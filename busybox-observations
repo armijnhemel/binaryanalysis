@@ -1,0 +1,150 @@
+Extracting configurations from a BusyBox binary
+
+There are many different instantations of BusyBox in widespread use on embedded devices. These have different configurations, depending on the needs of the manufacturer and the version of BusyBox. The goal of the BusyBox configuration tool is to extract the configuration that was used to build the BusyBox binary and print it in the right format, depending on the BusyBox version, so it can be compared with a configuration from a vendor.
+
+  BusyBox marker strings
+
+In a BusyBox binary you will find clear indication strings that BusyBox is used. The markers often look like this:
+
+Copyright (C) 1998-2008 Erik Andersen, Rob Landley, Denys Vlasenko
+and others. Licensed under GPLv2.
+See source distribution for full notice.
+Usage: busybox [function] [arguments]...
+   or: function [arguments]...
+        BusyBox is a multi-call binary that combines many common Unix
+        utilities into a single executable.  Most people will create a
+        link to busybox for each function they wish to use and BusyBox
+        will act like whatever it was invoked as!
+
+and
+
+BusyBox v1.15.2 (2009-12-03 00:14:42 CET)
+
+There is one exception: a BusyBox build configured to build just one applet will not contain clear indications that BusyBox was used and it will not contain the obvious BusyBox markers. In that case different detection mechanisms will have to be used.
+
+  BusyBox version strings
+
+The BusyBox version strings have remained fairly consistent over the years.
+
+BusyBox v1.00-rc2 (2006.09.14-03:08+0000) multi-call binary
+BusyBox v1.1.3 (2009.09.11-12:49+0000) multi-call binary
+BusyBox v1.15.2 (2009-12-03 00:14:42 CET)
+
+The time stamps are generated during configuration or build time and are dependent on the version, as well as the software installed on the build host, such as autoconf.
+
+Extracting version information from the BusyBox binary is not hard. With a simple regular expression it is very easy to look for "BusyBox v" and take everything that follows, until a '(' is reached. The version number is what you can find in between, stripped of spaces. In our implementation we adapt the input a bit first, because Python regular expressions and non-printable characters don't go well together. We remove all non-printable characters from the file and replace them with a space character. This way the actual size of the file will not change and offsets in the original file and the adapted version will still correspond.
+
+The BusyBox version number is used in the program for a few things, such as pretty printing the right configuration format and accessing a knowledgebase of known applets extracted from the standard BusyBox releases from busybox.net.
+
+  BusyBox configuration
+
+During the compilation of BusyBox a configuration file is used to determine which functionality has to be compiled into the binary. The format of this configuration file has changed a few times over the years. Early versions used a simple header format file, with GNU C/C++ style defines to configure the build script. Later versions, starting 1.00pre1, moved to Kbuild, the same configuration system as used by the Linux kernel. This format is still in use today (BusyBox 1.16.1 being the latest version).
+
+Each configuration directive determines whether or not a certain piece of functionality will be combined into BusyBox. This can either be a fully functioning applet, or small pieces of functionality that merely extend an existing applet.
+
+Extracting the BusyBox configuration from a binary is not trivial. There are a few methods which can be used:
+
+1. run busybox (inside a sandbox) and see what functionality it reports. This is probably the most accurate method, but also the hardest, since it requires a properly setup sandbox, with the right dependencies, and so on.
+2. examine the file system and try to match the names of the links with strings in the binary. This will not give the correct configuration if links have been removed in the file system and is therefor not reliable. It can serve as an extra check or to find unknown applets which are linked in the file system though.
+3. search for visible strings in the firmware and try to determine the configuration.
+
+  Running busybox in a sandbox
+
+When running busybox without any arguments, or with the --help option it will output a list of functions that are defined inside the binary:
+
+Currently defined functions:
+	ar, cal, cpio, dpkg, dpkg-deb, gunzip, zcat
+
+These can be mapped to a configuration. Like with the previous method it might be that the name for a tool might not directly map to a configuration directive and that source code inspection is needed for this.
+
+Setting up a sandbox, for example QEMU, is not an easy task and it might also not work for various portability reasons.
+
+
+  Searching for visible strings
+
+The binary of busybox has a string embedded for every function that is defined. This string can be mapped to a configuration directive. Depending on the binary it can be quite easy to extract this information, or quite hard.
+
+            uClibc
+
+In binaries that link against uClibc (a particular C library) the name of the main function of the applet is sometimes included in the busybox binary as follows:
+
+wget_main
+
+This maps to the name of the main function for the wget applet:
+
+networking/wget.c:int wget_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
+
+The BusyBox authors are pretty strict in their naming and usually have a configuration of CONFIG-${appletname} in the Makefile, like:
+
+lib-$(CONFIG_WGET)         += wget.o
+
+(networking/Kbuild in BusyBox 1.15.2), but this is not guaranteed.
+
+            glibc/uClibc without info
+
+Sometimes the method described above does not work for binaries that are linked with uClibc. It also does not work with binaries compiled with glibc.
+
+If the binary is unstripped (that is the binary contains symbol information) it is possible to extract this information with the readelf program (part of GNU binutils) in a similar way to how it is done described above.
+
+If this is not possible you will have to search inside the binary for applet names. This works best if you have a set of names of what to look for. Since it is quite easy to extract the version from the binary and most installations don't deviate much from a standard BusyBox the list of all applets in the default distribution of BusyBox is a very good starting point.
+
+By searching for the applet names you will at one point hit the list of applets in the BusyBox binary. This list is alphabetically sorted. By taking the lowest and highest from that list (as far as can be determined) and splitting the list, you should get all applet names that are defined in the version of BusyBox, although it might be able to miss any that are alphabetically before the first applet we know of and after the last one that we know of.
+
+  Pretty printing a configuration
+
+Pretty printing a configuration is fairly straightforward, but there are a few difficult cases:
+
+1. aliases
+2. functionality that is added to an applet, depending on a configuration directive
+3. applets that use non-standard configuration names (like CONFIG_APP_UDHCPD instead of CONFIG_UDHCPD in some versions of busybox)
+4. features
+
+For some applets aliases are installed by default as symlinks. These aliases are recorded in the binary, but there is no separate applet for it. In the busybox sources (1.15.2, others might be different) these are defined as:
+
+IF_CRYPTPW(APPLET_ODDNAME(mkpasswd, cryptpw, _BB_DIR_USR_BIN, _BB_SUID_DROP, mkpasswd))
+
+So if the cryptw tool is built, there is automatically a symlink mkpasswd that points to it. To recognize these properly information from source is needed.
+
+If extra functionality added to an applet in busybox it is defined in the source code by macros like this:
+
+IF_SHA256SUM(APPLET_ODDNAME(sha256sum, md5_sha1_sum, _BB_DIR_USR_BIN, _BB_SUID_DROP, sha256sum))
+IF_SHA512SUM(APPLET_ODDNAME(sha512sum, md5_sha1_sum, _BB_DIR_USR_BIN, _BB_SUID_DROP, sha512sum))
+
+The above configuration tells to add extra sha256sum and sha512sum symlinks if busybox is configured for the sha256sum and sha512sum commands. The applet that implements this functionality is md5_sha1_sum. The configuration extraction as currently implemented will not always get all the right configuration for these applets, unless we implement extracting the configuration as a multi way pass: first extract the configuration the way we do now, then search for the names of all the symlinks we have using one of the applets whose name we have been able to extract, then see which names have been recorded into the binary and extract those.
+
+The problem described in 3. can be fixed by adding more information to the tool. This would be done by extracting configuration information from the original busybox sources and generate a lookup table. This will not work if custom applets have been added to busybox.
+
+The information for 2 and 3 can also be found in a configured source code tree by looking at include/applet_tables.h.
+
+Adding 4. is really hard to do in a generic way, if not impossible because often no clear markers are recorded into the binary. A possibility would be to process the BusyBox sources, record which strings are unique to certain features and make checks accordingly. For example (from busybox 1.15.3, editors/diff.c):
+
+#if ENABLE_FEATURE_DIFF_DIR
+                diffdir(f1, f2);
+                return exit_status;
+#else
+                bb_error_msg_and_die("no support for directory comparison");
+#endif
+
+Implementing this will be quite a bit of work.
+
+   Feeding information into the tool
+
+By referencing with information extracted from the standard BusyBox sourcecode it is possible to get a far more accurate configuration, because it is known which applets use which configuration, unless:
+
+* new applets were added to busybox
+* applets use old names, but contain different code
+
+The names of applets that are defined in BusyBox serve as a very good starting point. How these are recorded in the sources has changed a few times and depends on the version of BusyBox. The tool appletname-extractor.py can extract these from the BusyBox sources and store them for later reference as a simple lookup table in Python pickle format.
+
+Names of applets per version breakdown:
+
+* 1.15.x: include/applets.h IF syntax
+* 1.1.1-1.14.x: include/applets.h USE syntax
+* 1.00-1.1.0: include/applets.h (different syntax)
+* 0.60.5 and earlier: applets.h, like 1.00-1.1.0 but with a slightly different syntax
+
+In 1.1.0 there is actually a mix of three different syntaxes: (0.60.5, 1.00 and another) for a few applets (runlevel, watchdog, tr). It takes some extra work to recognize these.
+
+There are also a few applets in 1.1.0 which are a bit harder to detect: busybox, mkfs.ext3, e3fsck and [[. These could be added by hand, since there are just four of them.
+
+Another issue that is currently unresolved is that not all the shells are correctly recognized.
