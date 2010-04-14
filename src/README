@@ -1,0 +1,94 @@
+  Installing the binary analysis tool
+
+The binary analysis tool is fairly self contained and can run without too many dependencies. The tools have been written and tested on Fedora 11 and 12, but should run without (m)any modifications on other Linux distributions.
+
+Requirements are:
+
+- python (2.6 or higher preferred, but not 3)
+- python-magic
+- GNU binutils (for readelf and strings)
+- squashfs tools (4.0 highly recommended)
+- module-init-tools (for modinfo)
+- gzip (for zcat)
+- xz (for lzma)
+- PyLucene (latest version possible)
+- java-1.6.0-openjdk, plus dependencies (Apache Ant, etc.) for PyLucene
+
+Installing PyLucene is outside of the scope of this document.
+
+  Running the binary analysis tool
+
+The tool consists of several components, some of which can be run as independent programs as well. The tool will create temporary files and directories in /tmp. These files are not cleaned up by default (this will be configurable in future versions).
+
+The tool consists of the following components:
+
+* bruteforce.py              -- brute force scan a firmware and extract its contents
+* busybox.py                 -- extract and print a possible configuration for a BusyBox binary
+* busybox-version.py         -- extract and print the version number from a BusyBox binary
+* busybox-compare-configs.py -- compare an extracted and original BusyBox configuration and report differences
+
+and the following helper scripts:
+
+* appletname-extractor.py -- extract and store appletnames and corresponding configurations from the BusyBox sources
+* extractkernelconfig.py  -- extract and store a mapping between kernel configuration directives and file names in a search database
+* extractkernelstrings.py -- extract and store a mapping between strings that can end up in kernel binaries and file names in a search database
+
+All tools can be run with the --help parameter for more information.
+
+  Running bruteforce.py
+
+The bruteforce.py tool tries to determine what is inside a firmware without much knowledge of what is inside the firmware. It does so by scanning for known magic markers of file systems (such as SquashFS) and compression methods (such as gzip), bootloader and kernel strings, unpack these files and do more in depth analysis of the files.
+
+  Running busybox.py
+
+The busybox.py tool has three modes: printing a possible configuration extracting from a BusyBox binary, printing names of applets for which no configuration exists in the source code of the official BusyBox release, or both. By default it prints just a configuration that could have been used to compile the BusyBox binary. In the near future there will be an export to a very simple XML file as well.
+
+Example invocations:
+
+$ python busybox.py --binary=test/busybox --found
+$ python busybox.py --binary=test/busybox --found --missing
+$ python busybox.py --binary=test/busybox --missing
+
+  Running busybox-version.py
+
+The busybox-version.py tool does one thing: printing the version number of a BusyBox binary.
+
+Example invocation:
+
+$ python busybox-version.py --binary=test/busybox
+
+  Running busybox-compare-configs.py
+
+The busybox-compare-configs.py tool takes at least two parameters: the path of the configuration extracted from a BusyBox binary and the configuration from a source archive. If available the BusyBox version number can be supplied to weed out some false positives. This tool can output in a very simple XML format using the -x flag. By default the tool will not output in XML.
+
+Example invocation:
+
+$ python busybox-compare-configs.py -e /tmp/extracted-config -f /tmp/original-config
+$ python busybox-compare-configs.py -e /tmp/extracted-config -f /tmp/original-config -n 1.11.1
+$ python busybox-compare-configs.py -e /tmp/extracted-config -f /tmp/original-config -n 1.11.1 -x
+
+  Running appletname-extractor.py
+
+The appletname-extractor.py tool takes two arguments: the full path to include/applets.h for a BusyBox source tree and a version number. It outputs a Python pickle file, which should be stored in the directory 'configs' before it can be used by busybox.py.
+
+Example invocation:
+
+$ python appletname-extractor.py /tmp/busybox-1.00-rc3/include/applets.h 1.00-rc3
+
+This tool is typically run when a new version of BusyBox is released.
+
+  Running extractkernelconfig.py
+
+The extractkernelconfig.py tool takes two arguments: the path to a directory with the unpacked Linux kernel sources and a path to a directory in which to store the search database. To ensure correctness the archive with the Linux kernel sources should be a directory to which all necessary patches have been applied. The reason for this is that the patch file format does not work great with our multiline regular expressions and could also lead to false positives.
+
+Example invocation:
+
+$ python extractkernelconfig.py -d ~/linux-2.6.15/ -i /tmp/kernelconfig/
+
+  Running extractkernelstrings.py
+
+The extractkernelstrings.py tool takes two arguments: the path to a directory with the unpacked Linux kernel sources and a path to a directory in which to store the search database. To ensure correctness the archive with the Linux kernel sources should be a directory to which all necessary patches have been applied. The reason for this is that the patch file format does not work great with our multiline regular expressions and could also lead to false positives.
+
+Example invocation:
+
+$ python extractkernelstrings.py -d ~/linux-2.6.15/ -i /tmp/kernelstrings/
