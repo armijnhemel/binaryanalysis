@@ -1,0 +1,18 @@
+[busybox-version]
+type    = program
+module  = busyboxversion
+method  = busybox_version
+
+[gzip-unpack]
+type    = unpack
+module  = fwunpack
+method  = searchUnpackGzip
+#magic   = gzip
+cleanup = cleanupGzip
+
+[squashfs-unpack]
+type    = unpack
+module  = fwunpack
+method  = searchUnpackSquashfs
+#magic   = gzip
+cleanup = cleanupSquashfs

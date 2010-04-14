@@ -1,0 +1,141 @@
+Linux kernel observations
+-------------------------
+
+  Extracting visible strings from the Linux kernel binary
+
+  Extracting visible strings from a Linux kernel module
+
+  Extracting strings from the Linux kernel sources
+
+The Linux kernel is full of strings that can end up in a binary. Some programmers have defined macros just specific to their part of the kernel for ease of use, other programmers use the standard mechanisms.
+
+  EXPORT_SYMBOL
+
+The strings inside the EXPORT_SYMBOL and EXPORT_SYMBOL_GPL end up in the kernel image. The EXPORT_SYMBOL_GPL symbol is interesting for licensing reporting as well, since anything that uses this symbol has to be GPL licensed. We need to do more research into this area.
+
+  printk
+
+The printk statement is used a lot in the kernel sources, sometimes with a priority, like KERN_DEBUG, KERN_WARNING, KERN_ERROR, etc. Various other statements, such as DBG() are macros that use printk.
+
+  .procname
+
+The .procname variable is used in the /proc/sys file system and it can end up in the kernel.
+
+  module_param
+
+The names of parameters for modules can end up in the kernel. The names of these parameters have to be prefixed with the name of the file (which is the module), but stripped from file extensions.
+
+  __setup
+
+  .attr
+
+grep -r 'attr =' * | grep "name ="
+
+.ident
+.input
+.result
+ACPI_FUNCTION_TRACE()
+ACPI_ERROR()
+ACPI_REPORT_ERROR()
+ACPI_FUNCTION_TRACE_PTR()
+ACPI_FUNCTION_TRACE_STR()
+ACPI_FUNCTION_TRACE_U32()
+acpi_os_create_cache()
+acpi_ut_create_list()
+add_uevent_var() - not in 2.6.15
+adfs_error()
+apic_printk
+card_name
+class_device_create
+create_flash_pde()
+cs46xx_dsp_create_scb()
+cs46xx_dsp_create_asynch_fg_rx_scb()
+cs46xx_dsp_create_generic_scb()
+cs_dbg()
+ctc_pr_emerg() -- not in 2.6.32, but present in 2.6.15
+DBF_EVENT()
+dbg_isoc()
+DBGMSG()
+DBGS()
+DBG_INIT()
+DEBUG_API()
+DEBUGP()
+debugl1()
+debug_log()
+dev_dbg()
+DMI_MATCH()
+die()
+dprint()
+dprintk()
+DO_ERROR()
+DRM_ERROR()
+ds_dbg()
+duprintf()
+envp[]
+err =
+EVENT()
+fputs()
+GET_CONFIG() -- ?
+HDAPS_DMI_MATCH_NORMAL
+HTB_DBG()
+HPSB_ERR()
+hvlog()
+i596_timeout()
+ibmasmfs_create_file()
+ide_pci_create_host_proc()
+INFO()
+IP_VS_ERR()
+IPW_DEBUG_WX()
+IRDA_DEBUG()
+isdn_tty_at_cout()
+jfs_err()
+NS_ERR()
+NS_LOG()
+ntfs_debug()
+of_find_node_by_path
+oprofilefs_create_ulong()
+oprofilefs_create_file()
+PARANOIA()
+PDBGG()
+PKP()
+pr_emerg()  -- not in 2.6.15, but ctc_pr_emerg() is
+PRINTD()
+PRINT_INFO()
+printk("") (without something between '(' and '"' )
+process_mcheck_info
+prom_printf()
+remove_proc_entry()
+request_module() (only for modules?)
+rio_dprintk()
+rpc_create_client()
+RTRACE()
+SCHED_FEAT()
+__setup(()
+snd_card_proc_new
+snd_iprintf()
+snd_info_create_module_entry()
+snd_i2c_device_create()
+snd_pcm_new()
+snd_printdd()
+strcat()
+TIME()
+TRACE()
+tracer_panic() (multiline?)
+UDEBUG()
+US_DEBUGP()
+VELOCITY_PRT()
+vendor =
+VERBOSE()
+veth_error()
+vmcoreinfo_append_str()
+
+  Duplicate strings
+
+The string "module" is defined by sysfs_remove_link and sysfs_create_link, but also in net/core/sock.c
+In an ideal situation some extra information would be provided (a kernel configuration for example) so the proper one can be filtered out.
+
+  Minimizing scan times
+
+There are some strings we scan for which might not be present in certain versions, because they were removed, or not yet written. A good example is devfs. This subsystem was removed in Linux kernel 2.6.17. To completely remove the scanning for a particular kind of functionality is problematic, since some vendors might have kept it and ported it to newer versions (forward porting).
+
+Other systems might have been backported.

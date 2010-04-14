@@ -1,0 +1,17 @@
+Reading contents from file systems
+
+Apart from the kernel a device has one or more file systems. The contents of these file systems can contain all kinds of files: normal files (including more file systems), directories, device nodes, etc.
+
+   Reading contents from an ext2/ext3 file system
+
+Sometimes (especially in some older devices) the file system with the root file system is stored as an ext2 file system. There is no Python support to directly manipulate ext2 file systems, so we are down to a few options:
+
+* mount file systems over loopback - this requires privileges, so is only feasible if we have enough privileges.
+* use fuse-ext2 ( http://fuse-ext2.sourceforge.net/ ) to mount the file system as a normal user using FUSE. This requires a system with support for FUSE.
+* use e2tools - this works adequately if you don't have FUSE, but it is quite spartan.
+
+   cramfs
+
+http://manpages.ubuntu.com/manpages/intrepid/man1/fusecram.1.html
+
+http://sourceforge.net/apps/mediawiki/fuse/index.php?title=CompressedFileSystems
