@@ -1,0 +1,18 @@
+  Brute force scanning
+
+Top level reporting:
+* cryptographic checksum (sha256) of the file
+* file name of the scanned file
+* scan date plus time
+
+Per directory:
+* full name of directory within the firmware
+* file listing (similar to ls -laR) after unpacking (this might skip things like device files)
+
+Per file:
+* file name
+* full path within the firmware
+* file type (according to MIME)
+* sha256sum
+* libraries that are linked to (if the file is a dynamic library or binary)
+* packages found in the binary
