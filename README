@@ -26,6 +26,7 @@ The tool consists of the following components:
 * busybox.py                 -- extract and print a possible configuration for a BusyBox binary
 * busybox-version.py         -- extract and print the version number from a BusyBox binary
 * busybox-compare-configs.py -- compare an extracted and original BusyBox configuration and report differences
+* findkernelstrings.py       -- extract strings from a Linux kernel image, compare it with a knowledgebase and report which file the string can be found in
 
 and the following helper scripts:
 
@@ -37,7 +38,13 @@ All tools can be run with the --help parameter for more information.
 
   Running bruteforce.py
 
-The bruteforce.py tool tries to determine what is inside a firmware without much knowledge of what is inside the firmware. It does so by scanning for known magic markers of file systems (such as SquashFS) and compression methods (such as gzip), bootloader and kernel strings, unpack these files and do more in depth analysis of the files.
+The bruteforce.py tool tries to determine what is inside a firmware without much knowledge of what is inside the firmware. It does so by scanning for known magic markers of file systems (such as SquashFS) and compression methods (such as gzip), bootloader and kernel strings, unpack these files and do more in depth analysis of the files. The checks that need to be run in the bruteforce.py tool can be configured through a configuration format. The exact format is in flux at the moment. Documentation for the format of the configuration file is coming soon. In the source release there is a demo configuration which configures basic functionality.
+
+At the moment the bruteforce.py tool displays information in a very crude format. This will change in the near future.
+
+Example invocation:
+
+$ python bruteforce.py -b /tmp/firmware.bin -c /tmp/bruteforce-config
 
   Running busybox.py
 
@@ -92,3 +99,15 @@ The extractkernelstrings.py tool takes two arguments: the path to a directory wi
 Example invocation:
 
 $ python extractkernelstrings.py -d ~/linux-2.6.15/ -i /tmp/kernelstrings/
+
+  Running findkernelstrings.py
+
+The findkernelstrings.py tool takes at least two parameters: the path to the binary kernel image and the path to the directory containing a search database, generated with the extractkernelstrings.py helper script. By default the tool will report what strings are found and in what file. There is an option to print which strings were not found and which might need further investigation. It should be noted that right now not all strings are correctly detected and there will be false positives. To avoid many false positives we have set a minimal limit for the length of the strings we look at. This limit can be changed if necesary. If configuration information extracted with extractkernelconfig.py is available this can be fed to the tool to try and guess a kernel configuration. This functionality is limited at the moment. If information about the architecture is available it can be supplied as well, although this is very crude at the moment.
+
+Example invocation:
+
+$ python findkernelstrings.py -k /tmp/kernelimage -i /tmp/kernelstrings
+$ python findkernelstrings.py -k /tmp/kernelimage -i /tmp/kernelstrings -m
+$ python findkernelstrings.py -k /tmp/kernelimage -i /tmp/kernelstrings -s 9
+$ python findkernelstrings.py -k /tmp/kernelimage -i /tmp/kernelstrings -c /tmp/kernelconfig
+$ python findkernelstrings.py -k /tmp/kernelimage -i /tmp/kernelstrings -c /tmp/kernelconfig -a mips
