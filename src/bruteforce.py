@@ -11,7 +11,7 @@ This script tries to analyse the firmware of a device, using a "brute force" app
 import sys, os, magic, hashlib, subprocess
 from optparse import OptionParser
 import ConfigParser
-import busybox, fssearch, fwunpack
+#import busybox, fssearch, fwunpack, wirelesstools
 import xml.dom.minidom
 
 ms = magic.open(magic.MAGIC_NONE)
@@ -49,12 +49,17 @@ def scanfile(path, file, checks, lentempdir):
 	## temporary location for example with a kernel image
 	report['name'] = file
 	report['path'] = path[lentempdir:].replace("/squashfs-root", "")
+	report['size'] = os.lstat("%s/%s" % (path, file)).st_size
 	mime = ms.file("%s/%s" % (path, file))
 	report['mime'] = mime
 	if "ELF" in mime:
-		report['libs'] = scanSharedLibs(path,file)
+		res = scanSharedLibs(path,file)
+		if res != []:
+			report['libs'] = res
 	scanfile = "%s/%s" % (path, file)
-	scan(scanfile, checks)
+	res = scan(scanfile, checks)
+	if res != []:
+		report['scans'] = res
 	return report
 
 ## result is a list of result tuples, one for every interesting file in the directory
@@ -76,9 +81,10 @@ def walktempdir(tempdir, checks):
                         	elif type.find('broken symbolic link to') == 0:
                                 	continue
 
-				## Filter out various things based on mime type. This should be configurable
-				## ASCII text or ASCII English text
-                        	elif type.find('ASCII') == 0:
+				## Filter out various things based on mime type.
+                        	elif type.find('ASCII text') == 0:
+                               		continue
+                        	elif type.find('ASCII English text') == 0:
                                		continue
                         	elif type.find('XML') == 0:
                                 	continue
@@ -136,7 +142,9 @@ def walktempdir(tempdir, checks):
                         	#elif type == 'POSIX shell script text executable':
                                 #	continue
 				try:
-					reports.append(scanfile(i[0], p, checks, len(tempdir)))
+					res = scanfile(i[0], p, checks, len(tempdir))
+					if res != []:
+						reports.append(res)
 				except Exception as e:
 					print e
 	except StopIteration:
@@ -147,15 +155,18 @@ def walktempdir(tempdir, checks):
 def scan(scanfile, config):
 	reports = []
 	for section in config.sections():
+		report = {}
 		if config.has_option(section, 'type'):
 			if config.get(section, 'type') == 'program':
+				#print section
 				module = config.get(section, 'module')
 				method = config.get(section, 'method')
 				exec "from %s import %s as %s_%s" % (module, method, module, method)
 				## temporary stuff, this should actually be nicely wrapped in a report tuple
 				res = eval("%s_%s(scanfile)" % (module, method))
 				if res != None:
-					print res
+					report[section] = res
+					reports.append(report)
 			elif config.get(section, 'type') == 'unpack':
 				## return value is a temporary dir right now, but we should offsets as well
 				module = config.get(section, 'module')
@@ -163,7 +174,9 @@ def scan(scanfile, config):
 				exec "from %s import %s as %s_%s" % (module, method, module, method)
 				dir = eval("%s_%s(scanfile)" % (module, method))
 				if dir != None:
-					reports.append(walktempdir(dir,config))
+					res = walktempdir(dir,config)
+					if res != []:
+						reports.append(res)
 			else:
 				pass
 	return reports
@@ -177,7 +190,6 @@ def main(argv):
 	if options.fw == None:
         	parser.error("Path to firmware needed")
 	try:
-        	#firmware_binary = open(options.fw, 'rb')
         	firmware_binary = options.fw
 	except:
         	print "No valid firmware file"
@@ -204,6 +216,7 @@ def main(argv):
 	## more lists in some fields, like libraries, or more result lists if
 	## the file inside a file system we looked at was in fact a file system.
 	res = scan(firmware_binary, config)
+	print res
 	for result in res:
 		for subresult in result:
 			print subresult

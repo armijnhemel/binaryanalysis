@@ -9,6 +9,7 @@ import tempfile
 import fsmagic
 import fssearch
 import bz2
+import tarfile
 
 def searchUnpackSquashfs(filename):
 	data = open(filename, 'rb').read()

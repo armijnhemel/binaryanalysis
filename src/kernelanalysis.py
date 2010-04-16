@@ -81,10 +81,12 @@ def findInitFs(lines):
 	return fssearch.findGzip(lines)
 
 ## analyse a kernel module. Requires that the modinfo program from module-init-tools has been installed
-def analyseModule(module, tmpdir):
-	p = subprocess.Popen(['/sbin/modinfo', "-F", "license", module], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+def analyseModuleLicense(path):
+	p = subprocess.Popen(['/sbin/modinfo', "-F", "license", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         (stanuit, stanerr) = p.communicate()
         if p.returncode != 0:
-                return
+                return None
+	if stanuit == "":
+		return None
         else:
-                return stanuit
+                return stanuit.strip()
