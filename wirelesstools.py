@@ -16,6 +16,17 @@ wirelessMarkerStrings = [ "Driver has no Wireless Extension version information.
 			, "Currently compiled with Wireless Extension v%d."
                         ]
 
+def searchWirelessTools(path):
+        try:
+                wireless_binary = open(path, 'rb')
+                wireless_lines = wireless_binary.read()
+                if extractWireless(wireless_lines) != -1:
+			return True
+		else:
+			return None
+        except Exception as e:
+                return None
+
 def extractWireless(lines):
 	for marker in wirelessMarkerStrings:
 		res = lines.find(marker)

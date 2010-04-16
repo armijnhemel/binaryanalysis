@@ -16,3 +16,18 @@ module  = fwunpack
 method  = searchUnpackSquashfs
 #magic   = gzip
 cleanup = cleanupSquashfs
+
+[wireless-tools]
+type    = program
+module  = wirelesstools
+method  = searchWirelessTools
+
+[redboot]
+type    = program
+module  = bootloaderanalysis
+method  = searchRedBoot
+
+[kernelmodulelicense]
+type    = program
+module  = kernelanalysis
+method  = analyseModuleLicense
