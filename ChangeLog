@@ -1,6 +1,7 @@
 2010-04-17
 * add basic pretty printing
 * speedup scanning for BusyBox version number
+* Python 2.5 compatibility fixes (thanks to Brett Smith)
 
 2010-04-16
 * add scan for RedBoot to brute force scanning tool

@@ -12,7 +12,7 @@ def searchRedBoot(path):
                         return True
                 else:
                         return None
-        except Exception as e:
+        except Exception, e:
                 return None
 
 def findRedBoot(lines):

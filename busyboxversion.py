@@ -13,7 +13,7 @@ def busybox_version(path):
 		busybox_binary = open(path, 'rb')
 		busybox_lines = busybox_binary.read()
 		return busybox.extract_version(busybox_lines)
-	except Exception as e:
+	except Exception, e:
 		return None
 	
 
