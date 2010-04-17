@@ -17,6 +17,38 @@ import xml.dom.minidom
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
+
+def prettyprintres(res, configs):
+	for result in res:
+		#print result.keys()
+		for subresult in result.keys():
+			#print result[subresult]
+			if configs.get(subresult, "type") == 'program':
+				pass
+				#print result[subresult]
+			elif configs.get(subresult, "type") == 'unpack':
+				for scannedfile in result[subresult]:
+					print "Analysis for: %s/%s" % (scannedfile['path'], scannedfile['name'])
+					print
+					print "   SHA256 checksum:"
+					print "      ", scannedfile['hash']
+					print "   MIME type:"
+					print "      ", scannedfile['mime']
+					try:
+						libs = scannedfile['libs']
+						print "   dynamically linked libraries:"
+						for lib in libs:
+							print "     ", lib
+					except:	pass
+					try:
+						scans = scannedfile['scans']
+						for scan in scans:
+							for scankey in scan.keys():
+								print "   %s:" % scankey
+								print "      ", scan[scankey]
+					except:	pass
+					print
+
 # the result is a list of library names that the file dynamically links with
 # the path of these libraries is not give, since this is not recorded in the binary
 # unless RPATH is used. It is also dependent on the dynamic linker configuration
@@ -158,7 +190,6 @@ def scan(scanfile, config):
 		report = {}
 		if config.has_option(section, 'type'):
 			if config.get(section, 'type') == 'program':
-				#print section
 				module = config.get(section, 'module')
 				method = config.get(section, 'method')
 				exec "from %s import %s as %s_%s" % (module, method, module, method)
@@ -176,7 +207,9 @@ def scan(scanfile, config):
 				if dir != None:
 					res = walktempdir(dir,config)
 					if res != []:
-						reports.append(res)
+						report[section] = res
+						reports.append(report)
+						#reports.append(res)
 			else:
 				pass
 	return reports
@@ -216,10 +249,7 @@ def main(argv):
 	## more lists in some fields, like libraries, or more result lists if
 	## the file inside a file system we looked at was in fact a file system.
 	res = scan(firmware_binary, config)
-	print res
-	for result in res:
-		for subresult in result:
-			print subresult
+	prettyprintres(res, config)
 
 if __name__ == "__main__":
         main(sys.argv)
