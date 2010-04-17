@@ -3,10 +3,14 @@
 import os, sys, string
 import re, subprocess
 import extractor, fssearch
+import magic
+
+ms = magic.open(magic.MAGIC_NONE)
+ms.load()
 
 ## Helper method that extracts the kernel version using a regular
 ## expression. It needs printable characters for this.
-## If it can't be find, it will return 'None' instead.
+## If it can't be found, it will return 'None' instead.
 def extractKernelVersion(lines):
         printables = extractor.extract_printables(lines)
         res = re.search("Linux version ([\d\.\d\w-]+) \(", printables)
@@ -82,6 +86,8 @@ def findInitFs(lines):
 
 ## analyse a kernel module. Requires that the modinfo program from module-init-tools has been installed
 def analyseModuleLicense(path):
+	if not "relocatable" in ms.file(path):
+		return None
 	p = subprocess.Popen(['/sbin/modinfo', "-F", "license", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         (stanuit, stanerr) = p.communicate()
         if p.returncode != 0:
