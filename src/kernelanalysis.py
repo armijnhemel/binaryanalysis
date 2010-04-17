@@ -8,10 +8,41 @@ import magic
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
+def kernelChecks(path):
+	results = {}
+        try:
+                kernelbinary = open(path, 'rb')
+                kernel_lines = kernelbinary.read()
+        except Exception, e:
+                return None
+	## sanity check
+	res = extractKernelVersion(kernel_lines)
+	if res != None:
+		results['version'] = res
+	else:
+		return None
+	if findALSA(kernel_lines) != -1:
+		results['alsa'] = True
+	if findMtd(kernel_lines) != -1:
+		results['mtd'] = True
+	if findFAT(kernel_lines) != -1:
+		results['fat'] = True
+	if findNetfilter(kernel_lines) != -1:
+		results['netfilter'] = True
+	if findRedBoot(kernel_lines) != -1:
+		results['redboot'] = True
+	if findSysfs(kernel_lines) != -1:
+		results['sysfs'] = True
+	if findSquashfs(kernel_lines) != -1:
+		results['squashfs'] = True
+	return results
+
 ## Helper method that extracts the kernel version using a regular
 ## expression. It needs printable characters for this.
 ## If it can't be found, it will return 'None' instead.
 def extractKernelVersion(lines):
+        if lines.find("Linux version ") == -1:
+                return
         printables = extractor.extract_printables(lines)
         res = re.search("Linux version ([\d\.\d\w-]+) \(", printables)
         if res != None:
