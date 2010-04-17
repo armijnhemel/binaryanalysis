@@ -24,7 +24,7 @@ def searchWirelessTools(path):
 			return True
 		else:
 			return None
-        except Exception as e:
+        except Exception, e:
                 return None
 
 def extractWireless(lines):

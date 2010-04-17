@@ -177,7 +177,7 @@ def walktempdir(tempdir, checks):
 					res = scanfile(i[0], p, checks, len(tempdir))
 					if res != []:
 						reports.append(res)
-				except Exception as e:
+				except Exception, e:
 					print e
 	except StopIteration:
         	pass
