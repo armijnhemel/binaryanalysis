@@ -5,6 +5,9 @@ import tempfile
 import fsmagic
 import bz2
 
+# find a squashfs file system, starting at a certain offset
+# Returns the offset of the file system. If a firmware contains
+# multiple squashfs file systems it should be applied multiple times
 def findSquashfs(data, offset=0):
 	marker = -1
 	marker = findType('squashfs-le', data,offset)
@@ -15,7 +18,8 @@ def findSquashfs(data, offset=0):
 		if marker2 != -1:
 			return min(marker, marker2)
 		else:
-			return marker2
+			# just one marker found
+			return marker
 
 def findMarker(marker, data, offset=0):
 	return data.find(fsmagic.marker[marker], offset)
