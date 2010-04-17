@@ -2,6 +2,8 @@
 * add basic pretty printing
 * speedup scanning for BusyBox version number
 * Python 2.5 compatibility fixes (thanks to Brett Smith)
+* only check for module license strings in actual modules
+* return the correct offset for finding squashfs file systems
 
 2010-04-16
 * add scan for RedBoot to brute force scanning tool
