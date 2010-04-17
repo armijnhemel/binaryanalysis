@@ -1,0 +1,11 @@
+2010-04-17
+* add basic pretty printing
+* speedup scanning for BusyBox version number
+
+2010-04-16
+* add scan for RedBoot to brute force scanning tool
+* add scan for wireless tools to brute force scanning tool
+* add scan for dynamically linked libraries to brute force scanning tool
+* add scan for licenses in kernel modules to brute force scanning tool
+
+2010-04-15 - initial release
