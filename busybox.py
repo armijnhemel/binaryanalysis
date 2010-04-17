@@ -207,8 +207,9 @@ def prettyprint_undefined_apps(undefined_apps):
 
 ## Helper method that extracts the BusyBox version using a regular
 ## expression. It needs printable characters for this.
-## If it can't be find, it will return 'None' instead.
+## If it can't be found, it will return 'None' instead.
 def extract_version(lines):
+	## quick check to see if this is BusyBox. If not, we can return immediately
 	if lines.find("BusyBox v") == -1:
 		return
 	printables = extractor.extract_printables(lines)
