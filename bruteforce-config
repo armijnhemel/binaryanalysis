@@ -31,3 +31,8 @@ method  = searchRedBoot
 type    = program
 module  = kernelanalysis
 method  = analyseModuleLicense
+
+[kernelchecks]
+type    = program
+module  = kernelanalysis
+method  = kernelChecks

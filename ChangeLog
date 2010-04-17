@@ -5,6 +5,7 @@
 * only check for module license strings in actual modules
 * return the correct offset for finding squashfs file systems
 * filter out more files, that are not immediately interesting, like HTML pages
+* add the kernel checks from the kernelanalysis script to the brute force scanner
 
 2010-04-16
 * add scan for RedBoot to brute force scanning tool
