@@ -150,13 +150,15 @@ def walktempdir(tempdir, checks):
                                 	continue
                         	elif type.find('MySQL') == 0:
                                 	continue
+                        	elif type.find('HTML document text') != -1:
+                                	continue
                         	elif type == 'Microsoft ICM Color Profile':
+                                	continue
+                        	elif type == 'exported SGML document text':
                                 	continue
                         	elif type == 'M3U playlist text':
                                 	continue
                         	elif type == 'diff output text':
-                                	continue
-                        	elif type == 'HTML document text':
                                 	continue
                         	elif type == 'UTF-8 Unicode text':
                                 	continue

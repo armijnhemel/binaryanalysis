@@ -4,6 +4,7 @@
 * Python 2.5 compatibility fixes (thanks to Brett Smith)
 * only check for module license strings in actual modules
 * return the correct offset for finding squashfs file systems
+* filter out more files, that are not immediately interesting, like HTML pages
 
 2010-04-16
 * add scan for RedBoot to brute force scanning tool
