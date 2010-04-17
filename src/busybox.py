@@ -209,6 +209,8 @@ def prettyprint_undefined_apps(undefined_apps):
 ## expression. It needs printable characters for this.
 ## If it can't be find, it will return 'None' instead.
 def extract_version(lines):
+	if lines.find("BusyBox v") == -1:
+		return
 	printables = extractor.extract_printables(lines)
 	res = re.search("BusyBox v([\d\.\d\w-]+) \(", printables)
 	if res != None:
