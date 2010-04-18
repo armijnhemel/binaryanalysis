@@ -51,8 +51,7 @@ def extractKernelVersion(lines):
                 return
 
 def findALSA(lines):
-	markerlines = [ "Directory bread(block %llu) failed"
-		      , "ALSA-PCM%d-%d%c%d"
+	markerlines = [ "ALSA-PCM%d-%d%c%d"
                       , "ALSA client number %d"
                       , "ALSA receiver port %d"
                       , "[%s] ALSA port %d:%d"

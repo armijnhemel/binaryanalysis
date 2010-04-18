@@ -1,3 +1,6 @@
+2010-04-18
+* remove wrong marker line for ALSA, leading to false positives
+
 2010-04-17
 * add basic pretty printing
 * speedup scanning for BusyBox version number
