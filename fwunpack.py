@@ -85,13 +85,28 @@ def searchUnpackGzip(filename):
 			offset = fssearch.findGzip(data, offset+1)
 		return None
 
+def searchUnpackLZMA(filename):
+	data = open(filename, 'rb').read()
+	offset = fssearch.findLZMA(data)
+	if offset == -1:
+		return None
+	else:
+		tmpdir = tempfile.mkdtemp()
+		while(offset != -1):
+			res = unpackLZMA(data, offset, tmpdir)
+			if res != None:
+				return tmpdir
+			offset = fssearch.findLZMA(data, offset+1)
+		return None
+
 ## tries to unpack stuff using lzma -cd. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
-def unpackLZMA(data, offset):
+def unpackLZMA(data, offset, tmpdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
 	## Assumes (for now) that lzma is in the path
-	tmpdir = tempfile.mkdtemp()
+	if tmpdir == None:
+		tmpdir = tempfile.mkdtemp()
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
 	p = subprocess.Popen(['lzma', '-cd', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)

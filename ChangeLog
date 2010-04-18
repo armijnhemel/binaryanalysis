@@ -1,5 +1,6 @@
 2010-04-18
 * remove wrong marker line for ALSA, leading to false positives
+* add LZMA decompression. This is not too reliable according to Debian bug #364260
 
 2010-04-17
 * add basic pretty printing

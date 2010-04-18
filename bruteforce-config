@@ -8,14 +8,21 @@ type    = unpack
 module  = fwunpack
 method  = searchUnpackGzip
 #magic   = gzip
-cleanup = cleanupGzip
+#cleanup = cleanupGzip
 
 [squashfs-unpack]
 type    = unpack
 module  = fwunpack
 method  = searchUnpackSquashfs
 #magic   = gzip
-cleanup = cleanupSquashfs
+#cleanup = cleanupSquashfs
+
+[lzma-unpack]
+type    = unpack
+module  = fwunpack
+method  = searchUnpackLZMA
+#magic   = gzip
+#cleanup = cleanupLZMA
 
 [wireless-tools]
 type    = program
