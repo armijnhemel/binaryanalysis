@@ -30,10 +30,13 @@ def searchUBoot(path):
                 return None
 
 def findUBoot(lines):
-        markerlines = [ "f_uboot_addr"
-                      , "f_firmware_addr"
-                      , "U-Boot 1.1.5-2.0"
+        markerlines = ["U-Boot "
+                      , "run script starting at addr"
+                      , "Hit any key to stop autoboot: %2d"
+                      , "## Binary (kermit) download aborted"
+                      , "## Ready for binary (ymodem) download "
                       ]
+
         for i in markerlines:
                 res = lines.find(i)
                 if res != -1:
