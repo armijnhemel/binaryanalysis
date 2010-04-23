@@ -1,3 +1,6 @@
+2010-04-23
+* add more documentation for the bruteforce scanning tool
+
 2010-04-21
 * add first scan for U-Boot. More marker strings need to be added to make it more reliable.
 
