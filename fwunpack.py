@@ -12,7 +12,9 @@ import bz2
 import tarfile
 
 def searchUnpackSquashfs(filename):
-	data = open(filename, 'rb').read()
+        datafile = open(filename, 'rb')
+        data = datafile.read()
+        datafile.close()
 	offset = fssearch.findSquashfs(data)
 	if offset == -1:
 		return None
@@ -38,8 +40,12 @@ def unpackSquashfs(data, offset, tmpdir=None):
 	p = subprocess.Popen(['/usr/sbin/unsquashfs', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanuit, stanerr) = p.communicate()
 	if p.returncode != 0:
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		os.rmdir(tmpdir)
 		return
 	else:
+		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		return tmpdir
 
@@ -65,14 +71,21 @@ def unpackGzip(data, offset, tmpdir=None):
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(outtmpfile[0], stanuit)
 	if os.stat(outtmpfile[1]).st_size == 0:
+		os.fdopen(outtmpfile[0]).close()
 		os.unlink(outtmpfile[1])
+		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
+		os.rmdir(tmpdir)
 		return None
+	os.fdopen(outtmpfile[0]).close()
+	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
 	return tmpdir
 
 def searchUnpackGzip(filename):
-	data = open(filename, 'rb').read()
+        datafile = open(filename, 'rb')
+        data = datafile.read()
+        datafile.close()
 	offset = fssearch.findGzip(data)
 	if offset == -1:
 		return None
@@ -86,7 +99,9 @@ def searchUnpackGzip(filename):
 		return None
 
 def searchUnpackLZMA(filename):
-	data = open(filename, 'rb').read()
+        datafile = open(filename, 'rb')
+        data = datafile.read()
+        datafile.close()
 	offset = fssearch.findLZMA(data)
 	if offset == -1:
 		return None

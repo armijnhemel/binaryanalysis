@@ -1,3 +1,7 @@
+2010-04-26
+* close files when we don't need them anymore. This prevents running out of
+limits for open files.
+
 2010-04-23
 * add more documentation for the bruteforce scanning tool
 
