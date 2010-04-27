@@ -210,9 +210,10 @@ def prettyprint_undefined_apps(undefined_apps):
 ## If it can't be found, it will return 'None' instead.
 def extract_version(lines):
 	## quick check to see if this is BusyBox. If not, we can return immediately
-	if lines.find("BusyBox v") == -1:
+	offset = lines.find("BusyBox v")
+	if offset == -1:
 		return
-	printables = extractor.extract_printables(lines)
+	printables = extractor.extract_printables(lines[offset:])
 	res = re.search("BusyBox v([\d\.\d\w-]+) \(", printables)
 	if res != None:
 		return res.groups(0)[0]
