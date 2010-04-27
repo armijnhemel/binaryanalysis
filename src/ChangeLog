@@ -1,3 +1,6 @@
+2010-04-27
+* add a check for loadlin, which you can still find in some embedded devices
+
 2010-04-26
 * close files when we don't need them anymore. This prevents running out of
 limits for open files.
