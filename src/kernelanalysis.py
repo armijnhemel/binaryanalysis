@@ -41,14 +41,15 @@ def kernelChecks(path):
 ## expression. It needs printable characters for this.
 ## If it can't be found, it will return 'None' instead.
 def extractKernelVersion(lines):
-        if lines.find("Linux version ") == -1:
-                return
-        printables = extractor.extract_printables(lines)
-        res = re.search("Linux version ([\d\.\d\w-]+) \(", printables)
-        if res != None:
-                return res.groups(0)[0]
-        else:
-                return
+	offset = lines.find("Linux version ")
+	if offset == -1:
+		return
+	printables = extractor.extract_printables(lines[offset:])
+	res = re.search("Linux version ([\d\.\d\w-]+) \(", printables)
+	if res != None:
+		return res.groups(0)[0]
+	else:
+		return
 
 def findALSA(lines):
 	markerlines = [ "ALSA-PCM%d-%d%c%d"

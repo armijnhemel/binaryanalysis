@@ -1,6 +1,7 @@
 2010-04-27
 * add a check for loadlin, which you can still find in some embedded devices
 * speedup for BusyBox version extraction
+* speedup for Linux kernel version extraction
 
 2010-04-26
 * close files when we don't need them anymore. This prevents running out of
