@@ -29,6 +29,11 @@ type    = program
 module  = wirelesstools
 method  = searchWirelessTools
 
+[loadlin]
+type    = program
+module  = checks
+method  = searchLoadLin
+
 [redboot]
 type    = program
 module  = bootloaderanalysis
