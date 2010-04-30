@@ -30,8 +30,7 @@ def searchUBoot(path):
                 return None
 
 def findUBoot(lines):
-        markerlines = ["U-Boot "
-                      , "run script starting at addr"
+        markerlines = [ "run script starting at addr"
                       , "Hit any key to stop autoboot: %2d"
                       , "## Binary (kermit) download aborted"
                       , "## Ready for binary (ymodem) download "

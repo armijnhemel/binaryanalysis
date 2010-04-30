@@ -1,3 +1,7 @@
+2010-04-30
+* remove a marker string for U-Boot which falsely identified some instances of
+CFE as possibly U-Boot
+
 2010-04-27
 * add a check for loadlin, which you can still find in some embedded devices
 * speedup for BusyBox version extraction
