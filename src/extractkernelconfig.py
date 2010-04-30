@@ -162,7 +162,6 @@ def storematch(results, lucenewriter):
 		doc.add(lucene.Field("name", pathstring,
 			lucene.Field.Store.YES,
 			lucene.Field.Index.NOT_ANALYZED))
-		lucenewriter.addDocument(doc)
 		doc.add(lucene.Field("configstring", configstring,
 			lucene.Field.Store.YES,
 			lucene.Field.Index.NOT_ANALYZED))
