@@ -219,7 +219,6 @@ def extractkernelstrings(kerneldir, lucenewriter):
 					doc.add(lucene.Field("name", "%s/%s" % (i[0][kerneldirlen:], p),
 						lucene.Field.Store.YES,
 						lucene.Field.Index.NOT_ANALYZED))
-					lucenewriter.addDocument(doc)
 					doc.add(lucene.Field("printstring", storestring,
 						lucene.Field.Store.YES,
 						lucene.Field.Index.NOT_ANALYZED))
@@ -235,7 +234,6 @@ def extractkernelstrings(kerneldir, lucenewriter):
 					doc.add(lucene.Field("name", "%s/%s" % (i[0][kerneldirlen:], p),
 						lucene.Field.Store.YES,
 						lucene.Field.Index.NOT_ANALYZED))
-					lucenewriter.addDocument(doc)
 					doc.add(lucene.Field("symbolstring", storestring,
 						lucene.Field.Store.YES,
 						lucene.Field.Index.NOT_ANALYZED))
@@ -253,7 +251,6 @@ def extractkernelstrings(kerneldir, lucenewriter):
 					doc.add(lucene.Field("name", "%s/%s" % (i[0][kerneldirlen:], p),
 						lucene.Field.Store.YES,
 						lucene.Field.Index.NOT_ANALYZED))
-					lucenewriter.addDocument(doc)
 					doc.add(lucene.Field("functionname", storestring,
 						lucene.Field.Store.YES,
 						lucene.Field.Index.NOT_ANALYZED))

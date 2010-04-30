@@ -1,3 +1,8 @@
+2010-05-01
+* remove some calls to addDocument() in the extractkernel* scripts, since they
+are unnecessary. It also brings down the size of the Lucene indexes with about
+a quarter, and lets the scripts run a bit faster.
+
 2010-04-30
 * remove a marker string for U-Boot which falsely identified some instances of
 CFE as possibly U-Boot
