@@ -22,13 +22,32 @@ def findSquashfs(data, offset=0):
 			return marker
 
 def findMarker(marker, data, offset=0):
-	return data.find(fsmagic.marker[marker], offset)
+	return data.find(marker, offset)
 
 def findType(type, data, offset=0):
 	return data.find(fsmagic.fsmagic[type], offset)
 
+def findCpio(data, offset=0):
+	for marker in fsmagic.cpio:
+		res = findMarker(marker, data, offset)
+		if res != -1:
+			return res
+	return -1
+
+def findCpioTrailer(data, offset=0):
+	res = findMarker('TRAILER!!!', data, offset)
+	if res != -1:
+		return res
+	return -1
+
 def findGzip(data, offset=0):
 	return findType('gzip', data, offset)
+
+def findZip(data, offset=0):
+	return findType('zip', data, offset)
+
+def findRar(data, offset=0):
+	return findType('rar', data, offset)
 
 ## not reliable according to comments in /usr/share/magic
 def findLZMA(data, offset=0):
@@ -60,17 +79,3 @@ def bruteForceSearch(data):
 	offsets.sort()
 	for i in offsets:
 		print hex(i[0]), i[1], i[0]%8
-
-def findLinuxKernel(data):
-	marker = findMarker('Linux kernel (ARM)', data)
-	return findGzip(data, marker)
-
-# search for a known marker for the Linux kernel for a certain arch
-# next find the first occurance of a certain header
-def findLinuxKernelX86(data, architecture):
-	## there are various compression methods in use on x86
-	marker = findMarker('Linux kernel (x86)', data)
-	res = findGzip(data, marker)
-	if res == -1:
-		res = findBzip2(data, marker)
-	return res

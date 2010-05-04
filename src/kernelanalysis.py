@@ -4,9 +4,21 @@ import os, sys, string
 import re, subprocess
 import extractor, fssearch
 import magic
+import xml.dom.minidom
 
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
+
+def xmlprettyprint(res, root):
+	topnode = root.createElement("kernelchecks")
+	for i in res.keys():
+		tmpnode = root.createElement(i)
+		if i == 'version':
+			tmpnodetext = xml.dom.minidom.Text()
+			tmpnodetext.data = res[i]
+			tmpnode.appendChild(tmpnodetext)
+		topnode.appendChild(tmpnode)
+	return topnode
 
 def kernelChecks(path):
 	results = {}
@@ -44,12 +56,13 @@ def extractKernelVersion(lines):
 	offset = lines.find("Linux version ")
 	if offset == -1:
 		return
-	printables = extractor.extract_printables(lines[offset:])
-	res = re.search("Linux version ([\d\.\d\w-]+) \(", printables)
-	if res != None:
-		return res.groups(0)[0]
-	else:
-		return
+        ## kernel version numbers should fit within 100 characters
+        printables = extractor.extract_printables(lines[offset:offset+100])
+        res = re.search("Linux version ([\d\.\d\w-]+) \(", printables)
+        if res != None:
+                return res.groups(0)[0]
+        else:
+                return
 
 def findALSA(lines):
 	markerlines = [ "ALSA-PCM%d-%d%c%d"

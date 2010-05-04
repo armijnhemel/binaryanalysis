@@ -5,6 +5,15 @@ version number)
 * cleanup fsmagic.py, add markers for cpio archives
 * add beginnings of tools to build and query a searchbase with a file name to
 package mapping, useful for quick sweep scanning
+* make the tool run silent by default (no reporting)
+* add reporting of bruteforce scanning in XML (enable with -x flag)
+* remove old text reporting
+* add infrastructure to have custom XML snippets printed for checks that don't
+fit the default XML reporting model
+* add unpack code for cpio, tar, Windows executables (cabinet archive files,
+7z), rar, zip
+* add code to determine architecture for ELF files
+* document code more
 
 2010-05-01
 * remove some calls to addDocument() in the extractkernel* scripts, since they
