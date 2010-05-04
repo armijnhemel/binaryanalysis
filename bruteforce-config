@@ -3,6 +3,48 @@ type    = program
 module  = busyboxversion
 method  = busybox_version
 
+[cpio-unpack]
+type    = unpack
+module  = fwunpack
+method  = searchUnpackCpio
+#magic   = zip
+#cleanup = cleanupZip
+
+[cab-unpack]
+type    = unpack
+module  = fwunpack
+method  = searchUnpackCab
+#magic   = zip
+#cleanup = cleanupZip
+
+[exe-unpack]
+type    = unpack
+module  = fwunpack
+method  = searchUnpack7z
+#magic   = zip
+#cleanup = cleanupZip
+
+[tar-unpack]
+type    = unpack
+module  = fwunpack
+method  = searchUnpackTar
+#magic   = zip
+#cleanup = cleanupZip
+
+[rar-unpack]
+type    = unpack
+module  = fwunpack
+method  = searchUnpackRar
+#magic   = zip
+#cleanup = cleanupZip
+
+[zip-unpack]
+type    = unpack
+module  = fwunpack
+method  = searchUnpackZip
+#magic   = zip
+#cleanup = cleanupZip
+
 [gzip-unpack]
 type    = unpack
 module  = fwunpack
@@ -53,3 +95,4 @@ method  = analyseModuleLicense
 type    = program
 module  = kernelanalysis
 method  = kernelChecks
+xmloutput = xmlprettyprint
