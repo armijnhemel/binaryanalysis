@@ -2,6 +2,7 @@
 * small speedup for BusyBox (40 characters should be enough for the BusyBox
 version number)
 * stub for XML reporting for BusyBox, not yet used
+* cleanup fsmagic.py, add markers for cpio archives
 
 2010-05-01
 * remove some calls to addDocument() in the extractkernel* scripts, since they
