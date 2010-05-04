@@ -1,3 +1,8 @@
+2010-05-04
+* small speedup for BusyBox (40 characters should be enough for the BusyBox
+version number)
+* stub for XML reporting for BusyBox, not yet used
+
 2010-05-01
 * remove some calls to addDocument() in the extractkernel* scripts, since they
 are unnecessary. It also brings down the size of the Lucene indexes with about

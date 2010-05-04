@@ -213,7 +213,8 @@ def extract_version(lines):
 	offset = lines.find("BusyBox v")
 	if offset == -1:
 		return
-	printables = extractor.extract_printables(lines[offset:])
+	## BusyBox version numbers should fit in 40 characters
+	printables = extractor.extract_printables(lines[offset:offset + 40])
 	res = re.search("BusyBox v([\d\.\d\w-]+) \(", printables)
 	if res != None:
 		return res.groups(0)[0]
@@ -225,6 +226,7 @@ def main(argv):
 	parser.add_option("-b", "--binary", dest="bb", help="path to BusyBox binary", metavar="FILE")
 	parser.add_option("-f", "--found", dest="found", action="store_true", help="print applets that can be found (default)")
 	parser.add_option("-m", "--missing", dest="missing", action="store_true", help="print applets that can't be found", metavar=None)
+	parser.add_option("-x", "--xml", dest="xmloutput", action="store_true", help="output in XML (default false)", metavar=None)
 	(options, args) = parser.parse_args()
 	if options.missing == None and options.found == None:
 		options.found = True
