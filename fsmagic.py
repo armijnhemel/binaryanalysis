@@ -21,6 +21,8 @@ analysis.'''
 fsmagic = {
             'gzip':             '\x1f\x8b\x08',
             'bz2':              'BZh',
+            'rar':              'Rar!',
+            'zip':              '\x50\x4b\x03\04',
             'squashfs-le':      '\x68\x73\x71\x73', # hsqs
             'squashfs-be':      '\x73\x71\x73\x68', # sqsh
             'squashfs-le-lzma': '\x71\x73\x68\x73', # qshs
@@ -31,12 +33,4 @@ fsmagic = {
           }
 
 squashcollection = ['squash-le', 'squash-be', 'squash-le-lzma', 'squash-be-lzma']
-
-'''Some file systems have a higher priority than others, since they are a wrapper around the contents'''
-
-'''Several markers'''
-
-marker = {
-            'Linux kernel (ARM)':           'Uncompressing Linux...',
-            #'Linux kernel (x86)':           'A20 gate not responding',
-          }
+cpio = ['070707', '070701', '070702']
