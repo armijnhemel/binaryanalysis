@@ -92,6 +92,28 @@ def extractEzIpupdate(lines):
 			return res
 	return -1
 
+def searchLibusb(path):
+        try:
+                binary = open(path, 'rb')
+                lines = binary.read()
+                if extractLibusb(lines) != -1:
+			return True
+		else:
+			return None
+        except Exception, e:
+                return None
+
+def extractLibusb(lines):
+	markerStrings = [ 'Check that you have permissions to write to %s/%s and, if you don\'t, that you set up hotplug (http://linux-hotplug.sourceforge.net/) correctly.'
+			, 'usb_os_find_busses: Skipping non bus directory %s'
+			, 'usb_os_init: couldn\'t find USB VFS in USB_DEVFS_PATH'
+			]
+	for marker in markerStrings:
+		res = lines.find(marker)
+		if res != -1:
+			return res
+	return -1
+
 def searchIproute(path):
         try:
                 binary = open(path, 'rb')
