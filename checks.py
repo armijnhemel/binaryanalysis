@@ -114,6 +114,29 @@ def extractLibusb(lines):
 			return res
 	return -1
 
+def searchVsftpd(path):
+        try:
+                binary = open(path, 'rb')
+                lines = binary.read()
+                if extractVsftpd(lines) != -1:
+			return True
+		else:
+			return None
+        except Exception, e:
+                return None
+
+def extractVsftpd(lines):
+	markerStrings = [ 'vsftpd: version'
+			, '(vsFTPd '
+			, 'VSFTPD_LOAD_CONF'
+			, 'run two copies of vsftpd for IPv4 and IPv6'
+			]
+	for marker in markerStrings:
+		res = lines.find(marker)
+		if res != -1:
+			return res
+	return -1
+
 def searchIproute(path):
         try:
                 binary = open(path, 'rb')
