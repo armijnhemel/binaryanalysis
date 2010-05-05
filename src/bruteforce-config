@@ -76,6 +76,11 @@ type    = program
 module  = checks
 method  = searchIptables
 
+[vsftpd]
+type    = program
+module  = checks
+method  = searchVsftpd
+
 [libusb]
 type    = program
 module  = checks
