@@ -76,6 +76,11 @@ type    = program
 module  = checks
 method  = searchIptables
 
+[libusb]
+type    = program
+module  = checks
+method  = searchLibusb
+
 [iproute]
 type    = program
 module  = checks
