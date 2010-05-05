@@ -71,6 +71,26 @@ type    = program
 module  = wirelesstools
 method  = searchWirelessTools
 
+[iptables]
+type    = program
+module  = checks
+method  = searchIptables
+
+[iproute]
+type    = program
+module  = checks
+method  = searchIproute
+
+[dproxy]
+type    = program
+module  = checks
+method  = searchDproxy
+
+[ez-ipupdate]
+type    = program
+module  = checks
+method  = searchEzIpupdate
+
 [loadlin]
 type    = program
 module  = checks

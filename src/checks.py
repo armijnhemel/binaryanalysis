@@ -26,3 +26,90 @@ def extractLoadLin(lines):
 		if res != -1:
 			return res
 	return -1
+
+def searchIptables(path):
+        try:
+                binary = open(path, 'rb')
+                lines = binary.read()
+                if extractIptables(lines) != -1:
+			return True
+		else:
+			return None
+        except Exception, e:
+                return None
+
+def extractIptables(lines):
+	markerStrings = [ 'iptables who? (do you need to insmod?)'
+			, 'Will be implemented real soon.  I promise ;)'
+			, 'can\'t initialize iptables table `%s\': %s'
+			]
+	for marker in markerStrings:
+		res = lines.find(marker)
+		if res != -1:
+			return res
+	return -1
+
+def searchDproxy(path):
+        try:
+                binary = open(path, 'rb')
+                lines = binary.read()
+                if extractDproxy(lines) != -1:
+			return True
+		else:
+			return None
+        except Exception, e:
+                return None
+
+def extractDproxy(lines):
+	markerStrings = [ '# dproxy monitors this file to determine when the machine is'
+			, '# If you want dproxy to log debug info specify a file here.'
+			]
+	for marker in markerStrings:
+		res = lines.find(marker)
+		if res != -1:
+			return res
+	return -1
+
+def searchEzIpupdate(path):
+        try:
+                binary = open(path, 'rb')
+                lines = binary.read()
+                if extractEzIpupdate(lines) != -1:
+			return True
+		else:
+			return None
+        except Exception, e:
+                return None
+
+def extractEzIpupdate(lines):
+	markerStrings = [ 'ez-ipupdate Version %s, Copyright (C) 1998-'
+			, '%s says that your IP address has not changed since the last update'
+			, 'you must provide either an interface or an address'
+			]
+	for marker in markerStrings:
+		res = lines.find(marker)
+		if res != -1:
+			return res
+	return -1
+
+def searchIproute(path):
+        try:
+                binary = open(path, 'rb')
+                lines = binary.read()
+                if extractIproute(lines) != -1:
+			return True
+		else:
+			return None
+        except Exception, e:
+                return None
+
+def extractIproute(lines):
+	markerStrings = [ 'Usage: tc [ OPTIONS ] OBJECT { COMMAND | help }'
+			, 'tc utility, iproute2-ss%s'
+			, 'Option "%s" is unknown, try "tc -help".'
+			]
+	for marker in markerStrings:
+		res = lines.find(marker)
+		if res != -1:
+			return res
+	return -1
