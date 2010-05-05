@@ -13,11 +13,10 @@ Per file:
 * file name
 * full path within the firmware
 * file type (determined with libmagic)
-* sha256sum
-* libraries that are linked to (if the file is a dynamic library or binary)
-* packages found in the binary
-
-plus any other checks that are deemed necessary.
+* sha256sum (not for empty files, symlinks, sockets, pipes)
+* libraries that are linked (if the file is a dynamic library or binary)
+* size (not for symlinks, sockets, pipes)
+* scan specific reports
 
 The searching program can be parameterised by supplying a list of checks that should be performed. This list also acts as a filter: only checks in the list will be checked for and reported. This way it is fairly easy to cherrypick checks you are interested in. Right now this does not work and all checks in the bruteforce configuration file are performed.
 
@@ -37,10 +36,37 @@ cleanup = cleanupGzip
 
 Each section defines the checks that we are interested in. If no list is given, then all checks are applied. The list is divided in two parts: unpacking of file systems and compressed files and program specific checks.
 
-  program
+ program
 
 "program" works on files. The result is a report which can be processed later by a pretty printer. This pretty printer is also dependent on the program. For example busybox needs different reporting than the Linux kernel which needs different reporting than Qt.
 
-  unpack
+ unpack
 
 "unpack" works on various compressed files or file systems and returns a directory that can be traversed by other scripts. An optional cleanup action is needed for cleaning up, or unmounting FUSE file systems.
+
+
+  Writing a new check
+
+    program
+
+Writing a new check can be added very simply. All that is needed is a Python method that takes a path to a file as its parameter. It should return either a string, unless there is a specific XML pretty printer for the check, where you can return pretty much whatever you want.
+
+    unpack
+
+The method for unpacking a file takes a path to a file as its parameter. It should return a list of tuples (directory, offset), where offset is the offset in the parent file, and directory is the name of the directory the file system was unpacked into for example with tempfile.mkdtemp().
+
+    XML pretty printing
+
+If the return value of your check is a more sophisticated than a simple string, or you want to display more details you can add your own XML pretty printer. The method a result (the return value of the check) and a XML document root element (from xml.dom.minidom) as its parameters. It should return a snippet of XML, which is then inserted into the final XML report.
+
+    bruteforce configuration file
+
+The configuration file for the bruteforce scanner is a file in the INI format. It has a section header (one word) and then a few name/value pairs. Mandatory fields are type (either 'program' or 'unpack'), module (name of the module that contains the check) and method (name of the method within the module). Optional fields are xmloutput (XML pretty printer).
+
+For example:
+
+[kernelchecks]
+type    = program
+module  = kernelanalysis
+method  = kernelChecks
+xmloutput = xmlprettyprint
