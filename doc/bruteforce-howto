@@ -1,24 +1,32 @@
   Brute force scanning
 
-Top level reporting:
-* cryptographic checksum (sha256) of the file
+The brute force scanner performs a series of checks on a file or a set of files to determine what is inside. Checks come in two sorts: checks to unpack a file system or compression format and checks that inspect individual files for all sorts of stuff. Reporting, if enabled (the default is to not report anything) is done in XML.
+
+For the top level file the following is reported:
+
 * file name of the scanned file
-* scan date plus time
+* scan date
+* cryptographic checksum (sha256) of the file
+* file type (determined with libmagic)
+* scans that were performed successfully
 
-Per directory:
-* full name of directory within the firmware
-* file listing (similar to ls -laR) after unpacking (this might skip things like device files)
+Per file system or compressed file that was found in a file (either the top level file or any other file) the following is reported:
 
-Per file:
+* type
+* file listing (similar to ls -laR) after unpacking (though unpacking might skip things like device files)
+* offset in the parent file
+
+Per file that is found inside a file system the following is reported:
+
 * file name
-* full path within the firmware
+* full path within the file system
 * file type (determined with libmagic)
 * sha256sum (not for empty files, symlinks, sockets, pipes)
 * libraries that are linked (if the file is a dynamic library or binary)
 * size (not for symlinks, sockets, pipes)
 * scan specific reports
 
-The searching program can be parameterised by supplying a list of checks that should be performed. This list also acts as a filter: only checks in the list will be checked for and reported. This way it is fairly easy to cherrypick checks you are interested in. Right now this does not work and all checks in the bruteforce configuration file are performed.
+The searching program can be parameterised by supplying a list of checks that should be performed. This list also acts as a filter: only checks in the list will be checked for and reported. This way it is fairly easy to cherrypick checks you are interested in. Right now all checks in the bruteforce configuration file are performed.
 
 The brute force scanner reads a list in a simple format, namely the same as .ini on Windows:
 
