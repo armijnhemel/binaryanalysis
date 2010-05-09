@@ -1,0 +1,76 @@
+Ideas for the knowledgebase
+===========================
+
+This file describes some ideas regarding the knowledgebase (milestone 4). It is based on the flow of how a firmware might pass through a scanning system.
+
+  Firmware layout
+
+A firmware can consist of file systems (compressed/uncompressed), bootloaders, kernels (compressed/uncompressed), graphic files (compressed/uncompressed) and so on.
+
+A file system can be nested inside other file systems, or appended to a kernel image, or prepended in front of a kernel image. In short: we can have nesting.
+
+|---bootloader
+|---kernel
+|     \-------file system
+|---file system
+
+The parts that can be found in a firmware are independent of each other and can all be extracted and analyzed separately. That means that it is fairly easy to separate information in a database.
+
+blob        -- unique number, index
+checksum    -- sha256, after unpacking
+type        -- type of the blob kernel, type of file system, combined, picture, etc.
+compression -- type of compression, if any
+offset      -- offset in the parent blob (represented as integers)
+parent      -- parent blob, or 0 if it is top level
+firmware    -- firmware it is part of (foreign key), although this actually only relevant for the top level firmware
+
++------+----------+----------+-------------+--------+--------+----------+
+| blob | sha256   |  type    | compression | offset | parent | firmware |
++------+----------+----------+-------------+--------+--------+----------+
+|  500 | 99999999 | firmware | none        |      0 |    0   |          |
++------+----------+----------+-------------+--------+--------+----------+
+|    2 | abcdefgh | kernel   | gzip        |     64 |  500   |          |
++------+----------+----------+-------------+--------+--------+----------+
+|    3 | fgbfsfff | ext2     | gzip        |   8192 |  500   |          |
++------+----------+----------+-------------+--------+--------+----------+
+
+This would describe a firmware, with a kernel blob (gzip compressed) at hex offset 0x40, followed by an ext2 file system with gzip compression at hex offset 0x2000.
+
+Every top level firmware could be identified by:
+
+id           -- unique number
+checksum     -- sha256sum
+version      -- version number, name, if applicable
+product      -- id (foreign key)
+scandate     -- date a device was scanned
+scantype     -- automatic/by hand (does this make sense? should this be included?)
+verified     -- (not sure if I would include this information or what it would mean. Verified by hand?)
+public       -- whether or not a scan report of this
+sources      -- boolean (are there sources for this device)
+compliant    -- boolean (combine with 'sources'? What if it was fixed eventually? what if we could not scan the firmware)
+comments     -- include a full report here? Is it necessary to make this searchable? It is kinda unstructured data.
+
+Every device could be identified by:
+
+id               -- unique number for a device (corresponds to "product" in the previous table)
+vendor           -- vendor name (NETGEAR, ASUS, Cisco, Linksys, etc. etc.)
+name             -- name of the device (WRT54G, etc.)
+type             -- subtype of the device (v5, 001, whatever is used)
+chipset          -- Texas Instruments AR7, Broadcom BCM6851 (with a join we can reduce this to ARM, MIPS, etc.)
+upstream vendor  -- useful information, which is typically not something that should be made publicly available
+
+An abstraction for the chipset:
+
+name             -- name of the chipset
+vendor           -- name of the vendor
+chipset family   -- generic chip family (MIPS, ARM, etc.)
+
+for example:
+
++---------+-------------------+-------+
+| name    | vendor            | chip  |
++---------+-------------------+-------+
+| AR7     | Texas Instruments | MIPS  |
++---------+-------------------+-------+
+| BCM6851 | Broadcom          | MIPS  |
++---------+-------------------+-------+
