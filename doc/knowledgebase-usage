@@ -1,0 +1,77 @@
+Using the knowledgebase
+
+Right now support for the knowledgebase is very minimal. It is only used in reporting, but this will be extended in the future.
+
+The knowledgebase uses sqlite. It is simple to port code that uses sqlite to any other relational database. The knowledgebase uses a few tables, as described in the knowledgebase design document.
+
+There are three scripts to initialize and populate the knowledgebase
+
+    knowledgebaseinit.py
+
+This script initializes the database and adds a few tables.
+
+$ python knowledgebaseinit.py --help
+Usage: knowledgebaseinit.py [options]
+
+Options:
+  -h, --help            show this help message and exit
+  -d FILE, --database=FILE
+                        path to database
+
+The command
+
+$ python knowledgebaseinit.py -d /tmp/db
+
+will create the database in the file /tmp/db.
+
+    knowledgebaseaddchipset.py
+
+This script can be used to add more chipset data to the knowledgebase. This data is not yet used by any of the scripts.
+
+$ python knowledgebaseaddchipset.py --help
+Usage: knowledgebaseaddchipset.py [options]
+
+Options:
+  -h, --help            show this help message and exit
+  -d FILE, --database=FILE
+                        path to database
+  -c CHIPSET, --chipset=CHIPSET
+                        name of chipset
+  -a ARCHITECTURE, --architecture=ARCHITECTURE
+                        chipset architecture (MIPS, ARM, etc.)
+  -m MANUFACTURER, --manufacturer=MANUFACTURER
+                        chipset manufacturer
+
+
+$ python knowledgebaseaddchipset.py -d /tmp/db -c Foo8 -a MIPS -m ACME\ Corporation
+
+    knowledgebaseadd.py
+
+This command adds information about devices and firmwares to the knowledgebase.
+
+$ python knowledgebaseadd.py --help
+Usage: knowledgebaseadd.py [options]
+
+Options:
+  -h, --help            show this help message and exit
+  -d FILE, --database=FILE
+                        path to database
+  -c CHIPSET, --chipset=CHIPSET
+                        name of chipset
+  -f FWVERSION, --firmwareversion=FWVERSION
+                        firmware version
+  -m MANUFACTURER, --manufacturer=MANUFACTURER
+                        name of manufacturer
+  -n NAME, --name=NAME  name of device
+  -p FILE, --firmware=FILE
+                        path to firmware
+  -u UPSTREAM, --upstream=UPSTREAM
+                        upstream vendor (optional)
+  -w HWVERSION, --hardwareversion=HWVERSION
+                        hardware version
+
+The command
+
+$ python knowledgebaseadd.py -d /tmp/db -f 4.20.8 -m Linksys -n WRT54G -c BCM5352 -w 4.0 -p ~/Downloads/WRT54G-EU_fw.zip
+
+will analyse the firmware file, determine the SHA256 hash and add it with other information to the knowledgebase.
