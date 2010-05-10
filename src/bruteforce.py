@@ -14,6 +14,7 @@ from optparse import OptionParser
 import ConfigParser
 import xml.dom.minidom
 import datetime
+import sqlite3
 
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
@@ -86,6 +87,41 @@ def prettyprintresxml(res, configs, scandate):
 	tmpnodetext.data = scandate.isoformat()
 	tmpnode.appendChild(tmpnodetext)
 	topnode.appendChild(tmpnode)
+
+	## try to get extra metadata from the knowledgebase regarding
+	## vendors, devices, hardware versions of devices and firmware versions
+	if conn != None:
+		c = conn.cursor()
+		c.execute('''select vendor, name, device.version, firmware.version from device, firmware where firmware.sha256=? and device.id == firmware.deviceid''', (res['sha256'],))
+		dbres = c.fetchall()
+		c.close()
+		for i in dbres:
+			devicenode = root.createElement('device')
+			(vendor,name,version,firmwareversion) = i
+			tmpnode = root.createElement('vendor')
+			tmpnodetext = xml.dom.minidom.Text()
+			tmpnodetext.data = vendor
+			tmpnode.appendChild(tmpnodetext)
+			devicenode.appendChild(tmpnode)
+
+			tmpnode = root.createElement('name')
+			tmpnodetext = xml.dom.minidom.Text()
+			tmpnodetext.data = name
+			tmpnode.appendChild(tmpnodetext)
+			devicenode.appendChild(tmpnode)
+
+			tmpnode = root.createElement('hardwareversion')
+			tmpnodetext = xml.dom.minidom.Text()
+			tmpnodetext.data = version
+			tmpnode.appendChild(tmpnodetext)
+			devicenode.appendChild(tmpnode)
+
+			tmpnode = root.createElement('firmwareversion')
+			tmpnodetext = xml.dom.minidom.Text()
+			tmpnodetext.data = firmwareversion
+			tmpnode.appendChild(tmpnodetext)
+			devicenode.appendChild(tmpnode)
+			topnode.appendChild(devicenode)
 
         for conf in ["name", "path", "magic", "sha256", "size", "architecture"]:
 		if conf in res:
@@ -263,8 +299,8 @@ def scanfile(path, file, checks, lentempdir=0):
 		res = scanArchitecture(path,file)
 		if res != None:
 			report['architecture'] = res
-	scanfile = "%s/%s" % (path, file)
-	res = scan(scanfile, checks, type)
+	scannedfile = "%s/%s" % (path, file)
+	res = scan(scannedfile, checks, type)
 	if res != []:
 		report['scans'] = res
 	return report
@@ -342,6 +378,7 @@ def main(argv):
         parser = OptionParser()
 	parser.add_option("-b", "--binary", action="store", dest="fw", help="path to firmware", metavar="FILE")
 	parser.add_option("-c", "--config", action="store", dest="cfg", help="path to configuration file", metavar="FILE")
+	parser.add_option("-d", "--database", action="store", dest="db", help="path to sqlite database (optional)", metavar="FILE")
 	parser.add_option("-z", "--cleanup", action="store_true", dest="cleanup", help="cleanup after analysis? (default: false)")
 	parser.add_option("-x", "--xml", action="store_true", dest="printxml", help="print in XML (default: false)")
 	(options, args) = parser.parse_args()
@@ -352,6 +389,16 @@ def main(argv):
 	except:
         	print "No valid firmware file"
         	sys.exit(1)
+
+	global conn
+	conn = None
+
+	if options.db != None:
+		try:
+			conn = sqlite3.connect(options.db)
+		except:
+			print "Can't open database file"
+			sys.exit(1)
 
 	if options.printxml == None:
 		options.printxml = False
