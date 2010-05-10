@@ -96,6 +96,11 @@ type    = program
 module  = checks
 method  = searchDproxy
 
+[wpa-supplicant]
+type    = program
+module  = checks
+method  = searchWpaSupplicant
+
 [ez-ipupdate]
 type    = program
 module  = checks
