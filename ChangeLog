@@ -1,6 +1,8 @@
 2010-05-10
 * add a simple check for wpa_supplicant
 * use data from the knowledgebase to report additional data
+* add a script to initialize a knowledgebase (sqlite) , as well as several separate
+scripts to maintain the knowledgebase
 
 2010-05-09
 * add a script for creating a knowledgebase and fill it with some test data
