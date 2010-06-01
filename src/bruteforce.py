@@ -228,7 +228,10 @@ def scanfile(path, file, checks, lentempdir=0):
 	if os.lstat("%s/%s" % (path, file)).st_size == 0:
 		return report
 
-	report['sha256'] = gethash(path, file)
+	## store the hash of the file for possibly querying the
+	## knowledgebase later on
+	filehash = gethash(path, file)
+	report['sha256'] = filehash
 
 	## Filter out various things based on magic type.
         if type.find('ASCII text') == 0:
@@ -300,7 +303,7 @@ def scanfile(path, file, checks, lentempdir=0):
 		if res != None:
 			report['architecture'] = res
 	scannedfile = "%s/%s" % (path, file)
-	res = scan(scannedfile, checks, type)
+	res = scan(scannedfile, checks, type, filehash)
 	if res != []:
 		report['scans'] = res
 	return report
@@ -323,8 +326,18 @@ def walktempdir(tempdir, checks):
         	pass
 	return reports
 
-def scan(scanfile, config, magic):
+## scan a single file. Optionally supply a filehash for checking a knowledgebase
+def scan(scanfile, config, magic, filehash=None):
 	reports = []
+
+	## get stuff from the knowledgebase, but skip if we have the 'scanalways' flag set
+	if not scanalways:
+		if filehash == None:
+			## we could not find the hash in the knowledgebase
+			pass
+		else:
+			pass
+
 	## list of magic file types that 'program' checks should not do
 	## to avoid false positives and superfluous scanning.
 	## Does not work correctly yet, for romfs for example. Solution:
@@ -376,6 +389,7 @@ def scan(scanfile, config, magic):
 
 def main(argv):
         parser = OptionParser()
+	parser.add_option("-a", "--always", action="store_true", dest="scanalways", help="always perform brute force scan even if results are availale in the knowledgebase (default false)")
 	parser.add_option("-b", "--binary", action="store", dest="fw", help="path to firmware", metavar="FILE")
 	parser.add_option("-c", "--config", action="store", dest="cfg", help="path to configuration file", metavar="FILE")
 	parser.add_option("-d", "--database", action="store", dest="db", help="path to sqlite database (optional)", metavar="FILE")
@@ -402,6 +416,12 @@ def main(argv):
 
 	if options.printxml == None:
 		options.printxml = False
+
+	global scanalways
+	if options.scanalways == None:
+		scanalways = False
+	else:
+		scanalways = options.scanalways
 
 	if options.cfg != None:
 		try:
