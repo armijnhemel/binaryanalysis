@@ -137,6 +137,26 @@ def extractVsftpd(lines):
 			return res
 	return -1
 
+def searchHostapd(path):
+        try:
+                binary = open(path, 'rb')
+                lines = binary.read()
+                if extractHostapd(lines) != -1:
+			return True
+		else:
+			return None
+        except Exception, e:
+                return None
+
+def extractHostapd(lines):
+	markerStrings = [ 'hostapd v'
+			]
+	for marker in markerStrings:
+		res = lines.find(marker)
+		if res != -1:
+			return res
+	return -1
+
 def searchWpaSupplicant(path):
         try:
                 binary = open(path, 'rb')
