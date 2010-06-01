@@ -1,5 +1,6 @@
 2010-06-01
 * add a simple check for hostapd
+* add some more stubs for integrating the knowledgebase
 
 2010-05-10
 * add a simple check for wpa_supplicant
