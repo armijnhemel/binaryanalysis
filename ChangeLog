@@ -1,3 +1,6 @@
+2010-06-01
+* add a simple check for hostapd
+
 2010-05-10
 * add a simple check for wpa_supplicant
 * use data from the knowledgebase to report additional data
