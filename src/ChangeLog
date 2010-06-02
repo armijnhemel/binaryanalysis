@@ -1,3 +1,7 @@
+2010-06-02
+* started work on a script to take the results from the output of the
+bruteforce tool and put the results into the knowledgebase
+
 2010-06-01
 * add a simple check for hostapd
 * add some more stubs for integrating the knowledgebase
