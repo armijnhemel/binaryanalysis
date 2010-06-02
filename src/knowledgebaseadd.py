@@ -5,7 +5,7 @@
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
-This script can be used to add chipset data to an existing knowledgebase
+This script can be used to add firmware data to an existing knowledgebase
 '''
 
 import os, sys, sqlite3, hashlib
