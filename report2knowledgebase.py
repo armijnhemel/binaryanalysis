@@ -23,20 +23,47 @@ from xml.xpath import Evaluate
 ## This requires that the script generating the XML file uses the same configuration file as this file for consistency
 def process(xmldata, config, options):
 	## first put information regarding the device itself in the knowledgebase
-	c = conn.cursor()
 	t = (options.vendor, options.name, options.hwversion, options.chipset, options.upstream)
 	c.execute('''insert into device(vendor, name, version, chipset, upstream) values (?, ?, ?, ?, ?)''', t)
 	conn.commit()
-	lastrow = c.lastrowid
-	print lastrow
 
-	##
+	## Insert the information about the firmware in the knowledgebase.
+	## The deviceid we use later on is the autoincremented id for the
+	## row we just inserted for the device.
+	deviceid = c.lastrowid
+	sha256 = Evaluate('file/sha256', j)[0].childNodes[0].data
+	t = (sha256, "", deviceid)
+	c.execute('''insert into firmware(sha256, version, deviceid) values (?, ?, ?)''', t)
+	conn.commit()
+	fwid = c.lastrowid
+
+	## first put information regarding the top level firmware in the knowledgebase
 	xmldoc = reader = PyExpat.Reader()
 	dom = reader.fromStream(xmldata)
-	print Evaluate('/file', dom)
-	## first put information regarding the top level firmware in the knowledgebase
+	elems = Evaluate('/report/sha256', dom)
+	sha256 = elems[0].childNodes[0].data
+	elems = Evaluate('/report/scans', dom)
+	for i in elems:
+		processScan(i, config, options, 0, fwid)
 
-	## then search for all file systems, extract sha256, type, offset in the parent and put that in the knowledgebase
+
+
+## search for all file systems, extract sha256, type, offset in the parent and put that in the knowledgebase
+def processScan(elem, config, options, parentid, firmwareid):
+	for j in elem.childNodes:
+		if config.has_option(j.tagName, 'type'):
+			if config.get(j.tagName, 'type') == 'unpack':
+				mag = config.get(j.tagName, 'magic')
+				offset = Evaluate('offset', j)[0].childNodes[0].data
+				sha256 = Evaluate('file/sha256', j)[0].childNodes[0].data
+				t = (sha256, "", mag, offset, parentid, firmwareid)
+				c.execute('''insert into filesystem(sha256, type, compression, offset, parentid, firmware) values (?, ?, ?, ?, ?, ?)''', t)
+				conn.commit()
+				fsid = c.lastrowid
+				# now recurse
+				newelems = Evaluate('file/scans', j)
+				for el in newelems:
+					processScan(el, config, options, fsid, firmwareid)
 
 def main(argv):
         parser = OptionParser()
@@ -94,6 +121,10 @@ def main(argv):
                 parser.error("Vendor name needed")
         if options.hwversion == None:
                 parser.error("Hardware version/revision needed")
+
+	global c
+	c = conn.cursor()
+
 	process(xmldata, config, options)
 
 

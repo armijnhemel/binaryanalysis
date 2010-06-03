@@ -1,3 +1,7 @@
+2010-06-03
+* reinstate 'magic' attribute in the configuration
+* tool to extract information from the XML output and add it to knowledgebase
+
 2010-06-02
 * started work on a script to take the results from the output of the
 bruteforce tool and put the results into the knowledgebase
