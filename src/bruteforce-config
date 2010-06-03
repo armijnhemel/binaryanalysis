@@ -7,63 +7,63 @@ method  = busybox_version
 type    = unpack
 module  = fwunpack
 method  = searchUnpackCpio
-#magic   = zip
+magic   = cpio
 #cleanup = cleanupZip
 
 [cab-unpack]
 type    = unpack
 module  = fwunpack
 method  = searchUnpackCab
-#magic   = zip
+magic   = cab
 #cleanup = cleanupZip
 
 [exe-unpack]
 type    = unpack
 module  = fwunpack
 method  = searchUnpack7z
-#magic   = zip
+magic   = 7z
 #cleanup = cleanupZip
 
 [tar-unpack]
 type    = unpack
 module  = fwunpack
 method  = searchUnpackTar
-#magic   = zip
+magic   = tar
 #cleanup = cleanupZip
 
 [rar-unpack]
 type    = unpack
 module  = fwunpack
 method  = searchUnpackRar
-#magic   = zip
+magic   = rar
 #cleanup = cleanupZip
 
 [zip-unpack]
 type    = unpack
 module  = fwunpack
 method  = searchUnpackZip
-#magic   = zip
+magic   = zip
 #cleanup = cleanupZip
 
 [gzip-unpack]
 type    = unpack
 module  = fwunpack
 method  = searchUnpackGzip
-#magic   = gzip
+magic   = gzip
 #cleanup = cleanupGzip
 
 [squashfs-unpack]
 type    = unpack
 module  = fwunpack
 method  = searchUnpackSquashfs
-#magic   = gzip
+magic   = squashfs
 #cleanup = cleanupSquashfs
 
 [lzma-unpack]
 type    = unpack
 module  = fwunpack
 method  = searchUnpackLZMA
-#magic   = gzip
+magic   = lzma
 #cleanup = cleanupLZMA
 
 [wireless-tools]
