@@ -60,7 +60,7 @@ def processScan(elem, config, options, parentid, firmwareid):
 				c.execute('''insert into filesystem(sha256, type, compression, offset, parentid, firmware) values (?, ?, ?, ?, ?, ?)''', t)
 				conn.commit()
 				fsid = c.lastrowid
-				# now recurse
+				# now recurse into the files in a file system
 				newelems = Evaluate('file/scans', j)
 				for el in newelems:
 					processScan(el, config, options, fsid, firmwareid)
@@ -115,6 +115,7 @@ def main(argv):
         else:
                 pass
 
+	## these entries are needed to be able to make a correct entry into the knowledgebase
         if options.name == None:
                 parser.error("Device name needed")
         if options.vendor == None:
