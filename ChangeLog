@@ -1,3 +1,6 @@
+2010-06-08
+* compatibility fixes for unzip 6.0
+
 2010-06-03
 * reinstate 'magic' attribute in the configuration
 * tool to extract information from the XML output and add it to knowledgebase

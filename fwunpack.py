@@ -238,7 +238,7 @@ def unpackZip(data, offset, tempdir=None):
 	## Use information from zipinfo -v to extract the right offsets (or at least the end offset
 	p = subprocess.Popen(['zipinfo', '-v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanuit, stanerr) = p.communicate()
-	res = re.search("Actual offset of end-of-central-dir record:\s*(\d+) \(", stanuit)
+	res = re.search("Actual[\w\s]*end-(?:of-)?cent(?:ral)?-dir record[\w\s]*:\s*(\d+) \(", stanuit)
 	if res != None:
 		endofcentraldir = int(res.groups(0)[0])
 	else:
@@ -271,6 +271,7 @@ def searchUnpackZip(filename):
 		endofcentraldir = 0
 		while(offset != -1):
 			(endofcentraldir, res) = unpackZip(data, offset)
+			#print "orig:", datafile, "offset:", offset, "res:", res, "endofcentraldir", endofcentraldir
 			if res != None:
 				diroffsets.append((res, offset))
 			if endofcentraldir == None:
