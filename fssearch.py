@@ -46,6 +46,9 @@ def findGzip(data, offset=0):
 def findZip(data, offset=0):
 	return findType('zip', data, offset)
 
+def findCramfs(data, offset=0):
+	return findType('cramfs', data, offset)
+
 def findRar(data, offset=0):
 	return findType('rar', data, offset)
 

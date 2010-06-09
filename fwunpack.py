@@ -130,6 +130,54 @@ def unpackCpio(data, offset, tempdir=None):
 	(stanuit, stanerr) = p.communicate(data[offset:])
 	return tmpdir
 
+def searchUnpackCramfs(filename):
+	datafile = open(filename, 'rb')
+	data = datafile.read()
+	datafile.close()
+	offset = fssearch.findCramfs(data)
+	if offset == -1:
+		return []
+	else:
+		diroffsets = []
+		while(offset != -1):
+			res = unpackCramfs(data, offset)
+			if res != None:
+				diroffsets.append((res, offset))
+			offset = fssearch.findCramfs(data, offset+1)
+		return diroffsets
+
+## tries to unpack stuff using fsck.cramfs. If it is successful, it will
+## return a directory for further processing, otherwise it will return None.
+def unpackCramfs(data, offset, tempdir=None):
+        if tempdir == None:
+                tmpdir = tempfile.mkdtemp()
+	else:
+		tmpdir = tempdir
+	## fsck.cramfs needs to unpack in a separate directory. So, create a new temporary
+	## directory to avoid name clashes
+        tmpdir2 = tempfile.mkdtemp()
+	## since fsck.cramfs can't deal with data via stdin first write it to
+	## a temporary location
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.write(tmpfile[0], data[offset:])
+
+	## right now this is a path to a specially adapted fsck.cramfs that ignores special inodes
+	## create a new path to unpack all stuff
+	p = subprocess.Popen(['/tmp/fsck.cramfs', '-x', tmpdir2 + "/cramfs", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	(stanuit, stanerr) = p.communicate()
+	if p.returncode != 0:
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+			os.rmdir(tmpdir2)
+		return
+	else:
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		os.rmdir(tmpdir)
+		return tmpdir2
+
 def searchUnpackSquashfs(filename):
 	datafile = open(filename, 'rb')
 	data = datafile.read()

@@ -52,6 +52,13 @@ method  = searchUnpackGzip
 magic   = gzip
 #cleanup = cleanupGzip
 
+#[cramfs-unpack]
+#type    = unpack
+#module  = fwunpack
+#method  = searchUnpackCramfs
+#magic   = cramfs
+#cleanup = cleanupCramfs
+
 [squashfs-unpack]
 type    = unpack
 module  = fwunpack

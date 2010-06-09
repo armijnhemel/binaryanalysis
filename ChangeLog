@@ -1,3 +1,8 @@
+2010-06-09
+* add preliminary support for cramfs (only tested with little endian cramfs).
+Some extra work is needed to get this to work (apply a patch, rebuild a tool),
+so it is disabled by default for now.
+
 2010-06-08
 * compatibility fixes for unzip 6.0
 
