@@ -28,6 +28,7 @@ fsmagic = {
             'squashfs-le-lzma': '\x71\x73\x68\x73', # qshs
             'squashfs-be-lzma': '\x73\x68\x73\x71', # shsq
             'lzma_alone':       '\x5d\x00\x00',
+            'cramfs':           '\x45\x3d\xcd\x28',
             #'lzma_alone':       '\x5d\x00\x00\x80',
             #'jffs2-le':         '\x85\x19',
           }
