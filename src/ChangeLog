@@ -1,3 +1,6 @@
+2010-06-17
+* add configuration for BusyBox 1.16.2
+
 2010-06-09
 * add preliminary support for cramfs (only tested with little endian cramfs).
 Some extra work is needed to get this to work (apply a patch, rebuild a tool),
