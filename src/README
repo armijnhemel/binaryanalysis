@@ -76,11 +76,11 @@ $ python busybox-compare-configs.py -e /tmp/extracted-config -f /tmp/original-co
 
   Running appletname-extractor.py
 
-The appletname-extractor.py tool takes two arguments: the full path to include/applets.h for a BusyBox source tree and a version number. It outputs a Python pickle file, which should be stored in the directory 'configs' before it can be used by busybox.py.
+The appletname-extractor.py tool takes two arguments: the full path to include/applets.h (or include/applets.src.h for 1.17.0 or later) for a BusyBox source tree and a version number. It outputs a Python pickle file, which should be stored in the directory 'configs' before it can be used by busybox.py.
 
 Example invocation:
 
-$ python appletname-extractor.py /tmp/busybox-1.00-rc3/include/applets.h 1.00-rc3
+$ python appletname-extractor.py -a /tmp/busybox-1.00-rc3/include/applets.h -n 1.00-rc3
 
 This tool is typically run when a new version of BusyBox is released.
 
