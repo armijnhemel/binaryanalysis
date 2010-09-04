@@ -1,3 +1,6 @@
+2010-09-04
+* add configuration for BusyBox 1.17.2
+
 2010-08-18
 * add configurations for BusyBox 1.17.0 and 1.17.1
 * fix README for appletname-extractor.py
