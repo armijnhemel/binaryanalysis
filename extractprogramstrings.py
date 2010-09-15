@@ -2,7 +2,7 @@ import sys, os, string, re
 from optparse import OptionParser
 import lucene
 
-def extractsourcestrings(srcdir, writer):
+def extractsourcestrings(srcdir, writer, package, pversion):
         srcdirlen = len(srcdir)+1
         osgen = os.walk(srcdir)
 
@@ -44,7 +44,29 @@ def extractsourcestrings(srcdir, writer):
                                                 	continue
                                         	elif res.strip() == "":
                                                 	continue
-						print res
+						if res.strip().endswith("\\n"):
+                                                	storestring = res.strip()[:-2]
+                                        	else:
+                                                	storestring = res.strip()
+                                        	if storestring.startswith("\\n"):
+                                                	storestring = storestring[2:].strip()
+                                        	# replace tabs
+                                        	storestring = storestring.replace("\\t", "\t").strip()
+                                        	#storestring = storestring.replace("\\n", "\n")
+                                        	doc = lucene.Document()
+                                        	doc.add(lucene.Field("filename", "%s/%s" % (i[0][srcdirlen:], p),
+                                               		lucene.Field.Store.YES,
+                                                	lucene.Field.Index.NOT_ANALYZED))
+                                        	doc.add(lucene.Field("printstring", storestring,
+                                                	lucene.Field.Store.YES,
+                                                	lucene.Field.Index.NOT_ANALYZED))
+                                        	doc.add(lucene.Field("package", package,
+                                                	lucene.Field.Store.YES,
+                                                	lucene.Field.Index.NOT_ANALYZED))
+                                        	doc.add(lucene.Field("version", pversion,
+                                                	lucene.Field.Store.YES,
+                                                	lucene.Field.Index.NOT_ANALYZED))
+                                        	writer.addDocument(doc)
 
 
 	except Exception, e:
@@ -55,11 +77,17 @@ def main(argv):
         parser = OptionParser()
         parser.add_option("-d", "--directory", dest="kd", help="path to sources directory", metavar="DIR")
 	parser.add_option("-i", "--index", dest="id", help="path to Lucene index directory", metavar="DIR")
+	parser.add_option("-p", "--package", dest="package", help="package name", metavar="PACKAGE")
+	parser.add_option("-v", "--version", dest="pversion", help="package version", metavar="PACKAGEVERSION")
         (options, args) = parser.parse_args()
         if options.kd == None:
                 parser.error("Path to sources directory needed")
         if options.id == None:
                 parser.error("Path to Lucene index directory needed")
+        if options.package == None:
+                parser.error("Package name needed")
+        if options.pversion == None:
+                parser.error("Package version needed")
         if options.kd.endswith('/'):
                 kerneldir = options.kd[:-1]
         else:
@@ -74,7 +102,7 @@ def main(argv):
                                     lucene.IndexWriter.MaxFieldLength.LIMITED)
         writer.setMaxFieldLength(1048576)
 
-	extractsourcestrings(kerneldir, writer)
+	extractsourcestrings(kerneldir, writer, options.package, options.pversion)
 
         writer.optimize()
         writer.close()
