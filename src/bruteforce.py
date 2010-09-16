@@ -394,7 +394,6 @@ def main(argv):
 	parser.add_option("-c", "--config", action="store", dest="cfg", help="path to configuration file", metavar="FILE")
 	parser.add_option("-d", "--database", action="store", dest="db", help="path to sqlite database (optional)", metavar="FILE")
 	parser.add_option("-z", "--cleanup", action="store_true", dest="cleanup", help="cleanup after analysis? (default: false)")
-	parser.add_option("-x", "--xml", action="store_true", dest="printxml", help="print in XML (default: false)")
 	(options, args) = parser.parse_args()
 	if options.fw == None:
         	parser.error("Path to firmware needed")
@@ -413,9 +412,6 @@ def main(argv):
 		except:
 			print "Can't open database file"
 			sys.exit(1)
-
-	if options.printxml == None:
-		options.printxml = False
 
 	global scanalways
 	if options.scanalways == None:
@@ -447,9 +443,8 @@ def main(argv):
 	## more lists in some fields, like libraries, or more result lists if
 	## the file inside a file system we looked at was in fact a file system.
 	res = scanfile(os.path.dirname(firmware_binary), os.path.basename(firmware_binary), config)
-	if options.printxml:
-		xml = prettyprintresxml(res, config, scandate)
-		print xml.toxml()
+	xml = prettyprintresxml(res, config, scandate)
+	print xml.toxml()
 
 if __name__ == "__main__":
         main(sys.argv)
