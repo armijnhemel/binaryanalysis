@@ -97,8 +97,12 @@ def main(argv):
 
         storeDir = options.id
         store = lucene.SimpleFSDirectory(lucene.File(storeDir))
+	
         analyzer = lucene.StandardAnalyzer(lucene.Version.LUCENE_CURRENT)
-        writer = lucene.IndexWriter(store, analyzer, True,
+
+	exists = lucene.IndexReader.indexExists(store)
+
+        writer = lucene.IndexWriter(store, analyzer, not exists,
                                     lucene.IndexWriter.MaxFieldLength.LIMITED)
         writer.setMaxFieldLength(1048576)
 
