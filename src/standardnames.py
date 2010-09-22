@@ -1,3 +1,6 @@
+## http://www.unix.org/version3/apis.html
+## more standards to follow
+
 functionnames = [ 'FD_CLR'
                 , 'FD_ISSET'
                 , 'FD_SET'
