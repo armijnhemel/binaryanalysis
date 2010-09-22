@@ -135,10 +135,11 @@ localenames = [
      "Yiddish"
        ]
 
-## list of encodings, from various places in gettext and vim
+## list of encodings and character sets, from various places in gettext and vim
 
 charsets = [ "ANSI_X3.4-1968",
     "ASCII",
+    "EBCDIC",
     "US-ASCII",
     "ISO-8859-1",
     "ISO-8859-2",
