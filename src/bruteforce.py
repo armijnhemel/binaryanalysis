@@ -42,7 +42,13 @@ def prettyprintresxmlsnippet(res, config, root):
                 			tmpnodetext.data = res[i]
                 			topnode.appendChild(tmpnodetext)
 			elif config.get(i, 'type') == 'unpack':
-                		topnode = root.createElement(i)
+                		#topnode = root.createElement(i)
+                		topnode = root.createElement('unpack')
+                		typenode = root.createElement('type')
+                		tmpnodetext = xml.dom.minidom.Text()
+                		tmpnodetext.data = i
+                		typenode.appendChild(tmpnodetext)
+                		topnode.appendChild(typenode)
 				for elem in res[i]:
 					if 'offset' in elem:
                 				tmpnode = root.createElement("offset")

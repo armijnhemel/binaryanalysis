@@ -3,70 +3,70 @@ type    = program
 module  = busyboxversion
 method  = busybox_version
 
-[cpio-unpack]
+[cpio]
 type    = unpack
 module  = fwunpack
 method  = searchUnpackCpio
 magic   = cpio
 #cleanup = cleanupZip
 
-[cab-unpack]
+[cab]
 type    = unpack
 module  = fwunpack
 method  = searchUnpackCab
 magic   = cab
 #cleanup = cleanupZip
 
-[exe-unpack]
+[exe]
 type    = unpack
 module  = fwunpack
 method  = searchUnpack7z
 magic   = 7z
 #cleanup = cleanupZip
 
-[tar-unpack]
+[tar]
 type    = unpack
 module  = fwunpack
 method  = searchUnpackTar
 magic   = tar
 #cleanup = cleanupZip
 
-[rar-unpack]
+[rar]
 type    = unpack
 module  = fwunpack
 method  = searchUnpackRar
 magic   = rar
 #cleanup = cleanupZip
 
-[zip-unpack]
+[zip]
 type    = unpack
 module  = fwunpack
 method  = searchUnpackZip
 magic   = zip
 #cleanup = cleanupZip
 
-[gzip-unpack]
+[gzip]
 type    = unpack
 module  = fwunpack
 method  = searchUnpackGzip
 magic   = gzip
 #cleanup = cleanupGzip
 
-#[cramfs-unpack]
+#[cramfs]
 #type    = unpack
 #module  = fwunpack
 #method  = searchUnpackCramfs
 #magic   = cramfs
 #cleanup = cleanupCramfs
 
-[squashfs-unpack]
+[squashfs]
 type    = unpack
 module  = fwunpack
 method  = searchUnpackSquashfs
 magic   = squashfs
 #cleanup = cleanupSquashfs
 
-[lzma-unpack]
+[lzma]
 type    = unpack
 module  = fwunpack
 method  = searchUnpackLZMA

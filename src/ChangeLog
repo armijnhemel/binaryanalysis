@@ -1,3 +1,14 @@
+2010-10-07
+* rename unpack types in the bruteforce configuration
+* replace per scan specific unpack elements with a generic "unpack" element, add
+type of unpack to a new element "type", which specifies the type.
+
+2010-09-15
+* store scanned strings to Lucene
+
+2010-09-13
+* start on a program to extract strings from sourcecode
+
 2010-09-04
 * add configuration for BusyBox 1.17.2
 
