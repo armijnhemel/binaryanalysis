@@ -208,3 +208,4 @@ charsets = [ "ANSI_X3.4-1968",
     "CP65001"
            ]
 
+## TODO: country names from ISO 3166
