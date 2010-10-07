@@ -1,6 +1,9 @@
-import sys, os, string, re
+import sys, os, string, re, subprocess, magic
 from optparse import OptionParser
 import lucene
+
+ms = magic.open(magic.MAGIC_NONE)
+ms.load()
 
 def extractsourcestrings(srcdir, writer, package, pversion):
         srcdirlen = len(srcdir)+1
@@ -10,10 +13,30 @@ def extractsourcestrings(srcdir, writer, package, pversion):
                 while True:
                         i = osgen.next()
                         for p in i[2]:
-				## we're only interested in a few files, perhaps add more
-				if p.endswith('.c') or p.endswith('.h'):
-					source = open("%s/%s" % (i[0], p)).read()
-					results = re.findall("\"(.*?)(?<!\\\)\"", source, re.MULTILINE|re.DOTALL)
+				## we're only interested in a few files right now, perhaps add more in the future
+				if p.endswith('.c') or p.endswith('.h') or p.endswith('.cpp'):
+					## first remove all C and C++ style comments
+					## if a file is in iso-8859-1 instead of ASCII or UTF-8 we need
+					## to do some extra work by converting it first using iconv.
+					#print p
+					if "ISO-8859" in ms.file("%s/%s" % (i[0], p)):
+						src = open("%s/%s" % (i[0], p)).read()
+						p1 = subprocess.Popen(["iconv", "-f", "latin1", "-t", "utf-8"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+						cleanedup_src = p1.communicate(src)[0]
+						p2 = subprocess.Popen(['./remccoms3.sed'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,close_fds=True)
+						(stanout, stanerr) = p2.communicate(cleanedup_src)
+						source = stanout
+					else:
+						p1 = subprocess.Popen(['./remccoms3.sed', "%s/%s" % (i[0], p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+                        			(stanout, stanerr) = p1.communicate()
+                        			if p1.returncode != 0:
+							continue
+						else:
+							source = stanout
+					## if " is directly preceded by an uneven amount of \ it should not be used
+					## TODO: fix for uneveness
+					results = re.findall("(?<!')\"(.*?)(?<!\\\)\"", source, re.MULTILINE|re.DOTALL)
+					#results = re.findall("\"(.*?)(?<!\\\)\"", source, re.MULTILINE|re.DOTALL)
 					for res in results:
                                         	## some strings are simply not interesting
                                         	if res.strip() == "\\n":
@@ -67,8 +90,6 @@ def extractsourcestrings(srcdir, writer, package, pversion):
                                                 	lucene.Field.Store.YES,
                                                 	lucene.Field.Index.NOT_ANALYZED))
                                         	writer.addDocument(doc)
-
-
 	except Exception, e:
 		print e
 
@@ -93,6 +114,7 @@ def main(argv):
         else:
                 kerneldir = options.kd
 
+	## initiate Lucene, launch JVM
         lucene.initVM()
 
         storeDir = options.id
@@ -100,6 +122,10 @@ def main(argv):
 	
         analyzer = lucene.StandardAnalyzer(lucene.Version.LUCENE_CURRENT)
 
+	## If we already have an index at the specified location we simply add to it.
+	## If not we create a new index. The drawback is that if you add
+	## sources twice they will end up in the knowledgebase twice so take
+	## care that you only add something once.
 	exists = lucene.IndexReader.indexExists(store)
 
         writer = lucene.IndexWriter(store, analyzer, not exists,

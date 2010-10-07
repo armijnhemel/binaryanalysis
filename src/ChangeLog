@@ -2,6 +2,9 @@
 * rename unpack types in the bruteforce configuration
 * replace per scan specific unpack elements with a generic "unpack" element, add
 type of unpack to a new element "type", which specifies the type.
+* extractprogramstrings.py: strip comments first, optionally run through
+iconv first, make regex more reliable
+* add public domain sed script that removes C/C++ style comments
 
 2010-09-15
 * store scanned strings to Lucene
