@@ -13,13 +13,25 @@ def extractsourcestrings(srcdir, writer, package, pversion):
                 while True:
                         i = osgen.next()
                         for p in i[2]:
-				## we're only interested in a few files right now, perhaps add more in the future
-				if p.endswith('.c') or p.endswith('.h') or p.endswith('.cpp'):
-					## first remove all C and C++ style comments
-					## if a file is in iso-8859-1 instead of ASCII or UTF-8 we need
-					## to do some extra work by converting it first using iconv.
-					#print p
+				## we're only interested in a few files right now, will add more in the future
+				## some filenames might have uppercase extensions, so lowercase them first
+				p_nocase = p.lower()
+				if p_nocase.endswith('.c') or p_nocase.endswith('.h') or p_nocase.endswith('.cpp'):
+					## Remove all C and C++ style comments. If a file is in iso-8859-1
+					## instead of ASCII or UTF-8 we need to do some extra work by
+					## converting it first using iconv.
+					## This is not failsafe, because magic gets it wrong sometimes, so we
+					## need some way to kill the subprocess if it is running too long.
+					print p
 					if "ISO-8859" in ms.file("%s/%s" % (i[0], p)):
+						src = open("%s/%s" % (i[0], p)).read()
+						p1 = subprocess.Popen(["iconv", "-f", "latin1", "-t", "utf-8"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+						cleanedup_src = p1.communicate(src)[0]
+						p2 = subprocess.Popen(['./remccoms3.sed'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,close_fds=True)
+						(stanout, stanerr) = p2.communicate(cleanedup_src)
+						source = stanout
+					## we don't know what this is, assuming it's latin1, but we could be wrong
+					elif "data" in ms.file("%s/%s" % (i[0], p)):
 						src = open("%s/%s" % (i[0], p)).read()
 						p1 = subprocess.Popen(["iconv", "-f", "latin1", "-t", "utf-8"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 						cleanedup_src = p1.communicate(src)[0]
@@ -38,35 +50,6 @@ def extractsourcestrings(srcdir, writer, package, pversion):
 					results = re.findall("(?<!')\"(.*?)(?<!\\\)\"", source, re.MULTILINE|re.DOTALL)
 					#results = re.findall("\"(.*?)(?<!\\\)\"", source, re.MULTILINE|re.DOTALL)
 					for res in results:
-                                        	## some strings are simply not interesting
-                                        	if res.strip() == "\\n":
-                                        		continue
-                                        	if res.strip() == "\\n\\n":
-                                                	continue
-                                        	elif res.strip() == "\\t":
-                                                	continue
-                                        	elif res.strip() == "%s%s":
-                                                	continue
-                                        	elif res.strip() == "%s:":
-                                                	continue
-                                        	elif res.strip() == "%s":
-                                                	continue
-                                        	elif res.strip() == "%d":
-                                                	continue
-                                        	elif res.strip() == ":":
-                                                	continue
-                                        	elif res.strip() == ",":
-                                                	continue
-                                        	elif res.strip() == "(":
-                                                	continue
-                                        	elif res.strip() == ")":
-                                                	continue
-                                        	elif res.strip() == "()":
-                                                	continue
-                                        	elif res.strip() == "|":
-                                                	continue
-                                        	elif res.strip() == "":
-                                                	continue
 						if res.strip().endswith("\\n"):
                                                 	storestring = res.strip()[:-2]
                                         	else:
@@ -91,7 +74,8 @@ def extractsourcestrings(srcdir, writer, package, pversion):
                                                 	lucene.Field.Index.NOT_ANALYZED))
                                         	writer.addDocument(doc)
 	except Exception, e:
-		print e
+		pass
+		#print e
 
 
 def main(argv):

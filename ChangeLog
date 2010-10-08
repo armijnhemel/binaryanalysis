@@ -1,3 +1,6 @@
+2010-10-08
+* iconv fixes, some extra comments
+
 2010-10-07
 * rename unpack types in the bruteforce configuration
 * replace per scan specific unpack elements with a generic "unpack" element, add
