@@ -23,7 +23,8 @@ def extractsourcestrings(srcdir, writer, package, pversion):
 					## This is not failsafe, because magic gets it wrong sometimes, so we
 					## need some way to kill the subprocess if it is running too long.
 					print p
-					if "ISO-8859" in ms.file("%s/%s" % (i[0], p)):
+					datatype = ms.file("%s/%s" % ( i[0], p))
+					if "ISO-8859" in datatype:
 						src = open("%s/%s" % (i[0], p)).read()
 						p1 = subprocess.Popen(["iconv", "-f", "latin1", "-t", "utf-8"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 						cleanedup_src = p1.communicate(src)[0]
@@ -31,7 +32,7 @@ def extractsourcestrings(srcdir, writer, package, pversion):
 						(stanout, stanerr) = p2.communicate(cleanedup_src)
 						source = stanout
 					## we don't know what this is, assuming it's latin1, but we could be wrong
-					elif "data" in ms.file("%s/%s" % (i[0], p)):
+					elif "data" in datatype or "ASCII" in datatype:
 						src = open("%s/%s" % (i[0], p)).read()
 						p1 = subprocess.Popen(["iconv", "-f", "latin1", "-t", "utf-8"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 						cleanedup_src = p1.communicate(src)[0]
