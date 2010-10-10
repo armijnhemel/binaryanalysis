@@ -64,7 +64,7 @@ def extract_configuration(lines, version):
 
 def main(argv):
 	parser = OptionParser()
-        parser.add_option("-a", "--applets", action="store", dest="applets", help="path to applets.h", metavar="FILE")
+        parser.add_option("-a", "--applets", action="store", dest="applets", help="path to applets.h or applets.src.h", metavar="FILE")
         parser.add_option("-n", "--busyboxversion", action="store", dest="busyboxversion", help="BusyBox version", metavar="VERSION")
         (options, args) = parser.parse_args()
         if options.applets == None:
