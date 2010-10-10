@@ -22,7 +22,7 @@ def extractsourcestrings(srcdir, writer, package, pversion):
 					## converting it first using iconv.
 					## This is not failsafe, because magic gets it wrong sometimes, so we
 					## need some way to kill the subprocess if it is running too long.
-					print p
+					#print p
 					datatype = ms.file("%s/%s" % ( i[0], p))
 					if "ISO-8859" in datatype:
 						src = open("%s/%s" % (i[0], p)).read()

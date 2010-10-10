@@ -1122,3 +1122,235 @@ functionnames = [ 'FD_CLR'
                 , 'y1'
                 , 'yn'
                 ]
+
+## errors defined in POSIX and others, from sysdeps/gnu/errlist.c in glibc
+## TODO: add sysdeps/posix/gai_strerror-strs.h
+errors = [
+    "Success",
+    "Operation not permitted",
+    "No such file or directory",
+    "No such process",
+    "Interrupted system call",
+    "Input/output error",
+    "No such device or address",
+    "Argument list too long",
+    "Exec format error",
+    "Bad file descriptor",
+    "No child processes",
+    "Resource deadlock avoided",
+    "Cannot allocate memory",
+    "Permission denied",
+    "Bad address",
+    "Block device required",
+    "Device or resource busy",
+    "File exists",
+    "Invalid cross-device link",
+    "No such device",
+    "Not a directory",
+    "Is a directory",
+    "Invalid argument",
+    "Too many open files",
+    "Too many open files in system",
+    "Inappropriate ioctl for device",
+    "Text file busy",
+    "File too large",
+    "No space left on device",
+    "Illegal seek",
+    "Read-only file system",
+    "Too many links",
+    "Broken pipe",
+    "Numerical argument out of domain",
+    "Numerical result out of range",
+    "Resource temporarily unavailable",
+    "Operation would block",
+    "Operation now in progress",
+    "Operation already in progress",
+    "Socket operation on non-socket",
+    "Message too long",
+    "Protocol wrong type for socket",
+    "Protocol not available",
+    "Protocol not supported",
+    "Socket type not supported",
+    "Operation not supported",
+    "Protocol family not supported",
+    "Address family not supported by protocol",
+    "Address already in use",
+    "Cannot assign requested address",
+    "Network is down",
+    "Network is unreachable",
+    "Network dropped connection on reset",
+    "Software caused connection abort",
+    "Connection reset by peer",
+    "No buffer space available",
+    "Transport endpoint is already connected",
+    "Transport endpoint is not connected",
+    "Destination address required",
+    "Cannot send after transport endpoint shutdown",
+    "Too many references: cannot splice",
+    "Connection timed out",
+    "Connection refused",
+    "Too many levels of symbolic links",
+    "File name too long",
+    "Host is down",
+    "No route to host",
+    "Directory not empty",
+    "Too many processes",
+    "Too many users",
+    "Disk quota exceeded",
+    "Stale NFS file handle",
+    "Object is remote",
+    "RPC struct is bad",
+    "RPC version wrong",
+    "RPC program not available",
+    "RPC program version wrong",
+    "RPC bad procedure for program",
+    "No locks available",
+    "Inappropriate file type or format",
+    "Authentication error",
+    "Need authenticator",
+    "Function not implemented",
+    "Not supported",
+    "Invalid or incomplete multibyte or wide character",
+    "Inappropriate operation for background process",
+    "Translator died",
+    "You really blew it this time",
+    "Computer bought the farm",
+    "Gratuitous error",
+    "Bad message",
+    "Identifier removed",
+    "Multihop attempted",
+    "No data available",
+    "Link has been severed",
+    "No message of desired type",
+    "Out of streams resources",
+    "Device not a stream",
+    "Value too large for defined data type",
+    "Protocol error",
+    "Timer expired",
+    "Operation canceled",
+    "Interrupted system call should be restarted",
+    "Channel number out of range",
+    "Level 2 not synchronized",
+    "Level 3 halted",
+    "Level 3 reset",
+    "Link number out of range",
+    "Protocol driver not attached",
+    "No CSI structure available",
+    "Level 2 halted",
+    "Invalid exchange",
+    "Invalid request descriptor",
+    "Exchange full",
+    "No anode",
+    "Invalid request code",
+    "Invalid slot",
+    "File locking deadlock error",
+    "Bad font file format",
+    "Machine is not on the network",
+    "Package not installed",
+    "Advertise error",
+    "Srmount error",
+    "Communication error on send",
+    "RFS specific error",
+    "Name not unique on network",
+    "File descriptor in bad state",
+    "Remote address changed",
+    "Can not access a needed shared library",
+    "Accessing a corrupted shared library",
+    ".lib section in a.out corrupted",
+    "Attempting to link in too many shared libraries",
+    "Cannot exec a shared library directly",
+    "Streams pipe error",
+    "Structure needs cleaning",
+    "Not a XENIX named type file",
+    "No XENIX semaphores available",
+    "Is a named type file",
+    "Remote I/O error",
+    "No medium found",
+    "Wrong medium type",
+    "Required key not available",
+    "Key has expired",
+    "Key has been revoked",
+    "Key was rejected by service",
+    "Owner died",
+    "State not recoverable"
+	      ]
+
+# list of signals as defined in glibc from sysdeps/generic/siglist.h
+signals = [
+  "Hangup",
+  "Interrupt",
+  "Quit",
+  "Illegal instruction",
+  "Trace/breakpoint trap",
+  "Aborted",
+  "Floating point exception",
+  "Killed",
+  "Bus error",
+  "Segmentation fault",
+  "Broken pipe",
+  "Alarm clock",
+  "Terminated",
+  "Urgent I/O condition",
+  "Stopped (signal)",
+  "Stopped",
+  "Continued",
+  "Child exited",
+  "Stopped (tty input)",
+  "Stopped (tty output)",
+  "I/O possible",
+  "CPU time limit exceeded",
+  "File size limit exceeded",
+  "Virtual timer expired",
+  "Profiling timer expired",
+  "Window changed",
+  "User defined signal 1",
+  "User defined signal 2",
+  "EMT trap",
+  "Bad system call",
+  "Stack fault",
+  "Information request",
+  "Power failure",
+  "Resource lost"
+	  ]
+
+## paths extracted from glibc:
+## resolv/netdb.h
+## sysdeps/unix/sysv/linux/paths.h
+
+paths = [ "/bin/csh"
+	, "/bin/sh"
+	, "/boot/vmlinux"
+	, "/dev/"
+	, "/dev/console"
+	, "/dev/drum"
+	, "/dev/kmem"
+	, "/dev/mem"
+	, "/dev/null"
+	, "/dev/tty"
+	, "/etc/fstab"
+	, "/etc/hosts.equiv"
+	, "/etc/hosts"
+	, "/etc/mtab"
+	, "/etc/networks"
+	, "/etc/nologin"
+	, "/etc/nsswitch.conf"
+	, "/etc/protocols"
+	, "/etc/services"
+	, "/etc/shadow"
+	, "/etc/shells"
+	, "/proc/kmsg"
+	, "/tmp/"
+	, "/usr/sbin/sendmail"
+	, "/usr/share/man"
+	, "/usr/bin/vi"
+	, "/var/db/"
+	, "/var/log/lastlog"
+	, "/var/log/wtmp"
+	, "/var/mail"
+	, "/var/lib"
+	, "/var/run/"
+	, "/var/run/dev.db"
+	, "/var/run/utmp"
+	, "/var/spool/rwho"
+	, "/var/tmp/"
+        ]
