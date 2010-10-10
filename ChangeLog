@@ -1,3 +1,7 @@
+2010-10-10
+* add configuration for BusyBox 1.17.3
+* change helptext for BusyBox config extraction script
+
 2010-10-08
 * iconv fixes, some extra comments
 
