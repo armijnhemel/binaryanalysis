@@ -1354,3 +1354,53 @@ paths = [ "/bin/csh"
 	, "/var/spool/rwho"
 	, "/var/tmp/"
         ]
+
+## Sun RPC from sunrpc/pmap_rmt.c in glibc and libc/inet/rpc/pmap_rmt.c in uClibc
+
+## times, dates, from locale/C-time.c in glibc, test/locale/tst-C-locale.c in uClibc
+
+timedates = [ "Sun",
+              "Mon",
+              "Tue",
+              "Wed",
+              "Thu",
+              "Fri",
+              "Sat",
+              "Sunday",
+              "Monday",
+              "Tuesday",
+              "Wednesday",
+              "Thursday",
+              "Friday",
+              "Saturday",
+              "Jan",
+              "Feb",
+              "Mar",
+              "Apr",
+              "May",
+              "Jun",
+              "Jul",
+              "Aug",
+              "Sep",
+              "Oct",
+              "Nov",
+              "Dec",
+              "January",
+              "February",
+              "March",
+              "April",
+              "May",
+              "June",
+              "July",
+              "August",
+              "September",
+              "October",
+              "November",
+              "December",
+              "AM",
+              "PM",
+              "%a %b %e %H:%M:%S %Y",
+              "%m/%d/%y",
+              "%H:%M:%S",
+              "%I:%M:%S %p"
+              ]
