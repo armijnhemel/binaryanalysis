@@ -1,3 +1,6 @@
+2010-10-18
+* busybox.py: exit printing an error when we can't find a version number
+
 2010-10-10
 * add configuration for BusyBox 1.17.3
 * change helptext for BusyBox config extraction script
