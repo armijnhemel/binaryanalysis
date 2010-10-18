@@ -244,6 +244,9 @@ def main(argv):
 	version = extract_version(busybox_lines)
 
 	## ... and read in names from all applets we have extracted from the BusyBox source
+	if version == None:
+		print "File does not appear to contain BusyBox"
+		sys.exit(1)
 	bbconfig = pickle.load(open('configs/%s-config' % (version,)))
 
 	## determine the configuration (can be empty)
