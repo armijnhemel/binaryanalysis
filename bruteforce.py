@@ -396,17 +396,17 @@ def scan(scanfile, config, magic, filehash=None):
 def main(argv):
         parser = OptionParser()
 	parser.add_option("-a", "--always", action="store_true", dest="scanalways", help="always perform brute force scan even if results are availale in the knowledgebase (default false)")
-	parser.add_option("-b", "--binary", action="store", dest="fw", help="path to firmware", metavar="FILE")
+	parser.add_option("-b", "--binary", action="store", dest="fw", help="path to binary file", metavar="FILE")
 	parser.add_option("-c", "--config", action="store", dest="cfg", help="path to configuration file", metavar="FILE")
 	parser.add_option("-d", "--database", action="store", dest="db", help="path to sqlite database (optional)", metavar="FILE")
 	parser.add_option("-z", "--cleanup", action="store_true", dest="cleanup", help="cleanup after analysis? (default: false)")
 	(options, args) = parser.parse_args()
 	if options.fw == None:
-        	parser.error("Path to firmware needed")
+        	parser.error("Path to binary file needed")
 	try:
         	firmware_binary = options.fw
 	except:
-        	print "No valid firmware file"
+        	print "No file to scan found"
         	sys.exit(1)
 
 	global conn

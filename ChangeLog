@@ -1,3 +1,6 @@
+2010-10-19
+* bruteforce.py: change help message, since we can scan more than firmwares
+
 2010-10-18
 * busybox.py: exit printing an error when we can't find a version number
 
