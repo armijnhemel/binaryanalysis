@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 ## borrowed from gettext sources, in itself based on ISO 639
 ## http://www.w3.org/WAI/ER/IG/ert/iso639.htm
 
