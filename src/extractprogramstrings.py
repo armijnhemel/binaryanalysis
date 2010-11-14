@@ -50,6 +50,7 @@ def extractsourcestrings(srcdir, writer, package, pversion):
 					## TODO: fix for uneveness
 					results = re.findall("(?<!')\"(.*?)(?<!\\\)\"", source, re.MULTILINE|re.DOTALL)
 					#results = re.findall("\"(.*?)(?<!\\\)\"", source, re.MULTILINE|re.DOTALL)
+					## TODO correctly remove strip() statements everywhere, correctly store the string we extracted
 					for res in results:
 						if res.strip().endswith("\\n"):
                                                 	storestring = res.strip()[:-2]
