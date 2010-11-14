@@ -45,7 +45,9 @@ def main(argv):
         parser = OptionParser()
         parser.add_option("-d", "--database", action="store", dest="db", help="path to Lucene database)", metavar="DIR")
         parser.add_option("-f", "--files", action="store", dest="filedir", help="path to directory containing files to unpack)", metavar="DIR")
-        parser.add_option("-z", "--cleanup", action="store_true", dest="cleanup", help="cleanup after unpacking? (default: true)")
+        parser.add_option("-v", "--verify", action="store_true", dest="verify", help="verify files, don't process (default: false)")
+	# implement later
+        #parser.add_option("-z", "--cleanup", action="store_true", dest="cleanup", help="cleanup after unpacking? (default: true)")
         (options, args) = parser.parse_args()
 
 
@@ -53,8 +55,14 @@ def main(argv):
         filelist = open(options.filedir + "/LIST").readlines()
         for unpackfile in filelist:
                 (package, version, filename) = unpackfile.strip().split()
-                temporarydir = unpack(options.filedir, filename)
-		extractprogramstrings.main(["-i", "/tmp/lucene", "-d", temporarydir, "-p", package, "-v", version])
+		if options.verify:
+			try:
+				os.stat("%s/%s" % (options.filedir, filename))
+			except:
+				print >>sys.stderr, "Can't find %s" % filename
+		else:
+                	temporarydir = unpack(options.filedir, filename)
+			extractprogramstrings.main(["-i", "/tmp/lucene", "-d", temporarydir, "-p", package, "-v", version])
 
 if __name__ == "__main__":
         main(sys.argv)
