@@ -86,7 +86,8 @@ def main(argv):
 	parser.add_option("-i", "--index", dest="id", help="path to Lucene index directory", metavar="DIR")
 	parser.add_option("-p", "--package", dest="package", help="package name", metavar="PACKAGE")
 	parser.add_option("-v", "--version", dest="pversion", help="package version", metavar="PACKAGEVERSION")
-        (options, args) = parser.parse_args()
+        (options, args) = parser.parse_args(argv)
+        #(options, args) = parser.parse_args()
         if options.kd == None:
                 parser.error("Path to sources directory needed")
         if options.id == None:
@@ -124,4 +125,4 @@ def main(argv):
         writer.close()
 
 if __name__ == "__main__":
-        main(sys.argv)
+        main(sys.argv[1:])
