@@ -44,11 +44,13 @@ def unpack(dir, filename):
 def main(argv):
         parser = OptionParser()
         parser.add_option("-d", "--database", action="store", dest="db", help="path to Lucene database)", metavar="DIR")
-        parser.add_option("-f", "--files", action="store", dest="filedir", help="path to directory containing files to unpack)", metavar="DIR")
+        parser.add_option("-f", "--filedir", action="store", dest="filedir", help="path to directory containing files to unpack)", metavar="DIR")
         parser.add_option("-v", "--verify", action="store_true", dest="verify", help="verify files, don't process (default: false)")
 	# implement later
         #parser.add_option("-z", "--cleanup", action="store_true", dest="cleanup", help="cleanup after unpacking? (default: true)")
         (options, args) = parser.parse_args()
+	if options.filedir == None:
+		print >>sys.stderr, "Specify dir with files"
 
 
         ## TODO: do all kinds of checks here
