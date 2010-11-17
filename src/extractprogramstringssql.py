@@ -52,18 +52,19 @@ def extractsourcestrings(srcdir, sqldb, package, pversion):
 					#results = re.findall("\"(.*?)(?<!\\\)\"", source, re.MULTILINE|re.DOTALL)
 					## TODO correctly remove strip() statements everywhere, correctly store the string we extracted
 					for res in results:
-						if res.strip().endswith("\\n"):
-                                                	storestring = res.strip()[:-2]
-                                        	else:
-                                                	storestring = res.strip()
-                                        	if storestring.startswith("\\n"):
-                                                	storestring = storestring[2:].strip()
+						storestring = res
+						#if res.strip().endswith("\\n"):
+                                                #	storestring = res.strip()[:-2]
+                                        	#else:
+                                                #	storestring = res.strip()
+                                        	#if storestring.startswith("\\n"):
+                                                #	storestring = storestring[2:].strip()
                                         	# replace tabs
-                                        	storestring = storestring.replace("\\t", "\t").strip()
+                                        	#storestring = storestring.replace("\\t", "\t").strip()
 						#print storestring
 						sqldb.execute('''insert into extracted (programstring, package, version, filename) values (?, ?, ?, ?)''', (storestring, package, pversion, u"%s/%s" % (i[0][srcdirlen:], p)))
 	except Exception, e:
-		print e
+		#print e
 		pass
 
 
