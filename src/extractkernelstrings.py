@@ -184,7 +184,7 @@ def extractkernelstrings(kerneldir, lucenewriter):
 				for staticexpr in staticexprs:
 					results = staticexpr.findall(source)
         				for res in results:
-						searchresults = searchresults + re.findall("\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", res, re.MULTILINE)
+						searchresults = searchresults + re.findall("\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]*)\"", res, re.MULTILINE)
 
 				for res in searchresults:
 					## some strings are simply not interesting
