@@ -61,8 +61,7 @@ def extractsourcestrings(srcdir, sqldb, package, pversion):
                                                 #	storestring = storestring[2:].strip()
                                         	# replace tabs
                                         	#storestring = storestring.replace("\\t", "\t").strip()
-						#print storestring
-						sqldb.execute('''insert into extracted (programstring, package, version, filename) values (?, ?, ?, ?)''', (storestring, package, pversion, u"%s/%s" % (i[0][srcdirlen:], p)))
+						sqldb.execute('''insert into extracted (programstring, package, version, filename) values (?, ?, ?, ?)''', (unicode(storestring), package, pversion, u"%s/%s" % (i[0][srcdirlen:], p)))
 	except Exception, e:
 		#print e
 		pass
