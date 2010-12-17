@@ -11,6 +11,7 @@ import sqlite3
 exprs = []
 exprs.append(re.compile("sprintf\s*\((?:[\w\s+<>\-\[\]]*),\s*\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
 exprs.append(re.compile("printf\s*\((?:[\w\s]*)\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
+exprs.append(re.compile("execvp\s*\(\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]*)\"", re.MULTILINE))
 exprs.append(re.compile("dev_warn\s*\((?:[\w\s&->\(\)]*),\s*\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
 exprs.append(re.compile("panic\s*\(\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
 exprs.append(re.compile("die_if_kernel\s*\(\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
