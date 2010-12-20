@@ -6,11 +6,12 @@
 
 import sys, os, string, re
 from optparse import OptionParser
-import lucene
+import sqlite3
 
 exprs = []
 exprs.append(re.compile("sprintf\s*\((?:[\w\s+<>\-\[\]]*),\s*\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
 exprs.append(re.compile("printf\s*\((?:[\w\s]*)\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
+exprs.append(re.compile("execvp\s*\(\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]*)\"", re.MULTILINE))
 exprs.append(re.compile("dev_warn\s*\((?:[\w\s&->\(\)]*),\s*\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
 exprs.append(re.compile("panic\s*\(\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
 exprs.append(re.compile("die_if_kernel\s*\(\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
@@ -103,7 +104,7 @@ staticexprs = []
 staticexprs.append(re.compile("static\s+(?:\w+s+)?struct\s+(?:[\w*\[\]{};\s]+)\s*=\s*\{(.*)\};", re.MULTILINE|re.DOTALL))
 staticexprs.append(re.compile("static\s+(?:\w+\s+)?char\s+\s*\*\s*\w+\[\w*\]\s*=\s*\{(.*)\};", re.MULTILINE|re.DOTALL))
 
-def extractkernelstrings(kerneldir, lucenewriter):
+def extractkernelstrings(kerneldir, sqldb):
 	kerneldirlen = len(kerneldir)+1
 	osgen = os.walk(kerneldir)
 
@@ -215,14 +216,7 @@ def extractkernelstrings(kerneldir, lucenewriter):
 					# replace tabs
 					storestring = storestring.replace("\\t", "\t").strip()
 					#storestring = storestring.replace("\\n", "\n")
-					doc = lucene.Document()
-					doc.add(lucene.Field("name", "%s/%s" % (i[0][kerneldirlen:], p),
-						lucene.Field.Store.YES,
-						lucene.Field.Index.NOT_ANALYZED))
-					doc.add(lucene.Field("printstring", storestring,
-						lucene.Field.Store.YES,
-						lucene.Field.Index.NOT_ANALYZED))
-					lucenewriter.addDocument(doc)
+					sqldb.execute('''insert into extracted (printstring, filename) values (?, ?)''', (storestring, u"%s/%s" % (i[0][kerneldirlen:], p)))
 
 				results = []
 				for symex in symbolexprs:
@@ -230,14 +224,7 @@ def extractkernelstrings(kerneldir, lucenewriter):
 
 				for res in results:
 					storestring = res.strip()
-					doc = lucene.Document()
-					doc.add(lucene.Field("name", "%s/%s" % (i[0][kerneldirlen:], p),
-						lucene.Field.Store.YES,
-						lucene.Field.Index.NOT_ANALYZED))
-					doc.add(lucene.Field("symbolstring", storestring,
-						lucene.Field.Store.YES,
-						lucene.Field.Index.NOT_ANALYZED))
-					lucenewriter.addDocument(doc)
+					sqldb.execute('''insert into symbol (symbolstring, filename) values (?, ?)''', (storestring, u"%s/%s" % (i[0][kerneldirlen:], p)))
 
 				results = []
 				for funex in funexprs:
@@ -247,26 +234,20 @@ def extractkernelstrings(kerneldir, lucenewriter):
 					if "#define" in res:
 						continue
 					storestring = res.strip()
-					doc = lucene.Document()
-					doc.add(lucene.Field("name", "%s/%s" % (i[0][kerneldirlen:], p),
-						lucene.Field.Store.YES,
-						lucene.Field.Index.NOT_ANALYZED))
-					doc.add(lucene.Field("functionname", storestring,
-						lucene.Field.Store.YES,
-						lucene.Field.Index.NOT_ANALYZED))
-					lucenewriter.addDocument(doc)
+					sqldb.execute('''insert into function (functionstring, filename) values (?, ?)''', (storestring, u"%s/%s" % (i[0][kerneldirlen:], p)))
+
 	except StopIteration:
 		pass
 
 def main(argv):
         parser = OptionParser()
         parser.add_option("-d", "--directory", dest="kd", help="path to Linux kernel directory", metavar="DIR")
-        parser.add_option("-i", "--index", dest="id", help="path to Lucene index directory", metavar="DIR")
+        parser.add_option("-i", "--index", dest="id", help="path to SQLite directory", metavar="DIR")
         (options, args) = parser.parse_args()
         if options.kd == None:
                 parser.error("Path to Linux kernel directory needed")
         if options.id == None:
-                parser.error("Path to Lucene index directory needed")
+                parser.error("Path to SQLite directory needed")
         #try:
         	## open the Linux kernel directory and do some sanity checks
                 #kernel_path = open(options.kd, 'rb')
@@ -278,19 +259,20 @@ def main(argv):
 		kerneldir = options.kd[:-1]
 	else:
 		kerneldir = options.kd
-	lucene.initVM()
 
-	storeDir = options.id
-        store = lucene.SimpleFSDirectory(lucene.File(storeDir))
-	analyzer = lucene.StandardAnalyzer(lucene.Version.LUCENE_CURRENT)
-        writer = lucene.IndexWriter(store, analyzer, True,
-                                    lucene.IndexWriter.MaxFieldLength.LIMITED)
-        writer.setMaxFieldLength(1048576)
+        conn = sqlite3.connect(options.id)
+        c = conn.cursor()
 
-	extractkernelstrings(kerneldir, writer)
+        try:
+                c.execute('''create table extracted (printstring text, filename text)''')
+                c.execute('''create table symbol (symbolstring text, filename text)''')
+                c.execute('''create table function (functionstring text, filename text)''')
+        except:
+                pass
 
-        writer.optimize()
-        writer.close()
+	extractkernelstrings(kerneldir, c)
+        conn.commit()
+        c.close()
 
 
 if __name__ == "__main__":

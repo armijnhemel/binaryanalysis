@@ -11,10 +11,6 @@ Requirements are:
 - module-init-tools (for modinfo)
 - gzip (for zcat)
 - xz (for lzma)
-- PyLucene (latest version possible)
-- java-1.6.0-openjdk, plus dependencies (Apache Ant, etc.) for PyLucene
-
-Installing PyLucene is outside of the scope of this document.
 
   Running the binary analysis tool
 
