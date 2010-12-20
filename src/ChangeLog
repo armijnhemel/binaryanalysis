@@ -1,3 +1,6 @@
+2010-12-20
+* remove dependency on PyLucene, replace with sqlite3
+
 2010-12-15
 * add configuration for BusyBox 1.17.4 and 1.18.0
 

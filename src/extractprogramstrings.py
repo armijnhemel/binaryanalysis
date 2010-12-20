@@ -1,11 +1,11 @@
 import sys, os, string, re, subprocess, magic
 from optparse import OptionParser
-import lucene
+import sqlite3
 
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
-def extractsourcestrings(srcdir, writer, package, pversion):
+def extractsourcestrings(srcdir, sqldb, package, pversion):
         srcdirlen = len(srcdir)+1
         osgen = os.walk(srcdir)
 
@@ -52,32 +52,19 @@ def extractsourcestrings(srcdir, writer, package, pversion):
 					#results = re.findall("\"(.*?)(?<!\\\)\"", source, re.MULTILINE|re.DOTALL)
 					## TODO correctly remove strip() statements everywhere, correctly store the string we extracted
 					for res in results:
-						if res.strip().endswith("\\n"):
-                                                	storestring = res.strip()[:-2]
-                                        	else:
-                                                	storestring = res.strip()
-                                        	if storestring.startswith("\\n"):
-                                                	storestring = storestring[2:].strip()
+						storestring = res
+						#if res.strip().endswith("\\n"):
+                                                #	storestring = res.strip()[:-2]
+                                        	#else:
+                                                #	storestring = res.strip()
+                                        	#if storestring.startswith("\\n"):
+                                                #	storestring = storestring[2:].strip()
                                         	# replace tabs
-                                        	storestring = storestring.replace("\\t", "\t").strip()
-                                        	#storestring = storestring.replace("\\n", "\n")
-                                        	doc = lucene.Document()
-                                        	doc.add(lucene.Field("filename", "%s/%s" % (i[0][srcdirlen:], p),
-                                               		lucene.Field.Store.YES,
-                                                	lucene.Field.Index.NOT_ANALYZED))
-                                        	doc.add(lucene.Field("printstring", storestring,
-                                                	lucene.Field.Store.YES,
-                                                	lucene.Field.Index.NOT_ANALYZED))
-                                        	doc.add(lucene.Field("package", package,
-                                                	lucene.Field.Store.YES,
-                                                	lucene.Field.Index.NOT_ANALYZED))
-                                        	doc.add(lucene.Field("version", pversion,
-                                                	lucene.Field.Store.YES,
-                                                	lucene.Field.Index.NOT_ANALYZED))
-                                        	writer.addDocument(doc)
+                                        	#storestring = storestring.replace("\\t", "\t").strip()
+						sqldb.execute('''insert into extracted (programstring, package, version, filename) values (?, ?, ?, ?)''', (unicode(storestring), package, pversion, u"%s/%s" % (i[0][srcdirlen:], p)))
 	except Exception, e:
-		pass
 		#print e
+		pass
 
 
 def main(argv):
@@ -101,28 +88,17 @@ def main(argv):
         else:
                 kerneldir = options.kd
 
-	## initiate Lucene, launch JVM
-        lucene.initVM()
+        conn = sqlite3.connect(options.id)
+	c = conn.cursor()
 
-        storeDir = options.id
-        store = lucene.SimpleFSDirectory(lucene.File(storeDir))
-	
-        analyzer = lucene.StandardAnalyzer(lucene.Version.LUCENE_CURRENT)
+	try:
+		c.execute('''create table extracted (programstring text, package text, version text, filename text)''')
+	except:
+		pass
 
-	## If we already have an index at the specified location we simply add to it.
-	## If not we create a new index. The drawback is that if you add
-	## sources twice they will end up in the knowledgebase twice so take
-	## care that you only add something once.
-	exists = lucene.IndexReader.indexExists(store)
-
-        writer = lucene.IndexWriter(store, analyzer, not exists,
-                                    lucene.IndexWriter.MaxFieldLength.LIMITED)
-        writer.setMaxFieldLength(1048576)
-
-	extractsourcestrings(kerneldir, writer, options.package, options.pversion)
-
-        writer.optimize()
-        writer.close()
+	extractsourcestrings(kerneldir, c, options.package, options.pversion)
+	conn.commit()
+	c.close()
 
 if __name__ == "__main__":
         main(sys.argv[1:])

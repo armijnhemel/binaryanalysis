@@ -15,7 +15,7 @@ Compression is determined using magic
 import sys, os, magic
 import tempfile, bz2, tarfile, gzip
 from optparse import OptionParser
-import extractprogramstrings
+import extractprogramstringssql
 
 tarmagic = ['POSIX tar archive (GNU)'
            , 'tar archive'
@@ -64,7 +64,7 @@ def main(argv):
 				print >>sys.stderr, "Can't find %s" % filename
 		else:
                 	temporarydir = unpack(options.filedir, filename)
-			extractprogramstrings.main(["-i", "/tmp/lucene", "-d", temporarydir, "-p", package, "-v", version])
+			extractprogramstrings.main(["-i", "/tmp/sqlite", "-d", temporarydir, "-p", package, "-v", version])
 
 if __name__ == "__main__":
         main(sys.argv)
