@@ -15,7 +15,6 @@ setup(name='bat',
       scripts=['bruteforce.py', 'busybox-compare-configs.py'],
       data_files=[('/etc/bat/configs', glob.glob('configs/*')),
                   ('/etc/bat',  ['bruteforce-config']),
-                  ('share/doc/bat-1.0',  glob.glob('../doc/*')),
                  ],
      long_description="""The Binary Analysis Tool is a modular framework that assists with auditing
 the contents of compiled software. It makes it easier and cheaper to look
