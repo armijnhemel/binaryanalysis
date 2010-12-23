@@ -32,8 +32,8 @@ def prettyprintresxmlsnippet(res, config, root):
 				try:
 					module = config.get(i, 'module')
 					method = config.get(i, 'xmloutput')
-					exec "from %s import %s as %s_%s" % (module, method, module, method)
-					xmlres = eval("%s_%s(res[i], root)" % (module, method))
+					exec "from %s import %s as bat_%s" % (module, method, method)
+					xmlres = eval("bat_%s(res[i], root)" % (method))
 					if xmlres != None:
                 				topnode = xmlres
 				except Exception, e:
@@ -367,9 +367,9 @@ def scan(scanfile, config, magic, filehash=None):
 				report = {}
 				module = config.get(section, 'module')
 				method = config.get(section, 'method')
-				exec "from %s import %s as %s_%s" % (module, method, module, method)
+				exec "from %s import %s as bat_%s" % (module, method, method)
 				## temporary stuff, this should actually be nicely wrapped in a report tuple
-				res = eval("%s_%s(scanfile)" % (module, method))
+				res = eval("bat_%s(scanfile)" % (method))
 				if res != None:
 					report[section] = res
 					reports.append(report)
@@ -377,8 +377,8 @@ def scan(scanfile, config, magic, filehash=None):
 				## return value is the temporary dir, plus offset in the parent file
 				module = config.get(section, 'module')
 				method = config.get(section, 'method')
-				exec "from %s import %s as %s_%s" % (module, method, module, method)
-				diroffsets = eval("%s_%s(scanfile)" % (module, method))
+				exec "from %s import %s as bat_%s" % (module, method, method)
+				diroffsets = eval("bat_%s(scanfile)" % (method))
 				for diroffset in diroffsets:
 					report = {}
 					if diroffset == None:
