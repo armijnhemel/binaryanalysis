@@ -17,7 +17,7 @@ busybox.py in the near future.
 
 import sys, os, string, re
 from optparse import OptionParser
-import busybox
+import bat.busybox as busybox
 import pickle
 import xml.dom.minidom
 
