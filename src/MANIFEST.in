@@ -1,2 +1,3 @@
 include bruteforce-config
 include configs/*
+include bat/*
