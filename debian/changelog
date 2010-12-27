@@ -1,0 +1,5 @@
+bat (1.0-1) unstable; urgency=low
+
+  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+
+ -- bat <bat@unknown>  Mon, 27 Dec 2010 21:43:43 +0100
