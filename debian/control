@@ -10,7 +10,7 @@ Homepage: http://www.binaryanalysis.org/
 
 Package: bat
 Architecture: any
-Depends: python-support, python (>= 2.5)
+Depends: python-support, python (>= 2.5), python-magic, binutils, e2tools, squashfs-tools, module-init-tools, gzip, lzma, zip, unrar, cabextract, p7zip, cpio, tar, bzip2
 Description: <insert up to 60 chars description>
  The Binary Analysis Tool is a modular framework that assists with auditing
  the contents of compiled software. It makes it easier and cheaper to look
