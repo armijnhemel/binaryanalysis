@@ -1,0 +1,16 @@
+HOWTO: Generating BAT packages for your distribution
+
+If you want to install BAT through the package manager of your distribution you might first need to generate packages for it if none exist. For BAT there is currently support to build packages for RPM-based systems and for DEB-based systems.
+
+  Building packages for RPM based systems
+
+1. Make a fresh checkout from Subversion
+2. run the command:
+     python setup.py bdist_rpm
+
+This will create a few files: an RPM file and an SRPM file. The RPM file will typically only work on the distribution you built it on, since several dependencies and paths (like the Python version) will be hardcoded in the RPM. If you need to install it on various distributions you can rebuild the SRPM.
+
+
+  Building packages for DEB based systems
+
+FIXME
