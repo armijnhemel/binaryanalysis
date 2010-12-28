@@ -1,5 +1,6 @@
 2010-12-28
 * make a configuration file for bruteforce.py mandatory
+* add configuration, plus default configuration, to bat.busybox.py
 
 2010-12-22
 * add configuration for BusyBox 1.18.1
