@@ -429,16 +429,14 @@ def main(argv):
 		try:
         		configfile = open(options.cfg, 'r')
 		except:
-			configfile = None
+			print "Need configuration file"
+			sys.exit(1)
 	else:
-		configfile = None
+		print "Need configuration file"
+		sys.exit(1)
 
-	if configfile != None:
-		config = ConfigParser.ConfigParser()
-        	config.readfp(configfile)
-	## use default system wide config
-	else:
-		pass
+	config = ConfigParser.ConfigParser()
+	config.readfp(configfile)
 
 	scandate = datetime.datetime.utcnow()
 
