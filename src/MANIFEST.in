@@ -1,3 +1,6 @@
 include bruteforce-config
 include configs/*
 include bat/*
+include README
+include ChangeLog
+include LICENSE
