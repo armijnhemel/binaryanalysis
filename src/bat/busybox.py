@@ -224,6 +224,7 @@ def extract_version(lines):
 def main(argv):
 	parser = OptionParser()
 	parser.add_option("-b", "--binary", dest="bb", help="path to BusyBox binary", metavar="FILE")
+	parser.add_option("-c", "--config", dest="bbconfigs", help="path to extracted BusyBox configs", metavar="FILE")
 	parser.add_option("-f", "--found", dest="found", action="store_true", help="print applets that can be found (default)")
 	parser.add_option("-m", "--missing", dest="missing", action="store_true", help="print applets that can't be found", metavar=None)
 	parser.add_option("-x", "--xml", dest="xmloutput", action="store_true", help="output in XML (default false)", metavar=None)
@@ -247,7 +248,15 @@ def main(argv):
 	if version == None:
 		print "File does not appear to contain BusyBox"
 		sys.exit(1)
-	bbconfig = pickle.load(open('configs/%s-config' % (version,)))
+
+	## read the location of the BAT configuration, default to /etc/bat
+	if options.bbconfigs != None:
+		## TODO: verify the location actually exists
+		bbconfigs = options.bbconfigs
+	else:
+		bbconfigs = "/etc/bat"
+
+	bbconfig = pickle.load(open('%s/configs/%s-config' % (bbconfigs, version)))
 
 	## determine the configuration (can be empty)
 	bb_configuration = extract_configuration(busybox_lines, options.bb, bbconfig)
