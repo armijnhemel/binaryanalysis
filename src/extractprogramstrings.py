@@ -24,6 +24,9 @@ def extractsourcestrings(srcdir, sqldb, package, pversion):
 					## need some way to kill the subprocess if it is running too long.
 					#print p
 					datatype = ms.file("%s/%s" % ( i[0], p))
+					print >>sys.stderr, "%s/%s" % (i[0], p), " ", datatype
+					if "AppleDouble" in datatype:
+						continue
 					if "ISO-8859" in datatype:
 						src = open("%s/%s" % (i[0], p)).read()
 						p1 = subprocess.Popen(["iconv", "-f", "latin1", "-t", "utf-8"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
@@ -93,6 +96,7 @@ def main(argv):
 
 	try:
 		c.execute('''create table extracted (programstring text, package text, version text, filename text)''')
+		c.execute('''create index programstring_index on extracted(programstring);''')
 	except:
 		pass
 
