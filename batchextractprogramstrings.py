@@ -15,7 +15,7 @@ Compression is determined using magic
 import sys, os, magic
 import tempfile, bz2, tarfile, gzip
 from optparse import OptionParser
-import extractprogramstringssql
+import extractprogramstrings
 
 tarmagic = ['POSIX tar archive (GNU)'
            , 'tar archive'
@@ -24,7 +24,7 @@ tarmagic = ['POSIX tar archive (GNU)'
 def unpack(dir, filename):
         ms = magic.open(magic.MAGIC_NONE)
         ms.load()
-        filemagic = ms.file("%s/%s" % (dir, filename))
+        filemagic = ms.file(os.path.realpath("%s/%s" % (dir, filename)))
 
         ## just assume if it is bz2 or gzip that we are looking at tar files with compression
 
@@ -57,6 +57,7 @@ def main(argv):
         filelist = open(options.filedir + "/LIST").readlines()
         for unpackfile in filelist:
                 (package, version, filename) = unpackfile.strip().split()
+                print >>sys.stderr, filename
 		if options.verify:
 			try:
 				os.stat("%s/%s" % (options.filedir, filename))
@@ -64,7 +65,8 @@ def main(argv):
 				print >>sys.stderr, "Can't find %s" % filename
 		else:
                 	temporarydir = unpack(options.filedir, filename)
-			extractprogramstrings.main(["-i", "/tmp/sqlite", "-d", temporarydir, "-p", package, "-v", version])
+			if temporarydir != None:
+				extractprogramstrings.main(["-i", "/tmp/sqlite", "-d", temporarydir, "-p", package, "-v", version])
 
 if __name__ == "__main__":
         main(sys.argv)
