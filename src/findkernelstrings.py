@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2010 Armijn Hemel for LOCO (LOOHUIS CONSULTING)
+## Copyright 2010-2011 Armijn Hemel for LOCO (LOOHUIS CONSULTING)
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 import os, sys, re, subprocess
@@ -12,15 +12,15 @@ from optparse import OptionParser
 parser = OptionParser()
 parser.add_option("-a", "--architecture", dest="arch", help="hardware architecture (optional)")
 parser.add_option("-f", "--found", dest="found", action="store_true", help="print symbols that can be found (default)")
-parser.add_option("-c", "--configindex", dest="configindex", help="path to Lucene index with configs", metavar="DIR")
-parser.add_option("-i", "--index", dest="index", help="path to Lucene index directory", metavar="DIR")
+parser.add_option("-c", "--configindex", dest="configindex", help="path to database with configs", metavar="DIR")
+parser.add_option("-i", "--index", dest="index", help="path to database with kernel strings", metavar="DIR")
 parser.add_option("-k", "--kernel", dest="kernel", help="path to Linux kernel image", metavar="FILE")
 parser.add_option("-m", "--missing", dest="missing", action="store_true", help="print symbols that can't be found", metavar=None)
 parser.add_option("-s", "--size", dest="stringsize", help="stringsize (default 6)")
 (options, args) = parser.parse_args()
 if options.index == None:
 	## check if this directory actually exists
-	parser.error("Path to Lucene index directory needed")
+	parser.error("Path to directory with kernel strings needed")
 if options.kernel == None:
 	parser.error("Path to Linux kernel image needed")
 if options.missing == None and options.found == None:
@@ -54,28 +54,28 @@ seenlinux = False
 seenstrings = []
 #seenaaaaaa = False
 for kernelstring in kernelstrings:
-	bleb = kernelstring.strip()
-	if "inux" in bleb:
+	kstring = kernelstring.strip()
+	if "inux" in kstring:
 		seenlinux = True
-	#if bleb == "AAAAAA":
+	#if kstring == "AAAAAA":
 	#	seenaaaaaa = True
-	if len(bleb) >= stringsize and seenlinux:
-		if re.match("(\<\d\>)", bleb) != None:
-			zoekstring = bleb[3:]
+	if len(kstring) >= stringsize and seenlinux:
+		if re.match("(\<\d\>)", kstring) != None:
+			searchstring = kstring[3:]
 		else:
-			zoekstring = bleb
-		if zoekstring in seenstrings:
+			searchstring = kstring
+		if searchstring in seenstrings:
 			continue
 		found = False
 		for lucenesearchstring in ["printstring", "symbolstring", "functionname"]:
-			zoekterm = lucene.Term(lucenesearchstring, zoekstring.strip())
-			query = lucene.TermQuery(zoekterm)
+			searchterm = lucene.Term(lucenesearchstring, searchstring.strip())
+			query = lucene.TermQuery(searchterm)
 
 			scoreDocs = searcher.search(query, 50).scoreDocs
 			if len(scoreDocs) != 0:
-				#print "%s total matching documents with %s" % (len(scoreDocs), zoekstring)
+				#print "%s total matching documents with %s" % (len(scoreDocs), searchstring)
 				if options.found:
-					print 'found string "%s"' % (zoekstring,)
+					print 'found string "%s"' % (searchstring,)
 				docs = {}
 				for scoreDoc in scoreDocs:
 					doc = searcher.doc(scoreDoc.doc)
@@ -105,8 +105,8 @@ for kernelstring in kernelstrings:
 				found = True
 		#if not found and options.missing and not seenaaaaaa:
 		if not found and options.missing:
-			print 'did not find string "%s"' % (zoekstring,)
-		seenstrings.append(zoekstring)
+			print 'did not find string "%s"' % (searchstring,)
+		seenstrings.append(searchstring)
 
 searcher.close()
 sys.exit()
