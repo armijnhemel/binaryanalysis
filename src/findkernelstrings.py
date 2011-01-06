@@ -33,11 +33,11 @@ else:
 STORE_DIR = options.index
 try:
 	p = subprocess.Popen(['/usr/bin/strings', options.kernel], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-        (stanuit, stanerr) = p.communicate()
+        (stanout, stanerr) = p.communicate()
 except:
 	sys.exit(1)
 
-kernelstrings = stanuit.split("\n")
+kernelstrings = stanout.split("\n")
 
 lucene.initVM()
 
