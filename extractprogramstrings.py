@@ -73,7 +73,7 @@ def extractsourcestrings(srcdir, sqldb, package, pversion):
 def main(argv):
         parser = OptionParser()
         parser.add_option("-d", "--directory", dest="kd", help="path to sources directory", metavar="DIR")
-	parser.add_option("-i", "--index", dest="id", help="path to Lucene index directory", metavar="DIR")
+	parser.add_option("-i", "--index", dest="id", help="path to database directory", metavar="DIR")
 	parser.add_option("-p", "--package", dest="package", help="package name", metavar="PACKAGE")
 	parser.add_option("-v", "--version", dest="pversion", help="package version", metavar="PACKAGEVERSION")
         (options, args) = parser.parse_args(argv)
@@ -81,7 +81,7 @@ def main(argv):
         if options.kd == None:
                 parser.error("Path to sources directory needed")
         if options.id == None:
-                parser.error("Path to Lucene index directory needed")
+                parser.error("Path to database directory needed")
         if options.package == None:
                 parser.error("Package name needed")
         if options.pversion == None:
