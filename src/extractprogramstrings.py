@@ -1,3 +1,9 @@
+#!/usr/bin/python
+
+## Binary Analysis Tool
+## Copyright 2009-2011 Armijn Hemel for LOCO (LOOHUIS CONSULTING)
+## Licensed under Apache 2.0, see LICENSE file for details
+
 import sys, os, string, re, subprocess, magic
 from optparse import OptionParser
 import sqlite3

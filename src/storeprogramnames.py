@@ -1,8 +1,14 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2010 Armijn Hemel for LOCO (LOOHUIS CONSULTING)
+## Copyright 2010-2011 Armijn Hemel for LOCO (LOOHUIS CONSULTING)
 ## Licensed under Apache 2.0, see LICENSE file for details
+
+'''
+This script stores the mapping between a package and program names into a
+knowledgebase. Many vendors do not change the default names of programs in
+packages, so a certain name might be a good indication.
+'''
 
 import sys, os, string, re
 import os.path
