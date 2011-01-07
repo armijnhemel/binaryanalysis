@@ -1,5 +1,9 @@
 #!/usr/bin/python
 
+## Binary Analysis Tool
+## Copyright 2009-2011 Armijn Hemel for LOCO (LOOHUIS CONSULTING)
+## Licensed under Apache 2.0, see LICENSE file for details
+
 '''
 Program to process a whole directory full of compressed source code archives
 to create a knowledgebase. Needs a file LIST in the directory it is passed as
