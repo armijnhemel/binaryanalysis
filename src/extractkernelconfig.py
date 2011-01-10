@@ -6,7 +6,14 @@
 
 import sys, os, string, re
 from optparse import OptionParser
-import lucene
+import sqlite3
+
+'''
+This tool extracts configurations from Makefiles in kernels and tries to
+determine which files are included by a certain configuration directive.
+This information is useful to try and determine a reverse mapping from a
+binary kernel image to a configuration.
+'''
 
 ## helper method for processing stuff
 ## output is a tuple (file/dirname, config) for later processing
@@ -148,7 +155,7 @@ def extractkernelstrings(kerneldir):
 	except StopIteration:
 		return searchresults
 
-def storematch(results, lucenewriter):
+def storematch(results, dbcursor):
 	## store two things:
 	## 1. if we have a path/subdir, we store subdir + configuration
 	##    making it searchable by subdir
@@ -158,24 +165,17 @@ def storematch(results, lucenewriter):
 	for res in results:
 		pathstring = res[0]
 		configstring = res[1]
-		doc = lucene.Document()
-		doc.add(lucene.Field("name", pathstring,
-			lucene.Field.Store.YES,
-			lucene.Field.Index.NOT_ANALYZED))
-		doc.add(lucene.Field("configstring", configstring,
-			lucene.Field.Store.YES,
-			lucene.Field.Index.NOT_ANALYZED))
-		lucenewriter.addDocument(doc)
+		dbcursor.execute('''insert into config (configstring, filename) values (?, ?)''', (configstring, pathstring))
 
 def main(argv):
         parser = OptionParser()
         parser.add_option("-d", "--directory", dest="kd", help="path to Linux kernel directory", metavar="DIR")
-        parser.add_option("-i", "--index", dest="id", help="path to Lucene index directory", metavar="DIR")
+        parser.add_option("-i", "--index", dest="id", help="path to database", metavar="DIR")
         (options, args) = parser.parse_args()
         if options.kd == None:
                 parser.error("Path to Linux kernel directory needed")
         if options.id == None:
-                parser.error("Path to Lucene index directory needed")
+                parser.error("Path to database needed")
         #try:
         	## open the Linux kernel directory and do some sanity checks
                 #kernel_path = open(options.kd, 'rb')
@@ -187,21 +187,20 @@ def main(argv):
 		kerneldir = options.kd[:-1]
 	else:
 		kerneldir = options.kd
-	lucene.initVM()
 
-	storeDir = options.id
-        store = lucene.SimpleFSDirectory(lucene.File(storeDir))
-	analyzer = lucene.StandardAnalyzer(lucene.Version.LUCENE_CURRENT)
-        writer = lucene.IndexWriter(store, analyzer, True,
-                                    lucene.IndexWriter.MaxFieldLength.LIMITED)
-        writer.setMaxFieldLength(1048576)
+        conn = sqlite3.connect(options.id)
+        c = conn.cursor()
 
-	results = extractkernelstrings(kerneldir)
-	storematch(results, writer)
+        try:
+                c.execute('''create table config (configstring text, filename text)''')
+        except:
+                pass
 
-        writer.optimize()
-        writer.close()
+        results = extractkernelstrings(kerneldir)
+        storematch(results, c)
 
+        conn.commit()
+        c.close()
 
 if __name__ == "__main__":
         main(sys.argv)
