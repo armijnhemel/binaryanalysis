@@ -4,9 +4,17 @@
 ## Copyright 2010-2011 Armijn Hemel for LOCO (LOOHUIS CONSULTING)
 ## Licensed under Apache 2.0, see LICENSE file for details
 
+'''
+This script tries to take strings from a binary and match it with files from
+a Linux kernel source tree, and if available, configurations from that same
+source tree, to trace which files were used to compile the kernel. This is not
+fool proof since there are many different kernel trees.
+'''
+
 import os, sys, re, subprocess
 import os.path
 import lucene
+import sqlite3
 from optparse import OptionParser
 
 parser = OptionParser()
@@ -39,17 +47,6 @@ except:
 
 kernelstrings = stanout.split("\n")
 
-lucene.initVM()
-
-directory = lucene.SimpleFSDirectory(lucene.File(STORE_DIR))
-searcher = lucene.IndexSearcher(directory, True)
-analyzer = lucene.StandardAnalyzer(lucene.Version.LUCENE_CURRENT)
-
-if options.configindex != None:
-	configdirectory = lucene.SimpleFSDirectory(lucene.File(options.configindex))
-	configsearcher = lucene.IndexSearcher(configdirectory, True)
-	configanalyzer = lucene.StandardAnalyzer(lucene.Version.LUCENE_CURRENT)
-
 seenlinux = False
 seenstrings = []
 #seenaaaaaa = False
@@ -67,8 +64,8 @@ for kernelstring in kernelstrings:
 		if searchstring in seenstrings:
 			continue
 		found = False
-		for lucenesearchstring in ["printstring", "symbolstring", "functionname"]:
-			searchterm = lucene.Term(lucenesearchstring, searchstring.strip())
+		for kernelsearchstring in ["printstring", "symbolstring", "functionname"]:
+			searchterm = lucene.Term(kernelsearchstring, searchstring.strip())
 			query = lucene.TermQuery(searchterm)
 
 			scoreDocs = searcher.search(query, 50).scoreDocs

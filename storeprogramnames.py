@@ -13,7 +13,7 @@ packages, so a certain name might be a good indication.
 import sys, os, string, re
 import os.path
 from optparse import OptionParser
-import lucene
+import sqlite3
 
 def namecleanup(names):
 	return map(lambda x: os.path.basename(x), names)
@@ -33,12 +33,12 @@ def storematch(packagename, programnames, lucenewriter):
 
 def main(argv):
         parser = OptionParser()
-        parser.add_option("-i", "--index", dest="id", help="path to Lucene index directory", metavar="DIR")
+        parser.add_option("-i", "--index", dest="id", help="path to database", metavar="DIR")
         parser.add_option("-p", "--package", dest="package", help="name of the package", metavar="PACKAGE")
         parser.add_option("-l", "--programlist", dest="programlist", help="file with program names", metavar="FILE")
         (options, args) = parser.parse_args()
         if options.id == None:
-                parser.error("Path to Lucene index directory needed")
+                parser.error("Path to database needed")
         if options.package == None:
                 parser.error("Package name needed")
         if options.programlist == None:
