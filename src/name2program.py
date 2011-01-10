@@ -5,8 +5,7 @@
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
-This tool maps the name of a program to the name of one or more packages, and optionally to
-the names sections in the bruteforce configuration.
+This tool maps the name of a program to the name of one or more packages.
 '''
 
 import os, sys, re, subprocess
@@ -16,7 +15,7 @@ from optparse import OptionParser
 import magic
 
 
-def name2program(name, searcher):
+def name2program(name, dbcursor):
 	progs = []
 	for lucenesearchstring in ["programname"]:
 		searchterm = lucene.Term(lucenesearchstring, name)
@@ -32,25 +31,22 @@ def name2program(name, searcher):
 
 def main(argv):
 	parser = OptionParser()
-	parser.add_option("-i", "--index", dest="index", help="path to Lucene index directory", metavar="DIR")
+	parser.add_option("-i", "--index", dest="index", help="path to database", metavar="DIR")
 	parser.add_option("-p", "--program", dest="programname", help="program name")
 	(options, args) = parser.parse_args()
 	if options.index == None:
 		## check if this directory actually exists
-		parser.error("Path to Lucene index directory needed")
+		parser.error("Path to database needed")
 	if options.programname == None:
 		parser.error("program name needed")
+        conn = sqlite3.connect(options.id)
+        c = conn.cursor()
 
-	STORE_DIR = options.index
 
-	lucene.initVM()
+	print name2program(options.programname, c)
 
-	directory = lucene.SimpleFSDirectory(lucene.File(STORE_DIR))
-	searcher = lucene.IndexSearcher(directory, True)
-	analyzer = lucene.StandardAnalyzer(lucene.Version.LUCENE_CURRENT)
-
-	print name2program(options.programname, searcher)
-	searcher.close()
+        conn.commit()
+        c.close()
 
 if __name__ == "__main__":
         main(sys.argv)
