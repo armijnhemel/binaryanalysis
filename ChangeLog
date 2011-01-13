@@ -1,6 +1,7 @@
 2011-01-13
 * last PyLucene dependencies removed
 * rename name2program.py to program2package.py
+* add a hack to fix different paths for unsquashfs
 
 2011-01-07
 * various cleanups
