@@ -19,17 +19,9 @@ def namecleanup(names):
 	return map(lambda x: os.path.basename(x), names)
 
 ## (packagename, [programnames])
-def storematch(packagename, programnames, lucenewriter):
-	doc = lucene.Document()
-	doc.add(lucene.Field("packagename", packagename,
-		lucene.Field.Store.YES,
-		lucene.Field.Index.NOT_ANALYZED))
-	#lucenewriter.addDocument(doc)
-	for prog in programnames:
-		doc.add(lucene.Field("programname", prog.strip(),
-			lucene.Field.Store.YES,
-			lucene.Field.Index.NOT_ANALYZED))
-	lucenewriter.addDocument(doc)
+def storematch(packagename, programnames, dbcursor):
+	for programname in programnames:
+		dbcursor.execute('''INSERT INTO programnames values (?, ?)''', (packagename, programname.strip()))
 
 def main(argv):
         parser = OptionParser()
@@ -45,20 +37,19 @@ def main(argv):
                 parser.error("Programlist needed")
 
 	programnames = namecleanup(open(options.programlist).readlines())
-	lucene.initVM()
 
-	storeDir = options.id
-        store = lucene.SimpleFSDirectory(lucene.File(storeDir))
-	analyzer = lucene.StandardAnalyzer(lucene.Version.LUCENE_CURRENT)
-        writer = lucene.IndexWriter(store, analyzer, True,
-                                    lucene.IndexWriter.MaxFieldLength.LIMITED)
-        writer.setMaxFieldLength(1048576)
+        conn = sqlite3.connect(options.id)
+        c = conn.cursor()
 
-	storematch(options.package, programnames, writer)
+        try:
+                c.execute('''create table programnames (packagename text, programname text)''')
+        except:
+                pass
 
-        writer.optimize()
-        writer.close()
+	storematch(options.package, programnames, c)
 
+        conn.commit()
+        c.close()
 
 if __name__ == "__main__":
         main(sys.argv)
