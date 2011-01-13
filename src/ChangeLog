@@ -1,3 +1,7 @@
+2011-01-13
+* last PyLucene dependencies removed
+* rename name2program.py to program2package.py
+
 2011-01-07
 * various cleanups
 
