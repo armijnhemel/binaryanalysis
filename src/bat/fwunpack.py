@@ -206,7 +206,23 @@ def unpackSquashfs(data, offset, tempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
 
-	p = subprocess.Popen(['/usr/sbin/unsquashfs', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	## squashfs is not always in the same path, so we need to make a few different invocations
+	## Fedora uses /usr/sbin, Ubuntu users /usr/bin
+	## Below there is an extremely ugly hack to differentiate between the two
+	try:
+		os.stat('/usr/sbin/unsquashfs')
+		distro = 'sbin'
+	except:
+		try:
+			os.stat('/usr/bin/unsquashfs')
+			distro = 'bin'
+		except:
+			return
+
+	if distro == 'sbin':
+		p = subprocess.Popen(['/usr/sbin/unsquashfs', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	elif distro == 'bin':
+		p = subprocess.Popen(['/usr/bin/unsquashfs', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanuit, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.fdopen(tmpfile[0]).close()
