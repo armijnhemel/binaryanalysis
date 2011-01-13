@@ -13,7 +13,6 @@ fool proof since there are many different kernel trees.
 
 import os, sys, re, subprocess
 import os.path
-import lucene
 import sqlite3
 from optparse import OptionParser
 
@@ -28,7 +27,7 @@ parser.add_option("-s", "--size", dest="stringsize", help="stringsize (default 6
 (options, args) = parser.parse_args()
 if options.index == None:
 	## check if this directory actually exists
-	parser.error("Path to directory with kernel strings needed")
+	parser.error("Path to database with kernel strings needed")
 if options.kernel == None:
 	parser.error("Path to Linux kernel image needed")
 if options.missing == None and options.found == None:
@@ -47,6 +46,14 @@ except:
 
 kernelstrings = stanout.split("\n")
 
+conn = sqlite3.connect(options.index)
+c = conn.cursor()
+
+## if we have a database with configuration mappings open it
+if options.configindex != None:
+	configconn = sqlite3.connect(options.configindex)
+	configc = configconn.cursor()
+
 seenlinux = False
 seenstrings = []
 #seenaaaaaa = False
@@ -64,46 +71,39 @@ for kernelstring in kernelstrings:
 		if searchstring in seenstrings:
 			continue
 		found = False
-		for kernelsearchstring in ["printstring", "symbolstring", "functionname"]:
-			searchterm = lucene.Term(kernelsearchstring, searchstring.strip())
-			query = lucene.TermQuery(searchterm)
-
-			scoreDocs = searcher.search(query, 50).scoreDocs
-			if len(scoreDocs) != 0:
-				#print "%s total matching documents with %s" % (len(scoreDocs), searchstring)
+		res = []
+		c.execute("SELECT filename FROM extracted WHERE printstring=?", (searchstring.strip(),))
+		res = res + map(lambda x: x[0], c.fetchall())
+		c.execute("SELECT filename FROM symbol WHERE symbolstring=?", (searchstring.strip(),))
+		res = res + map(lambda x: x[0], c.fetchall())
+		c.execute("SELECT filename FROM function WHERE functionstring=?", (searchstring.strip(),))
+		res = res + map(lambda x: x[0], c.fetchall())
+		if len(res) != 0:
+			if options.found:
+				print 'found string "%s"' % (searchstring,)
+			for d in res:
 				if options.found:
-					print 'found string "%s"' % (searchstring,)
-				docs = {}
-				for scoreDoc in scoreDocs:
-					doc = searcher.doc(scoreDoc.doc)
-					docs[doc.get("name")] = 1
-				for d in docs.keys():
-					if options.found:
-						if options.arch != None:
-							if "arch/" in d and options.arch not in d:
-								continue
-							if "asm-" in d and options.arch not in d:
-								continue
-						if options.configindex != None:
-							configsearchterm = lucene.Term("name", d)
-							#configsearchterm = lucene.Term("name", os.path.dirname(d) + "/")
-							configquery = lucene.TermQuery(configsearchterm)
+					if options.arch != None:
+						if "arch/" in d and options.arch not in d:
+							continue
+						if "asm-" in d and options.arch not in d:
+							continue
+					if options.configindex != None:
+						configc.execute("SELECT configstring FROM config WHERE filename=?", (d,))
+						configres = map(lambda x: x[0], configc.fetchall())
 
-							configscoreDocs = configsearcher.search(configquery, 50).scoreDocs
-							if len(configscoreDocs) == 0:
-									print '    This string is defined in path:', d
-							for configscoreDoc in configscoreDocs:
-								config = configsearcher.doc(configscoreDoc.doc).get("configstring")
-								if config != None:
-									print '    This string is defined in path: %s (config %s)' % (d, config)
-						else:
-									print '    This string is defined in path:', d
-							
+						if len(configres) == 0:
+								print '    This string is defined in path:', d
+						for cres in configres:
+							if cres != None:
+								print '    This string is defined in path: %s (config %s)' % (d, cres)
+					else:
+								print '    This string is defined in path:', d
+						
 				found = True
 		#if not found and options.missing and not seenaaaaaa:
 		if not found and options.missing:
 			print 'did not find string "%s"' % (searchstring,)
 		seenstrings.append(searchstring)
 
-searcher.close()
 sys.exit()
