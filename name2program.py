@@ -10,22 +10,15 @@ This tool maps the name of a program to the name of one or more packages.
 
 import os, sys, re, subprocess
 import os.path
-import lucene
+import sqlite3
 from optparse import OptionParser
 import magic
 
 
-def name2program(name, dbcursor):
+def program2package(name, dbcursor):
 	progs = []
-	for lucenesearchstring in ["programname"]:
-		searchterm = lucene.Term(lucenesearchstring, name)
-		query = lucene.TermQuery(searchterm)
-
-		scoreDocs = searcher.search(query, 50).scoreDocs
-		if len(scoreDocs) != 0:
-			for scoreDoc in scoreDocs:
-				doc = searcher.doc(scoreDoc.doc)
-				progs.append(doc.get("packagename"))
+	dbcursor.execute('''SELECT packagename from programnames WHERE programname=?''', (name,))
+	progs = map(lambda x: x[0], dbcursor.fetchall())
 	return progs
 						
 
@@ -39,11 +32,11 @@ def main(argv):
 		parser.error("Path to database needed")
 	if options.programname == None:
 		parser.error("program name needed")
-        conn = sqlite3.connect(options.id)
+        conn = sqlite3.connect(options.index)
         c = conn.cursor()
 
 
-	print name2program(options.programname, c)
+	print program2package(options.programname, c)
 
         conn.commit()
         c.close()
