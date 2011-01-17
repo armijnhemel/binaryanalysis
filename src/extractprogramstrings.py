@@ -4,6 +4,10 @@
 ## Copyright 2009-2011 Armijn Hemel for LOCO (LOOHUIS CONSULTING)
 ## Licensed under Apache 2.0, see LICENSE file for details
 
+'''
+This tool stores strings extracted from source code into a knowledgebase.
+'''
+
 import sys, os, string, re, subprocess, magic
 from optparse import OptionParser
 import sqlite3
@@ -102,6 +106,7 @@ def main(argv):
 
 	try:
 		c.execute('''create table extracted (programstring text, package text, version text, filename text)''')
+		## create an index to speed up searches
 		c.execute('''create index programstring_index on extracted(programstring);''')
 	except:
 		pass
