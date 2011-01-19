@@ -205,27 +205,35 @@ This method returns a report snippet for inclusion in the final
 report. Right now 'checks' is ignored and all checks are applied,
 but we really want to be able to weed a bit.
 '''
-def scanfile(path, file, checks, lentempdir=0):
+def scanfile(path, file, checks, lentempdir=0, relative=True):
 	report = {}
 
 	## this will report incorrectly if we only have unpacked one file to a
 	## temporary location, for example a kernel image
 	report['name'] = file
-	report['path'] = path[lentempdir:].replace("/squashfs-root", "")
+
+	## If we use relative reporting we will clean up the paths to reflect the
+	## position inside the file sytem or file we have unpacked.
+	## Else use the files as unpacked by BAT, convenient for later analysis
+	## of binaries.
+	if relative:
+		report['path'] = path[lentempdir:].replace("/squashfs-root", "")
+	else:
+		report['path'] = path
 	type = ms.file("%s/%s" % (path, file))
 	report['magic'] = type
 
-        ## broken symbolic links can't be statted, so return now
+        ## broken symbolic links can't be statted
         if type.find('broken symbolic link to') == 0:
+        	return report
+        ## don't care about symbolic links
+        if type.find('symbolic link to') == 0:
         	return report
         ## no use checking a named pipe
         if type.find('fifo (named pipe)') == 0:
         	return report
 	## no use checking a socket
         if type.find('socket') == 0:
-        	return report
-        ## don't care about symbolic links
-        elif type.find('symbolic link to') == 0:
         	return report
 
 	report['size'] = os.lstat("%s/%s" % (path, file)).st_size
