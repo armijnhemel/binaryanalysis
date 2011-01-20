@@ -58,7 +58,7 @@ def prettyprintresxmlsnippet(res, config, root):
                 				topnode.appendChild(tmpnode)
 					else:
                 				tmpnode = root.createElement("file")
-        					for conf in ["name", "path", "magic", "sha256", "size", "architecture"]:
+        					for conf in ["name", "path", "realpath", "magic", "sha256", "size", "architecture"]:
 							if conf in elem:
                 						tmpnode2 = root.createElement(conf)
                 						tmpnodetext = xml.dom.minidom.Text()
@@ -205,21 +205,18 @@ This method returns a report snippet for inclusion in the final
 report. Right now 'checks' is ignored and all checks are applied,
 but we really want to be able to weed a bit.
 '''
-def scanfile(path, file, checks, lentempdir=0, relative=True):
+def scanfile(path, file, checks, lentempdir=0):
 	report = {}
 
 	## this will report incorrectly if we only have unpacked one file to a
 	## temporary location, for example a kernel image
 	report['name'] = file
 
-	## If we use relative reporting we will clean up the paths to reflect the
-	## position inside the file sytem or file we have unpacked.
-	## Else use the files as unpacked by BAT, convenient for later analysis
-	## of binaries.
-	if relative:
-		report['path'] = path[lentempdir:].replace("/squashfs-root", "")
-	else:
-		report['path'] = path
+	## Add both the path to indicate the position inside the file sytem
+        ## or file we have unpacked, as well as the position of the files as unpacked
+	## by BAT, convenient for later analysis of binaries.
+	report['path'] = path[lentempdir:].replace("/squashfs-root", "")
+	report['realpath'] = path
 	type = ms.file("%s/%s" % (path, file))
 	report['magic'] = type
 
