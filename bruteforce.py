@@ -9,7 +9,7 @@ This script tries to analyse the firmware of a device, using a "brute force" app
 and pretty print it in a simple XML file.
 '''
 
-import sys, os, os.path, magic, hashlib, subprocess
+import sys, os, os.path, magic, hashlib, subprocess, tempfile
 from optparse import OptionParser
 import ConfigParser
 import xml.dom.minidom
@@ -205,7 +205,7 @@ This method returns a report snippet for inclusion in the final
 report. Right now 'checks' is ignored and all checks are applied,
 but we really want to be able to weed a bit.
 '''
-def scanfile(path, file, checks, lentempdir=0):
+def scanfile(path, file, checks, lentempdir=0, tempdir=None):
 	report = {}
 
 	## this will report incorrectly if we only have unpacked one file to a
@@ -314,13 +314,13 @@ def scanfile(path, file, checks, lentempdir=0):
 		if res != None:
 			report['architecture'] = res
 	scannedfile = "%s/%s" % (path, file)
-	res = scan(scannedfile, checks, type, filehash)
+	res = scan(scannedfile, checks, type, filehash, tempdir)
 	if res != []:
 		report['scans'] = res
 	return report
 
 ## result is a list of result tuples, one for every file in the directory
-def walktempdir(tempdir, checks):
+def walktempdir(tempdir, checks, tmpdir):
 	osgen = os.walk(tempdir)
 	reports = []
 	try:
@@ -328,7 +328,7 @@ def walktempdir(tempdir, checks):
                 	i = osgen.next()
                 	for p in i[2]:
 				try:
-					res = scanfile(i[0], p, checks, len(tempdir))
+					res = scanfile(i[0], p, checks, len(tempdir), tmpdir)
 					if res != []:
 						reports.append(res)
 				except Exception, e:
@@ -338,7 +338,7 @@ def walktempdir(tempdir, checks):
 	return reports
 
 ## scan a single file. Optionally supply a filehash for checking a knowledgebase
-def scan(scanfile, config, magic, filehash=None):
+def scan(scanfile, config, magic, filehash=None, tempdir=None):
 	reports = []
 
 	## get stuff from the knowledgebase, but skip if we have the 'scanalways' flag set
@@ -383,13 +383,13 @@ def scan(scanfile, config, magic, filehash=None):
 				module = config.get(section, 'module')
 				method = config.get(section, 'method')
 				exec "from %s import %s as bat_%s" % (module, method, method)
-				diroffsets = eval("bat_%s(scanfile)" % (method))
+				diroffsets = eval("bat_%s(scanfile, tempdir)" % (method))
 				for diroffset in diroffsets:
 					report = {}
 					if diroffset == None:
 						continue
 					dir = diroffset[0]
-					res = walktempdir(dir,config)
+					res = walktempdir(dir,config, tempdir)
 					if res != []:
 						res.append({'offset': diroffset[1]})
 						report[section] = res
@@ -451,7 +451,8 @@ def main(argv):
 	## within the inner list there is a result tuple, which could contain
 	## more lists in some fields, like libraries, or more result lists if
 	## the file inside a file system we looked at was in fact a file system.
-	res = scanfile(os.path.dirname(firmware_binary), os.path.basename(firmware_binary), config)
+	tempdir=tempfile.mkdtemp()
+	res = scanfile(os.path.dirname(firmware_binary), os.path.basename(firmware_binary), config, tempdir=tempdir)
 	xml = prettyprintresxml(res, config, scandate)
 	print xml.toxml()
 

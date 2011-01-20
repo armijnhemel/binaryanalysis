@@ -2,6 +2,9 @@
 * add option to switch between absolute and relative reporting of paths, to
 make unpacked files easier to find in /tmp after a scan
 * always report both absolute and relative paths, remove switch
+* unpack into a single directory, instead of scattering things over lots of
+directories in /tmp. This makes it easier to pack the results of a scan for
+later analysis.
 
 2011-01-17
 * add configuration for BusyBox 1.18.2

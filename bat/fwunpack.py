@@ -16,7 +16,7 @@ import sys, os, subprocess
 import tempfile, bz2, re, magic, tarfile
 import fsmagic, fssearch
 
-def searchUnpackTar(filename):
+def searchUnpackTar(filename, tempdir=None):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
 	type = ms.file(filename)
@@ -26,16 +26,21 @@ def searchUnpackTar(filename):
 		   , 'tar archive'
 		   ]
 
+	## search for first magic marker that matches
 	for tm in tarmagic:
 		if tm in type:
+        		if tempdir == None:
+        		       	tmpdir = tempfile.mkdtemp()
+			else:
+				tmpdir = tempdir
 			tar = tarfile.open(filename, 'r')
-                	tmpdir = tempfile.mkdtemp()
-			tar.extractall(path=tmpdir)
+                	tartmpdir = tempfile.mkdtemp(dir=tmpdir)
+			tar.extractall(path=tarttmpdir)
 			tar.close()
-			return [(tmpdir, 0)]
+			return [(tartmpdir, 0)]
 	return []
 
-def searchUnpackCab(filename):
+def searchUnpackCab(filename, tempdir=None):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
 	type = ms.file(filename)
@@ -46,19 +51,23 @@ def searchUnpackCab(filename):
 
 	for exe in exemagic:
 		if exe in type:
-                	tmpdir = tempfile.mkdtemp()
-			p = subprocess.Popen(['cabextract', '-d', tmpdir, filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+        		if tempdir == None:
+        		       	tmpdir = tempfile.mkdtemp()
+			else:
+				tmpdir = tempdir
+                	cabtmpdir = tempfile.mkdtemp(dir=tmpdir)
+			p = subprocess.Popen(['cabextract', '-d', cabtmpdir, filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 			(stanuit, stanerr) = p.communicate()
 			if p.returncode != 0:
 				try:
-					os.rmdir(tmpdir)
+					os.rmdir(cabtmpdir)
 				except:
 					pass
 				continue
-			return [(tmpdir, 0)]
+			return [(cabtmpdir, 0)]
 	return []
 
-def searchUnpack7z(filename):
+def searchUnpack7z(filename, tempdir=None):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
 	type = ms.file(filename)
@@ -69,20 +78,24 @@ def searchUnpack7z(filename):
 
 	for exe in exemagic:
 		if exe in type:
-                	tmpdir = tempfile.mkdtemp()
-			param = "-o%s" % tmpdir
+        		if tempdir == None:
+        		       	tmpdir = tempfile.mkdtemp()
+			else:
+				tmpdir = tempdir
+                	zztmpdir = tempfile.mkdtemp(dir=tmpdir)
+			param = "-o%s" % zztmpdir
 			p = subprocess.Popen(['7z', param, '-l', '-y', 'x', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 			(stanuit, stanerr) = p.communicate()
 			if p.returncode != 0:
 				try:
-					os.rmdir(tmpdir)
+					os.rmdir(zztmpdir)
 				except:
 					pass
 				continue
-			return [(tmpdir, 0)]
+			return [(zztmpdir, 0)]
 	return []
 
-def searchUnpackCpio(filename):
+def searchUnpackCpio(filename, tempdir=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
@@ -90,10 +103,14 @@ def searchUnpackCpio(filename):
 	if offset == -1:
 		return []
 	else:
+        	if tempdir == None:
+        	       	tmpdir = tempfile.mkdtemp()
+		else:
+			tmpdir = tempfile.mkdtemp(dir=tempdir)
 		diroffsets = []
 		trailer = fssearch.findCpioTrailer(data)
 		while(offset != -1):
-			res = unpackCpio(data, offset)
+			res = unpackCpio(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
 			offset = fssearch.findCpio(data, offset+1)
@@ -130,7 +147,7 @@ def unpackCpio(data, offset, tempdir=None):
 	(stanuit, stanerr) = p.communicate(data[offset:])
 	return tmpdir
 
-def searchUnpackCramfs(filename):
+def searchUnpackCramfs(filename, tempdir=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
@@ -139,11 +156,17 @@ def searchUnpackCramfs(filename):
 		return []
 	else:
 		diroffsets = []
+        	if tempdir == None:
+        	       	tmpdir = tempfile.mkdtemp()
+		else:
+			tmpdir = tempfile.mkdtemp(dir=tempdir)
 		while(offset != -1):
-			res = unpackCramfs(data, offset)
+			res = unpackCramfs(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
 			offset = fssearch.findCramfs(data, offset+1)
+		if len(diroffsets) == 0:
+			os.rmdir(tmpdir)
 		return diroffsets
 
 ## tries to unpack stuff using fsck.cramfs. If it is successful, it will
@@ -178,7 +201,7 @@ def unpackCramfs(data, offset, tempdir=None):
 		os.rmdir(tmpdir)
 		return tmpdir2
 
-def searchUnpackSquashfs(filename):
+def searchUnpackSquashfs(filename, tempdir=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
@@ -187,11 +210,17 @@ def searchUnpackSquashfs(filename):
 		return []
 	else:
 		diroffsets = []
+        	if tempdir == None:
+        	       	tmpdir = tempfile.mkdtemp()
+		else:
+			tmpdir = tempfile.mkdtemp(dir=tempdir)
 		while(offset != -1):
-			res = unpackSquashfs(data, offset)
+			res = unpackSquashfs(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
 			offset = fssearch.findSquashfs(data, offset+1)
+		if len(diroffsets) == 0:
+			os.rmdir(tmpdir)
 		return diroffsets
 
 ## tries to unpack stuff using unsquashfs. If it is successful, it will
@@ -273,7 +302,7 @@ def unpackGzip(data, offset, tempdir=None):
 	os.unlink(tmpfile[1])
 	return tmpdir
 
-def searchUnpackGzip(filename):
+def searchUnpackGzip(filename, tempdir=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
@@ -282,11 +311,17 @@ def searchUnpackGzip(filename):
 		return []
 	else:
 		diroffsets = []
+        	if tempdir == None:
+        	       	tmpdir = tempfile.mkdtemp()
+		else:
+			tmpdir = tempfile.mkdtemp(dir=tempdir)
 		while(offset != -1):
-			res = unpackGzip(data, offset)
+			res = unpackGzip(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
 			offset = fssearch.findGzip(data, offset+1)
+		if len(diroffsets) == 0:
+			os.rmdir(tmpdir)
 		return diroffsets
 
 def unpackZip(data, offset, tempdir=None):
@@ -323,7 +358,7 @@ def unpackZip(data, offset, tempdir=None):
 	os.unlink(tmpfile[1])
 	return (endofcentraldir, tmpdir)
 
-def searchUnpackZip(filename):
+def searchUnpackZip(filename, tempdir=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
@@ -332,9 +367,13 @@ def searchUnpackZip(filename):
 		return []
 	else:
 		diroffsets = []
+        	if tempdir == None:
+        	       	tmpdir = tempfile.mkdtemp()
+		else:
+			tmpdir = tempfile.mkdtemp(dir=tempdir)
 		endofcentraldir = 0
 		while(offset != -1):
-			(endofcentraldir, res) = unpackZip(data, offset)
+			(endofcentraldir, res) = unpackZip(data, offset, tmpdir)
 			#print "orig:", datafile, "offset:", offset, "res:", res, "endofcentraldir", endofcentraldir
 			if res != None:
 				diroffsets.append((res, offset))
@@ -342,9 +381,11 @@ def searchUnpackZip(filename):
 				offset = fssearch.findZip(data, offset+1)
 			else:
 				offset = fssearch.findZip(data, endofcentraldir+1)
+		if len(diroffsets) == 0:
+			os.rmdir(tmpdir)
 		return diroffsets
 
-def searchUnpackRar(filename):
+def searchUnpackRar(filename, tempdir=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
@@ -353,14 +394,20 @@ def searchUnpackRar(filename):
 		return []
 	else:
 		diroffsets = []
+        	if tempdir == None:
+        	       	tmpdir = tempfile.mkdtemp()
+		else:
+			tmpdir = tempfile.mkdtemp(dir=tempdir)
 		while(offset != -1):
-			(endofarchive, res) = unpackRar(data, offset)
+			(endofarchive, res) = unpackRar(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
 			if endofarchive == None:
 				offset = fssearch.findRar(data, offset+1)
 			else:
 				offset = fssearch.findRar(data, endofarchive)
+		if len(diroffsets) == 0:
+			os.rmdir(tmpdir)
 		return diroffsets
 
 def unpackRar(data, offset, tempdir=None):
@@ -401,7 +448,7 @@ def unpackRar(data, offset, tempdir=None):
 	os.unlink(tmpfile[1])
 	return (endofarchive, tmpdir)
 
-def searchUnpackLZMA(filename):
+def searchUnpackLZMA(filename, tempdir=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
@@ -410,11 +457,17 @@ def searchUnpackLZMA(filename):
 		return []
 	else:
 		diroffsets = []
+        	if tempdir == None:
+        	       	tmpdir = tempfile.mkdtemp()
+		else:
+			tmpdir = tempfile.mkdtemp(dir=tempdir)
 		while(offset != -1):
-			res = unpackLZMA(data, offset)
+			res = unpackLZMA(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
 			offset = fssearch.findLZMA(data, offset+1)
+		if len(diroffsets) == 0:
+			os.rmdir(tmpdir)
 		return diroffsets
 
 ## tries to unpack stuff using lzma -cd. If it is successful, it will
