@@ -326,6 +326,8 @@ def searchUnpackGzip(filename, tempdir=None):
 
 ## tries to unpack stuff using bzcat. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
+## We use bzcat instead of the bz2 module because that can't handle trailing
+## data very well.
 def unpackBzip2(data, offset, tempdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty

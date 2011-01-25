@@ -7,11 +7,12 @@
 import sys, os
 import tempfile
 import fsmagic
-import bz2
 
 # find a squashfs file system, starting at a certain offset
 # Returns the offset of the file system. If a firmware contains
 # multiple squashfs file systems it should be applied multiple times
+## TODO: possibly also return the type, or possible types of squashfs
+## we know of, so we can do a better job at unpacking.
 def findSquashfs(data, offset=0):
 	marker = -1
 	marker = findType('squashfs-le', data,offset)
@@ -52,6 +53,9 @@ def findZip(data, offset=0):
 
 def findCramfs(data, offset=0):
 	return findType('cramfs', data, offset)
+
+def findUbifs(data, offset=0):
+	return findType('ubifs', data, offset)
 
 def findRar(data, offset=0):
 	return findType('rar', data, offset)
