@@ -324,6 +324,57 @@ def searchUnpackGzip(filename, tempdir=None):
 			os.rmdir(tmpdir)
 		return diroffsets
 
+## tries to unpack stuff using bzcat. If it is successful, it will
+## return a directory for further processing, otherwise it will return None.
+def unpackBzip2(data, offset, tempdir=None):
+	## first unpack things, write things to a file and return
+	## the directory if the file is not empty
+	## Assumes (for now) that bzcat is in the path
+	if tempdir == None:
+		tmpdir = tempfile.mkdtemp()
+	else:
+		tmpdir = tempdir
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.write(tmpfile[0], data[offset:])
+	p = subprocess.Popen(['bzcat', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanuit, stanerr) = p.communicate()
+	outtmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.write(outtmpfile[0], stanuit)
+	#os.fdopen(outtmpfile[0]).flush()
+	os.fsync(outtmpfile[0])
+	if os.stat(outtmpfile[1]).st_size == 0:
+		os.fdopen(outtmpfile[0]).close()
+		os.unlink(outtmpfile[1])
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	os.fdopen(outtmpfile[0]).close()
+	os.fdopen(tmpfile[0]).close()
+	os.unlink(tmpfile[1])
+	return tmpdir
+
+def searchUnpackBzip2(filename, tempdir=None):
+	datafile = open(filename, 'rb')
+	data = datafile.read()
+	datafile.close()
+	offset = fssearch.findBzip2(data)
+	if offset == -1:
+		return []
+	else:
+		diroffsets = []
+		if tempdir == None:
+			tmpdir = tempfile.mkdtemp()
+		else:
+			tmpdir = tempfile.mkdtemp(dir=tempdir)
+		while(offset != -1):
+			res = unpackBzip2(data, offset, tmpdir)
+			if res != None:
+				diroffsets.append((res, offset))
+			offset = fssearch.findBzip2(data, offset+1)
+		return diroffsets
+
 def unpackZip(data, offset, tempdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
