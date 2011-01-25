@@ -19,7 +19,7 @@ analysis.'''
 ## (name: identifier)
 
 fsmagic = {
-            'gzip':             '\x1f\x8b\x08',
+            'gzip':             '\x1f\x8b\x08',     # this excludes some gzip files!
             'bz2':              'BZh',
             'rar':              'Rar!',
             'zip':              '\x50\x4b\x03\04',
@@ -31,6 +31,7 @@ fsmagic = {
             'cramfs':           '\x45\x3d\xcd\x28',
             #'lzma_alone':       '\x5d\x00\x00\x80',
             #'jffs2-le':         '\x85\x19',
+            'ubifs':            '\x55\x42\x49\x23',
           }
 
 squashcollection = ['squash-le', 'squash-be', 'squash-le-lzma', 'squash-be-lzma']

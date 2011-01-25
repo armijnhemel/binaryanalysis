@@ -1,3 +1,7 @@
+2011-01-25
+* cleanups
+* add markers for ubifs (used a lot on Android)
+
 2011-01-24
 * (finally) add support for bzip2 archives
 
