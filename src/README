@@ -1,6 +1,6 @@
   Installing the binary analysis tool
 
-The binary analysis tool is fairly self contained and can run without too many dependencies. The tools have been written and tested on Fedora 11 and 12, but should run without (m)any modifications on other Linux distributions.
+The binary analysis tool is fairly self contained and can run without too many dependencies. The tools have been written and tested extensively on Fedora 13 and 14 and basically on Ubuntu 10.10, but should run without (m)any modifications on other Linux distributions.
 
 Requirements are:
 
@@ -34,9 +34,9 @@ All tools can be run with the --help parameter for more information.
 
   Running bruteforce.py
 
-The bruteforce.py tool tries to determine what is inside a firmware without much knowledge of what is inside the firmware. It does so by scanning for known magic markers of file systems (such as SquashFS) and compression methods (such as gzip), bootloader and kernel strings, unpack these files and do more in depth analysis of the files. The checks that need to be run in the bruteforce.py tool can be configured through a configuration format. The exact format is in flux at the moment. Documentation for the format of the configuration file is coming soon. In the source release there is a demo configuration which configures basic functionality.
+The bruteforce.py tool tries to determine what is inside a firmware without much knowledge of what is inside the firmware. It does so by scanning for known magic markers of file systems (such as SquashFS) and compression methods (such as gzip), bootloader and kernel strings, unpack these files and do more in depth analysis of the files. The checks that need to be run in the bruteforce.py tool can be configured through a configuration file.
 
-At the moment the bruteforce.py tool displays information in a very crude format. This will change in the near future.
+The bruteforce.py tool outputs information in an XML file. At the moment there is no stylesheet to transform this data into human readable output, but this will be provided soon.
 
 Example invocation:
 
