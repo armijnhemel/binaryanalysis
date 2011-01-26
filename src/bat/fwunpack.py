@@ -205,7 +205,7 @@ def searchUnpackSquashfs(filename, tempdir=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
-	offset = fssearch.findSquashfs(data)
+	(offset, squashtype) = fssearch.findSquashfs(data)
 	if offset == -1:
 		return []
 	else:
@@ -218,7 +218,7 @@ def searchUnpackSquashfs(filename, tempdir=None):
 			res = unpackSquashfs(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
-			offset = fssearch.findSquashfs(data, offset+1)
+			(offset, squashtype) = fssearch.findSquashfs(data, offset+1)
 		if len(diroffsets) == 0:
 			os.rmdir(tmpdir)
 		return diroffsets
