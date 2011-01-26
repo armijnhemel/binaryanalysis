@@ -1,3 +1,12 @@
+2011-01-26
+* return the type of the squashfs file system we find. We don't yet use the
+information, but eventually we will use it to choose the right unpacker for
+squashfs, and be able to add some more meta information about what kind of
+squashfs file system it is.
+* update the README, it was still very old (and still can use cleanups)
+* add mtd-utils-ubi as a dependency for the RPM (package name needs to be
+checked for DEB)
+
 2011-01-25
 * cleanups
 * add markers for ubifs (used a lot on Android)

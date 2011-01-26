@@ -34,5 +34,5 @@ fsmagic = {
             'ubifs':            '\x55\x42\x49\x23',
           }
 
-squashcollection = ['squash-le', 'squash-be', 'squash-le-lzma', 'squash-be-lzma']
+squashtypes = ['squashfs-le', 'squashfs-be', 'squashfs-le-lzma', 'squashfs-be-lzma']
 cpio = ['070707', '070701', '070702']

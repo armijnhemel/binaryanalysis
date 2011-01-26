@@ -11,20 +11,24 @@ import fsmagic
 # find a squashfs file system, starting at a certain offset
 # Returns the offset of the file system. If a firmware contains
 # multiple squashfs file systems it should be applied multiple times
-## TODO: possibly also return the type, or possible types of squashfs
-## we know of, so we can do a better job at unpacking.
+## TODO: possibly use findAll() to return all the possible instances
+## so we don't have to keep searching the data.
 def findSquashfs(data, offset=0):
 	marker = -1
-	marker = findType('squashfs-le', data,offset)
-	if marker == -1:
-		return findType('squashfs-be', data, offset)
-	else:
-		marker2 = findType('squashfs-be', data, offset)
-		if marker2 != -1:
-			return min(marker, marker2)
+	squashtype = None
+	for t in fsmagic.squashtypes:
+		sqshmarker = findType(t, data, offset)
+		if sqshmarker == -1:
+			continue
+		if marker == -1:
+			marker = sqshmarker
 		else:
-			# just one marker found
-			return marker
+			marker = min(marker, sqshmarker)
+		if t == "squashfs-le" or t == "squashfs-be":
+			squashtype = "gzip"
+		else:
+			squashtype = None
+	return (marker, squashtype)
 
 def findMarker(marker, data, offset=0):
 	return data.find(marker, offset)
