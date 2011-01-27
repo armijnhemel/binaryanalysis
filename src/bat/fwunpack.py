@@ -35,7 +35,7 @@ def searchUnpackTar(filename, tempdir=None):
 				tmpdir = tempdir
 			tar = tarfile.open(filename, 'r')
                 	tartmpdir = tempfile.mkdtemp(dir=tmpdir)
-			tar.extractall(path=tarttmpdir)
+			tar.extractall(path=tartmpdir)
 			tar.close()
 			return [(tartmpdir, 0)]
 	return []
