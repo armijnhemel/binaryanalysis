@@ -26,7 +26,7 @@ def extractsourcestrings(srcdir, sqldb, package, pversion):
 				## we're only interested in a few files right now, will add more in the future
 				## some filenames might have uppercase extensions, so lowercase them first
 				p_nocase = p.lower()
-				if p_nocase.endswith('.c') or p_nocase.endswith('.h') or p_nocase.endswith('.cpp'):
+				if p_nocase.endswith('.c') or p_nocase.endswith('.h') or p_nocase.endswith('.cpp') or p_nocase.endswith('.cc') or p_nocase.endswith('.hh'):
 					## Remove all C and C++ style comments. If a file is in iso-8859-1
 					## instead of ASCII or UTF-8 we need to do some extra work by
 					## converting it first using iconv.
