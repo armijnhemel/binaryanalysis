@@ -1,3 +1,6 @@
+2011-01-27
+* add stubs for using Ninka to get licensing information per file
+
 2011-01-26
 * return the type of the squashfs file system we find. We don't yet use the
 information, but eventually we will use it to choose the right unpacker for
