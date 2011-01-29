@@ -10,6 +10,8 @@ Most of the commands are pretty self explaining. The result of the wrapper
 functions is a list of tuples, which contain the name of a temporary directory
 with the unpacked contents of the archive, and the offset of the archive or
 file system in the parent file.
+
+Optionally, we should return a range of bytes that should be excluded.
 '''
 
 import sys, os, subprocess
@@ -550,3 +552,65 @@ def unpackLZMA(data, offset, tempdir=None):
 	os.fdopen(outtmpfile[0]).close()
 	os.unlink(tmpfile[1])
 	return tmpdir
+
+def unpackRPM(data, offset, tempdir=None):
+	## first unpack things, write things to a file and return
+	## the directory if the file is not empty
+	## Assumes (for now) that unrar is in the path
+	if tempdir == None:
+		tmpdir = tempfile.mkdtemp()
+	else:
+		tmpdir = tempdir
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.write(tmpfile[0], data[offset:])
+	## first use rpm2cpio to unpack the rpm data
+	p = subprocess.Popen(['rpm2cpio', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanuit, stanerr) = p.communicate()
+	'''
+        if os.stat(outtmpfile[1]).st_size == 0:
+                os.fdopen(outtmpfile[0]).close()
+                os.unlink(outtmpfile[1])
+                os.fdopen(tmpfile[0]).close()
+                os.unlink(tmpfile[1])
+		if tempdir == None:
+                	os.rmdir(tmpdir)
+                return None
+	os.fdopen(outtmpfile[0]).close()
+	os.unlink(tmpfile[1])
+	'''
+	if len(stanuit) != 0:
+		## cleanup first
+                os.fdopen(tmpfile[0]).close()
+                os.unlink(tmpfile[1])
+		if tempdir == None:
+                	os.rmdir(tmpdir)
+		## then use unpackCpio() to unpack the RPM
+		return unpackCpio(stanuit, 0, tempdir)
+	else:
+                os.fdopen(tmpfile[0]).close()
+                os.unlink(tmpfile[1])
+		if tempdir == None:
+                	os.rmdir(tmpdir)
+		return None
+
+def searchUnpackRPM(filename, tempdir=None):
+	datafile = open(filename, 'rb')
+	data = datafile.read()
+	datafile.close()
+	offset = fssearch.findRPM(data)
+	if offset == -1:
+		return []
+	else:
+		diroffsets = []
+        	if tempdir == None:
+        	       	tmpdir = tempfile.mkdtemp()
+		else:
+			tmpdir = tempfile.mkdtemp(dir=tempdir)
+		while(offset != -1):
+			res = unpackRPM(data, offset, tmpdir)
+			if res != None:
+				diroffsets.append((res, offset))
+			offset = fssearch.findRPM(data, offset+1)
+		if len(diroffsets) == 0:
+			os.rmdir(tmpdir)
+		return diroffsets

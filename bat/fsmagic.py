@@ -32,6 +32,7 @@ fsmagic = {
             #'lzma_alone':       '\x5d\x00\x00\x80',
             #'jffs2-le':         '\x85\x19',
             'ubifs':            '\x55\x42\x49\x23',
+            'rpm':              '\xed\xab\xee\xdb',
           }
 
 squashtypes = ['squashfs-le', 'squashfs-be', 'squashfs-le-lzma', 'squashfs-be-lzma']
