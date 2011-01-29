@@ -73,6 +73,13 @@ method  = searchUnpackLZMA
 magic   = lzma
 #cleanup = cleanupLZMA
 
+[rpm]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackRPM
+magic   = rpm
+#cleanup = cleanupRPM
+
 [wireless-tools]
 type    = program
 module  = bat.wirelesstools

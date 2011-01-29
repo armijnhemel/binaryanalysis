@@ -49,6 +49,9 @@ def findCpioTrailer(data, offset=0):
 		return res
 	return -1
 
+def findRPM(data, offset=0):
+	return findType('rpm', data, offset)
+
 def findGzip(data, offset=0):
 	return findType('gzip', data, offset)
 
