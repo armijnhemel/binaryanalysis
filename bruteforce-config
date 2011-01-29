@@ -73,6 +73,12 @@ method  = searchUnpackLZMA
 magic   = lzma
 #cleanup = cleanupLZMA
 
+[bzip2]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackBzip2
+magic   = bzip2
+
 [rpm]
 type    = unpack
 module  = bat.fwunpack

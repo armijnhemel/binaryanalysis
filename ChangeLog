@@ -1,6 +1,7 @@
 2011-01-29
 * add -d to cpio, so it actually creates directories
 * add unpacking RPMs. RPM contains a gzip file so we get some duplicates.
+* actually enable bzip2 in the standard configuration, sigh.
 
 2011-01-27
 * add stubs for using Ninka to get licensing information per file
