@@ -203,6 +203,9 @@ def unpackCramfs(data, offset, tempdir=None):
 		os.rmdir(tmpdir)
 		return tmpdir2
 
+## Search and unpack a squashfs file system. Since there are so many flavours
+## of squashfs available we have to do some extra work here, and possibly have
+## some extra tools (squashfs variants) installed.
 def searchUnpackSquashfs(filename, tempdir=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
@@ -566,18 +569,6 @@ def unpackRPM(data, offset, tempdir=None):
 	## first use rpm2cpio to unpack the rpm data
 	p = subprocess.Popen(['rpm2cpio', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanuit, stanerr) = p.communicate()
-	'''
-        if os.stat(outtmpfile[1]).st_size == 0:
-                os.fdopen(outtmpfile[0]).close()
-                os.unlink(outtmpfile[1])
-                os.fdopen(tmpfile[0]).close()
-                os.unlink(tmpfile[1])
-		if tempdir == None:
-                	os.rmdir(tmpdir)
-                return None
-	os.fdopen(outtmpfile[0]).close()
-	os.unlink(tmpfile[1])
-	'''
 	if len(stanuit) != 0:
 		## cleanup first
                 os.fdopen(tmpfile[0]).close()
@@ -593,6 +584,10 @@ def unpackRPM(data, offset, tempdir=None):
                 	os.rmdir(tmpdir)
 		return None
 
+## RPM is basically a header, plus some compressed files, so we are getting
+## duplicates at the moment. We can defeat this by setting the blacklist
+## to start of compression + 1. This should be fairly easy to do according to
+## the documentation rpm.org.
 def searchUnpackRPM(filename, tempdir=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
