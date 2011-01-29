@@ -143,7 +143,7 @@ def unpackCpio(data, offset, tempdir=None):
 		return
 	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
-	p = subprocess.Popen(['cpio', '-i', '--no-absolute-filenames'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	p = subprocess.Popen(['cpio', '-i', '-d', '--no-absolute-filenames'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanuit, stanerr) = p.communicate(data[offset:])
 	return tmpdir
 

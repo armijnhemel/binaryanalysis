@@ -1,3 +1,6 @@
+2011-01-29
+* add -d to cpio, so it actually creates directories
+
 2011-01-27
 * add stubs for using Ninka to get licensing information per file
 
