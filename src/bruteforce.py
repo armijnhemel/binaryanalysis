@@ -26,12 +26,14 @@ unpackscans  = []
 ## programscans: {scanname, module, method, xmloutput, cleanup}
 programscans = []
 
+config = ConfigParser.ConfigParser()
+
 '''
 This method recursively generates XML snippets. If a method for a 'program'
 has a pretty printing method defined, it will be used instead of the generic
 one.
 '''
-def prettyprintresxmlsnippet(res, config, root):
+def prettyprintresxmlsnippet(res, root):
 	## this should always be len == 1, have more checks
 	for i in res.keys():
 		if config.has_option(i, 'type'):
@@ -86,13 +88,13 @@ def prettyprintresxmlsnippet(res, config, root):
 						if 'scans' in elem:
 							tmpnode2 = root.createElement('scans')
 							for scan in elem['scans']:
-								tmpnode2.appendChild(prettyprintresxmlsnippet(scan, config, root))
+								tmpnode2.appendChild(prettyprintresxmlsnippet(scan, root))
 								tmpnode.appendChild(tmpnode2)
                 			topnode.appendChild(tmpnode)
 	return topnode
 
 ## top level XML pretty printing, view results with xml_pp or Firefox
-def prettyprintresxml(res, configs, scandate):
+def prettyprintresxml(res, scandate):
 	root = xml.dom.minidom.Document()
 	topnode = root.createElement("report")
 	tmpnode = root.createElement('scandate')
@@ -157,7 +159,7 @@ def prettyprintresxml(res, configs, scandate):
 	if 'scans' in res:
 		tmpnode = root.createElement('scans')
 		for scan in res['scans']:
-			tmpnode.appendChild(prettyprintresxmlsnippet(scan, configs, root))
+			tmpnode.appendChild(prettyprintresxmlsnippet(scan, root))
 		topnode.appendChild(tmpnode)
 	root.appendChild(topnode)
 	return root
@@ -209,10 +211,9 @@ def gethash(path, file):
 
 '''
 This method returns a report snippet for inclusion in the final
-report. Right now 'checks' is ignored and all checks are applied,
-but we really want to be able to weed a bit.
+report.
 '''
-def scanfile(path, file, checks, lentempdir=0, tempdir=None):
+def scanfile(path, file, lentempdir=0, tempdir=None):
 	report = {}
 
 	## this will report incorrectly if we only have unpacked one file to a
@@ -328,13 +329,13 @@ def scanfile(path, file, checks, lentempdir=0, tempdir=None):
 		if res != None:
 			report['architecture'] = res
 	scannedfile = "%s/%s" % (path, file)
-	res = scan(scannedfile, checks, type, filehash, tempdir)
+	res = scan(scannedfile, type, filehash, tempdir)
 	if res != []:
 		report['scans'] = res
 	return report
 
 ## result is a list of result tuples, one for every file in the directory
-def walktempdir(tempdir, checks, tmpdir):
+def walktempdir(tempdir, tmpdir):
 	osgen = os.walk(tempdir)
 	reports = []
 	try:
@@ -342,7 +343,7 @@ def walktempdir(tempdir, checks, tmpdir):
                 	i = osgen.next()
                 	for p in i[2]:
 				try:
-					res = scanfile(i[0], p, checks, len(tempdir), tmpdir)
+					res = scanfile(i[0], p, len(tempdir), tmpdir)
 					if res != []:
 						reports.append(res)
 				except Exception, e:
@@ -352,7 +353,7 @@ def walktempdir(tempdir, checks, tmpdir):
 	return reports
 
 ## scan a single file. Optionally supply a filehash for checking a knowledgebase
-def scan(scanfile, config, magic, filehash=None, tempdir=None):
+def scan(scanfile, magic, filehash=None, tempdir=None):
 	reports = []
 
 	## get stuff from the knowledgebase, but skip if we have the 'scanalways' flag set
@@ -403,7 +404,7 @@ def scan(scanfile, config, magic, filehash=None, tempdir=None):
 					if diroffset == None:
 						continue
 					dir = diroffset[0]
-					res = walktempdir(dir,config, tempdir)
+					res = walktempdir(dir, tempdir)
 					if res != []:
 						res.append({'offset': diroffset[1]})
 						report[section] = res
@@ -413,37 +414,37 @@ def scan(scanfile, config, magic, filehash=None, tempdir=None):
 	return reports
 
 ## store the global configuration in two arrays with hashes
-def readconfig(config):
-	for section in config.sections():
-		if config.has_option(section, 'type'):
+def readconfig(batconfig):
+	for section in batconfig.sections():
+		if batconfig.has_option(section, 'type'):
 			conf = {}
-			if config.get(section, 'type') == 'program':
+			if batconfig.get(section, 'type') == 'program':
 				conf['name']   = section
-				conf['module'] = config.get(section, 'module')
-				conf['method'] = config.get(section, 'method')
+				conf['module'] = batconfig.get(section, 'module')
+				conf['method'] = batconfig.get(section, 'method')
 				try:
-					conf['xmloutput'] = config.get(section, 'xmloutput')
+					conf['xmloutput'] = batconfig.get(section, 'xmloutput')
 				except:
 					pass
 				try:
-					conf['cleanup'] = config.get(section, 'cleanup')
+					conf['cleanup'] = batconfig.get(section, 'cleanup')
 				except:
 					pass
 				programscans.append(conf)
-			elif config.get(section, 'type') == 'unpack':
+			elif batconfig.get(section, 'type') == 'unpack':
 				conf['name']   = section
-				conf['module'] = config.get(section, 'module')
-				conf['method'] = config.get(section, 'method')
+				conf['module'] = batconfig.get(section, 'module')
+				conf['method'] = batconfig.get(section, 'method')
 				try:
-					conf['priority'] = int(config.get(section, 'priority'))
+					conf['priority'] = int(batconfig.get(section, 'priority'))
 				except:
 					conf['priority'] = 0
 				try:
-					conf['xmloutput'] = config.get(section, 'xmloutput')
+					conf['xmloutput'] = batconfig.get(section, 'xmloutput')
 				except:
 					pass
 				try:
-					conf['cleanup'] = config.get(section, 'cleanup')
+					conf['cleanup'] = batconfig.get(section, 'cleanup')
 				except:
 					pass
 				unpackscans.append(conf)
@@ -490,7 +491,6 @@ def main(argv):
 		print "Need configuration file"
 		sys.exit(1)
 
-	config = ConfigParser.ConfigParser()
 	config.readfp(configfile)
 
 	readconfig(config)
@@ -503,8 +503,8 @@ def main(argv):
 	## more lists in some fields, like libraries, or more result lists if
 	## the file inside a file system we looked at was in fact a file system.
 	tempdir=tempfile.mkdtemp()
-	res = scanfile(os.path.dirname(firmware_binary), os.path.basename(firmware_binary), config, tempdir=tempdir)
-	xml = prettyprintresxml(res, config, scandate)
+	res = scanfile(os.path.dirname(firmware_binary), os.path.basename(firmware_binary), tempdir=tempdir)
+	xml = prettyprintresxml(res, scandate)
 	print xml.toxml()
 
 if __name__ == "__main__":
