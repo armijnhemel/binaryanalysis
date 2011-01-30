@@ -4,7 +4,9 @@
 * add code to store the configuration globally
 * reenable ubifs
 * add unpacker for ubifs, currently does not work correctly, but unpacks too
-much. This needs to be fixed
+much. This needs to be fixed.
+* fix unpacker for ubifs. Needs testing with more real data.
+* remove temporary dirs in the bzip2 unpacker
 
 2011-01-29
 * add -d to cpio, so it actually creates directories
