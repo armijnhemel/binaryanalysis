@@ -1,5 +1,7 @@
 2011-01-30
 * don't scan block devices or character devices
+* don't enable ubifs, since I have not added the code yet :-/
+* add code to store the configuration globally
 
 2011-01-29
 * add -d to cpio, so it actually creates directories
