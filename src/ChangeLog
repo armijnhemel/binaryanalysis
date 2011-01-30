@@ -1,3 +1,6 @@
+2011-01-30
+* don't scan block devices or character devices
+
 2011-01-29
 * add -d to cpio, so it actually creates directories
 * add unpacking RPMs. RPM contains a gzip file so we get some duplicates.
