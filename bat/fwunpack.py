@@ -20,6 +20,7 @@ import fsmagic, fssearch
 
 ## TODO: rewrite this to like how we do other searches: first
 ## look for markers, then unpack.
+## This method should return a blacklist.
 def searchUnpackTar(filename, tempdir=None):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
@@ -99,6 +100,7 @@ def searchUnpack7z(filename, tempdir=None):
 			return [(zztmpdir, 0)]
 	return []
 
+## This method should return a blacklist.
 def searchUnpackCpio(filename, tempdir=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
@@ -151,6 +153,7 @@ def unpackCpio(data, offset, tempdir=None):
 	(stanuit, stanerr) = p.communicate(data[offset:])
 	return tmpdir
 
+## This method should return a blacklist.
 def searchUnpackCramfs(filename, tempdir=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
@@ -275,6 +278,7 @@ def unpackSquashfs(data, offset, tempdir=None):
 ## unpack a file system, without having to mount it. This code does
 ## not exist as of now. So, we'll just use programs from e2tools:
 ## http://freshmeat.net/projects/e2tools/
+## This method should return a blacklist.
 def unpackExt2fs(data, offset):
 	pass
 
@@ -592,6 +596,7 @@ def unpackRPM(data, offset, tempdir=None):
 ## duplicates at the moment. We can defeat this by setting the blacklist
 ## to start of compression + 1. This should be fairly easy to do according to
 ## the documentation rpm.org.
+## This method should return a blacklist.
 def searchUnpackRPM(filename, tempdir=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
@@ -614,14 +619,17 @@ def searchUnpackRPM(filename, tempdir=None):
 			os.rmdir(tmpdir)
 		return diroffsets
 
-## search and unpack Ubifs. Since we can't easily determine the length of the
+## Search and unpack Ubifs. Since we can't easily determine the length of the
 ## file system by using ubifs we will have to use a different measurement to
 ## measure the size of ubifs. A good start is the sum of the size of the
 ## volumes that were unpacked.
+## This method should return a blacklist.
 def searchUnpackUbifs(filename, tempdir=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
+	## We can use the values of offset and ubisize where offset != -1
+	## to determine the ranges for the blacklist.
 	offset = fssearch.findUbifs(data)
 	if offset == -1:
 		return []
