@@ -559,7 +559,7 @@ def unpackLZMA(data, offset, tempdir=None):
 def unpackRPM(data, offset, tempdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
-	## Assumes (for now) that unrar is in the path
+	## Assumes (for now) that rpm2cpio is in the path
 	if tempdir == None:
 		tmpdir = tempfile.mkdtemp()
 	else:
@@ -609,3 +609,52 @@ def searchUnpackRPM(filename, tempdir=None):
 		if len(diroffsets) == 0:
 			os.rmdir(tmpdir)
 		return diroffsets
+
+## search and unpack Ubifs. Since we can't easily determine the length of the
+## file system by using ubifs we will have to use a different measurement to
+## measure the size of ubifs. A good start is the size of the volumes that were
+## unpacked. TODO.
+def searchUnpackUbifs(filename, tempdir=None):
+	datafile = open(filename, 'rb')
+	data = datafile.read()
+	datafile.close()
+	offset = fssearch.findUbifs(data)
+	if offset == -1:
+		return []
+	else:
+		diroffsets = []
+        	if tempdir == None:
+        	       	tmpdir = tempfile.mkdtemp()
+		else:
+			tmpdir = tempfile.mkdtemp(dir=tempdir)
+		while(offset != -1):
+			res = unpackUbifs(data, offset, tmpdir)
+			if res != None:
+				diroffsets.append((res, offset))
+			offset = fssearch.findUbifs(data, offset+1)
+		if len(diroffsets) == 0:
+			os.rmdir(tmpdir)
+		return diroffsets
+
+def unpackUbifs(data, offset, tempdir=None):
+	if tempdir == None:
+		tmpdir = tempfile.mkdtemp()
+	else:
+		tmpdir = tempdir
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.write(tmpfile[0], data[offset:])
+	## use unubi to unpack the data
+	p = subprocess.Popen(['unubi', '-d', tmpdir, tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanuit, stanerr) = p.communicate()
+
+	if p.returncode != 0:
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	else:
+		## clean up the temporary files
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		return tmpdir
