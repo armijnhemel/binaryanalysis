@@ -18,6 +18,8 @@ import sys, os, subprocess
 import tempfile, bz2, re, magic, tarfile
 import fsmagic, fssearch
 
+## TODO: rewrite this to like how we do other searches: first
+## look for markers, then unpack.
 def searchUnpackTar(filename, tempdir=None):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
