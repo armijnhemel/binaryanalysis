@@ -9,6 +9,7 @@ module  = bat.fwunpack
 method  = searchUnpackCpio
 magic   = cpio
 #cleanup = cleanupZip
+priority = 1
 
 [cab]
 type    = unpack
@@ -16,6 +17,7 @@ module  = bat.fwunpack
 method  = searchUnpackCab
 magic   = cab
 #cleanup = cleanupZip
+priority = 0
 
 [exe]
 type    = unpack
@@ -23,6 +25,7 @@ module  = bat.fwunpack
 method  = searchUnpack7z
 magic   = 7z
 #cleanup = cleanupZip
+priority = 0
 
 [tar]
 type    = unpack
@@ -30,6 +33,7 @@ module  = bat.fwunpack
 method  = searchUnpackTar
 magic   = tar
 #cleanup = cleanupZip
+priority = 1
 
 [rar]
 type    = unpack
@@ -37,6 +41,7 @@ module  = bat.fwunpack
 method  = searchUnpackRar
 magic   = rar
 #cleanup = cleanupZip
+priority = 0
 
 [zip]
 type    = unpack
@@ -44,6 +49,7 @@ module  = bat.fwunpack
 method  = searchUnpackZip
 magic   = zip
 #cleanup = cleanupZip
+priority = 0
 
 [gzip]
 type    = unpack
@@ -51,6 +57,7 @@ module  = bat.fwunpack
 method  = searchUnpackGzip
 magic   = gzip
 #cleanup = cleanupGzip
+priority = 0
 
 #[cramfs]
 #type    = unpack
@@ -58,6 +65,7 @@ magic   = gzip
 #method  = searchUnpackCramfs
 #magic   = cramfs
 #cleanup = cleanupCramfs
+#priority = 2
 
 [squashfs]
 type    = unpack
@@ -65,6 +73,7 @@ module  = bat.fwunpack
 method  = searchUnpackSquashfs
 magic   = squashfs
 #cleanup = cleanupSquashfs
+priority = 0
 
 [lzma]
 type    = unpack
@@ -72,12 +81,20 @@ module  = bat.fwunpack
 method  = searchUnpackLZMA
 magic   = lzma
 #cleanup = cleanupLZMA
+priority = 0
 
 [bzip2]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackBzip2
 magic   = bzip2
+priority = 0
+
+[ubifs]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackUbi
+priority = 2
 
 [rpm]
 type    = unpack
@@ -85,6 +102,7 @@ module  = bat.fwunpack
 method  = searchUnpackRPM
 magic   = rpm
 #cleanup = cleanupRPM
+priority = 1
 
 [wireless-tools]
 type    = program
