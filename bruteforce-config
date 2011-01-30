@@ -90,11 +90,11 @@ method  = searchUnpackBzip2
 magic   = bzip2
 priority = 0
 
-[ubifs]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackUbi
-priority = 2
+#[ubifs]
+#type    = unpack
+#module  = bat.fwunpack
+#method  = searchUnpackUbi
+#priority = 2
 
 [rpm]
 type    = unpack
