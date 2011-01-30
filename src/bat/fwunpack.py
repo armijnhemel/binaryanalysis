@@ -380,6 +380,8 @@ def searchUnpackBzip2(filename, tempdir=None):
 			if res != None:
 				diroffsets.append((res, offset))
 			offset = fssearch.findBzip2(data, offset+1)
+		if len(diroffsets) == 0:
+			os.rmdir(tmpdir)
 		return diroffsets
 
 def unpackZip(data, offset, tempdir=None):
@@ -612,8 +614,8 @@ def searchUnpackRPM(filename, tempdir=None):
 
 ## search and unpack Ubifs. Since we can't easily determine the length of the
 ## file system by using ubifs we will have to use a different measurement to
-## measure the size of ubifs. A good start is the size of the volumes that were
-## unpacked. TODO.
+## measure the size of ubifs. A good start is the sum of the size of the
+## volumes that were unpacked.
 def searchUnpackUbifs(filename, tempdir=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
@@ -630,8 +632,9 @@ def searchUnpackUbifs(filename, tempdir=None):
 		while(offset != -1):
 			res = unpackUbifs(data, offset, tmpdir)
 			if res != None:
-				diroffsets.append((res, offset))
-			offset = fssearch.findUbifs(data, offset+1)
+				(ubitmpdir, ubisize) = res
+				diroffsets.append((ubitmpdir, offset))
+			offset = fssearch.findUbifs(data, offset+ubisize)
 		if len(diroffsets) == 0:
 			os.rmdir(tmpdir)
 		return diroffsets
@@ -640,7 +643,9 @@ def unpackUbifs(data, offset, tempdir=None):
 	if tempdir == None:
 		tmpdir = tempfile.mkdtemp()
 	else:
-		tmpdir = tempdir
+		## since volumes might be called the same we need another
+		## layer of tempdirs
+		tmpdir = tempfile.mkdtemp(dir=tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
 	## use unubi to unpack the data
@@ -657,4 +662,14 @@ def unpackUbifs(data, offset, tempdir=None):
 		## clean up the temporary files
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
-		return tmpdir
+		## determine the sum of the size of the unpacked files
+		osgen = os.walk(tempdir)
+		ubisize = 0
+		try:
+			while True:
+				i = osgen.next()
+				for p in i[2]:
+					ubisize = ubisize + os.stat("%s/%s" % (i[0], p)).st_size
+        	except StopIteration:
+                	pass
+		return (tmpdir, ubisize)
