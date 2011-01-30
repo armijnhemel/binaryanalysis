@@ -19,6 +19,13 @@ import sqlite3
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
+## arrays for storing data for the scans we have. Since the configuration is
+## only read once and thus will not change we can easily store it globally
+## unpackscans: {scanname, module, method, xmloutput, priority, cleanup}
+unpackscans  = []
+## programscans: {scanname, module, method, xmloutput, cleanup}
+programscans = []
+
 '''
 This method recursively generates XML snippets. If a method for a 'program'
 has a pretty printing method defined, it will be used instead of the generic
@@ -405,6 +412,42 @@ def scan(scanfile, config, magic, filehash=None, tempdir=None):
 				pass
 	return reports
 
+## store the global configuration in two arrays with hashes
+def readconfig(config):
+	for section in config.sections():
+		if config.has_option(section, 'type'):
+			conf = {}
+			if config.get(section, 'type') == 'program':
+				conf['name']   = section
+				conf['module'] = config.get(section, 'module')
+				conf['method'] = config.get(section, 'method')
+				try:
+					conf['xmloutput'] = config.get(section, 'xmloutput')
+				except:
+					pass
+				try:
+					conf['cleanup'] = config.get(section, 'cleanup')
+				except:
+					pass
+				programscans.append(conf)
+			elif config.get(section, 'type') == 'unpack':
+				conf['name']   = section
+				conf['module'] = config.get(section, 'module')
+				conf['method'] = config.get(section, 'method')
+				try:
+					conf['priority'] = int(config.get(section, 'priority'))
+				except:
+					conf['priority'] = 0
+				try:
+					conf['xmloutput'] = config.get(section, 'xmloutput')
+				except:
+					pass
+				try:
+					conf['cleanup'] = config.get(section, 'cleanup')
+				except:
+					pass
+				unpackscans.append(conf)
+
 def main(argv):
         parser = OptionParser()
 	parser.add_option("-a", "--always", action="store_true", dest="scanalways", help="always perform brute force scan even if results are availale in the knowledgebase (default false)")
@@ -450,6 +493,7 @@ def main(argv):
 	config = ConfigParser.ConfigParser()
 	config.readfp(configfile)
 
+	readconfig(config)
 	scandate = datetime.datetime.utcnow()
 
 	## Per firmware scanned we get a list with results.
