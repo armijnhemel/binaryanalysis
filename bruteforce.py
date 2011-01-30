@@ -232,6 +232,12 @@ def scanfile(path, file, checks, lentempdir=0, tempdir=None):
 	## no use checking a socket
         if type.find('socket') == 0:
         	return report
+	## no use checking a block device
+        if type.find('block special') == 0:
+        	return report
+	## no use checking a character device
+        if type.find('character special') == 0:
+        	return report
 
 	report['size'] = os.lstat("%s/%s" % (path, file)).st_size
 
@@ -239,12 +245,13 @@ def scanfile(path, file, checks, lentempdir=0, tempdir=None):
 	if os.lstat("%s/%s" % (path, file)).st_size == 0:
 		return report
 
-	## store the hash of the file for possibly querying the
-	## knowledgebase later on
+	## Store the hash of the file for identification and for possibly
+	## querying the knowledgebase later on.
 	filehash = gethash(path, file)
 	report['sha256'] = filehash
 
-	## Filter out various things based on magic type.
+	## Filter out various things based on magic type. This might break
+	## if a firmware update is actually a shell script.
         if type.find('ASCII text') == 0:
         	return report
         elif type.find('ASCII English text') == 0:
