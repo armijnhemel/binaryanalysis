@@ -21,7 +21,7 @@ import fsmagic, fssearch
 ## TODO: rewrite this to like how we do other searches: first
 ## look for markers, then unpack.
 ## This method should return a blacklist.
-def searchUnpackTar(filename, tempdir=None):
+def searchUnpackTar(filename, tempdir=None, blacklist=None):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
 	type = ms.file(filename)
@@ -45,7 +45,7 @@ def searchUnpackTar(filename, tempdir=None):
 			return [(tartmpdir, 0)]
 	return []
 
-def searchUnpackCab(filename, tempdir=None):
+def searchUnpackCab(filename, tempdir=None, blacklist=None):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
 	type = ms.file(filename)
@@ -72,7 +72,7 @@ def searchUnpackCab(filename, tempdir=None):
 			return [(cabtmpdir, 0)]
 	return []
 
-def searchUnpack7z(filename, tempdir=None):
+def searchUnpack7z(filename, tempdir=None, blacklist=None):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
 	type = ms.file(filename)
@@ -101,7 +101,7 @@ def searchUnpack7z(filename, tempdir=None):
 	return []
 
 ## This method should return a blacklist.
-def searchUnpackCpio(filename, tempdir=None):
+def searchUnpackCpio(filename, tempdir=None, blacklist=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
@@ -154,7 +154,7 @@ def unpackCpio(data, offset, tempdir=None):
 	return tmpdir
 
 ## This method should return a blacklist.
-def searchUnpackCramfs(filename, tempdir=None):
+def searchUnpackCramfs(filename, tempdir=None, blacklist=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
@@ -211,7 +211,7 @@ def unpackCramfs(data, offset, tempdir=None):
 ## Search and unpack a squashfs file system. Since there are so many flavours
 ## of squashfs available we have to do some extra work here, and possibly have
 ## some extra tools (squashfs variants) installed.
-def searchUnpackSquashfs(filename, tempdir=None):
+def searchUnpackSquashfs(filename, tempdir=None, blacklist=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
@@ -313,7 +313,7 @@ def unpackGzip(data, offset, tempdir=None):
 	os.unlink(tmpfile[1])
 	return tmpdir
 
-def searchUnpackGzip(filename, tempdir=None):
+def searchUnpackGzip(filename, tempdir=None, blacklist=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
@@ -368,7 +368,7 @@ def unpackBzip2(data, offset, tempdir=None):
 	os.unlink(tmpfile[1])
 	return tmpdir
 
-def searchUnpackBzip2(filename, tempdir=None):
+def searchUnpackBzip2(filename, tempdir=None, blacklist=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
@@ -424,7 +424,7 @@ def unpackZip(data, offset, tempdir=None):
 	os.unlink(tmpfile[1])
 	return (endofcentraldir, tmpdir)
 
-def searchUnpackZip(filename, tempdir=None):
+def searchUnpackZip(filename, tempdir=None, blacklist=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
@@ -451,7 +451,7 @@ def searchUnpackZip(filename, tempdir=None):
 			os.rmdir(tmpdir)
 		return diroffsets
 
-def searchUnpackRar(filename, tempdir=None):
+def searchUnpackRar(filename, tempdir=None, blacklist=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
@@ -514,7 +514,7 @@ def unpackRar(data, offset, tempdir=None):
 	os.unlink(tmpfile[1])
 	return (endofarchive, tmpdir)
 
-def searchUnpackLZMA(filename, tempdir=None):
+def searchUnpackLZMA(filename, tempdir=None, blacklist=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
@@ -597,7 +597,7 @@ def unpackRPM(data, offset, tempdir=None):
 ## to start of compression + 1. This should be fairly easy to do according to
 ## the documentation rpm.org.
 ## This method should return a blacklist.
-def searchUnpackRPM(filename, tempdir=None):
+def searchUnpackRPM(filename, tempdir=None, blacklist=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
@@ -624,7 +624,7 @@ def searchUnpackRPM(filename, tempdir=None):
 ## measure the size of ubifs. A good start is the sum of the size of the
 ## volumes that were unpacked.
 ## This method should return a blacklist.
-def searchUnpackUbifs(filename, tempdir=None):
+def searchUnpackUbifs(filename, tempdir=None, blacklist=None):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
