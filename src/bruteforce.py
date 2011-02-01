@@ -398,7 +398,7 @@ def scan(scanfile, magic, filehash=None, tempdir=None):
 				module = config.get(section, 'module')
 				method = config.get(section, 'method')
 				exec "from %s import %s as bat_%s" % (module, method, method)
-				diroffsets = eval("bat_%s(scanfile, tempdir)" % (method))
+				diroffsets = eval("bat_%s(scanfile, tempdir, blacklist=[])" % (method))
 				for diroffset in diroffsets:
 					report = {}
 					if diroffset == None:
