@@ -1,3 +1,6 @@
+2011-02-03
+* add blacklisting for tar, cpio and RPM
+
 2011-01-30
 * don't scan block devices or character devices
 * don't enable ubifs, since I have not added the code yet :-/

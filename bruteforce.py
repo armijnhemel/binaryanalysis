@@ -355,6 +355,8 @@ def walktempdir(tempdir, tmpdir):
 ## scan a single file. Optionally supply a filehash for checking a knowledgebase
 def scan(scanfile, magic, filehash=None, tempdir=None):
 	reports = []
+	## we reset the blacklist for each new scan we do
+	blacklist = []
 
 	## get stuff from the knowledgebase, but skip if we have the 'scanalways' flag set
 	if not scanalways:
@@ -398,8 +400,14 @@ def scan(scanfile, magic, filehash=None, tempdir=None):
 				module = config.get(section, 'module')
 				method = config.get(section, 'method')
 				exec "from %s import %s as bat_%s" % (module, method, method)
-				diroffsets = eval("bat_%s(scanfile, tempdir, blacklist=[])" % (method))
-				for diroffset in diroffsets:
+				## last entry is a blacklist with blacklists for the *original* file
+				## these should be appended to the original blacklist
+				diroffsets = eval("bat_%s(scanfile, tempdir, blacklist)" % (method))
+				## result is either empty, just contains the blacklist that was
+				## passed into it, or offsets, plus a blacklist.
+				if len(diroffsets) <= 1:
+					continue
+				for diroffset in diroffsets[0:-1]:
 					report = {}
 					if diroffset == None:
 						continue
@@ -409,6 +417,7 @@ def scan(scanfile, magic, filehash=None, tempdir=None):
 						res.append({'offset': diroffset[1]})
 						report[section] = res
 						reports.append(report)
+				blacklist = diroffsets[-1]
 			else:
 				pass
 	return reports

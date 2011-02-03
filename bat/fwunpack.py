@@ -17,10 +17,11 @@ Optionally, we should return a range of bytes that should be excluded.
 import sys, os, subprocess
 import tempfile, bz2, re, magic, tarfile
 import fsmagic, fssearch
+import rpm
 
 ## convenience method to check if the offset we find is in a blacklist
-## Blacklists are composed of tuples (lower, upper) which mark a region as a no
-## go area.
+## Blacklists are composed of tuples (lower, upper) which mark a region
+## in the parent file(!) as a no go area.
 ## This method returns the upperbound from the tuple for which
 ## lower <= offset <= upper is True
 def inblacklist(offset, blacklist):
@@ -44,6 +45,7 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[]):
 	## search for first magic marker that matches
 	for tm in tarmagic:
 		if tm in type:
+			tarsize = 0
         		if tempdir == None:
         		       	tmpdir = tempfile.mkdtemp()
 			else:
@@ -51,8 +53,11 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[]):
 			tar = tarfile.open(filename, 'r')
                 	tartmpdir = tempfile.mkdtemp(dir=tmpdir)
 			tar.extractall(path=tartmpdir)
+			for t in tar:
+				tarsize = tarsize + t.size
 			tar.close()
-			return [(tartmpdir, 0)]
+			blacklist.append((0,tarsize))
+			return [(tartmpdir, 0), blacklist]
 	return []
 
 def searchUnpackCab(filename, tempdir=None, blacklist=[]):
@@ -79,7 +84,7 @@ def searchUnpackCab(filename, tempdir=None, blacklist=[]):
 				except:
 					pass
 				continue
-			return [(cabtmpdir, 0)]
+			return [(cabtmpdir, 0), blacklist]
 	return []
 
 def searchUnpack7z(filename, tempdir=None, blacklist=[]):
@@ -107,7 +112,7 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[]):
 				except:
 					pass
 				continue
-			return [(zztmpdir, 0)]
+			return [(zztmpdir, 0), blacklist]
 	return []
 
 ## This method should return a blacklist.
@@ -134,10 +139,12 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[]):
 			res = unpackCpio(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
+				blacklist.append((offset, trailer))
 			offset = fssearch.findCpio(data, offset+1)
 			while offset < trailer and offset != -1:
 				offset = fssearch.findCpio(data, offset+1)
 			trailer = fssearch.findCpioTrailer(data, offset)
+		diroffsets.append(blacklist)
 		return diroffsets
 
 ## tries to unpack stuff using cpio. If it is successful, it will
@@ -194,6 +201,7 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[]):
 			offset = fssearch.findCramfs(data, offset+1)
 		if len(diroffsets) == 0:
 			os.rmdir(tmpdir)
+		diroffsets.append(blacklist)
 		return diroffsets
 
 ## tries to unpack stuff using fsck.cramfs. If it is successful, it will
@@ -231,6 +239,8 @@ def unpackCramfs(data, offset, tempdir=None):
 ## Search and unpack a squashfs file system. Since there are so many flavours
 ## of squashfs available we have to do some extra work here, and possibly have
 ## some extra tools (squashfs variants) installed.
+## We don't return a blacklist here, but we could use unsquashfs -s to get
+## statistics and possibly speed up the scanning a bit.
 def searchUnpackSquashfs(filename, tempdir=None, blacklist=[]):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
@@ -257,6 +267,7 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[]):
 			(offset, squashtype) = fssearch.findSquashfs(data, offset+1)
 		if len(diroffsets) == 0:
 			os.rmdir(tmpdir)
+		diroffsets.append(blacklist)
 		return diroffsets
 
 ## tries to unpack stuff using unsquashfs. If it is successful, it will
@@ -364,6 +375,7 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[]):
 			offset = fssearch.findGzip(data, offset+1)
 		if len(diroffsets) == 0:
 			os.rmdir(tmpdir)
+		diroffsets.append(blacklist)
 		return diroffsets
 
 ## tries to unpack stuff using bzcat. If it is successful, it will
@@ -424,6 +436,7 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[]):
 			offset = fssearch.findBzip2(data, offset+1)
 		if len(diroffsets) == 0:
 			os.rmdir(tmpdir)
+		diroffsets.append(blacklist)
 		return diroffsets
 
 def unpackZip(data, offset, tempdir=None):
@@ -490,6 +503,7 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[]):
 				offset = fssearch.findZip(data, endofcentraldir+1)
 		if len(diroffsets) == 0:
 			os.rmdir(tmpdir)
+		diroffsets.append(blacklist)
 		return diroffsets
 
 def searchUnpackRar(filename, tempdir=None, blacklist=[]):
@@ -520,6 +534,7 @@ def searchUnpackRar(filename, tempdir=None, blacklist=[]):
 				offset = fssearch.findRar(data, endofarchive)
 		if len(diroffsets) == 0:
 			os.rmdir(tmpdir)
+		diroffsets.append(blacklist)
 		return diroffsets
 
 def unpackRar(data, offset, tempdir=None):
@@ -585,6 +600,7 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[]):
 			offset = fssearch.findLZMA(data, offset+1)
 		if len(diroffsets) == 0:
 			os.rmdir(tmpdir)
+		diroffsets.append(blacklist)
 		return diroffsets
 
 ## tries to unpack stuff using lzma -cd. If it is successful, it will
@@ -644,9 +660,8 @@ def unpackRPM(data, offset, tempdir=None):
 		return None
 
 ## RPM is basically a header, plus some compressed files, so we are getting
-## duplicates at the moment. We can defeat this by setting the blacklist
-## to start of compression + 1. This should be fairly easy to do according to
-## the documentation rpm.org.
+## duplicates at the moment. We can defeat this easily by setting the blacklist
+## upperbound to the start of compression.
 ## This method should return a blacklist.
 def searchUnpackRPM(filename, tempdir=None, blacklist=[]):
 	datafile = open(filename, 'rb')
@@ -670,9 +685,23 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[]):
 			res = unpackRPM(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
+				## determine which compression is used, so we can
+				## find the right offset. Code from the RPM examples
+				tset = rpm.TransactionSet()
+        			fdno = os.open(filename, os.O_RDONLY)
+        			header = tset.hdrFromFdno(fdno)
+        			os.close(fdno)
+				## first some sanity checks. payload format should
+				## always be 'cpio' according to LSB 3
+				if header[rpm.RPMTAG_PAYLOADFORMAT] == 'cpio':
+					## compression should always be 'gzip' according to LSB 3
+					if header[rpm.RPMTAG_PAYLOADCOMPRESSOR] == 'gzip':
+						payloadoffset = fssearch.findGzip(data, offset)
+						blacklist.append((offset, payloadoffset))
 			offset = fssearch.findRPM(data, offset+1)
 		if len(diroffsets) == 0:
 			os.rmdir(tmpdir)
+		diroffsets.append(blacklist)
 		return diroffsets
 
 ## Search and unpack Ubifs. Since we can't easily determine the length of the
@@ -708,6 +737,7 @@ def searchUnpackUbifs(filename, tempdir=None, blacklist=[]):
 			offset = fssearch.findUbifs(data, offset+ubisize)
 		if len(diroffsets) == 0:
 			os.rmdir(tmpdir)
+		diroffsets.append(blacklist)
 		return diroffsets
 
 def unpackUbifs(data, offset, tempdir=None):
