@@ -6,7 +6,7 @@
 
 import string, re
 
-def searchLoadLin(path):
+def searchLoadLin(path, blacklist=[]):
         try:
                 binary = open(path, 'rb')
                 lines = binary.read()
@@ -27,7 +27,7 @@ def extractLoadLin(lines):
 			return res
 	return -1
 
-def searchIptables(path):
+def searchIptables(path, blacklist=[]):
         try:
                 binary = open(path, 'rb')
                 lines = binary.read()
@@ -49,7 +49,7 @@ def extractIptables(lines):
 			return res
 	return -1
 
-def searchDproxy(path):
+def searchDproxy(path, blacklist=[]):
         try:
                 binary = open(path, 'rb')
                 lines = binary.read()
@@ -70,7 +70,7 @@ def extractDproxy(lines):
 			return res
 	return -1
 
-def searchEzIpupdate(path):
+def searchEzIpupdate(path, blacklist=[]):
         try:
                 binary = open(path, 'rb')
                 lines = binary.read()
@@ -92,7 +92,7 @@ def extractEzIpupdate(lines):
 			return res
 	return -1
 
-def searchLibusb(path):
+def searchLibusb(path, blacklist=[]):
         try:
                 binary = open(path, 'rb')
                 lines = binary.read()
@@ -114,7 +114,7 @@ def extractLibusb(lines):
 			return res
 	return -1
 
-def searchVsftpd(path):
+def searchVsftpd(path, blacklist=[]):
         try:
                 binary = open(path, 'rb')
                 lines = binary.read()
@@ -137,7 +137,7 @@ def extractVsftpd(lines):
 			return res
 	return -1
 
-def searchHostapd(path):
+def searchHostapd(path, blacklist=[]):
         try:
                 binary = open(path, 'rb')
                 lines = binary.read()
@@ -157,7 +157,7 @@ def extractHostapd(lines):
 			return res
 	return -1
 
-def searchWpaSupplicant(path):
+def searchWpaSupplicant(path, blacklist=[]):
         try:
                 binary = open(path, 'rb')
                 lines = binary.read()
@@ -177,7 +177,7 @@ def extractWpaSupplicant(lines):
 			return res
 	return -1
 
-def searchIproute(path):
+def searchIproute(path, blacklist=[]):
         try:
                 binary = open(path, 'rb')
                 lines = binary.read()

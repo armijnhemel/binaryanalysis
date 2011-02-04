@@ -8,7 +8,7 @@ import sys, os
 from optparse import OptionParser
 import busybox
 
-def busybox_version(path):
+def busybox_version(path, blacklist=[]):
 	try:
 		busybox_binary = open(path, 'rb')
 		busybox_lines = busybox_binary.read()
