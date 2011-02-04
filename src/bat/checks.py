@@ -5,12 +5,14 @@
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 import string, re
+import extractor
 
 def searchLoadLin(path, blacklist=[]):
         try:
                 binary = open(path, 'rb')
                 lines = binary.read()
-                if extractLoadLin(lines) != -1:
+                offset = extractLoadLin(lines)
+		if offset != -1 and not extractor.inblacklist(offset, blacklist):
 			return True
 		else:
 			return None
@@ -31,7 +33,8 @@ def searchIptables(path, blacklist=[]):
         try:
                 binary = open(path, 'rb')
                 lines = binary.read()
-                if extractIptables(lines) != -1:
+                offset = extractIptables(lines)
+		if offset != -1 and not extractor.inblacklist(offset, blacklist):
 			return True
 		else:
 			return None
@@ -53,7 +56,8 @@ def searchDproxy(path, blacklist=[]):
         try:
                 binary = open(path, 'rb')
                 lines = binary.read()
-                if extractDproxy(lines) != -1:
+                offset = extractDproxy(lines)
+		if offset != -1 and not extractor.inblacklist(offset, blacklist):
 			return True
 		else:
 			return None
@@ -74,7 +78,8 @@ def searchEzIpupdate(path, blacklist=[]):
         try:
                 binary = open(path, 'rb')
                 lines = binary.read()
-                if extractEzIpupdate(lines) != -1:
+                offset = extractEzIpupdate(lines)
+		if offset != -1 and not extractor.inblacklist(offset, blacklist):
 			return True
 		else:
 			return None
@@ -96,7 +101,8 @@ def searchLibusb(path, blacklist=[]):
         try:
                 binary = open(path, 'rb')
                 lines = binary.read()
-                if extractLibusb(lines) != -1:
+                offset = extractLibusb(lines)
+		if offset != -1 and not extractor.inblacklist(offset, blacklist):
 			return True
 		else:
 			return None
@@ -118,7 +124,8 @@ def searchVsftpd(path, blacklist=[]):
         try:
                 binary = open(path, 'rb')
                 lines = binary.read()
-                if extractVsftpd(lines) != -1:
+                offset = extractVsftpd(lines)
+		if offset != -1 and not extractor.inblacklist(offset, blacklist):
 			return True
 		else:
 			return None
@@ -141,7 +148,8 @@ def searchHostapd(path, blacklist=[]):
         try:
                 binary = open(path, 'rb')
                 lines = binary.read()
-                if extractHostapd(lines) != -1:
+                offset = extractHostapd(lines)
+		if offset != -1 and not extractor.inblacklist(offset, blacklist):
 			return True
 		else:
 			return None
@@ -161,7 +169,8 @@ def searchWpaSupplicant(path, blacklist=[]):
         try:
                 binary = open(path, 'rb')
                 lines = binary.read()
-                if extractWpaSupplicant(lines) != -1:
+                offset = extractWpaSupplicant(lines)
+		if offset != -1 and not extractor.inblacklist(offset, blacklist):
 			return True
 		else:
 			return None
@@ -181,7 +190,8 @@ def searchIproute(path, blacklist=[]):
         try:
                 binary = open(path, 'rb')
                 lines = binary.read()
-                if extractIproute(lines) != -1:
+                offset = extractIproute(lines)
+		if offset != -1 and not extractor.inblacklist(offset, blacklist):
 			return True
 		else:
 			return None

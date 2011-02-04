@@ -16,7 +16,7 @@ Optionally, we should return a range of bytes that should be excluded.
 
 import sys, os, subprocess
 import tempfile, bz2, re, magic, tarfile
-import fsmagic, fssearch
+import fsmagic, fssearch, extractor
 import rpm
 
 ## convenience method to check if the offset we find is in a blacklist
@@ -25,9 +25,7 @@ import rpm
 ## This method returns the upperbound from the tuple for which
 ## lower <= offset <= upper is True
 def inblacklist(offset, blacklist):
-	for bl in blacklist:
-		if offset >= bl[0] and offset <= bl[1]:
-			return bl[1]
+	return extractor.inblacklist(offset, blacklist)
 
 ## TODO: rewrite this to like how we do other searches: first
 ## look for markers, then unpack.

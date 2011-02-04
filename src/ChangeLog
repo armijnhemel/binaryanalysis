@@ -1,3 +1,7 @@
+2011-02-04
+* add documentation for blacklisting
+* add blacklisting for individual program scans
+
 2011-02-03
 * add blacklisting for tar, cpio and RPM
 

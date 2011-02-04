@@ -12,7 +12,8 @@ def searchRedBoot(path, blacklist=[]):
         try:
                 redboot_binary = open(path, 'rb')
                 redboot_lines = redboot_binary.read()
-                if findRedBoot(redboot_lines) != -1:
+                offset = findRedBoot(redboot_lines)
+		if offset != -1 and not extractor.inblacklist(offset, blacklist):
                         return True
                 else:
                         return None
@@ -26,7 +27,8 @@ def searchUBoot(path, blacklist=[]):
         try:
                 binary = open(path, 'rb')
                 lines = binary.read()
-                if findUBoot(lines) != -1:
+                offset = findUBoot(lines)
+		if offset != -1 and not extractor.inblacklist(offset, blacklist):
                         return True
                 else:
                         return None
