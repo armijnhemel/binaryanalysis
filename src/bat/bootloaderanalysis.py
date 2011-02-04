@@ -8,7 +8,7 @@ import os, sys, string
 import re, subprocess
 import extractor
 
-def searchRedBoot(path):
+def searchRedBoot(path, blacklist=[]):
         try:
                 redboot_binary = open(path, 'rb')
                 redboot_lines = redboot_binary.read()
@@ -22,7 +22,7 @@ def searchRedBoot(path):
 def findRedBoot(lines):
 	return lines.find("Display RedBoot version information")
 
-def searchUBoot(path):
+def searchUBoot(path, blacklist=[]):
         try:
                 binary = open(path, 'rb')
                 lines = binary.read()

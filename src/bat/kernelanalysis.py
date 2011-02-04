@@ -24,7 +24,7 @@ def xmlprettyprint(res, root):
 		topnode.appendChild(tmpnode)
 	return topnode
 
-def kernelChecks(path):
+def kernelChecks(path, blacklist=[]):
 	results = {}
         try:
                 kernelbinary = open(path, 'rb')
