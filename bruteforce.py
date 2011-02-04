@@ -22,6 +22,7 @@ ms.load()
 ## arrays for storing data for the scans we have. Since the configuration is
 ## only read once and thus will not change we can easily store it globally
 ## unpackscans: {scanname, module, method, xmloutput, priority, cleanup}
+## These need to be sorted by priority
 unpackscans  = []
 ## programscans: {scanname, module, method, xmloutput, cleanup}
 programscans = []
@@ -391,7 +392,7 @@ def scan(scanfile, magic, filehash=None, tempdir=None):
 				method = config.get(section, 'method')
 				exec "from %s import %s as bat_%s" % (module, method, method)
 				## temporary stuff, this should actually be nicely wrapped in a report tuple
-				res = eval("bat_%s(scanfile)" % (method))
+				res = eval("bat_%s(scanfile, blacklist)" % (method))
 				if res != None:
 					report[section] = res
 					reports.append(report)
@@ -512,6 +513,7 @@ def main(argv):
 	## more lists in some fields, like libraries, or more result lists if
 	## the file inside a file system we looked at was in fact a file system.
 	tempdir=tempfile.mkdtemp()
+	#tempdir=None
 	res = scanfile(os.path.dirname(firmware_binary), os.path.basename(firmware_binary), tempdir=tempdir)
 	xml = prettyprintresxml(res, scandate)
 	print xml.toxml()

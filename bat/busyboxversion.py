@@ -6,7 +6,7 @@
 
 import sys, os
 from optparse import OptionParser
-import busybox
+import busybox, extractor
 
 def busybox_version(path, blacklist=[]):
 	try:

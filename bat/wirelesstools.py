@@ -20,7 +20,8 @@ def searchWirelessTools(path, blacklist=[]):
         try:
                 wireless_binary = open(path, 'rb')
                 wireless_lines = wireless_binary.read()
-                if extractWireless(wireless_lines) != -1:
+                offset = extractWireless(wireless_lines)
+		if offset != -1 and not extractor.inblacklist(offset, blacklist):
 			return True
 		else:
 			return None
