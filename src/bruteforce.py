@@ -367,16 +367,22 @@ def scan(scanfile, magic, filehash=None, tempdir=None):
 		else:
 			pass
 
-	## list of magic file types that 'program' checks should not do
-	## to avoid false positives and superfluous scanning.
-	## Does not work correctly yet, for romfs for example. Solution:
-	## "normalize" magic first
+	## list of magic file types that 'program' checks should skip
+	## to avoid false positives and superfluous scanning. Does not work
+	## correctly yet, for romfs for example.
+	## If we use priorities we can rework this. The benefit of
+	## the current approach is that it is a lot faster.
+	## The drawback is that we might miss things that have been appended
+	## to any of the things in this list. So for correctness we should
+	## not rely on this.
 	programignorelist = [ "POSIX tar archive (GNU)"
                             , "Linux rev 0.0 ext2 filesystem data"
                             , "Linux rev 1.0 ext2 filesystem data"
                             , "Zip archive data, at least v1.0 to extract"
                             , "romfs filesystem, version 1"
                             ]
+
+	## TODO: rework so we first run the unpack scans with the highest priority
 	for section in config.sections():
 		if config.has_option(section, 'type'):
 			if config.get(section, 'type') == 'unpack':
