@@ -309,12 +309,56 @@ def unpackSquashfs(data, offset, tempdir=None):
 		os.unlink(tmpfile[1])
 		return tmpdir
 
+## We use tune2fs to get the size of the file system so we know what to
+## blacklist.
+## TODO: unpack, plus use tune2fs on the right offset
+## This method should return a blacklist.
+def searchUnpackExt2fs(filename, tempdir=None, blacklist=[]):
+	datafile = open(filename, 'rb')
+	data = datafile.read()
+	datafile.close()
+	offset = fssearch.findExt2fs(data)
+	if offset == -1:
+		return blacklist
+	## according to /usr/share/magic the magic header starts at 0x438
+	if offset < 0x438:
+		return blacklist
+	else:
+		diroffsets = []
+        	if tempdir == None:
+        	       	tmpdir = tempfile.mkdtemp()
+		else:
+			tmpdir = tempfile.mkdtemp(dir=tempdir)
+		while(offset != -1 and offset >= 0x438):
+			## check if the offset we find is in a blacklist
+			blacklistoffset = inblacklist(offset, blacklist)
+			if blacklistoffset != None:
+				offset = fssearch.findExt2fs(data, offset+blacklistoffset)
+			if offset == -1:
+				break
+			## unpack data here
+			## we should actually scan the data starting from offset - 0x438
+			p = subprocess.Popen(['tune2fs', '-l', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate()
+			if p.returncode == 0:
+				if len(stanerr) == 0:
+					blockcount = 0
+					blocksize = 0
+					## we want block count and block size
+					for line in stanout.split("\n"):
+						if 'Block count' in line:
+							blockcount = int(line.split(":")[1].strip())
+						if 'Block size' in line:
+							blocksize = int(line.split(":")[1].strip())
+					blacklist.append((offset - 0x438, offset - 0x438 + blockcount * blocksize))
+	return blacklist
+
 ## ideally we would have some code in Python that would analyse and
 ## unpack a file system, without having to mount it. This code does
-## not exist as of now. So, we'll just use programs from e2tools:
+## not exist as of now. We could use programs from e2tools:
 ## http://freshmeat.net/projects/e2tools/
-## This method should return a blacklist.
-def unpackExt2fs(data, offset):
+## but these are very very basic and might be more hassle than we think.
+def unpackExt2fs(data, offset, tempdir=None):
 	pass
 
 ## tries to unpack stuff using zcat. If it is successful, it will

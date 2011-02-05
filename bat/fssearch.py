@@ -49,6 +49,10 @@ def findCpioTrailer(data, offset=0):
 		return res
 	return -1
 
+def findExt2fs(data, offset=0):
+	return findType('ext2', data, offset)
+	#return -1
+
 def findRPM(data, offset=0):
 	return findType('rpm', data, offset)
 
