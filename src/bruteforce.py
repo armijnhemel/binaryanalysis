@@ -379,24 +379,7 @@ def scan(scanfile, magic, filehash=None, tempdir=None):
                             ]
 	for section in config.sections():
 		if config.has_option(section, 'type'):
-			if config.get(section, 'type') == 'program':
-				skip = False
-				for prog in programignorelist:
-					if prog in magic:
-						skip = True
-						break
-				if skip:
-					continue
-				report = {}
-				module = config.get(section, 'module')
-				method = config.get(section, 'method')
-				exec "from %s import %s as bat_%s" % (module, method, method)
-				## temporary stuff, this should actually be nicely wrapped in a report tuple
-				res = eval("bat_%s(scanfile, blacklist)" % (method))
-				if res != None:
-					report[section] = res
-					reports.append(report)
-			elif config.get(section, 'type') == 'unpack':
+			if config.get(section, 'type') == 'unpack':
 				## return value is the temporary dir, plus offset in the parent file
 				module = config.get(section, 'module')
 				method = config.get(section, 'method')
@@ -419,6 +402,23 @@ def scan(scanfile, magic, filehash=None, tempdir=None):
 						report[section] = res
 						reports.append(report)
 				blacklist = diroffsets[-1]
+			elif config.get(section, 'type') == 'program':
+				skip = False
+				for prog in programignorelist:
+					if prog in magic:
+						skip = True
+						break
+				if skip:
+					continue
+				report = {}
+				module = config.get(section, 'module')
+				method = config.get(section, 'method')
+				exec "from %s import %s as bat_%s" % (module, method, method)
+				## temporary stuff, this should actually be nicely wrapped in a report tuple
+				res = eval("bat_%s(scanfile, blacklist)" % (method))
+				if res != None:
+					report[section] = res
+					reports.append(report)
 			else:
 				pass
 	return reports
