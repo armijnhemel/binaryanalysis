@@ -12,6 +12,9 @@ with the unpacked contents of the archive, and the offset of the archive or
 file system in the parent file.
 
 Optionally, we should return a range of bytes that should be excluded.
+
+TODO: merge many of the searchUnpack and unpack methods, so we only have to
+suck in the data once in the unpack part.
 '''
 
 import sys, os, subprocess
