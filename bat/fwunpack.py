@@ -354,6 +354,7 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[]):
 						if 'Block size' in line:
 							blocksize = int(line.split(":")[1].strip())
 					blacklist.append((offset - 0x438, offset - 0x438 + blockcount * blocksize))
+			offset = fssearch.findExt2fs(data, offset+1)
 	return blacklist
 
 ## ideally we would have some code in Python that would analyse and
