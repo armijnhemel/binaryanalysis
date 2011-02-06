@@ -38,7 +38,7 @@ def unpack(dir, filename):
 
 ## Call Ninka, extract licenses and put them in the database. We might want to
 ## tweak the data a bit instead of using the raw output from Ninka. On the other
-## hand, maybe not. Also, people snoring in the train are annoying.
+## hand, maybe not.
 def ninka(srcdir, sqldb, package, pversion):
 	## Ninka needs some tweaks to the environment. Right now it is hardcoded
 	## to configuration on my own machine.
