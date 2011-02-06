@@ -11,7 +11,8 @@ functions is a list of tuples, which contain the name of a temporary directory
 with the unpacked contents of the archive, and the offset of the archive or
 file system in the parent file.
 
-Optionally, we should return a range of bytes that should be excluded.
+Optionally, we return a range of bytes that should be excluded in same cases
+where we want to prevent other scans from (re)scanning (part of) the data.
 
 TODO: merge many of the searchUnpack and unpack methods, so we only have to
 suck in the data once in the unpack part.
@@ -404,23 +405,32 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[]):
 	if offset == -1:
 		return []
 	else:
+		## counter to remember how many gzip file systems we have
+		## discovered, so we can use this to append to the directory
+		## name containing the unpacked contents. This is TODO.
+		gzipcounter = 1
 		diroffsets = []
-        	if tempdir == None:
-        	       	tmpdir = tempfile.mkdtemp()
-		else:
-			tmpdir = tempfile.mkdtemp(dir=tempdir)
 		while(offset != -1):
 			blacklistoffset = inblacklist(offset, blacklist)
 			if blacklistoffset != None:
 				offset = fssearch.findGzip(data, offset+blacklistoffset)
 			if offset == -1:
 				break
+        		if tempdir == None:
+        	       		tmpdir = tempfile.mkdtemp()
+			else:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
 			res = unpackGzip(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
+				gzipcounter = gzipcounter + 1
+			else:
+				## cleanup
+				os.rmdir(tmpdir)
 			offset = fssearch.findGzip(data, offset+1)
-		if len(diroffsets) == 0:
-			os.rmdir(tmpdir)
+		## this is no longer needed?
+		#if len(diroffsets) == 0:
+		#	os.rmdir(tmpdir)
 		diroffsets.append(blacklist)
 		return diroffsets
 

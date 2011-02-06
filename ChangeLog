@@ -1,3 +1,10 @@
+2011-02-07
+* move temporary directory creation into the while loop for
+searching/unpacking gzip files to prevent duplicate scanning. This should be
+done for other searches as well.
+* add stub for adding directories containing the names of the compression to
+make it easier to find things after a scan.
+
 2011-02-06
 * implement priorities for scanning, get rid of looping over configuration for
 every scan, which was a bit silly.
