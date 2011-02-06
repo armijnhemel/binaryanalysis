@@ -19,21 +19,19 @@ import sqlite3
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
-config = ConfigParser.ConfigParser()
-
 '''
 This method recursively generates XML snippets. If a method for a 'program'
 has a pretty printing method defined, it will be used instead of the generic
 one.
 '''
-def prettyprintresxmlsnippet(res, root):
+def prettyprintresxmlsnippet(res, root, unpackscans, programscans):
 	## this should always be len == 1, have more checks
 	for i in res.keys():
-		if config.has_option(i, 'type'):
-			if config.get(i, 'type') == 'program':
+		for confs in programscans:
+			if i == confs['name']:
 				try:
-					module = config.get(i, 'module')
-					method = config.get(i, 'xmloutput')
+					module = confs['module']
+					method = confs['xmloutput']
 					exec "from %s import %s as bat_%s" % (module, method, method)
 					xmlres = eval("bat_%s(res[i], root)" % (method))
 					if xmlres != None:
@@ -43,7 +41,8 @@ def prettyprintresxmlsnippet(res, root):
                 			tmpnodetext = xml.dom.minidom.Text()
                 			tmpnodetext.data = res[i]
                 			topnode.appendChild(tmpnodetext)
-			elif config.get(i, 'type') == 'unpack':
+		for confs in unpackscans:
+			if i == confs['name']:
                 		#topnode = root.createElement(i)
                 		topnode = root.createElement('unpack')
                 		typenode = root.createElement('type')
@@ -81,13 +80,13 @@ def prettyprintresxmlsnippet(res, root):
 						if 'scans' in elem:
 							tmpnode2 = root.createElement('scans')
 							for scan in elem['scans']:
-								tmpnode2.appendChild(prettyprintresxmlsnippet(scan, root))
+								tmpnode2.appendChild(prettyprintresxmlsnippet(scan, root, unpackscans, programscans))
 								tmpnode.appendChild(tmpnode2)
                 			topnode.appendChild(tmpnode)
 	return topnode
 
 ## top level XML pretty printing, view results with xml_pp or Firefox
-def prettyprintresxml(res, scandate):
+def prettyprintresxml(res, scandate, unpackscans=[], programscans=[]):
 	root = xml.dom.minidom.Document()
 	topnode = root.createElement("report")
 	tmpnode = root.createElement('scandate')
@@ -152,7 +151,7 @@ def prettyprintresxml(res, scandate):
 	if 'scans' in res:
 		tmpnode = root.createElement('scans')
 		for scan in res['scans']:
-			tmpnode.appendChild(prettyprintresxmlsnippet(scan, root))
+			tmpnode.appendChild(prettyprintresxmlsnippet(scan, root, unpackscans, programscans))
 		topnode.appendChild(tmpnode)
 	root.appendChild(topnode)
 	return root
@@ -422,39 +421,39 @@ def scan(scanfile, magic, unpackscans=[], programscans=[], filehash=None, tempdi
 ## unpackscans: {name, module, method, xmloutput, priority, cleanup}
 ## These are sorted by priority
 ## programscans: {name, module, method, xmloutput, cleanup}
-def readconfig(batconfig):
+def readconfig(config):
 	unpackscans = []
 	programscans = []
-	for section in batconfig.sections():
-		if batconfig.has_option(section, 'type'):
+	for section in config.sections():
+		if config.has_option(section, 'type'):
 			conf = {}
-			if batconfig.get(section, 'type') == 'program':
+			if config.get(section, 'type') == 'program':
 				conf['name']   = section
-				conf['module'] = batconfig.get(section, 'module')
-				conf['method'] = batconfig.get(section, 'method')
+				conf['module'] = config.get(section, 'module')
+				conf['method'] = config.get(section, 'method')
 				try:
-					conf['xmloutput'] = batconfig.get(section, 'xmloutput')
+					conf['xmloutput'] = config.get(section, 'xmloutput')
 				except:
 					pass
 				try:
-					conf['cleanup'] = batconfig.get(section, 'cleanup')
+					conf['cleanup'] = config.get(section, 'cleanup')
 				except:
 					pass
 				programscans.append(conf)
-			elif batconfig.get(section, 'type') == 'unpack':
+			elif config.get(section, 'type') == 'unpack':
 				conf['name']   = section
-				conf['module'] = batconfig.get(section, 'module')
-				conf['method'] = batconfig.get(section, 'method')
+				conf['module'] = config.get(section, 'module')
+				conf['method'] = config.get(section, 'method')
 				try:
-					conf['priority'] = int(batconfig.get(section, 'priority'))
+					conf['priority'] = int(config.get(section, 'priority'))
 				except:
 					conf['priority'] = 0
 				try:
-					conf['xmloutput'] = batconfig.get(section, 'xmloutput')
+					conf['xmloutput'] = config.get(section, 'xmloutput')
 				except:
 					pass
 				try:
-					conf['cleanup'] = batconfig.get(section, 'cleanup')
+					conf['cleanup'] = config.get(section, 'cleanup')
 				except:
 					pass
 				unpackscans.append(conf)
@@ -462,6 +461,7 @@ def readconfig(batconfig):
 	return (unpackscans, programscans)
 
 def main(argv):
+	config = ConfigParser.ConfigParser()
         parser = OptionParser()
 	parser.add_option("-a", "--always", action="store_true", dest="scanalways", help="always perform brute force scan even if results are availale in the knowledgebase (default false)")
 	parser.add_option("-b", "--binary", action="store", dest="fw", help="path to binary file", metavar="FILE")
@@ -517,7 +517,7 @@ def main(argv):
 	tempdir=tempfile.mkdtemp()
 	#tempdir=None
 	res = scanfile(os.path.dirname(firmware_binary), os.path.basename(firmware_binary), tempdir=tempdir, unpackscans=unpackscans, programscans=programscans)
-	xml = prettyprintresxml(res, scandate)
+	xml = prettyprintresxml(res, scandate, unpackscans=unpackscans, programscans=programscans)
 	print xml.toxml()
 
 if __name__ == "__main__":

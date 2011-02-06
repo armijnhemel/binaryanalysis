@@ -1,6 +1,8 @@
 2011-02-06
 * implement priorities for scanning, get rid of looping over configuration for
 every scan, which was a bit silly.
+* remove looping over configuration in XML printing
+* small cleanups
 
 2011-02-04
 * add documentation for blacklisting
