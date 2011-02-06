@@ -19,14 +19,6 @@ import sqlite3
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
-## arrays for storing data for the scans we have. Since the configuration is
-## only read once and thus will not change we can easily store it globally
-## unpackscans: {scanname, module, method, xmloutput, priority, cleanup}
-## These need to be sorted by priority
-unpackscans  = []
-## programscans: {scanname, module, method, xmloutput, cleanup}
-programscans = []
-
 config = ConfigParser.ConfigParser()
 
 '''
@@ -214,7 +206,7 @@ def gethash(path, file):
 This method returns a report snippet for inclusion in the final
 report.
 '''
-def scanfile(path, file, lentempdir=0, tempdir=None):
+def scanfile(path, file, lentempdir=0, tempdir=None, unpackscans=[], programscans=[]):
 	report = {}
 
 	## this will report incorrectly if we only have unpacked one file to a
@@ -330,13 +322,13 @@ def scanfile(path, file, lentempdir=0, tempdir=None):
 		if res != None:
 			report['architecture'] = res
 	scannedfile = "%s/%s" % (path, file)
-	res = scan(scannedfile, type, filehash, tempdir)
+	res = scan(scannedfile, type, filehash=filehash, tempdir=tempdir, unpackscans=unpackscans, programscans=programscans)
 	if res != []:
 		report['scans'] = res
 	return report
 
 ## result is a list of result tuples, one for every file in the directory
-def walktempdir(tempdir, tmpdir):
+def walktempdir(tempdir, tmpdir, unpackscans, programscans):
 	osgen = os.walk(tempdir)
 	reports = []
 	try:
@@ -344,7 +336,7 @@ def walktempdir(tempdir, tmpdir):
                 	i = osgen.next()
                 	for p in i[2]:
 				try:
-					res = scanfile(i[0], p, len(tempdir), tmpdir)
+					res = scanfile(i[0], p, lentempdir=len(tempdir), tempdir=tmpdir, unpackscans=unpackscans, programscans=programscans)
 					if res != []:
 						reports.append(res)
 				except Exception, e:
@@ -354,7 +346,7 @@ def walktempdir(tempdir, tmpdir):
 	return reports
 
 ## scan a single file. Optionally supply a filehash for checking a knowledgebase
-def scan(scanfile, magic, filehash=None, tempdir=None):
+def scan(scanfile, magic, unpackscans=[], programscans=[], filehash=None, tempdir=None):
 	reports = []
 	## we reset the blacklist for each new scan we do
 	blacklist = []
@@ -383,54 +375,56 @@ def scan(scanfile, magic, filehash=None, tempdir=None):
                             ]
 
 	## TODO: rework so we first run the unpack scans with the highest priority
-	for section in config.sections():
-		if config.has_option(section, 'type'):
-			if config.get(section, 'type') == 'unpack':
-				## return value is the temporary dir, plus offset in the parent file
-				module = config.get(section, 'module')
-				method = config.get(section, 'method')
-				exec "from %s import %s as bat_%s" % (module, method, method)
-				## last entry is a blacklist with blacklists for the *original* file
-				## these should be appended to the original blacklist
-				diroffsets = eval("bat_%s(scanfile, tempdir, blacklist)" % (method))
-				## result is either empty, just contains the blacklist that was
-				## passed into it, or offsets, plus a blacklist.
-				if len(diroffsets) <= 1:
-					continue
-				for diroffset in diroffsets[0:-1]:
-					report = {}
-					if diroffset == None:
-						continue
-					dir = diroffset[0]
-					res = walktempdir(dir, tempdir)
-					if res != []:
-						res.append({'offset': diroffset[1]})
-						report[section] = res
-						reports.append(report)
-				blacklist = diroffsets[-1]
-			elif config.get(section, 'type') == 'program':
-				skip = False
-				for prog in programignorelist:
-					if prog in magic:
-						skip = True
-						break
-				if skip:
-					continue
-				report = {}
-				module = config.get(section, 'module')
-				method = config.get(section, 'method')
-				exec "from %s import %s as bat_%s" % (module, method, method)
-				## temporary stuff, this should actually be nicely wrapped in a report tuple
-				res = eval("bat_%s(scanfile, blacklist)" % (method))
-				if res != None:
-					report[section] = res
-					reports.append(report)
-			else:
-				pass
+	for scan in unpackscans:
+		module = scan['module']
+		method = scan['method']
+		## return value is the temporary dir, plus offset in the parent file
+		exec "from %s import %s as bat_%s" % (module, method, method)
+		## last entry is a blacklist with blacklists for the *original* file
+		## these should be appended to the original blacklist
+		diroffsets = eval("bat_%s(scanfile, tempdir, blacklist)" % (method))
+		## result is either empty, just contains the blacklist that was
+		## passed into it, or offsets, plus a blacklist.
+		if len(diroffsets) <= 1:
+			continue
+		for diroffset in diroffsets[0:-1]:
+			report = {}
+			if diroffset == None:
+				continue
+			dir = diroffset[0]
+			res = walktempdir(dir, tempdir, unpackscans, programscans)
+			if res != []:
+				res.append({'offset': diroffset[1]})
+				report[scan['name']] = res
+				reports.append(report)
+		blacklist = diroffsets[-1]
+	for scan in programscans:
+		skip = False
+		for prog in programignorelist:
+			if prog in magic:
+				skip = True
+				break
+		if skip:
+			continue
+		report = {}
+		module = scan['module']
+		method = scan['method']
+		exec "from %s import %s as bat_%s" % (module, method, method)
+		## temporary stuff, this should actually be nicely wrapped in a report tuple
+		res = eval("bat_%s(scanfile, blacklist)" % (method))
+		if res != None:
+			report[scan['name']] = res
+			reports.append(report)
 	return reports
 
-## store the global configuration in two arrays with hashes
+## arrays for storing data for the scans we have. Since the configuration is
+## only read once and thus will not change we can easily store it globally
+## unpackscans: {name, module, method, xmloutput, priority, cleanup}
+## These are sorted by priority
+## programscans: {name, module, method, xmloutput, cleanup}
 def readconfig(batconfig):
+	unpackscans = []
+	programscans = []
 	for section in batconfig.sections():
 		if batconfig.has_option(section, 'type'):
 			conf = {}
@@ -464,6 +458,8 @@ def readconfig(batconfig):
 				except:
 					pass
 				unpackscans.append(conf)
+	unpackscans = sorted(unpackscans, key=lambda x: x['priority'], reverse=True)
+	return (unpackscans, programscans)
 
 def main(argv):
         parser = OptionParser()
@@ -509,7 +505,7 @@ def main(argv):
 
 	config.readfp(configfile)
 
-	readconfig(config)
+	(unpackscans, programscans) = readconfig(config)
 	scandate = datetime.datetime.utcnow()
 
 	## Per firmware scanned we get a list with results.
@@ -520,7 +516,7 @@ def main(argv):
 	## the file inside a file system we looked at was in fact a file system.
 	tempdir=tempfile.mkdtemp()
 	#tempdir=None
-	res = scanfile(os.path.dirname(firmware_binary), os.path.basename(firmware_binary), tempdir=tempdir)
+	res = scanfile(os.path.dirname(firmware_binary), os.path.basename(firmware_binary), tempdir=tempdir, unpackscans=unpackscans, programscans=programscans)
 	xml = prettyprintresxml(res, scandate)
 	print xml.toxml()
 
