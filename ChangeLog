@@ -4,6 +4,7 @@ searching/unpacking gzip files to prevent duplicate scanning. This should be
 done for other searches as well.
 * add stub for adding directories containing the names of the compression to
 make it easier to find things after a scan.
+* move temporary dir creation into the while loop for most other scans as well
 
 2011-02-06
 * implement priorities for scanning, get rid of looping over configuration for

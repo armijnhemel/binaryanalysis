@@ -82,11 +82,15 @@ def searchUnpackCab(filename, tempdir=None, blacklist=[]):
 			(stanuit, stanerr) = p.communicate()
 			if p.returncode != 0:
 				try:
+					## cleanup
 					os.rmdir(cabtmpdir)
+        				if tempdir == None:
+        		       			os.rmdir(tmpdir)
 				except:
 					pass
 				continue
-			return [(cabtmpdir, 0), blacklist]
+			else:
+				return [(cabtmpdir, 0), blacklist]
 	return []
 
 def searchUnpack7z(filename, tempdir=None, blacklist=[]):
@@ -110,11 +114,15 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[]):
 			(stanuit, stanerr) = p.communicate()
 			if p.returncode != 0:
 				try:
+					## cleanup
 					os.rmdir(zztmpdir)
+        				if tempdir == None:
+						os.rmdir(tmpdir)
 				except:
 					pass
 				continue
-			return [(zztmpdir, 0), blacklist]
+			else:
+				return [(zztmpdir, 0), blacklist]
 	return []
 
 ## This method should return a blacklist.
@@ -126,10 +134,6 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[]):
 	if offset == -1:
 		return []
 	else:
-        	if tempdir == None:
-        	       	tmpdir = tempfile.mkdtemp()
-		else:
-			tmpdir = tempfile.mkdtemp(dir=tempdir)
 		diroffsets = []
 		trailer = fssearch.findCpioTrailer(data)
 		while(offset != -1):
@@ -138,10 +142,17 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[]):
 				offset = fssearch.findCpio(data, offset+blacklistoffset)
 			if offset == -1:
 				break
+        		if tempdir == None:
+        	       		tmpdir = tempfile.mkdtemp()
+			else:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
 			res = unpackCpio(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
 				blacklist.append((offset, trailer))
+			else:
+				## cleanup
+				os.rmdir(tmpdir)
 			offset = fssearch.findCpio(data, offset+1)
 			while offset < trailer and offset != -1:
 				offset = fssearch.findCpio(data, offset+1)
@@ -252,10 +263,6 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[]):
 		return []
 	else:
 		diroffsets = []
-        	if tempdir == None:
-        	       	tmpdir = tempfile.mkdtemp()
-		else:
-			tmpdir = tempfile.mkdtemp(dir=tempdir)
 		while(offset != -1):
 			## check if the offset we find is in a blacklist
 			blacklistoffset = inblacklist(offset, blacklist)
@@ -263,12 +270,17 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[]):
 				(offset, squashtype) = fssearch.findSquashfs(data, offset+blacklistoffset)
 			if offset == -1:
 				break
+        		if tempdir == None:
+        	       		tmpdir = tempfile.mkdtemp()
+			else:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
 			res = unpackSquashfs(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
+			else:
+				## cleanup
+				os.rmdir(tmpdir)
 			(offset, squashtype) = fssearch.findSquashfs(data, offset+1)
-		if len(diroffsets) == 0:
-			os.rmdir(tmpdir)
 		diroffsets.append(blacklist)
 		return diroffsets
 
@@ -428,9 +440,6 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[]):
 				## cleanup
 				os.rmdir(tmpdir)
 			offset = fssearch.findGzip(data, offset+1)
-		## this is no longer needed?
-		#if len(diroffsets) == 0:
-		#	os.rmdir(tmpdir)
 		diroffsets.append(blacklist)
 		return diroffsets
 
@@ -476,22 +485,23 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[]):
 		return []
 	else:
 		diroffsets = []
-		if tempdir == None:
-			tmpdir = tempfile.mkdtemp()
-		else:
-			tmpdir = tempfile.mkdtemp(dir=tempdir)
 		while(offset != -1):
 			blacklistoffset = inblacklist(offset, blacklist)
 			if blacklistoffset != None:
 				offset = fssearch.findBzip2(data, offset+blacklistoffset)
 			if offset == -1:
 				break
+			if tempdir == None:
+				tmpdir = tempfile.mkdtemp()
+			else:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
 			res = unpackBzip2(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
+			else:
+				## cleanup
+				os.rmdir(tmpdir)
 			offset = fssearch.findBzip2(data, offset+1)
-		if len(diroffsets) == 0:
-			os.rmdir(tmpdir)
 		diroffsets.append(blacklist)
 		return diroffsets
 
@@ -538,10 +548,6 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[]):
 		return []
 	else:
 		diroffsets = []
-        	if tempdir == None:
-        	       	tmpdir = tempfile.mkdtemp()
-		else:
-			tmpdir = tempfile.mkdtemp(dir=tempdir)
 		endofcentraldir = 0
 		while(offset != -1):
 			blacklistoffset = inblacklist(offset, blacklist)
@@ -549,16 +555,21 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[]):
 				offset = fssearch.findZip(data, offset+blacklistoffset)
 			if offset == -1:
 				break
+        		if tempdir == None:
+        	       		tmpdir = tempfile.mkdtemp()
+			else:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
 			(endofcentraldir, res) = unpackZip(data, offset, tmpdir)
 			#print "orig:", datafile, "offset:", offset, "res:", res, "endofcentraldir", endofcentraldir
 			if res != None:
 				diroffsets.append((res, offset))
+			else:
+				## cleanup
+				os.rmdir(tmpdir)
 			if endofcentraldir == None:
 				offset = fssearch.findZip(data, offset+1)
 			else:
 				offset = fssearch.findZip(data, endofcentraldir+1)
-		if len(diroffsets) == 0:
-			os.rmdir(tmpdir)
 		diroffsets.append(blacklist)
 		return diroffsets
 
@@ -571,25 +582,26 @@ def searchUnpackRar(filename, tempdir=None, blacklist=[]):
 		return []
 	else:
 		diroffsets = []
-        	if tempdir == None:
-        	       	tmpdir = tempfile.mkdtemp()
-		else:
-			tmpdir = tempfile.mkdtemp(dir=tempdir)
 		while(offset != -1):
 			blacklistoffset = inblacklist(offset, blacklist)
 			if blacklistoffset != None:
 				offset = fssearch.findRar(data, offset+blacklistoffset)
 			if offset == -1:
 				break
+        		if tempdir == None:
+        	       		tmpdir = tempfile.mkdtemp()
+			else:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
 			(endofarchive, res) = unpackRar(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
+			else:
+				## cleanup
+				os.rmdir(tmpdir)
 			if endofarchive == None:
 				offset = fssearch.findRar(data, offset+1)
 			else:
 				offset = fssearch.findRar(data, endofarchive)
-		if len(diroffsets) == 0:
-			os.rmdir(tmpdir)
 		diroffsets.append(blacklist)
 		return diroffsets
 
@@ -640,22 +652,23 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[]):
 		return []
 	else:
 		diroffsets = []
-        	if tempdir == None:
-        	       	tmpdir = tempfile.mkdtemp()
-		else:
-			tmpdir = tempfile.mkdtemp(dir=tempdir)
 		while(offset != -1):
 			blacklistoffset = inblacklist(offset, blacklist)
 			if blacklistoffset != None:
 				offset = fssearch.findLZMA(data, offset+blacklistoffset)
 			if offset == -1:
 				break
+        		if tempdir == None:
+        	       		tmpdir = tempfile.mkdtemp()
+			else:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
 			res = unpackLZMA(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
+			else:
+				## cleanup
+				os.rmdir(tmpdir)
 			offset = fssearch.findLZMA(data, offset+1)
-		if len(diroffsets) == 0:
-			os.rmdir(tmpdir)
 		diroffsets.append(blacklist)
 		return diroffsets
 
@@ -728,16 +741,16 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[]):
 		return []
 	else:
 		diroffsets = []
-        	if tempdir == None:
-        	       	tmpdir = tempfile.mkdtemp()
-		else:
-			tmpdir = tempfile.mkdtemp(dir=tempdir)
 		while(offset != -1):
 			blacklistoffset = inblacklist(offset, blacklist)
 			if blacklistoffset != None:
 				offset = fssearch.findRPM(data, offset+blacklistoffset)
 			if offset == -1:
 				break
+        		if tempdir == None:
+        	       		tmpdir = tempfile.mkdtemp()
+			else:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
 			res = unpackRPM(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
@@ -754,9 +767,10 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[]):
 					if header[rpm.RPMTAG_PAYLOADCOMPRESSOR] == 'gzip':
 						payloadoffset = fssearch.findGzip(data, offset)
 						blacklist.append((offset, payloadoffset))
+			else:
+				## cleanup
+				os.rmdir(tmpdir)
 			offset = fssearch.findRPM(data, offset+1)
-		if len(diroffsets) == 0:
-			os.rmdir(tmpdir)
 		diroffsets.append(blacklist)
 		return diroffsets
 
@@ -776,16 +790,16 @@ def searchUnpackUbifs(filename, tempdir=None, blacklist=[]):
 		return []
 	else:
 		diroffsets = []
-        	if tempdir == None:
-        	       	tmpdir = tempfile.mkdtemp()
-		else:
-			tmpdir = tempfile.mkdtemp(dir=tempdir)
 		while(offset != -1):
 			blacklistoffset = inblacklist(offset, blacklist)
 			if blacklistoffset != None:
 				offset = fssearch.findUbifs(data, offset+blacklistoffset)
 			if offset == -1:
 				break
+        		if tempdir == None:
+        	       		tmpdir = tempfile.mkdtemp()
+			else:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
 			res = unpackUbifs(data, offset, tmpdir)
 			if res != None:
 				(ubitmpdir, ubisize) = res
