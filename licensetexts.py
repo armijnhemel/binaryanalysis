@@ -5,7 +5,7 @@
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 import sys, os, os.path, sqlite3, magic, subprocess
-import tempfile, bz2, tarfile, gzip
+import tempfile, bz2, tarfile, gzip, hashlib
 from optparse import OptionParser
 
 '''
@@ -13,6 +13,13 @@ Use Ninka to extract a license text from source code on a per file basis.
 If no license text is found in a source file we let Ninka search for clues in
 files like LICENSE, COPYING, and so on.
 '''
+
+def gethash(path, file):
+	scanfile = open("%s/%s" % (path, file), 'r')
+	h = hashlib.new('sha256')
+	h.update(scanfile.read())
+	scanfile.close()
+	return h.hexdigest()
 
 ## copied from batchextractprogramstrings.py, we should put this in a library
 def unpack(dir, filename):
@@ -57,29 +64,41 @@ def ninka(srcdir, sqldb, package, pversion):
 			for p in i[2]:
 				p1 = subprocess.Popen(["/tmp/ninka-1.0-pre2/ninka.pl", "-d", "%s/%s" % (i[0], p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=ninkaenv)
 				(stanout, stanerr) = p1.communicate()
-				print u"%s/%s  ----  " % (i[0][srcdirlen:], p), stanout.strip().split(";")[1:]
+				print u"%s/%s  ----  " % (i[0][srcdirlen:], p), stanout.strip().split(";")[1:], gethash(i[0], p)
 	except Exception, e:
 		print e
 
 ## TODO: add nice configuration options so we can remove the hardcoded stuff
 def main(argv):
-	conn = sqlite3.connect('/tmp/sqlicense')
+	parser = OptionParser()
+	parser.add_option("-d", "--database", action="store", dest="db", help="path to database)", metavar="FILE")
+	parser.add_option("-f", "--filedir", action="store", dest="filedir", help="path to dir with GPL tarballs)", metavar="DIR")
+
+	(options, args) = parser.parse_args()
+	if options.db == None:
+		print >>sys.stderr, "Specify database"
+		sys.exit(1)
+	if options.filedir == None:
+		print >>sys.stderr, "Specify dir with files"
+		sys.exit(1)
+	conn = sqlite3.connect(options.db)
 	c = conn.cursor()
 
 	try:
-		c.execute('''create table extracted (license text, package text, version text, filename text)''')
+		c.execute('''create table files (filename text, sha256 text, package text, version text)''')
+		c.execute('''create table licenses (sha256 text, license text)''')
 		## create an index to speed up searches
 		## probably needs another one so we can look up the package, version and filename
-		c.execute('''create index license_index on extracted(license);''')
+		c.execute('''create index filehash_index on extracted(sha256);''')
+		c.execute('''create index license_index on licenses(sha256);''')
 	except:
 		pass
 
-	filedir='/tmp/gpl'
-	filelist = open(filedir + "/LIST").readlines()
+	filelist = open(options.filedir + "/LIST").readlines()
 	for unpackfile in filelist:
 		(package, version, filename) = unpackfile.split()
-		tmpdir = unpack(filedir, filename)
+		tmpdir = unpack(options.filedir, filename)
 		ninka(tmpdir, c, package, version)
 
 if __name__ == "__main__":
-	main(sys.argv[1:])
+	main(sys.argv)
