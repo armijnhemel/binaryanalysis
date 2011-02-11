@@ -1,3 +1,7 @@
+2011-02-12
+* add proper options to license scanning program
+* determine sha256 hashes for files scanned by license scanner
+
 2011-02-07
 * move temporary directory creation into the while loop for
 searching/unpacking gzip files to prevent duplicate scanning. This should be
