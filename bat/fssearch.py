@@ -37,11 +37,14 @@ def findType(type, data, offset=0):
 	return data.find(fsmagic.fsmagic[type], offset)
 
 def findCpio(data, offset=0):
+	cpiomarker = -1
 	for marker in fsmagic.cpio:
 		res = findMarker(marker, data, offset)
-		if res != -1:
-			return res
-	return -1
+		if res != -1 and cpiomarker == -1:
+			cpiomarker = res
+		elif res != -1:
+			cpiomarker = min(cpiomarker, res)
+	return cpiomarker
 
 def findCpioTrailer(data, offset=0):
 	res = findMarker('TRAILER!!!', data, offset)
