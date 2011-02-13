@@ -149,7 +149,7 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[]):
 			else:
 				tmpdir = tempfile.mkdtemp(dir=tempdir)
 			## length of 'TRAILER!!!' plus 1 to include the whole trailer
-			res = unpackCpio(data[offset:trailer+11], 0, tmpdir)
+			res = unpackCpio(data[offset:trailer+10], 0, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
 				blacklist.append((offset, trailer))
@@ -172,6 +172,7 @@ def unpackCpio(data, offset, tempdir=None):
 		tmpdir = tempdir
 	## write data to a temporary location first so we can check
 	## the magic.
+	## Also use cpio -t to test if we actually have a valid archive
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
 
