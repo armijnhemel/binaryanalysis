@@ -30,14 +30,19 @@ def extractLoadLin(lines):
 	return -1
 
 def searchIptables(path, blacklist=[]):
+	markerStrings = [ 'iptables who? (do you need to insmod?)'
+			, 'Will be implemented real soon.  I promise ;)'
+			, 'can\'t initialize iptables table `%s\': %s'
+			]
         try:
                 binary = open(path, 'rb')
                 lines = binary.read()
-                offset = extractIptables(lines)
-		if offset != -1 and not extractor.inblacklist(offset, blacklist):
-			return True
-		else:
-			return None
+		for marker in markerStrings:
+			offset = lines.find(marker)
+			if offset != -1 and not extractor.inblacklist(offset, blacklist):
+				return True
+			else:
+				return None
         except Exception, e:
                 return None
 
@@ -166,16 +171,19 @@ def extractHostapd(lines):
 	return -1
 
 def searchWpaSupplicant(path, blacklist=[]):
+	markerStrings = [ 'wpa_supplicant v'
+			]
         try:
-                binary = open(path, 'rb')
-                lines = binary.read()
-                offset = extractWpaSupplicant(lines)
-		if offset != -1 and not extractor.inblacklist(offset, blacklist):
-			return True
-		else:
-			return None
-        except Exception, e:
-                return None
+		binary = open(path, 'rb')
+		lines = binary.read()
+		for marker in markerStrings:
+			offset = lines.find(marker)
+			if offset != -1 and not extractor.inblacklist(offset, blacklist):
+				return True
+			else:
+				return None
+	except Exception, e:
+		return None
 
 def extractWpaSupplicant(lines):
 	markerStrings = [ 'wpa_supplicant v'
