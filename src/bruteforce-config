@@ -112,7 +112,7 @@ priority = 1
 
 [wireless-tools]
 type    = program
-module  = bat.wirelesstools
+module  = bat.checks
 method  = searchWirelessTools
 
 [iptables]
