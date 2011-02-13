@@ -156,20 +156,52 @@ def searchIproute(path, blacklist=[]):
                 return None
 
 def searchWirelessTools(path, blacklist=[]):
-	wirelessMarkerStrings = [ "Driver has no Wireless Extension version information."
-				, "Wireless Extension version too old."
-				, "Wireless-Tools version"
-				, "Wireless Extension, while we are using version %d."
-				, "Currently compiled with Wireless Extension v%d."
-       	                 ]
+	markerStrings = [ "Driver has no Wireless Extension version information."
+			, "Wireless Extension version too old."
+			, "Wireless-Tools version"
+			, "Wireless Extension, while we are using version %d."
+			, "Currently compiled with Wireless Extension v%d."
+       	                ]
         try:
                 wireless_binary = open(path, 'rb')
                 lines = wireless_binary.read()
-		for marker in wirelessMarkerStrings:
+		for marker in markerStrings:
 			offset = lines.find(marker)
 			if offset != -1 and not extractor.inblacklist(offset, blacklist):
 				return True
 			else:
 				return None
+        except Exception, e:
+                return None
+
+def searchRedBoot(path, blacklist=[]):
+	markerStrings = ["Display RedBoot version information"]
+        try:
+                redboot_binary = open(path, 'rb')
+                lines = redboot_binary.read()
+		for marker in markerStrings:
+                	offset = lines.find(marker)
+			if offset != -1 and not extractor.inblacklist(offset, blacklist):
+                       		return True
+                	else:
+                        	return None
+        except Exception, e:
+                return None
+
+def searchUBoot(path, blacklist=[]):
+        markerStrings = [ "run script starting at addr"
+			, "Hit any key to stop autoboot: %2d"
+			, "## Binary (kermit) download aborted"
+			, "## Ready for binary (ymodem) download "
+			]
+        try:
+                binary = open(path, 'rb')
+                lines = binary.read()
+        	for marker in markerStrings:
+               		offset = lines.find(marker)
+			if offset != -1 and not extractor.inblacklist(offset, blacklist):
+                        	return True
+                	else:
+                        	return None
         except Exception, e:
                 return None

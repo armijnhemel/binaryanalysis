@@ -157,12 +157,12 @@ method  = searchLoadLin
 
 [redboot]
 type    = program
-module  = bat.bootloaderanalysis
+module  = bat.checks
 method  = searchRedBoot
 
 [uboot]
 type    = program
-module  = bat.bootloaderanalysis
+module  = bat.checks
 method  = searchUBoot
 
 [kernelmodulelicense]
