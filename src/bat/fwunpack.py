@@ -125,6 +125,8 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[]):
 				return [(zztmpdir, 0), blacklist]
 	return []
 
+## Not sure how cpio works if we have a cpio archive with a cpio archive in it
+## especially with regards to locating the proper cpio trailer.
 ## This method should return a blacklist.
 def searchUnpackCpio(filename, tempdir=None, blacklist=[]):
 	datafile = open(filename, 'rb')
@@ -146,7 +148,8 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[]):
         	       		tmpdir = tempfile.mkdtemp()
 			else:
 				tmpdir = tempfile.mkdtemp(dir=tempdir)
-			res = unpackCpio(data, offset, tmpdir)
+			## length of 'TRAILER!!!' plus 1 to include the whole trailer
+			res = unpackCpio(data[offset:trailer+11], 0, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
 				blacklist.append((offset, trailer))
