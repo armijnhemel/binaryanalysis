@@ -62,6 +62,9 @@ def ninka(srcdir, sqldb, package, pversion):
 		while True:
 			i = osgen.next()
 			for p in i[2]:
+				p_nocase = p.lower()
+				if not (p_nocase.endswith('.c') or p_nocase.endswith('.h') or p_nocase.endswith('.cpp') or p_nocase.endswith('.cc') or p_nocase.endswith('.hh')):
+					continue
 				p1 = subprocess.Popen(["/tmp/ninka-1.0-pre2/ninka.pl", "-d", "%s/%s" % (i[0], p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=ninkaenv)
 				(stanout, stanerr) = p1.communicate()
 				print u"%s/%s  ----  " % (i[0][srcdirlen:], p), stanout.strip().split(";")[1:], gethash(i[0], p)

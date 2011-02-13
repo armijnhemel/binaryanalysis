@@ -1,7 +1,11 @@
+2011-02-13
+* only pass data between cpio header and trailer to the cpio unpacker.
+
 2011-02-12
 * add proper options to license scanning program
 * determine sha256 hashes for files scanned by license scanner
 * fix cpio searching bug, might break some runs at the moment
+* only license check certain files
 
 2011-02-07
 * move temporary directory creation into the while loop for
