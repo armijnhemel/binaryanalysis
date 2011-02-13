@@ -2,6 +2,8 @@
 * only pass data between cpio header and trailer to the cpio unpacker.
 * start inlining methods in certain checks that don't have to be separate
 * inline more methods, merge a few checks into one file
+* add extra checks to cpio unpacking to ensure we are actually unpacking valid
+cpio archives.
 
 2011-02-12
 * add proper options to license scanning program
