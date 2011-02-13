@@ -149,7 +149,9 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[]):
 			else:
 				tmpdir = tempfile.mkdtemp(dir=tempdir)
 			## length of 'TRAILER!!!' plus 1 to include the whole trailer
-			res = unpackCpio(data[offset:trailer+10], 0, tmpdir)
+			## cpio archives are always rounded to blocks of 512 bytes
+			trailercorrection = (512 - len(data[offset:trailer+10])%512)
+			res = unpackCpio(data[offset:trailer+10 + trailercorrection], 0, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
 				blacklist.append((offset, trailer))
@@ -180,14 +182,19 @@ def unpackCpio(data, offset, tempdir=None):
 	ms.load()
 	type = ms.file(tmpfile[1])
 	ms.close()
+	os.fdopen(tmpfile[0]).close()
+	os.unlink(tmpfile[1])
 	if 'cpio' not in type:
-		os.fdopen(tmpfile[0]).close()
-		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return
-	os.fdopen(tmpfile[0]).close()
-	os.unlink(tmpfile[1])
+	p = subprocess.Popen(['cpio', '-t'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	(stanuit, stanerr) = p.communicate(data[offset:])
+	if p.returncode != 0:
+		## we don't have a valid archive according to cpio -t
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return
 	p = subprocess.Popen(['cpio', '-i', '-d', '--no-absolute-filenames'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanuit, stanerr) = p.communicate(data[offset:])
 	return tmpdir
