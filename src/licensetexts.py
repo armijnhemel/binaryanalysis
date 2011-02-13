@@ -21,6 +21,17 @@ def gethash(path, file):
 	scanfile.close()
 	return h.hexdigest()
 
+## convenience function to see if the pathname starts with:
+## package-version
+## package_version
+## in either lowercase or uppercase, or mixed case
+def packageinpath(package, version, path):
+	if path.lower() == "%s-%s" % (package, version):
+		return True
+	if path.lower() == "%s_%s" % (package, version):
+		return True
+	return False
+
 ## copied from batchextractprogramstrings.py, we should put this in a library
 def unpack(dir, filename):
 	ms = magic.open(magic.MAGIC_NONE)
@@ -46,12 +57,16 @@ def unpack(dir, filename):
 ## Call Ninka, extract licenses and put them in the database. We might want to
 ## tweak the data a bit instead of using the raw output from Ninka. On the other
 ## hand, maybe not.
-def ninka(srcdir, sqldb, package, pversion):
+def ninka(srcdir, sqldb, package, version):
 	## Ninka needs some tweaks to the environment. Right now it is hardcoded
 	## to configuration on my own machine.
 	ninkaenv = os.environ
-	ninkaenv['PATH'] = ninkaenv['PATH'] + ":/tmp/ninka-1.0-pre2/comments/comments"
+	#ninkaenv['PATH'] = ninkaenv['PATH'] + ":/tmp/ninka-1.0-pre2/comments/comments"
+	ninkaenv['PATH'] = ninkaenv['PATH'] + ":/tmp/dmgerman-ninka-7a9a5c4/comments/comments"
         srcdirlen = len(srcdir)+1
+	print srcdir
+	ninkares = []
+	start = True
 
 	osgen = os.walk(srcdir)
 
@@ -61,15 +76,22 @@ def ninka(srcdir, sqldb, package, pversion):
 	try:
 		while True:
 			i = osgen.next()
+			if start:
+				## only check if we have one top level directory
+				if len(i[1]) == 1:
+					if packageinpath(package, version, i[1][0]):
+						srcdirlen = srcdirlen + len("%s-%s/" % (package, version))
+				start = False
 			for p in i[2]:
 				p_nocase = p.lower()
 				if not (p_nocase.endswith('.c') or p_nocase.endswith('.h') or p_nocase.endswith('.cpp') or p_nocase.endswith('.cc') or p_nocase.endswith('.hh')):
 					continue
-				p1 = subprocess.Popen(["/tmp/ninka-1.0-pre2/ninka.pl", "-d", "%s/%s" % (i[0], p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=ninkaenv)
+				p1 = subprocess.Popen(["/tmp/dmgerman-ninka-7a9a5c4/ninka.pl", "-d", "%s/%s" % (i[0], p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=ninkaenv)
 				(stanout, stanerr) = p1.communicate()
-				print u"%s/%s  ----  " % (i[0][srcdirlen:], p), stanout.strip().split(";")[1:], gethash(i[0], p)
+				ninkares.append((i[0][srcdirlen:], p, stanout.strip().split(";")[1:], gethash(i[0], p), package, version))
 	except Exception, e:
 		print e
+	return ninkares
 
 ## TODO: add nice configuration options so we can remove the hardcoded stuff
 def main(argv):
@@ -101,7 +123,9 @@ def main(argv):
 	for unpackfile in filelist:
 		(package, version, filename) = unpackfile.split()
 		tmpdir = unpack(options.filedir, filename)
-		ninka(tmpdir, c, package, version)
+		ninkares = ninka(tmpdir, c, package, version)
+		print ninkares
+		sys.exit(1)
 
 if __name__ == "__main__":
 	main(sys.argv)
