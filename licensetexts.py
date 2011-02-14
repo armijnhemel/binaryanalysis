@@ -64,7 +64,6 @@ def ninka(srcdir, sqldb, package, version):
 	#ninkaenv['PATH'] = ninkaenv['PATH'] + ":/tmp/ninka-1.0-pre2/comments/comments"
 	ninkaenv['PATH'] = ninkaenv['PATH'] + ":/tmp/dmgerman-ninka-7a9a5c4/comments/comments"
         srcdirlen = len(srcdir)+1
-	print srcdir
 	ninkares = []
 	start = True
 
@@ -76,21 +75,28 @@ def ninka(srcdir, sqldb, package, version):
 	try:
 		while True:
 			i = osgen.next()
+			'''
 			if start:
 				## only check if we have one top level directory
 				if len(i[1]) == 1:
+					print package, version, packageinpath(package, version, i[1][0])
 					if packageinpath(package, version, i[1][0]):
 						srcdirlen = srcdirlen + len("%s-%s/" % (package, version))
 				start = False
+			'''
 			for p in i[2]:
 				p_nocase = p.lower()
 				if not (p_nocase.endswith('.c') or p_nocase.endswith('.h') or p_nocase.endswith('.cpp') or p_nocase.endswith('.cc') or p_nocase.endswith('.hh')):
 					continue
+				## we can't determine the license of an empty file
+				if os.stat("%s/%s" % (i[0], p)).st_size == 0:
+					continue
 				p1 = subprocess.Popen(["/tmp/dmgerman-ninka-7a9a5c4/ninka.pl", "-d", "%s/%s" % (i[0], p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=ninkaenv)
 				(stanout, stanerr) = p1.communicate()
-				ninkares.append((i[0][srcdirlen:], p, stanout.strip().split(";")[1:], gethash(i[0], p), package, version))
+				ninkares.append((i[0][srcdirlen:], p, stanout.strip(), gethash(i[0], p)))
 	except Exception, e:
-		print e
+		#print e
+		pass
 	return ninkares
 
 ## TODO: add nice configuration options so we can remove the hardcoded stuff
@@ -124,8 +130,23 @@ def main(argv):
 		(package, version, filename) = unpackfile.split()
 		tmpdir = unpack(options.filedir, filename)
 		ninkares = ninka(tmpdir, c, package, version)
-		print ninkares
-		sys.exit(1)
+		## TODO process output from ninka
+		for res in ninkares:
+			(topleveldir, filename, ninkascan, sha256) =  res
+			c.execute('''insert into files (filename, sha256, package, version) values (?,?,?,?)''', ("%s/%s" % (topleveldir, filename), sha256, package, version))
+			ninkasplit = ninkascan.split(';')[1:]
+			## filter out the ones we can't determine. We should run these through FOSSology.
+			if ninkasplit[0] == "NONE":
+				continue
+			elif ninkasplit[0].startswith("UNMATCHED"):
+				continue
+			elif ninkasplit[0].startswith("UNKNOWN"):
+				continue
+			else:
+				licenses = ninkasplit[0].split(',')
+				for license in licenses:
+					c.execute('''insert into licenses (sha256, license) values (?,?)''', (sha256, license))
+			conn.commit()
 
 if __name__ == "__main__":
 	main(sys.argv)
