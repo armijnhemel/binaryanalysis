@@ -2,6 +2,8 @@
 * use 'file' to determine the size of squashfs file systems.
 * introduce "genericSearch" and rewrite all checks in checks.py to use
 genericSearch
+* add stubs for XZ support
+* small comment fixes and removal from dead code
 
 2011-02-13
 * only pass data between cpio header and trailer to the cpio unpacker.

@@ -54,7 +54,6 @@ def findCpioTrailer(data, offset=0):
 
 def findExt2fs(data, offset=0):
 	return findType('ext2', data, offset)
-	#return -1
 
 def findRPM(data, offset=0):
 	return findType('rpm', data, offset)
@@ -77,6 +76,9 @@ def findRar(data, offset=0):
 ## not reliable according to comments in /usr/share/magic
 def findLZMA(data, offset=0):
 	return findType('lzma_alone', data, offset)
+
+def findXZ(data, offset=0):
+	return findType('xz', data, offset)
 
 def findBzip2(data, offset=0):
 	return findType('bz2', data, offset)
