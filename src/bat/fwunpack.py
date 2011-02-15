@@ -263,8 +263,8 @@ def unpackCramfs(data, offset, tempdir=None):
 ## Search and unpack a squashfs file system. Since there are so many flavours
 ## of squashfs available we have to do some extra work here, and possibly have
 ## some extra tools (squashfs variants) installed.
-## We don't return a blacklist here, but we could use unsquashfs -s to get
-## statistics and possibly speed up the scanning a bit.
+## Use the output of 'file' to determine the size of squashfs and use it for the
+## blacklist.
 def searchUnpackSquashfs(filename, tempdir=None, blacklist=[]):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
@@ -285,9 +285,10 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[]):
         	       		tmpdir = tempfile.mkdtemp()
 			else:
 				tmpdir = tempfile.mkdtemp(dir=tempdir)
-			res = unpackSquashfs(data, offset, tmpdir)
+			(res, squashsize) = unpackSquashfs(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
+				blacklist.append((offset,squashsize))
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
@@ -332,9 +333,16 @@ def unpackSquashfs(data, offset, tempdir=None):
 			os.rmdir(tmpdir)
 		return
 	else:
+		squashsize = 0
+		p = subprocess.Popen(['file', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+		(stanuit, stanerr) = p.communicate()
+		if p.returncode != 0:
+			pass
+		else:
+			squashsize = int(re.search(", (\d+) bytes", stanuit).groups()[0])
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
-		return tmpdir
+		return (tmpdir, squashsize)
 
 ## We use tune2fs to get the size of the file system so we know what to
 ## blacklist.
