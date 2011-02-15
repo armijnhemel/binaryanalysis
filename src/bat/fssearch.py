@@ -80,6 +80,9 @@ def findLZMA(data, offset=0):
 def findXZ(data, offset=0):
 	return findType('xz', data, offset)
 
+def findXZ(data, offset=0):
+	return findType('lzip', data, offset)
+
 def findBzip2(data, offset=0):
 	return findType('bz2', data, offset)
 

@@ -131,6 +131,10 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[]):
 				return [(zztmpdir, 0), blacklist]
 	return []
 
+## stub placeholder for unpacking lzip archives
+def searchUnpackLzip(filename, tempdir=None, blacklist=[]):
+	return []
+
 ## stub placeholder for unpacking XZ archives
 def searchUnpackXZ(filename, tempdir=None, blacklist=[]):
 	return []
