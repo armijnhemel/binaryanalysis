@@ -62,6 +62,9 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[]):
 			return [(tartmpdir, 0), blacklist]
 	return []
 
+## unpacker for Microsoft Cabinet Archive files.
+## Since it sometimes also can unpack other things (like .exe) we should let it
+## try to unpack more files.
 def searchUnpackCab(filename, tempdir=None, blacklist=[]):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
@@ -93,6 +96,9 @@ def searchUnpackCab(filename, tempdir=None, blacklist=[]):
 				return [(cabtmpdir, 0), blacklist]
 	return []
 
+## unpacker for Microsoft Windows Executables.
+## Since it sometimes also can unpack other things we should let it
+## try to unpack more files.
 def searchUnpack7z(filename, tempdir=None, blacklist=[]):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
@@ -125,7 +131,11 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[]):
 				return [(zztmpdir, 0), blacklist]
 	return []
 
-## Not sure how cpio works if we have a cpio archive with a cpio archive in it
+## stub placeholder for unpacking XZ archives
+def searchUnpackXZ(filename, tempdir=None, blacklist=[]):
+	return []
+
+## Not sure how cpio works if we have a cpio archive within a cpio archive
 ## especially with regards to locating the proper cpio trailer.
 ## This method should return a blacklist.
 def searchUnpackCpio(filename, tempdir=None, blacklist=[]):
