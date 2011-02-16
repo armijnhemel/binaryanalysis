@@ -1,6 +1,9 @@
 2011-02-16
 * add search method for XZ footer
 * make lzip a dependency for the RPM
+* start on XZ support. This does not yet work, so don't use.
+* rework cpio unpacking slightly. There are still a few logic errors here that
+need some love.
 
 2011-02-15
 * use 'file' to determine the size of squashfs file systems.
