@@ -46,6 +46,12 @@ def findCpio(data, offset=0):
 			cpiomarker = min(cpiomarker, res)
 	return cpiomarker
 
+def findXZTrailer(data, offset=0):
+	res = findMarker('\x59\x5a', data, offset)
+	if res != -1:
+		return res
+	return -1
+
 def findCpioTrailer(data, offset=0):
 	res = findMarker('TRAILER!!!', data, offset)
 	if res != -1:
