@@ -1,3 +1,6 @@
+2011-02-16
+* add search method for XZ footer
+
 2011-02-15
 * use 'file' to determine the size of squashfs file systems.
 * introduce "genericSearch" and rewrite all checks in checks.py to use
