@@ -137,7 +137,37 @@ def searchUnpackLzip(filename, tempdir=None, blacklist=[]):
 
 ## stub placeholder for unpacking XZ archives
 def searchUnpackXZ(filename, tempdir=None, blacklist=[]):
+	datafile = open(filename, 'rb')
+	data = datafile.read()
+	datafile.close()
+	offset = fssearch.findXZ(data)
+	if offset == -1:
+		return []
+	else:
+		diroffsets = []
+		while(offset != -1):
+			blacklistoffset = inblacklist(offset, blacklist)
+			if blacklistoffset != None:
+				offset = fssearch.findXZ(data, offset+blacklistoffset)
+			if offset == -1:
+				break
+			if tempdir == None:
+				tmpdir = tempfile.mkdtemp()
+			else:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
+			res = unpackXZ(data, offset, tmpdir)
+			if res != None:
+				diroffsets.append((res, offset))
+			else:
+				## cleanup
+				os.rmdir(tmpdir)
+			offset = fssearch.findXZ(data, offset+1)
+		diroffsets.append(blacklist)
+		return diroffsets
 	return []
+
+def unpackXZ(data, offset, tempdir=None):
+	pass
 
 ## Not sure how cpio works if we have a cpio archive within a cpio archive
 ## especially with regards to locating the proper cpio trailer.
