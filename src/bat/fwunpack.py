@@ -135,7 +135,18 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[]):
 def searchUnpackLzip(filename, tempdir=None, blacklist=[]):
 	return []
 
-## stub placeholder for unpacking XZ archives
+## To unpack XZ we need to find a header and a footer.
+## The trailer is actually very generic and a lot more common than the header,
+## so it is likely that we need to search for the trailer a lot more than
+## for the header.
+## We need to do:
+## for all offsets:
+## 	for all traileroffsets:
+##		unpackXZ(offset, trailer)
+##		if positivematch:
+##			store (offset, trailer)
+##			remove trailer from offsets list
+##			go to next offset > trailer
 def searchUnpackXZ(filename, tempdir=None, blacklist=[]):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
@@ -144,7 +155,19 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[]):
 	if offset == -1:
 		return []
 	else:
+		## record the original offset
+		origoffset = offset
 		diroffsets = []
+		## remember the offsets of the XZ footer
+		traileroffsets = []
+		trailer = fssearch.findXZTrailer(data)
+		if trailer == -1:
+			return []
+		while(trailer != -1):
+			trailer = fssearch.findXZTrailer(data)
+			traileroffsets.append(trailer)
+		trailercount = 0
+		trailer = traileroffsets[trailercount]
 		while(offset != -1):
 			blacklistoffset = inblacklist(offset, blacklist)
 			if blacklistoffset != None:
@@ -155,18 +178,50 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[]):
 				tmpdir = tempfile.mkdtemp()
 			else:
 				tmpdir = tempfile.mkdtemp(dir=tempdir)
-			res = unpackXZ(data, offset, tmpdir)
+			##
+			## for i in len(traileroffsets):
+			## 	do stuff here for each traileroffset, with unpacking.
+			## 	break when we have success
+			res = unpackXZ(data, offset, trailer, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
+				offset = fssearch.findXZ(data, offset+trailer)
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
-			offset = fssearch.findXZ(data, offset+1)
+				offset = fssearch.findXZ(data, offset+1)
 		diroffsets.append(blacklist)
 		return diroffsets
 	return []
 
-def unpackXZ(data, offset, tempdir=None):
+def unpackXZ(data, offset, trailer, tempdir=None):
+	## first unpack things, write things to a file and return
+	## the directory if the file is not empty
+	## Assumes (for now) that xz is in the path
+	if tempdir == None:
+		tmpdir = tempfile.mkdtemp()
+	else:
+		tmpdir = tempdir
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.write(tmpfile[0], data[offset:, trailer+1])
+	p = subprocess.Popen(['xz', '-d', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanuit, stanerr) = p.communicate()
+	outtmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.write(outtmpfile[0], stanuit)
+	#os.fdopen(outtmpfile[0]).flush()
+	os.fsync(outtmpfile[0])
+	if os.stat(outtmpfile[1]).st_size == 0:
+		os.fdopen(outtmpfile[0]).close()
+		os.unlink(outtmpfile[1])
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	os.fdopen(outtmpfile[0]).close()
+	os.fdopen(tmpfile[0]).close()
+	os.unlink(tmpfile[1])
+	return tmpdir
 	pass
 
 ## Not sure how cpio works if we have a cpio archive within a cpio archive
@@ -182,7 +237,10 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[]):
 	else:
 		diroffsets = []
 		trailer = fssearch.findCpioTrailer(data)
-		while(offset != -1):
+		if trailer == -1:
+			## no trailer found, so no use to continue checking
+			return []
+		while(offset != -1 and trailer != -1):
 			blacklistoffset = inblacklist(offset, blacklist)
 			if blacklistoffset != None:
 				offset = fssearch.findCpio(data, offset+blacklistoffset)
@@ -193,19 +251,23 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[]):
 			else:
 				tmpdir = tempfile.mkdtemp(dir=tempdir)
 			## length of 'TRAILER!!!' plus 1 to include the whole trailer
-			## cpio archives are always rounded to blocks of 512 bytes
+			## and cpio archives are always rounded to blocks of 512 bytes
 			trailercorrection = (512 - len(data[offset:trailer+10])%512)
 			res = unpackCpio(data[offset:trailer+10 + trailercorrection], 0, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
 				blacklist.append((offset, trailer))
+				offset = fssearch.findCpio(data, offset + trailer)
+				trailer = fssearch.findCpioTrailer(data, offset + trailer)
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
-			offset = fssearch.findCpio(data, offset+1)
+				offset = fssearch.findCpio(data, offset+1)
+			## there is a logic flow here. We should actually check for
+			## all (offset, trailer) pairs where offset < trailer
 			while offset < trailer and offset != -1:
 				offset = fssearch.findCpio(data, offset+1)
-			trailer = fssearch.findCpioTrailer(data, offset)
+			#trailer = fssearch.findCpioTrailer(data, offset)
 		diroffsets.append(blacklist)
 		return diroffsets
 
