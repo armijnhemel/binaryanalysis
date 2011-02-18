@@ -131,7 +131,8 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[]):
 				return [(zztmpdir, 0), blacklist]
 	return []
 
-## stub placeholder for unpacking lzip archives
+## unpack lzip archives.
+## This method returns a blacklist.
 def searchUnpackLzip(filename, tempdir=None, blacklist=[]):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
@@ -151,10 +152,12 @@ def searchUnpackLzip(filename, tempdir=None, blacklist=[]):
 				tmpdir = tempfile.mkdtemp()
 			else:
 				tmpdir = tempfile.mkdtemp(dir=tempdir)
-			res = unpackLzip(data, offset, tmpdir)
+			(res, trailer) = unpackLzip(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
-				offset = fssearch.findLzip(data, offset+1)
+				blacklist.append((offset, offset+trailer))
+				offset = fssearch.findLzip(data, offset+trailer)
+				print offset
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
@@ -164,7 +167,47 @@ def searchUnpackLzip(filename, tempdir=None, blacklist=[]):
 	return []
 
 def unpackLzip(data, offset, tempdir=None):
-	return None
+	## first unpack things, write things to a file and return
+	## the directory if the file is not empty
+	## Assumes (for now) that lzip is in the path
+	if tempdir == None:
+		tmpdir = tempfile.mkdtemp()
+	else:
+		tmpdir = tempdir
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.write(tmpfile[0], data[offset:])
+	p = subprocess.Popen(['lzip', "-d", "-c", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanuit, stanerr) = p.communicate()
+	outtmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.write(outtmpfile[0], stanuit)
+	#os.fdopen(outtmpfile[0]).flush()
+	os.fsync(outtmpfile[0])
+	if os.stat(outtmpfile[1]).st_size == 0:
+		os.fdopen(outtmpfile[0]).close()
+		os.unlink(outtmpfile[1])
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	## determine the size of the archive we unpacked, so we can skip a lot
+	p = subprocess.Popen(['lzip', '-vvvt', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanuit, stanerr) = p.communicate()
+	if p.returncode != 0:
+		## something weird happened here: we can unpack, but not test the archive?
+		os.fdopen(outtmpfile[0]).close()
+		os.unlink(outtmpfile[1])
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	lzipsize = int(re.search("member size\s+(\d+)", stanerr).groups()[0])
+	print lzipsize
+	os.fdopen(outtmpfile[0]).close()
+	os.fdopen(tmpfile[0]).close()
+	os.unlink(tmpfile[1])
+	return (tmpdir, lzipsize)
 
 ## To unpack XZ we need to find a header and a footer.
 ## The trailer is actually very generic and a lot more common than the header,

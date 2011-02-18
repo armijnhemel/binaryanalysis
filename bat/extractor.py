@@ -33,8 +33,8 @@ def check_nonprintable(lines, offset, word):
 ## Blacklists are composed of tuples (lower, upper) which mark a region
 ## in the parent file(!) as a no go area.
 ## This method returns the upperbound from the tuple for which
-## lower <= offset <= upper is True
+## lower <= offset < upper is True
 def inblacklist(offset, blacklist):
 	for bl in blacklist:
-		if offset >= bl[0] and offset <= bl[1]:
+		if offset >= bl[0] and offset < bl[1]:
 			return bl[1]
