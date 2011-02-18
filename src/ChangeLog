@@ -1,3 +1,7 @@
+2011-02-18
+* change upperbound of blacklist checking from <= to <
+* add lzip unpacking
+
 2011-02-16
 * add search method for XZ footer
 * make lzip a dependency for the RPM
