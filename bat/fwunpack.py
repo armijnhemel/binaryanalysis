@@ -133,7 +133,38 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[]):
 
 ## stub placeholder for unpacking lzip archives
 def searchUnpackLzip(filename, tempdir=None, blacklist=[]):
+	datafile = open(filename, 'rb')
+	data = datafile.read()
+	datafile.close()
+	offset = fssearch.findLzip(data)
+	if offset == -1:
+		return []
+	else:
+		diroffsets = []
+		while(offset != -1):
+			blacklistoffset = inblacklist(offset, blacklist)
+			if blacklistoffset != None:
+				offset = fssearch.findLzip(data, offset+blacklistoffset)
+			if offset == -1:
+				break
+			if tempdir == None:
+				tmpdir = tempfile.mkdtemp()
+			else:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
+			res = unpackLzip(data, offset, tmpdir)
+			if res != None:
+				diroffsets.append((res, offset))
+				offset = fssearch.findLzip(data, offset+1)
+			else:
+				## cleanup
+				os.rmdir(tmpdir)
+				offset = fssearch.findLzip(data, offset+1)
+		diroffsets.append(blacklist)
+		return diroffsets
 	return []
+
+def unpackLzip(data, offset, tempdir=None):
+	return None
 
 ## To unpack XZ we need to find a header and a footer.
 ## The trailer is actually very generic and a lot more common than the header,

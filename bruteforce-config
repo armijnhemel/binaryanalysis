@@ -35,6 +35,13 @@ magic   = tar
 #cleanup = cleanupZip
 priority = 1
 
+[lzip]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackLzip
+magic   = lzip
+priority = 0
+
 [rar]
 type    = unpack
 module  = bat.fwunpack
