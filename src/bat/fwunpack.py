@@ -157,7 +157,6 @@ def searchUnpackLzip(filename, tempdir=None, blacklist=[]):
 				diroffsets.append((res, offset))
 				blacklist.append((offset, offset+trailer))
 				offset = fssearch.findLzip(data, offset+trailer)
-				print offset
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
@@ -203,7 +202,6 @@ def unpackLzip(data, offset, tempdir=None):
 			os.rmdir(tmpdir)
 		return None
 	lzipsize = int(re.search("member size\s+(\d+)", stanerr).groups()[0])
-	print lzipsize
 	os.fdopen(outtmpfile[0]).close()
 	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
@@ -277,7 +275,7 @@ def unpackXZ(data, offset, trailer, tempdir=None):
 	else:
 		tmpdir = tempdir
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(tmpfile[0], data[offset:, trailer+1])
+	os.write(tmpfile[0], data[offset:trailer+1])
 	p = subprocess.Popen(['xz', '-d', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanuit, stanerr) = p.communicate()
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
@@ -296,7 +294,6 @@ def unpackXZ(data, offset, trailer, tempdir=None):
 	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
 	return tmpdir
-	pass
 
 ## Not sure how cpio works if we have a cpio archive within a cpio archive
 ## especially with regards to locating the proper cpio trailer.
@@ -347,6 +344,7 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[]):
 
 ## tries to unpack stuff using cpio. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
+## This one needs to stay separate, since it is also used by RPM unpacking
 def unpackCpio(data, offset, tempdir=None):
         if tempdir == None:
                 tmpdir = tempfile.mkdtemp()
