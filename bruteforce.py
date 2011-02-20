@@ -373,7 +373,8 @@ def scan(scanfile, magic, unpackscans=[], programscans=[], filehash=None, tempdi
                             , "romfs filesystem, version 1"
                             ]
 
-	## TODO: rework so we first run the unpack scans with the highest priority
+	## 'unpackscans' has been sorted in decreasing priority, so highest
+	## priority scans are run first.
 	for scan in unpackscans:
 		module = scan['module']
 		method = scan['method']
@@ -398,6 +399,7 @@ def scan(scanfile, magic, unpackscans=[], programscans=[], filehash=None, tempdi
 				reports.append(report)
 		blacklist = diroffsets[-1]
 	for scan in programscans:
+		## TODO: rework this. Probably having blacklists is enough for this.
 		skip = False
 		for prog in programignorelist:
 			if prog in magic:

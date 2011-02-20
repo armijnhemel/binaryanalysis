@@ -533,7 +533,7 @@ def unpackSquashfs(data, offset, tempdir=None):
 
 ## We use tune2fs to get the size of the file system so we know what to
 ## blacklist.
-## TODO: unpack, plus use tune2fs on the right offset
+## TODO: unpack, plus use tune2fs at the right offset
 ## This method should return a blacklist.
 def searchUnpackExt2fs(filename, tempdir=None, blacklist=[]):
 	datafile = open(filename, 'rb')
