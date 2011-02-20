@@ -1,3 +1,6 @@
+2011-02-20
+* fix XZ unpacking
+
 2011-02-18
 * change upperbound of blacklist checking from <= to <
 * add lzip unpacking

@@ -88,6 +88,13 @@ priority = 0
 #method  = searchUnpackExt2fs
 #priority = 2
 
+[xz]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackXZ
+magic   = xz
+priority = 0
+
 [lzma]
 type    = unpack
 module  = bat.fwunpack
