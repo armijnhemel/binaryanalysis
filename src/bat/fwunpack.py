@@ -471,8 +471,9 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[]):
         	       		tmpdir = tempfile.mkdtemp()
 			else:
 				tmpdir = tempfile.mkdtemp(dir=tempdir)
-			(res, squashsize) = unpackSquashfs(data, offset, tmpdir)
-			if res != None:
+			retval = unpackSquashfs(data, offset, tmpdir)
+			if retval != None:
+				(res, squashsize) = retval
 				diroffsets.append((res, offset))
 				blacklist.append((offset,squashsize))
 			else:
@@ -505,7 +506,7 @@ def unpackSquashfs(data, offset, tempdir=None):
 			os.stat('/usr/bin/unsquashfs')
 			distro = 'bin'
 		except:
-			return
+			return None
 
 	if distro == 'sbin':
 		p = subprocess.Popen(['/usr/sbin/unsquashfs', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
@@ -517,13 +518,13 @@ def unpackSquashfs(data, offset, tempdir=None):
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
-		return
+		return None
 	else:
 		squashsize = 0
 		p = subprocess.Popen(['file', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanuit, stanerr) = p.communicate()
 		if p.returncode != 0:
-			pass
+			return None
 		else:
 			squashsize = int(re.search(", (\d+) bytes", stanuit).groups()[0])
 		os.fdopen(tmpfile[0]).close()
