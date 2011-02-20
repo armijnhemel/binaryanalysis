@@ -4,6 +4,13 @@
 ## Copyright 2009-2011 Armijn Hemel for LOCO (LOOHUIS CONSULTING)
 ## Licensed under Apache 2.0, see LICENSE file for details
 
+'''
+This file contains a few methods that check for the presence of marker
+strings that are likely to be found in certain programs. It is far from fool
+proof and false positives are likely, so either check the results, or replace
+it with your own more robust checks.
+'''
+
 import string, re
 import extractor
 
