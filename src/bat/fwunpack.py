@@ -211,14 +211,6 @@ def unpackLzip(data, offset, tempdir=None):
 ## The trailer is actually very generic and a lot more common than the header,
 ## so it is likely that we need to search for the trailer a lot more than
 ## for the header.
-## We need to do:
-## for all offsets:
-## 	for all traileroffsets:
-##		unpackXZ(offset, trailer)
-##		if positivematch:
-##			store (offset, trailer)
-##			remove trailer from offsets list
-##			go to next offset > trailer
 def searchUnpackXZ(filename, tempdir=None, blacklist=[]):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
@@ -230,38 +222,45 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[]):
 		## record the original offset
 		origoffset = offset
 		diroffsets = []
-		## remember the offsets of the XZ footer
+		## remember the offsets of the XZ footer, search for all trailers once
 		traileroffsets = []
 		trailer = fssearch.findXZTrailer(data)
+		## why bother if we can't find a trailer?
 		if trailer == -1:
 			return []
 		while(trailer != -1):
-			trailer = fssearch.findXZTrailer(data)
+			trailer = fssearch.findXZTrailer(data,trailer+1)
 			traileroffsets.append(trailer)
-		trailercount = 0
-		trailer = traileroffsets[trailercount]
+		## remember all offsets of the XZ header in the file
+		offsets = [offset]
 		while(offset != -1):
-			blacklistoffset = inblacklist(offset, blacklist)
+			offset = fssearch.findXZ(data,offset+1)
+			offsets.append(offset)
+		for trail in traileroffsets:
+			## check if the trailer is in the blacklist
+			blacklistoffset = inblacklist(trail, blacklist)
 			if blacklistoffset != None:
-				offset = fssearch.findXZ(data, offset+blacklistoffset)
-			if offset == -1:
-				break
-			if tempdir == None:
-				tmpdir = tempfile.mkdtemp()
-			else:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
-			##
-			## for i in len(traileroffsets):
-			## 	do stuff here for each traileroffset, with unpacking.
-			## 	break when we have success
-			res = unpackXZ(data, offset, trailer, tmpdir)
-			if res != None:
-				diroffsets.append((res, offset))
-				offset = fssearch.findXZ(data, offset+trailer)
-			else:
-				## cleanup
-				os.rmdir(tmpdir)
-				offset = fssearch.findXZ(data, offset+1)
+				## remove trailer from traileroffsets?
+				continue
+			for offset in offsets:
+				## only check offsets that make sense
+				if offset >= trail:
+					continue
+				blacklistoffset = inblacklist(offset, blacklist)
+				if blacklistoffset != None:
+					## remove offset from offsets?
+					continue
+				else:
+					if tempdir == None:
+						tmpdir = tempfile.mkdtemp()
+					else:
+						tmpdir = tempfile.mkdtemp(dir=tempdir)
+					res = unpackXZ(data, offset, trail, tmpdir)
+					if res != None:
+						diroffsets.append((res, offset))
+					else:
+						## cleanup
+						os.rmdir(tmpdir)
 		diroffsets.append(blacklist)
 		return diroffsets
 	return []
@@ -275,8 +274,17 @@ def unpackXZ(data, offset, trailer, tempdir=None):
 	else:
 		tmpdir = tempdir
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(tmpfile[0], data[offset:trailer+1])
-	p = subprocess.Popen(['xz', '-d', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	## trailer has size of 2. Add 1 because [lower, upper)
+	os.write(tmpfile[0], data[offset:trailer+3])
+	## test integrity of the file
+	p = subprocess.Popen(['xz', '-t', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanuit, stanerr) = p.communicate()
+	if p.returncode != 0:
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		return None
+	## unpack
+	p = subprocess.Popen(['xzcat', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanuit, stanerr) = p.communicate()
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(outtmpfile[0], stanuit)
