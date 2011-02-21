@@ -1053,7 +1053,10 @@ def unpackUbifs(data, offset, tempdir=None):
                 	pass
 		return (tmpdir, ubisize)
 
+## unpacking for ARJ. The file format is described at:
 ## http://www.fileformat.info/format/arj/corion.htm
+## Although there is no trailer we can use the arj program to at least give
+## us some information about the uncompressed size of the archive.
 def searchUnpackARJ(filename, tempdir=None, blacklist=[]):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
@@ -1077,6 +1080,7 @@ def searchUnpackARJ(filename, tempdir=None, blacklist=[]):
 			if res != None:
 				(arjtmpdir, arjsize) = res
 				diroffsets.append((arjtmpdir, offset))
+				blacklist.append((offset, arjsize))
 				offset = fssearch.findARJ(data, offset+arjsize)
 			else:
 				## cleanup
@@ -1111,8 +1115,13 @@ def unpackARJ(data, offset, tempdir=None):
 			if tempdir == None:
 				os.rmdir(tmpdir)
 			return None
+	## everything has been unpacked, so we can get the size.
+	p = subprocess.Popen(['arj', 'v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	(stanuit, stanerr) = p.communicate()
+	stanoutlines = stanuit.strip().split("\n")
+	## we should do more sanity checks here
+	arjsize = int(stanoutlines[-1].split()[-2])
 	## always clean up the old temporary files
 	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
-	## use a dummy value for size right now
-	return (tmpdir, 1)
+	return (tmpdir, arjsize)
