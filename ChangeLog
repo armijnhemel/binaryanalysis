@@ -1,3 +1,7 @@
+2011-02-21
+* add unpacking for ARJ
+* fix small bug in ubifs searching
+
 2011-02-20
 * fix XZ unpacking
 * fix unsquashfs unpacking encountering a sqsh we can't unpack yet

@@ -1010,7 +1010,9 @@ def searchUnpackUbifs(filename, tempdir=None, blacklist=[]):
 			if res != None:
 				(ubitmpdir, ubisize) = res
 				diroffsets.append((ubitmpdir, offset))
-			offset = fssearch.findUbifs(data, offset+ubisize)
+				offset = fssearch.findUbifs(data, offset+ubisize)
+			else:
+				offset = fssearch.findUbifs(data, offset+1)
 		if len(diroffsets) == 0:
 			os.rmdir(tmpdir)
 		diroffsets.append(blacklist)
@@ -1050,3 +1052,67 @@ def unpackUbifs(data, offset, tempdir=None):
         	except StopIteration:
                 	pass
 		return (tmpdir, ubisize)
+
+## http://www.fileformat.info/format/arj/corion.htm
+def searchUnpackARJ(filename, tempdir=None, blacklist=[]):
+	datafile = open(filename, 'rb')
+	data = datafile.read()
+	datafile.close()
+	offset = fssearch.findARJ(data)
+	if offset == -1:
+		return []
+	else:
+		diroffsets = []
+		while(offset != -1):
+			blacklistoffset = inblacklist(offset, blacklist)
+			if blacklistoffset != None:
+				offset = fssearch.findARJ(data, offset+blacklistoffset)
+			if offset == -1:
+				break
+        		if tempdir == None:
+        	       		tmpdir = tempfile.mkdtemp()
+			else:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
+			res = unpackARJ(data, offset, tmpdir)
+			if res != None:
+				(arjtmpdir, arjsize) = res
+				diroffsets.append((arjtmpdir, offset))
+				offset = fssearch.findARJ(data, offset+arjsize)
+			else:
+				## cleanup
+				os.rmdir(tmpdir)
+				offset = fssearch.findARJ(data, offset+1)
+		diroffsets.append(blacklist)
+		return diroffsets
+
+def unpackARJ(data, offset, tempdir=None):
+	if tempdir == None:
+		tmpdir = tempfile.mkdtemp()
+	else:
+		tmpdir = tempdir
+	tmpfile = tempfile.mkstemp(dir=tmpdir, suffix=".arj")
+	os.write(tmpfile[0], data[offset:])
+	## first check archive integrity
+	p = subprocess.Popen(['arj', 't', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	(stanuit, stanerr) = p.communicate()
+	if p.returncode != 0:
+		## this is not an ARJ archive
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	else:
+		p = subprocess.Popen(['arj', 'x', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+		(stanuit, stanerr) = p.communicate()
+		if p.returncode != 0:
+			os.fdopen(tmpfile[0]).close()
+			os.unlink(tmpfile[1])
+			if tempdir == None:
+				os.rmdir(tmpdir)
+			return None
+	## always clean up the old temporary files
+	os.fdopen(tmpfile[0]).close()
+	os.unlink(tmpfile[1])
+	## use a dummy value for size right now
+	return (tmpdir, 1)

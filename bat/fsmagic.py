@@ -35,7 +35,8 @@ fsmagic = {
             #'jffs2-le':         '\x85\x19',
             'ubifs':            '\x55\x42\x49\x23',
             'rpm':              '\xed\xab\xee\xdb',
-            'ext2':              '\x53\xef',        # little endian
+            'ext2':             '\x53\xef',        # little endian
+            'arj':              '\x60\xea',
           }
 
 squashtypes = ['squashfs-le', 'squashfs-be', 'squashfs-le-lzma', 'squashfs-be-lzma']

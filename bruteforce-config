@@ -42,6 +42,13 @@ method  = searchUnpackLzip
 magic   = lzip
 priority = 0
 
+[arj]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackARJ
+magic   = arj
+priority = 0
+
 [rar]
 type    = unpack
 module  = bat.fwunpack
