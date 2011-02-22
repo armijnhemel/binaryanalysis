@@ -74,6 +74,15 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[]):
 ## Probably we should blacklist the whole file after one method has
 ## been successful.
 def searchUnpackExe(filename, tempdir=None, blacklist=[]):
+	## ZIP:
+	## self extracting exe can be found by searching for things like
+	## PKBAC
+	## WinZip Self-Extractor
+	## This can be unpacked with 7zip (gives better results than unzip)
+	## RAR:
+	## self extracting exe can be found by searching for things like
+	## WinRAR
+	## This can be unpacked with unrar
 	pass
 
 ## unpacker for Microsoft Cabinet Archive files.
