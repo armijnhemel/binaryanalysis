@@ -62,39 +62,75 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[]):
 			return [(tartmpdir, 0), blacklist]
 	return []
 
+## Windows executables can be unpacked in many ways
+def searchUnpackExe(filename, tempdir=None, blacklist=[]):
+	pass
+
 ## unpacker for Microsoft Cabinet Archive files.
-## Since it sometimes also can unpack other things (like .exe) we should let it
-## try to unpack more files.
 def searchUnpackCab(filename, tempdir=None, blacklist=[]):
+	datafile = open(filename, 'rb')
+	data = datafile.read()
+	datafile.close()
+	offset = fssearch.findCab(data)
+	if offset == -1:
+		return []
+	else:
+		diroffsets = []
+		while(offset != -1):
+			blacklistoffset = inblacklist(offset, blacklist)
+			if blacklistoffset != None:
+				offset = fssearch.findCab(data, offset+blacklistoffset)
+			if offset == -1:
+				break
+			if tempdir == None:
+				tmpdir = tempfile.mkdtemp()
+			else:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
+			res = unpackCab(data, offset, tmpdir)
+			if res != None:
+				diroffsets.append((res, offset))
+			else:
+				## cleanup
+				os.rmdir(tmpdir)
+			offset = fssearch.findCab(data, offset+1)
+		diroffsets.append(blacklist)
+		return diroffsets
+	pass
+
+def unpackCab(data, offset, tempdir=None):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
-	type = ms.file(filename)
-	ms.close()
+	if tempdir == None:
+		tmpdir = tempfile.mkdtemp()
+	else:
+		tmpdir = tempdir
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.write(tmpfile[0], data[offset:])
+	## copied from the python-magic examples
+	cab = file(tmpfile[1], "r")
+	buffer = cab.read(100)
+	cab.close()
 
-	exemagic = ['Microsoft Cabinet archive data'
-		   ]
-
-	for exe in exemagic:
-		if exe in type:
-        		if tempdir == None:
-        		       	tmpdir = tempfile.mkdtemp()
-			else:
-				tmpdir = tempdir
-                	cabtmpdir = tempfile.mkdtemp(dir=tmpdir)
-			p = subprocess.Popen(['cabextract', '-d', cabtmpdir, filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-			(stanuit, stanerr) = p.communicate()
-			if p.returncode != 0:
-				try:
-					## cleanup
-					os.rmdir(cabtmpdir)
-        				if tempdir == None:
-        		       			os.rmdir(tmpdir)
-				except:
-					pass
-				continue
-			else:
-				return [(cabtmpdir, 0), blacklist]
-	return []
+	type = ms.buffer(buffer)
+	if "Microsoft Cabinet archive data" not in type:
+		ms.close()
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	p = subprocess.Popen(['cabextract', '-d', tmpdir, tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanuit, stanerr) = p.communicate()
+	if p.returncode != 0:
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	else:
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		return tmpdir
 
 ## unpacker for Microsoft Windows Executables.
 ## Since it sometimes also can unpack other things we should let it

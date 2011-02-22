@@ -95,6 +95,9 @@ def findBzip2(data, offset=0):
 def findARJ(data, offset=0):
 	return findType('arj', data, offset)
 
+def findCab(data, offset=0):
+	return findType('cab', data, offset)
+
 def markerSearch(data):
 	offsets = []
 	marker_keys = fsmagic.marker.keys()
