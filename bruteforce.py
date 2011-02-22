@@ -252,10 +252,6 @@ def scanfile(path, file, lentempdir=0, tempdir=None, unpackscans=[], programscan
 
 	## Filter out various things based on magic type. This might break
 	## if a firmware update is actually a shell script.
-        if type.find('ASCII text') == 0:
-        	return report
-        elif type.find('ASCII English text') == 0:
-        	return report
         elif type.find('XML') == 0:
         	return report
         elif type.find('GIF image data') == 0:
