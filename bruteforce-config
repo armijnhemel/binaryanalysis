@@ -25,7 +25,7 @@ module  = bat.fwunpack
 method  = searchUnpack7z
 magic   = 7z
 #cleanup = cleanupZip
-priority = 0
+priority = 1
 
 [tar]
 type    = unpack
