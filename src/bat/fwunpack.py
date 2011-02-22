@@ -64,12 +64,13 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[]):
 
 ## Windows executables can be unpacked in many ways.
 ## We should try various methods:
+## * 7z
 ## * unshield
 ## * cabextract
-## * 7z
 ## * unrar
 ## * unzip
-## Sometimes one or both will give results
+## Sometimes one or both will give results. I don't know what the
+## best order is...yet.
 def searchUnpackExe(filename, tempdir=None, blacklist=[]):
 	pass
 
@@ -178,6 +179,7 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[]):
 					pass
 				continue
 			else:
+				blacklist.append((0, os.stat(filename).st_size))
 				return [(zztmpdir, 0), blacklist]
 	return []
 

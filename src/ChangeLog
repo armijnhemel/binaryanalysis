@@ -1,5 +1,8 @@
 2011-02-22
 * rework unpacking for CAB
+* give 7zip more priority than other scans such as CAB to prevent duplicate
+scanning
+* add blacklisting to 7z. This is very crude and needs to be reworked.
 
 2011-02-21
 * add unpacking for ARJ
