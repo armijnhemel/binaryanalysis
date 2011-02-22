@@ -19,7 +19,8 @@ analysis.'''
 ## (name: identifier)
 
 fsmagic = {
-            'gzip':             '\x1f\x8b\x08',     # this excludes some gzip files!
+            #'gzip':             '\x1f\x8b\x08',     # this excludes some gzip files!
+            'gzip':             '\x1f\x8b',
             'bz2':              'BZh',
             'rar':              'Rar!',
             'zip':              '\x50\x4b\x03\04',
