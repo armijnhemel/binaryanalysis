@@ -71,6 +71,8 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[]):
 ## * unzip
 ## Sometimes one or both will give results. I don't know what the
 ## best order is...yet.
+## Probably we should blacklist the whole file after one method has
+## been successful.
 def searchUnpackExe(filename, tempdir=None, blacklist=[]):
 	pass
 
@@ -773,7 +775,7 @@ def unpackZip(data, offset, tempdir=None):
 		tmpdir = tempdir
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
-	## Use information from zipinfo -v to extract the right offsets (or at least the end offset
+	## Use information from zipinfo -v to extract the right offsets (or at least the last offset)
 	p = subprocess.Popen(['zipinfo', '-v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanuit, stanerr) = p.communicate()
 	res = re.search("Actual[\w\s]*end-(?:of-)?cent(?:ral)?-dir record[\w\s]*:\s*(\d+) \(", stanuit)
@@ -818,7 +820,6 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[]):
 			else:
 				tmpdir = tempfile.mkdtemp(dir=tempdir)
 			(endofcentraldir, res) = unpackZip(data, offset, tmpdir)
-			#print "orig:", datafile, "offset:", offset, "res:", res, "endofcentraldir", endofcentraldir
 			if res != None:
 				diroffsets.append((res, offset))
 			else:
