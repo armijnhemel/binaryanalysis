@@ -37,6 +37,7 @@ fsmagic = {
             'rpm':              '\xed\xab\xee\xdb',
             'ext2':             '\x53\xef',        # little endian
             'arj':              '\x60\xea',
+            'cab':              'MSCF',
           }
 
 squashtypes = ['squashfs-le', 'squashfs-be', 'squashfs-le-lzma', 'squashfs-be-lzma']

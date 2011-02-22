@@ -1,3 +1,6 @@
+2011-02-22
+* rework unpacking for CAB
+
 2011-02-21
 * add unpacking for ARJ
 * fix small bug in ubifs searching
