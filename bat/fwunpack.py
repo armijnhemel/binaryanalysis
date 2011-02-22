@@ -62,7 +62,14 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[]):
 			return [(tartmpdir, 0), blacklist]
 	return []
 
-## Windows executables can be unpacked in many ways
+## Windows executables can be unpacked in many ways.
+## We should try various methods:
+## * unshield
+## * cabextract
+## * 7z
+## * unrar
+## * unzip
+## Sometimes one or both will give results
 def searchUnpackExe(filename, tempdir=None, blacklist=[]):
 	pass
 
@@ -88,11 +95,14 @@ def searchUnpackCab(filename, tempdir=None, blacklist=[]):
 				tmpdir = tempfile.mkdtemp(dir=tempdir)
 			res = unpackCab(data, offset, tmpdir)
 			if res != None:
-				diroffsets.append((res, offset))
+				(cabdir, cabsize) = res
+				diroffsets.append((cabdir, offset))
+				blacklist.append((offset, offset + cabsize))
+				offset = fssearch.findCab(data, offset+cabsize)
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
-			offset = fssearch.findCab(data, offset+1)
+				offset = fssearch.findCab(data, offset+1)
 		diroffsets.append(blacklist)
 		return diroffsets
 	pass
@@ -111,8 +121,8 @@ def unpackCab(data, offset, tempdir=None):
 	buffer = cab.read(100)
 	cab.close()
 
-	type = ms.buffer(buffer)
-	if "Microsoft Cabinet archive data" not in type:
+	mstype = ms.buffer(buffer)
+	if "Microsoft Cabinet archive data" not in mstype:
 		ms.close()
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
@@ -128,9 +138,13 @@ def unpackCab(data, offset, tempdir=None):
 			os.rmdir(tmpdir)
 		return None
 	else:
+		## The size of the CAB archive can be determined from the
+		## output from magic, which we already have.
+		## We should do more sanity checks here
+		cabsize = re.search("(\d+) bytes", mstype)
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
-		return tmpdir
+		return (tmpdir, int(cabsize.groups()[0]))
 
 ## unpacker for Microsoft Windows Executables.
 ## Since it sometimes also can unpack other things we should let it
