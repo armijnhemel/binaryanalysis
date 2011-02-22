@@ -69,21 +69,39 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[]):
 ## * cabextract
 ## * unrar
 ## * unzip
-## Sometimes one or both will give results. I don't know what the
-## best order is...yet.
-## Probably we should blacklist the whole file after one method has
-## been successful.
+## Sometimes one or both will give results.
+## We should probalby blacklist the whole file after one method has been successful.
 def searchUnpackExe(filename, tempdir=None, blacklist=[]):
-	## ZIP:
-	## self extracting exe can be found by searching for things like
-	## PKBAC
-	## WinZip Self-Extractor
-	## This can be unpacked with 7zip (gives better results than unzip)
-	## RAR:
-	## self extracting exe can be found by searching for things like
+	## first determine if we are dealing with a MS Windows executable
+	ms = magic.open(magic.MAGIC_NONE)
+	ms.load()
+	type = ms.file(filename)
+	ms.close()
+
+	if not 'PE32 executable for MS Windows' in type:
+		return []
+
+	## apparently we have a MS Windows executable, so continue
+	datafile = open(filename, 'rb')
+	data = datafile.read()
+	datafile.close()
+	## first search for ZIP. Do this by searching for:
+	## * PKBAC
+	## * WinZip Self-Extractor
+	## 7zip gives better results than unzip
+	offset = data.find("PKBAC")
+	if offset != 0:
+		pass
+	## then search for RAR by searching for:
 	## WinRAR
-	## This can be unpacked with unrar
-	pass
+	## and unpack with unrar
+	offset = data.find("WinRAR")
+	if offset != 0:
+		pass
+	## else try other methods
+	## 7zip gives better results than cabextract
+	## Ideally we should also do something with innounp
+	return []
 
 ## unpacker for Microsoft Cabinet Archive files.
 def searchUnpackCab(filename, tempdir=None, blacklist=[]):
@@ -158,9 +176,9 @@ def unpackCab(data, offset, tempdir=None):
 		os.unlink(tmpfile[1])
 		return (tmpdir, int(cabsize.groups()[0]))
 
-## unpacker for Microsoft Windows Executables.
-## Since it sometimes also can unpack other things we should let it
-## try to unpack more files.
+## temporary unpacker for Microsoft Windows Executables.
+## This is actually *not* correct and should be replaced with the generic EXE unpacker.
+## This method should be reworked to unpack 7z compressed files only.
 def searchUnpack7z(filename, tempdir=None, blacklist=[]):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
