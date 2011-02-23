@@ -1179,6 +1179,10 @@ def unpackUbifs(data, offset, tempdir=None):
 ## http://www.fileformat.info/format/arj/corion.htm
 ## Although there is no trailer we can use the arj program to at least give
 ## us some information about the uncompressed size of the archive.
+## Please note: these files can also be unpacked with 7z, which could be
+## a little bit faster. Since 7z is "smart" and looks ahead we would lose
+## blacklisting and getting the right offset.
+## ARJ should therefore have priority over 7z (TODO)
 def searchUnpackARJ(filename, tempdir=None, blacklist=[]):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
