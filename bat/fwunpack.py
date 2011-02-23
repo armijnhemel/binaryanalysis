@@ -91,7 +91,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[]):
 	else:
 		tmpdir = tempfile.mkdtemp(dir=tempdir)
 	## first search for ZIP. Do this by searching for:
-	## * PKBAC
+	## * PKBAC (seems to give the best results)
 	## * WinZip Self-Extractor
 	## 7zip gives better results than unzip
 	offset = data.find("PKBAC")
