@@ -110,7 +110,6 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[]):
 			diroffsets.append((rardir, 0))
 			## add the whole binary to the blacklist
 			blacklist.append((0, os.stat(filename).st_size))
-			print 'bla'
 	## else try other methods
 	## 7zip gives better results than cabextract
 	## Ideally we should also do something with innounp
