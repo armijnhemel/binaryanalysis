@@ -2,6 +2,8 @@
 * fix some bugs in unpacking RAR
 * rework scanning for EXE files. Currently only grabs files that can be
 unpacked with RAR.
+* add unpack7z for use in exe unpacking. Still need to rework generic 7z
+unpacking itself.
 
 2011-02-22
 * rework unpacking for CAB
