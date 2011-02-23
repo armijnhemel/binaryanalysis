@@ -79,12 +79,17 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[]):
 	ms.close()
 
 	if not 'PE32 executable for MS Windows' in type:
-		return []
+		return [blacklist]
 
 	## apparently we have a MS Windows executable, so continue
+	diroffsets = []
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
+	if tempdir == None:
+		tmpdir = tempfile.mkdtemp()
+	else:
+		tmpdir = tempfile.mkdtemp(dir=tempdir)
 	## first search for ZIP. Do this by searching for:
 	## * PKBAC
 	## * WinZip Self-Extractor
@@ -92,16 +97,25 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[]):
 	offset = data.find("PKBAC")
 	if offset != 0:
 		pass
+		#res = unpack7z(data, 0, tmpdir)
+		#print res
 	## then search for RAR by searching for:
 	## WinRAR
 	## and unpack with unrar
 	offset = data.find("WinRAR")
 	if offset != 0:
-		pass
+		res = unpackRar(data, 0, tmpdir)
+		if res != None:
+			(endofarchive, rardir) = res
+			diroffsets.append((rardir, 0))
+			## add the whole binary to the blacklist
+			blacklist.append((0, os.stat(filename).st_size))
+			print 'bla'
 	## else try other methods
 	## 7zip gives better results than cabextract
 	## Ideally we should also do something with innounp
-	return []
+	diroffsets.append(blacklist)
+	return diroffsets
 
 ## unpacker for Microsoft Cabinet Archive files.
 def searchUnpackCab(filename, tempdir=None, blacklist=[]):
@@ -878,16 +892,15 @@ def searchUnpackRar(filename, tempdir=None, blacklist=[]):
         	       		tmpdir = tempfile.mkdtemp()
 			else:
 				tmpdir = tempfile.mkdtemp(dir=tempdir)
-			(endofarchive, res) = unpackRar(data, offset, tmpdir)
+			res = unpackRar(data, offset, tmpdir)
 			if res != None:
-				diroffsets.append((res, offset))
+				(endofarchive, rardir) = res
+				diroffsets.append((rardir, offset))
+				offset = fssearch.findRar(data, endofarchive)
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
-			if endofarchive == None:
 				offset = fssearch.findRar(data, offset+1)
-			else:
-				offset = fssearch.findRar(data, endofarchive)
 		diroffsets.append(blacklist)
 		return diroffsets
 
@@ -915,7 +928,7 @@ def unpackRar(data, offset, tempdir=None):
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
-		return (-1, None)
+		return None
 	p = subprocess.Popen(['unrar', 'x', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanuit, stanerr) = p.communicate()
 	## oh the horror, we really need to check if unzip actually was successful

@@ -1,3 +1,8 @@
+2011-02-23
+* fix some bugs in unpacking RAR
+* rework scanning for EXE files. Currently only grabs files that can be
+unpacked with RAR.
+
 2011-02-22
 * rework unpacking for CAB
 * give 7zip more priority than other scans such as CAB to prevent duplicate
