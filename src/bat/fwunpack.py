@@ -95,15 +95,15 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[]):
 	## * WinZip Self-Extractor
 	## 7zip gives better results than unzip
 	offset = data.find("PKBAC")
-	if offset != 0:
-		pass
-		#res = unpack7z(data, 0, tmpdir)
-		#print res
+	if offset != -1:
+		res = unpack7z(data, 0, tmpdir)
+		blacklist.append((0, os.stat(filename).st_size))
+		return diroffsets
 	## then search for RAR by searching for:
 	## WinRAR
 	## and unpack with unrar
 	offset = data.find("WinRAR")
-	if offset != 0:
+	if offset != -1:
 		res = unpackRar(data, 0, tmpdir)
 		if res != None:
 			(endofarchive, rardir) = res
@@ -223,6 +223,18 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[]):
 			else:
 				blacklist.append((0, os.stat(filename).st_size))
 				return [(zztmpdir, 0), blacklist]
+	return []
+
+def unpack7z(data, offset, tempdir=None):
+	## first unpack things, write things to a file and return
+	## the directory if the file is not empty
+	## Assumes (for now) that lzip is in the path
+	if tempdir == None:
+		tmpdir = tempfile.mkdtemp()
+	else:
+		tmpdir = tempdir
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.write(tmpfile[0], data[offset:])
 	return []
 
 ## unpack lzip archives.
