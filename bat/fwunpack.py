@@ -70,7 +70,8 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[]):
 ## * unrar
 ## * unzip
 ## Sometimes one or both will give results.
-## We should probalby blacklist the whole file after one method has been successful.
+## We should probably blacklist the whole file after one method has been successful.
+## Some Windows executables can only be unpacked interactively using Wine :-(
 def searchUnpackExe(filename, tempdir=None, blacklist=[]):
 	## first determine if we are dealing with a MS Windows executable
 	ms = magic.open(magic.MAGIC_NONE)
@@ -97,10 +98,14 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[]):
 	offset = data.find("PKBAC")
 	if offset != -1:
 		res = unpack7z(data, 0, tmpdir)
-		diroffsets.append((res, 0))
-		blacklist.append((0, os.stat(filename).st_size))
-		diroffsets.append(blacklist)
-		return diroffsets
+		if res != None:
+			diroffsets.append((res, 0))
+			blacklist.append((0, os.stat(filename).st_size))
+			diroffsets.append(blacklist)
+			return diroffsets
+		else:
+			# we should do cleanup here
+			pass
 	## then search for RAR by searching for:
 	## WinRAR
 	## and unpack with unrar
