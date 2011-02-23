@@ -97,7 +97,9 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[]):
 	offset = data.find("PKBAC")
 	if offset != -1:
 		res = unpack7z(data, 0, tmpdir)
+		diroffsets.append((res, 0))
 		blacklist.append((0, os.stat(filename).st_size))
+		diroffsets.append(blacklist)
 		return diroffsets
 	## then search for RAR by searching for:
 	## WinRAR
@@ -235,7 +237,18 @@ def unpack7z(data, offset, tempdir=None):
 		tmpdir = tempdir
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
-	return []
+	param = "-o%s" % tmpdir
+	p = subprocess.Popen(['7z', param, '-l', '-y', 'x', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanuit, stanerr) = p.communicate()
+	if p.returncode != 0:
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	os.fdopen(tmpfile[0]).close()
+	os.unlink(tmpfile[1])
+	return tmpdir
 
 ## unpack lzip archives.
 ## This method returns a blacklist.
