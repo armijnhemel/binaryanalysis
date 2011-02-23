@@ -22,9 +22,7 @@ priority = 0
 [exe]
 type    = unpack
 module  = bat.fwunpack
-method  = searchUnpack7z
-magic   = 7z
-#cleanup = cleanupZip
+method  = searchUnpackExe
 priority = 1
 
 [tar]
