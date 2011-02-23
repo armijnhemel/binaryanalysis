@@ -1,0 +1,29 @@
+Unpacking Android things
+
+  File systems in use:
+
+* yaffs2 (use unyaffs for this)
+* ubifs (seen one example so far that had broken images)
+* ext4 (soon, according to post that Ted Ts'o once did)
+* possibly other file systems too
+
+  Location of standard license texts
+
+After unpacking firmware often a copy of the default Google terms of service can be found in /etc/NOTICE.html.gz. Sometimes additional files with extra license texts can be found.
+
+  APK
+
+Applications are in APK format:
+
+http://en.wikipedia.org/wiki/APK_%28file_format%29
+
+unzip can handle these.
+
+  Android resource files and XML files
+
+AXMLPrinter2: http://code.google.com/p/android4me/downloads/list
+http://code.google.com/p/android-apktool/
+
+  Dalvik files
+
+Perhaps not really significant for compliance, but probably we can use dedexer.
