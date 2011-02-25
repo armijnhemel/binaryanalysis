@@ -1,3 +1,7 @@
+2011-02-25
+* don't clear the blacklist by accident
+* start on extracting GIF images
+
 2011-02-23
 * fix some bugs in unpacking RAR
 * rework scanning for EXE files. Currently only grabs files that can be
