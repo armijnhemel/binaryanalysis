@@ -60,7 +60,7 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[]):
 			tar.close()
 			blacklist.append((0,tarsize))
 			return [(tartmpdir, 0), blacklist]
-	return []
+	return [blacklist]
 
 ## Windows executables can be unpacked in many ways.
 ## We should try various methods:
@@ -130,7 +130,7 @@ def searchUnpackCab(filename, tempdir=None, blacklist=[]):
 	datafile.close()
 	offset = fssearch.findCab(data)
 	if offset == -1:
-		return []
+		return [blacklist]
 	else:
 		diroffsets = []
 		while(offset != -1):
@@ -153,9 +153,8 @@ def searchUnpackCab(filename, tempdir=None, blacklist=[]):
 				## cleanup
 				os.rmdir(tmpdir)
 				offset = fssearch.findCab(data, offset+1)
-		diroffsets.append(blacklist)
-		return diroffsets
-	pass
+	diroffsets.append(blacklist)
+	return diroffsets
 
 def unpackCab(data, offset, tempdir=None):
 	ms = magic.open(magic.MAGIC_NONE)
@@ -230,7 +229,7 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[]):
 			else:
 				blacklist.append((0, os.stat(filename).st_size))
 				return [(zztmpdir, 0), blacklist]
-	return []
+	return [blacklist]
 
 def unpack7z(data, offset, tempdir=None):
 	## first unpack things, write things to a file and return
@@ -263,7 +262,7 @@ def searchUnpackLzip(filename, tempdir=None, blacklist=[]):
 	datafile.close()
 	offset = fssearch.findLzip(data)
 	if offset == -1:
-		return []
+		return [blacklist]
 	else:
 		diroffsets = []
 		while(offset != -1):
@@ -285,9 +284,8 @@ def searchUnpackLzip(filename, tempdir=None, blacklist=[]):
 				## cleanup
 				os.rmdir(tmpdir)
 				offset = fssearch.findLzip(data, offset+1)
-		diroffsets.append(blacklist)
-		return diroffsets
-	return []
+	diroffsets.append(blacklist)
+	return diroffsets
 
 def unpackLzip(data, offset, tempdir=None):
 	## first unpack things, write things to a file and return
@@ -341,7 +339,7 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[]):
 	datafile.close()
 	offset = fssearch.findXZ(data)
 	if offset == -1:
-		return []
+		return [blacklist]
 	else:
 		## record the original offset
 		origoffset = offset
@@ -385,9 +383,8 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[]):
 					else:
 						## cleanup
 						os.rmdir(tmpdir)
-		diroffsets.append(blacklist)
-		return diroffsets
-	return []
+	diroffsets.append(blacklist)
+	return diroffsets
 
 def unpackXZ(data, offset, trailer, tempdir=None):
 	## first unpack things, write things to a file and return
@@ -436,13 +433,13 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[]):
 	datafile.close()
 	offset = fssearch.findCpio(data)
 	if offset == -1:
-		return []
+		return [blacklist]
 	else:
 		diroffsets = []
 		trailer = fssearch.findCpioTrailer(data)
 		if trailer == -1:
 			## no trailer found, so no use to continue checking
-			return []
+			return [blacklist]
 		while(offset != -1 and trailer != -1):
 			blacklistoffset = inblacklist(offset, blacklist)
 			if blacklistoffset != None:
@@ -516,7 +513,7 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[]):
 	datafile.close()
 	offset = fssearch.findCramfs(data)
 	if offset == -1:
-		return []
+		return [blacklist]
 	else:
 		diroffsets = []
         	if tempdir == None:
@@ -581,7 +578,7 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[]):
 	datafile.close()
 	(offset, squashtype) = fssearch.findSquashfs(data)
 	if offset == -1:
-		return []
+		return [blacklist]
 	else:
 		diroffsets = []
 		while(offset != -1):
@@ -665,10 +662,10 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[]):
 	datafile.close()
 	offset = fssearch.findExt2fs(data)
 	if offset == -1:
-		return blacklist
+		return [blacklist]
 	## according to /usr/share/magic the magic header starts at 0x438
 	if offset < 0x438:
-		return blacklist
+		return [blacklist]
 	else:
 		diroffsets = []
         	if tempdir == None:
@@ -745,7 +742,7 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[]):
 	datafile.close()
 	offset = fssearch.findGzip(data)
 	if offset == -1:
-		return []
+		return [blacklist]
 	else:
 		## counter to remember how many gzip file systems we have
 		## discovered, so we can use this to append to the directory
@@ -812,7 +809,7 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[]):
 	datafile.close()
 	offset = fssearch.findBzip2(data)
 	if offset == -1:
-		return []
+		return [blacklist]
 	else:
 		diroffsets = []
 		while(offset != -1):
@@ -875,7 +872,7 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[]):
 	datafile.close()
 	offset = fssearch.findZip(data)
 	if offset == -1:
-		return []
+		return [blacklist]
 	else:
 		diroffsets = []
 		endofcentraldir = 0
@@ -908,7 +905,7 @@ def searchUnpackRar(filename, tempdir=None, blacklist=[]):
 	datafile.close()
 	offset = fssearch.findRar(data)
 	if offset == -1:
-		return []
+		return [blacklist]
 	else:
 		diroffsets = []
 		while(offset != -1):
@@ -977,7 +974,7 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[]):
 	datafile.close()
 	offset = fssearch.findLZMA(data)
 	if offset == -1:
-		return []
+		return [blacklist]
 	else:
 		diroffsets = []
 		while(offset != -1):
@@ -1066,7 +1063,7 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[]):
 	datafile.close()
 	offset = fssearch.findRPM(data)
 	if offset == -1:
-		return []
+		return [blacklist]
 	else:
 		diroffsets = []
 		while(offset != -1):
@@ -1115,7 +1112,7 @@ def searchUnpackUbifs(filename, tempdir=None, blacklist=[]):
 	## to determine the ranges for the blacklist.
 	offset = fssearch.findUbifs(data)
 	if offset == -1:
-		return []
+		return [blacklist]
 	else:
 		diroffsets = []
 		while(offset != -1):
@@ -1189,7 +1186,7 @@ def searchUnpackARJ(filename, tempdir=None, blacklist=[]):
 	datafile.close()
 	offset = fssearch.findARJ(data)
 	if offset == -1:
-		return []
+		return [blacklist]
 	else:
 		diroffsets = []
 		while(offset != -1):
@@ -1251,3 +1248,21 @@ def unpackARJ(data, offset, tempdir=None):
 	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
 	return (tmpdir, arjsize)
+
+## http://en.wikipedia.org/wiki/Graphics_Interchange_Format
+def searchUnpackGIF(filename, tempdir=None, blacklist=[]):
+	datafile = open(filename, 'rb')
+	data = datafile.read()
+	datafile.close()
+	offset = fssearch.searchGIF(data)
+	if offset == -1:
+		return [blacklist]
+	pass
+
+def unpackGIF(data, offset, tempdir=None):
+	## write the data to a location and check if it is a valid GIF with gifinfo
+	## If so, return the directory, plus the size
+	pass
+
+def extractEXIF(filename, tempdir):
+	pass
