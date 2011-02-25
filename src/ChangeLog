@@ -1,6 +1,8 @@
 2011-02-25
 * don't clear the blacklist by accident
 * start on extracting GIF images
+* add extraction of GIF images
+* fix another bug in blacklisting
 
 2011-02-23
 * fix some bugs in unpacking RAR

@@ -98,6 +98,16 @@ def findARJ(data, offset=0):
 def findCab(data, offset=0):
 	return findType('cab', data, offset)
 
+def findGIF(data, offset=0):
+	gifmarker = -1
+	for marker in ['GIF87a', 'GIF89a']:
+		res = findMarker(marker, data, offset)
+		if res != -1 and gifmarker == -1:
+			gifmarker = res
+		elif res != -1:
+			gifmarker = min(gifmarker, res)
+	return gifmarker
+
 def markerSearch(data):
 	offsets = []
 	marker_keys = fsmagic.marker.keys()
