@@ -250,65 +250,6 @@ def scanfile(path, file, lentempdir=0, tempdir=None, unpackscans=[], programscan
 	filehash = gethash(path, file)
 	report['sha256'] = filehash
 
-	## Filter out various things based on magic type. This might break
-	## if a firmware update is actually a shell script.
-        if type.find('XML') == 0:
-        	return report
-        elif type.find('GIF image data') == 0:
-        	return report
-        elif type.find('PNG image') == 0:
-        	return report
-        elif type.find('JPEG image data') == 0:
-        	return report
-        elif type.find('PC bitmap') == 0:
-        	return report
-        elif type.find('MPEG') == 0:
-        	return report
-        elif type.find('Ogg data') == 0:
-        	return report
-        elif type.find('Apple QuickTime movie') == 0:
-        	return report
-        elif type.find('MS Windows icon resource') == 0:
-        	return report
-        elif type.find('Macromedia Flash Video') == 0:
-        	return report
-        elif type.find('tcpdump capture file') == 0:
-        	return report
-        elif type.find('timezone data') == 0:
-        	return report
-        elif type.find('LaTeX') == 0:
-        	return report
-        elif type.find('PDF document') == 0:
-        	return report
-        elif type.find('PostScript document text') == 0:
-        	return report
-        elif type.find('MySQL') == 0:
-        	return report
-        elif type.find('HTML document text') != -1:
-        	return report
-        elif type == 'Microsoft ICM Color Profile':
-        	return report
-        elif type == 'exported SGML document text':
-        	return report
-        elif type == 'M3U playlist text':
-        	return report
-        elif type == 'diff output text':
-        	return report
-        elif type == 'UTF-8 Unicode text':
-        	return report
-        elif type == 'lex description text':
-        	return report
-        elif type == 'OS/2 REXX batch file text':
-        	return report
-        elif type == 'ISO-8859 C program text':
-        	return report
-        elif type == 'FORTRAN program':
-        	return report
-        elif type == 'python script text executable':
-        	return report
-	# some binaries may be distributed as shell scripts that unpack them
-        #elif type == 'POSIX shell script text executable':
-        #	continue
 	if "ELF" in type:
 		res = scanSharedLibs(path,file)
 		if res != []:

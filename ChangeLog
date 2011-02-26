@@ -1,3 +1,7 @@
+2011-02-26
+* don't exclude files to scan. The unpack scripts should be able to handle
+this nicely.
+
 2011-02-25
 * don't clear the blacklist by accident
 * start on extracting GIF images
