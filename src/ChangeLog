@@ -4,6 +4,8 @@ files as 'noscan' to avoid looping.
 * add giflib-utils as a dependency for the RPM
 * rework blacklisting, so we don't overload the datastructure for passing on
 the results.
+* remove Dutchims
+* add yaffs2 unpacking, not enabled by default
 
 2011-02-26
 * don't exclude files to scan. The unpack scripts should be able to handle
