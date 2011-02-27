@@ -316,14 +316,15 @@ def scan(scanfile, magic, unpackscans=[], programscans=[], filehash=None, tempdi
 		module = scan['module']
 		method = scan['method']
 		## return value is the temporary dir, plus offset in the parent file
+		## plus a blacklist containing blacklisted ranges for the *original*
+		## file.
 		exec "from %s import %s as bat_%s" % (module, method, method)
-		## last entry is a blacklist with blacklists for the *original* file
-		## these should be appended to the original blacklist
 		(diroffsets, blacklist) = eval("bat_%s(scanfile, tempdir, blacklist)" % (method))
-		## result is either empty, just contains the blacklist that was
-		## passed into it, or offsets, plus a blacklist.
+		## result is either empty, or contains offsets
 		if len(diroffsets) == 0:
 			continue
+		## each diroffset is a (path, offset) tuple
+		## TODO: optionally, there could be a 'noscan' boolean value
 		for diroffset in diroffsets:
 			report = {}
 			if diroffset == None:
