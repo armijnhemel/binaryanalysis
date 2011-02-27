@@ -123,6 +123,10 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[]):
 	diroffsets.append(blacklist)
 	return diroffsets
 
+## unpacker for Microsoft InstallShield
+def searchUnpackInstallShield(filename, tempdir=None, blacklist=[]):
+	pass
+
 ## unpacker for Microsoft Cabinet Archive files.
 def searchUnpackCab(filename, tempdir=None, blacklist=[]):
 	datafile = open(filename, 'rb')
@@ -1249,6 +1253,12 @@ def unpackARJ(data, offset, tempdir=None):
 	os.unlink(tmpfile[1])
 	return (tmpdir, arjsize)
 
+###
+## The scans below are scans that are used to extract files from bigger binary
+## blobs, but they should not be recursively applied to their own results,
+## because that results in endless loops.
+###
+
 ## http://en.wikipedia.org/wiki/Graphics_Interchange_Format
 ## 1. search for a GIF header
 ## 2. search for a GIF trailer
@@ -1319,5 +1329,30 @@ def unpackGIF(data, offset, trailer, tempdir=None):
 		os.fdopen(tmpfile[0]).close()
 		return tmpdir
 
-def extractEXIF(filename, tempdir):
-	pass
+## JPEG extraction can be tricky according to /usr/share/magic, so this is
+## not fool proof.
+def searchUnpackJPEG(filename, tempdir=None, blacklist=[]):
+	## first search for JFIF, then search for Exif, then search for plain
+	## JPEG and take the minimum value.
+	## Only do JFIF for now
+	datafile = open(filename, 'rb')
+	data = datafile.read()
+	datafile.close()
+	#print fssearch.findJFIF(data,0)
+	return [blacklist]
+
+## EXIF is (often) prepended to the actual image data
+## Having access to EXIF data can also (perhaps) get us useful data
+def searchUnpackEXIF(filename, tempdir=None, blacklist=[]):
+	return [blacklist]
+
+## sometimes Ogg audio files are embedded into binary blobs
+def searchUnpackOgg(filename, tempdir=None, blacklist=[]):
+	datafile = open(filename, 'rb')
+	data = datafile.read()
+	datafile.close()
+	return [blacklist]
+
+## sometimes MP3 audio files are embedded into binary blobs
+def searchUnpackMP3(filename, tempdir=None, blacklist=[]):
+	return [blacklist]
