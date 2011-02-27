@@ -62,6 +62,30 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[]):
 			return ([(tartmpdir, 0)], blacklist)
 	return ([], blacklist)
 
+## yaffs2 is used frequently in Android and various mediaplayers based on
+## Realtek chipsets (RTD1261/1262/1073/etc.)
+## yaffs2 does not have a magic header, so it is really hard to recognize.
+## This is why, for now, we will only try to unpack at offset 0.
+## For this you will need the unyaffs program from
+## http://code.google.com/p/unyaffs/
+def searchUnpackYaffs2(filename, tempdir=None, blacklist=[]):
+        if tempdir == None:
+               	tmpdir = tempfile.mkdtemp()
+	else:
+		tmpdir = tempfile.mkdtemp(dir=tempdir)
+	p = subprocess.Popen(['unyaffs', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return ([], blacklist)
+	## unfortunately unyaffs also returns 0 when it fails
+	if len(stanerr) != 0:
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return ([], blacklist)
+	return ([(tmpdir,0)], blacklist)
+
 ## Windows executables can be unpacked in many ways.
 ## We should try various methods:
 ## * 7z
@@ -180,7 +204,7 @@ def unpackCab(data, offset, tempdir=None):
 			os.rmdir(tmpdir)
 		return None
 	p = subprocess.Popen(['cabextract', '-d', tmpdir, tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanuit, stanerr) = p.communicate()
+	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
@@ -217,7 +241,7 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[]):
                 	zztmpdir = tempfile.mkdtemp(dir=tmpdir)
 			param = "-o%s" % zztmpdir
 			p = subprocess.Popen(['7z', param, '-l', '-y', 'x', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-			(stanuit, stanerr) = p.communicate()
+			(stanout, stanerr) = p.communicate()
 			if p.returncode != 0:
 				try:
 					## cleanup
@@ -244,7 +268,7 @@ def unpack7z(data, offset, tempdir=None):
 	os.write(tmpfile[0], data[offset:])
 	param = "-o%s" % tmpdir
 	p = subprocess.Popen(['7z', param, '-l', '-y', 'x', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanuit, stanerr) = p.communicate()
+	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
@@ -298,9 +322,9 @@ def unpackLzip(data, offset, tempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
 	p = subprocess.Popen(['lzip', "-d", "-c", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanuit, stanerr) = p.communicate()
+	(stanout, stanerr) = p.communicate()
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(outtmpfile[0], stanuit)
+	os.write(outtmpfile[0], stanout)
 	#os.fdopen(outtmpfile[0]).flush()
 	os.fsync(outtmpfile[0])
 	if os.stat(outtmpfile[1]).st_size == 0:
@@ -313,7 +337,7 @@ def unpackLzip(data, offset, tempdir=None):
 		return None
 	## determine the size of the archive we unpacked, so we can skip a lot
 	p = subprocess.Popen(['lzip', '-vvvt', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanuit, stanerr) = p.communicate()
+	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		## something weird happened here: we can unpack, but not test the archive?
 		os.fdopen(outtmpfile[0]).close()
@@ -398,16 +422,16 @@ def unpackXZ(data, offset, trailer, tempdir=None):
 	os.write(tmpfile[0], data[offset:trailer+3])
 	## test integrity of the file
 	p = subprocess.Popen(['xz', '-t', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanuit, stanerr) = p.communicate()
+	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		return None
 	## unpack
 	p = subprocess.Popen(['xzcat', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanuit, stanerr) = p.communicate()
+	(stanout, stanerr) = p.communicate()
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(outtmpfile[0], stanuit)
+	os.write(outtmpfile[0], stanout)
 	#os.fdopen(outtmpfile[0]).flush()
 	os.fsync(outtmpfile[0])
 	if os.stat(outtmpfile[1]).st_size == 0:
@@ -494,14 +518,14 @@ def unpackCpio(data, offset, tempdir=None):
 			os.rmdir(tmpdir)
 		return
 	p = subprocess.Popen(['cpio', '-t'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
-	(stanuit, stanerr) = p.communicate(data[offset:])
+	(stanout, stanerr) = p.communicate(data[offset:])
 	if p.returncode != 0:
 		## we don't have a valid archive according to cpio -t
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return
 	p = subprocess.Popen(['cpio', '-i', '-d', '--no-absolute-filenames'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
-	(stanuit, stanerr) = p.communicate(data[offset:])
+	(stanout, stanerr) = p.communicate(data[offset:])
 	return tmpdir
 
 ## This method should return a blacklist.
@@ -550,7 +574,7 @@ def unpackCramfs(data, offset, tempdir=None):
 	## right now this is a path to a specially adapted fsck.cramfs that ignores special inodes
 	## create a new path to unpack all stuff
 	p = subprocess.Popen(['/tmp/fsck.cramfs', '-x', tmpdir2 + "/cramfs", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
-	(stanuit, stanerr) = p.communicate()
+	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
@@ -629,7 +653,7 @@ def unpackSquashfs(data, offset, tempdir=None):
 		p = subprocess.Popen(['/usr/sbin/unsquashfs', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	elif distro == 'bin':
 		p = subprocess.Popen(['/usr/bin/unsquashfs', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
-	(stanuit, stanerr) = p.communicate()
+	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
@@ -639,11 +663,11 @@ def unpackSquashfs(data, offset, tempdir=None):
 	else:
 		squashsize = 0
 		p = subprocess.Popen(['file', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
-		(stanuit, stanerr) = p.communicate()
+		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
 			return None
 		else:
-			squashsize = int(re.search(", (\d+) bytes", stanuit).groups()[0])
+			squashsize = int(re.search(", (\d+) bytes", stanout).groups()[0])
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		return (tmpdir, squashsize)
@@ -714,9 +738,9 @@ def unpackGzip(data, offset, tempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
 	p = subprocess.Popen(['zcat', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanuit, stanerr) = p.communicate()
+	(stanout, stanerr) = p.communicate()
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(outtmpfile[0], stanuit)
+	os.write(outtmpfile[0], stanout)
 	#os.fdopen(outtmpfile[0]).flush()
 	os.fsync(outtmpfile[0])
 	if os.stat(outtmpfile[1]).st_size == 0:
@@ -780,9 +804,9 @@ def unpackBzip2(data, offset, tempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
 	p = subprocess.Popen(['bzcat', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanuit, stanerr) = p.communicate()
+	(stanout, stanerr) = p.communicate()
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(outtmpfile[0], stanuit)
+	os.write(outtmpfile[0], stanout)
 	#os.fdopen(outtmpfile[0]).flush()
 	os.fsync(outtmpfile[0])
 	if os.stat(outtmpfile[1]).st_size == 0:
@@ -838,8 +862,8 @@ def unpackZip(data, offset, tempdir=None):
 	os.write(tmpfile[0], data[offset:])
 	## Use information from zipinfo -v to extract the right offsets (or at least the last offset)
 	p = subprocess.Popen(['zipinfo', '-v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanuit, stanerr) = p.communicate()
-	res = re.search("Actual[\w\s]*end-(?:of-)?cent(?:ral)?-dir record[\w\s]*:\s*(\d+) \(", stanuit)
+	(stanout, stanerr) = p.communicate()
+	res = re.search("Actual[\w\s]*end-(?:of-)?cent(?:ral)?-dir record[\w\s]*:\s*(\d+) \(", stanout)
 	if res != None:
 		endofcentraldir = int(res.groups(0)[0])
 	else:
@@ -849,7 +873,7 @@ def unpackZip(data, offset, tempdir=None):
 			os.rmdir(tmpdir)
 		return (None, None)
 	p = subprocess.Popen(['unzip', '-o', tmpfile[1], '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanuit, stanerr) = p.communicate()
+	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0 and p.returncode != 1:
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
@@ -936,8 +960,8 @@ def unpackRar(data, offset, tempdir=None):
 	# inspect the rar archive, and retrieve the end of archive
 	# this way we won't waste too many resources when we don't need to
 	p = subprocess.Popen(['unrar', 'vt', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
-	(stanuit, stanerr) = p.communicate()
-	rarstring = stanuit.strip().split("\n")[-1]
+	(stanout, stanerr) = p.communicate()
+	rarstring = stanout.strip().split("\n")[-1]
 	res = re.search("\s*\d+\s*\d+\s+(\d+)\s+\d+%", rarstring)
 	if res != None:
 		endofarchive = int(res.groups(0)[0])
@@ -948,10 +972,10 @@ def unpackRar(data, offset, tempdir=None):
 			os.rmdir(tmpdir)
 		return None
 	p = subprocess.Popen(['unrar', 'x', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
-	(stanuit, stanerr) = p.communicate()
+	(stanout, stanerr) = p.communicate()
 	## oh the horror, we really need to check if unzip actually was successful
 	#outtmpfile = tempfile.mkstemp(dir=tmpdir)
-	#os.write(outtmpfile[0], stanuit)
+	#os.write(outtmpfile[0], stanout)
 	#if os.stat(outtmpfile[1]).st_size == 0:
 		#os.unlink(outtmpfile[1])
 		#os.unlink(tmpfile[1])
@@ -1001,9 +1025,9 @@ def unpackLZMA(data, offset, tempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
 	p = subprocess.Popen(['lzma', '-cd', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanuit, stanerr) = p.communicate()
+	(stanout, stanerr) = p.communicate()
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(outtmpfile[0], stanuit)
+	os.write(outtmpfile[0], stanout)
         if os.stat(outtmpfile[1]).st_size == 0:
                 os.fdopen(outtmpfile[0]).close()
                 os.unlink(outtmpfile[1])
@@ -1028,15 +1052,15 @@ def unpackRPM(data, offset, tempdir=None):
 	os.write(tmpfile[0], data[offset:])
 	## first use rpm2cpio to unpack the rpm data
 	p = subprocess.Popen(['rpm2cpio', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanuit, stanerr) = p.communicate()
-	if len(stanuit) != 0:
+	(stanout, stanerr) = p.communicate()
+	if len(stanout) != 0:
 		## cleanup first
                 os.fdopen(tmpfile[0]).close()
                 os.unlink(tmpfile[1])
 		if tempdir == None:
                 	os.rmdir(tmpdir)
 		## then use unpackCpio() to unpack the RPM
-		return unpackCpio(stanuit, 0, tempdir)
+		return unpackCpio(stanout, 0, tempdir)
 	else:
                 os.fdopen(tmpfile[0]).close()
                 os.unlink(tmpfile[1])
@@ -1137,7 +1161,7 @@ def unpackUbifs(data, offset, tempdir=None):
 	os.write(tmpfile[0], data[offset:])
 	## use unubi to unpack the data
 	p = subprocess.Popen(['unubi', '-d', tmpdir, tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanuit, stanerr) = p.communicate()
+	(stanout, stanerr) = p.communicate()
 
 	if p.returncode != 0:
 		os.fdopen(tmpfile[0]).close()
@@ -1209,7 +1233,7 @@ def unpackARJ(data, offset, tempdir=None):
 	os.write(tmpfile[0], data[offset:])
 	## first check archive integrity
 	p = subprocess.Popen(['arj', 't', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
-	(stanuit, stanerr) = p.communicate()
+	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		## this is not an ARJ archive
 		os.fdopen(tmpfile[0]).close()
@@ -1219,7 +1243,7 @@ def unpackARJ(data, offset, tempdir=None):
 		return None
 	else:
 		p = subprocess.Popen(['arj', 'x', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
-		(stanuit, stanerr) = p.communicate()
+		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
 			os.fdopen(tmpfile[0]).close()
 			os.unlink(tmpfile[1])
@@ -1228,8 +1252,8 @@ def unpackARJ(data, offset, tempdir=None):
 			return None
 	## everything has been unpacked, so we can get the size.
 	p = subprocess.Popen(['arj', 'v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
-	(stanuit, stanerr) = p.communicate()
-	stanoutlines = stanuit.strip().split("\n")
+	(stanout, stanerr) = p.communicate()
+	stanoutlines = stanout.strip().split("\n")
 	## we should do more sanity checks here
 	arjsize = int(stanoutlines[-1].split()[-2])
 	## always clean up the old temporary files
@@ -1301,7 +1325,7 @@ def unpackGIF(data, offset, trailer, tempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:trailer+1])
 	p = subprocess.Popen(['gifinfo', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanuit, stanerr) = p.communicate()
+	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
