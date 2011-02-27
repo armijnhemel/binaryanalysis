@@ -98,6 +98,13 @@ def findARJ(data, offset=0):
 def findCab(data, offset=0):
 	return findType('cab', data, offset)
 
+def findJFIF(data, offset=0):
+	jfifmarker = data.find('JFIF', offset)
+	if jfifmarker < 6:
+		return -1
+	else:
+		return jfifmarker - 6
+
 def findGIF(data, offset=0):
 	gifmarker = -1
 	for marker in ['GIF87a', 'GIF89a']:
