@@ -319,12 +319,12 @@ def scan(scanfile, magic, unpackscans=[], programscans=[], filehash=None, tempdi
 		exec "from %s import %s as bat_%s" % (module, method, method)
 		## last entry is a blacklist with blacklists for the *original* file
 		## these should be appended to the original blacklist
-		diroffsets = eval("bat_%s(scanfile, tempdir, blacklist)" % (method))
+		(diroffsets, blacklist) = eval("bat_%s(scanfile, tempdir, blacklist)" % (method))
 		## result is either empty, just contains the blacklist that was
 		## passed into it, or offsets, plus a blacklist.
-		if len(diroffsets) <= 1:
+		if len(diroffsets) == 0:
 			continue
-		for diroffset in diroffsets[0:-1]:
+		for diroffset in diroffsets:
 			report = {}
 			if diroffset == None:
 				continue
@@ -334,7 +334,6 @@ def scan(scanfile, magic, unpackscans=[], programscans=[], filehash=None, tempdi
 				res.append({'offset': diroffset[1]})
 				report[scan['name']] = res
 				reports.append(report)
-		blacklist = diroffsets[-1]
 	for scan in programscans:
 		## TODO: rework this. Probably having blacklists is enough for this.
 		skip = False
