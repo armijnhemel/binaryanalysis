@@ -1311,6 +1311,7 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[]):
 			res = unpackGIF(data, offset, trail, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
+				break
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
