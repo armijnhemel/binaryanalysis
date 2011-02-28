@@ -1,3 +1,9 @@
+2011-02-28
+* add a 'noscan' attribute for directories that don't need extra 'unpack'
+scans for its contents
+* add 'noscan' for unpacking GIF
+* reenable GIF
+
 2011-02-27
 * disable GIF scanning due to endless looping. We should start marking certain
 files as 'noscan' to avoid looping.
