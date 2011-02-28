@@ -1275,10 +1275,10 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[]):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
-	offset = fssearch.findGIF(data)
-	if offset == -1:
+	header = fssearch.findGIF(data)
+	if header == -1:
 		return ([], blacklist)
-	trailer = data.find(';', offset)
+	trailer = data.find(';', header)
 	if trailer == -1:
 		return ([], blacklist)
 	traileroffsets = []
@@ -1286,12 +1286,16 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[]):
 	while(trailer != -1):
 		trailer = data.find(';',trailer+1)
 		traileroffsets.append(trailer)
+	headeroffsets = []
+	headeroffsets.append(header)
+	while (header != -1):
+		header = fssearch.findGIF(data, header+1)
+		headeroffsets.append(header)
 	diroffsets = []
-	while offset != -1:
+	for offset in headeroffsets:
 		## first check if we're not blacklisted for the offset
 		blacklistoffset = inblacklist(offset, blacklist)
 		if blacklistoffset != None:
-			offset = fssearch.findGIF(data, blacklistoffset)
 			continue
 		for trail in traileroffsets:
 			if trail <= offset:
@@ -1307,13 +1311,10 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[]):
 			res = unpackGIF(data, offset, trail, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
-				offset = fssearch.findGIF(data, trail)
-				break
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
-		offset = fssearch.findGIF(data, offset+1)
-	return (diroffsets, blacklist)
+	return (diroffsets, blacklist, True)
 
 def unpackGIF(data, offset, trailer, tempdir=None):
 	## write the data to a location and check if it is a valid GIF with gifinfo

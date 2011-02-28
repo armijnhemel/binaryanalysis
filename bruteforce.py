@@ -313,14 +313,20 @@ def scan(scanfile, magic, unpackscans=[], programscans=[], filehash=None, tempdi
 	## 'unpackscans' has been sorted in decreasing priority, so highest
 	## priority scans are run first.
 	for scan in unpackscans:
+		noscan = False
 		module = scan['module']
 		method = scan['method']
 		## return value is the temporary dir, plus offset in the parent file
 		## plus a blacklist containing blacklisted ranges for the *original*
 		## file.
 		exec "from %s import %s as bat_%s" % (module, method, method)
-		(diroffsets, blacklist) = eval("bat_%s(scanfile, tempdir, blacklist)" % (method))
+		#(diroffsets, blacklist) = eval("bat_%s(scanfile, tempdir, blacklist)" % (method))
+		scanres = eval("bat_%s(scanfile, tempdir, blacklist)" % (method))
 		## result is either empty, or contains offsets
+		if len(scanres) == 2:
+			(diroffsets, blacklist) = scanres
+		elif len(scanres) == 3:
+			(diroffsets, blacklist, noscan) = scanres
 		if len(diroffsets) == 0:
 			continue
 		## each diroffset is a (path, offset) tuple
@@ -330,6 +336,8 @@ def scan(scanfile, magic, unpackscans=[], programscans=[], filehash=None, tempdi
 			if diroffset == None:
 				continue
 			dir = diroffset[0]
+			if noscan:
+				continue
 			res = walktempdir(dir, tempdir, unpackscans, programscans)
 			if res != []:
 				res.append({'offset': diroffset[1]})

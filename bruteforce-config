@@ -55,12 +55,12 @@ magic   = rar
 #cleanup = cleanupZip
 priority = 0
 
-#[gif]
-#type    = unpack
-#module  = bat.fwunpack
-#method  = searchUnpackGIF
-#magic   = gif
-#priority = 0
+[gif]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackGIF
+magic   = gif
+priority = 0
 
 [zip]
 type    = unpack
