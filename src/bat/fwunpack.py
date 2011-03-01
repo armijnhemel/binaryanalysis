@@ -300,11 +300,11 @@ def searchUnpackLzip(filename, tempdir=None, blacklist=[]):
 				tmpdir = tempfile.mkdtemp()
 			else:
 				tmpdir = tempfile.mkdtemp(dir=tempdir)
-			(res, trailer) = unpackLzip(data, offset, tmpdir)
+			(res, lzipsize) = unpackLzip(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
-				blacklist.append((offset, offset+trailer))
-				offset = fssearch.findLzip(data, offset+trailer)
+				blacklist.append((offset, offset+lzipsize))
+				offset = fssearch.findLzip(data, offset+lzipsize)
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
