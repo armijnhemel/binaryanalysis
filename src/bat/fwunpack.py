@@ -112,33 +112,41 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[]):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
-	if tempdir == None:
-		tmpdir = tempfile.mkdtemp()
-	else:
-		try:
-			tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "exe", execounter)
-			os.makedirs(tmpdir)
-		except Exception, e:
-			tmpdir = tempfile.mkdtemp(dir=tempdir)
 	## first search for ZIP. Do this by searching for:
 	## * PKBAC (seems to give the best results)
 	## * WinZip Self-Extractor
 	## 7zip gives better results than unzip
 	offset = data.find("PKBAC")
 	if offset != -1:
+		if tempdir == None:
+			tmpdir = tempfile.mkdtemp()
+		else:
+			try:
+				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "exe", execounter)
+				os.makedirs(tmpdir)
+			except Exception, e:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
 		res = unpack7z(data, 0, tmpdir)
 		if res != None:
 			diroffsets.append((res, 0))
 			blacklist.append((0, os.stat(filename).st_size))
 			return (diroffsets, blacklist)
 		else:
-			# we should do cleanup here
-			pass
+			if tempdir == None:
+				os.rmdir(tmpdir)
 	## then search for RAR by searching for:
 	## WinRAR
 	## and unpack with unrar
 	offset = data.find("WinRAR")
 	if offset != -1:
+		if tempdir == None:
+			tmpdir = tempfile.mkdtemp()
+		else:
+			try:
+				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "exe", execounter)
+				os.makedirs(tmpdir)
+			except Exception, e:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
 		res = unpackRar(data, 0, tmpdir)
 		if res != None:
 			(endofarchive, rardir) = res
@@ -146,6 +154,10 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[]):
 			## add the whole binary to the blacklist
 			blacklist.append((0, os.stat(filename).st_size))
 			execounter = execounter + 1
+			return (diroffsets, blacklist)
+		else:
+			if tempdir == None:
+				os.rmdir(tmpdir)
 	## else try other methods
 	## 7zip gives better results than cabextract
 	## Ideally we should also do something with innounp
