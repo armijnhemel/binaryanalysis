@@ -3,6 +3,8 @@
 * start on reworking hierachical unpacking which will make it easier to find
 where and how things were unpacked.
 * add more hierarchical unpacking
+* unpack squashfs to the temporary directory directly, without having
+unsquashfs create the 'squashfs-root' directory
 
 2011-02-28
 * add a 'noscan' attribute for directories that don't need extra 'unpack'
