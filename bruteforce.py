@@ -9,7 +9,7 @@ This script tries to analyse the firmware of a device, using a "brute force" app
 and pretty print it in a simple XML file.
 '''
 
-import sys, os, os.path, magic, hashlib, subprocess, tempfile
+import sys, os, os.path, magic, hashlib, subprocess, tempfile, shutil
 from optparse import OptionParser
 import ConfigParser
 import xml.dom.minidom
@@ -463,7 +463,8 @@ def main(argv):
 	## the file inside a file system we looked at was in fact a file system.
 	tempdir=tempfile.mkdtemp()
 	#tempdir=None
-	res = scanfile(os.path.dirname(firmware_binary), os.path.basename(firmware_binary), tempdir=tempdir, unpackscans=unpackscans, programscans=programscans)
+	shutil.copy(firmware_binary, tempdir)
+	res = scanfile(tempdir, os.path.basename(firmware_binary), tempdir=tempdir, unpackscans=unpackscans, programscans=programscans)
 	xml = prettyprintresxml(res, scandate, unpackscans=unpackscans, programscans=programscans)
 	print xml.toxml()
 
