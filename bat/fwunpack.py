@@ -1343,15 +1343,22 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[]):
 	traileroffsets.append(trailer)
 	while(trailer != -1):
 		trailer = data.find(';',trailer+1)
-		traileroffsets.append(trailer)
+		if trailer != -1:
+			traileroffsets.append(trailer)
 	headeroffsets = []
 	headeroffsets.append(header)
 	while (header != -1):
 		header = fssearch.findGIF(data, header+1)
-		headeroffsets.append(header)
+		if header != -1:
+			headeroffsets.append(header)
 	diroffsets = []
 	gifcounter = 1
-	for offset in headeroffsets:
+	for i in range (0,len(headeroffsets)):
+		offset = headeroffsets[i]
+		if i < len(headeroffsets) - 1:
+			nextoffset = headeroffsets[i+1]
+		else:
+			nextoffset = len(data)
 		## first check if we're not blacklisted for the offset
 		blacklistoffset = inblacklist(offset, blacklist)
 		if blacklistoffset != None:
@@ -1359,6 +1366,8 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[]):
 		for trail in traileroffsets:
 			if trail <= offset:
 				continue
+			if trail >= nextoffset:
+				break
 			## check if we're not blacklisted for the trailer
 			blacklistoffset = inblacklist(trail, blacklist)
 			if blacklistoffset != None:
