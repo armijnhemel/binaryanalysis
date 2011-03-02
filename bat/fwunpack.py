@@ -108,13 +108,18 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[]):
 
 	## apparently we have a MS Windows executable, so continue
 	diroffsets = []
+	execounter = 1
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
 	if tempdir == None:
 		tmpdir = tempfile.mkdtemp()
 	else:
-		tmpdir = tempfile.mkdtemp(dir=tempdir)
+		try:
+			tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "exe", execounter)
+			os.makedirs(tmpdir)
+		except Exception, e:
+			tmpdir = tempfile.mkdtemp(dir=tempdir)
 	## first search for ZIP. Do this by searching for:
 	## * PKBAC (seems to give the best results)
 	## * WinZip Self-Extractor
@@ -140,6 +145,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[]):
 			diroffsets.append((rardir, 0))
 			## add the whole binary to the blacklist
 			blacklist.append((0, os.stat(filename).st_size))
+			execounter = execounter + 1
 	## else try other methods
 	## 7zip gives better results than cabextract
 	## Ideally we should also do something with innounp
@@ -159,6 +165,7 @@ def searchUnpackCab(filename, tempdir=None, blacklist=[]):
 		return ([], blacklist)
 	else:
 		diroffsets = []
+		cabcounter = 1
 		while(offset != -1):
 			blacklistoffset = inblacklist(offset, blacklist)
 			if blacklistoffset != None:
@@ -168,13 +175,18 @@ def searchUnpackCab(filename, tempdir=None, blacklist=[]):
 			if tempdir == None:
 				tmpdir = tempfile.mkdtemp()
 			else:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+				try:
+					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "cab", cabcounter)
+					os.makedirs(tmpdir)
+				except Exception, e:
+					tmpdir = tempfile.mkdtemp(dir=tempdir)
 			res = unpackCab(data, offset, tmpdir)
 			if res != None:
 				(cabdir, cabsize) = res
 				diroffsets.append((cabdir, offset))
 				blacklist.append((offset, offset + cabsize))
 				offset = fssearch.findCab(data, offset+cabsize)
+				cabcounter = cabcounter + 1
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
@@ -290,6 +302,7 @@ def searchUnpackLzip(filename, tempdir=None, blacklist=[]):
 		return ([], blacklist)
 	else:
 		diroffsets = []
+		lzipcounter = 1
 		while(offset != -1):
 			blacklistoffset = inblacklist(offset, blacklist)
 			if blacklistoffset != None:
@@ -299,12 +312,17 @@ def searchUnpackLzip(filename, tempdir=None, blacklist=[]):
 			if tempdir == None:
 				tmpdir = tempfile.mkdtemp()
 			else:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+				try:
+					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "lzip", lzipcounter)
+					os.makedirs(tmpdir)
+				except Exception, e:
+					tmpdir = tempfile.mkdtemp(dir=tempdir)
 			(res, lzipsize) = unpackLzip(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
 				blacklist.append((offset, offset+lzipsize))
 				offset = fssearch.findLzip(data, offset+lzipsize)
+				lzipcounter = lzipcounter + 1
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
@@ -368,6 +386,7 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[]):
 		## record the original offset
 		origoffset = offset
 		diroffsets = []
+		xzcounter = 1
 		## remember the offsets of the XZ footer, search for all trailers once
 		traileroffsets = []
 		trailer = fssearch.findXZTrailer(data)
@@ -400,10 +419,15 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[]):
 					if tempdir == None:
 						tmpdir = tempfile.mkdtemp()
 					else:
-						tmpdir = tempfile.mkdtemp(dir=tempdir)
+						try:
+							tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "xz", xzcounter)
+							os.makedirs(tmpdir)
+						except Exception, e:
+							tmpdir = tempfile.mkdtemp(dir=tempdir)
 					res = unpackXZ(data, offset, trail, tmpdir)
 					if res != None:
 						diroffsets.append((res, offset))
+						xzcounter = xzcounter + 1
 					else:
 						## cleanup
 						os.rmdir(tmpdir)
@@ -941,6 +965,7 @@ def searchUnpackRar(filename, tempdir=None, blacklist=[]):
 		return ([], blacklist)
 	else:
 		diroffsets = []
+		rarcounter = 1
 		while(offset != -1):
 			blacklistoffset = inblacklist(offset, blacklist)
 			if blacklistoffset != None:
@@ -950,12 +975,17 @@ def searchUnpackRar(filename, tempdir=None, blacklist=[]):
         		if tempdir == None:
         	       		tmpdir = tempfile.mkdtemp()
 			else:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+				try:
+					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "rar", rarcounter)
+					os.makedirs(tmpdir)
+				except Exception, e:
+					tmpdir = tempfile.mkdtemp(dir=tempdir)
 			res = unpackRar(data, offset, tmpdir)
 			if res != None:
 				(endofarchive, rardir) = res
 				diroffsets.append((rardir, offset))
 				offset = fssearch.findRar(data, endofarchive)
+				rarcounter = rarcounter + 1
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
@@ -1224,6 +1254,7 @@ def searchUnpackARJ(filename, tempdir=None, blacklist=[]):
 		return ([], blacklist)
 	else:
 		diroffsets = []
+		arjcounter = 1
 		while(offset != -1):
 			blacklistoffset = inblacklist(offset, blacklist)
 			if blacklistoffset != None:
@@ -1233,13 +1264,18 @@ def searchUnpackARJ(filename, tempdir=None, blacklist=[]):
         		if tempdir == None:
         	       		tmpdir = tempfile.mkdtemp()
 			else:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+				try:
+					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "arj", arjcounter)
+					os.makedirs(tmpdir)
+				except Exception, e:
+					tmpdir = tempfile.mkdtemp(dir=tempdir)
 			res = unpackARJ(data, offset, tmpdir)
 			if res != None:
 				(arjtmpdir, arjsize) = res
 				diroffsets.append((arjtmpdir, offset))
 				blacklist.append((offset, arjsize))
 				offset = fssearch.findARJ(data, offset+arjsize)
+				arjcounter = arjcounter + 1
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
