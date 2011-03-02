@@ -395,12 +395,14 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[]):
 			return []
 		while(trailer != -1):
 			trailer = fssearch.findXZTrailer(data,trailer+1)
-			traileroffsets.append(trailer)
+			if trailer != -1:
+				traileroffsets.append(trailer)
 		## remember all offsets of the XZ header in the file
 		offsets = [offset]
 		while(offset != -1):
 			offset = fssearch.findXZ(data,offset+1)
-			offsets.append(offset)
+			if offset != -1:
+				offsets.append(offset)
 		for trail in traileroffsets:
 			## check if the trailer is in the blacklist
 			blacklistoffset = inblacklist(trail, blacklist)
