@@ -459,6 +459,7 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[]):
 		return ([], blacklist)
 	else:
 		diroffsets = []
+		cpiocounter = 1
 		trailer = fssearch.findCpioTrailer(data)
 		if trailer == -1:
 			## no trailer found, so no use to continue checking
@@ -472,7 +473,11 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[]):
         		if tempdir == None:
         	       		tmpdir = tempfile.mkdtemp()
 			else:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+				try:
+					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "cpio", cpiocounter)
+					os.makedirs(tmpdir)
+				except Exception, e:
+					tmpdir = tempfile.mkdtemp(dir=tempdir)
 			## length of 'TRAILER!!!' plus 1 to include the whole trailer
 			## and cpio archives are always rounded to blocks of 512 bytes
 			trailercorrection = (512 - len(data[offset:trailer+10])%512)
@@ -482,6 +487,7 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[]):
 				blacklist.append((offset, trailer))
 				offset = fssearch.findCpio(data, offset + trailer)
 				trailer = fssearch.findCpioTrailer(data, offset + trailer)
+				cpiocounter = cpiocounter + 1
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
@@ -602,6 +608,7 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[]):
 		return ([], blacklist)
 	else:
 		diroffsets = []
+		squashcounter = 1
 		while(offset != -1):
 			## check if the offset we find is in a blacklist
 			blacklistoffset = inblacklist(offset, blacklist)
@@ -612,12 +619,17 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[]):
         		if tempdir == None:
         	       		tmpdir = tempfile.mkdtemp()
 			else:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+				try:
+					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "squashfs", squashcounter)
+					os.makedirs(tmpdir)
+				except Exception, e:
+					tmpdir = tempfile.mkdtemp(dir=tempdir)
 			retval = unpackSquashfs(data, offset, tmpdir)
 			if retval != None:
 				(res, squashsize) = retval
 				diroffsets.append((res, offset))
 				blacklist.append((offset,squashsize))
+				squashcounter = squashcounter + 1
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
@@ -766,7 +778,7 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[]):
 	else:
 		## counter to remember how many gzip file systems we have
 		## discovered, so we can use this to append to the directory
-		## name containing the unpacked contents. This is TODO.
+		## name containing the unpacked contents.
 		gzipcounter = 1
 		diroffsets = []
 		while(offset != -1):
@@ -997,6 +1009,7 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[]):
 		return ([],blacklist)
 	else:
 		diroffsets = []
+		lzmacounter = 1
 		while(offset != -1):
 			blacklistoffset = inblacklist(offset, blacklist)
 			if blacklistoffset != None:
@@ -1006,10 +1019,15 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[]):
         		if tempdir == None:
         	       		tmpdir = tempfile.mkdtemp()
 			else:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+				try:
+					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "lzma", lzmacounter)
+					os.makedirs(tmpdir)
+				except Exception, e:
+					tmpdir = tempfile.mkdtemp(dir=tempdir)
 			res = unpackLZMA(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
+				lzmacounter = lzmacounter + 1
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
@@ -1296,6 +1314,7 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[]):
 		header = fssearch.findGIF(data, header+1)
 		headeroffsets.append(header)
 	diroffsets = []
+	gifcounter = 1
 	for offset in headeroffsets:
 		## first check if we're not blacklisted for the offset
 		blacklistoffset = inblacklist(offset, blacklist)
@@ -1311,10 +1330,15 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[]):
         		if tempdir == None:
         	       		tmpdir = tempfile.mkdtemp()
 			else:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+				try:
+					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "gif", gifcounter)
+					os.makedirs(tmpdir)
+				except Exception, e:
+					tmpdir = tempfile.mkdtemp(dir=tempdir)
 			res = unpackGIF(data, offset, trail, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
+				gifcounter = gifcounter + 1
 				break
 			else:
 				## cleanup
