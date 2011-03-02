@@ -18,7 +18,7 @@ TODO: merge many of the searchUnpack and unpack methods, so we only have to
 suck in the data once in the unpack part.
 '''
 
-import sys, os, subprocess
+import sys, os, subprocess, os.path
 import tempfile, bz2, re, magic, tarfile
 import fsmagic, fssearch, extractor
 import rpm
@@ -778,7 +778,11 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[]):
         		if tempdir == None:
         	       		tmpdir = tempfile.mkdtemp()
 			else:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+				try:
+					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "gzip", gzipcounter)
+					os.makedirs(tmpdir)
+				except Exception, e:
+					tmpdir = tempfile.mkdtemp(dir=tempdir)
 			res = unpackGzip(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
