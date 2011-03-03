@@ -1,3 +1,7 @@
+2011-03-04
+* rework GIF scanning so we don't unnecessarily loop: merge searchUnpackGIF
+and unpackGIF, add extra checks.
+
 2011-03-02
 * first copy the file to scan to the temporary scanning directory
 * start on reworking hierachical unpacking which will make it easier to find
