@@ -1394,36 +1394,26 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[]):
 					os.makedirs(tmpdir)
 				except Exception, e:
 					tmpdir = tempfile.mkdtemp(dir=tempdir)
-			res = unpackGIF(data, offset, trail, tmpdir)
-			if res != None:
-				diroffsets.append((res, offset))
-				gifcounter = gifcounter + 1
-				break
-			else:
-				## cleanup
-				os.rmdir(tmpdir)
-	return (diroffsets, blacklist, True)
-
-def unpackGIF(data, offset, trailer, tempdir=None):
-	## write the data to a location and check if it is a valid GIF with gifinfo
-	## If so, return the directory, plus the size of the image
-	if tempdir == None:
-		tmpdir = tempfile.mkdtemp()
-	else:
-		tmpdir = tempdir
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(tmpfile[0], data[offset:trailer+1])
-	p = subprocess.Popen(['gifinfo', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		os.fdopen(tmpfile[0]).close()
-		os.unlink(tmpfile[1])
-		if tempdir == None:
-			os.rmdir(tmpdir)
-		return None
-	else:
-		os.fdopen(tmpfile[0]).close()
-		return tmpdir
+				tmpfile = tempfile.mkstemp(dir=tmpdir)
+				os.write(tmpfile[0], data[offset:trail+1])
+				p = subprocess.Popen(['gifinfo', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+				(stanout, stanerr) = p.communicate()
+				if p.returncode != 0:
+					os.fdopen(tmpfile[0]).close()
+					os.unlink(tmpfile[1])
+					os.rmdir(tmpdir)
+				else:
+					os.fdopen(tmpfile[0]).close()
+					## basically we have a copy of the original
+					## image here, so why bother?
+					if offset == 0 and trail == len(data) - 1:
+						os.unlink(tmpfile[1])
+						os.rmdir(tmpdir)
+					else:
+						diroffsets.append((tmpdir, offset))
+						gifcounter = gifcounter + 1
+						break
+	return (diroffsets, blacklist)
 
 ## JPEG extraction can be tricky according to /usr/share/magic, so this is
 ## not fool proof.
