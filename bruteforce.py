@@ -258,6 +258,8 @@ def scanfile(path, file, lentempdir=0, tempdir=None, unpackscans=[], programscan
 		if res != None:
 			report['architecture'] = res
 	scannedfile = "%s/%s" % (path, file)
+
+	## scan per file and store the results
 	res = scan(scannedfile, type, filehash=filehash, tempdir=tempdir, unpackscans=unpackscans, programscans=programscans)
 	if res != []:
 		report['scans'] = res
@@ -286,14 +288,6 @@ def scan(scanfile, magic, unpackscans=[], programscans=[], filehash=None, tempdi
 	reports = []
 	## we reset the blacklist for each new scan we do
 	blacklist = []
-
-	## get stuff from the knowledgebase, but skip if we have the 'scanalways' flag set
-	if not scanalways:
-		if filehash == None:
-			## we could not find the hash in the knowledgebase
-			pass
-		else:
-			pass
 
 	## list of magic file types that 'program' checks should skip
 	## to avoid false positives and superfluous scanning. Does not work
@@ -338,13 +332,14 @@ def scan(scanfile, magic, unpackscans=[], programscans=[], filehash=None, tempdi
 			dir = diroffset[0]
 			if noscan:
 				continue
+			## recursively scan all files in the directory
 			res = walktempdir(dir, tempdir, unpackscans, programscans)
 			if res != []:
 				res.append({'offset': diroffset[1]})
 				report[scan['name']] = res
 				reports.append(report)
 	for scan in programscans:
-		## TODO: rework this. Probably having blacklists is enough for this.
+		## TODO: rework this. Probably having blacklists or 'noscan' is enough is enough for this.
 		skip = False
 		for prog in programignorelist:
 			if prog in magic:
