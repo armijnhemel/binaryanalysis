@@ -948,6 +948,7 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[]):
 	else:
 		diroffsets = []
 		endofcentraldir = 0
+		zipcounter = 1
 		while(offset != -1):
 			blacklistoffset = inblacklist(offset, blacklist)
 			if blacklistoffset != None:
@@ -957,10 +958,15 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[]):
         		if tempdir == None:
         	       		tmpdir = tempfile.mkdtemp()
 			else:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+				try:
+					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "zip", zipcounter)
+					os.makedirs(tmpdir)
+				except Exception, e:
+					tmpdir = tempfile.mkdtemp(dir=tempdir)
 			(endofcentraldir, res) = unpackZip(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
+				zipcounter = zipcounter + 1
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
