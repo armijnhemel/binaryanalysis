@@ -266,15 +266,15 @@ def scanfile(path, file, lentempdir=0, tempdir=None, unpackscans=[], programscan
 	return report
 
 ## result is a list of result tuples, one for every file in the directory
-def walktempdir(tempdir, tmpdir, unpackscans, programscans):
-	osgen = os.walk(tempdir)
+def walktempdir(scandir, tempdir, unpackscans, programscans):
+	osgen = os.walk(scandir)
 	reports = []
 	try:
        		while True:
                 	i = osgen.next()
                 	for p in i[2]:
 				try:
-					res = scanfile(i[0], p, lentempdir=len(tempdir), tempdir=tmpdir, unpackscans=unpackscans, programscans=programscans)
+					res = scanfile(i[0], p, lentempdir=len(scandir), tempdir=tempdir, unpackscans=unpackscans, programscans=programscans)
 					if res != []:
 						reports.append(res)
 				except Exception, e:
@@ -329,11 +329,11 @@ def scan(scanfile, magic, unpackscans=[], programscans=[], filehash=None, tempdi
 			report = {}
 			if diroffset == None:
 				continue
-			dir = diroffset[0]
+			scandir = diroffset[0]
 			if noscan:
 				continue
 			## recursively scan all files in the directory
-			res = walktempdir(dir, tempdir, unpackscans, programscans)
+			res = walktempdir(scandir, tempdir, unpackscans, programscans)
 			if res != []:
 				res.append({'offset': diroffset[1]})
 				report[scan['name']] = res
