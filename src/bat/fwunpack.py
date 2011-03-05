@@ -738,10 +738,15 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[]):
 		return ([], blacklist)
 	else:
 		diroffsets = []
+		ext2counter = 1
         	if tempdir == None:
         	       	tmpdir = tempfile.mkdtemp()
 		else:
-			tmpdir = tempfile.mkdtemp(dir=tempdir)
+			try:
+				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "ext2", ext2counter)
+				os.makedirs(tmpdir)
+			except Exception, e:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
 		while(offset != -1 and offset >= 0x438):
 			## check if the offset we find is in a blacklist
 			blacklistoffset = inblacklist(offset, blacklist)
@@ -764,6 +769,7 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[]):
 						if 'Block size' in line:
 							blocksize = int(line.split(":")[1].strip())
 					blacklist.append((offset - 0x438, offset - 0x438 + blockcount * blocksize))
+				ext2counter = ext2counter + 1
 			offset = fssearch.findExt2fs(data, offset+1)
 	return (diroffsets, blacklist)
 
