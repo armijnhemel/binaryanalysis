@@ -205,19 +205,19 @@ def gethash(path, file):
 This method returns a report snippet for inclusion in the final
 report.
 '''
-def scanfile(path, file, lentempdir=0, tempdir=None, unpackscans=[], programscans=[]):
+def scanfile(path, filename, lentempdir=0, tempdir=None, unpackscans=[], programscans=[]):
 	report = {}
 
 	## this will report incorrectly if we only have unpacked one file to a
 	## temporary location, for example a kernel image
-	report['name'] = file
+	report['name'] = filename
 
 	## Add both the path to indicate the position inside the file sytem
         ## or file we have unpacked, as well as the position of the files as unpacked
 	## by BAT, convenient for later analysis of binaries.
 	report['path'] = path[lentempdir:].replace("/squashfs-root", "")
 	report['realpath'] = path
-	type = ms.file("%s/%s" % (path, file))
+	type = ms.file("%s/%s" % (path, filename))
 	report['magic'] = type
 
         ## broken symbolic links can't be statted
@@ -239,52 +239,34 @@ def scanfile(path, file, lentempdir=0, tempdir=None, unpackscans=[], programscan
         if type.find('character special') == 0:
         	return report
 
-	report['size'] = os.lstat("%s/%s" % (path, file)).st_size
+	report['size'] = os.lstat("%s/%s" % (path, filename)).st_size
 
 	## empty file, not interested
-	if os.lstat("%s/%s" % (path, file)).st_size == 0:
+	if os.lstat("%s/%s" % (path, filename)).st_size == 0:
 		return report
 
 	## Store the hash of the file for identification and for possibly
 	## querying the knowledgebase later on.
-	filehash = gethash(path, file)
+	filehash = gethash(path, filename)
 	report['sha256'] = filehash
 
 	if "ELF" in type:
-		res = scanSharedLibs(path,file)
+		res = scanSharedLibs(path,filename)
 		if res != []:
 			report['libs'] = res
-		res = scanArchitecture(path,file)
+		res = scanArchitecture(path,filename)
 		if res != None:
 			report['architecture'] = res
-	scannedfile = "%s/%s" % (path, file)
+	filetoscan = "%s/%s" % (path, filename)
 
 	## scan per file and store the results
-	res = scan(scannedfile, type, filehash=filehash, tempdir=tempdir, unpackscans=unpackscans, programscans=programscans)
+	res = scan(filetoscan, type, filehash=filehash, tempdir=tempdir, unpackscans=unpackscans, programscans=programscans)
 	if res != []:
 		report['scans'] = res
 	return report
 
-## result is a list of result tuples, one for every file in the directory
-def walktempdir(scandir, tempdir, unpackscans, programscans):
-	osgen = os.walk(scandir)
-	reports = []
-	try:
-       		while True:
-                	i = osgen.next()
-                	for p in i[2]:
-				try:
-					res = scanfile(i[0], p, lentempdir=len(scandir), tempdir=tempdir, unpackscans=unpackscans, programscans=programscans)
-					if res != []:
-						reports.append(res)
-				except Exception, e:
-					print e
-	except StopIteration:
-        	pass
-	return reports
-
-## scan a single file. Optionally supply a filehash for checking a knowledgebase
-def scan(scanfile, magic, unpackscans=[], programscans=[], filehash=None, tempdir=None):
+## scan a single file and recurse. Optionally supply a filehash for checking a knowledgebase
+def scan(filetoscan, magic, unpackscans=[], programscans=[], filehash=None, tempdir=None):
 	reports = []
 	## we reset the blacklist for each new scan we do
 	blacklist = []
@@ -314,8 +296,8 @@ def scan(scanfile, magic, unpackscans=[], programscans=[], filehash=None, tempdi
 		## plus a blacklist containing blacklisted ranges for the *original*
 		## file.
 		exec "from %s import %s as bat_%s" % (module, method, method)
-		#(diroffsets, blacklist) = eval("bat_%s(scanfile, tempdir, blacklist)" % (method))
-		scanres = eval("bat_%s(scanfile, tempdir, blacklist)" % (method))
+		#(diroffsets, blacklist) = eval("bat_%s(filetoscan, tempdir, blacklist)" % (method))
+		scanres = eval("bat_%s(filetoscan, tempdir, blacklist)" % (method))
 		## result is either empty, or contains offsets
 		if len(scanres) == 2:
 			(diroffsets, blacklist) = scanres
@@ -330,13 +312,25 @@ def scan(scanfile, magic, unpackscans=[], programscans=[], filehash=None, tempdi
 			if diroffset == None:
 				continue
 			scandir = diroffset[0]
-			if noscan:
-				continue
+
 			## recursively scan all files in the directory
-			res = walktempdir(scandir, tempdir, unpackscans, programscans)
-			if res != []:
-				res.append({'offset': diroffset[1]})
-				report[scan['name']] = res
+			osgen = os.walk(scandir)
+			scanreports = []
+			try:
+       				while True:
+                			i = osgen.next()
+                			for p in i[2]:
+						try:
+							res = scanfile(i[0], p, lentempdir=len(scandir), tempdir=tempdir, unpackscans=unpackscans, programscans=programscans)
+							if res != []:
+								scanreports.append(res)
+						except Exception, e:
+							print e
+			except StopIteration:
+        			pass
+			if scanreports != []:
+				scanreports.append({'offset': diroffset[1]})
+				report[scan['name']] = scanreports
 				reports.append(report)
 	for scan in programscans:
 		## TODO: rework this. Probably having blacklists or 'noscan' is enough is enough for this.
@@ -352,7 +346,7 @@ def scan(scanfile, magic, unpackscans=[], programscans=[], filehash=None, tempdi
 		method = scan['method']
 		exec "from %s import %s as bat_%s" % (module, method, method)
 		## temporary stuff, this should actually be nicely wrapped in a report tuple
-		res = eval("bat_%s(scanfile, blacklist)" % (method))
+		res = eval("bat_%s(filetoscan, blacklist)" % (method))
 		if res != None:
 			report[scan['name']] = res
 			reports.append(report)
