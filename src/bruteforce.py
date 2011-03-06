@@ -170,14 +170,12 @@ def scanArchitecture(path, file):
                 if "Machine:" in line:
                         return line.split(':')[1].strip()
 
-'''
-The result of this method is a list of library names that the file dynamically links
-with. The path of these libraries is not given, since this is usually not recorded
-in the binary (unless RPATH is used) but determined at runtime: it is dependent on
-the dynamic linker configuration on the device. With some mixing and matching it is
-nearly always to determine which library in which path is used, since most installations
-don't change the default search paths.
-'''
+## The result of this method is a list of library names that the file dynamically links
+## with. The path of these libraries is not given, since this is usually not recorded
+## in the binary (unless RPATH is used) but determined at runtime: it is dependent on
+## the dynamic linker configuration on the device. With some mixing and matching it is
+## nearly always to determine which library in which path is used, since most installations
+## don't change the default search paths.
 def scanSharedLibs(path, file):
 	libs = []
         p = subprocess.Popen(['readelf', '-d', "%s/%s" % (path, file)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -189,11 +187,9 @@ def scanSharedLibs(path, file):
                         libs.append(line.split(': ')[1][1:-1])
 	return libs
 
-'''
-This method returns a cryptographic checksum for a file using the SHA256
-algorithm. This information can be used to uniquely identify a file and
-perhaps reuse results for scans of this file in a later audit.
-'''
+## This method returns a cryptographic checksum for a file using the SHA256
+## algorithm. This information can be used to uniquely identify a file and
+## perhaps reuse results for scans of this file in a later audit.
 def gethash(path, file):
 	scanfile = open("%s/%s" % (path, file), 'r')
 	h = hashlib.new('sha256')
@@ -201,12 +197,10 @@ def gethash(path, file):
 	scanfile.close()
 	return h.hexdigest()
 
-'''
-This method returns a report snippet for inclusion in the final report. The
-report snippet is per file, but if a file has other files embedded in it, the
-it will include reports for those files as well in the 'scans' section of the
-report.
-'''
+## This method returns a report snippet for inclusion in the final report. The
+## report snippet is per file, but if a file has other files embedded in it, the
+## it will include reports for those files as well in the 'scans' section of the
+## report.
 def scanfile(path, filename, lentempdir=0, tempdir=None, unpackscans=[], programscans=[], noscan=False):
 	report = {}
 
@@ -263,6 +257,7 @@ def scanfile(path, filename, lentempdir=0, tempdir=None, unpackscans=[], program
 
 	## scan per file and store the results, except when explicitely
 	## instructed not to scan. In that case we just report some statistics
+	## about the file.
 	if not noscan:
 		res = scan(filetoscan, type, filehash=filehash, tempdir=tempdir, unpackscans=unpackscans, programscans=programscans)
 		if res != []:
@@ -311,7 +306,6 @@ def scan(filetoscan, magic, unpackscans=[], programscans=[], filehash=None, temp
 		if len(diroffsets) == 0:
 			continue
 		## each diroffset is a (path, offset) tuple
-		## TODO: optionally, there could be a 'noscan' boolean value
 		for diroffset in diroffsets:
 			report = {}
 			if diroffset == None:
@@ -339,7 +333,7 @@ def scan(filetoscan, magic, unpackscans=[], programscans=[], filehash=None, temp
 				reports.append(report)
 
 	for scan in programscans:
-		## TODO: rework this. Probably having blacklists or 'noscan' is enough is enough for this.
+		## TODO: rework this. Having blacklists is enough for this.
 		skip = False
 		for prog in programignorelist:
 			if prog in magic:
