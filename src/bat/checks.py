@@ -11,12 +11,16 @@ proof and false positives are likely, so either check the results, or replace
 it with your own more robust checks.
 '''
 
-import string, re
+import string, re, os
 import extractor
 
 ## generic searcher for certain marker strings
 def genericSearch(path, markerStrings, blacklist=[]):
         try:
+		## first see if the entire file has been blacklisted
+		filesize = os.stat(path).st_size
+		if extractor.inblacklist(0, blacklist) == filesize:
+			return None
                 binary = open(path, 'rb')
                 lines = binary.read()
 		for marker in markerStrings:

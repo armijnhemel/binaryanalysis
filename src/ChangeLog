@@ -1,3 +1,7 @@
+2011-03-06
+* rework leaf scans to properly use blacklisting
+* reenable ext2fs scanning
+
 2011-03-05
 * fold walktempdir() into scan()
 * remove some clashes between names of variables and built-in function for
