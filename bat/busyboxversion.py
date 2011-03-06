@@ -10,6 +10,9 @@ import busybox, extractor
 
 def busybox_version(path, blacklist=[]):
 	try:
+                filesize = os.stat(path).st_size
+                if extractor.inblacklist(0, blacklist) == filesize:
+                        return None
 		busybox_binary = open(path, 'rb')
 		busybox_lines = busybox_binary.read()
 		return busybox.extract_version(busybox_lines)

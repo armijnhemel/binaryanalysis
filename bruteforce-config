@@ -94,11 +94,11 @@ magic   = squashfs
 #cleanup = cleanupSquashfs
 priority = 0
 
-#[ext2fs]
-#type    = unpack
-#module  = bat.fwunpack
-#method  = searchUnpackExt2fs
-#priority = 2
+[ext2fs]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackExt2fs
+priority = 2
 
 [xz]
 type    = unpack

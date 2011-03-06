@@ -202,10 +202,12 @@ def gethash(path, file):
 	return h.hexdigest()
 
 '''
-This method returns a report snippet for inclusion in the final
+This method returns a report snippet for inclusion in the final report. The
+report snippet is per file, but if a file has other files embedded in it, the
+it will include reports for those files as well in the 'scans' section of the
 report.
 '''
-def scanfile(path, filename, lentempdir=0, tempdir=None, unpackscans=[], programscans=[]):
+def scanfile(path, filename, lentempdir=0, tempdir=None, unpackscans=[], programscans=[], noscan=False):
 	report = {}
 
 	## this will report incorrectly if we only have unpacked one file to a
@@ -259,13 +261,16 @@ def scanfile(path, filename, lentempdir=0, tempdir=None, unpackscans=[], program
 			report['architecture'] = res
 	filetoscan = "%s/%s" % (path, filename)
 
-	## scan per file and store the results
-	res = scan(filetoscan, type, filehash=filehash, tempdir=tempdir, unpackscans=unpackscans, programscans=programscans)
-	if res != []:
-		report['scans'] = res
+	## scan per file and store the results, except when explicitely
+	## instructed not to scan. In that case we just report some statistics
+	if not noscan:
+		res = scan(filetoscan, type, filehash=filehash, tempdir=tempdir, unpackscans=unpackscans, programscans=programscans)
+		if res != []:
+			report['scans'] = res
 	return report
 
-## scan a single file and recurse. Optionally supply a filehash for checking a knowledgebase
+## scan a single file and recurse. Optionally supply a filehash for
+## checking a knowledgebase, which is future work.
 def scan(filetoscan, magic, unpackscans=[], programscans=[], filehash=None, tempdir=None):
 	reports = []
 	## we reset the blacklist for each new scan we do
@@ -280,8 +285,6 @@ def scan(filetoscan, magic, unpackscans=[], programscans=[], filehash=None, temp
 	## to any of the things in this list. So for correctness we should
 	## not rely on this.
 	programignorelist = [ "POSIX tar archive (GNU)"
-                            , "Linux rev 0.0 ext2 filesystem data"
-                            , "Linux rev 1.0 ext2 filesystem data"
                             , "Zip archive data, at least v1.0 to extract"
                             , "romfs filesystem, version 1"
                             ]
@@ -299,6 +302,8 @@ def scan(filetoscan, magic, unpackscans=[], programscans=[], filehash=None, temp
 		#(diroffsets, blacklist) = eval("bat_%s(filetoscan, tempdir, blacklist)" % (method))
 		scanres = eval("bat_%s(filetoscan, tempdir, blacklist)" % (method))
 		## result is either empty, or contains offsets
+		## TODO: clean up blacklists: [(a,b), (b,c)] should become [(a,c)]
+		## for various checks like genericSearch in bat/checks.py
 		if len(scanres) == 2:
 			(diroffsets, blacklist) = scanres
 		elif len(scanres) == 3:
@@ -321,7 +326,7 @@ def scan(filetoscan, magic, unpackscans=[], programscans=[], filehash=None, temp
                 			i = osgen.next()
                 			for p in i[2]:
 						try:
-							res = scanfile(i[0], p, lentempdir=len(scandir), tempdir=tempdir, unpackscans=unpackscans, programscans=programscans)
+							res = scanfile(i[0], p, lentempdir=len(scandir), tempdir=tempdir, unpackscans=unpackscans, programscans=programscans, noscan=noscan)
 							if res != []:
 								scanreports.append(res)
 						except Exception, e:
@@ -332,6 +337,7 @@ def scan(filetoscan, magic, unpackscans=[], programscans=[], filehash=None, temp
 				scanreports.append({'offset': diroffset[1]})
 				report[scan['name']] = scanreports
 				reports.append(report)
+
 	for scan in programscans:
 		## TODO: rework this. Probably having blacklists or 'noscan' is enough is enough for this.
 		skip = False
