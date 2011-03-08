@@ -23,14 +23,6 @@ import tempfile, bz2, re, magic, tarfile
 import fsmagic, fssearch, extractor
 import rpm
 
-## convenience method to check if the offset we find is in a blacklist
-## Blacklists are composed of tuples (lower, upper) which mark a region
-## in the parent file(!) as a no go area.
-## This method returns the upperbound from the tuple for which
-## lower <= offset <= upper is True
-def inblacklist(offset, blacklist):
-	return extractor.inblacklist(offset, blacklist)
-
 ## TODO: rewrite this to like how we do other searches: first
 ## look for markers, then unpack.
 ## This method should return a blacklist.
@@ -183,7 +175,7 @@ def searchUnpackCab(filename, tempdir=None, blacklist=[]):
 		diroffsets = []
 		cabcounter = 1
 		while(offset != -1):
-			blacklistoffset = inblacklist(offset, blacklist)
+			blacklistoffset = extractor.inblacklist(offset, blacklist)
 			if blacklistoffset != None:
 				offset = fssearch.findCab(data, blacklistoffset)
 			if offset == -1:
@@ -320,7 +312,7 @@ def searchUnpackLzip(filename, tempdir=None, blacklist=[]):
 		diroffsets = []
 		lzipcounter = 1
 		while(offset != -1):
-			blacklistoffset = inblacklist(offset, blacklist)
+			blacklistoffset = extractor.inblacklist(offset, blacklist)
 			if blacklistoffset != None:
 				offset = fssearch.findLzip(data, blacklistoffset)
 			if offset == -1:
@@ -421,7 +413,7 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[]):
 				offsets.append(offset)
 		for trail in traileroffsets:
 			## check if the trailer is in the blacklist
-			blacklistoffset = inblacklist(trail, blacklist)
+			blacklistoffset = extractor.inblacklist(trail, blacklist)
 			if blacklistoffset != None:
 				## remove trailer from traileroffsets?
 				continue
@@ -429,7 +421,7 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[]):
 				## only check offsets that make sense
 				if offset >= trail:
 					continue
-				blacklistoffset = inblacklist(offset, blacklist)
+				blacklistoffset = extractor.inblacklist(offset, blacklist)
 				if blacklistoffset != None:
 					## remove offset from offsets?
 					continue
@@ -507,7 +499,7 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[]):
 			## no trailer found, so no use to continue checking
 			return ([], blacklist)
 		while(offset != -1 and trailer != -1):
-			blacklistoffset = inblacklist(offset, blacklist)
+			blacklistoffset = extractor.inblacklist(offset, blacklist)
 			if blacklistoffset != None:
 				offset = fssearch.findCpio(data, blacklistoffset)
 			if offset == -1:
@@ -596,7 +588,7 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[]):
 			except Exception, e:
 				tmpdir = tempfile.mkdtemp(dir=tempdir)
 		while(offset != -1):
-			blacklistoffset = inblacklist(offset, blacklist)
+			blacklistoffset = extractor.inblacklist(offset, blacklist)
 			if blacklistoffset != None:
 				offset = fssearch.findCramfs(data, blacklistoffset)
 			if offset == -1:
@@ -662,7 +654,7 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[]):
 		squashcounter = 1
 		while(offset != -1):
 			## check if the offset we find is in a blacklist
-			blacklistoffset = inblacklist(offset, blacklist)
+			blacklistoffset = extractor.inblacklist(offset, blacklist)
 			if blacklistoffset != None:
 				(offset, squashtype) = fssearch.findSquashfs(data, blacklistoffset)
 			if offset == -1:
@@ -762,7 +754,7 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[]):
 				tmpdir = tempfile.mkdtemp(dir=tempdir)
 		while(offset != -1 and offset >= 0x438):
 			## check if the offset we find is in a blacklist
-			blacklistoffset = inblacklist(offset, blacklist)
+			blacklistoffset = extractor.inblacklist(offset, blacklist)
 			if blacklistoffset != None:
 				offset = fssearch.findExt2fs(data, blacklistoffset)
 			if offset == -1:
@@ -839,7 +831,7 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[]):
 		gzipcounter = 1
 		diroffsets = []
 		while(offset != -1):
-			blacklistoffset = inblacklist(offset, blacklist)
+			blacklistoffset = extractor.inblacklist(offset, blacklist)
 			if blacklistoffset != None:
 				offset = fssearch.findGzip(data, blacklistoffset)
 			if offset == -1:
@@ -906,7 +898,7 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[]):
 		diroffsets = []
 		bzip2counter = 1
 		while(offset != -1):
-			blacklistoffset = inblacklist(offset, blacklist)
+			blacklistoffset = extractor.inblacklist(offset, blacklist)
 			if blacklistoffset != None:
 				offset = fssearch.findBzip2(data, blacklistoffset)
 			if offset == -1:
@@ -975,7 +967,7 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[]):
 		endofcentraldir = 0
 		zipcounter = 1
 		while(offset != -1):
-			blacklistoffset = inblacklist(offset, blacklist)
+			blacklistoffset = extractor.inblacklist(offset, blacklist)
 			if blacklistoffset != None:
 				offset = fssearch.findZip(data, blacklistoffset)
 			if offset == -1:
@@ -1012,7 +1004,7 @@ def searchUnpackRar(filename, tempdir=None, blacklist=[]):
 		diroffsets = []
 		rarcounter = 1
 		while(offset != -1):
-			blacklistoffset = inblacklist(offset, blacklist)
+			blacklistoffset = extractor.inblacklist(offset, blacklist)
 			if blacklistoffset != None:
 				offset = fssearch.findRar(data, blacklistoffset)
 			if offset == -1:
@@ -1086,7 +1078,7 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[]):
 		diroffsets = []
 		lzmacounter = 1
 		while(offset != -1):
-			blacklistoffset = inblacklist(offset, blacklist)
+			blacklistoffset = extractor.inblacklist(offset, blacklist)
 			if blacklistoffset != None:
 				offset = fssearch.findLZMA(data, blacklistoffset)
 			if offset == -1:
@@ -1180,7 +1172,7 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[]):
 		diroffsets = []
 		rpmcounter = 1
 		while(offset != -1):
-			blacklistoffset = inblacklist(offset, blacklist)
+			blacklistoffset = extractor.inblacklist(offset, blacklist)
 			if blacklistoffset != None:
 				offset = fssearch.findRPM(data, blacklistoffset)
 			if offset == -1:
@@ -1234,7 +1226,7 @@ def searchUnpackUbifs(filename, tempdir=None, blacklist=[]):
 		diroffsets = []
 		ubicounter = 1
 		while(offset != -1):
-			blacklistoffset = inblacklist(offset, blacklist)
+			blacklistoffset = extractor.inblacklist(offset, blacklist)
 			if blacklistoffset != None:
 				offset = fssearch.findUbifs(data, blacklistoffset)
 			if offset == -1:
@@ -1313,7 +1305,7 @@ def searchUnpackARJ(filename, tempdir=None, blacklist=[]):
 		diroffsets = []
 		arjcounter = 1
 		while(offset != -1):
-			blacklistoffset = inblacklist(offset, blacklist)
+			blacklistoffset = extractor.inblacklist(offset, blacklist)
 			if blacklistoffset != None:
 				offset = fssearch.findARJ(data, blacklistoffset)
 			if offset == -1:
@@ -1417,7 +1409,7 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[]):
 		else:
 			nextoffset = len(data)
 		## first check if we're not blacklisted for the offset
-		blacklistoffset = inblacklist(offset, blacklist)
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
 		for trail in traileroffsets:
@@ -1426,7 +1418,7 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[]):
 			if trail >= nextoffset:
 				break
 			## check if we're not blacklisted for the trailer
-			blacklistoffset = inblacklist(trail, blacklist)
+			blacklistoffset = extractor.inblacklist(trail, blacklist)
 			if blacklistoffset != None:
 				continue
         		if tempdir == None:
