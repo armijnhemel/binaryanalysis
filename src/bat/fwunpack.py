@@ -582,10 +582,15 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[]):
 		return ([], blacklist)
 	else:
 		diroffsets = []
+		cramfscounter = 1
         	if tempdir == None:
         	       	tmpdir = tempfile.mkdtemp()
 		else:
-			tmpdir = tempfile.mkdtemp(dir=tempdir)
+			try:
+				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "cramfs", cramfscounter)
+				os.makedirs(tmpdir)
+			except Exception, e:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
 		while(offset != -1):
 			blacklistoffset = inblacklist(offset, blacklist)
 			if blacklistoffset != None:
@@ -595,6 +600,10 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[]):
 			res = unpackCramfs(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
+				cramfscounter = cramfscounter + 1
+			else:
+				## cleanup
+				os.rmdir(tmpdir)
 			offset = fssearch.findCramfs(data, offset+1)
 		if len(diroffsets) == 0:
 			os.rmdir(tmpdir)
