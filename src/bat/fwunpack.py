@@ -72,7 +72,11 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[]):
         if tempdir == None:
                	tmpdir = tempfile.mkdtemp()
 	else:
-		tmpdir = tempfile.mkdtemp(dir=tempdir)
+		try:
+			tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "yaffs", 1)
+			os.makedirs(tmpdir)
+		except Exception, e:
+			tmpdir = tempfile.mkdtemp(dir=tempdir)
 	p = subprocess.Popen(['unyaffs', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
@@ -900,6 +904,7 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[]):
 		return ([], blacklist)
 	else:
 		diroffsets = []
+		bzip2counter = 1
 		while(offset != -1):
 			blacklistoffset = inblacklist(offset, blacklist)
 			if blacklistoffset != None:
@@ -909,10 +914,15 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[]):
 			if tempdir == None:
 				tmpdir = tempfile.mkdtemp()
 			else:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+				try:
+					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "bzip2", bzip2counter)
+					os.makedirs(tmpdir)
+				except Exception, e:
+					tmpdir = tempfile.mkdtemp(dir=tempdir)
 			res = unpackBzip2(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
+				bzip2counter = bzip2counter + 1
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
@@ -1168,6 +1178,7 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[]):
 		return ([], blacklist)
 	else:
 		diroffsets = []
+		rpmcounter = 1
 		while(offset != -1):
 			blacklistoffset = inblacklist(offset, blacklist)
 			if blacklistoffset != None:
@@ -1177,10 +1188,15 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[]):
         		if tempdir == None:
         	       		tmpdir = tempfile.mkdtemp()
 			else:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+				try:
+					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "rpm", rpmcounter)
+					os.makedirs(tmpdir)
+				except Exception, e:
+					tmpdir = tempfile.mkdtemp(dir=tempdir)
 			res = unpackRPM(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
+				rpmcounter = rpmcounter + 1
 				## determine which compression is used, so we can
 				## find the right offset. Code from the RPM examples
 				tset = rpm.TransactionSet()
@@ -1216,6 +1232,7 @@ def searchUnpackUbifs(filename, tempdir=None, blacklist=[]):
 		return ([], blacklist)
 	else:
 		diroffsets = []
+		ubicounter = 1
 		while(offset != -1):
 			blacklistoffset = inblacklist(offset, blacklist)
 			if blacklistoffset != None:
@@ -1225,12 +1242,17 @@ def searchUnpackUbifs(filename, tempdir=None, blacklist=[]):
         		if tempdir == None:
         	       		tmpdir = tempfile.mkdtemp()
 			else:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+				try:
+					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "ubifs", ubicounter)
+					os.makedirs(tmpdir)
+				except Exception, e:
+					tmpdir = tempfile.mkdtemp(dir=tempdir)
 			res = unpackUbifs(data, offset, tmpdir)
 			if res != None:
 				(ubitmpdir, ubisize) = res
 				diroffsets.append((ubitmpdir, offset))
 				offset = fssearch.findUbifs(data, offset+ubisize)
+				ubicounter = ubicounter + 1
 			else:
 				offset = fssearch.findUbifs(data, offset+1)
 		if len(diroffsets) == 0:
