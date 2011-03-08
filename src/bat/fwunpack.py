@@ -43,7 +43,11 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[]):
         		if tempdir == None:
         		       	tmpdir = tempfile.mkdtemp()
 			else:
-				tmpdir = tempdir
+				try:
+					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "tar", 1)
+					os.makedirs(tmpdir)
+				except Exception, e:
+					tmpdir = tempfile.mkdtemp(dir=tempdir)
 			tar = tarfile.open(filename, 'r')
                 	tartmpdir = tempfile.mkdtemp(dir=tmpdir)
 			tar.extractall(path=tartmpdir)
