@@ -671,7 +671,7 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[]):
 					os.makedirs(tmpdir)
 				except Exception, e:
 					tmpdir = tempfile.mkdtemp(dir=tempdir)
-			retval = unpackSquashfs(data, offset, tmpdir)
+			retval = unpackSquashfsWrapper(data, offset, tmpdir)
 			if retval != None:
 				(res, squashsize) = retval
 				diroffsets.append((res, offset))
@@ -684,7 +684,20 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[]):
 				offset = fssearch.findSquashfs(data, offset+1)
 		return (diroffsets, blacklist)
 
-## tries to unpack stuff using unsquashfs. If it is successful, it will
+## wrapper around all the different squashfs types
+def unpackSquashfsWrapper(data, offset, tempdir=None):
+	retval = unpackSquashfs(data, offset, tempdir)
+	if retval != None:
+		return retval
+	'''
+	else:
+		retval = unpackSquashfsBroadcomLZMA(data,offset,tempdir)
+		if retval != None:
+			return retval
+	'''
+	return None
+
+## tries to unpack stuff using 'normal' unsquashfs. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
 def unpackSquashfs(data, offset, tempdir=None):
         if tempdir == None:
@@ -725,9 +738,39 @@ def unpackSquashfs(data, offset, tempdir=None):
 		p = subprocess.Popen(['file', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
+			os.fdopen(tmpfile[0]).close()
+			os.unlink(tmpfile[1])
+			if tempdir == None:
+				os.rmdir(tmpdir)
 			return None
 		else:
 			squashsize = int(re.search(", (\d+) bytes", stanout).groups()[0])
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		return (tmpdir, squashsize)
+
+def unpackSquashfsBroadcomLZMA(data, offset, tempdir=None):
+        if tempdir == None:
+                tmpdir = tempfile.mkdtemp()
+	else:
+		tmpdir = tempdir
+	## since unsquashfs can't deal with data via stdin first write it to
+	## a temporary location
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.write(tmpfile[0], data[offset:])
+
+	## this is just a temporary path for now
+	p = subprocess.Popen(['/home/armijn/gpltool/trunk/external/squashfs-broadcom/unsquashfs', '-d', tmpdir, '-f', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	else:
+		## unlike with 'normal' squashfs we can't use 'file' to determine the size
+		squashsize = 1
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		return (tmpdir, squashsize)

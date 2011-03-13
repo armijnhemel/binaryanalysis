@@ -1,3 +1,7 @@
+2011-03-14
+* introduce wrapper for squashfs, so we can easily add other squashfs
+unpackers too, plus fix some cleanup bugs for unpackSquashfs
+
 2011-03-13
 * add PNG unpacking
 * fix tempdirs for ext2 unpacking
