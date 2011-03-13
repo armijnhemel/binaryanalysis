@@ -39,6 +39,7 @@ fsmagic = {
             'ext2':             '\x53\xef',        # little endian
             'arj':              '\x60\xea',
             'cab':              'MSCF',
+            'png':              '\x89PNG\x0d\x0a\x1a\x0a',
           }
 
 squashtypes = ['squashfs-le', 'squashfs-be', 'squashfs-le-lzma', 'squashfs-be-lzma']
