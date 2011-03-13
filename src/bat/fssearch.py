@@ -24,11 +24,7 @@ def findSquashfs(data, offset=0):
 			marker = sqshmarker
 		else:
 			marker = min(marker, sqshmarker)
-		if t == "squashfs-le" or t == "squashfs-be":
-			squashtype = "gzip"
-		else:
-			squashtype = None
-	return (marker, squashtype)
+	return marker
 
 def findMarker(marker, data, offset=0):
 	return data.find(marker, offset)
