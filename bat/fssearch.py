@@ -101,6 +101,12 @@ def findCab(data, offset=0):
 def findPNG(data, offset=0):
 	return findType('png', data, offset)
 
+def findPNGTrailer(data, offset=0):
+	res = findMarker('IEND', data, offset)
+	if res != -1:
+		return res
+	return -1
+
 def findJFIF(data, offset=0):
 	jfifmarker = data.find('JFIF', offset)
 	if jfifmarker < 6:

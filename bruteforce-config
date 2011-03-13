@@ -62,6 +62,13 @@ method  = searchUnpackGIF
 magic   = gif
 priority = 0
 
+[png]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackPNG
+magic   = png
+priority = 0
+
 [zip]
 type    = unpack
 module  = bat.fwunpack
