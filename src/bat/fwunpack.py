@@ -675,12 +675,13 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[]):
 			if retval != None:
 				(res, squashsize) = retval
 				diroffsets.append((res, offset))
-				blacklist.append((offset,squashsize))
+				blacklist.append((offset,offset+squashsize))
 				squashcounter = squashcounter + 1
+				(offset, squashtype) = fssearch.findSquashfs(data, offset+squashsize)
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
-			(offset, squashtype) = fssearch.findSquashfs(data, offset+1)
+				(offset, squashtype) = fssearch.findSquashfs(data, offset+1)
 		return (diroffsets, blacklist)
 
 ## tries to unpack stuff using unsquashfs. If it is successful, it will
