@@ -98,6 +98,9 @@ def findARJ(data, offset=0):
 def findCab(data, offset=0):
 	return findType('cab', data, offset)
 
+def findPNG(data, offset=0):
+	return findType('png', data, offset)
+
 def findJFIF(data, offset=0):
 	jfifmarker = data.find('JFIF', offset)
 	if jfifmarker < 6:

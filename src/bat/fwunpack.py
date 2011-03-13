@@ -1466,6 +1466,9 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[]):
 	#print fssearch.findJFIF(data,0)
 	return ([], blacklist)
 
+def searchUnpackPNG(filename, tempdir=None, blacklist=[]):
+	return ([],blacklist)
+
 ## EXIF is (often) prepended to the actual image data
 ## Having access to EXIF data can also (perhaps) get us useful data
 def searchUnpackEXIF(filename, tempdir=None, blacklist=[]):
