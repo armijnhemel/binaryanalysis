@@ -650,7 +650,7 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[]):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
-	(offset, squashtype) = fssearch.findSquashfs(data)
+	offset = fssearch.findSquashfs(data)
 	if offset == -1:
 		return ([], blacklist)
 	else:
@@ -660,7 +660,7 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[]):
 			## check if the offset we find is in a blacklist
 			blacklistoffset = extractor.inblacklist(offset, blacklist)
 			if blacklistoffset != None:
-				(offset, squashtype) = fssearch.findSquashfs(data, blacklistoffset)
+				offset = fssearch.findSquashfs(data, blacklistoffset)
 			if offset == -1:
 				break
         		if tempdir == None:
@@ -677,11 +677,11 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[]):
 				diroffsets.append((res, offset))
 				blacklist.append((offset,offset+squashsize))
 				squashcounter = squashcounter + 1
-				(offset, squashtype) = fssearch.findSquashfs(data, offset+squashsize)
+				offset = fssearch.findSquashfs(data, offset+squashsize)
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
-				(offset, squashtype) = fssearch.findSquashfs(data, offset+1)
+				offset = fssearch.findSquashfs(data, offset+1)
 		return (diroffsets, blacklist)
 
 ## tries to unpack stuff using unsquashfs. If it is successful, it will
