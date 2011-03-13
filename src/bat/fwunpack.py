@@ -1466,8 +1466,79 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[]):
 	#print fssearch.findJFIF(data,0)
 	return ([], blacklist)
 
+## PNG extraction is similar to GIF extraction, except there is a way better
+## defined trailer.
 def searchUnpackPNG(filename, tempdir=None, blacklist=[]):
-	return ([],blacklist)
+	datafile = open(filename, 'rb')
+	data = datafile.read()
+	datafile.close()
+	header = fssearch.findPNG(data)
+	if header == -1:
+		return ([], blacklist)
+	trailer = fssearch.findPNGTrailer(data, header)
+	if trailer == -1:
+		return ([], blacklist)
+	traileroffsets = []
+	traileroffsets.append(trailer)
+	while(trailer != -1):
+		trailer = fssearch.findPNGTrailer(data,trailer+1)
+		if trailer != -1:
+			traileroffsets.append(trailer)
+	headeroffsets = []
+	headeroffsets.append(header)
+	while (header != -1):
+		header = fssearch.findPNG(data, header+1)
+		if header != -1:
+			headeroffsets.append(header)
+	diroffsets = []
+	pngcounter = 1
+	for i in range (0,len(headeroffsets)):
+		offset = headeroffsets[i]
+		if i < len(headeroffsets) - 1:
+			nextoffset = headeroffsets[i+1]
+		else:
+			nextoffset = len(data)
+		## first check if we're not blacklisted for the offset
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		for trail in traileroffsets:
+			if trail <= offset:
+				continue
+			if trail >= nextoffset:
+				break
+			## check if we're not blacklisted for the trailer
+			blacklistoffset = extractor.inblacklist(trail, blacklist)
+			if blacklistoffset != None:
+				continue
+        		if tempdir == None:
+        	       		tmpdir = tempfile.mkdtemp()
+			else:
+				try:
+					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "png", pngcounter)
+					os.makedirs(tmpdir)
+				except Exception, e:
+					tmpdir = tempfile.mkdtemp(dir=tempdir)
+				tmpfile = tempfile.mkstemp(dir=tmpdir)
+				os.write(tmpfile[0], data[offset:trail+8])
+				p = subprocess.Popen(['webpng', '-d', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+				(stanout, stanerr) = p.communicate()
+				if p.returncode != 0:
+					os.fdopen(tmpfile[0]).close()
+					os.unlink(tmpfile[1])
+					os.rmdir(tmpdir)
+				else:
+					os.fdopen(tmpfile[0]).close()
+					## basically we have a copy of the original
+					## image here, so why bother?
+					if offset == 0 and trail == len(data) - 8:
+						os.unlink(tmpfile[1])
+						os.rmdir(tmpdir)
+					else:
+						diroffsets.append((tmpdir, offset))
+						pngcounter = pngcounter + 1
+						break
+	return (diroffsets, blacklist)
 
 ## EXIF is (often) prepended to the actual image data
 ## Having access to EXIF data can also (perhaps) get us useful data

@@ -1,3 +1,6 @@
+2011-03-13
+* add PNG unpacking
+
 2011-03-06
 * rework leaf scans to properly use blacklisting
 * reenable ext2fs scanning
