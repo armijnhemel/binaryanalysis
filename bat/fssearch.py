@@ -101,6 +101,7 @@ def findCab(data, offset=0):
 def findPNG(data, offset=0):
 	return findType('png', data, offset)
 
+## http://www.w3.org/TR/PNG-Chunks.html
 def findPNGTrailer(data, offset=0):
 	res = findMarker('IEND', data, offset)
 	if res != -1:
