@@ -1,9 +1,0 @@
-This directory contains several packages, that are packaged for use with BAT. They are either slightly modified by the authors of BAT, or are lifted from GPL source code releases from devices, or firmware replacement projects.
-
-They are completely separate from BAT and are not under the same license as BAT.
-
-Included are:
-
-* cramfs - a version of cramfs that can unpack cramfs (the standard version of Fedora can't) and which does not require root privileges
-* squashfs-broadcom - a version of squashfs with LZMA compression that is used on devices that are based on certain Broadcom chipsets
-* squashfs-openwrt - a different version of squashfs with LZMA compression that is used on devices that run OpenWrt derived distributions. Can sometimes also be used for different distributions.

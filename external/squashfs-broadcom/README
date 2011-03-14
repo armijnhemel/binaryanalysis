@@ -1,7 +1,0 @@
-This source code is a modified version of the source code that can be found in GPL code archive of the the Belkin Share router.
-
-Compared to the sources there the following has changed:
-
-* obtained sqlzma.c and sqlzma.h from Broadcom under a GPL compatible license (standard in newer source code releases)
-* reorganised Makefile
-* changed include path for squashfs_fs.h in various files
