@@ -626,7 +626,7 @@ def unpackCramfs(data, offset, tempdir=None):
 
 	## right now this is a path to a specially adapted fsck.cramfs that ignores special inodes
 	## create a new path to unpack all stuff
-	p = subprocess.Popen(['/tmp/fsck.cramfs', '-x', tmpdir2 + "/cramfs", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	p = subprocess.Popen(['bat-fsck.cramfs', '-x', tmpdir2 + "/cramfs", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.fdopen(tmpfile[0]).close()
