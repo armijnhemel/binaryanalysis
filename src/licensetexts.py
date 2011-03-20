@@ -12,6 +12,8 @@ from optparse import OptionParser
 Use Ninka to extract a license text from source code on a per file basis.
 If no license text is found in a source file we let Ninka search for clues in
 files like LICENSE, COPYING, and so on.
+
+TODO: add the FOSSology scanner if Ninka returns no result.
 '''
 
 def gethash(path, file):
@@ -86,7 +88,7 @@ def ninka(srcdir, sqldb, package, version):
 			'''
 			for p in i[2]:
 				p_nocase = p.lower()
-				if not (p_nocase.endswith('.c') or p_nocase.endswith('.h') or p_nocase.endswith('.cpp') or p_nocase.endswith('.cc') or p_nocase.endswith('.hh')):
+				if p_nocase.endswith('.c') or p_nocase.endswith('.h') or p_nocase.endswith('.cpp') or p_nocase.endswith('.cc') or p_nocase.endswith('.hh') or p_nocase.endswith('.cxx') or p_nocase.endswith('.c++') or p_nocase.endswith('.hpp') or p_nocase.endswith('.hxx'):
 					continue
 				## we can't determine the license of an empty file
 				if os.stat("%s/%s" % (i[0], p)).st_size == 0:
@@ -99,7 +101,6 @@ def ninka(srcdir, sqldb, package, version):
 		pass
 	return ninkares
 
-## TODO: add nice configuration options so we can remove the hardcoded stuff
 def main(argv):
 	parser = OptionParser()
 	parser.add_option("-d", "--database", action="store", dest="db", help="path to database)", metavar="FILE")
