@@ -5,7 +5,7 @@
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 import sys, os, os.path, sqlite3, magic, subprocess
-import tempfile, bz2, tarfile, gzip, hashlib
+import tempfile, bz2, tarfile, gzip, hashlib, shutil
 from optparse import OptionParser
 
 '''
@@ -71,9 +71,8 @@ def ninka(srcdir, sqldb, package, version):
 
 	osgen = os.walk(srcdir)
 
-	## for each file run Ninka. Just print the result on stdout.
-	## Should we just look at the licenses for C/C++ source and
-	## header files?
+	## for each file run Ninka. Results are put in a database.
+	## For now we only loo at C/C++ source code and header files.
 	try:
 		while True:
 			i = osgen.next()
@@ -97,8 +96,7 @@ def ninka(srcdir, sqldb, package, version):
 				(stanout, stanerr) = p1.communicate()
 				ninkares.append((i[0][srcdirlen:], p, stanout.strip(), gethash(i[0], p)))
 	except Exception, e:
-		#print e
-		pass
+		print >>sys.stderr, e
 	return ninkares
 
 def main(argv):
@@ -131,7 +129,6 @@ def main(argv):
 		(package, version, filename) = unpackfile.split()
 		tmpdir = unpack(options.filedir, filename)
 		ninkares = ninka(tmpdir, c, package, version)
-		## TODO process output from ninka
 		for res in ninkares:
 			(topleveldir, filename, ninkascan, sha256) =  res
 			c.execute('''insert into files (filename, sha256, package, version) values (?,?,?,?)''', ("%s/%s" % (topleveldir, filename), sha256, package, version))
@@ -148,6 +145,8 @@ def main(argv):
 				for license in licenses:
 					c.execute('''insert into licenses (sha256, license) values (?,?)''', (sha256, license))
 			conn.commit()
+		## cleanup
+		shutil.rmtree(tmpdir)
 
 if __name__ == "__main__":
 	main(sys.argv)
