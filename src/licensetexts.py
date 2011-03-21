@@ -67,7 +67,7 @@ def ninka(srcdir, sqldb, package, version):
 	ninkaenv['PATH'] = ninkaenv['PATH'] + ":/tmp/dmgerman-ninka-7a9a5c4/comments/comments"
         srcdirlen = len(srcdir)+1
 	ninkares = []
-	start = True
+	recordstart = True
 
 	osgen = os.walk(srcdir)
 
@@ -76,18 +76,20 @@ def ninka(srcdir, sqldb, package, version):
 	try:
 		while True:
 			i = osgen.next()
-			'''
-			if start:
+			## determine if we want to record the first component of the path
+			## Most programs include a top level directory like:
+			## packagename-version/
+			## or:
+			## packagename-version/
+			if recordstart:
 				## only check if we have one top level directory
 				if len(i[1]) == 1:
-					print package, version, packageinpath(package, version, i[1][0])
 					if packageinpath(package, version, i[1][0]):
 						srcdirlen = srcdirlen + len("%s-%s/" % (package, version))
-				start = False
-			'''
+				recordstart = False
 			for p in i[2]:
 				p_nocase = p.lower()
-				if p_nocase.endswith('.c') or p_nocase.endswith('.h') or p_nocase.endswith('.cpp') or p_nocase.endswith('.cc') or p_nocase.endswith('.hh') or p_nocase.endswith('.cxx') or p_nocase.endswith('.c++') or p_nocase.endswith('.hpp') or p_nocase.endswith('.hxx'):
+				if not (p_nocase.endswith('.c') or p_nocase.endswith('.h') or p_nocase.endswith('.cpp') or p_nocase.endswith('.cc') or p_nocase.endswith('.hh') or p_nocase.endswith('.cxx') or p_nocase.endswith('.c++') or p_nocase.endswith('.hpp') or p_nocase.endswith('.hxx')):
 					continue
 				## we can't determine the license of an empty file
 				if os.stat("%s/%s" % (i[0], p)).st_size == 0:
