@@ -137,10 +137,10 @@ def analyseModuleLicense(path, blacklist=[]):
 	if not "relocatable" in ms.file(path):
 		return None
 	p = subprocess.Popen(['/sbin/modinfo', "-F", "license", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-        (stanuit, stanerr) = p.communicate()
+        (stanout, stanerr) = p.communicate()
         if p.returncode != 0:
                 return None
-	if stanuit == "":
+	if stanout == "":
 		return None
         else:
-                return stanuit.strip()
+                return stanout.strip()
