@@ -749,6 +749,44 @@ def unpackSquashfs(data, offset, tempdir=None):
 		os.unlink(tmpfile[1])
 		return (tmpdir, squashsize)
 
+## squashfs variant from OpenWrt, with LZMA
+def unpackSquashfsOpenWrtLZMA(data, offset, tempdir=None):
+        if tempdir == None:
+                tmpdir = tempfile.mkdtemp()
+	else:
+		tmpdir = tempdir
+	## since unsquashfs can't deal with data via stdin first write it to
+	## a temporary location
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.write(tmpfile[0], data[offset:])
+
+	## this is just a temporary path for now
+	p = subprocess.Popen(['/home/armijn/gpltool/trunk/external/squashfs-openwrt/unsquashfs-lzma', '-d', tmpdir, '-f', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	else:
+		## like with 'normal' squashfs we can use 'file' to determine the size
+		squashsize = 0
+		p = subprocess.Popen(['file', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			os.fdopen(tmpfile[0]).close()
+			os.unlink(tmpfile[1])
+			if tempdir == None:
+				os.rmdir(tmpdir)
+			return None
+		else:
+			squashsize = int(re.search(", (\d+) bytes", stanout).groups()[0])
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		return (tmpdir, squashsize)
+
+## squashfs variant from Broadcom, with LZMA
 def unpackSquashfsBroadcomLZMA(data, offset, tempdir=None):
         if tempdir == None:
                 tmpdir = tempfile.mkdtemp()

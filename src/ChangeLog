@@ -1,5 +1,6 @@
 2011-03-26
 * add proper ext2 unpacking
+* add unpacking with unsquashfs with LZMA from OpenWrt
 
 2011-03-14
 * introduce wrapper for squashfs, so we can easily add other squashfs
