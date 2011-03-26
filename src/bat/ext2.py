@@ -43,7 +43,7 @@ def readfiles(source, fspath):
 	p = subprocess.Popen(['e2ls', '-l', source + ":" + fspath], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         (stanout, stanerr) = p.communicate()
         if p.returncode != 0:
-		return files
+		return (dirs, files)
 	for i in stanout.strip().split("\n"):
 		if i.startswith(">"):
 			continue

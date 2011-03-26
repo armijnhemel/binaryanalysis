@@ -1,3 +1,6 @@
+2011-03-26
+* add proper ext2 unpacking
+
 2011-03-14
 * introduce wrapper for squashfs, so we can easily add other squashfs
 unpackers too, plus fix some cleanup bugs for unpackSquashfs

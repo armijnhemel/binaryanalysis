@@ -20,7 +20,7 @@ suck in the data once in the unpack part.
 
 import sys, os, subprocess, os.path
 import tempfile, bz2, re, magic, tarfile
-import fsmagic, fssearch, extractor
+import fsmagic, fssearch, extractor, ext2
 import rpm
 
 ## TODO: rewrite this to like how we do other searches: first
@@ -807,36 +807,48 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[]):
 					os.makedirs(tmpdir)
 				except Exception, e:
 					tmpdir = tempfile.mkdtemp(dir=tempdir)
-			## unpack data here
 			## we should actually scan the data starting from offset - 0x438
-			p = subprocess.Popen(['tune2fs', '-l', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-			(stanout, stanerr) = p.communicate()
-			if p.returncode == 0:
-				if len(stanerr) == 0:
-					blockcount = 0
-					blocksize = 0
-					## we want block count and block size
-					for line in stanout.split("\n"):
-						if 'Block count' in line:
-							blockcount = int(line.split(":")[1].strip())
-						if 'Block size' in line:
-							blocksize = int(line.split(":")[1].strip())
-					blacklist.append((offset - 0x438, offset - 0x438 + blockcount * blocksize))
-					ext2counter = ext2counter + 1
+			res = unpackExt2fs(data, offset - 0x438, tmpdir)
+			if res != None:
+				diroffsets.append((res, offset - 0x438))
+				p = subprocess.Popen(['tune2fs', '-l', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+				(stanout, stanerr) = p.communicate()
+				if p.returncode == 0:
+					if len(stanerr) == 0:
+						blockcount = 0
+						blocksize = 0
+						## we want block count and block size
+						for line in stanout.split("\n"):
+							if 'Block count' in line:
+								blockcount = int(line.split(":")[1].strip())
+							if 'Block size' in line:
+								blocksize = int(line.split(":")[1].strip())
+						blacklist.append((offset - 0x438, offset - 0x438 + blockcount * blocksize))
+						ext2counter = ext2counter + 1
+					else:
+						os.rmdir(tmpdir)
 				else:
 					os.rmdir(tmpdir)
 			else:
 				os.rmdir(tmpdir)
 			offset = fssearch.findExt2fs(data, offset+1)
+	print diroffsets
 	return (diroffsets, blacklist)
 
-## ideally we would have some code in Python that would analyse and
-## unpack a file system, without having to mount it. This code does
-## not exist as of now. We could use programs from e2tools:
-## http://freshmeat.net/projects/e2tools/
-## but these are very very basic and might be more hassle than we think.
+## Unpack an ext2 file system using e2tools and some custom written code.
 def unpackExt2fs(data, offset, tempdir=None):
-	pass
+	## first unpack things, write things to a file and return
+	## the directory if the file is not empty
+	if tempdir == None:
+		tmpdir = tempfile.mkdtemp()
+	else:
+		tmpdir = tempdir
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.write(tmpfile[0], data[offset:])
+	ext2.copyext2fs(tmpfile[1], tmpdir)
+	os.fdopen(tmpfile[0]).close()
+	os.unlink(tmpfile[1])
+	return tmpdir
 
 ## tries to unpack stuff using zcat. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
