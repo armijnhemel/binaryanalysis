@@ -832,7 +832,6 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[]):
 			else:
 				os.rmdir(tmpdir)
 			offset = fssearch.findExt2fs(data, offset+1)
-	print diroffsets
 	return (diroffsets, blacklist)
 
 ## Unpack an ext2 file system using e2tools and some custom written code.
@@ -1310,18 +1309,16 @@ def searchUnpackUbifs(filename, tempdir=None, blacklist=[]):
 				offset = fssearch.findUbifs(data, offset+ubisize)
 				ubicounter = ubicounter + 1
 			else:
+				## cleanup
+				os.rmdir(tmpdir)
 				offset = fssearch.findUbifs(data, offset+1)
-		if len(diroffsets) == 0:
-			os.rmdir(tmpdir)
 		return (diroffsets, blacklist)
 
 def unpackUbifs(data, offset, tempdir=None):
 	if tempdir == None:
 		tmpdir = tempfile.mkdtemp()
 	else:
-		## since volumes might be called the same we need another
-		## layer of tempdirs
-		tmpdir = tempfile.mkdtemp(dir=tempdir)
+		tmpdir = tempdir
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
 	## use unubi to unpack the data
@@ -1348,6 +1345,10 @@ def unpackUbifs(data, offset, tempdir=None):
 					ubisize = ubisize + os.stat("%s/%s" % (i[0], p)).st_size
         	except StopIteration:
                 	pass
+		if ubisize == 0:
+			if tempdir == None:
+				os.rmdir(tmpdir)
+			return None
 		return (tmpdir, ubisize)
 
 ## unpacking for ARJ. The file format is described at:
