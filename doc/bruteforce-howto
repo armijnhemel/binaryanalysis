@@ -1,6 +1,6 @@
   Brute force scanning
 
-The brute force scanner performs a series of checks on a file or a set of files to determine what is inside. Checks come in two sorts: checks to unpack a file system or compression format and checks that inspect individual files for all sorts of stuff. Reporting, if enabled (the default is to not report anything) is done in XML.
+The brute force scanner performs a series of checks on a file or a set of files to determine what is inside. Checks come in two sorts: checks to unpack a file system or compression format and checks that inspect individual files for all sorts of stuff. Reporting is done in XML.
 
 For the top level file the following is reported:
 
@@ -22,7 +22,7 @@ Per file that is found inside a file system the following is reported:
 * full path within the file system
 * file type (determined with libmagic)
 * sha256sum (not for empty files, symlinks, sockets, pipes)
-* libraries that are linked (if the file is a dynamic library or binary)
+* libraries that are linked (if the file is a dynamic library or binary, in ELF format)
 * size (not for symlinks, sockets, pipes)
 * scan specific reports
 
@@ -39,8 +39,6 @@ method  = extract_version
 type    = unpack
 module  = fwunpack
 method  = unpackGzip
-magic   = gzip
-cleanup = cleanupGzip
 
 Each section defines the checks that we are interested in. If no list is given, then all checks are applied. The list is divided in two parts: unpacking of file systems and compressed files and program specific checks.
 
