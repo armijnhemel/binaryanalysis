@@ -2,7 +2,7 @@ In BAT we use blacklists for a simple reason: we want to be able to prevent some
 
 The most obvious example is the ext2 file system: in a normal setup (no encryption) you can see the content of all the individual files when you open the file system. It might be scattered a bit, or seem like everything is concatenated, but all the data is there. Obviously what we want is to have the ext2 scan unpack the file system and scan all files individually, We therefore need to prevent other scans from running on that file.
 
-At the moment the unpack scans have alreadya 'blacklist', but we will also need it for individual checks, to prevent the BusyBox scan for giving a positive result for an ext2 file system, if it will also give a positive result for the BusyBox binary after unpacking.
+At the moment the unpack scans have already a 'blacklist', but we will also need it for individual checks, to prevent the BusyBox scan for giving a positive result for an ext2 file system, if it will also give a positive result for the BusyBox binary after unpacking.
 
 Other examples are:
 
