@@ -686,14 +686,23 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[]):
 
 ## wrapper around all the different squashfs types
 def unpackSquashfsWrapper(data, offset, tempdir=None):
+	## first try normal Squashfs unpacking
 	retval = unpackSquashfs(data, offset, tempdir)
 	if retval != None:
 		return retval
 	'''
+	## then try other flavours
 	else:
-		retval = unpackSquashfsBroadcomLZMA(data,offset,tempdir)
+		## first OpenWrt variant
+		retval = unpackSquashfsOpenWrtLZMA(data,offset,tempdir)
 		if retval != None:
 			return retval
+
+		else:
+			## then Broadcom variant
+			retval = unpackSquashfsBroadcomLZMA(data,offset,tempdir)
+			if retval != None:
+				return retval
 	'''
 	return None
 
