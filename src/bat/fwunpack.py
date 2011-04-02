@@ -824,7 +824,6 @@ def unpackSquashfsBroadcomLZMA(data, offset, tempdir=None):
 
 ## We use tune2fs to get the size of the file system so we know what to
 ## blacklist.
-## TODO: unpack, plus use tune2fs at the right offset
 ## This method should return a blacklist.
 def searchUnpackExt2fs(filename, tempdir=None, blacklist=[]):
 	datafile = open(filename, 'rb')
@@ -881,7 +880,7 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[]):
 			offset = fssearch.findExt2fs(data, offset+1)
 	return (diroffsets, blacklist)
 
-## Unpack an ext2 file system using e2tools and some custom written code.
+## Unpack an ext2 file system using e2tools and some custom written code from our own ext2 module
 def unpackExt2fs(data, offset, tempdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
