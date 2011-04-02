@@ -2,7 +2,7 @@
 ## Copyright 2009-2011 Armijn Hemel for LOCO (LOOHUIS CONSULTING)
 ## Licensed under Apache 2.0, see LICENSE file for details
 
-import sys, os, subprocess, re, tempfile
+import sys, os, subprocess, tempfile
 
 '''
 Module to 'unpack' an ext2 file system. We are taking a shortcut. We're using
