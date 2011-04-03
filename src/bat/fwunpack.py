@@ -854,9 +854,15 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[]):
 				except Exception, e:
 					tmpdir = tempfile.mkdtemp(dir=tempdir)
 			## we should actually scan the data starting from offset - 0x438
-			res = unpackExt2fs(data, offset - 0x438, tmpdir)
+			if not checkExt2fs(data[offset - 0x438:offset - 0x438 + 4096], 0, tmpdir):
+				os.rmdir(tmpdir)
+				offset = fssearch.findExt2fs(data, offset+1)
+				continue
+			res = unpackExt2fs(data[offset - 0x438:], 0, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset - 0x438))
+				## this needs to be moved to unpackExt2fs, since it fails if 'filename' contains
+				## an ext2 file system, but has data prepended.
 				p = subprocess.Popen(['tune2fs', '-l', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				if p.returncode == 0:
@@ -879,6 +885,27 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[]):
 				os.rmdir(tmpdir)
 			offset = fssearch.findExt2fs(data, offset+1)
 	return (diroffsets, blacklist)
+
+def checkExt2fs(data, offset, tempdir=None):
+	if tempdir == None:
+		tmpdir = tempfile.mkdtemp()
+	else:
+		tmpdir = tempdir
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	## for a quick sanity check we only need a tiny bit of data
+	if len(data[offset:]) >= 4096:
+		os.write(tmpfile[0], data[offset:offset+4096])
+	else:
+		os.write(tmpfile[0], data[offset:])
+	p = subprocess.Popen(['tune2fs', '-l', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		return False
+	os.fdopen(tmpfile[0]).close()
+	os.unlink(tmpfile[1])
+	return True
 
 ## Unpack an ext2 file system using e2tools and some custom written code from our own ext2 module
 def unpackExt2fs(data, offset, tempdir=None):
