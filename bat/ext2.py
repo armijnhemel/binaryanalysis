@@ -44,6 +44,8 @@ def readfiles(source, fspath):
         (stanout, stanerr) = p.communicate()
         if p.returncode != 0:
 		return (dirs, files)
+	if stanout.strip() == "No files found!":
+		return (dirs, files)
 	for i in stanout.strip().split("\n"):
 		if i.startswith(">"):
 			continue
