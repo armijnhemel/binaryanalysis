@@ -860,7 +860,8 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[]):
 				continue
 			res = unpackExt2fs(data[offset - 0x438:], 0, tmpdir)
 			if res != None:
-				diroffsets.append((res, offset - 0x438))
+				(ext2tmpdir, ext2size) = res
+				diroffsets.append((ext2tmpdir, offset - 0x438))
 				## this needs to be moved to unpackExt2fs, since it fails if 'filename' contains
 				## an ext2 file system, but has data prepended.
 				p = subprocess.Popen(['tune2fs', '-l', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -920,7 +921,8 @@ def unpackExt2fs(data, offset, tempdir=None):
 	ext2.copyext2fs(tmpfile[1], tmpdir)
 	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
-	return tmpdir
+	ext2size = 0
+	return (tmpdir, ext2size)
 
 ## tries to unpack stuff using zcat. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
