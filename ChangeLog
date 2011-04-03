@@ -1,3 +1,6 @@
+2011-04-03
+* add extra ext2 sanity checks to vastly speed up scanning
+
 2011-03-26
 * add proper ext2 unpacking
 * add unpacking with unsquashfs with LZMA from OpenWrt
