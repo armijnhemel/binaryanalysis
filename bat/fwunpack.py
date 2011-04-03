@@ -1641,7 +1641,7 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[]):
 					if offset == 0 and trail == len(data) - 8:
 						os.unlink(tmpfile[1])
 						os.rmdir(tmpdir)
-						blacklist.append((0,len(data))
+						blacklist.append((0,len(data)))
 					else:
 						diroffsets.append((tmpdir, offset))
 						pngcounter = pngcounter + 1
