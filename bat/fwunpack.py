@@ -205,6 +205,9 @@ def searchUnpackCab(filename, tempdir=None, blacklist=[]):
 				offset = fssearch.findCab(data, offset+1)
 	return (diroffsets, blacklist)
 
+## This method will not work when the CAB is embedded in a bigger file, such as
+## a MINIX file system. We need to use more data from the metadata and perhaps
+## adjust for certificates.
 def unpackCab(data, offset, tempdir=None):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
