@@ -49,13 +49,12 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[]):
 				except Exception, e:
 					tmpdir = tempfile.mkdtemp(dir=tempdir)
 			tar = tarfile.open(filename, 'r')
-                	tartmpdir = tempfile.mkdtemp(dir=tmpdir)
-			tar.extractall(path=tartmpdir)
+			tar.extractall(path=tmpdir)
 			for t in tar:
 				tarsize = tarsize + t.size
 			tar.close()
 			blacklist.append((0,tarsize))
-			return ([(tartmpdir, 0)], blacklist)
+			return ([(tmpdir, 0)], blacklist)
 	return ([], blacklist)
 
 ## yaffs2 is used frequently in Android and various mediaplayers based on
@@ -367,7 +366,7 @@ def unpackLzip(data, offset, tempdir=None):
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
-		return None
+		return (None, None)
 	## determine the size of the archive we unpacked, so we can skip a lot
 	p = subprocess.Popen(['lzip', '-vvvt', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
@@ -379,7 +378,7 @@ def unpackLzip(data, offset, tempdir=None):
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
-		return None
+		return (None, None)
 	lzipsize = int(re.search("member size\s+(\d+)", stanerr).groups()[0])
 	os.fdopen(outtmpfile[0]).close()
 	os.fdopen(tmpfile[0]).close()
