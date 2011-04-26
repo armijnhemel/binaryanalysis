@@ -1511,10 +1511,20 @@ def unpackARJ(data, offset, tempdir=None):
 	return (tmpdir, arjsize)
 
 ###
+## The scan below is to specifically analyse a Windows installers and extract
+## the XML that can usually be found in those installers. Based on that
+## information we will
+##
+###
+
+###
 ## The scans below are scans that are used to extract files from bigger binary
 ## blobs, but they should not be recursively applied to their own results,
 ## because that results in endless loops.
 ###
+
+def searchUnpackAssembly(filename, tempdir = None, blacklist=[]):
+	return ([], blacklist)
 
 ## http://en.wikipedia.org/wiki/Graphics_Interchange_Format
 ## 1. search for a GIF header
