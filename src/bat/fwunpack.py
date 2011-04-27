@@ -21,11 +21,11 @@ suck in the data once in the unpack part.
 import sys, os, subprocess, os.path
 import tempfile, bz2, re, magic, tarfile
 import fsmagic, fssearch, extractor, ext2
+from xml.dom import minidom
 import rpm
 
 ## TODO: rewrite this to like how we do other searches: first
 ## look for markers, then unpack.
-## This method should return a blacklist.
 def searchUnpackTar(filename, tempdir=None, blacklist=[]):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
@@ -489,7 +489,6 @@ def unpackXZ(data, offset, trailer, tempdir=None):
 
 ## Not sure how cpio works if we have a cpio archive within a cpio archive
 ## especially with regards to locating the proper cpio trailer.
-## This method should return a blacklist.
 def searchUnpackCpio(filename, tempdir=None, blacklist=[]):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
@@ -574,7 +573,6 @@ def unpackCpio(data, offset, tempdir=None):
 	(stanout, stanerr) = p.communicate(data[offset:])
 	return tmpdir
 
-## This method should return a blacklist.
 def searchUnpackCramfs(filename, tempdir=None, blacklist=[]):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
@@ -826,7 +824,6 @@ def unpackSquashfsBroadcomLZMA(data, offset, tempdir=None):
 
 ## We use tune2fs to get the size of the file system so we know what to
 ## blacklist.
-## This method should return a blacklist.
 def searchUnpackExt2fs(filename, tempdir=None, blacklist=[]):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
@@ -1300,7 +1297,6 @@ def unpackRPM(data, offset, tempdir=None):
 ## RPM is basically a header, plus some compressed files, so we are getting
 ## duplicates at the moment. We can defeat this easily by setting the blacklist
 ## upperbound to the start of compression.
-## This method should return a blacklist.
 def searchUnpackRPM(filename, tempdir=None, blacklist=[]):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
@@ -1352,7 +1348,6 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[]):
 ## file system by using ubifs we will have to use a different measurement to
 ## measure the size of ubifs. A good start is the sum of the size of the
 ## volumes that were unpacked.
-## This method should return a blacklist.
 def searchUnpackUbifs(filename, tempdir=None, blacklist=[]):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
@@ -1511,20 +1506,50 @@ def unpackARJ(data, offset, tempdir=None):
 	return (tmpdir, arjsize)
 
 ###
-## The scan below is to specifically analyse a Windows installers and extract
-## the XML that can usually be found in those installers. Based on that
-## information we will
-##
+## The helper method below is to specifically analyse Microsoft Windows binaries
+## and extract the XML that can usually be found in those installers. Based on
+## that information we might be able to get a better scan, since many well
+## known installers have default values for the descriptive strings
 ###
+
+## 1. search '<?xml'
+## 2. search for '<assembly' open tag
+## 3. search for </assembly> close tag
+## 4. see if there is no junk in between (using XML parsing)
+## 5. extract information from the assembly, such info from <assemblyIdentity>
+##    like architecture and the packager that was used to pack and information
+##    about dependencies
+## 6. repeat (there might be more than one XML assembly file included)
+def searchAssembly(filename):
+	datafile = open(filename, 'rb')
+	data = datafile.read()
+	datafile.close()
+	xmloffset = data.find('<?xml')
+	if xmloffset == -1:
+		return None
+	offset = data.find('<assembly', xmloffset)
+	if offset == -1:
+		return None
+	traileroffset = data.find('</assembly>', offset)
+	if traileroffset == -1:
+		return None
+	assembly = data[xmloffset:traileroffset + 11]
+	try:
+		dom = minidom.parseString(assembly)
+		assemblyNodes = dom.getElementsByTagName('assembly')
+		if len(assemblyNodes) != 1:
+			return None
+		else:
+			assemblyId = assemblyNodes[0].getElementsByTagName('assemblyIdentity')
+	except:
+		return None
+	return None
 
 ###
 ## The scans below are scans that are used to extract files from bigger binary
 ## blobs, but they should not be recursively applied to their own results,
 ## because that results in endless loops.
 ###
-
-def searchUnpackAssembly(filename, tempdir = None, blacklist=[]):
-	return ([], blacklist)
 
 ## http://en.wikipedia.org/wiki/Graphics_Interchange_Format
 ## 1. search for a GIF header
