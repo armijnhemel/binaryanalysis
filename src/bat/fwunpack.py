@@ -111,6 +111,9 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[]):
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
+	assembly = searchAssembly(data)
+	if assembly != None:
+		pass
 	## first search for ZIP. Do this by searching for:
 	## * PKBAC (seems to give the best results)
 	## * WinZip Self-Extractor
@@ -1519,11 +1522,12 @@ def unpackARJ(data, offset, tempdir=None):
 ## 5. extract information from the assembly, such info from <assemblyIdentity>
 ##    like architecture and the packager that was used to pack and information
 ##    about dependencies
-## 6. repeat (there might be more than one XML assembly file included)
-def searchAssembly(filename):
-	datafile = open(filename, 'rb')
-	data = datafile.read()
-	datafile.close()
+## 6. repeat, because there might be more than one XML assembly file included
+##    (ignored for now)
+## Returns a tuple with:
+## * hash with name, version, architecture, platform
+## * list of dependencies
+def searchAssembly(data):
 	xmloffset = data.find('<?xml')
 	if xmloffset == -1:
 		return None
@@ -1540,8 +1544,22 @@ def searchAssembly(filename):
 		if len(assemblyNodes) != 1:
 			return None
 		else:
-			assemblyId = assemblyNodes[0].getElementsByTagName('assemblyIdentity')
-	except:
+			deps = []
+			assemblyattrs = {}
+			for ch in assemblyNodes[0].childNodes:
+				if ch.localName == "assemblyIdentity":
+					for attr in xrange(0, ch.attributes.length):
+						assemblyattrs[ch.attributes.item(attr).name] = ch.attributes.item(attr).value
+				if ch.localName == "dependency":
+					assemblyId = ch.getElementsByTagName('assemblyIdentity')
+					for assembly in assemblyId:
+						depsattrs = {}
+						for attr in xrange(0, assembly.attributes.length):
+							depsattrs[assembly.attributes.item(attr).name] = assembly.attributes.item(attr).value
+						deps.append(depsattrs)
+				
+			return (assemblyattrs, deps)
+	except Exception, e:
 		return None
 	return None
 

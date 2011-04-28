@@ -1,3 +1,7 @@
+2011-04-28
+* partially integrate preliminary support for extracted assemblies for
+installers for Microsoft Windows
+
 2011-04-27
 * start on extracting XML descriptions from Windows installers so we can make
 better guesses as to which program to use to unpack the data
