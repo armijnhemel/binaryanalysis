@@ -8,11 +8,8 @@ import sys, os
 import tempfile
 import fsmagic
 
-# find a squashfs file system, starting at a certain offset
-# Returns the offset of the file system. If a firmware contains
-# multiple squashfs file systems it should be applied multiple times
-## TODO: possibly use findAll() to return all the possible instances
-## so we don't have to keep searching the data.
+# Find a squashfs file system, starting at a certain offset.
+# Returns the offset of the file system nearest file system.
 def findSquashfs(data, offset=0):
 	marker = -1
 	squashtype = None
