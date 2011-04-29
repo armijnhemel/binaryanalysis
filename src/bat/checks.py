@@ -11,7 +11,7 @@ proof and false positives are likely, so either check the results, or replace
 it with your own more robust checks.
 '''
 
-import string, re, os
+import string, re, os, magic
 import extractor
 
 ## generic searcher for certain marker strings
@@ -23,6 +23,7 @@ def genericSearch(path, markerStrings, blacklist=[]):
 			return None
                 binary = open(path, 'rb')
                 lines = binary.read()
+		binary.close()
 		for marker in markerStrings:
 			offset = lines.find(marker)
 			if offset != -1 and not extractor.inblacklist(offset, blacklist):
@@ -110,3 +111,28 @@ def searchUBoot(path, blacklist=[]):
 			, "## Ready for binary (ymodem) download "
 			]
 	return genericSearch(path, markerStrings, blacklist)
+
+## What actually do these dependencies mean?
+## Are they dependencies of the installer itself, or of the programs that are
+## installed by the installer?
+def searchWindowsDependencies(path, blacklist=[]):
+	## first determine if we are dealing with a MS Windows executable
+	ms = magic.open(magic.MAGIC_NONE)
+	ms.load()
+	type = ms.file(path)
+	ms.close()
+	if not 'PE32 executable for MS Windows' in type:
+                return None
+        binary = open(path, 'rb')
+        lines = binary.read()
+	binary.close()
+	deps = extractor.searchAssemblyDeps(lines)
+	if deps == None:
+		return None
+	if deps == []:
+		return None
+	else:
+		return deps
+
+def xmlPrettyPrintWindowsDeps(res, root):
+	pass
