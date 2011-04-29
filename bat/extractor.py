@@ -9,6 +9,7 @@ This file contains a few convenience functions that are used throughout the code
 '''
 
 import string
+from xml.dom import minidom
 
 ## Helper method to replace unprintable characters with spaces.
 ## This is useful for doing regular expressions to extract the BusyBox
@@ -38,3 +39,67 @@ def inblacklist(offset, blacklist):
 	for bl in blacklist:
 		if offset >= bl[0] and offset < bl[1]:
 			return bl[1]
+
+###
+## The helper method below is to specifically analyse Microsoft Windows binaries
+## and extract the XML that can usually be found in those installers. Based on
+## that information we might be able to get a better scan, since many well
+## known installers have default values for the descriptive strings
+###
+
+## 1. search '<?xml'
+## 2. search for '<assembly' open tag
+## 3. search for </assembly> close tag
+## 4. see if there is no junk in between (using XML parsing)
+## 5. extract information from the assembly, such info from <assemblyIdentity>
+##    like architecture and the packager that was used to pack and information
+##    about dependencies
+## 6. repeat, because there might be more than one XML assembly file included
+##    (ignored for now)
+## Returns a tuple with:
+## * hash with name, version, architecture, platform
+## * list of dependencies
+
+def searchAssembly(data):
+	xmloffset = data.find('<?xml')
+	if xmloffset == -1:
+		return None
+	offset = data.find('<assembly', xmloffset)
+	if offset == -1:
+		return None
+	traileroffset = data.find('</assembly>', offset)
+	if traileroffset == -1:
+		return None
+	assembly = data[xmloffset:traileroffset + 11]
+	try:
+		dom = minidom.parseString(assembly)
+		assemblyNodes = dom.getElementsByTagName('assembly')
+		if len(assemblyNodes) != 1:
+			return None
+		else:
+			deps = []
+			assemblyattrs = {}
+			for ch in assemblyNodes[0].childNodes:
+				if ch.localName == "assemblyIdentity":
+					for attr in xrange(0, ch.attributes.length):
+						assemblyattrs[ch.attributes.item(attr).name] = ch.attributes.item(attr).value
+				if ch.localName == "dependency":
+					assemblyId = ch.getElementsByTagName('assemblyIdentity')
+					for assembly in assemblyId:
+						depsattrs = {}
+						for attr in xrange(0, assembly.attributes.length):
+							depsattrs[assembly.attributes.item(attr).name] = assembly.attributes.item(attr).value
+						deps.append(depsattrs)
+
+			return (assemblyattrs, deps)
+	except Exception, e:
+		return None
+	return None
+
+## used in unpack scans
+def searchAssemblyAttrs(data):
+	return searchAssembly(data)[0]
+
+## used in leaf scans
+def searchAssemblyDeps(data):
+	return searchAssembly(data)[1]
