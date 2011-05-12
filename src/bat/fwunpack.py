@@ -118,7 +118,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[]):
 	## recognize. TODO: refactor
 	if assembly != None:
 		## we are pretty much out of luck with this one.
-		if assembly['name'] == "NOSMicrosystems.iNOSSO"
+		if assembly['name'] == "NOSMicrosystems.iNOSSO":
 			return ([], blacklist)
 		## if we see this we can probably directly go to unrar
 		elif assembly['name'] == "WinRAR SFX":
@@ -138,6 +138,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[]):
 			pass
 		elif assembly['name'] == "InstallShield.Setup":
 			pass
+		## self extracting cab, use either cabextract or 7z
 		elif assembly['name'] == "sfxcab":
 			pass
 		## Setup Factory
