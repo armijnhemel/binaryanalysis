@@ -644,8 +644,6 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[]):
 				## cleanup
 				os.rmdir(tmpdir)
 			offset = fssearch.findCramfs(data, offset+1)
-		if len(diroffsets) == 0:
-			os.rmdir(tmpdir)
 		return (diroffsets, blacklist)
 
 ## tries to unpack stuff using fsck.cramfs. If it is successful, it will
@@ -657,7 +655,7 @@ def unpackCramfs(data, offset, tempdir=None):
 		tmpdir = tempdir
 	## fsck.cramfs needs to unpack in a separate directory. So, create a new temporary
 	## directory to avoid name clashes
-        tmpdir2 = tempfile.mkdtemp()
+        #tmpdir2 = tempfile.mkdtemp()
 	## since fsck.cramfs can't deal with data via stdin first write it to
 	## a temporary location
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
@@ -672,13 +670,11 @@ def unpackCramfs(data, offset, tempdir=None):
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
-			os.rmdir(tmpdir2)
 		return
 	else:
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
-		os.rmdir(tmpdir)
-		return tmpdir2
+		return tmpdir
 
 ## Search and unpack a squashfs file system. Since there are so many flavours
 ## of squashfs available we have to do some extra work here, and possibly have
