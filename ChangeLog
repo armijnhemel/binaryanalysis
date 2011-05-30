@@ -1,3 +1,7 @@
+2011-05-30
+* rework SquashFS code
+* add length checking for cramfs for blacklisting
+
 2011-04-28
 * partially integrate preliminary support for extracted assemblies for
 installers for Microsoft Windows

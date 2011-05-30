@@ -636,8 +636,11 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[]):
 				offset = fssearch.findCramfs(data, blacklistoffset)
 			if offset == -1:
 				break
-			res = unpackCramfs(data, offset, tmpdir)
-			if res != None:
+			retval = unpackCramfs(data, offset, tmpdir)
+			if retval != None:
+				(res, cramfssize) = res
+				if cramfssize != 0:
+					blacklist.append((offset,offset+cramfssize))
 				diroffsets.append((res, offset))
 				cramfscounter = cramfscounter + 1
 			else:
@@ -664,6 +667,7 @@ def unpackCramfs(data, offset, tempdir=None):
 	## right now this is a path to a specially adapted fsck.cramfs that ignores special inodes
 	## create a new path to unpack all stuff
 	p = subprocess.Popen(['bat-fsck.cramfs', '-x', tmpdir2 + "/cramfs", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	#p = subprocess.Popen(['/home/armijn/gpltool/trunk/bat-extratools/cramfs/disk-utils/fsck.cramfs', '-x', tmpdir + "/cramfs", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.fdopen(tmpfile[0]).close()
@@ -672,9 +676,17 @@ def unpackCramfs(data, offset, tempdir=None):
 			os.rmdir(tmpdir)
 		return
 	else:
+		## determine if the whole file actually is the cramfs file. Do this by running bat-fsck.cramfs again with -v and check stderr.
+		## If there is no error on stderr, we know that the entire file is the cramfs file
+		p = subprocess.Popen(['bat-fsck.cramfs', '-v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+		(stanout, stanerr) = p.communicate()
+		if len(stanerr) != 0:
+			cramfssize = 0
+		else:
+			cramfssize = len(data)
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
-		return tmpdir
+		return (tmpdir, cramfssize)
 
 ## Search and unpack a squashfs file system. Since there are so many flavours
 ## of squashfs available we have to do some extra work here, and possibly have
@@ -727,17 +739,25 @@ def unpackSquashfsWrapper(data, offset, tempdir=None):
 		return retval
 	'''
 	## then try other flavours
-	else:
-		## first OpenWrt variant
-		retval = unpackSquashfsOpenWrtLZMA(data,offset,tempdir)
-		if retval != None:
-			return retval
+	## first SquashFS 4.2
+	retval = unpackSquashfs42(data,offset,tempdir)
+	if retval != None:
+		return retval
 
-		else:
-			## then Broadcom variant
-			retval = unpackSquashfsBroadcomLZMA(data,offset,tempdir)
-			if retval != None:
-				return retval
+	## then OpenWrt variant
+	retval = unpackSquashfsOpenWrtLZMA(data,offset,tempdir)
+	if retval != None:
+		return retval
+
+	## then Broadcom variant
+	retval = unpackSquashfsBroadcomLZMA(data,offset,tempdir)
+	if retval != None:
+		return retval
+
+	## then Ralink variant
+	retval = unpackSquashfsRalinkLZMA(data,offset,tempdir)
+	if retval != None:
+		return retval
 	'''
 	return None
 
@@ -826,6 +846,33 @@ def unpackSquashfsOpenWrtLZMA(data, offset, tempdir=None):
 			return None
 		else:
 			squashsize = int(re.search(", (\d+) bytes", stanout).groups()[0])
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		return (tmpdir, squashsize)
+
+## squashfs 4.2, various compression methods
+def unpackSquashfs42(data, offset, tempdir=None):
+        if tempdir == None:
+                tmpdir = tempfile.mkdtemp()
+	else:
+		tmpdir = tempdir
+	## since unsquashfs can't deal with data via stdin first write it to
+	## a temporary location
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.write(tmpfile[0], data[offset:])
+
+	## this is just a temporary path for now
+	p = subprocess.Popen(['bat-unsquashfs42', '-d', tmpdir, '-f', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	else:
+		## unlike with 'normal' squashfs we can't always use 'file' to determine the size
+		squashsize = 1
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		return (tmpdir, squashsize)
