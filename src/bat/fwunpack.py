@@ -324,7 +324,7 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[]):
 def unpack7z(data, offset, tempdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
-	## Assumes (for now) that lzip is in the path
+	## Assumes (for now) that 7z is in the path
 	if tempdir == None:
 		tmpdir = tempfile.mkdtemp()
 	else:
