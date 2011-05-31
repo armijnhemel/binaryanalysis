@@ -424,6 +424,76 @@ def unpackLzip(data, offset, tempdir=None):
 	os.unlink(tmpfile[1])
 	return (tmpdir, lzipsize)
 
+## unpack lzo archives.
+## This method returns a blacklist.
+def searchUnpackLzo(filename, tempdir=None, blacklist=[]):
+	datafile = open(filename, 'rb')
+	data = datafile.read()
+	datafile.close()
+	offset = fssearch.findLzo(data)
+	if offset == -1:
+		return ([], blacklist)
+	else:
+		diroffsets = []
+		lzocounter = 1
+		while(offset != -1):
+			blacklistoffset = extractor.inblacklist(offset, blacklist)
+			if blacklistoffset != None:
+				offset = fssearch.findLzo(data, blacklistoffset)
+			if offset == -1:
+				break
+			if tempdir == None:
+				tmpdir = tempfile.mkdtemp()
+			else:
+				try:
+					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "lzo", lzocounter)
+					os.makedirs(tmpdir)
+				except Exception, e:
+					tmpdir = tempfile.mkdtemp(dir=tempdir)
+			(res, lzosize) = unpackLzo(data, offset, tmpdir)
+			if res != None:
+				diroffsets.append((res, offset))
+				blacklist.append((offset, offset+lzosize))
+				offset = fssearch.findLzo(data, offset+lzosize)
+				lzocounter = lzocounter + 1
+			else:
+				## cleanup
+				os.rmdir(tmpdir)
+				offset = fssearch.findLzo(data, offset+1)
+	return (diroffsets, blacklist)
+
+def unpackLzo(data, offset, tempdir=None):
+	## first unpack things, write things to a file and return
+	## the directory if the file is not empty
+	## Assumes (for now) that lzop is in the path
+	if tempdir == None:
+		tmpdir = tempfile.mkdtemp()
+	else:
+		tmpdir = tempdir
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.write(tmpfile[0], data[offset:])
+	p = subprocess.Popen(['lzop', "-d", "-P", "-p%s" % (tmpdir,), tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return (None, None)
+	## determine the size of the archive we unpacked, so we can skip a lot in future scans
+	p = subprocess.Popen(['lzop', '-t', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	## file could be two lzop files concatenated, which would unpack just fine
+	## but which would give a returncode != 0 when tested. This will do for now though.
+	if p.returncode != 0:
+		lzopsize = 0
+	else:
+		## the whole file is the lzop archive
+		lzopsize = len(data)
+	os.fdopen(tmpfile[0]).close()
+	os.unlink(tmpfile[1])
+	return (tmpdir, lzopsize)
+
 ## To unpack XZ we need to find a header and a footer.
 ## The trailer is actually very generic and a lot more common than the header,
 ## so it is likely that we need to search for the trailer a lot more than
