@@ -40,6 +40,13 @@ method  = searchUnpackLzip
 magic   = lzip
 priority = 0
 
+[lzop]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackLzo
+magic   = lzo
+priority = 0
+
 [arj]
 type    = unpack
 module  = bat.fwunpack
