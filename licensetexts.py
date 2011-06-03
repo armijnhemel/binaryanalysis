@@ -103,8 +103,8 @@ def ninka(srcdir, sqldb, package, version):
 
 def main(argv):
 	parser = OptionParser()
-	parser.add_option("-d", "--database", action="store", dest="db", help="path to database)", metavar="FILE")
-	parser.add_option("-f", "--filedir", action="store", dest="filedir", help="path to dir with GPL tarballs)", metavar="DIR")
+	parser.add_option("-d", "--database", action="store", dest="db", help="path to database", metavar="FILE")
+	parser.add_option("-f", "--filedir", action="store", dest="filedir", help="path to dir with GPL tarballs", metavar="DIR")
 
 	(options, args) = parser.parse_args()
 	if options.db == None:
