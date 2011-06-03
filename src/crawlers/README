@@ -1,0 +1,9 @@
+This is a directory that contains several crawlers for initializing and updating a database.
+
+We need crawlers for:
+
+* ftp.gnu.org and mirrors
+* ftp.kernel.org and mirrors (for non-kernel tools)
+* sourceforge.net
+* savannah
+* apache (at least the C/C++ based projects)
