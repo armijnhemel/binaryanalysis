@@ -171,8 +171,12 @@ def extractsourcestrings(srcdir, sqldb, package, pversion):
 					## TODO: fix for uneveness
 					## Not matched: " directly preceded by '
 					## double quotes that are escaped using \
-					results = re.findall("(?<!')\"(.*?)(?<!\\\)\"", source, re.MULTILINE|re.DOTALL)
+					###### results = re.findall("(?<!')\"(.*?)(?<!\\\)\"", source, re.MULTILINE|re.DOTALL)
 					#results = re.findall("\"(.*?)(?<!\\\)\"", source, re.MULTILINE|re.DOTALL)
+					## http://stackoverflow.com/questions/5150398/using-python-to-split-a-string-with-delimiter-while-ignoring-the-delimiter-and-e
+					#results = re.findall(r'"[^"\\]*(?:\\.[^"\\]*)*"', source, re.MULTILINE|re.DOTALL)
+					## and prepend with "don't match a single quote first", which seems to do the trick.
+					results = re.findall(r'(?<!\')"[^"\\]*(?:\\.[^"\\]*)*"', source, re.MULTILINE|re.DOTALL)
 					for res in results:
                                                 #print >>sys.stderr, "got string", res
                                                 storestring = res
@@ -187,13 +191,14 @@ def extractsourcestrings(srcdir, sqldb, package, pversion):
                                                         line = line.replace("\\t", "\t")
                                                         line = line.replace("\\\\", "\\")
                                                         if "\n" in line:
-                                                                print >>sys.stderr, "skipping multiline string", storestring
+                                                                print >>sys.stderr, "skipping multiline string in file %s" % (p,), storestring
                                                         #print >>sys.stderr, "storing", line
 							#sqlres.append((unicode(storestring), package, pversion, u"%s/%s" % (i[0][srcdirlen:], p)))
 							sqlres.append((unicode(line), package, pversion, u"%s/%s" % (i[0][srcdirlen:], p)))
 	except Exception, e:
 		print >>sys.stderr, e
 	#print "package", package, len(sqlres)
+	## cleanup
 	shutil.rmtree(srcdir)
 	return sqlres
 
