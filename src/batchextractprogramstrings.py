@@ -30,19 +30,23 @@ tarmagic = ['POSIX tar archive (GNU)'
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
-def unpack(dir, filename):
-        filemagic = ms.file(os.path.realpath("%s/%s" % (dir, filename)))
+def unpack(directory, filename):
+        filemagic = ms.file(os.path.realpath("%s/%s" % (directory, filename)))
 
         ## just assume if it is bz2 or gzip that we are looking at tar files with compression
 
         if 'bzip2 compressed data' in filemagic:
-	        tar = tarfile.open("%s/%s" % (dir, filename), 'r:bz2')
        		tmpdir = tempfile.mkdtemp()
-       		tar.extractall(path=tmpdir)
-        	tar.close()
+		## for some reason sometimes the tar.bz2 unpacking from python doesn't work, like aeneas-1.0.tar.bz2 from GNU, so resort to calling a subprocess
+ 		p = subprocess.Popen(['tar', 'jxf', "%s/%s" % (directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+		(stanout, stanerr) = p.communicate()
+	        #tar = tarfile.open("%s/%s" % (dir, filename), 'r:bz2')
+		#print tar.list()
+       		#tar.extractall(path=tmpdir)
+        	#tar.close()
 		return tmpdir
         elif 'gzip compressed data' in filemagic:
-	        tar = tarfile.open("%s/%s" % (dir, filename), 'r:gz')
+	        tar = tarfile.open("%s/%s" % (directory, filename), 'r:gz')
        		tmpdir = tempfile.mkdtemp()
        		tar.extractall(path=tmpdir)
         	tar.close()
@@ -185,9 +189,10 @@ def extractsourcestrings(srcdir, sqldb, package, pversion):
                                                         if "\n" in line:
                                                                 print >>sys.stderr, "skipping multiline string", storestring
                                                         #print >>sys.stderr, "storing", line
-							sqlres.append((unicode(storestring), package, pversion, u"%s/%s" % (i[0][srcdirlen:], p)))
+							#sqlres.append((unicode(storestring), package, pversion, u"%s/%s" % (i[0][srcdirlen:], p)))
+							sqlres.append((unicode(line), package, pversion, u"%s/%s" % (i[0][srcdirlen:], p)))
 	except Exception, e:
-		pass
+		print >>sys.stderr, e
 	#print "package", package, len(sqlres)
 	return sqlres
 
