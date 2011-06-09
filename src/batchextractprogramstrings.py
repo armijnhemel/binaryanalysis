@@ -17,7 +17,7 @@ seperated by whitespace.
 Compression is determined using magic
 '''
 
-import sys, os, magic, string, re, subprocess
+import sys, os, magic, string, re, subprocess, shutil
 import tempfile, bz2, tarfile, gzip
 from optparse import OptionParser
 from multiprocessing import Pool
@@ -194,6 +194,7 @@ def extractsourcestrings(srcdir, sqldb, package, pversion):
 	except Exception, e:
 		print >>sys.stderr, e
 	#print "package", package, len(sqlres)
+	shutil.rmtree(srcdir)
 	return sqlres
 
 
