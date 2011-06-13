@@ -21,7 +21,7 @@ import sys, os, magic, string, re, subprocess, shutil
 import tempfile, bz2, tarfile, gzip
 from optparse import OptionParser
 from multiprocessing import Pool
-import sqlite3
+import sqlite3, hashlib
 
 tarmagic = ['POSIX tar archive (GNU)'
            , 'tar archive'
@@ -58,8 +58,13 @@ def unpack_verify(filedir, filename):
 	except:
 		print >>sys.stderr, "Can't find %s" % filename
 
-def unpack_getstrings((filedir, package, version, filename, dbpath)):
+def unpack_getstrings((filedir, package, version, filename, dbpath, cleanup)):
 	print filename
+	scanfile = open("%s/%s" % (filedir, filename), 'r')
+	h = hashlib.new('sha256')
+	h.update(scanfile.read())
+	scanfile.close()
+	filehash = h.hexdigest()
 	temporarydir = unpack(filedir, filename)
 	if temporarydir == None:
 		return None
@@ -68,21 +73,28 @@ def unpack_getstrings((filedir, package, version, filename, dbpath)):
 	sqlres = extractsourcestrings(temporarydir, c, package, version)
 	for res in sqlres:
 		c.execute('''insert into extracted (programstring, package, version, filename) values (?,?,?,?)''', res)
+	##
+	## add the file to the database: name of archive, sha256sum, packagename, version
+	## This is to be able to restart after
 	conn.commit()
 	#c.execute("COMMIT TRANSACTION;")
+	c.execute('''insert into processed (package, version, filename, sha256) values (?,?,?,?)''', (package, version, filename, filehash))
+	conn.commit()
 	c.close()
 	conn.close()
+	if cleanup:
+		shutil.rmtree(temporarydir)
 	return
 
 
 def main(argv):
-        parser = OptionParser()
-        parser.add_option("-d", "--database", action="store", dest="db", help="path to database", metavar="DIR")
-        parser.add_option("-f", "--filedir", action="store", dest="filedir", help="path to directory containing files to unpack", metavar="DIR")
-        parser.add_option("-v", "--verify", action="store_true", dest="verify", help="verify files, don't process (default: false)")
-	# implement later
-        #parser.add_option("-z", "--cleanup", action="store_true", dest="cleanup", help="cleanup after unpacking? (default: true)")
-        (options, args) = parser.parse_args()
+	parser = OptionParser()
+	parser.add_option("-d", "--database", action="store", dest="db", help="path to database", metavar="DIR")
+	parser.add_option("-f", "--filedir", action="store", dest="filedir", help="path to directory containing files to unpack", metavar="DIR")
+	parser.add_option("-v", "--verify", action="store_true", dest="verify", help="verify files, don't process (default: false)")
+	parser.add_option("-z", "--cleanup", action="store_true", dest="cleanup", help="cleanup after unpacking? (default: false)")
+	parser.add_option("-w", "--wipe", action="store_true", dest="wipe", help="wipe database instead of update (default: false)")
+	(options, args) = parser.parse_args()
 	if options.filedir == None:
 		print >>sys.stderr, "Specify dir with files"
 		sys.exit(1)
@@ -91,19 +103,38 @@ def main(argv):
 		print >>sys.stderr, "Specify path to database"
 		sys.exit(1)
 
+	if options.cleanup != None:
+		cleanup = True
+	else:
+		cleanup = False
 
-        #conn = sqlite3.connect(options.id)
-        #conn = sqlite3.connect("/tmp/sqlite", check_same_thread = False)
-        conn = sqlite3.connect(options.db, check_same_thread = False)
-        c = conn.cursor()
+	if options.wipe != None:
+		wipe = True
+	else:
+		wipe = False
 
+	#conn = sqlite3.connect(options.id)
+	#conn = sqlite3.connect("/tmp/sqlite", check_same_thread = False)
+	conn = sqlite3.connect(options.db, check_same_thread = False)
+	c = conn.cursor()
+
+	if wipe:
+		try:
+			c.execute('''drop table extracted''')
+			c.execute('''drop table processed''')
+			conn.commit()
+		except:
+			pass
         try:
-                c.execute('''create table extracted (programstring text, package text, version text, filename text)''')
-                ## create an index to speed up searches
-                c.execute('''create index programstring_index on extracted(programstring);''')
-        except:
-                pass
-	conn.commit()
+		c.execute('''create table extracted (programstring text, package text, version text, filename text)''')
+		## create an index to speed up searches
+		c.execute('''create index programstring_index on extracted(programstring);''')
+		c.execute('''create table processed (package text, version text, filename text, sha256 text)''')
+		## create an index to speed up searches
+		c.execute('''create index processed_index on processed(package, version);''')
+		conn.commit()
+	except:
+		pass
 	c.close()
 	conn.close()
 	#print pkgmeta
@@ -112,12 +143,12 @@ def main(argv):
 	pool = Pool(processes=1)
 
 	pkgmeta = []
-        ## TODO: do all kinds of checks here
-        filelist = open(options.filedir + "/LIST").readlines()
-        for unpackfile in filelist:
-                (package, version, filename) = unpackfile.strip().split()
-		pkgmeta.append((options.filedir, package, version, filename, options.db))
-                #print >>sys.stderr, filename
+	## TODO: do all kinds of checks here
+	filelist = open(options.filedir + "/LIST").readlines()
+	for unpackfile in filelist:
+		(package, version, filename) = unpackfile.strip().split()
+		pkgmeta.append((options.filedir, package, version, filename, options.db, cleanup))
+		#print >>sys.stderr, filename
 		if options.verify:
 			unpack_verify(options.filedir, filename)
 
@@ -125,14 +156,14 @@ def main(argv):
 
 
 def extractsourcestrings(srcdir, sqldb, package, pversion):
-        srcdirlen = len(srcdir)+1
-        osgen = os.walk(srcdir)
+	srcdirlen = len(srcdir)+1
+	osgen = os.walk(srcdir)
 	sqlres = []
 
-        try:
-                while True:
-                        i = osgen.next()
-                        for p in i[2]:
+	try:
+		while True:
+			i = osgen.next()
+			for p in i[2]:
 				## we're only interested in a few files right now, will add more in the future
 				## some filenames might have uppercase extensions, so lowercase them first
 				p_nocase = p.lower()
@@ -178,28 +209,25 @@ def extractsourcestrings(srcdir, sqldb, package, pversion):
 					## and prepend with "don't match a single quote first", which seems to do the trick.
 					results = re.findall(r'(?<!\')"[^"\\]*(?:\\.[^"\\]*)*"', source, re.MULTILINE|re.DOTALL)
 					for res in results:
-                                                #print >>sys.stderr, "got string", res
-                                                storestring = res
+                                                storestring = res[1:-1] # strip double quotes around the string
                                                 # Handle \" and \t.
                                                 # Handle \n.  The "strings" tool treats multi-line strings as separate 
                                                 # strings, so we also store them in the database as separate strings.
                                                 # Ideally, we would patch "strings" to return multi-line strings.
-                                                for line in storestring.split("\\n"):
-                                                        if line is '': continue
-                                                        line = line.replace("\\\n", "")
-                                                        line = line.replace("\\\"", "\"")
-                                                        line = line.replace("\\t", "\t")
-                                                        line = line.replace("\\\\", "\\")
-                                                        if "\n" in line:
-                                                                print >>sys.stderr, "skipping multiline string in file %s" % (p,), storestring
+						for line in storestring.split("\\n"):
+							if line is '': continue
+							line = line.replace("\\\n", "")
+							line = line.replace("\\\"", "\"")
+							line = line.replace("\\t", "\t")
+							line = line.replace("\\\\", "\\")
+                                                        #if "\n" in line:
+                                                        #        print >>sys.stderr, "skipping multiline string in file %s" % (p,), storestring
                                                         #print >>sys.stderr, "storing", line
 							#sqlres.append((unicode(storestring), package, pversion, u"%s/%s" % (i[0][srcdirlen:], p)))
 							sqlres.append((unicode(line), package, pversion, u"%s/%s" % (i[0][srcdirlen:], p)))
 	except Exception, e:
 		print >>sys.stderr, e
 	#print "package", package, len(sqlres)
-	## cleanup
-	shutil.rmtree(srcdir)
 	return sqlres
 
 
