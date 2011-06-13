@@ -69,18 +69,19 @@ def unpack_getstrings((filedir, package, version, filename, dbpath, cleanup)):
 	## Check if we've already processed this file, if so, we can easily skip it.
         conn = sqlite3.connect(dbpath, check_same_thread = False)
 	c = conn.cursor()
+	c.execute('''select * from processed where package=? and version=?''', (package, version,))
+	if len(c.fetchall()) != 0:
+		c.close()
+		conn.close()
+		return
+	## TODO: here we should check on program + version
 	temporarydir = unpack(filedir, filename)
 	if temporarydir == None:
 		c.close()
 		conn.close()
+		if cleanup:
+			shutil.rmtree(temporarydir)
 		return None
-	else:
-		c.execute('''select * from processed where package=? and version=?''', (package, version,))
-		if len(c.fetchall()) != 0:
-			c.close()
-			conn.close()
-			return
-		## TODO: here we should check on program + version
 	## check if we have any strings from program + version. If so,
 	## first remove them before we add them to avoid duplication
 	c.execute('''select * from extracted where package=? and version=?''', (package, version))
