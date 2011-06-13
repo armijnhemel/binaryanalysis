@@ -75,8 +75,7 @@ def unpack_getstrings((filedir, package, version, filename, dbpath, cleanup)):
 		conn.close()
 		return None
 	else:
-		## simple check on hash first, just to be sure
-		c.execute('''select * from processed where sha256=?''', (filehash,))
+		c.execute('''select * from processed where package=? and version=?''', (package, version,))
 		if len(c.fetchall()) != 0:
 			c.close()
 			conn.close()
