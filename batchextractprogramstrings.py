@@ -66,8 +66,7 @@ def unpack_getstrings((filedir, package, version, filename, dbpath, cleanup)):
 	scanfile.close()
 	filehash = h.hexdigest()
 
-	## check if we've already processed this file, if so, we can easily skip it
-	## This is good for updates.
+	## Check if we've already processed this file, if so, we can easily skip it.
         conn = sqlite3.connect(dbpath, check_same_thread = False)
 	c = conn.cursor()
 	temporarydir = unpack(filedir, filename)
@@ -76,21 +75,21 @@ def unpack_getstrings((filedir, package, version, filename, dbpath, cleanup)):
 		conn.close()
 		return None
 	else:
-		## simpe check on hash
+		## simple check on hash first, just to be sure
 		c.execute('''select * from processed where sha256=?''', (filehash,))
 		if len(c.fetchall()) != 0:
 			c.close()
 			conn.close()
 			return
 		## TODO: here we should check on program + version
+	## TODO: check if we have any strings from program + version. If so,
+	## first remove them before we add them to avoid duplication
 	sqlres = extractsourcestrings(temporarydir, package, version)
 	for res in sqlres:
 		c.execute('''insert into extracted (programstring, package, version, filename) values (?,?,?,?)''', res)
-	##
-	## add the file to the database: name of archive, sha256sum, packagename, version
-	## This is to be able to restart after
 	conn.commit()
-	#c.execute("COMMIT TRANSACTION;")
+	## add the file to the database: name of archive, sha256sum, packagename, version
+	## This is to be able to just update the database instead of recreating it.
 	c.execute('''insert into processed (package, version, filename, sha256) values (?,?,?,?)''', (package, version, filename, filehash))
 	conn.commit()
 	c.close()
