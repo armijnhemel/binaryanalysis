@@ -65,12 +65,25 @@ def unpack_getstrings((filedir, package, version, filename, dbpath, cleanup)):
 	h.update(scanfile.read())
 	scanfile.close()
 	filehash = h.hexdigest()
-	temporarydir = unpack(filedir, filename)
-	if temporarydir == None:
-		return None
+
+	## check if we've already processed this file, if so, we can easily skip it
+	## This is good for updates.
         conn = sqlite3.connect(dbpath, check_same_thread = False)
 	c = conn.cursor()
-	sqlres = extractsourcestrings(temporarydir, c, package, version)
+	temporarydir = unpack(filedir, filename)
+	if temporarydir == None:
+		c.close()
+		conn.close()
+		return None
+	else:
+		## simpe check on hash
+		c.execute('''select * from processed where sha256=?''', (filehash,))
+		if len(c.fetchall()) != 0:
+			c.close()
+			conn.close()
+			return
+		## TODO: here we should check on program + version
+	sqlres = extractsourcestrings(temporarydir, package, version)
 	for res in sqlres:
 		c.execute('''insert into extracted (programstring, package, version, filename) values (?,?,?,?)''', res)
 	##
@@ -155,7 +168,7 @@ def main(argv):
 	result = pool.map(unpack_getstrings, pkgmeta)
 
 
-def extractsourcestrings(srcdir, sqldb, package, pversion):
+def extractsourcestrings(srcdir, package, pversion):
 	srcdirlen = len(srcdir)+1
 	osgen = os.walk(srcdir)
 	sqlres = []
