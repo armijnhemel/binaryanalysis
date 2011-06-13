@@ -82,8 +82,12 @@ def unpack_getstrings((filedir, package, version, filename, dbpath, cleanup)):
 			conn.close()
 			return
 		## TODO: here we should check on program + version
-	## TODO: check if we have any strings from program + version. If so,
+	## check if we have any strings from program + version. If so,
 	## first remove them before we add them to avoid duplication
+	c.execute('''select * from extracted where package=? and version=?''', (package, version))
+	if len(c.fetchall()) != 0:
+		c.execute('''delete from extracted where package=? and version=?''', (package, version))
+		conn.commit()
 	sqlres = extractsourcestrings(temporarydir, package, version)
 	for res in sqlres:
 		c.execute('''insert into extracted (programstring, package, version, filename) values (?,?,?,?)''', res)
