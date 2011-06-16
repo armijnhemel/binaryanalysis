@@ -33,11 +33,12 @@ ms.load()
 def unpack(directory, filename):
         filemagic = ms.file(os.path.realpath("%s/%s" % (directory, filename)))
 
-        ## just assume if it is bz2 or gzip that we are looking at tar files with compression
-
+        ## Just assume if it is bz2 or gzip that we are looking at tar files with compression
         if 'bzip2 compressed data' in filemagic:
        		tmpdir = tempfile.mkdtemp()
-		## for some reason sometimes the tar.bz2 unpacking from python doesn't work, like aeneas-1.0.tar.bz2 from GNU, so resort to calling a subprocess
+		## for some reason sometimes the tar.bz2 unpacking from python doesn't always work,
+		## like aeneas-1.0.tar.bz2 from GNU, so resort to calling a subprocess instead of using
+		## the Python tar functionality.
  		p = subprocess.Popen(['tar', 'jxf', "%s/%s" % (directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 	        #tar = tarfile.open("%s/%s" % (dir, filename), 'r:bz2')
@@ -66,15 +67,16 @@ def unpack_getstrings((filedir, package, version, filename, dbpath, cleanup)):
 	scanfile.close()
 	filehash = h.hexdigest()
 
-	## Check if we've already processed this file, if so, we can easily skip it.
+	## Check if we've already processed this file. If so, we can easily skip it and return.
         conn = sqlite3.connect(dbpath, check_same_thread = False)
 	c = conn.cursor()
+	c.execute('PRAGMA journal_mode=off')
 	c.execute('''select * from processed where package=? and version=?''', (package, version,))
 	if len(c.fetchall()) != 0:
 		c.close()
 		conn.close()
 		return
-	## TODO: here we should check on program + version
+	## unpack the archive. If we fail, cleanup and return.
 	temporarydir = unpack(filedir, filename)
 	if temporarydir == None:
 		c.close()
@@ -82,19 +84,14 @@ def unpack_getstrings((filedir, package, version, filename, dbpath, cleanup)):
 		if cleanup:
 			shutil.rmtree(temporarydir)
 		return None
-	## check if we have any strings from program + version. If so,
-	## first remove them before we add them to avoid duplication
-	c.execute('''select * from extracted where package=? and version=?''', (package, version))
+	## Check if we already have any strings from program + version. If so,
+	## first remove them before we add them to avoid unnecessary duplication.
+	c.execute('''select * from processed_file where package=? and version=?''', (package, version))
 	if len(c.fetchall()) != 0:
-		c.execute('''delete from extracted where package=? and version=?''', (package, version))
 		c.execute('''delete from processed_file where package=? and version=?''', (package, version))
 		conn.commit()
-	sqlres = extractstrings(temporarydir, conn, package, version)
-	##
-	for res in sqlres:
-		c.execute('''insert into extracted (programstring, package, version, filename) values (?,?,?,?)''', res)
-	conn.commit()
-	## add the file to the database: name of archive, sha256sum, packagename, version
+	sqlres = extractstrings(temporarydir, conn, c, package, version)
+	## Add the file to the database: name of archive, sha256, packagename and version
 	## This is to be able to just update the database instead of recreating it.
 	c.execute('''insert into processed (package, version, filename, sha256) values (?,?,?,?)''', (package, version, filename, filehash))
 	conn.commit()
@@ -104,11 +101,9 @@ def unpack_getstrings((filedir, package, version, filename, dbpath, cleanup)):
 		shutil.rmtree(temporarydir)
 	return
 
-def extractstrings(srcdir, conn, package, version):
+def extractstrings(srcdir, conn, cursor, package, version):
 	srcdirlen = len(srcdir)+1
 	osgen = os.walk(srcdir)
-	#sqlres = []
-	c = conn.cursor()
 
 	try:
 		while True:
@@ -123,26 +118,23 @@ def extractstrings(srcdir, conn, package, version):
 					h.update(scanfile.read())
 					scanfile.close()
 					filehash = h.hexdigest()
-					c.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, "%s/%s" % (i[0],p), filehash))
-					conn.commit()
-					c.execute('''select * from extracted_file where sha256=?''', (filehash,))
-					if len(c.fetchall()) != 0:
+					cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, "%s/%s" % (i[0],p), filehash))
+					cursor.execute('''select * from extracted_file where sha256=?''', (filehash,))
+					if len(cursor.fetchall()) != 0:
 						print >>sys.stderr, "duplicate %s %s: %s/%s" % (package, version, i[0], p)
 						continue
 					sqlres = extractsourcestrings(p, i[0], package, version, srcdirlen)
 					for res in sqlres:
-						c.execute('''insert into extracted_file (programstring, sha256) values (?,?)''', (res, filehash))
-						conn.commit()
+						cursor.execute('''insert into extracted_file (programstring, sha256) values (?,?)''', (res, filehash))
 	except Exception, e:
 		print >>sys.stderr, e
 		pass
-	c.close()
-	#return sqlres
-	return []
+	conn.commit()
+	return
 
 def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 	sqlres = []
-	## Remove all C and C++ style comments. If a file is in iso-8859-1
+	## Remove all C and C++ style comments first. If a file is in iso-8859-1
 	## instead of ASCII or UTF-8 we need to do some extra work by
 	## converting it first using iconv.
 	## This is not failsafe, because magic gets it wrong sometimes, so we
@@ -197,10 +189,7 @@ def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 			#if "\n" in line:
 			#        print >>sys.stderr, "skipping multiline string in file %s" % (p,), storestring
 			#print >>sys.stderr, "storing", line
-			#sqlres.append((unicode(storestring), package, version, u"%s/%s" % (i[0][srcdirlen:], p)))
-			#sqlres.append((unicode(line), package, version, u"%s/%s" % (filedir[srcdirlen:], filename)))
 			sqlres.append(unicode(line))
-	#print "package", package, len(sqlres)
 	return sqlres
 
 def main(argv):
@@ -229,10 +218,9 @@ def main(argv):
 	else:
 		wipe = False
 
-	#conn = sqlite3.connect(options.id)
-	#conn = sqlite3.connect("/tmp/sqlite", check_same_thread = False)
 	conn = sqlite3.connect(options.db, check_same_thread = False)
 	c = conn.cursor()
+	c.execute('PRAGMA journal_mode=off')
 
 	if wipe:
 		try:
@@ -244,19 +232,19 @@ def main(argv):
 		except:
 			pass
         try:
-		c.execute('''create table extracted (programstring text, package text, version text, filename text)''')
-		## create an index to speed up searches
-		#c.execute('''create index programstring_index on extracted(programstring)''')
+		## Keep an archive of which packages and archive files (tar.gz, tar.bz2, etc.) we've already
+		## processed, so we don't repeat work.
 		c.execute('''create table processed (package text, version text, filename text, sha256 text)''')
-		## create an index to speed up searches
 		c.execute('''create index processed_index on processed(package, version)''')
+
+		## Since there is a lot of duplication inside source packages we store strings per checksum
+		## which we can later link with files
 		c.execute('''create table processed_file (package text, version text, filename text, sha256 text)''')
-		## create an index to speed up searches
 		c.execute('''create index processedfile_index on processed_file(sha256)''')
-		## since there is a lot of duplication inside source packages we store strings per checksum
-		## which we later link with files
+
+		## Store the extracted strings per checksum, not per (package, version, filename).
+		## This saves a lot of space in the database
 		c.execute('''create table extracted_file (programstring text, sha256 text)''')
-		## create an index to speed up searches
 		c.execute('''create index programstring_index on extracted_file(programstring)''')
 		conn.commit()
 	except Exception, e:
@@ -265,6 +253,7 @@ def main(argv):
 	conn.close()
 	#print pkgmeta
 
+	## TODO: make this a configuration parameter
 	#pool = Pool(processes=2)
 	pool = Pool(processes=1)
 
@@ -274,12 +263,10 @@ def main(argv):
 	for unpackfile in filelist:
 		(package, version, filename) = unpackfile.strip().split()
 		pkgmeta.append((options.filedir, package, version, filename, options.db, cleanup))
-		#print >>sys.stderr, filename
 		if options.verify:
 			unpack_verify(options.filedir, filename)
 
 	result = pool.map(unpack_getstrings, pkgmeta)
-
 
 if __name__ == "__main__":
     main(sys.argv)
