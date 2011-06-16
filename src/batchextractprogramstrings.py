@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 ## Binary Analysis Tool
-## Copyright 2009-2011 Armijn Hemel for LOCO (LOOHUIS CONSULTING)
+## Copyright 2009-2011 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -89,6 +89,7 @@ def unpack_getstrings((filedir, package, version, filename, dbpath, cleanup)):
 		c.execute('''delete from extracted where package=? and version=?''', (package, version))
 		conn.commit()
 	sqlres = extractstrings(temporarydir, conn, package, version)
+	##
 	for res in sqlres:
 		c.execute('''insert into extracted (programstring, package, version, filename) values (?,?,?,?)''', res)
 	conn.commit()
@@ -105,81 +106,98 @@ def unpack_getstrings((filedir, package, version, filename, dbpath, cleanup)):
 def extractstrings(srcdir, conn, package, version):
 	srcdirlen = len(srcdir)+1
 	osgen = os.walk(srcdir)
-	sqlres = []
+	#sqlres = []
+	c = conn.cursor()
 
 	try:
 		while True:
 			i = osgen.next()
 			for p in i[2]:
-				sqlres = sqlres + extractsourcestrings(p, i[0], package, version, srcdirlen)
+				## we're only interested in a few files right now, will add more in the future
+				## some filenames might have uppercase extensions, so lowercase them first
+				p_nocase = p.lower()
+				if (p_nocase.endswith('.c') or p_nocase.endswith('.h') or p_nocase.endswith('.cpp') or p_nocase.endswith('.cc') or p_nocase.endswith('.hh') or p_nocase.endswith('.cxx') or p_nocase.endswith('.c++') or p_nocase.endswith('.hpp') or p_nocase.endswith('.hxx')):
+					scanfile = open("%s/%s" % (i[0], p), 'r')
+					h = hashlib.new('sha256')
+					h.update(scanfile.read())
+					scanfile.close()
+					filehash = h.hexdigest()
+					c.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, p, filehash))
+					conn.commit()
+					c.execute('''select * from extracted_file where sha256=?''', (filehash,))
+					if len(c.fetchall()) != 0:
+						continue
+					sqlres = extractsourcestrings(p, i[0], package, version, srcdirlen)
+					for res in sqlres:
+						c.execute('''insert into extracted_file (programstring, sha256) values (?,?)''', (res, filehash))
+						conn.commit()
 	except Exception, e:
 		print >>sys.stderr, e
 		pass
-	return sqlres
+	c.close()
+	#return sqlres
+	return []
 
 def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 	sqlres = []
-	## we're only interested in a few files right now, will add more in the future
-	## some filenames might have uppercase extensions, so lowercase them first
-	p_nocase = filename.lower()
-	if (p_nocase.endswith('.c') or p_nocase.endswith('.h') or p_nocase.endswith('.cpp') or p_nocase.endswith('.cc') or p_nocase.endswith('.hh') or p_nocase.endswith('.cxx') or p_nocase.endswith('.c++') or p_nocase.endswith('.hpp') or p_nocase.endswith('.hxx')):
-		## Remove all C and C++ style comments. If a file is in iso-8859-1
-		## instead of ASCII or UTF-8 we need to do some extra work by
-		## converting it first using iconv.
-		## This is not failsafe, because magic gets it wrong sometimes, so we
-		## need some way to kill the subprocess if it is running too long.
-		datatype = ms.file("%s/%s" % (filedir, filename))
-		if "AppleDouble" in datatype:
+	## Remove all C and C++ style comments. If a file is in iso-8859-1
+	## instead of ASCII or UTF-8 we need to do some extra work by
+	## converting it first using iconv.
+	## This is not failsafe, because magic gets it wrong sometimes, so we
+	## need some way to kill the subprocess if it is running too long.
+	datatype = ms.file("%s/%s" % (filedir, filename))
+	if "AppleDouble" in datatype:
+		return sqlres
+	if "ISO-8859" in datatype:
+		src = open("%s/%s" % (filedir, filename)).read()
+		p1 = subprocess.Popen(["iconv", "-f", "latin1", "-t", "utf-8"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+		cleanedup_src = p1.communicate(src)[0]
+		p2 = subprocess.Popen(['./remccoms3.sed'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,close_fds=True)
+		(stanout, stanerr) = p2.communicate(cleanedup_src)
+		source = stanout
+		## we don't know what this is, assuming it's latin1, but we could be wrong
+	elif "data" in datatype or "ASCII" in datatype:
+		src = open("%s/%s" % (filedir, filename)).read()
+		p1 = subprocess.Popen(["iconv", "-f", "latin1", "-t", "utf-8"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+		cleanedup_src = p1.communicate(src)[0]
+		p2 = subprocess.Popen(['./remccoms3.sed'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,close_fds=True)
+		(stanout, stanerr) = p2.communicate(cleanedup_src)
+		source = stanout
+	else:
+		p1 = subprocess.Popen(['./remccoms3.sed', "%s/%s" % (filedir, filename)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p1.communicate()
+		if p1.returncode != 0:
 			return sqlres
-		if "ISO-8859" in datatype:
-			src = open("%s/%s" % (filedir, filename)).read()
-			p1 = subprocess.Popen(["iconv", "-f", "latin1", "-t", "utf-8"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-			cleanedup_src = p1.communicate(src)[0]
-			p2 = subprocess.Popen(['./remccoms3.sed'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,close_fds=True)
-			(stanout, stanerr) = p2.communicate(cleanedup_src)
-			source = stanout
-			## we don't know what this is, assuming it's latin1, but we could be wrong
-		elif "data" in datatype or "ASCII" in datatype:
-			src = open("%s/%s" % (filedir, filename)).read()
-			p1 = subprocess.Popen(["iconv", "-f", "latin1", "-t", "utf-8"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-			cleanedup_src = p1.communicate(src)[0]
-			p2 = subprocess.Popen(['./remccoms3.sed'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,close_fds=True)
-			(stanout, stanerr) = p2.communicate(cleanedup_src)
-			source = stanout
 		else:
-			p1 = subprocess.Popen(['./remccoms3.sed', "%s/%s" % (filedir, filename)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-                       	(stanout, stanerr) = p1.communicate()
-                       	if p1.returncode != 0:
-				return sqlres
-			else:
-				source = stanout
-		## if " is directly preceded by an uneven amount of \ it should not be used
-		## TODO: fix for uneveness
-		## Not matched: " directly preceded by '
-		## double quotes that are escaped using \
-		###### results = re.findall("(?<!')\"(.*?)(?<!\\\)\"", source, re.MULTILINE|re.DOTALL)
-		#results = re.findall("\"(.*?)(?<!\\\)\"", source, re.MULTILINE|re.DOTALL)
-		## http://stackoverflow.com/questions/5150398/using-python-to-split-a-string-with-delimiter-while-ignoring-the-delimiter-and-e
-		#results = re.findall(r'"[^"\\]*(?:\\.[^"\\]*)*"', source, re.MULTILINE|re.DOTALL)
-		## and prepend with "don't match a single quote first", which seems to do the trick.
-		results = re.findall(r'(?<!\')"[^"\\]*(?:\\.[^"\\]*)*"', source, re.MULTILINE|re.DOTALL)
-		for res in results:
-                	storestring = res[1:-1] # strip double quotes around the string
-			# Handle \" and \t.
-			# Handle \n.  The "strings" tool treats multi-line strings as separate 
-			# strings, so we also store them in the database as separate strings.
-			# Ideally, we would patch "strings" to return multi-line strings.
-			for line in storestring.split("\\n"):
-				if line is '': continue
-				line = line.replace("\\\n", "")
-				line = line.replace("\\\"", "\"")
-				line = line.replace("\\t", "\t")
-				line = line.replace("\\\\", "\\")
-				#if "\n" in line:
-				#        print >>sys.stderr, "skipping multiline string in file %s" % (p,), storestring
-                                #print >>sys.stderr, "storing", line
-				#sqlres.append((unicode(storestring), package, version, u"%s/%s" % (i[0][srcdirlen:], p)))
-				sqlres.append((unicode(line), package, version, u"%s/%s" % (filedir[srcdirlen:], filename)))
+			source = stanout
+	## if " is directly preceded by an uneven amount of \ it should not be used
+	## TODO: fix for uneveness
+	## Not matched: " directly preceded by '
+	## double quotes that are escaped using \
+	###### results = re.findall("(?<!')\"(.*?)(?<!\\\)\"", source, re.MULTILINE|re.DOTALL)
+	#results = re.findall("\"(.*?)(?<!\\\)\"", source, re.MULTILINE|re.DOTALL)
+	## http://stackoverflow.com/questions/5150398/using-python-to-split-a-string-with-delimiter-while-ignoring-the-delimiter-and-e
+	#results = re.findall(r'"[^"\\]*(?:\\.[^"\\]*)*"', source, re.MULTILINE|re.DOTALL)
+	## and prepend with "don't match a single quote first", which seems to do the trick.
+	results = re.findall(r'(?<!\')"[^"\\]*(?:\\.[^"\\]*)*"', source, re.MULTILINE|re.DOTALL)
+	for res in results:
+               	storestring = res[1:-1] # strip double quotes around the string
+		# Handle \" and \t.
+		# Handle \n.  The "strings" tool treats multi-line strings as separate 
+		# strings, so we also store them in the database as separate strings.
+		# Ideally, we would patch "strings" to return multi-line strings.
+		for line in storestring.split("\\n"):
+			if line is '': continue
+			line = line.replace("\\\n", "")
+			line = line.replace("\\\"", "\"")
+			line = line.replace("\\t", "\t")
+			line = line.replace("\\\\", "\\")
+			#if "\n" in line:
+			#        print >>sys.stderr, "skipping multiline string in file %s" % (p,), storestring
+			#print >>sys.stderr, "storing", line
+			#sqlres.append((unicode(storestring), package, version, u"%s/%s" % (i[0][srcdirlen:], p)))
+			#sqlres.append((unicode(line), package, version, u"%s/%s" % (filedir[srcdirlen:], filename)))
+			sqlres.append(unicode(line))
 	#print "package", package, len(sqlres)
 	return sqlres
 
@@ -226,21 +244,21 @@ def main(argv):
         try:
 		c.execute('''create table extracted (programstring text, package text, version text, filename text)''')
 		## create an index to speed up searches
-		c.execute('''create index programstring_index on extracted(programstring)''')
+		#c.execute('''create index programstring_index on extracted(programstring)''')
 		c.execute('''create table processed (package text, version text, filename text, sha256 text)''')
 		## create an index to speed up searches
 		c.execute('''create index processed_index on processed(package, version)''')
 		c.execute('''create table processed_file (package text, version text, filename text, sha256 text)''')
 		## create an index to speed up searches
-		c.execute('''create index processed_index on processed_file(sha256)''')
+		c.execute('''create index processedfile_index on processed_file(sha256)''')
 		## since there is a lot of duplication inside source packages we store strings per checksum
 		## which we later link with files
 		c.execute('''create table extracted_file (programstring text, sha256 text)''')
 		## create an index to speed up searches
 		c.execute('''create index programstring_index on extracted_file(programstring)''')
 		conn.commit()
-	except:
-		pass
+	except Exception, e:
+		print >>sys.stderr, e
 	c.close()
 	conn.close()
 	#print pkgmeta
