@@ -70,7 +70,7 @@ def unpack_getstrings((filedir, package, version, filename, dbpath, cleanup)):
 	## Check if we've already processed this file. If so, we can easily skip it and return.
         conn = sqlite3.connect(dbpath, check_same_thread = False)
 	c = conn.cursor()
-	c.execute('PRAGMA journal_mode=off')
+	#c.execute('PRAGMA journal_mode=off')
 	c.execute('''select * from processed where package=? and version=?''', (package, version,))
 	if len(c.fetchall()) != 0:
 		c.close()
@@ -142,6 +142,7 @@ def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 	datatype = ms.file("%s/%s" % (filedir, filename))
 	if "AppleDouble" in datatype:
 		return sqlres
+		'''
 	if "ISO-8859" in datatype:
 		src = open("%s/%s" % (filedir, filename)).read()
 		p1 = subprocess.Popen(["iconv", "-f", "latin1", "-t", "utf-8"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
@@ -149,7 +150,7 @@ def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 		p2 = subprocess.Popen(['./remccoms3.sed'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,close_fds=True)
 		(stanout, stanerr) = p2.communicate(cleanedup_src)
 		source = stanout
-		## we don't know what this is, assuming it's latin1, but we could be wrong
+	## we don't know what this is, assuming it's latin1, but we could be wrong
 	elif "data" in datatype or "ASCII" in datatype:
 		src = open("%s/%s" % (filedir, filename)).read()
 		p1 = subprocess.Popen(["iconv", "-f", "latin1", "-t", "utf-8"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
@@ -157,8 +158,10 @@ def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 		p2 = subprocess.Popen(['./remccoms3.sed'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,close_fds=True)
 		(stanout, stanerr) = p2.communicate(cleanedup_src)
 		source = stanout
+		'''
 	else:
-		p1 = subprocess.Popen(['./remccoms3.sed', "%s/%s" % (filedir, filename)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		#p1 = subprocess.Popen(['./remccoms3.sed', "%s/%s" % (filedir, filename)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		p1 = subprocess.Popen(['cpp', '-dD', '-fpreprocessed', "%s/%s" % (filedir, filename)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p1.communicate()
 		if p1.returncode != 0:
 			return sqlres
@@ -220,7 +223,7 @@ def main(argv):
 
 	conn = sqlite3.connect(options.db, check_same_thread = False)
 	c = conn.cursor()
-	c.execute('PRAGMA journal_mode=off')
+	#c.execute('PRAGMA journal_mode=off')
 
 	if wipe:
 		try:
@@ -255,7 +258,7 @@ def main(argv):
 
 	## TODO: make this a configuration parameter
 	#pool = Pool(processes=2)
-	pool = Pool(processes=1)
+	#pool = Pool(processes=1)
 
 	pkgmeta = []
 	## TODO: do all kinds of checks here
@@ -265,8 +268,8 @@ def main(argv):
 		pkgmeta.append((options.filedir, package, version, filename, options.db, cleanup))
 		if options.verify:
 			unpack_verify(options.filedir, filename)
-
-	result = pool.map(unpack_getstrings, pkgmeta)
+		res = unpack_getstrings((options.filedir, package, version, filename, options.db, cleanup))
+	#result = pool.map(unpack_getstrings, pkgmeta)
 
 if __name__ == "__main__":
     main(sys.argv)
