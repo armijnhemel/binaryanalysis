@@ -87,6 +87,7 @@ def unpack_getstrings((filedir, package, version, filename, dbpath, cleanup)):
 	c.execute('''select * from extracted where package=? and version=?''', (package, version))
 	if len(c.fetchall()) != 0:
 		c.execute('''delete from extracted where package=? and version=?''', (package, version))
+		c.execute('''delete from processed_file where package=? and version=?''', (package, version))
 		conn.commit()
 	sqlres = extractstrings(temporarydir, conn, package, version)
 	##
@@ -122,10 +123,11 @@ def extractstrings(srcdir, conn, package, version):
 					h.update(scanfile.read())
 					scanfile.close()
 					filehash = h.hexdigest()
-					c.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, p, filehash))
+					c.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, "%s/%s" % (i[0],p), filehash))
 					conn.commit()
 					c.execute('''select * from extracted_file where sha256=?''', (filehash,))
 					if len(c.fetchall()) != 0:
+						print >>sys.stderr, "duplicate %s %s: %s/%s" % (package, version, i[0], p)
 						continue
 					sqlres = extractsourcestrings(p, i[0], package, version, srcdirlen)
 					for res in sqlres:
