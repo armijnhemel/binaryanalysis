@@ -165,6 +165,15 @@ def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 				#print >>sys.stderr, "storing", line
 				sqlres.append(unicode(line))
 	except Exception, e:
+		## if we can't process the error due to codec errors perhaps we should first use iconv and try again
+		'''
+		src = open("%s/%s" % (filedir, filename)).read()
+		p1 = subprocess.Popen(["iconv", "-f", "latin1", "-t", "utf-8"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+		cleanedup_src = p1.communicate(src)[0]
+		p2 = subprocess.Popen(['./remccoms3.sed'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,close_fds=True)
+		(stanout, stanerr) = p2.communicate(cleanedup_src)
+		source = stanout
+		'''
 		print >>sys.stderr, e
 	return sqlres
 
