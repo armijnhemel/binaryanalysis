@@ -146,23 +146,26 @@ def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 	## http://stackoverflow.com/questions/5150398/using-python-to-split-a-string-with-delimiter-while-ignoring-the-delimiter-and-e
 	#results = re.findall(r'"[^"\\]*(?:\\.[^"\\]*)*"', source, re.MULTILINE|re.DOTALL)
 	## and prepend with "don't match a single quote first", which seems to do the trick.
-	results = re.findall(r'(?<!\')"[^"\\]*(?:\\.[^"\\]*)*"', source, re.MULTILINE|re.DOTALL)
-	for res in results:
-               	storestring = res[1:-1] # strip double quotes around the string
-		# Handle \" and \t.
-		# Handle \n.  The "strings" tool treats multi-line strings as separate 
-		# strings, so we also store them in the database as separate strings.
-		# Ideally, we would patch "strings" to return multi-line strings.
-		for line in storestring.split("\\n"):
-			if line is '': continue
-			line = line.replace("\\\n", "")
-			line = line.replace("\\\"", "\"")
-			line = line.replace("\\t", "\t")
-			line = line.replace("\\\\", "\\")
-			#if "\n" in line:
-			#        print >>sys.stderr, "skipping multiline string in file %s" % (p,), storestring
-			#print >>sys.stderr, "storing", line
-			sqlres.append(unicode(line))
+	try:
+		results = re.findall(r'(?<!\')"[^"\\]*(?:\\.[^"\\]*)*"', source, re.MULTILINE|re.DOTALL)
+		for res in results:
+               		storestring = res[1:-1] # strip double quotes around the string
+			# Handle \" and \t.
+			# Handle \n.  The "strings" tool treats multi-line strings as separate 
+			# strings, so we also store them in the database as separate strings.
+			# Ideally, we would patch "strings" to return multi-line strings.
+			for line in storestring.split("\\n"):
+				if line is '': continue
+				line = line.replace("\\\n", "")
+				line = line.replace("\\\"", "\"")
+				line = line.replace("\\t", "\t")
+				line = line.replace("\\\\", "\\")
+				#if "\n" in line:
+				#        print >>sys.stderr, "skipping multiline string in file %s" % (p,), storestring
+				#print >>sys.stderr, "storing", line
+				sqlres.append(unicode(line))
+	except Exception, e:
+		print >>sys.stderr, e
 	return sqlres
 
 def main(argv):
