@@ -41,10 +41,6 @@ def unpack(directory, filename):
 		## the Python tar functionality.
  		p = subprocess.Popen(['tar', 'jxf', "%s/%s" % (directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
-	        #tar = tarfile.open("%s/%s" % (dir, filename), 'r:bz2')
-		#print tar.list()
-       		#tar.extractall(path=tmpdir)
-        	#tar.close()
 		return tmpdir
         elif 'gzip compressed data' in filemagic:
 	        tar = tarfile.open("%s/%s" % (directory, filename), 'r:gz')
@@ -134,39 +130,13 @@ def extractstrings(srcdir, conn, cursor, package, version):
 
 def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 	sqlres = []
-	## Remove all C and C++ style comments first. If a file is in iso-8859-1
-	## instead of ASCII or UTF-8 we need to do some extra work by
-	## converting it first using iconv.
-	## This is not failsafe, because magic gets it wrong sometimes, so we
-	## need some way to kill the subprocess if it is running too long.
-	datatype = ms.file("%s/%s" % (filedir, filename))
-	if "AppleDouble" in datatype:
+	## Remove all C and C++ style comments first using the C preprocessor
+	p1 = subprocess.Popen(['cpp', '-dD', '-fpreprocessed', "%s/%s" % (filedir, filename)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p1.communicate()
+	if p1.returncode != 0:
 		return sqlres
-		'''
-	if "ISO-8859" in datatype:
-		src = open("%s/%s" % (filedir, filename)).read()
-		p1 = subprocess.Popen(["iconv", "-f", "latin1", "-t", "utf-8"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-		cleanedup_src = p1.communicate(src)[0]
-		p2 = subprocess.Popen(['./remccoms3.sed'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,close_fds=True)
-		(stanout, stanerr) = p2.communicate(cleanedup_src)
-		source = stanout
-	## we don't know what this is, assuming it's latin1, but we could be wrong
-	elif "data" in datatype or "ASCII" in datatype:
-		src = open("%s/%s" % (filedir, filename)).read()
-		p1 = subprocess.Popen(["iconv", "-f", "latin1", "-t", "utf-8"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-		cleanedup_src = p1.communicate(src)[0]
-		p2 = subprocess.Popen(['./remccoms3.sed'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,close_fds=True)
-		(stanout, stanerr) = p2.communicate(cleanedup_src)
-		source = stanout
-		'''
 	else:
-		#p1 = subprocess.Popen(['./remccoms3.sed', "%s/%s" % (filedir, filename)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		p1 = subprocess.Popen(['cpp', '-dD', '-fpreprocessed', "%s/%s" % (filedir, filename)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p1.communicate()
-		if p1.returncode != 0:
-			return sqlres
-		else:
-			source = stanout
+		source = stanout
 	## if " is directly preceded by an uneven amount of \ it should not be used
 	## TODO: fix for uneveness
 	## Not matched: " directly preceded by '
@@ -249,6 +219,7 @@ def main(argv):
 		## This saves a lot of space in the database
 		c.execute('''create table extracted_file (programstring text, sha256 text)''')
 		c.execute('''create index programstring_index on extracted_file(programstring)''')
+		c.execute('''create index extracted_hash on extracted_file(sha256)''')
 		conn.commit()
 	except Exception, e:
 		print >>sys.stderr, e
