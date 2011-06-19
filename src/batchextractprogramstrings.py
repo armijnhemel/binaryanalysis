@@ -184,6 +184,7 @@ def main(argv):
 	parser.add_option("-v", "--verify", action="store_true", dest="verify", help="verify files, don't process (default: false)")
 	parser.add_option("-z", "--cleanup", action="store_true", dest="cleanup", help="cleanup after unpacking? (default: false)")
 	parser.add_option("-w", "--wipe", action="store_true", dest="wipe", help="wipe database instead of update (default: false)")
+	parser.add_option("-l", "--licenses", action="store_true", dest="licenses", help="extract licenses (default: false)")
 	(options, args) = parser.parse_args()
 	if options.filedir == None:
 		print >>sys.stderr, "Specify dir with files"
@@ -213,6 +214,7 @@ def main(argv):
 			c.execute('''drop table processed''')
 			c.execute('''drop table processed_file''')
 			c.execute('''drop table extracted_file''')
+			c.execute('''drop table licenses''')
 			conn.commit()
 		except:
 			pass
@@ -232,6 +234,11 @@ def main(argv):
 		c.execute('''create table extracted_file (programstring text, sha256 text)''')
 		c.execute('''create index programstring_index on extracted_file(programstring)''')
 		c.execute('''create index extracted_hash on extracted_file(sha256)''')
+
+		## Store the extracted licenses per checksum.
+		c.execute('''create table licenses (sha256 text, license text)''')
+                c.execute('''create index license_index on licenses(sha256);''')
+
 		conn.commit()
 	except Exception, e:
 		print >>sys.stderr, e
