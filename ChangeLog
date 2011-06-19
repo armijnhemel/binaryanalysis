@@ -1,3 +1,6 @@
+2011-06-19
+* ugly byte swapping hack for Realtek RTL8196C based routers
+
 2011-06-03
 * start working on crawlers to help maintain archive of source code files that
 are needed to create knowledgebases

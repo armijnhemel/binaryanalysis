@@ -57,6 +57,35 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[]):
 			return ([(tmpdir, 0)], blacklist)
 	return ([], blacklist)
 
+## There are certain routers that have all bytes swapped. This is an ugly hack to first
+## rearrange the data. This is mostly for Realtek RTL8196C based routers.
+def searchUnpackFileswap(filename, tempdir=None, blacklist=[]):
+	if tempdir == None:
+		tmpdir = tempfile.mkdtemp()
+	else:
+		try:
+			tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "fileswap", 1)
+			os.makedirs(tmpdir)
+		except Exception, e:
+			tmpdir = tempfile.mkdtemp(dir=tempdir)
+	datafile = open(filename, 'rb')
+        data = datafile.read()
+        datafile.close()
+	## "Uncompressing Linux..."
+	if data.find("nUocpmerssni giLun.x..") != -1:
+		tmpfile = tempfile.mkstemp(dir=tmpdir)
+		counter = 0
+		for i in xrange(0,len(data)):
+        		if counter == 0:
+                		os.write(tmpfile[0], data[i+1])
+        		else:
+                		os.write(tmpfile[0], data[i-1])
+        		counter = (counter+1)%2
+		return ([(tmpdir, 0)], blacklist)
+	# cleanup
+	os.rmdir(tmpdir)
+	return ([], blacklist)
+
 ## yaffs2 is used frequently in Android and various mediaplayers based on
 ## Realtek chipsets (RTD1261/1262/1073/etc.)
 ## yaffs2 does not have a magic header, so it is really hard to recognize.

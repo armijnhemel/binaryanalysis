@@ -150,6 +150,12 @@ magic   = rpm
 #cleanup = cleanupRPM
 priority = 1
 
+[fileswap]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackFileswap
+priority = 100
+
 [wireless-tools]
 type    = program
 module  = bat.checks
