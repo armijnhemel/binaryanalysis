@@ -150,10 +150,10 @@ magic   = rpm
 #cleanup = cleanupRPM
 priority = 1
 
-[fileswap]
+[byteswap]
 type    = unpack
 module  = bat.fwunpack
-method  = searchUnpackFileswap
+method  = searchUnpackByteSwap
 priority = 100
 
 [wireless-tools]
