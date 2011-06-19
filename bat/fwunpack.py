@@ -59,12 +59,12 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[]):
 
 ## There are certain routers that have all bytes swapped. This is an ugly hack to first
 ## rearrange the data. This is mostly for Realtek RTL8196C based routers.
-def searchUnpackFileswap(filename, tempdir=None, blacklist=[]):
+def searchUnpackByteSwap(filename, tempdir=None, blacklist=[]):
 	if tempdir == None:
 		tmpdir = tempfile.mkdtemp()
 	else:
 		try:
-			tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "fileswap", 1)
+			tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "byteswap", 1)
 			os.makedirs(tmpdir)
 		except Exception, e:
 			tmpdir = tempfile.mkdtemp(dir=tempdir)
