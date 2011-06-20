@@ -57,7 +57,8 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[]):
 			return ([(tmpdir, 0)], blacklist)
 	return ([], blacklist)
 
-## There are certain routers that have all bytes swapped. This is an ugly hack to first
+## There are certain routers that have all bytes swapped, because they use 16
+## bytes NOR flash instead of 8 bytes SPI flash. This is an ugly hack to first
 ## rearrange the data. This is mostly for Realtek RTL8196C based routers.
 def searchUnpackByteSwap(filename, tempdir=None, blacklist=[]):
 	if tempdir == None:
