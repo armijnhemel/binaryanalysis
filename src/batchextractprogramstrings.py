@@ -8,11 +8,11 @@
 '''
 Program to process a whole directory full of compressed source code archives
 to create a knowledgebase. Needs a file LIST in the directory it is passed as
-a parameter.
+a parameter, which has the following format:
 
 package version filename
 
-seperated by whitespace.
+seperated by whitespace
 
 Compression is determined using magic
 '''
@@ -125,11 +125,12 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 					if len(cursor.fetchall()) != 0:
 						print >>sys.stderr, "duplicate %s %s: %s/%s" % (package, version, i[0], p)
 						continue
+					## if we want to scan for licenses, run Ninka and (future work) FOSSology
 					if license:
 						p1 = subprocess.Popen(["/tmp/dmgerman-ninka-7a9a5c4/ninka.pl", "-d", "%s/%s" % (i[0], p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=ninkaenv)
                                 		(stanout, stanerr) = p1.communicate()
 						ninkasplit = stanout.strip().split(';')[1:]
-						## filter out the ones we can't determine. We actually should run these through FOSSology to try and obtain a match.
+						## filter out the licenses we can't determine. We actually should run these through FOSSology to try and obtain a match.
 						if ninkasplit[0].startswith("UNMATCHED"):
 							pass
 						elif ninkasplit[0].startswith("UNKNOWN"):
@@ -238,13 +239,25 @@ def main(argv):
 	if wipe:
 		try:
 			c.execute('''drop table extracted''')
-			c.execute('''drop table processed''')
-			c.execute('''drop table processed_file''')
-			c.execute('''drop table extracted_file''')
-			c.execute('''drop table licenses''')
-			conn.commit()
 		except:
 			pass
+		try:
+			c.execute('''drop table processed''')
+		except:
+			pass
+		try:
+			c.execute('''drop table processed_file''')
+		except:
+			pass
+		try:
+			c.execute('''drop table extracted_file''')
+		except:
+			pass
+		try:
+			c.execute('''drop table licenses''')
+		except:
+			pass
+		conn.commit()
         try:
 		## Keep an archive of which packages and archive files (tar.gz, tar.bz2, etc.) we've already
 		## processed, so we don't repeat work.
