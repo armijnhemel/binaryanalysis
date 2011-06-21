@@ -105,6 +105,9 @@ def extractstrings(srcdir, conn, cursor, package, version):
 		while True:
 			i = osgen.next()
 			for p in i[2]:
+			## we can't determine anything about an empty file
+				if os.stat("%s/%s" % (i[0], p)).st_size == 0:
+					continue
 				## we're only interested in a few files right now, will add more in the future
 				## some filenames might have uppercase extensions, so lowercase them first
 				p_nocase = p.lower()
