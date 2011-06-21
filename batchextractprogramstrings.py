@@ -55,7 +55,7 @@ def unpack_verify(filedir, filename):
 	except:
 		print >>sys.stderr, "Can't find %s" % filename
 
-def unpack_getstrings((filedir, package, version, filename, dbpath, cleanup)):
+def unpack_getstrings((filedir, package, version, filename, dbpath, cleanup, license)):
 	print filename
 	scanfile = open("%s/%s" % (filedir, filename), 'r')
 	h = hashlib.new('sha256')
@@ -86,7 +86,7 @@ def unpack_getstrings((filedir, package, version, filename, dbpath, cleanup)):
 	if len(c.fetchall()) != 0:
 		c.execute('''delete from processed_file where package=? and version=?''', (package, version))
 		conn.commit()
-	sqlres = extractstrings(temporarydir, conn, c, package, version)
+	sqlres = extractstrings(temporarydir, conn, c, package, version, license)
 	## Add the file to the database: name of archive, sha256, packagename and version
 	## This is to be able to just update the database instead of recreating it.
 	c.execute('''insert into processed (package, version, filename, sha256) values (?,?,?,?)''', (package, version, filename, filehash))
@@ -97,10 +97,13 @@ def unpack_getstrings((filedir, package, version, filename, dbpath, cleanup)):
 		shutil.rmtree(temporarydir)
 	return
 
-def extractstrings(srcdir, conn, cursor, package, version):
+def extractstrings(srcdir, conn, cursor, package, version, license):
 	srcdirlen = len(srcdir)+1
 	osgen = os.walk(srcdir)
 
+	if license:
+		ninkaenv = os.environ
+		ninkaenv['PATH'] = ninkaenv['PATH'] + ":/tmp/dmgerman-ninka-7a9a5c4/comments/comments"
 	try:
 		while True:
 			i = osgen.next()
@@ -125,6 +128,11 @@ def extractstrings(srcdir, conn, cursor, package, version):
 					sqlres = extractsourcestrings(p, i[0], package, version, srcdirlen)
 					for res in sqlres:
 						cursor.execute('''insert into extracted_file (programstring, sha256) values (?,?)''', (res, filehash))
+					if license:
+						p1 = subprocess.Popen(["/tmp/dmgerman-ninka-7a9a5c4/ninka.pl", "-d", "%s/%s" % (i[0], p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=ninkaenv)
+                                		(stanout, stanerr) = p1.communicate()
+						print >>sys.stderr, stanout.strip()
+						pass
 	except Exception, e:
 		print >>sys.stderr, e
 		pass
@@ -207,6 +215,11 @@ def main(argv):
 	else:
 		wipe = False
 
+	if options.licenses != None:
+		license = True
+	else:
+		license = False
+
 	conn = sqlite3.connect(options.db, check_same_thread = False)
 	c = conn.cursor()
 	#c.execute('PRAGMA journal_mode=off')
@@ -258,10 +271,10 @@ def main(argv):
 	filelist = open(options.filedir + "/LIST").readlines()
 	for unpackfile in filelist:
 		(package, version, filename) = unpackfile.strip().split()
-		pkgmeta.append((options.filedir, package, version, filename, options.db, cleanup))
+		pkgmeta.append((options.filedir, package, version, filename, options.db, cleanup, license))
 		if options.verify:
 			unpack_verify(options.filedir, filename)
-		res = unpack_getstrings((options.filedir, package, version, filename, options.db, cleanup))
+		res = unpack_getstrings((options.filedir, package, version, filename, options.db, cleanup, license))
 	#result = pool.map(unpack_getstrings, pkgmeta)
 
 if __name__ == "__main__":
