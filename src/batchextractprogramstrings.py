@@ -125,13 +125,24 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 					if len(cursor.fetchall()) != 0:
 						print >>sys.stderr, "duplicate %s %s: %s/%s" % (package, version, i[0], p)
 						continue
-					sqlres = extractsourcestrings(p, i[0], package, version, srcdirlen)
-					for res in sqlres:
-						cursor.execute('''insert into extracted_file (programstring, sha256) values (?,?)''', (res, filehash))
 					if license:
 						p1 = subprocess.Popen(["/tmp/dmgerman-ninka-7a9a5c4/ninka.pl", "-d", "%s/%s" % (i[0], p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=ninkaenv)
                                 		(stanout, stanerr) = p1.communicate()
-						print >>sys.stderr, stanout.strip()
+						ninkasplit = stanout.strip().split(';')[1:]
+						## filter out the ones we can't determine. We actually should run these through FOSSology to try and obtain a match.
+						if ninkasplit[0].startswith("UNMATCHED"):
+							pass
+						elif ninkasplit[0].startswith("UNKNOWN"):
+							pass
+						else:
+							licenses = ninkasplit[0].split(',')
+							for license in licenses:
+								print >>sys.stderr, "%s/%s" % (i[0],p), license
+								cursor.execute('''insert into licenses (sha256, license) values (?,?)''', (filehash, license))
+					## TODO: remove ninka temporary files (.sentences, .license)
+					sqlres = extractsourcestrings(p, i[0], package, version, srcdirlen)
+					for res in sqlres:
+						cursor.execute('''insert into extracted_file (programstring, sha256) values (?,?)''', (res, filehash))
 						pass
 	except Exception, e:
 		print >>sys.stderr, e
