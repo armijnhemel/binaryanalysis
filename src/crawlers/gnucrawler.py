@@ -75,6 +75,8 @@ def processline(line):
 
 ## get rid of all duplicates, also make sure we don't get all the gcc subpackages
 ## prefer bz2 files, then gz, then xz, then lzma
+## TODO Also first check (for now just the storedir, later perhaps query a database)
+## to see if we already have downloaded this version of the package.
 def prune():
 	grablist = []
 	for i in filelist:
@@ -147,11 +149,8 @@ def prune():
 
 ## grab all files, store them
 ## for some reason we get hit by http://mail.python.org/pipermail/python-bugs-list/2005-January/027257.html
-def grab(filename):
-	print filename
+def grab(filename, ftp):
 	ftp.retrbinary('RETR %s' % (filename,), open("%s/%s" % (storedir, os.path.basename(filename)), 'wb').write)
-	#ftp.cwd("/%s" % prefix)
-	#ftp.retrbinary('RETR %s' % (filename,), open("%s/%s/%s" % (storedir, prefix, filename), 'wb').write)
 	
 def main(argv):
 	config = ConfigParser.ConfigParser()
@@ -170,7 +169,6 @@ def main(argv):
 		sys.exit(1)
 
 	config.readfp(configfile)
-	global ftp
 	global dirlist
 	global filelist
 	global prefix
@@ -189,7 +187,7 @@ def main(argv):
 		bla = ftp.retrlines('LIST %s' % prefix, processline)
 	grablist = prune()
 	for i in grablist:
-		grab(i)
+		grab(i, ftp)
 		sys.exit(1)
 
 	
