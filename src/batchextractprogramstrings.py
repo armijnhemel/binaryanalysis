@@ -139,7 +139,7 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 							licenses = ninkasplit[0].split(',')
 							for license in licenses:
 								print >>sys.stderr, "%s/%s" % (i[0],p), license
-								cursor.execute('''insert into licenses (sha256, license) values (?,?)''', (filehash, license))
+								cursor.execute('''insert into licenses (sha256, license, scanner) values (?,?,?)''', (filehash, license, "ninka"))
 					## TODO: remove ninka temporary files (.sentences, .license)
 					sqlres = extractsourcestrings(p, i[0], package, version, srcdirlen)
 					for res in sqlres:
@@ -276,7 +276,7 @@ def main(argv):
 		c.execute('''create index extracted_hash on extracted_file(sha256)''')
 
 		## Store the extracted licenses per checksum.
-		c.execute('''create table licenses (sha256 text, license text)''')
+		c.execute('''create table licenses (sha256 text, license text, scanner)''')
                 c.execute('''create index license_index on licenses(sha256);''')
 
 		conn.commit()
