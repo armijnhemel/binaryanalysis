@@ -15,11 +15,11 @@ This script crawls a mirror of the GNU FTP site, so it can be used to download
 the latest GNU packages to build/update a database.
 '''
 
-storedir = '/tmp/gpl'
-try:
-	os.makedirs("%s" % (storedir,))
-except:
-	pass
+def setup(storedir):
+	try:
+		os.makedirs("%s" % (storedir,))
+	except:
+		pass
 
 ## get a blacklist of extensions or patterns we're not interested in
 extensions = ['.sig', '.patch.bz2', '.patch.gz', '.diff', '.diff.gz',
@@ -77,13 +77,13 @@ def processline(line):
 ## prefer bz2 files, then gz, then xz, then lzma
 ## TODO Also first check (for now just the storedir, later perhaps query a database)
 ## to see if we already have downloaded this version of the package.
-def prune():
+def prune(storedir):
 	grablist = []
 	for i in filelist:
 		try:
 			(base, extension) = i.rsplit(".", 1)
 		except:
-			print "CAN'T UNPACK:", i
+			print >>sys.stderr, "CAN'T UNPACK:", i
 			continue
 		if re.search('gcc-[a-z]+', i) != None:
 			continue
@@ -149,7 +149,7 @@ def prune():
 
 ## grab all files, store them
 ## for some reason we get hit by http://mail.python.org/pipermail/python-bugs-list/2005-January/027257.html
-def grab(filename, ftp):
+def grab(filename, ftp, storedir):
 	ftp.retrbinary('RETR %s' % (filename,), open("%s/%s" % (storedir, os.path.basename(filename)), 'wb').write)
 	
 def main(argv):
@@ -169,14 +169,25 @@ def main(argv):
 		sys.exit(1)
 
 	config.readfp(configfile)
+	if not config.has_section("hostconfig"):
+		print >>sys.stderr, "Configuration file malformed"
+		sys.exit(1)
+	if not config.has_option("hostconfig", "url"):
+		print >>sys.stderr, "Configuration file malformed"
+		sys.exit(1)
+	if not config.has_option("hostconfig", "storedir"):
+		print >>sys.stderr, "Configuration file malformed"
+		sys.exit(1)
+	## grab the URL from the configuration file
+	hosturl = config.get("hostconfig", "url")
+	storedir = config.get("hostconfig", "storedir")
+	setup(storedir)
 	global dirlist
 	global filelist
 	global prefix
 	global hostprefix
-	## hardcoded for now. This should be made a configuration option so we don't DDoS
-	## ftp.nluug.nl
-	(hostname,prefix) = 'ftp.nluug.nl/pub/gnu'.split('/', 1)
-	hostprefix = 'ftp.nluug.nl/pub/gnu'.split('/', 1)[1]
+	(hostname,prefix) = hosturl.split('/', 1)
+	hostprefix = hosturl.split('/', 1)[1]
 	ftp = ftplib.FTP(hostname)
 	ftp.login()
 	ftp.set_pasv(True)
@@ -185,9 +196,9 @@ def main(argv):
 	while dirlist != []:
 		prefix = dirlist.pop()
 		bla = ftp.retrlines('LIST %s' % prefix, processline)
-	grablist = prune()
+	grablist = prune(storedir)
 	for i in grablist:
-		grab(i, ftp)
+		grab(i, ftp, storedir)
 		sys.exit(1)
 
 	
