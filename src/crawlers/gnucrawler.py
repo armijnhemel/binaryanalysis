@@ -35,7 +35,7 @@ extensions = ['.sig', '.patch.bz2', '.patch.gz', '.diff', 'diff.gz',
 		'.pdf.gz', '.ps.gz', '.pgn.gz', 'pics.tar.gz', 'manual.tar.gz',
 		'.info.gz', '.txt.gz', '.text.gz', 'pkg.tar.gz', '686.tar.xz',
 		'686.tar.bz2', '386.tar.bz2', '386.tar.xz', 'patch.gz', 'patch.bz2',
-		'.debian.tar.gz'
+		'.debian.tar.gz', '.lsp.gz', '.lisp.gz', '.cpio.gz', '.shar.gz'
 		]
 blacklistfile = ['README', 'readme', 'NEWS', 'SUMMARY', 'LICENSE', 'CHANGES',
 		'COPYING', 'ChangeLog', 'INDEX', 'RELEASE', 'ANNOUNCE',
@@ -44,7 +44,8 @@ blacklistfile = ['README', 'readme', 'NEWS', 'SUMMARY', 'LICENSE', 'CHANGES',
 		'mingw32', 'w32', 'woe32', 'win64', 'darwin', 'solaris', 'linux386',
 		'mac-universal', 'md5.sum', 'gr-howto', 'mit-scheme-doc', 'ghostscript-fonts',
 		'gnu-gs-fonts', 'glibc-2.0.1.bin', 'readline-doc', 'ps.tar.gz', 'aspell-lang',
-		'bash-doc'
+		'bash-doc', 'elisp-manual', 'gawk-doc', 'gawk-ps', 'clisp-alpha', 'clisp-ia64',
+		'clisp-hppa2.0', 'clisp-mips', 'clisp-rs6000'
 		]
 
 ## prune dirs we're not interested in (audio, video)
