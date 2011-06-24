@@ -21,7 +21,7 @@ def setup(storedir):
 		pass
 
 ## get a blacklist of extensions or patterns we're not interested in
-extensions = ['.sig', '.patch.bz2', '.patch.gz', '.diff', '.diff.gz',
+extensions = ['.sig', '.patch.bz2', '.patch.gz', '.diff', 'diff.gz',
 		'.diff.lzma', 'diff.bz2', 'diffs.gz', '.txt', '.text',
 		'.tex', '.md5', 'md5sum', 'sha1', '.exe', '.i386.rpm',
 		'.x86_64.rpm', '.i586.rpm', '.noarch.rpm', '.deb',
@@ -42,7 +42,8 @@ blacklistfile = ['README', 'readme', 'NEWS', 'SUMMARY', 'LICENSE', 'CHANGES',
 		'i386', 'i586', 'i686', 'x86-64', 'ix86','x86', 'x64', 'sparc',
 		'powerpc', 'openbsd', 'freebsd', 'netbsd', 'cygwin', 'win32',
 		'mingw32', 'w32', 'woe32', 'win64', 'darwin', 'solaris', 'linux386',
-		'mac-universal', 'md5.sum', 'gr-howto'
+		'mac-universal', 'md5.sum', 'gr-howto', 'mit-scheme-doc', 'ghostscript-fonts',
+		'gnu-gs-fonts', 'glibc-2.0.1.bin', 'readline-doc', 'ps.tar.gz', 'aspell-lang'
 		]
 
 ## prune dirs we're not interested in (audio, video)
