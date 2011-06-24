@@ -1,9 +1,8 @@
 #!/usr/bin/python
 
 import sys, os, os.path, re
-import ftplib
+import ftplib, fnmatch
 import ConfigParser
-import ftplib
 from optparse import OptionParser
 
 ## Binary Analysis Tool
@@ -79,14 +78,21 @@ def processline(line):
 ## to see if we already have downloaded this version of the package.
 def prune(storedir):
 	grablist = []
+	oslist = os.listdir(storedir)
 	for i in filelist:
 		try:
 			(base, extension) = i.rsplit(".", 1)
 		except:
-			print >>sys.stderr, "CAN'T UNPACK:", i
+			#print >>sys.stderr, "CAN'T UNPACK:", i
 			continue
 		if re.search('gcc-[a-z]+', i) != None:
 			continue
+		## see if we can match the filename, without the extension, if
+		## so we don't download the file.
+		matches = fnmatch.filter(oslist, "%s.*" % base.rsplit('/', 1)[-1])
+		if len(matches) != 0:
+			continue
+		## we don't have the file yet, so put it in the grablist
 		if extension == "bz2":
 			grablist.append(i)
 			for ext in ['gz', 'xz', 'lzma']:
@@ -147,8 +153,6 @@ def prune(storedir):
 						#print >>sys.stderr, e, i
 	return grablist
 
-## grab all files, store them
-## for some reason we get hit by http://mail.python.org/pipermail/python-bugs-list/2005-January/027257.html
 def grab(filename, ftp, storedir):
 	ftp.retrbinary('RETR %s' % (filename,), open("%s/%s" % (storedir, os.path.basename(filename)), 'wb').write)
 	
@@ -182,6 +186,8 @@ def main(argv):
 	hosturl = config.get("hostconfig", "url")
 	storedir = config.get("hostconfig", "storedir")
 	setup(storedir)
+	## for some reason we ran into http://mail.python.org/pipermail/python-bugs-list/2005-January/027257.html
+	## so: first create a list of URLs we want to grab, then grab them.
 	global dirlist
 	global filelist
 	global prefix
@@ -198,10 +204,8 @@ def main(argv):
 		bla = ftp.retrlines('LIST %s' % prefix, processline)
 	grablist = prune(storedir)
 	for i in grablist:
+		print "GRABBING:", i
 		grab(i, ftp, storedir)
-		sys.exit(1)
-
-	
 
 if __name__ == "__main__":
 	main(sys.argv)
