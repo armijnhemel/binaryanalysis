@@ -43,7 +43,8 @@ blacklistfile = ['README', 'readme', 'NEWS', 'SUMMARY', 'LICENSE', 'CHANGES',
 		'powerpc', 'openbsd', 'freebsd', 'netbsd', 'cygwin', 'win32',
 		'mingw32', 'w32', 'woe32', 'win64', 'darwin', 'solaris', 'linux386',
 		'mac-universal', 'md5.sum', 'gr-howto', 'mit-scheme-doc', 'ghostscript-fonts',
-		'gnu-gs-fonts', 'glibc-2.0.1.bin', 'readline-doc', 'ps.tar.gz', 'aspell-lang'
+		'gnu-gs-fonts', 'glibc-2.0.1.bin', 'readline-doc', 'ps.tar.gz', 'aspell-lang',
+		'bash-doc'
 		]
 
 ## prune dirs we're not interested in (audio, video)
@@ -151,7 +152,7 @@ def prune(storedir):
 						grablist.remove(i)
 					except Exception, e:
 						pass
-						#print >>sys.stderr, e, i
+						print >>sys.stderr, e, i
 	return grablist
 
 def grab(filename, ftp, storedir):
