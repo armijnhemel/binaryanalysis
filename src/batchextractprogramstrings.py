@@ -127,7 +127,7 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 						continue
 					## if we want to scan for licenses, run Ninka and (future work) FOSSology
 					if license:
-						p1 = subprocess.Popen(["/tmp/dmgerman-ninka-7a9a5c4/ninka.pl", "-d", "%s/%s" % (i[0], p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=ninkaenv)
+						p1 = subprocess.Popen(["/tmp/dmgerman-ninka-7a9a5c4/ninka.pl", "%s/%s" % (i[0], p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=ninkaenv)
                                 		(stanout, stanerr) = p1.communicate()
 						ninkasplit = stanout.strip().split(';')[1:]
 						## filter out the licenses we can't determine. We actually should run these through FOSSology to try and obtain a match.
