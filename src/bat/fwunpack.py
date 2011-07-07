@@ -1748,25 +1748,25 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[]):
 					os.makedirs(tmpdir)
 				except Exception, e:
 					tmpdir = tempfile.mkdtemp(dir=tempdir)
-				tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".gif", dir=tmpdir)
-				os.write(tmpfile[0], data[offset:trail+1])
-				p = subprocess.Popen(['gifinfo', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-				(stanout, stanerr) = p.communicate()
-				if p.returncode != 0:
-					os.fdopen(tmpfile[0]).close()
+			tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".gif", dir=tmpdir)
+			os.write(tmpfile[0], data[offset:trail+1])
+			p = subprocess.Popen(['gifinfo', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate()
+			if p.returncode != 0:
+				os.fdopen(tmpfile[0]).close()
+				os.unlink(tmpfile[1])
+				os.rmdir(tmpdir)
+			else:
+				os.fdopen(tmpfile[0]).close()
+				## basically we have a copy of the original
+				## image here, so why bother?
+				if offset == 0 and trail == len(data) - 1:
 					os.unlink(tmpfile[1])
 					os.rmdir(tmpdir)
 				else:
-					os.fdopen(tmpfile[0]).close()
-					## basically we have a copy of the original
-					## image here, so why bother?
-					if offset == 0 and trail == len(data) - 1:
-						os.unlink(tmpfile[1])
-						os.rmdir(tmpdir)
-					else:
-						diroffsets.append((tmpdir, offset))
-						gifcounter = gifcounter + 1
-						break
+					diroffsets.append((tmpdir, offset))
+					gifcounter = gifcounter + 1
+					break
 	return (diroffsets, blacklist)
 
 ## JPEG extraction can be tricky according to /usr/share/magic, so this is
@@ -1834,26 +1834,26 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[]):
 					os.makedirs(tmpdir)
 				except Exception, e:
 					tmpdir = tempfile.mkdtemp(dir=tempdir)
-				tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".png", dir=tmpdir)
-				os.write(tmpfile[0], data[offset:trail+8])
-				p = subprocess.Popen(['webpng', '-d', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-				(stanout, stanerr) = p.communicate()
-				if p.returncode != 0:
-					os.fdopen(tmpfile[0]).close()
+			tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".png", dir=tmpdir)
+			os.write(tmpfile[0], data[offset:trail+8])
+			p = subprocess.Popen(['webpng', '-d', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate()
+			if p.returncode != 0:
+				os.fdopen(tmpfile[0]).close()
+				os.unlink(tmpfile[1])
+				os.rmdir(tmpdir)
+			else:
+				os.fdopen(tmpfile[0]).close()
+				## basically we have a copy of the original
+				## image here, so why bother?
+				if offset == 0 and trail == len(data) - 8:
 					os.unlink(tmpfile[1])
 					os.rmdir(tmpdir)
+					blacklist.append((0,len(data)))
 				else:
-					os.fdopen(tmpfile[0]).close()
-					## basically we have a copy of the original
-					## image here, so why bother?
-					if offset == 0 and trail == len(data) - 8:
-						os.unlink(tmpfile[1])
-						os.rmdir(tmpdir)
-						blacklist.append((0,len(data)))
-					else:
-						diroffsets.append((tmpdir, offset))
-						pngcounter = pngcounter + 1
-						break
+					diroffsets.append((tmpdir, offset))
+					pngcounter = pngcounter + 1
+					break
 	return (diroffsets, blacklist)
 
 ## EXIF is (often) prepended to the actual image data
