@@ -26,6 +26,22 @@ def findSquashfs(data, offset=0):
 def findMarker(marker, data, offset=0):
 	return data.find(marker, offset)
 
+## version of findMarker that uses seek() and read()
+## which should come in handy for big files
+def findMarker2(marker, datafile, offset=0):
+	databuffer = []
+	datafile.seek(offset)
+	databuffer = datafile.read(100)
+	while databuffer != '':
+		res = databuffer.find(marker)
+		if res != -1:
+			return offset + res
+		else:
+			datafile.seek(offset + 50)
+			databuffer = datafile.read(100)
+			offset = offset + len(databuffer) - 50
+	return -1
+
 def findType(type, data, offset=0):
 	return data.find(fsmagic.fsmagic[type], offset)
 
