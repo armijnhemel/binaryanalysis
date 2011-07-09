@@ -24,10 +24,10 @@ fsmagic = {
             'bz2':              'BZh',
             'rar':              'Rar!',
             'zip':              '\x50\x4b\x03\04',
-            'squashfs-le':      '\x68\x73\x71\x73', # hsqs
-            'squashfs-be':      '\x73\x71\x73\x68', # sqsh
-            'squashfs-le-lzma': '\x71\x73\x68\x73', # qshs
-            'squashfs-be-lzma': '\x73\x68\x73\x71', # shsq
+            'squashfs1':        '\x68\x73\x71\x73', # hsqs
+            'squashfs2':        '\x73\x71\x73\x68', # sqsh
+            'squashfs3':        '\x71\x73\x68\x73', # qshs
+            'squashfs4':        '\x73\x68\x73\x71', # shsq
             'lzma_alone':       '\x5d\x00\x00',
             'xz':               '\xfd\x37\x7a\x58\x5a\x00',
             'xztrailer':        '\x59\x5a',
@@ -53,6 +53,6 @@ fsmagic = {
           }
 
 ## collection of markers that should be scanned together
-squashtypes = ['squashfs-le', 'squashfs-be', 'squashfs-le-lzma', 'squashfs-be-lzma']
+squashtypes = ['squashfs1', 'squashfs2', 'squashfs3', 'squashfs4']
 cpio        = ['cpio1', 'cpio2', 'cpio3']
 gif         = ['gif87', 'gif89']
