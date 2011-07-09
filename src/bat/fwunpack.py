@@ -30,11 +30,13 @@ import rpm
 def genericMarkerSearch(filename, tempdir=None, blacklist=[]):
 	datafile = open(filename, 'rb')
 	databuffer = []
-	offsets = []
+	offsets = {}
 	offset = 0
 	datafile.seek(offset)
 	databuffer = datafile.read(100000)
         marker_keys = fsmagic.fsmagic.keys()
+	for key in marker_keys:
+		offsets[key] = []
 	while databuffer != '':
 		for key in marker_keys:
 			res = databuffer.find(fsmagic.fsmagic[key])
@@ -42,7 +44,7 @@ def genericMarkerSearch(filename, tempdir=None, blacklist=[]):
 				continue
 			else:
 				while res != -1:
-					offsets.append((key, offset + res))
+					offsets[key].append(offset + res)
 					res = databuffer.find(fsmagic.fsmagic[key], res+1)
 		## move the offset 50
 		datafile.seek(offset + 99950)
@@ -55,8 +57,8 @@ def genericMarkerSearch(filename, tempdir=None, blacklist=[]):
 			offset = offset + len(databuffer)
 	datafile.close()
 	#print "offsets for %s" % filename
-	#for i in offsets:
-	#	print i
+	#for i in offsets.keys():
+		#print "%s:" % i, offsets[i]
 	#print
 	return ([], blacklist)
 
