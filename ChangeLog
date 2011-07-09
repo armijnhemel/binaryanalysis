@@ -1,3 +1,7 @@
+2011-07-09
+* (partial) rewrite to use seek() and read() for searching offsets instead of
+first reading the entire file and then find()
+
 2011-06-19
 * ugly byte swapping hack for Realtek RTL8196C based routers
 

@@ -14,7 +14,7 @@ def findSquashfs(data, offset=0):
 	marker = -1
 	squashtype = None
 	for t in fsmagic.squashtypes:
-		sqshmarker = findType(t, data, offset)
+		sqshmarker = findMarker2(fsmagic.fsmagic[t], data, offset)
 		if sqshmarker == -1:
 			continue
 		if marker == -1:
@@ -31,24 +31,33 @@ def findMarker(marker, data, offset=0):
 def findMarker2(marker, datafile, offset=0):
 	databuffer = []
 	datafile.seek(offset)
-	databuffer = datafile.read(100)
+	databuffer = datafile.read(100000)
 	while databuffer != '':
 		res = databuffer.find(marker)
 		if res != -1:
+			datafile.seek(0)
 			return offset + res
 		else:
-			datafile.seek(offset + 50)
-			databuffer = datafile.read(100)
-			offset = offset + len(databuffer) - 50
+			## move the offset 50
+			datafile.seek(offset + 99950)
+			## read 100000 bytes from oldoffset + 50, so there is 50 bytes
+			## overlap with the previous read
+			databuffer = datafile.read(100000)
+			if len(databuffer) >= 50:
+				offset = offset + 99950
+			else:
+				offset = offset + len(databuffer)
+	datafile.seek(0)
 	return -1
 
 def findType(type, data, offset=0):
-	return data.find(fsmagic.fsmagic[type], offset)
+	res = findMarker2(fsmagic.fsmagic[type], data, offset)
+	return res
 
 def findCpio(data, offset=0):
 	cpiomarker = -1
 	for marker in fsmagic.cpio:
-		res = findMarker(marker, data, offset)
+		res = findMarker2(marker, data, offset)
 		if res != -1 and cpiomarker == -1:
 			cpiomarker = res
 		elif res != -1:
@@ -56,13 +65,13 @@ def findCpio(data, offset=0):
 	return cpiomarker
 
 def findXZTrailer(data, offset=0):
-	res = findMarker('\x59\x5a', data, offset)
+	res = findMarker2('\x59\x5a', data, offset)
 	if res != -1:
 		return res
 	return -1
 
 def findCpioTrailer(data, offset=0):
-	res = findMarker('TRAILER!!!', data, offset)
+	res = findMarker2('TRAILER!!!', data, offset)
 	if res != -1:
 		return res
 	return -1
@@ -115,7 +124,7 @@ def findPNG(data, offset=0):
 
 ## http://www.w3.org/TR/PNG-Chunks.html
 def findPNGTrailer(data, offset=0):
-	res = findMarker('IEND', data, offset)
+	res = findMarker2('IEND', data, offset)
 	if res != -1:
 		return res
 	return -1
@@ -130,7 +139,7 @@ def findJFIF(data, offset=0):
 def findGIF(data, offset=0):
 	gifmarker = -1
 	for marker in ['GIF87a', 'GIF89a']:
-		res = findMarker(marker, data, offset)
+		res = findMarker2(marker, data, offset)
 		if res != -1 and gifmarker == -1:
 			gifmarker = res
 		elif res != -1:
