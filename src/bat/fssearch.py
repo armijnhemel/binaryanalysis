@@ -57,7 +57,7 @@ def findType(type, data, offset=0):
 def findCpio(data, offset=0):
 	cpiomarker = -1
 	for marker in fsmagic.cpio:
-		res = findMarker2(marker, data, offset)
+		res = findMarker2(fsmagic.fsmagic[marker], data, offset)
 		if res != -1 and cpiomarker == -1:
 			cpiomarker = res
 		elif res != -1:
@@ -130,7 +130,7 @@ def findJFIF(data, offset=0):
 def findGIF(data, offset=0):
 	gifmarker = -1
 	for marker in fsmagic.gif:
-		res = findMarker2(marker, data, offset)
+		res = findMarker2(fsmagic.fsmagic[marker], data, offset)
 		if res != -1 and gifmarker == -1:
 			gifmarker = res
 		elif res != -1:

@@ -45,8 +45,14 @@ fsmagic = {
             'pngtrailer':       'IEND',
             'cpiotrailer':      'TRAILER!!!',
             'jfif':             'JFIF',
+            'gif87':            'GIF87a',
+            'gif89':            'GIF89a',
+            'cpio1':            '070701',
+            'cpio2':            '070702',
+            'cpio3':            '070707',
           }
 
+## collection of markers that should be scanned together
 squashtypes = ['squashfs-le', 'squashfs-be', 'squashfs-le-lzma', 'squashfs-be-lzma']
-cpio = ['070707', '070701', '070702']
-gif = ['GIF87a', 'GIF89a']
+cpio        = ['cpio1', 'cpio2', 'cpio3']
+gif         = ['gif87', 'gif89']
