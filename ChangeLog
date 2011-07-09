@@ -1,6 +1,8 @@
 2011-07-09
 * (partial) rewrite to use seek() and read() for searching offsets instead of
 first reading the entire file and then find()
+* start on generic marker search, so we only have to read a file once, instead
+for every 'unpack' scan we want to run
 
 2011-06-19
 * ugly byte swapping hack for Realtek RTL8196C based routers

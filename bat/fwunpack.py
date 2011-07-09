@@ -24,6 +24,42 @@ import fsmagic, fssearch, extractor, ext2
 from xml.dom import minidom
 import rpm
 
+## method to search for all the markers we have in fsmagic
+## Later we should rewrite all methods to use the results from
+## this method instead of rereading the file.
+def genericMarkerSearch(filename, tempdir=None, blacklist=[]):
+	datafile = open(filename, 'rb')
+	databuffer = []
+	offsets = []
+	offset = 0
+	datafile.seek(offset)
+	databuffer = datafile.read(100000)
+        marker_keys = fsmagic.fsmagic.keys()
+	while databuffer != '':
+		for key in marker_keys:
+			res = databuffer.find(fsmagic.fsmagic[key])
+			if res == -1:
+				continue
+			else:
+				while res != -1:
+					offsets.append((key, offset + res))
+					res = databuffer.find(fsmagic.fsmagic[key], res+1)
+		## move the offset 50
+		datafile.seek(offset + 99950)
+		## read 100000 bytes from oldoffset + 50, so there is 50 bytes
+		## overlap with the previous read
+		databuffer = datafile.read(100000)
+		if len(databuffer) >= 50:
+			offset = offset + 99950
+		else:
+			offset = offset + len(databuffer)
+	datafile.close()
+	#print "offsets for %s" % filename
+	#for i in offsets:
+	#	print i
+	#print
+	return ([], blacklist)
+
 ## TODO: rewrite this to like how we do other searches: first
 ## look for markers, then unpack.
 def searchUnpackTar(filename, tempdir=None, blacklist=[]):
