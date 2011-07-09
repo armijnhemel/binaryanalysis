@@ -65,16 +65,10 @@ def findCpio(data, offset=0):
 	return cpiomarker
 
 def findXZTrailer(data, offset=0):
-	res = findMarker2('\x59\x5a', data, offset)
-	if res != -1:
-		return res
-	return -1
+	return findType('xztrailer', data, offset)
 
 def findCpioTrailer(data, offset=0):
-	res = findMarker2('TRAILER!!!', data, offset)
-	if res != -1:
-		return res
-	return -1
+	return findType('cpiotrailer', data, offset)
 
 def findExt2fs(data, offset=0):
 	return findType('ext2', data, offset)
@@ -124,13 +118,10 @@ def findPNG(data, offset=0):
 
 ## http://www.w3.org/TR/PNG-Chunks.html
 def findPNGTrailer(data, offset=0):
-	res = findMarker2('IEND', data, offset)
-	if res != -1:
-		return res
-	return -1
+	return findType('pngtrailer', data, offset)
 
 def findJFIF(data, offset=0):
-	jfifmarker = data.find('JFIF', offset)
+	jfifmarker = findType('jfif', data, offset)
 	if jfifmarker < 6:
 		return -1
 	else:
@@ -138,7 +129,7 @@ def findJFIF(data, offset=0):
 
 def findGIF(data, offset=0):
 	gifmarker = -1
-	for marker in ['GIF87a', 'GIF89a']:
+	for marker in fsmagic.gif:
 		res = findMarker2(marker, data, offset)
 		if res != -1 and gifmarker == -1:
 			gifmarker = res
