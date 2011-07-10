@@ -101,7 +101,7 @@ def searchAssemblyAttrs(data):
 	res = searchAssembly(data)
 	if res != None:
 		return res[0]
-	return None
+	return {}
 
 
 ## used in leaf scans
@@ -109,4 +109,4 @@ def searchAssemblyDeps(data):
 	res = searchAssembly(data)
 	if res != None:
 		return res[1]
-	return None
+	return {}
