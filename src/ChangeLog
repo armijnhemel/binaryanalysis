@@ -1,3 +1,7 @@
+2011-07-10
+* introduce generic method to create directories with the right names
+* rewrite most search* methods to use the prescanned offsets
+
 2011-07-09
 * (partial) rewrite to use seek() and read() for searching offsets instead of
 first reading the entire file and then find()
