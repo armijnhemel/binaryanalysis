@@ -98,8 +98,15 @@ def searchAssembly(data):
 
 ## used in unpack scans
 def searchAssemblyAttrs(data):
-	return searchAssembly(data)[0]
+	res = searchAssembly(data)
+	if res != None:
+		return res[0]
+	return None
+
 
 ## used in leaf scans
 def searchAssemblyDeps(data):
-	return searchAssembly(data)[1]
+	res = searchAssembly(data)
+	if res != None:
+		return res[1]
+	return None
