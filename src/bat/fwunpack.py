@@ -595,8 +595,8 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}):
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
-		tmpdir = dirsetup(tempdir, filename, "cpio", cpiocounter)
 		for trailer in offsets['cpiotrailer']:
+			tmpdir = dirsetup(tempdir, filename, "cpio", cpiocounter)
 			blacklistoffset = extractor.inblacklist(trailer, blacklist)
 			if blacklistoffset != None:
 				continue
