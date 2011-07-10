@@ -87,14 +87,7 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[], offsets={}):
 	for tm in tarmagic:
 		if tm in type:
 			tarsize = 0
-        		if tempdir == None:
-        		       	tmpdir = tempfile.mkdtemp()
-			else:
-				try:
-					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "tar", 1)
-					os.makedirs(tmpdir)
-				except Exception, e:
-					tmpdir = tempfile.mkdtemp(dir=tempdir)
+			tmpdir = dirsetup(tempdir, filename, "tar", 1)
 			tar = tarfile.open(filename, 'r')
 			tar.extractall(path=tmpdir)
 			for t in tar:
@@ -108,14 +101,8 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[], offsets={}):
 ## bytes NOR flash instead of 8 bytes SPI flash. This is an ugly hack to first
 ## rearrange the data. This is mostly for Realtek RTL8196C based routers.
 def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}):
-	if tempdir == None:
-		tmpdir = tempfile.mkdtemp()
-	else:
-		try:
-			tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "byteswap", 1)
-			os.makedirs(tmpdir)
-		except Exception, e:
-			tmpdir = tempfile.mkdtemp(dir=tempdir)
+	tmpdir = dirsetup(tempdir, filename, "byteswap", 1)
+
 	datafile = open(filename, 'rb')
         data = datafile.read()
         datafile.close()
@@ -141,14 +128,7 @@ def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}):
 ## For this you will need the unyaffs program from
 ## http://code.google.com/p/unyaffs/
 def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}):
-        if tempdir == None:
-               	tmpdir = tempfile.mkdtemp()
-	else:
-		try:
-			tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "yaffs", 1)
-			os.makedirs(tmpdir)
-		except Exception, e:
-			tmpdir = tempfile.mkdtemp(dir=tempdir)
+	tmpdir = dirsetup(tempdir, filename, "yaffs", 1)
 	p = subprocess.Popen(['unyaffs', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
@@ -233,14 +213,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}):
 	## 7zip gives better results than unzip
 	offset = data.find("PKBAC")
 	if offset != -1:
-		if tempdir == None:
-			tmpdir = tempfile.mkdtemp()
-		else:
-			try:
-				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "exe", execounter)
-				os.makedirs(tmpdir)
-			except Exception, e:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+		tmpdir = dirsetup(tempdir, filename, "exe", execounter)
 		res = unpack7z(data, 0, tmpdir)
 		if res != None:
 			diroffsets.append((res, 0))
@@ -254,14 +227,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}):
 	## and unpack with unrar
 	offset = data.find("WinRAR")
 	if offset != -1:
-		if tempdir == None:
-			tmpdir = tempfile.mkdtemp()
-		else:
-			try:
-				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "exe", execounter)
-				os.makedirs(tmpdir)
-			except Exception, e:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+		tmpdir = dirsetup(tempdir, filename, "exe", execounter)
 		res = unpackRar(data, 0, tmpdir)
 		if res != None:
 			(endofarchive, rardir) = res
@@ -295,14 +261,7 @@ def searchUnpackCab(filename, tempdir=None, blacklist=[], offsets={}):
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
-		if tempdir == None:
-			tmpdir = tempfile.mkdtemp()
-		else:
-			try:
-				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "cab", cabcounter)
-				os.makedirs(tmpdir)
-			except Exception, e:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+		tmpdir = dirsetup(tempdir, filename, "cab", cabcounter)
 		res = unpackCab(data, offset, tmpdir)
 		if res != None:
 			(cabdir, cabsize) = res
@@ -429,14 +388,7 @@ def searchUnpackLzip(filename, tempdir=None, blacklist=[], offsets={}):
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
-		if tempdir == None:
-			tmpdir = tempfile.mkdtemp()
-		else:
-			try:
-				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "lzip", lzipcounter)
-				os.makedirs(tmpdir)
-			except Exception, e:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+		tmpdir = dirsetup(tempdir, filename, "lzip", lzipcounter)
 		(res, lzipsize) = unpackLzip(data, offset, tmpdir)
 		if res != None:
 			diroffsets.append((res, offset))
@@ -502,14 +454,7 @@ def searchUnpackLzo(filename, tempdir=None, blacklist=[], offsets={}):
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
-		if tempdir == None:
-			tmpdir = tempfile.mkdtemp()
-		else:
-			try:
-				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "lzo", lzocounter)
-				os.makedirs(tmpdir)
-			except Exception, e:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+		tmpdir = dirsetup(tempdir, filename, "lzo", lzocounter)
 		(res, lzosize) = unpackLzo(data, offset, tmpdir)
 		if res != None:
 			diroffsets.append((res, offset))
@@ -581,14 +526,7 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}):
 			if blacklistoffset != None:
 				continue
 			else:
-				if tempdir == None:
-					tmpdir = tempfile.mkdtemp()
-				else:
-					try:
-						tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "xz", xzcounter)
-						os.makedirs(tmpdir)
-					except Exception, e:
-						tmpdir = tempfile.mkdtemp(dir=tempdir)
+				tmpdir = dirsetup(tempdir, filename, "xz", xzcounter)
 				res = unpackXZ(data, offset, trail, tmpdir)
 				if res != None:
 					diroffsets.append((res, offset))
@@ -658,14 +596,7 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}):
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
-        	if tempdir == None:
-               		tmpdir = tempfile.mkdtemp()
-		else:
-			try:
-				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "cpio", cpiocounter)
-				os.makedirs(tmpdir)
-			except Exception, e:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+		tmpdir = dirsetup(tempdir, filename, "cpio", cpiocounter)
 		for trailer in offsets['cpiotrailer']:
 			blacklistoffset = extractor.inblacklist(trailer, blacklist)
 			if blacklistoffset != None:
@@ -734,14 +665,7 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}):
 		data = datafile.read()
 		diroffsets = []
 		cramfscounter = 1
-        	if tempdir == None:
-        	       	tmpdir = tempfile.mkdtemp()
-		else:
-			try:
-				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "cramfs", cramfscounter)
-				os.makedirs(tmpdir)
-			except Exception, e:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+		tmpdir = dirsetup(tempdir, filename, "cramfs", cramfscounter)
 		while(offset != -1):
 			blacklistoffset = extractor.inblacklist(offset, blacklist)
 			if blacklistoffset != None:
@@ -822,14 +746,7 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}):
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
-        	if tempdir == None:
-        	      		tmpdir = tempfile.mkdtemp()
-		else:
-			try:
-				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "squashfs", squashcounter)
-				os.makedirs(tmpdir)
-			except Exception, e:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+		tmpdir = dirsetup(tempdir, filename, "squashfs", squashcounter)
 		retval = unpackSquashfsWrapper(data, offset, tmpdir)
 		if retval != None:
 			(res, squashsize) = retval
@@ -1032,14 +949,7 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}):
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
-        	if tempdir == None:
-        	      		tmpdir = tempfile.mkdtemp()
-		else:
-			try:
-				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "ext2", ext2counter)
-				os.makedirs(tmpdir)
-			except Exception, e:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+		tmpdir = dirsetup(tempdir, filename, "ext2", ext2counter)
 		## we should actually scan the data starting from offset - 0x438
 		if not checkExt2fs(data[offset - 0x438:offset - 0x438 + 4096], 0, tmpdir):
 			os.rmdir(tmpdir)
@@ -1212,14 +1122,7 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}):
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
-		if tempdir == None:
-			tmpdir = tempfile.mkdtemp()
-		else:
-			try:
-				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "bzip2", bzip2counter)
-				os.makedirs(tmpdir)
-			except Exception, e:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+		tmpdir = dirsetup(tempdir, filename, "bzip2", bzip2counter)
 		res = unpackBzip2(data, offset, tmpdir)
 		if res != None:
 			diroffsets.append((res, offset))
@@ -1284,14 +1187,7 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}):
 				offset = fssearch.findZip(datafile, blacklistoffset)
 			if offset == -1:
 				break
-        		if tempdir == None:
-        	       		tmpdir = tempfile.mkdtemp()
-			else:
-				try:
-					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "zip", zipcounter)
-					os.makedirs(tmpdir)
-				except Exception, e:
-					tmpdir = tempfile.mkdtemp(dir=tempdir)
+			tmpdir = dirsetup(tempdir, filename, "zip", zipcounter)
 			(endofcentraldir, res) = unpackZip(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
@@ -1322,14 +1218,7 @@ def searchUnpackRar(filename, tempdir=None, blacklist=[], offsets={}):
 				offset = fssearch.findRar(datafile, blacklistoffset)
 			if offset == -1:
 				break
-        		if tempdir == None:
-        	       		tmpdir = tempfile.mkdtemp()
-			else:
-				try:
-					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "rar", rarcounter)
-					os.makedirs(tmpdir)
-				except Exception, e:
-					tmpdir = tempfile.mkdtemp(dir=tempdir)
+			tmpdir = dirsetup(tempdir, filename, "rar", rarcounter)
 			res = unpackRar(data, offset, tmpdir)
 			if res != None:
 				(endofarchive, rardir) = res
@@ -1392,14 +1281,7 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}):
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
-        	if tempdir == None:
-               		tmpdir = tempfile.mkdtemp()
-		else:
-			try:
-				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "lzma", lzmacounter)
-				os.makedirs(tmpdir)
-			except Exception, e:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+		tmpdir = dirsetup(tempdir, filename, "lzma", lzmacounter)
 		res = unpackLZMA(data, offset, tmpdir)
 		if res != None:
 			diroffsets.append((res, offset))
@@ -1485,14 +1367,7 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[], offsets={}):
 				offset = fssearch.findRPM(datafile, blacklistoffset)
 			if offset == -1:
 				break
-        		if tempdir == None:
-        	       		tmpdir = tempfile.mkdtemp()
-			else:
-				try:
-					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "rpm", rpmcounter)
-					os.makedirs(tmpdir)
-				except Exception, e:
-					tmpdir = tempfile.mkdtemp(dir=tempdir)
+			tmpdir = dirsetup(tempdir, filename, "rpm", rpmcounter)
 			res = unpackRPM(data, offset, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset))
@@ -1535,14 +1410,7 @@ def searchUnpackUbifs(filename, tempdir=None, blacklist=[], offsets={}):
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
-        	if tempdir == None:
-               		tmpdir = tempfile.mkdtemp()
-		else:
-			try:
-				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "ubifs", ubicounter)
-				os.makedirs(tmpdir)
-			except Exception, e:
-				tmpdir = tempfile.mkdtemp(dir=tempdir)
+		tmpdir = dirsetup(tempdir, filename, "ubifs", ubicounter)
 		res = unpackUbifs(data, offset, tmpdir)
 		if res != None:
 			(ubitmpdir, ubisize) = res
@@ -1617,14 +1485,7 @@ def searchUnpackARJ(filename, tempdir=None, blacklist=[], offsets={}):
 				offset = fssearch.findARJ(datafile, blacklistoffset)
 			if offset == -1:
 				break
-        		if tempdir == None:
-        	       		tmpdir = tempfile.mkdtemp()
-			else:
-				try:
-					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "arj", arjcounter)
-					os.makedirs(tmpdir)
-				except Exception, e:
-					tmpdir = tempfile.mkdtemp(dir=tempdir)
+			tmpdir = dirsetup(tempdir, filename, "arj", arjcounter)
 			res = unpackARJ(data, offset, tmpdir)
 			if res != None:
 				(arjtmpdir, arjsize) = res
@@ -1730,14 +1591,7 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}):
 			blacklistoffset = extractor.inblacklist(trail, blacklist)
 			if blacklistoffset != None:
 				continue
-        		if tempdir == None:
-        	       		tmpdir = tempfile.mkdtemp()
-			else:
-				try:
-					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "gif", gifcounter)
-					os.makedirs(tmpdir)
-				except Exception, e:
-					tmpdir = tempfile.mkdtemp(dir=tempdir)
+			tmpdir = dirsetup(tempdir, filename, "gif", gifcounter)
 			tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".gif", dir=tmpdir)
 			os.write(tmpfile[0], data[offset:trail+1])
 			p = subprocess.Popen(['gifinfo', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -1804,14 +1658,7 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}):
 			blacklistoffset = extractor.inblacklist(trail, blacklist)
 			if blacklistoffset != None:
 				continue
-        		if tempdir == None:
-        	       		tmpdir = tempfile.mkdtemp()
-			else:
-				try:
-					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "png", pngcounter)
-					os.makedirs(tmpdir)
-				except Exception, e:
-					tmpdir = tempfile.mkdtemp(dir=tempdir)
+			tmpdir = dirsetup(tempdir, filename, "png", pngcounter)
 			tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".png", dir=tmpdir)
 			os.write(tmpfile[0], data[offset:trail+8])
 			p = subprocess.Popen(['webpng', '-d', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
