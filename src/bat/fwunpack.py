@@ -37,6 +37,13 @@ def dirsetup(tempdir, filename, marker, counter):
 			tmpdir = tempfile.mkdtemp(dir=tempdir)
 	return tmpdir
 
+def unpacksetup(tempdir):
+	if tempdir == None:
+		tmpdir = tempfile.mkdtemp()
+	else:
+		tmpdir = tempdir
+	return tmpdir
+
 ## method to search for all the markers we have in fsmagic
 ## Later we should rewrite all methods to use the results from
 ## this method instead of rereading the file.
@@ -280,10 +287,7 @@ def searchUnpackCab(filename, tempdir=None, blacklist=[], offsets={}):
 def unpackCab(data, offset, tempdir=None):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
-	if tempdir == None:
-		tmpdir = tempfile.mkdtemp()
-	else:
-		tmpdir = tempdir
+	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
 	## copied from the python-magic examples
@@ -330,10 +334,7 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[], offsets={}):
 
 	for exe in exemagic:
 		if exe in type:
-        		if tempdir == None:
-        		       	tmpdir = tempfile.mkdtemp()
-			else:
-				tmpdir = tempdir
+			tmpdir = unpacksetup(tempdir)
                 	zztmpdir = tempfile.mkdtemp(dir=tmpdir)
 			param = "-o%s" % zztmpdir
 			p = subprocess.Popen(['7z', param, '-l', '-y', 'x', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -356,10 +357,7 @@ def unpack7z(data, offset, tempdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
 	## Assumes (for now) that 7z is in the path
-	if tempdir == None:
-		tmpdir = tempfile.mkdtemp()
-	else:
-		tmpdir = tempdir
+	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
 	param = "-o%s" % tmpdir
@@ -404,10 +402,7 @@ def unpackLzip(data, offset, tempdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
 	## Assumes (for now) that lzip is in the path
-	if tempdir == None:
-		tmpdir = tempfile.mkdtemp()
-	else:
-		tmpdir = tempdir
+	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
 	p = subprocess.Popen(['lzip', "-d", "-c", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -470,10 +465,7 @@ def unpackLzo(data, offset, tempdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
 	## Assumes (for now) that lzop is in the path
-	if tempdir == None:
-		tmpdir = tempfile.mkdtemp()
-	else:
-		tmpdir = tempdir
+	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
 	p = subprocess.Popen(['lzop', "-d", "-P", "-p%s" % (tmpdir,), tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -541,10 +533,7 @@ def unpackXZ(data, offset, trailer, tempdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
 	## Assumes (for now) that xz is in the path
-	if tempdir == None:
-		tmpdir = tempfile.mkdtemp()
-	else:
-		tmpdir = tempdir
+	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	## trailer has size of 2. Add 1 because [lower, upper)
 	os.write(tmpfile[0], data[offset:trailer+3])
@@ -624,10 +613,7 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}):
 ## return a directory for further processing, otherwise it will return None.
 ## This one needs to stay separate, since it is also used by RPM unpacking
 def unpackCpio(data, offset, tempdir=None):
-        if tempdir == None:
-                tmpdir = tempfile.mkdtemp()
-	else:
-		tmpdir = tempdir
+	tmpdir = unpacksetup(tempdir)
 	## write data to a temporary location first so we can check
 	## the magic.
 	## Also use cpio -t to test if we actually have a valid archive
@@ -689,10 +675,7 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}):
 ## tries to unpack stuff using fsck.cramfs. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
 def unpackCramfs(data, offset, tempdir=None):
-        if tempdir == None:
-                tmpdir = tempfile.mkdtemp()
-	else:
-		tmpdir = tempdir
+	tmpdir = unpacksetup(tempdir)
 	## fsck.cramfs needs to unpack in a separate directory. So, create a new temporary
 	## directory to avoid name clashes
         #tmpdir2 = tempfile.mkdtemp()
@@ -792,10 +775,7 @@ def unpackSquashfsWrapper(data, offset, tempdir=None):
 ## tries to unpack stuff using 'normal' unsquashfs. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
 def unpackSquashfs(data, offset, tempdir=None):
-        if tempdir == None:
-                tmpdir = tempfile.mkdtemp()
-	else:
-		tmpdir = tempdir
+	tmpdir = unpacksetup(tempdir)
 	## since unsquashfs can't deal with data via stdin first write it to
 	## a temporary location
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
@@ -843,10 +823,7 @@ def unpackSquashfs(data, offset, tempdir=None):
 
 ## squashfs variant from OpenWrt, with LZMA
 def unpackSquashfsOpenWrtLZMA(data, offset, tempdir=None):
-        if tempdir == None:
-                tmpdir = tempfile.mkdtemp()
-	else:
-		tmpdir = tempdir
+	tmpdir = unpackset(tempdir)
 	## since unsquashfs can't deal with data via stdin first write it to
 	## a temporary location
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
@@ -880,10 +857,7 @@ def unpackSquashfsOpenWrtLZMA(data, offset, tempdir=None):
 
 ## squashfs 4.2, various compression methods
 def unpackSquashfs42(data, offset, tempdir=None):
-        if tempdir == None:
-                tmpdir = tempfile.mkdtemp()
-	else:
-		tmpdir = tempdir
+	tmpdir = unpacksetup(tempdir)
 	## since unsquashfs can't deal with data via stdin first write it to
 	## a temporary location
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
@@ -907,10 +881,7 @@ def unpackSquashfs42(data, offset, tempdir=None):
 
 ## squashfs variant from Broadcom, with LZMA
 def unpackSquashfsBroadcomLZMA(data, offset, tempdir=None):
-        if tempdir == None:
-                tmpdir = tempfile.mkdtemp()
-	else:
-		tmpdir = tempdir
+	tmpdir = unpacksetup(tempdir)
 	## since unsquashfs can't deal with data via stdin first write it to
 	## a temporary location
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
@@ -984,10 +955,7 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}):
 	return (diroffsets, blacklist, offsets)
 
 def checkExt2fs(data, offset, tempdir=None):
-	if tempdir == None:
-		tmpdir = tempfile.mkdtemp()
-	else:
-		tmpdir = tempdir
+	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	## for a quick sanity check we only need a tiny bit of data
 	if len(data[offset:]) >= 4096:
@@ -1008,10 +976,7 @@ def checkExt2fs(data, offset, tempdir=None):
 def unpackExt2fs(data, offset, tempdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
-	if tempdir == None:
-		tmpdir = tempfile.mkdtemp()
-	else:
-		tmpdir = tempdir
+	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
 	ext2.copyext2fs(tmpfile[1], tmpdir)
@@ -1023,13 +988,8 @@ def unpackExt2fs(data, offset, tempdir=None):
 ## tries to unpack stuff using zcat. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
 def unpackGzip(data, offset, tempdir=None):
-	## first unpack things, write things to a file and return
-	## the directory if the file is not empty
 	## Assumes (for now) that zcat is in the path
-	if tempdir == None:
-		tmpdir = tempfile.mkdtemp()
-	else:
-		tmpdir = tempdir
+	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
 	p = subprocess.Popen(['zcat', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -1085,10 +1045,7 @@ def unpackBzip2(data, offset, tempdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
 	## Assumes (for now) that bzcat is in the path
-	if tempdir == None:
-		tmpdir = tempfile.mkdtemp()
-	else:
-		tmpdir = tempdir
+	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
 	p = subprocess.Popen(['bzcat', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -1137,10 +1094,7 @@ def unpackZip(data, offset, tempdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
 	## Assumes (for now) that zipinfo and unzip are in the path
-	if tempdir == None:
-		tmpdir = tempfile.mkdtemp()
-	else:
-		tmpdir = tempdir
+	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
 	## Use information from zipinfo -v to extract the right offsets (or at least the last offset)
@@ -1233,13 +1187,8 @@ def searchUnpackRar(filename, tempdir=None, blacklist=[], offsets={}):
 		return (diroffsets, blacklist, offsets)
 
 def unpackRar(data, offset, tempdir=None):
-	## first unpack things, write things to a file and return
-	## the directory if the file is not empty
 	## Assumes (for now) that unrar is in the path
-	if tempdir == None:
-		tmpdir = tempfile.mkdtemp()
-	else:
-		tmpdir = tempdir
+	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
 
@@ -1259,7 +1208,7 @@ def unpackRar(data, offset, tempdir=None):
 		return None
 	p = subprocess.Popen(['unrar', 'x', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
-	## oh the horror, we really need to check if unzip actually was successful
+	## oh the horror, we really need to check if unrar actually was successful
 	#outtmpfile = tempfile.mkstemp(dir=tmpdir)
 	#os.write(outtmpfile[0], stanout)
 	#if os.stat(outtmpfile[1]).st_size == 0:
@@ -1298,10 +1247,7 @@ def unpackLZMA(data, offset, tempdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
 	## Assumes (for now) that lzma is in the path
-	if tempdir == None:
-		tmpdir = tempfile.mkdtemp()
-	else:
-		tmpdir = tempdir
+	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
 	p = subprocess.Popen(['lzma', '-cd', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -1321,13 +1267,8 @@ def unpackLZMA(data, offset, tempdir=None):
 	return tmpdir
 
 def unpackRPM(data, offset, tempdir=None):
-	## first unpack things, write things to a file and return
-	## the directory if the file is not empty
 	## Assumes (for now) that rpm2cpio is in the path
-	if tempdir == None:
-		tmpdir = tempfile.mkdtemp()
-	else:
-		tmpdir = tempdir
+	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
 	## first use rpm2cpio to unpack the rpm data
@@ -1425,10 +1366,7 @@ def searchUnpackUbifs(filename, tempdir=None, blacklist=[], offsets={}):
 	return (diroffsets, blacklist, offsets)
 
 def unpackUbifs(data, offset, tempdir=None):
-	if tempdir == None:
-		tmpdir = tempfile.mkdtemp()
-	else:
-		tmpdir = tempdir
+	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
 	## use unubi to unpack the data
@@ -1501,10 +1439,7 @@ def searchUnpackARJ(filename, tempdir=None, blacklist=[], offsets={}):
 		return (diroffsets, blacklist, offsets)
 
 def unpackARJ(data, offset, tempdir=None):
-	if tempdir == None:
-		tmpdir = tempfile.mkdtemp()
-	else:
-		tmpdir = tempdir
+	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir, suffix=".arj")
 	os.write(tmpfile[0], data[offset:])
 	## first check archive integrity
