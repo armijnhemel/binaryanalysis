@@ -249,6 +249,16 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}):
 	## else try other methods
 	## 7zip gives better results than cabextract
 	## Ideally we should also do something with innounp
+	## As a last resort try 7-zip
+	tmpdir = dirsetup(tempdir, filename, "exe", execounter)
+	res = unpack7z(data, 0, tmpdir)
+	if res != None:
+		diroffsets.append((res, 0))
+		blacklist.append((0, os.stat(filename).st_size))
+		return (diroffsets, blacklist, offsets)
+	else:
+		if tempdir == None:
+			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, offsets)
 
 ## unpacker for Microsoft InstallShield
