@@ -24,6 +24,19 @@ import fsmagic, fssearch, extractor, ext2
 from xml.dom import minidom
 import rpm
 
+## generic method to create temporary directories, with the correct filenames
+## which is used throughout the code.
+def dirsetup(tempdir, filename, marker, counter):
+	if tempdir == None:
+		tmpdir = tempfile.mkdtemp()
+	else:
+		try:
+			tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), marker, counter)
+			os.makedirs(tmpdir)
+		except Exception, e:
+			tmpdir = tempfile.mkdtemp(dir=tempdir)
+	return tmpdir
+
 ## method to search for all the markers we have in fsmagic
 ## Later we should rewrite all methods to use the results from
 ## this method instead of rereading the file.
@@ -56,10 +69,6 @@ def genericMarkerSearch(filename, tempdir=None, blacklist=[], offsets={}):
 		else:
 			offset = offset + len(databuffer)
 	datafile.close()
-	#print "offsets for %s" % filename
-	#for i in offsets.keys():
-		#print "%s:" % i, offsets[i]
-	#print
 	return ([], blacklist, offsets)
 
 ## TODO: rewrite this to like how we do other searches: first
@@ -275,41 +284,34 @@ def searchUnpackInstallShield(filename, tempdir=None, blacklist=[], offsets={}):
 
 ## unpacker for Microsoft Cabinet Archive files.
 def searchUnpackCab(filename, tempdir=None, blacklist=[], offsets={}):
-	datafile = open(filename, 'rb')
-	offset = fssearch.findCab(datafile)
-	if offset == -1:
-		datafile.close()
+	if offsets['cab'] == []:
 		return ([], blacklist, offsets)
-	else:
-		diroffsets = []
-		cabcounter = 1
-		## only read data when we have found an offset
-		data = datafile.read()
-		while(offset != -1):
-			blacklistoffset = extractor.inblacklist(offset, blacklist)
-			if blacklistoffset != None:
-				offset = fssearch.findCab(datafile, blacklistoffset)
-			if offset == -1:
-				break
-			if tempdir == None:
-				tmpdir = tempfile.mkdtemp()
-			else:
-				try:
-					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "cab", cabcounter)
-					os.makedirs(tmpdir)
-				except Exception, e:
-					tmpdir = tempfile.mkdtemp(dir=tempdir)
-			res = unpackCab(data, offset, tmpdir)
-			if res != None:
-				(cabdir, cabsize) = res
-				diroffsets.append((cabdir, offset))
-				blacklist.append((offset, offset + cabsize))
-				offset = fssearch.findCab(datafile, offset+cabsize)
-				cabcounter = cabcounter + 1
-			else:
-				## cleanup
-				os.rmdir(tmpdir)
-				offset = fssearch.findCab(datafile, offset+1)
+	datafile = open(filename, 'rb')
+	diroffsets = []
+	cabcounter = 1
+	## only read data when we have found an offset
+	data = datafile.read()
+	for offset in offsets['cab']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		if tempdir == None:
+			tmpdir = tempfile.mkdtemp()
+		else:
+			try:
+				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "cab", cabcounter)
+				os.makedirs(tmpdir)
+			except Exception, e:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
+		res = unpackCab(data, offset, tmpdir)
+		if res != None:
+			(cabdir, cabsize) = res
+			diroffsets.append((cabdir, offset))
+			blacklist.append((offset, offset + cabsize))
+			cabcounter = cabcounter + 1
+		else:
+			## cleanup
+			os.rmdir(tmpdir)
 	datafile.close()
 	return (diroffsets, blacklist, offsets)
 
@@ -417,39 +419,32 @@ def unpack7z(data, offset, tempdir=None):
 ## unpack lzip archives.
 ## This method returns a blacklist.
 def searchUnpackLzip(filename, tempdir=None, blacklist=[], offsets={}):
-	datafile = open(filename, 'rb')
-	offset = fssearch.findLzip(datafile)
-	if offset == -1:
-		datafile.close()
+	if offsets['lzip'] == []:
 		return ([], blacklist, offsets)
-	else:
-		diroffsets = []
-		lzipcounter = 1
-		data = datafile.read()
-		while(offset != -1):
-			blacklistoffset = extractor.inblacklist(offset, blacklist)
-			if blacklistoffset != None:
-				offset = fssearch.findLzip(datafile, blacklistoffset)
-			if offset == -1:
-				break
-			if tempdir == None:
-				tmpdir = tempfile.mkdtemp()
-			else:
-				try:
-					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "lzip", lzipcounter)
-					os.makedirs(tmpdir)
-				except Exception, e:
-					tmpdir = tempfile.mkdtemp(dir=tempdir)
-			(res, lzipsize) = unpackLzip(data, offset, tmpdir)
-			if res != None:
-				diroffsets.append((res, offset))
-				blacklist.append((offset, offset+lzipsize))
-				offset = fssearch.findLzip(datafile, offset+lzipsize)
-				lzipcounter = lzipcounter + 1
-			else:
-				## cleanup
-				os.rmdir(tmpdir)
-				offset = fssearch.findLzip(datafile, offset+1)
+	datafile = open(filename, 'rb')
+	diroffsets = []
+	lzipcounter = 1
+	data = datafile.read()
+	for offset in offsets['lzip']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		if tempdir == None:
+			tmpdir = tempfile.mkdtemp()
+		else:
+			try:
+				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "lzip", lzipcounter)
+				os.makedirs(tmpdir)
+			except Exception, e:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
+		(res, lzipsize) = unpackLzip(data, offset, tmpdir)
+		if res != None:
+			diroffsets.append((res, offset))
+			blacklist.append((offset, offset+lzipsize))
+			lzipcounter = lzipcounter + 1
+		else:
+			## cleanup
+			os.rmdir(tmpdir)
 	datafile.close()
 	return (diroffsets, blacklist, offsets)
 
@@ -496,41 +491,33 @@ def unpackLzip(data, offset, tempdir=None):
 	return (tmpdir, lzipsize)
 
 ## unpack lzo archives.
-## This method returns a blacklist.
 def searchUnpackLzo(filename, tempdir=None, blacklist=[], offsets={}):
-	datafile = open(filename, 'rb')
-	offset = fssearch.findLzo(datafile)
-	if offset == -1:
-		datafile.close()
+	if offsets['lzo'] == []:
 		return ([], blacklist, offsets)
-	else:
-		data = datafile.read()
-		diroffsets = []
-		lzocounter = 1
-		while(offset != -1):
-			blacklistoffset = extractor.inblacklist(offset, blacklist)
-			if blacklistoffset != None:
-				offset = fssearch.findLzo(datafile, blacklistoffset)
-			if offset == -1:
-				break
-			if tempdir == None:
-				tmpdir = tempfile.mkdtemp()
-			else:
-				try:
-					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "lzo", lzocounter)
-					os.makedirs(tmpdir)
-				except Exception, e:
-					tmpdir = tempfile.mkdtemp(dir=tempdir)
-			(res, lzosize) = unpackLzo(data, offset, tmpdir)
-			if res != None:
-				diroffsets.append((res, offset))
-				blacklist.append((offset, offset+lzosize))
-				offset = fssearch.findLzo(datafile, offset+lzosize)
-				lzocounter = lzocounter + 1
-			else:
-				## cleanup
-				os.rmdir(tmpdir)
-				offset = fssearch.findLzo(datafile, offset+1)
+	datafile = open(filename, 'rb')
+	data = datafile.read()
+	diroffsets = []
+	lzocounter = 1
+	for offset in offsets['lzo']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		if tempdir == None:
+			tmpdir = tempfile.mkdtemp()
+		else:
+			try:
+				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "lzo", lzocounter)
+				os.makedirs(tmpdir)
+			except Exception, e:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
+		(res, lzosize) = unpackLzo(data, offset, tmpdir)
+		if res != None:
+			diroffsets.append((res, offset))
+			blacklist.append((offset, offset+lzosize))
+			lzocounter = lzocounter + 1
+		else:
+			## cleanup
+			os.rmdir(tmpdir)
 	datafile.close()
 	return (diroffsets, blacklist, offsets)
 
@@ -571,65 +558,44 @@ def unpackLzo(data, offset, tempdir=None):
 ## so it is likely that we need to search for the trailer a lot more than
 ## for the header.
 def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}):
-	datafile = open(filename, 'rb')
-	offset = fssearch.findXZ(datafile)
-	if offset == -1:
-		datafile.close()
+	if offsets['xz'] == -1:
 		return ([], blacklist, offsets)
-	else:
-		## record the original offset
-		origoffset = offset
-		diroffsets = []
-		xzcounter = 1
-		## remember the offsets of the XZ footer, search for all trailers once
-		traileroffsets = []
-		trailer = fssearch.findXZTrailer(datafile)
-		## why bother if we can't find a trailer?
-		if trailer == -1:
-			datafile.close()
-			return ([], blacklist, offsets)
-		while(trailer != -1):
-			trailer = fssearch.findXZTrailer(datafile,trailer+1)
-			if trailer != -1:
-				traileroffsets.append(trailer)
-		## remember all offsets of the XZ header in the file
-		offsets = [offset]
-		while(offset != -1):
-			offset = fssearch.findXZ(datafile,offset+1)
-			if offset != -1:
-				offsets.append(offset)
-		## only read the data when we know we can continue
-		data = datafile.read()
-		for trail in traileroffsets:
-			## check if the trailer is in the blacklist
-			blacklistoffset = extractor.inblacklist(trail, blacklist)
-			if blacklistoffset != None:
-				## remove trailer from traileroffsets?
+	if offsets['xztrailer'] == -1:
+		return ([], blacklist, offsets)
+	datafile = open(filename, 'rb')
+	## record the original offset
+	diroffsets = []
+	xzcounter = 1
+	## only read the data when we know we can continue
+	data = datafile.read()
+	for trail in offsets['xztrailer']:
+		## check if the trailer is in the blacklist
+		blacklistoffset = extractor.inblacklist(trail, blacklist)
+		if blacklistoffset != None:
+			continue
+		for offset in offsets['xz']:
+			## only check offsets that make sense
+			if offset >= trail:
 				continue
-			for offset in offsets:
-				## only check offsets that make sense
-				if offset >= trail:
-					continue
-				blacklistoffset = extractor.inblacklist(offset, blacklist)
-				if blacklistoffset != None:
-					## remove offset from offsets?
-					continue
+			blacklistoffset = extractor.inblacklist(offset, blacklist)
+			if blacklistoffset != None:
+				continue
+			else:
+				if tempdir == None:
+					tmpdir = tempfile.mkdtemp()
 				else:
-					if tempdir == None:
-						tmpdir = tempfile.mkdtemp()
-					else:
-						try:
-							tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "xz", xzcounter)
-							os.makedirs(tmpdir)
-						except Exception, e:
-							tmpdir = tempfile.mkdtemp(dir=tempdir)
-					res = unpackXZ(data, offset, trail, tmpdir)
-					if res != None:
-						diroffsets.append((res, offset))
-						xzcounter = xzcounter + 1
-					else:
-						## cleanup
-						os.rmdir(tmpdir)
+					try:
+						tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "xz", xzcounter)
+						os.makedirs(tmpdir)
+					except Exception, e:
+						tmpdir = tempfile.mkdtemp(dir=tempdir)
+				res = unpackXZ(data, offset, trail, tmpdir)
+				if res != None:
+					diroffsets.append((res, offset))
+					xzcounter = xzcounter + 1
+				else:
+					## cleanup
+					os.rmdir(tmpdir)
 	datafile.close()
 	return (diroffsets, blacklist, offsets)
 
@@ -674,35 +640,38 @@ def unpackXZ(data, offset, trailer, tempdir=None):
 ## Not sure how cpio works if we have a cpio archive within a cpio archive
 ## especially with regards to locating the proper cpio trailer.
 def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}):
-	datafile = open(filename, 'rb')
-	offset = fssearch.findCpio(datafile)
-	if offset == -1:
-		datafile.close()
+	cpiooffsets = []
+	for marker in fsmagic.cpio:
+		cpiooffsets = cpiooffsets + offsets[marker]
+	if cpiooffsets == []:
 		return ([], blacklist, offsets)
-	else:
-		diroffsets = []
-		cpiocounter = 1
-		trailer = fssearch.findCpioTrailer(datafile)
-		if trailer == -1:
-			## no trailer found, so no use to continue checking
-			datafile.close()
-			return ([], blacklist, offsets)
-		while(offset != -1 and trailer != -1):
-			## only read data when we actually have offsets
-			data = datafile.read()
-			blacklistoffset = extractor.inblacklist(offset, blacklist)
+
+	if offsets['cpiotrailer'] == []:
+		return ([], blacklist, offsets)
+
+	datafile = open(filename, 'rb')
+	diroffsets = []
+	cpiocounter = 1
+	## only read data when we actually have offsets
+	data = datafile.read()
+	for offset in cpiooffsets:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+        	if tempdir == None:
+               		tmpdir = tempfile.mkdtemp()
+		else:
+			try:
+				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "cpio", cpiocounter)
+				os.makedirs(tmpdir)
+			except Exception, e:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
+		for trailer in offsets['cpiotrailer']:
+			blacklistoffset = extractor.inblacklist(trailer, blacklist)
 			if blacklistoffset != None:
-				offset = fssearch.findCpio(datafile, blacklistoffset)
-			if offset == -1:
-				break
-        		if tempdir == None:
-        	       		tmpdir = tempfile.mkdtemp()
-			else:
-				try:
-					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "cpio", cpiocounter)
-					os.makedirs(tmpdir)
-				except Exception, e:
-					tmpdir = tempfile.mkdtemp(dir=tempdir)
+				continue
+			if trailer < offset:
+				continue
 			## length of 'TRAILER!!!' plus 1 to include the whole trailer
 			## and cpio archives are always rounded to blocks of 512 bytes
 			trailercorrection = (512 - len(data[offset:trailer+10])%512)
@@ -710,19 +679,15 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}):
 			if res != None:
 				diroffsets.append((res, offset))
 				blacklist.append((offset, trailer))
-				offset = fssearch.findCpio(datafile, offset + trailer)
-				trailer = fssearch.findCpioTrailer(datafile, offset + trailer)
 				cpiocounter = cpiocounter + 1
+				## success with unpacking, no need to continue with
+				## the next trailer for this offset
+				break
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
-				offset = fssearch.findCpio(datafile, offset+1)
-			## there is a logic flow here. We should actually check for
-			## all (offset, trailer) pairs where offset < trailer
-			while offset < trailer and offset != -1:
-				offset = fssearch.findCpio(datafile, offset+1)
-		datafile.close()
-		return (diroffsets, blacklist, offsets)
+	datafile.close()
+	return (diroffsets, blacklist, offsets)
 
 ## tries to unpack stuff using cpio. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
@@ -842,43 +807,40 @@ def unpackCramfs(data, offset, tempdir=None):
 ## Use the output of 'file' to determine the size of squashfs and use it for the
 ## blacklist.
 def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}):
-	datafile = open(filename, 'rb')
-	offset = fssearch.findSquashfs(datafile)
-	if offset == -1:
-		datafile.close()
+	squashoffsets = []
+	for marker in fsmagic.squashtypes:
+		squashoffsets = squashoffsets + offsets[marker]
+	if squashoffsets == []:
 		return ([], blacklist, offsets)
-	else:
-		data = datafile.read()
-		diroffsets = []
-		squashcounter = 1
-		while(offset != -1):
-			## check if the offset we find is in a blacklist
-			blacklistoffset = extractor.inblacklist(offset, blacklist)
-			if blacklistoffset != None:
-				offset = fssearch.findSquashfs(datafile, blacklistoffset)
-			if offset == -1:
-				break
-        		if tempdir == None:
-        	       		tmpdir = tempfile.mkdtemp()
-			else:
-				try:
-					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "squashfs", squashcounter)
-					os.makedirs(tmpdir)
-				except Exception, e:
-					tmpdir = tempfile.mkdtemp(dir=tempdir)
-			retval = unpackSquashfsWrapper(data, offset, tmpdir)
-			if retval != None:
-				(res, squashsize) = retval
-				diroffsets.append((res, offset))
-				blacklist.append((offset,offset+squashsize))
-				squashcounter = squashcounter + 1
-				offset = fssearch.findSquashfs(datafile, offset+squashsize)
-			else:
-				## cleanup
-				os.rmdir(tmpdir)
-				offset = fssearch.findSquashfs(datafile, offset+1)
-		datafile.close()
-		return (diroffsets, blacklist, offsets)
+
+	datafile = open(filename, 'rb')
+	data = datafile.read()
+	diroffsets = []
+	squashcounter = 1
+	for offset in squashoffsets:
+		## check if the offset we find is in a blacklist
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+        	if tempdir == None:
+        	      		tmpdir = tempfile.mkdtemp()
+		else:
+			try:
+				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "squashfs", squashcounter)
+				os.makedirs(tmpdir)
+			except Exception, e:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
+		retval = unpackSquashfsWrapper(data, offset, tmpdir)
+		if retval != None:
+			(res, squashsize) = retval
+			diroffsets.append((res, offset))
+			blacklist.append((offset,offset+squashsize))
+			squashcounter = squashcounter + 1
+		else:
+			## cleanup
+			os.rmdir(tmpdir)
+	datafile.close()
+	return (diroffsets, blacklist, offsets)
 
 ## wrapper around all the different squashfs types
 def unpackSquashfsWrapper(data, offset, tempdir=None):
@@ -1056,66 +1018,58 @@ def unpackSquashfsBroadcomLZMA(data, offset, tempdir=None):
 ## We use tune2fs to get the size of the file system so we know what to
 ## blacklist.
 def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}):
+	if offsets['ext2'] == []:
+		return ([], blacklist, offsets)
 	datafile = open(filename, 'rb')
-	offset = fssearch.findExt2fs(datafile)
-	if offset == -1:
-		datafile.close()
-		return ([], blacklist, offsets)
-	## according to /usr/share/magic the magic header starts at 0x438
-	if offset < 0x438:
-		datafile.close()
-		return ([], blacklist, offsets)
-	else:
-		diroffsets = []
-		ext2counter = 1
-		data = datafile.read()
-		while(offset != -1 and offset >= 0x438):
-			## check if the offset we find is in a blacklist
-			blacklistoffset = extractor.inblacklist(offset, blacklist)
-			if blacklistoffset != None:
-				offset = fssearch.findExt2fs(datafile, blacklistoffset)
-			if offset == -1:
-				break
-        		if tempdir == None:
-        	       		tmpdir = tempfile.mkdtemp()
-			else:
-				try:
-					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "ext2", ext2counter)
-					os.makedirs(tmpdir)
-				except Exception, e:
-					tmpdir = tempfile.mkdtemp(dir=tempdir)
-			## we should actually scan the data starting from offset - 0x438
-			if not checkExt2fs(data[offset - 0x438:offset - 0x438 + 4096], 0, tmpdir):
-				os.rmdir(tmpdir)
-				offset = fssearch.findExt2fs(datafile, offset+1)
-				continue
-			res = unpackExt2fs(data[offset - 0x438:], 0, tmpdir)
-			if res != None:
-				(ext2tmpdir, ext2size) = res
-				diroffsets.append((ext2tmpdir, offset - 0x438))
-				## this needs to be moved to unpackExt2fs, since it fails if 'filename' contains
-				## an ext2 file system, but has data prepended.
-				p = subprocess.Popen(['tune2fs', '-l', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-				(stanout, stanerr) = p.communicate()
-				if p.returncode == 0:
-					if len(stanerr) == 0:
-						blockcount = 0
-						blocksize = 0
-						## we want block count and block size
-						for line in stanout.split("\n"):
-							if 'Block count' in line:
-								blockcount = int(line.split(":")[1].strip())
-							if 'Block size' in line:
-								blocksize = int(line.split(":")[1].strip())
-						blacklist.append((offset - 0x438, offset - 0x438 + blockcount * blocksize))
-						ext2counter = ext2counter + 1
-					else:
-						os.rmdir(tmpdir)
+	diroffsets = []
+	ext2counter = 1
+	data = datafile.read()
+	for offset in offsets['ext2']:
+		## according to /usr/share/magic the magic header starts at 0x438
+		if offset < 0x438:
+			continue
+		## check if the offset we find is in a blacklist
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+        	if tempdir == None:
+        	      		tmpdir = tempfile.mkdtemp()
+		else:
+			try:
+				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "ext2", ext2counter)
+				os.makedirs(tmpdir)
+			except Exception, e:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
+		## we should actually scan the data starting from offset - 0x438
+		if not checkExt2fs(data[offset - 0x438:offset - 0x438 + 4096], 0, tmpdir):
+			os.rmdir(tmpdir)
+			continue
+		res = unpackExt2fs(data[offset - 0x438:], 0, tmpdir)
+		if res != None:
+			(ext2tmpdir, ext2size) = res
+			diroffsets.append((ext2tmpdir, offset - 0x438))
+			## this needs to be moved to unpackExt2fs, since it fails if 'filename' contains
+			## an ext2 file system, but has data prepended.
+			p = subprocess.Popen(['tune2fs', '-l', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate()
+			if p.returncode == 0:
+				if len(stanerr) == 0:
+					blockcount = 0
+					blocksize = 0
+					## we want block count and block size
+					for line in stanout.split("\n"):
+						if 'Block count' in line:
+							blockcount = int(line.split(":")[1].strip())
+						if 'Block size' in line:
+							blocksize = int(line.split(":")[1].strip())
+					blacklist.append((offset - 0x438, offset - 0x438 + blockcount * blocksize))
+					ext2counter = ext2counter + 1
 				else:
 					os.rmdir(tmpdir)
 			else:
 				os.rmdir(tmpdir)
-			offset = fssearch.findExt2fs(datafile, offset+1)
+		else:
+			os.rmdir(tmpdir)
 	datafile.close()
 	return (diroffsets, blacklist, offsets)
 
@@ -1188,42 +1142,30 @@ def unpackGzip(data, offset, tempdir=None):
 	return tmpdir
 
 def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}):
-	datafile = open(filename, 'rb')
-	offset = fssearch.findGzip(datafile)
-	if offset == -1:
-		datafile.close()
+	if offsets['gzip'] == []:
 		return ([], blacklist, offsets)
-	else:
-		## counter to remember how many gzip file systems we have
-		## discovered, so we can use this to append to the directory
-		## name containing the unpacked contents.
-		gzipcounter = 1
-		diroffsets = []
-		data = datafile.read()
-		while(offset != -1):
-			blacklistoffset = extractor.inblacklist(offset, blacklist)
-			if blacklistoffset != None:
-				offset = fssearch.findGzip(datafile, blacklistoffset)
-			if offset == -1:
-				break
-        		if tempdir == None:
-        	       		tmpdir = tempfile.mkdtemp()
-			else:
-				try:
-					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "gzip", gzipcounter)
-					os.makedirs(tmpdir)
-				except Exception, e:
-					tmpdir = tempfile.mkdtemp(dir=tempdir)
-			res = unpackGzip(data, offset, tmpdir)
-			if res != None:
-				diroffsets.append((res, offset))
-				gzipcounter = gzipcounter + 1
-			else:
-				## cleanup
-				os.rmdir(tmpdir)
-			offset = fssearch.findGzip(datafile, offset+1)
-		datafile.close()
-		return (diroffsets, blacklist, offsets)
+
+	datafile = open(filename, 'rb')
+	## counter to remember how many gzip file systems we have
+	## discovered, so we can use this to append to the directory
+	## name containing the unpacked contents.
+	gzipcounter = 1
+	diroffsets = []
+	data = datafile.read()
+	for offset in offsets['gzip']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		tmpdir = dirsetup(tempdir, filename, "gzip", gzipcounter)
+		res = unpackGzip(data, offset, tmpdir)
+		if res != None:
+			diroffsets.append((res, offset))
+			gzipcounter = gzipcounter + 1
+		else:
+			## cleanup
+			os.rmdir(tmpdir)
+	datafile.close()
+	return (diroffsets, blacklist, offsets)
 
 ## tries to unpack stuff using bzcat. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
@@ -1259,39 +1201,34 @@ def unpackBzip2(data, offset, tempdir=None):
 	return tmpdir
 
 def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}):
-	datafile = open(filename, 'rb')
-	offset = fssearch.findBzip2(datafile)
-	if offset == -1:
-		datafile.close()
+	if offsets['bz2'] == []:
 		return ([], blacklist, offsets)
-	else:
-		diroffsets = []
-		bzip2counter = 1
-		data = datafile.read()
-		while(offset != -1):
-			blacklistoffset = extractor.inblacklist(offset, blacklist)
-			if blacklistoffset != None:
-				offset = fssearch.findBzip2(datafile, blacklistoffset)
-			if offset == -1:
-				break
-			if tempdir == None:
-				tmpdir = tempfile.mkdtemp()
-			else:
-				try:
-					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "bzip2", bzip2counter)
-					os.makedirs(tmpdir)
-				except Exception, e:
-					tmpdir = tempfile.mkdtemp(dir=tempdir)
-			res = unpackBzip2(data, offset, tmpdir)
-			if res != None:
-				diroffsets.append((res, offset))
-				bzip2counter = bzip2counter + 1
-			else:
-				## cleanup
-				os.rmdir(tmpdir)
-			offset = fssearch.findBzip2(datafile, offset+1)
-		datafile.close()
-		return (diroffsets, blacklist, offsets)
+
+	datafile = open(filename, 'rb')
+	diroffsets = []
+	bzip2counter = 1
+	data = datafile.read()
+	for offset in offsets['bz2']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		if tempdir == None:
+			tmpdir = tempfile.mkdtemp()
+		else:
+			try:
+				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "bzip2", bzip2counter)
+				os.makedirs(tmpdir)
+			except Exception, e:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
+		res = unpackBzip2(data, offset, tmpdir)
+		if res != None:
+			diroffsets.append((res, offset))
+			bzip2counter = bzip2counter + 1
+		else:
+			## cleanup
+			os.rmdir(tmpdir)
+	datafile.close()
+	return (diroffsets, blacklist, offsets)
 
 def unpackZip(data, offset, tempdir=None):
 	## first unpack things, write things to a file and return
@@ -1328,6 +1265,9 @@ def unpackZip(data, offset, tempdir=None):
 	return (endofcentraldir, tmpdir)
 
 def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}):
+	if offsets['zip'] == []:
+		return ([], blacklist, offsets)
+		
 	datafile = open(filename, 'rb')
 	offset = fssearch.findZip(datafile)
 	if offset == -1:
@@ -1442,39 +1382,33 @@ def unpackRar(data, offset, tempdir=None):
 	return (endofarchive, tmpdir)
 
 def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}):
-	datafile = open(filename, 'rb')
-	offset = fssearch.findLZMA(datafile)
-	if offset == -1:
-		datafile.close()
+	if offsets['lzma_alone'] == 0:
 		return ([],blacklist, offsets)
-	else:
-		diroffsets = []
-		lzmacounter = 1
-		data = datafile.read()
-		while(offset != -1):
-			blacklistoffset = extractor.inblacklist(offset, blacklist)
-			if blacklistoffset != None:
-				offset = fssearch.findLZMA(datafile, blacklistoffset)
-			if offset == -1:
-				break
-        		if tempdir == None:
-        	       		tmpdir = tempfile.mkdtemp()
-			else:
-				try:
-					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "lzma", lzmacounter)
-					os.makedirs(tmpdir)
-				except Exception, e:
-					tmpdir = tempfile.mkdtemp(dir=tempdir)
-			res = unpackLZMA(data, offset, tmpdir)
-			if res != None:
-				diroffsets.append((res, offset))
-				lzmacounter = lzmacounter + 1
-			else:
-				## cleanup
-				os.rmdir(tmpdir)
-			offset = fssearch.findLZMA(datafile, offset+1)
-		datafile.close()
-		return (diroffsets, blacklist, offsets)
+	datafile = open(filename, 'rb')
+	diroffsets = []
+	lzmacounter = 1
+	data = datafile.read()
+	for offset in offsets['lzma_alone']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+        	if tempdir == None:
+               		tmpdir = tempfile.mkdtemp()
+		else:
+			try:
+				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "lzma", lzmacounter)
+				os.makedirs(tmpdir)
+			except Exception, e:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
+		res = unpackLZMA(data, offset, tmpdir)
+		if res != None:
+			diroffsets.append((res, offset))
+			lzmacounter = lzmacounter + 1
+		else:
+			## cleanup
+			os.rmdir(tmpdir)
+	datafile.close()
+	return (diroffsets, blacklist, offsets)
 
 ## tries to unpack stuff using lzma -cd. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
@@ -1588,43 +1522,39 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[], offsets={}):
 ## measure the size of ubifs. A good start is the sum of the size of the
 ## volumes that were unpacked.
 def searchUnpackUbifs(filename, tempdir=None, blacklist=[], offsets={}):
+	if offsets['ubifs'] == []:
+		return ([], blacklist, offsets)
+
 	datafile = open(filename, 'rb')
 	## We can use the values of offset and ubisize where offset != -1
 	## to determine the ranges for the blacklist.
-	offset = fssearch.findUbifs(datafile)
-	if offset == -1:
-		datafile.close()
-		return ([], blacklist, offsets)
-	else:
-		diroffsets = []
-		ubicounter = 1
-		data = datafile.read()
-		while(offset != -1):
-			blacklistoffset = extractor.inblacklist(offset, blacklist)
-			if blacklistoffset != None:
-				offset = fssearch.findUbifs(datafile, blacklistoffset)
-			if offset == -1:
-				break
-        		if tempdir == None:
-        	       		tmpdir = tempfile.mkdtemp()
-			else:
-				try:
-					tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "ubifs", ubicounter)
-					os.makedirs(tmpdir)
-				except Exception, e:
-					tmpdir = tempfile.mkdtemp(dir=tempdir)
-			res = unpackUbifs(data, offset, tmpdir)
-			if res != None:
-				(ubitmpdir, ubisize) = res
-				diroffsets.append((ubitmpdir, offset))
-				offset = fssearch.findUbifs(datafile, offset+ubisize)
-				ubicounter = ubicounter + 1
-			else:
-				## cleanup
-				os.rmdir(tmpdir)
-				offset = fssearch.findUbifs(datafile, offset+1)
-		datafile.close()
-		return (diroffsets, blacklist, offsets)
+	diroffsets = []
+	ubicounter = 1
+	data = datafile.read()
+	for offset in offsets['ubifs']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+        	if tempdir == None:
+               		tmpdir = tempfile.mkdtemp()
+		else:
+			try:
+				tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filename), os.path.basename(filename), "ubifs", ubicounter)
+				os.makedirs(tmpdir)
+			except Exception, e:
+				tmpdir = tempfile.mkdtemp(dir=tempdir)
+		res = unpackUbifs(data, offset, tmpdir)
+		if res != None:
+			(ubitmpdir, ubisize) = res
+			diroffsets.append((ubitmpdir, offset))
+			## TODO fix this so we can actually skip some possible offsets
+			#offset = fssearch.findUbifs(datafile, offset+ubisize)
+			ubicounter = ubicounter + 1
+		else:
+			## cleanup
+			os.rmdir(tmpdir)
+	datafile.close()
+	return (diroffsets, blacklist, offsets)
 
 def unpackUbifs(data, offset, tempdir=None):
 	if tempdir == None:
@@ -1845,28 +1775,14 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}):
 ## PNG extraction is similar to GIF extraction, except there is a way better
 ## defined trailer.
 def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}):
+	if offsets['png'] == []:
+		return ([], blacklist, offsets)
+	if offsets['pngtrailer'] == []:
+		return ([], blacklist, offsets)
 	datafile = open(filename, 'rb')
-	header = fssearch.findPNG(datafile)
-	if header == -1:
-		datafile.close()
-		return ([], blacklist, offsets)
-	trailer = fssearch.findPNGTrailer(datafile, header)
-	if trailer == -1:
-		datafile.close()
-		return ([], blacklist, offsets)
-	traileroffsets = []
-	traileroffsets.append(trailer)
-	while(trailer != -1):
-		trailer = fssearch.findPNGTrailer(datafile,trailer+1)
-		if trailer != -1:
-			traileroffsets.append(trailer)
-	headeroffsets = []
-	headeroffsets.append(header)
-	while (header != -1):
-		header = fssearch.findPNG(datafile, header+1)
-		if header != -1:
-			headeroffsets.append(header)
 	diroffsets = []
+	headeroffsets = offsets['png']
+	traileroffsets = offsets['pngtrailer']
 	pngcounter = 1
 	data = datafile.read()
 	for i in range (0,len(headeroffsets)):
