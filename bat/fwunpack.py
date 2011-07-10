@@ -1253,6 +1253,9 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}):
 
 ## tries to unpack stuff using lzma -cd. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
+## With XZ Utils >= 5.0.0 we should be able to use the -l option for integrity
+## testing. It will not be faster, but probably more accurate.
+## This would require Fedora 15 or later (not sure about which Ubuntu).
 def unpackLZMA(data, offset, tempdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
