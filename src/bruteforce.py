@@ -190,10 +190,10 @@ def scanSharedLibs(path, file):
 ## This method returns a cryptographic checksum for a file using the SHA256
 ## algorithm. This information can be used to uniquely identify a file and
 ## perhaps reuse results for scans of this file in a later audit.
-def gethash(path, file):
-	scanfile = open("%s/%s" % (path, file), 'r')
+def gethash(path, filename):
+	scanfile = open("%s/%s" % (path, filename), 'r')
 	h = hashlib.new('sha256')
-	h.update(scanfile.read())
+	h.update(hashfile.read())
 	scanfile.close()
 	return h.hexdigest()
 
