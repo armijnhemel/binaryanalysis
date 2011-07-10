@@ -180,7 +180,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}):
 	## information from it. Although there are some vanity entries that we can
 	## easily skip (and just bruteforce) there are a few that we really need to
 	## recognize. TODO: refactor
-	if assembly != None:
+	if assembly != {}:
 		## we are pretty much out of luck with this one.
 		if assembly['name'] == "NOSMicrosystems.iNOSSO":
 			return ([], blacklist, offsets)
