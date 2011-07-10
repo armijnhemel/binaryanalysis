@@ -193,7 +193,7 @@ def scanSharedLibs(path, file):
 def gethash(path, filename):
 	scanfile = open("%s/%s" % (path, filename), 'r')
 	h = hashlib.new('sha256')
-	h.update(hashfile.read())
+	h.update(scanfile.read())
 	scanfile.close()
 	return h.hexdigest()
 
