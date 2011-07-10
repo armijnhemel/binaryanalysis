@@ -271,6 +271,9 @@ def scan(filetoscan, magic, unpackscans=[], programscans=[], filehash=None, temp
 	## we reset the blacklist for each new scan we do
 	blacklist = []
 
+	## we reset the offsets for each new scan we do
+	offsets = {}
+
 	## list of magic file types that 'program' checks should skip
 	## to avoid false positives and superfluous scanning. Does not work
 	## correctly yet, for romfs for example.
@@ -292,17 +295,16 @@ def scan(filetoscan, magic, unpackscans=[], programscans=[], filehash=None, temp
 		method = scan['method']
 		## return value is the temporary dir, plus offset in the parent file
 		## plus a blacklist containing blacklisted ranges for the *original*
-		## file.
+		## file and a hash with offsets for each marker.
 		exec "from %s import %s as bat_%s" % (module, method, method)
-		#(diroffsets, blacklist) = eval("bat_%s(filetoscan, tempdir, blacklist)" % (method))
-		scanres = eval("bat_%s(filetoscan, tempdir, blacklist)" % (method))
+		scanres = eval("bat_%s(filetoscan, tempdir, blacklist, offsets)" % (method))
 		## result is either empty, or contains offsets
 		## TODO: clean up blacklists: [(a,b), (b,c)] should become [(a,c)]
 		## for various checks like genericSearch in bat/checks.py
-		if len(scanres) == 2:
-			(diroffsets, blacklist) = scanres
-		elif len(scanres) == 3:
-			(diroffsets, blacklist, noscan) = scanres
+		if len(scanres) == 3:
+			(diroffsets, blacklist, offsets) = scanres
+		elif len(scanres) == 4:
+			(diroffsets, blacklist, offsets, noscan) = scanres
 		if len(diroffsets) == 0:
 			continue
 		## each diroffset is a (path, offset) tuple
