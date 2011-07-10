@@ -150,6 +150,12 @@ magic   = rpm
 #cleanup = cleanupRPM
 priority = 1
 
+[genericMarker]
+type    = unpack
+module  = bat.fwunpack
+method  = genericMarkerSearch
+priority = 99
+
 [byteswap]
 type    = unpack
 module  = bat.fwunpack
