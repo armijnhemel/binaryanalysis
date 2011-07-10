@@ -19,8 +19,7 @@ analysis.'''
 ## (name: identifier)
 
 fsmagic = {
-            #'gzip':             '\x1f\x8b\x08',     # this excludes some gzip files!
-            'gzip':             '\x1f\x8b',
+            'gzip':             '\x1f\x8b\x08',     # x08 is the only compression method according to RFC 1952
             'bz2':              'BZh',
             'rar':              'Rar!',
             'zip':              '\x50\x4b\x03\04',
