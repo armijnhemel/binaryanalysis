@@ -125,7 +125,7 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 					h.update(scanfile.read())
 					scanfile.close()
 					filehash = h.hexdigest()
-					cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, "%s/%s" % (i[0],p), filehash))
+					cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, "%s/%s" % (i[0][srcdirlen:],p), filehash))
 					cursor.execute('''select * from extracted_file where sha256=?''', (filehash,))
 					if len(cursor.fetchall()) != 0:
 						print >>sys.stderr, "duplicate %s %s: %s/%s" % (package, version, i[0], p)
