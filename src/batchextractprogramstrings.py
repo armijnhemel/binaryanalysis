@@ -200,6 +200,8 @@ def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 		results = re.findall(r'(?<!\')"[^"\\]*(?:\\.[^"\\]*)*"', source, re.MULTILINE|re.DOTALL)
 		for res in results:
                		storestring = res[1:-1] # strip double quotes around the string
+			if storestring == "%s/%s" % (filedir, filename):
+				continue
 			# Handle \" and \t.
 			# Handle \n.  The "strings" tool treats multi-line strings as separate 
 			# strings, so we also store them in the database as separate strings.
