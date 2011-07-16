@@ -34,6 +34,12 @@ ms.load()
 ## wise to use a ramdisk or tmpfs for this, although the program does not
 ## seem to be I/O bound...
 def unpack(directory, filename):
+	try:
+		os.stat("%s/%s" % (directory, filename))
+	except:
+		print >>sys.stderr, "Can't find %s" % filename
+		return None
+
         filemagic = ms.file(os.path.realpath("%s/%s" % (directory, filename)))
 
         ## Just assume if it is bz2 or gzip that we are looking at tar files with compression
