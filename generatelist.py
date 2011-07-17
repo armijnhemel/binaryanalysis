@@ -33,7 +33,10 @@ def generatelist(filedir):
 				if extension in ["tgz", "tbz2"]:
 					pass
 				else:
-					(packageversion, extension, compression) = p.rsplit('.', 2)
+					try:
+						(packageversion, extension, compression) = p.rsplit('.', 2)
+					except:
+						continue
 					if not (extension in ["tar"] and compression in ["gz", "bz2"]):
 						continue
 				## exceptions go here

@@ -1,3 +1,10 @@
+2011-07-17
+* don't barf if we can't generate a proper LIST for the batch extraction
+program
+
+2011-07-16
+* start on reimplementing ranking methods from MSR 2011 paper
+
 2011-07-10
 * introduce generic method to create directories with the right names
 * rewrite most search* methods to use the prescanned offsets
