@@ -105,7 +105,11 @@ def unpack_getstrings((filedir, package, version, filename, dbpath, cleanup, lic
 	c.close()
 	conn.close()
 	if cleanup:
-		shutil.rmtree(temporarydir)
+		try:
+			shutil.rmtree(temporarydir)
+		except:
+			## probably a permission problem, like no access to a directory. Meh.
+			pass
 	return
 
 def extractstrings(srcdir, conn, cursor, package, version, license):
