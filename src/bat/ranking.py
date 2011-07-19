@@ -11,7 +11,7 @@ by Armijn Hemel, Karl Trygve Kalleberg, Eelco Dolstra and Rob Vermaas, as
 presented at the Mining Software Repositories 2011 conference.
 '''
 
-import string, re, os, magic, sys
+import string, re, os, os.path, magic, sys
 import sqlite3
 import subprocess
 
@@ -63,7 +63,7 @@ def extractGeneric(lines, path):
 	oldline = None
 	matched = False
 	for line in lines:
-		## speedup if the lines happen to be the same
+		## speedup if the lines happen to be the same as the old one
 		if line == oldline:
 			if matched:
 				matchedlines = matchedlines + 1
@@ -94,6 +94,35 @@ def extractGeneric(lines, path):
 
 	print >>sys.stderr, "matchedlines:", matchedlines
 	print >>sys.stderr, matchedlines/(len(lines) * 1.0)
-	for i in allStrings:
+	for i in allStrings.keys():
 		pkgs = {}
-		#print i, allStrings[i]
+		for match in allStrings[i]:
+			if not pkgs.has_key(match['package']):
+				pkgs[match['package']] = [os.path.basename(match['filename'])]
+			else:
+				pkgs[match['package']].append(os.path.basename(match['filename']))
+		if len(pkgs.values()) == 1:
+			## the string is unique to this package and this package only
+			if not allMatches.has_key(match['package']):
+				allMatches[match['package']] = {}
+			if not allMatches[match['package']].has_key(i):
+				allMatches[match['package']][i] = len(i)
+			else:
+				allMatches[match['package']][i] = allMatches[match['package']][i] + len(i)
+			nrUniqueMatches = nrUniqueMatches + 1
+			#print "UNIQUE", i, pkgs.items()
+		else:
+			## The string we found is not unique to a package, but is the
+			## filename we found also not in unique to a filename?
+			## This method does assume that files that are named the same
+			## also contain the same or similar content.
+			filenames = {}
+			for f in pkgs.items():
+				## remove duplicates first
+				for fn in list(set(f[1])):
+					if not filenames.has_key(fn):
+						filenames[fn] = {}
+					filenames[fn][f[0]] = 1
+			for fn in filenames.keys():
+				print i, fn, filenames[fn], len(filenames[fn].values())
+			#print "NOT UNIQUE", i, pkgs.items()
