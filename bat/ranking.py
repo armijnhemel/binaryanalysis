@@ -46,6 +46,7 @@ def extractGeneric(lines, path):
 	nonUniqueScore = {}
 	nrUniqueMatches = 0
 	stringsLeft = {}
+	alpha = 5.0
 
 	conn = sqlite3.connect(os.environ.get('BAT_SQLITE_DB', '/tmp/sqlite'))
 	c = conn.cursor()
@@ -113,16 +114,32 @@ def extractGeneric(lines, path):
 			#print "UNIQUE", i, pkgs.items()
 		else:
 			## The string we found is not unique to a package, but is the
-			## filename we found also not in unique to a filename?
+			## filename we found also unique to a filename?
 			## This method does assume that files that are named the same
 			## also contain the same or similar content.
 			filenames = {}
 			for f in pkgs.items():
+				## f = (name of package, [list of filenames with 'i'])
 				## remove duplicates first
 				for fn in list(set(f[1])):
 					if not filenames.has_key(fn):
 						filenames[fn] = {}
 					filenames[fn][f[0]] = 1
+			## now we can determine the score for the string
+			score = len(i) / pow(alpha, (len(filenames.keys()) - 1))
+			#print score, i, filenames.keys()
 			for fn in filenames.keys():
-				print i, fn, filenames[fn], len(filenames[fn].values())
-			#print "NOT UNIQUE", i, pkgs.items()
+				if len(filenames[fn].values()) == 1:
+					fnkey = filenames[fn].keys()[0]
+					if not nonUniqueScore.has_key(fnkey):
+						nonUniqueScore[fnkey] = score
+					else:
+						nonUniqueScore[fnkey] = nonUniqueScore[fnkey] + score
+				else:
+					pass
+					#print filenames[fn].keys()
+					# There are multiple packages in which the same
+					# filename contains this string, which is likely to be
+					# internal cloning in the repo.  This string is
+					# assigned to a single package in the loop below.
+		print nonUniqueScore
