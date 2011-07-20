@@ -52,11 +52,15 @@ def unpack(directory, filename):
 		(stanout, stanerr) = p.communicate()
 		return tmpdir
         elif 'gzip compressed data' in filemagic:
-	        tar = tarfile.open("%s/%s" % (directory, filename), 'r:gz')
-       		tmpdir = tempfile.mkdtemp()
-       		tar.extractall(path=tmpdir)
-        	tar.close()
-		return tmpdir
+		try:
+	        	tar = tarfile.open("%s/%s" % (directory, filename), 'r:gz')
+       			tmpdir = tempfile.mkdtemp()
+       			tar.extractall(path=tmpdir)
+        		tar.close()
+			return tmpdir
+		except Exception, e:
+			print e
+			return None
 
 def unpack_verify(filedir, filename):
 	try:
@@ -89,7 +93,9 @@ def unpack_getstrings((filedir, package, version, filename, dbpath, cleanup, lic
 		c.close()
 		conn.close()
 		if cleanup:
-			shutil.rmtree(temporarydir)
+			try:
+				shutil.rmtree(temporarydir)
+			except: pass
 		return None
 	## Check if we already have any strings from program + version. If so,
 	## first remove them before we add them to avoid unnecessary duplication.
