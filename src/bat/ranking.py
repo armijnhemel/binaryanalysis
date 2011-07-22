@@ -50,7 +50,11 @@ def extractGeneric(lines, path):
 
 	conn = sqlite3.connect(os.environ.get('BAT_SQLITE_DB', '/tmp/sqlite'))
 	c = conn.cursor()
-	#print >>sys.stderr, c
+
+	## create an extra table and attach it to the current database connection
+	c.execute("attach '/tmp/avg' as avg")
+	c.execute("create table if not exists avg.avgstringscache (package text, avgstrings real, primary key (package))")
+	conn.commit()
 
 	## (package, version) => count
 	packagelist = {}
@@ -111,7 +115,6 @@ def extractGeneric(lines, path):
 			else:
 				allMatches[match['package']][i] = allMatches[match['package']][i] + len(i)
 			nrUniqueMatches = nrUniqueMatches + 1
-			#print "UNIQUE", i, pkgs.items()
 		else:
 			## The string we found is not unique to a package, but is the
 			## filename we found also unique to a filename?
@@ -142,4 +145,46 @@ def extractGeneric(lines, path):
 					# filename contains this string, which is likely to be
 					# internal cloning in the repo.  This string is
 					# assigned to a single package in the loop below.
-		print nonUniqueScore
+					stringsLeft['%s\t%s' % (i, fn)] = {'string': i, 'score': score, 'filename': fn}
+
+		# For each string that occurs in the same filename in multiple
+		# packages (e.g., "debugXML.c", a cloned file of libxml2 in several
+		# packages), assign it to one package.  We do this by picking the
+		# package that would gain the highest score increment across all
+		# strings that are left.  This is repeated until no strings are left.
+		sameFileScore = {}
+		round = 0
+		while len(stringsLeft.keys()) > 0:
+			round = round + 1
+			print "round %d: %d strings left" % (round, len(stringsLeft.keys()))
+			gain = {}
+			stringsPerPkgs = {}
+			for stri in stringsLeft.items():
+				print stri[0], stri[1]['string']
+			sys.exit(0)
+			pass
+
+		print "nonUniqueScore for %s: " % i, nonUniqueScore
+		print stringsLeft
+
+def comparePkgs(a, b, cursor, conn):
+	counta = averageStringsPerPkgVersion(a, cursor, conn)
+	countb = averageStringsPerPkgVersion(b, cursor, conn)
+	return cmp(counta, countb)
+
+def averageStringsPerPkgVersion(pkg, cursor, conn):
+	# Cache the average number of strings per package in the DB.
+	# Danger: this table should be invalidated whenever the
+	# "extracted_file" and "processed_file" tables change!
+	res = conn.execute("select avgstrings from avg.avgstringscache where package = ?", (pkg,)).fetchall()
+	if len(res) == 0:
+		pass
+		print "   looking up average nr of strings in %s" % (pkg,)
+
+            	cursor.execute("select count(*) * 1.0 / (select count(distinct version) from processed_file where package = ?) from (select distinct e.programstring, p.version from extracted_file e JOIN processed_file p on e.sha256 = p.sha256 WHERE package = ?)", (pkg,pkg))
+		count = cursor.fetchone()[0]
+        	cursor.execute("insert or ignore into avgstringscache(package, avgstrings) values (?, ?)", (pkg, count))
+		conn.commit()
+	else:
+		count = res[0]
+	return count
