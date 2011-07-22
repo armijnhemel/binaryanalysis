@@ -130,6 +130,7 @@ def prettyprintresxml(res, scandate, unpackscans=[], programscans=[]):
 			devicenode.appendChild(tmpnode)
 			topnode.appendChild(devicenode)
 
+	## TODO: merge with XML printing XML snippets
         for conf in ["name", "path", "magic", "sha256", "size", "architecture"]:
 		if conf in res:
                 	tmpnode = root.createElement(conf)
@@ -138,6 +139,7 @@ def prettyprintresxml(res, scandate, unpackscans=[], programscans=[]):
                 	tmpnode.appendChild(tmpnodetext)
                 	topnode.appendChild(tmpnode)
 
+	## TODO: merge with XML printing XML snippets
 	if 'libs' in res:
 		tmpnode = root.createElement('libs')
 		for lib in res['libs']:
@@ -148,6 +150,7 @@ def prettyprintresxml(res, scandate, unpackscans=[], programscans=[]):
                 	tmpnode.appendChild(tmpnode2)
 		topnode.appendChild(tmpnode)
 
+	## TODO: merge with XML printing XML snippets
 	if 'scans' in res:
 		tmpnode = root.createElement('scans')
 		for scan in res['scans']:
@@ -204,13 +207,13 @@ def gethash(path, filename):
 def scanfile(path, filename, lentempdir=0, tempdir=None, unpackscans=[], programscans=[], noscan=False):
 	report = {}
 
-	## this will report incorrectly if we only have unpacked one file to a
-	## temporary location, for example a kernel image
 	report['name'] = filename
 
 	## Add both the path to indicate the position inside the file sytem
         ## or file we have unpacked, as well as the position of the files as unpacked
 	## by BAT, convenient for later analysis of binaries.
+	## In case of squashfs we remove the "squashfs-root" part of the temporary
+	## directory too.
 	report['path'] = path[lentempdir:].replace("/squashfs-root", "")
 	report['realpath'] = path
 	type = ms.file("%s/%s" % (path, filename))
