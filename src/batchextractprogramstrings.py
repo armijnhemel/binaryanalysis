@@ -317,6 +317,7 @@ def main(argv):
 		## which we can later link with files
 		c.execute('''create table processed_file (package text, version text, filename text, sha256 text)''')
 		c.execute('''create index processedfile_index on processed_file(sha256)''')
+		c.execute('''create index processedfile__package_index on processed_file(package)''')
 
 		## Store the extracted strings per checksum, not per (package, version, filename).
 		## This saves a lot of space in the database
