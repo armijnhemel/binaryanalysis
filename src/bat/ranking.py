@@ -23,6 +23,9 @@ import subprocess
 ## Reimplementation in Python done by Armijn Hemel.
 def searchGeneric(path, blacklist=[]):
         try:
+		## extract all strings from the binary. Only look at strings
+		## that are 5 characters or longer. This should be made
+		## configurable although the gain will be relatively low.
 		p = subprocess.Popen(['strings', '-n', '5', path], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
@@ -48,6 +51,8 @@ def extractGeneric(lines, path):
 	stringsLeft = {}
 	alpha = 5.0
 
+	## open the database containing all the strings that were extracted
+	## from source code.
 	conn = sqlite3.connect(os.environ.get('BAT_SQLITE_DB', '/tmp/sqlite'))
 	c = conn.cursor()
 
@@ -59,11 +64,12 @@ def extractGeneric(lines, path):
 	## (package, version) => count
 	packagelist = {}
 
-	## sort the lines first
+	## sort the lines first, so we can easily skip duplicates
 	lines.sort()
 
-	res = []
 	print >>sys.stderr, "total extracted strings:", len(lines)
+
+	res = []
 	matchedlines = 0
 	oldline = None
 	matched = False
@@ -84,6 +90,8 @@ def extractGeneric(lines, path):
 			lenStringsFound = lenStringsFound + len(line)
 			matched = True
 			print >>sys.stderr, "\n%d matches found for <(|%s|)> in %s" % (len(res), line, path)
+
+			## for statistics it's fun to see how many lines we matched
 			matchedlines = matchedlines + 1
 			packageres = {}
 			allStrings[line] = []
@@ -98,10 +106,13 @@ def extractGeneric(lines, path):
 
 	print >>sys.stderr, "matchedlines:", matchedlines
 	print >>sys.stderr, matchedlines/(len(lines) * 1.0)
-	## for each string we determine in how many packages (without version) the string
+	## For each string we determine in how many packages (without version) the string
 	## is found.
-	## If the string is only found in one package the string is unique to the package.
-	## If not, we have to do a little bit more work, so we also record the filename.
+	## If the string is only found in one package the string is unique to the package
+	## and we record it as such and add its length to a score.
+	##
+	## If not, we have to do a little bit more work to determine which file is
+	## the most likely, so we also record the filename.
 	##
 	## 1. determine whether the string is unique to a package
 	## 2. if not, determine which filenames the string is in
@@ -117,7 +128,6 @@ def extractGeneric(lines, path):
 				pkgs[match['package']].append(os.path.basename(match['filename']))
 		if len(pkgs.values()) == 1:
 			## the string is unique to this package and this package only
-			#print i
 			uniqueScore[match['package']] = uniqueScore.get(match['package'], 0) + len(i)
 			uniqueMatches[match['package']] = uniqueMatches.get(match['package'], []) + [i]
 
@@ -125,14 +135,15 @@ def extractGeneric(lines, path):
 				allMatches[match['package']] = {}
 
 			allMatches[match['package']][i] = allMatches[match['package']].get(i,0) + len(i)
+
 			nrUniqueMatches = nrUniqueMatches + 1
 		else:
-			## The string we found is not unique to a package, but is the
-			## filename we found also unique to a filename?
+			## The string we found is not unique to a package, but is it 
+			## unique to a filename?
 			## This method does assume that files that are named the same
 			## also contain the same or similar content.
 			filenames = {}
-			##
+
 			for packagename in pkgs.items():
 				## packagename = (name of package, [list of filenames with 'i'])
 				## we record in how many different packages we find the
@@ -175,8 +186,8 @@ def extractGeneric(lines, path):
 			gain = {}
 			stringsPerPkg = {}
 			for stri in stringsLeft.items():
-				## get the unique score per package and sort in reverse order
-				pkgsSorted = map(lambda x: {'package': x, 'uniquescore': uniqueScore.get(x, 0)},  stri[1]['pkgs'])
+				## get the unique score per package, temporarily record it and sort in reverse order
+				pkgsSorted = map(lambda x: {'package': x, 'uniquescore': uniqueScore.get(x, 0)}, stri[1]['pkgs'])
 				pkgsSorted = sorted(pkgsSorted, key=lambda x: x['uniquescore'], reverse=True)
 				## and get rid of the unique scores again
 				pkgsSorted = map(lambda x: x['package'], pkgsSorted)
