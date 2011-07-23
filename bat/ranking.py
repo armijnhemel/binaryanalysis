@@ -38,7 +38,7 @@ def searchGeneric(path, blacklist=[]):
 
 ## Extract the strings
 def extractGeneric(lines, path):
-	allStrings = {}
+	allStrings = {}                ## {string, {package, version}}
 	lenStringsFound = 0
 	uniqueMatches = {}
 	allMatches = {}
@@ -77,9 +77,8 @@ def extractGeneric(lines, path):
 		oldline = line
 		## skip empty lines
                 if line == "": continue
-		scoreDocs = c.execute('''select p.package, p.version, p.filename FROM processed_file p JOIN extracted_file e on p.sha256 = e.sha256 WHERE programstring=?''', (line,))
+		res = conn.execute('''select p.package, p.version, p.filename FROM processed_file p JOIN extracted_file e on p.sha256 = e.sha256 WHERE programstring=?''', (line,)).fetchall()
 
-		res = scoreDocs.fetchall()
 		if len(res) != 0:
 			## Add the length of the string to lenStringsFound
 			lenStringsFound = lenStringsFound + len(line)
@@ -90,17 +89,27 @@ def extractGeneric(lines, path):
 			allStrings[line] = []
 			for result in res:
 				(package, version, filename) = result
-				## record in which packages we have seen this string
+				## record per line all (package, version, filename) combinations
+				## in which this string was found.
 				allStrings[line].append({'package': package, 'version': version, 'filename': filename})
 				print >>sys.stderr, "%s\t%s\t%s" % (package, version, filename)
 		else:
-			#print >>sys.stderr, line
 			continue
 
 	print >>sys.stderr, "matchedlines:", matchedlines
 	print >>sys.stderr, matchedlines/(len(lines) * 1.0)
+	## for each string we determine in how many packages (without version) the string
+	## is found.
+	## If the string is only found in one package the string is unique to the package.
+	## If not, we have to do a little bit more work, so we also record the filename.
+	##
+	## 1. determine whether the string is unique to a package
+	## 2. if not, determine which filenames the string is in
+	## 3. for each filename, determine whether or not this file (containing the string)
+	##    is unique to a package
+	## 4. if not, try to determine the most likely package
 	for i in allStrings.keys():
-		pkgs = {}
+		pkgs = {}    ## {package name: [filenames without path]}
 		for match in allStrings[i]:
 			if not pkgs.has_key(match['package']):
 				pkgs[match['package']] = [os.path.basename(match['filename'])]
@@ -108,12 +117,14 @@ def extractGeneric(lines, path):
 				pkgs[match['package']].append(os.path.basename(match['filename']))
 		if len(pkgs.values()) == 1:
 			## the string is unique to this package and this package only
+			#print i
+			uniqueScore[match['package']] = uniqueScore.get(match['package'], 0) + len(i)
+			uniqueMatches[match['package']] = uniqueMatches.get(match['package'], []) + [i]
+
 			if not allMatches.has_key(match['package']):
 				allMatches[match['package']] = {}
-			if not allMatches[match['package']].has_key(i):
-				allMatches[match['package']][i] = len(i)
-			else:
-				allMatches[match['package']][i] = allMatches[match['package']][i] + len(i)
+
+			allMatches[match['package']][i] = allMatches[match['package']].get(i,0) + len(i)
 			nrUniqueMatches = nrUniqueMatches + 1
 		else:
 			## The string we found is not unique to a package, but is the
@@ -121,31 +132,35 @@ def extractGeneric(lines, path):
 			## This method does assume that files that are named the same
 			## also contain the same or similar content.
 			filenames = {}
-			for f in pkgs.items():
-				## f = (name of package, [list of filenames with 'i'])
+			##
+			for packagename in pkgs.items():
+				## packagename = (name of package, [list of filenames with 'i'])
+				## we record in how many different packages we find the
+				## same filename that contain i
 				## remove duplicates first
-				for fn in list(set(f[1])):
+				for fn in list(set(packagename[1])):
 					if not filenames.has_key(fn):
 						filenames[fn] = {}
-					filenames[fn][f[0]] = 1
+					filenames[fn][packagename[0]] = 1
 			## now we can determine the score for the string
+			## by taking the length of the string,
+			## divided by alpha^(amount of packages - 1)
 			score = len(i) / pow(alpha, (len(filenames.keys()) - 1))
-			#print score, i, filenames.keys()
+
+			## After having computed a score we see if the files we have
+			## found the string in are all called the same.
+			## filenames {name of file: { name of package: 1} }
 			for fn in filenames.keys():
+				## the filename can only be found in this package.
 				if len(filenames[fn].values()) == 1:
 					fnkey = filenames[fn].keys()[0]
-					if not nonUniqueScore.has_key(fnkey):
-						nonUniqueScore[fnkey] = score
-					else:
-						nonUniqueScore[fnkey] = nonUniqueScore[fnkey] + score
+					nonUniqueScore[fnkey] = nonUniqueScore.get(fnkey,0) + score
 				else:
-					pass
-					#print filenames[fn].keys()
 					# There are multiple packages in which the same
 					# filename contains this string, which is likely to be
 					# internal cloning in the repo.  This string is
 					# assigned to a single package in the loop below.
-					stringsLeft['%s\t%s' % (i, fn)] = {'string': i, 'score': score, 'filename': fn}
+					stringsLeft['%s\t%s' % (i, fn)] = {'string': i, 'score': score, 'filename': fn, 'pkgs' : filenames[fn].keys()}
 
 		# For each string that occurs in the same filename in multiple
 		# packages (e.g., "debugXML.c", a cloned file of libxml2 in several
@@ -158,14 +173,53 @@ def extractGeneric(lines, path):
 			round = round + 1
 			print "round %d: %d strings left" % (round, len(stringsLeft.keys()))
 			gain = {}
-			stringsPerPkgs = {}
+			stringsPerPkg = {}
 			for stri in stringsLeft.items():
-				print stri[0], stri[1]['string']
-			sys.exit(0)
-			pass
+				## get the unique score per package and sort in reverse order
+				pkgsSorted = map(lambda x: {'package': x, 'uniquescore': uniqueScore.get(x, 0)},  stri[1]['pkgs'])
+				pkgsSorted = sorted(pkgsSorted, key=lambda x: x['uniquescore'], reverse=True)
+				## and get rid of the unique scores again
+				pkgsSorted = map(lambda x: x['package'], pkgsSorted)
 
-		print "nonUniqueScore for %s: " % i, nonUniqueScore
-		print stringsLeft
+				pkgs2 = []
+
+				for pkgSort in pkgsSorted:
+					if uniqueScore.get(pkgSort, 0) == uniqueScore.get(pkgsSorted[0], 0):
+						pkgs2.append(pkgSort)
+				for p2 in pkgs2:
+					gain[p2] = gain.get(p2, 0) + stri[1]['score']
+					stringsPerPkg[p2] = stri[0]
+			## gain_sorted contains the sort order
+			gain_sorted = sorted(gain, key = lambda x: gain.__getitem__(x), reverse=True)
+			best = gain_sorted[0]
+			close = []
+			for p3 in gain_sorted:
+				if gain[p3] > gain[best] * 0.9:
+					close.append(p3)
+	
+        		# Let's hope "sort" terminates on a comparison function that
+        		# may not actually be a proper ordering.	
+			if len(close) > 1:
+				print "  doing battle royale between [close]"
+				## TODO: battle royale
+				pass
+			x = stringsLeft[stringsPerPkg[best]]
+			if not allMatches.has_key(best):
+				allMatches[best] = {}
+
+			allMatches[best][x['string']] = allMatches[best].get(x['string'],0) + x['score']
+			sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
+			del stringsLeft[stringsPerPkg[best]]
+			if gain[best] < 1:
+				break
+
+	scores = {}
+	for k in uniqueScore.keys() + sameFileScore.keys():
+		scores[k] = uniqueScore.get(k, 0) + sameFileScore.get(k, 0) + nonUniqueScore.get(k,0)
+	scores_sorted = sorted(scores, key = lambda x: scores.__getitem__(x), reverse=True)
+
+	for s in scores_sorted:
+		print "%s: " % (s,), scores[s]
 
 def comparePkgs(a, b, cursor, conn):
 	counta = averageStringsPerPkgVersion(a, cursor, conn)
@@ -178,8 +232,7 @@ def averageStringsPerPkgVersion(pkg, cursor, conn):
 	# "extracted_file" and "processed_file" tables change!
 	res = conn.execute("select avgstrings from avg.avgstringscache where package = ?", (pkg,)).fetchall()
 	if len(res) == 0:
-		pass
-		print "   looking up average nr of strings in %s" % (pkg,)
+		#print "   looking up average nr of strings in %s" % (pkg,)
 
             	cursor.execute("select count(*) * 1.0 / (select count(distinct version) from processed_file where package = ?) from (select distinct e.programstring, p.version from extracted_file e JOIN processed_file p on e.sha256 = p.sha256 WHERE package = ?)", (pkg,pkg))
 		count = cursor.fetchone()[0]
