@@ -19,6 +19,17 @@ import sqlite3
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
+def generateNodes(elem, root, confs):
+	nodes = []
+	for conf in confs:
+		if conf in elem:
+			tmpnode = root.createElement(conf)
+			tmpnodetext = xml.dom.minidom.Text()
+			tmpnodetext.data = elem[conf]
+			tmpnode.appendChild(tmpnodetext)
+			nodes.append(tmpnode)
+	return nodes
+
 '''
 This method recursively generates XML snippets. If a method for a 'program'
 has a pretty printing method defined, it will be used instead of the generic
@@ -59,13 +70,9 @@ def prettyprintresxmlsnippet(res, root, unpackscans, programscans):
                 				topnode.appendChild(tmpnode)
 					else:
                 				tmpnode = root.createElement("file")
-        					for conf in ["name", "path", "realpath", "magic", "sha256", "size", "architecture"]:
-							if conf in elem:
-                						tmpnode2 = root.createElement(conf)
-                						tmpnodetext = xml.dom.minidom.Text()
-                						tmpnodetext.data = elem[conf]
-                						tmpnode2.appendChild(tmpnodetext)
-                						tmpnode.appendChild(tmpnode2)
+						tmpnodes = generateNodes(elem, root, ["name", "path", "realpath", "magic", "sha256", "size", "architecture"])
+						for tmpnode2 in tmpnodes:
+                					tmpnode.appendChild(tmpnode2)
 
 						if 'libs' in elem:
 							tmpnode2 = root.createElement('libs')
@@ -130,14 +137,9 @@ def prettyprintresxml(res, scandate, unpackscans=[], programscans=[]):
 			devicenode.appendChild(tmpnode)
 			topnode.appendChild(devicenode)
 
-	## TODO: merge with XML printing XML snippets
-        for conf in ["name", "path", "magic", "sha256", "size", "architecture"]:
-		if conf in res:
-                	tmpnode = root.createElement(conf)
-                	tmpnodetext = xml.dom.minidom.Text()
-                	tmpnodetext.data = res[conf]
-                	tmpnode.appendChild(tmpnodetext)
-                	topnode.appendChild(tmpnode)
+	tmpnodes = generateNodes(res, root, ["name", "path", "realpath", "magic", "sha256", "size", "architecture"])
+	for tmpnode in tmpnodes:
+                topnode.appendChild(tmpnode)
 
 	## TODO: merge with XML printing XML snippets
 	if 'libs' in res:
