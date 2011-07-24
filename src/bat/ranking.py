@@ -189,7 +189,7 @@ def extractGeneric(lines, path):
 		roundNr = 0
 		while len(stringsLeft.keys()) > 0:
 			roundNr = roundNr + 1
-			print "round %d: %d strings left" % (roundNr, len(stringsLeft.keys()))
+			#print "round %d: %d strings left" % (roundNr, len(stringsLeft.keys()))
 			gain = {}
 			stringsPerPkg = {}
 			for stri in stringsLeft.items():
@@ -214,7 +214,6 @@ def extractGeneric(lines, path):
 			## change
 
 			best = gain_sorted[0]
-			print "round", roundNr, "selected", best, "score =", gain[best]
 
 			close = []
 			## if we have multiple packages that have a big enough gain, we
@@ -227,10 +226,12 @@ def extractGeneric(lines, path):
         		## Let's hope "sort" terminates on a comparison function that
         		## may not actually be a proper ordering.	
 			if len(close) > 1:
-				print "  doing battle royale between [close]"
-				## TODO: battle royale
-				## sort close, then best = close[0]
-				pass
+				# print "  doing battle royale between [close]"
+				## reverse sort close, then best = close[0]
+				close_sorted = map(lambda x: (x, averageStringsPerPkgVersion(x, conn)), close)
+				close_sorted = sorted(close_sorted, key = lambda x: x[1], reverse=True)
+				close = map(lambda x: x[0], close_sorted)
+				best = close[0]
 			x = stringsLeft[stringsPerPkg[best]]
 			if not allMatches.has_key(best):
 				allMatches[best] = {}
@@ -246,26 +247,24 @@ def extractGeneric(lines, path):
 		scores[k] = uniqueScore.get(k, 0) + sameFileScore.get(k, 0) + nonUniqueScore.get(k,0)
 	scores_sorted = sorted(scores, key = lambda x: scores.__getitem__(x), reverse=True)
 
+	print "found %d strings, %d unique matches, %s bytes" % (len(allStrings.keys()), nrUniqueMatches, lenStringsFound)
+	print "the binary contains likely clones from the following packages:\n";
+	rank = 1
 	for s in scores_sorted:
-		print "%s: " % (s,), scores[s]
+		#print "rank %d" % rank, s, scores[s], uniqueScore[s], len(uniqueMatches[s])
+		print "rank %d: package %s - score %s" % (rank, s, scores[s]), uniqueScore.get(s,0), len(uniqueMatches.get(s, []))
+		rank = rank+1
 
-def comparePkgs(a, b, cursor, conn):
-	counta = averageStringsPerPkgVersion(a, cursor, conn)
-	countb = averageStringsPerPkgVersion(b, cursor, conn)
-	return cmp(counta, countb)
 
-def averageStringsPerPkgVersion(pkg, cursor, conn):
+def averageStringsPerPkgVersion(pkg, conn):
 	## Cache the average number of strings per package in the DB.
 	## Danger: this table should be invalidated whenever the
 	## "extracted_file" and "processed_file" tables change!
 	res = conn.execute("select avgstrings from avg.avgstringscache where package = ?", (pkg,)).fetchall()
 	if len(res) == 0:
-		#print "   looking up average nr of strings in %s" % (pkg,)
-
-            	cursor.execute("select count(*) * 1.0 / (select count(distinct version) from processed_file where package = ?) from (select distinct e.programstring, p.version from extracted_file e JOIN processed_file p on e.sha256 = p.sha256 WHERE package = ?)", (pkg,pkg))
-		count = cursor.fetchone()[0]
-        	cursor.execute("insert or ignore into avgstringscache(package, avgstrings) values (?, ?)", (pkg, count))
+            	count = conn.execute("select count(*) * 1.0 / (select count(distinct version) from processed_file where package = ?) from (select distinct e.programstring, p.version from extracted_file e JOIN processed_file p on e.sha256 = p.sha256 WHERE package = ?)", (pkg,pkg)).fetchone()[0]
+        	conn.execute("insert or ignore into avgstringscache(package, avgstrings) values (?, ?)", (pkg, count))
 		conn.commit()
 	else:
-		count = res[0]
+		count = res[0][0]
 	return count
