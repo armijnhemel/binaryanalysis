@@ -25,7 +25,8 @@ def searchGeneric(path, blacklist=[]):
         try:
 		## extract all strings from the binary. Only look at strings
 		## that are 5 characters or longer. This should be made
-		## configurable although the gain will be relatively low.
+		## configurable although the gain will be relatively low by also
+		## scanning shorter strings.
 		p = subprocess.Popen(['strings', '-n', '5', path], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
@@ -86,12 +87,14 @@ def extractGeneric(lines, path):
 		res = conn.execute('''select p.package, p.version, p.filename FROM processed_file p JOIN extracted_file e on p.sha256 = e.sha256 WHERE programstring=?''', (line,)).fetchall()
 
 		if len(res) != 0:
-			## Add the length of the string to lenStringsFound
+			## Add the length of the string to lenStringsFound.
+			## We're not really using it, except for reporting.
 			lenStringsFound = lenStringsFound + len(line)
 			matched = True
+
 			print >>sys.stderr, "\n%d matches found for <(|%s|)> in %s" % (len(res), line, path)
 
-			## for statistics it's fun to see how many lines we matched
+			## for statistics it's nice to see how many lines we matched
 			matchedlines = matchedlines + 1
 			packageres = {}
 			allStrings[line] = []
@@ -106,6 +109,7 @@ def extractGeneric(lines, path):
 
 	print >>sys.stderr, "matchedlines:", matchedlines
 	print >>sys.stderr, matchedlines/(len(lines) * 1.0)
+
 	## For each string we determine in how many packages (without version) the string
 	## is found.
 	## If the string is only found in one package the string is unique to the package
@@ -118,7 +122,7 @@ def extractGeneric(lines, path):
 	## 2. if not, determine which filenames the string is in
 	## 3. for each filename, determine whether or not this file (containing the string)
 	##    is unique to a package
-	## 4. if not, try to determine the most likely package
+	## 4. if not, try to determine the most likely package the string was found in
 	for i in allStrings.keys():
 		pkgs = {}    ## {package name: [filenames without path]}
 		for match in allStrings[i]:
@@ -154,35 +158,38 @@ def extractGeneric(lines, path):
 						filenames[fn] = {}
 					filenames[fn][packagename[0]] = 1
 			## now we can determine the score for the string
-			## by taking the length of the string,
-			## divided by alpha^(amount of packages - 1)
 			score = len(i) / pow(alpha, (len(filenames.keys()) - 1))
 
-			## After having computed a score we see if the files we have
-			## found the string in are all called the same.
+			## After having computed a score we determine if the files
+			## we have found the string in are all called the same.
 			## filenames {name of file: { name of package: 1} }
 			for fn in filenames.keys():
-				## the filename can only be found in this package.
 				if len(filenames[fn].values()) == 1:
+					## The filename fn containing the matched string can only
+					## be found in one package.
+					## For example: 'foo.c' in package 'foo'
+					## or 'bar.c' in package 'bar'
+					## The matched string is present in both 'foo.c' and 'bar.c'
 					fnkey = filenames[fn].keys()[0]
 					nonUniqueScore[fnkey] = nonUniqueScore.get(fnkey,0) + score
 				else:
-					# There are multiple packages in which the same
-					# filename contains this string, which is likely to be
-					# internal cloning in the repo.  This string is
-					# assigned to a single package in the loop below.
+					## There are multiple packages in which the same
+					## filename contains this string, for example 'foo.c'
+					## in packages 'foo' and 'bar. This is likely to be
+					## internal cloning in the repo.  This string is
+					## assigned to a single package in the loop below.
 					stringsLeft['%s\t%s' % (i, fn)] = {'string': i, 'score': score, 'filename': fn, 'pkgs' : filenames[fn].keys()}
 
-		# For each string that occurs in the same filename in multiple
-		# packages (e.g., "debugXML.c", a cloned file of libxml2 in several
-		# packages), assign it to one package.  We do this by picking the
-		# package that would gain the highest score increment across all
-		# strings that are left.  This is repeated until no strings are left.
+		## For each string that occurs in the same filename in multiple
+		## packages (e.g., "debugXML.c", a cloned file of libxml2 in several
+		## packages), assign it to one package.  We do this by picking the
+		## package that would gain the highest score increment across all
+		## strings that are left.  This is repeated until no strings are left.
 		sameFileScore = {}
-		round = 0
+		roundNr = 0
 		while len(stringsLeft.keys()) > 0:
-			round = round + 1
-			print "round %d: %d strings left" % (round, len(stringsLeft.keys()))
+			roundNr = roundNr + 1
+			print "round %d: %d strings left" % (roundNr, len(stringsLeft.keys()))
 			gain = {}
 			stringsPerPkg = {}
 			for stri in stringsLeft.items():
@@ -200,19 +207,29 @@ def extractGeneric(lines, path):
 				for p2 in pkgs2:
 					gain[p2] = gain.get(p2, 0) + stri[1]['score']
 					stringsPerPkg[p2] = stri[0]
-			## gain_sorted contains the sort order
+			## gain_sorted contains the sort order, gain contains the actual data
 			gain_sorted = sorted(gain, key = lambda x: gain.__getitem__(x), reverse=True)
+
+			## so far we think that this value is the best, but that might
+			## change
+
 			best = gain_sorted[0]
+			print "round", roundNr, "selected", best, "score =", gain[best]
+
 			close = []
+			## if we have multiple packages that have a big enough gain, we
+			## add them to 'close' and battle it out to see which package is
+			## the most likely hit.
 			for p3 in gain_sorted:
 				if gain[p3] > gain[best] * 0.9:
 					close.append(p3)
 	
-        		# Let's hope "sort" terminates on a comparison function that
-        		# may not actually be a proper ordering.	
+        		## Let's hope "sort" terminates on a comparison function that
+        		## may not actually be a proper ordering.	
 			if len(close) > 1:
 				print "  doing battle royale between [close]"
 				## TODO: battle royale
+				## sort close, then best = close[0]
 				pass
 			x = stringsLeft[stringsPerPkg[best]]
 			if not allMatches.has_key(best):
@@ -238,9 +255,9 @@ def comparePkgs(a, b, cursor, conn):
 	return cmp(counta, countb)
 
 def averageStringsPerPkgVersion(pkg, cursor, conn):
-	# Cache the average number of strings per package in the DB.
-	# Danger: this table should be invalidated whenever the
-	# "extracted_file" and "processed_file" tables change!
+	## Cache the average number of strings per package in the DB.
+	## Danger: this table should be invalidated whenever the
+	## "extracted_file" and "processed_file" tables change!
 	res = conn.execute("select avgstrings from avg.avgstringscache where package = ?", (pkg,)).fetchall()
 	if len(res) == 0:
 		#print "   looking up average nr of strings in %s" % (pkg,)
