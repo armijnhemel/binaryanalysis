@@ -697,7 +697,6 @@ def unpackCramfs(data, offset, tempdir=None):
 	## fsck.cramfs needs to unpack in a separate directory. So, create a new temporary
 	## directory to avoid name clashes
         tmpdir2 = tempfile.mkdtemp()
-	print tmpdir, tmpdir2
 	## since fsck.cramfs can't deal with data via stdin first write it to
 	## a temporary location
 	tmpfile = tempfile.mkstemp(dir=tmpdir2)
