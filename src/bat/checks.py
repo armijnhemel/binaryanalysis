@@ -69,6 +69,23 @@ def dynamicLibsPrettyPrint(res, root):
 		tmpnode.appendChild(tmpnode2)
 	return tmpnode
 
+## This method uses readelf to determine the architecture of the executable file.
+## This is necessary because sometimes leftovers from different products (and
+## different architectures) can be found in one firmware.
+def scanArchitecture(path, blacklist=[]):
+	ms = magic.open(magic.MAGIC_NONE)
+	ms.load()
+	type = ms.file(path)
+	ms.close()
+	if "ELF" in type:
+		p = subprocess.Popen(['readelf', '-h', "%s" % (path,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			return
+		for line in stanout.split('\n'):
+			if "Machine:" in line:
+				return line.split(':')[1].strip()
+
 def searchLoadLin(path, blacklist=[]):
 	markerStrings = [ 'Ooops..., size of "setup.S" has become too long for LOADLIN,'
 			, 'LOADLIN started from $'

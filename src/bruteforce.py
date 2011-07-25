@@ -69,7 +69,7 @@ def prettyprintresxmlsnippet(res, root, unpackscans, programscans):
                 				topnode.appendChild(tmpnode)
 					else:
                 				tmpnode = root.createElement("file")
-						tmpnodes = generateNodes(elem, root, ["name", "path", "realpath", "magic", "sha256", "size", "architecture"])
+						tmpnodes = generateNodes(elem, root, ["name", "path", "realpath", "magic", "sha256", "size"])
 						for tmpnode2 in tmpnodes:
                 					tmpnode.appendChild(tmpnode2)
 
@@ -126,7 +126,7 @@ def prettyprintresxml(res, scandate, unpackscans=[], programscans=[]):
 			devicenode.appendChild(tmpnode)
 			topnode.appendChild(devicenode)
 
-	tmpnodes = generateNodes(res, root, ["name", "path", "realpath", "magic", "sha256", "size", "architecture"])
+	tmpnodes = generateNodes(res, root, ["name", "path", "realpath", "magic", "sha256", "size"])
 	for tmpnode in tmpnodes:
                 topnode.appendChild(tmpnode)
 
@@ -138,19 +138,6 @@ def prettyprintresxml(res, scandate, unpackscans=[], programscans=[]):
 		topnode.appendChild(tmpnode)
 	root.appendChild(topnode)
 	return root
-
-## This method uses readelf to determine the architecture of the executable file.
-## This is necessary because sometimes leftovers from different products (and
-## different architectures) can be found in one firmware.
-## TODO: turn this into a separate check.
-def scanArchitecture(path, file):
-        p = subprocess.Popen(['readelf', '-h', "%s/%s" % (path, file)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-        (stanout, stanerr) = p.communicate()
-        if p.returncode != 0:
-                return
-        for line in stanout.split('\n'):
-                if "Machine:" in line:
-                        return line.split(':')[1].strip()
 
 ## This method returns a cryptographic checksum for a file using the SHA256
 ## algorithm. This information can be used to uniquely identify a file and
@@ -211,10 +198,6 @@ def scanfile(path, filename, lentempdir=0, tempdir=None, unpackscans=[], program
 	filehash = gethash(path, filename)
 	report['sha256'] = filehash
 
-	if "ELF" in type:
-		res = scanArchitecture(path,filename)
-		if res != None:
-			report['architecture'] = res
 	filetoscan = "%s/%s" % (path, filename)
 
 	## scan per file and store the results, except when explicitely
