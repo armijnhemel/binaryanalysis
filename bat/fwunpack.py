@@ -678,7 +678,7 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}):
 				break
 			retval = unpackCramfs(data, offset, tmpdir)
 			if retval != None:
-				(res, cramfssize) = res
+				(res, cramfssize) = retval
 				if cramfssize != 0:
 					blacklist.append((offset,offset+cramfssize))
 				diroffsets.append((res, offset))
@@ -696,15 +696,16 @@ def unpackCramfs(data, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	## fsck.cramfs needs to unpack in a separate directory. So, create a new temporary
 	## directory to avoid name clashes
-        #tmpdir2 = tempfile.mkdtemp()
+        tmpdir2 = tempfile.mkdtemp()
+	print tmpdir, tmpdir2
 	## since fsck.cramfs can't deal with data via stdin first write it to
 	## a temporary location
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	tmpfile = tempfile.mkstemp(dir=tmpdir2)
 	os.write(tmpfile[0], data[offset:])
 
 	## right now this is a path to a specially adapted fsck.cramfs that ignores special inodes
-	## create a new path to unpack all stuff
-	p = subprocess.Popen(['bat-fsck.cramfs', '-x', tmpdir2 + "/cramfs", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	## We actually need to create a new subdirectory inside tmpdir, otherwise the tool will complain
+	p = subprocess.Popen(['bat-fsck.cramfs', '-x', tmpdir + "/cramfs", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	#p = subprocess.Popen(['/home/armijn/gpltool/trunk/bat-extratools/cramfs/disk-utils/fsck.cramfs', '-x', tmpdir + "/cramfs", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
@@ -712,11 +713,13 @@ def unpackCramfs(data, offset, tempdir=None):
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
+			os.rmdir(tmpdir2)
 		return
 	else:
 		## determine if the whole file actually is the cramfs file. Do this by running bat-fsck.cramfs again with -v and check stderr.
 		## If there is no error on stderr, we know that the entire file is the cramfs file
 		p = subprocess.Popen(['bat-fsck.cramfs', '-v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+		#p = subprocess.Popen(['/home/armijn/gpltool/trunk/bat-extratools/cramfs/disk-utils/fsck.cramfs', '-v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		if len(stanerr) != 0:
 			cramfssize = 0
@@ -724,7 +727,8 @@ def unpackCramfs(data, offset, tempdir=None):
 			cramfssize = len(data)
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
-		return (tmpdir, cramfssize)
+		os.rmdir(tmpdir2)
+		return (tmpdir + "/cramfs", cramfssize)
 
 ## Search and unpack a squashfs file system. Since there are so many flavours
 ## of squashfs available we have to do some extra work here, and possibly have
