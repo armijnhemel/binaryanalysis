@@ -44,6 +44,14 @@ def unpacksetup(tempdir):
 		tmpdir = tempdir
 	return tmpdir
 
+## placeholder method for mounting FUSE file systems and copying the
+## contents to a temporary directory. Requires FUSE support on the
+## host system.
+## This is mostly useful for ISO9660 files
+## TODO
+def mountFuse(filename, tempdir=None):
+	pass
+
 ## method to search for all the markers we have in fsmagic
 ## Later we should rewrite all methods to use the results from
 ## this method instead of rereading the file.
