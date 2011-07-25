@@ -3,6 +3,7 @@
 * remove more duplicate code from bruteforce.py
 * move dynamic library scanning to a separate check
 * move architecture scanning to a separate check
+* fix cramfs scanning
 
 2011-07-24
 * finish ranking method from MSR 2011 paper, except reporting
