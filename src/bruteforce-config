@@ -162,6 +162,12 @@ module  = bat.fwunpack
 method  = searchUnpackByteSwap
 priority = 100
 
+[libs]
+type    = program
+module  = bat.checks
+method  = searchDynamicLibs
+xmloutput = dynamicLibsPrettyPrint
+
 [wireless-tools]
 type    = program
 module  = bat.checks

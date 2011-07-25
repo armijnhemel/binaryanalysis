@@ -11,8 +11,9 @@ proof and false positives are likely, so either check the results, or replace
 it with your own more robust checks.
 '''
 
-import string, re, os, magic
+import string, re, os, magic, subprocess, sys
 import extractor
+import xml.dom.minidom
 
 ## generic searcher for certain marker strings
 def genericSearch(path, markerStrings, blacklist=[]):
@@ -32,6 +33,38 @@ def genericSearch(path, markerStrings, blacklist=[]):
 				return None
         except Exception, e:
                 return None
+
+## The result of this method is a list of library names that the file dynamically links
+## with. The path of these libraries is not given, since this is usually not recorded
+## in the binary (unless RPATH is used) but determined at runtime: it is dependent on
+## the dynamic linker configuration on the device. With some mixing and matching it is
+## nearly always to determine which library in which path is used, since most installations
+## don't change the default search paths.
+def searchDynamicLibs(path, blacklist=[]):
+	ms = magic.open(magic.MAGIC_NONE)
+	ms.load()
+	type = ms.file(path)
+	ms.close()
+	if "ELF" in type:
+		libs = []
+		p = subprocess.Popen(['readelf', '-d', "%s" % (path,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+                	return
+		for line in stanout.split('\n'):
+			if "Shared library:" in line:
+				libs.append(line.split(': ')[1][1:-1])
+		return libs
+
+def dynamicLibsPrettyPrint(res, root):
+	tmpnode = root.createElement('libs')
+	for lib in res:
+		tmpnode2 = root.createElement('lib')
+		tmpnodetext = xml.dom.minidom.Text()
+		tmpnodetext.data = lib
+		tmpnode2.appendChild(tmpnodetext)
+		tmpnode.appendChild(tmpnode2)
+	return tmpnode
 
 def searchLoadLin(path, blacklist=[]):
 	markerStrings = [ 'Ooops..., size of "setup.S" has become too long for LOADLIN,'
