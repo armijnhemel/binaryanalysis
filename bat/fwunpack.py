@@ -83,7 +83,7 @@ def genericMarkerSearch(filename, tempdir=None, blacklist=[], offsets={}):
 def searchUnpackTar(filename, tempdir=None, blacklist=[], offsets={}):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
-	type = ms.file(filename)
+	mstype = ms.file(filename)
 	ms.close()
 
 	tarmagic = ['POSIX tar archive (GNU)'
@@ -92,7 +92,7 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[], offsets={}):
 
 	## search for first magic marker that matches
 	for tm in tarmagic:
-		if tm in type:
+		if tm in mstype:
 			tarsize = 0
 			tmpdir = dirsetup(tempdir, filename, "tar", 1)
 			tar = tarfile.open(filename, 'r')
@@ -163,10 +163,10 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}):
 	## first determine if we are dealing with a MS Windows executable
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
-	type = ms.file(filename)
+	mstype = ms.file(filename)
 	ms.close()
 
-	if not 'PE32 executable for MS Windows' in type:
+	if not 'PE32 executable for MS Windows' in mstype:
 		return ([], blacklist, offsets)
 
 	## apparently we have a MS Windows executable, so continue
@@ -336,14 +336,14 @@ def unpackCab(data, offset, tempdir=None):
 def searchUnpack7z(filename, tempdir=None, blacklist=[], offsets={}):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
-	type = ms.file(filename)
+	mstype = ms.file(filename)
 	ms.close()
 
 	exemagic = ['PE32 executable for MS Windows'
 		   ]
 
 	for exe in exemagic:
-		if exe in type:
+		if exe in mstype:
 			tmpdir = unpacksetup(tempdir)
                 	zztmpdir = tempfile.mkdtemp(dir=tmpdir)
 			param = "-o%s" % zztmpdir
@@ -632,11 +632,11 @@ def unpackCpio(data, offset, tempdir=None):
 
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
-	type = ms.file(tmpfile[1])
+	mstype = ms.file(tmpfile[1])
 	ms.close()
 	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
-	if 'cpio' not in type:
+	if 'cpio' not in mstype:
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return
