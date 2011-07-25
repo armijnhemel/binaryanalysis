@@ -126,11 +126,12 @@ def prettyprintresxml(res, scandate, unpackscans=[], programscans=[]):
 			devicenode.appendChild(tmpnode)
 			topnode.appendChild(devicenode)
 
+	## there are a few things we always want to know about the top level node
 	tmpnodes = generateNodes(res, root, ["name", "path", "realpath", "magic", "sha256", "size"])
 	for tmpnode in tmpnodes:
                 topnode.appendChild(tmpnode)
 
-	## TODO: merge with XML printing XML snippets
+	## then we recurse into the results from the individual scans
 	if 'scans' in res:
 		tmpnode = root.createElement('scans')
 		for scan in res['scans']:
@@ -165,26 +166,26 @@ def scanfile(path, filename, lentempdir=0, tempdir=None, unpackscans=[], program
 	## directory too.
 	report['path'] = path[lentempdir:].replace("/squashfs-root", "")
 	report['realpath'] = path
-	type = ms.file("%s/%s" % (path, filename))
-	report['magic'] = type
+	mstype = ms.file("%s/%s" % (path, filename))
+	report['magic'] = mstype
 
         ## broken symbolic links can't be statted
-        if type.find('broken symbolic link to') == 0:
+        if mstype.find('broken symbolic link to') == 0:
         	return report
         ## don't care about symbolic links
-        if type.find('symbolic link to') == 0:
+        if mstype.find('symbolic link to') == 0:
         	return report
         ## no use checking a named pipe
-        if type.find('fifo (named pipe)') == 0:
+        if mstype.find('fifo (named pipe)') == 0:
         	return report
 	## no use checking a socket
-        if type.find('socket') == 0:
+        if mstype.find('socket') == 0:
         	return report
 	## no use checking a block device
-        if type.find('block special') == 0:
+        if mstype.find('block special') == 0:
         	return report
 	## no use checking a character device
-        if type.find('character special') == 0:
+        if mstype.find('character special') == 0:
         	return report
 
 	report['size'] = os.lstat("%s/%s" % (path, filename)).st_size
@@ -204,7 +205,7 @@ def scanfile(path, filename, lentempdir=0, tempdir=None, unpackscans=[], program
 	## instructed not to scan. In that case we just report some statistics
 	## about the file.
 	if not noscan:
-		res = scan(filetoscan, type, filehash=filehash, tempdir=tempdir, unpackscans=unpackscans, programscans=programscans)
+		res = scan(filetoscan, mstype, filehash=filehash, tempdir=tempdir, unpackscans=unpackscans, programscans=programscans)
 		if res != []:
 			report['scans'] = res
 	return report
