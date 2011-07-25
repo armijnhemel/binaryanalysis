@@ -43,9 +43,9 @@ def genericSearch(path, markerStrings, blacklist=[]):
 def searchDynamicLibs(path, blacklist=[]):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
-	type = ms.file(path)
+	mstype = ms.file(path)
 	ms.close()
-	if "ELF" in type:
+	if "ELF" in mstype:
 		libs = []
 		p = subprocess.Popen(['readelf', '-d', "%s" % (path,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
@@ -75,9 +75,9 @@ def dynamicLibsPrettyPrint(res, root):
 def scanArchitecture(path, blacklist=[]):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
-	type = ms.file(path)
+	mstype = ms.file(path)
 	ms.close()
-	if "ELF" in type:
+	if "ELF" in mstype:
 		p = subprocess.Popen(['readelf', '-h', "%s" % (path,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
@@ -172,9 +172,9 @@ def searchWindowsDependencies(path, blacklist=[]):
 	## first determine if we are dealing with a MS Windows executable
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
-	type = ms.file(path)
+	mstype = ms.file(path)
 	ms.close()
-	if not 'PE32 executable for MS Windows' in type:
+	if not 'PE32 executable for MS Windows' in mstype:
                 return None
         binary = open(path, 'rb')
         lines = binary.read()
