@@ -1,12 +1,12 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2009-2011 Armijn Hemel for LOCO (LOOHUIS CONSULTING)
+## Copyright 2009-2011 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
 This script tries to analyse the firmware of a device, using a "brute force" approach
-and pretty print it in a simple XML file.
+and pretty print the analysis in a simple XML format.
 '''
 
 import sys, os, os.path, magic, hashlib, subprocess, tempfile, shutil
@@ -19,6 +19,7 @@ import sqlite3
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
+## pretty printing for various elements, plus shared libraries
 def generateNodes(elem, root, confs):
 	nodes = []
 	for conf in confs:
@@ -28,13 +29,20 @@ def generateNodes(elem, root, confs):
 			tmpnodetext.data = elem[conf]
 			tmpnode.appendChild(tmpnodetext)
 			nodes.append(tmpnode)
+	if 'libs' in elem:
+		tmpnode = root.createElement('libs')
+		for lib in elem['libs']:
+			tmpnode2 = root.createElement('lib')
+                	tmpnodetext = xml.dom.minidom.Text()
+                	tmpnodetext.data = lib
+                	tmpnode2.appendChild(tmpnodetext)
+                	tmpnode.appendChild(tmpnode2)
+		nodes.append(tmpnode)
 	return nodes
 
-'''
-This method recursively generates XML snippets. If a method for a 'program'
-has a pretty printing method defined, it will be used instead of the generic
-one.
-'''
+## This method recursively generates XML snippets. If a method for a 'program'
+## has a pretty printing method defined, it will be used instead of the generic
+## one.
 def prettyprintresxmlsnippet(res, root, unpackscans, programscans):
 	## this should always be len == 1, have more checks
 	for i in res.keys():
@@ -72,16 +80,6 @@ def prettyprintresxmlsnippet(res, root, unpackscans, programscans):
                 				tmpnode = root.createElement("file")
 						tmpnodes = generateNodes(elem, root, ["name", "path", "realpath", "magic", "sha256", "size", "architecture"])
 						for tmpnode2 in tmpnodes:
-                					tmpnode.appendChild(tmpnode2)
-
-						if 'libs' in elem:
-							tmpnode2 = root.createElement('libs')
-							for lib in elem['libs']:
-								tmpnode3 = root.createElement('lib')
-                						tmpnodetext = xml.dom.minidom.Text()
-                						tmpnodetext.data = lib
-                						tmpnode3.appendChild(tmpnodetext)
-                						tmpnode2.appendChild(tmpnode3)
                 					tmpnode.appendChild(tmpnode2)
 
 						if 'scans' in elem:
@@ -142,17 +140,6 @@ def prettyprintresxml(res, scandate, unpackscans=[], programscans=[]):
                 topnode.appendChild(tmpnode)
 
 	## TODO: merge with XML printing XML snippets
-	if 'libs' in res:
-		tmpnode = root.createElement('libs')
-		for lib in res['libs']:
-			tmpnode2 = root.createElement('lib')
-                	tmpnodetext = xml.dom.minidom.Text()
-                	tmpnodetext.data = lib
-                	tmpnode2.appendChild(tmpnodetext)
-                	tmpnode.appendChild(tmpnode2)
-		topnode.appendChild(tmpnode)
-
-	## TODO: merge with XML printing XML snippets
 	if 'scans' in res:
 		tmpnode = root.createElement('scans')
 		for scan in res['scans']:
@@ -161,11 +148,10 @@ def prettyprintresxml(res, scandate, unpackscans=[], programscans=[]):
 	root.appendChild(topnode)
 	return root
 
-'''
-This method uses readelf to determine the architecture of the executable file.
-This is necessary because sometimes leftovers from different products (and
-different architectures) can be found in one firmware.
-'''
+## This method uses readelf to determine the architecture of the executable file.
+## This is necessary because sometimes leftovers from different products (and
+## different architectures) can be found in one firmware.
+## TODO: turn this into a separate check.
 def scanArchitecture(path, file):
         p = subprocess.Popen(['readelf', '-h', "%s/%s" % (path, file)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         (stanuit, stanerr) = p.communicate()
@@ -181,6 +167,7 @@ def scanArchitecture(path, file):
 ## the dynamic linker configuration on the device. With some mixing and matching it is
 ## nearly always to determine which library in which path is used, since most installations
 ## don't change the default search paths.
+## TODO: turn this into a separate check.
 def scanSharedLibs(path, file):
 	libs = []
         p = subprocess.Popen(['readelf', '-d', "%s/%s" % (path, file)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
