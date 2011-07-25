@@ -19,6 +19,34 @@ import sqlite3
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
+## convenience method to merge ranges that overlap in a blacklist
+## We do multiple passes to make sure everything is correctly merged
+## Example:
+## [(1,3), (2,4), (5,7), (3,7)] would need to result in [(1,7)]
+def mergeBlacklist(blacklist):
+	if len(blacklist) == 0:
+		return []
+	blacklistold = []
+	while (blacklistold != blacklist):
+		res = []
+		res.append(blacklist[0])
+		for i in xrange(1,len(blacklist)):
+			lower = res[-1][0]
+			upper = res[-1][1]
+			if upper >= blacklist[i][0] or lower >= blacklist[i][0]:
+				if upper <= blacklist[i][1]:
+					upper = blacklist[i][1]
+				if lower >= blacklist[i][0]:
+					lower = blacklist[i][0]
+				res[-1] = (lower,upper)
+				continue
+			## no overlapping ranges, so just append
+			res.append(blacklist[i])
+		blacklistold = blacklist
+		blacklist = res
+	return blacklist
+
+
 ## pretty printing for various elements, plus shared libraries
 def generateNodes(elem, root, confs):
 	nodes = []
@@ -245,14 +273,13 @@ def scan(filetoscan, magic, unpackscans=[], programscans=[], filehash=None, temp
 		exec "from %s import %s as bat_%s" % (module, method, method)
 		scanres = eval("bat_%s(filetoscan, tempdir, blacklist, offsets)" % (method))
 		## result is either empty, or contains offsets
-		## TODO: clean up blacklists: [(a,b), (b,c)] should become [(a,c)]
-		## for various checks like genericSearch in bat/checks.py
 		if len(scanres) == 3:
 			(diroffsets, blacklist, offsets) = scanres
 		elif len(scanres) == 4:
 			(diroffsets, blacklist, offsets, noscan) = scanres
 		if len(diroffsets) == 0:
 			continue
+		blacklist = mergeBlacklist(blacklist)
 		## each diroffset is a (path, offset) tuple
 		for diroffset in diroffsets:
 			report = {}
