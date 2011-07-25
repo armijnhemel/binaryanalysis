@@ -1,6 +1,7 @@
 2011-07-25
 * fix copyright statements
 * remove more duplicate code from bruteforce.py
+* move dynamic library scanning to separate checks
 
 2011-07-24
 * finish ranking method from MSR 2011 paper, except reporting

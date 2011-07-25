@@ -29,15 +29,6 @@ def generateNodes(elem, root, confs):
 			tmpnodetext.data = elem[conf]
 			tmpnode.appendChild(tmpnodetext)
 			nodes.append(tmpnode)
-	if 'libs' in elem:
-		tmpnode = root.createElement('libs')
-		for lib in elem['libs']:
-			tmpnode2 = root.createElement('lib')
-                	tmpnodetext = xml.dom.minidom.Text()
-                	tmpnodetext.data = lib
-                	tmpnode2.appendChild(tmpnodetext)
-                	tmpnode.appendChild(tmpnode2)
-		nodes.append(tmpnode)
 	return nodes
 
 ## This method recursively generates XML snippets. If a method for a 'program'
@@ -161,24 +152,6 @@ def scanArchitecture(path, file):
                 if "Machine:" in line:
                         return line.split(':')[1].strip()
 
-## The result of this method is a list of library names that the file dynamically links
-## with. The path of these libraries is not given, since this is usually not recorded
-## in the binary (unless RPATH is used) but determined at runtime: it is dependent on
-## the dynamic linker configuration on the device. With some mixing and matching it is
-## nearly always to determine which library in which path is used, since most installations
-## don't change the default search paths.
-## TODO: turn this into a separate check.
-def scanSharedLibs(path, file):
-	libs = []
-        p = subprocess.Popen(['readelf', '-d', "%s/%s" % (path, file)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-        (stanuit, stanerr) = p.communicate()
-        if p.returncode != 0:
-                return
-        for line in stanuit.split('\n'):
-                if "Shared library:" in line:
-                        libs.append(line.split(': ')[1][1:-1])
-	return libs
-
 ## This method returns a cryptographic checksum for a file using the SHA256
 ## algorithm. This information can be used to uniquely identify a file and
 ## perhaps reuse results for scans of this file in a later audit.
@@ -239,9 +212,6 @@ def scanfile(path, filename, lentempdir=0, tempdir=None, unpackscans=[], program
 	report['sha256'] = filehash
 
 	if "ELF" in type:
-		res = scanSharedLibs(path,filename)
-		if res != []:
-			report['libs'] = res
 		res = scanArchitecture(path,filename)
 		if res != None:
 			report['architecture'] = res
