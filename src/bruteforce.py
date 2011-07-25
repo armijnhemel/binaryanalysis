@@ -145,10 +145,10 @@ def prettyprintresxml(res, scandate, unpackscans=[], programscans=[]):
 ## TODO: turn this into a separate check.
 def scanArchitecture(path, file):
         p = subprocess.Popen(['readelf', '-h', "%s/%s" % (path, file)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-        (stanuit, stanerr) = p.communicate()
+        (stanout, stanerr) = p.communicate()
         if p.returncode != 0:
                 return
-        for line in stanuit.split('\n'):
+        for line in stanout.split('\n'):
                 if "Machine:" in line:
                         return line.split(':')[1].strip()
 
