@@ -54,7 +54,10 @@ def searchDynamicLibs(path, blacklist=[]):
 		for line in stanout.split('\n'):
 			if "Shared library:" in line:
 				libs.append(line.split(': ')[1][1:-1])
-		return libs
+		if libs == []:
+			return None
+		else:
+			return libs
 
 def dynamicLibsPrettyPrint(res, root):
 	tmpnode = root.createElement('libs')
