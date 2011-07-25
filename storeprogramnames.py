@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2010-2011 Armijn Hemel for LOCO (LOOHUIS CONSULTING)
+## Copyright 2010-2011 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -9,6 +9,9 @@ This tool stores a list of program names that can be typically found in a
 package. Since very often the names of the programs are not changed when
 installing a package these names can provide an indication which package
 is used in a firmware.
+
+We should also look into things like configuration files, help files, init
+scripts, etc.
 '''
 
 import sys, os, string, re

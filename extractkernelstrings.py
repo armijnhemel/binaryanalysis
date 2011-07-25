@@ -1,13 +1,16 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2010-2011 Armijn Hemel for LOCO (LOOHUIS CONSULTING)
+## Copyright 2010-2011 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 import sys, os, string, re
 from optparse import OptionParser
 import sqlite3
 
+## we have a big load of regular expressions here. It would be nice to see if
+## we could somehow first fold these (macro expansion?) so we can then use the
+## normal extraction methods.
 exprs = []
 exprs.append(re.compile("sprintf\s*\((?:[\w\s+<>\-\[\]]*),\s*\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
 exprs.append(re.compile("printf\s*\((?:[\w\s]*)\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
