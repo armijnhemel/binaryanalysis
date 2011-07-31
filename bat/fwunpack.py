@@ -82,6 +82,16 @@ def genericMarkerSearch(filename, tempdir=None, blacklist=[], offsets={}):
 	datafile.close()
 	return ([], blacklist, offsets)
 
+## 1. search ISO9660 file system
+## 2. mount it using FUSE
+## 3. copy the contents
+## 4. make sure all permissions are correct (so use chmod)
+## 5. unmount file system
+def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}):
+	if offsets['iso9660'] == []:
+		return ([], blacklist, offsets)
+	return ([], blacklist, offsets)
+
 ## TODO: rewrite this to like how we do other searches: first
 ## look for markers, then unpack.
 def searchUnpackTar(filename, tempdir=None, blacklist=[], offsets={}):
