@@ -1,3 +1,7 @@
+2011-07-31
+* move the RPM unpacking to an external file so BAT will not fail on systems
+where there is no RPM Python and where unpacking RPM has been disabled.
+
 2011-07-26
 * add mergeBlacklist method to merge sections in blacklists that overlap.
 
