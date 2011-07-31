@@ -49,6 +49,7 @@ fsmagic = {
             'cpio1':            '070701',
             'cpio2':            '070702',
             'cpio3':            '070707',
+            'iso9660':          'CD001',
           }
 
 ## collection of markers that should be scanned together
