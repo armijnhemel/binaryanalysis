@@ -144,7 +144,7 @@ priority = 2
 
 [rpm]
 type    = unpack
-module  = bat.fwunpack
+module  = bat.unpackrpm
 method  = searchUnpackRPM
 magic   = rpm
 #cleanup = cleanupRPM
