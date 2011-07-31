@@ -90,6 +90,25 @@ def genericMarkerSearch(filename, tempdir=None, blacklist=[], offsets={}):
 def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}):
 	if offsets['iso9660'] == []:
 		return ([], blacklist, offsets)
+	datafile = open(filename, 'rb')
+	diroffsets = []
+	isocounter = 1
+	data = datafile.read()
+	for offset in offsets['iso9660']:
+		## according to /usr/share/magic the magic header starts at 0x438
+		if offset < 32769:
+			continue
+		## check if the offset we find is in a blacklist
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		tmpdir = dirsetup(tempdir, filename, "iso9660", isocounter)
+		res = None
+		if res != None:
+			pass
+		else:
+			os.rmdir(tmpdir)
+	datafile.close()
 	return ([], blacklist, offsets)
 
 ## TODO: rewrite this to like how we do other searches: first
