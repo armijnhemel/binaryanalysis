@@ -73,6 +73,9 @@ def findCpioTrailer(data, offset=0):
 def findExt2fs(data, offset=0):
 	return findType('ext2', data, offset)
 
+def findISO9660(data, offset=0):
+	return findType('iso9660', data, offset)
+
 def findRPM(data, offset=0):
 	return findType('rpm', data, offset)
 
