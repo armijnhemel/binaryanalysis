@@ -15,7 +15,7 @@ Optionally, we return a range of bytes that should be excluded in same cases
 where we want to prevent other scans from (re)scanning (part of) the data.
 '''
 
-import sys, os, subprocess, os.path
+import sys, os, subprocess, os.path, shutil, stat
 import tempfile, bz2, re, magic, tarfile
 import fsmagic, fssearch, extractor, ext2
 from xml.dom import minidom
@@ -39,14 +39,6 @@ def unpacksetup(tempdir):
 	else:
 		tmpdir = tempdir
 	return tmpdir
-
-## placeholder method for mounting FUSE file systems and copying the
-## contents to a temporary directory. Requires FUSE support on the
-## host system.
-## This is mostly useful for ISO9660 files
-## TODO
-def mountFuse(filename, tempdir=None):
-	pass
 
 ## method to search for all the markers we have in fsmagic
 ## Later we should rewrite all methods to use the results from
@@ -103,13 +95,61 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}):
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "iso9660", isocounter)
-		res = None
+		res = unpackISO9660(data, offset - 32769, tmpdir)
 		if res != None:
-			pass
+			diroffsets.append((res, offset - 32769))
+			isocounter = isocounter + 1
 		else:
 			os.rmdir(tmpdir)
 	datafile.close()
-	return ([], blacklist, offsets)
+	return (diroffsets, blacklist, offsets)
+
+## TODO: determine the size of the file system, so we can add it to the blacklist
+def unpackISO9660(data, offset, tempdir=None):
+	tmpdir = unpacksetup(tempdir)
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.write(tmpfile[0], data[offset:])
+
+	## create a mountpoint
+	mountdir = tempfile.mkdtemp()
+	p = subprocess.Popen(['fuseiso', tmpfile[1], mountdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		os.rmdir(mountdir)
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	else:
+		## first we create *another* temporary directory, because of the behaviour of shutil.copytree()
+		tmpdir2 = tempfile.mkdtemp()
+		## then copy the contents to a subdir
+		shutil.copytree(mountdir, tmpdir2 + "/bla")
+		## then change all the permissions
+		osgen = os.walk(tmpdir2 + "/bla")
+		try:
+			while True:
+				i = osgen.next()
+				os.chmod(i[0], stat.S_IRWXU)
+				for p in i[2]:
+					os.chmod("%s/%s" % (i[0], p), stat.S_IRWXU)
+		except Exception, e:
+			pass
+		## then we move all the contents using shutil.move()
+		mvfiles = os.listdir(tmpdir2 + "/bla")
+		for f in mvfiles:
+			shutil.move(tmpdir2 + "/bla/" + f, tmpdir)
+		## then we cleanup the temporary dir
+		shutil.rmtree(tmpdir2)
+	## unmount the ISO image using fusermount
+	p = subprocess.Popen(['fusermount', "-u", mountdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	## TODO: check exit codes
+	os.rmdir(mountdir)
+	os.fdopen(tmpfile[0]).close()
+	os.unlink(tmpfile[1])
+	return tmpdir
 
 ## TODO: rewrite this to like how we do other searches: first
 ## look for markers, then unpack.

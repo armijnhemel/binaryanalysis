@@ -108,6 +108,12 @@ magic   = squashfs
 #cleanup = cleanupSquashfs
 priority = 0
 
+[iso9660]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackISO9660
+priority = 3
+
 [ext2fs]
 type    = unpack
 module  = bat.fwunpack
