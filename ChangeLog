@@ -1,3 +1,7 @@
+2011-08-02
+* add scanning for ISO9660 file systems. Still need to determine the size of
+the file system for the blacklist. This functionality needs FUSE and fuseiso.
+
 2011-07-31
 * move the RPM unpacking to an external file so BAT will not fail on systems
 where there is no RPM Python and where unpacking RPM has been disabled.
