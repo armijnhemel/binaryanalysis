@@ -97,14 +97,15 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}):
 		tmpdir = dirsetup(tempdir, filename, "iso9660", isocounter)
 		res = unpackISO9660(data, offset - 32769, tmpdir)
 		if res != None:
-			diroffsets.append((res, offset - 32769))
+			(isooffset, size) = res
+			diroffsets.append((isooffset, offset - 32769))
+			blacklist.append((offset - 32769, offset - 32769 + size))
 			isocounter = isocounter + 1
 		else:
 			os.rmdir(tmpdir)
 	datafile.close()
 	return (diroffsets, blacklist, offsets)
 
-## TODO: determine the size of the file system, so we can add it to the blacklist
 def unpackISO9660(data, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
@@ -121,27 +122,38 @@ def unpackISO9660(data, offset, tempdir=None):
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
-	else:
-		## first we create *another* temporary directory, because of the behaviour of shutil.copytree()
-		tmpdir2 = tempfile.mkdtemp()
-		## then copy the contents to a subdir
-		shutil.copytree(mountdir, tmpdir2 + "/bla")
-		## then change all the permissions
-		osgen = os.walk(tmpdir2 + "/bla")
-		try:
-			while True:
-				i = osgen.next()
-				os.chmod(i[0], stat.S_IRWXU)
-				for p in i[2]:
-					os.chmod("%s/%s" % (i[0], p), stat.S_IRWXU)
-		except Exception, e:
-			pass
-		## then we move all the contents using shutil.move()
-		mvfiles = os.listdir(tmpdir2 + "/bla")
-		for f in mvfiles:
-			shutil.move(tmpdir2 + "/bla/" + f, tmpdir)
-		## then we cleanup the temporary dir
-		shutil.rmtree(tmpdir2)
+	## first we create *another* temporary directory, because of the behaviour of shutil.copytree()
+	tmpdir2 = tempfile.mkdtemp()
+	## then copy the contents to a subdir
+	shutil.copytree(mountdir, tmpdir2 + "/bla")
+	## then change all the permissions
+	osgen = os.walk(tmpdir2 + "/bla")
+	try:
+		while True:
+			i = osgen.next()
+			os.chmod(i[0], stat.S_IRWXU)
+			for p in i[2]:
+				os.chmod("%s/%s" % (i[0], p), stat.S_IRWXU)
+	except Exception, e:
+		pass
+	## then we move all the contents using shutil.move()
+	mvfiles = os.listdir(tmpdir2 + "/bla")
+	for f in mvfiles:
+		shutil.move(tmpdir2 + "/bla/" + f, tmpdir)
+	## then we cleanup the temporary dir
+	shutil.rmtree(tmpdir2)
+	
+	## determine size
+	p = subprocess.Popen(['du', '-scb', mountdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		## this should not happen
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	size = int(stanout.strip().split("\n")[-1].split()[0])
 	## unmount the ISO image using fusermount
 	p = subprocess.Popen(['fusermount', "-u", mountdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
@@ -149,7 +161,7 @@ def unpackISO9660(data, offset, tempdir=None):
 	os.rmdir(mountdir)
 	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
-	return tmpdir
+	return (tmpdir, size)
 
 ## TODO: rewrite this to like how we do other searches: first
 ## look for markers, then unpack.
