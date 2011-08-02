@@ -1250,7 +1250,7 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}):
 			if endofcentraldir == None:
 				offset = fssearch.findZip(datafile, offset+1)
 			else:
-				offset = fssearch.findZip(datafile, endofcentraldir+1)
+				offset = fssearch.findZip(datafile, offset + endofcentraldir+1)
 		datafile.close()
 		return (diroffsets, blacklist, offsets)
 
