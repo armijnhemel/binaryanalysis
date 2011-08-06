@@ -11,7 +11,7 @@ by Armijn Hemel, Karl Trygve Kalleberg, Eelco Dolstra and Rob Vermaas, as
 presented at the Mining Software Repositories 2011 conference.
 '''
 
-import string, re, os, os.path, magic, sys
+import string, re, os, os.path, magic, sys, tempfile
 import sqlite3
 import subprocess
 
@@ -22,25 +22,54 @@ import subprocess
 ## Original code (in Perl) was written by Eelco Dolstra.
 ## Reimplementation in Python done by Armijn Hemel.
 def searchGeneric(path, blacklist=[]):
-	## TODO: check for blacklist. If the blacklist is empty, we can continue with
-	## the whole file. If not, we will have to carve the right parts from the file
-	## first.
+	if blacklist == []:
+		scanfile = path
+	else:
+		## we have already scanned parts of the file
+		## we need to carve the right parts from the file first
+		datafile = open(path, 'rb')
+		data = datafile.read()
+		datafile.close()
+		scanfile = path
+		lastindex = 0
+		databytes = ""
+		for i in blacklist:
+			if i[0] > lastindex:
+				## just concatenate the bytes
+				databytes = databytes + data[lastindex:i[0]]
+				## set lastindex to the next
+				lastindex = i[1] - 1
+		tmpfile = tempfile.mkstemp()
+		os.write(tmpfile[0], databytes)
+		os.fdopen(tmpfile[0]).close()
         try:
 		## extract all strings from the binary. Only look at strings
 		## that are 5 characters or longer. This should be made
 		## configurable although the gain will be relatively low by also
 		## scanning shorter strings.
-		p = subprocess.Popen(['strings', '-n', '5', path], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		p = subprocess.Popen(['strings', '-n', '5', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
+			if blacklist != []:
+				## cleanup the tempfile
+				os.unlink(tmpfile[1])
 			return
                 lines = stanout.split("\n")
                 if extractGeneric(lines, path) != -1:
+			if blacklist != []:
+				## cleanup the tempfile
+				os.unlink(tmpfile[1])
 			return True
 		else:
+			if blacklist != []:
+				## cleanup the tempfile
+				os.unlink(tmpfile[1])
 			return None
         except Exception, e:
                 print >>sys.stderr, "string scan failed:", e;
+		if blacklist != []:
+			## cleanup the tempfile
+			os.unlink(tmpfile[1])
                 return None
 
 ## Extract the strings
@@ -53,6 +82,7 @@ def extractGeneric(lines, path):
 	nonUniqueScore = {}
 	nrUniqueMatches = 0
 	stringsLeft = {}
+	sameFileScore = {}
 	alpha = 5.0
 
 	## open the database containing all the strings that were extracted
@@ -188,7 +218,6 @@ def extractGeneric(lines, path):
 		## packages), assign it to one package.  We do this by picking the
 		## package that would gain the highest score increment across all
 		## strings that are left.  This is repeated until no strings are left.
-		sameFileScore = {}
 		roundNr = 0
 		while len(stringsLeft.keys()) > 0:
 			roundNr = roundNr + 1
