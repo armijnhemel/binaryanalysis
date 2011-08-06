@@ -251,7 +251,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}):
 	mstype = ms.file(filename)
 	ms.close()
 
-	if not 'PE32 executable for MS Windows' in mstype:
+	if not 'PE32 executable for MS Windows' in mstype and not "PE32+ executable for MS Windows" in mstype:
 		return ([], blacklist, offsets)
 
 	## apparently we have a MS Windows executable, so continue
@@ -424,7 +424,8 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[], offsets={}):
 	mstype = ms.file(filename)
 	ms.close()
 
-	exemagic = ['PE32 executable for MS Windows'
+	exemagic = ['PE32 executable for MS Windows',
+		    'PE32+ executable for MS Windows',
 		   ]
 
 	for exe in exemagic:
