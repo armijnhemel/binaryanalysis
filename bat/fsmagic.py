@@ -46,6 +46,7 @@ fsmagic = {
             'jfif':             'JFIF',
             'gif87':            'GIF87a',
             'gif89':            'GIF89a',
+            'ico':              '\x00\x00\x01\x00',
             'cpio1':            '070701',
             'cpio2':            '070702',
             'cpio3':            '070707',

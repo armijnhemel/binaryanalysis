@@ -76,6 +76,9 @@ def findExt2fs(data, offset=0):
 def findISO9660(data, offset=0):
 	return findType('iso9660', data, offset)
 
+def findIco(data, offset=0):
+	return findType('ico', data, offset)
+
 def findRPM(data, offset=0):
 	return findType('rpm', data, offset)
 
