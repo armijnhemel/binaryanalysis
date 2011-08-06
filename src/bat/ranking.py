@@ -22,6 +22,9 @@ import subprocess
 ## Original code (in Perl) was written by Eelco Dolstra.
 ## Reimplementation in Python done by Armijn Hemel.
 def searchGeneric(path, blacklist=[]):
+	## TODO: check for blacklist. If the blacklist is empty, we can continue with
+	## the whole file. If not, we will have to carve the right parts from the file
+	## first.
         try:
 		## extract all strings from the binary. Only look at strings
 		## that are 5 characters or longer. This should be made
