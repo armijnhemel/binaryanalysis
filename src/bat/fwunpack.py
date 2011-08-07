@@ -347,8 +347,58 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}):
 	return (diroffsets, blacklist, offsets)
 
 ## unpacker for Microsoft InstallShield
+## We're using unshield for this. Unfortunately the released version of
+## unshield (0.6) does not support newer versions of InstallShield files, so we
+## can only unpack a (shrinking) subset of files.
+##
+## Patches for support of newer versions have been posted at:
+## http://sourceforge.net/tracker/?func=detail&aid=3163039&group_id=30550&atid=399603
+## but unfortunately there has not been a new release yet.
 def searchUnpackInstallShield(filename, tempdir=None, blacklist=[], offsets={}):
-	return ([], blacklist, offsets)
+	if offsets['installshield'] == []:
+		return ([], blacklist, offsets)
+	datafile = open(filename, 'rb')
+	diroffsets = []
+	counter = 1
+	## To successfully unpack we need:
+	## * installshield cabinet (.cab)
+	## * header file (.hdr)
+	## * possibly (if available) <filename>2.cab
+	## To successfully unpack the filenames need to be formatted as <filename>1.<extension>
+	## We will only consider files that end in "1.cab"
+	for offset in offsets['installshield']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		tmpdir = dirsetup(tempdir, filename, "installshield", counter)
+		res = unpackInstallShield(data, offset, tmpdir)
+		if res != None:
+			cabdir = res
+			diroffsets.append((cabdir, offset))
+			counter = counter + 1
+		else:
+			## cleanup
+			os.rmdir(tmpdir)
+	return (diroffsets, blacklist, offsets)
+
+'''
+def unpackInstallShield(data, offset, tempdir=None):
+	tmpdir = unpacksetup(tempdir)
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.write(tmpfile[0], data[offset:])
+	p = subprocess.Popen(['unshield', 'x', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	## cleanup
+	os.fdopen(tmpfile[0]).close()
+	os.unlink(tmpfile[1])
+	return tmpdir
+'''
 
 ## unpacker for Microsoft Cabinet Archive files.
 def searchUnpackCab(filename, tempdir=None, blacklist=[], offsets={}):
@@ -1541,7 +1591,7 @@ def unpackIco(data, offset, tempdir=None):
 	p = subprocess.Popen(['icotool', '-x', '-o', tmpdir, tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 
-	if p.returncode != 0:
+	if p.returncode != 0 or "no images matched" in stanerr:
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		if tempdir == None:
