@@ -7,16 +7,12 @@ method  = busybox_version
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackCpio
-magic   = cpio
-#cleanup = cleanupZip
 priority = 1
 
 [cab]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackCab
-magic   = cab
-#cleanup = cleanupZip
 priority = 0
 
 [exe]
@@ -29,83 +25,66 @@ priority = 1
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackTar
-magic   = tar
-#cleanup = cleanupZip
 priority = 1
 
 [lzip]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackLzip
-magic   = lzip
 priority = 0
 
 [lzop]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackLzo
-magic   = lzo
 priority = 0
 
 [arj]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackARJ
-magic   = arj
 priority = 0
 
 [rar]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackRar
-magic   = rar
-#cleanup = cleanupZip
 priority = 0
 
 [gif]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackGIF
-magic   = gif
 priority = 0
 
 [png]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackPNG
-magic   = png
 priority = 0
 
 [zip]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackZip
-magic   = zip
-#cleanup = cleanupZip
 priority = 0
 
 [gzip]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackGzip
-magic   = gzip
-#cleanup = cleanupGzip
 priority = 0
 
 #[cramfs]
 #type    = unpack
 #module  = bat.fwunpack
 #method  = searchUnpackCramfs
-#magic   = cramfs
-#cleanup = cleanupCramfs
 #priority = 2
 
 [squashfs]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackSquashfs
-magic   = squashfs
-#cleanup = cleanupSquashfs
 priority = 0
 
 [iso9660]
@@ -124,22 +103,18 @@ priority = 2
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackXZ
-magic   = xz
 priority = 0
 
 [lzma]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackLZMA
-magic   = lzma
-#cleanup = cleanupLZMA
 priority = 0
 
 [bzip2]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackBzip2
-magic   = bzip2
 priority = 0
 
 [ubifs]
@@ -152,8 +127,6 @@ priority = 2
 type    = unpack
 module  = bat.unpackrpm
 method  = searchUnpackRPM
-magic   = rpm
-#cleanup = cleanupRPM
 priority = 1
 
 [genericMarker]
@@ -244,3 +217,8 @@ type    = program
 module  = bat.kernelanalysis
 method  = kernelChecks
 xmloutput = xmlprettyprint
+
+#[ranking]
+#type    = program
+#module  = bat.ranking
+#method  = searchGeneric
