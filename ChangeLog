@@ -1,5 +1,7 @@
 2011-08-07
 * unpack .ico files
+* start on unpacking InstallShield files. Unfortunately we can only process a
+subset of files, because "unshield" can't process all files.
 
 2011-08-02
 * add scanning for ISO9660 file systems. Still need to determine the size of
