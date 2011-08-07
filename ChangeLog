@@ -1,3 +1,6 @@
+2011-08-07
+* unpack .ico files
+
 2011-08-02
 * add scanning for ISO9660 file systems. Still need to determine the size of
 the file system for the blacklist. This functionality needs FUSE and fuseiso.

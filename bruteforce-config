@@ -51,6 +51,12 @@ module  = bat.fwunpack
 method  = searchUnpackRar
 priority = 0
 
+[ico]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackIco
+priority = 0
+
 [gif]
 type    = unpack
 module  = bat.fwunpack
