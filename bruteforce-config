@@ -7,49 +7,55 @@ method  = busybox_version
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackCpio
-priority = 1
+priority = 2
 
 [cab]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackCab
-priority = 0
+priority = 1
+
+[installshield]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackInstallShield
+priority = 1
 
 [exe]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackExe
-priority = 1
+priority = 2
 
 [tar]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackTar
-priority = 1
+priority = 3
 
 [lzip]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackLzip
-priority = 0
+priority = 1
 
 [lzop]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackLzo
-priority = 0
+priority = 1
 
 [arj]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackARJ
-priority = 0
+priority = 1
 
 [rar]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackRar
-priority = 0
+priority = 1
 
 [ico]
 type    = unpack
@@ -73,67 +79,67 @@ priority = 0
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackZip
-priority = 0
+priority = 1
 
 [gzip]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackGzip
-priority = 0
+priority = 1
 
 #[cramfs]
 #type    = unpack
 #module  = bat.fwunpack
 #method  = searchUnpackCramfs
-#priority = 2
+#priority = 3
 
 [squashfs]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackSquashfs
-priority = 0
+priority = 1
 
 [iso9660]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackISO9660
-priority = 3
+priority = 4
 
 [ext2fs]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackExt2fs
-priority = 2
+priority = 3
 
 [xz]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackXZ
-priority = 0
+priority = 1
 
 [lzma]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackLZMA
-priority = 0
+priority = 1
 
 [bzip2]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackBzip2
-priority = 0
+priority = 1
 
 [ubifs]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackUbifs
-priority = 2
+priority = 3
 
 [rpm]
 type    = unpack
 module  = bat.unpackrpm
 method  = searchUnpackRPM
-priority = 1
+priority = 2
 
 [genericMarker]
 type    = unpack
