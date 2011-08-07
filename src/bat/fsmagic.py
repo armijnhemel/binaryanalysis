@@ -40,6 +40,7 @@ fsmagic = {
             'ext2':             '\x53\xef',        # little endian
             'arj':              '\x60\xea',
             'cab':              'MSCF',
+            'installshield':    'ISc(',
             'png':              '\x89PNG\x0d\x0a\x1a\x0a',
             'pngtrailer':       'IEND',
             'cpiotrailer':      'TRAILER!!!',
