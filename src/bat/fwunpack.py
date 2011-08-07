@@ -1375,7 +1375,6 @@ def unpackLZMA(data, offset, tempdir=None):
 def searchUnpackUbifs(filename, tempdir=None, blacklist=[], offsets={}):
 	if offsets['ubifs'] == []:
 		return ([], blacklist, offsets)
-
 	datafile = open(filename, 'rb')
 	## We can use the values of offset and ubisize where offset != -1
 	## to determine the ranges for the blacklist.
@@ -1441,8 +1440,12 @@ def unpackUbifs(data, offset, tempdir=None):
 ## Please note: these files can also be unpacked with 7z, which could be
 ## a little bit faster. Since 7z is "smart" and looks ahead we would lose
 ## blacklisting and getting the right offset.
-## ARJ should therefore have priority over 7z (TODO)
+##
+## TODO: rewrite so we don't use findARJ, but use the offsets that we already
+## found with the generic scanner.
 def searchUnpackARJ(filename, tempdir=None, blacklist=[], offsets={}):
+	if offsets['arj'] == []:
+		return ([], blacklist, offsets)
 	datafile = open(filename, 'rb')
 	offset = fssearch.findARJ(datafile)
 	if offset == -1:
@@ -1506,6 +1509,48 @@ def unpackARJ(data, offset, tempdir=None):
 	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
 	return (tmpdir, arjsize)
+
+## extract files from .ico files
+def searchUnpackIco(filename, tempdir=None, blacklist=[], offsets={}):
+	if offsets['ico'] == []:
+		return ([], blacklist, offsets)
+	datafile = open(filename, 'rb')
+	diroffsets = []
+	counter = 1
+	data = datafile.read()
+	for offset in offsets['ico']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		tmpdir = dirsetup(tempdir, filename, "ico", counter)
+		res = unpackIco(data, offset, tmpdir)
+		if res != None:
+			icotmpdir = res
+			diroffsets.append((icotmpdir, offset))
+			counter = counter + 1
+		else:
+			## cleanup
+			os.rmdir(tmpdir)
+	datafile.close()
+	return (diroffsets, blacklist, offsets)
+
+def unpackIco(data, offset, tempdir=None):
+	tmpdir = unpacksetup(tempdir)
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.write(tmpfile[0], data[offset:])
+	p = subprocess.Popen(['icotool', '-x', '-o', tmpdir, tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+
+	if p.returncode != 0:
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	## clean up the temporary files
+	os.fdopen(tmpfile[0]).close()
+	os.unlink(tmpfile[1])
+	return tmpdir
 
 ###
 ## The scans below are scans that are used to extract files from bigger binary
