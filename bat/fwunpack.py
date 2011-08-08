@@ -1492,41 +1492,29 @@ def unpackUbifs(data, offset, tempdir=None):
 ## Please note: these files can also be unpacked with 7z, which could be
 ## a little bit faster. Since 7z is "smart" and looks ahead we would lose
 ## blacklisting and getting the right offset.
-##
-## TODO: rewrite so we don't use findARJ, but use the offsets that we already
-## found with the generic scanner.
 def searchUnpackARJ(filename, tempdir=None, blacklist=[], offsets={}):
 	if offsets['arj'] == []:
 		return ([], blacklist, offsets)
 	datafile = open(filename, 'rb')
-	offset = fssearch.findARJ(datafile)
-	if offset == -1:
-		datafile.close()
-		return ([], blacklist, offsets)
-	else:
-		diroffsets = []
-		arjcounter = 1
-		data = datafile.read()
-		while(offset != -1):
-			blacklistoffset = extractor.inblacklist(offset, blacklist)
-			if blacklistoffset != None:
-				offset = fssearch.findARJ(datafile, blacklistoffset)
-			if offset == -1:
-				break
-			tmpdir = dirsetup(tempdir, filename, "arj", arjcounter)
-			res = unpackARJ(data, offset, tmpdir)
-			if res != None:
-				(arjtmpdir, arjsize) = res
-				diroffsets.append((arjtmpdir, offset))
-				blacklist.append((offset, arjsize))
-				offset = fssearch.findARJ(datafile, offset+arjsize)
-				arjcounter = arjcounter + 1
-			else:
-				## cleanup
-				os.rmdir(tmpdir)
-				offset = fssearch.findARJ(datafile, offset+1)
-		datafile.close()
-		return (diroffsets, blacklist, offsets)
+	diroffsets = []
+	counter = 1
+	data = datafile.read()
+	for offset in offsets['arj']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		tmpdir = dirsetup(tempdir, filename, "arj", counter)
+		res = unpackARJ(data, offset, tmpdir)
+		if res != None:
+			(arjtmpdir, arjsize) = res
+			diroffsets.append((arjtmpdir, offset))
+			blacklist.append((offset, arjsize))
+			counter = counter + 1
+		else:
+			## cleanup
+			os.rmdir(tmpdir)
+	datafile.close()
+	return (diroffsets, blacklist, offsets)
 
 def unpackARJ(data, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)

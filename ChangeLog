@@ -1,5 +1,6 @@
 2011-08-08
 * fix InstallShield unpacking
+* rewrite ARJ unpacking to new style unpacking
 
 2011-08-07
 * unpack .ico files
