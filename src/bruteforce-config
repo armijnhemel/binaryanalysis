@@ -15,11 +15,11 @@ module  = bat.fwunpack
 method  = searchUnpackCab
 priority = 1
 
-#[installshield]
-#type    = unpack
-#module  = bat.fwunpack
-#method  = searchUnpackInstallShield
-#priority = 1
+[installshield]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackInstallShield
+priority = 1
 
 [exe]
 type    = unpack
