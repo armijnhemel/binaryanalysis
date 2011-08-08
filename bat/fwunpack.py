@@ -357,7 +357,6 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}):
 def searchUnpackInstallShield(filename, tempdir=None, blacklist=[], offsets={}):
 	if offsets['installshield'] == []:
 		return ([], blacklist, offsets)
-	datafile = open(filename, 'rb')
 	diroffsets = []
 	counter = 1
 	## To successfully unpack we need:
@@ -365,40 +364,43 @@ def searchUnpackInstallShield(filename, tempdir=None, blacklist=[], offsets={}):
 	## * header file (.hdr)
 	## * possibly (if available) <filename>2.cab
 	## To successfully unpack the filenames need to be formatted as <filename>1.<extension>
-	## We will only consider files that end in "1.cab"
-	for offset in offsets['installshield']:
-		blacklistoffset = extractor.inblacklist(offset, blacklist)
-		if blacklistoffset != None:
-			continue
-		tmpdir = dirsetup(tempdir, filename, "installshield", counter)
-		res = unpackInstallShield(data, offset, tmpdir)
-		if res != None:
-			cabdir = res
-			diroffsets.append((cabdir, offset))
-			counter = counter + 1
-		else:
-			## cleanup
-			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, offsets)
-
-'''
-def unpackInstallShield(data, offset, tempdir=None):
-	tmpdir = unpacksetup(tempdir)
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(tmpfile[0], data[offset:])
-	p = subprocess.Popen(['unshield', 'x', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	## so we will only consider files that end in "1.cab"
+	if offsets['installshield'][0] != 0:
+		return ([], blacklist, offsets)
+	## check the filenames first, if we don't have <filename>1.cab, or <filename>1.hdr we return
+	if not filename.endswith("1.cab"):
+		return ([], blacklist, offsets)
+	try:
+		os.stat(filename[:-4] + ".hdr")
+	except Exception, e:
+		return ([], blacklist, offsets)
+	blacklistoffset = extractor.inblacklist(0, blacklist)
+	if blacklistoffset != None:
+		return ([], blacklist, offsets)
+	tmpdir = dirsetup(tempdir, filename, "installshield", counter)
+	shutil.copy(filename, tmpdir)
+	shutil.copy(filename[:-4] + ".hdr", tmpdir)
+	try:
+		os.stat(filename[:-5] + "2.cab")
+		shutil.copy(filename[:-5] + "2.cab", tmpdir)
+	except Exception, e:
+		pass
+	
+	p = subprocess.Popen(['unshield', 'x', os.path.basename(filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
+	## cleanup
+	os.unlink("%s/%s" % (tmpdir, os.path.basename(filename)))
+	os.unlink("%s/%s" % (tmpdir, os.path.basename(filename)[:-4] + ".hdr"))
+	try:
+		os.unlink("%s/%s" % (tmpdir, os.path.basename(filename)[:-5] + "2.cab"))
+	except:
+		pass
 	if p.returncode != 0:
-		os.fdopen(tmpfile[0]).close()
-		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
-		return None
-	## cleanup
-	os.fdopen(tmpfile[0]).close()
-	os.unlink(tmpfile[1])
-	return tmpdir
-'''
+	else:
+		diroffsets.append((tmpdir, 0))
+	return (diroffsets, blacklist, offsets)
 
 ## unpacker for Microsoft Cabinet Archive files.
 def searchUnpackCab(filename, tempdir=None, blacklist=[], offsets={}):
