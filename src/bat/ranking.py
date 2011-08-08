@@ -14,6 +14,7 @@ presented at the Mining Software Repositories 2011 conference.
 import string, re, os, os.path, magic, sys, tempfile
 import sqlite3
 import subprocess
+import xml.dom.minidom
 
 ## extract the strings using 'strings' and only consider strings >= 5,
 ## although this should be configurable
@@ -279,11 +280,11 @@ def extractGeneric(lines, path):
 		scores[k] = uniqueScore.get(k, 0) + sameFileScore.get(k, 0) + nonUniqueScore.get(k,0)
 	scores_sorted = sorted(scores, key = lambda x: scores.__getitem__(x), reverse=True)
 
-	print "found %d strings, %d unique matches, %s bytes" % (len(allStrings.keys()), nrUniqueMatches, lenStringsFound)
-	print "the binary contains likely clones from the following packages:\n";
+	#print "found %d strings, %d unique matches, %s bytes" % (len(allStrings.keys()), nrUniqueMatches, lenStringsFound)
+	#print "the binary contains likely clones from the following packages:\n";
 	rank = 1
+	reports = {}
 	for s in scores_sorted:
-		#print "rank %d" % rank, s, scores[s], uniqueScore[s], len(uniqueMatches[s])
 		print "rank %d: package %s - score %s" % (rank, s, scores[s]), uniqueScore.get(s,0), len(uniqueMatches.get(s, []))
 		rank = rank+1
 
@@ -300,3 +301,13 @@ def averageStringsPerPkgVersion(pkg, conn):
 	else:
 		count = res[0][0]
 	return count
+
+
+## TODO: implement pretty printing for the reports. The question is:
+## when should we report and when not? There are various possibilities:
+## * best x packages
+## * packages that together have a percentage of total the score (say 98%)
+## * everything
+## Drawbacks are reporting too much or too little
+def xmlprettyprint(res, root):
+	pass
