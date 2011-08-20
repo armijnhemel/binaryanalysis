@@ -60,7 +60,6 @@ def unpack(directory, filename):
 			return tmpdir
 		except Exception, e:
 			print e
-			return None
 
 def unpack_verify(filedir, filename):
 	try:
@@ -144,7 +143,7 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 					cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, "%s/%s" % (i[0][srcdirlen:],p), filehash))
 					cursor.execute('''select * from extracted_file where sha256=?''', (filehash,))
 					if len(cursor.fetchall()) != 0:
-						print >>sys.stderr, "duplicate %s %s: %s/%s" % (package, version, i[0], p)
+						#print >>sys.stderr, "duplicate %s %s: %s/%s" % (package, version, i[0], p)
 						continue
 					## if we want to scan for licenses, run Ninka and (future work) FOSSology
 					if license:
@@ -162,6 +161,7 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 						cursor.execute('''select license from ninkacomments where sha256=?''', (commentshash,))
 						res = cursor.fetchall()
 						if len(res) > 0:
+							print >>sys.stderr, "duplicate comment %s %s: %s/%s" % (package, version, i[0], p)
 							## store all the licenses we already know for this file
 							for r in res:
 								## hardcode the scanner to 'ninka'. This could/should change in the future.
@@ -175,9 +175,10 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 							## filter out the licenses we can't determine.
 							## We actually should run these through FOSSology to try and obtain a match.
 							if ninkasplit[0].startswith("UNMATCHED"):
+								print >>sys.stderr, "%s/%s" % (i[0],p), "UNMATCHED"
 								pass
 							elif ninkasplit[0].startswith("UNKNOWN"):
-								pass
+								print >>sys.stderr, "%s/%s" % (i[0],p), "UNKNOWN"
 							else:
 								licenses = ninkasplit[0].split(',')
 								for license in licenses:
@@ -318,6 +319,7 @@ def main(argv):
 		c.execute('''create table processed_file (package text, version text, filename text, sha256 text)''')
 		c.execute('''create index processedfile_index on processed_file(sha256)''')
 		c.execute('''create index processedfile__package_index on processed_file(package)''')
+		c.execute('''create unique index processedfile_package_index_unique on processed_file(package, version, filename, sha256)''')
 
 		## Store the extracted strings per checksum, not per (package, version, filename).
 		## This saves a lot of space in the database
