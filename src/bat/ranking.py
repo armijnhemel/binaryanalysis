@@ -67,7 +67,7 @@ def searchGeneric(path, blacklist=[]):
 				os.unlink(tmpfile[1])
 			return None
         except Exception, e:
-                print >>sys.stderr, "string scan failed:", e, path;
+                print >>sys.stderr, "string scan failed for:", path, e
 		if blacklist != []:
 			## cleanup the tempfile
 			os.unlink(tmpfile[1])
@@ -141,7 +141,7 @@ def extractGeneric(lines, path):
 		else:
 			continue
 
-	print >>sys.stderr, "matchedlines:", matchedlines
+	print >>sys.stderr, "matchedlines: %d for %s" % (matchedlines, path)
 	print >>sys.stderr, matchedlines/(len(lines) * 1.0)
 
 	## For each string we determine in how many packages (without version) the string
@@ -192,7 +192,13 @@ def extractGeneric(lines, path):
 						filenames[fn] = {}
 					filenames[fn][packagename[0]] = 1
 			## now we can determine the score for the string
-			score = len(i) / pow(alpha, (len(filenames.keys()) - 1))
+			try:
+				score = len(i) / pow(alpha, (len(filenames.keys()) - 1))
+			except Exception, e:
+				print >>sys.stderr, e
+				## pow(alpha, (len(filenames.keys()) - 1)) is overflowing here
+				## so the score would be very close to 0.
+				score = len(i) / sys.maxint
 
 			## After having computed a score we determine if the files
 			## we have found the string in are all called the same.
@@ -222,7 +228,7 @@ def extractGeneric(lines, path):
 		roundNr = 0
 		while len(stringsLeft.keys()) > 0:
 			roundNr = roundNr + 1
-			#print "round %d: %d strings left" % (roundNr, len(stringsLeft.keys()))
+			#print >>sys.stderr, "round %d: %d strings left" % (roundNr, len(stringsLeft.keys()))
 			gain = {}
 			stringsPerPkg = {}
 			for stri in stringsLeft.items():
