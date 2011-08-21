@@ -74,6 +74,12 @@ def genericMarkerSearch(filename, tempdir=None, blacklist=[], offsets={}):
 	datafile.close()
 	return ([], blacklist, offsets)
 
+## stub for unpacking Debian archives. They are the same as archives unpacked
+## with ar, but perhaps we can extract some useful data from the metadata in
+## the future.
+def searchUnpackDeb(filename, tempdir=None, blacklist=[], offsets={}):
+	return ([], blacklist, offsets)
+
 ## 1. search ISO9660 file system
 ## 2. mount it using FUSE
 ## 3. copy the contents
