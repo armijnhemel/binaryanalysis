@@ -67,7 +67,7 @@ def searchGeneric(path, blacklist=[]):
 				os.unlink(tmpfile[1])
 			return None
         except Exception, e:
-                print >>sys.stderr, "string scan failed:", e;
+                print >>sys.stderr, "string scan failed:", e, path;
 		if blacklist != []:
 			## cleanup the tempfile
 			os.unlink(tmpfile[1])
@@ -102,7 +102,7 @@ def extractGeneric(lines, path):
 	## sort the lines first, so we can easily skip duplicates
 	lines.sort()
 
-	print >>sys.stderr, "total extracted strings:", len(lines)
+	print >>sys.stderr, "total extracted strings for %s: %d" %(path, len(lines))
 
 	res = []
 	matchedlines = 0
