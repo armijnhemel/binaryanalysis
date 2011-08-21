@@ -88,7 +88,8 @@ def extractGeneric(lines, path):
 
 	## open the database containing all the strings that were extracted
 	## from source code.
-	conn = sqlite3.connect(os.environ.get('BAT_SQLITE_DB', '/tmp/sqlite'))
+	#conn = sqlite3.connect(os.environ.get('BAT_SQLITE_DB', '/tmp/sqlite'))
+	conn = sqlite3.connect(os.environ.get('BAT_SQLITE_DB', '/tmp/master'))
 	c = conn.cursor()
 
 	## create an extra table and attach it to the current database connection
@@ -195,9 +196,11 @@ def extractGeneric(lines, path):
 			try:
 				score = len(i) / pow(alpha, (len(filenames.keys()) - 1))
 			except Exception, e:
-				print >>sys.stderr, e
+				## print >>sys.stderr, e
 				## pow(alpha, (len(filenames.keys()) - 1)) is overflowing here
-				## so the score would be very close to 0.
+				## so the score would be very close to 0. The largest value
+				## we have is sys.maxint, so use that one. The score will be
+				## small enough...
 				score = len(i) / sys.maxint
 
 			## After having computed a score we determine if the files
