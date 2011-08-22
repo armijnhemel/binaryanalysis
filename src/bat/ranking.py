@@ -92,9 +92,14 @@ def extractGeneric(lines, path):
 	conn = sqlite3.connect(os.environ.get('BAT_SQLITE_DB', '/tmp/master'))
 	c = conn.cursor()
 
-	## create an extra table and attach it to the current database connection
+	## create extra tables and attach them to the current database connection
+	## These databases should be wiped and/or recreated when the database with
+	## strings has been changed!!
 	c.execute("attach '/tmp/avg' as avg")
 	c.execute("create table if not exists avg.avgstringscache (package text, avgstrings real, primary key (package))")
+	c.execute("attach '/tmp/stringscache' as stringscache")
+	c.execute("create table if not exists stringscache.stringscache (programstring text, package text, version text, filename text)")
+	c.execute("create index if not exists stringscache.programstring_index on stringscache(programstring)")
 	conn.commit()
 
 	## (package, version) => count
@@ -117,9 +122,13 @@ def extractGeneric(lines, path):
 			continue
 		matched = False
 		oldline = line
+		newmatch = False
 		## skip empty lines
                 if line == "": continue
-		res = conn.execute('''select p.package, p.version, p.filename FROM processed_file p JOIN extracted_file e on p.sha256 = e.sha256 WHERE programstring=?''', (line,)).fetchall()
+		res = conn.execute('''select package, version, filename FROM stringscache.stringscache WHERE programstring=?''', (line,)).fetchall()
+		if len(res) == 0:
+			res = conn.execute('''select p.package, p.version, p.filename FROM processed_file p JOIN extracted_file e on p.sha256 = e.sha256 WHERE programstring=?''', (line,)).fetchall()
+			newmatch = True
 
 		if len(res) != 0:
 			## Add the length of the string to lenStringsFound.
@@ -138,12 +147,19 @@ def extractGeneric(lines, path):
 				## record per line all (package, version, filename) combinations
 				## in which this string was found.
 				allStrings[line].append({'package': package, 'version': version, 'filename': filename})
-				print >>sys.stderr, "%s\t%s\t%s" % (package, version, filename)
+				#print >>sys.stderr, "%s\t%s\t%s" % (package, version, filename)
+				if newmatch:
+					c.execute('''insert into stringscache.stringscache values (?, ?, ?, ?)''', (line, package, version, filename))
+					conn.commit()
+			newmatch = False
 		else:
 			continue
+		lines.remove(line)
 
 	print >>sys.stderr, "matchedlines: %d for %s" % (matchedlines, path)
 	print >>sys.stderr, matchedlines/(len(lines) * 1.0)
+
+	del lines
 
 	## For each string we determine in how many packages (without version) the string
 	## is found.
@@ -222,67 +238,70 @@ def extractGeneric(lines, path):
 					## internal cloning in the repo.  This string is
 					## assigned to a single package in the loop below.
 					stringsLeft['%s\t%s' % (i, fn)] = {'string': i, 'score': score, 'filename': fn, 'pkgs' : filenames[fn].keys()}
+		del allStrings[i]
+	del filenames
 
-		## For each string that occurs in the same filename in multiple
-		## packages (e.g., "debugXML.c", a cloned file of libxml2 in several
-		## packages), assign it to one package.  We do this by picking the
-		## package that would gain the highest score increment across all
-		## strings that are left.  This is repeated until no strings are left.
-		roundNr = 0
-		while len(stringsLeft.keys()) > 0:
-			roundNr = roundNr + 1
-			#print >>sys.stderr, "round %d: %d strings left" % (roundNr, len(stringsLeft.keys()))
-			gain = {}
-			stringsPerPkg = {}
-			for stri in stringsLeft.items():
-				## get the unique score per package, temporarily record it and sort in reverse order
-				pkgsSorted = map(lambda x: {'package': x, 'uniquescore': uniqueScore.get(x, 0)}, stri[1]['pkgs'])
-				pkgsSorted = sorted(pkgsSorted, key=lambda x: x['uniquescore'], reverse=True)
-				## and get rid of the unique scores again
-				pkgsSorted = map(lambda x: x['package'], pkgsSorted)
+	## For each string that occurs in the same filename in multiple
+	## packages (e.g., "debugXML.c", a cloned file of libxml2 in several
+	## packages), assign it to one package.  We do this by picking the
+	## package that would gain the highest score increment across all
+	## strings that are left.  This is repeated until no strings are left.
+	roundNr = 0
+	while len(stringsLeft.keys()) > 0:
+		roundNr = roundNr + 1
+		print >>sys.stderr, "round %d: %d strings left" % (roundNr, len(stringsLeft.keys()))
+		gain = {}
+		stringsPerPkg = {}
+		for stri in stringsLeft.items():
+			## get the unique score per package, temporarily record it and sort in reverse order
+			pkgsSorted = map(lambda x: {'package': x, 'uniquescore': uniqueScore.get(x, 0)}, stri[1]['pkgs'])
+			pkgsSorted = sorted(pkgsSorted, key=lambda x: x['uniquescore'], reverse=True)
+			## and get rid of the unique scores again
+			pkgsSorted = map(lambda x: x['package'], pkgsSorted)
 
-				pkgs2 = []
+			pkgs2 = []
 
-				for pkgSort in pkgsSorted:
-					if uniqueScore.get(pkgSort, 0) == uniqueScore.get(pkgsSorted[0], 0):
-						pkgs2.append(pkgSort)
-				for p2 in pkgs2:
-					gain[p2] = gain.get(p2, 0) + stri[1]['score']
-					stringsPerPkg[p2] = stri[0]
-			## gain_sorted contains the sort order, gain contains the actual data
-			gain_sorted = sorted(gain, key = lambda x: gain.__getitem__(x), reverse=True)
+			for pkgSort in pkgsSorted:
+				if uniqueScore.get(pkgSort, 0) == uniqueScore.get(pkgsSorted[0], 0):
+					pkgs2.append(pkgSort)
+			for p2 in pkgs2:
+				gain[p2] = gain.get(p2, 0) + stri[1]['score']
+				stringsPerPkg[p2] = stri[0]
+		## gain_sorted contains the sort order, gain contains the actual data
+		gain_sorted = sorted(gain, key = lambda x: gain.__getitem__(x), reverse=True)
 
-			## so far we think that this value is the best, but that might
-			## change
+		## so far we think that this value is the best, but that might
+		## change
 
-			best = gain_sorted[0]
+		best = gain_sorted[0]
 
-			close = []
-			## if we have multiple packages that have a big enough gain, we
-			## add them to 'close' and battle it out to see which package is
-			## the most likely hit.
-			for p3 in gain_sorted:
-				if gain[p3] > gain[best] * 0.9:
-					close.append(p3)
-	
-        		## Let's hope "sort" terminates on a comparison function that
-        		## may not actually be a proper ordering.	
-			if len(close) > 1:
-				# print "  doing battle royale between [close]"
-				## reverse sort close, then best = close[0]
-				close_sorted = map(lambda x: (x, averageStringsPerPkgVersion(x, conn)), close)
-				close_sorted = sorted(close_sorted, key = lambda x: x[1], reverse=True)
-				close = map(lambda x: x[0], close_sorted)
-				best = close[0]
-			x = stringsLeft[stringsPerPkg[best]]
-			if not allMatches.has_key(best):
-				allMatches[best] = {}
+		close = []
+		## if we have multiple packages that have a big enough gain, we
+		## add them to 'close' and battle it out to see which package is
+		## the most likely hit.
+		for p3 in gain_sorted:
+			if gain[p3] > gain[best] * 0.9:
+				close.append(p3)
 
-			allMatches[best][x['string']] = allMatches[best].get(x['string'],0) + x['score']
-			sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
-			del stringsLeft[stringsPerPkg[best]]
-			if gain[best] < 1:
-				break
+       		## Let's hope "sort" terminates on a comparison function that
+       		## may not actually be a proper ordering.	
+		if len(close) > 1:
+			# print "  doing battle royale between [close]"
+			## reverse sort close, then best = close[0]
+			close_sorted = map(lambda x: (x, averageStringsPerPkgVersion(x, conn)), close)
+			close_sorted = sorted(close_sorted, key = lambda x: x[1], reverse=True)
+			close = map(lambda x: x[0], close_sorted)
+			best = close[0]
+		x = stringsLeft[stringsPerPkg[best]]
+		if not allMatches.has_key(best):
+			allMatches[best] = {}
+
+		allMatches[best][x['string']] = allMatches[best].get(x['string'],0) + x['score']
+		sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
+		del stringsLeft[stringsPerPkg[best]]
+		#print >>sys.stderr, "GAIN", gain[best], best, x
+		if gain[best] < 1:
+			break
 
 	scores = {}
 	for k in uniqueScore.keys() + sameFileScore.keys():
