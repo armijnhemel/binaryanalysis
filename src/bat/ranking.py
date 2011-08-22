@@ -55,8 +55,8 @@ def searchGeneric(path, blacklist=[]):
 				## cleanup the tempfile
 				os.unlink(tmpfile[1])
 			return
-                lines = stanout.split("\n")
-                if extractGeneric(lines, path) != -1:
+		lines = stanout.split("\n")
+		if extractGeneric(lines, path) != -1:
 			if blacklist != []:
 				## cleanup the tempfile
 				os.unlink(tmpfile[1])
