@@ -85,6 +85,7 @@ def extractGeneric(lines, path):
 	stringsLeft = {}
 	sameFileScore = {}
 	alpha = 5.0
+	gaincutoff = 1
 
 	## open the database containing all the strings that were extracted
 	## from source code.
@@ -299,8 +300,7 @@ def extractGeneric(lines, path):
 		allMatches[best][x['string']] = allMatches[best].get(x['string'],0) + x['score']
 		sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
 		del stringsLeft[stringsPerPkg[best]]
-		#print >>sys.stderr, "GAIN", gain[best], best, x
-		if gain[best] < 1:
+		if gain[best] < gaincutoff:
 			break
 
 	scores = {}
