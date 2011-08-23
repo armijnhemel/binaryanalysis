@@ -206,6 +206,7 @@ def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 		source = stanout
 	## if " is directly preceded by an uneven amount of \ it should not be used
 	## TODO: fix for uneveness
+	## TODO: investigate xgettext to see if we get similar or better results
 	## Not matched: " directly preceded by '
 	## double quotes that are escaped using \
 	###### results = re.findall("(?<!')\"(.*?)(?<!\\\)\"", source, re.MULTILINE|re.DOTALL)
