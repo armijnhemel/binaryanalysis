@@ -1,3 +1,8 @@
+2011-08-24
+* replace homebrew string extraction code with a call to xgettext. It's
+cleaner and gives better results. A small wrapper around it to parse output is
+all that was needed.
+
 2011-08-08
 * fix InstallShield unpacking
 * rewrite ARJ unpacking to new style unpacking
