@@ -197,54 +197,39 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 
 def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 	sqlres = []
-	## Remove all C and C++ style comments first using the C preprocessor
-	p1 = subprocess.Popen(['cpp', '-dD', '-fpreprocessed', "%s/%s" % (filedir, filename)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p1 = subprocess.Popen(['xgettext', '-a', "%s/%s" % (filedir, filename), '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p1.communicate()
 	if p1.returncode != 0:
 		return sqlres
 	else:
-		source = stanout
-	## if " is directly preceded by an uneven amount of \ it should not be used
-	## TODO: fix for uneveness
-	## TODO: investigate xgettext to see if we get similar or better results
-	## Not matched: " directly preceded by '
-	## double quotes that are escaped using \
-	###### results = re.findall("(?<!')\"(.*?)(?<!\\\)\"", source, re.MULTILINE|re.DOTALL)
-	#results = re.findall("\"(.*?)(?<!\\\)\"", source, re.MULTILINE|re.DOTALL)
-	## http://stackoverflow.com/questions/5150398/using-python-to-split-a-string-with-delimiter-while-ignoring-the-delimiter-and-e
-	#results = re.findall(r'"[^"\\]*(?:\\.[^"\\]*)*"', source, re.MULTILINE|re.DOTALL)
-	## and prepend with "don't match a single quote first", which seems to do the trick.
-	try:
-		results = re.findall(r'(?<!\')"[^"\\]*(?:\\.[^"\\]*)*"', source, re.MULTILINE|re.DOTALL)
-		for res in results:
-               		storestring = res[1:-1] # strip double quotes around the string
-			if storestring == "%s/%s" % (filedir, filename):
+		source = stanout 
+	count = 0
+	for l in stanout.split("\n"):
+		# TODO: rewrite code so we also store the line number, this could come
+		# in handy in the future.
+		if l.startswith("#: "):
+			## there can actually be more than one entry on a single line,
+			## so adjust the count accordingly
+			s = l[3:].split()
+			count = count + len(s)
+		if l.startswith("msgid "):
+			res = l[7:-1]
+			if res == '':
+				count = 0
 				continue
-			# Handle \" and \t.
-			# Handle \n.  The "strings" tool treats multi-line strings as separate 
-			# strings, so we also store them in the database as separate strings.
-			# Ideally, we would patch "strings" to return multi-line strings.
-			for line in storestring.split("\\n"):
-				if line is '': continue
+			for line in res.split("\\n"):
 				line = line.replace("\\\n", "")
 				line = line.replace("\\\"", "\"")
 				line = line.replace("\\t", "\t")
 				line = line.replace("\\\\", "\\")
-				#if "\n" in line:
-				#        print >>sys.stderr, "skipping multiline string in file %s" % (p,), storestring
-				#print >>sys.stderr, "storing", line
-				sqlres.append(unicode(line))
-	except Exception, e:
-		## if we can't process the error due to codec errors perhaps we should first use iconv and try again?
-		'''
-		src = open("%s/%s" % (filedir, filename)).read()
-		p1 = subprocess.Popen(["iconv", "-f", "latin1", "-t", "utf-8"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-		cleanedup_src = p1.communicate(src)[0]
-		p2 = subprocess.Popen(['./remccoms3.sed'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,close_fds=True)
-		(stanout, stanerr) = p2.communicate(cleanedup_src)
-		source = stanout
-		'''
-		print >>sys.stderr, e
+
+				## we don't want to store empty strings, they won't show up in binaries
+				## but they do make the database a lot larger
+				if line == '':
+					continue
+				for i in range(0, count):
+					sqlres.append(line)
+			count = 0
 	return sqlres
 
 def main(argv):
@@ -350,11 +335,15 @@ def main(argv):
 	## TODO: do all kinds of checks here
 	filelist = open(options.filedir + "/LIST").readlines()
 	for unpackfile in filelist:
-		(package, version, filename) = unpackfile.strip().split()
-		pkgmeta.append((options.filedir, package, version, filename, options.db, cleanup, license))
-		if options.verify:
-			unpack_verify(options.filedir, filename)
-		res = unpack_getstrings((options.filedir, package, version, filename, options.db, cleanup, license))
+		try:
+			(package, version, filename) = unpackfile.strip().split()
+			pkgmeta.append((options.filedir, package, version, filename, options.db, cleanup, license))
+			if options.verify:
+				unpack_verify(options.filedir, filename)
+			res = unpack_getstrings((options.filedir, package, version, filename, options.db, cleanup, license))
+		except Exception, e:
+			# oops, something went wrong
+			print >>sys.stderr, e
 	#result = pool.map(unpack_getstrings, pkgmeta)
 
 if __name__ == "__main__":
