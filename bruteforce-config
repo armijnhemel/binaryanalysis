@@ -45,11 +45,11 @@ module  = bat.fwunpack
 method  = searchUnpackLzo
 priority = 1
 
-[arj]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackARJ
-priority = 1
+#[arj]
+#type    = unpack
+#module  = bat.fwunpack
+#method  = searchUnpackARJ
+#priority = 1
 
 [rar]
 type    = unpack
@@ -57,11 +57,11 @@ module  = bat.fwunpack
 method  = searchUnpackRar
 priority = 1
 
-[ico]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackIco
-priority = 0
+#[ico]
+#type    = unpack
+#module  = bat.fwunpack
+#method  = searchUnpackIco
+#priority = 0
 
 [gif]
 type    = unpack
@@ -134,6 +134,12 @@ type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackUbifs
 priority = 3
+
+[ar]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackAr
+priority = 2
 
 [rpm]
 type    = unpack
