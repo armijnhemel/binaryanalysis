@@ -74,11 +74,60 @@ def genericMarkerSearch(filename, tempdir=None, blacklist=[], offsets={}):
 	datafile.close()
 	return ([], blacklist, offsets)
 
-## stub for unpacking Debian archives. They are the same as archives unpacked
-## with ar, but perhaps we can extract some useful data from the metadata in
-## the future.
-def searchUnpackDeb(filename, tempdir=None, blacklist=[], offsets={}):
-	return ([], blacklist, offsets)
+## stub for unpacking archives, such as Debian packages.
+def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}):
+	if offsets['ar'] == []:
+		return ([], blacklist, offsets)
+	datafile = open(filename, 'rb')
+	counter = 1
+	data = datafile.read()
+	diroffsets = []
+	for offset in offsets['ar']:
+		## check if the offset we find is in a blacklist
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		tmpdir = dirsetup(tempdir, filename, "ar", counter)
+		res = unpackAr(data, offset, tmpdir)
+		if res != None:
+			(aroffset, size) = res
+			diroffsets.append((aroffset, offset))
+			blacklist.append((offset, offset + size))
+			counter = counter + 1
+		else:
+			os.rmdir(tmpdir)
+	datafile.close()
+	return (diroffsets, blacklist, offsets)
+
+def unpackAr(data, offset, tempdir=None):
+	tmpdir = unpacksetup(tempdir)
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.write(tmpfile[0], data[offset:])
+	p = subprocess.Popen(['ar', 'tv', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		os.rmdir(mountdir)
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	## ar only works on complete files, so we can set the size to len(data)
+	p = subprocess.Popen(['ar', 'x', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		print stanout
+		os.rmdir(mountdir)
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	os.fdopen(tmpfile[0]).close()
+	os.unlink(tmpfile[1])
+	if tempdir == None:
+		os.rmdir(tmpdir)
+	return (tmpdir, len(data))
 
 ## 1. search ISO9660 file system
 ## 2. mount it using FUSE
