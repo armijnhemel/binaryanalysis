@@ -1,3 +1,6 @@
+2011-08-27
+* add unpacking ar archives, such as Debian packages
+
 2011-08-24
 * replace homebrew string extraction code with a call to xgettext. It's
 cleaner and gives better results. A small wrapper around it to parse output is
