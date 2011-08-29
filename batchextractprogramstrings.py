@@ -195,6 +195,12 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 	conn.commit()
 	return
 
+##
+## Extract strings using xgettext. Apparently this does not always work correctly. For example for busybox 1.6.1:
+## $ xgettext -a -o - fdisk.c
+##  xgettext: Non-ASCII string at fdisk.c:203.
+##  Please specify the source encoding through --from-code.
+## TODO: fix this
 def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 	sqlres = []
 	p1 = subprocess.Popen(['xgettext', '-a', "%s/%s" % (filedir, filename), '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
