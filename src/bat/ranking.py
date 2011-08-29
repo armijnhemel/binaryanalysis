@@ -85,7 +85,7 @@ def extractGeneric(lines, path):
 	stringsLeft = {}
 	sameFileScore = {}
 	alpha = 5.0
-	gaincutoff = 1
+	gaincutoff = 5
 
 	## open the database containing all the strings that were extracted
 	## from source code.
@@ -254,6 +254,11 @@ def extractGeneric(lines, path):
 		gain = {}
 		stringsPerPkg = {}
 		for stri in stringsLeft.items():
+			## when a string will not significantly contribute to the score we can just ignore
+			## it and remove it from the list. This speeds up the algorithm A LOT.
+			if stri[1]['score'] <= 1.0e-20:
+				del stringsLeft[stri[0]]
+				continue
 			## get the unique score per package, temporarily record it and sort in reverse order
 			pkgsSorted = map(lambda x: {'package': x, 'uniquescore': uniqueScore.get(x, 0)}, stri[1]['pkgs'])
 			pkgsSorted = sorted(pkgsSorted, key=lambda x: x['uniquescore'], reverse=True)
@@ -300,6 +305,7 @@ def extractGeneric(lines, path):
 		allMatches[best][x['string']] = allMatches[best].get(x['string'],0) + x['score']
 		sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
 		del stringsLeft[stringsPerPkg[best]]
+		print >>sys.stderr, "GAIN", gain[best], best, x
 		if gain[best] < gaincutoff:
 			break
 
@@ -312,8 +318,9 @@ def extractGeneric(lines, path):
 	#print "the binary contains likely clones from the following packages:\n";
 	rank = 1
 	reports = {}
+	totalscore = reduce(lambda x, y: x + y, scores.values())
 	for s in scores_sorted:
-		print "rank %d: package %s - score %s" % (rank, s, scores[s]), uniqueScore.get(s,0), len(uniqueMatches.get(s, []))
+		print "rank %d: package %s - score %s" % (rank, s, scores[s]), uniqueScore.get(s,0), len(uniqueMatches.get(s, [])), "percentage - %f" % ((scores[s]/totalscore)*100.0,)
 		rank = rank+1
 
 
