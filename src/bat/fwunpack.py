@@ -787,12 +787,12 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}):
 		if blacklistoffset != None:
 			continue
 		for trailer in offsets['cpiotrailer']:
-			tmpdir = dirsetup(tempdir, filename, "cpio", cpiocounter)
 			blacklistoffset = extractor.inblacklist(trailer, blacklist)
 			if blacklistoffset != None:
 				continue
 			if trailer < offset:
 				continue
+			tmpdir = dirsetup(tempdir, filename, "cpio", cpiocounter)
 			## length of 'TRAILER!!!' plus 1 to include the whole trailer
 			## and cpio archives are always rounded to blocks of 512 bytes
 			trailercorrection = (512 - len(data[offset:trailer+10])%512)
