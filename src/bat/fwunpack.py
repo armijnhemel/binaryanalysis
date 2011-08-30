@@ -106,7 +106,6 @@ def unpackAr(data, offset, tempdir=None):
 	p = subprocess.Popen(['ar', 'tv', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		os.rmdir(mountdir)
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		if tempdir == None:
@@ -117,7 +116,6 @@ def unpackAr(data, offset, tempdir=None):
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		print stanout
-		os.rmdir(mountdir)
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		if tempdir == None:
