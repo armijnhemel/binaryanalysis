@@ -187,7 +187,7 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 									cursor.execute('''insert into ninkacomments (sha256, license) values (?,?)''', (commentshash, license))
 					sqlres = extractsourcestrings(p, i[0], package, version, srcdirlen)
 					for res in sqlres:
-						cursor.execute('''insert into extracted_file (programstring, sha256, language) values (?,?, 'C')''', (res, filehash))
+						cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?, 'C', 0)''', (res, filehash))
 						pass
 	except Exception, e:
 		print >>sys.stderr, e
@@ -216,8 +216,10 @@ def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 		if l.startswith("#: "):
 			## there can actually be more than one entry on a single line,
 			## so adjust the count accordingly
+			## TODO: test with filenames that have spaces in them
 			s = l[3:].split()
 			count = count + len(s)
+			## TODO: get line numbers and store them
 		if l.startswith("msgid "):
 			res = l[7:-1]
 			if res == '':
@@ -317,7 +319,7 @@ def main(argv):
 		## This saves a lot of space in the database
 		## The field 'language' denotes what 'language' (family) the file the string is extracted from
 		## is in. Current values: 'C' (C and C++) and Java
-		c.execute('''create table extracted_file (programstring text, sha256 text, language text)''')
+		c.execute('''create table extracted_file (programstring text, sha256 text, language text, linenumber int)''')
 		c.execute('''create index programstring_index on extracted_file(programstring)''')
 		c.execute('''create index extracted_hash on extracted_file(sha256)''')
 
