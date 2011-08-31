@@ -128,7 +128,7 @@ def extractGeneric(lines, path):
                 if line == "": continue
 		res = conn.execute('''select package, version, filename FROM stringscache.stringscache WHERE programstring=?''', (line,)).fetchall()
 		if len(res) == 0:
-			res = conn.execute('''select p.package, p.version, p.filename FROM processed_file p JOIN extracted_file e on p.sha256 = e.sha256 WHERE programstring=?''', (line,)).fetchall()
+			res = conn.execute('''select p.package, p.version, p.filename FROM processed_file p JOIN extracted_file e on p.sha256 = e.sha256 WHERE programstring=? AND language=?''', (line,'C')).fetchall()
 			newmatch = True
 
 		if len(res) != 0:
