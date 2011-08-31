@@ -10,9 +10,9 @@ Program to process a whole directory full of compressed source code archives
 to create a knowledgebase. Needs a file LIST in the directory it is passed as
 a parameter, which has the following format:
 
-package version filename
+package version filename origin
 
-seperated by whitespace
+separated by whitespace
 
 Compression is determined using magic
 '''
@@ -69,7 +69,7 @@ def unpack_verify(filedir, filename):
 
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
-def unpack_getstrings((filedir, package, version, filename, dbpath, cleanup, license)):
+def unpack_getstrings((filedir, package, version, filename, origin, dbpath, cleanup, license)):
 	print filename
 	scanfile = open("%s/%s" % (filedir, filename), 'r')
 	h = hashlib.new('sha256')
@@ -105,7 +105,7 @@ def unpack_getstrings((filedir, package, version, filename, dbpath, cleanup, lic
 	sqlres = extractstrings(temporarydir, conn, c, package, version, license)
 	## Add the file to the database: name of archive, sha256, packagename and version
 	## This is to be able to just update the database instead of recreating it.
-	c.execute('''insert into processed (package, version, filename, sha256) values (?,?,?,?)''', (package, version, filename, filehash))
+	c.execute('''insert into processed (package, version, filename, origin, sha256) values (?,?,?,?)''', (package, version, filename, origin, filehash))
 	conn.commit()
 	c.close()
 	conn.close()
@@ -303,7 +303,7 @@ def main(argv):
         try:
 		## Keep an archive of which packages and archive files (tar.gz, tar.bz2, etc.) we've already
 		## processed, so we don't repeat work.
-		c.execute('''create table processed (package text, version text, filename text, sha256 text)''')
+		c.execute('''create table processed (package text, version text, filename text, origin text, sha256 text)''')
 		c.execute('''create index processed_index on processed(package, version)''')
 
 		## Since there is a lot of duplication inside source packages we store strings per checksum
@@ -342,11 +342,15 @@ def main(argv):
 	filelist = open(options.filedir + "/LIST").readlines()
 	for unpackfile in filelist:
 		try:
-			(package, version, filename) = unpackfile.strip().split()
-			pkgmeta.append((options.filedir, package, version, filename, options.db, cleanup, license))
+			unpacks = unpackfile.strip().split()
+			if len(unpacks) == 3:
+				origin = "unknown"
+			else:
+				(package, version, filename, origin) = unpacks
+			#pkgmeta.append((options.filedir, package, version, filename, origin, options.db, cleanup, license))
 			if options.verify:
 				unpack_verify(options.filedir, filename)
-			res = unpack_getstrings((options.filedir, package, version, filename, options.db, cleanup, license))
+			res = unpack_getstrings((options.filedir, package, version, filename, origin, options.db, cleanup, license))
 		except Exception, e:
 			# oops, something went wrong
 			print >>sys.stderr, e
