@@ -42,7 +42,7 @@ def searchGeneric(path, blacklist=[], offsets={}):
 	elif "compiled Java" in mstype:
 		language = 'Java'
 	else:
-		return([], blacklist, offsets)
+		return None
 
 	if blacklist == []:
 		scanfile = path
@@ -75,24 +75,25 @@ def searchGeneric(path, blacklist=[], offsets={}):
 			if blacklist != []:
 				## cleanup the tempfile
 				os.unlink(tmpfile[1])
-			return([], blacklist, offsets)
+			return None
 		lines = stanout.split("\n")
-		if extractGeneric(lines, path, language) != -1:
+		res = extractGeneric(lines, path, language)
+		if res != None:
 			if blacklist != []:
-				## cleanup the tempfile
+				## we made a tempfile because of blacklisting, so cleanup
 				os.unlink(tmpfile[1])
+			return res
 		else:
 			if blacklist != []:
-				## cleanup the tempfile
+				## we made a tempfile because of blacklisting, so cleanup
 				os.unlink(tmpfile[1])
-			return([], blacklist, offsets)
+			return None
         except Exception, e:
                 print >>sys.stderr, "string scan failed for:", path, e
 		if blacklist != []:
 			## cleanup the tempfile
 			os.unlink(tmpfile[1])
-                return ([], blacklist, offsets)
-	return([], blacklist, offsets)
+                return  None
 
 ## Extract the strings
 def extractGeneric(lines, path, language='C'):
@@ -130,7 +131,9 @@ def extractGeneric(lines, path, language='C'):
 	## sort the lines first, so we can easily skip duplicates
 	lines.sort()
 
-	print >>sys.stderr, "total extracted strings for %s: %d" %(path, len(lines))
+	lenlines = len(lines)
+
+	print >>sys.stderr, "total extracted strings for %s: %d" %(path, lenlines)
 
 	res = []
 	matchedlines = 0
@@ -335,14 +338,13 @@ def extractGeneric(lines, path, language='C'):
 		scores[k] = uniqueScore.get(k, 0) + sameFileScore.get(k, 0) + nonUniqueScore.get(k,0)
 	scores_sorted = sorted(scores, key = lambda x: scores.__getitem__(x), reverse=True)
 
-	#print "found %d strings, %d unique matches, %s bytes" % (len(allStrings.keys()), nrUniqueMatches, lenStringsFound)
-	#print "the binary contains likely clones from the following packages:\n";
 	rank = 1
-	reports = {}
+	reports = []
 	totalscore = reduce(lambda x, y: x + y, scores.values())
 	for s in scores_sorted:
-		print "rank %d: package %s - score %s" % (rank, s, scores[s]), uniqueScore.get(s,0), len(uniqueMatches.get(s, [])), "percentage - %f" % ((scores[s]/totalscore)*100.0,)
+		reports.append((rank, s, uniqueMatches.get(s,[]), (scores[s]/totalscore)*100.0))
 		rank = rank+1
+	return {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports}
 
 
 def averageStringsPerPkgVersion(pkg, conn):
@@ -366,4 +368,53 @@ def averageStringsPerPkgVersion(pkg, conn):
 ## * everything
 ## Drawbacks are reporting too much or too little
 def xmlprettyprint(res, root):
-	pass
+	tmpnode = root.createElement('ranking')
+
+	matchedlines = root.createElement('matchedlines')
+	tmpnodetext = xml.dom.minidom.Text()
+	tmpnodetext.data = res['matchedlines']
+	matchedlines.appendChild(tmpnodetext)
+	tmpnode.appendChild(matchedlines)
+
+	extractedlines = root.createElement('extractedlines')
+	tmpnodetext = xml.dom.minidom.Text()
+	tmpnodetext.data = res['extractedlines']
+	extractedlines.appendChild(tmpnodetext)
+	tmpnode.appendChild(extractedlines)
+
+	for k in res['reports']:
+		(rank, name, uniqueMatches, percentage) = k
+
+		## add package name
+		packagenode = root.createElement('package')
+		tmpnodetext = xml.dom.minidom.Text()
+		tmpnodetext.data = name
+		packagenode.appendChild(tmpnodetext)
+
+		## add unique matches, if any
+		if len(uniqueMatches) > 0:
+			uniquenode = root.createElement('uniquematches')
+			for match in uniqueMatches:
+				matchnode = root.createElement('unique')
+				tmpnodetext = xml.dom.minidom.Text()
+				tmpnodetext.data = match
+				matchnode.appendChild(tmpnodetext)
+				uniquenode.appendChild(matchnode)
+			packagenode.appendChild(uniquenode)
+
+		## add rank
+		ranknode = root.createElement('rank')
+		tmpnodetext = xml.dom.minidom.Text()
+		tmpnodetext.data = rank
+		ranknode.appendChild(tmpnodetext)
+
+		## add score percentage
+		percentagenode = root.createElement('percentage')
+		tmpnodetext = xml.dom.minidom.Text()
+		tmpnodetext.data = percentage
+		percentagenode.appendChild(tmpnodetext)
+
+		packagenode.appendChild(ranknode)
+		packagenode.appendChild(percentagenode)
+		tmpnode.appendChild(packagenode)
+	return tmpnode
