@@ -240,3 +240,4 @@ xmloutput = xmlprettyprint
 #type    = program
 #module  = bat.ranking
 #method  = searchGeneric
+#xmloutput = xmlprettyprint
