@@ -16,13 +16,34 @@ import sqlite3
 import subprocess
 import xml.dom.minidom
 
+ms = magic.open(magic.MAGIC_NONE)
+ms.load()
+
 ## extract the strings using 'strings' and only consider strings >= 5,
 ## although this should be configurable
 ## Then run it through extractGeneric, that queries the database and does
 ## funky statistcs as described in our paper.
 ## Original code (in Perl) was written by Eelco Dolstra.
 ## Reimplementation in Python done by Armijn Hemel.
-def searchGeneric(path, blacklist=[]):
+def searchGeneric(path, blacklist=[], offsets={}):
+	## we only want to scan certain files, namely:
+	## * ELF files
+	## * bFLT files
+	## * Java class files
+	## * Dalvik VM files
+	## * Windows executables and libraries
+	## * Mono/.NET files
+	## Focus is first on ELF
+        mstype = ms.file(path)
+        if "ELF" in mstype:
+		language = 'C'
+	elif "bFLT" in mstype:
+		language = 'C'
+	elif "compiled Java" in mstype:
+		language = 'Java'
+	else:
+		return([], blacklist, offsets)
+
 	if blacklist == []:
 		scanfile = path
 	else:
@@ -54,27 +75,27 @@ def searchGeneric(path, blacklist=[]):
 			if blacklist != []:
 				## cleanup the tempfile
 				os.unlink(tmpfile[1])
-			return
+			return([], blacklist, offsets)
 		lines = stanout.split("\n")
-		if extractGeneric(lines, path) != -1:
+		if extractGeneric(lines, path, language) != -1:
 			if blacklist != []:
 				## cleanup the tempfile
 				os.unlink(tmpfile[1])
-			return True
 		else:
 			if blacklist != []:
 				## cleanup the tempfile
 				os.unlink(tmpfile[1])
-			return None
+			return([], blacklist, offsets)
         except Exception, e:
                 print >>sys.stderr, "string scan failed for:", path, e
 		if blacklist != []:
 			## cleanup the tempfile
 			os.unlink(tmpfile[1])
-                return None
+                return ([], blacklist, offsets)
+	return([], blacklist, offsets)
 
 ## Extract the strings
-def extractGeneric(lines, path):
+def extractGeneric(lines, path, language='C'):
 	allStrings = {}                ## {string, {package, version}}
 	lenStringsFound = 0
 	uniqueMatches = {}
