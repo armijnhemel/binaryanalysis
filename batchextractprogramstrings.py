@@ -187,7 +187,8 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 									cursor.execute('''insert into ninkacomments (sha256, license) values (?,?)''', (commentshash, license))
 					sqlres = extractsourcestrings(p, i[0], package, version, srcdirlen)
 					for res in sqlres:
-						cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?, 'C', 0)''', (res, filehash))
+						(pstring, linenumber) = res
+						cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?, 'C', ?)''', (pstring, filehash, linenumber))
 						pass
 	except Exception, e:
 		print >>sys.stderr, e
@@ -200,7 +201,8 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 ## $ xgettext -a -o - fdisk.c
 ##  xgettext: Non-ASCII string at fdisk.c:203.
 ##  Please specify the source encoding through --from-code.
-## TODO: fix this
+## We fix this by rerunning xgettext with --from-code=utf-8
+## The results might not be perfect, but they are acceptable.
 def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 	sqlres = []
 	p1 = subprocess.Popen(['xgettext', '-a', "--omit-header", "--no-wrap", "%s/%s" % (filedir, filename), '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -215,21 +217,19 @@ def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 			if p2.returncode != 0:
 				return sqlres
 	source = stanout 
-	count = 0
 	lines = []
+	linenumbers = []
 	for l in stanout.split("\n"):
 		## skip comments and hints
 		if l.startswith("#, "):
 			continue
-		# TODO: rewrite code so we also store the line number, this could come
-		# in handy in the future.
 		if l.startswith("#: "):
-			## there can actually be more than one entry on a single line,
-			## so adjust the count accordingly
-			## TODO: test with filenames that have spaces in them
-			s = l[3:].split()
-			count = count + len(s)
-			## TODO: get line numbers and store them
+			## there can actually be more than one entry on a single line
+			res = re.findall("%s:(\d+)" % (filename,), l[3:])
+			if res != None:
+				linenumbers = linenumbers + map(lambda x: int(x), res)
+			else:
+				linenumbers.append(0)
 
 		if l.startswith("msgid "):
 			lines = []
@@ -237,6 +237,7 @@ def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 		## when we see msgstr "" we have reached the end of a block and we can start
 		## processing
 		elif l.startswith("msgstr \"\""):
+			count = len(linenumbers)
 			for xline in lines:
 				for line in xline.split("\\n"):
 					line = line.replace("\\\n", "")
@@ -248,9 +249,9 @@ def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 					## but they do make the database a lot larger
 					if line == '':
 						continue
-					for i in range(0, count):
-						sqlres.append(line)
-			count = 0
+					for i in range(0, len(linenumbers)):
+						sqlres.append((line, linenumbers[i]))
+			linenumbers = []
 		## the other strings are added to the list of strings we need to process
 		else:
 			lines.append(l)
