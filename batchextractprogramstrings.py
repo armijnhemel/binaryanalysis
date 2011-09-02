@@ -225,7 +225,7 @@ def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 			continue
 		if l.startswith("#: "):
 			## there can actually be more than one entry on a single line
-			res = re.findall("%s:(\d+)" % (filename,), l[3:])
+			res = re.findall("%s:(\d+)" % (re.escape(filename),), l[3:])
 			if res != None:
 				linenumbers = linenumbers + map(lambda x: int(x), res)
 			else:
