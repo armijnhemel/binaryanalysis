@@ -81,7 +81,7 @@ def unpack_getstrings((filedir, package, version, filename, origin, dbpath, clea
         conn = sqlite3.connect(dbpath, check_same_thread = False)
 	c = conn.cursor()
 	#c.execute('PRAGMA journal_mode=off')
-	c.execute('''select * from processed where package=? and version=?''', (package, version,))
+	c.execute('''select * from processed where package=? and version=?''', (package, version))
 	if len(c.fetchall()) != 0:
 		c.close()
 		conn.close()
@@ -203,14 +203,18 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 ## TODO: fix this
 def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 	sqlres = []
-	p1 = subprocess.Popen(['xgettext', '-a', "%s/%s" % (filedir, filename), '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p1 = subprocess.Popen(['xgettext', '-a', "--omit-header", "--no-wrap", "%s/%s" % (filedir, filename), '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p1.communicate()
 	if p1.returncode != 0:
 		return sqlres
 	else:
 		source = stanout 
 	count = 0
+	lines = []
 	for l in stanout.split("\n"):
+		## skip comments and hints
+		if l.startswith("#, "):
+			continue
 		# TODO: rewrite code so we also store the line number, this could come
 		# in handy in the future.
 		if l.startswith("#: "):
@@ -220,24 +224,30 @@ def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 			s = l[3:].split()
 			count = count + len(s)
 			## TODO: get line numbers and store them
-		if l.startswith("msgid "):
-			res = l[7:-1]
-			if res == '':
-				count = 0
-				continue
-			for line in res.split("\\n"):
-				line = line.replace("\\\n", "")
-				line = line.replace("\\\"", "\"")
-				line = line.replace("\\t", "\t")
-				line = line.replace("\\\\", "\\")
 
-				## we don't want to store empty strings, they won't show up in binaries
-				## but they do make the database a lot larger
-				if line == '':
-					continue
-				for i in range(0, count):
-					sqlres.append(line)
+		if l.startswith("msgid "):
+			lines = []
+			lines.append(l[7:-1])
+		## when we see msgstr "" we have reached the end of a block and we can start
+		## processing
+		elif l.startswith("msgstr \"\""):
+			for xline in lines:
+				for line in xline.split("\\n"):
+					line = line.replace("\\\n", "")
+					line = line.replace("\\\"", "\"")
+					line = line.replace("\\t", "\t")
+					line = line.replace("\\\\", "\\")
+	
+					## we don't want to store empty strings, they won't show up in binaries
+					## but they do make the database a lot larger
+					if line == '':
+						continue
+					for i in range(0, count):
+						sqlres.append(line)
 			count = 0
+		## the other strings are added to the list of strings we need to process
+		else:
+			lines.append(l)
 	return sqlres
 
 def main(argv):
@@ -349,6 +359,7 @@ def main(argv):
 			unpacks = unpackfile.strip().split()
 			if len(unpacks) == 3:
 				origin = "unknown"
+				(package, version, filename) = unpacks
 			else:
 				(package, version, filename, origin) = unpacks
 			#pkgmeta.append((options.filedir, package, version, filename, origin, options.db, cleanup, license))
