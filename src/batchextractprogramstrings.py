@@ -206,9 +206,15 @@ def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 	p1 = subprocess.Popen(['xgettext', '-a', "--omit-header", "--no-wrap", "%s/%s" % (filedir, filename), '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p1.communicate()
 	if p1.returncode != 0:
-		return sqlres
-	else:
-		source = stanout 
+		## analyze stderr first
+		if "Non-ASCII" in stanerr:
+			## rerun xgettext with a different encoding
+			p2 = subprocess.Popen(['xgettext', '-a', "--omit-header", "--no-wrap", "--from-code=utf-8", "%s/%s" % (filedir, filename), '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			## overwrite stanout
+			(stanout, pstanerr) = p2.communicate()
+			if p2.returncode != 0:
+				return sqlres
+	source = stanout 
 	count = 0
 	lines = []
 	for l in stanout.split("\n"):
