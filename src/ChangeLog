@@ -1,5 +1,7 @@
 2011-09-02
 * fix bugs in extraction code using xgettext
+* store line numbers for extracted strings. This might come in handy in future
+reporting.
 
 2011-08-29
 * ignore strings that will not significantly contribute to a score in the
