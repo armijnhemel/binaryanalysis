@@ -219,13 +219,17 @@ def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 	source = stanout 
 	lines = []
 	linenumbers = []
+
+	## escape just once to speed up extraction of filenumbers
+	filename_escape = re.escape(filename)
+
 	for l in stanout.split("\n"):
 		## skip comments and hints
 		if l.startswith("#, "):
 			continue
 		if l.startswith("#: "):
 			## there can actually be more than one entry on a single line
-			res = re.findall("%s:(\d+)" % (re.escape(filename),), l[3:])
+			res = re.findall("%s:(\d+)" % (filename_escape,), l[3:])
 			if res != None:
 				linenumbers = linenumbers + map(lambda x: int(x), res)
 			else:
