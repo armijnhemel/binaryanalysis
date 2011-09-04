@@ -1354,34 +1354,27 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}):
 	return (diroffsets, blacklist, offsets)
 
 def searchUnpackRar(filename, tempdir=None, blacklist=[], offsets={}):
-	datafile = open(filename, 'rb')
-	offset = fssearch.findRar(datafile)
-	if offset == -1:
-		datafile.close()
+	if offsets['rar'] == []:
 		return ([], blacklist, offsets)
-	else:
-		diroffsets = []
-		rarcounter = 1
-		data = datafile.read()
-		while(offset != -1):
-			blacklistoffset = extractor.inblacklist(offset, blacklist)
-			if blacklistoffset != None:
-				offset = fssearch.findRar(datafile, blacklistoffset)
-			if offset == -1:
-				break
-			tmpdir = dirsetup(tempdir, filename, "rar", rarcounter)
-			res = unpackRar(data, offset, tmpdir)
-			if res != None:
-				(endofarchive, rardir) = res
-				diroffsets.append((rardir, offset))
-				offset = fssearch.findRar(datafile, endofarchive)
-				rarcounter = rarcounter + 1
-			else:
-				## cleanup
-				os.rmdir(tmpdir)
-				offset = fssearch.findRar(datafile, offset+1)
-		datafile.close()
-		return (diroffsets, blacklist, offsets)
+	datafile = open(filename, 'rb')
+	diroffsets = []
+	counter = 1
+	data = datafile.read()
+	for offset in offsets['rar']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		tmpdir = dirsetup(tempdir, filename, "rar", counter)
+		res = unpackRar(data, offset, tmpdir)
+		if res != None:
+			(endofarchive, rardir) = res
+			diroffsets.append((rardir, offset))
+			counter = counter + 1
+		else:
+			## cleanup
+			os.rmdir(tmpdir)
+	datafile.close()
+	return (diroffsets, blacklist, offsets)
 
 def unpackRar(data, offset, tempdir=None):
 	## Assumes (for now) that unrar is in the path
