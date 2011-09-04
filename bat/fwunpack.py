@@ -1403,7 +1403,7 @@ def unpackRar(data, offset, tempdir=None):
 	rarstring = stanout.strip().split("\n")[-1]
 	res = re.search("\s*\d+\s*\d+\s+(\d+)\s+\d+%", rarstring)
 	if res != None:
-		endofarchive = int(res.groups(0)[0])
+		endofarchive = int(res.groups(0)[0]) + offset
 	else:
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
