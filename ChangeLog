@@ -1,6 +1,9 @@
 2011-09-04
 * add experimental virus scanning method using clamscan, just for Windows
 executables
+* fix offset for RAR endofarchive variable
+* rewrite Zip processing code to new format. For some reason this was not done
+yet :-/
 
 2011-09-02
 * fix bugs in extraction code using xgettext
