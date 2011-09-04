@@ -1328,37 +1328,30 @@ def unpackZip(data, offset, tempdir=None):
 def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}):
 	if offsets['zip'] == []:
 		return ([], blacklist, offsets)
-		
 	datafile = open(filename, 'rb')
-	offset = fssearch.findZip(datafile)
-	if offset == -1:
-		datafile.close()
-		return ([], blacklist, offsets)
-	else:
-		diroffsets = []
-		endofcentraldir = 0
-		zipcounter = 1
-		data = datafile.read()
-		while(offset != -1):
-			blacklistoffset = extractor.inblacklist(offset, blacklist)
-			if blacklistoffset != None:
-				offset = fssearch.findZip(datafile, blacklistoffset)
-			if offset == -1:
-				break
-			tmpdir = dirsetup(tempdir, filename, "zip", zipcounter)
-			(endofcentraldir, res) = unpackZip(data, offset, tmpdir)
-			if res != None:
-				diroffsets.append((res, offset))
-				zipcounter = zipcounter + 1
-			else:
-				## cleanup
-				os.rmdir(tmpdir)
-			if endofcentraldir == None:
-				offset = fssearch.findZip(datafile, offset+1)
-			else:
-				offset = fssearch.findZip(datafile, offset + endofcentraldir+1)
-		datafile.close()
-		return (diroffsets, blacklist, offsets)
+	diroffsets = []
+	counter = 1
+	data = datafile.read()
+	endofcentraldir_offset = 0
+	for offset in offsets['zip']:
+		if offset < endofcentraldir_offset:
+			continue
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		tmpdir = dirsetup(tempdir, filename, "zip", counter)
+		(endofcentraldir, res) = unpackZip(data, offset, tmpdir)
+		if res != None:
+			diroffsets.append((res, offset))
+			counter = counter + 1
+		else:
+			## cleanup
+			os.rmdir(tmpdir)
+		if endofcentraldir != None:
+			endofcentraldir_offset = endofcentraldir
+			blacklist.append((offset, offset + endofcentraldir))
+	datafile.close()
+	return (diroffsets, blacklist, offsets)
 
 def searchUnpackRar(filename, tempdir=None, blacklist=[], offsets={}):
 	datafile = open(filename, 'rb')
