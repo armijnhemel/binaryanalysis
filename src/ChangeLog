@@ -3,6 +3,8 @@
 can't determine where a base64 encoded starts or ends.
 * split at \r, similar to \n. The 'strings' command will split at either and
 so should we to get better matches.
+* remove double quotes before putting strings in database in case we are
+processing a multiline msgid
 
 2011-09-04
 * add experimental virus scanning method using clamscan, just for Windows

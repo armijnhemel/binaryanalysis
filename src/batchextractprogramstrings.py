@@ -260,7 +260,7 @@ def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 			linenumbers = []
 		## the other strings are added to the list of strings we need to process
 		else:
-			lines.append(l)
+			lines.append(l[1:-1])
 	return sqlres
 
 def main(argv):
