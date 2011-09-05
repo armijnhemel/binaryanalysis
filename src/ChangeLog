@@ -5,6 +5,7 @@ can't determine where a base64 encoded starts or ends.
 so should we to get better matches.
 * remove double quotes before putting strings in database in case we are
 processing a multiline msgid
+* report amount of unique strings for ranking scan
 
 2011-09-04
 * add experimental virus scanning method using clamscan, just for Windows
