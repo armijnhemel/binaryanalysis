@@ -74,6 +74,30 @@ def genericMarkerSearch(filename, tempdir=None, blacklist=[], offsets={}):
 	datafile.close()
 	return ([], blacklist, offsets)
 
+## unpack base64 files
+def searchUnpackBase64(filename, tempdir=None, blacklist=[], offsets={}):
+	## first determine if we are dealing with ASCII text
+	ms = magic.open(magic.MAGIC_NONE)
+	ms.load()
+	mstype = ms.file(filename)
+	ms.close()
+
+	if not 'ASCII' in mstype:
+		return ([], blacklist, offsets)
+	counter = 1
+	diroffsets = []
+	tmpdir = dirsetup(tempdir, filename, "base64", counter)
+	p = subprocess.Popen(['base64', '-d', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		os.rmdir(tmpdir)
+		return ([], blacklist, offsets)
+	else:
+		tmpfile = tempfile.mkstemp(dir=tmpdir)
+		os.write(tmpfile[0], stanout)
+		diroffsets.append((tmpdir, 0))
+		return (diroffsets, blacklist, offsets)
+
 ## stub for unpacking archives, such as Debian packages.
 def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}):
 	if offsets['ar'] == []:
@@ -90,8 +114,8 @@ def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}):
 		tmpdir = dirsetup(tempdir, filename, "ar", counter)
 		res = unpackAr(data, offset, tmpdir)
 		if res != None:
-			(aroffset, size) = res
-			diroffsets.append((aroffset, offset))
+			(ardir, size) = res
+			diroffsets.append((ardir, offset))
 			blacklist.append((offset, offset + size))
 			counter = counter + 1
 		else:
@@ -115,7 +139,6 @@ def unpackAr(data, offset, tempdir=None):
 	p = subprocess.Popen(['ar', 'x', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		print stanout
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		if tempdir == None:

@@ -1,3 +1,7 @@
+2011-09-05
+* add unpacking for base64 encoded files. This will not always work, because we
+can't determine where a base64 encoded starts or ends.
+
 2011-09-04
 * add experimental virus scanning method using clamscan, just for Windows
 executables
