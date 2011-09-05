@@ -161,7 +161,7 @@ def extractGeneric(lines, path, language='C'):
 			lenStringsFound = lenStringsFound + len(line)
 			matched = True
 
-			print >>sys.stderr, "\n%d matches found for <(|%s|)> in %s" % (len(res), line, path)
+			#print >>sys.stderr, "\n%d matches found for <(|%s|)> in %s" % (len(res), line, path)
 
 			## for statistics it's nice to see how many lines we matched
 			matchedlines = matchedlines + 1
@@ -178,6 +178,7 @@ def extractGeneric(lines, path, language='C'):
 					conn.commit()
 			newmatch = False
 		else:
+			print >>sys.stderr, "no matches found for <(|%s|)> in %s" % (line, path)
 			continue
 		lines.remove(line)
 
@@ -401,6 +402,11 @@ def xmlprettyprint(res, root):
 				matchnode.appendChild(tmpnodetext)
 				uniquenode.appendChild(matchnode)
 			packagenode.appendChild(uniquenode)
+			countnode = root.createElement('uniquecount')
+			tmpnodetext = xml.dom.minidom.Text()
+			tmpnodetext.data = len(uniqueMatches)
+			countnode.appendChild(tmpnodetext)
+			uniquenode.appendChild(countnode)
 
 		## add rank
 		ranknode = root.createElement('rank')
