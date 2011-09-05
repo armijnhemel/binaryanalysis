@@ -243,8 +243,9 @@ def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 		elif l.startswith("msgstr \"\""):
 			count = len(linenumbers)
 			for xline in lines:
-				## TODO: split at \r and \0
-				for line in xline.split("\\n"):
+				## split at \r
+				## TODO: handle \0 (although xgettext will not scan any further when encountering a \0 in a string)
+				for line in re.split("\\\\n|\\\\r", xline):
 					line = line.replace("\\\n", "")
 					line = line.replace("\\\"", "\"")
 					line = line.replace("\\t", "\t")
