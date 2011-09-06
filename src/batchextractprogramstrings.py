@@ -245,18 +245,22 @@ def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 			for xline in lines:
 				## split at \r
 				## TODO: handle \0 (although xgettext will not scan any further when encountering a \0 in a string)
-				for line in re.split("\\\\n|\\\\r", xline):
-					line = line.replace("\\\n", "")
-					line = line.replace("\\\"", "\"")
-					line = line.replace("\\t", "\t")
-					line = line.replace("\\\\", "\\")
+				for line in xline.split("\\r\\n"):
+					for sline in line.split("\\n"):
+						## do we really need this?
+						sline = sline.replace("\\\n", "")
+
+						## unescape a few values
+						sline = sline.replace("\\\"", "\"")
+						sline = sline.replace("\\t", "\t")
+						sline = sline.replace("\\\\", "\\")
 	
-					## we don't want to store empty strings, they won't show up in binaries
-					## but they do make the database a lot larger
-					if line == '':
-						continue
-					for i in range(0, len(linenumbers)):
-						sqlres.append((line, linenumbers[i]))
+						## we don't want to store empty strings, they won't show up in binaries
+						## but they do make the database a lot larger
+						if sline == '':
+							continue
+						for i in range(0, len(linenumbers)):
+							sqlres.append((sline, linenumbers[i]))
 			linenumbers = []
 		## the other strings are added to the list of strings we need to process
 		else:
