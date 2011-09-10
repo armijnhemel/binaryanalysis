@@ -1,2 +1,0 @@
-Q: Why use iconv on ASCII files?
-A: magic is not always correctly guessing the type. For example the file src/spell.c in the Vim 7.3 sources is recognized as ASCII C program text, while on line 11133 there is a non-ASCII character. The sed script we use to remove comments breaks on this and will consume 99.9% CPU power. Converting ASCII files with iconv from latin1 to utf-8 has no impact on files that are ASCII only, so we can safely do this.
