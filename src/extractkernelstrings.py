@@ -136,6 +136,17 @@ def extractkernelstrings(kerneldir, sqldb):
 					continue
 				source = open("%s/%s" % (i[0], p)).read()
 				searchresults = []
+
+				## TODO: replace several regular expressions with a call to xgettext, keep the other regular expressions for now
+				## * sprintf
+				## * printf
+				## * PRINT
+				## * PANIC_PIC
+				## * printk
+				## * pr_info
+				## * SNMP_MIB_ITEM
+				## * kthread_create
+				## * ...
 				for ex in exprs:
 					searchresults = searchresults + ex.findall(source)
 				## printk
