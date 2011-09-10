@@ -5,7 +5,11 @@
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 ##
-## helper script to extract configurations from busybox
+## Helper script to extract configurations from busybox source code.
+## Results are dumped as a pickle file, which can later be used by the
+## BusyBox processing scripts to map applet names back to configuration
+## directives. This is useful when comparing with a supplied configuration
+## file to see if these match.
 ##
 
 import sys, os, re, pickle
