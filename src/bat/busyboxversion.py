@@ -4,6 +4,9 @@
 ## Copyright 2009-2011 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
+## Stand alone module to determine the version of BusyBox. Has a method for being called
+## from bruteforce.py, but can also be invoked separately.
+
 import sys, os
 from optparse import OptionParser
 import busybox, extractor
