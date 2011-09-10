@@ -26,7 +26,9 @@ ms.load()
 ## Original code (in Perl) was written by Eelco Dolstra.
 ## Reimplementation in Python done by Armijn Hemel.
 def searchGeneric(path, blacklist=[], offsets={}):
-	## we only want to scan certain files, namely:
+	## Only consider strings that are len(stringcutoff) or larger
+	stringcutoff = 5
+	## we want to use extra information for a few file types
 	## * ELF files
 	## * bFLT files
 	## * Java class files
@@ -42,7 +44,9 @@ def searchGeneric(path, blacklist=[], offsets={}):
 	elif "compiled Java" in mstype:
 		language = 'Java'
 	else:
-		return None
+		## if we just have a blob we will just consider it as 'C' for now
+		## In the future we might want to consider everything.
+		language='C'
 
 	if blacklist == []:
 		scanfile = path
@@ -52,7 +56,6 @@ def searchGeneric(path, blacklist=[], offsets={}):
 		datafile = open(path, 'rb')
 		data = datafile.read()
 		datafile.close()
-		scanfile = path
 		lastindex = 0
 		databytes = ""
 		for i in blacklist:
@@ -64,19 +67,65 @@ def searchGeneric(path, blacklist=[], offsets={}):
 		tmpfile = tempfile.mkstemp()
 		os.write(tmpfile[0], databytes)
 		os.fdopen(tmpfile[0]).close()
+		scanfile = tmpfile
         try:
-		## extract all strings from the binary. Only look at strings
-		## that are 5 characters or longer. This should be made
-		## configurable although the gain will be relatively low by also
-		## scanning shorter strings.
-		p = subprocess.Popen(['strings', '-n', '5', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-		if p.returncode != 0:
-			if blacklist != []:
-				## cleanup the tempfile
-				os.unlink(tmpfile[1])
-			return None
-		lines = stanout.split("\n")
+		## For ELF binaries we can concentrate on just a few sections of the
+		## binary namely the .rodata and .data sections and the dynamic
+		## symbols.
+		## We only consider full binaries, not binaries that have parts carved
+		## out of them because of blacklists
+        	if "ELF" in mstype and blacklist == []:
+			lines = []
+			for i in [".rodata", ".data"]:
+        			p = subprocess.Popen(['readelf', '-p', i, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+
+				## run strings to get rid of weird characters that we don't even want to scan
+        			p2 = subprocess.Popen(['strings', '-n', stringcutoff], stdin=p.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+        			(stanout, stanerr) = p2.communicate()
+
+        			st = stanout.split("\n")
+
+        			for s in st[1:]:
+					## readelf -p results are in a specific format
+                			bla = re.match("\s+\[\s*\w+\]\s\s(.*)", s)
+                			if bla == None:
+						## the invocation of 'strings' on the output sometimes gives
+						## lines that do not adher to this format, because 'strings' has
+						## broken up a line in several lines
+                        			printstring = s
+                			else:
+                        			printstring = bla.groups()[0]
+                			if len(printstring) >= stringcutoff:
+                        			lines.append(printstring)
+
+			## sometimes we can extract useful information from the dynamic symbols
+			 = subprocess.Popen(['readelf', '--dyn-syms', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate()
+			st = stanout.split("\n")
+
+			for s in st[3:]:
+        			if len(s.split()) <= 7:
+                			continue
+        			printstring = s.split()[7]
+				## remove references to functions in other libraries such as glibc
+        			if '@' in printstring:
+                			continue
+        			if len(printstring) >= stringcutoff:
+                			lines.append(printstring)
+
+		else:
+			## extract all strings from the binary. Only look at strings
+			## that are a certain amount of characters or longer. This is
+			## configurable through "stringcutoff" although the gain will be relatively
+			## low by also scanning strings < 5.
+			p = subprocess.Popen(['strings', '-n', stringcutoff, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate()
+			if p.returncode != 0:
+				if blacklist != []:
+					## cleanup the tempfile
+					os.unlink(tmpfile[1])
+				return None
+			lines = stanout.split("\n")
 		res = extractGeneric(lines, path, language)
 		if res != None:
 			if blacklist != []:
