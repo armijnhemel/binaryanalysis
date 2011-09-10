@@ -2,7 +2,7 @@ Unpacking Android things
 
   File systems in use:
 
-* yaffs2 (use unyaffs for this)
+* yaffs2 (use unyaffs for this, although this will not always work)
 * ubifs (seen one example so far that had broken images)
 * ext4 (soon, according to post that Ted Ts'o once did)
 * possibly other file systems too
@@ -30,4 +30,4 @@ http://code.google.com/p/android-apktool/
 
   Dalvik files
 
-Perhaps not really significant for compliance, but probably we can use dedexer.
+Perhaps we can use dedexer.
