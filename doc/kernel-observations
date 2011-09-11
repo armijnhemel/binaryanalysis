@@ -3,31 +3,35 @@ Linux kernel observations
 
   Extracting visible strings from the Linux kernel binary
 
+If the kernel is detected as an ELF binary we can simply read a few sections of the binary using readelf. Otherwise we can simply run the strings command on the binary. It will return more strings than reading the strings using readelf. The extra strings are just extra craft that won't be matched.
+
   Extracting visible strings from a Linux kernel module
+
+If the kernel module is an ELF binary (and it is most of the time) we can simply read a few sections of the binary using readelf. Otherwise we can simply run the strings command on the binary. It will return more strings than reading the strings using readelf. The extra strings are just extra craft that won't be matched.
 
   Extracting strings from the Linux kernel sources
 
-The Linux kernel is full of strings that can end up in a binary. Some programmers have defined macros just specific to their part of the kernel for ease of use, other programmers use the standard mechanisms.
+The Linux kernel is full of strings that can end up in a binary. Some programmers have defined macros just specific to their part of the kernel for ease of use, other programmers use more standard mechanisms like printk. Most strings can be extracted from the Linux kernel using xgettext. A minority of strings needs to be extracted using a custom regular expression.
 
-  EXPORT_SYMBOL
+    EXPORT_SYMBOL
 
 The strings inside the EXPORT_SYMBOL and EXPORT_SYMBOL_GPL end up in the kernel image. The EXPORT_SYMBOL_GPL symbol is interesting for licensing reporting as well, since anything that uses this symbol has to be GPL licensed. We need to do more research into this area.
 
-  printk
+    printk
 
 The printk statement is used a lot in the kernel sources, sometimes with a priority, like KERN_DEBUG, KERN_WARNING, KERN_ERROR, etc. Various other statements, such as DBG() are macros that use printk.
 
-  .procname
+    .procname
 
 The .procname variable is used in the /proc/sys file system and it can end up in the kernel.
 
-  module_param
+    module_param
 
 The names of parameters for modules can end up in the kernel. The names of these parameters have to be prefixed with the name of the file (which is the module), but stripped from file extensions.
 
-  __setup
+    __setup
 
-  .attr
+    .attr
 
 grep -r 'attr =' * | grep "name ="
 
@@ -134,8 +138,8 @@ vmcoreinfo_append_str()
 The string "module" is defined by sysfs_remove_link and sysfs_create_link, but also in net/core/sock.c
 In an ideal situation some extra information would be provided (a kernel configuration for example) so the proper one can be filtered out.
 
-  Minimizing scan times
+  Forward porting and back porting
 
-There are some strings we scan for which might not be present in certain versions, because they were removed, or not yet written. A good example is devfs. This subsystem was removed in Linux kernel 2.6.17. To completely remove the scanning for a particular kind of functionality is problematic, since some vendors might have kept it and ported it to newer versions (forward porting).
+There are some strings we scan for which might not be present in certain versions, because they were removed, or not yet included in the mainline kernel. A good example is devfs. This subsystem was removed in Linux kernel 2.6.17, but we can't assume that every 2.6.17 kernel or later does not have devfs, since some vendors might have kept it and ported it to newer versions (forward porting).
 
-Other systems might have been backported.
+Similarly we can't assume that because we detect a certain version we can skip scanning for functionality that was not included yet, because this functionality might have been backported.
