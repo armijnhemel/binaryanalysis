@@ -203,6 +203,7 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 ##  Please specify the source encoding through --from-code.
 ## We fix this by rerunning xgettext with --from-code=utf-8
 ## The results might not be perfect, but they are acceptable.
+## TODO: use version from bat/extractor.py
 def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 	sqlres = []
 	p1 = subprocess.Popen(['xgettext', '-a', "--omit-header", "--no-wrap", "%s/%s" % (filedir, filename), '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
