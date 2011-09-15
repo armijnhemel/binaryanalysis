@@ -8,7 +8,7 @@
 This file contains a few convenience functions that are used throughout the code.
 '''
 
-import string
+import string, re, subprocess
 from xml.dom import minidom
 
 ## Helper method to replace unprintable characters with spaces.
@@ -110,3 +110,73 @@ def searchAssemblyDeps(data):
 	if res != None:
 		return res[1]
 	return {}
+
+## Extract strings using xgettext. Apparently this does not always work correctly. For example for busybox 1.6.1:
+## $ xgettext -a -o - fdisk.c
+##  xgettext: Non-ASCII string at fdisk.c:203.
+##  Please specify the source encoding through --from-code.
+## We fix this by rerunning xgettext with --from-code=utf-8
+## The results might not be perfect, but they are acceptable.
+def extractStrings(filename, filedir):
+	results = []
+	p1 = subprocess.Popen(['xgettext', '-a', "--omit-header", "--no-wrap", "%s/%s" % (filedir, filename), '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p1.communicate()
+	if p1.returncode != 0:
+		## analyze stderr first
+		if "Non-ASCII" in stanerr:
+			## rerun xgettext with a different encoding
+			p2 = subprocess.Popen(['xgettext', '-a', "--omit-header", "--no-wrap", "--from-code=utf-8", "%s/%s" % (filedir, filename), '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			## overwrite stanout
+			(stanout, pstanerr) = p2.communicate()
+			if p2.returncode != 0:
+				return results
+	source = stanout 
+	lines = []
+	linenumbers = []
+
+	## escape just once to speed up extraction of filenumbers
+	filename_escape = re.escape(filename)
+
+	for l in stanout.split("\n"):
+		## skip comments and hints
+		if l.startswith("#, "):
+			continue
+		if l.startswith("#: "):
+			## there can actually be more than one entry on a single line
+			res = re.findall("%s:(\d+)" % (filename_escape,), l[3:])
+			if res != None:
+				linenumbers = linenumbers + map(lambda x: int(x), res)
+			else:
+				linenumbers.append(0)
+
+		if l.startswith("msgid "):
+			lines = []
+			lines.append(l[7:-1])
+		## when we see msgstr "" we have reached the end of a block and we can start
+		## processing
+		elif l.startswith("msgstr \"\""):
+			count = len(linenumbers)
+			for xline in lines:
+				## split at \r
+				## TODO: handle \0 (although xgettext will not scan any further when encountering a \0 in a string)
+				for line in xline.split("\\r\\n"):
+					for sline in line.split("\\n"):
+						## do we really need this?
+						sline = sline.replace("\\\n", "")
+
+						## unescape a few values
+						sline = sline.replace("\\\"", "\"")
+						sline = sline.replace("\\t", "\t")
+						sline = sline.replace("\\\\", "\\")
+	
+						## we don't want to store empty strings, they won't show up in binaries
+						## but they do make the database a lot larger
+						if sline == '':
+							continue
+						for i in range(0, len(linenumbers)):
+							results.append((sline, linenumbers[i]))
+			linenumbers = []
+		## the other strings are added to the list of strings we need to process
+		else:
+			lines.append(l[1:-1])
+	return results
