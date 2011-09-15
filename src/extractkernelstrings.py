@@ -21,14 +21,11 @@ exprs.append(re.compile("\w+_ATTR\w*\s*\((\w+)", re.MULTILINE))
 
 ## TODO: check if these can be replaced by a call to xgettext
 exprs.append(re.compile("devfs_remove\s*\(\"([\w\s\-=/%]+)\"", re.MULTILINE))
-exprs.append(re.compile("render_sigset_t\s*\(\"([\w\s\.:\-=/%]+)\"", re.MULTILINE))
 exprs.append(re.compile("\.id\w*\s*=\s*\"([\w\s\.',&\-/=]+)\"", re.MULTILINE))
 exprs.append(re.compile("\.comm\s*=\s*\"([\w\-=]*)\"", re.MULTILINE))
 # unsure)
 #searchresults = searchresults + re.findall("\.comment\s*=\s*\"([\w\-=]*)\"", source, re.MULTILINE))
-exprs.append(re.compile("set_kset_name\s*\(\"([\w\s\.\-=/%]+)\"", re.MULTILINE))
 exprs.append(re.compile("\w*name\s*[:=]\s*\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
-exprs.append(re.compile("class_device_create\((?:[\w\s+&*\.\-<>\(\)]+,\s+){5,6}\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
 exprs.append(re.compile("E\((?:\w+,\s*)\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
 exprs.append(re.compile("add_hotplug_env_var\((?:[\w&]+,\s*){6}\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
 
