@@ -143,3 +143,19 @@ In an ideal situation some extra information would be provided (a kernel configu
 There are some strings we scan for which might not be present in certain versions, because they were removed, or not yet included in the mainline kernel. A good example is devfs. This subsystem was removed in Linux kernel 2.6.17, but we can't assume that every 2.6.17 kernel or later does not have devfs, since some vendors might have kept it and ported it to newer versions (forward porting).
 
 Similarly we can't assume that because we detect a certain version we can skip scanning for functionality that was not included yet, because this functionality might have been backported.
+
+  Substring matching
+
+Sometimes depending on a definition extra stuff is printed. To properly detect this we would need substring matching, which is probably too expensive at the moment.
+
+Example:
+
+#undef DEBUG
+#ifdef DEBUG
+#define DPRINTK( s, arg... )  printk( "dma<%p>: " s, regs , ##arg )
+#else
+#define DPRINTK( x... )
+#endif
+
+
+arch/arm/mach-sa1100/dma.c from 2.6.32.9
