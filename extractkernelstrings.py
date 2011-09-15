@@ -21,7 +21,6 @@ exprs.append(re.compile("\w+_ATTR\w*\s*\((\w+)", re.MULTILINE))
 
 ## TODO: check if these can be replaced by a call to xgettext
 exprs.append(re.compile("devfs_remove\s*\(\"([\w\s\-=/%]+)\"", re.MULTILINE))
-exprs.append(re.compile("\.id\w*\s*=\s*\"([\w\s\.',&\-/=]+)\"", re.MULTILINE))
 exprs.append(re.compile("\.comm\s*=\s*\"([\w\-=]*)\"", re.MULTILINE))
 # unsure)
 #searchresults = searchresults + re.findall("\.comment\s*=\s*\"([\w\-=]*)\"", source, re.MULTILINE))
@@ -83,18 +82,6 @@ def extractkernelstrings(kerneldir, sqldb):
 					searchresults = searchresults + extractor.extractStrings(p, i[0])
 					print searchresults
 					sys.exit(0)
-					## TODO: replace several regular expressions with a call to xgettext, keep the other regular expressions for now
-					## * sprintf
-					## * printf
-					## * PRINT
-					## * PANIC_PIC
-					## * printk
-					## * pr_info
-					## * kthread_create
-					## * get_sb_pseudo
-					## * SOCK_DEBUG
-					## * DBG
-					## * ...
 
 					## values that we can't extract using xgettext are extracted using regular
 					## expressions. We set the line number for the result to 0, since
@@ -107,6 +94,7 @@ def extractkernelstrings(kerneldir, sqldb):
 						if "#define" in bugtrap:
 							continue
 						searchresults.append(re.sub("\n\s*", " ", bugtrap))
+					'''
 					debugs = re.findall("DBG\s*\([\w\s]*\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", source, re.MULTILINE)
 					for debug in debugs:
 						if "#define" in debug:
@@ -117,6 +105,7 @@ def extractkernelstrings(kerneldir, sqldb):
 						if "#define" in debug:
 							continue
                                 		searchresults.append((debug, 0))
+					'''
 	
 					## extract the module parameters and append it to the name of the file
 					## without the extension. Separate with a dot.
