@@ -80,20 +80,19 @@ def extractkernelstrings(kerneldir, sqldb):
 					searchresults = []
 
 					searchresults = searchresults + extractor.extractStrings(p, i[0])
-					print searchresults
-					sys.exit(0)
+					#print searchresults
 
 					## values that we can't extract using xgettext are extracted using regular
 					## expressions. We set the line number for the result to 0, since
 					## we don't know it (TODO)
 					for ex in exprs:
-						searchresults = searchresults + ex.findall(source)
+						searchresults = searchresults + map(lambda x: (x,0), ex.findall(source))
 	
 					bugtraps = bugtrapexpr.findall(source)
 					for bugtrap in bugtraps:
 						if "#define" in bugtrap:
 							continue
-						searchresults.append(re.sub("\n\s*", " ", bugtrap))
+						searchresults.append((re.sub("\n\s*", " ", bugtrap),0))
 					'''
 					debugs = re.findall("DBG\s*\([\w\s]*\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", source, re.MULTILINE)
 					for debug in debugs:
@@ -115,20 +114,20 @@ def extractkernelstrings(kerneldir, sqldb):
 						## no parameter names
 						if "#define" in paramstring:
 							continue
-                                		searchresults.append("%s.%s" % (p.split(".")[0], paramstring),0)
+                                		searchresults.append(("%s.%s" % (p.split(".")[0], paramstring), 0))
 	
 					chars = re.findall("static\s+char\s+\*\s*\w+\[\w*\]\s*=\s*\{([\w+\",\s]*)};", source, re.MULTILINE)
 					chars = chars + re.findall("static\s+const char\s+\s*\w+\[\w*\]\[\w*\]\s*=\s*\{([\w+%\",\s]*)};", source, re.MULTILINE)
 					if chars != []:
 						for c in chars:
 							## TODO: add line number
-							searchresults = searchresults + re.split(",\s*", c.strip().replace("\"", ""))
+							searchresults = searchresults + map(lambda x: (x,0), re.split(",\s*", c.strip().replace("\"", "")))
 	
 					for staticexpr in staticexprs:
 						results = staticexpr.findall(source)
         					for res in results:
 							## TODO: add line number
-							searchresults = searchresults + re.findall("\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]*)\"", res, re.MULTILINE)
+							searchresults = searchresults + map(lambda x: (x,0), re.findall("\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]*)\"", res, re.MULTILINE))
 	
 					for result in searchresults:
 						(res, lineno) = result
@@ -209,9 +208,12 @@ def main(argv):
         c = conn.cursor()
 
         try:
-                c.execute('''create table extracted (printstring text, filename text, linenumber int)''')
-                c.execute('''create table symbol (symbolstring text, filename text)''')
-                c.execute('''create table function (functionstring text, filename text)''')
+		c.execute('''create table extracted (printstring text, filename text, linenumber int)''')
+		c.execute('''create index printstring_index on extracted(printstring)''')
+		c.execute('''create table symbol (symbolstring text, filename text)''')
+		c.execute('''create index symbolstring_index on symbol(symbolstring)''')
+		c.execute('''create table function (functionstring text, filename text)''')
+		c.execute('''create index functionstring_index on function(functionstring)''')
         except:
                 pass
 
