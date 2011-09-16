@@ -35,104 +35,6 @@ The names of parameters for modules can end up in the kernel. The names of these
 
 grep -r 'attr =' * | grep "name ="
 
-.ident
-.input
-.result
-ACPI_FUNCTION_TRACE()
-ACPI_ERROR()
-ACPI_REPORT_ERROR()
-ACPI_FUNCTION_TRACE_PTR()
-ACPI_FUNCTION_TRACE_STR()
-ACPI_FUNCTION_TRACE_U32()
-acpi_os_create_cache()
-acpi_ut_create_list()
-add_uevent_var() - not in 2.6.15
-adfs_error()
-apic_printk
-card_name
-class_device_create
-create_flash_pde()
-cs46xx_dsp_create_scb()
-cs46xx_dsp_create_asynch_fg_rx_scb()
-cs46xx_dsp_create_generic_scb()
-cs_dbg()
-ctc_pr_emerg() -- not in 2.6.32, but present in 2.6.15
-DBF_EVENT()
-dbg_isoc()
-DBGMSG()
-DBGS()
-DBG_INIT()
-DEBUG_API()
-DEBUGP()
-debugl1()
-debug_log()
-dev_dbg()
-DMI_MATCH()
-die()
-dprint()
-dprintk()
-DO_ERROR()
-DRM_ERROR()
-ds_dbg()
-duprintf()
-envp[]
-err =
-EVENT()
-fputs()
-GET_CONFIG() -- ?
-HDAPS_DMI_MATCH_NORMAL
-HTB_DBG()
-HPSB_ERR()
-hvlog()
-i596_timeout()
-ibmasmfs_create_file()
-ide_pci_create_host_proc()
-INFO()
-IP_VS_ERR()
-IPW_DEBUG_WX()
-IRDA_DEBUG()
-isdn_tty_at_cout()
-jfs_err()
-NS_ERR()
-NS_LOG()
-ntfs_debug()
-of_find_node_by_path
-oprofilefs_create_ulong()
-oprofilefs_create_file()
-PARANOIA()
-PDBGG()
-PKP()
-pr_emerg()  -- not in 2.6.15, but ctc_pr_emerg() is
-PRINTD()
-PRINT_INFO()
-printk("") (without something between '(' and '"' )
-process_mcheck_info
-prom_printf()
-remove_proc_entry()
-request_module() (only for modules?)
-rio_dprintk()
-rpc_create_client()
-RTRACE()
-SCHED_FEAT()
-__setup(()
-snd_card_proc_new
-snd_iprintf()
-snd_info_create_module_entry()
-snd_i2c_device_create()
-snd_pcm_new()
-snd_printdd()
-strcat()
-TIME()
-TRACE()
-tracer_panic() (multiline?)
-UDEBUG()
-US_DEBUGP()
-VELOCITY_PRT()
-vendor =
-VERBOSE()
-veth_error()
-vmcoreinfo_append_str()
-
   Duplicate strings
 
 The string "module" is defined by sysfs_remove_link and sysfs_create_link, but also in net/core/sock.c
@@ -146,9 +48,9 @@ Similarly we can't assume that because we detect a certain version we can skip s
 
   Substring matching
 
-Sometimes depending on a definition extra stuff is printed. To properly detect this we would need substring matching, which is probably too expensive at the moment.
+Sometimes depending on a definition extra strings are printed. To properly detect this we would need substring matching, which is probably too expensive at the moment.
 
-Example:
+An example from arch/arm/mach-sa1100/dma.c from kernel 2.6.32.9:
 
 #undef DEBUG
 #ifdef DEBUG
@@ -157,5 +59,4 @@ Example:
 #define DPRINTK( x... )
 #endif
 
-
-arch/arm/mach-sa1100/dma.c from 2.6.32.9
+Other examples include pr_debug, DBG, DPRINTK
