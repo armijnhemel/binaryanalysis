@@ -21,7 +21,6 @@ exprs.append(re.compile("\w+_ATTR\w*\s*\((\w+)", re.MULTILINE))
 
 ## TODO: check if these can be replaced by a call to xgettext
 exprs.append(re.compile("devfs_remove\s*\(\"([\w\s\-=/%]+)\"", re.MULTILINE))
-exprs.append(re.compile("\.comm\s*=\s*\"([\w\-=]*)\"", re.MULTILINE))
 # unsure)
 exprs.append(re.compile("\w*name\s*[:=]\s*\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
 exprs.append(re.compile("E\((?:\w+,\s*)\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
@@ -80,7 +79,6 @@ def extractkernelstrings(kerneldir, sqldb):
 					searchresults = []
 
 					searchresults = searchresults + extractor.extractStrings(p, i[0])
-					#print searchresults
 
 					## values that we can't extract using xgettext are extracted using regular
 					## expressions. We set the line number for the result to 0, since
@@ -156,7 +154,7 @@ def extractkernelstrings(kerneldir, sqldb):
 							storestring = res.strip()
 						if storestring.startswith("\\n"):
 							storestring = storestring[2:].strip()
-						# replace tabs
+						# clean up tabs
 						storestring = storestring.replace("\\t", "\t").strip()
 						#storestring = storestring.replace("\\n", "\n")
 						sqldb.execute('''insert into extracted (printstring, filename, linenumber) values (?, ?, ?)''', (storestring, u"%s/%s" % (i[0][kerneldirlen:], p), lineno))
