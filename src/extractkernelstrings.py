@@ -23,15 +23,15 @@ exprs.append(re.compile("\w+_ATTR\w*\s*\((\w+)", re.MULTILINE))
 exprs.append(re.compile("devfs_remove\s*\(\"([\w\s\-=/%]+)\"", re.MULTILINE))
 exprs.append(re.compile("\.comm\s*=\s*\"([\w\-=]*)\"", re.MULTILINE))
 # unsure)
-#searchresults = searchresults + re.findall("\.comment\s*=\s*\"([\w\-=]*)\"", source, re.MULTILINE))
 exprs.append(re.compile("\w*name\s*[:=]\s*\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
 exprs.append(re.compile("E\((?:\w+,\s*)\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
 exprs.append(re.compile("add_hotplug_env_var\((?:[\w&]+,\s*){6}\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
 
 bugtrapexpr = re.compile("BUG_TRAP\s*\(([\w\s\.:<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\);", re.MULTILINE)
 
+## we extract function names as well, since they frequently appear in the kernel image
 funexprs = []
-funexprs.append(re.compile("(?:static|extern) (?:\w+\s)+(?:\*\s)*(\w+)\(", re.MULTILINE))
+funexprs.append(re.compile("(?:static|extern) (?:\w+\s)+\*?\s*(\w+)\(", re.MULTILINE))
 
 symbolexprs = []
 symbolexprs.append(re.compile("EXPORT_SYMBOL\s*\(([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\\\]+)", re.MULTILINE))
