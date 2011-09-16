@@ -20,9 +20,6 @@ exprs.append(re.compile("NETSTAT_ENTRY\s*\((\w+)", re.MULTILINE))
 exprs.append(re.compile("\w+_ATTR\w*\s*\((\w+)", re.MULTILINE))
 
 ## TODO: check if these can be replaced by a call to xgettext
-exprs.append(re.compile("devfs_remove\s*\(\"([\w\s\-=/%]+)\"", re.MULTILINE))
-# unsure)
-exprs.append(re.compile("\w*name\s*[:=]\s*\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
 exprs.append(re.compile("E\((?:\w+,\s*)\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
 exprs.append(re.compile("add_hotplug_env_var\((?:[\w&]+,\s*){6}\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
 
@@ -81,8 +78,8 @@ def extractkernelstrings(kerneldir, sqldb):
 					searchresults = searchresults + extractor.extractStrings(p, i[0])
 
 					## values that we can't extract using xgettext are extracted using regular
-					## expressions. We set the line number for the result to 0, since
-					## we don't know it (TODO)
+					## expressions. We set the line number for the result to 0, in case
+					## we don't know it
 					for ex in exprs:
 						searchresults = searchresults + map(lambda x: (x,0), ex.findall(source))
 	
@@ -91,18 +88,6 @@ def extractkernelstrings(kerneldir, sqldb):
 						if "#define" in bugtrap:
 							continue
 						searchresults.append((re.sub("\n\s*", " ", bugtrap),0))
-					'''
-					debugs = re.findall("DBG\s*\([\w\s]*\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", source, re.MULTILINE)
-					for debug in debugs:
-						if "#define" in debug:
-							continue
-                                		searchresults.append(debug)
-					debugs = re.findall("DPRINTK\s*\([\w\s]*\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", source, re.MULTILINE)
-					for debug in debugs:
-						if "#define" in debug:
-							continue
-                                		searchresults.append((debug, 0))
-					'''
 	
 					## extract the module parameters and append it to the name of the file
 					## without the extension. Separate with a dot.
@@ -118,13 +103,11 @@ def extractkernelstrings(kerneldir, sqldb):
 					chars = chars + re.findall("static\s+const char\s+\s*\w+\[\w*\]\[\w*\]\s*=\s*\{([\w+%\",\s]*)};", source, re.MULTILINE)
 					if chars != []:
 						for c in chars:
-							## TODO: add line number
 							searchresults = searchresults + map(lambda x: (x,0), re.split(",\s*", c.strip().replace("\"", "")))
 	
 					for staticexpr in staticexprs:
 						results = staticexpr.findall(source)
         					for res in results:
-							## TODO: add line number
 							searchresults = searchresults + map(lambda x: (x,0), re.findall("\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]*)\"", res, re.MULTILINE))
 	
 					for result in searchresults:
