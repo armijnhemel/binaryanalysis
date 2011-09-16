@@ -13,23 +13,15 @@ If the kernel module is an ELF binary (and it is most of the time) we can simply
 
 The Linux kernel is full of strings that can end up in a binary. Some programmers have defined macros just specific to their part of the kernel for ease of use, other programmers use more standard mechanisms like printk. Most strings can be extracted from the Linux kernel using xgettext. A minority of strings needs to be extracted using a custom regular expression.
 
-    EXPORT_SYMBOL
+    EXPORT_SYMBOL and EXPORT_SYMBOL_GPL
 
 The strings inside the EXPORT_SYMBOL and EXPORT_SYMBOL_GPL end up in the kernel image. The EXPORT_SYMBOL_GPL symbol is interesting for licensing reporting as well, since anything that uses this symbol has to be GPL licensed. We need to do more research into this area.
 
-    printk
-
-The printk statement is used a lot in the kernel sources, sometimes with a priority, like KERN_DEBUG, KERN_WARNING, KERN_ERROR, etc. Various other statements, such as DBG() are macros that use printk.
-
-    .procname
-
-The .procname variable is used in the /proc/sys file system and it can end up in the kernel.
-
     module_param
 
-The names of parameters for modules can end up in the kernel. The names of these parameters have to be prefixed with the name of the file (which is the module), but stripped from file extensions.
+The names of parameters for modules can end up in the kernel, or in the kernel module. The names of these parameters are typically prefixed with the name of the file (which is the module) and a dot, but without the extension of the file.
 
-    __setup
+This is defined in the function __init param_sysfs_builtin in kernel/params.c
 
     .attr
 
@@ -59,4 +51,4 @@ An example from arch/arm/mach-sa1100/dma.c from kernel 2.6.32.9:
 #define DPRINTK( x... )
 #endif
 
-Other examples include pr_debug, DBG, DPRINTK
+Other examples include pr_debug, DBG, DPRINTK, pr_info
