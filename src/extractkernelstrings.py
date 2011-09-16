@@ -99,12 +99,6 @@ def extractkernelstrings(kerneldir, sqldb):
 							continue
                                 		searchresults.append(("%s.%s" % (p.split(".")[0], paramstring), 0))
 	
-					chars = re.findall("static\s+char\s+\*\s*\w+\[\w*\]\s*=\s*\{([\w+\",\s]*)};", source, re.MULTILINE)
-					chars = chars + re.findall("static\s+const char\s+\s*\w+\[\w*\]\[\w*\]\s*=\s*\{([\w+%\",\s]*)};", source, re.MULTILINE)
-					if chars != []:
-						for c in chars:
-							searchresults = searchresults + map(lambda x: (x,0), re.split(",\s*", c.strip().replace("\"", "")))
-	
 					for staticexpr in staticexprs:
 						results = staticexpr.findall(source)
         					for res in results:
