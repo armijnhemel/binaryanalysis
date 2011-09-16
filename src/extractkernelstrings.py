@@ -33,10 +33,6 @@ symbolexprs = []
 symbolexprs.append(re.compile("EXPORT_SYMBOL\s*\(([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\\\]+)", re.MULTILINE))
 symbolexprs.append(re.compile("EXPORT_SYMBOL_GPL\s*\(([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\\\]+)", re.MULTILINE))
 
-staticexprs = []
-staticexprs.append(re.compile("static\s+(?:\w+s+)?struct\s+(?:[\w*\[\]{};\s]+)\s*=\s*\{(.*)\};", re.MULTILINE|re.DOTALL))
-staticexprs.append(re.compile("static\s+(?:\w+\s+)?char\s+\s*\*\s*\w+\[\w*\]\s*=\s*\{(.*)\};", re.MULTILINE|re.DOTALL))
-
 def extractkernelstrings(kerneldir, sqldb):
 	kerneldirlen = len(kerneldir)+1
 	osgen = os.walk(kerneldir)
@@ -98,11 +94,6 @@ def extractkernelstrings(kerneldir, sqldb):
 						if "#define" in paramstring:
 							continue
                                 		searchresults.append(("%s.%s" % (p.split(".")[0], paramstring), 0))
-	
-					for staticexpr in staticexprs:
-						results = staticexpr.findall(source)
-        					for res in results:
-							searchresults = searchresults + map(lambda x: (x,0), re.findall("\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]*)\"", res, re.MULTILINE))
 	
 					for result in searchresults:
 						(res, lineno) = result
