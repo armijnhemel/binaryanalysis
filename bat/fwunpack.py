@@ -82,7 +82,8 @@ def searchUnpackBase64(filename, tempdir=None, blacklist=[], offsets={}):
 	mstype = ms.file(filename)
 	ms.close()
 
-	if not 'ASCII' in mstype:
+	## Since this only works on complete files the blacklist should be empty
+	if not 'ASCII' in mstype or blacklist != []:
 		return ([], blacklist, offsets)
 	counter = 1
 	diroffsets = []
@@ -95,10 +96,11 @@ def searchUnpackBase64(filename, tempdir=None, blacklist=[], offsets={}):
 	else:
 		tmpfile = tempfile.mkstemp(dir=tmpdir)
 		os.write(tmpfile[0], stanout)
+		## the whole file is blacklisted
+		blacklist.append((0, os.stat(filename).st_size))
 		diroffsets.append((tmpdir, 0))
 		return (diroffsets, blacklist, offsets)
 
-## stub for unpacking archives, such as Debian packages.
 def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}):
 	if offsets['ar'] == []:
 		return ([], blacklist, offsets)
