@@ -1,3 +1,6 @@
+2011-09-17
+* add stubs for unpacking of SWF files
+
 2011-09-10
 * if we have ELF files we can do a much better job at getting the strings from
 the binary by just looking at a few sections which we can get using readelf.

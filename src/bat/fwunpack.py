@@ -16,7 +16,7 @@ where we want to prevent other scans from (re)scanning (part of) the data.
 '''
 
 import sys, os, subprocess, os.path, shutil, stat
-import tempfile, bz2, re, magic, tarfile
+import tempfile, bz2, re, magic, tarfile, zlib
 import fsmagic, fssearch, extractor, ext2
 from xml.dom import minidom
 
@@ -100,6 +100,24 @@ def searchUnpackBase64(filename, tempdir=None, blacklist=[], offsets={}):
 		blacklist.append((0, os.stat(filename).st_size))
 		diroffsets.append((tmpdir, 0))
 		return (diroffsets, blacklist, offsets)
+
+## unpacking SWF files is easy, but for later processing we definitely would
+## need to give some hints to other scanners about what file we have, so we can
+## search more effectively.
+def searchUnpackSwf(filename, tempdir=None, blacklist=[], offsets={}):
+	if offsets['swf'] == []:
+		return ([], blacklist, offsets)
+	return ([], blacklist, offsets)
+
+def unpackSwf(data, offset, tempdir=None):
+	## skip first 8 bytes, then decompress with zlib
+	'''
+	foo = data[8:]
+	bar = zlib.decompress(foo)
+	baz = open('bla', 'w')
+	baz.write(bar)
+	'''
+	return None
 
 def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}):
 	if offsets['ar'] == []:
