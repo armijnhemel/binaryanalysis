@@ -16,6 +16,13 @@ from bat import extractor
 exprs = []
 exprs.append(re.compile("WIRELESS_SHOW\s*\((\w+),", re.MULTILINE))
 exprs.append(re.compile("NETSTAT_ENTRY\s*\((\w+)", re.MULTILINE))
+
+## some stuff that is used by __print_symbolic
+## TODO: add a proper expression for __print_symbolic
+## scsi_hostbyte_name, scsi_opcode_name, scsi_driverbyte_name
+## scsi_msgbyte_name, scsi_statusbyte_name
+exprs.append(re.compile("scsi_\w+_name\((\w+)", re.MULTILINE))
+
 ## lots of things with _ATTR, like DEVICE_ATTR and SYSDEV_ATTR)
 exprs.append(re.compile("\w+_ATTR\w*\s*\((\w+)", re.MULTILINE))
 
@@ -87,6 +94,10 @@ def extractkernelstrings(kerneldir, sqldb):
 	
 					## extract the module parameters and append it to the name of the file
 					## without the extension. Separate with a dot.
+					## This is actually *not* correct, for example for libata, where the
+					## module is libata, but the file is libata-core.c
+					## Extra information from the Makefiles should be used to properly determine
+					## what the module name is.
 					paramstrings = re.findall("module_param\(([\w\d]+)", source, re.MULTILINE)
 					for paramstring in paramstrings:
 						## we skip the lines that start with #define, since they are
