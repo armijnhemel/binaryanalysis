@@ -52,6 +52,7 @@ fsmagic = {
             'cpio2':            '070702',
             'cpio3':            '070707',
             'iso9660':          'CD001',
+            'swf':              'CWS',
             'ar':               '!<arch>',
           }
 
