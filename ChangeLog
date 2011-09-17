@@ -1,5 +1,6 @@
 2011-09-17
 * add stubs for unpacking of SWF files
+* add mapping from extension to language as used in the database
 
 2011-09-10
 * if we have ELF files we can do a much better job at getting the strings from

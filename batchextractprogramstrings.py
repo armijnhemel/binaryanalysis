@@ -30,6 +30,22 @@ tarmagic = ['POSIX tar archive (GNU)'
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
+## list of extensions, plus what language they should be mapped to
+## This is not necessarily correct, but right now it is the best we have.
+extensions = {'.c'    : 'C',
+              '.h'    : 'C',
+              '.cc'   : 'C',
+              '.hh'   : 'C',
+              '.c++'  : 'C',
+              '.cpp'  : 'C',
+              '.hpp'  : 'C',
+              '.cxx'  : 'C',
+              '.hxx'  : 'C',
+              '.S'    : 'C',
+              '.java' : 'Java',
+              '.as'   : 'ActionScript',
+             }
+
 ## unpack the directories to be scanned. For speed improvements it might be
 ## wise to use a ramdisk or tmpfs for this, although the program does not
 ## seem to be I/O bound...
@@ -42,12 +58,13 @@ def unpack(directory, filename):
 
         filemagic = ms.file(os.path.realpath("%s/%s" % (directory, filename)))
 
-        ## Just assume if it is bz2 or gzip that we are looking at tar files with compression
+	## TODO: add zip and JAR, since many Java projects release sources in one of these formats
+        ## Assume if we have bz2 or gzip compressed file we are dealing with compressed tar files
         if 'bzip2 compressed data' in filemagic:
        		tmpdir = tempfile.mkdtemp()
-		## for some reason sometimes the tar.bz2 unpacking from python doesn't always work,
-		## like aeneas-1.0.tar.bz2 from GNU, so resort to calling a subprocess instead of using
-		## the Python tar functionality.
+		## for some reason the tar.bz2 unpacking from python doesn't always work, like
+		## aeneas-1.0.tar.bz2 from GNU, so use a subprocess instead of using the
+		## Python tar functionality.
  		p = subprocess.Popen(['tar', 'jxf', "%s/%s" % (directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		return tmpdir
@@ -128,68 +145,68 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 		while True:
 			i = osgen.next()
 			for p in i[2]:
-			## we can't determine anything about an empty file
+			## we can't determine anything about an empty file, so skip
 				if os.stat("%s/%s" % (i[0], p)).st_size == 0:
 					continue
-				## we're only interested in a few files right now, will add more in the future
 				## some filenames might have uppercase extensions, so lowercase them first
 				p_nocase = p.lower()
-				if (p_nocase.endswith('.c') or p_nocase.endswith('.h') or p_nocase.endswith('.cpp') or p_nocase.endswith('.cc') or p_nocase.endswith('.hh') or p_nocase.endswith('.cxx') or p_nocase.endswith('.c++') or p_nocase.endswith('.hpp') or p_nocase.endswith('.hxx')):
-					scanfile = open("%s/%s" % (i[0], p), 'r')
-					h = hashlib.new('sha256')
-					h.update(scanfile.read())
-					scanfile.close()
-					filehash = h.hexdigest()
-					cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, "%s/%s" % (i[0][srcdirlen:],p), filehash))
-					cursor.execute('''select * from extracted_file where sha256=?''', (filehash,))
-					if len(cursor.fetchall()) != 0:
-						#print >>sys.stderr, "duplicate %s %s: %s/%s" % (package, version, i[0], p)
-						continue
-					## if we want to scan for licenses, run Ninka and (future work) FOSSology
-					if license:
-						## first we generate just a .comments file and see if we've already seen it
-						## before. This is because often license headers are very similar, so we
-						## don't need to rescan everything.
-						## For gtk+ 2.20.1 scanning time dropped with about 25%.
-						p1 = subprocess.Popen(["/tmp/dmgerman-ninka-7a9a5c4/ninka.pl", "-c", "%s/%s" % (i[0], p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=ninkaenv)
-                                		(stanout, stanerr) = p1.communicate()
-						scanfile = open("%s/%s.comments" % (i[0], p), 'r')
-						ch = hashlib.new('sha256')
-						ch.update(scanfile.read())
+				for extension in extensions.keys():
+					if (p_nocase.endswith(extension)):
+						scanfile = open("%s/%s" % (i[0], p), 'r')
+						h = hashlib.new('sha256')
+						h.update(scanfile.read())
 						scanfile.close()
-						commentshash = ch.hexdigest()
-						cursor.execute('''select license from ninkacomments where sha256=?''', (commentshash,))
-						res = cursor.fetchall()
-						if len(res) > 0:
-							print >>sys.stderr, "duplicate comment %s %s: %s/%s" % (package, version, i[0], p)
-							## store all the licenses we already know for this file
-							for r in res:
-								## hardcode the scanner to 'ninka'. This could/should change in the future.
-								cursor.execute('''insert into licenses (sha256, license, scanner) values (?,?,?)''', (filehash, r[0], "ninka"))
-						else:
-							## we don't have any information about this .comments file yet, so
-							## restart Ninka for a full scan.
-							p2 = subprocess.Popen(["/tmp/dmgerman-ninka-7a9a5c4/ninka.pl", "%s/%s" % (i[0], p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=ninkaenv)
-                                			(stanout, stanerr) = p2.communicate()
-							ninkasplit = stanout.strip().split(';')[1:]
-							## filter out the licenses we can't determine.
-							## We actually should run these through FOSSology to try and obtain a match.
-							if ninkasplit[0].startswith("UNMATCHED"):
-								print >>sys.stderr, "%s/%s" % (i[0],p), "UNMATCHED"
-								pass
-							elif ninkasplit[0].startswith("UNKNOWN"):
-								print >>sys.stderr, "%s/%s" % (i[0],p), "UNKNOWN"
+						filehash = h.hexdigest()
+						cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, "%s/%s" % (i[0][srcdirlen:],p), filehash))
+						cursor.execute('''select * from extracted_file where sha256=?''', (filehash,))
+						if len(cursor.fetchall()) != 0:
+							#print >>sys.stderr, "duplicate %s %s: %s/%s" % (package, version, i[0], p)
+							continue
+						## if we want to scan for licenses, run Ninka and (future work) FOSSology
+						if license:
+							## first we generate just a .comments file and see if we've already seen it
+							## before. This is because often license headers are very similar, so we
+							## don't need to rescan everything.
+							## For gtk+ 2.20.1 scanning time dropped with about 25%.
+							p1 = subprocess.Popen(["/tmp/dmgerman-ninka-7a9a5c4/ninka.pl", "-c", "%s/%s" % (i[0], p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=ninkaenv)
+                                			(stanout, stanerr) = p1.communicate()
+							scanfile = open("%s/%s.comments" % (i[0], p), 'r')
+							ch = hashlib.new('sha256')
+							ch.update(scanfile.read())
+							scanfile.close()
+							commentshash = ch.hexdigest()
+							cursor.execute('''select license from ninkacomments where sha256=?''', (commentshash,))
+							res = cursor.fetchall()
+							if len(res) > 0:
+								print >>sys.stderr, "duplicate comment %s %s: %s/%s" % (package, version, i[0], p)
+								## store all the licenses we already know for this file
+								for r in res:
+									## hardcode the scanner to 'ninka'. This could/should change in the future.
+									cursor.execute('''insert into licenses (sha256, license, scanner) values (?,?,?)''', (filehash, r[0], "ninka"))
 							else:
-								licenses = ninkasplit[0].split(',')
-								for license in licenses:
-									print >>sys.stderr, "%s/%s" % (i[0],p), license
-									cursor.execute('''insert into licenses (sha256, license, scanner) values (?,?,?)''', (filehash, license, "ninka"))
-									cursor.execute('''insert into ninkacomments (sha256, license) values (?,?)''', (commentshash, license))
-					sqlres = extractsourcestrings(p, i[0], package, version, srcdirlen)
-					for res in sqlres:
-						(pstring, linenumber) = res
-						cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?, 'C', ?)''', (pstring, filehash, linenumber))
-						pass
+								## we don't have any information about this .comments file yet, so
+								## restart Ninka for a full scan.
+								p2 = subprocess.Popen(["/tmp/dmgerman-ninka-7a9a5c4/ninka.pl", "%s/%s" % (i[0], p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=ninkaenv)
+                                				(stanout, stanerr) = p2.communicate()
+								ninkasplit = stanout.strip().split(';')[1:]
+								## filter out the licenses we can't determine.
+								## We actually should run these through FOSSology to try and obtain a match.
+								if ninkasplit[0].startswith("UNMATCHED"):
+									print >>sys.stderr, "%s/%s" % (i[0],p), "UNMATCHED"
+									pass
+								elif ninkasplit[0].startswith("UNKNOWN"):
+									print >>sys.stderr, "%s/%s" % (i[0],p), "UNKNOWN"
+								else:
+									licenses = ninkasplit[0].split(',')
+									for license in licenses:
+										print >>sys.stderr, "%s/%s" % (i[0],p), license
+										cursor.execute('''insert into licenses (sha256, license, scanner) values (?,?,?)''', (filehash, license, "ninka"))
+										cursor.execute('''insert into ninkacomments (sha256, license) values (?,?)''', (commentshash, license))
+						sqlres = extractsourcestrings(p, i[0], package, version, srcdirlen)
+						for res in sqlres:
+							(pstring, linenumber) = res
+							cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (pstring, filehash, extensions[extension], linenumber))
+							pass
 	except Exception, e:
 		print >>sys.stderr, e
 		pass
