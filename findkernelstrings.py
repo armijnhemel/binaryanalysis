@@ -11,7 +11,7 @@ source tree, to trace which files were used to compile the kernel. This is not
 fool proof since there are many different kernel trees.
 '''
 
-import os, sys, re, subprocess
+import os, sys, re, subprocess, magic
 import os.path
 import sqlite3
 from optparse import OptionParser
@@ -20,12 +20,12 @@ parser = OptionParser()
 parser.add_option("-a", "--architecture", dest="arch", help="hardware architecture (optional)")
 parser.add_option("-f", "--found", dest="found", action="store_true", help="print symbols that can be found (default)")
 parser.add_option("-c", "--configindex", dest="configindex", help="path to database with configs", metavar="DIR")
-parser.add_option("-i", "--index", dest="index", help="path to database with kernel strings", metavar="DIR")
+parser.add_option("-d", "--database", dest="database", help="path to database with kernel strings", metavar="FILE")
 parser.add_option("-k", "--kernel", dest="kernel", help="path to Linux kernel image", metavar="FILE")
 parser.add_option("-m", "--missing", dest="missing", action="store_true", help="print symbols that can't be found", metavar=None)
 parser.add_option("-s", "--size", dest="stringsize", help="stringsize (default 6)")
 (options, args) = parser.parse_args()
-if options.index == None:
+if options.database == None:
 	## check if this directory actually exists
 	parser.error("Path to database with kernel strings needed")
 if options.kernel == None:
@@ -37,16 +37,17 @@ if options.stringsize == None:
 else:
 	stringsize = int(options.stringsize)
 
-STORE_DIR = options.index
+## TODO: if we have a ELF file instead, we can do a much better job at picking the right strings from the binary
+## TODO: remove things like initrds or extra file systems appended to the file
 try:
-	p = subprocess.Popen(['/usr/bin/strings', options.kernel], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['/usr/bin/strings', '-n', str(stringsize), options.kernel], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         (stanout, stanerr) = p.communicate()
-except:
+except Exception, e:
 	sys.exit(1)
 
 kernelstrings = stanout.split("\n")
 
-conn = sqlite3.connect(options.index)
+conn = sqlite3.connect(options.database)
 c = conn.cursor()
 
 ## if we have a database with configuration mappings open it
@@ -58,13 +59,22 @@ seenlinux = False
 seenstrings = []
 #seenaaaaaa = False
 for kernelstring in kernelstrings:
-	kstring = kernelstring.strip()
+	## TODO: we should not strip. extractkernelstrings.py and this method should be synced
+	#kstring = kernelstring.strip()
+	kstring = kernelstring
 	if "inux" in kstring:
 		seenlinux = True
 	#if kstring == "AAAAAA":
 	#	seenaaaaaa = True
-	if len(kstring) >= stringsize and seenlinux:
+	## no need to really dig into things if we haven't seen the string 'inux' (seriously? TODO)
+	if seenlinux:
+		## shouldn't we try to first check to see if <\d> is part of the original string?
+		## later 2.6 kernels introduced KERN_CONT (<c>) and KERN_DEFAULT (<d>)
 		if re.match("(\<\d\>)", kstring) != None:
+			searchstring = kstring[3:]
+		elif re.match("(\<c\>)", kstring) != None:
+			searchstring = kstring[3:]
+		elif re.match("(\<d\>)", kstring) != None:
 			searchstring = kstring[3:]
 		else:
 			searchstring = kstring
@@ -103,7 +113,7 @@ for kernelstring in kernelstrings:
 				found = True
 		#if not found and options.missing and not seenaaaaaa:
 		if not found and options.missing:
-			print 'did not find string "%s"' % (searchstring,)
-		seenstrings.append(searchstring)
+			print 'did not find string "%s"' % (kstring,)
+		seenstrings.append(kstring)
 
 sys.exit()
