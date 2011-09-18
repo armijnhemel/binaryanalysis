@@ -1,5 +1,9 @@
 import os, sys, subprocess, re, zlib, tempfile
 
+## Binary Analysis Tool
+## Copyright 2011 Armijn Hemel for Tjaldur Software Governance Solutions
+## Licensed under Apache 2.0, see LICENSE file for details
+
 def readJFFS2Inodes(path):
 	p = subprocess.Popen(['jffs2dump', '-cv', path], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
