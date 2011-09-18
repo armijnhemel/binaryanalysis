@@ -1,6 +1,5 @@
 import os, sys, subprocess, re, zlib, tempfile
 
-
 def readJFFS2Inodes(path):
 	p = subprocess.Popen(['jffs2dump', '-cv', path], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
@@ -70,6 +69,8 @@ def unpackJFFS2(path, tempdir=None):
 
 	pathinodes = {}
 
+	data = open(path).read()
+
 	for n in direntries.keys():
 		## create directory structure
 		if n in directories:
@@ -84,25 +85,19 @@ def unpackJFFS2(path, tempdir=None):
 			os.makedirs(parentdirs)
 		## we have a leaf node, so we need to unpack data here
 		else:
+			unzfiledata = ""
+			for node in nodeentries:
+				if node['inode'] == n:
+					filedata = data[node['offset'] + 0x44: node['offset'] + node['size']]
+					try:
+						unzfiledata = unzfiledata + zlib.decompress(filedata)
+					except Exception, e:
+						## we can't uncompress, so we most probably have a symlink, TODO
+						unzfiledata = unzfiledata + filedata
+			datafile = open('%s/%s/%s' % (tmpdir, pathinodes[direntries[n]['parent']], direntries[n]['name']), 'w')
+			datafile.write(unzfiledata)
+			datafile.close()
 			pass
-	print pathinodes
 	return None
 
 unpackJFFS2('/tmp/test.jffs2')
-
-'''
-bla = open('/tmp/test.jffs2').read()
-
-unzfiledata = ""
-
-for n in nodeentries:
-	if n['inode'] == 8:
-		filedata = bla[n['offset'] + 0x44: n['offset'] + n['size']]
-		unzfiledata = unzfiledata + zlib.decompress(filedata)
-
-blebber = open('/tmp/testroot.jffs2', 'w')
-blebber.write(unzfiledata)
-blebber.close()
-
-## for each inode: isize == sum(dsize of all inode entries)
-'''
