@@ -60,9 +60,14 @@ def unpackJFFS2(path, tempdir=None):
 	if tempdir == None:
 		tmpdir = tempfile.mkdtemp()
 	else:
-		## for now, change this
-		tmpdir = tempfile.mkdtemp()
-	(direntries, nodeentries) = readJFFS2Inodes(path)
+		tmpdir = tempdir
+	res = readJFFS2Inodes(path)
+	if res == None:
+		## cleanup
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	(direntries, nodeentries) = res
 
 	## first get all the entries for the direntries (a misnomer)
 	directories = []
@@ -101,6 +106,6 @@ def unpackJFFS2(path, tempdir=None):
 			datafile = open('%s/%s/%s' % (tmpdir, pathinodes[direntries[n]['parent']], direntries[n]['name']), 'w')
 			datafile.write(unzfiledata)
 			datafile.close()
-	return None
+	return tmpdir
 
 unpackJFFS2('/tmp/test.jffs2')
