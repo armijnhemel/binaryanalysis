@@ -71,7 +71,7 @@ def unpackJFFS2(path, tempdir=None):
 	directories = list(set(directories))
 	directories.sort()
 
-	pathinodes = {}
+	pathinodes = {1: ''}
 
 	data = open(path).read()
 
@@ -96,12 +96,11 @@ def unpackJFFS2(path, tempdir=None):
 					try:
 						unzfiledata = unzfiledata + zlib.decompress(filedata)
 					except Exception, e:
-						## we can't uncompress, so we most probably have a symlink, TODO
+						## TODO: handle symlinks
 						unzfiledata = unzfiledata + filedata
 			datafile = open('%s/%s/%s' % (tmpdir, pathinodes[direntries[n]['parent']], direntries[n]['name']), 'w')
 			datafile.write(unzfiledata)
 			datafile.close()
-			pass
 	return None
 
 unpackJFFS2('/tmp/test.jffs2')
