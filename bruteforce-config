@@ -21,6 +21,12 @@ module  = bat.fwunpack
 method  = searchUnpackInstallShield
 priority = 1
 
+[jffs2]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackJffs2
+priority = 1
+
 [exe]
 type    = unpack
 module  = bat.fwunpack
@@ -62,6 +68,12 @@ priority = 1
 #module  = bat.fwunpack
 #method  = searchUnpackIco
 #priority = 0
+
+[base64]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackBase64
+priority = 0
 
 [gif]
 type    = unpack
