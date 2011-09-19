@@ -107,5 +107,3 @@ def unpackJFFS2(path, tempdir=None):
 			datafile.write(unzfiledata)
 			datafile.close()
 	return tmpdir
-
-unpackJFFS2('/tmp/test.jffs2')
