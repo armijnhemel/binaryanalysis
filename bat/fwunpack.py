@@ -111,12 +111,17 @@ def searchUnpackSwf(filename, tempdir=None, blacklist=[], offsets={}):
 
 def unpackSwf(data, offset, tempdir=None):
 	## skip first 8 bytes, then decompress with zlib
-	'''
-	foo = data[8:]
-	bar = zlib.decompress(foo)
-	baz = open('bla', 'w')
-	baz.write(bar)
-	'''
+	tmpdir = unpacksetup(tempdir)
+	## TODO: cleanup when zlib decompression fails
+	try:
+		unzswf = zlib.decompress(data[8:])
+	except Exception, e:
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	tmpfile = tempfile.mkstemp(dir=tempdir)
+	os.write(tmpfile[0], unzswf)
+	os.fdopen(tmpfile[0]).close()
 	return None
 
 ## unpacking jffs2 files is tricky
