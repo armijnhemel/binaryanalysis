@@ -17,7 +17,7 @@ where we want to prevent other scans from (re)scanning (part of) the data.
 
 import sys, os, subprocess, os.path, shutil, stat
 import tempfile, bz2, re, magic, tarfile, zlib
-import fsmagic, fssearch, extractor, ext2
+import fsmagic, fssearch, extractor, ext2, jffs2
 from xml.dom import minidom
 
 ## generic method to create temporary directories, with the correct filenames
@@ -118,6 +118,32 @@ def unpackSwf(data, offset, tempdir=None):
 	baz.write(bar)
 	'''
 	return None
+
+## unpacking jffs2 files is tricky
+def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}):
+	## first determine if we are dealing with ASCII text
+	ms = magic.open(magic.MAGIC_NONE)
+	ms.load()
+	mstype = ms.file(filename)
+	ms.close()
+	## for now we're just working on whole file systems. This could change in the future.
+	if not 'jffs2' in mstype or blacklist != []:
+		return ([], blacklist, offsets)
+
+	counter = 1
+	diroffsets = []
+	tmpdir = dirsetup(tempdir, filename, "jffs2", counter)
+	res = unpackJffs2(filename, tmpdir)
+	if res != None:
+		diroffsets.append((res, 0))
+		blacklist.append((0, os.stat(filename).st_size))
+	else:
+		os.rmdir(tmpdir)
+	return (diroffsets, blacklist, offsets)
+
+def unpackJffs2(filename, tempdir=None):
+	tmpdir = unpacksetup(tempdir)
+	return jffs2.unpackJFFS2(filename, tmpdir)
 
 def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}):
 	if offsets['ar'] == []:
