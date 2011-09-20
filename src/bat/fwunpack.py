@@ -102,27 +102,41 @@ def searchUnpackBase64(filename, tempdir=None, blacklist=[], offsets={}):
 		return (diroffsets, blacklist, offsets)
 
 ## unpacking SWF files is easy, but for later processing we definitely would
-## need to give some hints to other scanners about what file we have, so we can
-## search more effectively.
+## need to give some hints to other scanners about what file we have unpacked,
+## so we can search more effectively.
+## We are assuming that the whole file is an SWF file.
 def searchUnpackSwf(filename, tempdir=None, blacklist=[], offsets={}):
 	if offsets['swf'] == []:
 		return ([], blacklist, offsets)
-	return ([], blacklist, offsets)
+	## right now we are dealing only with entire files. This might change in
+	## the future.
+	if offsets['swf'][0] != 0:
+		return ([], blacklist, offsets)
+	counter = 1
+	diroffsets = []
+	data = open(filename).read()
+	tmpdir = dirsetup(tempdir, filename, "swf", counter)
+	res = unpackSwf(data, tmpdir)
+	if res != None:
+		diroffsets.append((res, 0))
+		blacklist.append((0, os.stat(filename).st_size))
+	else:
+		os.rmdir(tmpdir)
+	return (diroffsets, blacklist, offsets)
 
-def unpackSwf(data, offset, tempdir=None):
+def unpackSwf(data, tempdir=None):
 	## skip first 8 bytes, then decompress with zlib
 	tmpdir = unpacksetup(tempdir)
-	## TODO: cleanup when zlib decompression fails
 	try:
 		unzswf = zlib.decompress(data[8:])
 	except Exception, e:
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
-	tmpfile = tempfile.mkstemp(dir=tempdir)
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], unzswf)
 	os.fdopen(tmpfile[0]).close()
-	return None
+	return tmpdir
 
 ## unpacking jffs2 files is tricky
 def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}):
