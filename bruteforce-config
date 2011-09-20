@@ -87,6 +87,12 @@ module  = bat.fwunpack
 method  = searchUnpackPNG
 priority = 0
 
+[swf]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackSwf
+priority = 0
+
 [zip]
 type    = unpack
 module  = bat.fwunpack
