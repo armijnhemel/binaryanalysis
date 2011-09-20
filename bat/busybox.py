@@ -4,7 +4,7 @@
 ## Copyright 2009-2011 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
-import sys, os, string, re
+import sys, os, string, re, subprocess
 import pickle
 from optparse import OptionParser
 import extractor
@@ -33,6 +33,9 @@ translation_table = {'1.13': translation_table_1_15}
 translation_table = {'1.14': translation_table_1_15}
 translation_table = {'1.15': translation_table_1_15}
 translation_table = {'1.16': translation_table_1_15}
+translation_table = {'1.17': translation_table_1_15}
+translation_table = {'1.18': translation_table_1_15}
+translation_table = {'1.19': translation_table_1_15}
 
 ## helper method to extract the major version of a BusyBox program:
 ## 1.15.2 becomes 1.15
@@ -97,6 +100,8 @@ def extract_configuration(lines, busybox, bbconfig):
 
 		## search through the original binary, not the one with all spaces
 		## to reduce the amount of false positives
+		## TODO: we need to rewrite this and take into account that the applet names in
+		## BusyBox are actually separated by 0x00 and not just any non-printable character.
 		offset = lines.find(keys[pos])
 		while pos < len(keys)-1:
 			if offset == -1:
@@ -178,9 +183,12 @@ def extract_configuration_pass1(lines, busybox, printables):
 				config.append(printables[offset2+1:offset])
 				offset = printables.find("_main", offset+1)
 		elif printables[offset2+1:offset] == '__libc_start':
-			# glibc, rewrite this to use the subprocess module
-			res = os.popen("readelf -s %s" % (busybox,))
-			lines = res.readlines()
+			# glibc
+			p = subprocess.Popen(['readelf', '-s', busybox], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate()
+			if p.returncode != 0:
+				return []
+			lines = stanout.split('\n')
 			for line in lines:
 				if not "_main" in line:
 					continue
