@@ -1,0 +1,348 @@
+\documentclass[10pt]{article}
+\usepackage{url}
+\usepackage{a4}
+
+\pagestyle{empty}
+
+\setlength{\parskip}{4pt}
+
+\author{Armijn Hemel -- Tjaldur Software Governance Solutions}
+\title{Binary Analysis Tool User Manual}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+
+\section{Introducing the Binary Analysis Tool}
+
+The Binary Analysis Tool is a tool that 
+
+\section{Design of the Binary Analysis Tool}
+
+BAT consists of several scripts written in Python.
+
+\subsection{\texttt{bruteforce.py}}
+
+The main program in BAT is the \texttt{bruteforce.py} tool. It takes a brute
+force approach to scanning a binary and has no prior knowledge of how a binary
+is constructed. Instead it finds out by applying several methods, including
+searching for known identifiers ...
+
+\subsubsection{Unpack scans}
+
+\begin{itemize}
+\item file systems: cramfs, ext2/ext3/ext4, ISO9660, JFFS2, SquashFS (specific
+variants), UBIFS
+\item compressed files: ar, ARJ, BASE64, BZIP2, compressed Flash, CAB, CPIO,
+EXE (specific compression methods only) GZIP, InstallShield (old versions),
+LZIP, LZMA, LZO, RAR, RPM, TAR, XZ, ZIP
+\item media files: GIF, ICO, PNG
+\end{itemize}
+
+\subsubsection{Leaf scans}
+
+Leaf scans, or program scans, are scans that are run on every single file
+that has been unpacked, including ...
+
+\begin{itemize}
+\item fast string searches: BusyBox, dproxy, ez-ipupdate, iptables, iproute,
+libusb, Linux kernel, loadlin, RedBoot, U-Boot, vsftpd, wireless-tools,
+wpa-supplicant
+\item dynamic library dependencies (ELF files only)
+\item Linux kernel module license (Linux kernel modules only)
+\end{itemize}
+
+\subsubsection{Enabling and disabling scans}
+
+The \texttt{bruteforce.py} tool uses a configuration file that is in Windows
+INI format. There is a default configuration file that enables most of the
+scans by default. To disable a scan it can be outcommented in the file (by
+starting the line with the \texttt{\#} character), or by removing it from the
+configuration file.
+
+\subsubsection{Blacklisting and priorities}
+
+In BAT blacklists are used to prevent some scans from running on a particular
+byte range, because other scans have already covered these bytes, or will cover
+them.
+
+The most obvious example is the ext2 file system: in a normal setup (no
+encryption) it is trivial to see the content of all the individual files when
+ax ext2 file system image is opened. This is because this file system is
+mostly a concatenation of the data, with some meta data associated with the
+files in the file system.
+
+If another compressed file is in the ext2 file system it could be that it will
+be picked up by BAT twice: once it will be detected inside the ext2 file system
+and once after the file system has been unpacked by the ext2 file system
+unpacker.
+
+Other examples are:
+
+\begin{itemize}
+\item cpio (files are concatenated with a header and a trailer)
+\item tar (files are concatenated with some meta data)
+\item RPM (files are in a compressed archive with some meta data)
+\item ar and DEB
+\item some flavours of cramfs
+\item ubifs
+\end{itemize}
+
+To avoid duplicate scanning and false positives it is therefore necessary to
+prevent other scans from running on the byte range already covered by one of
+these files.
+
+In BAT this is achieved by using blacklists. All unpack scans have a parameter
+called \texttt{blacklist} which is consulted everytime a file is unpacked. If
+a file system offset is in a blacklist the scan could use the next offset, or
+skip scanning the entire file, depending on the scan.
+
+The blacklist is set for every file individually and is initially empty. If a
+scan is successful it adds a byte range to the blacklist and changes it for
+..
+
+The scans are run in a particular order to make the best use of blacklists. The
+order of scans is determined by the \texttt{priority} parameter in the
+configuration file. The file systems and concatenated files mentioned above
+have a higher priority and are scanned earlier than other scans that could also
+give a match. It is not a fool proof system, but it works well enough.
+
+\subsubsection{Pretty printing}
+
+\subsection{Interpreting the results}
+
+BAT outputs its results as XML on standard output. After redirecting the output
+to a file it is possible to look at this file using a commandline tool such as
+\texttt{xml\_pp} or a webbrowser such as Mozilla Firefox.
+
+In the future a graphical user interface will be wrapped around BAT that will
+make it easier to interpret the results in a more interactive way.
+
+The XML file starts with metadata, such as:
+
+\begin{itemize}
+\item date, plus time of the scan (local time of the computer, in UTC)
+\item name of the file
+\item SHA256 cryptographic checksum of the file, uniquely identifying it
+\item size of the file
+\item filetype as determined by \texttt{file} on a Linux system
+\item relative path inside the unpacked system, plus the absolute path inside
+the file system, which is useful for later analysis
+\end{itemize}
+
+If any of the scans were successful the results of the individual scans will
+be included in the element \texttt{scans}.
+
+For each unpacking scans the following attributes are reported:
+
+\begin{itemize}
+\item name of the scan (corresponding to the name of the scan in the
+configuration file)
+\item offset in the parent file of the compressed file or file system
+\end{itemize}
+
+\section{Binary Analysus Tool extratools collection}
+
+To help with unpacking non-standard file systems, or standard file systems for
+which there are no tools readily available on Fedora or Ubuntu there is also
+a collection of tools that can be used by BAT to unpack more file systems.
+These tools are not part of the standard distribution, but have to be installed
+separately. They are governed by different license conditions than the core BAT
+distribution.
+
+Currently the collection consists of:
+
+\begin{itemize}
+\item modified version of \texttt{cramfsck} that enables unpacking cramfs
+file systems
+\item unmodified version of \texttt{unyaffs} that enables unpacking for some
+(but not all) YAFFS2 file systems.
+\item various versions of \texttt{unsquashfs} that enable unpacking variants
+of SquashFS. These versions have either been lifted from vendor SDKs, the
+OpenWrt project, or upstream SquashFS project.
+\end{itemize}
+
+\section{Binary Analysis Tool knowledgebase}
+
+BAT comes with a mechanism to use a database backend. The default version of
+BAT only unpacks file systems and compressed files and runs a few simple checks
+on the leaf nodes of the unpacking process.
+
+In the paper "Finding Software License Violations Through Binary Code Clone
+Detection" by Hemel et. al. (ACM 978-1-4503-0574-7/11/05) presented at
+the Mining Software Repositories 2011 conference a method to use a database
+with strings extracted from source code was described. This functionality is
+is available in the ranking module in the file \texttt{ranking.py}. This code
+is not enabled by default, but it has to be explicitely enabled in the
+configuration for \texttt{bruteforce.py}.
+
+To give good results the database that is used needs to be populated with as
+many packages as possible, from a cross cut of all of open source software, to
+prevent bias towards certain packages: if you only would have BusyBox in your
+database, everything would look like BusyBox.
+
+To populate the database you need to download and process open source packages.
+Be aware that this is a costly operation: a download of all source packages of
+a snapshot of Debian (which would give you a few versions for most packages) is
+about 60 GiB. Together with all of GNU, GNOME, most BusyBox versions, and a few
+versions of KDE you have about 100 GiB of compressed source code archives.
+Processing these files (including licensing information) will take a long time
+and the resulting database will also be quite big (at least around 20 GiB).
+
+If you don't want to spend much time on downloading packages and processing
+these packages, please contact Tjaldur Software Governance Solutions for
+purchasing a copy of a fully preprocessed database at \url{info@tjaldur.nl}.
+
+\subsection{Crawling FTP mirrors}
+
+In the directory \texttt{crawlers} a sample crawler is given for downloading
+source packages from the GNU project. The code is fairly straightforward. The
+script (written in Python) tries to intelligently download packages from a GNU
+FTP mirror, skipping packages that are in a blacklist (either parts of the
+filename, whole directories, or extensions) or that have already been
+downloaded in the past.
+
+The default configuration points to a mirror in the Netherlands. It is advised
+to update the location of the GNU mirror in the configuration file. Specifying
+a local mirror will result in faster downloads. It will also not put an
+unnecessary strain on the FTP mirror mentioned in the default configuration
+file.
+
+\subsection{Generating the package list}
+
+The code and license extractor wants a description file of which packages to
+process. This file is hardcoded to \texttt{LIST} relative to the directory that
+contains all source archives. The reason we have a specific file is that some
+packages do not follow a consistent naming scheme. By using this extra file we
+can cleanup names and make sure that source code archives are recognized
+correctly.
+
+The file contains four values per line:
+
+\begin{itemize}
+\item name
+\item version
+\item archivename
+\item origin (or ``unknown'' if not specified)
+\end{itemize}
+
+separated by whitespace (spaces or tabs). An example would look like this:
+
+\begin{verbatim}
+amarok	2.3.2	amarok-2.3.2.tar.bz2	kde
+\end{verbatim}
+
+This line says that the package is \texttt{amarok}, the version number is
+\texttt{2.3.2}, the filename is \texttt{amarok-2.3.2.tar.bz2} and the file
+was downloaded from the KDE project.
+
+There is a helper script (\texttt{generatelist.py}) to help generate the file.
+It can be invoked as follows:
+
+\begin{verbatim}
+python generatelist.py -f /path/to/directory/with/sources
+\end{verbatim}
+
+The output is printed on standard output, so you want to redirect it to a file
+called \texttt{LIST} (as expected by the string extraction script) and
+optionally sorting it first:
+
+\begin{verbatim}
+python generatelist.py -f /path/to/directory/with/sources | sort >
+   /path/to/directory/with/sources/LIST
+\end{verbatim}
+
+
+\texttt{generatelist.py} tries to determine the name of the package by
+splitting the file name on the right if it encounters a \texttt{-} (dash)
+character. This is not always done correctly because a package uses multiple
+dashes, or because it does not contain a dash. In the latter case an error
+will be printed on standard error, informing you that a file could not be
+added to the list of packages and it should be added manually.
+
+It is advised to manually inspect the file after generating it to ensure the
+correctness of the package names. Packages can have been renamed for a number
+of reasons:
+
+\begin{itemize}
+\item upstream projects decided to use a new name for archives (abiword
+archives for example were renamed from \texttt{abi-\$VERSION.tar.gz} to
+\texttt{abiword-\$VERSION.tar.gz}).
+\item a distribution has renamed packages to avoid clashes during installation
+and allow different versions to be installed next to eachother.
+\end{itemize}
+
+In these cases you need to change the names of the packages, otherwise
+different versions of the same package will be recorded in the database as
+different packages, which will confuse the rating algorithm and cause it to
+give suboptimal results.
+
+
+\subsection{Running the extraction program}
+
+The program to extract strings from sourcecode is
+\texttt{batchextractprogramstrings.py}. It parses the file generated by
+\texttt{generatelist.py}, unpacks the files (currently only \texttt{tar.gz}
+and \texttt{tar.bz2} files, plus variants are supported) and scans each
+individual source code file (at the moment just C/C++ files, assembler files,
+Java/Scala files and ActionScript files) for strings and, if enabled, licenses.
+
+\texttt{batchextractprogramstrings.py} internally uses \texttt{xgettext} to
+extract all strings between double quotes from source code. These are the
+strings that are likely to end up in a binary, such as console messages, error
+messages or messages and so on. \texttt{batchextractprogramstrings.py} simply
+invokes \texttt{xgettext} and parses the results.
+
+\begin{verbatim}
+python batchextractprogramstrings.py -f
+    /path/to/directory/with/files -d /path/to/database
+\end{verbatim}
+
+\subsection{License scanning}
+
+\texttt{batchextractprogramstrings.py} has a few commandline options. The most
+important is whether or not to also extract licenses from the source code files.
+License extraction is done using the Ninka license scanner, with support
+for the Nomos license scanner from FOSSology being added in the near future.
+This option is disabled by default for a few reasons:
+
+\begin{itemize}
+\item scanning licenses adds a significant performance penalty to scanning the
+code (about 1100\% when scanning uClibc 0.9.30.1), even with many
+optimizations (like deduplication) in place.
+\item there is currently no code in the Binary Analysis Tool that can make use
+of this information.
+\end{itemize}
+
+If you want to enable license scanning, you will have to install Ninka first
+and change a few hardcoded paths in \texttt{batchextractprogramstrings.py} that
+point to the main Ninka script.
+
+\subsection{Intelligently making sets of packages when using multiple machines}
+
+One way to tackle the tackle the problem of having to process huge amounts of
+source code is to use multiple machines and later merge database. By adding a
+little bit of intelligence to preparing the sets of source packages you can
+save a lot of processing time. Many packages have duplicate files, especially
+if they are just different versions of the same package. A minor patch version
+could differ as little as one file. If the extractor already has seen a file, it
+will not scan it again, so it makes sense to have as many similar packages
+scanned on the same machine, for example all versions of a single package. If
+license scanning is enabled it makes sense to have as many packages from the
+same project scanned on the same machine, since coding styles often result in
+identical license statements, which the scanner already takes into account.
+
+\subsection{Enabling the database}
+
+Currently the database is hardcoded to \texttt{/tmp/master}. It can be changed
+in \texttt{ranking.py} in the following line:
+
+\begin{verbatim}
+  conn = sqlite3.connect(os.environ.get('BAT_SQLITE_DB', '/tmp/master'))
+\end{verbatim}
+
+In the future it will be possible to set the location of the database in the
+configuration file for \texttt{bruteforce.py}.
+
+\end{document}
