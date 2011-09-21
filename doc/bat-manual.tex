@@ -51,6 +51,7 @@ libusb, Linux kernel, loadlin, RedBoot, U-Boot, vsftpd, wireless-tools,
 wpa-supplicant
 \item dynamic library dependencies (ELF files only)
 \item Linux kernel module license (Linux kernel modules only)
+\item advanced search mode using ranking (described in detail later)
 \end{itemize}
 
 \subsubsection{Enabling and disabling scans}
@@ -109,6 +110,10 @@ have a higher priority and are scanned earlier than other scans that could also
 give a match. It is not a fool proof system, but it works well enough.
 
 \subsubsection{Pretty printing}
+
+Pretty printing for unpack scans is standardized. For leaf scans there is more
+flexibility. This is needed because in some cases the result as returned by
+the leaf scan needs post processing.
 
 \subsection{Interpreting the results}
 
