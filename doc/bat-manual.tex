@@ -330,13 +330,16 @@ This string maps to the name of the main function for the \texttt{wget} applet
 int wget_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
 \end{verbatim}
 
-The BusyBox authors are pretty strict in their naming and usually have a configuration of CONFIG-\$\{appletname\} in the Makefile, like:
+The BusyBox authors are pretty strict in their naming and usually have a
+configuration directive in the a specific format
+(\texttt{CONFIG-\$appletname}) in the Makefile, like:
 
 \begin{verbatim}
 lib-$(CONFIG_WGET)         += wget.o
 \end{verbatim}
 
-(networking/Kbuild in BusyBox 1.15.2), but this is not guaranteed.
+(example taken from \texttt{networking/Kbuild} in BusyBox 1.15.2). There are
+cases where the format could be slightly different.
 
 \subsubsection{Binaries linked with glibc \& uClibc exceptions}
 
@@ -348,54 +351,87 @@ If the binary is unstripped and the binary still contains symbol information
 it is possible to extract the right information using \texttt{readelf} (part
 of GNU binutils) in a similar fashion as the earlier described method.
 
-If this is not possible you will have to search inside the binary for applet names. This works best if you have a set of names of what to look for. Since it is quite easy to extract the version from the binary and most installations don't deviate much from a standard BusyBox the list of all applets in the default distribution of BusyBox is a very good starting point.
+In case there is no information available it is still possible to search inside
+the binary for the applet names. Because most instances of BusyBox that are
+installed on devices have not been modified the list of applets in the stock
+version of BusyBox serves as an excellent starting point.
 
-By searching for the applet names you will at one point encounter the list of applets in the BusyBox binary. This list is alphabetically sorted. By taking the lowest and highest from that list (as far as can be determined) and splitting the list, you should get all applet names that are defined in the version of BusyBox, although it might be able to miss any that are alphabetically before the first applet we know of and after the last one that we know of. Since the only characters that occur between applet names are NUL characters it is quite easy to narrow the list down.
+The list as printed by \texttt{busybox} if the \texttt{--help} parameter is
+given is embedded in the binary. The applet names are alphabetically sorted
+and separated by NUL characters.
+
+By searching for this list and splitting it accordingly it is possible to get
+the list of all applets that are defined. The only caveats are that a new
+applet that was added appears alphabetically before any of the applets that
+can be recognized using a list of appletnames extracted from the source code,
+or it appears alphabetically after the last one that can be recognized.
 
 \subsubsection{Pretty printing a configuration}
 
-Pretty printing a configuration is fairly straightforward, but there are a few difficult cases where we cannot always make a good guess:
+Pretty printing a configuration is fairly straightforward, but there are a few
+cases where it is hard to make a good guess:
 
 \begin{enumerate}
 \item aliases
 \item functionality that is added to an applet, depending on a configuration directive
-\item applets that use non-standard configuration names (like \texttt{CONFIG\_APP\_UDHCPD} instead of \texttt{CONFIG\_UDHCPD} in some versions of busybox)
+\item applets that use non-standard configuration names (like \texttt{CONFIG\_APP\_UDHCPD} instead of \texttt{CONFIG\_UDHCPD} in some versions of BusyBox)
 \item features
 \end{enumerate}
 
-For some applets aliases are installed by default as symlinks. These aliases are recorded in the binary, but there is no separate applet for it. In the busybox sources (1.15.2, others might be different) these are defined as:
+For some applets aliases are installed by default as symlinks. These aliases
+are recorded in the binary, but there is no separate applet for it. In the
+BusyBox sources (1.15.2, others might be different) these are defined as:
 
 \begin{verbatim}
-IF_CRYPTPW(APPLET_ODDNAME(mkpasswd, cryptpw, _BB_DIR_USR_BIN, _BB_SUID_DROP, mkpasswd))
+IF_CRYPTPW(APPLET_ODDNAME(mkpasswd, cryptpw, _BB_DIR_USR_BIN,
+    _BB_SUID_DROP, mkpasswd))
 \end{verbatim}
 
-So if the cryptw tool is built, there is automatically a symlink mkpasswd that points to it. To recognize these symlinks properly some extra information from the source code is needed.
+So if the \texttt{cryptw} tool is built, an additional symlink called
+\texttt{mkpasswd} is added during installation.
 
-If extra functionality is added to an applet in busybox it is defined in the source code by macros like the following:
+If extra functionality is added to an applet in BusyBox it is defined in the
+source code by macros like the following:
 
 \begin{verbatim}
-IF_SHA256SUM(APPLET_ODDNAME(sha256sum, md5_sha1_sum, _BB_DIR_USR_BIN, _BB_SUID_DROP, sha256sum))
-IF_SHA512SUM(APPLET_ODDNAME(sha512sum, md5_sha1_sum, _BB_DIR_USR_BIN, _BB_SUID_DROP, sha512sum))
+IF_SHA256SUM(APPLET_ODDNAME(sha256sum, md5_sha1_sum, _BB_DIR_USR_BIN,
+    _BB_SUID_DROP, sha256sum))
+IF_SHA512SUM(APPLET_ODDNAME(sha512sum, md5_sha1_sum, _BB_DIR_USR_BIN,
+    _BB_SUID_DROP, sha512sum))
 \end{verbatim}
 
-The above configuration tells to add extra sha256sum and sha512sum symlinks if busybox is configured for the sha256sum and sha512sum commands. The applet that implements this functionality is md5\_sha1\_sum. The configuration extraction as currently implemented will not always get all the right configuration for these applets, unless we implement extracting the configuration as a multi way pass: first extract the configuration the way we do now, then search for the names of all the symlinks we have using one of the applets whose name we have been able to extract, then see which names have been recorded into the binary and extract those.
+The above configuration tells to add extra symlinks for \texttt{sha256sum} and
+\texttt{sha512sum} if BusyBox is configured for suppport for the SHA256 and
+SHA512 algorithms. The applet that implements this functionality is
+\texttt{md5\_sha1\_sum}.
+
+The configuration extraction as currently implemented will not always get all the right configuration for these applets, unless we implement extracting the configuration as a multi way pass: first extract the configuration the way we do now, then search for the names of all the symlinks we have using one of the applets whose name we have been able to extract, then see which names have been recorded into the binary and extract those.
 
 The problem described in 3. can be fixed by adding more information to the tool. This would be done by extracting configuration information from the original busybox sources and generate a lookup table. This will not work if custom applets have been added to busybox.
 
 The information for 2 and 3 can also be found in a configured source code tree by looking at \texttt{include/applet\_tables.h}.
 
-Adding 4. is really hard to do in a generic way, if not impossible because often no clear markers are recorded into the binary. A possibility would be to process the BusyBox sources, record which strings are unique to certain features and make checks accordingly. For example (from busybox 1.15.3, \texttt{editors/diff.c}):
+Detecting features is really hard to do in a generic way. In most cases it will
+even be impossible, because there are no clear markers (strings, applet names)
+in the binary that indicate that a certain feature is enabled. In cases there
+are clear marker strings these would still need to be linked to specific
+features. One possibility would be to parse the BusyBox sources and link
+strings to features, for example (from busybox 1.15.3,
+\texttt{editors/diff.c}):
 
 \begin{verbatim}
 #if ENABLE_FEATURE_DIFF_DIR
-                diffdir(f1, f2);
-                return exit_status;
+       diffdir(f1, f2);
+       return exit_status;
 #else
-                bb_error_msg_and_die("no support for directory comparison");
+       bb_error_msg_and_die("no support for directory comparison");
 #endif
 \end{verbatim}
 
-Implementing this will be quite a bit of work.
+The string \texttt{"no support for directory comparison"} only appears if the
+feature \texttt{ENABLE\_FEATURE\_DIFF\_DIR} is not enabled.
+
+Implementing this will be a lot of work and it will likely not be very useful.
 
 \subsubsection{Feeding information into the tool}
 
@@ -404,7 +440,7 @@ it is possible to get a far more accurate configuration, because it is known
 which applets use which configuration, unless:
 
 \begin{itemize}
-\item new applets were added to busybox
+\item new applets were added to BusyBox
 \item applets use old names, but contain different code
 \end{itemize}
 
@@ -425,7 +461,9 @@ Names of applets per version breakdown:
 
 In 1.1.0 there is actually a mix of three different syntaxes: (0.60.5, 1.00 and another) for a few applets (runlevel, watchdog, tr). It takes some extra work to recognize these.
 
-There are also a few applets in 1.1.0 which are a bit harder to detect: \texttt{busybox}, \texttt{mkfs.ext3}, \texttt{e3fsck} and \texttt{[[}. These could be added by hand, since there are just four of them.
+There are also a few applets in 1.1.0 which are a bit harder to detect:
+\texttt{busybox}, \texttt{mkfs.ext3}, \texttt{e3fsck} and \texttt{[[}. These
+could be added by hand, since there are just four of them.
 
 Another issue that is currently unresolved is that not all the shells are correctly recognized.
 
@@ -500,7 +538,7 @@ file.
 
 The code and license extractor wants a description file of which packages to
 process. This file is hardcoded to \texttt{LIST} relative to the directory that
-contains all source archives. The reason we have a specific file is that some
+contains all source archives. The reason there is a specific file is that some
 packages do not follow a consistent naming scheme. By using this extra file we
 can cleanup names and make sure that source code archives are recognized
 correctly.
