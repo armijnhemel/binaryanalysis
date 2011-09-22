@@ -206,267 +206,6 @@ The BusyBox processing tools in BAT try to extract the most likely
 configuration from the binary and print it in the right format (which
 depends on the BusyBox version).
 
-\subsubsection{Detecting BusyBox}
-
-The first step is determining if a binary is indeed BusyBox. This is trivial,
-since in a BusyBox binary you will almost always find clear indication strings
-if BusyBox is used (unless they have been specifically altered to hide the use
-of BusyBox).
-
-A significant string to look for is:
-
-\begin{verbatim}
-        BusyBox is a multi-call binary that combines many common Unix
-        utilities into a single executable.  Most people will create a
-        link to busybox for each function they wish to use and BusyBox
-        will act like whatever it was invoked as!
-\end{verbatim}
-
-Another clear indicator is a BusyBox version string, for example:
-
-\begin{verbatim}
-BusyBox v1.15.2 (2009-12-03 00:14:42 CET)
-\end{verbatim}
-
-As an exception a BusyBox binary configured to include just a single applet
-will not contain contain the marker strings, or the BusyBox version string. In
-such a case a different detection mechanism will have to be used, for example
-the ranking code as used in \texttt{bruteforce.py}, although this will only be
-necessary in a very small percentage of cases, since the vast majority of
-BusyBox instances include more than one applet.
-
-\subsubsection{BusyBox version strings}
-
-The BusyBox version strings have remained fairly consistent over the years:
-
-\begin{verbatim}
-BusyBox v1.00-rc2 (2006.09.14-03:08+0000) multi-call binary
-BusyBox v1.1.3 (2009.09.11-12:49+0000) multi-call binary
-BusyBox v1.15.2 (2009-12-03 00:14:42 CET)
-\end{verbatim}
-
-The time stamps in the version string are irrelevant, since they are generated
-during build time and are not hardcoded in the source code.
-
-Extracting version information from the BusyBox binary is not difficult.
-Using regular expression it is possible to look for \texttt{BusyBox v} which
-indicates the start of a BusyBox version string. The version number can be
-found immediately following this substring until \texttt{ (} (including
-leading space) is found.
-
-Apart from reporting, the BusyBox version number is also used for other
-things, such as determining the right configuration format and accessing a
-knowledgebase of known applet names extracted from the standard BusyBox
-releases from \url{busybox.net}.
-
-\subsubsection{BusyBox configuration format}
-
-During the compilation of BusyBox a configuration file is used to determine
-which functionality will be included in the binary. The format of this
-configuration file has changed a few times over the years. Early versions used
-a simple header format file, with GNU C/C++ style defines. Later versions,
-starting 1.00pre1, moved to Kbuild, the same configuration system as used by
-for example the Linux kernel or OpenWrt. This format is still in use today
-(BusyBox 1.19.2 being the latest version at the time of writing).
-
-Each configuration directive determines whether or not a certain piece of
-source code will be compiled and up in the BusyBox binary. This source code can
-either be a full applet, or just a piece of functionality that merely extends
-an existing applet.
-
-\subsubsection{Methods for extracting a configuration from a BusyBox binary}
-
-Extracting the BusyBox configuration from a binary is not entirely trivial.
-There are a few methods which can be used:
-
-\begin{enumerate}
-\item run \texttt{busybox} (on a device, or inside a sandbox) and see what
-functionality is reported. This is probably the most accurate method, but also
-the hardest, since it requires access to a device, or a sandbox that has been
-properly set up, with all the right dependencies, and so on.
-
-When running \texttt{busybox} without any arguments, or with the \texttt{--help}
-parameter it will output a list of functions that are defined inside the
-binary:
-
-\begin{verbatim}
-Currently defined functions:
-        ar, cal, cpio, dpkg, dpkg-deb, gunzip, zcat
-\end{verbatim}
-
-These can be mapped to a configuration, using information extracted from
-BusyBox source code about which applets map to which configuration option.
-\item extract the configuration from the binary by searching for known applet
-names in the firmware. The end result is the same as a previous step, but
-possibly with less accuracy in some cases but it is the only feasible solution
-when you only have a binary.
-\end{enumerate}
-
-The BusyBox binary has a string embedded for every applet that is included.
-This is the string that is printed out if \texttt{--help} is given as a
-parameter to an invocation of \texttt{busybox}.
-
-Using information about the configuration extracted from BusyBox source code
-these strings can be mapped to a configuration directive and a possible
-configuration can be reconstructed.
-
-Depending on how the binary was compiled this can be trivial, or quite hard.
-
-\subsubsection{Binaries linked with uClibc}
-
-In binaries that link against uClibc (a particular C library) the name of the
-main function of the applet is sometimes (but not always) included in the
-\texttt{busybox} binary as follows (a good way is to run \texttt{strings} on
-the binary and look at the output).
-
-\begin{verbatim}
-wget_main
-\end{verbatim}
-
-This string maps to the name of the main function for the \texttt{wget} applet
-(\texttt{networking/wget.c}):
-
-\begin{verbatim}
-int wget_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
-\end{verbatim}
-
-The BusyBox authors are pretty strict in their naming and usually have a
-configuration directive in the a specific format
-(\texttt{CONFIG-\$appletname}) in the Makefile, like:
-
-\begin{verbatim}
-lib-$(CONFIG_WGET)         += wget.o
-\end{verbatim}
-
-(example taken from \texttt{networking/Kbuild} in BusyBox 1.15.2). There are
-cases where the format could be slightly different.
-
-\subsubsection{Binaries linked with glibc \& uClibc exceptions}
-
-Sometimes the method described in the previous section does not work for
-binaries that are linked with uClibc. It also does not work with binaries
-compiled with glibc.
-
-If the binary is unstripped and the binary still contains symbol information
-it is possible to extract the right information using \texttt{readelf} (part
-of GNU binutils) in a similar fashion as the earlier described method.
-
-In case there is no information available it is still possible to search inside
-the binary for the applet names. Because most instances of BusyBox that are
-installed on devices have not been modified the list of applets in the stock
-version of BusyBox serves as an excellent starting point.
-
-The list as printed by \texttt{busybox} if the \texttt{--help} parameter is
-given is embedded in the binary. The applet names are alphabetically sorted
-and separated by NUL characters.
-
-By searching for this list and splitting it accordingly it is possible to get
-the list of all applets that are defined. The only caveats are that a new
-applet that was added appears alphabetically before any of the applets that
-can be recognized using a list of appletnames extracted from the source code,
-or it appears alphabetically after the last one that can be recognized.
-
-\subsubsection{Pretty printing a configuration}
-
-Pretty printing a configuration is fairly straightforward, but there are a few
-cases where it is hard to make a good guess:
-
-\begin{enumerate}
-\item aliases
-\item functionality that is added to an applet, depending on a configuration directive
-\item applets that use non-standard configuration names (like \texttt{CONFIG\_APP\_UDHCPD} instead of \texttt{CONFIG\_UDHCPD} in some versions of BusyBox)
-\item features
-\end{enumerate}
-
-For some applets aliases are installed by default as symlinks. These aliases
-are recorded in the binary, but there is no separate applet for it. In the
-BusyBox sources (1.15.2, others might be different) these are defined as:
-
-\begin{verbatim}
-IF_CRYPTPW(APPLET_ODDNAME(mkpasswd, cryptpw, _BB_DIR_USR_BIN,
-    _BB_SUID_DROP, mkpasswd))
-\end{verbatim}
-
-So if the \texttt{cryptw} tool is built, an additional symlink called
-\texttt{mkpasswd} is added during installation.
-
-If extra functionality is added to an applet in BusyBox it is defined in the
-source code by macros like the following:
-
-\begin{verbatim}
-IF_SHA256SUM(APPLET_ODDNAME(sha256sum, md5_sha1_sum, _BB_DIR_USR_BIN,
-    _BB_SUID_DROP, sha256sum))
-IF_SHA512SUM(APPLET_ODDNAME(sha512sum, md5_sha1_sum, _BB_DIR_USR_BIN,
-    _BB_SUID_DROP, sha512sum))
-\end{verbatim}
-
-The above configuration tells to add extra symlinks for \texttt{sha256sum} and
-\texttt{sha512sum} if BusyBox is configured for suppport for the SHA256 and
-SHA512 algorithms. The applet that implements this functionality is
-\texttt{md5\_sha1\_sum}.
-
-The configuration extraction as currently implemented will not always get all the right configuration for these applets, unless we implement extracting the configuration as a multi way pass: first extract the configuration the way we do now, then search for the names of all the symlinks we have using one of the applets whose name we have been able to extract, then see which names have been recorded into the binary and extract those.
-
-The problem described in 3. can be fixed by adding more information to the tool. This would be done by extracting configuration information from the original busybox sources and generate a lookup table. This will not work if custom applets have been added to busybox.
-
-The information for 2 and 3 can also be found in a configured source code tree by looking at \texttt{include/applet\_tables.h}.
-
-Detecting features is really hard to do in a generic way. In most cases it will
-even be impossible, because there are no clear markers (strings, applet names)
-in the binary that indicate that a certain feature is enabled. In cases there
-are clear marker strings these would still need to be linked to specific
-features. One possibility would be to parse the BusyBox sources and link
-strings to features, for example (from busybox 1.15.3,
-\texttt{editors/diff.c}):
-
-\begin{verbatim}
-#if ENABLE_FEATURE_DIFF_DIR
-       diffdir(f1, f2);
-       return exit_status;
-#else
-       bb_error_msg_and_die("no support for directory comparison");
-#endif
-\end{verbatim}
-
-The string \texttt{"no support for directory comparison"} only appears if the
-feature \texttt{ENABLE\_FEATURE\_DIFF\_DIR} is not enabled.
-
-Implementing this will be a lot of work and it will likely not be very useful.
-
-\subsubsection{Feeding information into the tool}
-
-By referencing with information extracted from the standard BusyBox sourcecode
-it is possible to get a far more accurate configuration, because it is known
-which applets use which configuration, unless:
-
-\begin{itemize}
-\item new applets were added to BusyBox
-\item applets use old names, but contain different code
-\end{itemize}
-
-The names of applets that are defined in BusyBox serve as a very good starting
-point. How these are recorded in the sources has changed a few times and
-depends on the version of BusyBox. The tool \texttt{appletname-extractor.py}
-can extract these from the BusyBox sources and store them for later reference
-as a simple lookup table in Python pickle format.
-
-Names of applets per version breakdown:
-
-\begin{itemize}
-\item 1.15.x and later: \texttt{include/applets.h} IF syntax
-\item 1.1.1-1.14.x: \texttt{include/applets.h} USE syntax
-\item 1.00-1.1.0: \texttt{include/applets.h} (different syntax)
-\item 0.60.5 and earlier: \texttt{applets.h}, like 1.00-1.1.0 but with a slightly different syntax
-\end{itemize}
-
-In 1.1.0 there is actually a mix of three different syntaxes: (0.60.5, 1.00 and another) for a few applets (runlevel, watchdog, tr). It takes some extra work to recognize these.
-
-There are also a few applets in 1.1.0 which are a bit harder to detect:
-\texttt{busybox}, \texttt{mkfs.ext3}, \texttt{e3fsck} and \texttt{[[}. These
-could be added by hand, since there are just four of them.
-
-Another issue that is currently unresolved is that not all the shells are correctly recognized.
-
 \section{Binary Analysus Tool extratools collection}
 
 To help with unpacking non-standard file systems, or standard file systems for
@@ -669,5 +408,267 @@ in \texttt{ranking.py} in the following line:
 
 In the future it will be possible to set the location of the database in the
 configuration file for \texttt{bruteforce.py}.
+
+\section{BusyBox script internals}
+
+\subsection{Detecting BusyBox}
+
+Detecting if a binary is indeed BusyBox is trivial, since in a BusyBox binary
+there are almost always clear indication strings if BusyBox is used (unless
+they it was specifically altered to hide the use of BusyBox).
+
+A significant string to look for is:
+
+\begin{verbatim}
+        BusyBox is a multi-call binary that combines many common Unix
+        utilities into a single executable.  Most people will create a
+        link to busybox for each function they wish to use and BusyBox
+        will act like whatever it was invoked as!
+\end{verbatim}
+
+Another clear indicator is a BusyBox version string, for example:
+
+\begin{verbatim}
+BusyBox v1.15.2 (2009-12-03 00:14:42 CET)
+\end{verbatim}
+
+As an exception a BusyBox binary configured to include just a single applet
+will not contain contain the marker strings, or the BusyBox version string. In
+such a case a different detection mechanism will have to be used, for example
+the ranking code as used in \texttt{bruteforce.py}, although this will only be
+necessary in a very small percentage of cases, since the vast majority of
+BusyBox instances include more than one applet.
+
+\subsection{BusyBox version strings}
+
+The BusyBox version strings have remained fairly consistent over the years:
+
+\begin{verbatim}
+BusyBox v1.00-rc2 (2006.09.14-03:08+0000) multi-call binary
+BusyBox v1.1.3 (2009.09.11-12:49+0000) multi-call binary
+BusyBox v1.15.2 (2009-12-03 00:14:42 CET)
+\end{verbatim}
+
+The time stamps in the version string are irrelevant, since they are generated
+during build time and are not hardcoded in the source code.
+
+Extracting version information from the BusyBox binary is not difficult.
+Using regular expression it is possible to look for \texttt{BusyBox v} which
+indicates the start of a BusyBox version string. The version number can be
+found immediately following this substring until \texttt{ (} (including
+leading space) is found.
+
+Apart from reporting, the BusyBox version number is also used for other
+things, such as determining the right configuration format and accessing a
+knowledgebase of known applet names extracted from the standard BusyBox
+releases from \url{busybox.net}.
+
+\subsection{BusyBox configuration format}
+
+During the compilation of BusyBox a configuration file is used to determine
+which functionality will be included in the binary. The format of this
+configuration file has changed a few times over the years. Early versions used
+a simple header format file, with GNU C/C++ style defines. Later versions,
+starting 1.00pre1, moved to Kbuild, the same configuration system as used by
+for example the Linux kernel or OpenWrt. This format is still in use today
+(BusyBox 1.19.2 being the latest version at the time of writing).
+
+Each configuration directive determines whether or not a certain piece of
+source code will be compiled and up in the BusyBox binary. This source code can
+either be a full applet, or just a piece of functionality that merely extends
+an existing applet.
+
+\subsection{Extracting a configuration from a BusyBox binary}
+
+Extracting the BusyBox configuration from a binary is not entirely trivial.
+There are a few methods which can be used:
+
+\begin{enumerate}
+\item run \texttt{busybox} (on a device, or inside a sandbox) and see what
+functionality is reported. This is probably the most accurate method, but also
+the hardest, since it requires access to a device, or a sandbox that has been
+properly set up, with all the right dependencies, and so on.
+
+When running \texttt{busybox} without any arguments, or with the \texttt{--help}
+parameter it will output a list of functions that are defined inside the
+binary:
+
+\begin{verbatim}
+Currently defined functions:
+        ar, cal, cpio, dpkg, dpkg-deb, gunzip, zcat
+\end{verbatim}
+
+These can be mapped to a configuration, using information extracted from
+BusyBox source code about which applets map to which configuration option.
+\item extract the configuration from the binary by searching for known applet
+names in the firmware. The end result is the same as a previous step, but
+possibly with less accuracy in some cases but it is the only feasible solution
+when you only have a binary.
+\end{enumerate}
+
+The BusyBox binary has a string embedded for every applet that is included.
+This is the string that is printed out if \texttt{--help} is given as a
+parameter to an invocation of \texttt{busybox}.
+
+Using information about the configuration extracted from BusyBox source code
+these strings can be mapped to a configuration directive and a possible
+configuration can be reconstructed.
+
+Depending on how the binary was compiled this can be trivial, or quite hard.
+
+\subsubsection{Binaries linked with uClibc}
+
+In binaries that link against uClibc (a particular C library) the name of the
+main function of the applet is sometimes (but not always) included in the
+\texttt{busybox} binary as follows (a good way is to run \texttt{strings} on
+the binary and look at the output).
+
+\begin{verbatim}
+wget_main
+\end{verbatim}
+
+This string maps to the name of the main function for the \texttt{wget} applet
+(\texttt{networking/wget.c}):
+
+\begin{verbatim}
+int wget_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
+\end{verbatim}
+
+The BusyBox authors are pretty strict in their naming and usually have a
+configuration directive in the a specific format
+(\texttt{CONFIG-\$appletname}) in the Makefile, like:
+
+\begin{verbatim}
+lib-$(CONFIG_WGET)         += wget.o
+\end{verbatim}
+
+(example taken from \texttt{networking/Kbuild} in BusyBox 1.15.2). There are
+cases where the format could be slightly different.
+
+\subsubsection{Binaries linked with glibc \& uClibc exceptions}
+
+Sometimes the method described in the previous section does not work for
+binaries that are linked with uClibc. It also does not work with binaries
+compiled with glibc.
+
+If the binary is unstripped and the binary still contains symbol information
+it is possible to extract the right information using \texttt{readelf} (part
+of GNU binutils) in a similar fashion as the earlier described method.
+
+In case there is no information available it is still possible to search inside
+the binary for the applet names. Because most instances of BusyBox that are
+installed on devices have not been modified the list of applets in the stock
+version of BusyBox serves as an excellent starting point.
+
+The list as printed by \texttt{busybox} if the \texttt{--help} parameter is
+given is embedded in the binary. The applet names are alphabetically sorted
+and separated by NUL characters.
+
+By searching for this list and splitting it accordingly it is possible to get
+the list of all applets that are defined. The only caveats are that a new
+applet that was added appears alphabetically before any of the applets that
+can be recognized using a list of appletnames extracted from the source code,
+or it appears alphabetically after the last one that can be recognized.
+
+\subsection{Pretty printing a configuration}
+
+Pretty printing a configuration is fairly straightforward, but there are a few
+cases where it is hard to make a good guess:
+
+\begin{enumerate}
+\item aliases
+\item functionality that is added to an applet, depending on a configuration directive
+\item applets that use non-standard configuration names (like \texttt{CONFIG\_APP\_UDHCPD} instead of \texttt{CONFIG\_UDHCPD} in some versions of BusyBox)
+\item features
+\end{enumerate}
+
+For some applets aliases are installed by default as symlinks. These aliases
+are recorded in the binary, but there is no separate applet for it. In the
+BusyBox sources (1.15.2, others might be different) these are defined as:
+
+\begin{verbatim}
+IF_CRYPTPW(APPLET_ODDNAME(mkpasswd, cryptpw, _BB_DIR_USR_BIN,
+    _BB_SUID_DROP, mkpasswd))
+\end{verbatim}
+
+So if the \texttt{cryptw} tool is built, an additional symlink called
+\texttt{mkpasswd} is added during installation.
+
+If extra functionality is added to an applet in BusyBox it is defined in the
+source code by macros like the following:
+
+\begin{verbatim}
+IF_SHA256SUM(APPLET_ODDNAME(sha256sum, md5_sha1_sum, _BB_DIR_USR_BIN,
+    _BB_SUID_DROP, sha256sum))
+IF_SHA512SUM(APPLET_ODDNAME(sha512sum, md5_sha1_sum, _BB_DIR_USR_BIN,
+    _BB_SUID_DROP, sha512sum))
+\end{verbatim}
+
+The above configuration tells to add extra symlinks for \texttt{sha256sum} and
+\texttt{sha512sum} if BusyBox is configured for suppport for the SHA256 and
+SHA512 algorithms. The applet that implements this functionality is
+\texttt{md5\_sha1\_sum}.
+
+The configuration extraction as currently implemented will not always get all the right configuration for these applets, unless we implement extracting the configuration as a multi way pass: first extract the configuration the way we do now, then search for the names of all the symlinks we have using one of the applets whose name we have been able to extract, then see which names have been recorded into the binary and extract those.
+
+The problem described in 3. can be fixed by adding more information to the tool. This would be done by extracting configuration information from the original busybox sources and generate a lookup table. This will not work if custom applets have been added to busybox.
+
+The information for 2 and 3 can also be found in a configured source code tree by looking at \texttt{include/applet\_tables.h}.
+
+Detecting features is really hard to do in a generic way. In most cases it will
+even be impossible, because there are no clear markers (strings, applet names)
+in the binary that indicate that a certain feature is enabled. In cases there
+are clear marker strings these would still need to be linked to specific
+features. One possibility would be to parse the BusyBox sources and link
+strings to features, for example (from busybox 1.15.3,
+\texttt{editors/diff.c}):
+
+\begin{verbatim}
+#if ENABLE_FEATURE_DIFF_DIR
+       diffdir(f1, f2);
+       return exit_status;
+#else
+       bb_error_msg_and_die("no support for directory comparison");
+#endif
+\end{verbatim}
+
+The string \texttt{"no support for directory comparison"} only appears if the
+feature \texttt{ENABLE\_FEATURE\_DIFF\_DIR} is not enabled.
+
+Implementing this will be a lot of work and it will likely not be very useful.
+
+\subsection{Feeding information into the tool}
+
+By referencing with information extracted from the standard BusyBox sourcecode
+it is possible to get a far more accurate configuration, because it is known
+which applets use which configuration, unless:
+
+\begin{itemize}
+\item new applets were added to BusyBox
+\item applets use old names, but contain different code
+\end{itemize}
+
+The names of applets that are defined in BusyBox serve as a very good starting
+point. How these are recorded in the sources has changed a few times and
+depends on the version of BusyBox. The tool \texttt{appletname-extractor.py}
+can extract these from the BusyBox sources and store them for later reference
+as a simple lookup table in Python pickle format.
+
+Names of applets per version breakdown:
+
+\begin{itemize}
+\item 1.15.x and later: \texttt{include/applets.h} IF syntax
+\item 1.1.1-1.14.x: \texttt{include/applets.h} USE syntax
+\item 1.00-1.1.0: \texttt{include/applets.h} (different syntax)
+\item 0.60.5 and earlier: \texttt{applets.h}, like 1.00-1.1.0 but with a slightly different syntax
+\end{itemize}
+
+In 1.1.0 there is actually a mix of three different syntaxes: (0.60.5, 1.00 and another) for a few applets (runlevel, watchdog, tr). It takes some extra work to recognize these.
+
+There are also a few applets in 1.1.0 which are a bit harder to detect:
+\texttt{busybox}, \texttt{mkfs.ext3}, \texttt{e3fsck} and \texttt{[[}. These
+could be added by hand, since there are just four of them.
+
+Another issue that is currently unresolved is that not all the shells are correctly recognized.
 
 \end{document}
