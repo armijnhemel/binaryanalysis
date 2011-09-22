@@ -111,13 +111,15 @@ def extract_configuration(lines, busybox, bbconfig):
 				## search through the original binary until we have an exact match
 				## that is surrounded by non-printable characters, which is
 				## exactly how the applet list in BusyBox works (currently)
-				res = extractor.check_nonprintable(lines, offset, keys[pos])
+				#res = extractor.check_nonprintable(lines, offset, keys[pos])
+				res = extractor.check_null(lines, offset, keys[pos])
 				while res == False:
 					offset = lines.find(keys[pos], offset+1)
 					if offset == -1:
 						break
 					else:
-						res = extractor.check_nonprintable(lines, offset, keys[pos])
+						#res = extractor.check_nonprintable(lines, offset, keys[pos])
+						res = extractor.check_null(lines, offset, keys[pos])
 				if offset != -1:
 					results2.append((keys[pos], offset))
 			pos = pos+1
