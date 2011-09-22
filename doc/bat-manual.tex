@@ -698,6 +698,8 @@ more standard mechanisms like \texttt{printk}. Most strings can be extracted
 from the Linux kernel using \texttt{xgettext}. A minority of strings needs to
 be extracted using a custom regular expression.
 
+The following two cases are worth a closer look:
+
 \subsubsection{\texttt{EXPORT\_SYMBOL} and \texttt{EXPORT\_SYMBOL\_GPL}}
 
 The symbols defined in the \texttt{EXPORT\_SYMBOL} and
@@ -711,14 +713,13 @@ under the GPLv2. This is a topic for future research.
 The names of parameters for kernel modules can end up in the kernel, or in the
 kernel module itself. The names of these parameters are typically prefixed
 with the name of the module (which is often, but not always) and a dot, but
-without the extension of the file.
+without the extension of the file. In cases where the module name does not
+match the name of the file it was defined in extra information from the
+build system needs to be added to determine the right string. This is future
+work.
 
 The code for this is in the function \texttt{\_\_init param\_sysfs\_builtin} in
 \texttt{kernel/params.c}.
-
-\subsubsection{\texttt{.attr}}
-
-grep -r 'attr =' * | grep "name ="
 
 \subsection{Duplicate strings}
 
@@ -733,14 +734,15 @@ versions, because they were removed, or not yet included in the mainline
 kernel. A good example is devfs. This subsystem was removed in Linux kernel
 2.6.17, but it is not safe to assume that this was done for every 2.6.17 (or
 later) kernel that is out in the wild, since some vendors might have kept it
-and ported it to newer versions (forward porting).
+and ported it to newer versions (forward porting). Similarly code from newer
+kernels might have been included in older versions
+(backporting).
 
-Similarly some newer functionality from newer kernels might have been included
-in older versions (backporting).
+\subsection{Corner cases}
 
-\subsection{Substring matching}
-
-Sometimes depending on a definition extra strings are printed. To properly detect this we would need substring matching, which is probably too expensive at the moment.
+Sometimes a \texttt{\#define} or some configuration directive causes that our 
+string matching method will not work, because the string is prepended with
+extra characters.
 
 An example from \texttt{arch/arm/mach-sa1100/dma.c} from kernel 2.6.32.9:
 
@@ -755,4 +757,16 @@ An example from \texttt{arch/arm/mach-sa1100/dma.c} from kernel 2.6.32.9:
 
 Other examples include \texttt{pr\_debug}, \texttt{DBG}, \texttt{DPRINTK} and
 \texttt{pr\_info}.
+
+To work around this there are two ways:
+
+\begin{enumerate}
+\item do substring matches
+\item parse the source code and record where extra code is being added as in
+the example above and only do substring matches in a small number of cases.
+\end{enumerate}
+
+Substring matching is expensive and since it only happens in a minority of
+cases the second method, although not trivial to implement, would be easier.
+This is future work.
 \end{document}
