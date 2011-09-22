@@ -7,7 +7,7 @@
 \setlength{\parskip}{4pt}
 
 \author{Armijn Hemel -- Tjaldur Software Governance Solutions}
-\title{Binary Analysis Tool User Manual}
+\title{Binary Analysis Tool User and Developer Manual}
 
 \begin{document}
 
@@ -93,70 +93,6 @@ scans by default. To disable a scan it can be outcommented in the file (by
 starting the line with the \texttt{\#} character), or by removing it from the
 configuration file.
 
-\subsubsection{Blacklisting and priorities}
-
-In BAT blacklists are used to prevent some scans from running on a particular
-byte range, because other scans have already covered these bytes, or will cover
-them.
-
-The most obvious example is the ext2 file system: in a normal setup (no
-encryption) it is trivial to see the content of all the individual files when
-ax ext2 file system image is opened. This is because this file system is
-mostly a concatenation of the data, with some meta data associated with the
-files in the file system.
-
-If another compressed file is in the ext2 file system it could be that it will
-be picked up by BAT twice: once it will be detected inside the ext2 file system
-and once after the file system has been unpacked by the ext2 file system
-unpacker.
-
-Other examples are:
-
-\begin{itemize}
-\item cpio (files are concatenated with a header and a trailer)
-\item tar (files are concatenated with some meta data)
-\item RPM (files are in a compressed archive with some meta data)
-\item ar and DEB
-\item some flavours of cramfs
-\item ubifs
-\end{itemize}
-
-To avoid duplicate scanning and false positives it is therefore necessary to
-prevent other scans from running on the byte range already covered by one of
-these files.
-
-In BAT this is achieved by using blacklists. All unpack scans have a parameter
-called \texttt{blacklist} which is consulted everytime a file is unpacked. If
-a file system offset is in a blacklist the scan could use the next offset, or
-skip scanning the entire file, depending on the scan.
-
-The blacklist is set for every file individually and is initially empty. If a
-scan is successful it adds a byte range to the blacklist. Subsequent scans
-will skip the byte range added by the scan.
-
-The scans are run in a particular order to make the best use of blacklists. The
-order of scans is determined by the \texttt{priority} parameter in the
-configuration file. The file systems and concatenated files mentioned above
-have a higher priority and are scanned earlier than other scans that could also
-give a match. It is not a fool proof system, but it seems to work well enough.
-
-\subsubsection{Pretty printing}
-
-Pretty printing for unpack scans is standardized. For leaf scans there is more
-flexibility. This is needed because in some cases the result as returned by
-the leaf scan needs post processing.
-
-A pretty printer can be defined in the configuration through the directive
-\texttt{xmloutput}. The pretty printer should be in the same module as the
-scanning method defined in the same section. The pretty printer has two
-parameters: a Python datastructure as returned by the scanner (this differs
-per scan) and a XML root element, needed to create new XML nodes. The method is
-expected to return a XML node in case of success, or \texttt{None} in case of
-failure.
-
-If no pretty printer is defined the value as returned by the scan will be used
-as the content of result tag.
-
 \subsubsection{Interpreting the results}
 
 \texttt{bruteforce.py} outputs its results as XML on standard output. After
@@ -226,6 +162,72 @@ file systems
 of SquashFS. These versions have either been lifted from vendor SDKs, the
 OpenWrt project, or upstream SquashFS project.
 \end{itemize}
+
+\section{\texttt{bruteforce.py} internals}
+
+\subsection{Blacklisting and priorities}
+
+In BAT blacklists are used to prevent some scans from running on a particular
+byte range, because other scans have already covered these bytes, or will cover
+them.
+
+The most obvious example is the ext2 file system: in a normal setup (no
+encryption) it is trivial to see the content of all the individual files when
+ax ext2 file system image is opened. This is because this file system is
+mostly a concatenation of the data, with some meta data associated with the
+files in the file system.
+
+If another compressed file is in the ext2 file system it could be that it will
+be picked up by BAT twice: once it will be detected inside the ext2 file system
+and once after the file system has been unpacked by the ext2 file system
+unpacker.
+
+Other examples are:
+
+\begin{itemize}
+\item cpio (files are concatenated with a header and a trailer)
+\item tar (files are concatenated with some meta data)
+\item RPM (files are in a compressed archive with some meta data)
+\item ar and DEB
+\item some flavours of cramfs
+\item ubifs
+\end{itemize}
+
+To avoid duplicate scanning and false positives it is therefore necessary to
+prevent other scans from running on the byte range already covered by one of
+these files.
+
+In BAT this is achieved by using blacklists. All unpack scans have a parameter
+called \texttt{blacklist} which is consulted everytime a file is unpacked. If
+a file system offset is in a blacklist the scan could use the next offset, or
+skip scanning the entire file, depending on the scan.
+
+The blacklist is set for every file individually and is initially empty. If a
+scan is successful it adds a byte range to the blacklist. Subsequent scans
+will skip the byte range added by the scan.
+
+The scans are run in a particular order to make the best use of blacklists. The
+order of scans is determined by the \texttt{priority} parameter in the
+configuration file. The file systems and concatenated files mentioned above
+have a higher priority and are scanned earlier than other scans that could also
+give a match. It is not a fool proof system, but it seems to work well enough.
+
+\subsection{Pretty printing}
+
+Pretty printing for unpack scans is standardized. For leaf scans there is more
+flexibility. This is needed because in some cases the result as returned by
+the leaf scan needs post processing.
+
+A pretty printer can be defined in the configuration through the directive
+\texttt{xmloutput}. The pretty printer should be in the same module as the
+scanning method defined in the same section. The pretty printer has two
+parameters: a Python datastructure as returned by the scanner (this differs
+per scan) and a XML root element, needed to create new XML nodes. The method is
+expected to return a XML node in case of success, or \texttt{None} in case of
+failure.
+
+If no pretty printer is defined the value as returned by the scan will be used
+as the content of result tag.
 
 \section{Binary Analysis Tool knowledgebase}
 
