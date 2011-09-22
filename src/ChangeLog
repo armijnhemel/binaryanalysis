@@ -1,3 +1,10 @@
+2011-09-22
+* add more sections to the user guide
+
+2011-09-21
+* started work on incorporating snippets of documentation into a comprehensive
+user guide, giving it a much needed quality boost as well.
+
 2011-09-20
 * finished SWF unpacking. Right now it is assumed that the entire file is a
 flash file and it's compressed.
