@@ -25,8 +25,8 @@ def extract_printables(lines):
 
 ## check if a word is surrounded by NUL characters
 def check_null(lines, offset, word):
-        if lines[offset-1] == 0x00:
-                if lines[offset+len(word)] == 0x00:
+        if lines[offset-1] == chr(0x00):
+                if lines[offset+len(word)] == chr(0x00):
                         return True
         return False
 
