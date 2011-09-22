@@ -23,6 +23,13 @@ def extract_printables(lines):
                         printables += " "
         return printables
 
+## check if a word is surrounded by NUL characters
+def check_null(lines, offset, word):
+        if lines[offset-1] == 0x00:
+                if lines[offset+len(word)] == 0x00:
+                        return True
+        return False
+
 ## check if a word is surrounded by non-printable characters
 def check_nonprintable(lines, offset, word):
         if lines[offset-1] not in string.printable:
