@@ -671,4 +671,88 @@ could be added by hand, since there are just four of them.
 
 Another issue that is currently unresolved is that not all the shells are correctly recognized.
 
+\section{Linux kernel scripts internals}
+
+\subsection{Extracting visible strings from the Linux kernel binary}
+
+If a kernel is an ELF binary (sometimes) the relevant sections of the
+binary can be read using \texttt{readelf}. Otherwise \texttt{strings} can be
+run on the binary. This method will return more strings than if using
+\texttt{readelf}, but the extra strings are only extra cruft that won't be
+matched.
+
+\subsection{Extracting visible strings from a Linux kernel module}
+
+If a kernel module is an ELF binary (most cases) the relevant sections of the
+binary can be read using \texttt{readelf}. Otherwise \texttt{strings} can be
+run on the binary. This method will return more strings than if using
+\texttt{readelf}, but the extra strings are only extra cruft that won't be
+matched.
+
+\subsection{Extracting strings from the Linux kernel sources}
+
+The Linux kernel is full of strings that can end up in a binary. Some
+programmers have defined macros just specific to their part of the kernel for
+ease of use (often a wrapper around \texttt{printk}, other programmers use
+more standard mechanisms like \texttt{printk}. Most strings can be extracted
+from the Linux kernel using \texttt{xgettext}. A minority of strings needs to
+be extracted using a custom regular expression.
+
+\subsubsection{\texttt{EXPORT\_SYMBOL} and \texttt{EXPORT\_SYMBOL\_GPL}}
+
+The symbols defined in the \texttt{EXPORT\_SYMBOL} and
+\texttt{EXPORT\_SYMBOL\_GPL} macros end up in the kernel image. The
+\texttt{EXPORT\_SYMBOL\_GPL} symbol could be interesting for licensing
+reporting as well, since anything that uses this symbol should be released
+under the GPLv2. This is a topic for future research.
+
+\subsubsection{\texttt{module\_param}}
+
+The names of parameters for kernel modules can end up in the kernel, or in the
+kernel module itself. The names of these parameters are typically prefixed
+with the name of the module (which is often, but not always) and a dot, but
+without the extension of the file.
+
+The code for this is in the function \texttt{\_\_init param\_sysfs\_builtin} in
+\texttt{kernel/params.c}.
+
+\subsubsection{\texttt{.attr}}
+
+grep -r 'attr =' * | grep "name ="
+
+\subsection{Duplicate strings}
+
+The string \texttt{module} is defined by \texttt{sysfs\_remove\_link} and
+\texttt{sysfs\_create\_link}, but also in \texttt{net/core/sock.c}.
+In an ideal situation some extra information would be provided (a kernel configuration for example) so the proper one can be filtered out.
+
+\subsection{Forward porting and back porting}
+
+There are some strings we scan for which might not be present in certain
+versions, because they were removed, or not yet included in the mainline
+kernel. A good example is devfs. This subsystem was removed in Linux kernel
+2.6.17, but it is not safe to assume that this was done for every 2.6.17 (or
+later) kernel that is out in the wild, since some vendors might have kept it
+and ported it to newer versions (forward porting).
+
+Similarly some newer functionality from newer kernels might have been included
+in older versions (backporting).
+
+\subsection{Substring matching}
+
+Sometimes depending on a definition extra strings are printed. To properly detect this we would need substring matching, which is probably too expensive at the moment.
+
+An example from \texttt{arch/arm/mach-sa1100/dma.c} from kernel 2.6.32.9:
+
+\begin{verbatim}
+#undef DEBUG
+#ifdef DEBUG
+#define DPRINTK( s, arg... )  printk( "dma<%p>: " s, regs , ##arg )
+#else
+#define DPRINTK( x... )
+#endif
+\end{verbatim}
+
+Other examples include \texttt{pr\_debug}, \texttt{DBG}, \texttt{DPRINTK} and
+\texttt{pr\_info}.
 \end{document}
