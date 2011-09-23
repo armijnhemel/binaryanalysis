@@ -16,7 +16,7 @@ from optparse import OptionParser
 ##   package-version.extension
 ##   package_version.extension
 ## where extension is tar.gz, tar.bz2, tar.xz, tgz, zip, tbz2, etc.
-def generatelist(filedir):
+def generatelist(filedir, origin):
 	files = os.walk(filedir)
 	try:
         	while True:
@@ -57,7 +57,7 @@ def generatelist(filedir):
 							print >>sys.stderr, "can't split %s -- add manually" % (p,)
 							continue
 				(package, version) = res
-				print "%s\t%s\t%s" % (package, version, p)
+				print "%s\t%s\t%s\t%s" % (package, version, p, origin)
 				
 	except Exception, e:
 		pass
@@ -65,11 +65,16 @@ def generatelist(filedir):
 def main(argv):
 	parser = OptionParser()
 	parser.add_option("-f", "--filedir", action="store", dest="filedir", help="path to directory containing files to unpack", metavar="DIR")
+	parser.add_option("-o", "--origin", action="store", dest="origin", help="origin of packages (default: unknown)", metavar="DIR")
 	(options, args) = parser.parse_args()
 	if options.filedir == None:
 		print >>sys.stderr, "Specify dir with files"
 		sys.exit(1)
-	generatelist(options.filedir)
+	if options.filedir == None:
+		origin = "unknown"
+	else:
+		origin = options.origin
+	generatelist(options.filedir, origin)
 
 if __name__ == "__main__":
 	main(sys.argv)
