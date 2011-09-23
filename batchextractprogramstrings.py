@@ -59,7 +59,6 @@ def unpack(directory, filename):
 
         filemagic = ms.file(os.path.realpath("%s/%s" % (directory, filename)))
 
-	## TODO: add zip and JAR, since many Java projects release sources in one of these formats
         ## Assume if we have bz2 or gzip compressed file we are dealing with compressed tar files
         if 'bzip2 compressed data' in filemagic:
        		tmpdir = tempfile.mkdtemp()
@@ -76,6 +75,18 @@ def unpack(directory, filename):
        			tar.extractall(path=tmpdir)
         		tar.close()
 			return tmpdir
+		except Exception, e:
+			print e
+	elif 'Zip archive data' in filemagic:
+		try:
+       			tmpdir = tempfile.mkdtemp()
+			p = subprocess.Popen(['unzip', "%s/%s" % (directory, filename), '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate()
+			if p.returncode != 0:
+				## TODO: cleanup
+				pass
+			else:
+				return tmpdir
 		except Exception, e:
 			print e
 
