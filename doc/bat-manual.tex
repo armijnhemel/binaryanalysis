@@ -165,7 +165,11 @@ OpenWrt project, or upstream SquashFS project.
 
 \section{\texttt{bruteforce.py} internals}
 
-\subsection{Blacklisting and priorities}
+\subsection{Unpack scans}
+
+\subsubsection{Writing an unpack scan}
+
+\subsubsection{Blacklisting and priorities}
 
 In BAT blacklists are used to prevent some scans from running on a particular
 byte range, because other scans have already covered these bytes, or will cover
@@ -212,7 +216,11 @@ configuration file. The file systems and concatenated files mentioned above
 have a higher priority and are scanned earlier than other scans that could also
 give a match. It is not a fool proof system, but it seems to work well enough.
 
-\subsection{Pretty printing}
+\subsection{Program/leaf scans}
+
+\subsubsection{Writing a leaf scan}
+
+\subsubsection{Pretty printing}
 
 Pretty printing for unpack scans is standardized. For leaf scans there is more
 flexibility. This is needed because in some cases the result as returned by
@@ -352,7 +360,8 @@ The program to extract strings from sourcecode is
 \texttt{generatelist.py}, unpacks the files (currently only \texttt{tar.gz}
 and \texttt{tar.bz2} files, plus variants are supported) and scans each
 individual source code file (at the moment just C/C++ files, assembler files,
-Java/Scala files and ActionScript files) for strings and, if enabled, licenses.
+C\# files, Java/Scala files and ActionScript files) for strings and, if
+enabled, licenses using Ninka and FOSSology.
 
 \texttt{batchextractprogramstrings.py} internally uses \texttt{xgettext} to
 extract all strings between double quotes from source code. These are the
@@ -399,7 +408,7 @@ license scanning is enabled it makes sense to have as many packages from the
 same project scanned on the same machine, since coding styles often result in
 identical license statements, which the scanner already takes into account.
 
-\subsection{Enabling the database}
+\subsection{Setting the database}
 
 Currently the database is hardcoded to \texttt{/tmp/master}. It can be changed
 in \texttt{ranking.py} in the following line:
@@ -411,7 +420,31 @@ in \texttt{ranking.py} in the following line:
 In the future it will be possible to set the location of the database in the
 configuration file for \texttt{bruteforce.py}.
 
+\subsection{Enabling the ranking scan}
+
+The ranking scan is configured in the configuration file. In the default
+configuration file it is disabled by default. By uncommenting the entry for the
+scan it can be enabled.
+
+Currently the scan only searches strings that have their type recorded as
+\texttt{C} in the database. This means C and C++ source code and header files,
+as well as assembler files.
+
+Other files, such as Java, are ignored (vice versa, when Java scanning will be
+added in the future everything but Java will be ignored for Java class files).
+The reason for this is that there is usually little code cloning between C and
+Java files, or Java and C\# files (except of course when interpreters and virtual
+machines are embedded, or other language bridges are used). Strings in a Java
+program are unlikely to come directly from a C language. Adding all strings from
+all programs, irrespective of the language they were written in, therefore is
+likely to result in worse matching behaviour.
+
+\subsubsection{Interpreting the results}
+
 \section{BusyBox script internals}
+
+The BusyBox processing scripts look simple, but behind the internals are a bit
+hairy. Especially extracting the correct configuration is not trivial.
 
 \subsection{Detecting BusyBox}
 
@@ -572,6 +605,8 @@ applet that was added appears alphabetically before any of the applets that
 can be recognized using a list of appletnames extracted from the source code,
 or it appears alphabetically after the last one that can be recognized.
 
+The current code is suboptimal and will be rewritten in the near future.
+
 \subsection{Pretty printing a configuration}
 
 Pretty printing a configuration is fairly straightforward, but there are a few
@@ -579,8 +614,11 @@ cases where it is hard to make a good guess:
 
 \begin{enumerate}
 \item aliases
-\item functionality that is added to an applet, depending on a configuration directive
-\item applets that use non-standard configuration names (like \texttt{CONFIG\_APP\_UDHCPD} instead of \texttt{CONFIG\_UDHCPD} in some versions of BusyBox)
+\item functionality that is added to an applet, depending on a configuration
+directive
+\item applets that use non-standard configuration names (like
+\texttt{CONFIG\_APP\_UDHCPD} instead of \texttt{CONFIG\_UDHCPD} in some
+versions of BusyBox)
 \item features
 \end{enumerate}
 
@@ -611,18 +649,16 @@ The above configuration tells to add extra symlinks for \texttt{sha256sum} and
 SHA512 algorithms. The applet that implements this functionality is
 \texttt{md5\_sha1\_sum}.
 
-The configuration extraction as currently implemented will not always get all the right configuration for these applets, unless we implement extracting the configuration as a multi way pass: first extract the configuration the way we do now, then search for the names of all the symlinks we have using one of the applets whose name we have been able to extract, then see which names have been recorded into the binary and extract those.
-
-The problem described in 3. can be fixed by adding more information to the tool. This would be done by extracting configuration information from the original busybox sources and generate a lookup table. This will not work if custom applets have been added to busybox.
-
-The information for 2 and 3 can also be found in a configured source code tree by looking at \texttt{include/applet\_tables.h}.
+Non-standard configuration names can be fixed by using a translation table that
+translates to the non-standard name. The current code has a translation table
+for BusyBox 1.15 and higher.
 
 Detecting features is really hard to do in a generic way. In most cases it will
 even be impossible, because there are no clear markers (strings, applet names)
 in the binary that indicate that a certain feature is enabled. In cases there
 are clear marker strings these would still need to be linked to specific
 features. One possibility would be to parse the BusyBox sources and link
-strings to features, for example (from busybox 1.15.3,
+strings to features, for example (from BusyBox 1.15.3,
 \texttt{editors/diff.c}):
 
 \begin{verbatim}
@@ -662,16 +698,20 @@ Names of applets per version breakdown:
 \item 1.15.x and later: \texttt{include/applets.h} IF syntax
 \item 1.1.1-1.14.x: \texttt{include/applets.h} USE syntax
 \item 1.00-1.1.0: \texttt{include/applets.h} (different syntax)
-\item 0.60.5 and earlier: \texttt{applets.h}, like 1.00-1.1.0 but with a slightly different syntax
+\item 0.60.5 and earlier: \texttt{applets.h}, like 1.00-1.1.0 but with a
+slightly different syntax
 \end{itemize}
 
-In 1.1.0 there is actually a mix of three different syntaxes: (0.60.5, 1.00 and another) for a few applets (runlevel, watchdog, tr). It takes some extra work to recognize these.
+In one particular version of BusyBox (namely 1.1.0) there is a mix of three
+different syntaxes: (0.60.5, 1.00 and another) for a few applets
+(\texttt{runlevel}, \texttt{watchdog}, \texttt{tr}).
 
-There are also a few applets in 1.1.0 which are a bit harder to detect:
+There are also a few applets in 1.1.0 which seem to be a bit harder to detect:
 \texttt{busybox}, \texttt{mkfs.ext3}, \texttt{e3fsck} and \texttt{[[}. These
-could be added by hand, since there are just four of them.
+can easily be added by hand, since there are just four of them.
 
-Another issue that is currently unresolved is that not all the shells are correctly recognized.
+Another issue that is currently unresolved is that not all the shells are
+correctly recognized.
 
 \section{Linux kernel scripts internals}
 
@@ -722,12 +762,6 @@ work.
 
 The code for this is in the function \texttt{\_\_init param\_sysfs\_builtin} in
 \texttt{kernel/params.c}.
-
-\subsection{Duplicate strings}
-
-The string \texttt{module} is defined by \texttt{sysfs\_remove\_link} and
-\texttt{sysfs\_create\_link}, but also in \texttt{net/core/sock.c}.
-In an ideal situation some extra information would be provided (a kernel configuration for example) so the proper one can be filtered out.
 
 \subsection{Forward porting and back porting}
 
