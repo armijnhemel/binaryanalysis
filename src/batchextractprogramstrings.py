@@ -208,7 +208,7 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 								if ninkasplit[0] == '':
 									print >>sys.stderr, "NINKA     %s/%s" % (i[0],p), "UNKNOWN"
 									cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "ninka", "594d5e4"))
-									cursor.execute('''insert into ninkacomments (sha256, license, scanner, version) values (?,?,?,?)''', (commentshash, license, "ninka", "594d5e4"))
+									cursor.execute('''insert into ninkacomments (sha256, license, scanner, version) values (?,?,?,?)''', (commentshash, "UNKNOWN", "ninka", "594d5e4"))
 								else:
 									licenses = ninkasplit[0].split(',')
 									for license in licenses:
