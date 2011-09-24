@@ -205,15 +205,28 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 								## filter out the licenses we can't determine.
 								## We actually should run these through FOSSology to try and obtain a match.
 								if ninkasplit[0] == '':
-									print >>sys.stderr, "%s/%s" % (i[0],p), "UNKNOWN"
+									print >>sys.stderr, "NINKA     %s/%s" % (i[0],p), "UNKNOWN"
 									cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "ninka", "594d5e4"))
 									cursor.execute('''insert into ninkacomments (sha256, license, scanner, version) values (?,?,?,?)''', (commentshash, license, "ninka", "594d5e4"))
 								else:
 									licenses = ninkasplit[0].split(',')
 									for license in licenses:
-										print >>sys.stderr, "%s/%s" % (i[0],p), license
+										print >>sys.stderr, "NINKA     %s/%s" % (i[0],p), license
 										cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "ninka", "594d5e4"))
 										cursor.execute('''insert into ninkacomments (sha256, license, scanner, version) values (?,?,?,?)''', (commentshash, license, "ninka", "594d5e4"))
+								## Also run FOSSology
+								## this requires that the user has enough privileges to actually connect to the FOSSology database!
+								p2 = subprocess.Popen(["/usr/lib/fossology/agents/nomos", "%s/%s" % (i[0], p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+                                				(stanout, stanerr) = p2.communicate()
+								if "FATAL" in stanout:
+									pass
+								else:
+									fossysplit = stanout.strip().rsplit(" ", 1)
+									licenses = fossysplit[-1].split(',')
+									for license in licenses:
+										print >>sys.stderr, "FOSSOLOGY %s/%s" % (i[0],p), license
+										cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "nomos", "1.4.0"))
+								print >> sys.stderr
 						sqlres = extractsourcestrings(p, i[0], package, version, srcdirlen)
 						for res in sqlres:
 							(pstring, linenumber) = res
