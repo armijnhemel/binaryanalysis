@@ -220,11 +220,62 @@ give a match. It is not a fool proof system, but it seems to work well enough.
 
 \subsubsection{Writing a leaf scan}
 
+The program/leaf scans have a simple interface. There are two parameters
+passed down, namely the absolute path of the file, plus an optional blacklist
+with byte ranges that should not be scanned. For example:
+
+\begin{verbatim}
+def programScan(path, blacklist=[]):
+        ## code goes here
+\end{verbatim}
+
+There are no restrictions on the return values of the program/leaf scan, except
+when nothing could be found. The result values are:
+
+\begin{itemize}
+\item \texttt{None} if nothing can be found
+\item simple values (booleans, strings)
+\item custom data structure, but a custom pretty printer has to be added
+\end{itemize}
+
+There is no restriction for the code that is run. In BAT there are currently
+checks that invoke other programs to discover dynamically linked libraries,
+find the license of a kernel module as declared by certain macros during the
+build process of the module, or simple checks for the presence of strings in
+the binary that indicate the use of certain software.
+
+The simple checks scan for hardcoded strings. These strings are frequently
+found just in the package for which the check is written for. For example,
+these strings can often be found in copies of the \texttt{iptables} program and
+the related \texttt{libiptc} library:
+
+\begin{verbatim}
+markerStrings =
+     [ 'iptables who? (do you need to insmod?)'
+     , 'Will be implemented real soon.  I promise ;)'
+     , 'can\'t initialize iptables table `%s\': \%s'
+     ]
+\end{verbatim}
+
+Although this is very fast, this method has some drawbacks:
+
+\begin{itemize}
+\item a program sometimes does not have these exact strings embedded in the
+binary
+\item this method will only find the strings that are hardcoded and not any
+other significant strings
+\item if another package includes the string, there is a false positive
+\end{itemize}
+
+The quick checks should therefore only be used as an indication that further
+inspection of the binary is needed. A much better method is the ranking method
+that is also available in BAT, but which is not as fast.
+
 \subsubsection{Pretty printing}
 
-Pretty printing for unpack scans is standardized. For leaf scans there is more
-flexibility. This is needed because in some cases the result as returned by
-the leaf scan needs post processing.
+Pretty printing for unpack scans is standardized but for leaf scans there is
+more flexibility. This is needed because in some cases the result as returned
+by the leaf scan needs post processing.
 
 A pretty printer can be defined in the configuration through the directive
 \texttt{xmloutput}. The pretty printer should be in the same module as the
