@@ -1,9 +1,12 @@
+2011-09-25
+* add more documentation to the user guide
+
 2011-09-24
 * update version of Ninka that's used, also scan with FOSSology by default.
 * scan .qml files and treat them as C
 
 2011-09-23
-* unpack ZIP files for batchextractprogramstrings.py
+* add unpack ZIP files to batchextractprogramstrings.py
 
 2011-09-22
 * add more sections to the user guide
