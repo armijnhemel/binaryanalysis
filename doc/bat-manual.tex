@@ -16,7 +16,8 @@
 
 \section{Introducing the Binary Analysis Tool}
 
-The Binary Analysis Tool (BAT) is a tool that 
+The Binary Analysis Tool (BAT) is a tool that can help developers and companies
+check binary files by unpacking opaque binary objects
 
 \subsection{Software requirements}
 
@@ -35,7 +36,11 @@ invest in more memory and faster disks (SSD) than in raw CPU power.
 
 \section{Design of the Binary Analysis Tool}
 
-BAT consists of several scripts written in Python.
+BAT consists of several scripts written in Python. The most important program
+is the scanner for binary objects, but there are also a few other programs to
+help with specific tasks, such as verifying if configurations for the BusyBox
+binary match a given binary and a very experimental program to help scan
+Linux kernel image and derive a configuration from it.
 
 \subsection{\texttt{bruteforce.py}}
 
@@ -152,8 +157,8 @@ The XML file starts with metadata, such as:
 the file system, which is useful for later analysis
 \end{itemize}
 
-If any of the scans were successful the results of the individual scans will
-be included in the element \texttt{scans}.
+If any of the scans were successful the results of the individual scans can
+be found in the element \texttt{scans}.
 
 For each unpacking scans the following attributes are reported:
 
@@ -209,6 +214,8 @@ After extracting the configuration ...
 python busybox-compare-configs.py -e /path/to/saved/config
     -f /path/to/vendor/configuration -n $version
 \end{verbatim}
+
+\subsection{\texttt{extractkernelstrings.py}, \texttt{extractkernelconfig.py} and \texttt{findkernelstrings.py}}
 
 \section{Binary Analysis Tool extratools collection}
 
