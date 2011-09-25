@@ -191,8 +191,8 @@ configuration from the binary and print it in the right format (which
 depends on the BusyBox version).
 
 \texttt{busybox.py} is used to extract the configuration from a binary.
-Afterwards \texttt{busybox-compare-configs.py} is used to compare the extracted
-configuration with a vendor supplied configuration.
+Afterwards \texttt{busybox-compare-configs.py} can be used to compare the
+extracted configuration with a vendor supplied configuration.
 
 \subsubsection{Extracting a configuration from BusyBox}
 
@@ -201,7 +201,7 @@ Extracting a configuration from a BusyBox executable is done using
 two commandline parameters: the path to the binary and the path to a directory
 containing a directory \texttt{configs} which has files containing mappings
 from BusyBox applet names to BusyBox configuration directives. By default this
-value is set to \texttt{/etc/bat}, but this might change in the future.
+value is hardcoded as \texttt{/etc/bat}, but this might change in the future.
 
 \begin{verbatim}
 python bat/busybox.py -b /path/to/busybox/binary -c
@@ -658,7 +658,7 @@ Detecting if a binary is indeed BusyBox is trivial, since in a BusyBox binary
 there are almost always clear indication strings if BusyBox is used (unless
 they it was specifically altered to hide the use of BusyBox).
 
-A significant string to look for is:
+A significant set of strings to look for is:
 
 \begin{verbatim}
         BusyBox is a multi-call binary that combines many common Unix
@@ -938,6 +938,17 @@ The configuration will be written to a file \texttt{\$VERSION-config} and
 should be moved into the directory containing the other configurations.
 
 \section{Linux kernel scripts internals}
+
+The Linux kernel processing scripts are at the moment still very experimental.
+This is because there are a few challenges when working with Linux kernel
+source code and Linux kernel binaries. Because there are so many variants of
+the Linux kernel plus associated kernel drivers floating around (vendor
+versions, specific hardware ports, out of tree kernel drivers, etcetera) it is
+difficult to do a really good job.
+
+Although the scripts are right now doing a ``good enough'' job for core Linux
+kernel functionality, it will take a few more iterations to declare it fit for
+production use.
 
 \subsection{Extracting visible strings from the Linux kernel binary}
 
