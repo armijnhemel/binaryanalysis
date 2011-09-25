@@ -17,7 +17,15 @@
 \section{Introducing the Binary Analysis Tool}
 
 The Binary Analysis Tool (BAT) is a tool that can help developers and companies
-check binary files by unpacking opaque binary objects
+check binary files. Its main application right now is for Open Source software
+license compliance.
+
+BAT consists of several scripts written in Python. The most important program
+is the scanner for binary objects to detect the presence of Open Source
+software inside binaries, but there are also a few other programs to help with
+specific tasks, such as verifying if configurations for the BusyBox binary
+match a given binary and a very experimental program to help scan Linux kernel
+images and derive a Linux kernel configuration from them.
 
 \subsection{Software requirements}
 
@@ -34,13 +42,10 @@ The tools in the Binary Analysis Tool can be quite resource intensive. Most of
 the tools seem to be memorybound and I/O-bound, so it makes more sense to
 invest in more memory and faster disks (SSD) than in raw CPU power.
 
-\section{Design of the Binary Analysis Tool}
+\section{Using the programs in the Binary Analysis Tool}
 
-BAT consists of several scripts written in Python. The most important program
-is the scanner for binary objects, but there are also a few other programs to
-help with specific tasks, such as verifying if configurations for the BusyBox
-binary match a given binary and a very experimental program to help scan
-Linux kernel image and derive a configuration from it.
+BAT consists of several programs. Most of these are only helper scripts and
+there are just a few programs that are meant to be directly used.
 
 \subsection{\texttt{bruteforce.py}}
 
@@ -170,8 +175,8 @@ configuration file)
 
 \subsection{\texttt{busybox.py} and \texttt{busybox-compare-configs.py}}
 
-Two other tools in BAT are \texttt{busybox.py} (in the subdirectory
-\texttt{bat}) and \texttt{busybox-compare-configs.py}. These two tools are
+Two other tools in BAT are \texttt{busybox-compare-configs.py} and
+\texttt{busybox.py} (in the subdirectory \texttt{bat}). These two tools are
 specifically used to analyze BusyBox binaries. BusyBox is in widespread use on
 embedded devices and the license on BusyBox is actively enforced in court.
 
@@ -208,14 +213,31 @@ input to \texttt{busybox-compare-configs.py}.
 
 \subsubsection{Comparing two configurations}
 
-After extracting the configuration ...
+After extracting the configuration the extracted configuration can be compared
+to another configuration, for example one supplied by a vendor:
 
 \begin{verbatim}
 python busybox-compare-configs.py -e /path/to/saved/config
     -f /path/to/vendor/configuration -n $version
 \end{verbatim}
 
-\subsection{\texttt{extractkernelstrings.py}, \texttt{extractkernelconfig.py} and \texttt{findkernelstrings.py}}
+\subsection{\texttt{extractkernelstrings.py}, \texttt{extractkernelconfig.py}
+\\and \texttt{findkernelstrings.py}}
+
+The three programs \texttt{extractkernelstrings.py},
+\texttt{extractkernelconfig.py} and \texttt{findkernelstrings.py} are very
+experimental tools to derive a configuration from a Linux kernel image. They
+are far from mature and are not yet ready for production use.
+
+Once they are ready for production use a description for the scripts will be
+included in this manual. A description of the technical uses that need to be
+solved, plus a motivation on why and how to solve them can be found in the
+appendix.
+
+%\subsubsection{\texttt{extractkernelstrings.py}}
+%\subsubsection{\texttt{extractkernelconfig.py}}
+%\subsubsection{\texttt{findkernelstrings.py}}
+
 
 \section{Binary Analysis Tool extratools collection}
 
