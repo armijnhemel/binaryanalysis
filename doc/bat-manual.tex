@@ -16,9 +16,16 @@
 
 \section{Introducing the Binary Analysis Tool}
 
-The Binary Analysis Tool is a tool that 
+The Binary Analysis Tool (BAT) is a tool that 
 
 \subsection{Software requirements}
+
+To run BAT a recent Linux distribution is needed. Development is (currently)
+done on Fedora 14 and Fedora 15, so those platforms are likely to work best.
+Other platforms are only tested on during release time.
+
+If the latest version from version control is used it is important to look at
+\texttt{setup.cfg} to get a list of the latest package dependencies.
 
 \subsection{Hardware requirements}
 
@@ -228,9 +235,62 @@ OpenWrt project, or upstream SquashFS project.
 
 \section{\texttt{bruteforce.py} internals}
 
+The \texttt{bruteforce.py} program processsed binaries: it unpacks files by
+running unpack scans, it runs scans on individual scans with program/leaf
+scans, processes and prettyprints output and performs cleanups, if necessary.
+
+\texttt{bruteforce.py} was written with extensibility in mind: new file systems
+or variants of old ones tend to pop up regularly (there are at least 5 or more
+versions of SquashFS with LZMA compression out there).
+
 \subsection{Unpack scans}
 
+Unpack scans are responsible for recursively unpacking binaries until they
+can't be unpacked any further, before the program/leaf scans are run on the
+files.
+
 \subsubsection{Writing an unpack scan}
+
+The unpack scans have a strict interface:
+
+\begin{verbatim}
+def unpackScan(filename, tempdir=None, blacklist=[], offsets={}):
+        ## code goes here
+\end{verbatim}
+
+The last three parameters are optional, but in practice they are always passed
+by the top level script.
+
+\begin{itemize}
+\item \texttt{tempdir} is the directory into which files and directories for
+unpacking should be created. In case it is \texttt{None} a new temporary
+directory should be created.
+\item \texttt{blacklist} is a list of byte ranges that should not be scanned.
+If the current scan needs to blacklist a byte range it should be added to this
+list.
+\item \texttt{offsets} is a dictionary containing a mapping from an identifier
+to a list of offsets in the file where these identifiers can be found. This
+list is filled by the scan \texttt{genericMarker} which is defined to run as
+the first scan in the configuration.
+\end{itemize}
+
+Most scans have been split in two parts: one part is for searching the
+identifiers, correctly setting up temporary directories and collecting results.
+The other part is doing the actual unpacking of the data and verification
+steps.
+
+The idea behind this split is that sometimes functionality is shared between
+two scans. For example, \texttt{unpackCpio} is used by both
+\texttt{searchUnpackCpio} and \texttt{unpackRPM}.
+
+\subsubsection{Adding an identifier}
+
+Identifiers for new file systems and compressed files are, if available, added
+to \texttt{fsmagic.py} in the directory \texttt{bat}. These identifiers will be
+available in the \texttt{offsets} parameter that is passed to a scan.
+
+Good sources to find identifiers are \texttt{/usr/share/magic}, documentation
+for file systems or compressed files, or the output of \texttt{hexdump -C}.
 
 \subsubsection{Blacklisting and priorities}
 
@@ -282,7 +342,7 @@ give a match. It is not a fool proof system, but it seems to work well enough.
 \subsection{Program/leaf scans}
 
 After everything has been unpacked each file, including the files from which
-other files were carved, will be scanned again ...
+other files were carved, will be scanned again by the program, or leaf, scans.
 
 \subsubsection{Writing a leaf scan}
 
@@ -457,9 +517,9 @@ correctness of the package names. Packages can have been renamed for a number
 of reasons:
 
 \begin{itemize}
-\item upstream projects decided to use a new name for archives (abiword
-archives for example were renamed from \texttt{abi-\$VERSION.tar.gz} to
-\texttt{abiword-\$VERSION.tar.gz}).
+\item upstream projects decided to use a new name for archives (AbiWord
+archives for example were renamed from \texttt{abi-\$VERSION.tar.gz} (used for
+early versions) to \texttt{abiword-\$VERSION.tar.gz}).
 \item a distribution has renamed packages to avoid clashes during installation
 and allow different versions to be installed next to eachother.
 \end{itemize}
@@ -545,7 +605,7 @@ scan it can be enabled.
 
 Currently the scan only searches strings that have their type recorded as
 \texttt{C} in the database. This means C and C++ source code and header files,
-as well as assembler files.
+as well as QML and assembler files.
 
 Other files, such as Java, are ignored (vice versa, when Java scanning will be
 added in the future everything but Java will be ignored for Java class files).
