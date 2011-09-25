@@ -34,12 +34,29 @@ BAT consists of several scripts written in Python.
 
 The main program in BAT is the \texttt{bruteforce.py} tool. It takes a brute
 force approach to scanning a binary and has no prior knowledge of how a binary
-is constructed. Instead it finds out by applying several methods, like
-searching for known identifiers. It then unpacks compressed files, media files
+is constructed or what is inside. Instead it tries to determine what is inside
+by applying several methods (looking for identifiers, running external tools)
+to find contents in the binary. It then unpacks compressed files, media files
 and file systems recursively and finally applies a wide range of individual
-scans to each unpacked file.
+scans to each unpacked file, ranging from discovering dynamically linked
+libraries to an elaborate ranking method to guess which sources were used to
+build a program.
+
+There are two types of scans that are used in BAT: unpack and program/leaf
+scans.
 
 \subsubsection{Unpack scans}
+
+Unpack scans can be recognized in the configuration because their type is set
+to \texttt{unpack}, for example:
+
+\begin{verbatim}
+[jffs2]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackJffs2
+priority = 1
+\end{verbatim}
 
 In BAT currently the following file systems, compressed files and media files
 can be unpacked:
@@ -58,11 +75,14 @@ identifier that can be looked for in a binary blob. Using this information it
 is possible to carve out the right parts of a binary blob and verify if it
 indeed contains a compressed file, media file or file system.
 
-Not all files have a proper identifier. The YAFFS2 file system layout for
-example is dependent on the hardware specifics of the underlying flash chip.
+There is not always a proper identifier available to search for. The YAFFS2
+file system layout for example is dependent on the hardware specifics of the
+underlying flash chip. Without knowing these it is not possible to unpack these
+files.
 
 Other files (such as ARJ and ICO files) have a very generic identifier, so
-there are a lot of false positives, which causes a big increase in runtime.
+there are a lot of false positives. This causes a big increase in runtime.
+These two scans are therefore disabled by default.
 
 \subsubsection{Leaf scans}
 
@@ -70,20 +90,30 @@ Leaf scans, or program scans, are scans that are run on every single file
 that has been unpacked, including files that contained files that were found
 and extracted by unpack scans.
 
+Leaf/program scans can be recognized in the configuration because their type is
+set to \texttt{program}, for example:
+
+\begin{verbatim}
+[iptables]
+type    = program
+module  = bat.checks
+method  = searchIptables
+\end{verbatim}
+
 The current scans that are available in BAT are:
 
 \begin{itemize}
-\item fast string searches: BusyBox, dproxy, ez-ipupdate, iptables, iproute,
-libusb, Linux kernel, loadlin, RedBoot, U-Boot, vsftpd, wireless-tools,
-wpa-supplicant
-\item advanced search mode using ranking (described in detail later)
+\item fast string searches: dproxy, ez-ipupdate, iptables, iproute, libusb,
+Linux kernel, loadlin, RedBoot, U-Boot, vsftpd, wireless-tools, wpa-supplicant
+\item advanced search mode using ranking and a large database
+\item BusyBox version number
 \item dynamic library dependencies (ELF files only)
 \item Linux kernel module license (Linux kernel modules only)
 \end{itemize}
 
-The fast string searches are meant for quick sweep scanning. These scans work
-by scanning for a few well known marker strings that can be found in the
-respective packages. They will not always match, but they are useful ..
+The fast string searches are meant for quick sweep scanning only. They have
+their limits, can report false positives or miss finding a program. They should
+only be used to signal that further inspection is necessary.
 
 \subsubsection{Enabling and disabling scans}
 
@@ -126,13 +156,14 @@ configuration file)
 \item offset in the parent file of the compressed file or file system
 \end{itemize}
 
-\subsection{\texttt{busybox-compare-configs.py}}
+\subsection{\texttt{busybox.py} and \texttt{busybox-compare-configs.py}}
 
-Another tool in BAT is \texttt{busybox-compare-configs.py} which is specifically
-used to analyze BusyBox binaries. BusyBox is in widespread use on embedded
-devices and the license on BusyBox is actively enforced.
+Two other tools in BAT are \texttt{busybox.py} (in the subdirectory
+\texttt{bat}) and \texttt{busybox-compare-configs.py}. These two tools are
+specifically used to analyze BusyBox binaries. BusyBox is in widespread use on
+embedded devices and the license on BusyBox is actively enforced in court.
 
-The BusyBox binaries on these machines often have different configurations,
+BusyBox binaries on embedded machines often have different configurations,
 depending on the needs of the manufacturer. Since providing the correct
 configuration is one of the requirements for license compliance it is important
 to be able to determine the configuration of a BusyBox binary and verify that
@@ -141,6 +172,36 @@ there is a corresponding configuration file in the source code release.
 The BusyBox processing tools in BAT try to extract the most likely
 configuration from the binary and print it in the right format (which
 depends on the BusyBox version).
+
+\texttt{busybox.py} is used to extract the configuration from a binary.
+Afterwards \texttt{busybox-compare-configs.py} is used to compare the extracted
+configuration with a vendor supplied configuration.
+
+\subsubsection{Extracting a configuration from BusyBox}
+
+Extracting a configuration from a BusyBox executable is done using
+\texttt{busybox.py} which can be found in the \texttt{bat} directory. It needs
+two commandline parameters: the path to the binary and the path to a directory
+containing a directory \texttt{configs} which has files containing mappings
+from BusyBox applet names to BusyBox configuration directives. By default this
+value is set to \texttt{/etc/bat}, but this might change in the future.
+
+\begin{verbatim}
+python bat/busybox.py -b /path/to/busybox/binary -c
+     /path/to/pre/extracted/configs > /path/to/saved/config
+\end{verbatim}
+
+This command will save the configuration to a file, which can be used as an
+input to \texttt{busybox-compare-configs.py}.
+
+\subsubsection{Comparing two configurations}
+
+After extracting the configuration ...
+
+\begin{verbatim}
+python busybox-compare-configs.py -e /path/to/saved/config
+    -f /path/to/vendor/configuration -n $version
+\end{verbatim}
 
 \section{Binary Analysis Tool extratools collection}
 
@@ -219,6 +280,9 @@ have a higher priority and are scanned earlier than other scans that could also
 give a match. It is not a fool proof system, but it seems to work well enough.
 
 \subsection{Program/leaf scans}
+
+After everything has been unpacked each file, including the files from which
+other files were carved, will be scanned again ...
 
 \subsubsection{Writing a leaf scan}
 
@@ -655,7 +719,7 @@ and separated by NUL characters.
 By searching for this list and splitting it accordingly it is possible to get
 the list of all applets that are defined. The only caveats are that a new
 applet that was added appears alphabetically before any of the applets that
-can be recognized using a list of appletnames extracted from the source code,
+can be recognized using a list of applet names extracted from the source code,
 or it appears alphabetically after the last one that can be recognized.
 
 The current code is suboptimal and will be rewritten in the near future.
@@ -765,6 +829,24 @@ can easily be added by hand, since there are just four of them.
 
 Another issue that is currently unresolved is that not all the shells are
 correctly recognized.
+
+\subsection{Extracting configurations from BusyBox sourcecode}
+
+The \texttt{busybox.py} script makes use of a table that maps applet names to
+configuration directives. These tables are stored in a Python pickle and read
+by \texttt{busybox.py} upon startup. To generate these pickle files the
+\texttt{appletname-extractor.py} should be used. In the standard distribution
+for BAT the configurations for most versions of BusyBox are shipped.
+
+The applet names are extracted from a file called \texttt{applets.h} or
+\texttt{applets.src.h}.
+
+\begin{verbatim}
+python appletname-extractor.py -a /path/to/applets.h -n $VERSION
+\end{verbatim}
+
+The configuration will be written to a file \texttt{\$VERSION-config} and
+should be moved into the directory containing the other configurations.
 
 \section{Linux kernel scripts internals}
 
