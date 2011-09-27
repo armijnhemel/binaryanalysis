@@ -166,6 +166,7 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 				p_nocase = p.lower()
 				for extension in extensions.keys():
 					if (p_nocase.endswith(extension)):
+						## TODO skip if file type is "AppleDouble encoded Macintosh file"
 						scanfile = open("%s/%s" % (i[0], p), 'r')
 						h = hashlib.new('sha256')
 						h.update(scanfile.read())
