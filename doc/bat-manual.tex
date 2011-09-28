@@ -18,7 +18,8 @@
 
 The Binary Analysis Tool (BAT) is a tool that can help developers and companies
 check binary files. Its main application right now is for Open Source software
-license compliance.
+license compliance, with a special focus on supply chain management in consumer
+electronics.
 
 BAT consists of several scripts written in Python. The most important program
 is the scanner for binary objects to detect the presence of Open Source
@@ -31,7 +32,7 @@ images and derive a Linux kernel configuration from them.
 
 To run BAT a recent Linux distribution is needed. Development is (currently)
 done on Fedora 14 and Fedora 15, so those platforms are likely to work best.
-Other platforms are only tested on during release time.
+Other platforms are tested with, but only around release time.
 
 If the latest version from version control is used it is important to look at
 \texttt{setup.cfg} to get a list of the latest package dependencies.
@@ -40,12 +41,15 @@ If the latest version from version control is used it is important to look at
 
 The tools in the Binary Analysis Tool can be quite resource intensive. Most of
 the tools seem to be memorybound and I/O-bound, so it makes more sense to
-invest in more memory and faster disks (SSD) than in raw CPU power.
+focus on more memory and faster disks (SSD) than on raw CPU power.
 
 \section{Using the programs in the Binary Analysis Tool}
 
-BAT consists of several programs. Most of these are only helper scripts and
-there are just a few programs that are meant to be directly used.
+BAT consists of several programs. Most of these programs are only helper scripts
+and there are just a few programs that are meant to be directly used.
+
+The main programs are \texttt{bruteforce.py},
+\texttt{busybox-compare-configs.py} and \texttt{busybox.py}
 
 \subsection{\texttt{bruteforce.py}}
 
@@ -59,8 +63,7 @@ scans to each unpacked file, ranging from discovering dynamically linked
 libraries to an elaborate ranking method to guess which sources were used to
 build a program.
 
-There are two types of scans that are used in BAT: unpack and program/leaf
-scans.
+There are two types of scans: unpack and program/leaf scans.
 
 \subsubsection{Unpack scans}
 
@@ -75,8 +78,8 @@ method  = searchUnpackJffs2
 priority = 1
 \end{verbatim}
 
-In BAT currently the following file systems, compressed files and media files
-can be unpacked:
+Currently the following file systems, compressed files and media files can be
+unpacked:
 
 \begin{itemize}
 \item file systems: cramfs, ext2/ext3/ext4, ISO9660, JFFS2, SquashFS (specific
