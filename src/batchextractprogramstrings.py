@@ -404,7 +404,7 @@ def main(argv):
 
 		## Store the comments extracted by Ninka per checksum.
 		c.execute('''create table ninkacomments (sha256 text, license text, scanner text, version text)''')
-		c.execute('''create index comments_index on licenses(sha256);''')
+		c.execute('''create index comments_index on ninkacomments(sha256);''')
 		conn.commit()
 	except Exception, e:
 		print >>sys.stderr, e
