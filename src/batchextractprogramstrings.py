@@ -399,12 +399,12 @@ def main(argv):
 		c.execute('''create index extracted_hash on extracted_file(sha256)''')
 
 		## Store the extracted licenses per checksum.
-		c.execute('''create table licenses (sha256 text, license text, scanner, version)''')
-                c.execute('''create index license_index on licenses(sha256);''')
+		c.execute('''create table licenses (sha256 text, license text, scanner text, version text)''')
+		c.execute('''create index license_index on licenses(sha256);''')
 
 		## Store the comments extracted by Ninka per checksum.
-		c.execute('''create table ninkacomments (sha256 text, license text, scanner, version)''')
-                c.execute('''create index comments_index on licenses(sha256);''')
+		c.execute('''create table ninkacomments (sha256 text, license text, scanner text, version text)''')
+		c.execute('''create index comments_index on licenses(sha256);''')
 		conn.commit()
 	except Exception, e:
 		print >>sys.stderr, e
