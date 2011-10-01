@@ -642,13 +642,143 @@ as well as QML and assembler files.
 Other files, such as Java, are ignored (vice versa, when Java scanning will be
 added in the future everything but Java will be ignored for Java class files).
 The reason for this is that there is usually little code cloning between C and
-Java files, or Java and C\# files (except of course when interpreters and virtual
-machines are embedded, or other language bridges are used). Strings in a Java
-program are unlikely to come directly from a C language. Adding all strings from
-all programs, irrespective of the language they were written in, therefore is
-likely to result in worse matching behaviour.
+Java files, or Java and C\# files (except of course when interpreters and
+virtual machines are embedded, or other language bridges are used). Strings in
+a Java program are unlikely to come directly from a C language. Adding all
+strings from all programs, irrespective of the language they were written in,
+therefore is likely to result in worse matching behaviour.
 
 \subsubsection{Interpreting the results}
+
+The results of the scan can be found in the element \texttt{<ranking>}. In
+this element the following can be found:
+
+\begin{itemize}
+\item number of lines that were extracted from the binary
+\item number of lines that could be matched exactly with an entry in the
+database
+\item result per package which are a possible match
+\end{itemize}
+
+Per package the following is reported:
+
+\begin{itemize}
+\item name of the package
+\item all unique matches (strings that can only be found in this package)
+\item relative ranking
+\item percentage of the total score
+\end{itemize}
+
+For example, take the results of a run on a BusyBox binary:
+
+\begin{verbatim}
+<ranking>
+  <matchedlines>1314</matchedlines>
+  <extractedlines>3147</extractedlines>
+  <package>
+    <name>busybox</name>
+    <uniquematches>
+        <unique>%d heads, %d sectors/track, %d cylinders</unique>
+        ...
+    </uniquematches>
+    <rank>1</rank>
+    <percentage>98.3386895181</percentage>
+  </package>
+  ...
+</ranking>
+\end{verbatim}
+
+About 98\% of the total score was for BusyBox, so it is a clear match. In
+programs were two or more packages are embedded percentages will be distributed
+in a different, more uniform, way.
+
+\subsection{Database design}
+
+The database currently has 5 tables:
+
+\begin{itemize}
+\item \texttt{processed}
+\item \texttt{processed\_file}
+\item \texttt{extracted\_file}
+\item \texttt{licenses}
+\item \texttt{ninkacomments}
+\end{itemize}
+
+\subsubsection{\texttt{processed} table}
+
+This table is to keep track of which versions of which packages were scanned.
+Its only purpose is to avoid scanning packages multiple times. It is not
+actively used in the ranking code.
+
+It has the following fields:
+
+\begin{itemize}
+\item name of the package
+\item version of the package
+\item name of the archive that was processed
+\item sha256 of the archive that was processed
+\end{itemize}
+
+\subsubsection{\texttt{processed} table}
+This table contains information about of individual source code files that were
+scanned.
+
+It has the following fields:
+
+\begin{itemize}
+\item name of the package the file is from
+\item version of the package the file is from
+\item relative path inside the source code archive
+\item sha256 of the file
+\end{itemize}
+
+\subsubsection{\texttt{processed} table}
+This table stores the individual strings that were extracted from files and
+that could possibly end up in binaries.
+
+It has the following fields:
+
+\begin{itemize}
+\item string that was extracted
+\item sha256 of file the string was extracted from
+\item language of the source code file
+\item line number where the extracted string can be found in the source code
+file, or $0$ if unknown. This information is determined using
+\texttt{xgettext}.
+\end{itemize}
+
+\subsubsection{\texttt{licenses} table}
+
+This table stores the licenses that were extracted from files using a source
+code scanner, like Ninka or FOSSology. If a file has more than one licenses
+there will be multiple rows for a file. It has these fields:
+
+\begin{itemize}
+\item sha256 checksum of file
+\item license as found by the scanner
+\item scanner name. Currently only Ninka and FOSSology are used. Of course, the
+scanner could also be a person doing a manual review.
+\item version of scanner. This is useful if there is for example a bug in a
+scanner, or to compare results from various versions.
+\end{itemize}
+
+\subsubsection{\texttt{ninkacomments} table}
+
+This is a helper table that keeps track of which licenses were associated with
+a file header as extracted by Ninka. Ninka determines licenses by looking at
+just the header of the file. Since the headers in a single program are often
+similar it is possible to get some speed improvements by first determining if a
+header has already been scanned.
+
+It has the following fields:
+
+\begin{itemize}
+\item sha256 of the header as extracted by Ninka. Ninka stores these in
+separate files.
+\item license as found by Ninka
+\item name of the scanner (hardcoded to 'Ninka')
+\item version of Ninka
+\end{itemize}
 
 \section{BusyBox script internals}
 
