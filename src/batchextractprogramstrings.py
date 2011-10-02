@@ -397,6 +397,7 @@ def main(argv):
 		c.execute('''create table extracted_file (programstring text, sha256 text, language text, linenumber int)''')
 		c.execute('''create index programstring_index on extracted_file(programstring)''')
 		c.execute('''create index extracted_hash on extracted_file(sha256)''')
+		c.execute('''create index extracted_language on extracted_file(language);''')
 
 		## Store the extracted licenses per checksum.
 		c.execute('''create table licenses (sha256 text, license text, scanner text, version text)''')
