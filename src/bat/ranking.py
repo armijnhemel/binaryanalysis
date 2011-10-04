@@ -453,7 +453,7 @@ def xmlprettyprint(res, root):
 		tmpnodetext = root.createElement('name')
 		namenode = xml.dom.minidom.Text()
 		namenode.data = name
-		packagenode.appendChild(namenode)
+		tmpnodetext.appendChild(namenode)
 		packagenode.appendChild(tmpnodetext)
 
 		## add unique matches, if any
