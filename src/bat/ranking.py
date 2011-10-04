@@ -120,7 +120,7 @@ def searchGeneric(path, blacklist=[], offsets={}):
 				## that are a certain amount of characters or longer. This is
 				## configurable through "stringcutoff" although the gain will be relatively
 				## low by also scanning strings < 5.
-				p = subprocess.Popen(['strings', '-n', stringcutoff, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+				p = subprocess.Popen(['strings', '-n', str(stringcutoff), scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				if p.returncode != 0:
 					if blacklist != []:
@@ -208,7 +208,11 @@ def extractGeneric(lines, path, language='C'):
                 if line == "": continue
 		res = conn.execute('''select package, version, filename FROM stringscache.stringscache WHERE programstring=? AND language=?''', (line,'C')).fetchall()
 		if len(res) == 0:
-			res = conn.execute('''select p.package, p.version, p.filename FROM processed_file p JOIN extracted_file e on p.sha256 = e.sha256 WHERE programstring=? AND language=?''', (line,'C')).fetchall()
+			## do we actually have a result?
+			checkres = conn.execute('''select programstring from extracted_file WHERE programstring=? LIMIT 1''', (line,)).fetchall()
+			if len(checkres) != 0:
+				res = conn.execute('''select p.package, p.version, p.filename FROM processed_file p JOIN extracted_file e on p.sha256 = e.sha256 WHERE programstring=? AND language=?''', (line,'C')).fetchall()
+			else: res = []
 			newmatch = True
 
 		if len(res) != 0:
