@@ -75,9 +75,12 @@ def searchGeneric(path, blacklist=[], offsets={}):
 			## For ELF binaries we can concentrate on just a few sections of the
 			## binary namely the .rodata and .data sections and the dynamic
 			## symbols.
+			## DO NOT USE: readelf -p sometimes transforms tabs to spaces, which
+			## makes our algorithm fail.
 			## We only consider full binaries, not binaries that have parts carved
 			## out of them because of blacklists
-        		if "ELF" in mstype and blacklist == []:
+        		#if "ELF" in mstype and blacklist == []:
+        		if "DONTUSE" in mstype and blacklist == []:
 				for i in [".rodata", ".data"]:
         				p = subprocess.Popen(['readelf', '-p', i, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 
@@ -239,7 +242,6 @@ def extractGeneric(lines, path, language='C'):
 			newmatch = False
 		else:
 			print >>sys.stderr, "no matches found for <(|%s|)> in %s" % (line, path)
-			continue
 		lines.remove(line)
 
 	print >>sys.stderr, "matchedlines: %d for %s" % (matchedlines, path)
