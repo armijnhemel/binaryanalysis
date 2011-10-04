@@ -101,7 +101,7 @@ def searchGeneric(path, blacklist=[], offsets={}):
                         				lines.append(printstring)
 
 				## sometimes we can extract useful information from the dynamic symbols
-			 	= subprocess.Popen(['readelf', '--dyn-syms', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			 	p = subprocess.Popen(['readelf', '--dyn-syms', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				st = stanout.split("\n")
 
@@ -444,8 +444,10 @@ def xmlprettyprint(res, root):
 
 		## add package name
 		packagenode = root.createElement('package')
-		tmpnodetext = xml.dom.minidom.Text()
-		tmpnodetext.data = name
+		tmpnodetext = root.createElement('name')
+		namenode = xml.dom.minidom.Text()
+		namenode.data = name
+		packagenode.appendChild(namenode)
 		packagenode.appendChild(tmpnodetext)
 
 		## add unique matches, if any
@@ -457,12 +459,12 @@ def xmlprettyprint(res, root):
 				tmpnodetext.data = match
 				matchnode.appendChild(tmpnodetext)
 				uniquenode.appendChild(matchnode)
-			packagenode.appendChild(uniquenode)
 			countnode = root.createElement('uniquecount')
 			tmpnodetext = xml.dom.minidom.Text()
 			tmpnodetext.data = len(uniqueMatches)
 			countnode.appendChild(tmpnodetext)
 			uniquenode.appendChild(countnode)
+			packagenode.appendChild(uniquenode)
 
 		## add rank
 		ranknode = root.createElement('rank')
