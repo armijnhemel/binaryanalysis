@@ -82,7 +82,7 @@ def searchGeneric(path, blacklist=[], offsets={}):
         				p = subprocess.Popen(['readelf', '-p', i, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 
 					## run strings to get rid of weird characters that we don't even want to scan
-        				p2 = subprocess.Popen(['strings', '-n', stringcutoff], stdin=p.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+        				p2 = subprocess.Popen(['strings', '-n', str(stringcutoff)], stdin=p.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         				(stanout, stanerr) = p2.communicate()
 
         				st = stanout.split("\n")
