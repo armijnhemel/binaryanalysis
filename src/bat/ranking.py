@@ -209,12 +209,12 @@ def extractGeneric(lines, path, language='C'):
 		newmatch = False
 		## skip empty lines
                 if line == "": continue
-		res = conn.execute('''select package, version, filename FROM stringscache.stringscache WHERE programstring=? AND language=?''', (line,'C')).fetchall()
+		res = conn.execute('''select package, version, filename FROM stringscache.stringscache WHERE programstring=? AND language=?''', (line,language)).fetchall()
 		if len(res) == 0:
 			## do we actually have a result?
 			checkres = conn.execute('''select programstring from extracted_file WHERE programstring=? LIMIT 1''', (line,)).fetchall()
 			if len(checkres) != 0:
-				res = conn.execute('''select p.package, p.version, p.filename FROM processed_file p JOIN extracted_file e on p.sha256 = e.sha256 WHERE programstring=? AND language=?''', (line,'C')).fetchall()
+				res = conn.execute('''select p.package, p.version, p.filename FROM processed_file p JOIN extracted_file e on p.sha256 = e.sha256 WHERE programstring=? AND language=?''', (line,language)).fetchall()
 			else: res = []
 			newmatch = True
 
