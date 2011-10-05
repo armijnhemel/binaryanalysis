@@ -181,7 +181,7 @@ def extractGeneric(lines, path, language='C'):
 	c.execute("create table if not exists avg.avgstringscache (package text, avgstrings real, primary key (package))")
 	c.execute("attach '/tmp/stringscache' as stringscache")
 	c.execute("create table if not exists stringscache.stringscache (programstring text, package text, version text, filename text)")
-	c.execute("create index if not exists stringscache.programstring_index on stringscache(programstring)")
+	c.execute("create index if not exists stringscache.programstring_index on stringscache(programstring, language)")
 	conn.commit()
 
 	## (package, version) => count
@@ -212,10 +212,14 @@ def extractGeneric(lines, path, language='C'):
 		res = conn.execute('''select package, version, filename FROM stringscache.stringscache WHERE programstring=? AND language=?''', (line,language)).fetchall()
 		if len(res) == 0:
 			## do we actually have a result?
-			checkres = conn.execute('''select programstring from extracted_file WHERE programstring=? LIMIT 1''', (line,)).fetchall()
+			checkres = conn.execute('''select sha256, language from extracted_file WHERE programstring=? LIMIT 1''', (line,)).fetchall()
+			res = []
 			if len(checkres) != 0:
-				res = conn.execute('''select p.package, p.version, p.filename FROM processed_file p JOIN extracted_file e on p.sha256 = e.sha256 WHERE programstring=? AND language=?''', (line,language)).fetchall()
-			else: res = []
+				for (checksha, checklan) in checkres:
+					if checklan != language:
+						continue
+					else:
+						res = conn.execute('''select package, version, filename FROM processed_file p WHERE sha256=?''', (checksha,)).fetchall()
 			newmatch = True
 
 		if len(res) != 0:
