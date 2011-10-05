@@ -242,7 +242,6 @@ def extractGeneric(lines, path, language='C'):
 			newmatch = False
 		else:
 			print >>sys.stderr, "no matches found for <(|%s|)> in %s" % (line, path)
-		lines.remove(line)
 
 	print >>sys.stderr, "matchedlines: %d for %s" % (matchedlines, path)
 	print >>sys.stderr, matchedlines/(len(lines) * 1.0)
