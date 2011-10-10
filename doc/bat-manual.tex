@@ -138,19 +138,19 @@ only be used to signal that further inspection is necessary.
 \subsubsection{Enabling and disabling scans}
 
 The \texttt{bruteforce.py} tool uses a configuration file that is in Windows
-INI format. There is a default configuration file that enables most of the
+INI format. There is a standard configuration file that enables most of the
 scans by default. To disable a scan it can be outcommented in the file (by
 starting the line with the \texttt{\#} character), or by removing it from the
 configuration file.
 
 \subsubsection{Interpreting the results}
 
-\texttt{bruteforce.py} outputs its results as XML on standard output. After
-redirecting the output to a file it is possible to look at this file using a
+\texttt{bruteforce.py} outputs its results in XML format on standard output. After
+redirecting the output to a file it is possible to look at this file with a
 commandline tool such as \texttt{xml\_pp} or a webbrowser such as Mozilla
 Firefox.
 
-In the future a graphical user interface will be wrapped around BAT that will
+A graphical user interface is planned that wraps around BAT that will
 make it easier to interpret the results in a more interactive way.
 
 The XML file starts with metadata, such as:
@@ -268,11 +268,11 @@ OpenWrt project, or upstream SquashFS project.
 \section{\texttt{bruteforce.py} internals}
 
 The \texttt{bruteforce.py} program processsed binaries: it unpacks files by
-running unpack scans, it runs scans on individual scans with program/leaf
+running unpack scans, it runs scans on individual files with program/leaf
 scans, processes and prettyprints output and performs cleanups, if necessary.
 
 \texttt{bruteforce.py} was written with extensibility in mind: new file systems
-or variants of old ones tend to pop up regularly (there are at least 5 or more
+or variants of old ones tend to appear regularly (there are at least 5 or more
 versions of SquashFS with LZMA compression out there).
 
 \subsection{Unpack scans}
@@ -295,8 +295,8 @@ by the top level script.
 
 \begin{itemize}
 \item \texttt{tempdir} is the directory into which files and directories for
-unpacking should be created. In case it is \texttt{None} a new temporary
-directory should be created.
+unpacking should be created. If it is \texttt{None} a new temporary directory
+should be created.
 \item \texttt{blacklist} is a list of byte ranges that should not be scanned.
 If the current scan needs to blacklist a byte range it should be added to this
 list.
