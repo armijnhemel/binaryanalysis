@@ -978,7 +978,6 @@ def unpackCramfs(data, offset, tempdir=None):
 	## right now this is a path to a specially adapted fsck.cramfs that ignores special inodes
 	## We actually need to create a new subdirectory inside tmpdir, otherwise the tool will complain
 	p = subprocess.Popen(['bat-fsck.cramfs', '-x', tmpdir + "/cramfs", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
-	#p = subprocess.Popen(['/home/armijn/gpltool/trunk/bat-extratools/cramfs/disk-utils/fsck.cramfs', '-x', tmpdir + "/cramfs", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.fdopen(tmpfile[0]).close()
@@ -991,7 +990,6 @@ def unpackCramfs(data, offset, tempdir=None):
 		## determine if the whole file actually is the cramfs file. Do this by running bat-fsck.cramfs again with -v and check stderr.
 		## If there is no error on stderr, we know that the entire file is the cramfs file
 		p = subprocess.Popen(['bat-fsck.cramfs', '-v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
-		#p = subprocess.Popen(['/home/armijn/gpltool/trunk/bat-extratools/cramfs/disk-utils/fsck.cramfs', '-v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		if len(stanerr) != 0:
 			cramfssize = 0
@@ -1042,7 +1040,6 @@ def unpackSquashfsWrapper(data, offset, tempdir=None):
 	retval = unpackSquashfs(data, offset, tempdir)
 	if retval != None:
 		return retval
-	'''
 	## then try other flavours
 	## first SquashFS 4.2
 	retval = unpackSquashfs42(data,offset,tempdir)
@@ -1059,8 +1056,10 @@ def unpackSquashfsWrapper(data, offset, tempdir=None):
 	if retval != None:
 		return retval
 
+	'''
 	## then Ralink variant
 	retval = unpackSquashfsRalinkLZMA(data,offset,tempdir)
+	print >>sys.stderr, "RETVAL", retval, "RALINK"
 	if retval != None:
 		return retval
 	'''
@@ -1108,14 +1107,14 @@ def unpackSquashfs(data, offset, tempdir=None):
 
 ## squashfs variant from OpenWrt, with LZMA
 def unpackSquashfsOpenWrtLZMA(data, offset, tempdir=None):
-	tmpdir = unpackset(tempdir)
+	tmpdir = unpacksetup(tempdir)
 	## since unsquashfs can't deal with data via stdin first write it to
 	## a temporary location
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
 
 	## this is just a temporary path for now
-	p = subprocess.Popen(['/home/armijn/gpltool/trunk/external/squashfs-openwrt/unsquashfs-lzma', '-d', tmpdir, '-f', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['bat-unsquashfs-openwrt', '-d', tmpdir, '-f', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.fdopen(tmpfile[0]).close()
@@ -1173,7 +1172,7 @@ def unpackSquashfsBroadcomLZMA(data, offset, tempdir=None):
 	os.write(tmpfile[0], data[offset:])
 
 	## this is just a temporary path for now
-	p = subprocess.Popen(['/home/armijn/gpltool/trunk/external/squashfs-broadcom/unsquashfs', '-d', tmpdir, '-f', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['bat-unsquashfs-broadcom', '-d', tmpdir, '-f', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.fdopen(tmpfile[0]).close()
@@ -1182,6 +1181,13 @@ def unpackSquashfsBroadcomLZMA(data, offset, tempdir=None):
 			os.rmdir(tmpdir)
 		return None
 	else:
+		## we first need to check the contents of stderr to see if uncompression actually worked
+		if "LzmaUncompress: error" in stanerr:
+			os.fdopen(tmpfile[0]).close()
+			os.unlink(tmpfile[1])
+			if tempdir == None:
+				os.rmdir(tmpdir)
+			return None
 		## unlike with 'normal' squashfs we can't use 'file' to determine the size
 		squashsize = 1
 		os.fdopen(tmpfile[0]).close()
