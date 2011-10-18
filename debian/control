@@ -1,17 +1,15 @@
 Source: bat
 Section: unknown
 Priority: extra
-Maintainer: bat <bat@unknown>
+Maintainer: Armijn Hemel <armijn@binaryanalysis.org>
 Build-Depends: debhelper (>= 7.0.50~)
 Standards-Version: 3.8.4
 Homepage: http://www.binaryanalysis.org/
-#Vcs-Git: git://git.debian.org/collab-maint/bat.git
-#Vcs-Browser: http://git.debian.org/?p=collab-maint/bat.git;a=summary
 
 Package: bat
 Architecture: any
-Depends: python-support, python (>= 2.5), python-magic, binutils, e2tools, squashfs-tools, module-init-tools, gzip, lzma, zip, unrar, cabextract, p7zip, cpio, tar, bzip2
-Description: <insert up to 60 chars description>
+Depends: python-support, python (>= 2.5), python-magic, binutils, e2tools, squashfs-tools, module-init-tools, gzip, lzma, zip, unrar, cabextract, p7zip, cpio, tar, bzip2, bat-extratools
+Description: Modular framework to assist auditing binary files
  The Binary Analysis Tool is a modular framework that assists with auditing
  the contents of compiled software. It makes it easier and cheaper to look
  inside technology, and this helps compliance and due diligence activities.
