@@ -1076,7 +1076,7 @@ def unpackSquashfs(data, offset, tempdir=None):
 	## Just to be sure we add /usr/sbin to the path and set the environment
 
 	unpackenv = os.environ
-        unpackenv['PATH'] = unpackenv['PATH'] + ":/usr/sbin"
+	unpackenv['PATH'] = unpackenv['PATH'] + ":/usr/sbin"
 
 	p = subprocess.Popen(['unsquashfs', '-d', tmpdir, '-f', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, env=unpackenv)
 	(stanout, stanerr) = p.communicate()
@@ -1224,6 +1224,11 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}):
 	diroffsets = []
 	counter = 1
 	data = datafile.read()
+
+	## set path for Debian
+	unpackenv = os.environ
+	unpackenv['PATH'] = unpackenv['PATH'] + ":/sbin"
+
 	for offset in offsets['ext2']:
 		## according to /usr/share/magic the magic header starts at 0x438
 		if offset < 0x438:
@@ -1243,7 +1248,7 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}):
 			diroffsets.append((ext2tmpdir, offset - 0x438))
 			## this needs to be moved to unpackExt2fs, since it fails if 'filename' contains
 			## an ext2 file system, but has data prepended.
-			p = subprocess.Popen(['tune2fs', '-l', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			p = subprocess.Popen(['tune2fs', '-l', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, env=unpackenv)
 			(stanout, stanerr) = p.communicate()
 			if p.returncode == 0:
 				if len(stanerr) == 0:
