@@ -1,5 +1,6 @@
-bat (4.0) unstable; urgency=low
+bat (5.0) unstable; urgency=low
 
-  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+  * Updated release, includes much functionality. So ChangeLog in SVN repo for
+    details
 
- -- bat <bat@unknown>  Mon, 27 Dec 2010 21:43:43 +0100
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Tue, 18 Oct 2011 19:13:43 +0200

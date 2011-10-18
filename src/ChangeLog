@@ -1,3 +1,9 @@
+2011-10-17
+* RPM specfile fixes
+* enable squashfs variants, plus fix bug in Squashfs LZMA (Broadcom variant)
+* add Squashfs LZMA (slax.org/Ralink variant)
+* add Debian package installation files for bat-extratools
+
 2011-09-25
 * add more documentation to the user guide
 

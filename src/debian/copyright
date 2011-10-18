@@ -1,20 +1,18 @@
 This work was packaged for Debian by:
 
-    bat <bat@unknown> on Mon, 27 Dec 2010 21:43:43 +0100
+    Armijn Hemel <armijn@binaryanalysis.org> on Tue, 18 Oct 2011 15:01:43 +0200
 
 It was downloaded from:
 
-    <url://example.com>
+    <http://www.binaryanalysis.org>
 
 Upstream Author(s):
 
-    <put author's name and email here>
-    <likewise for another author>
+    Armijn Hemel <armijn@binaryanalysis.org>
 
 Copyright:
 
-    <Copyright (C) YYYY Firstname Lastname>
-    <likewise for another author>
+    <Copyright (C) 2010-2011 Armijn Hemel>
 
 License:
 
@@ -35,16 +33,4 @@ can be found in "/usr/share/common-licenses/Apache-2.0".
 
 The Debian packaging is:
 
-    Copyright (C) 2010 bat <bat@unknown>
-
-# Please chose a license for your packaging work. If the program you package
-# uses a mainstream license, using the same license is the safest choice.
-# Please avoid to pick license terms that are more restrictive than the
-# packaged work, as it may make Debian's contributions unacceptable upstream.
-# If you just want it to be GPL version 3, leave the following lines in.
-
-and is licensed under the GPL version 3,
-see "/usr/share/common-licenses/GPL-3".
-
-# Please also look if there are files or directories which have a
-# different copyright/license attached and list them here.
+    Copyright (C) 2010,2011 Armijn Hemel <armijn@binaryanalysis.org>
