@@ -362,7 +362,7 @@ def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}):
 ## http://code.google.com/p/unyaffs/
 def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}):
 	tmpdir = dirsetup(tempdir, filename, "yaffs", 1)
-	p = subprocess.Popen(['unyaffs', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	p = subprocess.Popen(['bat-unyaffs', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		if tempdir == None:
