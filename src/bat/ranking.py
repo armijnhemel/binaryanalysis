@@ -135,6 +135,8 @@ def searchGeneric(path, blacklist=[], offsets={}):
 				lines = stanout.split("\n")
 		elif language == 'Java':
 			lines = []
+			## we really should think about whether or not we want to do this per class file,
+			## or per JAR file.
         		if "compiled Java" in mstype and blacklist == []:
 				p = subprocess.Popen(['jcf-dump', '--print-constants', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
@@ -149,6 +151,9 @@ def searchGeneric(path, blacklist=[], offsets={}):
 						lines.append(l.split("=", 1)[1][1:-1])
 			elif "Dalvik dex" in mstype and blacklist == []:
 				## we should find a way to extract strings from Dalvik files
+				## Using dedexer http://dedexer.sourceforge.net/ we can extract string constants from Dalvik files
+				## java -jar ~/Downloads/ddx1.15.jar -d $tmpdir classes.dex
+				## then process each file in $tmpdir and search file for lines containing "const-string"
 				pass
 		else:
 			lines = []
