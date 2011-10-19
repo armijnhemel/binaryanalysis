@@ -44,6 +44,8 @@ def searchGeneric(path, blacklist=[], offsets={}):
 		language = 'C'
 	elif "compiled Java" in mstype:
 		language = 'Java'
+	elif "Dalvik dex file" in mstype:
+		language = 'Java'
 	else:
 		## if we just have a blob we will just consider it as 'C' for now
 		## In the future we might want to consider everything.
@@ -133,6 +135,21 @@ def searchGeneric(path, blacklist=[], offsets={}):
 				lines = stanout.split("\n")
 		elif language == 'Java':
 			lines = []
+        		if "compiled Java" in mstype and blacklist == []:
+				p = subprocess.Popen(['jcf-dump', '--print-constants', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+				(stanout, stanerr) = p.communicate()
+				if p.returncode != 0:
+					if blacklist != []:
+						## cleanup the tempfile
+						os.unlink(tmpfile[1])
+					## we process each line of stanout, looking for lines that look like this:
+					## #13: String 45="/"
+					for l in stanout.split("\n"):
+						if re.match("#\d+: String \d+=\"", l) != None:
+						lines.append(l.split("=", 1)[1][1:-1])
+			elif "Dalvik dex" in mstype and blacklist == []:
+				## we should find a way to extract strings from Dalvik files
+				pass
 		else:
 			lines = []
 
