@@ -154,6 +154,7 @@ def searchGeneric(path, blacklist=[], offsets={}):
 				## Using dedexer http://dedexer.sourceforge.net/ we can extract string constants from Dalvik files
 				## java -jar ~/Downloads/ddx1.15.jar -d $tmpdir classes.dex
 				## then process each file in $tmpdir and search file for lines containing "const-string"
+				## alternatively, use code from here http://code.google.com/p/smali/
 				pass
 		else:
 			lines = []
