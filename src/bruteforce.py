@@ -74,6 +74,8 @@ def prettyprintresxmlsnippet(res, root, unpackscans, programscans):
 					xmlres = eval("bat_%s(res[i], root)" % (method))
 					if xmlres != None:
                 				topnode = xmlres
+					else:
+						topnode = None
 				except Exception, e:
                 			topnode = root.createElement(i)
                 			tmpnodetext = xml.dom.minidom.Text()
@@ -81,7 +83,6 @@ def prettyprintresxmlsnippet(res, root, unpackscans, programscans):
                 			topnode.appendChild(tmpnodetext)
 		for confs in unpackscans:
 			if i == confs['name']:
-                		#topnode = root.createElement(i)
                 		topnode = root.createElement('unpack')
                 		typenode = root.createElement('type')
                 		tmpnodetext = xml.dom.minidom.Text()
@@ -163,7 +164,9 @@ def prettyprintresxml(res, scandate, unpackscans=[], programscans=[]):
 	if 'scans' in res:
 		tmpnode = root.createElement('scans')
 		for scan in res['scans']:
-			tmpnode.appendChild(prettyprintresxmlsnippet(scan, root, unpackscans, programscans))
+			childscannode = prettyprintresxmlsnippet(scan, root, unpackscans, programscans)
+			if childscannode != None:
+				tmpnode.appendChild(childscannode)
 		topnode.appendChild(tmpnode)
 	root.appendChild(topnode)
 	return root
