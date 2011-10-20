@@ -11,7 +11,7 @@ by Armijn Hemel, Karl Trygve Kalleberg, Eelco Dolstra and Rob Vermaas, as
 presented at the Mining Software Repositories 2011 conference.
 '''
 
-import string, re, os, os.path, magic, sys, tempfile
+import string, re, os, os.path, magic, sys, tempfile, shutil
 import sqlite3
 import subprocess
 import xml.dom.minidom
@@ -148,14 +148,32 @@ def searchGeneric(path, blacklist=[], offsets={}):
 					## #13: String 45="/"
 					for l in stanout.split("\n"):
 						if re.match("#\d+: String \d+=\"", l) != None:
-						lines.append(l.split("=", 1)[1][1:-1])
+							lines.append(l.split("=", 1)[1][1:-1])
+			#elif "Dalvik dex" in mstype and blacklist == [] and False:
 			elif "Dalvik dex" in mstype and blacklist == []:
 				## we should find a way to extract strings from Dalvik files
 				## Using dedexer http://dedexer.sourceforge.net/ we can extract string constants from Dalvik files
 				## java -jar ~/Downloads/ddx1.15.jar -d $tmpdir classes.dex
 				## then process each file in $tmpdir and search file for lines containing "const-string"
 				## alternatively, use code from here http://code.google.com/p/smali/
-				pass
+				dalvikdir = tempfile.mkdtemp()
+				p = subprocess.Popen(['java', '-jar', '/home/armijn/Downloads/ddx1.15.jar', '-d', dalvikdir, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+				(stanout, stanerr) = p.communicate()
+				if p.returncode == 0:
+					osgen = os.walk(dalvikdir)
+					try:
+						while True:
+							ddxfiles = osgen.next()
+							for ddx in ddxfiles[2]:
+								ddxlines = open("%s/%s" % (ddxfiles[0], ddx)).readlines()
+								for d in ddxlines:
+									reres = re.match("\s+const-string\s+v\d+", d)
+									if reres != None:
+										lines.append(d.strip().split(',', 1)[1][1:-1])
+					except StopIteration:
+						pass
+				## cleanup
+				shutil.rmtree(dalvikdir)
 		else:
 			lines = []
 
