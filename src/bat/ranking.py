@@ -221,7 +221,7 @@ def extractGeneric(lines, path, language='C'):
 	c.execute("attach '/tmp/avg' as avg")
 	c.execute("create table if not exists avg.avgstringscache (package text, avgstrings real, primary key (package))")
 	c.execute("attach '/tmp/stringscache' as stringscache")
-	c.execute("create table if not exists stringscache.stringscache (programstring text, package text, version text, filename text)")
+	c.execute("create table if not exists stringscache.stringscache (programstring text, language text, package text, version text, filename text)")
 	c.execute("create index if not exists stringscache.programstring_index on stringscache(programstring, language)")
 	conn.commit()
 
