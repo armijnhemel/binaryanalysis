@@ -1,4 +1,5 @@
 #!/usr/bin/python
+#-*- coding: utf-8 -*-
 
 ## Binary Analysis Tool
 ## Copyright 2011 Armijn Hemel for Tjaldur Software Governance Solutions
@@ -189,7 +190,7 @@ def searchGeneric(path, blacklist=[], offsets={}):
 				os.unlink(tmpfile[1])
 			return None
         except Exception, e:
-                print >>sys.stderr, "string scan failed for:", path, e
+                print >>sys.stderr, "string scan failed for:", path, e, type(e)
 		if blacklist != []:
 			## cleanup the tempfile
 			os.unlink(tmpfile[1])
@@ -213,6 +214,8 @@ def extractGeneric(lines, path, language='C'):
 	## from source code.
 	#conn = sqlite3.connect(os.environ.get('BAT_SQLITE_DB', '/tmp/sqlite'))
 	conn = sqlite3.connect(os.environ.get('BAT_SQLITE_DB', '/tmp/master'))
+	## we have byte strings in our database, not utf-8 characters...I hope
+	conn.text_factory = str
 	c = conn.cursor()
 
 	## create extra tables and attach them to the current database connection
@@ -282,7 +285,7 @@ def extractGeneric(lines, path, language='C'):
 				allStrings[line].append({'package': package, 'version': version, 'filename': filename})
 				#print >>sys.stderr, "%s\t%s\t%s" % (package, version, filename)
 				if newmatch:
-					c.execute('''insert into stringscache.stringscache values (?, ?, ?, ?)''', (line, package, version, filename))
+					c.execute('''insert into stringscache.stringscache values (?, ?, ?, ?, ?)''', (line, language, package, version, filename))
 					conn.commit()
 			newmatch = False
 		else:
@@ -371,7 +374,7 @@ def extractGeneric(lines, path, language='C'):
 					## assigned to a single package in the loop below.
 					stringsLeft['%s\t%s' % (i, fn)] = {'string': i, 'score': score, 'filename': fn, 'pkgs' : filenames[fn].keys()}
 		del allStrings[i]
-	del filenames
+		#del filenames
 
 	## For each string that occurs in the same filename in multiple
 	## packages (e.g., "debugXML.c", a cloned file of libxml2 in several
@@ -447,7 +450,10 @@ def extractGeneric(lines, path, language='C'):
 
 	rank = 1
 	reports = []
-	totalscore = reduce(lambda x, y: x + y, scores.values())
+	if scores == {}:
+		totalscore = 0
+	else:
+		totalscore = reduce(lambda x, y: x + y, scores.values())
 	for s in scores_sorted:
 		reports.append((rank, s, uniqueMatches.get(s,[]), (scores[s]/totalscore)*100.0))
 		rank = rank+1
@@ -475,6 +481,8 @@ def averageStringsPerPkgVersion(pkg, conn):
 ## * everything
 ## Drawbacks are reporting too much or too little
 def xmlprettyprint(res, root):
+	if res['matchedlines'] == 0:
+		return None
 	tmpnode = root.createElement('ranking')
 
 	matchedlines = root.createElement('matchedlines')
