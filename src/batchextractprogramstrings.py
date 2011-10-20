@@ -317,7 +317,7 @@ def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 
 def main(argv):
 	parser = OptionParser()
-	parser.add_option("-d", "--database", action="store", dest="db", help="path to database", metavar="DIR")
+	parser.add_option("-d", "--database", action="store", dest="db", help="path to database", metavar="FILE")
 	parser.add_option("-f", "--filedir", action="store", dest="filedir", help="path to directory containing files to unpack", metavar="DIR")
 	parser.add_option("-v", "--verify", action="store_true", dest="verify", help="verify files, don't process (default: false)")
 	parser.add_option("-z", "--cleanup", action="store_true", dest="cleanup", help="cleanup after unpacking? (default: false)")
