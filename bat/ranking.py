@@ -26,7 +26,7 @@ ms.load()
 ## funky statistcs as described in our paper.
 ## Original code (in Perl) was written by Eelco Dolstra.
 ## Reimplementation in Python done by Armijn Hemel.
-def searchGeneric(path, blacklist=[], offsets={}):
+def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 	## Only consider strings that are len(stringcutoff) or larger
 	stringcutoff = 5
 	## we want to use extra information for a few file types
@@ -182,7 +182,7 @@ def searchGeneric(path, blacklist=[], offsets={}):
 		else:
 			lines = []
 
-		res = extractGeneric(lines, path, language)
+		res = extractGeneric(lines, path, language, envvars)
 		if res != None:
 			if blacklist != []:
 				## we made a tempfile because of blacklisting, so cleanup
@@ -201,7 +201,7 @@ def searchGeneric(path, blacklist=[], offsets={}):
                 return  None
 
 ## Extract the strings
-def extractGeneric(lines, path, language='C'):
+def extractGeneric(lines, path, language='C', envvars=None):
 	allStrings = {}                ## {string, {package, version}}
 	lenStringsFound = 0
 	uniqueMatches = {}
@@ -214,10 +214,18 @@ def extractGeneric(lines, path, language='C'):
 	alpha = 5.0
 	gaincutoff = 5
 
+	scanenv = os.environ
+	if envvars != None:
+		for en in envvars.split(':'):
+			try:
+				(envname, envvalue) = en.split('=')
+				scanenv[envname] = envvalue
+			except Exception, e:
+				pass
+		
 	## open the database containing all the strings that were extracted
 	## from source code.
-	#conn = sqlite3.connect(os.environ.get('BAT_SQLITE_DB', '/tmp/sqlite'))
-	conn = sqlite3.connect(os.environ.get('BAT_SQLITE_DB', '/tmp/master'))
+	conn = sqlite3.connect(scanenv.get('BAT_SQLITE_DB', '/tmp/master'))
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
