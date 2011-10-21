@@ -10,6 +10,12 @@ This file contains the ranking algorithm as described in the paper
 "Finding Software License Violations Through Binary Code Clone Detection"
 by Armijn Hemel, Karl Trygve Kalleberg, Eelco Dolstra and Rob Vermaas, as
 presented at the Mining Software Repositories 2011 conference.
+
+Configuration parameters for databases are:
+
+BAT_SQLITE_DB            :: location of database containing extracted strings
+BAT_SQLITE_AVG           :: location of database containing average strings per package
+BAT_SQLITE_STRINGSCACHE  :: location of database that stores temporary results for future lookups
 '''
 
 import string, re, os, os.path, magic, sys, tempfile, shutil
@@ -32,8 +38,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 	## we want to use extra information for a few file types
 	## * ELF files
 	## * bFLT files
-	## * Java class files
-	## * Dalvik VM files
+	## * Java class files + Dalvik VM files
 	## * Windows executables and libraries
 	## * Mono/.NET files
 	## * Flash/ActionScript
