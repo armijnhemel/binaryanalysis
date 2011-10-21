@@ -11,7 +11,7 @@ import sys, os
 from optparse import OptionParser
 import busybox, extractor
 
-def busybox_version(path, blacklist=[]):
+def busybox_version(path, blacklist=[], envvars=None):
 	try:
                 filesize = os.stat(path).st_size
                 if extractor.inblacklist(0, blacklist) == filesize:

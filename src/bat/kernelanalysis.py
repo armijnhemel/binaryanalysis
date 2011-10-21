@@ -24,7 +24,7 @@ def xmlprettyprint(res, root):
 		topnode.appendChild(tmpnode)
 	return topnode
 
-def kernelChecks(path, blacklist=[]):
+def kernelChecks(path, blacklist=[], envvars=None):
 	results = {}
         try:
                 kernelbinary = open(path, 'rb')
@@ -133,7 +133,7 @@ def findInitFs(lines):
 	return fssearch.findGzip(lines)
 
 ## analyse a kernel module. Requires that the modinfo program from module-init-tools has been installed
-def analyseModuleLicense(path, blacklist=[]):
+def analyseModuleLicense(path, blacklist=[], envvars=[]):
 	if not "relocatable" in ms.file(path):
 		return None
 	p = subprocess.Popen(['/sbin/modinfo', "-F", "license", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)

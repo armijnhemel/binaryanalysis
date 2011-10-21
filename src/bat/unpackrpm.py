@@ -39,7 +39,7 @@ def unpackRPM(data, offset, tempdir=None):
 ## RPM is basically a header, plus some compressed files, so we are getting
 ## duplicates at the moment. We can defeat this easily by setting the blacklist
 ## upperbound to the start of compression.
-def searchUnpackRPM(filename, tempdir=None, blacklist=[], offsets={}):
+def searchUnpackRPM(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	datafile = open(filename, 'rb')
 	offset = fssearch.findRPM(datafile)
 	if offset == -1:

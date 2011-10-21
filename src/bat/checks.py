@@ -40,7 +40,7 @@ def genericSearch(path, markerStrings, blacklist=[]):
 ## the dynamic linker configuration on the device. With some mixing and matching it is
 ## nearly always to determine which library in which path is used, since most installations
 ## don't change the default search paths.
-def searchDynamicLibs(path, blacklist=[]):
+def searchDynamicLibs(path, blacklist=[], envvars=None):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
 	mstype = ms.file(path)
@@ -72,7 +72,7 @@ def dynamicLibsPrettyPrint(res, root):
 ## This method uses readelf to determine the architecture of the executable file.
 ## This is necessary because sometimes leftovers from different products (and
 ## different architectures) can be found in one firmware.
-def scanArchitecture(path, blacklist=[]):
+def scanArchitecture(path, blacklist=[], envvars=None):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
 	mstype = ms.file(path)
@@ -86,40 +86,40 @@ def scanArchitecture(path, blacklist=[]):
 			if "Machine:" in line:
 				return line.split(':')[1].strip()
 
-def searchLoadLin(path, blacklist=[]):
+def searchLoadLin(path, blacklist=[], envvars=None):
 	markerStrings = [ 'Ooops..., size of "setup.S" has become too long for LOADLIN,'
 			, 'LOADLIN started from $'
 			]
 	return genericSearch(path, markerStrings, blacklist)
 
-def searchIptables(path, blacklist=[]):
+def searchIptables(path, blacklist=[], envvars=None):
 	markerStrings = [ 'iptables who? (do you need to insmod?)'
 			, 'Will be implemented real soon.  I promise ;)'
 			, 'can\'t initialize iptables table `%s\': %s'
 			]
 	return genericSearch(path, markerStrings, blacklist)
 
-def searchDproxy(path, blacklist=[]):
+def searchDproxy(path, blacklist=[], envvars=None):
 	markerStrings = [ '# dproxy monitors this file to determine when the machine is'
 			, '# If you want dproxy to log debug info specify a file here.'
 			]
 	return genericSearch(path, markerStrings, blacklist)
 
-def searchEzIpupdate(path, blacklist=[]):
+def searchEzIpupdate(path, blacklist=[], envvars=None):
 	markerStrings = [ 'ez-ipupdate Version %s, Copyright (C) 1998-'
 			, '%s says that your IP address has not changed since the last update'
 			, 'you must provide either an interface or an address'
 			]
 	return genericSearch(path, markerStrings, blacklist)
 
-def searchLibusb(path, blacklist=[]):
+def searchLibusb(path, blacklist=[], envvars=None):
 	markerStrings = [ 'Check that you have permissions to write to %s/%s and, if you don\'t, that you set up hotplug (http://linux-hotplug.sourceforge.net/) correctly.'
 			, 'usb_os_find_busses: Skipping non bus directory %s'
 			, 'usb_os_init: couldn\'t find USB VFS in USB_DEVFS_PATH'
 			]
 	return genericSearch(path, markerStrings, blacklist)
 
-def searchVsftpd(path, blacklist=[]):
+def searchVsftpd(path, blacklist=[], envvars=None):
 	markerStrings = [ 'vsftpd: version'
 			, '(vsFTPd '
 			, 'VSFTPD_LOAD_CONF'
@@ -127,24 +127,24 @@ def searchVsftpd(path, blacklist=[]):
 			]
 	return genericSearch(path, markerStrings, blacklist)
 
-def searchHostapd(path, blacklist=[]):
+def searchHostapd(path, blacklist=[], envvars=None):
 	markerStrings = [ 'hostapd v'
 			]
 	return genericSearch(path, markerStrings, blacklist)
 
-def searchWpaSupplicant(path, blacklist=[]):
+def searchWpaSupplicant(path, blacklist=[], envvars=None):
 	markerStrings = [ 'wpa_supplicant v'
 			]
 	return genericSearch(path, markerStrings, blacklist)
 
-def searchIproute(path, blacklist=[]):
+def searchIproute(path, blacklist=[], envvars=None):
 	markerStrings = [ 'Usage: tc [ OPTIONS ] OBJECT { COMMAND | help }'
 			, 'tc utility, iproute2-ss%s'
 			, 'Option "%s" is unknown, try "tc -help".'
 			]
 	return genericSearch(path, markerStrings, blacklist)
 
-def searchWirelessTools(path, blacklist=[]):
+def searchWirelessTools(path, blacklist=[], envvars=None):
 	markerStrings = [ "Driver has no Wireless Extension version information."
 			, "Wireless Extension version too old."
 			, "Wireless-Tools version"
@@ -153,11 +153,11 @@ def searchWirelessTools(path, blacklist=[]):
        	                ]
 	return genericSearch(path, markerStrings, blacklist)
 
-def searchRedBoot(path, blacklist=[]):
+def searchRedBoot(path, blacklist=[], envvars=None):
 	markerStrings = ["Display RedBoot version information"]
 	return genericSearch(path, markerStrings, blacklist)
 
-def searchUBoot(path, blacklist=[]):
+def searchUBoot(path, blacklist=[], envvars=None):
         markerStrings = [ "run script starting at addr"
 			, "Hit any key to stop autoboot: %2d"
 			, "## Binary (kermit) download aborted"
@@ -168,7 +168,7 @@ def searchUBoot(path, blacklist=[]):
 ## What actually do these dependencies mean?
 ## Are they dependencies of the installer itself, or of the programs that are
 ## installed by the installer?
-def searchWindowsDependencies(path, blacklist=[]):
+def searchWindowsDependencies(path, blacklist=[], envvars=None):
 	## first determine if we are dealing with a MS Windows executable
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
@@ -193,7 +193,7 @@ def xmlPrettyPrintWindowsDeps(res, root):
 ## experimental clamscan feature
 ## Always run freshclam before scanning to get the latest
 ## virus signatures!
-def scanVirus(path, blacklist=[]):
+def scanVirus(path, blacklist=[], envvars=None):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
 	mstype = ms.file(path)
