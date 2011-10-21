@@ -336,7 +336,7 @@ def scan(filetoscan, magic, unpackscans=[], programscans=[], filehash=None, temp
 			envvars = None
 		exec "from %s import %s as bat_%s" % (module, method, method)
 		## temporary stuff, this should actually be nicely wrapped in a report tuple
-		res = eval("bat_%s(filetoscan, blacklist, envvars)" % (method))
+		res = eval("bat_%s(filetoscan, blacklist, envvars=envvars)" % (method))
 		if res != None:
 			report[scan['name']] = res
 			reports.append(report)
