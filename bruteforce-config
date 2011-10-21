@@ -259,3 +259,4 @@ xmloutput = xmlprettyprint
 #module  = bat.ranking
 #method  = searchGeneric
 #xmloutput = xmlprettyprint
+#envvars = BAT_SQLITE_AVG=/tmp/avg:BAT_SQLITE_STRINGSCACHE=/tmp/stringscache
