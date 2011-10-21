@@ -1,3 +1,7 @@
+2011-10-21
+* add field 'envvars' to pass around extra information to scans. These should
+be put into the environment in some cases (ranking scan)
+
 2011-10-20
 * add string constant extraction for Dalvik files, using dedexer. This needs
 to be added to bat-extratools

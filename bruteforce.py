@@ -270,11 +270,17 @@ def scan(filetoscan, magic, unpackscans=[], programscans=[], filehash=None, temp
 		noscan = False
 		module = scan['module']
 		method = scan['method']
+		## if there is extra information we need to pass, like locations of databases
+		## we can use the environment for it
+		if scan.has_key('envvars'):
+			envvars = scan['envvars']
+		else:
+			envvars = None
 		## return value is the temporary dir, plus offset in the parent file
 		## plus a blacklist containing blacklisted ranges for the *original*
 		## file and a hash with offsets for each marker.
 		exec "from %s import %s as bat_%s" % (module, method, method)
-		scanres = eval("bat_%s(filetoscan, tempdir, blacklist, offsets)" % (method))
+		scanres = eval("bat_%s(filetoscan, tempdir, blacklist, offsets, envvars)" % (method))
 		## result is either empty, or contains offsets
 		if len(scanres) == 3:
 			(diroffsets, blacklist, offsets) = scanres
@@ -322,9 +328,15 @@ def scan(filetoscan, magic, unpackscans=[], programscans=[], filehash=None, temp
 		report = {}
 		module = scan['module']
 		method = scan['method']
+		## if there is extra information we need to pass, like locations of databases
+		## we can use the environment for it
+		if scan.has_key('envvars'):
+			envvars = scan['envvars']
+		else:
+			envvars = None
 		exec "from %s import %s as bat_%s" % (module, method, method)
 		## temporary stuff, this should actually be nicely wrapped in a report tuple
-		res = eval("bat_%s(filetoscan, blacklist)" % (method))
+		res = eval("bat_%s(filetoscan, blacklist, envvars)" % (method))
 		if res != None:
 			report[scan['name']] = res
 			reports.append(report)
@@ -341,6 +353,7 @@ def readconfig(config):
 	for section in config.sections():
 		if config.has_option(section, 'type'):
 			conf = {}
+			## there is some duplication here, that we probably can get rid of
 			if config.get(section, 'type') == 'program':
 				conf['name']   = section
 				conf['module'] = config.get(section, 'module')
@@ -351,6 +364,10 @@ def readconfig(config):
 					pass
 				try:
 					conf['cleanup'] = config.get(section, 'cleanup')
+				except:
+					pass
+				try:
+					conf['envvars'] = config.get(section, 'envvars')
 				except:
 					pass
 				programscans.append(conf)
@@ -368,6 +385,10 @@ def readconfig(config):
 					pass
 				try:
 					conf['cleanup'] = config.get(section, 'cleanup')
+				except:
+					pass
+				try:
+					conf['envvars'] = config.get(section, 'envvars')
 				except:
 					pass
 				unpackscans.append(conf)
