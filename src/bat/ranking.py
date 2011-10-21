@@ -233,9 +233,12 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	## create extra tables and attach them to the current database connection
 	## These databases should be wiped and/or recreated when the database with
 	## strings has been changed!!
-	c.execute("attach '/tmp/avg' as avg")
+	avgdb = scanenv.get('BAT_SQLITE_AVG', '/tmp/avg')
+	c.execute("attach ? as avg", (avgdb,))
 	c.execute("create table if not exists avg.avgstringscache (package text, avgstrings real, primary key (package))")
-	c.execute("attach '/tmp/stringscache' as stringscache")
+
+	stringscache = scanenv.get('BAT_SQLITE_STRINGSCACHE', '/tmp/stringscache')
+	c.execute("attach ? as stringscache", (stringscache,))
 	c.execute("create table if not exists stringscache.stringscache (programstring text, language text, package text, version text, filename text)")
 	c.execute("create index if not exists stringscache.programstring_index on stringscache(programstring, language)")
 	conn.commit()
