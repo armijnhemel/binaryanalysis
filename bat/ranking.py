@@ -149,7 +149,9 @@ def searchGeneric(path, blacklist=[], offsets={}):
 					## #13: String 45="/"
 					for l in stanout.split("\n"):
 						if re.match("#\d+: String \d+=\"", l) != None:
-							lines.append(l.split("=", 1)[1][1:-1])
+							printstring = l.split("=", 1)[1][1:-1]
+        						if len(printstring) >= stringcutoff:
+								lines.append(printstring)
 			#elif "Dalvik dex" in mstype and blacklist == [] and False:
 			elif "Dalvik dex" in mstype and blacklist == []:
 				## we should find a way to extract strings from Dalvik files
@@ -170,7 +172,9 @@ def searchGeneric(path, blacklist=[], offsets={}):
 								for d in ddxlines:
 									reres = re.match("\s+const-string\s+v\d+", d)
 									if reres != None:
-										lines.append(d.strip().split(',', 1)[1][1:-1])
+										printstring = d.strip().split(',', 1)[1][1:-1]
+        									if len(printstring) >= stringcutoff:
+											lines.append(printstring)
 					except StopIteration:
 						pass
 				## cleanup
