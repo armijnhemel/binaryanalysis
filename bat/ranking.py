@@ -534,6 +534,9 @@ def xmlprettyprint(res, root):
 			for match in uniqueMatches:
 				matchnode = root.createElement('unique')
 				tmpnodetext = xml.dom.minidom.Text()
+				## TODO: not every character is legal in XML,
+				## so we actually need to have a translation step
+				## here that rewrites illegal characters!
 				tmpnodetext.data = match
 				matchnode.appendChild(tmpnodetext)
 				uniquenode.appendChild(matchnode)
