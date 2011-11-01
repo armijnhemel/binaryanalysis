@@ -1,5 +1,6 @@
 2011-11-01
 * treat Groovy files as Java
+* treat JSP files as Java
 
 2011-10-30
 * add dedexer to bat-extratools
