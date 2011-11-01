@@ -32,21 +32,22 @@ ms.load()
 
 ## list of extensions, plus what language they should be mapped to
 ## This is not necessarily correct, but right now it is the best we have.
-extensions = {'.c'     : 'C',
-              '.h'     : 'C',
-              '.cc'    : 'C',
-              '.hh'    : 'C',
-              '.c++'   : 'C',
-              '.cpp'   : 'C',
-              '.hpp'   : 'C',
-              '.cxx'   : 'C',
-              '.hxx'   : 'C',
-              '.S'     : 'C',
-              '.qml'   : 'C',
-              '.cs'    : 'C#',
-              '.java'  : 'Java',
-              '.scala' : 'Java',
-              '.as'    : 'ActionScript',
+extensions = {'.c'      : 'C',
+              '.h'      : 'C',
+              '.cc'     : 'C',
+              '.hh'     : 'C',
+              '.c++'    : 'C',
+              '.cpp'    : 'C',
+              '.hpp'    : 'C',
+              '.cxx'    : 'C',
+              '.hxx'    : 'C',
+              '.S'      : 'C',
+              '.qml'    : 'C',
+              '.cs'     : 'C#',
+              '.java'   : 'Java',
+              '.groovy' : 'Java',
+              '.scala'  : 'Java',
+              '.as'     : 'ActionScript',
              }
 
 ## unpack the directories to be scanned. For speed improvements it might be
