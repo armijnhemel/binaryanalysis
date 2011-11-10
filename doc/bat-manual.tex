@@ -63,11 +63,11 @@ scans to each unpacked file, ranging from discovering dynamically linked
 libraries to an elaborate ranking method to guess which sources were used to
 build a program.
 
-There are two types of scans: unpack and program/leaf scans.
+There are two types of scans: unpackers and program/leaf scans.
 
-\subsubsection{Unpack scans}
+\subsubsection{Unpackers}
 
-Unpack scans can be recognized in the configuration because their type is set
+Unpackers can be recognized in the configuration because their type is set
 to \texttt{unpack}, for example:
 
 \begin{verbatim}
@@ -78,7 +78,7 @@ method  = searchUnpackJffs2
 priority = 1
 \end{verbatim}
 
-Currently the following file systems, compressed files and media files can be
+In BAT 5.0 the following file systems, compressed files and media files can be
 unpacked:
 
 \begin{itemize}
@@ -108,7 +108,7 @@ These two scans are therefore disabled by default.
 
 Leaf scans, or program scans, are scans that are run on every single file
 that has been unpacked, including files that contained files that were found
-and extracted by unpack scans.
+and extracted by unpackers.
 
 Leaf/program scans can be recognized in the configuration because their type is
 set to \texttt{program}, for example:
@@ -268,22 +268,22 @@ OpenWrt project, or upstream SquashFS project.
 \section{\texttt{bruteforce.py} internals}
 
 The \texttt{bruteforce.py} program processsed binaries: it unpacks files by
-running unpack scans, it runs scans on individual files with program/leaf
+running unpackers, it runs scans on individual files with program/leaf
 scans, processes and prettyprints output and performs cleanups, if necessary.
 
 \texttt{bruteforce.py} was written with extensibility in mind: new file systems
 or variants of old ones tend to appear regularly (there are at least 5 or more
 versions of SquashFS with LZMA compression out there).
 
-\subsection{Unpack scans}
+\subsection{Unpackers}
 
-Unpack scans are responsible for recursively unpacking binaries until they
+Unpackers are responsible for recursively unpacking binaries until they
 can't be unpacked any further, before the program/leaf scans are run on the
 files.
 
-\subsubsection{Writing an unpack scan}
+\subsubsection{Writing an unpacker}
 
-The unpack scans have a strict interface:
+The unpackers have a strict interface:
 
 \begin{verbatim}
 def unpackScan(filename, tempdir=None, blacklist=[], offsets={}):
@@ -356,7 +356,7 @@ To avoid duplicate scanning and false positives it is therefore necessary to
 prevent other scans from running on the byte range already covered by one of
 these files.
 
-In BAT this is achieved by using blacklists. All unpack scans have a parameter
+In BAT this is achieved by using blacklists. All unpackers have a parameter
 called \texttt{blacklist} which is consulted everytime a file is unpacked. If
 a file system offset is in a blacklist the scan could use the next offset, or
 skip scanning the entire file, depending on the scan.
@@ -431,7 +431,7 @@ that is also available in BAT, but which is not as fast.
 
 \subsubsection{Pretty printing}
 
-Pretty printing for unpack scans is standardized but for leaf scans there is
+Pretty printing for unpackers is standardized but for leaf scans there is
 more flexibility. This is needed because in some cases the result as returned
 by the leaf scan needs post processing.
 
@@ -452,8 +452,8 @@ BAT comes with a mechanism to use a database backend. The default version of
 BAT only unpacks file systems and compressed files and runs a few simple checks
 on the leaf nodes of the unpacking process.
 
-In the paper "Finding Software License Violations Through Binary Code Clone
-Detection" by Hemel et. al. (ACM 978-1-4503-0574-7/11/05) presented at
+In the paper ``Finding Software License Violations Through Binary Code Clone
+Detection'' by Hemel et. al. (ACM 978-1-4503-0574-7/11/05) presented at
 the Mining Software Repositories 2011 conference a method to use a database
 with strings extracted from source code was described. This functionality is
 is available in the ranking module in the file \texttt{ranking.py}. This code
@@ -465,17 +465,9 @@ many packages as possible, from a cross cut of all of open source software, to
 prevent bias towards certain packages: if you only would have BusyBox in your
 database, everything would look like BusyBox.
 
-To populate the database you need to download and process open source packages.
-Be aware that this is a costly operation: a download of all source packages of
-a snapshot of Debian (which would give you a few versions for most packages) is
-about 60 GiB. Together with all of GNU, GNOME, most BusyBox versions, and a few
-versions of KDE you have about 100 GiB of compressed source code archives.
-Processing these files (including licensing information) will take a long time
-and the resulting database will also be quite big (at least around 20 GiB).
-
-If you don't want to spend much time on downloading packages and processing
-these packages, please contact Tjaldur Software Governance Solutions for
-purchasing a copy of a fully preprocessed database at \url{info@tjaldur.nl}.
+If you don't want to spend much time on downloading and processing
+packages, please contact Tjaldur Software Governance Solutions for
+purchasing a copy of a fully prepared database at \url{info@tjaldur.nl}.
 
 \subsection{Crawling FTP mirrors}
 
@@ -538,7 +530,7 @@ python generatelist.py -f /path/to/directory/with/sources | sort >
 
 
 \texttt{generatelist.py} tries to determine the name of the package by
-splitting the file name on the right if it encounters a \texttt{-} (dash)
+splitting the file name on the right on a \texttt{-} (dash)
 character. This is not always done correctly because a package uses multiple
 dashes, or because it does not contain a dash. In the latter case an error
 will be printed on standard error, informing you that a file could not be
@@ -595,39 +587,24 @@ This option is disabled by default for a few reasons:
 \item scanning licenses adds a significant performance penalty to scanning the
 code (about 1100\% when scanning uClibc 0.9.30.1), even with many
 optimizations (like deduplication) in place.
-\item there is currently no code in the Binary Analysis Tool that can make use
-of this information.
+\item there is no code in the BAT 5.0 that makes use of this information.
 \end{itemize}
 
 If you want to enable license scanning, you will have to install Ninka first
 and change a few hardcoded paths in \texttt{batchextractprogramstrings.py} that
 point to the main Ninka script.
 
-\subsection{Intelligently making sets of packages when using multiple machines}
-
-One way to tackle the tackle the problem of having to process huge amounts of
-source code is to use multiple machines and later merge database. By adding a
-little bit of intelligence to preparing the sets of source packages you can
-save a lot of processing time. Many packages have duplicate files, especially
-if they are just different versions of the same package. A minor patch version
-could differ as little as one file. If the extractor already has seen a file, it
-will not scan it again, so it makes sense to have as many similar packages
-scanned on the same machine, for example all versions of a single package. If
-license scanning is enabled it makes sense to have as many packages from the
-same project scanned on the same machine, since coding styles often result in
-identical license statements, which the scanner already takes into account.
-
 \subsection{Setting the database}
 
-Currently the database is hardcoded to \texttt{/tmp/master}. It can be changed
+In BAT 5.0 the database is hardcoded to \texttt{/tmp/master}. It can be changed
 in \texttt{ranking.py} in the following line:
 
 \begin{verbatim}
   conn = sqlite3.connect(os.environ.get('BAT_SQLITE_DB', '/tmp/master'))
 \end{verbatim}
 
-In the future it will be possible to set the location of the database in the
-configuration file for \texttt{bruteforce.py}.
+In the latest development versions it is possible to set the location of the database
+in the configuration file for \texttt{bruteforce.py}.
 
 \subsection{Enabling the ranking scan}
 
@@ -635,12 +612,13 @@ The ranking scan is configured in the configuration file. In the default
 configuration file it is disabled by default. By uncommenting the entry for the
 scan it can be enabled.
 
-Currently the scan only searches strings that have their type recorded as
-\texttt{C} in the database. This means C and C++ source code and header files,
+In BAT 5.0 the ranking scan only searches strings that have their type recorded
+as \texttt{C} in the database. This means C and C++ source code and header files,
 as well as QML and assembler files.
 
-Other files, such as Java, are ignored (vice versa, when Java scanning will be
-added in the future everything but Java will be ignored for Java class files).
+Other files, such as Java, are ignored. Vice versa, for Java executables (in
+the development version of BAT Java scanning has been added) everything but
+Java will be ignored.  
 The reason for this is that there is usually little code cloning between C and
 Java files, or Java and C\# files (except of course when interpreters and
 virtual machines are embedded, or other language bridges are used). Strings in
