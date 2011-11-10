@@ -105,7 +105,10 @@ def prettyprintresxmlsnippet(res, root, unpackscans, programscans):
 						if 'scans' in elem:
 							tmpnode2 = root.createElement('scans')
 							for scan in elem['scans']:
-								tmpnode2.appendChild(prettyprintresxmlsnippet(scan, root, unpackscans, programscans))
+								#tmpnode2.appendChild(prettyprintresxmlsnippet(scan, root, unpackscans, programscans))
+								childscannode = prettyprintresxmlsnippet(scan, root, unpackscans, programscans)
+								if childscannode != None:
+									tmpnode2.appendChild(childscannode)
 								tmpnode.appendChild(tmpnode2)
                 			topnode.appendChild(tmpnode)
 	return topnode
