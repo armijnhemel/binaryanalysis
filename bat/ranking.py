@@ -22,6 +22,7 @@ import string, re, os, os.path, magic, sys, tempfile, shutil
 import sqlite3
 import subprocess
 import xml.dom.minidom
+import extractor
 
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
@@ -53,8 +54,9 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 	elif "Dalvik dex file" in mstype:
 		language = 'Java'
 	else:
-		## if we just have a blob we will just consider it as 'C' for now
-		## In the future we might want to consider everything.
+		## first check the filename extension. If it is .js we will treat it as
+		## JavaScript.
+		## Else we will just consider it as 'C'.
 		language='C'
 
 	if blacklist == []:
@@ -184,6 +186,13 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 						pass
 				## cleanup
 				shutil.rmtree(dalvikdir)
+		elif language == 'JavaScipt':
+			## JavaScript can be minified, but using xgettext we
+			## can still extract the strings from it
+			## results = extractor.extractStrings(os.path.dirname(path), os.path.basename(path))
+			## for r in results:
+			##	lines.append(r[0])
+			lines = []
 		else:
 			lines = []
 
@@ -273,19 +282,24 @@ def extractGeneric(lines, path, language='C', envvars=None):
 		newmatch = False
 		## skip empty lines
                 if line == "": continue
-		res = conn.execute('''select package, version, filename FROM stringscache.stringscache WHERE programstring=? AND language=?''', (line,language)).fetchall()
+
+		## first see if we have anything in the cache at all
+		res = conn.execute('''select package, version, filename FROM stringscache.stringscache WHERE programstring=? AND language=? LIMIT 1''', (line,language)).fetchall()
 		if len(res) == 0:
 			## do we actually have a result?
 			checkres = conn.execute('''select sha256, language from extracted_file WHERE programstring=? LIMIT 1''', (line,)).fetchall()
 			res = []
-			if len(checkres) != 0:
+			if len(checkres) == 0:
+				print >>sys.stderr, "no matches found for <(|%s|)> in %s" % (line, path)
+				continue
+			else:
 				for (checksha, checklan) in checkres:
 					if checklan != language:
 						continue
 					else:
+						## overwrite 'res' here
 						res = conn.execute('''select package, version, filename FROM processed_file p WHERE sha256=?''', (checksha,)).fetchall()
 			newmatch = True
-
 		if len(res) != 0:
 			## Add the length of the string to lenStringsFound.
 			## We're not really using it, except for reporting.
@@ -298,6 +312,8 @@ def extractGeneric(lines, path, language='C', envvars=None):
 			matchedlines = matchedlines + 1
 			packageres = {}
 			allStrings[line] = []
+			if not newmatch:
+				res = conn.execute('''select package, version, filename FROM stringscache.stringscache WHERE programstring=? AND language=?''', (line,language)).fetchall()
 			for result in res:
 				(package, version, filename) = result
 				## record per line all (package, version, filename) combinations
@@ -308,8 +324,6 @@ def extractGeneric(lines, path, language='C', envvars=None):
 					c.execute('''insert into stringscache.stringscache values (?, ?, ?, ?, ?)''', (line, language, package, version, filename))
 					conn.commit()
 			newmatch = False
-		else:
-			print >>sys.stderr, "no matches found for <(|%s|)> in %s" % (line, path)
 
 	print >>sys.stderr, "matchedlines: %d for %s" % (matchedlines, path)
 	print >>sys.stderr, matchedlines/(len(lines) * 1.0)
