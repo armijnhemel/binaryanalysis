@@ -33,39 +33,38 @@ configuration from them.
 
 To run BAT a recent Linux distribution is needed. Development is (currently)
 done on Fedora 14 and Fedora 15, so those platforms are likely to work best.
-Other platforms are tested with, but only around release time.
+Other platforms are tested with, but only to build binary releases.
 
 If the latest version from version control is used it is important to look at
-\texttt{setup.cfg} to get a list of the latest package dependencies.
+the file \texttt{setup.cfg} to get a list of the dependencies that should be
+installed on the system.
 
 \subsection{Hardware requirements}
 
 The tools in the Binary Analysis Tool can be quite resource intensive. Most of
-the tools seem to be memorybound and I/O-bound, so it makes more sense to
-focus on more memory and faster disks (SSD) than on raw CPU power.
+the tools seem to be memorybound and I/O-bound, and it makes more sense to
+invest in more memory and faster disks than in raw CPU power.
 
 \section{Using the programs in the Binary Analysis Tool}
 
-BAT consists of several programs. Most of these programs are only helper scripts
-and there are just a few programs that are meant to be directly used.
+BAT consists of several programs and a few helper scripts (not meant to be
+used directly).
 
 The programs in the Binary Analysis Tool are \texttt{bruteforce.py},
 \texttt{busybox-compare-configs.py} and \texttt{busybox.py}
 
 \subsection{\texttt{bruteforce.py}}
 
-The main program in BAT is \texttt{bruteforce.py}. It uses a brute
-force approach for scanning a binary. It assumes no prior knowledge of how a binary
-is constructed or what is inside. Instead it tries to determine what is inside
-by applying several methods to find contents in the binary, such as looking for
-identifiers and running external tools to find contents in the binary. After
-successful identification it then unpacks compressed files, media files
-and file systems recursively. Finally a wide range of individual scans
+The main program in BAT is \texttt{bruteforce.py}. As the name suggests uses a
+brute force approach for scanning a binary. It assumes no prior knowledge of
+how a binary is constructed or what is inside. Instead it tries to determine
+what is inside by applying several methods to find contents in the binary, such
+as looking for identifiers and running external tools to find contents in the
+binary. After successful identification it unpacks compressed files, media
+files and file systems recursively. Finally a wide range of individual scans
 are applied to each extracted file, ranging from determining dynamically linked
 libraries to an elaborate ranking method to guess which sources were used to
 build a program.
-
-There are two types of scans: unpackers and program/leaf scans.
 
 \subsubsection{Unpackers}
 
@@ -92,15 +91,15 @@ LZIP, LZMA, LZO, RAR, RPM, TAR, XZ, ZIP
 \item media files: GIF, ICO, PNG
 \end{itemize}
 
-The unpacking process differs per file type. Most files use one or more
-identifier that can be looked for in a binary blob. Using this information it
+Unpacking differs per file type. Most files use one or more identifiers that
+can be searched for in a binary blob. Using this information it
 is possible to carve out the right parts of a binary blob and verify if it
 indeed contains a compressed file, media file or file system.
 
-There is not always a proper identifier available to search for. The YAFFS2
-file system layout for example is dependent on the hardware specifics of the
-underlying flash chip. Without knowing these it is not possible to unpack these
-files.
+There is not always an identifier that can be searched for. The YAFFS2 file
+system layout for example is dependent on the hardware specifics of the
+underlying flash chip. Without knowing these specifics it is not possible to
+unpack YAFFS2 file systems.
 
 Other files (such as ARJ and ICO files) have a very generic identifier, so
 there are a lot of false positives. This causes a big increase in runtime.
@@ -109,7 +108,7 @@ These two unpackers are therefore disabled by default.
 \subsubsection{Leaf scans}
 
 Leaf scans, or program scans, are scans that are run on every single file
-that has been unpacked, including files that contained files that were found
+after unpacking, including files that contained files that were found
 and extracted by unpackers.
 
 Leaf/program scans can be recognized in the configuration because their type is
@@ -122,7 +121,7 @@ module  = bat.checks
 method  = searchIptables
 \end{verbatim}
 
-The current scans that are available in BAT are:
+The current program scans that are available in BAT are:
 
 \begin{itemize}
 \item fast string searches: dproxy, ez-ipupdate, iptables, iproute, libusb,
@@ -152,8 +151,9 @@ redirecting the output to a file it is possible to look at this file with a
 commandline tool such as \texttt{xml\_pp} or a webbrowser such as Mozilla
 Firefox.
 
-A graphical user interface is planned that wraps around BAT that will
-make it easier to interpret the results in a more interactive way.
+Since XML is not meant for human consumption a graphical user interface is
+planned that wraps around BAT that will make it easier to interpret the
+results in a more interactive way.
 
 The XML file starts with metadata, such as:
 
@@ -167,15 +167,16 @@ The XML file starts with metadata, such as:
 the file system, which is useful for later analysis
 \end{itemize}
 
-If any of the scans were successful the results of the individual scans can
+If any of the scans were successful the results of the these scans can
 be found in the element \texttt{scans}.
 
-For each unpacking scans the following attributes are reported:
+For each successful unpack action the following attributes are reported:
 
 \begin{itemize}
 \item name of the scan (corresponding to the name of the scan in the
 configuration file)
-\item offset in the parent file of the compressed file or file system
+\item offset in the parent file of the compressed file, file system or media
+file
 \end{itemize}
 
 \subsection{\texttt{busybox.py} and \texttt{busybox-compare-configs.py}}
@@ -219,7 +220,7 @@ input to \texttt{busybox-compare-configs.py}.
 \subsubsection{Comparing two configurations}
 
 After extracting the configuration the extracted configuration can be compared
-to another configuration, for example one supplied by a vendor:
+to another configuration, for example a configuration as supplied by a vendor:
 
 \begin{verbatim}
 python busybox-compare-configs.py -e /path/to/saved/config
@@ -274,14 +275,13 @@ running unpackers, it runs scans on individual files with program/leaf
 scans, processes and prettyprints output and performs cleanups, if necessary.
 
 \texttt{bruteforce.py} was written with extensibility in mind: new file systems
-or variants of old ones tend to appear regularly (there are at least 5 or more
-versions of SquashFS with LZMA compression out there).
+or variants of old ones tend to appear regularly (for example: there are at
+least 5 or more versions of SquashFS with LZMA compression out there).
 
 \subsection{Unpackers}
 
 Unpackers are responsible for recursively unpacking binaries until they
-can't be unpacked any further, before the program/leaf scans are run on the
-files.
+can't be unpacked any further.
 
 \subsubsection{Writing an unpacker}
 
@@ -300,8 +300,8 @@ by the top level script.
 unpacking should be created. If it is \texttt{None} a new temporary directory
 should be created.
 \item \texttt{blacklist} is a list of byte ranges that should not be scanned.
-If the current scan needs to blacklist a byte range it should be added to this
-list.
+If the current scan needs to blacklist a byte range it should add it to this
+list after finishing a scan.
 \item \texttt{offsets} is a dictionary containing a mapping from an identifier
 to a list of offsets in the file where these identifiers can be found. This
 list is filled by the scan \texttt{genericMarker} which is defined to run as
@@ -310,8 +310,7 @@ the first scan in the configuration.
 
 Most scans have been split in two parts: one part is for searching the
 identifiers, correctly setting up temporary directories and collecting results.
-The other part is doing the actual unpacking of the data and verification
-steps.
+The other part is doing the actual unpacking of the data and verification.
 
 The idea behind this split is that sometimes functionality is shared between
 two scans. For example, \texttt{unpackCpio} is used by both
@@ -566,11 +565,7 @@ individual source code file (at the moment just C/C++ files, assembler files,
 C\# files, Java/Scala files and ActionScript files) for strings and, if
 enabled, licenses using Ninka and FOSSology.
 
-\texttt{batchextractprogramstrings.py} internally uses \texttt{xgettext} to
-extract all strings between double quotes from source code. These are the
-strings that are likely to end up in a binary, such as console messages, error
-messages or messages and so on. \texttt{batchextractprogramstrings.py} simply
-invokes \texttt{xgettext} and parses the results.
+\texttt{batchextractprogramstrings.py} can be invoked as follows:
 
 \begin{verbatim}
 python batchextractprogramstrings.py -f
@@ -587,8 +582,7 @@ This option is disabled by default for a few reasons:
 
 \begin{itemize}
 \item scanning licenses adds a significant performance penalty to scanning the
-code (about 1100\% when scanning uClibc 0.9.30.1), even with many
-optimizations (like deduplication) in place.
+code (about 1100\% when scanning uClibc 0.9.30.1).
 \item there is no code in the BAT 5.0 that makes use of this information.
 \end{itemize}
 
@@ -610,9 +604,9 @@ in the configuration file for \texttt{bruteforce.py}.
 
 \subsection{Enabling the ranking scan}
 
-The ranking scan is configured in the configuration file. In the default
-configuration file it is disabled by default. By uncommenting the entry for the
-scan it can be enabled.
+The ranking scan is configured in the configuration file. In the configuration
+shipped with BAT it is disabled by default. By uncommenting the entry for
+the scan it can be enabled.
 
 In BAT 5.0 the ranking scan only searches strings that have their type recorded
 as \texttt{C} in the database. This means C and C++ source code and header files,
