@@ -17,16 +17,17 @@
 \section{Introducing the Binary Analysis Tool}
 
 The Binary Analysis Tool (BAT) is a tool that can help developers and companies
-check binary files. Its main application right now is for Open Source software
+check binary files. Its primary application right now is for Open Source software
 license compliance, with a special focus on supply chain management in consumer
 electronics.
 
 BAT consists of several scripts written in Python. The most important program
 is the scanner for binary objects to detect the presence of Open Source
-software inside binaries, but there are also a few other programs to help with
-specific tasks, such as verifying if configurations for the BusyBox binary
-match a given binary and a very experimental program to help scan Linux kernel
-images and derive a Linux kernel configuration from them.
+software inside binaries. There are also other programs to help with specific
+tasks, such as verifying if configurations for a given BusyBox binary match
+with the configuration in source code. Also included is a very experimental
+program to help scan Linux kernel images and derive a Linux kernel
+configuration from them.
 
 \subsection{Software requirements}
 
@@ -48,18 +49,19 @@ focus on more memory and faster disks (SSD) than on raw CPU power.
 BAT consists of several programs. Most of these programs are only helper scripts
 and there are just a few programs that are meant to be directly used.
 
-The main programs are \texttt{bruteforce.py},
+The programs in the Binary Analysis Tool are \texttt{bruteforce.py},
 \texttt{busybox-compare-configs.py} and \texttt{busybox.py}
 
 \subsection{\texttt{bruteforce.py}}
 
-The main program in BAT is the \texttt{bruteforce.py} tool. It takes a brute
-force approach to scanning a binary and has no prior knowledge of how a binary
+The main program in BAT is \texttt{bruteforce.py}. It uses a brute
+force approach for scanning a binary. It assumes no prior knowledge of how a binary
 is constructed or what is inside. Instead it tries to determine what is inside
-by applying several methods (looking for identifiers, running external tools)
-to find contents in the binary. It then unpacks compressed files, media files
-and file systems recursively and finally applies a wide range of individual
-scans to each unpacked file, ranging from discovering dynamically linked
+by applying several methods to find contents in the binary, such as looking for
+identifiers and running external tools to find contents in the binary. After
+successful identification it then unpacks compressed files, media files
+and file systems recursively. Finally a wide range of individual scans
+are applied to each extracted file, ranging from determining dynamically linked
 libraries to an elaborate ranking method to guess which sources were used to
 build a program.
 
@@ -102,7 +104,7 @@ files.
 
 Other files (such as ARJ and ICO files) have a very generic identifier, so
 there are a lot of false positives. This causes a big increase in runtime.
-These two scans are therefore disabled by default.
+These two unpackers are therefore disabled by default.
 
 \subsubsection{Leaf scans}
 
