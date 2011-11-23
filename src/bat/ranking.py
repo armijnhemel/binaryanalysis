@@ -325,8 +325,9 @@ def extractGeneric(lines, path, language='C', envvars=None):
 					conn.commit()
 			newmatch = False
 
-	print >>sys.stderr, "matchedlines: %d for %s" % (matchedlines, path)
-	print >>sys.stderr, matchedlines/(len(lines) * 1.0)
+	if len(lines) != 0:
+		print >>sys.stderr, "matchedlines: %d for %s" % (matchedlines, path)
+		print >>sys.stderr, matchedlines/(len(lines) * 1.0)
 
 	del lines
 
@@ -489,7 +490,11 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	else:
 		totalscore = float(reduce(lambda x, y: x + y, scores.values()))
 	for s in scores_sorted:
-		reports.append((rank, s, uniqueMatches.get(s,[]), (scores[s]/totalscore)*100.0))
+		try:
+			percentage = (scores[s]/totalscore)*100.0
+		except:
+			percentage = 0.0
+		reports.append((rank, s, uniqueMatches.get(s,[]), percentage))
 		rank = rank+1
 	return {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports}
 
