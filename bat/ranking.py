@@ -485,9 +485,9 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	rank = 1
 	reports = []
 	if scores == {}:
-		totalscore = 0
+		totalscore = 0.0
 	else:
-		totalscore = reduce(lambda x, y: x + y, scores.values())
+		totalscore = float(reduce(lambda x, y: x + y, scores.values()))
 	for s in scores_sorted:
 		reports.append((rank, s, uniqueMatches.get(s,[]), (scores[s]/totalscore)*100.0))
 		rank = rank+1
