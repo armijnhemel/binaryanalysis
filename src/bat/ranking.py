@@ -152,13 +152,13 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 					if blacklist != []:
 						## cleanup the tempfile
 						os.unlink(tmpfile[1])
-					## we process each line of stanout, looking for lines that look like this:
-					## #13: String 45="/"
-					for l in stanout.split("\n"):
-						if re.match("#\d+: String \d+=\"", l) != None:
-							printstring = l.split("=", 1)[1][1:-1]
-        						if len(printstring) >= stringcutoff:
-								lines.append(printstring)
+				## we process each line of stanout, looking for lines that look like this:
+				## #13: String 45="/"
+				for l in stanout.split("\n"):
+					if re.match("#\d+: String \d+=\"", l) != None:
+						printstring = l.split("=", 1)[1][1:-1]
+        					if len(printstring) >= stringcutoff:
+							lines.append(printstring)
 			#elif "Dalvik dex" in mstype and blacklist == [] and False:
 			elif "Dalvik dex" in mstype and blacklist == []:
 				## we should find a way to extract strings from Dalvik files
