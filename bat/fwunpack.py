@@ -101,6 +101,52 @@ def searchUnpackBase64(filename, tempdir=None, blacklist=[], offsets={}, envvars
 		diroffsets.append((tmpdir, 0))
 		return (diroffsets, blacklist, offsets)
 
+## unpack Java serialized data
+def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if offsets['java_serialized'] == []:
+		return ([], blacklist, offsets)
+	counter = 1
+	diroffsets = []
+	datafile = open(filename, 'rb')
+	data = datafile.read()
+	for offset in offsets['java_serialized']:
+		## check if the offset we find is in a blacklist
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		tmpdir = dirsetup(tempdir, filename, "java_serialized", counter)
+		res = unpackJavaSerialized(data, offset, tmpdir)
+		if res != None:
+			(serdir, size) = res
+			#diroffsets.append((ardir, offset))
+			diroffsets.append((serdir, offset))
+			blacklist.append((offset, offset + size))
+			counter = counter + 1
+		else:
+			os.rmdir(tmpdir)
+	datafile.close()
+	return (diroffsets, blacklist, offsets)
+
+def unpackJavaSerialized(data, offset, tempdir=None):
+
+	tmpdir = unpacksetup(tempdir)
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.write(tmpfile[0], data[offset:])
+	## TODO: remove hardcoded path
+	p = subprocess.Popen(['java', '-jar', '/home/armijn/gpltool/trunk/bat-extratools/jdeserialize/bat-jdeserialize.jar', '-blockdata', 'deserialize', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+        (stanout, stanerr) = p.communicate()
+        if p.returncode != 0:
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	serialized_size = os.stat(tmpfile[1]).st_size
+	os.fdopen(tmpfile[0]).close()
+	os.unlink(tmpfile[1])
+	return (tmpdir, serialized_size)
+
+
 ## unpacking SWF files is easy, but for later processing we definitely would
 ## need to give some hints to other scanners about what file we have unpacked,
 ## so we can search more effectively.
