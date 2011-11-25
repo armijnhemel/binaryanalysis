@@ -132,17 +132,18 @@ def unpackJavaSerialized(data, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
+	os.fdopen(tmpfile[0]).close()
 	## TODO: remove hardcoded path
 	p = subprocess.Popen(['java', '-jar', '/home/armijn/gpltool/trunk/bat-extratools/jdeserialize/bat-jdeserialize.jar', '-blockdata', 'deserialize', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
         (stanout, stanerr) = p.communicate()
-        if p.returncode != 0:
-		os.fdopen(tmpfile[0]).close()
+	print p.returncode, offset
+        if p.returncode != 0 or 'file version mismatch!' in stanerr:
+		#os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
 	serialized_size = os.stat(tmpfile[1]).st_size
-	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
 	return (tmpdir, serialized_size)
 
@@ -1453,6 +1454,19 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, envvars=
 	datafile.close()
 	return (diroffsets, blacklist, offsets)
 
+def unpackZipMulti(data, zipoffset, tempdir=None):
+	tmpfile = tempfile.mkstemp(dir=tempdir)
+	os.write(tmpfile[0], data[0:zipoffset])
+	os.fdopen(tmpfile[0]).close()
+	while zipoffset != 0:
+		p = subprocess.Popen(['zipinfo', '-v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+		zipoffset = int(re.search("(\d+) extra bytes at beginning or within zipfile", stanerr).groups()[0])
+		tmpfile = tempfile.mkstemp(dir=tempdir)
+		os.write(tmpfile[0], data[0:zipoffset])
+		os.fdopen(tmpfile[0]).close()
+	return None
+
 def unpackZip(data, offset, tempdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
@@ -1463,6 +1477,11 @@ def unpackZip(data, offset, tempdir=None):
 	## Use information from zipinfo -v to extract the right offsets (or at least the last offset)
 	p = subprocess.Popen(['zipinfo', '-v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
+	if p.returncode == 1:
+		if "extra bytes at beginning or within zipfile" in stanerr:
+			zipoffset = int(re.search("(\d+) extra bytes at beginning or within zipfile", stanerr).groups()[0])
+			#unpackZipMulti(data[offset:], zipoffset, tempdir)
+			#sys.exit(0)
 	res = re.search("Actual[\w\s]*end-(?:of-)?cent(?:ral)?-dir record[\w\s]*:\s*(\d+) \(", stanout)
 	if res != None:
 		endofcentraldir = int(res.groups(0)[0])
@@ -1498,6 +1517,7 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
+		## this is where we should differentiate between ZIP files with multiple entries and `normal' ones
 		tmpdir = dirsetup(tempdir, filename, "zip", counter)
 		(endofcentraldir, res) = unpackZip(data, offset, tmpdir)
 		if res != None:
