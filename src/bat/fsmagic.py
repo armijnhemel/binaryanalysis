@@ -54,6 +54,7 @@ fsmagic = {
             'iso9660':          'CD001',
             'swf':              'CWS',
             'ar':               '!<arch>',
+            'java_serialized':  '\xac\xed\x00',
           }
 
 ## collection of markers that should be scanned together
