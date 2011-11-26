@@ -87,6 +87,12 @@ module  = bat.fwunpack
 method  = searchUnpackPNG
 priority = 0
 
+#[java_serialized]
+#type    = unpack
+#module  = bat.fwunpack
+#method  = searchUnpackJavaSerialized
+#priority = 2
+
 [swf]
 type    = unpack
 module  = bat.fwunpack
