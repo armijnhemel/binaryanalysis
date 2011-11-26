@@ -1453,39 +1453,62 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, envvars=
 	datafile.close()
 	return (diroffsets, blacklist, offsets)
 
-def unpackZipMulti(data, offset, tempdir=None):
+def unpackZipMulti(data, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tempdir)
-	os.write(tmpfile[0], data[offset:])
+	os.write(tmpfile[0], data)
 	os.fdopen(tmpfile[0]).close()
 	p = subprocess.Popen(['zipinfo', '-v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	multi = False
 	(stanout, stanerr) = p.communicate()
 	if p.returncode == 1:
 		if "extra bytes at beginning or within zipfile" in stanerr:
+			multi = True
 			zipoffset = int(re.search("(\d+) extra bytes at beginning or within zipfile", stanerr).groups()[0])
 			while zipoffset != 0:
+				tmpfile = tempfile.mkstemp(dir=tempdir)
+				os.write(tmpfile[0], data[:zipoffset])
+				os.fdopen(tmpfile[0]).close()
 				p = subprocess.Popen(['zipinfo', '-v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanoutzip, stanerrzip) = p.communicate()
-				zipoffset = int(re.search("(\d+) extra bytes at beginning or within zipfilezip", stanerr).groups()[0])
-				tmpfile = tempfile.mkstemp(dir=tempdir)
-				os.write(tmpfile[0], data[0:zipoffset])
-				os.fdopen(tmpfile[0]).close()
-	return tmpdir
+				if not "extra bytes at beginning or within zipfile" in stanerrzip:
+					break
+				zipoffset = int(re.search("(\d+) extra bytes at beginning or within zipfile", stanerrzip).groups()[0])
+		else:
+			if not multi:
+				os.unlink(tmpfile[1])
+				return multi
+	else:
+		os.unlink(tmpfile[1])
+	return multi
 
-def unpackZip(data, offset, tempdir=None):
-	## first unpack things, write things to a file and return
-	## the directory if the file is not empty
-	## Assumes (for now) that zipinfo and unzip are in the path
+def unpackZip(data, offset, filename, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 
+	## check whether or not we have a multi-archive ZIP file
+	## if we do, we can just unpack everything
+	multi = unpackZipMulti(data[offset:], tmpdir)
+	if multi:
+		multicounter = 1
+		osgen = os.walk(tmpdir)
+		i = osgen.next()
+		for zp in i[2]:
+			multitmpdir = "/%s/%s-multi-%s" % (tmpdir, os.path.basename(filename), multicounter)
+			os.makedirs(multitmpdir)
+			p = subprocess.Popen(['unzip', '-o', "%s/%s" % (i[0], zp), '-d', multitmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate()
+			os.unlink("%s/%s" % (i[0], zp))
+			if p.returncode != 0 and p.returncode != 1:
+				continue
+			multicounter = multicounter + 1
+
 	tmpfile = tempfile.mkstemp(dir=tempdir)
+
 	os.write(tmpfile[0], data[offset:])
 	os.fdopen(tmpfile[0]).close()
 
-	#unpackZipMulti(data, offset, tmpdir)
-	#osgen = os.walk(tmpdir)
-
-	## Use information from zipinfo -v to extract the right offsets (or at least the last offset)
+	## Use information from zipinfo -v to extract the right offset (or at least the last offset,
+	## which is the only one we are interested in)
 	p = subprocess.Popen(['zipinfo', '-v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	res = re.search("Actual[\w\s]*end-(?:of-)?cent(?:ral)?-dir record[\w\s]*:\s*(\d+) \(", stanout)
@@ -1496,10 +1519,17 @@ def unpackZip(data, offset, tempdir=None):
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return (None, None)
-	p = subprocess.Popen(['unzip', '-o', tmpfile[1], '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	if multi:
+		multitmpdir = "/%s/%s-multi-%s" % (tmpdir, os.path.basename(filename), multicounter)
+		os.makedirs(multitmpdir)
+		p = subprocess.Popen(['unzip', '-o', tmpfile[1], '-d', multitmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	else:
+		p = subprocess.Popen(['unzip', '-o', tmpfile[1], '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0 and p.returncode != 1:
 		os.unlink(tmpfile[1])
+		if multi:
+			os.rmdir(multitmpdir)
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return (None, None)
@@ -1513,6 +1543,7 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 	diroffsets = []
 	counter = 1
 	data = datafile.read()
+	datafile.close()
 	endofcentraldir_offset = 0
 	for offset in offsets['zip']:
 		if offset < endofcentraldir_offset:
@@ -1522,7 +1553,7 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 			continue
 		## this is where we should differentiate between ZIP files with multiple entries and `normal' ones
 		tmpdir = dirsetup(tempdir, filename, "zip", counter)
-		(endofcentraldir, res) = unpackZip(data, offset, tmpdir)
+		(endofcentraldir, res) = unpackZip(data, offset, filename, tmpdir)
 		if res != None:
 			diroffsets.append((res, offset))
 			counter = counter + 1
@@ -1532,7 +1563,6 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		if endofcentraldir != None:
 			endofcentraldir_offset = endofcentraldir
 			blacklist.append((offset, offset + endofcentraldir))
-	datafile.close()
 	return (diroffsets, blacklist, offsets)
 
 def searchUnpackRar(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
