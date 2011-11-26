@@ -9,7 +9,7 @@ This script tries to analyse the firmware of a device, using a "brute force" app
 and pretty print the analysis in a simple XML format.
 '''
 
-import sys, os, os.path, magic, hashlib, subprocess, tempfile, shutil
+import sys, os, os.path, magic, hashlib, subprocess, tempfile, shutil, stat
 from optparse import OptionParser
 import ConfigParser
 import xml.dom.minidom
@@ -305,8 +305,12 @@ def scan(filetoscan, magic, unpackscans=[], programscans=[], filehash=None, temp
 			try:
        				while True:
                 			i = osgen.next()
+					## make sure we can access all directories
+					for d in i[1]:
+						os.chmod("%s/%s" % (i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
                 			for p in i[2]:
 						try:
+							os.chmod("%s/%s" % (i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 							res = scanfile(i[0], p, lentempdir=len(scandir), tempdir=tempdir, unpackscans=unpackscans, programscans=programscans, noscan=noscan)
 							if res != []:
 								scanreports.append(res)
