@@ -1,0 +1,142 @@
+\documentclass[11pt]{beamer}
+
+\usepackage{url}
+\usepackage{tikz}
+\author{Armijn Hemel}
+\title{Using the Binary Analysis Tool}
+\date{November 27, 2011}
+
+\begin{document}
+
+\setlength{\parskip}{4pt}
+
+\frame{\titlepage}
+
+\frame{
+\frametitle{Binary Analysis Tool - introduction}
+
+Binary Analysis Tool (BAT) is a generic framework for automated analysis of binary files:
+
+\begin{itemize}
+\item license compliance engineering
+\item security research
+\item \dots
+\end{itemize}
+
+Focus is on license compliance engineering
+}
+
+\frame{
+\frametitle{Binary Analysis Tool - motivations}
+
+\begin{itemize}
+\item demystify compliance engineering by codifying
+\item reproducable results
+\item common language for binary analysis
+\item no more excuses for companies (``we didn't know and it is hard to detect'')
+\end{itemize}
+}
+
+\frame{
+\frametitle{Binary Analysis Tool - facts}
+\begin{itemize}
+\item Apache 2 licensed
+\item lightweight
+\item uses standard Linux tools, or standard tools with some slight tweaks
+\item has spawned academic research
+\item only analyses, but draws no legal conclusions
+\end{itemize}
+
+BAT is currently maintained and enhanced by Tjaldur Software Governance Solutions.
+}
+
+\frame{
+}
+
+\frame{
+\frametitle{GPL compliance engineering}
+
+\begin{itemize}
+\item extract programs from blobs (firmwares, installers, etc.)
+\item extract human readable strings from programs and compare this to (publicly available) source code
+\item use other information like file names, other files, etc. for circumstantial evidence
+\end{itemize}
+
+If you can relate many strings from a binary file to source code it becomes statistically hard to deny use of GPL software.
+}
+
+\begin{frame}[fragile]
+\frametitle{What's in this blob?}
+
+{\scriptsize\color{blue}{
+\begin{verbatim}
+00000000  50 4b 03 04 14 00 00 00  08 00 29 52 57 3c fa c0  |PK........)RW<..|
+00000010  03 a7 26 9e 16 01 f4 ae  19 01 15 00 00 00 76 31  |..&...........v1|
+00000020  2e 31 2e 31 2e 31 37 5f  53 4d 43 5f 61 6c 6c 2e  |.1.1.17_SMC_all.|
+00000030  65 78 65 ec 3a 6d 78 53  55 9a f7 26 69 9a 42 ca  |exe.:mxSU..&i.B.|
+00000040  0d d0 38 65 69 30 60 50  94 96 56 43 91 98 06 03  |..8ei0`P..VC....|
+00000050  92 18 9f e1 e3 d6 c8 4d  03 f4 03 69 6b b8 a3 88  |.......M...ik...|
+00000060  78 2f 83 da 76 c3 a6 d9  6d 7a 37 0f 38 8b 33 ae  |x/..v...mz7.8.3.|
+00000070  33 ce d0 89 ee 8a f8 38  ae 3a 88 1f 30 61 c2 52  |3......8.:..0a.R|
+00000080  3a ea 33 ac e3 02 0e 3c  b3 38 ea ee e9 a4 ce d4  |:.3....<.8......|
+00000090  85 2d 01 0b 77 df f7 dc  f4 03 1c 67 66 9f fd db  |.-..w......gf...|
+000000a0  ab 37 f7 9c f7 bc e7 fd  38 e7 bc 5f a7 ac 5c bb  |.7......8.._..\.|
+000000b0  8b d1 33 0c 63 80 57 55  19 e6 00 a3 3d 5e e6 cf  |..3.c.WU....=^..|
+000000c0  3f 67 e1 9d 72 fd 5b 53  98 d7 8b de 9f 7d 80 5d  |?g..r.[S.....}.]|
+000000d0  f1 fe ec fb 22 9b 1e b5  6f d9 fa f0 03 5b 37 3c  |...."...o....[7<|
+000000e0  64 df b8 61 f3 e6 87 25  fb fd 2d f6 ad f2 66 fb  |d..a...%..-...f.|
+000000f0  a6 cd f6 e5 ab 83 f6 87  1e 6e 6e 59 50 5c 3c c9  |.........nnYP\<.|
+00000100  91 a7 d1 fc c1 99 4b f6  d7 5e dd 3b f2 5e da f5  |......K..^.;.^..|
+00000110  f2 de 6a f8 ae 7e e9 cd  bd f3 e0 9b fa c9 3b 7b  |..j..~........;{|
+00000120  17 d2 fe 81 bd 9b e0 fb  eb 5d fb f6 56 52 dc d7  |.........]..VR..|
+00000130  f6 7e 1f be 37 ee 7a 73  ef 2d f0 fd af 9f be be  |.~..7.zs.-......|
+00000140  77 36 7c ef dd b4 31 82  74 46 64 e4 7d 0c b3 82  |w6|...1.tFd.}...|
+00000150  35 30 43 1b fd 9e 31 b9  39 76 32 6b 64 98 2a 96  |50C...1.9v2kd.*.|
+00000160  61 9a f4 14 76 a1 1b 7e  2c a8 38 ab 69 6f d1 fa  |a...v..~,.8.io..|
+00000170  86 fc 9c 91 2f b3 c7 a0  8d c1 a3 a3 bf 96 7c df  |..../.........|.|
+00000180  32 0a b7 8c 5b a3 c8 3d  2c b3 07 1b c7 59 e6 85  |2...[..=,....Y..|
+00000190  5f e8 fe 82 55 fd 0b 1f  90 d3 a0 ff fa e1 05 52  |_...U..........R|
+000001a0  cb 76 09 be 8b 1c ac 26  50 15 7b b5 60 f0 d8 41  |.v.....&P.{.`..A|
+000001b0  fb 05 5b 9b 37 48 1b 18  e6 d5 19 1a 4d 04 6a 6b  |..[.7H......M.jk|
+000001c0  30 8e 15 fc bf 40 43 63  9a 37 c3 4f 13 ab 1d 90  |0....@Cc.7.O....|
+000001d0  a6 af e0 a5 17 6c 7d 74  eb 46 68 53 5d 41 67 e6  |.....l}t.FhS]Ag.|
+000001e0  38 7c f7 7c 95 de ff 4d  d9 89 67 e2 99 78 26 9e  |8|.|...M..g..x&.|
+000001f0  89 67 e2 99 78 26 9e 89  67 e2 99 78 26 9e 89 e7  |.g..x&..g..x&...|
+00000200  ff fb ac 51 06 62 03 e6  a0 f3 74 30 b6 72 58 8d  |...Q.b....t0.rX.|
+00000210  44 01 24 ea 83 22 1b 81  46 54 95 4d aa b5 64 e9  |D.$.."..FT.M..d.|
+00000220  52 46 59 69 8e e5 d4 84  ef 7c 2f 3b a4 aa 2a d7  |RFYi.....|/;..*.|
+00000230  b9 03 86 83 c1 a0 a8 0b  f2 aa b5 14 30 dc 99 84  |............0...|
+00000240  2f 27 35 87 10 68 00 58  19 ce ca b9 bf 94 ee de  |/'5..h.X........|
+00000250  71 e7 ca e0 5d 7e d9 29  28 df b6 e8 2f b4 ba 1a  |q...]~.)(.../...|
+00000260  cb 12 f5 c3 89 7a d3 36  bb 62 8c 1d 9d ca fa 86  |.....z.6.b......|
+\end{verbatim}
+}}
+
+\end{frame}
+
+\frame{
+\frametitle{Binary analysis}
+A firmware seems to be a blob with random data. Often there is a structure.
+
+\begin{enumerate}
+\item find file systems and compressed files
+\item unpack them
+\item research unpacked files, goto 1 if needed
+\end{enumerate}
+}
+
+\frame{
+\frametitle{Obtaining binary files}
+
+Firmwares are often not enough:
+
+\begin{itemize}
+\item not all software that is on the device is in the firmware (bootloader, recovery, etc.)
+\item firmware might be encrypted
+\item no firmware available
+\end{itemize}
+
+Via other methods (serial port, security holes) you need to gain access to the device.
+}
+
+\end{document}
