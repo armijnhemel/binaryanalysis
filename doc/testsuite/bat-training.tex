@@ -23,7 +23,7 @@ Binary Analysis Tool (BAT) is a generic framework for automated analysis of bina
 \item \dots
 \end{itemize}
 
-Focus is on license compliance engineering
+Focus is on license compliance engineering.
 }
 
 \frame{
@@ -48,9 +48,6 @@ Focus is on license compliance engineering
 \end{itemize}
 
 BAT is currently maintained and enhanced by Tjaldur Software Governance Solutions.
-}
-
-\frame{
 }
 
 \frame{
@@ -127,7 +124,6 @@ A firmware seems to be a blob with random data. Often there is a structure.
 
 \frame{
 \frametitle{Obtaining binary files}
-
 Firmwares are often not enough:
 
 \begin{itemize}
@@ -136,7 +132,86 @@ Firmwares are often not enough:
 \item no firmware available
 \end{itemize}
 
-Via other methods (serial port, security holes) you need to gain access to the device.
+Via other methods (serial port, security holes) you need to gain access to the device to get
+access to the full firmware.
+
+Obtaining firmwares via these methods is out of scope for this training.
 }
+
+\frame{
+\frametitle{Firmwares used in this training}
+
+\begin{itemize}
+\item based on OpenWrt 10.03 (``Backfire'')
+\item full corresponding source code available and GPL compliant
+\end{itemize}
+}
+
+\frame{
+\frametitle{Manual compliance engineering}
+To understand how BAT works you need to know what it does. We will look at:
+
+\begin{itemize}
+\item manual discovery of offsets
+\item manually unpacking of file systems
+\item manual analysis of binaries
+\end{itemize}
+}
+
+\frame{
+\frametitle{Discovery of offsets}
+}
+
+\begin{frame}[fragile]
+\frametitle{\texttt{hexdump}}
+
+\texttt{hexdump} is a great tool for displaying files in hexadecimal format.
+
+The switch \texttt{-C} 
+
+\texttt{hexdump -C \$file | less}
+
+{\scriptsize\color{blue}{
+\begin{verbatim}
+00000000  48 44 52 30 00 10 21 00  0a 07 eb 3d 00 00 01 00  |HDR0..!....=....|
+00000010  1c 00 00 00 04 09 00 00  00 b4 07 00 1f 8b 08 00  |................|
+00000020  00 00 00 00 02 03 a5 57  4d 6c 5b 59 19 3d be ef  |.......WMl[Y.=..|
+\end{verbatim}
+}}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Padding in firmwares}
+Firmwares are typically written to flash chips. The bootloader on devices is often configured with offsets that indicate:
+
+\begin{itemize}
+\item start of file systems
+\item start of bootloader
+\item location of (compressed) kernel
+\item \dots
+\end{itemize}
+
+Partitions are often not big enough to completely fill the allocated space, so \textit{padding} is used, usually NUL characters.
+{\scriptsize\color{blue}{
+\begin{verbatim}
+0007b130  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+\end{verbatim}
+}}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Recognizing padding}
+\texttt{hexdump} will compress duplicate lines and replace them with \texttt{*}:
+
+{\scriptsize\color{blue}{
+\begin{verbatim}
+0007b130  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+*
+0007b400  68 73 71 73 06 02 00 00  e0 05 62 0f 3f 00 00 00  |hsqs......b.?...|
+\end{verbatim}
+}}
+
+If there are large amounts of NUL characters it often indicates a partition boundary.
+\end{frame}
 
 \end{document}
