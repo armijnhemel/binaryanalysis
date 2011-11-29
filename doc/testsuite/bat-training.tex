@@ -4,13 +4,26 @@
 \usepackage{tikz}
 \author{Armijn Hemel}
 \title{Using the Binary Analysis Tool}
-\date{November 27, 2011}
+\date{November 29, 2011}
 
 \begin{document}
 
 \setlength{\parskip}{4pt}
 
 \frame{\titlepage}
+
+\frame{
+\frametitle{Subjects}
+
+In this presentation you will learn:
+
+\begin{itemize}
+\item backgrounds of the Binary Analysis Tool
+\item identifying compressed files and file systems within a bigger binary blob
+\item extracting and verifying compressed files and file systems
+\item configuring and using the Binary Analysis Tool to extract and verify compressed files and file systems
+\end{itemize}
+}
 
 \frame{
 \frametitle{Binary Analysis Tool - introduction}
@@ -30,7 +43,7 @@ Focus is on license compliance engineering.
 \frametitle{Binary Analysis Tool - motivations}
 
 \begin{itemize}
-\item demystify compliance engineering by codifying
+\item demystify compliance engineering by codifying knowledge
 \item reproducable results
 \item common language for binary analysis
 \item no more excuses for companies (``we didn't know and it is hard to detect'')
@@ -160,6 +173,14 @@ To understand how BAT works you need to know what it does. We will look at:
 
 \frame{
 \frametitle{Discovery of offsets}
+Two clear indicators where compressed files or file systems can start:
+
+\begin{itemize}
+\item known identifiers
+\item padding
+\end{itemize}
+
+Displaying files in a readable format is essential for manual analysis.
 }
 
 \begin{frame}[fragile]
@@ -167,7 +188,13 @@ To understand how BAT works you need to know what it does. We will look at:
 
 \texttt{hexdump} is a great tool for displaying files in hexadecimal format.
 
-The switch \texttt{-C} 
+The switch \texttt{-C} displays three columns:
+
+\begin{enumerate}
+\item hexadecimal offset in the file
+\item hexadecimal value of bytes
+\item human readable representation of bytes
+\end{enumerate}
 
 \texttt{hexdump -C \$file | less}
 
@@ -179,6 +206,20 @@ The switch \texttt{-C}
 \end{verbatim}
 }}
 \end{frame}
+
+\frame{
+\frametitle{Known identifiers}
+Many compressed files and file systems start, or end, with identifiers.
+
+\begin{itemize}
+\item \texttt{PK} for ZIP files
+\item \texttt{ELF} for ELF files
+\item \texttt{0x1f 0x8b 0x08} for gzip compression
+\item \dots
+\end{itemize}
+
+Many identifiers are well documented, for example in \texttt{/usr/share/magic} or file specification.
+}
 
 \begin{frame}[fragile]
 \frametitle{Padding in firmwares}
@@ -212,6 +253,33 @@ Partitions are often not big enough to completely fill the allocated space, so \
 }}
 
 If there are large amounts of NUL characters it often indicates a partition boundary.
+
+For example, here the padding directly precedes a SquashFS file system.
 \end{frame}
+
+\frame{
+\frametitle{Extracting files}
+}
+
+\frame{
+\frametitle{Verifying files}
+}
+
+\frame{
+\frametitle{Automating extraction using BAT}
+Manually extracting files is a lot of work and it is easy to miss files. BAT automates extraction:
+
+\begin{itemize}
+\item search for identifiers
+\item extraction
+\item verification
+\end{itemize}
+
+BAT works recursively and can unpack nested files and file systems.
+}
+
+\frame{
+\frametitle{Configuring BAT}
+}
 
 \end{document}
