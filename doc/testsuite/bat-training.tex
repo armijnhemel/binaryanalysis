@@ -278,8 +278,24 @@ Manually extracting files is a lot of work and it is easy to miss files. BAT aut
 BAT works recursively and can unpack nested files and file systems.
 }
 
-\frame{
+\begin{frame}[fragile]
 \frametitle{Configuring BAT}
+BAT can be configured through a configuration file. This file is in Windows INI format:
+
+\begin{verbatim}
+\end{verbatim}
+\end{frame}
+
+\frame{
+\frametitle{Running BAT}
+}
+
+\frame{
+\frametitle{Reading and interpreting results}
+
+\texttt{xml\_pp /path/to/bat/output | less}
+
+or use a web browser such as Firefox.
 }
 
 \end{document}
