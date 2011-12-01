@@ -307,13 +307,15 @@ def scan(filetoscan, magic, unpackscans=[], programscans=[], filehash=None, temp
                 			i = osgen.next()
 					## make sure we can access all directories
 					for d in i[1]:
-						os.chmod("%s/%s" % (i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+						if not os.path.islink("%s/%s" % (i[0], d)):
+							os.chmod("%s/%s" % (i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
                 			for p in i[2]:
 						try:
-							os.chmod("%s/%s" % (i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-							res = scanfile(i[0], p, lentempdir=len(scandir), tempdir=tempdir, unpackscans=unpackscans, programscans=programscans, noscan=noscan)
-							if res != []:
-								scanreports.append(res)
+							if not os.path.islink("%s/%s" % (i[0], p)):
+								os.chmod("%s/%s" % (i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+								res = scanfile(i[0], p, lentempdir=len(scandir), tempdir=tempdir, unpackscans=unpackscans, programscans=programscans, noscan=noscan)
+								if res != []:
+									scanreports.append(res)
 						except Exception, e:
 							print e
 			except StopIteration:

@@ -1156,15 +1156,28 @@ def unpackSquashfsOpenWrtLZMA(data, offset, tempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
 
-	p = subprocess.Popen(['bat-unsquashfs-openwrt', '-d', tmpdir, '-f', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	## squashfs 1.0 with lzma from OpenWrt can't unpack to an existing directory
+	## so we use a workaround using an extra temporary directory
+	tmpdir2 = tempfile.mkdtemp()
+
+	p = subprocess.Popen(['bat-unsquashfs-openwrt', '-dest', tmpdir2 + "/squashfs-root", '-f', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
+	##  return code is not reliable enough, since even after successful unpacking the return code would be 16
+	#if p.returncode != 0:
+	if stanerr != "":
+		shutil.rmtree(tmpdir2)
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
 	else:
+		## move all the contents using shutil.move()
+		mvfiles = os.listdir(tmpdir2 + "/squashfs-root")
+		for f in mvfiles:
+			shutil.move(tmpdir2 + "/squashfs-root/" + f, tmpdir)
+		## then we cleanup the temporary dir
+		shutil.rmtree(tmpdir2)
 		## like with 'normal' squashfs we can use 'file' to determine the size
 		squashsize = 0
 		p = subprocess.Popen(['file', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
@@ -1453,6 +1466,7 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, envvars=
 	datafile.close()
 	return (diroffsets, blacklist, offsets)
 
+## if there are multiple ZIP files in 
 def unpackZipMulti(data, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tempdir)
