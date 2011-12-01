@@ -28,7 +28,7 @@ In this presentation you will learn:
 \frame{
 \frametitle{Binary Analysis Tool - introduction}
 
-Binary Analysis Tool (BAT) is a generic framework for automated analysis of binary files:
+The Binary Analysis Tool (BAT) is a generic framework for automated analysis of binary files:
 
 \begin{itemize}
 \item license compliance engineering
@@ -72,7 +72,7 @@ BAT is currently maintained and enhanced by Tjaldur Software Governance Solution
 \item use other information like file names, other files, etc. for circumstantial evidence
 \end{itemize}
 
-If you can relate many strings from a binary file to source code it becomes statistically hard to deny use of GPL software.
+If you can relate many strings from a binary file to source code it becomes statistically hard to deny (re)use of software.
 }
 
 \begin{frame}[fragile]
@@ -107,18 +107,6 @@ If you can relate many strings from a binary file to source code it becomes stat
 00000180  32 0a b7 8c 5b a3 c8 3d  2c b3 07 1b c7 59 e6 85  |2...[..=,....Y..|
 00000190  5f e8 fe 82 55 fd 0b 1f  90 d3 a0 ff fa e1 05 52  |_...U..........R|
 000001a0  cb 76 09 be 8b 1c ac 26  50 15 7b b5 60 f0 d8 41  |.v.....&P.{.`..A|
-000001b0  fb 05 5b 9b 37 48 1b 18  e6 d5 19 1a 4d 04 6a 6b  |..[.7H......M.jk|
-000001c0  30 8e 15 fc bf 40 43 63  9a 37 c3 4f 13 ab 1d 90  |0....@Cc.7.O....|
-000001d0  a6 af e0 a5 17 6c 7d 74  eb 46 68 53 5d 41 67 e6  |.....l}t.FhS]Ag.|
-000001e0  38 7c f7 7c 95 de ff 4d  d9 89 67 e2 99 78 26 9e  |8|.|...M..g..x&.|
-000001f0  89 67 e2 99 78 26 9e 89  67 e2 99 78 26 9e 89 e7  |.g..x&..g..x&...|
-00000200  ff fb ac 51 06 62 03 e6  a0 f3 74 30 b6 72 58 8d  |...Q.b....t0.rX.|
-00000210  44 01 24 ea 83 22 1b 81  46 54 95 4d aa b5 64 e9  |D.$.."..FT.M..d.|
-00000220  52 46 59 69 8e e5 d4 84  ef 7c 2f 3b a4 aa 2a d7  |RFYi.....|/;..*.|
-00000230  b9 03 86 83 c1 a0 a8 0b  f2 aa b5 14 30 dc 99 84  |............0...|
-00000240  2f 27 35 87 10 68 00 58  19 ce ca b9 bf 94 ee de  |/'5..h.X........|
-00000250  71 e7 ca e0 5d 7e d9 29  28 df b6 e8 2f b4 ba 1a  |q...]~.)(.../...|
-00000260  cb 12 f5 c3 89 7a d3 36  bb 62 8c 1d 9d ca fa 86  |.....z.6.b......|
 \end{verbatim}
 }}
 
@@ -258,11 +246,40 @@ For example, here the padding directly precedes a SquashFS file system.
 \end{frame}
 
 \frame{
-\frametitle{Extracting files}
+\frametitle{Excercise 1: discover offsets}
+
+Copy the first firmware (\texttt{openwrt-brcm-2.4-squashfs.trx} to a temporary directory and do the following:
+
+\begin{enumerate}
+\item use \texttt{hexdump -C} to display the contents of the file
+\item report likely offsets for gzip compressed file and SquashFS file system
+\end{enumerate}
 }
 
 \frame{
-\frametitle{Verifying files}
+\frametitle{Extracting files}
+After finding the right offsets you need to carve out the right parts of the file:
+
+\begin{itemize}
+\item editor that can process binary files (vim, emacs, etcetera)
+\item \texttt{dd}
+\end{itemize}
+
+Example with \texttt{dd}:
+
+\texttt{dd if=/path/to/firmware of=/path/to/outfile bs=1 skip=\$offset}
+}
+
+\frame{
+\frametitle{Verifying and unpacking files}
+
+\begin{itemize}
+\item
+\end{itemize}
+}
+
+\frame{
+\frametitle{Excercise 2: extract, verify and unpack files}
 }
 
 \frame{
@@ -293,9 +310,17 @@ BAT can be configured through a configuration file. This file is in Windows INI 
 \frame{
 \frametitle{Reading and interpreting results}
 
+The output from BAT is in XML format. To display it use a command like this:
+
 \texttt{xml\_pp /path/to/bat/output | less}
 
-or use a web browser such as Firefox.
+or use a web browser such as Firefox to navigate the XML file.
+
+In the near future a GUI for easier navigation of the results will be made.
+}
+
+\frame{
+\frametitle{Exercise 3: run BAT and interpret results}
 }
 
 \end{document}
