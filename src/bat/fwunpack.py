@@ -1636,13 +1636,16 @@ def unpackRar(data, offset, tempdir=None):
 	return (endofarchive, tmpdir)
 
 def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
-	if offsets['lzma_alone'] == 0:
-		return ([],blacklist, offsets)
+	lzmaoffsets = []
+	for marker in fsmagic.lzmatypes:
+		lzmaoffsets = lzmaoffsets + offsets[marker]
+	if lzmaoffsets == []:
+		return ([], blacklist, offsets)
 	datafile = open(filename, 'rb')
 	diroffsets = []
 	counter = 1
 	data = datafile.read()
-	for offset in offsets['lzma_alone']:
+	for offset in lzmaoffsets:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue

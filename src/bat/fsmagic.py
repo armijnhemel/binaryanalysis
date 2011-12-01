@@ -28,6 +28,7 @@ fsmagic = {
             'squashfs3':        '\x71\x73\x68\x73', # qshs
             'squashfs4':        '\x73\x68\x73\x71', # shsq
             'lzma_alone':       '\x5d\x00\x00',
+            'lzma_alone_alt':   '\x6d\x00\x00',     # used in OpenWrt
             'xz':               '\xfd\x37\x7a\x58\x5a\x00',
             'xztrailer':        '\x59\x5a',
             'lzip':             'LZIP',
@@ -59,5 +60,6 @@ fsmagic = {
 
 ## collection of markers that should be scanned together
 squashtypes = ['squashfs1', 'squashfs2', 'squashfs3', 'squashfs4']
+lzmatypes   = ['lzma_alone', 'lzma_alone_alt']
 cpio        = ['cpio1', 'cpio2', 'cpio3']
 gif         = ['gif87', 'gif89']
