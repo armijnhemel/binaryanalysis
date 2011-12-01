@@ -312,6 +312,9 @@ Commenting an entry, or deleting it from the configuration, disables the unpacke
 
 \frame{
 \frametitle{Running BAT}
+Make sure BAT and the \texttt{bat-extratools} package are installed (version 6 or higher)
+
+\texttt{bruteforce.py -c /path/to/configuration -b /path/to/firmware > /path/to/output}
 }
 
 \frame{
@@ -328,6 +331,12 @@ In the near future a GUI for easier navigation of the results will be made.
 
 \frame{
 \frametitle{Exercise 3: run BAT and interpret results}
+Run BAT on the test firmware and confirm:
+
+\begin{itemize}
+\item three \texttt{unpack} scans were successfully run
+\item the offset for the gzip file is 28, the offset for the LZMA file is 2308, the offset for SquashFS is 504832
+\end{itemize}
 }
 
 \frame{
