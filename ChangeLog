@@ -2,6 +2,8 @@
 * don't follow symlinks for chmod
 * unsquashfs from openwrt with lzma cannot unpack to an existing directory, so
 use an extra directory to work around that limitation
+* add alternative LZMA identifier that is sometimes used in OpenWrt, rework
+LZMA unpacking to work with multiple identifiers
 
 2011-11-25
 * add jdeserialize to bat-extratools
