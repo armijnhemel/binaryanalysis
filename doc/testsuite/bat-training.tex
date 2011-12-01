@@ -3,8 +3,8 @@
 \usepackage{url}
 \usepackage{tikz}
 \author{Armijn Hemel}
-\title{Using the Binary Analysis Tool}
-\date{November 29, 2011}
+\title{Using the Binary Analysis Tool - part 1}
+\date{December 1, 2011}
 
 \begin{document}
 
@@ -15,7 +15,7 @@
 \frame{
 \frametitle{Subjects}
 
-In this presentation you will learn:
+In this course you will learn:
 
 \begin{itemize}
 \item backgrounds of the Binary Analysis Tool
@@ -248,7 +248,7 @@ For example, here the padding directly precedes a SquashFS file system.
 \frame{
 \frametitle{Excercise 1: discover offsets}
 
-Copy the first firmware (\texttt{openwrt-brcm-2.4-squashfs.trx} to a temporary directory and do the following:
+Copy the first firmware (\texttt{openwrt-brcm-2.4-squashfs.trx}) to a temporary directory and do the following:
 
 \begin{enumerate}
 \item use \texttt{hexdump -C} to display the contents of the file
@@ -283,7 +283,7 @@ Example with \texttt{dd}:
 }
 
 \frame{
-\frametitle{Automating extraction using BAT}
+\frametitle{Automated extraction using BAT}
 Manually extracting files is a lot of work and it is easy to miss files. BAT automates extraction:
 
 \begin{itemize}
@@ -297,10 +297,17 @@ BAT works recursively and can unpack nested files and file systems.
 
 \begin{frame}[fragile]
 \frametitle{Configuring BAT}
-BAT can be configured through a configuration file. This file is in Windows INI format:
+BAT can be configured through a configuration file. This file is in Windows INI format. Unpackers are of type \texttt{unpack}:
 
 \begin{verbatim}
+[gzip]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackGzip
+priority = 1
 \end{verbatim}
+
+Commenting an entry, or deleting it from the configuration, disables the unpacker.
 \end{frame}
 
 \frame{
