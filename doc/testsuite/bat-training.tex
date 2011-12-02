@@ -4,7 +4,7 @@
 \usepackage{tikz}
 \author{Armijn Hemel}
 \title{Using the Binary Analysis Tool - part 1}
-\date{December 1, 2011}
+\date{December 2, 2011}
 
 \begin{document}
 
@@ -136,11 +136,11 @@ Firmwares are often not enough:
 Via other methods (serial port, security holes) you need to gain access to the device to get
 access to the full firmware.
 
-Obtaining firmwares via these methods is out of scope for this training.
+Obtaining firmwares via these methods is out of scope for this course.
 }
 
 \frame{
-\frametitle{Firmwares used in this training}
+\frametitle{Firmwares used in this course}
 
 \begin{itemize}
 \item based on OpenWrt 10.03 (``Backfire'')
@@ -274,12 +274,44 @@ Example with \texttt{dd}:
 \frametitle{Verifying and unpacking files}
 
 \begin{itemize}
-\item
+\item remove all bytes preceding an identifier
+\item run an unpacker tool
+\item verify contents were successfully unpacked
 \end{itemize}
 }
 
+\begin{frame}[fragile]
+\frametitle{Example: gzip}
+Firmware has a gzip file at offset \texttt{0x1C}. Remove the bytes in front:
+
+\texttt{dd if=/path/to/firmware of=/path/to/outfile bs=1 skip=28}
+
+and verify using \texttt{file} that the file is actually a gzip file:
+
+\begin{verbatim}
+$ file /path/to/outfile 
+/path/to/outfile: gzip compressed data, from Unix,
+    max compression
+\end{verbatim}
+
+Then you can unpack using \texttt{zcat}:
+
+\begin{verbatim}
+$ zcat /path/to/outfile > /path/to/outfile2
+gzip: /path/to/outfile: decompression OK,
+    trailing garbage ignored
+\end{verbatim}
+\end{frame}
+
 \frame{
 \frametitle{Excercise 2: extract, verify and unpack files}
+Extract the following:
+
+\begin{itemize}
+\item gzip compressed file at offset \texttt{0x1C}
+\item LZMA compressed file at offset \texttt{0x904}
+\item SquashFS file system (find the offset yourself). Use \texttt{bat-unsquashfs-openwrt} to extract this file system.
+\end{itemize}
 }
 
 \frame{
