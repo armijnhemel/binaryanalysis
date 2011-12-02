@@ -1,1 +1,49 @@
 Notes/transcript for presentation
+
+Slide 1: no notes
+
+Slide 2: Welcome to this first course about using the Binary Analysis Tool. This course is
+the first in a series of courses about analysing binaries with the Binary Analysis Tool
+
+In this course you will learn about what the Binary Analysis Tool is and why it was made.
+You will also learn about the backgrounds of how to identify compressed files and file
+systems within a larger binary blob and how to extract these from the blob.
+
+After that we will look into how the Binary Analysis Tool automates this and will make
+your life a lot easier.
+
+Slide 3: The Binary Analysis Tool, or BAT, is a generic framework for automating analysis of
+binary files. It can be used for various purposes, like license compliance engineering,
+or security research, or basically any problem for which you want to analyse a binary file.
+
+The main focus of the Binary Analysis Tool is on license compliance engineering.
+
+Slide 4: the Binary Analysis Tool was created with a few goals in mind. The first goal
+is to demystify compliance engineering. To many people compliance engineering is a form of
+black art, while to any properly trained engineer it is just another form of debugging.
+With the Binary Analysis Tool it is easier to get up to speed with compliance engineering.
+
+Very important is that results can be reproduced by someone else who is also running the
+tool, without having to solely rely on someone's expert opinion that is hard to verify.
+
+By making a common language for binary analysis it is easier to talk to other people
+about analysing binaries, and accelerate research in this field.
+
+But, one of the most important reasons was to take away excuses for companies that
+insist that for them it is impossible to find out what they ship. By giving them a
+tool that automates this task they can no longer use this excuse, but at the same
+time are not left in the cold, because the tool is available to them as well.
+
+Slide 5: BAT is released under the Apache 2 license. It is written in Python and is
+a lightweight wrapper around standard and well-tested Linux tools, or standard tools with
+some slight tweaks (available in a separate package). The heavy lifting is done by the
+tools, while BAT takes care of all the infrastructure, such as setting up directories,
+invoking tools with the proper parameters, cleaning up after tools, collecting results,
+and so on.
+
+In the past few years BAT has actively been used in academic research, of which results
+have been put back into BAT.
+
+One very important thing to remember is that BAT is just a tool that analyses binaries,
+but it does not draw any legal conclusions. The results should always be interpreted
+by a human.
