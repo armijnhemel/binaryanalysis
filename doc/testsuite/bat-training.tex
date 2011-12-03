@@ -156,7 +156,7 @@ To understand how BAT works you need to know what it does. We will look at:
 \begin{itemize}
 \item manual discovery of offsets
 \item manually unpacking of file systems
-\item manual analysis of binaries
+\item manual analysis of binaries (next course)
 \end{itemize}
 }
 
@@ -221,7 +221,7 @@ Firmwares are typically written to flash chips. The bootloader on devices is oft
 \item \dots
 \end{itemize}
 
-Partitions are often not big enough to completely fill the allocated space, so \textit{padding} is used, usually NUL characters.
+There is often not enough data to completely fill the allocated space, so \textit{padding} is used, usually NUL characters.
 {\scriptsize\color{blue}{
 \begin{verbatim}
 0007b130  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
@@ -268,7 +268,7 @@ After finding the right offsets you need to carve out the right parts of the fil
 
 Example with \texttt{dd}:
 
-\texttt{dd if=/path/to/firmware of=/path/to/outfile bs=1 skip=\$offset}
+\texttt{dd if=/path/to/firmware of=/path/to/outfile bs=\$offset skip=1}
 }
 
 \frame{
