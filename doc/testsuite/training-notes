@@ -2,94 +2,182 @@ Notes/transcript for presentation
 
 Slide 1: no notes
 
-Slide 2: Welcome to this first course about using the Binary Analysis Tool. This course is
-the first in a series of courses about analysing binaries with the Binary Analysis Tool
+Slide 2: Welcome to this first course about using the Binary Analysis Tool.
+This course is the first in a series of courses about analysing binaries with
+the Binary Analysis Tool
 
-In this course you will learn about what the Binary Analysis Tool is and why it was made.
-You will also learn about the backgrounds of how to identify compressed files and file
-systems within a larger binary blob and how to extract these from the blob.
+In this course you will learn about what the Binary Analysis Tool is and why it
+was made. You will also learn about the backgrounds of how to identify
+compressed files and file systems within a larger binary blob and how to
+extract these from the blob.
 
-After that we will look into how the Binary Analysis Tool automates this and will make
-your life a lot easier.
+After that we will look into how the Binary Analysis Tool automates this and
+will make your life a lot easier.
 
-Slide 3: The Binary Analysis Tool, or BAT, is a generic framework for automating analysis of
-binary files. It can be used for various purposes, like license compliance engineering,
-or security research, or basically any problem for which you want to analyse a binary file.
+Slide 3: The Binary Analysis Tool, or BAT, is a generic framework for
+automating analysis of binary files. It can be used for various purposes, like
+license compliance engineering, or security research, or basically any problem
+for which you want to analyse a binary file.
 
 The main focus of the Binary Analysis Tool is on license compliance engineering.
 
-Slide 4: the Binary Analysis Tool was created with a few goals in mind. The first goal
-is to demystify compliance engineering. To many people compliance engineering is a form of
-black art, while to any properly trained engineer it is just another form of debugging.
-With the Binary Analysis Tool it is easier to get up to speed with compliance engineering.
+Slide 4: the Binary Analysis Tool was created with a few goals in mind. The
+first goal is to demystify compliance engineering. To many people compliance
+engineering is a form of black art, while to any properly trained engineer it
+is just another form of debugging.  With the Binary Analysis Tool it is easier
+to get up to speed with compliance engineering.
 
-Very important is that results can be reproduced by someone else who is also running the
-tool, without having to solely rely on someone's expert opinion that is hard to verify.
+Very important is that results can be reproduced by someone else who is also
+running the tool, without having to solely rely on someone's expert opinion
+that is hard to verify.
 
-By making a common language for binary analysis it is easier to talk to other people
-about analysing binaries, and accelerate research in this field.
+By making a common language for binary analysis it is easier to talk to other
+people about analysing binaries, and accelerate research in this field.
 
-But, one of the most important reasons was to take away excuses for companies that
-insist that for them it is impossible to find out what they ship. By giving them a
-tool that automates this task they can no longer use this excuse, but at the same
-time are not left in the cold, because the tool is available to them as well.
+But, one of the most important reasons was to take away excuses for companies
+that insist that for them it is impossible to find out what they ship. By
+giving them a tool that automates this task they can no longer use this excuse,
+but at the same time are not left in the cold, because the tool is available to
+them as well.
 
-Slide 5: BAT is released under the Apache 2 license. It is written in Python and is
-a lightweight wrapper around standard and well-tested Linux tools, or standard tools with
-some slight tweaks (available in a separate package). The heavy lifting is done by the
-tools, while BAT takes care of all the infrastructure, such as setting up directories,
-invoking tools with the proper parameters, cleaning up after tools, collecting results,
-and so on.
+Slide 5: BAT is released under the Apache 2 license. It is written in Python
+and is a lightweight wrapper around standard and well-tested Linux tools, or
+standard tools with some slight tweaks (available in a separate package). The
+heavy lifting is done by the tools, while BAT takes care of all the
+infrastructure, such as setting up directories, invoking tools with the proper
+parameters, cleaning up after tools, collecting results, and so on.
 
-In the past few years BAT has actively been used in academic research, of which results
-have been put back into BAT.
+In the past few years BAT has actively been used in academic research, of which
+results have been put back into BAT.
 
-One very important thing to remember is that BAT is just a tool that analyses binaries,
-but it does not draw any legal conclusions. The results should always be interpreted
-by a human.
+One very important thing to remember is that BAT is just a tool that analyses
+binaries, but it does not draw any legal conclusions. The results should always
+be interpreted by a human.
 
 Slide 6:
 
-Slide 7: When looking at a binary file it looks rather overwhelming at first sight.
-On this slide you see what a file looks like if you look at it with the tool 'hexdump'.
-The first column displays the offset in the file (in hexadecimal notation), the second column
-has the hexadecimal values of 16 bytes per row, and the third column displays the bytes as
-human readable characters, if possible.
+Slide 7: When looking at a binary file it looks rather overwhelming at first
+sight.  On this slide you see what a file looks like if you look at it with the
+tool 'hexdump'.  The first column displays the offset in the file (in
+hexadecimal notation), the second column has the hexadecimal values of 16 bytes
+per row, and the third column displays the bytes as human readable characters,
+if possible.
 
-This slide actually displays the first few hundred bytes of a file in ZIP format. The first
-bytes ('PK') are (part of) the identifier that is used for ZIP files.
+This slide actually displays the first few hundred bytes of a file in ZIP
+format. The first bytes ('PK') are (part of) the identifier that is used for
+ZIP files.
 
-Slide 8: A binary file, for example a firmware, looks like random data. But actually there
-is a hidden structure, that is sometimes easy to find, and sometimes harder, or almost
-impossible to find (for example if a firmware has been encrypted and you don't have any
-decryption key). In most cases it is quite trivial, you just need to know what to look for.
+Slide 8: A binary file, for example a firmware, looks like random data. But
+actually there is a hidden structure, that is sometimes easy to find, and
+sometimes harder, or almost impossible to find (for example if a firmware has
+been encrypted and you don't have any decryption key). In most cases it is
+quite trivial, you just need to know what to look for. 
 
-To extract the contents of a firmware you first need to find file systems and compressed
-files, then unpack them and for every file that has been extracted you need to do the same,
-until you can't unpack anymore. After that you can start analysing each individual file that
-you have unpacked.
+To extract the contents of a firmware you first need to find file systems and
+compressed files, then unpack them and for every file that has been extracted
+you need to do the same, until you can't unpack anymore. After that you can
+start analysing each individual file that you have unpacked.
 
-Slide 9: Analysing a firmware that was downloaded from a website will not always tell you
-everything on a device. Often firmware updates only update a part of the data that you can
-find on the flash chip. Software like the bootloader, which often is GPL licensed software,
-is not included in the firmware. If a device has a rescue partition it is often also left
-untouched by a firmware update.
+Slide 9: Analysing a firmware that was downloaded from a website will not
+always tell you everything on a device. Often firmware updates only update a
+part of the data that you can find on the flash chip. Software like the
+bootloader, which often is GPL licensed software, is not included in the
+firmware. If a device has a rescue partition it is often also left untouched by
+a firmware update.
 
-Sometimes a firmware update might be unusable because it is encrypted and you don't have
-the right information to decrypt it. Or, you might not have a firmware to analyse in
-the first place!
+Sometimes a firmware update might be unusable because it is encrypted and you
+don't have the right information to decrypt it. Or, you might not have a
+firmware to analyse in the first place!
 
-In these cases you will need to get access to the contents of the flash chip. The method
-that's used the most is adding a serial port to the device and transferring the contents
-of the flash chip. Other methods could be exploiting security bugs in the device, or, in
-case of Android devices using the (remote) Android debugger. These topics are out of scope
-for this course.
+In these cases you will need to get access to the contents of the flash chip.
+The method that's used the most is adding a serial port to the device and
+transferring the contents of the flash chip. Other methods could be exploiting
+security bugs in the device, or, in case of Android devices using the (remote)
+Android debugger. These topics are out of scope for this course.
 
-Slide 10: The firmwares that will be used in this course are all based on OpenWrt. We will
-not be using firmwares of commercially available firmwares for a few reasons: we don't want
-to single out companies and by distributing their firmwares we could possibly be infringing
-the license terms ourselves. By using OpenWrt, for which we have complete sources, we avoid
-both issues.
+Slide 10: The firmwares that will be used in this course are all based on
+OpenWrt. We will not be using firmwares of commercially available firmwares for
+a few reasons: we don't want to single out companies and by distributing their
+firmwares we could possibly be infringing the license terms ourselves. By using
+OpenWrt, for which we have complete sources, we avoid both issues.
 
-Slide 11: Before we can explain how the Binary Analysis Tool works you need to understand
-the workflow that BAT implements, also because it makes it easier to debug ...
+Slide 11: Before we can explain how the Binary Analysis Tool works you need to
+understand the workflow that BAT implements, also because it makes it easier to
+debug in case BAT does not work correctly and you need to look into files by
+hand.
+
+We will therefore look at discovering offsets of compressed files and file
+systems and unpacking file systems. Compliance engineering for binaries after
+unpacking them is the main subject for the next course.
+
+Slide 12: The discover the start of a compressed file or file system there are
+two things we can search for in a firmware: known identifiers of compressed
+files and file systems and something called `padding'.
+
+Before you can search for these it is essential to have the right tools to
+display files.
+
+Slide 13: A tool that easily allows you to view a file in several formats
+simultaneously is hexdump. It is intended to display hexadecimal values of the
+bytes in a file. When you use the flag '-C' you get the values of the bytes in
+both hexadecimal format, plus, if possible, a human readable representation of
+those bytes.
+
+A we saw a few slides ago: the first column displays the offset in the file (in
+hexadecimal notation), the second column has the hexadecimal values of 16 bytes
+per row, and the third column displays the bytes as human readable characters,
+if possible.
+
+Slide 14: Many compressed files, file systems or media files start, or end,
+with a file specific identifier, such as 'PK' for ZIP files, 'ELF' for ELF
+executables or object files or the hexadecimal sequence 0x1f 0x8b 0x08 for gzip
+compressed files.
+
+On almost all Linux systems you can find identifiers for many file types in the
+so called `magic' file, or database, located in /usr/share/magic.
+
+Slide 15: Another good way to find offsets is to seach for so called `padding
+characters' or simply `padding'. On many embedded devices the flash chip is
+divided in partitions. The bootloader is configured in such a way that it knows
+at which offset it can find for example the (compressed) kernel, or the root
+file system.
+
+Data (kernel/file system) is often not enough to fill the entire partition that
+is reserved for it, so padding is used to fill out the remaining space. Often
+the NUL character (hexadecimal value 0x00) is used, but other values (for
+example 0xff) are used as well.
+
+Slide 16: When using hexdump it is quite easy to recognize padding, since
+hexdump will not display duplicate lines, but instead replace them with the
+asterisk character, If you see a lot of NUL characters it is safe to assume
+that it is padding and something interesting is following the padding.
+
+In the example here you can see padding, followed by the identifier for a
+SquashFS file system.
+
+Slide 17:
+
+Slide 18: After finding the right offsets for a compressed file or file system
+you can carve it from the file. There are several ways you can do this. One way
+is to use an editor like Vim or Emacs and edit the file by hand. An easier way
+is to use a tool like dd to write the right bytes to a file, for example like
+shown on the slide.
+
+Slide 19:
+
+Slide 20:
+
+Slide 21:
+
+Slide 22: Extracting files and file systems manually is doable but it is a lot
+of work and it is easy to miss things. The Binary Analysis Tool automates the
+boring work and searches for identifiers, extracts files and file systems,
+unpacks them and verifies unpacking was done successfully. It then recursively
+applies the same methods to the unpacked files, so you can unpack nested files
+and file systems.
+
+Slide 23: BAT is extremely configurable. All the unpackers that are tried are
+defined in a configuration file. This file uses the Windows INI format and is
+extremely easy to edit.
+
+...
