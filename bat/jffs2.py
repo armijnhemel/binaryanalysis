@@ -102,6 +102,7 @@ def unpackJFFS2(path, tempdir=None):
 						unzfiledata = unzfiledata + zlib.decompress(filedata)
 					except Exception, e:
 						## TODO: handle symlinks
+						## a symlink is written as an ASCII file with the target of the symlink as the content of the file
 						unzfiledata = unzfiledata + filedata
 			datafile = open('%s/%s/%s' % (tmpdir, pathinodes[direntries[n]['parent']], direntries[n]['name']), 'w')
 			datafile.write(unzfiledata)
