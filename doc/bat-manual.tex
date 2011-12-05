@@ -592,15 +592,30 @@ point to the main Ninka script.
 
 \subsection{Setting the database}
 
-In BAT 5.0 the database is hardcoded to \texttt{/tmp/master}. It can be changed
-in \texttt{ranking.py} in the following line:
+Since BAT 6.0 the locatation of the strings database and the caching databases can
+be set in the configuration file for \texttt{bruteforce.py}:
 
 \begin{verbatim}
-  conn = sqlite3.connect(os.environ.get('BAT_SQLITE_DB', '/tmp/master'))
+[ranking]
+type    = program
+module  = bat.ranking
+method  = searchGeneric
+xmloutput = xmlprettyprint
+envvars = BAT_SQLITE_AVG=/tmp/avg:BAT_SQLITE_STRINGSCACHE=/tmp/stringscache
+     :BAT_SQLITE_DB=/tmp/master
 \end{verbatim}
 
-In the latest development versions it is possible to set the location of the database
-in the configuration file for \texttt{bruteforce.py}.
+The caching databases are \texttt{BAT\_SQLITE\_AVG} and
+\texttt{BAT\_SQLITE\_STRINGSCACHE}. The strings database is \texttt{BAT\_SQLITE\_DB}.
+
+Fallback values for these databases have been hardcoded in \texttt{ranking.py}.
+To change these values, change the following lines:
+
+\begin{verbatim}
+conn = sqlite3.connect(scanenv.get('BAT_SQLITE_DB', '/tmp/master'))
+avgdb = scanenv.get('BAT_SQLITE_AVG', '/tmp/avg')
+stringscache = scanenv.get('BAT_SQLITE_STRINGSCACHE', '/tmp/stringscache')
+\end{verbatim}
 
 \subsection{Enabling the ranking scan}
 
@@ -608,24 +623,31 @@ The ranking scan is configured in the configuration file. In the configuration
 shipped with BAT it is disabled by default. By uncommenting the entry for
 the scan it can be enabled.
 
-In BAT 5.0 the ranking scan only searches strings that have their type recorded
-as \texttt{C} in the database. This means C and C++ source code and header files,
-as well as QML and assembler files.
+Since BAT 6.0 a distinction is made in the ranking scan between programs
+written in different language families. When the strings are extracted from
+source code the language family is also recorded with the string. For example:
+C and C++ source code and header files, as well as QML and assembler files are
+recorded as \texttt{C}. Similarly Java, Scala, Groovy and JSP are recorded as
+\texttt{Java}, and so on.
 
-Other files, such as Java, are ignored. Vice versa, for Java executables (in
-the development version of BAT Java scanning has been added) everything but
-Java will be ignored.  
+When a binary is scanned the ranking scan first tries to classify it. Based on
+the classification only strings from a certain language family are used. For
+example, when scanning an ELF executable, only strings from C language files
+are selected from the database. Others, such as strings extracted from Java
+files, are ignored. Vice versa, for Java executables everything but Java will
+be ignored.  
+
 The reason for this is that there is usually little code cloning between C and
 Java files, or Java and C\# files (except of course when interpreters and
 virtual machines are embedded, or other language bridges are used). Strings in
-a Java program are unlikely to come directly from a C language. Adding all
+a Java program are unlikely to originate from a file in a C program. Using all
 strings from all programs, irrespective of the language they were written in,
-therefore is likely to result in worse matching behaviour.
+therefore is likely to result in incorrect matching behaviour.
 
 \subsubsection{Interpreting the results}
 
-The results of the scan can be found in the element \texttt{<ranking>}. In
-this element the following can be found:
+The results of the scan can be found in the element \texttt{<ranking>}. This
+element contains:
 
 \begin{itemize}
 \item number of lines that were extracted from the binary
