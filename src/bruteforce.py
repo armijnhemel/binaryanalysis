@@ -5,7 +5,7 @@
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
-This script tries to analyse the firmware of a device, using a "brute force" approach
+This script tries to analyse binary blobs, using a "brute force" approach
 and pretty print the analysis in a simple XML format.
 '''
 
@@ -22,7 +22,7 @@ ms.load()
 ## convenience method to merge ranges that overlap in a blacklist
 ## We do multiple passes to make sure everything is correctly merged
 ## Example:
-## [(1,3), (2,4), (5,7), (3,7)] would need to result in [(1,7)]
+## [(1,3), (2,4), (5,7), (3,7)] would result in [(1,7)]
 def mergeBlacklist(blacklist):
 	if len(blacklist) == 0:
 		return []
@@ -122,41 +122,6 @@ def prettyprintresxml(res, scandate, unpackscans=[], programscans=[]):
 	tmpnodetext.data = scandate.isoformat()
 	tmpnode.appendChild(tmpnodetext)
 	topnode.appendChild(tmpnode)
-
-	## try to get extra metadata from the knowledgebase regarding
-	## vendors, devices, hardware versions of devices and firmware versions
-	if conn != None:
-		c = conn.cursor()
-		c.execute('''select vendor, name, device.version, firmware.version from device, firmware where firmware.sha256=? and device.id == firmware.deviceid''', (res['sha256'],))
-		dbres = c.fetchall()
-		c.close()
-		for i in dbres:
-			devicenode = root.createElement('device')
-			(vendor,name,version,firmwareversion) = i
-			tmpnode = root.createElement('vendor')
-			tmpnodetext = xml.dom.minidom.Text()
-			tmpnodetext.data = vendor
-			tmpnode.appendChild(tmpnodetext)
-			devicenode.appendChild(tmpnode)
-
-			tmpnode = root.createElement('name')
-			tmpnodetext = xml.dom.minidom.Text()
-			tmpnodetext.data = name
-			tmpnode.appendChild(tmpnodetext)
-			devicenode.appendChild(tmpnode)
-
-			tmpnode = root.createElement('hardwareversion')
-			tmpnodetext = xml.dom.minidom.Text()
-			tmpnodetext.data = version
-			tmpnode.appendChild(tmpnodetext)
-			devicenode.appendChild(tmpnode)
-
-			tmpnode = root.createElement('firmwareversion')
-			tmpnodetext = xml.dom.minidom.Text()
-			tmpnodetext.data = firmwareversion
-			tmpnode.appendChild(tmpnodetext)
-			devicenode.appendChild(tmpnode)
-			topnode.appendChild(devicenode)
 
 	## there are a few things we always want to know about the top level node
 	tmpnodes = generateNodes(res, root, ["name", "path", "realpath", "magic", "sha256", "size"])
@@ -410,26 +375,15 @@ def main(argv):
 	parser.add_option("-a", "--always", action="store_true", dest="scanalways", help="always perform brute force scan even if results are availale in the knowledgebase (default false)")
 	parser.add_option("-b", "--binary", action="store", dest="fw", help="path to binary file", metavar="FILE")
 	parser.add_option("-c", "--config", action="store", dest="cfg", help="path to configuration file", metavar="FILE")
-	parser.add_option("-d", "--database", action="store", dest="db", help="path to sqlite database (optional)", metavar="FILE")
 	parser.add_option("-z", "--cleanup", action="store_true", dest="cleanup", help="cleanup after analysis? (default: false)")
 	(options, args) = parser.parse_args()
 	if options.fw == None:
         	parser.error("Path to binary file needed")
 	try:
-        	firmware_binary = options.fw
+        	scan_binary = options.fw
 	except:
         	print "No file to scan found"
         	sys.exit(1)
-
-	global conn
-	conn = None
-
-	if options.db != None:
-		try:
-			conn = sqlite3.connect(options.db)
-		except:
-			print "Can't open database file"
-			sys.exit(1)
 
 	global scanalways
 	if options.scanalways == None:
@@ -452,7 +406,7 @@ def main(argv):
 	(unpackscans, programscans) = readconfig(config)
 	scandate = datetime.datetime.utcnow()
 
-	## Per firmware scanned we get a list with results.
+	## Per binary scanned we get a list with results.
 	## Each file system or compressed file we can unpack gives a list with
 	## reports back as its result, so we have a list of lists
 	## within the inner list there is a result tuple, which could contain
@@ -460,8 +414,8 @@ def main(argv):
 	## the file inside a file system we looked at was in fact a file system.
 	tempdir=tempfile.mkdtemp()
 	#tempdir=None
-	shutil.copy(firmware_binary, tempdir)
-	res = scanfile(tempdir, os.path.basename(firmware_binary), tempdir=tempdir, unpackscans=unpackscans, programscans=programscans)
+	shutil.copy(scan_binary, tempdir)
+	res = scanfile(tempdir, os.path.basename(scan_binary), tempdir=tempdir, unpackscans=unpackscans, programscans=programscans)
 	xml = prettyprintresxml(res, scandate, unpackscans=unpackscans, programscans=programscans)
 	print xml.toxml()
 
