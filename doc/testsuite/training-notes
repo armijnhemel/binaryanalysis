@@ -178,6 +178,33 @@ and file systems.
 
 Slide 23: BAT is extremely configurable. All the unpackers that are tried are
 defined in a configuration file. This file uses the Windows INI format and is
-extremely easy to edit.
+very easy to edit.
 
-...
+All unpackers have a separate section in the configuration file. The 'type'
+of the unpackers is 'unpack'. To disable an unpacker you can either comment
+the section, or remove it from the configuration file completely.
+
+Slide 24:
+
+Slide 25: Results from BAT are in XML format. XML is, of course, not for human
+consumption, but should be used for data exchange between tools. Because right
+now there is no graphical user interface for BAT it is unfortunately necessary
+to read XML.
+
+There are two ways you can read it. The first one is to use a separate tool
+like xml_pp and a pager (like less) to pretty print and display the XML file.
+Another option is to use a web browser like Firefox. Web browsers allow a bit
+more navigation.
+
+In the near future there will be a graphical user interface for BAT.
+
+Slide 26:
+
+Slide 27: In this course you have learned about the backgrounds of the Binary
+Analysis Tool, you have learned to identify file systems and compressed files
+within a bigger binary blob such as a firmware. You have learned how to extract
+file systems and compressed files manually and also to do this automatically
+with BAT.
+
+In the next course we will look deeper into per file analysis, both manually
+and using BAT.
