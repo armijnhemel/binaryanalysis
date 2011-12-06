@@ -416,9 +416,9 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, envvars
 		return ([], blacklist, offsets)
 	## unfortunately unyaffs also returns 0 when it fails
 	if len(stanerr) != 0:
-		if tempdir == None:
-			os.rmdir(tmpdir)
+		os.rmdir(tmpdir)
 		return ([], blacklist, offsets)
+	blacklist.append((0, os.stat(filename).st_size))
 	return ([(tmpdir,0)], blacklist, offsets)
 
 ## Windows executables can be unpacked in many ways.
