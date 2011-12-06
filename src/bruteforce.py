@@ -54,7 +54,7 @@ def generateNodes(elem, root, confs):
 		if conf in elem:
 			tmpnode = root.createElement(conf)
 			tmpnodetext = xml.dom.minidom.Text()
-			tmpnodetext.data = elem[conf]
+			tmpnodetext.data = str(elem[conf])
 			tmpnode.appendChild(tmpnodetext)
 			nodes.append(tmpnode)
 	return nodes
