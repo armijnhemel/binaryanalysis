@@ -79,21 +79,21 @@ def prettyprintresxmlsnippet(res, root, unpackscans, programscans):
 				except Exception, e:
                 			topnode = root.createElement(i)
                 			tmpnodetext = xml.dom.minidom.Text()
-                			tmpnodetext.data = res[i]
+                			tmpnodetext.data = str(res[i])
                 			topnode.appendChild(tmpnodetext)
 		for confs in unpackscans:
 			if i == confs['name']:
                 		topnode = root.createElement('unpack')
                 		typenode = root.createElement('type')
                 		tmpnodetext = xml.dom.minidom.Text()
-                		tmpnodetext.data = i
+                		tmpnodetext.data = str(i)
                 		typenode.appendChild(tmpnodetext)
                 		topnode.appendChild(typenode)
 				for elem in res[i]:
 					if 'offset' in elem:
                 				tmpnode = root.createElement("offset")
                 				tmpnodetext = xml.dom.minidom.Text()
-                				tmpnodetext.data = elem['offset']
+                				tmpnodetext.data = str(elem['offset'])
                 				tmpnode.appendChild(tmpnodetext)
                 				topnode.appendChild(tmpnode)
 					else:
