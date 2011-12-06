@@ -526,13 +526,13 @@ def xmlprettyprint(res, root):
 
 	matchedlines = root.createElement('matchedlines')
 	tmpnodetext = xml.dom.minidom.Text()
-	tmpnodetext.data = res['matchedlines']
+	tmpnodetext.data = str(res['matchedlines'])
 	matchedlines.appendChild(tmpnodetext)
 	tmpnode.appendChild(matchedlines)
 
 	extractedlines = root.createElement('extractedlines')
 	tmpnodetext = xml.dom.minidom.Text()
-	tmpnodetext.data = res['extractedlines']
+	tmpnodetext.data = str(res['extractedlines'])
 	extractedlines.appendChild(tmpnodetext)
 	tmpnode.appendChild(extractedlines)
 
@@ -561,7 +561,7 @@ def xmlprettyprint(res, root):
 				uniquenode.appendChild(matchnode)
 			countnode = root.createElement('uniquecount')
 			tmpnodetext = xml.dom.minidom.Text()
-			tmpnodetext.data = len(uniqueMatches)
+			tmpnodetext.data = str(len(uniqueMatches))
 			countnode.appendChild(tmpnodetext)
 			uniquenode.appendChild(countnode)
 			packagenode.appendChild(uniquenode)
@@ -569,13 +569,13 @@ def xmlprettyprint(res, root):
 		## add rank
 		ranknode = root.createElement('rank')
 		tmpnodetext = xml.dom.minidom.Text()
-		tmpnodetext.data = rank
+		tmpnodetext.data = str(rank)
 		ranknode.appendChild(tmpnodetext)
 
 		## add score percentage
 		percentagenode = root.createElement('percentage')
 		tmpnodetext = xml.dom.minidom.Text()
-		tmpnodetext.data = percentage
+		tmpnodetext.data = str(percentage)
 		percentagenode.appendChild(tmpnodetext)
 
 		packagenode.appendChild(ranknode)
