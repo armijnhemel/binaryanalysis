@@ -1,5 +1,5 @@
 Source: bat
-Section: unknown
+Section: misc
 Priority: extra
 Maintainer: Armijn Hemel <armijn@binaryanalysis.org>
 Build-Depends: debhelper (>= 7.0.50~)
