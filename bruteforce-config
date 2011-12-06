@@ -21,6 +21,12 @@ module  = bat.fwunpack
 method  = searchUnpackInstallShield
 priority = 1
 
+[unyaffs]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackYaffs2
+priority = 2
+
 [jffs2]
 type    = unpack
 module  = bat.fwunpack
@@ -265,4 +271,4 @@ xmloutput = xmlprettyprint
 #module  = bat.ranking
 #method  = searchGeneric
 #xmloutput = xmlprettyprint
-#envvars = BAT_SQLITE_AVG=/tmp/avg:BAT_SQLITE_STRINGSCACHE=/tmp/stringscache
+#envvars = BAT_SQLITE_AVG=/tmp/avg:BAT_SQLITE_STRINGSCACHE=/tmp/stringscache:BAT_SQLITE_DB=/tmp/master
