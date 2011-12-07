@@ -190,6 +190,52 @@ def searchWindowsDependencies(path, blacklist=[], envvars=None):
 def xmlPrettyPrintWindowsDeps(res, root):
 	pass
 
+## method to extract meta information from PDF files
+def scanPDF(path, blacklist=[], envvars=None):
+	ms = magic.open(magic.MAGIC_NONE)
+	ms.load()
+	mstype = ms.file(path)
+	ms.close()
+	if not 'PDF document' in mstype:
+                return None
+	else:
+		p = subprocess.Popen(['pdfinfo', "%s" % (path,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+                	return
+		else:
+			pdfinfo = {}
+			pdflines = stanout.rstrip().split("\n")
+			for pdfline in pdflines:
+				(tag, value) = pdfline.split(":", 1)
+				if tag == "Creator":
+					pdfinfo['creator'] = value.strip()
+				if tag == "Producer":
+					pdfinfo['producer'] = value.strip()
+				if tag == "Tagged":
+					pdfinfo['tagged'] = value.strip()
+				if tag == "Pages":
+					pdfinfo['pages'] = int(value.strip())
+				if tag == "Page size":
+					pdfinfo['pagesize'] = value.strip()
+				if tag == "Encrypted":
+					pdfinfo['encrypted'] = value.strip()
+				if tag == "Optimized":
+					pdfinfo['optimized'] = value.strip()
+				if tag == "PDF version":
+					pdfinfo['version'] = value.strip()
+			return pdfinfo
+
+def pdfPrettyPrint(res, root):
+	tmpnode = root.createElement('pdfinfo')
+	for key in res.keys():
+		tmpnode2 = root.createElement(key)
+		tmpnodetext = xml.dom.minidom.Text()
+		tmpnodetext.data = str(res[key])
+		tmpnode2.appendChild(tmpnodetext)
+		tmpnode.appendChild(tmpnode2)
+	return tmpnode
+
 ## experimental clamscan feature
 ## Always run freshclam before scanning to get the latest
 ## virus signatures!

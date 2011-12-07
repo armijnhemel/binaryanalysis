@@ -261,6 +261,12 @@ type    = program
 module  = bat.checks
 method  = searchUBoot
 
+[pdf]
+type    = program
+module  = bat.checks
+method  = scanPDF
+xmloutput = pdfPrettyPrint
+
 [kernelmodulelicense]
 type    = program
 module  = bat.kernelanalysis

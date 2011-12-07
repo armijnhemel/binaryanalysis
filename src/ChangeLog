@@ -1,6 +1,7 @@
 2011-12-07
 * add unpacking for executables packed with UPX
 * rewrite tar unpacking to standard format
+* add extraction of PDF meta information using pdfinfo
 
 2011-12-06
 * enable yaffs2 unpacking
