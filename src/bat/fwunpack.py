@@ -851,9 +851,9 @@ def unpackLzo(data, offset, tempdir=None):
 ## so it is likely that we need to search for the trailer a lot more than
 ## for the header.
 def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
-	if offsets['xz'] == -1:
+	if offsets['xz'] == []:
 		return ([], blacklist, offsets)
-	if offsets['xztrailer'] == -1:
+	if offsets['xztrailer'] == []:
 		return ([], blacklist, offsets)
 	datafile = open(filename, 'rb')
 	## record the original offset
