@@ -102,23 +102,26 @@ def searchUnpackBase64(filename, tempdir=None, blacklist=[], offsets={}, envvars
 		return (diroffsets, blacklist, offsets)
 
 ## decompress executables that have been compressed with UPX.
-def searchUnpackUPX(filename, tempdir=None, blacklist=[], offset={}, envvars=None):
-	'''
+def searchUnpackUPX(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	datafile = open(filename, 'rb')
+	data = datafile.read()
+	# ultrasimple test to filter out non-UPX files
+	if not "UPX" in data:
+		datafile.close()
+		return ([], blacklist, offsets)
 	counter = 1
 	diroffsets = []
 	tmpdir = dirsetup(tempdir, filename, "upx", counter)
+	p = subprocess.Popen(['upx', '-d', filename, '-o', os.path.basename(filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.rmdir(tmpdir)
 		return ([], blacklist, offsets)
 	else:
-		tmpfile = tempfile.mkstemp(dir=tmpdir)
-		os.write(tmpfile[0], stanout)
 		## the whole file is blacklisted
 		blacklist.append((0, os.stat(filename).st_size))
 		diroffsets.append((tmpdir, 0))
 		return (diroffsets, blacklist, offsets)
-	'''
-	pass
 
 ## unpack Java serialized data
 def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
