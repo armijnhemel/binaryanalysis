@@ -433,8 +433,7 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, envvars
 	p = subprocess.Popen(['bat-unyaffs', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		if tempdir == None:
-			os.rmdir(tmpdir)
+		os.rmdir(tmpdir)
 		return ([], blacklist, offsets)
 	## unfortunately unyaffs also returns 0 when it fails
 	if len(stanerr) != 0:
