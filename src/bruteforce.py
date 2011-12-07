@@ -47,7 +47,7 @@ def mergeBlacklist(blacklist):
 	return blacklist
 
 
-## pretty printing for various elements, plus shared libraries
+## pretty printing for various elements
 def generateNodes(elem, root, confs):
 	nodes = []
 	for conf in confs:
@@ -105,7 +105,6 @@ def prettyprintresxmlsnippet(res, root, unpackscans, programscans):
 						if 'scans' in elem:
 							tmpnode2 = root.createElement('scans')
 							for scan in elem['scans']:
-								#tmpnode2.appendChild(prettyprintresxmlsnippet(scan, root, unpackscans, programscans))
 								childscannode = prettyprintresxmlsnippet(scan, root, unpackscans, programscans)
 								if childscannode != None:
 									tmpnode2.appendChild(childscannode)
@@ -162,7 +161,7 @@ def scanfile(path, filename, lentempdir=0, tempdir=None, unpackscans=[], program
         ## or file we have unpacked, as well as the position of the files as unpacked
 	## by BAT, convenient for later analysis of binaries.
 	## In case of squashfs we remove the "squashfs-root" part of the temporary
-	## directory too.
+	## directory too, if it is present (not always).
 	report['path'] = path[lentempdir:].replace("/squashfs-root", "")
 	report['realpath'] = path
 	mstype = ms.file("%s/%s" % (path, filename))
@@ -366,6 +365,7 @@ def readconfig(config):
 				except:
 					pass
 				unpackscans.append(conf)
+	## sort the unpack scans on priority (highest priority first)
 	unpackscans = sorted(unpackscans, key=lambda x: x['priority'], reverse=True)
 	return (unpackscans, programscans)
 
@@ -413,7 +413,6 @@ def main(argv):
 	## more lists in some fields, like libraries, or more result lists if
 	## the file inside a file system we looked at was in fact a file system.
 	tempdir=tempfile.mkdtemp()
-	#tempdir=None
 	shutil.copy(scan_binary, tempdir)
 	res = scanfile(tempdir, os.path.basename(scan_binary), tempdir=tempdir, unpackscans=unpackscans, programscans=programscans)
 	xml = prettyprintresxml(res, scandate, unpackscans=unpackscans, programscans=programscans)
