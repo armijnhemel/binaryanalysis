@@ -372,31 +372,63 @@ def unpackISO9660(data, offset, tempdir=None):
 	os.unlink(tmpfile[1])
 	return (tmpdir, size)
 
-## TODO: rewrite this to like how we do other searches: first
-## look for markers, then unpack.
 def searchUnpackTar(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
-	ms = magic.open(magic.MAGIC_NONE)
-	ms.load()
-	mstype = ms.file(filename)
-	ms.close()
+	taroffsets = []
+	for marker in fsmagic.tar:
+		taroffsets = taroffsets + offsets[marker]
+	if taroffsets == []:
+		return ([], blacklist, offsets)
 
-	tarmagic = ['POSIX tar archive (GNU)'
-		   , 'tar archive'
-		   ]
+	diroffsets = []
+	counter = 1
+	datafile = open(filename, 'rb')
+	data = datafile.read()
+	datafile.close()
+	for offset in taroffsets:
+		## according to /usr/share/magic the magic header starts at 0x101
+		if offset < 0x101:
+			continue
 
-	## search for first magic marker that matches
-	for tm in tarmagic:
-		if tm in mstype:
-			tarsize = 0
-			tmpdir = dirsetup(tempdir, filename, "tar", 1)
-			tar = tarfile.open(filename, 'r')
-			tar.extractall(path=tmpdir)
-			for t in tar:
-				tarsize = tarsize + t.size
-			tar.close()
-			blacklist.append((0,tarsize))
-			return ([(tmpdir, 0)], blacklist, offsets)
-	return ([], blacklist, offsets)
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		tmpdir = dirsetup(tempdir, filename, "tar", counter)
+		(res, tarsize) = unpackTar(data, offset, tmpdir)
+		if res != None:
+			diroffsets.append((res, offset))
+			counter = counter + 1
+			blacklist.append((offset,offset + tarsize))
+		else:
+			## cleanup
+			os.rmdir(tmpdir)
+	return (diroffsets, blacklist, offsets)
+
+
+def unpackTar(data, offset, tempdir=None):
+	tmpdir = unpacksetup(tempdir)
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.write(tmpfile[0], data[offset-0x101:])
+
+	tarsize = 0
+
+	try:
+		tar = tarfile.open(tmpfile[1], 'r')
+		tarmembers = tar.getmembers()
+		tarsize = 0
+		for i in tarmembers:
+			tarsize = tarsize + i.size
+			if not i.isdev():
+				tar.extract(i, path=tmpdir)
+		tar.close()
+	except Exception, e:
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return (None, None)
+	os.fdopen(tmpfile[0]).close()
+	os.unlink(tmpfile[1])
+	return (tmpdir, tarsize)
 
 ## There are certain routers that have all bytes swapped, because they use 16
 ## bytes NOR flash instead of 8 bytes SPI flash. This is an ugly hack to first

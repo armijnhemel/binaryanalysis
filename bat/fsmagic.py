@@ -22,7 +22,6 @@ fsmagic = {
             'gzip':             '\x1f\x8b\x08',     # x08 is the only compression method according to RFC 1952
             'bz2':              'BZh',
             'rar':              'Rar!',
-            'tar':              'ustar',
             'zip':              '\x50\x4b\x03\04',
             'squashfs1':        '\x68\x73\x71\x73', # hsqs
             'squashfs2':        '\x73\x71\x73\x68', # sqsh
@@ -56,6 +55,8 @@ fsmagic = {
             'iso9660':          'CD001',
             'swf':              'CWS',
             'ar':               '!<arch>',
+            'tar1':             'ustar\x00',
+            'tar2':             'ustar\x20',
             'java_serialized':  '\xac\xed\x00',
           }
 
@@ -64,3 +65,4 @@ squashtypes = ['squashfs1', 'squashfs2', 'squashfs3', 'squashfs4']
 lzmatypes   = ['lzma_alone', 'lzma_alone_alt']
 cpio        = ['cpio1', 'cpio2', 'cpio3']
 gif         = ['gif87', 'gif89']
+tar         = ['tar1', 'tar2']
