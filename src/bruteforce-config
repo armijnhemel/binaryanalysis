@@ -189,6 +189,12 @@ module  = bat.fwunpack
 method  = searchUnpackByteSwap
 priority = 100
 
+[upx]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackUPX
+priority = 3
+
 [libs]
 type    = program
 module  = bat.checks
