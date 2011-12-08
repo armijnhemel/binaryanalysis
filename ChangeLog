@@ -1,3 +1,6 @@
+2011-12-08
+* rework unpacking for GIF
+
 2011-12-07
 * add unpacking for executables packed with UPX
 * rewrite tar unpacking to standard format
