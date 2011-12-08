@@ -414,10 +414,8 @@ def unpackTar(data, offset, tempdir=None):
 	try:
 		tar = tarfile.open(tmpfile[1], 'r')
 		tarmembers = tar.getmembers()
-		tarsize = 0
+		tarsize = tarmembers[-1].offset_data + tarmembers[-1].size
 		for i in tarmembers:
-			## add 512 bytes for tar header
-			tarsize = tarsize + i.size + 512
 			if not i.isdev():
 				tar.extract(i, path=tmpdir)
 		tar.close()
