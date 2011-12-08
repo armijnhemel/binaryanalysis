@@ -1928,42 +1928,48 @@ def unpackIco(data, offset, tempdir=None):
 ## 2. search for a GIF trailer
 ## 3. check the data with gifinfo
 def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	gifoffsets = []
+	for marker in fsmagic.gif:
+		gifoffsets = gifoffsets + offsets[marker]
+	if gifoffsets == []:
+		return ([], blacklist, offsets)
+
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
-	header = fssearch.findGIF(datafile)
-	if header == -1:
-		return ([], blacklist, offsets)
-	trailer = data.find(';', header)
-	if trailer == -1:
-		return ([], blacklist, offsets)
+
+	## GIF files have a trailer. We search for them here, since it is very very
+	## generic character. It would cost too many resources to also for these
+	## in all cases.
 	traileroffsets = []
-	traileroffsets.append(trailer)
+	trailer = data.find(';', gifoffsets[0])
 	while(trailer != -1):
+		traileroffsets.append(trailer)
 		trailer = data.find(';',trailer+1)
-		if trailer != -1:
-			traileroffsets.append(trailer)
-	headeroffsets = []
-	headeroffsets.append(header)
-	while (header != -1):
-		header = fssearch.findGIF(datafile, header+1)
-		if header != -1:
-			headeroffsets.append(header)
+	if traileroffsets == []:
+		return ([], blacklist, offsets)
+
 	diroffsets = []
 	counter = 1
-	for i in range (0,len(headeroffsets)):
-		offset = headeroffsets[i]
-		if i < len(headeroffsets) - 1:
-			nextoffset = headeroffsets[i+1]
+
+	for i in range (0,len(gifoffsets)):
+		offset = gifoffsets[i]
+		if i < len(gifoffsets) - 1:
+			nextoffset = gifoffsets[i+1]
 		else:
 			nextoffset = len(data)
-		## first check if we're not blacklisted for the offset
+		## first check if we're not blacklisted for the header
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
+		## we're only interested in the trailers that are bigger than the offset
+		traileroffsets = filter(lambda x: x>=offset, traileroffsets)
 		for trail in traileroffsets:
 			if trail <= offset:
 				continue
+			## There is no trailer before the next header, so this can't be correct.
+			## This breaks apart if by any chance one of the identifiers is in the 
+			## file as normal data. Chances for that are very very low.
 			if trail >= nextoffset:
 				break
 			## check if we're not blacklisted for the trailer
@@ -1986,9 +1992,12 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 				if offset == 0 and trail == len(data) - 1:
 					os.unlink(tmpfile[1])
 					os.rmdir(tmpdir)
+					blacklist.append((0, os.stat(filename).st_size))
+					return (diroffsets, blacklist, offsets)
 				else:
 					diroffsets.append((tmpdir, offset))
 					counter = counter + 1
+					## go to the next header
 					break
 	return (diroffsets, blacklist, offsets)
 
