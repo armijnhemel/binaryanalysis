@@ -2,6 +2,8 @@
 * rework unpacking for GIF
 * don't always create a temporary directory for 'byteswap', only when
 necessary
+* rewrite cramfs unpacking to new style
+* don't try to unpack encrypted ZIP files
 
 2011-12-07
 * add unpacking for executables packed with UPX

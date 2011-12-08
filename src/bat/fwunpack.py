@@ -1574,6 +1574,16 @@ def unpackZip(data, offset, filename, tempdir=None):
 	## which is the only one we are interested in)
 	p = subprocess.Popen(['zipinfo', '-v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
+
+	## check if the file is encrypted, if so, we need to bail out
+	res = re.search("file security status:\s+(\w*)\sencrypted", stanout)
+	if res.groups(0)[0] != 'not':
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return (None, None)
+
+	## we have a non-encrypted file, so we can continue processing it
 	res = re.search("Actual[\w\s]*end-(?:of-)?cent(?:ral)?-dir record[\w\s]*:\s*(\d+) \(", stanout)
 	if res != None:
 		endofcentraldir = int(res.groups(0)[0])
