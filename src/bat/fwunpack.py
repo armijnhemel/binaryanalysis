@@ -1063,12 +1063,12 @@ def unpackCramfs(data, offset, tempdir=None):
         tmpdir2 = tempfile.mkdtemp()
 	## since fsck.cramfs can't deal with data via stdin first write it to
 	## a temporary location
-	tmpfile = tempfile.mkstemp(dir=tmpdir2)
+	tmpfile = tempfile.mkstemp()
 	os.write(tmpfile[0], data[offset:])
 
 	## right now this is a path to a specially adapted fsck.cramfs that ignores special inodes
 	## We actually need to create a new subdirectory inside tmpdir, otherwise the tool will complain
-	p = subprocess.Popen(['bat-fsck.cramfs', '-x', tmpdir + "/cramfs", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	p = subprocess.Popen(['bat-fsck.cramfs', '-x', tmpdir2 + "/cramfs", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.fdopen(tmpfile[0]).close()
@@ -1078,8 +1078,12 @@ def unpackCramfs(data, offset, tempdir=None):
 			os.rmdir(tmpdir2)
 		return
 	else:
+		## first copy all the contents from the temporary dir to tmpdir
+		mvfiles = os.listdir(tmpdir2 + "/cramfs")
+		for f in mvfiles:
+			shutil.move(tmpdir2 + "/cramfs/" + f, tmpdir)
 		## determine if the whole file actually is the cramfs file. Do this by running bat-fsck.cramfs again with -v and check stderr.
-		## If there is no error on stderr, we know that the entire file is the cramfs file
+		## If there is no warning or error on stderr, we know that the entire file is the cramfs file and it can be blacklisted.
 		p = subprocess.Popen(['bat-fsck.cramfs', '-v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		if len(stanerr) != 0:
@@ -1088,8 +1092,8 @@ def unpackCramfs(data, offset, tempdir=None):
 			cramfssize = len(data)
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
-		os.rmdir(tmpdir2)
-		return (tmpdir + "/cramfs", cramfssize)
+		shutil.rmtree(tmpdir2)
+		return (tmpdir, cramfssize)
 
 ## Search and unpack a squashfs file system. Since there are so many flavours
 ## of squashfs available we have to do some extra work here, and possibly have
