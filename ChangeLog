@@ -1,5 +1,7 @@
 2011-12-08
 * rework unpacking for GIF
+* don't always create a temporary directory for 'byteswap', only when
+necessary
 
 2011-12-07
 * add unpacking for executables packed with UPX
