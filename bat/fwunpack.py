@@ -414,6 +414,7 @@ def unpackTar(data, offset, tempdir=None):
 	try:
 		tar = tarfile.open(tmpfile[1], 'r')
 		tarmembers = tar.getmembers()
+		## assume that the last member is also the last in the file
 		tarsize = tarmembers[-1].offset_data + tarmembers[-1].size
 		for i in tarmembers:
 			if not i.isdev():
@@ -599,6 +600,7 @@ def searchUnpackInstallShield(filename, tempdir=None, blacklist=[], offsets={}, 
 	## * installshield cabinet (.cab)
 	## * header file (.hdr)
 	## * possibly (if available) <filename>2.cab
+	##
 	## To successfully unpack the filenames need to be formatted as <filename>1.<extension>
 	## so we will only consider files that end in "1.cab"
 	if offsets['installshield'][0] != 0:
@@ -614,26 +616,15 @@ def searchUnpackInstallShield(filename, tempdir=None, blacklist=[], offsets={}, 
 	if blacklistoffset != None:
 		return ([], blacklist, offsets)
 	tmpdir = dirsetup(tempdir, filename, "installshield", counter)
-	shutil.copy(filename, tmpdir)
-	shutil.copy(filename[:-4] + ".hdr", tmpdir)
-	try:
-		os.stat(filename[:-5] + "2.cab")
-		shutil.copy(filename[:-5] + "2.cab", tmpdir)
-	except Exception, e:
-		pass
-	
-	p = subprocess.Popen(['unshield', 'x', os.path.basename(filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+
+	p = subprocess.Popen(['unshield', 'x', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
-	## cleanup
-	os.unlink("%s/%s" % (tmpdir, os.path.basename(filename)))
-	os.unlink("%s/%s" % (tmpdir, os.path.basename(filename)[:-4] + ".hdr"))
-	try:
-		os.unlink("%s/%s" % (tmpdir, os.path.basename(filename)[:-5] + "2.cab"))
-	except:
-		pass
 	if p.returncode != 0:
 		os.rmdir(tmpdir)
 	else:
+		## now we need to add data1.cab, data1.hdr and (if present) data2.cab to the blacklist
+		## for this we need to be able to supply more information to the parent process
+		## or simply remove data1.hdr and data2.cab
 		diroffsets.append((tmpdir, 0))
 	return (diroffsets, blacklist, offsets)
 
