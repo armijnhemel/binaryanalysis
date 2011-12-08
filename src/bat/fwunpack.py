@@ -1029,35 +1029,30 @@ def unpackCpio(data, offset, tempdir=None):
 ## devices most notably from Sigma Designs, since they seem to have tweaked
 ## the file system.
 def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
-	datafile = open(filename, 'rb')
-	offset = fssearch.findCramfs(datafile)
-	if offset == -1:
-		datafile.close()
+	if offsets['cramfs'] == []:
 		return ([], blacklist, offsets)
-	else:
-		data = datafile.read()
-		datafile.close()
-		diroffsets = []
-		counter = 1
+
+	datafile = open(filename, 'rb')
+	data = datafile.read()
+	datafile.close()
+	diroffsets = []
+	counter = 1
+	for offset in offsets['cramfs']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
 		tmpdir = dirsetup(tempdir, filename, "cramfs", counter)
-		while(offset != -1):
-			blacklistoffset = extractor.inblacklist(offset, blacklist)
-			if blacklistoffset != None:
-				offset = fssearch.findCramfs(datafile, blacklistoffset)
-			if offset == -1:
-				break
-			retval = unpackCramfs(data, offset, tmpdir)
-			if retval != None:
-				(res, cramfssize) = retval
-				if cramfssize != 0:
-					blacklist.append((offset,offset+cramfssize))
-				diroffsets.append((res, offset))
-				counter = counter + 1
-			else:
-				## cleanup
-				os.rmdir(tmpdir)
-			offset = fssearch.findCramfs(datafile, offset+1)
-		return (diroffsets, blacklist, offsets)
+		retval = unpackCramfs(data, offset, tmpdir)
+		if retval != None:
+			(res, cramfssize) = retval
+			if cramfssize != 0:
+				blacklist.append((offset,offset+cramfssize))
+			diroffsets.append((res, offset))
+			counter = counter + 1
+		else:
+			## cleanup
+			os.rmdir(tmpdir)
+	return (diroffsets, blacklist, offsets)
 
 ## tries to unpack stuff using fsck.cramfs. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
