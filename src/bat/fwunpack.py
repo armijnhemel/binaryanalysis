@@ -434,13 +434,12 @@ def unpackTar(data, offset, tempdir=None):
 ## bytes NOR flash instead of 8 bytes SPI flash. This is an ugly hack to first
 ## rearrange the data. This is mostly for Realtek RTL8196C based routers.
 def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
-	tmpdir = dirsetup(tempdir, filename, "byteswap", 1)
-
 	datafile = open(filename, 'rb')
         data = datafile.read()
         datafile.close()
 	## "Uncompressing Linux..."
 	if data.find("nUocpmerssni giLun.x..") != -1:
+		tmpdir = dirsetup(tempdir, filename, "byteswap", 1)
 		tmpfile = tempfile.mkstemp(dir=tmpdir)
 		counter = 0
 		for i in xrange(0,len(data)):
@@ -450,8 +449,6 @@ def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, envva
                 		os.write(tmpfile[0], data[i-1])
         		counter = (counter+1)%2
 		return ([(tmpdir, 0)], blacklist, offsets)
-	# cleanup
-	os.rmdir(tmpdir)
 	return ([], blacklist, offsets)
 
 ## yaffs2 is used frequently in Android and various mediaplayers based on
