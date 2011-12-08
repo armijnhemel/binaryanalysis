@@ -633,8 +633,7 @@ def searchUnpackInstallShield(filename, tempdir=None, blacklist=[], offsets={}, 
 	except:
 		pass
 	if p.returncode != 0:
-		if tempdir == None:
-			os.rmdir(tmpdir)
+		os.rmdir(tmpdir)
 	else:
 		diroffsets.append((tmpdir, 0))
 	return (diroffsets, blacklist, offsets)
