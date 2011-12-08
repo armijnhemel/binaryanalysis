@@ -395,9 +395,9 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		tmpdir = dirsetup(tempdir, filename, "tar", counter)
 		(res, tarsize) = unpackTar(data, offset, tmpdir)
 		if res != None:
-			diroffsets.append((res, offset))
+			diroffsets.append((res, offset - 0x101))
 			counter = counter + 1
-			blacklist.append((offset,offset + tarsize))
+			blacklist.append((offset - 0x101, offset - 0x101 + tarsize))
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
@@ -416,7 +416,8 @@ def unpackTar(data, offset, tempdir=None):
 		tarmembers = tar.getmembers()
 		tarsize = 0
 		for i in tarmembers:
-			tarsize = tarsize + i.size
+			## add 512 bytes for tar header
+			tarsize = tarsize + i.size + 512
 			if not i.isdev():
 				tar.extract(i, path=tmpdir)
 		tar.close()
