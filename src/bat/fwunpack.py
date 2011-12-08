@@ -1870,8 +1870,10 @@ def unpackARJ(data, offset, tempdir=None):
 	os.unlink(tmpfile[1])
 	return (tmpdir, arjsize)
 
-## extract files from .ico files
-## WARNING: this is a very costly check, with relatively little gain
+## extraction of Windows .ICO files. The identifier for .ICO files is very
+## common, so on large files this will have a rather big performance impact
+## with relatively little gain. In the default distribution of BAT this scan
+## is therefore disabled.
 def searchUnpackIco(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	if offsets['ico'] == []:
 		return ([], blacklist, offsets)
