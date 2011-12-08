@@ -1274,7 +1274,7 @@ def unpackSquashfsRalinkLZMA(data, offset, tempdir=None):
 	else:
 		## unlike with 'normal' squashfs we can't use 'file' to determine the size
 		## This could lead to duplicate scanning with LZMA, so we might need to implement
-		## a top level "pruning" script at the end :-(
+		## a top level "pruning" script :-(
 		squashsize = 1
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
@@ -1299,7 +1299,7 @@ def unpackSquashfsBroadcomLZMA(data, offset, tempdir=None):
 	else:
 		## we first need to check the contents of stderr to see if uncompression actually worked
 		## This could lead to duplicate scanning with LZMA, so we might need to implement
-		## a top level "pruning" script at the end :-(
+		## a top level "pruning" script :-(
 		if "LzmaUncompress: error" in stanerr:
 			os.fdopen(tmpfile[0]).close()
 			os.unlink(tmpfile[1])
