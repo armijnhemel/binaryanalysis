@@ -327,10 +327,10 @@ def readconfig(config):
 		if config.has_option(section, 'type'):
 			conf = {}
 			## there is some duplication here, that we probably can get rid of
+			conf['name']   = section
+			conf['module'] = config.get(section, 'module')
+			conf['method'] = config.get(section, 'method')
 			if config.get(section, 'type') == 'program':
-				conf['name']   = section
-				conf['module'] = config.get(section, 'module')
-				conf['method'] = config.get(section, 'method')
 				try:
 					conf['xmloutput'] = config.get(section, 'xmloutput')
 				except:
@@ -345,9 +345,9 @@ def readconfig(config):
 					pass
 				programscans.append(conf)
 			elif config.get(section, 'type') == 'unpack':
-				conf['name']   = section
-				conf['module'] = config.get(section, 'module')
-				conf['method'] = config.get(section, 'method')
+				#conf['name']   = section
+				#conf['module'] = config.get(section, 'module')
+				#conf['method'] = config.get(section, 'method')
 				try:
 					conf['priority'] = int(config.get(section, 'priority'))
 				except:
