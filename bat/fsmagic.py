@@ -29,6 +29,7 @@ fsmagic = {
             'squashfs4':        '\x73\x68\x73\x71', # shsq
             'lzma_alone':       '\x5d\x00\x00',
             'lzma_alone_alt':   '\x6d\x00\x00',     # used in OpenWrt
+            '7z':               '7z\xbc\xaf\x27\x1c',
             'xz':               '\xfd\x37\x7a\x58\x5a\x00',
             'xztrailer':        '\x59\x5a',
             'lzip':             'LZIP',
