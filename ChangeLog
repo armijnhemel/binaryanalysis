@@ -1,3 +1,7 @@
+2011-12-10
+* add unpacking for 7z files, only when 7zip header can be found at offset 0,
+until figured out what's safe (7z can unpack a lot more)
+
 2011-12-08
 * rework unpacking for GIF
 * don't always create a temporary directory for 'byteswap', only when
