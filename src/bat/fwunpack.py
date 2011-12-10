@@ -696,39 +696,37 @@ def unpackCab(data, offset, tempdir=None):
 		os.unlink(tmpfile[1])
 		return (tmpdir, int(cabsize.groups()[0]))
 
-## temporary unpacker for Microsoft Windows Executables.
-## This is actually *not* correct and should be replaced with the generic EXE unpacker.
-## This method should be reworked to unpack 7z compressed files only.
 def searchUnpack7z(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
-	ms = magic.open(magic.MAGIC_NONE)
-	ms.load()
-	mstype = ms.file(filename)
-	ms.close()
+	if offsets['7z'] == []:
+		return ([], blacklist, offsets)
 
-	exemagic = ['PE32 executable for MS Windows',
-		    'PE32+ executable for MS Windows',
-		   ]
+	## for now only try to unpack if 7z starts at offset 0
+	if offsets['7z'][0] != 0:
+		return ([], blacklist, offsets)
 
-	for exe in exemagic:
-		if exe in mstype:
-			tmpdir = unpacksetup(tempdir)
-                	zztmpdir = tempfile.mkdtemp(dir=tmpdir)
-			param = "-o%s" % zztmpdir
-			p = subprocess.Popen(['7z', param, '-l', '-y', 'x', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-			(stanout, stanerr) = p.communicate()
-			if p.returncode != 0:
-				try:
-					## cleanup
-					os.rmdir(zztmpdir)
-        				if tempdir == None:
-						os.rmdir(tmpdir)
-				except:
-					pass
-				continue
-			else:
-				blacklist.append((0, os.stat(filename).st_size))
-				return ([(zztmpdir, 0)], blacklist, offsets)
-	return ([], blacklist, offsets)
+	datafile = open(filename, 'rb')
+	## counter to remember how many gzip file systems we have
+	## discovered, so we can use this to append to the directory
+	## name containing the unpacked contents.
+	counter = 1
+	diroffsets = []
+	data = datafile.read()
+	datafile.close()
+	for offset in offsets['7z']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		tmpdir = dirsetup(tempdir, filename, "7z", counter)
+		res = unpack7z(data, offset, tmpdir)
+		if res != None:
+			diroffsets.append((res, offset))
+			counter = counter + 1
+			break
+		else:
+			## cleanup
+			os.rmdir(tmpdir)
+	return (diroffsets, blacklist, offsets)
+
 
 def unpack7z(data, offset, tempdir=None):
 	## first unpack things, write things to a file and return

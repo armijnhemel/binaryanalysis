@@ -141,6 +141,12 @@ module  = bat.fwunpack
 method  = searchUnpackExt2fs
 priority = 3
 
+[7z]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpack7z
+priority = 1
+
 [xz]
 type    = unpack
 module  = bat.fwunpack
