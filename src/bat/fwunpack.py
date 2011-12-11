@@ -1571,6 +1571,12 @@ def unpackZip(data, offset, filename, tempdir=None):
 
 	## check if the file is encrypted, if so, we need to bail out
 	res = re.search("file security status:\s+(\w*)\sencrypted", stanout)
+	if res == None:
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return (None, None)
+
 	if res.groups(0)[0] != 'not':
 		os.unlink(tmpfile[1])
 		if tempdir == None:

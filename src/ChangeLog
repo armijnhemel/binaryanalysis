@@ -1,6 +1,7 @@
 2011-12-11
 * if unyaffs seems successful, but actually does not unpack any data, it is
 unsuccessful, so treat it as such.
+* if zipinfo is unsuccessful we should bail out
 
 2011-12-10
 * add unpacking for 7z files, only when 7zip header can be found at offset 0,
