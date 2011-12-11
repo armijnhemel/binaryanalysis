@@ -1542,27 +1542,12 @@ def unpackZipMulti(data, tempdir=None):
 def unpackZip(data, offset, filename, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 
-	## check whether or not we have a multi-archive ZIP file
-	## if we do, we can just unpack everything
-	multi = unpackZipMulti(data[offset:], tmpdir)
-	if multi:
-		multicounter = 1
-		osgen = os.walk(tmpdir)
-		i = osgen.next()
-		for zp in i[2]:
-			multitmpdir = "/%s/%s-multi-%s" % (tmpdir, os.path.basename(filename), multicounter)
-			os.makedirs(multitmpdir)
-			p = subprocess.Popen(['unzip', '-o', "%s/%s" % (i[0], zp), '-d', multitmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-			(stanout, stanerr) = p.communicate()
-			os.unlink("%s/%s" % (i[0], zp))
-			if p.returncode != 0 and p.returncode != 1:
-				continue
-			multicounter = multicounter + 1
-
 	tmpfile = tempfile.mkstemp(dir=tempdir)
 
 	os.write(tmpfile[0], data[offset:])
 	os.fdopen(tmpfile[0]).close()
+
+	## First we do some sanity checks
 
 	## Use information from zipinfo -v to extract the right offset (or at least the last offset,
 	## which is the only one we are interested in)
@@ -1592,6 +1577,24 @@ def unpackZip(data, offset, filename, tempdir=None):
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return (None, None)
+
+	## check whether or not we have a multi-archive ZIP file
+	## if we do, we can just unpack everything
+	multi = unpackZipMulti(data[offset:], tmpdir)
+	if multi:
+		multicounter = 1
+		osgen = os.walk(tmpdir)
+		i = osgen.next()
+		for zp in i[2]:
+			multitmpdir = "/%s/%s-multi-%s" % (tmpdir, os.path.basename(filename), multicounter)
+			os.makedirs(multitmpdir)
+			p = subprocess.Popen(['unzip', '-o', "%s/%s" % (i[0], zp), '-d', multitmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate()
+			os.unlink("%s/%s" % (i[0], zp))
+			if p.returncode != 0 and p.returncode != 1:
+				continue
+			multicounter = multicounter + 1
+
 	if multi:
 		multitmpdir = "/%s/%s-multi-%s" % (tmpdir, os.path.basename(filename), multicounter)
 		os.makedirs(multitmpdir)
