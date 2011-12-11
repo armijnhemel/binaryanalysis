@@ -471,6 +471,10 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, envvars
 	if len(stanerr) != 0:
 		os.rmdir(tmpdir)
 		return ([], blacklist, offsets)
+	## we need to check if there was actually any data unpacked.
+	if os.listdir(tmpdir) == []:
+		os.rmdir(tmpdir)
+		return ([], blacklist, offsets)
 	blacklist.append((0, os.stat(filename).st_size))
 	return ([(tmpdir,0)], blacklist, offsets)
 
