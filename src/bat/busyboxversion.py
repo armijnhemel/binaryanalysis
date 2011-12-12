@@ -14,6 +14,7 @@ import busybox, extractor
 def busybox_version(path, blacklist=[], envvars=None):
 	try:
                 filesize = os.stat(path).st_size
+		## if the whole file is blacklisted, we don't have to scan
                 if extractor.inblacklist(0, blacklist) == filesize:
                         return None
 		busybox_binary = open(path, 'rb')
