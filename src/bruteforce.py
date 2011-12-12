@@ -277,11 +277,12 @@ def scan(filetoscan, magic, unpackscans=[], programscans=[], filehash=None, temp
 						try:
 							if not os.path.islink("%s/%s" % (i[0], p)):
 								os.chmod("%s/%s" % (i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-								res = scanfile(i[0], p, lentempdir=len(scandir), tempdir=tempdir, unpackscans=unpackscans, programscans=programscans, noscan=noscan)
-								if res != []:
-									scanreports.append(res)
+							res = scanfile(i[0], p, lentempdir=len(scandir), tempdir=tempdir, unpackscans=unpackscans, programscans=programscans, noscan=noscan)
+							if res != []:
+								scanreports.append(res)
 						except Exception, e:
-							print e
+							#print e
+							pass
 			except StopIteration:
         			pass
 			if scanreports != []:
