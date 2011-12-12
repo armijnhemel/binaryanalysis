@@ -7,6 +7,9 @@ unpacking
 works for now, but it might be that we will need additional fixes in the
 future.
 * fix ranking bug that was triggered when there was a blacklist active
+* fix unpacking code for unsquashfs (openwrt, lzma). When unqsuashfs tried to
+unpack and tried to create inodes the scan thought unpacking had failed while
+it was in fact successful.
 
 2011-12-11
 * if unyaffs seems successful, but actually does not unpack any data, it is

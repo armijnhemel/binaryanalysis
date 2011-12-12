@@ -1215,9 +1215,16 @@ def unpackSquashfsOpenWrtLZMA(data, offset, tempdir=None):
 
 	p = subprocess.Popen(['bat-unsquashfs-openwrt', '-dest', tmpdir2 + "/squashfs-root", '-f', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
-	##  return code is not reliable enough, since even after successful unpacking the return code would be 16
-	#if p.returncode != 0:
-	if stanerr != "":
+	## Return code is not reliable enough, since even after successful unpacking the return code could be 16 (related to creating inodes as non-root)
+	## we need to filter out messages about creating inodes. Right now we do that by counting how many
+	## error lines we have for creating inodes and comparing them with the total number of lines in stderr
+	## If they match we know all errors are for creating inodes, so we can safely ignore them.
+	stanerrlines = stanerr.strip().split("\n")
+	inode_error = 0
+	for stline in stanerrlines:
+		if "create_inode: could not create" in stline:
+			inode_error = inode_error + 1
+	if stanerr != "" and len(stanerrlines) != inode_error:
 		shutil.rmtree(tmpdir2)
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
