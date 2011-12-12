@@ -162,7 +162,12 @@ def unpackJavaSerialized(data, offset, tempdir=None):
 	p = subprocess.Popen(['java', '-jar', '/home/armijn/gpltool/trunk/bat-extratools/jdeserialize/bat-jdeserialize.jar', '-blockdata', 'deserialize', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
         (stanout, stanerr) = p.communicate()
         if p.returncode != 0 or 'file version mismatch!' in stanerr:
-		#os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	if os.stat("%s/%s" % (tmpdir, "deserialize")).st_size == 0:
+		os.unlink("%s/%s" % (tmpdir, "deserialize"))
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
