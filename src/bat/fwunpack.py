@@ -1593,12 +1593,25 @@ def unpackZip(data, offset, filename, tempdir=None):
 			(stanoutzip, stanerrzip) = p.communicate()
 			if p.returncode != 0 and p.returncode != 1:
 				## this is just weird! We were told that we have a zip file by zipinfo, but we can't unzip?
-				#shutil.rmtree(multitmpdir)
-				pass
+				## hackish workaround: get 'end of central dir', add 100 bytes, and try to unpack. Actually
+				## we should do this in a loop until we can either successfully unpack or reach the end of
+				## the file.
+				p2 = subprocess.Popen(['zipinfo', '-v', multitmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+				(stanoutzip, stanerrzip) = p2.communicate()
+				res = re.search("Actual[\w\s]*end-(?:of-)?cent(?:ral)?-dir record[\w\s]*:\s*(\d+) \(", stanoutzip)
+				if res != None:
+					tmpendofcentraldir = int(res.groups(0)[0])
+					newtmpfile = open(multitmpfile[1], 'w')
+					newtmpfile.write(multidata[:tmpendofcentraldir+100])
+					newtmpfile.close()
+					p3 = subprocess.Popen(['unzip', '-o', newtmpfile.name, '-d', multitmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+					(stanoutzip, stanerrzip) = p3.communicate()
+				else:
+					## need to do something here, unsure yet what
+					pass
 			p = subprocess.Popen(['zipinfo', '-v', multitmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 			(stanoutzip, stanerrzip) = p.communicate()
 			if not "extra bytes at beginning or within zipfile" in stanerrzip:
-				shutil.rmtree(multitmpdir)
 				os.unlink(multitmpfile[1])
 				break
 			zipoffset = int(re.search("(\d+) extra bytes at beginning or within zipfile", stanerrzip).groups()[0])
@@ -1630,7 +1643,6 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
-		## this is where we should differentiate between ZIP files with multiple entries and `normal' ones
 		tmpdir = dirsetup(tempdir, filename, "zip", counter)
 		(endofcentraldir, res) = unpackZip(data, offset, filename, tmpdir)
 		if res != None:
