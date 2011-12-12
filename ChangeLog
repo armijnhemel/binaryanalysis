@@ -3,6 +3,9 @@
 * add unpacking for squashfs+LZMA variant for Atheros devices to squashfs
 unpacking
 * rework code for unpacking files that contain multiple zip files, almost done
+* add work around for certain files that contain multiple zip files. This
+works for now, but it might be that we will need additional fixes in the
+future.
 
 2011-12-11
 * if unyaffs seems successful, but actually does not unpack any data, it is
