@@ -233,6 +233,7 @@ def scan(filetoscan, magic, unpackscans=[], programscans=[], filehash=None, temp
 
 	## 'unpackscans' has been sorted in decreasing priority, so highest
 	## priority scans are run first.
+	# TODO: if the whole file has already been blacklisted, we don't have to scan further
 	for scan in unpackscans:
 		noscan = False
 		module = scan['module']
