@@ -1146,6 +1146,12 @@ def unpackSquashfsWrapper(data, offset, tempdir=None):
 		return retval
 
 	## Broadcom variant
+	## WARNING!!
+	## Sometimes, for example when the OpenWrt version from above
+	## can't unpack a file, this scan will pick it up and eat
+	## 100% CPU for a long long long time, without producing any
+	## result. This is not a bug in BAT, but in this version of
+	## unsquashfs!
 	retval = unpackSquashfsBroadcomLZMA(data,offset,tempdir)
 	if retval != None:
 		return retval
