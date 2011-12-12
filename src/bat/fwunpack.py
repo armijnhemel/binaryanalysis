@@ -1525,36 +1525,6 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, envvars=
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, offsets)
 
-## if there are multiple ZIP files in a file we should carve them out and unzip them separately.
-def unpackZipMulti(filename, data, stanerr, tempdir=None):
-	tmpdir = unpacksetup(tempdir)
-	origtmpfile = tempfile.mkstemp()
-	os.write(origtmpfile[0], data)
-	os.fdopen(origtmpfile[0]).close()
-	multi = True
-	multicounter = 1
-	multitmpdir = "/%s/%s-multi-%s" % (tmpdir, os.path.basename(filename), multicounter)
-	os.makedirs(multitmpdir)
-	tmpfile = tempfile.mkstemp(dir=multitmpdir)
-	os.write(tmpfile[0], data)
-	os.fdopen(tmpfile[0]).close()
-	multicounter = multicounter + 1
-	zipoffset = int(re.search("(\d+) extra bytes at beginning or within zipfile", stanerr).groups()[0])
-	while zipoffset != 0:
-		multitmpdir = "/%s/%s-multi-%s" % (tmpdir, os.path.basename(filename), multicounter)
-		os.makedirs(multitmpdir)
-		tmpfile = tempfile.mkstemp(dir=multitmpdir)
-		os.write(tmpfile[0], data[:zipoffset])
-		os.fdopen(tmpfile[0]).close()
-		p = subprocess.Popen(['zipinfo', '-v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanoutzip, stanerrzip) = p.communicate()
-		if not "extra bytes at beginning or within zipfile" in stanerrzip:
-			break
-		zipoffset = int(re.search("(\d+) extra bytes at beginning or within zipfile", stanerrzip).groups()[0])
-		multicounter = multicounter + 1
-	os.unlink(origtmpfile[1])
-	return multi
-
 def unpackZip(data, offset, filename, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 
@@ -1594,28 +1564,41 @@ def unpackZip(data, offset, filename, tempdir=None):
 			os.rmdir(tmpdir)
 		return (None, None)
 
-	## TODO: merge unpackZipMulti here
 	if "extra bytes at beginning or within zipfile" in stanerr:
-		## check whether or not we have a multi-archive ZIP file
-		## we carve every sub zip file from the original one
-		multi = unpackZipMulti(filename, data[offset:], stanerr, tmpdir)
-		osgen = os.walk(tmpdir)
-		i = osgen.next()
-		for zp in i[1]:
-			if not "multi" in zp:
-				continue
-			multitmpdir = "%s/%s" % (i[0], zp)
-			multizipfiles = os.listdir(multitmpdir)
-			if len(multizipfiles) != 1:
-				## something went wrong here
-				pass
-			p = subprocess.Popen(['unzip', '-o', "%s/%s" % (multitmpdir, multizipfiles[0]), '-d', multitmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-			(stanout, stanerr) = p.communicate()
-			os.unlink("%s/%s" % (multitmpdir, multizipfiles[0]))
+		multidata = data[offset:]
+		multicounter = 1
+		## first unpack the original file.
+		multitmpdir = "/%s/%s-multi-%s" % (tmpdir, os.path.basename(filename), multicounter)
+		os.makedirs(multitmpdir)
+		p = subprocess.Popen(['unzip', '-o', tmpfile[1], '-d', multitmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanoutzip, stanerrzip) = p.communicate()
+		if p.returncode != 0 and p.returncode != 1:
+			## this is just weird! We were told that we have a zip file by zipinfo, but we can't unzip?
+			#shutil.rmtree(multitmpdir)
+			pass
+		multicounter = multicounter + 1
+		zipoffset = int(re.search("(\d+) extra bytes at beginning or within zipfile", stanerr).groups()[0])
+		while zipoffset != 0:
+			multitmpdir = "/%s/%s-multi-%s" % (tmpdir, os.path.basename(filename), multicounter)
+			os.makedirs(multitmpdir)
+			multitmpfile = tempfile.mkstemp(dir=tmpdir)
+			os.write(multitmpfile[0], multidata[:zipoffset])
+			os.fdopen(multitmpfile[0]).close()
+			p = subprocess.Popen(['unzip', '-o', multitmpfile[1], '-d', multitmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			(stanoutzip, stanerrzip) = p.communicate()
 			if p.returncode != 0 and p.returncode != 1:
+				## this is just weird! We were told that we have a zip file by zipinfo, but we can't unzip?
+				#shutil.rmtree(multitmpdir)
+				pass
+			p = subprocess.Popen(['zipinfo', '-v', multitmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			(stanoutzip, stanerrzip) = p.communicate()
+			if not "extra bytes at beginning or within zipfile" in stanerrzip:
 				shutil.rmtree(multitmpdir)
-				continue
-
+				os.unlink(multitmpfile[1])
+				break
+			zipoffset = int(re.search("(\d+) extra bytes at beginning or within zipfile", stanerrzip).groups()[0])
+			os.unlink(multitmpfile[1])
+			multicounter = multicounter + 1
 	else:
 		p = subprocess.Popen(['unzip', '-o', tmpfile[1], '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
