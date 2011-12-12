@@ -1135,18 +1135,23 @@ def unpackSquashfsWrapper(data, offset, tempdir=None):
 	if retval != None:
 		return retval
 
-	## then OpenWrt variant
+	## OpenWrt variant
 	retval = unpackSquashfsOpenWrtLZMA(data,offset,tempdir)
 	if retval != None:
 		return retval
 
-	## then Broadcom variant
+	## Broadcom variant
 	retval = unpackSquashfsBroadcomLZMA(data,offset,tempdir)
 	if retval != None:
 		return retval
 
-	## then Ralink variant
+	## Ralink variant
 	retval = unpackSquashfsRalinkLZMA(data,offset,tempdir)
+	if retval != None:
+		return retval
+
+	## Atheros variant
+	retval = unpackSquashfsAtherosLZMA(data,offset,tempdir)
 	if retval != None:
 		return retval
 	return None
@@ -1260,15 +1265,17 @@ def unpackSquashfs42(data, offset, tempdir=None):
 		os.unlink(tmpfile[1])
 		return (tmpdir, squashsize)
 
-## squashfs variant from Ralink, with LZMA
-def unpackSquashfsRalinkLZMA(data, offset, tempdir=None):
+## generic function for all kinds of squashfs+lzma variants that were copied
+## from slax.org and then adapted and that are slightly different, but not that
+## much.
+def unpackSquashfsWithLZMA(data, offset, command, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	## since unsquashfs can't deal with data via stdin first write it to
 	## a temporary location
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
 
-	p = subprocess.Popen(['bat-unsquashfs-ralink', '-d', tmpdir, '-f', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen([command, '-d', tmpdir, '-f', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.fdopen(tmpfile[0]).close()
@@ -1284,6 +1291,15 @@ def unpackSquashfsRalinkLZMA(data, offset, tempdir=None):
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		return (tmpdir, squashsize)
+	pass
+
+## squashfs variant from Atheros, with LZMA
+def unpackSquashfsAtherosLZMA(data, offset, tempdir=None):
+	return unpackSquashfsWithLZMA(data, offset, "bat-unsquashfs-atheros", tempdir)
+
+## squashfs variant from Ralink, with LZMA
+def unpackSquashfsRalinkLZMA(data, offset, tempdir=None):
+	return unpackSquashfsWithLZMA(data, offset, "bat-unsquashfs-ralink", tempdir)
 
 ## squashfs variant from Broadcom, with LZMA
 def unpackSquashfsBroadcomLZMA(data, offset, tempdir=None):
