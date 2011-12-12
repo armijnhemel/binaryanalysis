@@ -2,6 +2,7 @@
 * add another squashfs+LZMA variant (for Atheros devices) to bat-extratools
 * add unpacking for squashfs+LZMA variant for Atheros devices to squashfs
 unpacking
+* rework code for unpacking files that contain multiple zip files, almost done
 
 2011-12-11
 * if unyaffs seems successful, but actually does not unpack any data, it is
