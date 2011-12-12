@@ -49,10 +49,11 @@ def readfiles(source, fspath):
 	for i in stanout.strip().split("\n"):
 		if i.startswith(">"):
 			continue
-		modeflag = i.split()[1][0:-3]
+		modeflag = int(i.split()[1][0:-3])
 		filename = i.split()[7]
-		if modeflag == "40":
+		if modeflag == 40:
 			dirs.append(filename)
-		elif modeflag == "100":
+		## also take symlinks into account
+		elif modeflag >= 100 and modeflag < 120:
 			files.append(filename)
 	return (dirs, files)
