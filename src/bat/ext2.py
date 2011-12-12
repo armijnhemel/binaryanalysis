@@ -53,7 +53,7 @@ def readfiles(source, fspath):
 		filename = i.split()[7]
 		if modeflag == 40:
 			dirs.append(filename)
-		## also take symlinks into account
+		## also take sticky bit, suid, sgid, etc. into account
 		elif modeflag >= 100 and modeflag < 120:
 			files.append(filename)
 	return (dirs, files)
