@@ -6,6 +6,7 @@ unpacking
 * add work around for certain files that contain multiple zip files. This
 works for now, but it might be that we will need additional fixes in the
 future.
+* fix ranking bug that was triggered when there was a blacklist active
 
 2011-12-11
 * if unyaffs seems successful, but actually does not unpack any data, it is

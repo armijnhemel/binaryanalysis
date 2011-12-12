@@ -78,7 +78,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 		tmpfile = tempfile.mkstemp()
 		os.write(tmpfile[0], databytes)
 		os.fdopen(tmpfile[0]).close()
-		scanfile = tmpfile
+		scanfile = tmpfile[1]
         try:
 		lines = []
 		if language == 'C':
