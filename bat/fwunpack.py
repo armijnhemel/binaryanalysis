@@ -617,7 +617,8 @@ def searchUnpackInstallShield(filename, tempdir=None, blacklist=[], offsets={}, 
 	## so we will only consider files that end in "1.cab"
 	if offsets['installshield'][0] != 0:
 		return ([], blacklist, offsets)
-	## check the filenames first, if we don't have <filename>1.cab, or <filename>1.hdr we return
+	## Check the filenames first, if we don't have <filename>1.cab, or <filename>1.hdr we return
+	## This should prevent that data2.cab is scanned.
 	if not filename.endswith("1.cab"):
 		return ([], blacklist, offsets)
 	try:
@@ -634,9 +635,8 @@ def searchUnpackInstallShield(filename, tempdir=None, blacklist=[], offsets={}, 
 	if p.returncode != 0:
 		os.rmdir(tmpdir)
 	else:
-		## now we need to add data1.cab, data1.hdr and (if present) data2.cab to the blacklist
-		## for this we need to be able to supply more information to the parent process
-		## or simply remove data1.hdr and data2.cab
+		## Ideally we add data1.cab, data1.hdr and (if present) data2.cab to the blacklist.
+		## For this we need to be able to supply more information to the parent process
 		diroffsets.append((tmpdir, 0))
 	return (diroffsets, blacklist, offsets)
 
