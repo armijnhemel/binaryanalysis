@@ -51,7 +51,7 @@ module  = bat.fwunpack
 method  = searchUnpackLzip
 priority = 1
 
-[lzop]
+[lzo]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackLzo
