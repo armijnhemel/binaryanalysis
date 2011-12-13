@@ -145,7 +145,11 @@ def prettyprintresxml(res, scandate, unpackscans=[], programscans=[]):
 def gethash(path, filename):
 	scanfile = open("%s/%s" % (path, filename), 'r')
 	h = hashlib.new('sha256')
-	h.update(scanfile.read())
+	scanfile.seek(0)
+	hashdata = scanfile.read(10000000)
+	while hashdata != '':
+		h.update(hashdata)
+		hashdata = scanfile.read(10000000)
 	scanfile.close()
 	return h.hexdigest()
 
