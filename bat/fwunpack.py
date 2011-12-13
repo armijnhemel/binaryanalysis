@@ -145,10 +145,25 @@ def searchUnpackBase64(filename, tempdir=None, blacklist=[], offsets={}, envvars
 ## decompress executables that have been compressed with UPX.
 def searchUnpackUPX(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	datafile = open(filename, 'rb')
-	data = datafile.read()
-	datafile.close()
+	offset = 0
+	datafile.seek(offset)
+	upx = False
+	databuffer = datafile.read(100000)
+	while databuffer != '':
+		datafile.seek(offset + 99950)
+		if databuffer.find("UPX") != -1:
+			upx = True
+			break
+		databuffer = datafile.read(100000)
+		if len(databuffer) >= 50:
+			offset = offset + 99950
+		else:
+			offset = offset + len(databuffer)
+
 	# ultrasimple test to filter out non-UPX files
-	if not "UPX" in data:
+	## It might actually be faster to remove this test
+	## let UPX handle it instead.
+	if not upx:
 		return ([], blacklist, offsets)
 	counter = 1
 	diroffsets = []
