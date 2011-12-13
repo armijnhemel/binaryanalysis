@@ -1495,7 +1495,6 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 	if offsets['gzip'] == []:
 		return ([], blacklist, offsets)
 
-	datafile = open(filename, 'rb')
 	## counter to remember how many gzip file systems we have
 	## discovered, so we can use this to append to the directory
 	## name containing the unpacked contents.
@@ -1519,19 +1518,24 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 ## return a directory for further processing, otherwise it will return None.
 ## We use bzcat instead of the bz2 module because that can't handle trailing
 ## data very well.
-def unpackBzip2(data, offset, tempdir=None):
+def unpackBzip2(filename, offset, tempdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
 	## Assumes (for now) that bzcat is in the path
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(tmpfile[0], data[offset:])
-	p = subprocess.Popen(['bzcat', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
+
+	if offset != 0:
+		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+	## if we need to the whole file we might as well just copy it directly
+	else:
+		shutil.copy(filename, tmpfile[1])
+
+	#p = subprocess.Popen(['bzcat', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(outtmpfile[0], stanout)
-	#os.fdopen(outtmpfile[0]).flush()
-	os.fsync(outtmpfile[0])
+	p = subprocess.Popen(['bzcat', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
 	if os.stat(outtmpfile[1]).st_size == 0:
 		os.fdopen(outtmpfile[0]).close()
 		os.unlink(outtmpfile[1])
@@ -1549,17 +1553,14 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, envvars=
 	if offsets['bz2'] == []:
 		return ([], blacklist, offsets)
 
-	datafile = open(filename, 'rb')
 	diroffsets = []
 	counter = 1
-	data = datafile.read()
-	datafile.close()
 	for offset in offsets['bz2']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "bzip2", counter)
-		res = unpackBzip2(data, offset, tmpdir)
+		res = unpackBzip2(filename, offset, tmpdir)
 		if res != None:
 			diroffsets.append((res, offset))
 			counter = counter + 1
