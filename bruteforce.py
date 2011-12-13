@@ -15,6 +15,7 @@ import ConfigParser
 import xml.dom.minidom
 import datetime
 import sqlite3
+import bat.extractor
 
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
@@ -167,6 +168,7 @@ def scanfile(path, filename, lentempdir=0, tempdir=None, unpackscans=[], program
 	mstype = ms.file("%s/%s" % (path, filename))
 	report['magic'] = mstype
 
+	## TODO: replace with os.path.islink() and friends
         ## broken symbolic links can't be statted
         if mstype.find('broken symbolic link to') == 0:
         	return report
@@ -233,8 +235,11 @@ def scan(filetoscan, magic, unpackscans=[], programscans=[], filehash=None, temp
 
 	## 'unpackscans' has been sorted in decreasing priority, so highest
 	## priority scans are run first.
-	# TODO: if the whole file has already been blacklisted, we don't have to scan further
 	for scan in unpackscans:
+		## the whole file has already been scanned by other scans, so we can
+		## continue with the program scans.
+		if bat.extractor.inblacklist(0, blacklist) == os.stat(filetoscan).st_size:
+			break
 		noscan = False
 		module = scan['module']
 		method = scan['method']
@@ -328,44 +333,31 @@ def readconfig(config):
 	for section in config.sections():
 		if config.has_option(section, 'type'):
 			conf = {}
-			## there is some duplication here, that we probably can get rid of
 			conf['name']   = section
 			conf['module'] = config.get(section, 'module')
 			conf['method'] = config.get(section, 'method')
+
+			try:
+				conf['xmloutput'] = config.get(section, 'xmloutput')
+			except:
+				pass
+			try:
+				conf['cleanup'] = config.get(section, 'cleanup')
+			except:
+				pass
+			try:
+				conf['envvars'] = config.get(section, 'envvars')
+			except:
+				pass
+
 			if config.get(section, 'type') == 'program':
-				try:
-					conf['xmloutput'] = config.get(section, 'xmloutput')
-				except:
-					pass
-				try:
-					conf['cleanup'] = config.get(section, 'cleanup')
-				except:
-					pass
-				try:
-					conf['envvars'] = config.get(section, 'envvars')
-				except:
-					pass
 				programscans.append(conf)
+			## unpack has some extra options
 			elif config.get(section, 'type') == 'unpack':
-				#conf['name']   = section
-				#conf['module'] = config.get(section, 'module')
-				#conf['method'] = config.get(section, 'method')
 				try:
 					conf['priority'] = int(config.get(section, 'priority'))
 				except:
 					conf['priority'] = 0
-				try:
-					conf['xmloutput'] = config.get(section, 'xmloutput')
-				except:
-					pass
-				try:
-					conf['cleanup'] = config.get(section, 'cleanup')
-				except:
-					pass
-				try:
-					conf['envvars'] = config.get(section, 'envvars')
-				except:
-					pass
 				unpackscans.append(conf)
 	## sort the unpack scans on priority (highest priority first)
 	unpackscans = sorted(unpackscans, key=lambda x: x['priority'], reverse=True)

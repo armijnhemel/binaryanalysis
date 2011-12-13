@@ -1,3 +1,7 @@
+2011-12-13
+* stop unpacking a file when the whole file has been blacklisted
+* remove duplicate code in bruteforce.py
+
 2011-12-12
 * add another squashfs+LZMA variant (for Atheros devices) to bat-extratools
 * add unpacking for squashfs+LZMA variant for Atheros devices to squashfs
