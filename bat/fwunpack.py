@@ -1440,27 +1440,28 @@ def unpackExt2fs(data, offset, tempdir=None):
 
 ## tries to unpack stuff using zcat. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
-def unpackGzip(data, offset, tempdir=None):
+def unpackGzip(filename, offset, tempdir=None):
 	## Assumes (for now) that zcat is in the path
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(tmpfile[0], data[offset:])
-	p = subprocess.Popen(['zcat', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
+	os.fdopen(tmpfile[0]).close()
+	## use dd. This really pays off when using large files.
+	if offset != 0:
+		p = subprocess.Popen(['dd', 'if=%s % (filename,)', 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+	## if we need to the whole file we might as well just copy it directly
+	else:
+		shutil.copy(filename, tmpfile[1])
+
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(outtmpfile[0], stanout)
-	#os.fdopen(outtmpfile[0]).flush()
-	os.fsync(outtmpfile[0])
+	p = subprocess.Popen(['zcat', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
 	if os.stat(outtmpfile[1]).st_size == 0:
-		os.fdopen(outtmpfile[0]).close()
 		os.unlink(outtmpfile[1])
-		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
-	os.fdopen(outtmpfile[0]).close()
-	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
 	return tmpdir
 
@@ -1474,14 +1475,12 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 	## name containing the unpacked contents.
 	counter = 1
 	diroffsets = []
-	data = datafile.read()
-	datafile.close()
 	for offset in offsets['gzip']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "gzip", counter)
-		res = unpackGzip(data, offset, tmpdir)
+		res = unpackGzip(filename, offset, tmpdir)
 		if res != None:
 			diroffsets.append((res, offset))
 			counter = counter + 1
