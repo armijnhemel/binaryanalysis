@@ -180,7 +180,6 @@ def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={},
 		res = unpackJavaSerialized(data, offset, tmpdir)
 		if res != None:
 			(serdir, size) = res
-			#diroffsets.append((ardir, offset))
 			diroffsets.append((serdir, offset))
 			blacklist.append((offset, offset + size))
 			counter = counter + 1
