@@ -41,8 +41,8 @@ def unpacksetup(tempdir):
 	return tmpdir
 
 ## method to search for all the markers we have in fsmagic
-## Later we should rewrite all methods to use the results from
-## this method instead of rereading the file.
+## TODO: since most/all scans use results from this method we can rewrite this and
+## always run it, but after other pre-run scans, such as byteswapping
 def genericMarkerSearch(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	datafile = open(filename, 'rb')
 	databuffer = []
@@ -75,6 +75,27 @@ def genericMarkerSearch(filename, tempdir=None, blacklist=[], offsets={}, envvar
 		else:
 			offset = offset + len(databuffer)
 	datafile.close()
+	return ([], blacklist, offsets)
+
+## There are certain routers that have all bytes swapped, because they use 16
+## bytes NOR flash instead of 8 bytes SPI flash. This is an ugly hack to first
+## rearrange the data. This is mostly for Realtek RTL8196C based routers.
+def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	datafile = open(filename, 'rb')
+        data = datafile.read()
+        datafile.close()
+	## "Uncompressing Linux..."
+	if data.find("nUocpmerssni giLun.x..") != -1:
+		tmpdir = dirsetup(tempdir, filename, "byteswap", 1)
+		tmpfile = tempfile.mkstemp(dir=tmpdir)
+		counter = 0
+		for i in xrange(0,len(data)):
+        		if counter == 0:
+                		os.write(tmpfile[0], data[i+1])
+        		else:
+                		os.write(tmpfile[0], data[i-1])
+        		counter = (counter+1)%2
+		return ([(tmpdir, 0)], blacklist, offsets)
 	return ([], blacklist, offsets)
 
 ## unpack base64 files
@@ -124,7 +145,7 @@ def searchUnpackUPX(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		## the whole file is blacklisted
 		blacklist.append((0, os.stat(filename).st_size))
 		diroffsets.append((tmpdir, 0))
-		return (diroffsets, blacklist, offsets)
+	return (diroffsets, blacklist, offsets)
 
 ## unpack Java serialized data
 def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
@@ -437,27 +458,6 @@ def unpackTar(data, offset, tempdir=None):
 	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
 	return (tmpdir, tarsize)
-
-## There are certain routers that have all bytes swapped, because they use 16
-## bytes NOR flash instead of 8 bytes SPI flash. This is an ugly hack to first
-## rearrange the data. This is mostly for Realtek RTL8196C based routers.
-def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
-	datafile = open(filename, 'rb')
-        data = datafile.read()
-        datafile.close()
-	## "Uncompressing Linux..."
-	if data.find("nUocpmerssni giLun.x..") != -1:
-		tmpdir = dirsetup(tempdir, filename, "byteswap", 1)
-		tmpfile = tempfile.mkstemp(dir=tmpdir)
-		counter = 0
-		for i in xrange(0,len(data)):
-        		if counter == 0:
-                		os.write(tmpfile[0], data[i+1])
-        		else:
-                		os.write(tmpfile[0], data[i-1])
-        		counter = (counter+1)%2
-		return ([(tmpdir, 0)], blacklist, offsets)
-	return ([], blacklist, offsets)
 
 ## yaffs2 is used frequently in Android and various mediaplayers based on
 ## Realtek chipsets (RTD1261/1262/1073/etc.)
