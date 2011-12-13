@@ -1,6 +1,11 @@
 2011-12-13
 * stop unpacking a file when the whole file has been blacklisted
 * remove duplicate code in bruteforce.py
+* unpackGzip: don't read in a file and then write it out again if it is the
+same data, but use shutil.copy() instead. Also write files out with dd instead
+of reading the data ourselves. It is a lot more efficient. Finally don't read
+the output of zcat, but write it to a file directly. This really pays off in
+the case of big files.
 
 2011-12-12
 * add another squashfs+LZMA variant (for Atheros devices) to bat-extratools
