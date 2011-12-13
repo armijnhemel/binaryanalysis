@@ -1382,8 +1382,6 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, envvars
 	datafile = open(filename, 'rb')
 	diroffsets = []
 	counter = 1
-	data = datafile.read()
-	datafile.close()
 
 	## set path for Debian
 	unpackenv = os.environ
@@ -1399,10 +1397,12 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, envvars
 			continue
 		tmpdir = dirsetup(tempdir, filename, "ext2", counter)
 		## we should actually scan the data starting from offset - 0x438
-		if not checkExt2fs(data[(offset - 0x438):(offset - 0x438 + 4096)], 0, tmpdir):
+		datafile.seek(offset - 0x438)
+		ext2checkdata = datafile.read(4096)
+		if not checkExt2fs(ext2checkdata, 0, tmpdir):
 			os.rmdir(tmpdir)
 			continue
-		res = unpackExt2fs(data[offset - 0x438:], 0, tmpdir)
+		res = unpackExt2fs(filename, offset - 0x438, tmpdir)
 		if res != None:
 			(ext2tmpdir, ext2size) = res
 			diroffsets.append((ext2tmpdir, offset - 0x438))
@@ -1428,6 +1428,7 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, envvars
 				os.rmdir(tmpdir)
 		else:
 			os.rmdir(tmpdir)
+	datafile.close()
 	return (diroffsets, blacklist, offsets)
 
 def checkExt2fs(data, offset, tempdir=None):
@@ -1449,12 +1450,17 @@ def checkExt2fs(data, offset, tempdir=None):
 	return True
 
 ## Unpack an ext2 file system using e2tools and some custom written code from our own ext2 module
-def unpackExt2fs(data, offset, tempdir=None):
+def unpackExt2fs(filename, offset, tempdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(tmpfile[0], data[offset:])
+	if offset != 0:
+		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+	## if we need to the whole file we might as well just copy it directly
+	else:
+		shutil.copy(filename, tmpfile[1])
 	ext2.copyext2fs(tmpfile[1], tmpdir)
 	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
