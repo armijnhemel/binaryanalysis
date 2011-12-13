@@ -65,9 +65,9 @@ def genericMarkerSearch(filename, tempdir=None, blacklist=[], offsets={}, envvar
 					#offsets[key].append((offset + res, key))
 					offsets[key].append(offset + res)
 					res = databuffer.find(fsmagic.fsmagic[key], res+1)
-		## move the offset 50
+		## move the offset 99950
 		datafile.seek(offset + 99950)
-		## read 100000 bytes from oldoffset + 50, so there is 50 bytes
+		## read 100000 bytes with a 50 bytes overlap
 		## overlap with the previous read
 		databuffer = datafile.read(100000)
 		if len(databuffer) >= 50:
@@ -410,9 +410,6 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 
 	diroffsets = []
 	counter = 1
-	datafile = open(filename, 'rb')
-	data = datafile.read()
-	datafile.close()
 	for offset in taroffsets:
 		## according to /usr/share/magic the magic header starts at 0x101
 		if offset < 0x101:
@@ -422,7 +419,7 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "tar", counter)
-		(res, tarsize) = unpackTar(data, offset, tmpdir)
+		(res, tarsize) = unpackTar(filename, offset, tmpdir)
 		if res != None:
 			diroffsets.append((res, offset - 0x101))
 			counter = counter + 1
@@ -433,10 +430,16 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 	return (diroffsets, blacklist, offsets)
 
 
-def unpackTar(data, offset, tempdir=None):
+def unpackTar(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(tmpfile[0], data[offset-0x101:])
+
+	if offset != 0x101:
+		p = subprocess.Popen(['dd', 'if=%s % (filename,)', 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset - 0x101,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+	## if we need to the whole file we might as well just copy it directly
+	else:
+		shutil.copy(filename, tmpfile[1])
 
 	tarsize = 0
 

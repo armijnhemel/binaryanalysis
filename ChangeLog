@@ -8,6 +8,8 @@ the output of zcat, but write it to a file directly. This really pays off in
 the case of big files.
 * don't read in the file at once when determining the hash, because this will
 be very resource intensive for large files.
+* unpackTar: like unpackGzip: don't read a file, but use shutil.copy() and dd
+instead. This pays off with big files.
 
 2011-12-12
 * add another squashfs+LZMA variant (for Atheros devices) to bat-extratools
