@@ -82,12 +82,28 @@ def genericMarkerSearch(filename, tempdir=None, blacklist=[], offsets={}, envvar
 ## rearrange the data. This is mostly for Realtek RTL8196C based routers.
 def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	datafile = open(filename, 'rb')
-        data = datafile.read()
-        datafile.close()
+	offset = 0
+	datafile.seek(offset)
+	swapped = False
+	databuffer = datafile.read(100000)
 	## "Uncompressing Linux..."
-	if data.find("nUocpmerssni giLun.x..") != -1:
+	while databuffer != '':
+		datafile.seek(offset + 99950)
+		if databuffer.find("nUocpmerssni giLun.x..") != -1:
+			swapped = True
+			break
+		databuffer = datafile.read(100000)
+		if len(databuffer) >= 50:
+			offset = offset + 99950
+		else:
+			offset = offset + len(databuffer)
+
+	if swapped:
 		tmpdir = dirsetup(tempdir, filename, "byteswap", 1)
 		tmpfile = tempfile.mkstemp(dir=tmpdir)
+		## reset pointer into file
+		datafile.seek(0)
+		data = datafile.read()
 		counter = 0
 		for i in xrange(0,len(data)):
         		if counter == 0:
@@ -96,6 +112,7 @@ def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, envva
                 		os.write(tmpfile[0], data[i-1])
         		counter = (counter+1)%2
 		return ([(tmpdir, 0)], blacklist, offsets)
+	datafile.close()
 	return ([], blacklist, offsets)
 
 ## unpack base64 files
@@ -320,11 +337,8 @@ def unpackAr(data, offset, tempdir=None):
 def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	if offsets['iso9660'] == []:
 		return ([], blacklist, offsets)
-	datafile = open(filename, 'rb')
 	diroffsets = []
 	counter = 1
-	data = datafile.read()
-	datafile.close()
 	for offset in offsets['iso9660']:
 		## according to /usr/share/magic the magic header starts at 0x438
 		if offset < 32769:
@@ -334,7 +348,7 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, envvar
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "iso9660", counter)
-		res = unpackISO9660(data, offset - 32769, tmpdir)
+		res = unpackISO9660(filename, offset, tmpdir)
 		if res != None:
 			(isooffset, size) = res
 			diroffsets.append((isooffset, offset - 32769))
@@ -344,10 +358,16 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, envvar
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, offsets)
 
-def unpackISO9660(data, offset, tempdir=None):
+def unpackISO9660(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(tmpfile[0], data[offset:])
+
+	if offset != 32769:
+		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset - 32769,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+	## if we need to the whole file we might as well just copy it directly
+	else:
+		shutil.copy(filename, tmpfile[1])
 
 	## create a mountpoint
 	mountdir = tempfile.mkdtemp()
@@ -435,7 +455,7 @@ def unpackTar(filename, offset, tempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 
 	if offset != 0x101:
-		p = subprocess.Popen(['dd', 'if=%s % (filename,)', 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset - 0x101,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset - 0x101,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
 	## if we need to the whole file we might as well just copy it directly
 	else:
@@ -1450,7 +1470,7 @@ def unpackGzip(filename, offset, tempdir=None):
 	os.fdopen(tmpfile[0]).close()
 	## use dd. This really pays off when using large files.
 	if offset != 0:
-		p = subprocess.Popen(['dd', 'if=%s % (filename,)', 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
 	## if we need to the whole file we might as well just copy it directly
 	else:
