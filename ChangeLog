@@ -12,6 +12,7 @@ be very resource intensive for large files.
 instead. This pays off with big files.
 * big file improvements for byteswap and iso9660 scanning, plus fix dd command
 for gzip and tar
+* big file improvement for ext2
 
 2011-12-12
 * add another squashfs+LZMA variant (for Atheros devices) to bat-extratools
