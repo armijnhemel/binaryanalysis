@@ -427,6 +427,7 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		taroffsets = taroffsets + offsets[marker]
 	if taroffsets == []:
 		return ([], blacklist, offsets)
+	taroffsets.sort()
 
 	diroffsets = []
 	counter = 1
@@ -979,6 +980,7 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 		cpiooffsets = cpiooffsets + offsets[marker]
 	if cpiooffsets == []:
 		return ([], blacklist, offsets)
+	cpiooffsets.sort()
 
 	if offsets['cpiotrailer'] == []:
 		return ([], blacklist, offsets)
@@ -1128,6 +1130,8 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, envva
 		squashoffsets = squashoffsets + offsets[marker]
 	if squashoffsets == []:
 		return ([], blacklist, offsets)
+
+	squashoffsets.sort()
 
 	datafile = open(filename, 'rb')
 	data = datafile.read()
@@ -2004,6 +2008,8 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		gifoffsets = gifoffsets + offsets[marker]
 	if gifoffsets == []:
 		return ([], blacklist, offsets)
+
+	gifoffsets.sort()
 
 	datafile = open(filename, 'rb')
 	data = datafile.read()
