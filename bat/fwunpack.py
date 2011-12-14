@@ -1760,14 +1760,12 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 	datafile = open(filename, 'rb')
 	diroffsets = []
 	counter = 1
-	data = datafile.read()
-	datafile.close()
 	for offset in lzmaoffsets:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "lzma", counter)
-		res = unpackLZMA(data, offset, tmpdir)
+		res = unpackLZMA(filename, offset, tmpdir)
 		if res != None:
 			diroffsets.append((res, offset))
 			counter = counter + 1
@@ -1781,13 +1779,19 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 ## With XZ Utils >= 5.0.0 we should be able to use the -l option for integrity
 ## testing. It will not be faster, but probably more accurate.
 ## This would require Fedora 15 or later (not sure about which Ubuntu).
-def unpackLZMA(data, offset, tempdir=None):
+def unpackLZMA(filename, offset, tempdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
 	## Assumes (for now) that lzma is in the path
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(tmpfile[0], data[offset:])
+        ## use dd. This really pays off when using large files.
+	if offset != 0:
+		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+	## if we need to the whole file we might as well just copy it directly
+	else:
+		shutil.copy(filename, tmpfile[1])
 	p = subprocess.Popen(['lzma', '-cd', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
