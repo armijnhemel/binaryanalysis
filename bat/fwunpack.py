@@ -1757,6 +1757,7 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 		lzmaoffsets = lzmaoffsets + offsets[marker]
 	if lzmaoffsets == []:
 		return ([], blacklist, offsets)
+	lzmaoffsets.sort()
 	diroffsets = []
 	counter = 1
 	for offset in lzmaoffsets:
