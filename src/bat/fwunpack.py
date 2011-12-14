@@ -668,10 +668,9 @@ def searchUnpackInstallShield(filename, tempdir=None, blacklist=[], offsets={}, 
 def searchUnpackCab(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	if offsets['cab'] == []:
 		return ([], blacklist, offsets)
-	datafile = open(filename, 'rb')
 	diroffsets = []
 	counter = 1
-	## only read data when we have found an offset
+	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
 	for offset in offsets['cab']:
@@ -907,11 +906,9 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, envvars=Non
 		return ([], blacklist, offsets)
 	if offsets['xztrailer'] == []:
 		return ([], blacklist, offsets)
-	datafile = open(filename, 'rb')
-	## record the original offset
 	diroffsets = []
 	counter = 1
-	## only read the data when we know we can continue
+	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
 	for trail in offsets['xztrailer']:
@@ -985,10 +982,9 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 	if offsets['cpiotrailer'] == []:
 		return ([], blacklist, offsets)
 
-	datafile = open(filename, 'rb')
 	diroffsets = []
 	counter = 1
-	## only read data when we actually have offsets
+	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
 	for offset in cpiooffsets:
@@ -1677,9 +1673,9 @@ def unpackZip(data, offset, filename, tempdir=None):
 def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	if offsets['zip'] == []:
 		return ([], blacklist, offsets)
-	datafile = open(filename, 'rb')
 	diroffsets = []
 	counter = 1
+	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
 	endofcentraldir_offset = 0
@@ -1705,9 +1701,9 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 def searchUnpackRar(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	if offsets['rar'] == []:
 		return ([], blacklist, offsets)
-	datafile = open(filename, 'rb')
 	diroffsets = []
 	counter = 1
+	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
 	for offset in offsets['rar']:
@@ -1892,9 +1888,9 @@ def unpackUbifs(data, offset, tempdir=None):
 def searchUnpackARJ(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	if offsets['arj'] == []:
 		return ([], blacklist, offsets)
-	datafile = open(filename, 'rb')
 	diroffsets = []
 	counter = 1
+	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
 	for offset in offsets['arj']:
@@ -1954,9 +1950,9 @@ def unpackARJ(data, offset, tempdir=None):
 def searchUnpackIco(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	if offsets['ico'] == []:
 		return ([], blacklist, offsets)
-	datafile = open(filename, 'rb')
 	diroffsets = []
 	counter = 1
+	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
 	for offset in offsets['ico']:
@@ -2097,11 +2093,11 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		return ([], blacklist, offsets)
 	if offsets['pngtrailer'] == []:
 		return ([], blacklist, offsets)
-	datafile = open(filename, 'rb')
 	diroffsets = []
 	headeroffsets = offsets['png']
 	traileroffsets = offsets['pngtrailer']
 	counter = 1
+	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
 	for i in range (0,len(headeroffsets)):
