@@ -1,5 +1,5 @@
 2011-12-14
-* big file improvements for lzma, serialized Java and RAR
+* big file improvements for lzma, serialized Java, RAR and ZIP
 * replace using output of libmagic for determining device files, sockets, etc.
 by using standard Python functionality
 * big file improvements: use hardlinks instead of shutil.copy(). This will

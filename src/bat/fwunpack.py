@@ -1580,13 +1580,19 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, envvars=
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, offsets)
 
-def unpackZip(data, offset, filename, tempdir=None):
+def unpackZip(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 
 	tmpfile = tempfile.mkstemp(dir=tempdir)
 
-	os.write(tmpfile[0], data[offset:])
-	os.fdopen(tmpfile[0]).close()
+	## use dd. This really pays off when using large files.
+	if offset != 0:
+		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+	## if we need to the whole file we might as well hardlink it
+	else:
+		os.link(filename, "%s/%s" % (tmpdir, "templink"))
+		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
 
 	## First we do some sanity checks
 
@@ -1683,9 +1689,6 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		return ([], blacklist, offsets)
 	diroffsets = []
 	counter = 1
-	datafile = open(filename, 'rb')
-	data = datafile.read()
-	datafile.close()
 	endofcentraldir_offset = 0
 	for offset in offsets['zip']:
 		if offset < endofcentraldir_offset:
@@ -1694,7 +1697,7 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "zip", counter)
-		(endofcentraldir, res) = unpackZip(data, offset, filename, tmpdir)
+		(endofcentraldir, res) = unpackZip(filename, offset, tmpdir)
 		if res != None:
 			diroffsets.append((res, offset))
 			counter = counter + 1
