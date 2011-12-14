@@ -1703,15 +1703,12 @@ def searchUnpackRar(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		return ([], blacklist, offsets)
 	diroffsets = []
 	counter = 1
-	datafile = open(filename, 'rb')
-	data = datafile.read()
-	datafile.close()
 	for offset in offsets['rar']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "rar", counter)
-		res = unpackRar(data, offset, tmpdir)
+		res = unpackRar(filename, offset, tmpdir)
 		if res != None:
 			(endofarchive, rardir) = res
 			diroffsets.append((rardir, offset))
@@ -1721,11 +1718,16 @@ def searchUnpackRar(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, offsets)
 
-def unpackRar(data, offset, tempdir=None):
+def unpackRar(filename, offset, tempdir=None):
 	## Assumes (for now) that unrar is in the path
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(tmpfile[0], data[offset:])
+	if offset != 0:
+		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+	## if we need to the whole file we might as well just copy it directly
+	else:
+		shutil.copy(filename, tmpfile[1])
 
 	# inspect the rar archive, and retrieve the end of archive
 	# this way we won't waste too many resources when we don't need to

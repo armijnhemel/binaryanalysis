@@ -1,5 +1,5 @@
 2011-12-14
-* big file improvements for lzma and serialized Java
+* big file improvements for lzma, serialized Java and RAR
 * replace using output of libmagic for determining device files, sockets, etc.
 by using standard Python functionality
 
