@@ -168,16 +168,13 @@ def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={},
 		return ([], blacklist, offsets)
 	counter = 1
 	diroffsets = []
-	datafile = open(filename, 'rb')
-	data = datafile.read()
-	datafile.close()
 	for offset in offsets['java_serialized']:
 		## check if the offset we find is in a blacklist
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "java_serialized", counter)
-		res = unpackJavaSerialized(data, offset, tmpdir)
+		res = unpackJavaSerialized(filename, offset, tmpdir)
 		if res != None:
 			(serdir, size) = res
 			diroffsets.append((serdir, offset))
@@ -187,12 +184,18 @@ def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={},
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, offsets)
 
-def unpackJavaSerialized(data, offset, tempdir=None):
-
+def unpackJavaSerialized(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(tmpfile[0], data[offset:])
-	os.fdopen(tmpfile[0]).close()
+	#os.write(tmpfile[0], data[offset:])
+	#os.fdopen(tmpfile[0]).close()
+	if offset != 0:
+		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+	## if we need to the whole file we might as well just copy it directly
+	else:
+		shutil.copy(filename, tmpfile[1])
+
 	## TODO: remove hardcoded path
 	p = subprocess.Popen(['java', '-jar', '/home/armijn/gpltool/trunk/bat-extratools/jdeserialize/bat-jdeserialize.jar', '-blockdata', 'deserialize', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
         (stanout, stanerr) = p.communicate()
