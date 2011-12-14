@@ -192,9 +192,12 @@ def unpackJavaSerialized(filename, offset, tempdir=None):
 	if offset != 0:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
-	## if we need to the whole file we might as well just copy it directly
+	## if we need to the whole file we might as well hardlink it
 	else:
-		shutil.copy(filename, tmpfile[1])
+		## unsafe because the name can be guessed by an attacker? Possibly.
+		## high risk? Not for me.
+		os.link(filename, "%s/%s" % (tmpdir, "templink"))
+		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
 
 	## TODO: remove hardcoded path
 	p = subprocess.Popen(['java', '-jar', '/home/armijn/gpltool/trunk/bat-extratools/jdeserialize/bat-jdeserialize.jar', '-blockdata', 'deserialize', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
@@ -365,9 +368,10 @@ def unpackISO9660(filename, offset, tempdir=None):
 	if offset != 32769:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset - 32769,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
-	## if we need to the whole file we might as well just copy it directly
+	## if we need to the whole file we might as well hardlink it
 	else:
-		shutil.copy(filename, tmpfile[1])
+		os.link(filename, "%s/%s" % (tmpdir, "templink"))
+		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
 
 	## create a mountpoint
 	mountdir = tempfile.mkdtemp()
@@ -458,9 +462,10 @@ def unpackTar(filename, offset, tempdir=None):
 	if offset != 0x101:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset - 0x101,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
-	## if we need to the whole file we might as well just copy it directly
+	## if we need to the whole file we might as well hardlink it
 	else:
-		shutil.copy(filename, tmpfile[1])
+		os.link(filename, "%s/%s" % (tmpdir, "templink"))
+		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
 
 	tarsize = 0
 
@@ -1458,9 +1463,10 @@ def unpackExt2fs(filename, offset, tempdir=None):
 	if offset != 0:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
-	## if we need to the whole file we might as well just copy it directly
+	## if we need to the whole file we might as well hardlink it
 	else:
-		shutil.copy(filename, tmpfile[1])
+		os.link(filename, "%s/%s" % (tmpdir, "templink"))
+		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
 	ext2.copyext2fs(tmpfile[1], tmpdir)
 	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
@@ -1478,9 +1484,10 @@ def unpackGzip(filename, offset, tempdir=None):
 	if offset != 0:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
-	## if we need to the whole file we might as well just copy it directly
+	## if we need to the whole file we might as well hardlink it
 	else:
-		shutil.copy(filename, tmpfile[1])
+		os.link(filename, "%s/%s" % (tmpdir, "templink"))
+		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
 
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
 	p = subprocess.Popen(['zcat', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
@@ -1531,9 +1538,10 @@ def unpackBzip2(filename, offset, tempdir=None):
 	if offset != 0:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
-	## if we need to the whole file we might as well just copy it directly
+	## if we need to the whole file we might as well hardlink it
 	else:
-		shutil.copy(filename, tmpfile[1])
+		os.link(filename, "%s/%s" % (tmpdir, "templink"))
+		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
 
 	#p = subprocess.Popen(['bzcat', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
@@ -1725,9 +1733,10 @@ def unpackRar(filename, offset, tempdir=None):
 	if offset != 0:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
-	## if we need to the whole file we might as well just copy it directly
+	## if we need to the whole file we might as well hardlink it
 	else:
-		shutil.copy(filename, tmpfile[1])
+		os.link(filename, "%s/%s" % (tmpdir, "templink"))
+		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
 
 	# inspect the rar archive, and retrieve the end of archive
 	# this way we won't waste too many resources when we don't need to
@@ -1794,9 +1803,10 @@ def unpackLZMA(filename, offset, tempdir=None):
 	if offset != 0:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
-	## if we need to the whole file we might as well just copy it directly
+	## if we need to the whole file we might as well hardlink it
 	else:
-		shutil.copy(filename, tmpfile[1])
+		os.link(filename, "%s/%s" % (tmpdir, "templink"))
+		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
 	p = subprocess.Popen(['lzma', '-cd', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()

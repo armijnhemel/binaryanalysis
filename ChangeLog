@@ -2,6 +2,8 @@
 * big file improvements for lzma, serialized Java and RAR
 * replace using output of libmagic for determining device files, sockets, etc.
 by using standard Python functionality
+* big file improvements: use hardlinks instead of shutil.copy(). This will
+give us some more improvements, since files don't need to be copied around.
 
 2011-12-13
 * stop unpacking a file when the whole file has been blacklisted
