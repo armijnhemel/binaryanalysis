@@ -1757,7 +1757,6 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 		lzmaoffsets = lzmaoffsets + offsets[marker]
 	if lzmaoffsets == []:
 		return ([], blacklist, offsets)
-	datafile = open(filename, 'rb')
 	diroffsets = []
 	counter = 1
 	for offset in lzmaoffsets:
@@ -1792,10 +1791,9 @@ def unpackLZMA(filename, offset, tempdir=None):
 	## if we need to the whole file we might as well just copy it directly
 	else:
 		shutil.copy(filename, tmpfile[1])
-	p = subprocess.Popen(['lzma', '-cd', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(outtmpfile[0], stanout)
+	p = subprocess.Popen(['lzma', '-cd', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
         if os.stat(outtmpfile[1]).st_size == 0:
                 os.fdopen(outtmpfile[0]).close()
                 os.unlink(outtmpfile[1])
