@@ -1,5 +1,7 @@
 2011-12-14
 * big file improvements for lzma
+* replace using output of libmagic for determining device files, sockets, etc.
+by using standard Python functionality
 
 2011-12-13
 * stop unpacking a file when the whole file has been blacklisted
