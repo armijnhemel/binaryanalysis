@@ -172,25 +172,11 @@ def scanfile(path, filename, lentempdir=0, tempdir=None, unpackscans=[], program
 	mstype = ms.file("%s/%s" % (path, filename))
 	report['magic'] = mstype
 
-	## TODO: replace with os.path.islink() and friends
-        ## broken symbolic links can't be statted
-        if mstype.find('broken symbolic link to') == 0:
-        	return report
-        ## don't care about symbolic links
-        if mstype.find('symbolic link to') == 0:
-        	return report
-        ## no use checking a named pipe
-        if mstype.find('fifo (named pipe)') == 0:
-        	return report
-	## no use checking a socket
-        if mstype.find('socket') == 0:
-        	return report
-	## no use checking a block device
-        if mstype.find('block special') == 0:
-        	return report
-	## no use checking a character device
-        if mstype.find('character special') == 0:
-        	return report
+	if os.path.islink("%s/%s" % (path, filename)):
+		return report
+	## no use checking pipes, sockets, device files, etcetera
+	if not os.path.isfile("%s/%s" % (path, filename)) and not os.path.isdir("%s/%s" % (path, filename)):
+		return report
 
 	report['size'] = os.lstat("%s/%s" % (path, filename)).st_size
 
