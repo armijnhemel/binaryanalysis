@@ -237,16 +237,19 @@ def pdfPrettyPrint(res, root):
 	return tmpnode
 
 ## scan for mentions of:
-## * some markers for GPL
+## * GPL
+## * Apache
 ######################################
 ## !!! WARNING WARNING WARNING !!! ###
 ######################################
 ## This should only be used as an indicator for further investigation,
-## never as proof that a binary is actually licensed under GPL!
+## never as proof that a binary is actually licensed under a license!
 def scanLicenses(path, blacklist=[], envvars=None):
 	results = {}
 	if genericSearch(path, ["General Public License", "http://gnu.org/licenses/gpl.html", "http://www.gnu.org/licenses/gpl.html"]):
 		results['GPL'] = True
+	if genericSearch(path, ["http://www.apache.org/licenses/LICENSE-2.0"]):
+		results['Apache2.0'] = True
 	if results != {}:
 		return results
 	else:
@@ -259,15 +262,15 @@ def licensesPrettyPrint(res, root):
 		tmpnode.appendChild(tmpnode2)
 	return tmpnode
 
-## scan for mentions of:
-## * sourceforge.net
-## * code.google.com
+## scan for mentions of several forges
 def scanForges(path, blacklist=[], envvars=None):
 	results = {}
 	if genericSearch(path, ["sourceforge.net"]):
 		results['sourceforge.net'] = True
 	if genericSearch(path, ["code.google.com"]):
 		results['code.google.com'] = True
+	if genericSearch(path, ["http://savannah.gnu.org/"]):
+		results['savannah.gnu.org'] = True
 	if results != {}:
 		return results
 	else:
