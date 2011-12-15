@@ -267,6 +267,12 @@ type    = program
 module  = bat.checks
 method  = searchUBoot
 
+[licenses]
+type    = program
+module  = bat.checks
+method  = scanLicenses
+xmloutput = licensesPrettyPrint
+
 [forges]
 type    = program
 module  = bat.checks

@@ -3,6 +3,9 @@
 * simple scanner that looks for presence of strings that might indicate the
 code was from a forge, like sourceforge or code.google.com. In the future it
 might be good to use the scanner from FOSSology for this.
+* very simplistic scanner for scanning for a few license identifiers. This is
+*not* meant to obtain proof that a program is under GPL, just as an indicator
+for further investigation.
 
 2011-12-14
 * big file improvements for lzma, serialized Java, RAR and ZIP
