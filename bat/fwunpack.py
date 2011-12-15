@@ -187,12 +187,10 @@ def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={},
 def unpackJavaSerialized(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	#os.write(tmpfile[0], data[offset:])
-	#os.fdopen(tmpfile[0]).close()
+
 	if offset != 0:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
-	## if we need to the whole file we might as well hardlink it
 	else:
 		## unsafe because the name can be guessed by an attacker? Possibly.
 		## high risk? Not for me.
@@ -284,10 +282,7 @@ def unpackJffs2(filename, tempdir=None):
 def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	if offsets['ar'] == []:
 		return ([], blacklist, offsets)
-	datafile = open(filename, 'rb')
 	counter = 1
-	data = datafile.read()
-	datafile.close()
 	diroffsets = []
 	for offset in offsets['ar']:
 		## check if the offset we find is in a blacklist
@@ -295,7 +290,7 @@ def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, envvars=Non
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "ar", counter)
-		res = unpackAr(data, offset, tmpdir)
+		res = unpackAr(filename, offset, tmpdir)
 		if res != None:
 			(ardir, size) = res
 			diroffsets.append((ardir, offset))
@@ -305,10 +300,17 @@ def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, envvars=Non
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, offsets)
 
-def unpackAr(data, offset, tempdir=None):
+def unpackAr(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(tmpfile[0], data[offset:])
+
+	if offset != 0:
+		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+	else:
+		os.link(filename, "%s/%s" % (tmpdir, "templink"))
+		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
+
 	p = subprocess.Popen(['ar', 'tv', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
@@ -317,7 +319,7 @@ def unpackAr(data, offset, tempdir=None):
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
-	## ar only works on complete files, so we can set the size to len(data)
+	## ar only works on complete files, so we can set the size to file length
 	p = subprocess.Popen(['ar', 'x', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
@@ -330,7 +332,7 @@ def unpackAr(data, offset, tempdir=None):
 	os.unlink(tmpfile[1])
 	if tempdir == None:
 		os.rmdir(tmpdir)
-	return (tmpdir, len(data))
+	return (tmpdir, os.stat(filename).st_size)
 
 ## 1. search ISO9660 file system
 ## 2. mount it using FUSE
@@ -368,7 +370,6 @@ def unpackISO9660(filename, offset, tempdir=None):
 	if offset != 32769:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset - 32769,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
-	## if we need to the whole file we might as well hardlink it
 	else:
 		os.link(filename, "%s/%s" % (tmpdir, "templink"))
 		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
@@ -462,7 +463,6 @@ def unpackTar(filename, offset, tempdir=None):
 	if offset != 0x101:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset - 0x101,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
-	## if we need to the whole file we might as well hardlink it
 	else:
 		os.link(filename, "%s/%s" % (tmpdir, "templink"))
 		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
@@ -1160,11 +1160,9 @@ def unpackSquashfsWrapper(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 
-	## use dd. This really pays off when using large files.
 	if offset != 0:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
-	## if we need to the whole file we might as well hardlink it
 	else:
 		os.link(filename, "%s/%s" % (tmpdir, "templink"))
 		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
@@ -1409,13 +1407,14 @@ def unpackExt2fs(filename, offset, tempdir=None):
 	## the directory if the file is not empty
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
+
 	if offset != 0:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
-	## if we need to the whole file we might as well hardlink it
 	else:
 		os.link(filename, "%s/%s" % (tmpdir, "templink"))
 		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
+
 	ext2.copyext2fs(tmpfile[1], tmpdir)
 	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
@@ -1429,11 +1428,10 @@ def unpackGzip(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
-	## use dd. This really pays off when using large files.
+
 	if offset != 0:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
-	## if we need to the whole file we might as well hardlink it
 	else:
 		os.link(filename, "%s/%s" % (tmpdir, "templink"))
 		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
@@ -1487,7 +1485,6 @@ def unpackBzip2(filename, offset, tempdir=None):
 	if offset != 0:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
-	## if we need to the whole file we might as well hardlink it
 	else:
 		os.link(filename, "%s/%s" % (tmpdir, "templink"))
 		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
@@ -1534,11 +1531,9 @@ def unpackZip(filename, offset, tempdir=None):
 
 	tmpfile = tempfile.mkstemp(dir=tempdir)
 
-	## use dd. This really pays off when using large files.
 	if offset != 0:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
-	## if we need to the whole file we might as well hardlink it
 	else:
 		os.link(filename, "%s/%s" % (tmpdir, "templink"))
 		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
@@ -1682,10 +1677,10 @@ def unpackRar(filename, offset, tempdir=None):
 	## Assumes (for now) that unrar is in the path
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
+
 	if offset != 0:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
-	## if we need to the whole file we might as well hardlink it
 	else:
 		os.link(filename, "%s/%s" % (tmpdir, "templink"))
 		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
@@ -1751,11 +1746,10 @@ def unpackLZMA(filename, offset, tempdir=None):
 	## Assumes (for now) that lzma is in the path
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
-        ## use dd. This really pays off when using large files.
+
 	if offset != 0:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
-	## if we need to the whole file we might as well hardlink it
 	else:
 		os.link(filename, "%s/%s" % (tmpdir, "templink"))
 		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
@@ -1874,14 +1868,13 @@ def unpackARJ(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir, suffix=".arj")
 
-	## use dd. This really pays off when using large files.
 	if offset != 0:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
-	## if we need to the whole file we might as well hardlink it
 	else:
 		os.link(filename, "%s/%s" % (tmpdir, "templink"))
 		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
+
 	## first check archive integrity
 	p = subprocess.Popen(['arj', 't', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
