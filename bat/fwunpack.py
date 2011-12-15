@@ -1854,15 +1854,12 @@ def searchUnpackARJ(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		return ([], blacklist, offsets)
 	diroffsets = []
 	counter = 1
-	datafile = open(filename, 'rb')
-	data = datafile.read()
-	datafile.close()
 	for offset in offsets['arj']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "arj", counter)
-		res = unpackARJ(data, offset, tmpdir)
+		res = unpackARJ(filename, offset, tmpdir)
 		if res != None:
 			(arjtmpdir, arjsize) = res
 			diroffsets.append((arjtmpdir, offset))
@@ -1873,10 +1870,18 @@ def searchUnpackARJ(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, offsets)
 
-def unpackARJ(data, offset, tempdir=None):
+def unpackARJ(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir, suffix=".arj")
-	os.write(tmpfile[0], data[offset:])
+
+	## use dd. This really pays off when using large files.
+	if offset != 0:
+		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+	## if we need to the whole file we might as well hardlink it
+	else:
+		os.link(filename, "%s/%s" % (tmpdir, "templink"))
+		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
 	## first check archive integrity
 	p = subprocess.Popen(['arj', 't', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
