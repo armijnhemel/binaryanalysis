@@ -1,3 +1,6 @@
+2011-12-15
+* big file improvements for squashfs
+
 2011-12-14
 * big file improvements for lzma, serialized Java, RAR and ZIP
 * replace using output of libmagic for determining device files, sockets, etc.

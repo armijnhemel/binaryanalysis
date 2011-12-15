@@ -1134,9 +1134,6 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, envva
 
 	squashoffsets.sort()
 
-	datafile = open(filename, 'rb')
-	data = datafile.read()
-	datafile.close()
 	diroffsets = []
 	counter = 1
 	for offset in squashoffsets:
@@ -1145,7 +1142,7 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, envva
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "squashfs", counter)
-		retval = unpackSquashfsWrapper(data, offset, tmpdir)
+		retval = unpackSquashfsWrapper(filename, offset, tmpdir)
 		if retval != None:
 			(res, squashsize) = retval
 			diroffsets.append((res, offset))
@@ -1157,20 +1154,37 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, envva
 	return (diroffsets, blacklist, offsets)
 
 ## wrapper around all the different squashfs types
-def unpackSquashfsWrapper(data, offset, tempdir=None):
+def unpackSquashfsWrapper(filename, offset, tempdir=None):
+	## since unsquashfs can't deal with data via stdin first write it to
+	## a temporary location
+	tmpdir = unpacksetup(tempdir)
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+
+	## use dd. This really pays off when using large files.
+	if offset != 0:
+		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+	## if we need to the whole file we might as well hardlink it
+	else:
+		os.link(filename, "%s/%s" % (tmpdir, "templink"))
+		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
+
 	## first try normal Squashfs unpacking
-	retval = unpackSquashfs(data, offset, tempdir)
+	retval = unpackSquashfs(tmpfile[1], offset, tmpdir)
 	if retval != None:
+		os.unlink(tmpfile[1])
 		return retval
 	## then try other flavours
 	## first SquashFS 4.2
-	retval = unpackSquashfs42(data,offset,tempdir)
+	retval = unpackSquashfs42(tmpfile[1],offset,tmpdir)
 	if retval != None:
+		os.unlink(tmpfile[1])
 		return retval
 
 	## OpenWrt variant
-	retval = unpackSquashfsOpenWrtLZMA(data,offset,tempdir)
+	retval = unpackSquashfsOpenWrtLZMA(tmpfile[1],offset,tmpdir)
 	if retval != None:
+		os.unlink(tmpfile[1])
 		return retval
 
 	## Broadcom variant
@@ -1180,30 +1194,31 @@ def unpackSquashfsWrapper(data, offset, tempdir=None):
 	## 100% CPU for a long long long time, without producing any
 	## result. This is not a bug in BAT, but in this version of
 	## unsquashfs!
-	retval = unpackSquashfsBroadcomLZMA(data,offset,tempdir)
+	retval = unpackSquashfsBroadcomLZMA(tmpfile[1],offset,tmpdir)
 	if retval != None:
+		os.unlink(tmpfile[1])
 		return retval
 
 	## Ralink variant
-	retval = unpackSquashfsRalinkLZMA(data,offset,tempdir)
+	retval = unpackSquashfsRalinkLZMA(tmpfile[1],offset,tmpdir)
 	if retval != None:
+		os.unlink(tmpfile[1])
 		return retval
 
 	## Atheros variant
-	retval = unpackSquashfsAtherosLZMA(data,offset,tempdir)
+	retval = unpackSquashfsAtherosLZMA(tmpfile[1],offset,tmpdir)
 	if retval != None:
+		os.unlink(tmpfile[1])
 		return retval
+
+	os.unlink(tmpfile[1])
+	if tempdir == None:
+		os.rmdir(tmpdir)
 	return None
 
 ## tries to unpack stuff using 'normal' unsquashfs. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
-def unpackSquashfs(data, offset, tempdir=None):
-	tmpdir = unpacksetup(tempdir)
-	## since unsquashfs can't deal with data via stdin first write it to
-	## a temporary location
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(tmpfile[0], data[offset:])
-
+def unpackSquashfs(filename, offset, tmpdir):
 	## squashfs is not always in the same path:
 	## Fedora uses /usr/sbin, Ubuntu uses /usr/bin
 	## Just to be sure we add /usr/sbin to the path and set the environment
@@ -1211,43 +1226,27 @@ def unpackSquashfs(data, offset, tempdir=None):
 	unpackenv = os.environ
 	unpackenv['PATH'] = unpackenv['PATH'] + ":/usr/sbin"
 
-	p = subprocess.Popen(['unsquashfs', '-d', tmpdir, '-f', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, env=unpackenv)
+	p = subprocess.Popen(['unsquashfs', '-d', tmpdir, '-f', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, env=unpackenv)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		os.fdopen(tmpfile[0]).close()
-		os.unlink(tmpfile[1])
-		if tempdir == None:
-			os.rmdir(tmpdir)
 		return None
 	else:
 		squashsize = 0
-		p = subprocess.Popen(['file', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+		p = subprocess.Popen(['file', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
-			os.fdopen(tmpfile[0]).close()
-			os.unlink(tmpfile[1])
-			if tempdir == None:
-				os.rmdir(tmpdir)
 			return None
 		else:
 			squashsize = int(re.search(", (\d+) bytes", stanout).groups()[0])
-		os.fdopen(tmpfile[0]).close()
-		os.unlink(tmpfile[1])
 		return (tmpdir, squashsize)
 
 ## squashfs variant from OpenWrt, with LZMA
-def unpackSquashfsOpenWrtLZMA(data, offset, tempdir=None):
-	tmpdir = unpacksetup(tempdir)
-	## since unsquashfs can't deal with data via stdin first write it to
-	## a temporary location
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(tmpfile[0], data[offset:])
-
+def unpackSquashfsOpenWrtLZMA(filename, offset, tmpdir):
 	## squashfs 1.0 with lzma from OpenWrt can't unpack to an existing directory
 	## so we use a workaround using an extra temporary directory
 	tmpdir2 = tempfile.mkdtemp()
 
-	p = subprocess.Popen(['bat-unsquashfs-openwrt', '-dest', tmpdir2 + "/squashfs-root", '-f', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['bat-unsquashfs-openwrt', '-dest', tmpdir2 + "/squashfs-root", '-f', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	## Return code is not reliable enough, since even after successful unpacking the return code could be 16 (related to creating inodes as non-root)
 	## we need to filter out messages about creating inodes. Right now we do that by counting how many
@@ -1260,10 +1259,6 @@ def unpackSquashfsOpenWrtLZMA(data, offset, tempdir=None):
 			inode_error = inode_error + 1
 	if stanerr != "" and len(stanerrlines) != inode_error:
 		shutil.rmtree(tmpdir2)
-		os.fdopen(tmpfile[0]).close()
-		os.unlink(tmpfile[1])
-		if tempdir == None:
-			os.rmdir(tmpdir)
 		return None
 	else:
 		## move all the contents using shutil.move()
@@ -1274,109 +1269,63 @@ def unpackSquashfsOpenWrtLZMA(data, offset, tempdir=None):
 		shutil.rmtree(tmpdir2)
 		## like with 'normal' squashfs we can use 'file' to determine the size
 		squashsize = 0
-		p = subprocess.Popen(['file', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+		p = subprocess.Popen(['file', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
-			os.fdopen(tmpfile[0]).close()
-			os.unlink(tmpfile[1])
-			if tempdir == None:
-				os.rmdir(tmpdir)
 			return None
 		else:
 			squashsize = int(re.search(", (\d+) bytes", stanout).groups()[0])
-		os.fdopen(tmpfile[0]).close()
-		os.unlink(tmpfile[1])
 		return (tmpdir, squashsize)
 
 ## squashfs 4.2, various compression methods
-def unpackSquashfs42(data, offset, tempdir=None):
-	tmpdir = unpacksetup(tempdir)
-	## since unsquashfs can't deal with data via stdin first write it to
-	## a temporary location
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(tmpfile[0], data[offset:])
-
-	p = subprocess.Popen(['bat-unsquashfs42', '-d', tmpdir, '-f', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+def unpackSquashfs42(filename, offset, tmpdir):
+	p = subprocess.Popen(['bat-unsquashfs42', '-d', tmpdir, '-f', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		os.fdopen(tmpfile[0]).close()
-		os.unlink(tmpfile[1])
-		if tempdir == None:
-			os.rmdir(tmpdir)
 		return None
 	else:
 		## unlike with 'normal' squashfs we can't always use 'file' to determine the size
 		squashsize = 1
-		os.fdopen(tmpfile[0]).close()
-		os.unlink(tmpfile[1])
 		return (tmpdir, squashsize)
 
 ## generic function for all kinds of squashfs+lzma variants that were copied
 ## from slax.org and then adapted and that are slightly different, but not that
 ## much.
-def unpackSquashfsWithLZMA(data, offset, command, tempdir=None):
-	tmpdir = unpacksetup(tempdir)
-	## since unsquashfs can't deal with data via stdin first write it to
-	## a temporary location
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(tmpfile[0], data[offset:])
-
-	p = subprocess.Popen([command, '-d', tmpdir, '-f', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+def unpackSquashfsWithLZMA(filename, offset, command, tmpdir):
+	p = subprocess.Popen([command, '-d', tmpdir, '-f', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		os.fdopen(tmpfile[0]).close()
-		os.unlink(tmpfile[1])
-		if tempdir == None:
-			os.rmdir(tmpdir)
 		return None
 	else:
 		## unlike with 'normal' squashfs we can't use 'file' to determine the size
 		## This could lead to duplicate scanning with LZMA, so we might need to implement
 		## a top level "pruning" script :-(
 		squashsize = 1
-		os.fdopen(tmpfile[0]).close()
-		os.unlink(tmpfile[1])
 		return (tmpdir, squashsize)
 	pass
 
 ## squashfs variant from Atheros, with LZMA
-def unpackSquashfsAtherosLZMA(data, offset, tempdir=None):
-	return unpackSquashfsWithLZMA(data, offset, "bat-unsquashfs-atheros", tempdir)
+def unpackSquashfsAtherosLZMA(filename, offset, tmpdir):
+	return unpackSquashfsWithLZMA(filename, offset, "bat-unsquashfs-atheros", tmpdir)
 
 ## squashfs variant from Ralink, with LZMA
-def unpackSquashfsRalinkLZMA(data, offset, tempdir=None):
-	return unpackSquashfsWithLZMA(data, offset, "bat-unsquashfs-ralink", tempdir)
+def unpackSquashfsRalinkLZMA(filename, offset, tmpdir):
+	return unpackSquashfsWithLZMA(filename, offset, "bat-unsquashfs-ralink", tmpdir)
 
 ## squashfs variant from Broadcom, with LZMA
-def unpackSquashfsBroadcomLZMA(data, offset, tempdir=None):
-	tmpdir = unpacksetup(tempdir)
-	## since unsquashfs can't deal with data via stdin first write it to
-	## a temporary location
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(tmpfile[0], data[offset:])
-
-	p = subprocess.Popen(['bat-unsquashfs-broadcom', '-d', tmpdir, '-f', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+def unpackSquashfsBroadcomLZMA(filename, offset, tmpdir):
+	p = subprocess.Popen(['bat-unsquashfs-broadcom', '-d', tmpdir, '-f', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		os.fdopen(tmpfile[0]).close()
-		os.unlink(tmpfile[1])
-		if tempdir == None:
-			os.rmdir(tmpdir)
 		return None
 	else:
 		## we first need to check the contents of stderr to see if uncompression actually worked
 		## This could lead to duplicate scanning with LZMA, so we might need to implement
 		## a top level "pruning" script :-(
 		if "LzmaUncompress: error" in stanerr:
-			os.fdopen(tmpfile[0]).close()
-			os.unlink(tmpfile[1])
-			if tempdir == None:
-				os.rmdir(tmpdir)
 			return None
 		## unlike with 'normal' squashfs we can't use 'file' to determine the size
 		squashsize = 1
-		os.fdopen(tmpfile[0]).close()
-		os.unlink(tmpfile[1])
 		return (tmpdir, squashsize)
 
 ## We use tune2fs to get the size of the file system so we know what to
