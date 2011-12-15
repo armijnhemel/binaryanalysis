@@ -236,6 +236,27 @@ def pdfPrettyPrint(res, root):
 		tmpnode.appendChild(tmpnode2)
 	return tmpnode
 
+## scanner for mentions of:
+## * sourceforge.net
+## * code.google.com
+def scanForges(path, blacklist=[], envvars=None):
+	results = {}
+	if genericSearch(path, ["sourceforge.net"]):
+		results['sourceforge.net'] = True
+	if genericSearch(path, ["code.google.com"]):
+		results['code.google.com'] = True
+	if results != {}:
+		return results
+	else:
+		return None
+
+def forgesPrettyPrint(res, root):
+	tmpnode = root.createElement('forges')
+	for key in res.keys():
+		tmpnode2 = root.createElement(key)
+		tmpnode.appendChild(tmpnode2)
+	return tmpnode
+
 ## experimental clamscan feature
 ## Always run freshclam before scanning to get the latest
 ## virus signatures!

@@ -267,6 +267,12 @@ type    = program
 module  = bat.checks
 method  = searchUBoot
 
+[forges]
+type    = program
+module  = bat.checks
+method  = scanForges
+xmloutput = forgesPrettyPrint
+
 [pdf]
 type    = program
 module  = bat.checks

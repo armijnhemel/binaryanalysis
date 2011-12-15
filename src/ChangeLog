@@ -1,5 +1,8 @@
 2011-12-15
 * big file improvements for squashfs, ARJ and ar
+* simple scanner that looks for presence of strings that might indicate the
+code was from a forge, like sourceforge or code.google.com. In the future it
+might be good to use the scanner from FOSSology for this.
 
 2011-12-14
 * big file improvements for lzma, serialized Java, RAR and ZIP
