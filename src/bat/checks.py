@@ -236,7 +236,30 @@ def pdfPrettyPrint(res, root):
 		tmpnode.appendChild(tmpnode2)
 	return tmpnode
 
-## scanner for mentions of:
+## scan for mentions of:
+## * some markers for GPL
+######################################
+## !!! WARNING WARNING WARNING !!! ###
+######################################
+## This should only be used as an indicator for further investigation,
+## never as proof that a binary is actually licensed under GPL!
+def scanLicenses(path, blacklist=[], envvars=None):
+	results = {}
+	if genericSearch(path, ["General Public License", "http://gnu.org/licenses/gpl.html", "http://www.gnu.org/licenses/gpl.html"]):
+		results['GPL'] = True
+	if results != {}:
+		return results
+	else:
+		return None
+
+def licensesPrettyPrint(res, root):
+	tmpnode = root.createElement('licenses')
+	for key in res.keys():
+		tmpnode2 = root.createElement(key)
+		tmpnode.appendChild(tmpnode2)
+	return tmpnode
+
+## scan for mentions of:
 ## * sourceforge.net
 ## * code.google.com
 def scanForges(path, blacklist=[], envvars=None):
