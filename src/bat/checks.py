@@ -254,7 +254,7 @@ def scanLicenses(path, blacklist=[], envvars=None):
 		results['GPLv2'] = True
 	if genericSearch(path, ["http://gnu.org/licenses/old-licenses/lgpl-2.1.html"]):
 		results['LGPLv2.1'] = True
-	if genericSearch(path, ["http://www.apache.org/licenses/LICENSE-2.0"]):
+	if genericSearch(path, ["http://www.apache.org/licenses/LICENSE-2.0", "http://opensource.org/licenses/apache2.0.php"]):
 		results['Apache2.0'] = True
 	if results != {}:
 		return results
@@ -269,14 +269,27 @@ def licensesPrettyPrint(res, root):
 	return tmpnode
 
 ## scan for mentions of several forges
+## Some of the URLs of the forges no longer work or are redirected, but they
+## might still pop up in binaries.
 def scanForges(path, blacklist=[], envvars=None):
 	results = {}
 	if genericSearch(path, ["sourceforge.net"]):
 		results['sourceforge.net'] = True
-	if genericSearch(path, ["code.google.com"]):
+	if genericSearch(path, ["http://cvs.freedesktop.org/", "http://cgit.freedesktop.org/"]):
+		results['freedesktop.org'] = True
+	if genericSearch(path, ["code.google.com", "googlecode.com"]):
 		results['code.google.com'] = True
-	if genericSearch(path, ["http://savannah.gnu.org/"]):
+	if genericSearch(path, ["savannah.gnu.org/"]):
 		results['savannah.gnu.org'] = True
+	if genericSearch(path, ["github.com"]):
+		results['github.com'] = True
+	if genericSearch(path, ["bitbucket.org"]):
+		results['bitbucket.org'] = True
+	if genericSearch(path, ["tigris.org"]):
+		results['tigris.org'] = True
+	## various gits:
+	## http://git.fedoraproject.org/git/
+	## https://fedorahosted.org/
 	if results != {}:
 		return results
 	else:
