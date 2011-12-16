@@ -187,6 +187,7 @@ def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={},
 def unpackJavaSerialized(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.fdopen(tmpfile[0]).close()
 
 	if offset != 0:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -1747,6 +1748,7 @@ def unpackLZMA(filename, offset, tempdir=None):
 	## Assumes (for now) that lzma is in the path
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.fdopen(tmpfile[0]).close()
 
 	if offset != 0:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -1760,7 +1762,6 @@ def unpackLZMA(filename, offset, tempdir=None):
         if os.stat(outtmpfile[1]).st_size == 0:
                 os.fdopen(outtmpfile[0]).close()
                 os.unlink(outtmpfile[1])
-                os.fdopen(tmpfile[0]).close()
                 os.unlink(tmpfile[1])
 		if tempdir == None:
                 	os.rmdir(tmpdir)
