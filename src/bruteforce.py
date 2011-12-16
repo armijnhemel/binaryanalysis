@@ -114,7 +114,7 @@ def prettyprintresxmlsnippet(res, root, unpackscans, programscans):
 	return topnode
 
 ## top level XML pretty printing, view results with xml_pp or Firefox
-def prettyprintresxml(res, scandate, unpackscans=[], programscans=[]):
+def prettyprintresxml(res, scandate, scans):
 	root = xml.dom.minidom.Document()
 	topnode = root.createElement("report")
 	tmpnode = root.createElement('scandate')
@@ -132,7 +132,7 @@ def prettyprintresxml(res, scandate, unpackscans=[], programscans=[]):
 	if 'scans' in res:
 		tmpnode = root.createElement('scans')
 		for scan in res['scans']:
-			childscannode = prettyprintresxmlsnippet(scan, root, unpackscans, programscans)
+			childscannode = prettyprintresxmlsnippet(scan, root, scans['unpackscans'], scans['programscans'])
 			if childscannode != None:
 				tmpnode.appendChild(childscannode)
 		topnode.appendChild(tmpnode)
@@ -157,7 +157,7 @@ def gethash(path, filename):
 ## report snippet is per file, but if a file has other files embedded in it, the
 ## it will include reports for those files as well in the 'scans' section of the
 ## report.
-def scanfile(path, filename, lentempdir=0, tempdir=None, unpackscans=[], programscans=[], noscan=False):
+def scanfile(path, filename, scans, lentempdir=0, tempdir=None, noscan=False):
 	report = {}
 
 	report['name'] = filename
@@ -195,14 +195,14 @@ def scanfile(path, filename, lentempdir=0, tempdir=None, unpackscans=[], program
 	## instructed not to scan. In that case we just report some statistics
 	## about the file.
 	if not noscan:
-		res = scan(filetoscan, mstype, filehash=filehash, tempdir=tempdir, unpackscans=unpackscans, programscans=programscans)
+		res = scan(filetoscan, mstype, scans, filehash=filehash, tempdir=tempdir)
 		if res != []:
 			report['scans'] = res
 	return report
 
 ## scan a single file and recurse. Optionally supply a filehash for
 ## checking a knowledgebase, which is future work.
-def scan(filetoscan, magic, unpackscans=[], programscans=[], filehash=None, tempdir=None):
+def scan(filetoscan, magic, scans, filehash=None, tempdir=None):
 	reports = []
 	## we reset the blacklist for each new scan we do
 	blacklist = []
@@ -223,9 +223,13 @@ def scan(filetoscan, magic, unpackscans=[], programscans=[], filehash=None, temp
                             , "romfs filesystem, version 1"
                             ]
 
+	## prerun scans should be run before any of the other scans
+	## for scan in prerunscans:
+	##	pass
+
 	## 'unpackscans' has been sorted in decreasing priority, so highest
 	## priority scans are run first.
-	for scan in unpackscans:
+	for scan in scans['unpackscans']:
 		## the whole file has already been scanned by other scans, so we can
 		## continue with the program scans.
 		if bat.extractor.inblacklist(0, blacklist) == os.stat(filetoscan).st_size:
@@ -273,7 +277,7 @@ def scan(filetoscan, magic, unpackscans=[], programscans=[], filehash=None, temp
 						try:
 							if not os.path.islink("%s/%s" % (i[0], p)):
 								os.chmod("%s/%s" % (i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-							res = scanfile(i[0], p, lentempdir=len(scandir), tempdir=tempdir, unpackscans=unpackscans, programscans=programscans, noscan=noscan)
+							res = scanfile(i[0], p, scans, lentempdir=len(scandir), tempdir=tempdir, noscan=noscan)
 							if res != []:
 								scanreports.append(res)
 						except Exception, e:
@@ -286,7 +290,7 @@ def scan(filetoscan, magic, unpackscans=[], programscans=[], filehash=None, temp
 				report[scan['name']] = scanreports
 				reports.append(report)
 
-	for scan in programscans:
+	for scan in scans['programscans']:
 		## TODO: rework this. Having blacklists is enough for this.
 		skip = False
 		for prog in programignorelist:
@@ -320,6 +324,7 @@ def scan(filetoscan, magic, unpackscans=[], programscans=[], filehash=None, temp
 def readconfig(config):
 	unpackscans = []
 	programscans = []
+	prerunscans = []
 	for section in config.sections():
 		if config.has_option(section, 'type'):
 			conf = {}
@@ -327,6 +332,7 @@ def readconfig(config):
 			conf['module'] = config.get(section, 'module')
 			conf['method'] = config.get(section, 'method')
 
+			## some scans might have these
 			try:
 				conf['xmloutput'] = config.get(section, 'xmloutput')
 			except:
@@ -339,19 +345,20 @@ def readconfig(config):
 				conf['envvars'] = config.get(section, 'envvars')
 			except:
 				pass
+			try:
+				conf['priority'] = int(config.get(section, 'priority'))
+			except:
+				conf['priority'] = 0
 
 			if config.get(section, 'type') == 'program':
 				programscans.append(conf)
-			## unpack has some extra options
 			elif config.get(section, 'type') == 'unpack':
-				try:
-					conf['priority'] = int(config.get(section, 'priority'))
-				except:
-					conf['priority'] = 0
 				unpackscans.append(conf)
+			elif config.get(section, 'type') == 'prerun':
+				prerunscans.append(conf)
 	## sort the unpack scans on priority (highest priority first)
 	unpackscans = sorted(unpackscans, key=lambda x: x['priority'], reverse=True)
-	return (unpackscans, programscans)
+	return {'unpackscans': unpackscans, 'programscans': programscans, 'prerunscans': prerunscans}
 
 def main(argv):
 	config = ConfigParser.ConfigParser()
@@ -387,7 +394,7 @@ def main(argv):
 
 	config.readfp(configfile)
 
-	(unpackscans, programscans) = readconfig(config)
+	scans = readconfig(config)
 	scandate = datetime.datetime.utcnow()
 
 	## Per binary scanned we get a list with results.
@@ -398,8 +405,8 @@ def main(argv):
 	## the file inside a file system we looked at was in fact a file system.
 	tempdir=tempfile.mkdtemp()
 	shutil.copy(scan_binary, tempdir)
-	res = scanfile(tempdir, os.path.basename(scan_binary), tempdir=tempdir, unpackscans=unpackscans, programscans=programscans)
-	xml = prettyprintresxml(res, scandate, unpackscans=unpackscans, programscans=programscans)
+	res = scanfile(tempdir, os.path.basename(scan_binary), scans, tempdir=tempdir)
+	xml = prettyprintresxml(res, scandate, scans)
 	print xml.toxml()
 
 if __name__ == "__main__":
