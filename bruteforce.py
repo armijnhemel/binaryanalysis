@@ -224,8 +224,26 @@ def scan(filetoscan, magic, scans, filehash=None, tempdir=None):
                             ]
 
 	## prerun scans should be run before any of the other scans
-	## for scan in prerunscans:
-	##	pass
+	## * byteswapping
+	## * scanning for markers
+	for scan in scans['prerunscans']:
+		module = scan['module']
+		method = scan['method']
+		## if there is extra information we need to pass, like locations of databases
+		## we can use the environment for it
+		if scan.has_key('envvars'):
+			envvars = scan['envvars']
+		else:
+			envvars = None
+		exec "from %s import %s as bat_%s" % (module, method, method)
+		scanres = eval("bat_%s(filetoscan, tempdir, blacklist, offsets, envvars)" % (method))
+		## result is either empty, or contains offsets
+		if len(scanres) == 3:
+			(diroffsets, blacklist, offsets) = scanres
+		elif len(scanres) == 4:
+			(diroffsets, blacklist, offsets, noscan) = scanres
+
+	## So we should have all offsets with markers here
 
 	## 'unpackscans' has been sorted in decreasing priority, so highest
 	## priority scans are run first.
@@ -356,8 +374,9 @@ def readconfig(config):
 				unpackscans.append(conf)
 			elif config.get(section, 'type') == 'prerun':
 				prerunscans.append(conf)
-	## sort the unpack scans on priority (highest priority first)
+	## sort the unpack and prerun scans on priority (highest priority first)
 	unpackscans = sorted(unpackscans, key=lambda x: x['priority'], reverse=True)
+	prerunscans = sorted(prerunscans, key=lambda x: x['priority'], reverse=True)
 	return {'unpackscans': unpackscans, 'programscans': programscans, 'prerunscans': prerunscans}
 
 def main(argv):

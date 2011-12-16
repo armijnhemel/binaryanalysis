@@ -1,61 +1,34 @@
-[busybox-version]
-type    = program
-module  = bat.busyboxversion
-method  = busybox_version
+####################
+### prerun scans ###
+####################
 
-[cpio]
+[genericMarker]
+type    = prerun
+module  = bat.fwunpack
+method  = genericMarkerSearch
+priority = 99
+
+[byteswap]
+type    = prerun
+module  = bat.fwunpack
+method  = searchUnpackByteSwap
+priority = 100
+
+####################
+### unpack scans ###
+####################
+
+[7z]
 type    = unpack
 module  = bat.fwunpack
-method  = searchUnpackCpio
+method  = searchUnpack7z
+priority = 1
+
+[ar]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackAr
 priority = 2
-
-[cab]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackCab
-priority = 1
-
-[installshield]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackInstallShield
-priority = 1
-
-[unyaffs]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackYaffs2
-priority = 2
-
-[jffs2]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackJffs2
-priority = 1
-
-[exe]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackExe
-priority = 2
-
-[tar]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackTar
-priority = 3
-
-[lzip]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackLzip
-priority = 1
-
-[lzo]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackLzo
-priority = 1
 
 #[arj]
 #type    = unpack
@@ -63,10 +36,58 @@ priority = 1
 #method  = searchUnpackARJ
 #priority = 1
 
-[rar]
+[base64]
 type    = unpack
 module  = bat.fwunpack
-method  = searchUnpackRar
+method  = searchUnpackBase64
+priority = 0
+
+[bzip2]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackBzip2
+priority = 1
+
+[cab]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackCab
+priority = 1
+
+[cpio]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackCpio
+priority = 2
+
+#[cramfs]
+#type    = unpack
+#module  = bat.fwunpack
+#method  = searchUnpackCramfs
+#priority = 3
+
+[exe]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackExe
+priority = 2
+
+[ext2fs]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackExt2fs
+priority = 3
+
+[gif]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackGIF
+priority = 0
+
+[gzip]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackGzip
 priority = 1
 
 #[ico]
@@ -75,58 +96,10 @@ priority = 1
 #method  = searchUnpackIco
 #priority = 0
 
-[base64]
+[installshield]
 type    = unpack
 module  = bat.fwunpack
-method  = searchUnpackBase64
-priority = 0
-
-[gif]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackGIF
-priority = 0
-
-[png]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackPNG
-priority = 0
-
-#[java_serialized]
-#type    = unpack
-#module  = bat.fwunpack
-#method  = searchUnpackJavaSerialized
-#priority = 2
-
-[swf]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackSwf
-priority = 0
-
-[zip]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackZip
-priority = 1
-
-[gzip]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackGzip
-priority = 1
-
-#[cramfs]
-#type    = unpack
-#module  = bat.fwunpack
-#method  = searchUnpackCramfs
-#priority = 3
-
-[squashfs]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackSquashfs
+method  = searchUnpackInstallShield
 priority = 1
 
 [iso9660]
@@ -135,22 +108,22 @@ module  = bat.fwunpack
 method  = searchUnpackISO9660
 priority = 4
 
-[ext2fs]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackExt2fs
-priority = 3
+#[java_serialized]
+#type    = unpack
+#module  = bat.fwunpack
+#method  = searchUnpackJavaSerialized
+#priority = 2
 
-[7z]
+[jffs2]
 type    = unpack
 module  = bat.fwunpack
-method  = searchUnpack7z
+method  = searchUnpackJffs2
 priority = 1
 
-[xz]
+[lzip]
 type    = unpack
 module  = bat.fwunpack
-method  = searchUnpackXZ
+method  = searchUnpackLzip
 priority = 1
 
 [lzma]
@@ -159,23 +132,23 @@ module  = bat.fwunpack
 method  = searchUnpackLZMA
 priority = 1
 
-[bzip2]
+[lzo]
 type    = unpack
 module  = bat.fwunpack
-method  = searchUnpackBzip2
+method  = searchUnpackLzo
 priority = 1
 
-[ubifs]
+[png]
 type    = unpack
 module  = bat.fwunpack
-method  = searchUnpackUbifs
-priority = 3
+method  = searchUnpackPNG
+priority = 0
 
-[ar]
+[rar]
 type    = unpack
 module  = bat.fwunpack
-method  = searchUnpackAr
-priority = 2
+method  = searchUnpackRar
+priority = 1
 
 [rpm]
 type    = unpack
@@ -183,17 +156,35 @@ module  = bat.unpackrpm
 method  = searchUnpackRPM
 priority = 2
 
-[genericMarker]
+[squashfs]
 type    = unpack
 module  = bat.fwunpack
-method  = genericMarkerSearch
-priority = 99
+method  = searchUnpackSquashfs
+priority = 1
 
-[byteswap]
+[swf]
 type    = unpack
 module  = bat.fwunpack
-method  = searchUnpackByteSwap
-priority = 100
+method  = searchUnpackSwf
+priority = 0
+
+[tar]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackTar
+priority = 3
+
+[ubifs]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackUbifs
+priority = 3
+
+[unyaffs]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackYaffs2
+priority = 2
 
 [upx]
 type    = unpack
@@ -201,61 +192,103 @@ module  = bat.fwunpack
 method  = searchUnpackUPX
 priority = 3
 
-[libs]
-type    = program
-module  = bat.checks
-method  = searchDynamicLibs
-xmloutput = dynamicLibsPrettyPrint
+[xz]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackXZ
+priority = 1
+
+[zip]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackZip
+priority = 1
+
+##################
+### leaf scans ###
+##################
 
 [architecture]
 type    = program
 module  = bat.checks
 method  = scanArchitecture
 
-[wireless-tools]
+[busybox-version]
 type    = program
-module  = bat.checks
-method  = searchWirelessTools
-
-[iptables]
-type    = program
-module  = bat.checks
-method  = searchIptables
-
-[vsftpd]
-type    = program
-module  = bat.checks
-method  = searchVsftpd
-
-[libusb]
-type    = program
-module  = bat.checks
-method  = searchLibusb
-
-[iproute]
-type    = program
-module  = bat.checks
-method  = searchIproute
+module  = bat.busyboxversion
+method  = busybox_version
 
 [dproxy]
 type    = program
 module  = bat.checks
 method  = searchDproxy
 
-[wpa-supplicant]
-type    = program
-module  = bat.checks
-method  = searchWpaSupplicant
-
 [ez-ipupdate]
 type    = program
 module  = bat.checks
 method  = searchEzIpupdate
 
+[forges]
+type    = program
+module  = bat.checks
+method  = scanForges
+xmloutput = forgesPrettyPrint
+
+[iproute]
+type    = program
+module  = bat.checks
+method  = searchIproute
+
+[iptables]
+type    = program
+module  = bat.checks
+method  = searchIptables
+
+[kernelchecks]
+type    = program
+module  = bat.kernelanalysis
+method  = kernelChecks
+xmloutput = xmlprettyprint
+
+[kernelmodulelicense]
+type    = program
+module  = bat.kernelanalysis
+method  = analyseModuleLicense
+
+[libs]
+type    = program
+module  = bat.checks
+method  = searchDynamicLibs
+xmloutput = dynamicLibsPrettyPrint
+
+[libusb]
+type    = program
+module  = bat.checks
+method  = searchLibusb
+
+[licenses]
+type    = program
+module  = bat.checks
+method  = scanLicenses
+xmloutput = licensesPrettyPrint
+
 [loadlin]
 type    = program
 module  = bat.checks
 method  = searchLoadLin
+
+[pdf]
+type    = program
+module  = bat.checks
+method  = scanPDF
+xmloutput = pdfPrettyPrint
+
+#[ranking]
+#type    = program
+#module  = bat.ranking
+#method  = searchGeneric
+#xmloutput = xmlprettyprint
+#envvars = BAT_SQLITE_AVG=/tmp/avg:BAT_SQLITE_STRINGSCACHE=/tmp/stringscache:BAT_SQLITE_DB=/tmp/master
 
 [redboot]
 type    = program
@@ -267,38 +300,17 @@ type    = program
 module  = bat.checks
 method  = searchUBoot
 
-[licenses]
+[vsftpd]
 type    = program
 module  = bat.checks
-method  = scanLicenses
-xmloutput = licensesPrettyPrint
+method  = searchVsftpd
 
-[forges]
+[wireless-tools]
 type    = program
 module  = bat.checks
-method  = scanForges
-xmloutput = forgesPrettyPrint
+method  = searchWirelessTools
 
-[pdf]
+[wpa-supplicant]
 type    = program
 module  = bat.checks
-method  = scanPDF
-xmloutput = pdfPrettyPrint
-
-[kernelmodulelicense]
-type    = program
-module  = bat.kernelanalysis
-method  = analyseModuleLicense
-
-[kernelchecks]
-type    = program
-module  = bat.kernelanalysis
-method  = kernelChecks
-xmloutput = xmlprettyprint
-
-#[ranking]
-#type    = program
-#module  = bat.ranking
-#method  = searchGeneric
-#xmloutput = xmlprettyprint
-#envvars = BAT_SQLITE_AVG=/tmp/avg:BAT_SQLITE_STRINGSCACHE=/tmp/stringscache:BAT_SQLITE_DB=/tmp/master
+method  = searchWpaSupplicant
