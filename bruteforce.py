@@ -139,9 +139,6 @@ def prettyprintresxml(res, scandate, scans):
 	root.appendChild(topnode)
 	return root
 
-## This method returns a cryptographic checksum for a file using the SHA256
-## algorithm. This information can be used to uniquely identify a file and
-## perhaps reuse results for scans of this file in a later audit.
 def gethash(path, filename):
 	scanfile = open("%s/%s" % (path, filename), 'r')
 	h = hashlib.new('sha256')
@@ -178,10 +175,11 @@ def scanfile(path, filename, scans, lentempdir=0, tempdir=None, noscan=False):
 	if not os.path.isfile("%s/%s" % (path, filename)) and not os.path.isdir("%s/%s" % (path, filename)):
 		return report
 
-	report['size'] = os.lstat("%s/%s" % (path, filename)).st_size
+	filesize = os.lstat("%s/%s" % (path, filename)).st_size
+	report['size'] = filesize
 
-	## empty file, not interested
-	if os.lstat("%s/%s" % (path, filename)).st_size == 0:
+	## empty file, not interested in further scanning
+	if filesize == 0:
 		return report
 
 	## Store the hash of the file for identification and for possibly
@@ -191,8 +189,8 @@ def scanfile(path, filename, scans, lentempdir=0, tempdir=None, noscan=False):
 
 	filetoscan = "%s/%s" % (path, filename)
 
-	## scan per file and store the results, except when explicitely
-	## instructed not to scan. In that case we just report some statistics
+	## and store the results per scanned file, except when explicitely
+	## instructed not to scan. In that case just report some statistics
 	## about the file.
 	if not noscan:
 		res = scan(filetoscan, mstype, scans, filehash=filehash, tempdir=tempdir)
@@ -203,25 +201,10 @@ def scanfile(path, filename, scans, lentempdir=0, tempdir=None, noscan=False):
 ## scan a single file and recurse. Optionally supply a filehash for
 ## checking a knowledgebase, which is future work.
 def scan(filetoscan, magic, scans, filehash=None, tempdir=None):
+	## we reset the reports, blacklist and offsets for each new scan
 	reports = []
-	## we reset the blacklist for each new scan we do
 	blacklist = []
-
-	## we reset the offsets for each new scan we do
 	offsets = {}
-
-	## list of magic file types that 'program' checks should skip
-	## to avoid false positives and superfluous scanning. Does not work
-	## correctly yet, for romfs for example.
-	## If we use priorities we can rework this. The benefit of
-	## the current approach is that it is a lot faster.
-	## The drawback is that we might miss things that have been appended
-	## to any of the things in this list. So for correctness we should
-	## not rely on this.
-	programignorelist = [ "POSIX tar archive (GNU)"
-                            , "Zip archive data, at least v1.0 to extract"
-                            , "romfs filesystem, version 1"
-                            ]
 
 	## prerun scans should be run before any of the other scans
 	## * byteswapping
@@ -308,6 +291,19 @@ def scan(filetoscan, magic, scans, filehash=None, tempdir=None):
 				report[scan['name']] = scanreports
 				reports.append(report)
 
+	## list of magic file types that 'program' checks should skip
+	## to avoid false positives and superfluous scanning. Does not work
+	## correctly yet, for romfs for example.
+	## If we use priorities we can rework this. The benefit of
+	## the current approach is that it is a lot faster.
+	## The drawback is that we might miss things that have been appended
+	## to any of the things in this list. So for correctness we should
+	## not rely on this.
+	programignorelist = [ "POSIX tar archive (GNU)"
+                            , "Zip archive data, at least v1.0 to extract"
+                            , "romfs filesystem, version 1"
+                            ]
+
 	for scan in scans['programscans']:
 		## TODO: rework this. Having blacklists is enough for this.
 		skip = False
@@ -350,7 +346,7 @@ def readconfig(config):
 			conf['module'] = config.get(section, 'module')
 			conf['method'] = config.get(section, 'method')
 
-			## some scans might have these
+			## some scans might, or might not, have these
 			try:
 				conf['xmloutput'] = config.get(section, 'xmloutput')
 			except:
