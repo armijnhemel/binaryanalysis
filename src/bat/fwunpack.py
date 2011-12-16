@@ -817,16 +817,16 @@ def unpackLzip(data, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
+	os.fdopen(tmpfile[0]).close()
+
 	p = subprocess.Popen(['lzip', "-d", "-c", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(outtmpfile[0], stanout)
-	#os.fdopen(outtmpfile[0]).flush()
 	os.fsync(outtmpfile[0])
+	os.fdopen(outtmpfile[0]).close()
 	if os.stat(outtmpfile[1]).st_size == 0:
-		os.fdopen(outtmpfile[0]).close()
 		os.unlink(outtmpfile[1])
-		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
@@ -836,16 +836,12 @@ def unpackLzip(data, offset, tempdir=None):
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		## something weird happened here: we can unpack, but not test the archive?
-		os.fdopen(outtmpfile[0]).close()
 		os.unlink(outtmpfile[1])
-		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return (None, None)
 	lzipsize = int(re.search("member size\s+(\d+)", stanerr).groups()[0])
-	os.fdopen(outtmpfile[0]).close()
-	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
 	return (tmpdir, lzipsize)
 
@@ -1159,6 +1155,7 @@ def unpackSquashfsWrapper(filename, offset, tempdir=None):
 	## a temporary location
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.fdopen(tmpfile[0]).close()
 
 	if offset != 0:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -1407,6 +1404,7 @@ def unpackExt2fs(filename, offset, tempdir=None):
 	## the directory if the file is not empty
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.fdopen(tmpfile[0]).close()
 
 	if offset != 0:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -1416,7 +1414,6 @@ def unpackExt2fs(filename, offset, tempdir=None):
 		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
 
 	ext2.copyext2fs(tmpfile[1], tmpdir)
-	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
 	ext2size = 0
 	return (tmpdir, ext2size)
@@ -1440,11 +1437,13 @@ def unpackGzip(filename, offset, tempdir=None):
 	p = subprocess.Popen(['zcat', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if os.stat(outtmpfile[1]).st_size == 0:
+		os.fdopen(outtmpfile[0]).close()
 		os.unlink(outtmpfile[1])
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
+	os.fdopen(outtmpfile[0]).close()
 	os.unlink(tmpfile[1])
 	return tmpdir
 
@@ -1481,6 +1480,7 @@ def unpackBzip2(filename, offset, tempdir=None):
 	## Assumes (for now) that bzcat is in the path
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.fdopen(tmpfile[0]).close()
 
 	if offset != 0:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -1489,20 +1489,17 @@ def unpackBzip2(filename, offset, tempdir=None):
 		os.link(filename, "%s/%s" % (tmpdir, "templink"))
 		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
 
-	#p = subprocess.Popen(['bzcat', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
 	p = subprocess.Popen(['bzcat', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if os.stat(outtmpfile[1]).st_size == 0:
 		os.fdopen(outtmpfile[0]).close()
 		os.unlink(outtmpfile[1])
-		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
 	os.fdopen(outtmpfile[0]).close()
-	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
 	return tmpdir
 
@@ -1530,6 +1527,7 @@ def unpackZip(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 
 	tmpfile = tempfile.mkstemp(dir=tempdir)
+	os.fdopen(tmpfile[0]).close()
 
 	if offset != 0:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -1570,6 +1568,9 @@ def unpackZip(filename, offset, tempdir=None):
 		return (None, None)
 
 	if "extra bytes at beginning or within zipfile" in stanerr:
+		datafile = open(filename)
+		data = datafile.read()
+		datafile.close()
 		multidata = data[offset:]
 		multicounter = 1
 		## first unpack the original file.
