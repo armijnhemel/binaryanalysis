@@ -294,12 +294,14 @@ def extractGeneric(lines, path, language='C', envvars=None):
 				print >>sys.stderr, "no matches found for <(|%s|)> in %s" % (line, path)
 				continue
 			else:
+				## now fetch *all* sha256 checksums
+				checkres = conn.execute('''select sha256, language from extracted_file WHERE programstring=?''', (line,)).fetchall()
 				for (checksha, checklan) in checkres:
 					if checklan != language:
 						continue
 					else:
 						## overwrite 'res' here
-						res = conn.execute('''select package, version, filename FROM processed_file p WHERE sha256=?''', (checksha,)).fetchall()
+						res = res + conn.execute('''select package, version, filename FROM processed_file p WHERE sha256=?''', (checksha,)).fetchall()
 			newmatch = True
 		if len(res) != 0:
 			## Add the length of the string to lenStringsFound.
