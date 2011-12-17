@@ -4,6 +4,8 @@ dynamically load and eval() the code
 * big file improvements for ICO scanning
 * rework unpack scans: no longer return offsets, since only one of the prerun
 scans scans for/alters those.
+* ranking: if none of the strings we have for gains is significant enough we
+should stop processing
 
 2011-12-15
 * big file improvements for squashfs, ARJ and ar
