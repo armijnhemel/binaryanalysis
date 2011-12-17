@@ -8,12 +8,6 @@ module  = bat.fwunpack
 method  = genericMarkerSearch
 priority = 99
 
-[byteswap]
-type    = prerun
-module  = bat.fwunpack
-method  = searchUnpackByteSwap
-priority = 100
-
 ####################
 ### unpack scans ###
 ####################
@@ -44,6 +38,12 @@ type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackBase64
 priority = 0
+
+[byteswap]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackByteSwap
+priority = 100
 
 [bzip2]
 type    = unpack
