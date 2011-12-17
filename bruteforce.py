@@ -226,25 +226,32 @@ def scan(filetoscan, magic, scans, filehash=None, tempdir=None):
 		elif len(scanres) == 4:
 			(diroffsets, blacklist, offsets, noscan) = scanres
 
-	## So we should have all offsets with markers here
+	## we have all offsets with markers here, so we can filter out
+	## the scans we won't need
+	## TODO: only filter the scans we need, sort them by offset
+	## to make sure we get it right the first time more often
 	filterscans = []
 	for magictype in offsets.keys():
 		if offsets[magictype] != []:
 			filterscans.append(magictype)
 
+	filesize = os.stat(filetoscan).st_size
 	## 'unpackscans' has been sorted in decreasing priority, so highest
 	## priority scans are run first.
 	for scan in scans['unpackscans']:
 		## the whole file has already been scanned by other scans, so we can
 		## continue with the program scans.
-		if bat.extractor.inblacklist(0, blacklist) == os.stat(filetoscan).st_size:
+		if bat.extractor.inblacklist(0, blacklist) == filesize:
 			break
 		noscan = False
 		
+		## if we don't have a marker in the file, but we do have a marker
+		## in the scan, we can continue with the next scan
 		if scan['magic'] != None:
 			scanmagic = scan['magic'].split(':')
 			if list(set(scanmagic).intersection(set(filterscans))) == []:
 				continue
+
 		module = scan['module']
 		method = scan['method']
 		## if there is extra information we need to pass, like locations of databases
