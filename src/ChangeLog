@@ -1,6 +1,9 @@
 2011-12-17
 * filter out scans we don't need to run anyway, removing the need to
 dynamically load and eval() the code
+* big file improvements for ICO scanning
+* rework unpack scans: no longer return offsets, since only one of the prerun
+scans scans for/alters those.
 
 2011-12-15
 * big file improvements for squashfs, ARJ and ar
