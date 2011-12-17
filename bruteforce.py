@@ -266,10 +266,10 @@ def scan(filetoscan, magic, scans, filehash=None, tempdir=None):
 		exec "from %s import %s as bat_%s" % (module, method, method)
 		scanres = eval("bat_%s(filetoscan, tempdir, blacklist, offsets, envvars)" % (method))
 		## result is either empty, or contains offsets
-		if len(scanres) == 3:
-			(diroffsets, blacklist, offsets) = scanres
-		elif len(scanres) == 4:
-			(diroffsets, blacklist, offsets, noscan) = scanres
+		if len(scanres) == 2:
+			(diroffsets, blacklist) = scanres
+		elif len(scanres) == 3:
+			(diroffsets, blacklist, noscan) = scanres
 		if len(diroffsets) == 0:
 			continue
 		blacklist = mergeBlacklist(blacklist)
