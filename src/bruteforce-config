@@ -23,18 +23,21 @@ type    = unpack
 module  = bat.fwunpack
 method  = searchUnpack7z
 priority = 1
+magic = 7z
 
 [ar]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackAr
 priority = 2
+magic = ar
 
 #[arj]
 #type    = unpack
 #module  = bat.fwunpack
 #method  = searchUnpackARJ
 #priority = 1
+#magic = arj
 
 [base64]
 type    = unpack
@@ -47,24 +50,28 @@ type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackBzip2
 priority = 1
+magic = bz2
 
 [cab]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackCab
 priority = 1
+magic = cab
 
 [cpio]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackCpio
 priority = 2
+magic = cpio1:cpio2:cpio3
 
 #[cramfs]
 #type    = unpack
 #module  = bat.fwunpack
 #method  = searchUnpackCramfs
 #priority = 3
+#magic = cramfs
 
 [exe]
 type    = unpack
@@ -77,36 +84,42 @@ type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackExt2fs
 priority = 3
+magic = ext2
 
 [gif]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackGIF
 priority = 0
+magic = gif87:gif89
 
 [gzip]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackGzip
 priority = 1
+magic = gzip
 
 #[ico]
 #type    = unpack
 #module  = bat.fwunpack
 #method  = searchUnpackIco
 #priority = 0
+#magic = ico
 
 [installshield]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackInstallShield
 priority = 1
+magic = installshield
 
 [iso9660]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackISO9660
 priority = 4
+magic = iso9660
 
 #[java_serialized]
 #type    = unpack
@@ -125,60 +138,70 @@ type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackLzip
 priority = 1
+magic = lzip
 
 [lzma]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackLZMA
 priority = 1
+magic = lzma_alone:lzma_alone_alt
 
 [lzo]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackLzo
 priority = 1
+magic = lzo
 
 [png]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackPNG
 priority = 0
+magic = png
 
 [rar]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackRar
 priority = 1
+magic = rar
 
 [rpm]
 type    = unpack
 module  = bat.unpackrpm
 method  = searchUnpackRPM
 priority = 2
+magic = rpm
 
 [squashfs]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackSquashfs
 priority = 1
+magic = squashfs1:squashfs2:squashfs3:squashfs4
 
 [swf]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackSwf
 priority = 0
+magic = swf
 
 [tar]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackTar
 priority = 3
+magic = tar1:tar2
 
 [ubifs]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackUbifs
 priority = 3
+magic = ubifs
 
 [unyaffs]
 type    = unpack
@@ -197,12 +220,14 @@ type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackXZ
 priority = 1
+magic = xz
 
 [zip]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackZip
 priority = 1
+magic = zip
 
 ##################
 ### leaf scans ###

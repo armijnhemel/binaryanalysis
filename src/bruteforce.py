@@ -227,6 +227,10 @@ def scan(filetoscan, magic, scans, filehash=None, tempdir=None):
 			(diroffsets, blacklist, offsets, noscan) = scanres
 
 	## So we should have all offsets with markers here
+	filterscans = []
+	for magictype in offsets.keys():
+		if offsets[magictype] != []:
+			filterscans.append(magictype)
 
 	## 'unpackscans' has been sorted in decreasing priority, so highest
 	## priority scans are run first.
@@ -236,6 +240,11 @@ def scan(filetoscan, magic, scans, filehash=None, tempdir=None):
 		if bat.extractor.inblacklist(0, blacklist) == os.stat(filetoscan).st_size:
 			break
 		noscan = False
+		
+		if scan['magic'] != None:
+			scanmagic = scan['magic'].split(':')
+			if list(set(scanmagic).intersection(set(filterscans))) == []:
+				continue
 		module = scan['module']
 		method = scan['method']
 		## if there is extra information we need to pass, like locations of databases
@@ -351,6 +360,10 @@ def readconfig(config):
 				conf['xmloutput'] = config.get(section, 'xmloutput')
 			except:
 				pass
+			try:
+				conf['magic'] = config.get(section, 'magic')
+			except:
+				conf['magic'] = None
 			try:
 				conf['cleanup'] = config.get(section, 'cleanup')
 			except:
