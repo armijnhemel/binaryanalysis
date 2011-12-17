@@ -292,6 +292,8 @@ def scanForges(path, blacklist=[], envvars=None):
 		results['bitbucket.org'] = True
 	if genericSearch(path, ["tigris.org"]):
 		results['tigris.org'] = True
+	if genericSearch(path, ["http://svn.apache.org/"]):
+		results['svn.apache.org'] = True
 	## various gits:
 	## http://git.fedoraproject.org/git/
 	## https://fedorahosted.org/
