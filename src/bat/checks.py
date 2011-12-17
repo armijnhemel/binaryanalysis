@@ -246,7 +246,7 @@ def pdfPrettyPrint(res, root):
 ## never as proof that a binary is actually licensed under a license!
 def scanLicenses(path, blacklist=[], envvars=None):
 	results = {}
-	if genericSearch(path, ["General Public License", "http://www.gnu.org/licenses/", "http://gnu.org/licenses/"]:
+	if genericSearch(path, ["General Public License", "http://www.gnu.org/licenses/", "http://gnu.org/licenses/"]):
 		results['GNU'] = True
 	if genericSearch(path, ["http://gnu.org/licenses/gpl.html", "http://www.gnu.org/licenses/gpl.html",
                                 "http://www.opensource.org/licenses/gpl-license.php", "http://www.gnu.org/copyleft/gpl.html"]):
