@@ -132,6 +132,7 @@ type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackJffs2
 priority = 1
+magic = jffs2_le
 
 [lzip]
 type    = unpack

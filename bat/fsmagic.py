@@ -36,7 +36,7 @@ fsmagic = {
             'lzo':              '\x89\x4c\x5a\x4f\x00\x0d\x0a\x1a\x0a',
             'cramfs':           '\x45\x3d\xcd\x28',
             #'lzma_alone':       '\x5d\x00\x00\x80',
-            #'jffs2-le':         '\x85\x19',
+            'jffs2_le':         '\x85\x19',
             'ubifs':            '\x55\x42\x49\x23',
             'rpm':              '\xed\xab\xee\xdb',
             'ext2':             '\x53\xef',        # little endian
