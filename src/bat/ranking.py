@@ -272,6 +272,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	oldline = None
 	matched = False
 	for line in lines:
+		#print >>sys.stderr, "processing <|%s|>" % line
 		## speedup if the lines happen to be the same as the old one
 		if line == oldline:
 			if matched:
@@ -442,6 +443,9 @@ def extractGeneric(lines, path, language='C', envvars=None):
 			for p2 in pkgs2:
 				gain[p2] = gain.get(p2, 0) + stri[1]['score']
 				stringsPerPkg[p2] = stri[0]
+		## if all the gains are < our cutoff value (1.0e-20) we can already quit
+		if gain == {}:
+			break
 		## gain_sorted contains the sort order, gain contains the actual data
 		gain_sorted = sorted(gain, key = lambda x: gain.__getitem__(x), reverse=True)
 
