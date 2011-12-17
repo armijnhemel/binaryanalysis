@@ -278,6 +278,8 @@ scans, processes and prettyprints output and performs cleanups, if necessary.
 or variants of old ones tend to appear regularly (for example: there are at
 least 5 or more versions of SquashFS with LZMA compression out there).
 
+\subsection{Pre-run methods}
+
 \subsection{Unpackers}
 
 Unpackers are responsible for recursively unpacking binaries until they
@@ -305,7 +307,7 @@ list after finishing a scan.
 \item \texttt{offsets} is a dictionary containing a mapping from an identifier
 to a list of offsets in the file where these identifiers can be found. This
 list is filled by the scan \texttt{genericMarker} which is defined to run as
-the first scan in the configuration.
+part of the pre-run methods.
 \end{itemize}
 
 Most scans have been split in two parts: one part is for searching the
