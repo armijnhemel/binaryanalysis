@@ -1,3 +1,11 @@
+2011-12-18
+* rework extraction of ELF sections from ELF binaries. Just using 'strings'
+got too many strings. The previous version of the extraction of the right
+sections (using readelf -p) did not work, because readelf -p ate leading tabs
+and converted them into spaces, so sometimes some strings were not matched
+properly. Now we first cut the right ELF sections from the binary, then use
+strings on the temporary binary, which gives much better results.
+
 2011-12-17
 * filter out scans we don't need to run anyway, removing the need to
 dynamically load and eval() the code

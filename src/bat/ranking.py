@@ -89,36 +89,43 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 			## For ELF binaries we can concentrate on just a few sections of the
 			## binary namely the .rodata and .data sections and the dynamic
 			## symbols.
-			## DO NOT USE: readelf -p sometimes transforms tabs to spaces, which
-			## makes our algorithm fail.
-			## We only consider full binaries, not binaries that have parts carved
-			## out of them because of blacklists
-        		#if "ELF" in mstype and blacklist == []:
-        		if "DONTUSE" in mstype and blacklist == []:
-				for i in [".rodata", ".data"]:
-        				p = subprocess.Popen(['readelf', '-p', i, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 
+        		if "ELF" in mstype and blacklist == []:
+				datafile = open(path, 'rb')
+				data = datafile.read()
+				datafile.close()
+				elfscanfiles = []
+				## first we need to determine the size and offset of .data and .rodata and carve it from the file
+        			p = subprocess.Popen(['readelf', '-SW', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+        			(stanout, stanerr) = p.communicate()
+				st = stanout.strip().split("\n")
+				for s in st[3:]:
+					for section in [".data", ".rodata"]:
+						if section in s:
+							elfsplits = s[8:].split()
+							if section == "." + elfsplits[0]:
+								elfoffset = int(elfsplits[3], 16)
+								elfsize = int(elfsplits[4], 16)
+								elftmp = tempfile.mkstemp(suffix=section)
+								os.write(elftmp[0], data[elfoffset:elfoffset+elfsize])
+								os.fdopen(elftmp[0]).close()
+								elfscanfiles.append(elftmp[1])
+
+				for i in elfscanfiles:
 					## run strings to get rid of weird characters that we don't even want to scan
-        				p2 = subprocess.Popen(['strings', '-n', str(stringcutoff)], stdin=p.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-        				(stanout, stanerr) = p2.communicate()
+        				p = subprocess.Popen(['strings', '-n', str(stringcutoff), i], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+        				(stanout, stanerr) = p.communicate()
 
         				st = stanout.split("\n")
 
-        				for s in st[1:]:
-						## readelf -p results are in a specific format
-                				res = re.match("\s+\[\s*\w+\]\s\s(.*)", s)
-                				if res == None:
-							## the invocation of 'strings' on the output sometimes gives
-							## lines that do not adher to this format, because 'strings' has
-							## broken up a line in several lines
-                        				printstring = s
-                				else:
-                        				printstring = res.groups()[0]
+        				for s in st:
+                        			printstring = s
                 				if len(printstring) >= stringcutoff:
                         				lines.append(printstring)
+					os.unlink(i)
 
 				## sometimes we can extract useful information from the dynamic symbols
-			 	p = subprocess.Popen(['readelf', '--dyn-syms', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			 	p = subprocess.Popen(['readelf', '-W', '--dyn-syms', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				st = stanout.split("\n")
 
