@@ -62,6 +62,10 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 	if blacklist == []:
 		scanfile = path
 	else:
+		filesize = filesize = os.stat(scanfile).st_size
+		## whole file is blacklisted, so no need to scan
+		if extractor.inblacklist(0, blacklist) == filesize:
+			return None
 		## we have already scanned parts of the file
 		## we need to carve the right parts from the file first
 		datafile = open(path, 'rb')
@@ -212,7 +216,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 		if blacklist != []:
 			## cleanup the tempfile
 			os.unlink(tmpfile[1])
-                return  None
+                return None
 
 ## Extract the strings
 def extractGeneric(lines, path, language='C', envvars=None):
