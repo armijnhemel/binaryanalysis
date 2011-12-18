@@ -2018,14 +2018,13 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 			tmpdir = dirsetup(tempdir, filename, "gif", counter)
 			tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".gif", dir=tmpdir)
 			os.write(tmpfile[0], data[offset:trail+1])
+			os.fdopen(tmpfile[0]).close()
 			p = subprocess.Popen(['gifinfo', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 			(stanout, stanerr) = p.communicate()
 			if p.returncode != 0:
-				os.fdopen(tmpfile[0]).close()
 				os.unlink(tmpfile[1])
 				os.rmdir(tmpdir)
 			else:
-				os.fdopen(tmpfile[0]).close()
 				## basically we have a copy of the original
 				## image here, so why bother?
 				if offset == 0 and trail == len(data) - 1:
