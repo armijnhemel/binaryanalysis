@@ -285,7 +285,9 @@ def extractGeneric(lines, path, language='C', envvars=None):
                 if line == "": continue
 
 		## first see if we have anything in the cache at all
-		res = conn.execute('''select package, version, filename FROM stringscache.stringscache WHERE programstring=? AND language=? LIMIT 1''', (line,language)).fetchall()
+		res = conn.execute('''select package, version, filename FROM stringscache.stringscache WHERE programstring=? AND language=?''', (line,language)).fetchall()
+
+		## nothing in the cache
 		if len(res) == 0:
 			## do we actually have a result?
 			checkres = conn.execute('''select sha256, language from extracted_file WHERE programstring=? LIMIT 1''', (line,)).fetchall()
@@ -309,14 +311,13 @@ def extractGeneric(lines, path, language='C', envvars=None):
 			lenStringsFound = lenStringsFound + len(line)
 			matched = True
 
-			#print >>sys.stderr, "\n%d matches found for <(|%s|)> in %s" % (len(res), line, path)
-
 			## for statistics it's nice to see how many lines we matched
 			matchedlines = matchedlines + 1
 			packageres = {}
 			allStrings[line] = []
-			if not newmatch:
-				res = conn.execute('''select package, version, filename FROM stringscache.stringscache WHERE programstring=? AND language=?''', (line,language)).fetchall()
+
+			print >>sys.stderr, "\n%d matches found for <(|%s|)> in %s" % (len(res), line, path)
+
 			for result in res:
 				(package, version, filename) = result
 				## record per line all (package, version, filename) combinations
