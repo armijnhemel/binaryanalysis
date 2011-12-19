@@ -2,6 +2,12 @@
 ### prerun scans ###
 ####################
 
+[checkXML]
+type    = prerun
+module  = bat.fwunpack
+method  = searchXML
+priority = 100
+
 [genericMarker]
 type    = prerun
 module  = bat.fwunpack
