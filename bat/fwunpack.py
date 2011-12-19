@@ -77,6 +77,16 @@ def genericMarkerSearch(filename, tempdir=None, blacklist=[], offsets={}, envvar
 	datafile.close()
 	return ([], blacklist, offsets)
 
+## XML files actually only need to be verified and blacklisted so other scans
+## don't waste time on it
+def searchXML(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	p = subprocess.Popen(['xmllint',filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode == 0:
+		## valid XML, so blacklist
+		blacklist.append((0, os.stat(filename).st_size))
+	return ([], blacklist, offsets)
+
 ## There are certain routers that have all bytes swapped, because they use 16
 ## bytes NOR flash instead of 8 bytes SPI flash. This is an ugly hack to first
 ## rearrange the data. This is mostly for Realtek RTL8196C based routers.
