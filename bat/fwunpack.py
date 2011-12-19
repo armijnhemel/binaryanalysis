@@ -2053,8 +2053,13 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 					break
 	return (diroffsets, blacklist)
 
+## use bmptopnm for this
+def searchUnpackBMP(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	pass
+
 ## JPEG extraction can be tricky according to /usr/share/magic, so this is
 ## not fool proof.
+## use jpeg2pnm for this
 def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	## first search for JFIF, then search for Exif, then search for plain
 	## JPEG and take the minimum value.
