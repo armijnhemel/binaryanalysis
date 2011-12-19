@@ -1960,6 +1960,10 @@ def unpackIco(filename, offset, tempdir=None):
 ## because that results in endless loops.
 ###
 
+## PDFs end with %%EOF, sometimes followed by one or two extra characters
+def searchUnpackPDF(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	pass
+
 ## http://en.wikipedia.org/wiki/Graphics_Interchange_Format
 ## 1. search for a GIF header
 ## 2. search for a GIF trailer
