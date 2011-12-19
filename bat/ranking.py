@@ -62,7 +62,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 	if blacklist == []:
 		scanfile = path
 	else:
-		filesize = filesize = os.stat(scanfile).st_size
+		filesize = filesize = os.stat(path).st_size
 		## whole file is blacklisted, so no need to scan
 		if extractor.inblacklist(0, blacklist) == filesize:
 			return None
