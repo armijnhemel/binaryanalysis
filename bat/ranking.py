@@ -296,7 +296,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
                 if line == "": continue
 
 		## first see if we have anything in the cache at all
-		res = conn.execute('''select package, version, filename FROM stringscache.stringscache WHERE programstring=? AND language=?''', (line,language)).fetchall()
+		res = conn.execute('''select distinct package, version, filename FROM stringscache.stringscache WHERE programstring=? AND language=?''', (line,language)).fetchall()
 
 		## nothing in the cache
 		if len(res) == 0:
@@ -308,13 +308,13 @@ def extractGeneric(lines, path, language='C', envvars=None):
 				continue
 			else:
 				## now fetch *all* sha256 checksums
-				checkres = conn.execute('''select sha256, language from extracted_file WHERE programstring=?''', (line,)).fetchall()
+				checkres = conn.execute('''select distinct sha256, language from extracted_file WHERE programstring=?''', (line,)).fetchall()
 				for (checksha, checklan) in checkres:
 					if checklan != language:
 						continue
 					else:
 						## overwrite 'res' here
-						res = res + conn.execute('''select package, version, filename FROM processed_file p WHERE sha256=?''', (checksha,)).fetchall()
+						res = res + conn.execute('''select distinct package, version, filename FROM processed_file p WHERE sha256=?''', (checksha,)).fetchall()
 			newmatch = True
 		if len(res) != 0:
 			## Add the length of the string to lenStringsFound.
