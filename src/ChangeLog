@@ -1,3 +1,7 @@
+2011-12-20
+* avoid duplicated rows in the strings cache database for ranking. This can
+save quite a bit of of space.
+
 2011-12-19
 * for each file first determine it is a valid XML file, so other methods no
 longer need to scan it. This is especially to prevent the ranking method from
