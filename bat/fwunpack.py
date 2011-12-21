@@ -1217,6 +1217,11 @@ def unpackSquashfsWrapper(filename, offset, tempdir=None):
 		os.unlink(tmpfile[1])
 		return retval
 
+	## Realtek variant
+	retval = unpackSquashfsRealtekLZMA(tmpfile[1],offset,tmpdir)
+	if retval != None:
+		os.unlink(tmpfile[1])
+		return retval
 	os.unlink(tmpfile[1])
 	if tempdir == None:
 		os.rmdir(tmpdir)
@@ -1333,6 +1338,10 @@ def unpackSquashfsBroadcomLZMA(filename, offset, tmpdir):
 		## unlike with 'normal' squashfs we can't use 'file' to determine the size
 		squashsize = 1
 		return (tmpdir, squashsize)
+
+## squashfs variant from Realtek, with LZMA
+def unpackSquashfsRealtekLZMA(filename, offset, tmpdir):
+	return None
 
 ## We use tune2fs to get the size of the file system so we know what to
 ## blacklist.
