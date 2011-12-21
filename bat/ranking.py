@@ -98,6 +98,8 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 				## first we need to determine the size and offset of .data and .rodata and carve it from the file
         			p = subprocess.Popen(['readelf', '-SW', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         			(stanout, stanerr) = p.communicate()
+				## TODO: check if we actually get sections. On some systems the
+				## binary is somewhat corrupted and does not have section headers
 				st = stanout.strip().split("\n")
 				for s in st[3:]:
 					for section in [".data", ".rodata"]:
