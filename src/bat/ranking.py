@@ -283,7 +283,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	oldline = None
 	matched = False
 	for line in lines:
-		#print >>sys.stderr, "processing <|%s|>" % line
+		print >>sys.stderr, "processing <|%s|>" % line
 		## speedup if the lines happen to be the same as the old one
 		if line == oldline:
 			if matched:
@@ -308,15 +308,17 @@ def extractGeneric(lines, path, language='C', envvars=None):
 				continue
 			else:
 				## now fetch *all* sha256 checksums
-				checkres = conn.execute('''select distinct sha256, language from extracted_file WHERE programstring=?''', (line,)).fetchall()
+				checkres = conn.execute('''select sha256, language from extracted_file WHERE programstring=?''', (line,)).fetchall()
+				checkres = list(set(checkres))
 				for (checksha, checklan) in checkres:
 					if checklan != language:
 						continue
 					else:
 						## overwrite 'res' here
-						res = res + conn.execute('''select distinct package, version, filename FROM processed_file p WHERE sha256=?''', (checksha,)).fetchall()
+						res = res + conn.execute('''select package, version, filename FROM processed_file p WHERE sha256=?''', (checksha,)).fetchall()
 			newmatch = True
 		if len(res) != 0:
+			res = list(set(res))
 			## Add the length of the string to lenStringsFound.
 			## We're not really using it, except for reporting.
 			lenStringsFound = lenStringsFound + len(line)
@@ -337,7 +339,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 				#print >>sys.stderr, "%s\t%s\t%s" % (package, version, filename)
 				if newmatch:
 					c.execute('''insert into stringscache.stringscache values (?, ?, ?, ?, ?)''', (line, language, package, version, filename))
-					conn.commit()
+			conn.commit()
 			newmatch = False
 
 	if len(lines) != 0:
