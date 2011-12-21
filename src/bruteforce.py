@@ -207,7 +207,6 @@ def scan(filetoscan, magic, scans, filehash=None, tempdir=None):
 	offsets = {}
 
 	## prerun scans should be run before any of the other scans
-	## * byteswapping
 	## * scanning for markers
 	for scan in scans['prerunscans']:
 		module = scan['module']
