@@ -114,6 +114,7 @@ def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, envva
 		## reset pointer into file
 		datafile.seek(0)
 		data = datafile.read()
+		datafile.close()
 		counter = 0
 		for i in xrange(0,len(data)):
         		if counter == 0:
@@ -121,9 +122,8 @@ def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, envva
         		else:
                 		os.write(tmpfile[0], data[i-1])
         		counter = (counter+1)%2
-		datafile.close()
-		return ([(tmpdir, 0)], blacklist, offsets)
-	return ([], blacklist, offsets)
+		return ([(tmpdir, 0)], blacklist)
+	return ([], blacklist)
 
 ## unpack base64 files
 def searchUnpackBase64(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
