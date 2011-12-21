@@ -121,8 +121,8 @@ def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, envva
         		else:
                 		os.write(tmpfile[0], data[i-1])
         		counter = (counter+1)%2
+		datafile.close()
 		return ([(tmpdir, 0)], blacklist, offsets)
-	datafile.close()
 	return ([], blacklist, offsets)
 
 ## unpack base64 files
@@ -1222,6 +1222,7 @@ def unpackSquashfsWrapper(filename, offset, tempdir=None):
 	if retval != None:
 		os.unlink(tmpfile[1])
 		return retval
+
 	os.unlink(tmpfile[1])
 	if tempdir == None:
 		os.rmdir(tmpdir)
@@ -1340,8 +1341,17 @@ def unpackSquashfsBroadcomLZMA(filename, offset, tmpdir):
 		return (tmpdir, squashsize)
 
 ## squashfs variant from Realtek, with LZMA
+## explicitely use only one processor, because otherwise unpacking
+## might fail if multiple CPUs are used. What a hack.
 def unpackSquashfsRealtekLZMA(filename, offset, tmpdir):
-	return None
+	p = subprocess.Popen(['bat-unsquashfs-realtek', '-p', '1', '-d', tmpdir, '-f', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		return None
+	else:
+		## unlike with 'normal' squashfs we can't always use 'file' to determine the size
+		squashsize = 1
+		return (tmpdir, squashsize)
 
 ## We use tune2fs to get the size of the file system so we know what to
 ## blacklist.
