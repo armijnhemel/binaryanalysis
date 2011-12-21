@@ -1,6 +1,7 @@
 2011-12-21
 * speedups in creation of temporary strings cache, which reduces runtime
 vastly.
+* enable new variant (realtek) of squashfs+lzma
 
 2011-12-20
 * avoid duplicated rows in the strings cache database for ranking. This can
