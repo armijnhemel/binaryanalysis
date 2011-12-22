@@ -1161,6 +1161,7 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, envva
 	return (diroffsets, blacklist)
 
 ## wrapper around all the different squashfs types
+## TODO: verify if all the squashfs unpacking works on SMP machines (sometimes it does not)
 def unpackSquashfsWrapper(filename, offset, tempdir=None):
 	## since unsquashfs can't deal with data via stdin first write it to
 	## a temporary location
@@ -1342,7 +1343,7 @@ def unpackSquashfsBroadcomLZMA(filename, offset, tmpdir):
 
 ## squashfs variant from Realtek, with LZMA
 ## explicitely use only one processor, because otherwise unpacking
-## might fail if multiple CPUs are used. What a hack.
+## might fail if multiple CPUs are used.
 def unpackSquashfsRealtekLZMA(filename, offset, tmpdir):
 	p = subprocess.Popen(['bat-unsquashfs-realtek', '-p', '1', '-d', tmpdir, '-f', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
