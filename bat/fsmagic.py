@@ -55,6 +55,8 @@ fsmagic = {
             'cpio3':            '070707',
             'iso9660':          'CD001',
             'swf':              'CWS',
+            'pdf':              '%PDF-',
+            'pdftrailer':       '%%EOF',
             'ar':               '!<arch>',
             'tar1':             'ustar\x00',
             'tar2':             'ustar\x20',
