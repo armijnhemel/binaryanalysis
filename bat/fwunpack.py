@@ -1992,7 +1992,73 @@ def unpackIco(filename, offset, tempdir=None):
 
 ## PDFs end with %%EOF, sometimes followed by one or two extra characters
 def searchUnpackPDF(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
-	pass
+	if offsets['pdf'] == []:
+		return ([], blacklist)
+	if offsets['pdftrailer'] == []:
+		return ([], blacklist)
+	diroffsets = []
+	counter = 1
+	filesize = os.stat(filename).st_size
+
+	for offset in offsets['pdf']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		for trailer in offsets['pdftrailer']:
+			blacklistoffset = extractor.inblacklist(trailer, blacklist)
+			if blacklistoffset != None:
+				break
+			if offset > trailer:
+				continue
+			tmpdir = dirsetup(tempdir, filename, "pdf", counter)
+			res = unpackPDF(filename, offset, trailer, tmpdir)
+			if res != None:
+				(pdfdir, size) = res
+				if offset == 0 and (filesize - 2) <= size <= filesize:
+					## the PDF is the whole file, so why bother?
+					shutil.rmtree(tmpdir)
+					return (diroffsets, blacklist)
+				else:
+					diroffsets.append((pdfdir, offset))
+					blacklist.append((offset, offset + size))
+				counter = counter + 1
+				break
+			else:
+				os.rmdir(tmpdir)
+		offsets['pdftrailer'].remove(trailer)
+
+	return (diroffsets, blacklist)
+
+def unpackPDF(filename, offset, trailer, tempdir=None):
+	tmpdir = unpacksetup(tempdir)
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.fdopen(tmpfile[0]).close()
+	filesize = os.stat(filename).st_size
+
+	if offset != 0 and (trailer == filesize or trailer == filesize-1 or trailer == filesize-2):
+		os.link(filename, "%s/%s" % (tmpdir, "templink"))
+		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
+	else:
+		datafile = open(filename, 'rb')
+		data = datafile.read()
+		datafile.close()
+		pdffile = open(tmpfile[1], 'wb')
+		pdffile.write(data[offset:trailer+len(fsmagic.fsmagic['pdftrailer'])])
+		pdffile.close()
+
+	p = subprocess.Popen(['pdfinfo', "%s" % (tmpfile[1],)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		os.unlink(tmpfile[1])
+		return None
+	else:
+		pdflines = stanout.rstrip().split("\n")
+		for pdfline in pdflines:
+			(tag, value) = pdfline.split(":", 1)
+			if tag == "File size":
+				size = int(value.strip().split()[0])
+				break
+		return (tmpdir, size)
 
 ## http://en.wikipedia.org/wiki/Graphics_Interchange_Format
 ## 1. search for a GIF header

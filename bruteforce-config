@@ -161,6 +161,13 @@ method  = searchUnpackLzo
 priority = 1
 magic = lzo
 
+[pdf_unpack]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackPDF
+priority = 10
+magic = pdf:pdftrailer
+
 [png]
 type    = unpack
 module  = bat.fwunpack
