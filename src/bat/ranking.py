@@ -266,7 +266,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 
 	stringscache = scanenv.get('BAT_SQLITE_STRINGSCACHE', '/tmp/stringscache')
 	c.execute("attach ? as stringscache", (stringscache,))
-	c.execute("create table if not exists stringscache.stringscache (programstring text, language text, package text, version text, filename text)")
+	c.execute("create table if not exists stringscache.stringscache (programstring text, language text, package text, filename text)")
 	c.execute("create index if not exists stringscache.programstring_index on stringscache(programstring, language)")
 	conn.commit()
 
@@ -298,7 +298,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
                 if line == "": continue
 
 		## first see if we have anything in the cache at all
-		res = conn.execute('''select distinct package, version, filename FROM stringscache.stringscache WHERE programstring=? AND language=?''', (line,language)).fetchall()
+		res = conn.execute('''select distinct package, filename FROM stringscache.stringscache WHERE programstring=? AND language=?''', (line,language)).fetchall()
 
 		## nothing in the cache
 		if len(res) == 0:
@@ -317,9 +317,12 @@ def extractGeneric(lines, path, language='C', envvars=None):
 						continue
 					else:
 						## overwrite 'res' here
-						res = res + conn.execute('''select package, version, filename FROM processed_file p WHERE sha256=?''', (checksha,)).fetchall()
+						res = res + conn.execute('''select package, filename FROM processed_file p WHERE sha256=?''', (checksha,)).fetchall()
 			newmatch = True
 		if len(res) != 0:
+			## we don't need versions, only need the filename
+			## not the full path
+			res = map(lambda (x,y): (x, os.path.basename(y)), res)
 			res = list(set(res))
 			## Add the length of the string to lenStringsFound.
 			## We're not really using it, except for reporting.
@@ -334,13 +337,12 @@ def extractGeneric(lines, path, language='C', envvars=None):
 			print >>sys.stderr, "\n%d matches found for <(|%s|)> in %s" % (len(res), line, path)
 
 			for result in res:
-				(package, version, filename) = result
-				## record per line all (package, version, filename) combinations
+				(package, filename) = result
+				## record per line all (package, filename) combinations
 				## in which this string was found.
-				allStrings[line].append({'package': package, 'version': version, 'filename': filename})
-				#print >>sys.stderr, "%s\t%s\t%s" % (package, version, filename)
+				allStrings[line].append({'package': package, 'filename': filename})
 				if newmatch:
-					c.execute('''insert into stringscache.stringscache values (?, ?, ?, ?, ?)''', (line, language, package, version, filename))
+					c.execute('''insert into stringscache.stringscache values (?, ?, ?, ?)''', (line, language, package, filename))
 			conn.commit()
 			newmatch = False
 
