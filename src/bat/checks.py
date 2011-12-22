@@ -192,6 +192,11 @@ def xmlPrettyPrintWindowsDeps(res, root):
 
 ## method to extract meta information from PDF files
 def scanPDF(path, blacklist=[], envvars=None):
+	## we only want to scan whole PDF files. If anything has been carved from
+	## it, we don't want to see it. Blacklists are a good indicator, but we
+	## should have some way to prevent other scans from analysing this file.
+	if blacklist != []:
+		return None
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
 	mstype = ms.file(path)

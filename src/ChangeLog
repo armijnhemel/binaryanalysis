@@ -1,3 +1,6 @@
+2011-12-22
+* add extraction of PDFs
+
 2011-12-21
 * speedups in creation of temporary strings cache, which reduces runtime
 vastly.
