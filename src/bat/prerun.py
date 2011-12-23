@@ -57,6 +57,14 @@ def searchXML(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 		tags.append("xml")
 	return ([], blacklist, offsets, tags)
 
+## method to verify if a file only contains text
+## Since the default encoding in Python 2 is 'ascii' and we can't guarantee
+## that it has been set by the user to something else this will not work
+## on UTF-8 encoded files, unless we ask the user to set the encoding in
+## site.py which we can't.
+##
+## Interesting link with background info:
+## * http://fedoraproject.org/wiki/Features/PythonEncodingUsesSystemLocale
 def verifyText(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	tags = []
 	datafile = open(filename, 'rb')
