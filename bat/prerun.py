@@ -56,3 +56,22 @@ def searchXML(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	if p.returncode == 0:
 		tags.append("xml")
 	return ([], blacklist, offsets, tags)
+
+def verifyText(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	tags = []
+	datafile = open(filename, 'rb')
+	databuffer = []
+	offset = 0
+	datafile.seek(offset)
+	databuffer = datafile.read(100000)
+	while databuffer != '':
+		if not extractor.isPrintables(databuffer):
+			datafile.close()
+			return ([], blacklist, offsets, tags)
+		## move the offset 100000
+		datafile.seek(offset + 100000)
+		databuffer = datafile.read(100000)
+		offset = offset + len(databuffer)
+	tags.append("text")
+	datafile.close()
+	return ([], blacklist, offsets, tags)

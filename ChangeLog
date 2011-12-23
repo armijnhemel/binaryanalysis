@@ -7,6 +7,8 @@ they could be anything. The contents of the list of tags is compared to the
 value of 'noscan' in the configuration file. If a tag can be found in the
 'noscan' list, the scan is skipped. This way we have a fine grained model to
 enable and disable scans for specific files.
+* add prerun scan for verifying if a file consists of just printable text
+characters
 
 2011-12-22
 * add extraction of PDFs
