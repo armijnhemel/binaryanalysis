@@ -154,7 +154,7 @@ def gethash(path, filename):
 ## report snippet is per file, but if a file has other files embedded in it, the
 ## it will include reports for those files as well in the 'scans' section of the
 ## report.
-def scanfile(path, filename, scans, lentempdir=0, tempdir=None, noscan=False):
+def scanfile(path, filename, scans, lentempdir=0, tempdir=None):
 	report = {}
 
 	report['name'] = filename
@@ -192,19 +192,19 @@ def scanfile(path, filename, scans, lentempdir=0, tempdir=None, noscan=False):
 	## and store the results per scanned file, except when explicitely
 	## instructed not to scan. In that case just report some statistics
 	## about the file.
-	if not noscan:
-		res = scan(filetoscan, mstype, scans, filehash=filehash, tempdir=tempdir)
-		if res != []:
-			report['scans'] = res
+	res = scan(filetoscan, mstype, scans, filehash=filehash, tempdir=tempdir)
+	if res != []:
+		report['scans'] = res
 	return report
 
 ## scan a single file and recurse. Optionally supply a filehash for
 ## checking a knowledgebase, which is future work.
 def scan(filetoscan, magic, scans, filehash=None, tempdir=None):
-	## we reset the reports, blacklist and offsets for each new scan
+	## we reset the reports, blacklist, offsets and tags for each new scan
 	reports = []
 	blacklist = []
 	offsets = {}
+	tags = []
 
 	## prerun scans should be run before any of the other scans
 	## * scanning for markers
@@ -222,8 +222,6 @@ def scan(filetoscan, magic, scans, filehash=None, tempdir=None):
 		## result is either empty, or contains offsets
 		if len(scanres) == 3:
 			(diroffsets, blacklist, offsets) = scanres
-		elif len(scanres) == 4:
-			(diroffsets, blacklist, offsets, noscan) = scanres
 
 	## we have all offsets with markers here, so we can filter out
 	## the scans we won't need
@@ -242,7 +240,6 @@ def scan(filetoscan, magic, scans, filehash=None, tempdir=None):
 		## continue with the program scans.
 		if bat.extractor.inblacklist(0, blacklist) == filesize:
 			break
-		noscan = False
 		
 		## if we don't have a marker in the file, but we do have a marker
 		## in the scan, we can continue with the next scan
@@ -267,8 +264,6 @@ def scan(filetoscan, magic, scans, filehash=None, tempdir=None):
 		## result is either empty, or contains offsets
 		if len(scanres) == 2:
 			(diroffsets, blacklist) = scanres
-		elif len(scanres) == 3:
-			(diroffsets, blacklist, noscan) = scanres
 		if len(diroffsets) == 0:
 			continue
 		blacklist = mergeBlacklist(blacklist)
@@ -293,7 +288,7 @@ def scan(filetoscan, magic, scans, filehash=None, tempdir=None):
 						try:
 							if not os.path.islink("%s/%s" % (i[0], p)):
 								os.chmod("%s/%s" % (i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-							res = scanfile(i[0], p, scans, lentempdir=len(scandir), tempdir=tempdir, noscan=noscan)
+							res = scanfile(i[0], p, scans, lentempdir=len(scandir), tempdir=tempdir)
 							if res != []:
 								scanreports.append(res)
 						except Exception, e:
