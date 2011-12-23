@@ -51,7 +51,7 @@ def genericMarkerSearch(filename, tempdir=None, blacklist=[], offsets={}, envvar
 ## XML files actually only need to be verified and tagged so other scans can decide to ignore it
 def searchXML(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	tags = []
-	p = subprocess.Popen(['xmllint',filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['xmllint','--noout', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode == 0:
 		tags.append("xml")
