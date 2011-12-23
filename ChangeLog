@@ -1,6 +1,7 @@
 2011-12-23
 * stubs for adding a 'noscan' directive that scans can use to say which
 category of files they don't want to scan.
+* move prerun scans to separate file
 
 2011-12-22
 * add extraction of PDFs

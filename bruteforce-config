@@ -4,13 +4,13 @@
 
 [checkXML]
 type    = prerun
-module  = bat.fwunpack
+module  = bat.prerun
 method  = searchXML
 priority = 100
 
 [genericMarker]
 type    = prerun
-module  = bat.fwunpack
+module  = bat.prerun
 method  = genericMarkerSearch
 priority = 99
 
