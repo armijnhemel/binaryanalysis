@@ -40,53 +40,6 @@ def unpacksetup(tempdir):
 		tmpdir = tempdir
 	return tmpdir
 
-## method to search for all the markers we have in fsmagic
-## TODO: move to separate files with just prerun scans
-def genericMarkerSearch(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
-	datafile = open(filename, 'rb')
-	databuffer = []
-	offsets = {}
-	offset = 0
-	datafile.seek(offset)
-	databuffer = datafile.read(100000)
-        marker_keys = fsmagic.fsmagic.keys()
-	for key in marker_keys:
-		offsets[key] = []
-	while databuffer != '':
-		for key in marker_keys:
-			res = databuffer.find(fsmagic.fsmagic[key])
-			if res == -1:
-				continue
-			else:
-				while res != -1:
-					## we should return this differently, so we can sort per offset and
-					## do a possibly better scan
-					#offsets[key].append((offset + res, key))
-					offsets[key].append(offset + res)
-					res = databuffer.find(fsmagic.fsmagic[key], res+1)
-		## move the offset 99950
-		datafile.seek(offset + 99950)
-		## read 100000 bytes with a 50 bytes overlap
-		## overlap with the previous read
-		databuffer = datafile.read(100000)
-		if len(databuffer) >= 50:
-			offset = offset + 99950
-		else:
-			offset = offset + len(databuffer)
-	datafile.close()
-	return ([], blacklist, offsets)
-
-## XML files actually only need to be verified and blacklisted so other scans
-## don't waste time on it
-## TODO: rewrite as a prerun scan and tag files as 'xml'
-def searchXML(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
-	p = subprocess.Popen(['xmllint',filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode == 0:
-		## valid XML, so blacklist
-		blacklist.append((0, os.stat(filename).st_size))
-	return ([], blacklist, offsets)
-
 ## There are certain routers that have all bytes swapped, because they use 16
 ## bytes NOR flash instead of 8 bytes SPI flash. This is an ugly hack to first
 ## rearrange the data. This is mostly for Realtek RTL8196C based routers.
@@ -122,6 +75,7 @@ def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, envva
         		else:
                 		os.write(tmpfile[0], data[i-1])
         		counter = (counter+1)%2
+		blacklist.append((0, os.stat(filename).st_size))
 		return ([(tmpdir, 0)], blacklist)
 	return ([], blacklist)
 
