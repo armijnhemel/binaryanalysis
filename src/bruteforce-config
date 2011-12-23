@@ -81,7 +81,7 @@ type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackCpio
 priority = 2
-magic = cpio1:cpio2:cpio3
+magic = cpio1:cpio2:cpio3:cpiotrailer
 noscan   = text:xml
 
 #[cramfs]
@@ -269,7 +269,7 @@ type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackXZ
 priority = 1
-magic = xz
+magic = xz:xztrailer
 noscan   = text:xml
 
 [zip]
