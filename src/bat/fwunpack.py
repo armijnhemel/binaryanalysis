@@ -41,8 +41,7 @@ def unpacksetup(tempdir):
 	return tmpdir
 
 ## method to search for all the markers we have in fsmagic
-## TODO: since most/all scans use results from this method we can rewrite this and
-## always run it, but after other pre-run scans, such as byteswapping
+## TODO: move to separate files with just prerun scans
 def genericMarkerSearch(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	datafile = open(filename, 'rb')
 	databuffer = []
@@ -79,6 +78,7 @@ def genericMarkerSearch(filename, tempdir=None, blacklist=[], offsets={}, envvar
 
 ## XML files actually only need to be verified and blacklisted so other scans
 ## don't waste time on it
+## TODO: rewrite as a prerun scan and tag files as 'xml'
 def searchXML(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	p = subprocess.Popen(['xmllint',filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
@@ -99,7 +99,7 @@ def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, envva
 	## "Uncompressing Linux..."
 	while databuffer != '':
 		datafile.seek(offset + 99950)
-		if databuffer.find("nUocpmerssni giLun.x..") != -1:
+		if databuffer.find("nUocpmerssni giLun.x..") != 0:
 			swapped = True
 			break
 		databuffer = datafile.read(100000)
