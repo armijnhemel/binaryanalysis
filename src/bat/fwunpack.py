@@ -99,7 +99,7 @@ def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, envva
 	## "Uncompressing Linux..."
 	while databuffer != '':
 		datafile.seek(offset + 99950)
-		if databuffer.find("nUocpmerssni giLun.x..") != 0:
+		if databuffer.find("nUocpmerssni giLun.x..") != -1:
 			swapped = True
 			break
 		databuffer = datafile.read(100000)
