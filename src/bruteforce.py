@@ -363,14 +363,6 @@ def readconfig(config):
 
 			## some scans might, or might not, have these
 			try:
-				conf['xmloutput'] = config.get(section, 'xmloutput')
-			except:
-				pass
-			try:
-				conf['magic'] = config.get(section, 'magic')
-			except:
-				conf['magic'] = None
-			try:
 				conf['cleanup'] = config.get(section, 'cleanup')
 			except:
 				pass
@@ -379,9 +371,21 @@ def readconfig(config):
 			except:
 				pass
 			try:
+				conf['magic'] = config.get(section, 'magic')
+			except:
+				conf['magic'] = None
+			try:
+				conf['noscan'] = config.get(section, 'noscan')
+			except:
+				pass
+			try:
 				conf['priority'] = int(config.get(section, 'priority'))
 			except:
 				conf['priority'] = 0
+			try:
+				conf['xmloutput'] = config.get(section, 'xmloutput')
+			except:
+				pass
 
 			if config.get(section, 'type') == 'program':
 				programscans.append(conf)
