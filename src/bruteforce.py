@@ -237,7 +237,13 @@ def scan(filetoscan, magic, scans, filehash=None, tempdir=None):
 	filesize = os.stat(filetoscan).st_size
 	## 'unpackscans' has been sorted in decreasing priority, so highest
 	## priority scans are run first.
-	for scan in scans['unpackscans']:
+	## Based on information about offsets we should reorder the scans,
+	## or at least if one scan has a match for offset 0 (after correction
+	## of the offset, like for tar, gzip, iso9660, etc.) make sure it is
+	## run first.
+	unpackscans = scans['unpackscans']
+
+	for scan in unpackscans:
 		## the whole file has already been scanned by other scans, so we can
 		## continue with the program scans.
 		if bat.extractor.inblacklist(0, blacklist) == filesize:
