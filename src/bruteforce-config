@@ -14,6 +14,12 @@ module  = bat.prerun
 method  = genericMarkerSearch
 priority = 99
 
+[verifytext]
+type    = prerun
+module  = bat.prerun
+method  = verifyText
+priority = 1
+
 ####################
 ### unpack scans ###
 ####################
