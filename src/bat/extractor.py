@@ -23,6 +23,9 @@ def extract_printables(lines):
                         printables += " "
         return printables
 
+def isPrintables(lines):
+	return len(lines) == len(filter(lambda x: x in string.printable, lines))
+
 ## check if a word is surrounded by NUL characters
 def check_null(lines, offset, word):
         if lines[offset-1] == chr(0x00):
