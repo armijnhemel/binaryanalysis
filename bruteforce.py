@@ -220,8 +220,10 @@ def scan(filetoscan, magic, scans, filehash=None, tempdir=None):
 		exec "from %s import %s as bat_%s" % (module, method, method)
 		scanres = eval("bat_%s(filetoscan, tempdir, blacklist, offsets, envvars)" % (method))
 		## result is either empty, or contains offsets
-		if len(scanres) == 3:
-			(diroffsets, blacklist, offsets) = scanres
+		(diroffsets, blacklist, offsets, scantags) = scanres
+		## append the tag results. These will be used later to be able to specifically filter
+		## out files
+		tags = tags + scantags
 
 	## we have all offsets with markers here, so we can filter out
 	## the scans we won't need
@@ -246,6 +248,10 @@ def scan(filetoscan, magic, scans, filehash=None, tempdir=None):
 		if scan['magic'] != None:
 			scanmagic = scan['magic'].split(':')
 			if list(set(scanmagic).intersection(set(filterscans))) == []:
+				continue
+		if scan['noscan'] != None:
+			noscans = scan['noscan'].split(':')
+			if list(set(tags).intersection(set(tags))) != []:
 				continue
 
 		module = scan['module']
@@ -323,6 +329,11 @@ def scan(filetoscan, magic, scans, filehash=None, tempdir=None):
 				break
 		if skip:
 			continue
+
+		if scan['noscan'] != None:
+			noscans = scan['noscan'].split(':')
+			if list(set(tags).intersection(set(tags))) != []:
+				continue
 		report = {}
 		module = scan['module']
 		method = scan['method']
@@ -372,7 +383,7 @@ def readconfig(config):
 			try:
 				conf['noscan'] = config.get(section, 'noscan')
 			except:
-				pass
+				conf['noscan'] = None
 			try:
 				conf['priority'] = int(config.get(section, 'priority'))
 			except:

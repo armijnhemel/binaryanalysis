@@ -46,15 +46,13 @@ def genericMarkerSearch(filename, tempdir=None, blacklist=[], offsets={}, envvar
 		else:
 			offset = offset + len(databuffer)
 	datafile.close()
-	return ([], blacklist, offsets)
+	return ([], blacklist, offsets, [])
 
-## XML files actually only need to be verified and blacklisted so other scans
-## don't waste time on it
-## TODO: rewrite as a prerun scan and tag files as 'xml'
+## XML files actually only need to be verified and tagged so other scans can decide to ignore it
 def searchXML(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	tags = []
 	p = subprocess.Popen(['xmllint',filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode == 0:
-		## valid XML, so blacklist
-		blacklist.append((0, os.stat(filename).st_size))
-	return ([], blacklist, offsets)
+		tags.append("xml")
+	return ([], blacklist, offsets, tags)

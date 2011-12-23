@@ -1,7 +1,12 @@
 2011-12-23
 * stubs for adding a 'noscan' directive that scans can use to say which
 category of files they don't want to scan.
-* move prerun scans to separate file
+* move pre-run scans to separate file
+* pre-run scans can return a list of tags. Right now it is just file type, but
+they could be anything. The contents of the list of tags is compared to the
+value of 'noscan' in the configuration file. If a tag can be found in the
+'noscan' list, the scan is skipped. This way we have a fine grained model to
+enable and disable scans for specific files.
 
 2011-12-22
 * add extraction of PDFs
