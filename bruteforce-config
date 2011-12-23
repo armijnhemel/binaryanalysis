@@ -257,21 +257,25 @@ magic = zip
 type    = program
 module  = bat.checks
 method  = scanArchitecture
+noscans = text
 
 [busybox-version]
 type    = program
 module  = bat.busyboxversion
 method  = busybox_version
+noscans = text
 
 [dproxy]
 type    = program
 module  = bat.checks
 method  = searchDproxy
+noscans = text
 
 [ez-ipupdate]
 type    = program
 module  = bat.checks
 method  = searchEzIpupdate
+noscans = text
 
 [forges]
 type    = program
@@ -283,33 +287,39 @@ xmloutput = forgesPrettyPrint
 type    = program
 module  = bat.checks
 method  = searchIproute
+noscans = text
 
 [iptables]
 type    = program
 module  = bat.checks
 method  = searchIptables
+noscans = text
 
 [kernelchecks]
 type    = program
 module  = bat.kernelanalysis
 method  = kernelChecks
 xmloutput = xmlprettyprint
+noscans = text
 
 [kernelmodulelicense]
 type    = program
 module  = bat.kernelanalysis
 method  = analyseModuleLicense
+noscans = text
 
 [libs]
 type    = program
 module  = bat.checks
 method  = searchDynamicLibs
 xmloutput = dynamicLibsPrettyPrint
+noscans = text
 
 [libusb]
 type    = program
 module  = bat.checks
 method  = searchLibusb
+noscans = text
 
 [licenses]
 type    = program
@@ -321,12 +331,14 @@ xmloutput = licensesPrettyPrint
 type    = program
 module  = bat.checks
 method  = searchLoadLin
+noscans = text
 
 [pdf]
 type    = program
 module  = bat.checks
 method  = scanPDF
 xmloutput = pdfPrettyPrint
+noscans = text
 
 #[ranking]
 #type    = program
@@ -334,28 +346,34 @@ xmloutput = pdfPrettyPrint
 #method  = searchGeneric
 #xmloutput = xmlprettyprint
 #envvars = BAT_SQLITE_AVG=/tmp/avg:BAT_SQLITE_STRINGSCACHE=/tmp/stringscache:BAT_SQLITE_DB=/tmp/master
+#noscans = text
 
 [redboot]
 type    = program
 module  = bat.checks
 method  = searchRedBoot
+noscans = text
 
 [uboot]
 type    = program
 module  = bat.checks
 method  = searchUBoot
+noscans = text
 
 [vsftpd]
 type    = program
 module  = bat.checks
 method  = searchVsftpd
+noscans = text
 
 [wireless-tools]
 type    = program
 module  = bat.checks
 method  = searchWirelessTools
+noscans = text
 
 [wpa-supplicant]
 type    = program
 module  = bat.checks
 method  = searchWpaSupplicant
+noscans = text
