@@ -257,25 +257,25 @@ magic = zip
 type    = program
 module  = bat.checks
 method  = scanArchitecture
-noscans = text
+noscan  = text
 
 [busybox-version]
 type    = program
 module  = bat.busyboxversion
 method  = busybox_version
-noscans = text
+noscan  = text
 
 [dproxy]
 type    = program
 module  = bat.checks
 method  = searchDproxy
-noscans = text
+noscan  = text
 
 [ez-ipupdate]
 type    = program
 module  = bat.checks
 method  = searchEzIpupdate
-noscans = text
+noscan  = text
 
 [forges]
 type    = program
@@ -287,39 +287,39 @@ xmloutput = forgesPrettyPrint
 type    = program
 module  = bat.checks
 method  = searchIproute
-noscans = text
+noscan  = text
 
 [iptables]
 type    = program
 module  = bat.checks
 method  = searchIptables
-noscans = text
+noscan  = text
 
 [kernelchecks]
 type    = program
 module  = bat.kernelanalysis
 method  = kernelChecks
 xmloutput = xmlprettyprint
-noscans = text
+noscan  = text
 
 [kernelmodulelicense]
 type    = program
 module  = bat.kernelanalysis
 method  = analyseModuleLicense
-noscans = text
+noscan  = text
 
 [libs]
 type    = program
 module  = bat.checks
 method  = searchDynamicLibs
 xmloutput = dynamicLibsPrettyPrint
-noscans = text
+noscan  = text
 
 [libusb]
 type    = program
 module  = bat.checks
 method  = searchLibusb
-noscans = text
+noscan  = text
 
 [licenses]
 type    = program
@@ -331,14 +331,14 @@ xmloutput = licensesPrettyPrint
 type    = program
 module  = bat.checks
 method  = searchLoadLin
-noscans = text
+noscan  = text
 
 [pdf]
 type    = program
 module  = bat.checks
 method  = scanPDF
 xmloutput = pdfPrettyPrint
-noscans = text
+noscan  = text
 
 #[ranking]
 #type    = program
@@ -346,34 +346,34 @@ noscans = text
 #method  = searchGeneric
 #xmloutput = xmlprettyprint
 #envvars = BAT_SQLITE_AVG=/tmp/avg:BAT_SQLITE_STRINGSCACHE=/tmp/stringscache:BAT_SQLITE_DB=/tmp/master
-#noscans = text
+#noscan  = text
 
 [redboot]
 type    = program
 module  = bat.checks
 method  = searchRedBoot
-noscans = text
+noscan  = text
 
 [uboot]
 type    = program
 module  = bat.checks
 method  = searchUBoot
-noscans = text
+noscan  = text
 
 [vsftpd]
 type    = program
 module  = bat.checks
 method  = searchVsftpd
-noscans = text
+noscan  = text
 
 [wireless-tools]
 type    = program
 module  = bat.checks
 method  = searchWirelessTools
-noscans = text
+noscan  = text
 
 [wpa-supplicant]
 type    = program
 module  = bat.checks
 method  = searchWpaSupplicant
-noscans = text
+noscan  = text
