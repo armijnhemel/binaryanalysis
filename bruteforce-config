@@ -30,6 +30,7 @@ module  = bat.fwunpack
 method  = searchUnpack7z
 priority = 1
 magic = 7z
+noscan   = text:xml
 
 [ar]
 type    = unpack
@@ -37,6 +38,7 @@ module  = bat.fwunpack
 method  = searchUnpackAr
 priority = 2
 magic = ar
+noscan   = text:xml
 
 #[arj]
 #type    = unpack
@@ -44,6 +46,7 @@ magic = ar
 #method  = searchUnpackARJ
 #priority = 1
 #magic = arj
+#noscan   = text:xml
 
 [base64]
 type    = unpack
@@ -63,6 +66,7 @@ module  = bat.fwunpack
 method  = searchUnpackBzip2
 priority = 1
 magic = bz2
+noscan   = text:xml
 
 [cab]
 type    = unpack
@@ -70,6 +74,7 @@ module  = bat.fwunpack
 method  = searchUnpackCab
 priority = 1
 magic = cab
+noscan   = text:xml
 
 [cpio]
 type    = unpack
@@ -77,6 +82,7 @@ module  = bat.fwunpack
 method  = searchUnpackCpio
 priority = 2
 magic = cpio1:cpio2:cpio3
+noscan   = text:xml
 
 #[cramfs]
 #type    = unpack
@@ -84,12 +90,14 @@ magic = cpio1:cpio2:cpio3
 #method  = searchUnpackCramfs
 #priority = 3
 #magic = cramfs
+#noscan   = text:xml
 
 [exe]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackExe
 priority = 2
+noscan   = text:xml
 
 [ext2fs]
 type    = unpack
@@ -97,6 +105,7 @@ module  = bat.fwunpack
 method  = searchUnpackExt2fs
 priority = 3
 magic = ext2
+noscan   = text:xml
 
 [gif]
 type    = unpack
@@ -104,6 +113,7 @@ module  = bat.fwunpack
 method  = searchUnpackGIF
 priority = 0
 magic = gif87:gif89
+noscan   = text:xml
 
 [gzip]
 type    = unpack
@@ -111,6 +121,7 @@ module  = bat.fwunpack
 method  = searchUnpackGzip
 priority = 1
 magic = gzip
+noscan   = text:xml
 
 #[ico]
 #type    = unpack
@@ -118,6 +129,7 @@ magic = gzip
 #method  = searchUnpackIco
 #priority = 0
 #magic = ico
+#noscan   = text:xml
 
 [installshield]
 type    = unpack
@@ -125,6 +137,7 @@ module  = bat.fwunpack
 method  = searchUnpackInstallShield
 priority = 1
 magic = installshield
+noscan   = text:xml
 
 [iso9660]
 type    = unpack
@@ -132,12 +145,14 @@ module  = bat.fwunpack
 method  = searchUnpackISO9660
 priority = 4
 magic = iso9660
+noscan   = text:xml
 
 #[java_serialized]
 #type    = unpack
 #module  = bat.fwunpack
 #method  = searchUnpackJavaSerialized
 #priority = 2
+#noscan   = text:xml
 
 [jffs2]
 type    = unpack
@@ -145,6 +160,7 @@ module  = bat.fwunpack
 method  = searchUnpackJffs2
 priority = 1
 magic = jffs2_le
+noscan   = text:xml
 
 [lzip]
 type    = unpack
@@ -152,6 +168,7 @@ module  = bat.fwunpack
 method  = searchUnpackLzip
 priority = 1
 magic = lzip
+noscan   = text:xml
 
 [lzma]
 type    = unpack
@@ -159,6 +176,7 @@ module  = bat.fwunpack
 method  = searchUnpackLZMA
 priority = 1
 magic = lzma_alone:lzma_alone_alt
+noscan   = text:xml
 
 [lzo]
 type    = unpack
@@ -166,6 +184,7 @@ module  = bat.fwunpack
 method  = searchUnpackLzo
 priority = 1
 magic = lzo
+noscan   = text:xml
 
 [pdf_unpack]
 type    = unpack
@@ -173,6 +192,7 @@ module  = bat.fwunpack
 method  = searchUnpackPDF
 priority = 10
 magic = pdf:pdftrailer
+noscan   = text:xml
 
 [png]
 type    = unpack
@@ -180,6 +200,7 @@ module  = bat.fwunpack
 method  = searchUnpackPNG
 priority = 0
 magic = png
+noscan   = text:xml
 
 [rar]
 type    = unpack
@@ -187,6 +208,7 @@ module  = bat.fwunpack
 method  = searchUnpackRar
 priority = 1
 magic = rar
+noscan   = text:xml
 
 [rpm]
 type    = unpack
@@ -194,6 +216,7 @@ module  = bat.unpackrpm
 method  = searchUnpackRPM
 priority = 2
 magic = rpm
+noscan   = text:xml
 
 [squashfs]
 type    = unpack
@@ -201,6 +224,7 @@ module  = bat.fwunpack
 method  = searchUnpackSquashfs
 priority = 1
 magic = squashfs1:squashfs2:squashfs3:squashfs4
+noscan   = text:xml
 
 [swf]
 type    = unpack
@@ -208,6 +232,7 @@ module  = bat.fwunpack
 method  = searchUnpackSwf
 priority = 0
 magic = swf
+noscan   = text:xml
 
 [tar]
 type    = unpack
@@ -215,6 +240,7 @@ module  = bat.fwunpack
 method  = searchUnpackTar
 priority = 3
 magic = tar1:tar2
+noscan   = text:xml
 
 [ubifs]
 type    = unpack
@@ -222,18 +248,21 @@ module  = bat.fwunpack
 method  = searchUnpackUbifs
 priority = 3
 magic = ubifs
+noscan   = text:xml
 
 [unyaffs]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackYaffs2
 priority = 2
+noscan   = text:xml
 
 [upx]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackUPX
 priority = 3
+noscan   = text:xml
 
 [xz]
 type    = unpack
@@ -241,6 +270,7 @@ module  = bat.fwunpack
 method  = searchUnpackXZ
 priority = 1
 magic = xz
+noscan   = text:xml
 
 [zip]
 type    = unpack
@@ -248,6 +278,7 @@ module  = bat.fwunpack
 method  = searchUnpackZip
 priority = 1
 magic = zip
+noscan   = text:xml
 
 ##################
 ### leaf scans ###
@@ -257,25 +288,25 @@ magic = zip
 type    = program
 module  = bat.checks
 method  = scanArchitecture
-noscan  = text
+noscan  = text:xml
 
 [busybox-version]
 type    = program
 module  = bat.busyboxversion
 method  = busybox_version
-noscan  = text
+noscan  = text:xml
 
 [dproxy]
 type    = program
 module  = bat.checks
 method  = searchDproxy
-noscan  = text
+noscan  = text:xml
 
 [ez-ipupdate]
 type    = program
 module  = bat.checks
 method  = searchEzIpupdate
-noscan  = text
+noscan  = text:xml
 
 [forges]
 type    = program
@@ -287,39 +318,39 @@ xmloutput = forgesPrettyPrint
 type    = program
 module  = bat.checks
 method  = searchIproute
-noscan  = text
+noscan  = text:xml
 
 [iptables]
 type    = program
 module  = bat.checks
 method  = searchIptables
-noscan  = text
+noscan  = text:xml
 
 [kernelchecks]
 type    = program
 module  = bat.kernelanalysis
 method  = kernelChecks
 xmloutput = xmlprettyprint
-noscan  = text
+noscan  = text:xml
 
 [kernelmodulelicense]
 type    = program
 module  = bat.kernelanalysis
 method  = analyseModuleLicense
-noscan  = text
+noscan  = text:xml
 
 [libs]
 type    = program
 module  = bat.checks
 method  = searchDynamicLibs
 xmloutput = dynamicLibsPrettyPrint
-noscan  = text
+noscan  = text:xml
 
 [libusb]
 type    = program
 module  = bat.checks
 method  = searchLibusb
-noscan  = text
+noscan  = text:xml
 
 [licenses]
 type    = program
@@ -331,14 +362,14 @@ xmloutput = licensesPrettyPrint
 type    = program
 module  = bat.checks
 method  = searchLoadLin
-noscan  = text
+noscan  = text:xml
 
 [pdf]
 type    = program
 module  = bat.checks
 method  = scanPDF
 xmloutput = pdfPrettyPrint
-noscan  = text
+noscan  = text:xml
 
 #[ranking]
 #type    = program
@@ -346,34 +377,34 @@ noscan  = text
 #method  = searchGeneric
 #xmloutput = xmlprettyprint
 #envvars = BAT_SQLITE_AVG=/tmp/avg:BAT_SQLITE_STRINGSCACHE=/tmp/stringscache:BAT_SQLITE_DB=/tmp/master
-#noscan  = text
+#noscan  = text:xml
 
 [redboot]
 type    = program
 module  = bat.checks
 method  = searchRedBoot
-noscan  = text
+noscan  = text:xml
 
 [uboot]
 type    = program
 module  = bat.checks
 method  = searchUBoot
-noscan  = text
+noscan  = text:xml
 
 [vsftpd]
 type    = program
 module  = bat.checks
 method  = searchVsftpd
-noscan  = text
+noscan  = text:xml
 
 [wireless-tools]
 type    = program
 module  = bat.checks
 method  = searchWirelessTools
-noscan  = text
+noscan  = text:xml
 
 [wpa-supplicant]
 type    = program
 module  = bat.checks
 method  = searchWpaSupplicant
-noscan  = text
+noscan  = text:xml
