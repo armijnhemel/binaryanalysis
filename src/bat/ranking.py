@@ -443,14 +443,14 @@ def extractGeneric(lines, path, language='C', envvars=None):
 		print >>sys.stderr, "round %d: %d strings left" % (roundNr, len(stringsLeft.keys()))
 		gain = {}
 		stringsPerPkg = {}
-		for stri in stringsLeft.items():
+		for stri in stringsLeft.keys():
 			## when a string will not significantly contribute to the score we can just ignore
 			## it and remove it from the list. This speeds up the algorithm A LOT.
-			if stri[1]['score'] <= 1.0e-20:
-				del stringsLeft[stri[0]]
+			if stringsLeft[stri]['score'] <= 1.0e-20:
+				del stringsLeft[stri]
 				continue
 			## get the unique score per package, temporarily record it and sort in reverse order
-			pkgsSorted = map(lambda x: {'package': x, 'uniquescore': uniqueScore.get(x, 0)}, stri[1]['pkgs'])
+			pkgsSorted = map(lambda x: {'package': x, 'uniquescore': uniqueScore.get(x, 0)}, stringsLeft[stri]['pkgs'])
 			pkgsSorted = sorted(pkgsSorted, key=lambda x: x['uniquescore'], reverse=True)
 			## and get rid of the unique scores again
 			pkgsSorted = map(lambda x: x['package'], pkgsSorted)
@@ -461,8 +461,8 @@ def extractGeneric(lines, path, language='C', envvars=None):
 				if uniqueScore.get(pkgSort, 0) == uniqueScore.get(pkgsSorted[0], 0):
 					pkgs2.append(pkgSort)
 			for p2 in pkgs2:
-				gain[p2] = gain.get(p2, 0) + stri[1]['score']
-				stringsPerPkg[p2] = stri[0]
+				gain[p2] = gain.get(p2, 0) + stringsLeft[stri]['score']
+				stringsPerPkg[p2] = stri
 		## if all the gains are < our cutoff value (1.0e-20) we can already quit
 		if gain == {}:
 			break
