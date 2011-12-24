@@ -14,7 +14,7 @@ import tempfile, re, magic
 import fsmagic, fssearch, extractor
 
 ## method to search for all the markers we have in fsmagic
-def genericMarkerSearch(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+def genericMarkerSearch(filename, envvars=None):
 	datafile = open(filename, 'rb')
 	databuffer = []
 	offsets = {}
@@ -46,7 +46,7 @@ def genericMarkerSearch(filename, tempdir=None, blacklist=[], offsets={}, envvar
 		else:
 			offset = offset + len(databuffer)
 	datafile.close()
-	return ([], blacklist, offsets, [])
+	return offsets
 
 ## XML files actually only need to be verified and tagged so other scans can decide to ignore it
 def searchXML(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
@@ -55,7 +55,7 @@ def searchXML(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	(stanout, stanerr) = p.communicate()
 	if p.returncode == 0:
 		tags.append("xml")
-	return ([], blacklist, offsets, tags)
+	return ([], blacklist, tags)
 
 ## method to verify if a file only contains text
 ## Since the default encoding in Python 2 is 'ascii' and we can't guarantee
@@ -75,14 +75,14 @@ def verifyText(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	while databuffer != '':
 		if not extractor.isPrintables(databuffer):
 			datafile.close()
-			return ([], blacklist, offsets, tags)
+			return ([], blacklist, tags)
 		## move the offset 100000
 		datafile.seek(offset + 100000)
 		databuffer = datafile.read(100000)
 		offset = offset + len(databuffer)
 	tags.append("text")
 	datafile.close()
-	return ([], blacklist, offsets, tags)
+	return ([], blacklist, tags)
 
 ## quick check to verify if a file is a graphics file.
 ## right now it's just a check for JPEGs.
@@ -91,10 +91,10 @@ def verifyGraphics(filename, tempdir=None, blacklist=[], offsets={}, envvars=Non
 	p = subprocess.Popen(['jpegtopnm', '-multiple', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		return ([], blacklist, offsets, tags)
+		return ([], blacklist, tags)
 	## multiple jpegs in this file, so we need to unpack
 	if len(stanerr.strip().split("\n")) > 1:
-		return ([], blacklist, offsets, tags)
+		return ([], blacklist, tags)
 	tags.append("jpeg")
 	tags.append("graphics")
-	return ([], blacklist, offsets, tags)
+	return ([], blacklist, tags)
