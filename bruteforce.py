@@ -16,6 +16,7 @@ import xml.dom.minidom
 import datetime
 import sqlite3
 import bat.extractor
+import bat.prerun
 
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
@@ -206,8 +207,10 @@ def scan(filetoscan, magic, scans, filehash=None, tempdir=None):
 	offsets = {}
 	tags = []
 
+	## scan for markers
+	offsets =  bat.prerun.genericMarkerSearch(filetoscan)
+
 	## prerun scans should be run before any of the other scans
-	## * scanning for markers
 	for scan in scans['prerunscans']:
 		module = scan['module']
 		method = scan['method']
@@ -218,9 +221,9 @@ def scan(filetoscan, magic, scans, filehash=None, tempdir=None):
 		else:
 			envvars = None
 		exec "from %s import %s as bat_%s" % (module, method, method)
-		scanres = eval("bat_%s(filetoscan, tempdir, blacklist, offsets, envvars)" % (method))
+		scanres = eval("bat_%s(filetoscan, tempdir, blacklist, envvars)" % (method))
 		## result is either empty, or contains offsets
-		(diroffsets, blacklist, offsets, scantags) = scanres
+		(diroffsets, blacklist, scantags) = scanres
 		## append the tag results. These will be used later to be able to specifically filter
 		## out files
 		tags = tags + scantags

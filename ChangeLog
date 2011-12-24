@@ -1,6 +1,8 @@
 2011-12-24
 * add a very simple verifyGraphics pre-run scan. Right now it only verifies if
 a file is a JPEG file.
+* always run the marker search program and no longer as an optional pre-run
+scan. This also simplifies the other pre-run scans a bit.
 
 2011-12-23
 * stubs for adding a 'noscan' directive that scans can use to say which
