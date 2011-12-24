@@ -5,6 +5,8 @@ a file is a JPEG file.
 scan. This also simplifies the other pre-run scans a bit.
 * only run the marker searches for the magic types that are defined in the
 configuration. This speeds up scanning a tiny bit.
+* move code outside of loops in ranking scan, slashing runtime with an
+additional 60%.
 
 2011-12-23
 * stubs for adding a 'noscan' directive that scans can use to say which
