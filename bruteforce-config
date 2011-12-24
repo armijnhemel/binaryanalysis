@@ -201,7 +201,7 @@ type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackPNG
 priority = 0
-magic = png
+magic = png:pngtrailer
 noscan   = text:xml:jpeg
 
 [rar]
