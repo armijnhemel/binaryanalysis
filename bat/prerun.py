@@ -13,15 +13,15 @@ import sys, os, subprocess, os.path, shutil, stat
 import tempfile, re, magic
 import fsmagic, fssearch, extractor
 
-## method to search for all the markers we have in fsmagic
-def genericMarkerSearch(filename, envvars=None):
+## method to search for all the markers in magicscans
+def genericMarkerSearch(filename, magicscans, envvars=None):
 	datafile = open(filename, 'rb')
 	databuffer = []
 	offsets = {}
 	offset = 0
 	datafile.seek(offset)
 	databuffer = datafile.read(100000)
-        marker_keys = fsmagic.fsmagic.keys()
+        marker_keys = magicscans
 	for key in marker_keys:
 		offsets[key] = []
 	while databuffer != '':
