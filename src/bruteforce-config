@@ -53,14 +53,14 @@ type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackBase64
 priority = 0
-noscan   = graphics
+noscan   = xml:graphics
 
 [byteswap]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackByteSwap
 priority = 100
-noscan   = graphics
+noscan   = xml:graphics
 
 [bzip2]
 type    = unpack
