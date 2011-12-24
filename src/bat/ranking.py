@@ -428,7 +428,10 @@ def extractGeneric(lines, path, language='C', envvars=None):
 					## in packages 'foo' and 'bar. This is likely to be
 					## internal cloning in the repo.  This string is
 					## assigned to a single package in the loop below.
-					stringsLeft['%s\t%s' % (i, fn)] = {'string': i, 'score': score, 'filename': fn, 'pkgs' : filenames[fn].keys()}
+					## when a string will not significantly contribute to the score we can just ignore
+					## it and remove it from the list. This speeds up the algorithm A LOT.
+					if score > 1.0e-20:
+						stringsLeft['%s\t%s' % (i, fn)] = {'string': i, 'score': score, 'filename': fn, 'pkgs' : filenames[fn].keys()}
 		del allStrings[i]
 		#del filenames
 
@@ -438,17 +441,13 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	## package that would gain the highest score increment across all
 	## strings that are left.  This is repeated until no strings are left.
 	roundNr = 0
-	while len(stringsLeft.keys()) > 0:
+	strleft = len(stringsLeft.keys())
+	while strleft > 0:
 		roundNr = roundNr + 1
-		print >>sys.stderr, "round %d: %d strings left" % (roundNr, len(stringsLeft.keys()))
+		print >>sys.stderr, "round %d: %d strings left" % (roundNr, strleft)
 		gain = {}
 		stringsPerPkg = {}
 		for stri in stringsLeft.keys():
-			## when a string will not significantly contribute to the score we can just ignore
-			## it and remove it from the list. This speeds up the algorithm A LOT.
-			if stringsLeft[stri]['score'] <= 1.0e-20:
-				del stringsLeft[stri]
-				continue
 			## get the unique score per package, temporarily record it and sort in reverse order
 			pkgsSorted = map(lambda x: {'package': x, 'uniquescore': uniqueScore.get(x, 0)}, stringsLeft[stri]['pkgs'])
 			pkgsSorted = sorted(pkgsSorted, key=lambda x: x['uniquescore'], reverse=True)
@@ -498,6 +497,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 		print >>sys.stderr, "GAIN", gain[best], best, x
 		if gain[best] < gaincutoff:
 			break
+		strleft = len(stringsLeft.keys())
 
 	scores = {}
 	for k in uniqueScore.keys() + sameFileScore.keys():
