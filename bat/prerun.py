@@ -88,7 +88,7 @@ def verifyText(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 ## right now it's just a check for JPEGs.
 def verifyGraphics(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	tags = []
-	p = subprocess.Popen(['jpegtopnm', '-multiple', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	p = subprocess.Popen(['jpegtopnm', '-multiple', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		return ([], blacklist, offsets, tags)
