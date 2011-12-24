@@ -155,7 +155,7 @@ def gethash(path, filename):
 ## report snippet is per file, but if a file has other files embedded in it, the
 ## it will include reports for those files as well in the 'scans' section of the
 ## report.
-def scanfile(path, filename, scans, lentempdir=0, tempdir=None):
+def scanfile(path, filename, scans, magicscans, lentempdir=0, tempdir=None):
 	report = {}
 
 	report['name'] = filename
@@ -193,14 +193,14 @@ def scanfile(path, filename, scans, lentempdir=0, tempdir=None):
 	## and store the results per scanned file, except when explicitely
 	## instructed not to scan. In that case just report some statistics
 	## about the file.
-	res = scan(filetoscan, mstype, scans, filehash=filehash, tempdir=tempdir)
+	res = scan(filetoscan, mstype, scans, magicscans, filehash=filehash, tempdir=tempdir)
 	if res != []:
 		report['scans'] = res
 	return report
 
 ## scan a single file and recurse. Optionally supply a filehash for
 ## checking a knowledgebase, which is future work.
-def scan(filetoscan, magic, scans, filehash=None, tempdir=None):
+def scan(filetoscan, magic, scans, magicscans, filehash=None, tempdir=None):
 	## we reset the reports, blacklist, offsets and tags for each new scan
 	reports = []
 	blacklist = []
@@ -208,7 +208,7 @@ def scan(filetoscan, magic, scans, filehash=None, tempdir=None):
 	tags = []
 
 	## scan for markers
-	offsets =  bat.prerun.genericMarkerSearch(filetoscan)
+	offsets =  bat.prerun.genericMarkerSearch(filetoscan, magicscans)
 
 	## prerun scans should be run before any of the other scans
 	for scan in scans['prerunscans']:
@@ -303,7 +303,7 @@ def scan(filetoscan, magic, scans, filehash=None, tempdir=None):
 						try:
 							if not os.path.islink("%s/%s" % (i[0], p)):
 								os.chmod("%s/%s" % (i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-							res = scanfile(i[0], p, scans, lentempdir=len(scandir), tempdir=tempdir)
+							res = scanfile(i[0], p, scans, magicscans, lentempdir=len(scandir), tempdir=tempdir)
 							if res != []:
 								scanreports.append(res)
 						except Exception, e:
@@ -448,6 +448,12 @@ def main(argv):
 	config.readfp(configfile)
 
 	scans = readconfig(config)
+	magicscans = []
+	for k in scans.keys():
+		for s in scans[k]:
+			if s['magic'] != None:
+				magicscans = magicscans + s['magic'].split(':')
+	magicscans = list(set(magicscans))
 	scandate = datetime.datetime.utcnow()
 
 	## Per binary scanned we get a list with results.
@@ -458,7 +464,7 @@ def main(argv):
 	## the file inside a file system we looked at was in fact a file system.
 	tempdir=tempfile.mkdtemp()
 	shutil.copy(scan_binary, tempdir)
-	res = scanfile(tempdir, os.path.basename(scan_binary), scans, tempdir=tempdir)
+	res = scanfile(tempdir, os.path.basename(scan_binary), scans, magicscans, tempdir=tempdir)
 	xml = prettyprintresxml(res, scandate, scans)
 	print xml.toxml()
 
