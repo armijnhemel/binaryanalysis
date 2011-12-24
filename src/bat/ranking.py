@@ -440,6 +440,10 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	## packages), assign it to one package.  We do this by picking the
 	## package that would gain the highest score increment across all
 	## strings that are left.  This is repeated until no strings are left.
+	pkgsSorted2 = {}
+	for stri in stringsLeft.keys():
+		pkgsSortedTmp = map(lambda x: {'package': x, 'uniquescore': uniqueScore.get(x, 0)}, stringsLeft[stri]['pkgs'])
+		pkgsSorted2[stri] = pkgsSortedTmp
 	roundNr = 0
 	strleft = len(stringsLeft.keys())
 	while strleft > 0:
@@ -449,7 +453,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 		stringsPerPkg = {}
 		for stri in stringsLeft.keys():
 			## get the unique score per package, temporarily record it and sort in reverse order
-			pkgsSorted = map(lambda x: {'package': x, 'uniquescore': uniqueScore.get(x, 0)}, stringsLeft[stri]['pkgs'])
+			pkgsSorted = pkgsSorted2[stri]
 			pkgsSorted = sorted(pkgsSorted, key=lambda x: x['uniquescore'], reverse=True)
 			## and get rid of the unique scores again
 			pkgsSorted = map(lambda x: x['package'], pkgsSorted)
@@ -463,6 +467,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 				gain[p2] = gain.get(p2, 0) + stringsLeft[stri]['score']
 				stringsPerPkg[p2] = stri
 		## if all the gains are < our cutoff value (1.0e-20) we can already quit
+		## This should no longer happen.
 		if gain == {}:
 			break
 		## gain_sorted contains the sort order, gain contains the actual data
