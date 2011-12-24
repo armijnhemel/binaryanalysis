@@ -83,3 +83,18 @@ def verifyText(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	tags.append("text")
 	datafile.close()
 	return ([], blacklist, offsets, tags)
+
+## quick check to verify if a file is a graphics file.
+## right now it's just a check for JPEGs.
+def verifyGraphics(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	tags = []
+	p = subprocess.Popen(['jpegtopnm', '-multiple', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		return ([], blacklist, offsets, tags)
+	## multiple jpegs in this file, so we need to unpack
+	if len(stanerr.strip().split("\n")) > 1:
+		return ([], blacklist, offsets, tags)
+	tags.append("jpeg")
+	tags.append("graphics")
+	return ([], blacklist, offsets, tags)
