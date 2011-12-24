@@ -474,13 +474,10 @@ def extractGeneric(lines, path, language='C', envvars=None):
 
 		best = gain_sorted[0]
 
-		close = []
 		## if we have multiple packages that have a big enough gain, we
 		## add them to 'close' and battle it out to see which package is
 		## the most likely hit.
-		for p3 in gain_sorted:
-			if gain[p3] > gain[best] * 0.9:
-				close.append(p3)
+		close = filter(lambda x: gain[x] > (gain[best] * 0.9), gain_sorted)
 
        		## Let's hope "sort" terminates on a comparison function that
        		## may not actually be a proper ordering.	
