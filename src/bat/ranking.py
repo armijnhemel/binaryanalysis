@@ -433,7 +433,6 @@ def extractGeneric(lines, path, language='C', envvars=None):
 					if score > 1.0e-20:
 						stringsLeft['%s\t%s' % (i, fn)] = {'string': i, 'score': score, 'filename': fn, 'pkgs' : filenames[fn].keys()}
 		del allStrings[i]
-		#del filenames
 
 	## For each string that occurs in the same filename in multiple
 	## packages (e.g., "debugXML.c", a cloned file of libxml2 in several
@@ -452,10 +451,10 @@ def extractGeneric(lines, path, language='C', envvars=None):
 		gain = {}
 		stringsPerPkg = {}
 		for stri in stringsLeft.keys():
-			## get the unique score per package, temporarily record it and sort in reverse order
+			## get the unique score per package and sort in reverse order
 			pkgsSorted = pkgsSorted2[stri]
 			pkgsSorted = sorted(pkgsSorted, key=lambda x: x['uniquescore'], reverse=True)
-			## and get rid of the unique scores again
+			## and get rid of the unique scores again. Now it's sorted.
 			pkgsSorted = map(lambda x: x['package'], pkgsSorted)
 
 			pkgs2 = []
