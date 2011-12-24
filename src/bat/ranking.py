@@ -439,10 +439,21 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	## packages), assign it to one package.  We do this by picking the
 	## package that would gain the highest score increment across all
 	## strings that are left.  This is repeated until no strings are left.
-	pkgsSorted2 = {}
+	pkgsScorePerString = {}
 	for stri in stringsLeft.keys():
 		pkgsSortedTmp = map(lambda x: {'package': x, 'uniquescore': uniqueScore.get(x, 0)}, stringsLeft[stri]['pkgs'])
-		pkgsSorted2[stri] = pkgsSortedTmp
+
+		## get the unique score per package and sort in reverse order
+		pkgsSorted = sorted(pkgsSortedTmp, key=lambda x: x['uniquescore'], reverse=True)
+		## and get rid of the unique scores again. Now it's sorted.
+		pkgsSorted = map(lambda x: x['package'], pkgsSorted)
+		pkgs2 = []
+
+		for pkgSort in pkgsSorted:
+			if uniqueScore.get(pkgSort, 0) == uniqueScore.get(pkgsSorted[0], 0):
+				pkgs2.append(pkgSort)
+		pkgsScorePerString[stri] = pkgs2
+
 	roundNr = 0
 	strleft = len(stringsLeft.keys())
 	while strleft > 0:
@@ -451,17 +462,8 @@ def extractGeneric(lines, path, language='C', envvars=None):
 		gain = {}
 		stringsPerPkg = {}
 		for stri in stringsLeft.keys():
-			## get the unique score per package and sort in reverse order
-			pkgsSorted = pkgsSorted2[stri]
-			pkgsSorted = sorted(pkgsSorted, key=lambda x: x['uniquescore'], reverse=True)
-			## and get rid of the unique scores again. Now it's sorted.
-			pkgsSorted = map(lambda x: x['package'], pkgsSorted)
+			pkgs2 = pkgsScorePerString[stri]
 
-			pkgs2 = []
-
-			for pkgSort in pkgsSorted:
-				if uniqueScore.get(pkgSort, 0) == uniqueScore.get(pkgsSorted[0], 0):
-					pkgs2.append(pkgSort)
 			for p2 in pkgs2:
 				gain[p2] = gain.get(p2, 0) + stringsLeft[stri]['score']
 				stringsPerPkg[p2] = stri
