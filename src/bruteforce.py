@@ -255,6 +255,8 @@ def scan(filetoscan, magic, scans, magicscans, filehash=None, tempdir=None):
 		else:
 			unpackscans.append(scan)
 
+	unpackscans = sorted(unpackscans, key=lambda x: x['priority'], reverse=True)
+
 	for scan in unpackscans:
 		## the whole file has already been scanned by other scans, so we can
 		## continue with the program scans.
@@ -405,8 +407,7 @@ def readconfig(config):
 				unpackscans.append(conf)
 			elif config.get(section, 'type') == 'prerun':
 				prerunscans.append(conf)
-	## sort the unpack and prerun scans on priority (highest priority first)
-	unpackscans = sorted(unpackscans, key=lambda x: x['priority'], reverse=True)
+	## sort the prerun scans on priority (highest priority first)
 	prerunscans = sorted(prerunscans, key=lambda x: x['priority'], reverse=True)
 	return {'unpackscans': unpackscans, 'programscans': programscans, 'prerunscans': prerunscans}
 
