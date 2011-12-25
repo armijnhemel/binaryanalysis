@@ -190,9 +190,7 @@ def scanfile(path, filename, scans, magicscans, lentempdir=0, tempdir=None):
 
 	filetoscan = "%s/%s" % (path, filename)
 
-	## and store the results per scanned file, except when explicitely
-	## instructed not to scan. In that case just report some statistics
-	## about the file.
+	## and store the results per scanned file
 	res = scan(filetoscan, mstype, scans, magicscans, filehash=filehash, tempdir=tempdir)
 	if res != []:
 		report['scans'] = res
@@ -230,8 +228,8 @@ def scan(filetoscan, magic, scans, magicscans, filehash=None, tempdir=None):
 
 	## we have all offsets with markers here, so we can filter out
 	## the scans we won't need
-	## TODO: only filter the scans we need, sort them by offset
-	## to make sure we get it right the first time more often
+	## TODO: sort the scans by offset (or just offset 0) to make sure
+	## we get it right the first time more often
 	filterscans = []
 	for magictype in offsets.keys():
 		if offsets[magictype] != []:
@@ -360,8 +358,7 @@ def scan(filetoscan, magic, scans, magicscans, filehash=None, tempdir=None):
 			reports.append(report)
 	return reports
 
-## arrays for storing data for the scans we have. Since the configuration is
-## only read once and thus will not change we can easily store it globally
+## arrays for storing data for the scans we have.
 ## unpackscans: {name, module, method, xmloutput, priority, cleanup}
 ## These are sorted by priority
 ## programscans: {name, module, method, xmloutput, cleanup}
@@ -416,7 +413,6 @@ def readconfig(config):
 def main(argv):
 	config = ConfigParser.ConfigParser()
         parser = OptionParser()
-	parser.add_option("-a", "--always", action="store_true", dest="scanalways", help="always perform brute force scan even if results are availale in the knowledgebase (default false)")
 	parser.add_option("-b", "--binary", action="store", dest="fw", help="path to binary file", metavar="FILE")
 	parser.add_option("-c", "--config", action="store", dest="cfg", help="path to configuration file", metavar="FILE")
 	parser.add_option("-z", "--cleanup", action="store_true", dest="cleanup", help="cleanup after analysis? (default: false)")
@@ -428,12 +424,6 @@ def main(argv):
 	except:
         	print "No file to scan found"
         	sys.exit(1)
-
-	global scanalways
-	if options.scanalways == None:
-		scanalways = False
-	else:
-		scanalways = options.scanalways
 
 	if options.cfg != None:
 		try:
