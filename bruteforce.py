@@ -105,10 +105,14 @@ def prettyprintresxmlsnippet(res, root, unpackscans, programscans):
                 					tmpnode.appendChild(tmpnode2)
 
 						if 'scans' in elem:
-							tmpnode2 = root.createElement('scans')
+							childscannodes = []
 							for scan in elem['scans']:
 								childscannode = prettyprintresxmlsnippet(scan, root, unpackscans, programscans)
 								if childscannode != None:
+									childscannodes.append(childscannode)
+							if childscannodes != []:
+								tmpnode2 = root.createElement('scans')
+								for childscannode in childscannodes:
 									tmpnode2.appendChild(childscannode)
 								tmpnode.appendChild(tmpnode2)
                 			topnode.appendChild(tmpnode)
@@ -140,7 +144,7 @@ def prettyprintresxml(res, scandate, scans):
 			tmpnode = root.createElement('scans')
 			for childscannode in childscannodes:
 				tmpnode.appendChild(childscannode)
-		topnode.appendChild(tmpnode)
+			topnode.appendChild(tmpnode)
 	root.appendChild(topnode)
 	return root
 
