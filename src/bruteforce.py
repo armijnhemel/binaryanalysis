@@ -341,7 +341,7 @@ def scan(filetoscan, magic, scans, magicscans, filehash=None, tempdir=None):
 
 		if scan['noscan'] != None:
 			noscans = scan['noscan'].split(':')
-			if list(set(tags).intersection(set(tags))) != []:
+			if list(set(noscans).intersection(set(tags))) != []:
 				continue
 		report = {}
 		module = scan['module']
