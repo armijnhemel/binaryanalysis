@@ -1708,12 +1708,14 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 	lzmaoffsets.sort()
 	diroffsets = []
 	counter = 1
+
+	filesize = os.stat(filename).st_size
 	for offset in lzmaoffsets:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "lzma", counter)
-		res = unpackLZMA(filename, offset, tmpdir)
+		res = unpackLZMA(filename, offset, filesize, tmpdir)
 		if res != None:
 			diroffsets.append((res, offset))
 			counter = counter + 1
@@ -1727,7 +1729,7 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 ## With XZ Utils >= 5.0.0 we should be able to use the -l option for integrity
 ## testing. It will not be faster, but probably more accurate.
 ## This would require Fedora 15 or later (not sure about which Ubuntu).
-def unpackLZMA(filename, offset, tempdir=None):
+def unpackLZMA(filename, offset, filesize, tempdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
 	## Assumes (for now) that lzma is in the path
@@ -1736,8 +1738,16 @@ def unpackLZMA(filename, offset, tempdir=None):
 	os.fdopen(tmpfile[0]).close()
 
 	if offset != 0:
-		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
+		## if the offset is small, the blocksize of dd will be small, so it will be slow. In that case using
+		## tail is faster, especially for big files.
+		if offset < 128:
+			tmptmpfile = open(tmpfile[1], 'wb')
+			p = subprocess.Popen(['tail', filename, '-c', "%d" % (filesize - offset)], stdout=tmptmpfile, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate()
+			tmptmpfile.close()
+		else:
+			p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate()
 	else:
 		os.link(filename, "%s/%s" % (tmpdir, "templink"))
 		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
