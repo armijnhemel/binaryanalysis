@@ -225,13 +225,16 @@ def scan(filetoscan, magic, scans, magicscans, filehash=None, tempdir=None):
 		tags = tags + scantags
 
 	## we have all offsets with markers here, so we can filter out
-	## the scans we won't need
-	## TODO: sort the scans by offset (or just offset 0) to make sure
-	## we get it right the first time more often
+	## the scans we won't need.
+	## We also keep track of the "most promising" scans (offset 0) to try
+	## them first.
 	filterscans = []
+	zerooffsets = []
 	for magictype in offsets.keys():
 		if offsets[magictype] != []:
 			filterscans.append(magictype)
+			if offsets[magictype][0] - bat.fsmagic.correction.get(magictype, 0) == 0:
+				zerooffsets.append(magictype)
 
 	filesize = os.stat(filetoscan).st_size
 	## 'unpackscans' has been sorted in decreasing priority, so highest
@@ -241,6 +244,7 @@ def scan(filetoscan, magic, scans, magicscans, filehash=None, tempdir=None):
 	## of the offset, like for tar, gzip, iso9660, etc.) make sure it is
 	## run first.
 	unpackscans = []
+	scanfirst = []
 
 	## Filter scans
 	for scan in scans['unpackscans']:
@@ -251,11 +255,18 @@ def scan(filetoscan, magic, scans, magicscans, filehash=None, tempdir=None):
 		if scan['magic'] != None:
 			scanmagic = scan['magic'].split(':')
 			if list(set(scanmagic).intersection(set(filterscans))) != []:
-				unpackscans.append(scan)
+				if list(set(scanmagic).intersection(set(zerooffsets))) != []:
+					scanfirst.append(scan)
+				else:
+					unpackscans.append(scan)
 		else:
 			unpackscans.append(scan)
 
+	## sort the scans
 	unpackscans = sorted(unpackscans, key=lambda x: x['priority'], reverse=True)
+	## prepend the most promising scan
+	scanfirst = sorted(scanfirst, key=lambda x: x['priority'], reverse=True)
+	unpackscans = scanfirst + unpackscans
 
 	for scan in unpackscans:
 		## the whole file has already been scanned by other scans, so we can

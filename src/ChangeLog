@@ -1,3 +1,7 @@
+2011-12-25
+* select scans based on the actual offsets that were found. Also make sure
+that scans for which magic was found at offset 0 are tried first.
+
 2011-12-24
 * add a very simple verifyGraphics pre-run scan. Right now it only verifies if
 a file is a JPEG file.
