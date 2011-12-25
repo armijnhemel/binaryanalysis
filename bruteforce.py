@@ -131,10 +131,14 @@ def prettyprintresxml(res, scandate, scans):
 
 	## then we recurse into the results from the individual scans
 	if 'scans' in res:
-		tmpnode = root.createElement('scans')
+		childscannodes = []
 		for scan in res['scans']:
 			childscannode = prettyprintresxmlsnippet(scan, root, scans['unpackscans'], scans['programscans'])
 			if childscannode != None:
+				childscannodes.append(childscannode)
+		if childscannodes != []:
+			tmpnode = root.createElement('scans')
+			for childscannode in childscannodes:
 				tmpnode.appendChild(childscannode)
 		topnode.appendChild(tmpnode)
 	root.appendChild(topnode)
