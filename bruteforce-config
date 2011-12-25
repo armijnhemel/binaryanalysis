@@ -46,7 +46,7 @@ noscan   = text:xml:graphics
 #method  = searchUnpackARJ
 #priority = 1
 #magic = arj
-#noscan   = text:xml
+#noscan   = text:xml:graphics
 
 [base64]
 type    = unpack
@@ -115,7 +115,7 @@ module  = bat.fwunpack
 method  = searchUnpackGIF
 priority = 0
 magic = gif87:gif89
-noscan   = text:xml:jpeg
+noscan   = text:xml:jpeg:bmp
 
 [gzip]
 type    = unpack
@@ -131,7 +131,7 @@ noscan   = text:xml:graphics
 #method  = searchUnpackIco
 #priority = 0
 #magic = ico
-#noscan   = text:xml:jpeg
+#noscan   = text:xml:jpeg:bmp
 
 [installshield]
 type    = unpack
@@ -202,7 +202,7 @@ module  = bat.fwunpack
 method  = searchUnpackPNG
 priority = 0
 magic = png:pngtrailer
-noscan   = text:xml:jpeg
+noscan   = text:xml:jpeg:bmp
 
 [rar]
 type    = unpack
@@ -234,7 +234,7 @@ module  = bat.fwunpack
 method  = searchUnpackSwf
 priority = 0
 magic = swf
-noscan   = text:xml:jpeg
+noscan   = text:xml:jpeg:bmp
 
 [tar]
 type    = unpack
