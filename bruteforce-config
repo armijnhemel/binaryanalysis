@@ -53,7 +53,7 @@ type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackBase64
 priority = 0
-noscan   = xml:graphics
+noscan   = xml:graphics:binary
 
 [byteswap]
 type    = unpack
