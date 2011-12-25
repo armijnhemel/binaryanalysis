@@ -240,7 +240,20 @@ def scan(filetoscan, magic, scans, magicscans, filehash=None, tempdir=None):
 	## or at least if one scan has a match for offset 0 (after correction
 	## of the offset, like for tar, gzip, iso9660, etc.) make sure it is
 	## run first.
-	unpackscans = scans['unpackscans']
+	unpackscans = []
+
+	## Filter scans
+	for scan in scans['unpackscans']:
+		if scan['noscan'] != None:
+			noscans = scan['noscan'].split(':')
+			if list(set(noscans).intersection(set(tags))) != []:
+				continue
+		if scan['magic'] != None:
+			scanmagic = scan['magic'].split(':')
+			if list(set(scanmagic).intersection(set(filterscans))) != []:
+				unpackscans.append(scan)
+		else:
+			unpackscans.append(scan)
 
 	for scan in unpackscans:
 		## the whole file has already been scanned by other scans, so we can
@@ -248,17 +261,6 @@ def scan(filetoscan, magic, scans, magicscans, filehash=None, tempdir=None):
 		if bat.extractor.inblacklist(0, blacklist) == filesize:
 			break
 		
-		## if we don't have a marker in the file, but we do have a marker
-		## in the scan, we can continue with the next scan
-		if scan['magic'] != None:
-			scanmagic = scan['magic'].split(':')
-			if list(set(scanmagic).intersection(set(filterscans))) == []:
-				continue
-		if scan['noscan'] != None:
-			noscans = scan['noscan'].split(':')
-			if list(set(tags).intersection(set(tags))) != []:
-				continue
-
 		module = scan['module']
 		method = scan['method']
 		## if there is extra information we need to pass, like locations of databases
