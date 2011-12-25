@@ -63,6 +63,15 @@ fsmagic = {
             'java_serialized':  '\xac\xed\x00',
           }
 
+## some offsets can be found after a certain number of bytes, but
+## the actual file system or file starts earlier
+correction = {
+               'ext2':    0x438,
+               'iso9660': 32769,
+               'tar1':    0x101,
+               'tar2':    0x101,
+             }
+
 ## collection of markers that should be scanned together
 squashtypes = ['squashfs1', 'squashfs2', 'squashfs3', 'squashfs4']
 lzmatypes   = ['lzma_alone', 'lzma_alone_alt']
