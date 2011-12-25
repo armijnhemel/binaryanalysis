@@ -75,6 +75,7 @@ def verifyText(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	while databuffer != '':
 		if not extractor.isPrintables(databuffer):
 			datafile.close()
+			tags.append("binary")
 			return ([], blacklist, tags)
 		## move the offset 100000
 		datafile.seek(offset + 100000)
