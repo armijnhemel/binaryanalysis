@@ -432,7 +432,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 					## it and remove it from the list. This speeds up the algorithm A LOT.
 					if score > 1.0e-20:
 						stringsLeft['%s\t%s' % (i, fn)] = {'string': i, 'score': score, 'filename': fn, 'pkgs' : filenames[fn].keys()}
-		del allStrings[i]
+		#del allStrings[i]
 
 	## For each string that occurs in the same filename in multiple
 	## packages (e.g., "debugXML.c", a cloned file of libxml2 in several
