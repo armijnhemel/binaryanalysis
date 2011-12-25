@@ -101,6 +101,7 @@ def searchUnpackBase64(filename, tempdir=None, blacklist=[], offsets={}, envvars
 	else:
 		tmpfile = tempfile.mkstemp(dir=tmpdir)
 		os.write(tmpfile[0], stanout)
+		os.fdopen(tmpfile[0]).close()
 		## the whole file is blacklisted
 		blacklist.append((0, os.stat(filename).st_size))
 		diroffsets.append((tmpdir, 0))
