@@ -188,10 +188,8 @@ def scanfile(path, filename, scans, magicscans, lentempdir=0, tempdir=None):
 	filehash = gethash(path, filename)
 	report['sha256'] = filehash
 
-	filetoscan = "%s/%s" % (path, filename)
-
 	## and store the results per scanned file
-	res = scan(filetoscan, mstype, scans, magicscans, filehash=filehash, tempdir=tempdir)
+	res = scan("%s/%s" % (path, filename), mstype, scans, magicscans, filehash=filehash, tempdir=tempdir)
 	if res != []:
 		report['scans'] = res
 	return report
