@@ -154,6 +154,7 @@ noscan   = text:xml:graphics
 #module  = bat.fwunpack
 #method  = searchUnpackJavaSerialized
 #priority = 2
+#magic = java_serialized
 #noscan   = text:xml:graphics
 
 [jffs2]
