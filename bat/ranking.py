@@ -487,11 +487,11 @@ def extractGeneric(lines, path, language='C', envvars=None):
        		## may not actually be a proper ordering.	
 		if len(close) > 1:
 			# print "  doing battle royale between [close]"
-			## reverse sort close, then best = close[0]
+			## reverse sort close, then best = close_sorted[0][0] (no need to
+			## transform it back to original format
 			close_sorted = map(lambda x: (x, averageStringsPerPkgVersion(x, conn)), close)
 			close_sorted = sorted(close_sorted, key = lambda x: x[1], reverse=True)
-			close = map(lambda x: x[0], close_sorted)
-			best = close[0]
+			best = close_sorted[0][0]
 		x = stringsLeft[stringsPerPkg[best]]
 		if not allMatches.has_key(best):
 			allMatches[best] = {}
