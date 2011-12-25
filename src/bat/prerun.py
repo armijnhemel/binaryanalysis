@@ -86,8 +86,24 @@ def verifyText(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	return ([], blacklist, tags)
 
 ## quick check to verify if a file is a graphics file.
-## right now it's just a check for JPEGs.
 def verifyGraphics(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	tags = []
+	tags = verifyPNG(filename, tempdir, blacklist, offsets, envvars)[2]
+	if tags == []:
+		tags = verifyBMP(filename, tempdir, blacklist, offsets, envvars)[2]
+	return ([], blacklist, tags)
+
+def verifyBMP(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	tags = []
+	p = subprocess.Popen(['bmptopnm', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		return ([], blacklist, tags)
+	tags.append("bmp")
+	tags.append("graphics")
+	return ([], blacklist, tags)
+
+def verifyPNG(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	tags = []
 	p = subprocess.Popen(['jpegtopnm', '-multiple', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
