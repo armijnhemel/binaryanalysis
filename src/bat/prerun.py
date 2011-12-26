@@ -97,7 +97,7 @@ def verifyBMP(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	tags = []
 	p = subprocess.Popen(['bmptopnm', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
+	if p.returncode != 0 or "warning" in stanerr:
 		return ([], blacklist, tags)
 	tags.append("bmp")
 	tags.append("graphics")
