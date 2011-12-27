@@ -295,9 +295,10 @@ def scan(filetoscan, magic, scans, magicscans, filehash=None, tempdir=None):
 		## file and a hash with offsets for each marker.
 		exec "from %s import %s as bat_%s" % (module, method, method)
 		scanres = eval("bat_%s(filetoscan, tempdir, blacklist, offsets, envvars)" % (method))
-		## result is either empty, or contains offsets
-		if len(scanres) == 2:
-			(diroffsets, blacklist) = scanres
+		## result is either empty, or contains offsets and tags
+		if len(scanres) == 3:
+			(diroffsets, blacklist, scantags) = scanres
+			tags = tags + scantags
 		if len(diroffsets) == 0:
 			continue
 		blacklist = mergeBlacklist(blacklist)
