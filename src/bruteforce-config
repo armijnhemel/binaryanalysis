@@ -30,7 +30,7 @@ module  = bat.fwunpack
 method  = searchUnpack7z
 priority = 1
 magic = 7z
-noscan   = text:xml:graphics
+noscan   = text:xml:graphics:pdf
 
 [ar]
 type    = unpack
@@ -38,7 +38,7 @@ module  = bat.fwunpack
 method  = searchUnpackAr
 priority = 2
 magic = ar
-noscan   = text:xml:graphics
+noscan   = text:xml:graphics:pdf
 
 #[arj]
 #type    = unpack
@@ -46,21 +46,21 @@ noscan   = text:xml:graphics
 #method  = searchUnpackARJ
 #priority = 1
 #magic = arj
-#noscan   = text:xml:graphics
+#noscan   = text:xml:graphics:pdf
 
 [base64]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackBase64
 priority = 0
-noscan   = xml:graphics:binary
+noscan   = xml:graphics:binary:pdf
 
 [byteswap]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackByteSwap
 priority = 100
-noscan   = xml:graphics
+noscan   = xml:graphics:pdf
 
 [bzip2]
 type    = unpack
@@ -68,7 +68,7 @@ module  = bat.fwunpack
 method  = searchUnpackBzip2
 priority = 1
 magic = bz2
-noscan   = text:xml:graphics
+noscan   = text:xml:graphics:pdf
 
 [cab]
 type    = unpack
@@ -76,7 +76,7 @@ module  = bat.fwunpack
 method  = searchUnpackCab
 priority = 1
 magic = cab
-noscan   = text:xml:graphics
+noscan   = text:xml:graphics:pdf
 
 [cpio]
 type    = unpack
@@ -84,7 +84,7 @@ module  = bat.fwunpack
 method  = searchUnpackCpio
 priority = 2
 magic = cpio1:cpio2:cpio3:cpiotrailer
-noscan   = text:xml:graphics
+noscan   = text:xml:graphics:pdf
 
 #[cramfs]
 #type    = unpack
@@ -92,14 +92,14 @@ noscan   = text:xml:graphics
 #method  = searchUnpackCramfs
 #priority = 3
 #magic = cramfs
-#noscan   = text:xml:graphics
+#noscan   = text:xml:graphics:pdf
 
 [exe]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackExe
 priority = 2
-noscan   = text:xml:graphics
+noscan   = text:xml:graphics:pdf
 
 [ext2fs]
 type    = unpack
@@ -107,7 +107,7 @@ module  = bat.fwunpack
 method  = searchUnpackExt2fs
 priority = 3
 magic = ext2
-noscan   = text:xml:graphics
+noscan   = text:xml:graphics:pdf
 
 [gif]
 type    = unpack
@@ -115,7 +115,7 @@ module  = bat.fwunpack
 method  = searchUnpackGIF
 priority = 0
 magic = gif87:gif89
-noscan   = text:xml:jpeg:bmp
+noscan   = text:xml:jpeg:bmp:pdf:png
 
 [gzip]
 type    = unpack
@@ -123,7 +123,7 @@ module  = bat.fwunpack
 method  = searchUnpackGzip
 priority = 1
 magic = gzip
-noscan   = text:xml:graphics
+noscan   = text:xml:graphics:pdf
 
 #[ico]
 #type    = unpack
@@ -131,7 +131,7 @@ noscan   = text:xml:graphics
 #method  = searchUnpackIco
 #priority = 0
 #magic = ico
-#noscan   = text:xml:jpeg:bmp
+#noscan   = text:xml:jpeg:bmp:pdf:gif:png
 
 [installshield]
 type    = unpack
@@ -139,7 +139,7 @@ module  = bat.fwunpack
 method  = searchUnpackInstallShield
 priority = 1
 magic = installshield
-noscan   = text:xml:graphics
+noscan   = text:xml:graphics:pdf
 
 [iso9660]
 type    = unpack
@@ -147,7 +147,7 @@ module  = bat.fwunpack
 method  = searchUnpackISO9660
 priority = 4
 magic = iso9660
-noscan   = text:xml:graphics
+noscan   = text:xml:graphics:pdf
 
 #[java_serialized]
 #type    = unpack
@@ -155,7 +155,7 @@ noscan   = text:xml:graphics
 #method  = searchUnpackJavaSerialized
 #priority = 2
 #magic = java_serialized
-#noscan   = text:xml:graphics
+#noscan   = text:xml:graphics:pdf
 
 [jffs2]
 type    = unpack
@@ -163,7 +163,7 @@ module  = bat.fwunpack
 method  = searchUnpackJffs2
 priority = 1
 magic = jffs2_le
-noscan   = text:xml:graphics
+noscan   = text:xml:graphics:pdf
 
 [lzip]
 type    = unpack
@@ -171,7 +171,7 @@ module  = bat.fwunpack
 method  = searchUnpackLzip
 priority = 1
 magic = lzip
-noscan   = text:xml:graphics
+noscan   = text:xml:graphics:pdf
 
 [lzma]
 type    = unpack
@@ -179,7 +179,7 @@ module  = bat.fwunpack
 method  = searchUnpackLZMA
 priority = 1
 magic = lzma_alone:lzma_alone_alt
-noscan   = text:xml:graphics
+noscan   = text:xml:graphics:pdf
 
 [lzo]
 type    = unpack
@@ -187,7 +187,7 @@ module  = bat.fwunpack
 method  = searchUnpackLzo
 priority = 1
 magic = lzo
-noscan   = text:xml:graphics
+noscan   = text:xml:graphics:pdf
 
 [pdf_unpack]
 type    = unpack
@@ -203,7 +203,7 @@ module  = bat.fwunpack
 method  = searchUnpackPNG
 priority = 0
 magic = png:pngtrailer
-noscan   = text:xml:jpeg:bmp
+noscan   = text:xml:jpeg:bmp:pdf:gif
 
 [rar]
 type    = unpack
@@ -211,7 +211,7 @@ module  = bat.fwunpack
 method  = searchUnpackRar
 priority = 1
 magic = rar
-noscan   = text:xml:graphics
+noscan   = text:xml:graphics:pdf
 
 [rpm]
 type    = unpack
@@ -219,7 +219,7 @@ module  = bat.unpackrpm
 method  = searchUnpackRPM
 priority = 2
 magic = rpm
-noscan   = text:xml:graphics
+noscan   = text:xml:graphics:pdf
 
 [squashfs]
 type    = unpack
@@ -227,7 +227,7 @@ module  = bat.fwunpack
 method  = searchUnpackSquashfs
 priority = 1
 magic = squashfs1:squashfs2:squashfs3:squashfs4
-noscan   = text:xml:graphics
+noscan   = text:xml:graphics:pdf
 
 [swf]
 type    = unpack
@@ -235,7 +235,7 @@ module  = bat.fwunpack
 method  = searchUnpackSwf
 priority = 0
 magic = swf
-noscan   = text:xml:jpeg:bmp
+noscan   = text:xml:jpeg:bmp:pdf:png:gif
 
 [tar]
 type    = unpack
@@ -243,7 +243,7 @@ module  = bat.fwunpack
 method  = searchUnpackTar
 priority = 3
 magic = tar1:tar2
-noscan   = text:xml:graphics
+noscan   = text:xml:graphics:pdf
 
 [ubifs]
 type    = unpack
@@ -251,21 +251,21 @@ module  = bat.fwunpack
 method  = searchUnpackUbifs
 priority = 3
 magic = ubifs
-noscan   = text:xml:graphics
+noscan   = text:xml:graphics:pdf
 
 [unyaffs]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackYaffs2
 priority = 2
-noscan   = text:xml:graphics
+noscan   = text:xml:graphics:pdf
 
 [upx]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackUPX
 priority = 3
-noscan   = text:xml:graphics
+noscan   = text:xml:graphics:pdf
 
 [xz]
 type    = unpack
@@ -273,7 +273,7 @@ module  = bat.fwunpack
 method  = searchUnpackXZ
 priority = 1
 magic = xz:xztrailer
-noscan   = text:xml:graphics
+noscan   = text:xml:graphics:pdf
 
 [zip]
 type    = unpack
@@ -281,7 +281,7 @@ module  = bat.fwunpack
 method  = searchUnpackZip
 priority = 1
 magic = zip
-noscan   = text:xml:graphics
+noscan   = text:xml:graphics:pdf
 
 ##################
 ### leaf scans ###
@@ -291,25 +291,25 @@ noscan   = text:xml:graphics
 type    = program
 module  = bat.checks
 method  = scanArchitecture
-noscan  = text:xml:graphics
+noscan  = text:xml:graphics:pdf
 
 [busybox-version]
 type    = program
 module  = bat.busyboxversion
 method  = busybox_version
-noscan  = text:xml:graphics
+noscan  = text:xml:graphics:pdf
 
 [dproxy]
 type    = program
 module  = bat.checks
 method  = searchDproxy
-noscan  = text:xml:graphics
+noscan  = text:xml:graphics:pdf
 
 [ez-ipupdate]
 type    = program
 module  = bat.checks
 method  = searchEzIpupdate
-noscan  = text:xml:graphics
+noscan  = text:xml:graphics:pdf
 
 [forges]
 type    = program
@@ -322,39 +322,39 @@ noscan  = graphics
 type    = program
 module  = bat.checks
 method  = searchIproute
-noscan  = text:xml:graphics
+noscan  = text:xml:graphics:pdf
 
 [iptables]
 type    = program
 module  = bat.checks
 method  = searchIptables
-noscan  = text:xml:graphics
+noscan  = text:xml:graphics:pdf
 
 [kernelchecks]
 type    = program
 module  = bat.kernelanalysis
 method  = kernelChecks
 xmloutput = xmlprettyprint
-noscan  = text:xml:graphics
+noscan  = text:xml:graphics:pdf
 
 [kernelmodulelicense]
 type    = program
 module  = bat.kernelanalysis
 method  = analyseModuleLicense
-noscan  = text:xml:graphics
+noscan  = text:xml:graphics:pdf
 
 [libs]
 type    = program
 module  = bat.checks
 method  = searchDynamicLibs
 xmloutput = dynamicLibsPrettyPrint
-noscan  = text:xml:graphics
+noscan  = text:xml:graphics:pdf
 
 [libusb]
 type    = program
 module  = bat.checks
 method  = searchLibusb
-noscan  = text:xml:graphics
+noscan  = text:xml:graphics:pdf
 
 [licenses]
 type    = program
@@ -366,7 +366,7 @@ xmloutput = licensesPrettyPrint
 type    = program
 module  = bat.checks
 method  = searchLoadLin
-noscan  = text:xml:graphics
+noscan  = text:xml:graphics:pdf
 
 [pdf]
 type    = program
@@ -381,34 +381,34 @@ noscan  = text:xml:graphics
 #method  = searchGeneric
 #xmloutput = xmlprettyprint
 #envvars = BAT_SQLITE_AVG=/tmp/avg:BAT_SQLITE_STRINGSCACHE=/tmp/stringscache:BAT_SQLITE_DB=/tmp/master
-#noscan  = text:xml:graphics
+#noscan  = text:xml:graphics:pdf
 
 [redboot]
 type    = program
 module  = bat.checks
 method  = searchRedBoot
-noscan  = text:xml:graphics
+noscan  = text:xml:graphics:pdf
 
 [uboot]
 type    = program
 module  = bat.checks
 method  = searchUBoot
-noscan  = text:xml:graphics
+noscan  = text:xml:graphics:pdf
 
 [vsftpd]
 type    = program
 module  = bat.checks
 method  = searchVsftpd
-noscan  = text:xml:graphics
+noscan  = text:xml:graphics:pdf
 
 [wireless-tools]
 type    = program
 module  = bat.checks
 method  = searchWirelessTools
-noscan  = text:xml:graphics
+noscan  = text:xml:graphics:pdf
 
 [wpa-supplicant]
 type    = program
 module  = bat.checks
 method  = searchWpaSupplicant
-noscan  = text:xml:graphics
+noscan  = text:xml:graphics:pdf
