@@ -394,7 +394,6 @@ def extractGeneric(lines, path, language='C', envvars=None):
 				## packagename = (name of package, [list of filenames with 'i'])
 				## we record in how many different packages we find the
 				## same filename that contain i
-				## remove duplicates first
 				for fn in list(set(packagename[1])):
 					if not filenames.has_key(fn):
 						filenames[fn] = {}
@@ -403,7 +402,6 @@ def extractGeneric(lines, path, language='C', envvars=None):
 			try:
 				score = len(i) / pow(alpha, (len(filenames.keys()) - 1))
 			except Exception, e:
-				## print >>sys.stderr, e
 				## pow(alpha, (len(filenames.keys()) - 1)) is overflowing here
 				## so the score would be very close to 0. The largest value
 				## we have is sys.maxint, so use that one. The score will be
@@ -417,9 +415,9 @@ def extractGeneric(lines, path, language='C', envvars=None):
 				if len(filenames[fn].values()) == 1:
 					## The filename fn containing the matched string can only
 					## be found in one package.
-					## For example: 'foo.c' in package 'foo'
-					## or 'bar.c' in package 'bar'
-					## The matched string is present in both 'foo.c' and 'bar.c'
+					## For example: string 'foobar' is present in 'foo.c' in package 'foo'
+					## and 'bar.c' in package 'bar', but not in 'foo.c' in package 'bar'
+					## or 'bar.c' in foo (if any).
 					fnkey = filenames[fn].keys()[0]
 					nonUniqueScore[fnkey] = nonUniqueScore.get(fnkey,0) + score
 				else:
@@ -481,9 +479,8 @@ def extractGeneric(lines, path, language='C', envvars=None):
        		## Let's hope "sort" terminates on a comparison function that
        		## may not actually be a proper ordering.	
 		if len(close) > 1:
-			# print "  doing battle royale between [close]"
-			## reverse sort close, then best = close_sorted[0][0] (no need to
-			## transform it back to original format
+			# print >>sys.stderr, "  doing battle royale between [close]"
+			## reverse sort close, then best = close_sorted[0][0]
 			close_sorted = map(lambda x: (x, averageStringsPerPkgVersion(x, conn)), close)
 			close_sorted = sorted(close_sorted, key = lambda x: x[1], reverse=True)
 			best = close_sorted[0][0]
