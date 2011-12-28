@@ -461,9 +461,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 		gain = {}
 		stringsPerPkg = {}
 		for stri in stringsLeft.keys():
-			pkgs2 = pkgsScorePerString[stri]
-
-			for p2 in pkgs2:
+			for p2 in pkgsScorePerString[stri]:
 				gain[p2] = gain.get(p2, 0) + stringsLeft[stri]['score']
 				stringsPerPkg[p2] = stri
 		## if all the gains are < our cutoff value (1.0e-20) we can already quit
@@ -498,10 +496,10 @@ def extractGeneric(lines, path, language='C', envvars=None):
 
 		allMatches[best][x['string']] = allMatches[best].get(x['string'],0) + x['score']
 		sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
-		del stringsLeft[stringsPerPkg[best]]
 		print >>sys.stderr, "GAIN", gain[best], best, x
 		if gain[best] < gaincutoff:
 			break
+		del stringsLeft[stringsPerPkg[best]]
 		strleft = len(stringsLeft.keys())
 
 	scores = {}
