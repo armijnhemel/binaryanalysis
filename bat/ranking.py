@@ -180,7 +180,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 				## then process each file in $tmpdir and search file for lines containing "const-string"
 				## alternatively, use code from here http://code.google.com/p/smali/
 				dalvikdir = tempfile.mkdtemp()
-				p = subprocess.Popen(['java', '-jar', '/home/armijn/Downloads/ddx1.15.jar', '-d', dalvikdir, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+				p = subprocess.Popen(['java', '-jar', '/home/armijn/gpltool/trunk/bat-extratools/dedexer/bat-ddx.jar', '-d', dalvikdir, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				if p.returncode == 0:
 					osgen = os.walk(dalvikdir)
@@ -464,10 +464,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 			for p2 in pkgsScorePerString[stri]:
 				gain[p2] = gain.get(p2, 0) + stringsLeft[stri]['score']
 				stringsPerPkg[p2] = stri
-		## if all the gains are < our cutoff value (1.0e-20) we can already quit
-		## This should no longer happen.
-		if gain == {}:
-			break
+
 		## gain_sorted contains the sort order, gain contains the actual data
 		gain_sorted = sorted(gain, key = lambda x: gain.__getitem__(x), reverse=True)
 
