@@ -1333,7 +1333,7 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, envvars
 		tmpdir = dirsetup(tempdir, filename, "ext2", counter)
 		## we should actually scan the data starting from offset - 0x438
 		datafile.seek(offset - 0x438)
-		ext2checkdata = datafile.read(4096)
+		ext2checkdata = datafile.read(8192)
 		if not checkExt2fs(ext2checkdata, 0, tmpdir):
 			os.rmdir(tmpdir)
 			continue
@@ -1370,8 +1370,8 @@ def checkExt2fs(data, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	## for a quick sanity check we only need a tiny bit of data
-	if len(data[offset:]) >= 4096:
-		os.write(tmpfile[0], data[offset:offset+4096])
+	if len(data[offset:]) >= 8192:
+		os.write(tmpfile[0], data[offset:offset+8192])
 	else:
 		os.write(tmpfile[0], data[offset:])
 	p = subprocess.Popen(['tune2fs', '-l', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -2004,6 +2004,7 @@ def unpackPDF(filename, offset, trailer, tempdir=None):
 		os.link(filename, "%s/%s" % (tmpdir, "templink"))
 		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
 	else:
+		## TODO: this is extremely inefficient for large files
 		datafile = open(filename, 'rb')
 		data = datafile.read()
 		datafile.close()
