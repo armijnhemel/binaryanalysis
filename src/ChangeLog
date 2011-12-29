@@ -1,3 +1,5 @@
+2011-12-28
+* for some ext4 file systems tune2fs needs 8192 bytes to run correctly
 2011-12-27
 * unpack scans also can return tags
 
