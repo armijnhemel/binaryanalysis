@@ -328,16 +328,13 @@ def scanVirus(path, blacklist=[], envvars=None):
 	ms.load()
 	mstype = ms.file(path)
 	ms.close()
-	if not 'PE32 executable for MS Windows' in mstype and not "PE32+ executable for MS Windows" in mstype:
-                return None
+	p = subprocess.Popen(['clamscan', "%s" % (path,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode == 0:
+               	return
 	else:
-		p = subprocess.Popen(['clamscan', "%s" % (path,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-		if p.returncode == 0:
-                	return
-		else:
-			## Oooh, virus found!
-			viruslines = stanout.split("\n")
-			## first line contains the report:
-			virusname = viruslines[0].strip()[len(path) + 2:-6]
-			return virusname
+		## Oooh, virus found!
+		viruslines = stanout.split("\n")
+		## first line contains the report:
+		virusname = viruslines[0].strip()[len(path) + 2:-6]
+		return virusname
