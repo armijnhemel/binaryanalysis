@@ -9,7 +9,7 @@ This script tries to analyse binary blobs, using a "brute force" approach
 and pretty print the analysis in a simple XML format.
 '''
 
-import sys, os, os.path, magic, hashlib, subprocess, tempfile, shutil, stat
+import sys, os, os.path, magic, hashlib, subprocess, tempfile, shutil, stat, multiprocessing
 from optparse import OptionParser
 import ConfigParser
 import xml.dom.minidom
@@ -20,6 +20,10 @@ import bat.prerun
 
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
+
+## list of leaftasks
+leaftasks     = []
+unpackreports = {}
 
 ## convenience method to merge ranges that overlap in a blacklist
 ## We do multiple passes to make sure everything is correctly merged
@@ -121,7 +125,7 @@ def prettyprintresxmlsnippet(res, root, unpackscans, programscans):
 	return topnode
 
 ## top level XML pretty printing, view results with xml_pp or Firefox
-def prettyprintresxml(res, scandate, scans):
+def prettyprintresxml(res, poolresult, scandate, scans):
 	root = xml.dom.minidom.Document()
 	topnode = root.createElement("report")
 	tmpnode = root.createElement('scandate')
@@ -161,69 +165,58 @@ def gethash(path, filename):
 	scanfile.close()
 	return h.hexdigest()
 
-## This method returns a report snippet for inclusion in the final report. The
-## report snippet is per file, but if a file has other files embedded in it, the
-## it will include reports for those files as well in the 'scans' section of the
-## report.
-def scanfile(path, filename, scans, magicscans, lentempdir=0, tempdir=None):
-	report = {}
+## scan a single file and recurse. Optionally supply a filehash for
+## checking a knowledgebase, which is future work.
+def scan(path, filename, scans, magicscans, lentempdir=0, tempdir=None):
+	filetoscan = "%s/%s" % (path, filename)
+	## we reset the reports, blacklist, offsets and tags for each new scan
+	reports = []
+	blacklist = []
+	offsets = {}
+	tags = []
+	unpackreports[filetoscan] = {}
+	unpackreports[filetoscan]['name'] = filename
 
-	report['name'] = filename
+	magic = ms.file(filetoscan)
+	unpackreports[filetoscan]['magic'] = magic
 
 	## Add both the path to indicate the position inside the file sytem
         ## or file we have unpacked, as well as the position of the files as unpacked
 	## by BAT, convenient for later analysis of binaries.
 	## In case of squashfs we remove the "squashfs-root" part of the temporary
 	## directory too, if it is present (not always).
-	report['path'] = path[lentempdir:].replace("/squashfs-root", "")
-	report['realpath'] = path
-	mstype = ms.file("%s/%s" % (path, filename))
-	report['magic'] = mstype
+	unpackreports[filetoscan]['path'] = path[lentempdir:].replace("/squashfs-root", "")
+	unpackreports[filetoscan]['realpath'] = path
 
 	if os.path.islink("%s/%s" % (path, filename)):
-		return report
+		return
 	## no use checking pipes, sockets, device files, etcetera
 	if not os.path.isfile("%s/%s" % (path, filename)) and not os.path.isdir("%s/%s" % (path, filename)):
-		return report
+		return
 
 	filesize = os.lstat("%s/%s" % (path, filename)).st_size
-	report['size'] = filesize
+	unpackreports[filetoscan]['size'] = filesize
 
 	## empty file, not interested in further scanning
 	if filesize == 0:
-		return report
+		return
 
 	## Store the hash of the file for identification and for possibly
 	## querying the knowledgebase later on.
 	filehash = gethash(path, filename)
-	report['sha256'] = filehash
-
-	## and store the results per scanned file
-	res = scan("%s/%s" % (path, filename), mstype, scans, magicscans, filehash=filehash, tempdir=tempdir)
-	if res != []:
-		report['scans'] = res
-	return report
-
-## scan a single file and recurse. Optionally supply a filehash for
-## checking a knowledgebase, which is future work.
-def scan(filetoscan, magic, scans, magicscans, filehash=None, tempdir=None):
-	## we reset the reports, blacklist, offsets and tags for each new scan
-	reports = []
-	blacklist = []
-	offsets = {}
-	tags = []
+	unpackreports[filetoscan]['sha256'] = filehash
 
 	## scan for markers
 	offsets =  bat.prerun.genericMarkerSearch(filetoscan, magicscans)
 
 	## prerun scans should be run before any of the other scans
-	for scan in scans['prerunscans']:
-		module = scan['module']
-		method = scan['method']
+	for prerunscan in scans['prerunscans']:
+		module = prerunscan['module']
+		method = prerunscan['method']
 		## if there is extra information we need to pass, like locations of databases
 		## we can use the environment for it
-		if scan.has_key('envvars'):
-			envvars = scan['envvars']
+		if prerunscan.has_key('envvars'):
+			envvars = prerunscan['envvars']
 		else:
 			envvars = None
 		exec "from %s import %s as bat_%s" % (module, method, method)
@@ -257,20 +250,20 @@ def scan(filetoscan, magic, scans, magicscans, filehash=None, tempdir=None):
 	scanfirst = []
 
 	## Filter scans
-	for scan in scans['unpackscans']:
-		if scan['noscan'] != None:
-			noscans = scan['noscan'].split(':')
+	for unpackscan in scans['unpackscans']:
+		if unpackscan['noscan'] != None:
+			noscans = unpackscan['noscan'].split(':')
 			if list(set(noscans).intersection(set(tags))) != []:
 				continue
-		if scan['magic'] != None:
-			scanmagic = scan['magic'].split(':')
+		if unpackscan['magic'] != None:
+			scanmagic = unpackscan['magic'].split(':')
 			if list(set(scanmagic).intersection(set(filterscans))) != []:
 				if list(set(scanmagic).intersection(set(zerooffsets))) != []:
-					scanfirst.append(scan)
+					scanfirst.append(unpackscan)
 				else:
-					unpackscans.append(scan)
+					unpackscans.append(unpackscan)
 		else:
-			unpackscans.append(scan)
+			unpackscans.append(unpackscan)
 
 	## sort the scans
 	unpackscans = sorted(unpackscans, key=lambda x: x['priority'], reverse=True)
@@ -278,18 +271,20 @@ def scan(filetoscan, magic, scans, magicscans, filehash=None, tempdir=None):
 	scanfirst = sorted(scanfirst, key=lambda x: x['priority'], reverse=True)
 	unpackscans = scanfirst + unpackscans
 
-	for scan in unpackscans:
+	unpackreports[filetoscan]['scans'] = []
+
+	for unpackscan in unpackscans:
 		## the whole file has already been scanned by other scans, so we can
 		## continue with the program scans.
 		if bat.extractor.inblacklist(0, blacklist) == filesize:
 			break
 		
-		module = scan['module']
-		method = scan['method']
+		module = unpackscan['module']
+		method = unpackscan['method']
 		## if there is extra information we need to pass, like locations of databases
 		## we can use the environment for it
-		if scan.has_key('envvars'):
-			envvars = scan['envvars']
+		if unpackscan.has_key('envvars'):
+			envvars = unpackscan['envvars']
 		else:
 			envvars = None
 		## return value is the temporary dir, plus offset in the parent file
@@ -325,19 +320,20 @@ def scan(filetoscan, magic, scans, magicscans, filehash=None, tempdir=None):
 						try:
 							if not os.path.islink("%s/%s" % (i[0], p)):
 								os.chmod("%s/%s" % (i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-							res = scanfile(i[0], p, scans, magicscans, lentempdir=len(scandir), tempdir=tempdir)
-							if res != []:
-								scanreports.append(res)
+							res = scan(i[0], p, scans, magicscans, lentempdir=len(scandir), tempdir=tempdir)
+							scanreports.append("%s/%s" % (i[0], p))
 						except Exception, e:
 							#print e
 							pass
 			except StopIteration:
         			pass
-			if scanreports != []:
-				scanreports.append({'offset': diroffset[1]})
-				report[scan['name']] = scanreports
-				reports.append(report)
+			unpackreports[filetoscan]['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1]})
+	## is this safe when multithreading the unpacking itself?
+	leaftasks.append((filetoscan, magic, scans, tags, blacklist, tempdir))
+	return reports
 
+def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir)):
+	reports = []
 	## list of magic file types that 'program' checks should skip
 	## to avoid false positives and superfluous scanning. Does not work
 	## correctly yet, for romfs for example.
@@ -380,7 +376,7 @@ def scan(filetoscan, magic, scans, magicscans, filehash=None, tempdir=None):
 		if res != None:
 			report[scan['name']] = res
 			reports.append(report)
-	return reports
+	return (filetoscan, reports)
 
 ## arrays for storing data for the scans we have.
 ## unpackscans: {name, module, method, xmloutput, priority, cleanup}
@@ -433,6 +429,32 @@ def readconfig(config):
 	prerunscans = sorted(prerunscans, key=lambda x: x['priority'], reverse=True)
 	return {'unpackscans': unpackscans, 'programscans': programscans, 'prerunscans': prerunscans}
 
+def flatten(toplevel, unpackreports, leafreports):
+	res = {}
+	for i in ['realpath', 'magic', 'name', 'path', 'sha256', 'size']:
+		if unpackreports[toplevel].has_key(i):
+			res[i] = unpackreports[toplevel][i]
+	if unpackreports[toplevel].has_key('scans') or toplevel in leafreports:
+		res['scans'] = []
+	if unpackreports[toplevel].has_key('scans'):
+		for s in unpackreports[toplevel]['scans']:
+			scanres = {}
+			flattenres = []
+			for i in s['scanreports']:
+				flattenres.append(flatten(i, unpackreports, leafreports))
+			if flattenres != []:
+				scanres[s['scanname']] = []
+				if s.has_key('offset'):
+					scanres[s['scanname']].append({'offset': s['offset']})
+				scanres[s['scanname']] = scanres[s['scanname']] + flattenres
+			if scanres != {}:
+				res['scans'].append(scanres)
+	if toplevel in leafreports:
+		for s in leafreports[toplevel]:
+			res['scans'].append(s)
+	return res
+
+
 def main(argv):
 	config = ConfigParser.ConfigParser()
         parser = OptionParser()
@@ -477,8 +499,18 @@ def main(argv):
 	## the file inside a file system we looked at was in fact a file system.
 	tempdir=tempfile.mkdtemp()
 	shutil.copy(scan_binary, tempdir)
-	res = scanfile(tempdir, os.path.basename(scan_binary), scans, magicscans, tempdir=tempdir)
-	xml = prettyprintresxml(res, scandate, scans)
+	scan(tempdir, os.path.basename(scan_binary), scans, magicscans, lentempdir=len(tempdir), tempdir=tempdir)
+
+	## multithread it. Sometimes we hit http://bugs.python.org/issue9207
+	## TODO: sort leaftasks on size, so big files are looked at first
+	## hardcode to 1 worker process for now. This is because ranking writes to
+	## databases and you don't want concurrent writes.
+	pool = multiprocessing.Pool(processes=1)
+	#pool = multiprocessing.Pool()
+	poolresult = pool.map(leafScan, leaftasks)
+
+	res = flatten("%s/%s" % (tempdir, os.path.basename(scan_binary)), unpackreports, dict(poolresult))
+	xml = prettyprintresxml(res, dict(poolresult), scandate, scans)
 	print xml.toxml()
 
 if __name__ == "__main__":

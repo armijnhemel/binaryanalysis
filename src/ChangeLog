@@ -1,3 +1,12 @@
+2011-12-31
+* parallellise leafscans. Especially when ranking is enabled this pays off a
+lot and shaves off another 30% of runtime (even more if caches are hot). It
+seems to be faster even when there is only one worker process in the pool. There
+is one caveat: this will only work correctly if the caching database for the
+ranking scan has been *FULLY* generated, or else it will try to write to the
+database, which could lead to errors. The default process is therefore
+hardcoded to 1, but this will be made configurable in the near future.
+
 2011-12-28
 * for some ext4 file systems tune2fs needs 8192 bytes to run correctly
 2011-12-27
