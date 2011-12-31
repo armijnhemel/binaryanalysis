@@ -91,7 +91,9 @@ def prettyprintresxmlsnippet(res, root, unpackscans, programscans):
                 		tmpnodetext.data = str(i)
                 		typenode.appendChild(tmpnodetext)
                 		topnode.appendChild(typenode)
-				for elem in res[i]:
+				scanelems = res[i]
+				scanelems.sort()
+				for elem in scanelems:
 					if 'offset' in elem:
                 				tmpnode = root.createElement("offset")
                 				tmpnodetext = xml.dom.minidom.Text()
