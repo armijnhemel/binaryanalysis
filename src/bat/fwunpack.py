@@ -1478,14 +1478,13 @@ def unpackBzip2(filename, offset, tempdir=None):
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
 	p = subprocess.Popen(['bzcat', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
+	os.fdopen(outtmpfile[0]).close()
 	if os.stat(outtmpfile[1]).st_size == 0:
-		os.fdopen(outtmpfile[0]).close()
 		os.unlink(outtmpfile[1])
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
-	os.fdopen(outtmpfile[0]).close()
 	os.unlink(tmpfile[1])
 	return tmpdir
 
