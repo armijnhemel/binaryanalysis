@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2009-2011 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2009-2012 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''This file contains information about how to recognize certain
