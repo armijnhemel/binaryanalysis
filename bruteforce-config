@@ -8,17 +8,17 @@ module  = bat.prerun
 method  = searchXML
 priority = 100
 
-[verifybz2]
-type    = prerun
-module  = bat.prerun
-method  = verifyBZ2
-priority = 1
+#[verifybz2]
+#type    = prerun
+#module  = bat.prerun
+#method  = verifyBZ2
+#priority = 1
 
-[verifygzip]
-type    = prerun
-module  = bat.prerun
-method  = verifyGzip
-priority = 1
+#[verifygzip]
+#type    = prerun
+#module  = bat.prerun
+#method  = verifyGzip
+#priority = 1
 
 [verifytext]
 type    = prerun
