@@ -49,6 +49,7 @@ extensions = {'.c'      : 'C',
               '.groovy' : 'Java',
               '.scala'  : 'Java',
               '.as'     : 'ActionScript',
+              '.js'     : 'JavaScript',
              }
 
 ## unpack the directories to be scanned. For speed improvements it might be
