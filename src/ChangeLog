@@ -6,6 +6,7 @@
 pool runs for roughly the same time.
 * fix an error in the ranking code, which significantly speeds up the
 algorithm...again
+* tag bz2 and gzip files
 
 2011-12-31
 * parallellise leafscans. Especially when ranking is enabled this pays off a

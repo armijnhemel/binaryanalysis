@@ -14,6 +14,12 @@ module  = bat.prerun
 method  = verifyBZ2
 priority = 1
 
+[verifygzip]
+type    = prerun
+module  = bat.prerun
+method  = verifyGzip
+priority = 1
+
 [verifytext]
 type    = prerun
 module  = bat.prerun
@@ -36,7 +42,7 @@ module  = bat.fwunpack
 method  = searchUnpack7z
 priority = 1
 magic = 7z
-noscan   = text:xml:graphics:pdf:bz2
+noscan   = text:xml:graphics:pdf:bz2:gzip
 
 [ar]
 type    = unpack
@@ -44,7 +50,7 @@ module  = bat.fwunpack
 method  = searchUnpackAr
 priority = 2
 magic = ar
-noscan   = text:xml:graphics:pdf:bz2
+noscan   = text:xml:graphics:pdf:bz2:gzip
 
 #[arj]
 #type    = unpack
@@ -52,7 +58,7 @@ noscan   = text:xml:graphics:pdf:bz2
 #method  = searchUnpackARJ
 #priority = 1
 #magic = arj
-#noscan   = text:xml:graphics:pdf:bz2
+#noscan   = text:xml:graphics:pdf:bz2:gzip
 
 [base64]
 type    = unpack
@@ -74,7 +80,7 @@ module  = bat.fwunpack
 method  = searchUnpackBzip2
 priority = 1
 magic = bz2
-noscan   = text:xml:graphics:pdf
+noscan   = text:xml:graphics:pdf:gzip
 
 [cab]
 type    = unpack
@@ -145,7 +151,7 @@ module  = bat.fwunpack
 method  = searchUnpackInstallShield
 priority = 1
 magic = installshield
-noscan   = text:xml:graphics:pdf:bz2
+noscan   = text:xml:graphics:pdf:bz2:gzip
 
 [iso9660]
 type    = unpack
@@ -161,7 +167,7 @@ noscan   = text:xml:graphics:pdf:compressed
 #method  = searchUnpackJavaSerialized
 #priority = 2
 #magic = java_serialized
-#noscan   = text:xml:graphics:pdf:bz2
+#noscan   = text:xml:graphics:pdf:bz2:gzip
 
 [jffs2]
 type    = unpack
@@ -177,7 +183,7 @@ module  = bat.fwunpack
 method  = searchUnpackLzip
 priority = 1
 magic = lzip
-noscan   = text:xml:graphics:pdf:bz2
+noscan   = text:xml:graphics:pdf:bz2:gzip
 
 [lzma]
 type    = unpack
@@ -185,7 +191,7 @@ module  = bat.fwunpack
 method  = searchUnpackLZMA
 priority = 1
 magic = lzma_alone:lzma_alone_alt
-noscan   = text:xml:graphics:pdf:bz2
+noscan   = text:xml:graphics:pdf:bz2:gzip
 
 [lzo]
 type    = unpack
@@ -193,7 +199,7 @@ module  = bat.fwunpack
 method  = searchUnpackLzo
 priority = 1
 magic = lzo
-noscan   = text:xml:graphics:pdf:bz2
+noscan   = text:xml:graphics:pdf:bz2:gzip
 
 [pdf_unpack]
 type    = unpack
@@ -217,7 +223,7 @@ module  = bat.fwunpack
 method  = searchUnpackRar
 priority = 1
 magic = rar
-noscan   = text:xml:graphics:pdf:bz2
+noscan   = text:xml:graphics:pdf:bz2:gzip
 
 [rpm]
 type    = unpack
@@ -249,7 +255,7 @@ module  = bat.fwunpack
 method  = searchUnpackTar
 priority = 3
 magic = tar1:tar2
-noscan   = text:xml:graphics:pdf:bz2
+noscan   = text:xml:graphics:pdf:bz2:gzip
 
 [ubifs]
 type    = unpack
@@ -279,7 +285,7 @@ module  = bat.fwunpack
 method  = searchUnpackXZ
 priority = 1
 magic = xz:xztrailer
-noscan   = text:xml:graphics:pdf:bz2
+noscan   = text:xml:graphics:pdf:bz2:gzip
 
 [zip]
 type    = unpack
@@ -287,7 +293,7 @@ module  = bat.fwunpack
 method  = searchUnpackZip
 priority = 1
 magic = zip
-noscan   = text:xml:graphics:pdf:bz2
+noscan   = text:xml:graphics:pdf:bz2:gzip
 
 ##################
 ### leaf scans ###
