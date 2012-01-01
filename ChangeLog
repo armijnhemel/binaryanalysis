@@ -1,6 +1,7 @@
 2012-01-01
 * change copyright statements
 * extract strings from JavaScript files too
+* sort scans for leafs first, so big files are scanned first
 
 2011-12-31
 * parallellise leafscans. Especially when ranking is enabled this pays off a
