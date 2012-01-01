@@ -329,10 +329,10 @@ def scan(path, filename, scans, magicscans, lentempdir=0, tempdir=None):
         			pass
 			unpackreports[filetoscan]['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1]})
 	## is this safe when multithreading the unpacking itself?
-	leaftasks.append((filetoscan, magic, scans, tags, blacklist, tempdir))
+	leaftasks.append((filetoscan, magic, scans, tags, blacklist, tempdir, filesize))
 	return reports
 
-def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir)):
+def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize)):
 	reports = []
 	## list of magic file types that 'program' checks should skip
 	## to avoid false positives and superfluous scanning. Does not work
@@ -502,11 +502,11 @@ def main(argv):
 	scan(tempdir, os.path.basename(scan_binary), scans, magicscans, lentempdir=len(tempdir), tempdir=tempdir)
 
 	## multithread it. Sometimes we hit http://bugs.python.org/issue9207
-	## TODO: sort leaftasks on size, so big files are looked at first
 	## hardcode to 1 worker process for now. This is because ranking writes to
 	## databases and you don't want concurrent writes.
 	pool = multiprocessing.Pool(processes=1)
 	#pool = multiprocessing.Pool()
+	leaftasks.sort(key=lambda x: x[-1], reverse=True)
 	poolresult = pool.map(leafScan, leaftasks)
 
 	res = flatten("%s/%s" % (tempdir, os.path.basename(scan_binary)), unpackreports, dict(poolresult))
