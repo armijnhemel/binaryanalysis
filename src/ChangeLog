@@ -1,3 +1,7 @@
+2012-01-01
+* change copyright statements
+* extract strings from JavaScript files too
+
 2011-12-31
 * parallellise leafscans. Especially when ranking is enabled this pays off a
 lot and shaves off another 30% of runtime (even more if caches are hot). It
