@@ -115,3 +115,27 @@ def verifyPNG(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	tags.append("jpeg")
 	tags.append("graphics")
 	return ([], blacklist, tags)
+
+def verifyBZ2(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	tags = []
+	p = subprocess.Popen(['bunzip2', '-tvv', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		return ([], blacklist, tags)
+	## multiple jpegs in this file, so we need to unpack
+	if len(stanerr.strip().split("\n")) > 1:
+		if "trailing garbage after EOF ignored" in stanerr:
+			return ([], blacklist, tags)
+		else:
+			## output would look like:
+			## $ bunzip2 -tvv foo.bz2 
+			##  foo.bz2: 
+			##    [1: huff+mtf rt+rld]
+			##    ok
+			## so splitting it on "\n" would give us a list of length 3
+			## (because we strip) if there is just one bzip2 file, otherwise more.
+			if len(stanerr.strip().split("\n")) > 3:
+				return ([], blacklist, tags)
+	tags.append("bz2")
+	tags.append("compressed")
+	return ([], blacklist, tags)
