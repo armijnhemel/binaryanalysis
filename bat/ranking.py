@@ -115,6 +115,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 
 				for i in elfscanfiles:
 					## run strings to get rid of weird characters that we don't even want to scan
+					## TODO: check if we need -Tbinary or not
         				p = subprocess.Popen(['strings', '-n', str(stringcutoff), i], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         				(stanout, stanerr) = p.communicate()
 
