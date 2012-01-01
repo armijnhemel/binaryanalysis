@@ -2,6 +2,10 @@
 * change copyright statements
 * extract strings from JavaScript files too
 * sort scans for leafs first, so big files are scanned first
+* send tasks to the pool in chunks of size 1, so each process in the worker
+pool runs for roughly the same time.
+* fix an error in the ranking code, which significantly speeds up the
+algorithm...again
 
 2011-12-31
 * parallellise leafscans. Especially when ranking is enabled this pays off a
