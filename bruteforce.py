@@ -507,7 +507,7 @@ def main(argv):
 	pool = multiprocessing.Pool(processes=1)
 	#pool = multiprocessing.Pool()
 	leaftasks.sort(key=lambda x: x[-1], reverse=True)
-	poolresult = pool.map(leafScan, leaftasks)
+	poolresult = pool.map(leafScan, leaftasks, 1)
 
 	res = flatten("%s/%s" % (tempdir, os.path.basename(scan_binary)), unpackreports, dict(poolresult))
 	xml = prettyprintresxml(res, dict(poolresult), scandate, scans)
