@@ -239,7 +239,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	stringsLeft = {}
 	sameFileScore = {}
 	alpha = 5.0
-	gaincutoff = 5
+	gaincutoff = 1
 
 	scanenv = os.environ
 	if envvars != None:
@@ -426,8 +426,11 @@ def extractGeneric(lines, path, language='C', envvars=None):
 					## in packages 'foo' and 'bar. This is likely to be
 					## internal cloning in the repo.  This string is
 					## assigned to a single package in the loop below.
-					## when a string will not significantly contribute to the score we can just ignore
-					## it and remove it from the list. This speeds up the algorithm A LOT.
+					## Some strings will not signficantly contribute to the score, so they
+					## could be ignored and not added to the list.
+					## For now we exclude them, but in the future we could include them for
+					## completeness.
+					#if score > 1.0e-200:
 					if score > 1.0e-20:
 						stringsLeft['%s\t%s' % (i, fn)] = {'string': i, 'score': score, 'filename': fn, 'pkgs' : filenames[fn].keys()}
 
@@ -458,10 +461,11 @@ def extractGeneric(lines, path, language='C', envvars=None):
 		print >>sys.stderr, "round %d: %d strings left" % (roundNr, strleft)
 		gain = {}
 		stringsPerPkg = {}
+		## Determine to which packages the remaining strings belong.
 		for stri in stringsLeft.keys():
 			for p2 in pkgsScorePerString[stri]:
 				gain[p2] = gain.get(p2, 0) + stringsLeft[stri]['score']
-				stringsPerPkg[p2] = stri
+				stringsPerPkg[p2] = stringsPerPkg.get(p2, []) + [stri]
 
 		## gain_sorted contains the sort order, gain contains the actual data
 		gain_sorted = sorted(gain, key = lambda x: gain.__getitem__(x), reverse=True)
@@ -484,16 +488,20 @@ def extractGeneric(lines, path, language='C', envvars=None):
 			close_sorted = map(lambda x: (x, averageStringsPerPkgVersion(x, conn)), close)
 			close_sorted = sorted(close_sorted, key = lambda x: x[1], reverse=True)
 			best = close_sorted[0][0]
-		x = stringsLeft[stringsPerPkg[best]]
-		if not allMatches.has_key(best):
-			allMatches[best] = {}
+		## for each string in the package with the best gain we add the score
+		## to the package and move on to the next package.
+		for xy in stringsPerPkg[best]:
 
-		allMatches[best][x['string']] = allMatches[best].get(x['string'],0) + x['score']
-		sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
-		print >>sys.stderr, "GAIN", gain[best], best, x
+			x = stringsLeft[xy]
+			if not allMatches.has_key(best):
+				allMatches[best] = {}
+
+			allMatches[best][x['string']] = allMatches[best].get(x['string'],0) + x['score']
+			sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
+			print >>sys.stderr, "GAIN", gain[best], best, x
+			del stringsLeft[xy]
 		if gain[best] < gaincutoff:
 			break
-		del stringsLeft[stringsPerPkg[best]]
 		strleft = len(stringsLeft.keys())
 
 	scores = {}
