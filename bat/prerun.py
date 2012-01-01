@@ -116,13 +116,27 @@ def verifyPNG(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	tags.append("graphics")
 	return ([], blacklist, tags)
 
+def verifyGzip(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	tags = []
+	p = subprocess.Popen(['gunzip', '-t', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		return ([], blacklist, tags)
+	## possibly multiple gzips in this file, or bzip2 with trailing data
+	if "trailing garbage ignored" in stanerr:
+		return ([], blacklist, tags)
+	## the file contains one or more gzip archives
+	tags.append("gzip")
+	tags.append("compressed")
+	return ([], blacklist, tags)
+
 def verifyBZ2(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	tags = []
 	p = subprocess.Popen(['bunzip2', '-tvv', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		return ([], blacklist, tags)
-	## multiple jpegs in this file, so we need to unpack
+	## possibly multiple bzip2 in this file, or bzip2 with trailing data
 	if len(stanerr.strip().split("\n")) > 1:
 		if "trailing garbage after EOF ignored" in stanerr:
 			return ([], blacklist, tags)
