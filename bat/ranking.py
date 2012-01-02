@@ -347,9 +347,9 @@ def extractGeneric(lines, path, language='C', envvars=None):
 			conn.commit()
 			newmatch = False
 
-	if len(lines) != 0:
+	if lenlines != 0:
 		print >>sys.stderr, "matchedlines: %d for %s" % (matchedlines, path)
-		print >>sys.stderr, matchedlines/(len(lines) * 1.0)
+		print >>sys.stderr, matchedlines/(lenlines * 1.0)
 
 	del lines
 
