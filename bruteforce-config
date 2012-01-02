@@ -372,7 +372,8 @@ noscan  = text:xml:graphics:pdf:compressed
 type    = program
 module  = bat.checks
 method  = scanLicenses
-xmloutput = licensesPrettyPrint:compressed
+xmloutput = licensesPrettyPrint
+noscan    = compressed
 
 [loadlin]
 type    = program
