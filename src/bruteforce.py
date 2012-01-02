@@ -386,6 +386,7 @@ def readconfig(config):
 	unpackscans = []
 	programscans = []
 	prerunscans = []
+	postrunscans = []
 	for section in config.sections():
 		if config.has_option(section, 'type'):
 			conf = {}
@@ -425,9 +426,11 @@ def readconfig(config):
 				unpackscans.append(conf)
 			elif config.get(section, 'type') == 'prerun':
 				prerunscans.append(conf)
+			elif config.get(section, 'type') == 'postrun':
+				postrunscans.append(conf)
 	## sort the prerun scans on priority (highest priority first)
 	prerunscans = sorted(prerunscans, key=lambda x: x['priority'], reverse=True)
-	return {'unpackscans': unpackscans, 'programscans': programscans, 'prerunscans': prerunscans}
+	return {'unpackscans': unpackscans, 'programscans': programscans, 'prerunscans': prerunscans, 'postrunscans': postrunscans}
 
 def flatten(toplevel, unpackreports, leafreports):
 	res = {}
