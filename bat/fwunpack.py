@@ -818,37 +818,45 @@ def unpackLzip(filename, offset, tempdir=None):
 def searchUnpackLzo(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	if offsets['lzo'] == []:
 		return ([], blacklist, [])
-	datafile = open(filename, 'rb')
-	data = datafile.read()
-	datafile.close()
 	diroffsets = []
+	tags = []
 	counter = 1
 	for offset in offsets['lzo']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "lzo", counter)
-		(res, lzosize) = unpackLzo(data, offset, tmpdir)
+		(res, lzosize) = unpackLzo(filename, offset, tmpdir)
 		if res != None:
 			diroffsets.append((res, offset))
 			blacklist.append((offset, offset+lzosize))
+			if offset == 0 and lzosize == os.stat(filename).st_size:
+				tags.append("compressed")
+				tags.append("lzo")
 			counter = counter + 1
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, tags)
 
-def unpackLzo(data, offset, tempdir=None):
+def unpackLzo(filename, offset, tempdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
 	## Assumes (for now) that lzop is in the path
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(tmpfile[0], data[offset:])
+	os.fdopen(tmpfile[0]).close()
+
+	if offset != 0:
+		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+	else:
+		os.link(filename, "%s/%s" % (tmpdir, "templink"))
+		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
+
 	p = subprocess.Popen(['lzop', "-d", "-P", "-p%s" % (tmpdir,), tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
@@ -862,8 +870,7 @@ def unpackLzo(data, offset, tempdir=None):
 		lzopsize = 0
 	else:
 		## the whole file is the lzop archive
-		lzopsize = len(data)
-	os.fdopen(tmpfile[0]).close()
+		lzopsize = os.stat(filename).st_size
 	os.unlink(tmpfile[1])
 	return (tmpdir, lzopsize)
 
