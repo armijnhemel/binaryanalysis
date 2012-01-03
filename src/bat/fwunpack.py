@@ -759,6 +759,7 @@ def searchUnpackLzip(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 	if offsets['lzip'] == []:
 		return ([], blacklist, [])
 	diroffsets = []
+	tags = []
 	counter = 1
 	for offset in offsets['lzip']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
@@ -770,10 +771,13 @@ def searchUnpackLzip(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 			diroffsets.append((res, offset))
 			blacklist.append((offset, offset+lzipsize))
 			counter = counter + 1
+			if offset == 0 and lzipsize == os.stat(filename).st_size:
+				tags.append("compressed")
+				tags.append("lzip")
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, tags)
 
 def unpackLzip(filename, offset, tempdir=None):
 	## first unpack things, write things to a file and return
