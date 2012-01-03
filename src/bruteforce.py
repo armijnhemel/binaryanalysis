@@ -21,10 +21,6 @@ import bat.prerun
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
-## list of leaftasks
-leaftasks     = []
-unpackreports = {}
-
 ## convenience method to merge ranges that overlap in a blacklist
 ## We do multiple passes to make sure everything is correctly merged
 ## Example:
@@ -167,10 +163,12 @@ def gethash(path, filename):
 
 ## scan a single file and recurse. Optionally supply a filehash for
 ## checking a knowledgebase, which is future work.
-def scan(path, filename, scans, magicscans, lentempdir=0, tempdir=None):
+def scan((path, filename, scans, magicscans, lentempdir, tempdir)):
 	filetoscan = "%s/%s" % (path, filename)
 	## we reset the reports, blacklist, offsets and tags for each new scan
-	reports = []
+	leaftasks = []
+	scantasks = []
+	unpackreports = {}
 	blacklist = []
 	offsets = {}
 	tags = []
@@ -189,17 +187,17 @@ def scan(path, filename, scans, magicscans, lentempdir=0, tempdir=None):
 	unpackreports[filetoscan]['realpath'] = path
 
 	if os.path.islink("%s/%s" % (path, filename)):
-		return
+		return (scantasks, leaftasks, unpackreports)
 	## no use checking pipes, sockets, device files, etcetera
 	if not os.path.isfile("%s/%s" % (path, filename)) and not os.path.isdir("%s/%s" % (path, filename)):
-		return
+		return (scantasks, leaftasks, unpackreports)
 
 	filesize = os.lstat("%s/%s" % (path, filename)).st_size
 	unpackreports[filetoscan]['size'] = filesize
 
 	## empty file, not interested in further scanning
 	if filesize == 0:
-		return
+		return (scantasks, leaftasks, unpackreports)
 
 	## Store the hash of the file for identification and for possibly
 	## querying the knowledgebase later on.
@@ -320,7 +318,7 @@ def scan(path, filename, scans, magicscans, lentempdir=0, tempdir=None):
 						try:
 							if not os.path.islink("%s/%s" % (i[0], p)):
 								os.chmod("%s/%s" % (i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-							res = scan(i[0], p, scans, magicscans, lentempdir=len(scandir), tempdir=tempdir)
+							scantasks.append((i[0], p, scans, magicscans, len(scandir), tempdir))
 							scanreports.append("%s/%s" % (i[0], p))
 						except Exception, e:
 							#print e
@@ -328,9 +326,8 @@ def scan(path, filename, scans, magicscans, lentempdir=0, tempdir=None):
 			except StopIteration:
         			pass
 			unpackreports[filetoscan]['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1]})
-	## is this safe when multithreading the unpacking itself?
 	leaftasks.append((filetoscan, magic, scans, tags, blacklist, tempdir, filesize))
-	return reports
+	return (scantasks, leaftasks, unpackreports)
 
 def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize)):
 	reports = []
@@ -457,7 +454,6 @@ def flatten(toplevel, unpackreports, leafreports):
 			res['scans'].append(s)
 	return res
 
-
 def main(argv):
 	config = ConfigParser.ConfigParser()
         parser = OptionParser()
@@ -502,16 +498,34 @@ def main(argv):
 	## the file inside a file system we looked at was in fact a file system.
 	tempdir=tempfile.mkdtemp()
 	shutil.copy(scan_binary, tempdir)
-	scan(tempdir, os.path.basename(scan_binary), scans, magicscans, lentempdir=len(tempdir), tempdir=tempdir)
 
 	## multithread it. Sometimes we hit http://bugs.python.org/issue9207
 	## hardcode to 1 worker process for now. This is because ranking writes to
 	## databases and you don't want concurrent writes.
+
+	scantasks = [(tempdir, os.path.basename(scan_binary), scans, magicscans, len(tempdir), tempdir)]
+	leaftasks = []
+	unpackreports_tmp = []
+	unpackreports = {}
+
 	pool = multiprocessing.Pool(processes=1)
 	#pool = multiprocessing.Pool()
+	while True:
+		scansplusleafs = pool.map(scan, scantasks, 1)
+		scantasks = []
+		for i in scansplusleafs:
+			if i != None:
+				scantasks = scantasks + i[0]
+				leaftasks = leaftasks + i[1]
+				unpackreports_tmp += [i[2]]
+		if scantasks == []:
+			break
 	leaftasks.sort(key=lambda x: x[-1], reverse=True)
 	poolresult = pool.map(leafScan, leaftasks, 1)
-
+	for i in unpackreports_tmp:
+		for k in i.keys():
+			unpackreports[k] = i[k]
+	
 	res = flatten("%s/%s" % (tempdir, os.path.basename(scan_binary)), unpackreports, dict(poolresult))
 	xml = prettyprintresxml(res, dict(poolresult), scandate, scans)
 	print xml.toxml()
