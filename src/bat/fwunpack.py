@@ -756,17 +756,14 @@ def unpack7z(data, offset, tempdir=None):
 def searchUnpackLzip(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	if offsets['lzip'] == []:
 		return ([], blacklist, [])
-	datafile = open(filename, 'rb')
 	diroffsets = []
 	counter = 1
-	data = datafile.read()
-	datafile.close()
 	for offset in offsets['lzip']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "lzip", counter)
-		(res, lzipsize) = unpackLzip(data, offset, tmpdir)
+		(res, lzipsize) = unpackLzip(filename, offset, tmpdir)
 		if res != None:
 			diroffsets.append((res, offset))
 			blacklist.append((offset, offset+lzipsize))
@@ -776,14 +773,20 @@ def searchUnpackLzip(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [])
 
-def unpackLzip(data, offset, tempdir=None):
+def unpackLzip(filename, offset, tempdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
 	## Assumes (for now) that lzip is in the path
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(tmpfile[0], data[offset:])
 	os.fdopen(tmpfile[0]).close()
+
+	if offset != 0:
+		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+	else:
+		os.link(filename, "%s/%s" % (tmpdir, "templink"))
+		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
 
 	p = subprocess.Popen(['lzip', "-d", "-c", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
