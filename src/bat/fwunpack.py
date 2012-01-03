@@ -504,6 +504,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
+	# TODO: fix, since we want to get rid of 'data'
 	assembly = extractor.searchAssemblyAttrs(data)
 	## if we were able to extract the assembly XML file we could get some useful
 	## information from it. Although there are some vanity entries that we can
@@ -547,10 +548,11 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 	## * PKBAC (seems to give the best results)
 	## * WinZip Self-Extractor
 	## 7zip gives better results than unzip
+	## TODO: fix, we want to get rid of 'data'
 	offset = data.find("PKBAC")
 	if offset != -1:
 		tmpdir = dirsetup(tempdir, filename, "exe", counter)
-		res = unpack7z(data, 0, tmpdir)
+		res = unpack7z(filename, 0, tmpdir)
 		if res != None:
 			diroffsets.append((res, 0))
 			blacklist.append((0, os.stat(filename).st_size))
@@ -561,10 +563,11 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 	## then search for RAR by searching for:
 	## WinRAR
 	## and unpack with unrar
+	## TODO: fix, we want to get rid of 'data'
 	offset = data.find("WinRAR")
 	if offset != -1:
 		tmpdir = dirsetup(tempdir, filename, "exe", counter)
-		res = unpackRar(data, 0, tmpdir)
+		res = unpackRar(filename, 0, tmpdir)
 		if res != None:
 			(endofarchive, rardir) = res
 			diroffsets.append((rardir, 0))
@@ -580,7 +583,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 	## Ideally we should also do something with innounp
 	## As a last resort try 7-zip
 	tmpdir = dirsetup(tempdir, filename, "exe", counter)
-	res = unpack7z(data, 0, tmpdir)
+	res = unpack7z(filename, 0, tmpdir)
 	if res != None:
 		diroffsets.append((res, 0))
 		blacklist.append((0, os.stat(filename).st_size))
@@ -707,20 +710,14 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[], offsets={}, envvars=Non
 	if offsets['7z'][0] != 0:
 		return ([], blacklist, [])
 
-	datafile = open(filename, 'rb')
-	## counter to remember how many gzip file systems we have
-	## discovered, so we can use this to append to the directory
-	## name containing the unpacked contents.
 	counter = 1
 	diroffsets = []
-	data = datafile.read()
-	datafile.close()
 	for offset in offsets['7z']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "7z", counter)
-		res = unpack7z(data, offset, tmpdir)
+		res = unpack7z(filename, offset, tmpdir)
 		if res != None:
 			diroffsets.append((res, offset))
 			counter = counter + 1
@@ -731,23 +728,28 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[], offsets={}, envvars=Non
 	return (diroffsets, blacklist, [])
 
 
-def unpack7z(data, offset, tempdir=None):
+def unpack7z(filename, offset, tempdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
 	## Assumes (for now) that 7z is in the path
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(tmpfile[0], data[offset:])
+	os.fdopen(tmpfile[0]).close()
+
+	if offset != 0:
+		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+	else:
+		os.link(filename, "%s/%s" % (tmpdir, "templink"))
+		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
 	param = "-o%s" % tmpdir
 	p = subprocess.Popen(['7z', param, '-l', '-y', 'x', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
-	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
 	return tmpdir
 

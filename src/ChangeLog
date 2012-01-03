@@ -1,6 +1,6 @@
 2012-01-03
 * parallellise unpacking. Hardcoded to 1 worker for now.
-* big file improvements for lzip and lzo unpacking
+* big file improvements for lzip, lzo and 7z unpacking
 
 2012-01-01
 * change copyright statements
