@@ -265,7 +265,7 @@ def scan((path, filename, scans, magicscans, lentempdir, tempdir)):
 
 	## sort the scans
 	unpackscans = sorted(unpackscans, key=lambda x: x['priority'], reverse=True)
-	## prepend the most promising scan
+	## prepend the most promising scan at offset 0 (if any)
 	scanfirst = sorted(scanfirst, key=lambda x: x['priority'], reverse=True)
 	unpackscans = scanfirst + unpackscans
 
@@ -375,6 +375,23 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize)):
 			reports.append(report)
 	return (filetoscan, reports)
 
+def postrunscan((filetoscan, unpackreports, leafreports, scans)):
+	for scan in scans['postrunscans']:
+		module = scan['module']
+		method = scan['method']
+		## if there is extra information we need to pass, like locations of databases
+		## we can use the environment for it
+		if scan.has_key('envvars'):
+			envvars = scan['envvars']
+		else:
+			envvars = None
+		exec "from %s import %s as bat_%s" % (module, method, method)
+
+		res = eval("bat_%s(filetoscan, unpackreports, leafreports, envvars=envvars)" % (method))
+		## TODO: find out what we want to do with this
+		if res != None:
+			pass
+
 ## arrays for storing data for the scans we have.
 ## unpackscans: {name, module, method, xmloutput, priority, cleanup}
 ## These are sorted by priority
@@ -429,6 +446,7 @@ def readconfig(config):
 	prerunscans = sorted(prerunscans, key=lambda x: x['priority'], reverse=True)
 	return {'unpackscans': unpackscans, 'programscans': programscans, 'prerunscans': prerunscans, 'postrunscans': postrunscans}
 
+## combine all results that we have into a format that xmlresprettyprint() can handle
 def flatten(toplevel, unpackreports, leafreports):
 	res = {}
 	for i in ['realpath', 'magic', 'name', 'path', 'sha256', 'size']:
@@ -529,7 +547,16 @@ def main(argv):
 	res = flatten("%s/%s" % (tempdir, os.path.basename(scan_binary)), unpackreports, dict(poolresult))
 	xml = prettyprintresxml(res, scandate, scans)
 	print xml.toxml()
-	## run postrunscans here, again in parallel
+	## run postrunscans here, again in parallel, if needed/wanted
+	## These scans typically only have a few side effects, but don't change
+	## the reporting/scanning, just process the results. Examples: generate
+	## fancier reports, use microblogging to post scan results,
+	## order a pizza, whatever...
+	
+	postrunscans = []
+	for i in unpackreports.keys():
+		postrunscans.append((i, unpackreports, dict(poolresult), scans))
+	postrunresults = pool.map(postrunscan, postrunscans, 1)
 
 if __name__ == "__main__":
         main(sys.argv)
