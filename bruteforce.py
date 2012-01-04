@@ -121,7 +121,7 @@ def prettyprintresxmlsnippet(res, root, unpackscans, programscans):
 	return topnode
 
 ## top level XML pretty printing, view results with xml_pp or Firefox
-def prettyprintresxml(res, poolresult, scandate, scans):
+def prettyprintresxml(res, scandate, scans):
 	root = xml.dom.minidom.Document()
 	topnode = root.createElement("report")
 	tmpnode = root.createElement('scandate')
@@ -527,8 +527,9 @@ def main(argv):
 			unpackreports[k] = i[k]
 	
 	res = flatten("%s/%s" % (tempdir, os.path.basename(scan_binary)), unpackreports, dict(poolresult))
-	xml = prettyprintresxml(res, dict(poolresult), scandate, scans)
+	xml = prettyprintresxml(res, scandate, scans)
 	print xml.toxml()
+	## run postrunscans here, again in parallel
 
 if __name__ == "__main__":
         main(sys.argv)
