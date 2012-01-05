@@ -241,6 +241,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	sameFileScore = {}
 	alpha = 5.0
 	gaincutoff = 1
+	nonUniqueMatches = []
 
 	scanenv = os.environ
 	if envvars != None:
@@ -413,6 +414,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 			## we have found the string in are all called the same.
 			## filenames {name of file: { name of package: 1} }
 			for fn in filenames.keys():
+				nonUniqueMatches.append(i)
 				if len(filenames[fn].values()) == 1:
 					## The filename fn containing the matched string can only
 					## be found in one package.
@@ -434,6 +436,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 					#if score > 1.0e-200:
 					if score > 1.0e-20:
 						stringsLeft['%s\t%s' % (i, fn)] = {'string': i, 'score': score, 'filename': fn, 'pkgs' : filenames[fn].keys()}
+	nonUniqueMatches = list(set(nonUniqueMatches))
 
 	## For each string that occurs in the same filename in multiple
 	## packages (e.g., "debugXML.c", a cloned file of libxml2 in several
@@ -523,7 +526,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 			percentage = 0.0
 		reports.append((rank, s, uniqueMatches.get(s,[]), percentage))
 		rank = rank+1
-	return {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports}
+	return {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches}
 
 
 def averageStringsPerPkgVersion(pkg, conn):
