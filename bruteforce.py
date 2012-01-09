@@ -49,6 +49,17 @@ def mergeBlacklist(blacklist):
 	return blacklist
 
 
+def filterScans(scans, tags):
+	filteredscans = []
+	for scan in scans:
+		if scan['noscan'] != None:
+			noscans = scan['noscan'].split(':')
+			if list(set(noscans).intersection(set(tags))) != []:
+				continue
+			else:
+				filteredscans.append(scan)
+	return filteredscans
+
 ## pretty printing for various elements
 def generateNodes(elem, root, confs):
 	nodes = []
@@ -326,7 +337,7 @@ def scan((path, filename, scans, magicscans, lentempdir, tempdir)):
 			except StopIteration:
         			pass
 			unpackreports[filetoscan]['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1]})
-	leaftasks.append((filetoscan, magic, scans['programscans'], tags, blacklist, tempdir, filesize))
+	leaftasks.append((filetoscan, magic, filterScans(scans['programscans'], tags), tags, blacklist, tempdir, filesize))
 	return (scantasks, leaftasks, unpackreports)
 
 def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize)):
