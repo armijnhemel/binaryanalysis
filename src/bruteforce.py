@@ -546,7 +546,9 @@ def main(argv):
 		for k in i.keys():
 			unpackreports[k] = i[k]
 
-	res = flatten("%s/%s" % (tempdir, os.path.basename(scan_binary)), unpackreports, dict(poolresult))
+	leafreports = dict(poolresult)
+
+	res = flatten("%s/%s" % (tempdir, os.path.basename(scan_binary)), unpackreports, leafreports)
 	xml = prettyprintresxml(res, scandate, scans)
 	print xml.toxml()
 	## run postrunscans here, again in parallel, if needed/wanted
@@ -554,12 +556,15 @@ def main(argv):
 	## the reporting/scanning, just process the results. Examples: generate
 	## fancier reports, use microblogging to post scan results,
 	## order a pizza, whatever...
+
 	
 	if scans['postrunscans'] != []:
 		postrunscans = []
-		## TODO: we're passing *all* of the results here to every scan. That's not good.
 		for i in unpackreports.keys():
-			postrunscans.append((i, unpackreports, dict(poolresult), scans))
+			if leafreports.has_key(i):
+				postrunscans.append((i, unpackreports[i], leafreports[i], scans))
+			else:
+				postrunscans.append((i, unpackreports[i], [], scans))
 		postrunresults = pool.map(postrunscan, postrunscans, 1)
 
 if __name__ == "__main__":
