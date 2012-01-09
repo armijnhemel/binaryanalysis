@@ -538,8 +538,10 @@ def main(argv):
 				unpackreports_tmp += [i[2]]
 		if scantasks == []:
 			break
-	leaftasks.sort(key=lambda x: x[-1], reverse=True)
-	poolresult = pool.map(leafScan, leaftasks, 1)
+	poolresult = []
+	if scans['programscans'] != []:
+		leaftasks.sort(key=lambda x: x[-1], reverse=True)
+		poolresult = pool.map(leafScan, leaftasks, 1)
 	for i in unpackreports_tmp:
 		for k in i.keys():
 			unpackreports[k] = i[k]
