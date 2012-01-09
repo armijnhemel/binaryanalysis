@@ -340,6 +340,8 @@ def scan((path, filename, scans, magicscans, lentempdir, tempdir)):
 	leaftasks.append((filetoscan, magic, filterScans(scans['programscans'], tags), tags, blacklist, tempdir, filesize))
 	return (scantasks, leaftasks, unpackreports)
 
+## Actually these scans should be done per sha256. In some firmwares there is
+## tons of duplication, so we an take a shortcut there and just scan once.
 def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize)):
 	reports = []
 	## list of magic file types that 'program' checks should skip
@@ -553,6 +555,8 @@ def main(argv):
 	if scans['programscans'] != []:
 		leaftasks.sort(key=lambda x: x[-1], reverse=True)
 		poolresult = pool.map(leafScan, leaftasks, 1)
+
+	## we have a list of dicts and we just want one dict
 	for i in unpackreports_tmp:
 		for k in i.keys():
 			unpackreports[k] = i[k]
@@ -562,13 +566,12 @@ def main(argv):
 	res = flatten("%s/%s" % (tempdir, os.path.basename(scan_binary)), unpackreports, leafreports)
 	xml = prettyprintresxml(res, scandate, scans)
 	print xml.toxml()
+
 	## run postrunscans here, again in parallel, if needed/wanted
 	## These scans typically only have a few side effects, but don't change
 	## the reporting/scanning, just process the results. Examples: generate
 	## fancier reports, use microblogging to post scan results,
 	## order a pizza, whatever...
-
-	
 	if scans['postrunscans'] != []:
 		postrunscans = []
 		for i in unpackreports.keys():
