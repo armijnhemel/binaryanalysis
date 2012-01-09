@@ -1,3 +1,9 @@
+2012-01-09
+* don't unnecessarily run program scans and postrun scans if none are defined
+in the configuration
+* only pass the configuration of the program scans to the program scans. This
+can save a lot of memory for big runs.
+
 2012-01-04
 * add infrastructure for postrun scans
 
