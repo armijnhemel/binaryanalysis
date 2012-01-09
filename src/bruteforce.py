@@ -376,7 +376,7 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize)):
 	return (filetoscan, reports)
 
 def postrunscan((filetoscan, unpackreports, leafreports, scans)):
-	for scan in scans['postrunscans']:
+	for scan in scans:
 		module = scan['module']
 		method = scan['method']
 		## if there is extra information we need to pass, like locations of databases
@@ -562,9 +562,9 @@ def main(argv):
 		postrunscans = []
 		for i in unpackreports.keys():
 			if leafreports.has_key(i):
-				postrunscans.append((i, unpackreports[i], leafreports[i], scans))
+				postrunscans.append((i, unpackreports[i], leafreports[i], scans['postrunscans']))
 			else:
-				postrunscans.append((i, unpackreports[i], [], scans))
+				postrunscans.append((i, unpackreports[i], [], scans['postrunscans']))
 		postrunresults = pool.map(postrunscan, postrunscans, 1)
 
 if __name__ == "__main__":
