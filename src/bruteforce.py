@@ -543,7 +543,7 @@ def main(argv):
 	for i in unpackreports_tmp:
 		for k in i.keys():
 			unpackreports[k] = i[k]
-	
+
 	res = flatten("%s/%s" % (tempdir, os.path.basename(scan_binary)), unpackreports, dict(poolresult))
 	xml = prettyprintresxml(res, scandate, scans)
 	print xml.toxml()
@@ -555,6 +555,7 @@ def main(argv):
 	
 	if scans['postrunscans'] != []:
 		postrunscans = []
+		## TODO: we're passing *all* of the results here to every scan. That's not good.
 		for i in unpackreports.keys():
 			postrunscans.append((i, unpackreports, dict(poolresult), scans))
 		postrunresults = pool.map(postrunscan, postrunscans, 1)
