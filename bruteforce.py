@@ -326,7 +326,7 @@ def scan((path, filename, scans, magicscans, lentempdir, tempdir)):
 			except StopIteration:
         			pass
 			unpackreports[filetoscan]['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1]})
-	leaftasks.append((filetoscan, magic, scans, tags, blacklist, tempdir, filesize))
+	leaftasks.append((filetoscan, magic, scans['programscans'], tags, blacklist, tempdir, filesize))
 	return (scantasks, leaftasks, unpackreports)
 
 def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize)):
@@ -344,7 +344,7 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize)):
                             , "romfs filesystem, version 1"
                             ]
 
-	for scan in scans['programscans']:
+	for scan in scans:
 		## TODO: rework this. Having blacklists is enough for this.
 		skip = False
 		for prog in programignorelist:
