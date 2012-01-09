@@ -553,10 +553,11 @@ def main(argv):
 	## fancier reports, use microblogging to post scan results,
 	## order a pizza, whatever...
 	
-	postrunscans = []
-	for i in unpackreports.keys():
-		postrunscans.append((i, unpackreports, dict(poolresult), scans))
-	postrunresults = pool.map(postrunscan, postrunscans, 1)
+	if scans['postrunscans'] != []:
+		postrunscans = []
+		for i in unpackreports.keys():
+			postrunscans.append((i, unpackreports, dict(poolresult), scans))
+		postrunresults = pool.map(postrunscan, postrunscans, 1)
 
 if __name__ == "__main__":
         main(sys.argv)
