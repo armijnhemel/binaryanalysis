@@ -174,7 +174,7 @@ def gethash(path, filename):
 
 ## scan a single file and recurse. Optionally supply a filehash for
 ## checking a knowledgebase, which is future work.
-def scan((path, filename, scans, magicscans, lentempdir, tempdir)):
+def scan((path, filename, scans, prerunscans, magicscans, lentempdir, tempdir)):
 	filetoscan = "%s/%s" % (path, filename)
 	## we reset the reports, blacklist, offsets and tags for each new scan
 	leaftasks = []
@@ -219,7 +219,7 @@ def scan((path, filename, scans, magicscans, lentempdir, tempdir)):
 	offsets =  bat.prerun.genericMarkerSearch(filetoscan, magicscans)
 
 	## prerun scans should be run before any of the other scans
-	for prerunscan in scans['prerunscans']:
+	for prerunscan in prerunscans:
 		module = prerunscan['module']
 		method = prerunscan['method']
 		## if there is extra information we need to pass, like locations of databases
@@ -259,7 +259,7 @@ def scan((path, filename, scans, magicscans, lentempdir, tempdir)):
 	scanfirst = []
 
 	## Filter scans
-	for unpackscan in scans['unpackscans']:
+	for unpackscan in scans:
 		if unpackscan['noscan'] != None:
 			noscans = unpackscan['noscan'].split(':')
 			if list(set(noscans).intersection(set(tags))) != []:
@@ -329,7 +329,7 @@ def scan((path, filename, scans, magicscans, lentempdir, tempdir)):
 						try:
 							if not os.path.islink("%s/%s" % (i[0], p)):
 								os.chmod("%s/%s" % (i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-							scantasks.append((i[0], p, scans, magicscans, len(scandir), tempdir))
+							scantasks.append((i[0], p, scans, prerunscans, magicscans, len(scandir), tempdir))
 							scanreports.append("%s/%s" % (i[0], p))
 						except Exception, e:
 							#print e
@@ -337,7 +337,7 @@ def scan((path, filename, scans, magicscans, lentempdir, tempdir)):
 			except StopIteration:
         			pass
 			unpackreports[filetoscan]['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1]})
-	leaftasks.append((filetoscan, magic, filterScans(scans['programscans'], tags), tags, blacklist, tempdir, filehash, filesize))
+	leaftasks.append((filetoscan, magic, tags, blacklist, tempdir, filehash, filesize))
 	return (scantasks, leaftasks, unpackreports)
 
 ## Actually these scans should be done per sha256. In some firmwares there is
@@ -534,7 +534,7 @@ def main(argv):
 	## hardcode to 1 worker process for now. This is because ranking writes to
 	## databases and you don't want concurrent writes.
 
-	scantasks = [(tempdir, os.path.basename(scan_binary), scans, magicscans, len(tempdir), tempdir)]
+	scantasks = [(tempdir, os.path.basename(scan_binary), scans['unpackscans'], scans['prerunscans'], magicscans, len(tempdir), tempdir)]
 	leaftasks = []
 	unpackreports_tmp = []
 	unpackreports = {}
@@ -563,6 +563,7 @@ def main(argv):
 			else:
 				sha256leaf[i[-2]] = [i[0]]
 		leaftasks = map(lambda x: x[:-2] + (x[-1],), leaftasks)
+		leaftasks = map(lambda x: x[:2] + (filterScans(scans['programscans'], x[2]),) + x[2:], leaftasks)
 		leaftasks.sort(key=lambda x: x[-1], reverse=True)
 		poolresult = pool.map(leafScan, leaftasks, 1)
 		leafreports = dict(poolresult)
