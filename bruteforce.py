@@ -553,7 +553,7 @@ def main(argv):
 			break
 	poolresult = []
 	if scans['programscans'] != []:
-		## TODO: filter duplicate files and only scan them once. Recombine
+		## Filter duplicate files and only scan them once. Recombine
 		## results. Keep a list of which sha256 have duplicates.
 		## filter out the checksums
 		sha256leaf = {}
@@ -562,14 +562,23 @@ def main(argv):
 				sha256leaf[i[-2]].append(i[0])
 			else:
 				sha256leaf[i[-2]] = [i[0]]
-		leaftasks = map(lambda x: x[:-2] + (x[-1],), leaftasks)
-		leaftasks = map(lambda x: x[:2] + (filterScans(scans['programscans'], x[2]),) + x[2:], leaftasks)
-		leaftasks.sort(key=lambda x: x[-1], reverse=True)
-		poolresult = pool.map(leafScan, leaftasks, 1)
+		sha256_tmp = {}
+		for i in sha256leaf.keys():
+			if len(sha256leaf[i]) > 0:
+				sha256_tmp[i] = sha256leaf[i][0]
+		leaftasks_tmp = []
+		for i in leaftasks:
+			if sha256_tmp[i[-2]] == i[0]:
+				leaftasks_tmp.append(i)
+		leaftasks_tmp = map(lambda x: x[:-2] + (x[-1],), leaftasks_tmp)
+		leaftasks_tmp = map(lambda x: x[:2] + (filterScans(scans['programscans'], x[2]),) + x[2:], leaftasks_tmp)
+		leaftasks_tmp.sort(key=lambda x: x[-1], reverse=True)
+		poolresult = pool.map(leafScan, leaftasks_tmp, 1)
 		leafreports = dict(poolresult)
-		## for i in sha256leaf.keys():
-		##	for j in sha256leaf[i]:
-		##		recombine stuff
+		for i in sha256leaf.keys():
+			if len(sha256leaf[i]) > 1:
+				for j in sha256leaf[i][1:]:
+					leafreports[j] = leafreports[sha256leaf[i][0]]
 	else:
 		leafreports = {}
 

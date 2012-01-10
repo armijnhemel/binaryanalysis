@@ -1,3 +1,7 @@
+2012-01-10
+* don't run leaf scans on duplicate files. Instead run the scans just once and
+recombine the results later.
+
 2012-01-09
 * don't unnecessarily run program scans and postrun scans if none are defined
 in the configuration
