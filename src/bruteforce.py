@@ -337,11 +337,11 @@ def scan((path, filename, scans, magicscans, lentempdir, tempdir)):
 			except StopIteration:
         			pass
 			unpackreports[filetoscan]['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1]})
-	leaftasks.append((filetoscan, magic, filterScans(scans['programscans'], tags), tags, blacklist, tempdir, filesize))
+	leaftasks.append((filetoscan, magic, filterScans(scans['programscans'], tags), tags, blacklist, tempdir, filehash, filesize))
 	return (scantasks, leaftasks, unpackreports)
 
 ## Actually these scans should be done per sha256. In some firmwares there is
-## tons of duplication, so we an take a shortcut there and just scan once.
+## tons of duplication, so we can take a shortcut there and just scan once.
 def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize)):
 	reports = []
 	## list of magic file types that 'program' checks should skip
@@ -553,15 +553,30 @@ def main(argv):
 			break
 	poolresult = []
 	if scans['programscans'] != []:
+		## TODO: filter duplicate files and only scan them once. Recombine
+		## results. Keep a list of which sha256 have duplicates.
+		## filter out the checksums
+		sha256leaf = {}
+		for i in leaftasks:
+			if sha256leaf.has_key(i[-2]):
+				sha256leaf[i[-2]].append(i[0])
+			else:
+				sha256leaf[i[-2]] = [i[0]]
+		leaftasks = map(lambda x: x[:-2] + (x[-1],), leaftasks)
 		leaftasks.sort(key=lambda x: x[-1], reverse=True)
 		poolresult = pool.map(leafScan, leaftasks, 1)
+		leafreports = dict(poolresult)
+		## for i in sha256leaf.keys():
+		##	for j in sha256leaf[i]:
+		##		recombine stuff
+	else:
+		leafreports = {}
+
 
 	## we have a list of dicts and we just want one dict
 	for i in unpackreports_tmp:
 		for k in i.keys():
 			unpackreports[k] = i[k]
-
-	leafreports = dict(poolresult)
 
 	res = flatten("%s/%s" % (tempdir, os.path.basename(scan_binary)), unpackreports, leafreports)
 	xml = prettyprintresxml(res, scandate, scans)
