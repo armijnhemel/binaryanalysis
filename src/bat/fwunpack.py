@@ -40,6 +40,23 @@ def unpacksetup(tempdir):
 		tmpdir = tempdir
 	return tmpdir
 
+def unpackFile(filename, offset, tmpfile, tmpdir):
+	filesize = os.stat(filename).st_size
+	if offset != 0:
+		## if the offset is small, the blocksize of dd will be small, so it will be slow. In that case using
+		## tail is faster, especially for big files.
+		if offset < 128:
+			tmptmpfile = open(tmpfile, 'wb')
+			p = subprocess.Popen(['tail', filename, '-c', "%d" % (filesize - offset)], stdout=tmptmpfile, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate()
+			tmptmpfile.close()
+		else:
+			p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile,), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate()
+	else:
+		os.link(filename, "%s/%s" % (tmpdir, "templink"))
+		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile)
+
 ## There are certain routers that have all bytes swapped, because they use 16
 ## bytes NOR flash instead of 8 bytes SPI flash. This is an ugly hack to first
 ## rearrange the data. This is mostly for Realtek RTL8196C based routers.
@@ -154,14 +171,7 @@ def unpackJavaSerialized(filename, offset, tempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	if offset != 0:
-		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-	else:
-		## unsafe because the name can be guessed by an attacker? Possibly.
-		## high risk? Not for me.
-		os.link(filename, "%s/%s" % (tmpdir, "templink"))
-		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
 	## TODO: remove hardcoded path
 	p = subprocess.Popen(['java', '-jar', '/home/armijn/gpltool/trunk/bat-extratools/jdeserialize/bat-jdeserialize.jar', '-blockdata', 'deserialize', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
@@ -270,12 +280,7 @@ def unpackAr(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 
-	if offset != 0:
-		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-	else:
-		os.link(filename, "%s/%s" % (tmpdir, "templink"))
-		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
 	p = subprocess.Popen(['ar', 'tv', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
@@ -736,12 +741,8 @@ def unpack7z(filename, offset, tempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	if offset != 0:
-		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-	else:
-		os.link(filename, "%s/%s" % (tmpdir, "templink"))
-		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
+
 	param = "-o%s" % tmpdir
 	p = subprocess.Popen(['7z', param, '-l', '-y', 'x', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
@@ -787,12 +788,7 @@ def unpackLzip(filename, offset, tempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	if offset != 0:
-		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-	else:
-		os.link(filename, "%s/%s" % (tmpdir, "templink"))
-		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
 	p = subprocess.Popen(['lzip', "-d", "-c", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
@@ -853,12 +849,7 @@ def unpackLzo(filename, offset, tempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	if offset != 0:
-		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-	else:
-		os.link(filename, "%s/%s" % (tmpdir, "templink"))
-		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
 	p = subprocess.Popen(['lzop', "-d", "-P", "-p%s" % (tmpdir,), tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
@@ -1140,12 +1131,7 @@ def unpackSquashfsWrapper(filename, offset, tempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	if offset != 0:
-		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-	else:
-		os.link(filename, "%s/%s" % (tmpdir, "templink"))
-		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
 	## first try normal Squashfs unpacking
 	retval = unpackSquashfs(tmpfile[1], offset, tmpdir)
@@ -1408,12 +1394,7 @@ def unpackExt2fs(filename, offset, tempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	if offset != 0:
-		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-	else:
-		os.link(filename, "%s/%s" % (tmpdir, "templink"))
-		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
 	ext2.copyext2fs(tmpfile[1], tmpdir)
 	os.unlink(tmpfile[1])
@@ -1428,12 +1409,7 @@ def unpackGzip(filename, offset, tempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	if offset != 0:
-		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-	else:
-		os.link(filename, "%s/%s" % (tmpdir, "templink"))
-		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
 	p = subprocess.Popen(['zcat', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
@@ -1484,12 +1460,7 @@ def unpackBzip2(filename, offset, tempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	if offset != 0:
-		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-	else:
-		os.link(filename, "%s/%s" % (tmpdir, "templink"))
-		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
 	p = subprocess.Popen(['bzcat', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
@@ -1530,15 +1501,9 @@ def unpackZip(filename, offset, tempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tempdir)
 	os.fdopen(tmpfile[0]).close()
 
-	if offset != 0:
-		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-	else:
-		os.link(filename, "%s/%s" % (tmpdir, "templink"))
-		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
 	## First we do some sanity checks
-
 	## Use information from zipinfo -v to extract the right offset (or at least the last offset,
 	## which is the only one we are interested in)
 	p = subprocess.Popen(['zipinfo', '-v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -1680,12 +1645,7 @@ def unpackRar(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 
-	if offset != 0:
-		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-	else:
-		os.link(filename, "%s/%s" % (tmpdir, "templink"))
-		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
 	# inspect the rar archive, and retrieve the end of archive
 	# this way we won't waste too many resources when we don't need to
@@ -1752,20 +1712,8 @@ def unpackLZMA(filename, offset, filesize, tempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	if offset != 0:
-		## if the offset is small, the blocksize of dd will be small, so it will be slow. In that case using
-		## tail is faster, especially for big files.
-		if offset < 128:
-			tmptmpfile = open(tmpfile[1], 'wb')
-			p = subprocess.Popen(['tail', filename, '-c', "%d" % (filesize - offset)], stdout=tmptmpfile, stderr=subprocess.PIPE, close_fds=True)
-			(stanout, stanerr) = p.communicate()
-			tmptmpfile.close()
-		else:
-			p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-			(stanout, stanerr) = p.communicate()
-	else:
-		os.link(filename, "%s/%s" % (tmpdir, "templink"))
-		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
+
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
 	p = subprocess.Popen(['lzma', '-cd', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
@@ -1880,12 +1828,7 @@ def unpackARJ(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir, suffix=".arj")
 
-	if offset != 0:
-		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-	else:
-		os.link(filename, "%s/%s" % (tmpdir, "templink"))
-		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
 	## first check archive integrity
 	p = subprocess.Popen(['arj', 't', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
@@ -1945,12 +1888,8 @@ def unpackIco(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
-	if offset != 0:
-		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-	else:
-		os.link(filename, "%s/%s" % (tmpdir, "templink"))
-		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
+
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
 	p = subprocess.Popen(['icotool', '-x', '-o', tmpdir, tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
