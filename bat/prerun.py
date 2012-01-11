@@ -49,13 +49,13 @@ def genericMarkerSearch(filename, magicscans, envvars=None):
 	return offsets
 
 ## XML files actually only need to be verified and tagged so other scans can decide to ignore it
-def searchXML(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
-	tags = []
+def searchXML(filename, tempdir=None, tags=[], offsets={}, envvars=None):
+	newtags = []
 	p = subprocess.Popen(['xmllint','--noout', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode == 0:
-		tags.append("xml")
-	return ([], blacklist, tags)
+		newtags.append("xml")
+	return ([], newtags)
 
 ## method to verify if a file only contains text
 ## Since the default encoding in Python 2 is 'ascii' and we can't guarantee
@@ -65,8 +65,8 @@ def searchXML(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 ##
 ## Interesting link with background info:
 ## * http://fedoraproject.org/wiki/Features/PythonEncodingUsesSystemLocale
-def verifyText(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
-	tags = []
+def verifyText(filename, tempdir=None, tags=[], offsets={}, envvars=None):
+	newtags = []
 	datafile = open(filename, 'rb')
 	databuffer = []
 	offset = 0
@@ -75,71 +75,71 @@ def verifyText(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	while databuffer != '':
 		if not extractor.isPrintables(databuffer):
 			datafile.close()
-			tags.append("binary")
-			return ([], blacklist, tags)
+			newtags.append("binary")
+			return ([], newtags)
 		## move the offset 100000
 		datafile.seek(offset + 100000)
 		databuffer = datafile.read(100000)
 		offset = offset + len(databuffer)
-	tags.append("text")
+	newtags.append("text")
 	datafile.close()
-	return ([], blacklist, tags)
+	return ([], newtags)
 
 ## quick check to verify if a file is a graphics file.
-def verifyGraphics(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
-	tags = []
-	tags = verifyPNG(filename, tempdir, blacklist, offsets, envvars)[2]
-	if tags == []:
-		tags = verifyBMP(filename, tempdir, blacklist, offsets, envvars)[2]
-	return ([], blacklist, tags)
+def verifyGraphics(filename, tempdir=None, tags=[], offsets={}, envvars=None):
+	newtags = []
+	newtags = verifyJPEG(filename, tempdir, tags, offsets, envvars)[1]
+	if newtags == []:
+		newtags = verifyBMP(filename, tempdir, tags, offsets, envvars)[1]
+	return ([], newtags)
 
-def verifyBMP(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
-	tags = []
+def verifyBMP(filename, tempdir=None, tags=[], offsets={}, envvars=None):
+	newtags = []
 	p = subprocess.Popen(['bmptopnm', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0 or "warning" in stanerr:
-		return ([], blacklist, tags)
-	tags.append("bmp")
-	tags.append("graphics")
-	return ([], blacklist, tags)
+		return ([], newtags)
+	newtags.append("bmp")
+	newtags.append("graphics")
+	return ([], newtags)
 
-def verifyPNG(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
-	tags = []
+def verifyJPEG(filename, tempdir=None, tags=[], offsets={}, envvars=None):
+	newtags = []
 	p = subprocess.Popen(['jpegtopnm', '-multiple', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		return ([], blacklist, tags)
+		return ([], newtags)
 	## multiple jpegs in this file, so we need to unpack
 	if len(stanerr.strip().split("\n")) > 1:
-		return ([], blacklist, tags)
-	tags.append("jpeg")
-	tags.append("graphics")
-	return ([], blacklist, tags)
+		return ([], newtags)
+	newtags.append("jpeg")
+	newtags.append("graphics")
+	return ([], newtags)
 
-def verifyGzip(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
-	tags = []
+def verifyGzip(filename, tempdir=None, tags=[], offsets={}, envvars=None):
+	newtags = []
 	p = subprocess.Popen(['gunzip', '-t', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		return ([], blacklist, tags)
+		return ([], newtags)
 	## possibly multiple gzips in this file, or bzip2 with trailing data
 	if "trailing garbage ignored" in stanerr:
-		return ([], blacklist, tags)
+		return ([], newtags)
 	## the file contains one or more gzip archives
-	tags.append("gzip")
-	tags.append("compressed")
-	return ([], blacklist, tags)
+	newtags.append("gzip")
+	newtags.append("compressed")
+	return ([], newtags)
 
-def verifyBZ2(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
-	tags = []
+def verifyBZ2(filename, tempdir=None, tags=[], offsets={}, envvars=None):
+	newtags = []
 	p = subprocess.Popen(['bunzip2', '-tvv', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		return ([], blacklist, tags)
+		return ([], newtags)
 	## possibly multiple bzip2 in this file, or bzip2 with trailing data
 	if len(stanerr.strip().split("\n")) > 1:
 		if "trailing garbage after EOF ignored" in stanerr:
-			return ([], blacklist, tags)
+			return ([], newtags)
 		else:
 			## output would look like:
 			## $ bunzip2 -tvv foo.bz2 
@@ -149,7 +149,7 @@ def verifyBZ2(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 			## so splitting it on "\n" would give us a list of length 3
 			## (because we strip) if there is just one bzip2 file, otherwise more.
 			if len(stanerr.strip().split("\n")) > 3:
-				return ([], blacklist, tags)
-	tags.append("bz2")
-	tags.append("compressed")
-	return ([], blacklist, tags)
+				return ([], newtags)
+	newtags.append("bz2")
+	newtags.append("compressed")
+	return ([], newtags)
