@@ -88,6 +88,8 @@ def verifyText(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 ## quick check to verify if a file is a graphics file.
 def verifyGraphics(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
+	if "text" in tags or "compressed" in tags:
+		return ([], newtags)
 	newtags = verifyJPEG(filename, tempdir, tags, offsets, envvars)[1]
 	if newtags == []:
 		newtags = verifyBMP(filename, tempdir, tags, offsets, envvars)[1]
@@ -118,6 +120,10 @@ def verifyJPEG(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 
 def verifyGzip(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
+	if "text" in tags or "graphics" in tags:
+		return ([], newtags)
+	if not 0 in offsets['gzip']:
+		return ([], newtags)
 	p = subprocess.Popen(['gunzip', '-t', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
@@ -132,6 +138,10 @@ def verifyGzip(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 
 def verifyBZ2(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
+	if "text" in tags or "graphics" in tags:
+		return ([], newtags)
+	if not 0 in offsets['bz2']:
+		return ([], newtags)
 	p = subprocess.Popen(['bunzip2', '-tvv', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
@@ -146,9 +156,16 @@ def verifyBZ2(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 			##  foo.bz2: 
 			##    [1: huff+mtf rt+rld]
 			##    ok
-			## so splitting it on "\n" would give us a list of length 3
-			## (because we strip) if there is just one bzip2 file, otherwise more.
-			if len(stanerr.strip().split("\n")) > 3:
+			## so splitting it on "\n" would give us a list of length 3 in this case
+			## perhaps more in other cases. More bzip2 files concatenated would mean
+			## that the length of stanerr would be significantly more than the number
+			## of the last block that it reports.
+			stanerrlines = stanerr.strip().split("\n")
+			try:
+				blocks = int(stanerrlines[-2].split(':')[0][5:])
+				if blocks != (len(stanerrlines) - 2):
+					return ([], newtags)
+			except:
 				return ([], newtags)
 	newtags.append("bz2")
 	newtags.append("compressed")
