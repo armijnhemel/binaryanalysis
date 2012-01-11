@@ -24,7 +24,7 @@ priority = 100
 type    = prerun
 module  = bat.prerun
 method  = verifyText
-priority = 1
+priority = 2
 
 [verifygraphics]
 type    = prerun
