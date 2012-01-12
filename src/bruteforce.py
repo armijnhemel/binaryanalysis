@@ -553,9 +553,17 @@ def main(argv):
 			break
 	poolresult = []
 	if scans['programscans'] != []:
-		## Filter duplicate files and only scan them once. Recombine
-		## results. Keep a list of which sha256 have duplicates.
-		## filter out the checksums
+		## Sometimes there are duplicate files inside a blob. We
+		## only want to scan them once to minimize time spent on
+		## scanning. Since the results are independent anyway (the
+		## unpacking phase is where unique paths are determined) we
+		## can scan once for each sha256 and if there are more files
+		## with the same sha256 we can simply copy the result.
+		##
+		## * keep a list of which sha256 have duplicates.
+		## * filter out the checksums
+		## * for each sha256 scan once
+		## * copy results in case there are duplicates
 		sha256leaf = {}
 		for i in leaftasks:
 			if sha256leaf.has_key(i[-2]):
@@ -597,6 +605,8 @@ def main(argv):
 	## the reporting/scanning, just process the results. Examples: generate
 	## fancier reports, use microblogging to post scan results,
 	## order a pizza, whatever...
+	## TODO: make sure we don't process duplicates here as well, just like
+	## in leaf scans.
 	if scans['postrunscans'] != []:
 		postrunscans = []
 		for i in unpackreports.keys():
