@@ -56,7 +56,7 @@ extensions = {'.c'      : 'C',
 splitcharacters = map(lambda x: chr(x), range(0,9) + range(14,32) + [127])
 
 ## split on the special characters, plus remove special control characters that are
-## at the beginning of the string in escaped form.
+## at the beginning and end of the string in escaped form.
 ## Return a list of strings.
 def splitSpecialChars(s):
 	splits = [s]
@@ -69,7 +69,9 @@ def splitSpecialChars(s):
 		for i in splitchars:
 			splits = filter(lambda x: x != '', reduce(lambda x, y: x + y, map(lambda x: x.split(i), splits), []))
 	## Now we need to make sure we get rid of leading control characters.
-	## The reason we remove them only at the beginning (for now) is because it is a lot easier.
+	## The reason we remove them only at the beginning and end
+	## (for now) is because it is a lot easier. In the future we should also
+	## split on them mid-string.
 	remove_chars = ["\\a", "\\b", "\\v", "\\f", "\\n", "\\r", "\\e", "\\0"]
 	for i in splits:
 		processed = False
@@ -79,6 +81,10 @@ def splitSpecialChars(s):
 				if i.startswith(c):
 					i = i[2:]
 					break
+				if i.endswith(c) and len(i) > 3:
+					if i[-3] != "\\":
+						i = i[:-2]
+						break
 			if lensplit == len(i):
 				processed = True
 				final_splits.append(i)
