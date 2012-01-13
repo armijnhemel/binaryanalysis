@@ -22,17 +22,24 @@ def genericSearch(path, markerStrings, blacklist=[]):
 		filesize = os.stat(path).st_size
 		if extractor.inblacklist(0, blacklist) == filesize:
 			return None
-                binary = open(path, 'rb')
-                lines = binary.read()
-		binary.close()
-		for marker in markerStrings:
-			offset = lines.find(marker)
-			if offset != -1 and not extractor.inblacklist(offset, blacklist):
-				return True
-			else:
-				return None
+		datafile = open(path, 'rb')
+		databuffer = []
+		offset = 0
+		datafile.seek(offset)
+		databuffer = datafile.read(100000)
+		while databuffer != '':
+			for marker in markerStrings:
+				markeroffset = databuffer.find(marker)
+				if markeroffset != -1 and not extractor.inblacklist(offset, blacklist):
+					return True
+			## move the offset 100000
+			datafile.seek(offset + 100000)
+			databuffer = datafile.read(100000)
+			offset = offset + len(databuffer)
+		datafile.close()
         except Exception, e:
                 return None
+	return None
 
 ## The result of this method is a list of library names that the file dynamically links
 ## with. The path of these libraries is not given, since this is usually not recorded
