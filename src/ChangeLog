@@ -1,3 +1,7 @@
+2012-01-13
+* further preprocess strings that go into the database. Specifically we split
+on strings that 'strings' will split on when reading a binary file
+
 2012-01-10
 * don't run leaf scans on duplicate files. Instead run the scans just once and
 recombine the results later.

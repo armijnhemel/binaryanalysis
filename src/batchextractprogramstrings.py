@@ -52,6 +52,21 @@ extensions = {'.c'      : 'C',
               '.js'     : 'JavaScript',
              }
 
+## a list of characters that 'strings' will split on when processing a binary file
+splitcharacters = map(lambda x: chr(x), range(0,9) + range(14,32) + [127])
+
+## split on the special characters. Return a list of strings.
+def splitSpecialChars(s):
+	splits = [s]
+	splitchars = []
+	for i in splitcharacters:
+		if i in s:
+			splitchars.append(i)
+	if splitchars != []:
+		for i in splitchars:
+			splits = filter(lambda x: x != '', reduce(lambda x, y: x + y, map(lambda x: x.split(i), splits), []))
+	return splits
+
 ## unpack the directories to be scanned. For speed improvements it might be
 ## wise to use a ramdisk or tmpfs for this, although the program does not
 ## seem to be I/O bound...
@@ -294,24 +309,25 @@ def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 		elif l.startswith("msgstr \"\""):
 			count = len(linenumbers)
 			for xline in lines:
-				## split at \r
-				## TODO: handle \0 (although xgettext will not scan any further when encountering a \0 in a string)
-				for line in xline.split("\\r\\n"):
-					for sline in line.split("\\n"):
-						## do we really need this?
-						sline = sline.replace("\\\n", "")
+				splits = []
+				splits=splitSpecialChars(xline)
+				for splitline in splits:
+					for line in splitline.split("\\r\\n"):
+						for sline in line.split("\\n"):
+							## do we really need this?
+							sline = sline.replace("\\\n", "")
 
-						## unescape a few values
-						sline = sline.replace("\\\"", "\"")
-						sline = sline.replace("\\t", "\t")
-						sline = sline.replace("\\\\", "\\")
+							## unescape a few values
+							sline = sline.replace("\\\"", "\"")
+							sline = sline.replace("\\t", "\t")
+							sline = sline.replace("\\\\", "\\")
 	
-						## we don't want to store empty strings, they won't show up in binaries
-						## but they do make the database a lot larger
-						if sline == '':
-							continue
-						for i in range(0, len(linenumbers)):
-							sqlres.append((sline, linenumbers[i]))
+							## we don't want to store empty strings, they won't show up in binaries
+							## but they do make the database a lot larger
+							if sline == '':
+								continue
+							for i in range(0, len(linenumbers)):
+								sqlres.append((sline, linenumbers[i]))
 			linenumbers = []
 		## the other strings are added to the list of strings we need to process
 		else:
