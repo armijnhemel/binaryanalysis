@@ -55,9 +55,12 @@ extensions = {'.c'      : 'C',
 ## a list of characters that 'strings' will split on when processing a binary file
 splitcharacters = map(lambda x: chr(x), range(0,9) + range(14,32) + [127])
 
-## split on the special characters. Return a list of strings.
+## split on the special characters, plus remove special control characters that are
+## at the beginning of the string in escaped form.
+## Return a list of strings.
 def splitSpecialChars(s):
 	splits = [s]
+	final_splits = []
 	splitchars = []
 	for i in splitcharacters:
 		if i in s:
@@ -65,7 +68,24 @@ def splitSpecialChars(s):
 	if splitchars != []:
 		for i in splitchars:
 			splits = filter(lambda x: x != '', reduce(lambda x, y: x + y, map(lambda x: x.split(i), splits), []))
-	return splits
+	## Now we need to make sure we get rid of leading control characters.
+	## The reason we remove them only at the beginning (for now) is because it is a lot easier.
+	remove_chars = ["\\a", "\\b", "\\v", "\\f", "\\n", "\\r", "\\e", "\\0"]
+	for i in splits:
+		processed = False
+		lensplit = len(i)
+		while not processed and lensplit != 0:
+			for c in remove_chars:
+				if i.startswith(c):
+					i = i[2:]
+					break
+			if lensplit == len(i):
+				processed = True
+				final_splits.append(i)
+				break
+			else:
+				lensplit = len(i)
+	return final_splits
 
 ## unpack the directories to be scanned. For speed improvements it might be
 ## wise to use a ramdisk or tmpfs for this, although the program does not
@@ -309,8 +329,9 @@ def extractsourcestrings(filename, filedir, package, version, srcdirlen):
 		elif l.startswith("msgstr \"\""):
 			count = len(linenumbers)
 			for xline in lines:
-				splits = []
 				splits=splitSpecialChars(xline)
+				if splits == []:
+					continue
 				for splitline in splits:
 					for line in splitline.split("\\r\\n"):
 						for sline in line.split("\\n"):
