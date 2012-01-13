@@ -414,8 +414,21 @@ def readconfig(config):
 	programscans = []
 	prerunscans = []
 	postrunscans = []
+	batconf = {}
 	for section in config.sections():
-		if config.has_option(section, 'type'):
+		## TODO: generic configuration for BAT
+		if section == "batconfig":
+			try:
+				mp = config.get(section, 'multiprocessing')
+				if mp == 'yes':
+					batconf['multiprocessing'] = True
+				else:
+					batconf['multiprocessing'] = False
+			except:
+				batconf['multiprocessing'] = False
+			continue
+		
+		elif config.has_option(section, 'type'):
 			conf = {}
 			conf['name']   = section
 			conf['module'] = config.get(section, 'module')
@@ -457,7 +470,7 @@ def readconfig(config):
 				postrunscans.append(conf)
 	## sort the prerun scans on priority (highest priority first)
 	prerunscans = sorted(prerunscans, key=lambda x: x['priority'], reverse=True)
-	return {'unpackscans': unpackscans, 'programscans': programscans, 'prerunscans': prerunscans, 'postrunscans': postrunscans}
+	return {'batconfig': batconf, 'unpackscans': unpackscans, 'programscans': programscans, 'prerunscans': prerunscans, 'postrunscans': postrunscans}
 
 ## combine all results that we have into a format that xmlresprettyprint() can handle
 def flatten(toplevel, unpackreports, leafreports):
@@ -514,7 +527,7 @@ def main(argv):
 
 	scans = readconfig(config)
 	magicscans = []
-	for k in scans.keys():
+	for k in ["prerunscans", "unpackscans", "programscans", "postrunscans"]:
 		for s in scans[k]:
 			if s['magic'] != None:
 				magicscans = magicscans + s['magic'].split(':')
@@ -539,8 +552,10 @@ def main(argv):
 	unpackreports_tmp = []
 	unpackreports = {}
 
-	pool = multiprocessing.Pool(processes=1)
-	#pool = multiprocessing.Pool()
+	if scans['batconfig']['multiprocessing']:
+		pool = multiprocessing.Pool()
+	else:
+		pool = multiprocessing.Pool(processes=1)
 	while True:
 		scansplusleafs = pool.map(scan, scantasks, 1)
 		scantasks = []
