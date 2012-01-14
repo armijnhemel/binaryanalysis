@@ -79,4 +79,4 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 				os.rmdir(tmpdir)
 			offset = fssearch.findRPM(datafile, offset+1)
 		datafile.close()
-		return (diroffsets, blacklist, offsets)
+		return (diroffsets, blacklist, [])
