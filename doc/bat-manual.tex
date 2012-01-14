@@ -17,8 +17,8 @@
 \section{Introducing the Binary Analysis Tool}
 
 The Binary Analysis Tool (BAT) is a tool that can help developers and companies
-check binary files. Its primary application right now is for Open Source software
-license compliance, with a special focus on supply chain management in consumer
+check binary files. Its primary application is for Open Source software license
+compliance, with a special focus on supply chain management in consumer
 electronics.
 
 BAT consists of several scripts written in Python. The most important program
@@ -26,8 +26,8 @@ is the scanner for binary objects to detect the presence of Open Source
 software inside binaries. There are also other programs to help with specific
 tasks, such as verifying if configurations for a given BusyBox binary match
 with the configuration in source code. Also included is a very experimental
-program to help scan Linux kernel images and derive a Linux kernel
-configuration from them.
+program to help scan Linux kernel images and a script to derive a Linux kernel
+configuration from a Linux kernel image.
 
 \subsection{Software requirements}
 
@@ -37,7 +37,7 @@ Other platforms are tested with, but only to build binary releases.
 
 If the latest version from version control is used it is important to look at
 the file \texttt{setup.cfg} to get a list of the dependencies that should be
-installed on the system.
+met.
 
 \subsection{Hardware requirements}
 
@@ -57,14 +57,38 @@ The programs in the Binary Analysis Tool are \texttt{bruteforce.py},
 
 The main program in BAT is \texttt{bruteforce.py}. As the name suggests uses a
 brute force approach for scanning a binary. It assumes no prior knowledge of
-how a binary is constructed or what is inside. Instead it tries to determine
-what is inside by applying several methods to find contents in the binary, such
-as looking for identifiers and running external tools to find contents in the
-binary. After successful identification it unpacks compressed files, media
-files and file systems recursively. Finally a wide range of individual scans
-are applied to each extracted file, ranging from determining dynamically linked
-libraries to an elaborate ranking method to guess which sources were used to
-build a program.
+how a binary is constructed or what is inside the binary. Instead it tries to
+determine what is inside by applying several methods, such as looking for
+known identifiers of file systems and compressed files and running external
+tools to find contents in the binary.
+
+After successful identification it unpacks compressed files, media files and
+file systems recursively. Finally several individual scans are applied to each
+extracted file, ranging from determining dynamically linked libraries to an
+elaborate ranking method to guess which sources were used to build a program.
+
+\subsubsection{Marker search}
+
+The first action performed by \texttt{bruteforce.py} is to scan a file for
+known markers from compressed files and file systems. Which markers are
+searched for depends on the contents of the configuration file (specifically
+the \texttt{magic} attribute). These markers are subsequently used to choose
+which other methods, such as unpackers, to run.
+
+\subsubsection{Pre-run checks}
+
+Before files are unpacked they are briefly inspected and tagged, so methods
+that are applied later do not unnecessarily have to process files, reducing
+run time and false positives.
+
+For example, files that only contain text are tagged as \texttt{text}, and the
+rest as \texttt{binary} (this depends on the implementation of Python. Python 2
+only considers (by default) ASCII to be valid text). Methods that only work on
+binaries can ignore anything that has been tagged with \texttt{text}.
+
+There are similar checks to determine valid XML and images, plus there are a
+few example methods for more sophisticated checks, such as detecting
+\texttt{gzip} and \texttt{bzip2} compression, which are disabled by default.
 
 \subsubsection{Unpackers}
 
@@ -79,16 +103,17 @@ method  = searchUnpackJffs2
 priority = 1
 \end{verbatim}
 
-In BAT 5.0 the following file systems, compressed files and media files can be
-unpacked:
+In BAT 6.0 the following file systems, compressed files and media files can be
+unpacked or extracted:
 
 \begin{itemize}
 \item file systems: cramfs, ext2/ext3/ext4, ISO9660, JFFS2, SquashFS (specific
-variants), UBIFS
-\item compressed files: ar, ARJ, BASE64, BZIP2, compressed Flash, CAB, CPIO,
-EXE (specific compression methods only) GZIP, InstallShield (old versions),
-LZIP, LZMA, LZO, RAR, RPM, TAR, XZ, ZIP
-\item media files: GIF, ICO, PNG
+variants), UBIFS (not on Debian/Ubuntu), YAFFS2 (specific variants)
+\item compressed files and executable formats: 7z, ar, ARJ, BASE64, BZIP2,
+compressed Flash, CAB, CPIO, EXE (specific compression methods only) GZIP,
+InstallShield (old versions), LZIP, LZMA, LZO, RAR, RPM, serialized Java, TAR,
+UPX, XZ, ZIP
+\item media files: GIF, ICO, PDF, PNG
 \end{itemize}
 
 Unpacking differs per file type. Most files use one or more identifiers that
@@ -134,7 +159,8 @@ Linux kernel, loadlin, RedBoot, U-Boot, vsftpd, wireless-tools, wpa-supplicant
 
 The fast string searches are meant for quick sweep scanning only. They have
 their limits, can report false positives or miss finding a program. They should
-only be used to signal that further inspection is necessary.
+only be used to signal that further inspection is necessary. For a thorough
+investigation the advanced search mode should be used.
 
 \subsubsection{Enabling and disabling scans}
 
@@ -264,7 +290,13 @@ file systems
 \item various versions of \texttt{unsquashfs} that enable unpacking variants
 of SquashFS. These versions have either been lifted from vendor SDKs, the
 OpenWrt project, or upstream SquashFS project.
+\item two Java projects: \texttt{jdeserialze} and \texttt{ddex}, to help
+respectively with unpacking serialized Java files and scanning binary files
+from the Dalvik VM (Android).
 \end{itemize}
+
+The collection is split in two packages: \texttt{bat-extratools-java} contains
+the two Java packages, the \texttt{bat-extratools} package contains the rest.
 
 \appendix
 
@@ -585,7 +617,7 @@ This option is disabled by default for a few reasons:
 \begin{itemize}
 \item scanning licenses adds a significant performance penalty to scanning the
 code (about 1100\% when scanning uClibc 0.9.30.1).
-\item there is no code in the BAT 5.0 that makes use of this information.
+\item there is no code in the BAT 6.0 that makes use of this information.
 \end{itemize}
 
 If you want to enable license scanning, you will have to install Ninka first
