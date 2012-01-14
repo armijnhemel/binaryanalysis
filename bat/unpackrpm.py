@@ -63,6 +63,7 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 				## determine which compression is used, so we can
 				## find the right offset. Code from the RPM examples
 				tset = rpm.TransactionSet()
+				tset.setVSFlags(rpm._RPMVSF_NOSIGNATURES)
         			fdno = os.open(filename, os.O_RDONLY)
         			header = tset.hdrFromFdno(fdno)
         			os.close(fdno)
