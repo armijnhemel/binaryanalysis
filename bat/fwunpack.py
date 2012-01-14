@@ -174,7 +174,7 @@ def unpackJavaSerialized(filename, offset, tempdir=None):
 	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
 	## TODO: remove hardcoded path
-	p = subprocess.Popen(['java', '-jar', '/home/armijn/gpltool/trunk/bat-extratools/jdeserialize/bat-jdeserialize.jar', '-blockdata', 'deserialize', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	p = subprocess.Popen(['java', '-jar', '/usr/share/java/bat-jdeserialize.jar', '-blockdata', 'deserialize', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
         (stanout, stanerr) = p.communicate()
         if p.returncode != 0 or 'file version mismatch!' in stanerr:
 		os.unlink(tmpfile[1])

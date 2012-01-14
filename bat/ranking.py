@@ -181,7 +181,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 				## then process each file in $tmpdir and search file for lines containing "const-string"
 				## alternatively, use code from here http://code.google.com/p/smali/
 				dalvikdir = tempfile.mkdtemp()
-				p = subprocess.Popen(['java', '-jar', '/home/armijn/gpltool/trunk/bat-extratools/dedexer/bat-ddx.jar', '-d', dalvikdir, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+				p = subprocess.Popen(['java', '-jar', '/usr/share/java/bat-ddx.jar', '-d', dalvikdir, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				if p.returncode == 0:
 					osgen = os.walk(dalvikdir)
