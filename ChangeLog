@@ -1,3 +1,7 @@
+2012-01-14
+* prepare for 6.0 release
+* fix bugs in RPM unpacking
+
 2012-01-13
 * further preprocess strings that go into the database. Specifically we split
 on strings that 'strings' will split on when reading a binary file
