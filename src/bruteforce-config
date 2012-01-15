@@ -237,7 +237,7 @@ type    = unpack
 module  = bat.unpackrpm
 method  = searchUnpackRPM
 priority = 2
-magic = rpm
+magic = rpm:gzip:xz:xztrailer
 noscan   = text:xml:graphics:pdf:compressed
 
 [squashfs]
