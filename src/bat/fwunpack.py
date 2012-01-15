@@ -1495,6 +1495,29 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, envvars=
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [])
 
+def searchUnpackLRZIP(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if offsets['lrzip'] == []:
+		return ([], blacklist, [])
+
+	diroffsets = []
+	counter = 1
+	for offset in offsets['lrzip']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		tmpdir = dirsetup(tempdir, filename, "lrzip", counter)
+		res = unpackLRZIP(filename, offset, tmpdir)
+		if res != None:
+			diroffsets.append((res, offset))
+			counter = counter + 1
+		else:
+			## cleanup
+			os.rmdir(tmpdir)
+	return (diroffsets, blacklist, [])
+
+def unpackLRZIP(filename, offset, tempdir=None):
+	pass
+
 def unpackZip(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 
