@@ -33,7 +33,8 @@ configuration from a Linux kernel image.
 
 To run BAT a recent Linux distribution is needed. Development is (currently)
 done on Fedora 14 and Fedora 15, so those platforms are likely to work best.
-Other platforms are tested with, but only to build binary releases.
+Other platforms (Debian 6, Ubuntu 10.10 and later) are tested with, but only to
+build binary releases.
 
 If the latest version from version control is used it is important to look at
 the file \texttt{setup.cfg} to get a list of the dependencies that should be
@@ -43,7 +44,8 @@ met.
 
 The tools in the Binary Analysis Tool can be quite resource intensive. Most of
 the tools seem to be memorybound and I/O-bound, and it makes more sense to
-invest in more memory and faster disks than in raw CPU power.
+invest in more memory and faster disks than in raw CPU power, although using
+more cores definitely will speed up the scanning process.
 
 \section{Using the programs in the Binary Analysis Tool}
 
@@ -66,6 +68,27 @@ After successful identification it unpacks compressed files, media files and
 file systems recursively. Finally several individual scans are applied to each
 extracted file, ranging from determining dynamically linked libraries to an
 elaborate ranking method to guess which sources were used to build a program.
+
+\subsubsection{Running \texttt{bruteforce.py}}
+
+The \texttt{bruteforce.py} tool uses a configuration file that is in Windows
+INI format. The main configuration directive is \texttt{batconfig}, which
+currently only allows setting a single setting, namely whether or not multiple
+CPUs (or cores) should be used during scanning. The default configuration as
+shipped in the official BAT distribution is to not use multiple CPUs:
+
+\begin{verbatim}
+[batconfig]
+multiprocessing = no
+\end{verbatim}
+
+By setting this to \texttt{yes} the program will start an extra process per CPU
+that is available. In most cases it is completely safe to use multiprocessing,
+but there is one important exception: if the ranking method (described later)
+is used, without pregenerating the proper caching database (or purchasing one)
+it is unsafe to use multiprocessing. If ranking is used and there is a fully
+generated database it is completely safe and even strongly advised to use
+multiprocessing, since it vastly speeds up running the program.
 
 \subsubsection{Marker search}
 
@@ -117,9 +140,9 @@ UPX, XZ, ZIP
 \end{itemize}
 
 Unpacking differs per file type. Most files use one or more identifiers that
-can be searched for in a binary blob. Using this information it
-is possible to carve out the right parts of a binary blob and verify if it
-indeed contains a compressed file, media file or file system.
+can be searched for in a binary blob. Using this information it is possible
+to carve out the right parts of a binary blob and verify if it indeed contains
+a compressed file, media file or file system.
 
 There is not always an identifier that can be searched for. The YAFFS2 file
 system layout for example is dependent on the hardware specifics of the
@@ -130,10 +153,14 @@ Other files (such as ARJ and ICO files) have a very generic identifier, so
 there are a lot of false positives. This causes a big increase in runtime.
 These two unpackers are therefore disabled by default.
 
+If unpacking is successful a directory with unpacked files that can be
+scanned further is returned, and, if available, some meta information to avoid
+duplicate scanning (blacklisting information and tags).
+
 \subsubsection{Leaf scans}
 
-Leaf scans, or program scans, are scans that are run on every single file
-after unpacking, including files that contained files that were found
+Leaf scans, also called program scans, are scans that are run on every single
+file after unpacking, including files that contained files that were found
 and extracted by unpackers.
 
 Leaf/program scans can be recognized in the configuration because their type is
@@ -162,19 +189,29 @@ their limits, can report false positives or miss finding a program. They should
 only be used to signal that further inspection is necessary. For a thorough
 investigation the advanced search mode should be used.
 
-\subsubsection{Enabling and disabling scans}
+\subsubsection{Post-run methods}
 
-The \texttt{bruteforce.py} tool uses a configuration file that is in Windows
-INI format. There is a standard configuration file that enables most of the
-scans by default. To disable a scan it can be outcommented in the file (by
+Since BAT 6.0 there is the possibility to add methods that are run after all
+the regular work has been performed, or ``post-run''. These methods should not
+alter the scan results in any way, but just use the information from the
+scanning process. A typical use case would be to present the data in a nicer
+to use format than the standard report, or to use more external data sources.
+
+While there are no post-run methods in BAT by default it is fairly easy to
+write them.
+
+\subsubsection{Enabling and disabling scans and methods}
+
+The standard configuration file enables most of the scans methods implemented
+in BAT by default. To disable a scan it can be outcommented in the file (by
 starting the line with the \texttt{\#} character), or by removing it from the
 configuration file.
 
 \subsubsection{Interpreting the results}
 
-\texttt{bruteforce.py} outputs its results in XML format on standard output. After
-redirecting the output to a file it is possible to look at this file with a
-commandline tool such as \texttt{xml\_pp} or a webbrowser such as Mozilla
+\texttt{bruteforce.py} outputs its results in XML format on standard output.
+After redirecting the output to a file it is possible to look at this file with
+a commandline tool such as \texttt{xml\_pp} or a webbrowser such as Mozilla
 Firefox.
 
 Since XML is not meant for human consumption a graphical user interface is
@@ -464,7 +501,7 @@ The quick checks should therefore only be used as an indication that further
 inspection of the binary is needed. A much better method is the ranking method
 that is also available in BAT, but which is not as fast.
 
-\subsubsection{Pretty printing}
+\subsubsection{Pretty printing for leaf scans}
 
 Pretty printing for unpackers is standardized but for leaf scans there is
 more flexibility. This is needed because in some cases the result as returned
@@ -481,6 +518,8 @@ failure.
 If no pretty printer is defined the value as returned by the scan will be used
 as the content of result tag.
 
+\subsection{Post-run methods}
+
 \section{Binary Analysis Tool knowledgebase}
 
 BAT comes with a mechanism to use a database backend. The default version of
@@ -488,8 +527,8 @@ BAT only unpacks file systems and compressed files and runs a few simple checks
 on the leaf nodes of the unpacking process.
 
 In the paper ``Finding Software License Violations Through Binary Code Clone
-Detection'' by Hemel et. al. (ACM 978-1-4503-0574-7/11/05) presented at
-the Mining Software Repositories 2011 conference a method to use a database
+Detection'' by Hemel et. al. (ACM 978-1-4503-0574-7/11/05), presented at
+the Mining Software Repositories 2011 conference, a method to use a database
 with strings extracted from source code was described. This functionality is
 available in the ranking module in the file \texttt{ranking.py}. This code
 is not enabled by default, but it has to be explicitely enabled in the
