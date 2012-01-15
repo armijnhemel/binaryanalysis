@@ -1516,7 +1516,21 @@ def searchUnpackLRZIP(filename, tempdir=None, blacklist=[], offsets={}, envvars=
 	return (diroffsets, blacklist, [])
 
 def unpackLRZIP(filename, offset, tempdir=None):
-	pass
+	tmpdir = unpacksetup(tempdir)
+
+	tmpfile = tempfile.mkstemp(dir=tempdir)
+	os.fdopen(tmpfile[0]).close()
+
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
+
+	## from unpacking stdout we can get some information
+	## for blacklists. A few experiments show that there
+	## are 125 bytes of overhead, so if the size of
+	## uncompressed bytes + 125 == filesize we can blacklist
+	## the entire file and tag it as 'compressed'
+
+	os.unlink(tmpfile[1])
+	return (endofcentraldir, tmpdir)
 
 def unpackZip(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
