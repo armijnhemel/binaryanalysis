@@ -951,10 +951,10 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 		cpiooffsets = cpiooffsets + offsets[marker]
 	if cpiooffsets == []:
 		return ([], blacklist, [])
-	cpiooffsets.sort()
-
 	if offsets['cpiotrailer'] == []:
 		return ([], blacklist, [])
+
+	cpiooffsets.sort()
 
 	diroffsets = []
 	counter = 1
