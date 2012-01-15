@@ -11,15 +11,13 @@ import sys, os
 from optparse import OptionParser
 import busybox, extractor
 
-def busybox_version(path, blacklist=[], envvars=None):
+def busybox_version(filename, blacklist=[], envvars=None):
 	try:
-                filesize = os.stat(path).st_size
+                filesize = os.stat(filename).st_size
 		## if the whole file is blacklisted, we don't have to scan
                 if extractor.inblacklist(0, blacklist) == filesize:
                         return None
-		busybox_binary = open(path, 'rb')
-		busybox_lines = busybox_binary.read()
-		return busybox.extract_version(busybox_lines)
+		return busybox.extract_version(filename)
 	except Exception, e:
 		return None
 	
@@ -28,7 +26,6 @@ def main(argv):
 	parser = OptionParser()
 	parser.add_option("-b", "--binary", dest="bb", help="path to BusyBox binary", metavar="FILE")
 	(options, args) = parser.parse_args()
-	## suck in the BusyBox binary
 	if options.bb == None:
 		parser.error("Path to BusyBox binary needed")
 	version = busybox_version(options.bb)
