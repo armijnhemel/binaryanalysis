@@ -218,13 +218,32 @@ def prettyprint_undefined_apps(undefined_apps):
 ## Helper method that extracts the BusyBox version using a regular
 ## expression. It needs printable characters for this.
 ## If it can't be found, it will return 'None' instead.
-def extract_version(lines):
-	## quick check to see if this is BusyBox. If not, we can return immediately
-	offset = lines.find("BusyBox v")
-	if offset == -1:
-		return
+## This won't always work: if just one applet is compiled in it is
+## likely that the "BusyBox v" string is not even included at all, which
+## also means we can't extract a version number from it.
+def extract_version(filename):
+	offset = 0
+	bboffset = 0
+	databuffer = []
+	datafile = open(filename)
+	datafile.seek(offset)
+	databuffer = datafile.read(100000)
+	while databuffer != '':
+		## quick check to see if this is BusyBox. If not, we can return immediately
+		markeroffset = databuffer.find("BusyBox v")
+		if markeroffset != -1:
+			bboffset = offset + markeroffset
+			break
+		## move the offset 100000
+		datafile.seek(offset + 100000)
+		databuffer = datafile.read(100000)
+		offset = offset + len(databuffer)
+	datafile.close()
+	busybox = open(filename, 'rb')
+	lines = busybox.read()
+	busybox.close()
 	## BusyBox version numbers should fit in 40 characters
-	printables = extractor.extract_printables(lines[offset:offset + 40])
+	printables = extractor.extract_printables(lines[bboffset:bboffset + 40])
 	res = re.search("BusyBox v([\d\.\d\w-]+) \(", printables)
 	if res != None:
 		return res.groups(0)[0]
@@ -249,10 +268,9 @@ def main(argv):
 	except:
 		print "No valid BusyBox file"
 		sys.exit(1)
-	busybox_lines = busybox_binary.read()
 
 	## determine the BusyBox binary
-	version = extract_version(busybox_lines)
+	version = extract_version(options.bb)
 
 	## ... and read in names from all applets we have extracted from the BusyBox source
 	if version == None:
@@ -268,6 +286,8 @@ def main(argv):
 
 	bbconfig = pickle.load(open('%s/configs/%s-config' % (bbconfigs, version)))
 
+	busybox_lines = busybox_binary.read()
+	busybox_binary.close()
 	## determine the configuration (can be empty)
 	bb_configuration = extract_configuration(busybox_lines, options.bb, bbconfig)
 
