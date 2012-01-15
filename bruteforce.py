@@ -416,7 +416,6 @@ def readconfig(config):
 	postrunscans = []
 	batconf = {}
 	for section in config.sections():
-		## TODO: generic configuration for BAT
 		if section == "batconfig":
 			try:
 				mp = config.get(section, 'multiprocessing')
@@ -544,8 +543,9 @@ def main(argv):
 	shutil.copy(scan_binary, tempdir)
 
 	## multithread it. Sometimes we hit http://bugs.python.org/issue9207
-	## hardcode to 1 worker process for now. This is because ranking writes to
-	## databases and you don't want concurrent writes.
+	## Amount of threats can be configured in the configuration file, but
+	## often it is wise to have it set to 'no. This is because ranking writes
+	## to databases and you don't want concurrent writes.
 
 	scantasks = [(tempdir, os.path.basename(scan_binary), scans['unpackscans'], scans['prerunscans'], magicscans, len(tempdir), tempdir)]
 	leaftasks = []
