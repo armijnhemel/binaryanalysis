@@ -1069,7 +1069,7 @@ def unpackCramfs(data, offset, tempdir=None):
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
-			os.rmdir(tmpdir2)
+		os.rmdir(tmpdir2)
 		return
 	else:
 		## first copy all the contents from the temporary dir to tmpdir
