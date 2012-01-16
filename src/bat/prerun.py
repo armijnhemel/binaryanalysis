@@ -14,6 +14,8 @@ import tempfile, re, magic
 import fsmagic, fssearch, extractor
 
 ## method to search for all the markers in magicscans
+## Although it is in this method it is actually not a pre-run scan, so perhaps
+## it should be moved to bruteforce.py instead.
 def genericMarkerSearch(filename, magicscans, envvars=None):
 	datafile = open(filename, 'rb')
 	databuffer = []
@@ -55,7 +57,7 @@ def searchXML(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	(stanout, stanerr) = p.communicate()
 	if p.returncode == 0:
 		newtags.append("xml")
-	return ([], newtags)
+	return newtags
 
 ## method to verify if a file only contains text
 ## Since the default encoding in Python 2 is 'ascii' and we can't guarantee
@@ -76,80 +78,80 @@ def verifyText(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 		if not extractor.isPrintables(databuffer):
 			datafile.close()
 			newtags.append("binary")
-			return ([], newtags)
+			return newtags
 		## move the offset 100000
 		datafile.seek(offset + 100000)
 		databuffer = datafile.read(100000)
 		offset = offset + len(databuffer)
 	newtags.append("text")
 	datafile.close()
-	return ([], newtags)
+	return newtags
 
 ## quick check to verify if a file is a graphics file.
 def verifyGraphics(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
 	if "text" in tags or "compressed" in tags:
-		return ([], newtags)
-	newtags = verifyJPEG(filename, tempdir, tags, offsets, envvars)[1]
+		return newtags
+	newtags = verifyJPEG(filename, tempdir, tags, offsets, envvars)
 	if newtags == []:
-		newtags = verifyBMP(filename, tempdir, tags, offsets, envvars)[1]
-	return ([], newtags)
+		newtags = verifyBMP(filename, tempdir, tags, offsets, envvars)
+	return newtags
 
 def verifyBMP(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
 	p = subprocess.Popen(['bmptopnm', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0 or "warning" in stanerr:
-		return ([], newtags)
+		return newtags
 	newtags.append("bmp")
 	newtags.append("graphics")
-	return ([], newtags)
+	return newtags
 
 def verifyJPEG(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
 	p = subprocess.Popen(['jpegtopnm', '-multiple', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		return ([], newtags)
+		return newtags
 	## multiple jpegs in this file, so we need to unpack
 	if len(stanerr.strip().split("\n")) > 1:
-		return ([], newtags)
+		return newtags
 	newtags.append("jpeg")
 	newtags.append("graphics")
-	return ([], newtags)
+	return newtags
 
 def verifyGzip(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
 	if "text" in tags or "graphics" in tags:
-		return ([], newtags)
+		return newtags
 	if not 0 in offsets['gzip']:
-		return ([], newtags)
+		return newtags
 	p = subprocess.Popen(['gunzip', '-t', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		return ([], newtags)
+		return newtags
 	## possibly multiple gzips in this file, or bzip2 with trailing data
 	if "trailing garbage ignored" in stanerr:
-		return ([], newtags)
+		return newtags
 	## the file contains one or more gzip archives
 	newtags.append("gzip")
 	newtags.append("compressed")
-	return ([], newtags)
+	return newtags
 
 def verifyBZ2(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
 	if "text" in tags or "graphics" in tags:
-		return ([], newtags)
+		return newtags
 	if not 0 in offsets['bz2']:
-		return ([], newtags)
+		return newtags
 	p = subprocess.Popen(['bunzip2', '-tvv', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		return ([], newtags)
+		return newtags
 	## possibly multiple bzip2 in this file, or bzip2 with trailing data
 	if len(stanerr.strip().split("\n")) > 1:
 		if "trailing garbage after EOF ignored" in stanerr:
-			return ([], newtags)
+			return newtags
 		else:
 			## output would look like:
 			## $ bunzip2 -tvv foo.bz2 
@@ -164,9 +166,9 @@ def verifyBZ2(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 			try:
 				blocks = int(stanerrlines[-2].split(':')[0][5:])
 				if blocks != (len(stanerrlines) - 2):
-					return ([], newtags)
+					return newtags
 			except:
-				return ([], newtags)
+				return newtags
 	newtags.append("bz2")
 	newtags.append("compressed")
-	return ([], newtags)
+	return newtags
