@@ -229,12 +229,11 @@ def scan((path, filename, scans, prerunscans, magicscans, lentempdir, tempdir)):
 		else:
 			envvars = None
 		exec "from %s import %s as bat_%s" % (module, method, method)
-		scanres = eval("bat_%s(filetoscan, tempdir, tags, offsets, envvars)" % (method))
-		## result is either empty, or contains offsets
-		(diroffsets, scantags) = scanres
+		scantags = eval("bat_%s(filetoscan, tempdir, tags, offsets, envvars)" % (method))
 		## append the tag results. These will be used later to be able to specifically filter
 		## out files
-		tags = tags + scantags
+		if scantags != []:
+			tags = tags + scantags
 
 	## we have all offsets with markers here, so we can filter out
 	## the scans we won't need.
