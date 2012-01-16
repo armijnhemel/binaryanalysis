@@ -83,6 +83,7 @@ def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, envva
 		tmpfile = tempfile.mkstemp(dir=tmpdir)
 		## reset pointer into file
 		datafile.seek(0)
+		## TODO fix for big files
 		data = datafile.read()
 		datafile.close()
 		counter = 0
@@ -649,6 +650,7 @@ def searchUnpackCab(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		return ([], blacklist, [])
 	diroffsets = []
 	counter = 1
+	## TODO: fix for big files
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
@@ -677,6 +679,7 @@ def unpackCab(data, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])
+	os.fdopen(tmpfile[0]).close()
 	## copied from the python-magic examples
 	cab = file(tmpfile[1], "r")
 	buffer = cab.read(100)
@@ -685,7 +688,6 @@ def unpackCab(data, offset, tempdir=None):
 	mstype = ms.buffer(buffer)
 	if "Microsoft Cabinet archive data" not in mstype:
 		ms.close()
-		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
@@ -693,8 +695,13 @@ def unpackCab(data, offset, tempdir=None):
 	p = subprocess.Popen(['cabextract', '-d', tmpdir, tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
+		## files might have been written, but possibly not correct, so
+		## remove them
+		rmfiles = os.listdir(tmpdir)
+		if rmfiles != []:
+			for rmfile in rmfiles:
+				os.unlink("%s/%s" % (tmpdir, rmfile))
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
@@ -703,7 +710,6 @@ def unpackCab(data, offset, tempdir=None):
 		## output from magic, which we already have.
 		## We should do more sanity checks here
 		cabsize = re.search("(\d+) bytes", mstype)
-		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		return (tmpdir, int(cabsize.groups()[0]))
 
@@ -1027,6 +1033,7 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, envvars
 		return ([], blacklist, [])
 
 	datafile = open(filename, 'rb')
+	## TODO: fix for big files
 	data = datafile.read()
 	datafile.close()
 	diroffsets = []
