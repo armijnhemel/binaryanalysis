@@ -224,10 +224,10 @@ write them.
 
 \subsubsection{Enabling and disabling scans and methods}
 
-The standard configuration file enables most of the scans methods implemented
-in BAT by default. To disable a scan it can be outcommented in the file (by
-starting the line with the \texttt{\#} character), or by removing it from the
-configuration file.
+The standard configuration file enables most of the scans and methods
+implemented in BAT by default. To disable a scan it can be outcommented in the
+file (by starting the line with the \texttt{\#} character), or by removing it
+from the configuration file.
 
 \subsubsection{Interpreting the results}
 
@@ -371,6 +371,9 @@ least 5 or more versions of SquashFS with LZMA compression out there).
 
 \subsection{Pre-run methods}
 
+Pre-run methods check and tag files, so the files can be ignored by later
+methods and scans. While tagging is not exclusive
+
 \subsection{Unpackers}
 
 Unpackers are responsible for recursively unpacking binaries until they
@@ -397,8 +400,16 @@ If the current scan needs to blacklist a byte range it should add it to this
 list after finishing a scan.
 \item \texttt{offsets} is a dictionary containing a mapping from an identifier
 to a list of offsets in the file where these identifiers can be found. This
-list is filled by the scan \texttt{genericMarker} which is defined to run as
-part of the pre-run methods.
+list is filled by the scan \texttt{genericMarker} which always runs before
+anything else.
+\end{itemize}
+
+Return values are:
+
+\begin{itemize}
+\item the name of a directory, containing files that were unpacked.
+\item the blacklist, possibly appended with new values
+\item a list of tags, in case any tags were added, or an empty list
 \end{itemize}
 
 Most scans have been split in two parts: one part is for searching the
@@ -413,7 +424,8 @@ two scans. For example, \texttt{unpackCpio} is used by both
 
 Identifiers for new file systems and compressed files are, if available, added
 to \texttt{fsmagic.py} in the directory \texttt{bat}. These identifiers will be
-available in the \texttt{offsets} parameter that is passed to a scan.
+available in the \texttt{offsets} parameter that is passed to a scan, if any
+were found.
 
 Good sources to find identifiers are \texttt{/usr/share/magic}, documentation
 for file systems or compressed files, or the output of \texttt{hexdump -C}.
