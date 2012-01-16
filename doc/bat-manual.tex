@@ -436,16 +436,16 @@ In BAT blacklists are used to prevent some scans from running on a particular
 byte range, because other scans have already covered these bytes, or will cover
 them.
 
-The most obvious example is the ext2 file system: in a normal setup (no
-encryption) it is trivial to see the content of all the individual files when
-ax ext2 file system image is opened. This is because this file system is
-mostly a concatenation of the data, with some meta data associated with the
-files in the file system.
+The most obvious example is the \texttt{ext2} file system: in a normal setup
+(no encryption) it is trivial to see the content of all the individual files
+when an \texttt{ext2} file system image is opened. This is because this file
+system is mostly a concatenation of the data, with some meta data associated
+with the files in the file system.
 
-If another compressed file is in the ext2 file system it could be that it will
-be picked up by BAT twice: once it will be detected inside the ext2 file system
-and once after the file system has been unpacked by the ext2 file system
-unpacker.
+If another compressed file is in the \texttt{ext2} file system it could be that
+it will be picked up by BAT twice: once it will be detected inside the
+\texttt{ext2} file system and once after the file system has been unpacked by
+the \texttt{ext2} file system unpacker.
 
 Other examples are:
 
