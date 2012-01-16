@@ -28,6 +28,8 @@ fsmagic = {
             'squashfs2':        '\x73\x71\x73\x68', # sqsh
             'squashfs3':        '\x71\x73\x68\x73', # qshs
             'squashfs4':        '\x73\x68\x73\x71', # shsq
+            'squashfs5':        '\x74\x71\x73\x68', # tqsh - used in DD-WRT
+            'squashfs6':        '\x68\x73\x71\x74', # hsqt - used in DD-WRT
             'lzma_alone':       '\x5d\x00\x00',
             'lzma_alone_alt':   '\x6d\x00\x00',     # used in OpenWrt
             '7z':               '7z\xbc\xaf\x27\x1c',
@@ -76,7 +78,7 @@ correction = {
              }
 
 ## collection of markers that should be scanned together
-squashtypes = ['squashfs1', 'squashfs2', 'squashfs3', 'squashfs4']
+squashtypes = ['squashfs1', 'squashfs2', 'squashfs3', 'squashfs4', 'squashfs5', 'squashfs6']
 lzmatypes   = ['lzma_alone', 'lzma_alone_alt']
 cpio        = ['cpio1', 'cpio2', 'cpio3']
 gif         = ['gif87', 'gif89']
