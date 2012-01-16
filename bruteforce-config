@@ -105,13 +105,13 @@ priority = 2
 magic = cpio1:cpio2:cpio3:cpiotrailer
 noscan   = text:xml:graphics:pdf:compressed
 
-#[cramfs]
-#type    = unpack
-#module  = bat.fwunpack
-#method  = searchUnpackCramfs
-#priority = 3
-#magic = cramfs
-#noscan   = text:xml:graphics:pdf:compressed
+[cramfs]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackCramfs
+priority = 3
+magic = cramfs
+noscan   = text:xml:graphics:pdf:compressed
 
 [exe]
 type    = unpack

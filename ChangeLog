@@ -1,5 +1,6 @@
 2012-01-16
 * add lrzip unpacking
+* enable cramfs checking by default
 
 2012-01-14
 * prepare for 6.0 release
