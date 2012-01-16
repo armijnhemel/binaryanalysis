@@ -372,7 +372,37 @@ least 5 or more versions of SquashFS with LZMA compression out there).
 \subsection{Pre-run methods}
 
 Pre-run methods check and tag files, so the files can be ignored by later
-methods and scans. While tagging is not exclusive
+methods and scans. While tagging is not exclusive to pre-run methods it is
+their main purpose.
+
+\subsubsection{Writing a pre-run method}
+
+Pre-run methods have a strict interface:
+
+\begin{verbatim}
+def prerunMethod(filename, tempdir=None, tags=[],
+          offsets={}, envvars=None):
+	newtags = []
+	newtags.append('helloworld')
+	return newtags
+\end{verbatim}
+
+\begin{itemize}
+\item \texttt{filename} is the absolute path of the file that needs to be tagged
+\item \texttt{tempdir} is the (possibly) empty name of a directory where the
+file is. This is currently unused and might be removed in the future.
+\item \texttt{tags} is the set of tags that have already been defined for the
+file.
+\item \texttt{offsets} is the set of offsets that have been found for the file
+\item \texttt{envvars} is an optionally empty set of environment variables that
+can be used to pass extra information to the pre-run method.
+\end{itemize}
+
+Return values are:
+
+\begin{itemize}
+\item a list containing tags
+\end{itemize}
 
 \subsection{Unpackers}
 
@@ -502,16 +532,16 @@ when nothing could be found. The result values are:
 \item custom data structure, but a custom pretty printer has to be added
 \end{itemize}
 
-There is no restriction for the code that is run. In BAT there are currently
-checks that invoke other programs to discover dynamically linked libraries,
-find the license of a kernel module as declared by certain macros during the
-build process of the module, or simple checks for the presence of strings in
-the binary that indicate the use of certain software.
+There is no restriction on the code that is run and basically anything can be
+done. In BAT there are for example checks that invoke other programs to discover
+dynamically linked libraries, find the license of a kernel module using
+\texttt{modinfo} or simple checks for the presence of strings in the binary
+that indicate the use of certain software.
 
-The simple checks scan for hardcoded strings. These strings are frequently
-found just in the package for which the check is written for. For example,
-these strings can often be found in copies of the \texttt{iptables} program and
-the related \texttt{libiptc} library:
+The simplest methods are the ones that scan for hardcoded strings. These strings
+are frequently found just in the package for which the check is written for. For
+example, these strings can often be found in copies of the \texttt{iptables}
+program and the related \texttt{libiptc} library:
 
 \begin{verbatim}
 markerStrings =
@@ -554,6 +584,31 @@ as the content of result tag.
 
 \subsection{Post-run methods}
 
+Post-run methods don't change the result of the whole scanning process, but
+only use the data from the process. For example prettyprinting a fancy report
+(more advanced than the standard XML report) would be a typical post-run
+method.
+
+\subsubsection{Writing a post-run method}
+
+Post-run methods have a strict interface:
+
+\begin{verbatim}
+def postrunHelloWorld(filename, unpackreports, leafreports, envvars={}):
+	print "Hello World"
+\end{verbatim}
+
+\begin{itemize}
+\item \texttt{filename} is the absolute path of the scanned file, after
+unpacking.
+\item \texttt{unpackreports} are the reports of the unpackers for the file
+\item \texttt{leafreports} are the reports of the unpackers for the file
+\item \texttt{envvars} is an optional dictionary of environment variables
+\end{itemize}
+
+Since the post-run methods don't change the result in any way, but just have
+side effects there is no need to return anything.
+
 \section{Building binary packages of the Binary Analysis Tool}
 
 If you want to install BAT through the package manager of your distribution you
@@ -581,6 +636,17 @@ rebuild the SRPM using \texttt{rpmbuild --rebuild}.
 
 Building packages for \texttt{bat-extratools} and \texttt{bat-extratools-java}
 is unfortunately a bit more elaborate.
+
+\begin{enumerate}
+\item make a fresh export of the Subversion repository
+\item change the names of \texttt{bat-extratools} and the
+\texttt{bat-extratools-java} directories to contain the version name of the
+release (for example \texttt{bat-extratools-6.0}). Make a \texttt{tar.gz}
+archive of the directory:
+\texttt{tar zcf bat-extratools-6.0.tar.gz bat-extratools-6.0}
+\item run \texttt{rpmbuild} to create binary packages:
+\texttt{rpmbuild -ta bat-extratools-6.0.tar.gz}
+\end{enumerate}
 
 \subsection{Building packages for DEB based systems}
 
