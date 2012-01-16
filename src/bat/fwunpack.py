@@ -1151,6 +1151,12 @@ def unpackSquashfsWrapper(filename, offset, tempdir=None):
 		os.unlink(tmpfile[1])
 		return retval
 
+	## DD-WRT variant
+	retval = unpackSquashfsDDWRTLZMA(tmpfile[1],offset,tmpdir)
+	if retval != None:
+		os.unlink(tmpfile[1])
+		return retval
+
 	## Broadcom variant
 	## WARNING!!
 	## Sometimes, for example when the OpenWrt version from above
@@ -1208,6 +1214,37 @@ def unpackSquashfs(filename, offset, tmpdir):
 			return None
 		else:
 			squashsize = int(re.search(", (\d+) bytes", stanout).groups()[0])
+		return (tmpdir, squashsize)
+
+## squashfs variant from DD-WRT, with LZMA
+def unpackSquashfsDDWRTLZMA(filename, offset, tmpdir):
+	## squashfs 1.0 with lzma from DDWRT can't unpack to an existing directory
+	## so we use a workaround using an extra temporary directory
+	tmpdir2 = tempfile.mkdtemp()
+
+	p = subprocess.Popen(['bat-unsquashfs-ddwrt', '-dest', tmpdir2 + "/squashfs-root", '-f', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	## Return code is not reliable enough, since even after successful unpacking the return code could be 16 (related to creating inodes as non-root)
+	## we need to filter out messages about creating inodes. Right now we do that by counting how many
+	## error lines we have for creating inodes and comparing them with the total number of lines in stderr
+	## If they match we know all errors are for creating inodes, so we can safely ignore them.
+	stanerrlines = stanerr.strip().split("\n")
+	inode_error = 0
+	for stline in stanerrlines:
+		if "create_inode: could not create" in stline:
+			inode_error = inode_error + 1
+	if stanerr != "" and len(stanerrlines) != inode_error:
+		shutil.rmtree(tmpdir2)
+		return None
+	else:
+		## move all the contents using shutil.move()
+		mvfiles = os.listdir(tmpdir2 + "/squashfs-root")
+		for f in mvfiles:
+			shutil.move(tmpdir2 + "/squashfs-root/" + f, tmpdir)
+		## then we cleanup the temporary dir
+		shutil.rmtree(tmpdir2)
+		## unlike with 'normal' squashfs we can use 'file' to determine the size
+		squashsize = 1
 		return (tmpdir, squashsize)
 
 ## squashfs variant from OpenWrt, with LZMA

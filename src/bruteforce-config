@@ -253,7 +253,7 @@ type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackSquashfs
 priority = 1
-magic = squashfs1:squashfs2:squashfs3:squashfs4
+magic = squashfs1:squashfs2:squashfs3:squashfs4:squashfs5:squashfs6
 noscan   = text:xml:graphics:pdf:compressed
 
 [swf]
