@@ -50,7 +50,24 @@ invest in more memory and faster disks than in raw CPU power, although using
 more cores definitely will speed up the scanning process.
 
 \subsubsection{Installing on Fedora}
+
+To install on Fedora three packages are needed:
+\texttt{bat-extratools}, \texttt{bat-extratools-java} and \texttt{bat}. These
+can be downloaded from the website of the binary analysis tool in both prebuilt
+versions and as a source RPM file. When installing the three files there should
+be a list of dependencies that should be installed to let BAT work
+successfully. Some of these packages are not in Fedora by default but need to
+be installed through extra repositories, such as RPMfusion.
+
 \subsubsection{Installing on Debian and Ubuntu}
+
+To install on Debian and Ubuntu three packages are needed:
+\texttt{bat-extratools}, \texttt{bat-extratools-java} and \texttt{bat}. These
+can be downloaded from the website of the binary analysis tool in both prebuilt
+versions. When installing the three files there should be a list of
+dependencies that should be installed to let BAT work successfully. Some of
+these packages are not in Debian by default but need to be installed by
+enabling extra repositories such as Debian \texttt{non-free}.
 
 \section{Using the programs in the Binary Analysis Tool}
 
@@ -534,27 +551,49 @@ systems.
 
 \subsection{Building packages for RPM based systems}
 
+\subsubsection{Building \texttt{bat}}
+
+Building the \texttt{bat} package is fairly straightforward.
+
 \begin{enumerate}
-\item Make a fresh checkout from Subversion
+\item Make a fresh export of BAT from Subversion
 \item run the command: \texttt{python setup.py bdist\_rpm}
 \end{enumerate}
 
-This will create a few files: an RPM file and an SRPM file. The RPM file will typically only work on the distribution you built it on, since several dependencies and paths (like the Python version) will be hardcoded in the RPM. If you need to install it on various distributions you can rebuild the SRPM.
+This will create an RPM file and an SRPM file. If you need to install BAT on
+other versions of Fedora or on other RPM based distributions you can simply
+rebuild the SRPM using \texttt{rpmbuild --rebuild}.
 
+\subsubsection{Building \texttt{bat-extratools} and
+\texttt{bat-extratools-java}}
+
+Building packages for \texttt{bat-extratools} and \texttt{bat-extratools-java}
+is unfortunately a bit more elaborate.
 
 \subsection{Building packages for DEB based systems}
 
-The Debian scripts were written according to the documentation for \texttt{debhelper} found here:
+\subsubsection{Building \texttt{bat}}
 
-\url{https://wiki.ubuntu.com/PackagingGuide/Python}
+The Debian scripts were written according to the documentation for
+\texttt{debhelper} found at \url{https://wiki.ubuntu.com/PackagingGuide/Python}.
 
-Package development is done on Ubuntu 10.10.
+Package building and testing is done on Ubuntu 10.10 and Debian 6.
 
-To build a .deb package do a checkout of Subversion. Change to the directory \texttt{src} and type:
+To build a \texttt{.deb} package do an export of the Subversion repository
+first.  Change to the directory \texttt{src} and type:
+\texttt{debuild -uc -us} to build the package.
 
-debuild -uc -us
+The build process might complain about not being able to find the original
+sources. In our experience it is safe to ignore this. The command will build a
+\texttt{.deb} package which can be installed with \texttt{dpkg -i}.
 
-It will complain about not being able to find the original sources. You can ignore this, until we have a cleaner solution. The command will build a .deb package which you can install with \texttt{dpkg -i}. You might have to take care of installing some dependencies using apt-get first.
+\subsubsection{Building \texttt{bat-extratools} and
+\texttt{bat-extratools-java}}
+
+To build a .deb package do an export of the Subversion repository first. Change
+to the correct directories (\texttt{bat-extratools} and 
+\texttt{bat-extratools-java} and type: \texttt{debuild -uc -us} to
+build the packages.
 
 \section{Binary Analysis Tool knowledgebase}
 
