@@ -280,13 +280,6 @@ priority = 3
 magic = ubifs
 noscan   = text:xml:graphics:pdf:compressed
 
-[unyaffs]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackYaffs2
-priority = 2
-noscan   = text:xml:graphics:pdf:compressed
-
 [upx]
 type    = unpack
 module  = bat.fwunpack
@@ -301,6 +294,13 @@ method  = searchUnpackXZ
 priority = 1
 magic = xz:xztrailer
 noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip
+
+[yaffs]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackYaffs2
+priority = 2
+noscan   = text:xml:graphics:pdf:compressed
 
 [zip]
 type    = unpack
