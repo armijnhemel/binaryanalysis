@@ -2,10 +2,6 @@ Reading contents from file systems and compressed files
 
 Apart from the kernel a device has one or more file systems. The contents of these file systems can contain all kinds of files: normal files (including more file systems), directories, device nodes, etc.
 
-   cramfs
-
-http://manpages.ubuntu.com/manpages/intrepid/man1/fusecram.1.html
-
 http://sourceforge.net/apps/mediawiki/fuse/index.php?title=CompressedFileSystems
 
    Nullsoft installer

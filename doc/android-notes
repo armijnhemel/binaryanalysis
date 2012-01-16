@@ -15,19 +15,15 @@ http://android.git.kernel.org/?p=platform/bootloader/legacy.git;a=blob;f=include
 
 After unpacking firmware often a copy of the default Google terms of service can be found in /etc/NOTICE.html.gz. Sometimes additional files with extra license texts can be found.
 
+
   APK
 
 Applications are in APK format:
 
 http://en.wikipedia.org/wiki/APK_%28file_format%29
 
-unzip can handle these.
 
   Android resource files and XML files
 
 AXMLPrinter2: http://code.google.com/p/android4me/downloads/list
 http://code.google.com/p/android-apktool/
-
-  Dalvik files
-
-Perhaps we can use dedexer.

@@ -29,6 +29,8 @@ with the configuration in source code. Also included is a very experimental
 program to help scan Linux kernel images and a script to derive a Linux kernel
 configuration from a Linux kernel image.
 
+\section{Installing the Binary Analysis Tool}
+
 \subsection{Software requirements}
 
 To run BAT a recent Linux distribution is needed. Development is (currently)
@@ -46,6 +48,9 @@ The tools in the Binary Analysis Tool can be quite resource intensive. Most of
 the tools seem to be memorybound and I/O-bound, and it makes more sense to
 invest in more memory and faster disks than in raw CPU power, although using
 more cores definitely will speed up the scanning process.
+
+\subsubsection{Installing on Fedora}
+\subsubsection{Installing on Debian and Ubuntu}
 
 \section{Using the programs in the Binary Analysis Tool}
 
@@ -519,6 +524,37 @@ If no pretty printer is defined the value as returned by the scan will be used
 as the content of result tag.
 
 \subsection{Post-run methods}
+
+\section{Building binary packages of the Binary Analysis Tool}
+
+If you want to install BAT through the package manager of your distribution you
+might first need to generate packages for it if none exist. For BAT there is
+currently support to build packages for RPM-based systems and for DEB-based
+systems.
+
+\subsection{Building packages for RPM based systems}
+
+\begin{enumerate}
+\item Make a fresh checkout from Subversion
+\item run the command: \texttt{python setup.py bdist\_rpm}
+\end{enumerate}
+
+This will create a few files: an RPM file and an SRPM file. The RPM file will typically only work on the distribution you built it on, since several dependencies and paths (like the Python version) will be hardcoded in the RPM. If you need to install it on various distributions you can rebuild the SRPM.
+
+
+\subsection{Building packages for DEB based systems}
+
+The Debian scripts were written according to the documentation for \texttt{debhelper} found here:
+
+\url{https://wiki.ubuntu.com/PackagingGuide/Python}
+
+Package development is done on Ubuntu 10.10.
+
+To build a .deb package do a checkout of Subversion. Change to the directory \texttt{src} and type:
+
+debuild -uc -us
+
+It will complain about not being able to find the original sources. You can ignore this, until we have a cleaner solution. The command will build a .deb package which you can install with \texttt{dpkg -i}. You might have to take care of installing some dependencies using apt-get first.
 
 \section{Binary Analysis Tool knowledgebase}
 
