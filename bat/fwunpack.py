@@ -1501,6 +1501,7 @@ def searchUnpackLRZIP(filename, tempdir=None, blacklist=[], offsets={}, envvars=
 
 	diroffsets = []
 	counter = 1
+	tags = []
 	for offset in offsets['lrzip']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
@@ -1508,17 +1509,22 @@ def searchUnpackLRZIP(filename, tempdir=None, blacklist=[], offsets={}, envvars=
 		tmpdir = dirsetup(tempdir, filename, "lrzip", counter)
 		res = unpackLRZIP(filename, offset, tmpdir)
 		if res != None:
-			diroffsets.append((res, offset))
+			(lrzipdir, lrzipsize) = res
+			diroffsets.append((lrzipdir, offset))
+			blacklist.append((offset, offset + lrzipsize))
 			counter = counter + 1
+			if lrzipsize == os.stat(filename).st_size:
+				tags.append("compressed")
+				tags.append("lrzip")
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, tags)
 
 def unpackLRZIP(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 
-	tmpfile = tempfile.mkstemp(dir=tempdir)
+	tmpfile = tempfile.mkstemp(dir=tempdir, suffix='.lrz')
 	os.fdopen(tmpfile[0]).close()
 
 	unpackFile(filename, offset, tmpfile[1], tmpdir)
@@ -1529,8 +1535,20 @@ def unpackLRZIP(filename, offset, tempdir=None):
 	## uncompressed bytes + 125 == filesize we can blacklist
 	## the entire file and tag it as 'compressed'
 
+	p = subprocess.Popen(['lrunzip', '-vvv', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		os.unlink(tmpfile[1])
+		return None
+	
+	lrzipsize = 0
+	for i in stanout.strip().split("\n"):
+		if i.startswith("Starting thread"):
+			lrzipsize += int(re.search("to decompress (\d+) bytes from stream", i).groups()[0])
 	os.unlink(tmpfile[1])
-	return (endofcentraldir, tmpdir)
+	if (os.stat(filename).st_size - lrzipsize) == 125:
+		lrzipsize += 125
+	return (tmpdir, lrzipsize)
 
 def unpackZip(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)

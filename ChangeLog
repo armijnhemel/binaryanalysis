@@ -1,3 +1,6 @@
+2012-01-16
+* add lrzip unpacking
+
 2012-01-14
 * prepare for 6.0 release
 * fix bugs in RPM unpacking
