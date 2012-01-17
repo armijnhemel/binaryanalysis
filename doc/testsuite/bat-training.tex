@@ -21,7 +21,7 @@ In this course you will learn:
 \item backgrounds of the Binary Analysis Tool
 \item identifying compressed files and file systems within a bigger binary blob
 \item extracting and verifying compressed files and file systems
-\item configuring and using the Binary Analysis Tool to extract and verify compressed files and file systems
+\item using the Binary Analysis Tool to extract and verify compressed files and file systems
 \end{itemize}
 }
 
@@ -285,7 +285,7 @@ Example with \texttt{dd}:
 \frametitle{Example: gzip}
 Firmware has a gzip file at offset \texttt{0x1C}. Remove the bytes in front:
 
-\texttt{dd if=/path/to/firmware of=/path/to/outfile bs=1 skip=28}
+\texttt{dd if=/path/to/firmware of=/path/to/outfile bs=28 skip=1}
 
 and verify using \texttt{file} that the file is actually a gzip file:
 
@@ -327,21 +327,6 @@ Manually extracting files is a lot of work and it is easy to miss files. BAT aut
 
 BAT works recursively and can unpack nested files and file systems.
 }
-
-\begin{frame}[fragile]
-\frametitle{Configuring BAT}
-BAT can be configured through a configuration file. This file is in Windows INI format. Unpackers are of type \texttt{unpack}:
-
-\begin{verbatim}
-[gzip]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackGzip
-priority = 1
-\end{verbatim}
-
-Commenting an entry, or deleting it from the configuration, disables the unpacker.
-\end{frame}
 
 \frame{
 \frametitle{Running BAT}
