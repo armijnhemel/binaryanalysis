@@ -153,9 +153,13 @@ def unpack_getstrings((filedir, package, version, filename, origin, dbpath, clea
 	filehash = h.hexdigest()
 
 	## Check if we've already processed this file. If so, we can easily skip it and return.
+	## TODO: we should take the origin into account, because sometimes there are differences
+	## in packages with the same name from different sources (binutils-2.1[567] from GNU for
+	## example got a license change in mid-2011, without package names being updated)
         conn = sqlite3.connect(dbpath, check_same_thread = False)
 	c = conn.cursor()
 	#c.execute('PRAGMA journal_mode=off')
+	#c.execute('''select * from processed where package=? and version=? and origin=?''', (package, version, origin))
 	c.execute('''select * from processed where package=? and version=?''', (package, version))
 	if len(c.fetchall()) != 0:
 		c.close()
