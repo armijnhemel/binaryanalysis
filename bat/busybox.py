@@ -236,8 +236,8 @@ def extract_version(filename):
 			break
 		## move the offset 100000
 		datafile.seek(offset + 100000)
+		offset = offset + 100000
 		databuffer = datafile.read(100000)
-		offset = offset + len(databuffer)
 	datafile.close()
 	busybox = open(filename, 'rb')
 	lines = busybox.read()
