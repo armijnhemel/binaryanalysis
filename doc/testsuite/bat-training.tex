@@ -4,7 +4,7 @@
 \usepackage{tikz}
 \author{Armijn Hemel}
 \title{Using the Binary Analysis Tool - part 1}
-\date{December 2, 2011}
+\date{January 17, 2012}
 
 \begin{document}
 
@@ -22,6 +22,17 @@ In this course you will learn:
 \item identifying compressed files and file systems within a bigger binary blob
 \item extracting and verifying compressed files and file systems
 \item using the Binary Analysis Tool to extract and verify compressed files and file systems
+\end{itemize}
+}
+
+\frame{
+\frametitle{Course materials}
+
+For this course you will need:
+
+\begin{itemize}
+\item a computer running a recent installation of Fedora (version 14 or higher), Debian 6, or Ubuntu (version 10.10 or later)
+\item a copy of the Binary Analysis Tool user and developer guide
 \end{itemize}
 }
 
@@ -145,13 +156,13 @@ Obtaining firmwares via these methods is out of scope for this course.
 
 \begin{itemize}
 \item based on OpenWrt 10.03 (``Backfire'')
-\item full corresponding source code available and GPL compliant
+\item full corresponding source code available and GPL compliant: \url{http://www.openwrt.org/}
 \end{itemize}
 }
 
 \frame{
 \frametitle{Manual compliance engineering}
-To understand how BAT works you need to know what it does. We will look at:
+To understand what BAT does under the hood it is good to do it yourself manually a few times. We will look at:
 
 \begin{itemize}
 \item manual discovery of offsets
@@ -330,7 +341,7 @@ BAT works recursively and can unpack nested files and file systems.
 
 \frame{
 \frametitle{Running BAT}
-Make sure BAT and the \texttt{bat-extratools} package are installed (version 6 or higher)
+First make sure BAT (version 6 or higher), plus all necessary dependencies are installed. Then run:
 
 \texttt{bruteforce.py -c /path/to/configuration -b /path/to/firmware > /path/to/output}
 }
