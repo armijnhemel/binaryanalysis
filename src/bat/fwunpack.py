@@ -15,7 +15,7 @@ Optionally, we return a range of bytes that should be excluded in same cases
 where we want to prevent other scans from (re)scanning (part of) the data.
 '''
 
-import sys, os, subprocess, os.path, shutil, stat
+import sys, os, subprocess, os.path, shutil, stat, array
 import tempfile, bz2, re, magic, tarfile, zlib
 import fsmagic, fssearch, extractor, ext2, jffs2
 from xml.dom import minidom
@@ -61,12 +61,15 @@ def unpackFile(filename, offset, tmpfile, tmpdir):
 ## bytes NOR flash instead of 8 bytes SPI flash. This is an ugly hack to first
 ## rearrange the data. This is mostly for Realtek RTL8196C based routers.
 def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	## we can't byteswap if there is not an even amount of bytes in the file
+	if os.stat(filename).st_size % 2 != 0:
+		return ([], blacklist, [])
 	datafile = open(filename, 'rb')
 	offset = 0
 	datafile.seek(offset)
 	swapped = False
 	databuffer = datafile.read(100000)
-	## "Uncompressing Linux..."
+	## look for "Uncompressing Linux..."
 	while databuffer != '':
 		datafile.seek(offset + 99950)
 		if databuffer.find("nUocpmerssni giLun.x..") != -1:
@@ -83,17 +86,16 @@ def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, envva
 		tmpfile = tempfile.mkstemp(dir=tmpdir)
 		## reset pointer into file
 		datafile.seek(0)
-		## TODO fix for big files
-		data = datafile.read()
-		datafile.close()
-		counter = 0
-		for i in xrange(0,len(data)):
-        		if counter == 0:
-                		os.write(tmpfile[0], data[i+1])
-        		else:
-                		os.write(tmpfile[0], data[i-1])
-        		counter = (counter+1)%2
+		databuffer = datafile.read(100000)
+		while databuffer != '':
+			tmparray = array.array('H')
+			tmparray.fromstring(databuffer)
+			tmparray.byteswap()
+			os.write(tmpfile[0], tmparray.tostring())
+			databuffer = datafile.read(100000)
 		blacklist.append((0, os.stat(filename).st_size))
+		datafile.close()
+		os.fdopen(tmpfile[0]).close()
 		return ([(tmpdir, 0)], blacklist, [])
 	return ([], blacklist, [])
 
