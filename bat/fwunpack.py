@@ -234,15 +234,10 @@ def unpackSwf(data, tempdir=None):
 
 ## unpacking jffs2 files is tricky
 def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
-	## first determine if we are dealing with ASCII text
-	ms = magic.open(magic.MAGIC_NONE)
-	ms.load()
-	mstype = ms.file(filename)
-	ms.close()
-	## for now we're just working on whole file systems. This could change in the future.
-	if not 'jffs2' in mstype or blacklist != []:
+	if offsets['jffs2_le'] == []:
 		return ([], blacklist, [])
-
+	if offsets['jffs2_le'][0] != 0 or blacklist != []:
+		return ([], blacklist, [])
 	counter = 1
 	diroffsets = []
 	tmpdir = dirsetup(tempdir, filename, "jffs2", counter)
