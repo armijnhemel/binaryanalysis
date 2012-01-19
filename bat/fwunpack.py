@@ -232,7 +232,6 @@ def unpackSwf(data, tempdir=None):
 	os.fdopen(tmpfile[0]).close()
 	return tmpdir
 
-## unpacking jffs2 files is tricky
 def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	if offsets['jffs2_le'] == []:
 		return ([], blacklist, [])
@@ -243,8 +242,9 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, envvars=
 	tmpdir = dirsetup(tempdir, filename, "jffs2", counter)
 	res = unpackJffs2(filename, tmpdir)
 	if res != None:
-		diroffsets.append((res, 0))
-		blacklist.append((0, os.stat(filename).st_size))
+		(jffs2dir, jffs2size) = res
+		diroffsets.append((jffs2dir, 0))
+		blacklist.append((0, jffs2size))
 	else:
 		os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [])
