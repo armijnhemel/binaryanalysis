@@ -503,7 +503,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 	mstype = ms.file(filename)
 	ms.close()
 
-	if not 'PE32 executable for MS Windows' in mstype and not "PE32+ executable for MS Windows" in mstype:
+	if not 'PE32 executable for MS Windows' in mstype and not "PE32+ executable for MS Windows" in mstype and not "PE32 executable (GUI) Intel 80386, for MS Windows" in mstype:
 		return ([], blacklist, [])
 
 	## apparently we have a MS Windows executable, so continue
