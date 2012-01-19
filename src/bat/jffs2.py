@@ -16,6 +16,7 @@ def readJFFS2Inodes(path):
 
 	## (offset, size, inode, name)
 	nodeentries = []
+	maxoffset = 0
 
 	for s in st:
 		if re.match("\s+Dirent", s) != None:
@@ -35,6 +36,8 @@ def readJFFS2Inodes(path):
 				namesize = int(res.groups()[0])
 			nodename = name[-namesize:]
 			direntries[inodenr] = {'offset': offset, 'size': 0, 'parent': pinodenr, 'name': nodename}
+			if offset > maxoffset:
+				maxoffset = offset
 		elif re.match("\s+Inode", s) != None:
 			(inodeent, size, inode, version, inodesize, csize, dsize, decompressedoffset) = s.split(',', 7)
 			res = re.search("\s+dsize\s*(\d+)", dsize)
@@ -54,7 +57,9 @@ def readJFFS2Inodes(path):
 			if res != None:
 				inodenr = int(res.groups()[0])
 			nodeentries.append({'offset': offset, 'size': size, 'inode': inodenr, 'compressedsize': compressedsize, 'decompressedsize': decompressedsize})
-	return (direntries, nodeentries)
+			if offset > maxoffset:
+				maxoffset = offset
+	return (direntries, nodeentries, maxoffset)
 
 def unpackJFFS2(path, tempdir=None):
 	if tempdir == None:
@@ -67,7 +72,7 @@ def unpackJFFS2(path, tempdir=None):
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
-	(direntries, nodeentries) = res
+	(direntries, nodeentries, maxoffset) = res
 
 	## first get all the entries for the direntries (a misnomer)
 	directories = []
@@ -79,6 +84,8 @@ def unpackJFFS2(path, tempdir=None):
 	pathinodes = {1: ''}
 
 	data = open(path).read()
+
+	jffs2size = maxoffset
 
 	for n in direntries.keys():
 		## create directory structure
@@ -98,6 +105,8 @@ def unpackJFFS2(path, tempdir=None):
 			for node in nodeentries:
 				if node['inode'] == n:
 					filedata = data[node['offset'] + 0x44: node['offset'] + node['size']]
+					if node['offset'] == maxoffset:
+						jffs2size += node['size']
 					try:
 						unzfiledata = unzfiledata + zlib.decompress(filedata)
 					except Exception, e:
@@ -107,4 +116,4 @@ def unpackJFFS2(path, tempdir=None):
 			datafile = open('%s/%s/%s' % (tmpdir, pathinodes[direntries[n]['parent']], direntries[n]['name']), 'w')
 			datafile.write(unzfiledata)
 			datafile.close()
-	return tmpdir
+	return (tmpdir, jffs2size)

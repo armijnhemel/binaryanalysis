@@ -1,3 +1,6 @@
+2012-01-20
+* determine the size of JFFS2 file systems
+
 2012-01-19
 * big file fixes for byteswapping
 * rework identifiers for .exe files
