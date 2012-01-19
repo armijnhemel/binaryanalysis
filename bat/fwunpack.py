@@ -566,8 +566,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 			blacklist.append((0, os.stat(filename).st_size))
 			return (diroffsets, blacklist, [])
 		else:
-			if tempdir == None:
-				os.rmdir(tmpdir)
+			os.rmdir(tmpdir)
 	## then search for RAR by searching for:
 	## WinRAR
 	## and unpack with unrar
@@ -584,8 +583,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 			counter = counter + 1
 			return (diroffsets, blacklist, [])
 		else:
-			if tempdir == None:
-				os.rmdir(tmpdir)
+			os.rmdir(tmpdir)
 	## else try other methods
 	## 7zip gives better results than cabextract
 	## Ideally we should also do something with innounp
@@ -597,8 +595,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		blacklist.append((0, os.stat(filename).st_size))
 		return (diroffsets, blacklist, [])
 	else:
-		if tempdir == None:
-			os.rmdir(tmpdir)
+		os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [])
 
 ## unpacker for Microsoft InstallShield
