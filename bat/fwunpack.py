@@ -2052,17 +2052,27 @@ def unpackPDF(filename, offset, trailer, tempdir=None):
 	os.fdopen(tmpfile[0]).close()
 	filesize = os.stat(filename).st_size
 
-	if offset != 0 and (trailer == filesize or trailer == filesize-1 or trailer == filesize-2):
+	## if the data is the whole file we can just hardlink
+	if offset == 0 and (trailer + 5 == filesize or trailer + 5 == filesize-1 or trailer + 5 == filesize-2):
 		os.link(filename, "%s/%s" % (tmpdir, "templink"))
 		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
 	else:
-		## TODO: this is extremely inefficient for large files
-		datafile = open(filename, 'rb')
-		data = datafile.read()
-		datafile.close()
-		pdffile = open(tmpfile[1], 'wb')
-		pdffile.write(data[offset:trailer+len(fsmagic.fsmagic['pdftrailer'])])
-		pdffile.close()
+		## first we use 'dd' or tail. Then we use truncate
+		if offset < 128:
+			tmptmpfile = open(tmpfile[1], 'wb')
+			p = subprocess.Popen(['tail', filename, '-c', "%d" % (filesize - offset)], stdout=tmptmpfile, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate()
+			tmptmpfile.close()
+		else:
+			p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate()
+			shutil.copy(tmpfile[1], '/tmp/truncatedebug')
+		pdflength = trailer + 5 - offset
+		p = subprocess.Popen(['truncate', "-s", "%d" % pdflength, tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			os.unlink(tmpfile[1])
+			return None
 
 	p = subprocess.Popen(['pdfinfo', "%s" % (tmpfile[1],)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()

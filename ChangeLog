@@ -1,5 +1,7 @@
 2012-01-19
 * big file fixes for byteswapping
+* rework identifiers for .exe files
+* big file fixes for PDF files
 
 2012-01-16
 * add lrzip unpacking
