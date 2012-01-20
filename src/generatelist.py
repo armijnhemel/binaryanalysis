@@ -37,6 +37,8 @@ def generatelist(filedir, origin):
 				(packageversion, extension) = res
 				if extension in ["tgz", "tbz2"]:
 					pass
+				elif extension in ["jar", "zip"]:
+					pass
 				else:
 					try:
 						(packageversion, extension, compression) = p.rsplit('.', 2)
