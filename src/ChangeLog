@@ -2,6 +2,7 @@
 * determine the size of JFFS2 file systems
 * remove limit of JFFS2 scanning (whole file). JFFS2 file systems can now also
 be carved from the middle of a file.
+* return order in which identifiers are found. This is not yet used.
 
 2012-01-19
 * big file fixes for byteswapping

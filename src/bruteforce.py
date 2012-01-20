@@ -216,7 +216,7 @@ def scan((path, filename, scans, prerunscans, magicscans, lentempdir, tempdir)):
 	unpackreports[filetoscan]['sha256'] = filehash
 
 	## scan for markers
-	offsets =  bat.prerun.genericMarkerSearch(filetoscan, magicscans)
+	(offsets, order) =  bat.prerun.genericMarkerSearch(filetoscan, magicscans)
 
 	## prerun scans should be run before any of the other scans
 	for prerunscan in prerunscans:
