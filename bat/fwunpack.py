@@ -240,7 +240,7 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, envvars=
 	counter = 1
 	diroffsets = []
 	tmpdir = dirsetup(tempdir, filename, "jffs2", counter)
-	res = unpackJffs2(filename, tmpdir)
+	res = unpackJffs2(filename, 0, tmpdir)
 	if res != None:
 		(jffs2dir, jffs2size) = res
 		diroffsets.append((jffs2dir, 0))
@@ -249,8 +249,15 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, envvars=
 		os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [])
 
-def unpackJffs2(filename, tempdir=None):
+def unpackJffs2(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.fdopen(tmpfile[0]).close()
+
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
+
+	os.unlink(tmpfile[1])
+
 	return jffs2.unpackJFFS2(filename, tmpdir)
 
 def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
@@ -277,6 +284,7 @@ def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, envvars=Non
 def unpackAr(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.fdopen(tmpfile[0]).close()
 
 	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
@@ -292,12 +300,10 @@ def unpackAr(filename, offset, tempdir=None):
 	p = subprocess.Popen(['ar', 'x', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
-	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
 	if tempdir == None:
 		os.rmdir(tmpdir)
