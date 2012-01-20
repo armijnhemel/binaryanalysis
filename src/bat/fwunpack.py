@@ -235,18 +235,22 @@ def unpackSwf(data, tempdir=None):
 def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	if offsets['jffs2_le'] == []:
 		return ([], blacklist, [])
-	if offsets['jffs2_le'][0] != 0 or blacklist != []:
-		return ([], blacklist, [])
 	counter = 1
 	diroffsets = []
-	tmpdir = dirsetup(tempdir, filename, "jffs2", counter)
-	res = unpackJffs2(filename, 0, tmpdir)
-	if res != None:
-		(jffs2dir, jffs2size) = res
-		diroffsets.append((jffs2dir, 0))
-		blacklist.append((0, jffs2size))
-	else:
-		os.rmdir(tmpdir)
+	for offset in offsets['jffs2_le']:
+		## check if the offset we find is in a blacklist
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		tmpdir = dirsetup(tempdir, filename, "jffs2", counter)
+		res = unpackJffs2(filename, offset, tmpdir)
+		if res != None:
+			(jffs2dir, jffs2size) = res
+			diroffsets.append((jffs2dir, offset))
+			blacklist.append((offset, offset + jffs2size))
+			counter = counter + 1
+		else:
+			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [])
 
 def unpackJffs2(filename, offset, tempdir=None):
@@ -256,9 +260,11 @@ def unpackJffs2(filename, offset, tempdir=None):
 
 	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
+	res = jffs2.unpackJFFS2(tmpfile[1], tmpdir)
 	os.unlink(tmpfile[1])
-
-	return jffs2.unpackJFFS2(filename, tmpdir)
+	if tempdir == None:
+		os.rmdir(tmpdir)
+	return res
 
 def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	if offsets['ar'] == []:

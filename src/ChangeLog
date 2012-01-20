@@ -1,5 +1,7 @@
 2012-01-20
 * determine the size of JFFS2 file systems
+* remove limit of JFFS2 scanning (whole file). JFFS2 file systems can now also
+be carved from the middle of a file.
 
 2012-01-19
 * big file fixes for byteswapping
