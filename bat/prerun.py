@@ -19,6 +19,7 @@ import fsmagic, fssearch, extractor
 def genericMarkerSearch(filename, magicscans, envvars=None):
 	datafile = open(filename, 'rb')
 	databuffer = []
+	order = []
 	offsets = {}
 	offset = 0
 	datafile.seek(offset)
@@ -38,6 +39,8 @@ def genericMarkerSearch(filename, magicscans, envvars=None):
 					#offsets[key].append((offset + res, key))
 					offsets[key].append(offset + res)
 					res = databuffer.find(fsmagic.fsmagic[key], res+1)
+					if not key in order:
+						order.append(key)
 		## move the offset 99950
 		datafile.seek(offset + 99950)
 		## read 100000 bytes with a 50 bytes overlap
@@ -48,7 +51,7 @@ def genericMarkerSearch(filename, magicscans, envvars=None):
 		else:
 			offset = offset + len(databuffer)
 	datafile.close()
-	return offsets
+	return (offsets, order)
 
 ## XML files actually only need to be verified and tagged so other scans can decide to ignore it
 def searchXML(filename, tempdir=None, tags=[], offsets={}, envvars=None):
