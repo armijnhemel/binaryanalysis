@@ -67,7 +67,7 @@ def unpackJFFS2(path, tempdir=None):
 	else:
 		tmpdir = tempdir
 	res = readJFFS2Inodes(path)
-	if res == None:
+	if res == ({}, [], 0):
 		## cleanup
 		if tempdir == None:
 			os.rmdir(tmpdir)
