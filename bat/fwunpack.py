@@ -1749,6 +1749,7 @@ def unpackRar(filename, offset, tempdir=None):
 	## Assumes (for now) that unrar is in the path
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.fdopen(tmpfile[0]).close()
 
 	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
@@ -1761,7 +1762,6 @@ def unpackRar(filename, offset, tempdir=None):
 	if res != None:
 		endofarchive = int(res.groups(0)[0]) + offset
 	else:
-		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
@@ -1775,7 +1775,6 @@ def unpackRar(filename, offset, tempdir=None):
 		#os.unlink(outtmpfile[1])
 		#os.unlink(tmpfile[1])
 		#return None
-	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
 	return (endofarchive, tmpdir)
 
@@ -1932,6 +1931,7 @@ def searchUnpackARJ(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 def unpackARJ(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir, suffix=".arj")
+	os.fdopen(tmpfile[0]).close()
 
 	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
@@ -1940,7 +1940,6 @@ def unpackARJ(filename, offset, tempdir=None):
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		## this is not an ARJ archive
-		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
@@ -1949,7 +1948,6 @@ def unpackARJ(filename, offset, tempdir=None):
 		p = subprocess.Popen(['arj', 'x', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
-			os.fdopen(tmpfile[0]).close()
 			os.unlink(tmpfile[1])
 			if tempdir == None:
 				os.rmdir(tmpdir)
@@ -1961,7 +1959,6 @@ def unpackARJ(filename, offset, tempdir=None):
 	## we should do more sanity checks here
 	arjsize = int(stanoutlines[-1].split()[-2])
 	## always clean up the old temporary files
-	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
 	return (tmpdir, arjsize)
 
