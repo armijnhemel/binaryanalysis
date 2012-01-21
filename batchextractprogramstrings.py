@@ -131,13 +131,14 @@ def unpack(directory, filename):
        			tmpdir = tempfile.mkdtemp()
 			p = subprocess.Popen(['unzip', "%s/%s" % (directory, filename), '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 			(stanout, stanerr) = p.communicate()
-			if p.returncode != 0:
-				## TODO: cleanup
+			if p.returncode != 0 and p.returncode != 1:
+				print >>sys.stderr, "unpacking ZIP failed for", filename, stanerr
+				shutil.rmtree(tmpdir)
 				pass
 			else:
 				return tmpdir
 		except Exception, e:
-			print e
+			print >>sys.stderr, "unpacking ZIP failed", e
 
 def unpack_verify(filedir, filename):
 	try:
@@ -148,7 +149,7 @@ def unpack_verify(filedir, filename):
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
 def unpack_getstrings((filedir, package, version, filename, origin, dbpath, cleanup, license)):
-	print filename
+	print >>sys.stdout, filename
 	scanfile = open("%s/%s" % (filedir, filename), 'r')
 	h = hashlib.new('sha256')
 	h.update(scanfile.read())
@@ -173,10 +174,6 @@ def unpack_getstrings((filedir, package, version, filename, origin, dbpath, clea
 	if temporarydir == None:
 		c.close()
 		conn.close()
-		if cleanup:
-			try:
-				shutil.rmtree(temporarydir)
-			except: pass
 		return None
 	## Check if we already have any strings from program + version. If so,
 	## first remove them before we add them to avoid unnecessary duplication.
@@ -194,8 +191,9 @@ def unpack_getstrings((filedir, package, version, filename, origin, dbpath, clea
 	if cleanup:
 		try:
 			shutil.rmtree(temporarydir)
-		except:
+		except Exception, e:
 			## probably a permission problem, like no access to a directory. Meh.
+			print >>sys.stderr, "can't remove: ", temporarydir
 			pass
 	return
 
@@ -250,7 +248,7 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 								## store all the licenses we already know for this file
 								for r in res:
 									(filelicense, scannerversion) = r
-									print >>sys.stderr, "NINKA     %s/%s" % (i[0],p), filelicense
+									#print >>sys.stderr, "NINKA     %s/%s" % (i[0],p), filelicense
 									## hardcode the scanner to 'ninka'. This could/should change in the future.
 									cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, filelicense, "ninka", scannerversion))
 							else:
@@ -262,35 +260,36 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 								## filter out the licenses we can't determine.
 								## We actually should run these through FOSSology to try and obtain a match.
 								if ninkasplit[0] == '':
-									print >>sys.stderr, "NINKA     %s/%s" % (i[0],p), "UNKNOWN"
+									#print >>sys.stderr, "NINKA     %s/%s" % (i[0],p), "UNKNOWN"
 									cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "ninka", ninkaversion))
 									cursor.execute('''insert into ninkacomments (sha256, license, scanner, version) values (?,?,?,?)''', (commentshash, "UNKNOWN", "ninka", ninkaversion))
 								else:
 									licenses = ninkasplit[0].split(',')
 									for license in licenses:
-										print >>sys.stderr, "NINKA     %s/%s" % (i[0],p), license
+										#print >>sys.stderr, "NINKA     %s/%s" % (i[0],p), license
 										cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "ninka", ninkaversion))
 										cursor.execute('''insert into ninkacomments (sha256, license, scanner, version) values (?,?,?,?)''', (commentshash, license, "ninka", ninkaversion))
 							## Also run FOSSology. Since licenses might appear halfway a file we should not look at the ninkacomments table!
 							## This requires that the user has enough privileges to actually connect to the FOSSology database!
-							p2 = subprocess.Popen(["/usr/lib/fossology/agents/nomos", "%s/%s" % (i[0], p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-                                			(stanout, stanerr) = p2.communicate()
-							if "FATAL" in stanout:
-								pass
-							else:
-								fossysplit = stanout.strip().rsplit(" ", 1)
-								licenses = fossysplit[-1].split(',')
-								for license in licenses:
-									print >>sys.stderr, "FOSSOLOGY %s/%s" % (i[0],p), license
-									cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "nomos", "1.4.0"))
-							print >> sys.stderr
+							#p2 = subprocess.Popen(["/usr/lib/fossology/agents/nomos", "%s/%s" % (i[0], p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+                                			#(stanout, stanerr) = p2.communicate()
+							#if "FATAL" in stanout:
+							#	pass
+							#else:
+							#	fossysplit = stanout.strip().rsplit(" ", 1)
+							#	licenses = fossysplit[-1].split(',')
+							#	for license in licenses:
+							#		print >>sys.stderr, "FOSSOLOGY %s/%s" % (i[0],p), license
+							#		cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "nomos", "1.4.0"))
+							#print >> sys.stderr
 						sqlres = extractsourcestrings(p, i[0], package, version, srcdirlen)
 						for res in sqlres:
 							(pstring, linenumber) = res
 							cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (pstring, filehash, extensions[extension], linenumber))
 							pass
 	except Exception, e:
-		print >>sys.stderr, e
+		if str(e) != "":
+			print >>sys.stderr, package, version, e
 		pass
 	conn.commit()
 	return
