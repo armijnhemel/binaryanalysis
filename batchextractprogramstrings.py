@@ -15,6 +15,9 @@ package version filename origin
 separated by whitespace
 
 Compression is determined using magic
+
+!!WARNING!!
+Sometimes the script bails out with an error "Argument list too long" when using Ninka. I have no idea why this happens (it seems Ninka is not always very robust), but restarting the script should fix it.
 '''
 
 import sys, os, magic, string, re, subprocess, shutil
