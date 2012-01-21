@@ -129,7 +129,7 @@ def unpack(directory, filename):
 	elif 'Zip archive data' in filemagic:
 		try:
        			tmpdir = tempfile.mkdtemp()
-			p = subprocess.Popen(['unzip', "%s/%s" % (directory, filename), '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			p = subprocess.Popen(['unzip', "-B", "%s/%s" % (directory, filename), '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 			(stanout, stanerr) = p.communicate()
 			if p.returncode != 0 and p.returncode != 1:
 				print >>sys.stderr, "unpacking ZIP failed for", filename, stanerr
