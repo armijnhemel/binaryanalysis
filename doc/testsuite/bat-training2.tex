@@ -41,10 +41,32 @@ It is important to keep in mind that this is only for finding evidence. Whether 
 
 \frame{
 \frametitle{Type of a file}
+There are various types of files we are interested in for license issues:
+
+\begin{itemize}
+\item executables (ELF, bFLT, Java, Windows executables)
+\item libraries
+\item scripts
+\item Linux kernel images
+\end{itemize}
+
+Most files can be 
 }
 
 \frame{
-\frametitle{Excercise: }
+\frametitle{Excercise: determine the type of files}
+
+Use the \texttt{file} command to recognize various
+}
+
+\frame{
+\frametitle{Drawbacks of using \texttt{file} and \texttt{libmagic}}
+There are some drawbacks of using commands like \texttt{file} or tools that use \texttt{libmagic}:
+
+\begin{itemize}
+\item the descriptions in the magic database (often found in \texttt{/usr/share/magic}) can change over time
+\item 
+\end{itemize}
 }
 
 \frame{
