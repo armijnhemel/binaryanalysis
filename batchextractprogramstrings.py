@@ -17,7 +17,7 @@ separated by whitespace
 Compression is determined using magic
 '''
 
-import sys, os, magic, string, re, subprocess, shutil
+import sys, os, magic, string, re, subprocess, shutil, stat
 import tempfile, bz2, tarfile, gzip
 from optparse import OptionParser
 from multiprocessing import Pool
@@ -187,10 +187,26 @@ def unpack_getstrings((filedir, package, version, filename, origin, dbpath, clea
 	conn.close()
 	if cleanup:
 		try:
+			osgen = os.walk(temporarydir)
+			while True:
+				i = osgen.next()
+				## make sure we can access all directories
+				for d in i[1]:
+					if not os.path.islink("%s/%s" % (i[0], d)):
+						os.chmod("%s/%s" % (i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+				for p in i[2]:
+					try:
+						if not os.path.islink("%s/%s" % (i[0], p)):
+							os.chmod("%s/%s" % (i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+					except Exception, e:
+						#print e
+						pass
+		except StopIteration:
+			pass
+		try:
 			shutil.rmtree(temporarydir)
-		except Exception, e:
-			## probably a permission problem, like no access to a directory. Meh.
-			print >>sys.stderr, "can't remove: ", temporarydir
+		except:
+			## nothing we can do right now, so just give up
 			pass
 	return
 
@@ -258,7 +274,7 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 								## We actually should run these through FOSSology to try and obtain a match.
 								if ninkasplit[0] == '':
 									#print >>sys.stderr, "NINKA     %s/%s" % (i[0],p), "UNKNOWN"
-									cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "ninka", ninkaversion))
+									cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, "UNKNOWN", "ninka", ninkaversion))
 									cursor.execute('''insert into ninkacomments (sha256, license, scanner, version) values (?,?,?,?)''', (commentshash, "UNKNOWN", "ninka", ninkaversion))
 								else:
 									licenses = ninkasplit[0].split(',')
