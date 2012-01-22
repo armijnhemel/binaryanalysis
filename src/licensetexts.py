@@ -62,7 +62,7 @@ def unpack(dir, filename):
 def ninka(srcdir, sqldb, package, version):
 	## Ninka needs some tweaks to the environment. Right now it is hardcoded
 	## to configuration on my own machine.
-	ninkaenv = os.environ
+	ninkaenv = os.environ.copy()
 	#ninkaenv['PATH'] = ninkaenv['PATH'] + ":/tmp/ninka-1.0-pre2/comments/comments"
 	ninkaenv['PATH'] = ninkaenv['PATH'] + ":/tmp/dmgerman-ninka-7a9a5c4/comments/comments"
         srcdirlen = len(srcdir)+1
