@@ -243,7 +243,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	gaincutoff = 1
 	nonUniqueMatches = []
 
-	scanenv = os.environ
+	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):
 			try:

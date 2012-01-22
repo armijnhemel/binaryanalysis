@@ -1212,7 +1212,7 @@ def unpackSquashfs(filename, offset, tmpdir):
 	## Fedora uses /usr/sbin, Ubuntu uses /usr/bin
 	## Just to be sure we add /usr/sbin to the path and set the environment
 
-	unpackenv = os.environ
+	unpackenv = os.environ.copy()
 	unpackenv['PATH'] = unpackenv['PATH'] + ":/usr/sbin"
 
 	p = subprocess.Popen(['unsquashfs', '-d', tmpdir, '-f', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, env=unpackenv)
@@ -1371,7 +1371,7 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, envvars
 	counter = 1
 
 	## set path for Debian
-	unpackenv = os.environ
+	unpackenv = os.environ.copy()
 	unpackenv['PATH'] = unpackenv['PATH'] + ":/sbin"
 
 	for offset in offsets['ext2']:
