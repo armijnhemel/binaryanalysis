@@ -1,3 +1,7 @@
+2012-01-22
+* actually make a copy of the environment, to prevent "Argument list too long"
+errors
+
 2012-01-20
 * determine the size of JFFS2 file systems
 * remove limit of JFFS2 scanning (whole file). JFFS2 file systems can now also
