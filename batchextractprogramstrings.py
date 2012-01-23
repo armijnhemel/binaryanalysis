@@ -236,6 +236,10 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 						h.update(scanfile.read())
 						scanfile.close()
 						filehash = h.hexdigest()
+						cursor.execute('''select * from processed_file where sha256=?''', (filehash,))
+						if len(cursor.fetchall()) != 0:
+							cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, "%s/%s" % (i[0][srcdirlen:],p), filehash))
+							continue
 						cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, "%s/%s" % (i[0][srcdirlen:],p), filehash))
 						cursor.execute('''select * from extracted_file where sha256=?''', (filehash,))
 						if len(cursor.fetchall()) != 0:
@@ -278,7 +282,7 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 									cursor.execute('''insert into ninkacomments (sha256, license, scanner, version) values (?,?,?,?)''', (commentshash, "UNKNOWN", "ninka", ninkaversion))
 								else:
 									licenses = ninkasplit[0].split(',')
-									for license in licenses:
+									for license in list(set(licenses)):
 										#print >>sys.stderr, "NINKA     %s/%s" % (i[0],p), license
 										cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "ninka", ninkaversion))
 										cursor.execute('''insert into ninkacomments (sha256, license, scanner, version) values (?,?,?,?)''', (commentshash, license, "ninka", ninkaversion))
