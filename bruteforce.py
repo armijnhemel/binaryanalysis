@@ -248,8 +248,6 @@ def scan((path, filename, scans, prerunscans, magicscans, lentempdir, tempdir)):
 				zerooffsets.append(magictype)
 
 	filesize = os.stat(filetoscan).st_size
-	## 'unpackscans' has been sorted in decreasing priority, so highest
-	## priority scans are run first.
 	## Based on information about offsets we should reorder the scans,
 	## or at least if one scan has a match for offset 0 (after correction
 	## of the offset, like for tar, gzip, iso9660, etc.) make sure it is
@@ -273,9 +271,11 @@ def scan((path, filename, scans, prerunscans, magicscans, lentempdir, tempdir)):
 		else:
 			unpackscans.append(unpackscan)
 
-	## sort the scans
+	## sort 'unpackscans' in decreasing priority, so highest
+	## priority scans are run first.
 	unpackscans = sorted(unpackscans, key=lambda x: x['priority'], reverse=True)
-	## prepend the most promising scan at offset 0 (if any)
+
+	## prepend the most promising scans at offset 0 (if any)
 	scanfirst = sorted(scanfirst, key=lambda x: x['priority'], reverse=True)
 	unpackscans = scanfirst + unpackscans
 
@@ -339,8 +339,6 @@ def scan((path, filename, scans, prerunscans, magicscans, lentempdir, tempdir)):
 	leaftasks.append((filetoscan, magic, tags, blacklist, tempdir, filehash, filesize))
 	return (scantasks, leaftasks, unpackreports)
 
-## Actually these scans should be done per sha256. In some firmwares there is
-## tons of duplication, so we can take a shortcut there and just scan once.
 def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize)):
 	reports = []
 	## list of magic file types that 'program' checks should skip
@@ -380,7 +378,6 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize)):
 		else:
 			envvars = None
 		exec "from %s import %s as bat_%s" % (module, method, method)
-		## temporary stuff, this should actually be nicely wrapped in a report tuple
 		res = eval("bat_%s(filetoscan, blacklist, envvars=envvars)" % (method))
 		if res != None:
 			report[scan['name']] = res
@@ -432,7 +429,7 @@ def readconfig(config):
 			conf['module'] = config.get(section, 'module')
 			conf['method'] = config.get(section, 'method')
 
-			## some scans might, or might not, have these
+			## some scans might, or might not, have these defined
 			try:
 				conf['cleanup'] = config.get(section, 'cleanup')
 			except:
