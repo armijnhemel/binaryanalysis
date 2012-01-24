@@ -1,3 +1,6 @@
+2012-01-23
+* avoid duplicate license scanning
+
 2012-01-22
 * actually make a copy of the environment, to prevent "Argument list too long"
 errors
