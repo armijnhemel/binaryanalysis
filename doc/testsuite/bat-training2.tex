@@ -56,7 +56,7 @@ Most files can be
 \frame{
 \frametitle{Excercise: determine the type of files}
 
-Use the \texttt{file} command to recognize various
+Use the \texttt{file} command to recognize various files.
 }
 
 \frame{
@@ -65,8 +65,10 @@ There are some drawbacks of using commands like \texttt{file} or tools that use 
 
 \begin{itemize}
 \item the descriptions in the magic database (often found in \texttt{/usr/share/magic}) can change over time
-\item 
+\item not the entire file is considered, but just a number of bytes (up to a few hundred)
 \end{itemize}
+
+Using BAT to unpack files first will get rid of this problem.
 }
 
 \frame{
@@ -76,7 +78,11 @@ In case the file is an ELF executable (executable program) or shared object (lib
 }
 
 \frame{
-\frametitle{Excercise: }
+\frametitle{Excercise: find the dynamically linked libraries of a file}
+}
+
+\frame{
+\frametitle{Why not use \texttt{ldd}?}
 }
 
 \frame{
