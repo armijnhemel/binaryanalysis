@@ -49,6 +49,7 @@ fsmagic = {
             'png':              '\x89PNG\x0d\x0a\x1a\x0a',
             'pngtrailer':       'IEND',
             'cpiotrailer':      'TRAILER!!!',
+            'bmp':              'BM',
             'jpeg':             '\xff\xd8',
             'jpegtrailer':      '\xff\xd9',
             'jfif':             'JFIF',
