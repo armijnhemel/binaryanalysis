@@ -102,6 +102,10 @@ def verifyGraphics(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 
 def verifyBMP(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
+	if not offsets.has_key('bmp'):
+		return newtags
+	if not 0 in offsets['bmp']:
+		return newtags
 	p = subprocess.Popen(['bmptopnm', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0 or "warning" in stanerr:
@@ -116,7 +120,7 @@ def verifyJPEG(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		return newtags
-	## multiple jpegs in this file, so we need to unpack
+	## multiple jpegs in this file, so we need to unpack, which we don't do here
 	if len(stanerr.strip().split("\n")) > 1:
 		return newtags
 	newtags.append("jpeg")

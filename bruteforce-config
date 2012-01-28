@@ -37,6 +37,7 @@ priority = 2
 type    = prerun
 module  = bat.prerun
 method  = verifyGraphics
+magic   = bmp
 priority = 1
 
 ####################
