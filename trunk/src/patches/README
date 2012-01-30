@@ -1,3 +1,0 @@
-This directory contains a few patches that need to be applied to programs before they can be reliably used by BAT
-
-* cramfs.patch: this patch enables the -x option and removes the unpacking of special inodes, such as device files. Creating these files sometimes requires root privileges. This means that BAT would have to run as root. Since these special files are not inspected anyway there is no need to unpack them.

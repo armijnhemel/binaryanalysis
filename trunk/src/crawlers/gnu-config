@@ -1,5 +1,0 @@
-## change this to a local mirror!
-[hostconfig]
-protocol = ftp
-url      = ftp.nluug.nl/pub/gnu
-storedir = /tmp/gpl

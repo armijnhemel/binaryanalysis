@@ -1,3 +1,0 @@
-010-fix_mixed_implicit_and_normal_rules_error.patch :: this is a patch for BusyBox to ensure Backfire 10.03 can build on versions with a newer version of GNU make. It should be placed in package/busybox/patches/
-
-It was copied from upstream OpenWrt
