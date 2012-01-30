@@ -1419,6 +1419,10 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, envvars
 	return (diroffsets, blacklist, [])
 
 def checkExt2fs(data, offset, tempdir=None):
+	## set path for Debian
+	unpackenv = os.environ.copy()
+	unpackenv['PATH'] = unpackenv['PATH'] + ":/sbin"
+
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	## for a quick sanity check we only need a tiny bit of data
@@ -1426,7 +1430,7 @@ def checkExt2fs(data, offset, tempdir=None):
 		os.write(tmpfile[0], data[offset:offset+8192])
 	else:
 		os.write(tmpfile[0], data[offset:])
-	p = subprocess.Popen(['tune2fs', '-l', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['tune2fs', '-l', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, env=unpackenv)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.fdopen(tmpfile[0]).close()
