@@ -1,0 +1,1398 @@
+\documentclass[10pt]{article}
+\usepackage{url}
+\usepackage{a4}
+
+\pagestyle{empty}
+
+\setlength{\parskip}{4pt}
+
+\author{Armijn Hemel -- Tjaldur Software Governance Solutions}
+\title{Binary Analysis Tool User and Developer Manual}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+
+\section{Introducing the Binary Analysis Tool}
+
+The Binary Analysis Tool (BAT) is a tool that can help developers and companies
+check binary files. Its primary application is for Open Source software license
+compliance, with a special focus on supply chain management in consumer
+electronics.
+
+BAT consists of several scripts written in Python. The most important program
+is the scanner for binary objects to detect the presence of Open Source
+software inside binaries. There are also other programs to help with specific
+tasks, such as verifying if configurations for a given BusyBox binary match
+with the configuration in source code. Also included is a very experimental
+program to help scan Linux kernel images and a script to derive a Linux kernel
+configuration from a Linux kernel image.
+
+\section{Installing the Binary Analysis Tool}
+
+\subsection{Software requirements}
+
+To run BAT a recent Linux distribution is needed. Development is (currently)
+done on Fedora 14 and Fedora 15, so those platforms are likely to work best.
+Other platforms (Debian 6, Ubuntu 10.10 and later) are tested with, but only to
+build binary releases.
+
+If the latest version from version control is used it is important to look at
+the file \texttt{setup.cfg} to get a list of the dependencies that should be
+met.
+
+\subsection{Hardware requirements}
+
+The tools in the Binary Analysis Tool can be quite resource intensive. Most of
+the tools seem to be memorybound and I/O-bound, and it makes more sense to
+invest in more memory and faster disks than in raw CPU power, although using
+more cores definitely will speed up the scanning process.
+
+\subsubsection{Installing on Fedora}
+
+To install on Fedora three packages are needed:
+\texttt{bat-extratools}, \texttt{bat-extratools-java} and \texttt{bat}. These
+can be downloaded from the website of the binary analysis tool in both prebuilt
+versions and as a source RPM file. When installing the three files there should
+be a list of dependencies that should be installed to let BAT work
+successfully. Some of these packages are not in Fedora by default but need to
+be installed through extra repositories, such as RPMfusion.
+
+\subsubsection{Installing on Debian and Ubuntu}
+
+To install on Debian and Ubuntu three packages are needed:
+\texttt{bat-extratools}, \texttt{bat-extratools-java} and \texttt{bat}. These
+can be downloaded from the website of the binary analysis tool in both prebuilt
+versions. When installing the three files there should be a list of
+dependencies that should be installed to let BAT work successfully. Some of
+these packages are not in Debian by default but need to be installed by
+enabling extra repositories such as Debian \texttt{non-free}.
+
+\section{Using the programs in the Binary Analysis Tool}
+
+BAT consists of several programs and a few helper scripts (not meant to be
+used directly).
+
+The programs in the Binary Analysis Tool are \texttt{bruteforce.py},
+\texttt{busybox-compare-configs.py} and \texttt{busybox.py}
+
+\subsection{\texttt{bruteforce.py}}
+
+The main program in BAT is \texttt{bruteforce.py}. As the name suggests uses a
+brute force approach for scanning a binary. It assumes no prior knowledge of
+how a binary is constructed or what is inside the binary. Instead it tries to
+determine what is inside by applying several methods, such as looking for
+known identifiers of file systems and compressed files and running external
+tools to find contents in the binary.
+
+After successful identification it unpacks compressed files, media files and
+file systems recursively. Finally several individual scans are applied to each
+extracted file, ranging from determining dynamically linked libraries to an
+elaborate ranking method to guess which sources were used to build a program.
+
+\subsubsection{Running \texttt{bruteforce.py}}
+
+The \texttt{bruteforce.py} tool uses a configuration file that is in Windows
+INI format. The main configuration directive is \texttt{batconfig}, which
+currently only allows setting a single setting, namely whether or not multiple
+CPUs (or cores) should be used during scanning. The default configuration as
+shipped in the official BAT distribution is to not use multiple CPUs:
+
+\begin{verbatim}
+[batconfig]
+multiprocessing = no
+\end{verbatim}
+
+By setting this to \texttt{yes} the program will start an extra process per CPU
+that is available. In most cases it is completely safe to use multiprocessing,
+but there is one important exception: if the ranking method (described later)
+is used, without pregenerating the proper caching database (or purchasing one)
+it is unsafe to use multiprocessing. If ranking is used and there is a fully
+generated database it is completely safe and even strongly advised to use
+multiprocessing, since it vastly speeds up running the program.
+
+\subsubsection{Marker search}
+
+The first action performed by \texttt{bruteforce.py} is to scan a file for
+known markers from compressed files and file systems. Which markers are
+searched for depends on the contents of the configuration file (specifically
+the \texttt{magic} attribute). These markers are subsequently used to choose
+which other methods, such as unpackers, to run.
+
+\subsubsection{Pre-run checks}
+
+Before files are unpacked they are briefly inspected and tagged, so methods
+that are applied later do not unnecessarily have to process files, reducing
+run time and false positives.
+
+For example, files that only contain text are tagged as \texttt{text}, and the
+rest as \texttt{binary} (this depends on the implementation of Python. Python 2
+only considers (by default) ASCII to be valid text). Methods that only work on
+binaries can ignore anything that has been tagged with \texttt{text}.
+
+There are similar checks to determine valid XML and images, plus there are a
+few example methods for more sophisticated checks, such as detecting
+\texttt{gzip} and \texttt{bzip2} compression, which are disabled by default.
+
+\subsubsection{Unpackers}
+
+Unpackers can be recognized in the configuration because their type is set
+to \texttt{unpack}, for example:
+
+\begin{verbatim}
+[jffs2]
+type    = unpack
+module  = bat.fwunpack
+method  = searchUnpackJffs2
+priority = 1
+\end{verbatim}
+
+In BAT 6.0 the following file systems, compressed files and media files can be
+unpacked or extracted:
+
+\begin{itemize}
+\item file systems: cramfs, ext2/ext3/ext4, ISO9660, JFFS2, SquashFS (several
+variants), UBIFS (not on Debian/Ubuntu), YAFFS2 (specific variants)
+\item compressed files and executable formats: 7z, ar, ARJ, BASE64, BZIP2,
+compressed Flash, CAB, CPIO, EXE (specific compression methods only) GZIP,
+InstallShield (old versions), LRZIP, LZIP, LZMA, LZO, RAR, RPM, serialized
+Java, TAR, UPX, XZ, ZIP
+\item media files: GIF, ICO, PDF, PNG
+\end{itemize}
+
+Unpacking differs per file type. Most files use one or more identifiers that
+can be searched for in a binary blob. Using this information it is possible
+to carve out the right parts of a binary blob and verify if it indeed contains
+a compressed file, media file or file system.
+
+There is not always an identifier that can be searched for. The YAFFS2 file
+system layout for example is dependent on the hardware specifics of the
+underlying flash chip. Without knowing these specifics it is not possible to
+unpack YAFFS2 file systems.
+
+Other files (such as ARJ and ICO files) have a very generic identifier, so
+there are a lot of false positives. This causes a big increase in runtime.
+These two unpackers are therefore disabled by default.
+
+If unpacking is successful a directory with unpacked files that can be
+scanned further is returned, and, if available, some meta information to avoid
+duplicate scanning (blacklisting information and tags).
+
+\subsubsection{Leaf scans}
+
+Leaf scans, also called program scans, are scans that are run on every single
+file after unpacking, including files that contained files that were found
+and extracted by unpackers.
+
+Leaf/program scans can be recognized in the configuration because their type is
+set to \texttt{program}, for example:
+
+\begin{verbatim}
+[iptables]
+type    = program
+module  = bat.checks
+method  = searchIptables
+\end{verbatim}
+
+The current program scans that are available in BAT are:
+
+\begin{itemize}
+\item fast string searches: dproxy, ez-ipupdate, iptables, iproute, libusb,
+Linux kernel, loadlin, RedBoot, U-Boot, vsftpd, wireless-tools, wpa-supplicant
+\item advanced search mode using ranking and a large database
+\item BusyBox version number
+\item dynamic library dependencies (ELF files only)
+\item Linux kernel module license (Linux kernel modules only)
+\end{itemize}
+
+The fast string searches are meant for quick sweep scanning only. They have
+their limits, can report false positives or miss finding a program. They should
+only be used to signal that further inspection is necessary. For a thorough
+investigation the advanced search mode should be used.
+
+\subsubsection{Post-run methods}
+
+Since BAT 6.0 there is the possibility to add methods that are run after all
+the regular work has been performed, or ``post-run''. These methods should not
+alter the scan results in any way, but just use the information from the
+scanning process. A typical use case would be to present the data in a nicer
+to use format than the standard report, or to use more external data sources.
+
+While there are no post-run methods in BAT by default it is fairly easy to
+write them.
+
+\subsubsection{Enabling and disabling scans and methods}
+
+The standard configuration file enables most of the scans and methods
+implemented in BAT by default. To disable a scan it can be outcommented in the
+file (by starting the line with the \texttt{\#} character), or by removing it
+from the configuration file.
+
+\subsubsection{Interpreting the results}
+
+\texttt{bruteforce.py} outputs its results in XML format on standard output.
+After redirecting the output to a file it is possible to look at this file with
+a commandline tool such as \texttt{xml\_pp} or a webbrowser such as Mozilla
+Firefox.
+
+Since XML is not meant for human consumption a graphical user interface is
+planned that wraps around BAT that will make it easier to interpret the
+results in a more interactive way.
+
+The XML file starts with metadata, such as:
+
+\begin{itemize}
+\item date, plus time of the scan (local time of the computer, in UTC)
+\item name of the file
+\item SHA256 cryptographic checksum of the file, uniquely identifying it
+\item size of the file
+\item filetype as determined by \texttt{file} on a Linux system
+\item relative path inside the unpacked system, plus the absolute path inside
+the file system, which is useful for later analysis
+\end{itemize}
+
+If any of the scans were successful the results of the these scans can
+be found in the element \texttt{scans}.
+
+For each successful unpack action the following attributes are reported:
+
+\begin{itemize}
+\item name of the scan (corresponding to the name of the scan in the
+configuration file)
+\item offset in the parent file of the compressed file, file system or media
+file
+\end{itemize}
+
+\subsection{\texttt{busybox.py} and \texttt{busybox-compare-configs.py}}
+
+Two other tools in BAT are \texttt{busybox-compare-configs.py} and
+\texttt{busybox.py} (in the subdirectory \texttt{bat}). These two tools are
+specifically used to analyze BusyBox binaries. BusyBox is in widespread use on
+embedded devices and the license on BusyBox is actively enforced in court.
+
+BusyBox binaries on embedded machines often have different configurations,
+depending on the needs of the manufacturer. Since providing the correct
+configuration is one of the requirements for license compliance it is important
+to be able to determine the configuration of a BusyBox binary and verify that
+there is a corresponding configuration file in the source code release.
+
+The BusyBox processing tools in BAT try to extract the most likely
+configuration from the binary and print it in the right format (which
+depends on the BusyBox version).
+
+\texttt{busybox.py} is used to extract the configuration from a binary.
+Afterwards \texttt{busybox-compare-configs.py} can be used to compare the
+extracted configuration with a vendor supplied configuration.
+
+\subsubsection{Extracting a configuration from BusyBox}
+
+Extracting a configuration from a BusyBox executable is done using
+\texttt{busybox.py} which can be found in the \texttt{bat} directory. It needs
+two commandline parameters: the path to the binary and the path to a directory
+containing a directory \texttt{configs} which has files containing mappings
+from BusyBox applet names to BusyBox configuration directives. By default this
+value is hardcoded as \texttt{/etc/bat}, but this might change in the future.
+
+\begin{verbatim}
+python bat/busybox.py -b /path/to/busybox/binary -c
+     /path/to/pre/extracted/configs > /path/to/saved/config
+\end{verbatim}
+
+This command will save the configuration to a file, which can be used as an
+input to \texttt{busybox-compare-configs.py}.
+
+\subsubsection{Comparing two configurations}
+
+After extracting the configuration the extracted configuration can be compared
+to another configuration, for example a configuration as supplied by a vendor:
+
+\begin{verbatim}
+python busybox-compare-configs.py -e /path/to/saved/config
+    -f /path/to/vendor/configuration -n $version
+\end{verbatim}
+
+\subsection{\texttt{extractkernelstrings.py}, \texttt{extractkernelconfig.py}
+\\and \texttt{findkernelstrings.py}}
+
+The three programs \texttt{extractkernelstrings.py},
+\texttt{extractkernelconfig.py} and \texttt{findkernelstrings.py} are very
+experimental tools to derive a configuration from a Linux kernel image. They
+are far from mature and are not yet ready for production use.
+
+Once they are ready for production use a description for the scripts will be
+included in this manual. A description of the technical uses that need to be
+solved, plus a motivation on why and how to solve them can be found in the
+appendix.
+
+%\subsubsection{\texttt{extractkernelstrings.py}}
+%\subsubsection{\texttt{extractkernelconfig.py}}
+%\subsubsection{\texttt{findkernelstrings.py}}
+
+
+\section{Binary Analysis Tool extratools collection}
+
+To help with unpacking non-standard file systems, or standard file systems for
+which there are no tools readily available on Fedora or Ubuntu there is also
+a collection of tools that can be used by BAT to unpack more file systems.
+These tools are not part of the standard distribution, but have to be installed
+separately. They are governed by different license conditions than the core BAT
+distribution.
+
+Currently the collection consists of:
+
+\begin{itemize}
+\item modified version of \texttt{cramfsck} that enables unpacking cramfs
+file systems
+\item unmodified version of \texttt{unyaffs} that enables unpacking for some
+(but not all) YAFFS2 file systems.
+\item various versions of \texttt{unsquashfs} that enable unpacking variants
+of SquashFS. These versions have either been lifted from vendor SDKs, the
+OpenWrt project, or upstream SquashFS project.
+\item two Java projects: \texttt{jdeserialze} and \texttt{ddex}, to help
+respectively with unpacking serialized Java files and scanning binary files
+from the Dalvik VM (Android).
+\end{itemize}
+
+The collection is split in two packages: \texttt{bat-extratools-java} contains
+the two Java packages, the \texttt{bat-extratools} package contains the rest.
+
+\appendix
+
+\section{\texttt{bruteforce.py} internals}
+
+The \texttt{bruteforce.py} program processsed binaries: it unpacks files by
+running unpackers, it runs scans on individual files with program/leaf
+scans, processes and prettyprints output and performs cleanups, if necessary.
+
+\texttt{bruteforce.py} was written with extensibility in mind: new file systems
+or variants of old ones tend to appear regularly (for example: there are at
+least 5 or more versions of SquashFS with LZMA compression out there).
+
+\subsection{Pre-run methods}
+
+Pre-run methods check and tag files, so the files can be ignored by later
+methods and scans. While tagging is not exclusive to pre-run methods it is
+their main purpose.
+
+\subsubsection{Writing a pre-run method}
+
+Pre-run methods have a strict interface:
+
+\begin{verbatim}
+def prerunMethod(filename, tempdir=None, tags=[],
+          offsets={}, envvars=None):
+	newtags = []
+	newtags.append('helloworld')
+	return newtags
+\end{verbatim}
+
+\begin{itemize}
+\item \texttt{filename} is the absolute path of the file that needs to be tagged
+\item \texttt{tempdir} is the (possibly) empty name of a directory where the
+file is. This is currently unused and might be removed in the future.
+\item \texttt{tags} is the set of tags that have already been defined for the
+file.
+\item \texttt{offsets} is the set of offsets that have been found for the file
+\item \texttt{envvars} is an optionally empty set of environment variables that
+can be used to pass extra information to the pre-run method.
+\end{itemize}
+
+Return values are:
+
+\begin{itemize}
+\item a list containing tags
+\end{itemize}
+
+\subsection{Unpackers}
+
+Unpackers are responsible for recursively unpacking binaries until they
+can't be unpacked any further.
+
+\subsubsection{Writing an unpacker}
+
+The unpackers have a strict interface:
+
+\begin{verbatim}
+def unpackScan(filename, tempdir=None, blacklist=[], offsets={}):
+        ## code goes here
+\end{verbatim}
+
+The last three parameters are optional, but in practice they are always passed
+by the top level script.
+
+\begin{itemize}
+\item \texttt{tempdir} is the directory into which files and directories for
+unpacking should be created. If it is \texttt{None} a new temporary directory
+should be created.
+\item \texttt{blacklist} is a list of byte ranges that should not be scanned.
+If the current scan needs to blacklist a byte range it should add it to this
+list after finishing a scan.
+\item \texttt{offsets} is a dictionary containing a mapping from an identifier
+to a list of offsets in the file where these identifiers can be found. This
+list is filled by the scan \texttt{genericMarker} which always runs before
+anything else.
+\end{itemize}
+
+Return values are:
+
+\begin{itemize}
+\item the name of a directory, containing files that were unpacked.
+\item the blacklist, possibly appended with new values
+\item a list of tags, in case any tags were added, or an empty list
+\end{itemize}
+
+Most scans have been split in two parts: one part is for searching the
+identifiers, correctly setting up temporary directories and collecting results.
+The other part is doing the actual unpacking of the data and verification.
+
+The idea behind this split is that sometimes functionality is shared between
+two scans. For example, \texttt{unpackCpio} is used by both
+\texttt{searchUnpackCpio} and \texttt{unpackRPM}.
+
+\subsubsection{Adding an identifier}
+
+Identifiers for new file systems and compressed files are, if available, added
+to \texttt{fsmagic.py} in the directory \texttt{bat}. These identifiers will be
+available in the \texttt{offsets} parameter that is passed to a scan, if any
+were found.
+
+Good sources to find identifiers are \texttt{/usr/share/magic}, documentation
+for file systems or compressed files, or the output of \texttt{hexdump -C}.
+
+\subsubsection{Blacklisting and priorities}
+
+In BAT blacklists are used to prevent some scans from running on a particular
+byte range, because other scans have already covered these bytes, or will cover
+them.
+
+The most obvious example is the \texttt{ext2} file system: in a normal setup
+(no encryption) it is trivial to see the content of all the individual files
+when an \texttt{ext2} file system image is opened. This is because this file
+system is mostly a concatenation of the data, with some meta data associated
+with the files in the file system.
+
+If another compressed file is in the \texttt{ext2} file system it could be that
+it will be picked up by BAT twice: once it will be detected inside the
+\texttt{ext2} file system and once after the file system has been unpacked by
+the \texttt{ext2} file system unpacker.
+
+Other examples are:
+
+\begin{itemize}
+\item cpio (files are concatenated with a header and a trailer)
+\item tar (files are concatenated with some meta data)
+\item RPM (files are in a compressed archive with some meta data)
+\item ar and DEB
+\item some flavours of cramfs
+\item ubifs
+\end{itemize}
+
+To avoid duplicate scanning and false positives it is therefore necessary to
+prevent other scans from running on the byte range already covered by one of
+these files.
+
+In BAT this is achieved by using blacklists. All unpackers have a parameter
+called \texttt{blacklist} which is consulted everytime a file is unpacked. If
+a file system offset is in a blacklist the scan could use the next offset, or
+skip scanning the entire file, depending on the scan.
+
+The blacklist is set for every file individually and is initially empty. If a
+scan is successful it adds a byte range to the blacklist. Subsequent scans
+will skip the byte range added by the scan.
+
+The scans are run in a particular order to make the best use of blacklists. The
+order of scans is determined by the \texttt{priority} parameter in the
+configuration file. The file systems and concatenated files mentioned above
+have a higher priority and are scanned earlier than other scans that could also
+give a match. It is not a fool proof system, but it seems to work well enough.
+
+\subsection{Program/leaf scans}
+
+After everything has been unpacked each file, including the files from which
+other files were carved, will be scanned again by the program, or leaf, scans.
+
+\subsubsection{Writing a leaf scan}
+
+The program/leaf scans have a simple interface. There are two parameters
+passed down, namely the absolute path of the file, plus an optional blacklist
+with byte ranges that should not be scanned. For example:
+
+\begin{verbatim}
+def programScan(path, blacklist=[]):
+        ## code goes here
+\end{verbatim}
+
+There are no restrictions on the return values of the program/leaf scan, except
+when nothing could be found. The result values are:
+
+\begin{itemize}
+\item \texttt{None} if nothing can be found
+\item simple values (booleans, strings)
+\item custom data structure, but a custom pretty printer has to be added
+\end{itemize}
+
+There is no restriction on the code that is run and basically anything can be
+done. In BAT there are for example checks that invoke other programs to discover
+dynamically linked libraries, find the license of a kernel module using
+\texttt{modinfo} or simple checks for the presence of strings in the binary
+that indicate the use of certain software.
+
+The simplest methods are the ones that scan for hardcoded strings. These strings
+are frequently found just in the package for which the check is written for. For
+example, these strings can often be found in copies of the \texttt{iptables}
+program and the related \texttt{libiptc} library:
+
+\begin{verbatim}
+markerStrings =
+     [ 'iptables who? (do you need to insmod?)'
+     , 'Will be implemented real soon.  I promise ;)'
+     , 'can\'t initialize iptables table `%s\': \%s'
+     ]
+\end{verbatim}
+
+Although this is very fast, this method has some drawbacks:
+
+\begin{itemize}
+\item a program sometimes does not have these exact strings embedded in the
+binary
+\item this method will only find the strings that are hardcoded and not any
+other significant strings
+\item if another package includes the string, there is a false positive
+\end{itemize}
+
+The quick checks should therefore only be used as an indication that further
+inspection of the binary is needed. A much better method is the ranking method
+that is also available in BAT, but which is not as fast.
+
+\subsubsection{Pretty printing for leaf scans}
+
+Pretty printing for unpackers is standardized but for leaf scans there is
+more flexibility. This is needed because in some cases the result as returned
+by the leaf scan needs post processing.
+
+A pretty printer can be defined in the configuration through the directive
+\texttt{xmloutput}. The pretty printer should be in the same module as the
+scanning method defined in the same section. The pretty printer has two
+parameters: a Python datastructure as returned by the scanner (this differs
+per scan) and a XML root element, needed to create new XML nodes. The method is
+expected to return a XML node in case of success, or \texttt{None} in case of
+failure.
+
+If no pretty printer is defined the value as returned by the scan will be used
+as the content of result tag.
+
+\subsection{Post-run methods}
+
+Post-run methods don't change the result of the whole scanning process, but
+only use the data from the process. For example prettyprinting a fancy report
+(more advanced than the standard XML report) would be a typical post-run
+method.
+
+\subsubsection{Writing a post-run method}
+
+Post-run methods have a strict interface:
+
+\begin{verbatim}
+def postrunHelloWorld(filename, unpackreports, leafreports, envvars={}):
+	print "Hello World"
+\end{verbatim}
+
+\begin{itemize}
+\item \texttt{filename} is the absolute path of the scanned file, after
+unpacking.
+\item \texttt{unpackreports} are the reports of the unpackers for the file
+\item \texttt{leafreports} are the reports of the unpackers for the file
+\item \texttt{envvars} is an optional dictionary of environment variables
+\end{itemize}
+
+Since the post-run methods don't change the result in any way, but just have
+side effects there is no need to return anything.
+
+\section{Building binary packages of the Binary Analysis Tool}
+
+If you want to install BAT through the package manager of your distribution you
+might first need to generate packages for it if none exist. For BAT there is
+currently support to build packages for RPM-based systems and for DEB-based
+systems.
+
+\subsection{Building packages for RPM based systems}
+
+\subsubsection{Building \texttt{bat}}
+
+Building the \texttt{bat} package is fairly straightforward.
+
+\begin{enumerate}
+\item Make a fresh export of BAT from Subversion
+\item run the command: \texttt{python setup.py bdist\_rpm}
+\end{enumerate}
+
+This will create an RPM file and an SRPM file. If you need to install BAT on
+other versions of Fedora or on other RPM based distributions you can simply
+rebuild the SRPM using \texttt{rpmbuild --rebuild}.
+
+\subsubsection{Building \texttt{bat-extratools} and
+\texttt{bat-extratools-java}}
+
+Building packages for \texttt{bat-extratools} and \texttt{bat-extratools-java}
+is unfortunately a bit more elaborate.
+
+\begin{enumerate}
+\item make a fresh export of the Subversion repository
+\item change the names of \texttt{bat-extratools} and the
+\texttt{bat-extratools-java} directories to contain the version name of the
+release (for example \texttt{bat-extratools-6.0}). Make a \texttt{tar.gz}
+archive of the directory:
+\texttt{tar zcf bat-extratools-6.0.tar.gz bat-extratools-6.0}
+\item run \texttt{rpmbuild} to create binary packages:
+\texttt{rpmbuild -ta bat-extratools-6.0.tar.gz}
+\end{enumerate}
+
+\subsection{Building packages for DEB based systems}
+
+\subsubsection{Building \texttt{bat}}
+
+The Debian scripts were written according to the documentation for
+\texttt{debhelper} found at \url{https://wiki.ubuntu.com/PackagingGuide/Python}.
+
+Package building and testing is done on Ubuntu 10.10 and Debian 6.
+
+To build a \texttt{.deb} package do an export of the Subversion repository
+first.  Change to the directory \texttt{src} and type:
+\texttt{debuild -uc -us} to build the package.
+
+The build process might complain about not being able to find the original
+sources. In our experience it is safe to ignore this. The command will build a
+\texttt{.deb} package which can be installed with \texttt{dpkg -i}.
+
+\subsubsection{Building \texttt{bat-extratools} and
+\texttt{bat-extratools-java}}
+
+To build a .deb package do an export of the Subversion repository first. Change
+to the correct directories (\texttt{bat-extratools} and 
+\texttt{bat-extratools-java} and type: \texttt{debuild -uc -us} to
+build the packages.
+
+\section{Binary Analysis Tool knowledgebase}
+
+BAT comes with a mechanism to use a database backend. The default version of
+BAT only unpacks file systems and compressed files and runs a few simple checks
+on the leaf nodes of the unpacking process.
+
+In the paper ``Finding Software License Violations Through Binary Code Clone
+Detection'' by Hemel et. al. (ACM 978-1-4503-0574-7/11/05), presented at
+the Mining Software Repositories 2011 conference, a method to use a database
+with strings extracted from source code was described. This functionality is
+available in the ranking module in the file \texttt{ranking.py}. This code
+is not enabled by default, but it has to be explicitely enabled in the
+configuration for \texttt{bruteforce.py}.
+
+To give good results the database that is used needs to be populated with as
+many packages as possible, from a cross cut of all of open source software, to
+prevent bias towards certain packages: if you only would have BusyBox in your
+database, everything would look like BusyBox.
+
+If you don't want to spend much time on downloading and processing
+packages, please contact Tjaldur Software Governance Solutions for
+purchasing a copy of a fully prepared database at \url{info@tjaldur.nl}.
+
+\subsection{Crawling FTP mirrors}
+
+In the directory \texttt{crawlers} a sample crawler is given for downloading
+source packages from the GNU project. The code is fairly straightforward. The
+script (written in Python) tries to intelligently download packages from a GNU
+FTP mirror, skipping packages that are in a blacklist (either parts of the
+filename, whole directories, or extensions) or that have already been
+downloaded in the past.
+
+The default configuration points to a mirror in the Netherlands. It is advised
+to update the location of the GNU mirror in the configuration file. Specifying
+a local mirror will result in faster downloads. It will also not put an
+unnecessary strain on the FTP mirror mentioned in the default configuration
+file.
+
+\subsection{Generating the package list}
+
+The code and license extractor wants a description file of which packages to
+process. This file is hardcoded to \texttt{LIST} relative to the directory that
+contains all source archives. The reason there is a specific file is that some
+packages do not follow a consistent naming scheme. By using this extra file we
+can cleanup names and make sure that source code archives are recognized
+correctly.
+
+The file contains four values per line:
+
+\begin{itemize}
+\item name
+\item version
+\item archivename
+\item origin (or ``unknown'' if not specified)
+\end{itemize}
+
+separated by whitespace (spaces or tabs). An example would look like this:
+
+\begin{verbatim}
+amarok	2.3.2	amarok-2.3.2.tar.bz2	kde
+\end{verbatim}
+
+This line says that the package is \texttt{amarok}, the version number is
+\texttt{2.3.2}, the filename is \texttt{amarok-2.3.2.tar.bz2} and the file
+was downloaded from the KDE project.
+
+There is a helper script (\texttt{generatelist.py}) to help generate the file.
+It can be invoked as follows:
+
+\begin{verbatim}
+python generatelist.py -f /path/to/directory/with/sources
+\end{verbatim}
+
+The output is printed on standard output, so you want to redirect it to a file
+called \texttt{LIST} (as expected by the string extraction script) and
+optionally sorting it first:
+
+\begin{verbatim}
+python generatelist.py -f /path/to/directory/with/sources | sort >
+   /path/to/directory/with/sources/LIST
+\end{verbatim}
+
+
+\texttt{generatelist.py} tries to determine the name of the package by
+splitting the file name on the right on a \texttt{-} (dash)
+character. This is not always done correctly because a package uses multiple
+dashes, or because it does not contain a dash. In the latter case an error
+will be printed on standard error, informing you that a file could not be
+added to the list of packages and it should be added manually.
+
+It is advised to manually inspect the file after generating it to ensure the
+correctness of the package names. Packages can have been renamed for a number
+of reasons:
+
+\begin{itemize}
+\item upstream projects decided to use a new name for archives (AbiWord
+archives for example were renamed from \texttt{abi-\$VERSION.tar.gz} (used for
+early versions) to \texttt{abiword-\$VERSION.tar.gz}).
+\item a distribution has renamed packages to avoid clashes during installation
+and allow different versions to be installed next to eachother.
+\end{itemize}
+
+In these cases you need to change the names of the packages, otherwise
+different versions of the same package will be recorded in the database as
+different packages, which will confuse the rating algorithm and cause it to
+give suboptimal results.
+
+
+\subsection{Running the extraction program}
+
+The program to extract strings from sourcecode is
+\texttt{batchextractprogramstrings.py}. It parses the file generated by
+\texttt{generatelist.py}, unpacks the files (currently only \texttt{tar.gz}
+and \texttt{tar.bz2} files, plus variants are supported) and scans each
+individual source code file (at the moment just C/C++ files, assembler files,
+C\# files, Java/Scala files and ActionScript files) for strings and, if
+enabled, licenses using Ninka and FOSSology.
+
+\texttt{batchextractprogramstrings.py} can be invoked as follows:
+
+\begin{verbatim}
+python batchextractprogramstrings.py -f
+    /path/to/directory/with/files -d /path/to/database
+\end{verbatim}
+
+\subsection{License scanning}
+
+\texttt{batchextractprogramstrings.py} has a few commandline options. The most
+important is whether or not to also extract licenses from the source code files.
+License extraction is done using the Ninka license scanner, with support
+for the Nomos license scanner from FOSSology being added in the near future.
+This option is disabled by default for a few reasons:
+
+\begin{itemize}
+\item scanning licenses adds a significant performance penalty to scanning the
+code (about 1100\% when scanning uClibc 0.9.30.1).
+\item there is no code in the BAT 6.0 that makes use of this information.
+\end{itemize}
+
+If you want to enable license scanning, you will have to install Ninka first
+and change a few hardcoded paths in \texttt{batchextractprogramstrings.py} that
+point to the main Ninka script.
+
+\subsection{Setting the database}
+
+Since BAT 6.0 the locatation of the strings database and the caching databases can
+be set in the configuration file for \texttt{bruteforce.py}:
+
+\begin{verbatim}
+[ranking]
+type    = program
+module  = bat.ranking
+method  = searchGeneric
+xmloutput = xmlprettyprint
+envvars = BAT_SQLITE_AVG=/tmp/avg:BAT_SQLITE_STRINGSCACHE=/tmp/stringscache
+     :BAT_SQLITE_DB=/tmp/master
+\end{verbatim}
+
+The caching databases are \texttt{BAT\_SQLITE\_AVG} and
+\texttt{BAT\_SQLITE\_STRINGSCACHE}. The strings database is \texttt{BAT\_SQLITE\_DB}.
+
+Fallback values for these databases have been hardcoded in \texttt{ranking.py}.
+To change these values, change the following lines:
+
+\begin{verbatim}
+conn = sqlite3.connect(scanenv.get('BAT_SQLITE_DB', '/tmp/master'))
+avgdb = scanenv.get('BAT_SQLITE_AVG', '/tmp/avg')
+stringscache = scanenv.get('BAT_SQLITE_STRINGSCACHE', '/tmp/stringscache')
+\end{verbatim}
+
+\subsection{Enabling the ranking scan}
+
+The ranking scan is configured in the configuration file. In the configuration
+shipped with BAT it is disabled by default. By uncommenting the entry for
+the scan it can be enabled.
+
+Since BAT 6.0 a distinction is made in the ranking scan between programs
+written in different language families. When the strings are extracted from
+source code the language family is also recorded with the string. For example:
+C and C++ source code and header files, as well as QML and assembler files are
+recorded as \texttt{C}. Similarly Java, Scala, Groovy and JSP are recorded as
+\texttt{Java}, and so on.
+
+When a binary is scanned the ranking scan first tries to classify it. Based on
+the classification only strings from a certain language family are used. For
+example, when scanning an ELF executable, only strings from C language files
+are selected from the database. Others, such as strings extracted from Java
+files, are ignored. Vice versa, for Java executables everything but Java will
+be ignored.  
+
+The reason for this is that there is usually little code cloning between C and
+Java files, or Java and C\# files (except of course when interpreters and
+virtual machines are embedded, or other language bridges are used). Strings in
+a Java program are unlikely to originate from a file in a C program. Using all
+strings from all programs, irrespective of the language they were written in,
+therefore is likely to result in incorrect matching behaviour.
+
+\subsubsection{Interpreting the results}
+
+The results of the scan can be found in the element \texttt{<ranking>}. This
+element contains:
+
+\begin{itemize}
+\item number of lines that were extracted from the binary
+\item number of lines that could be matched exactly with an entry in the
+database
+\item result per package which are a possible match
+\end{itemize}
+
+Per package the following is reported:
+
+\begin{itemize}
+\item name of the package
+\item all unique matches (strings that can only be found in this package)
+\item relative ranking
+\item percentage of the total score
+\end{itemize}
+
+For example, take the results of a run on a BusyBox binary:
+
+\begin{verbatim}
+<ranking>
+  <matchedlines>1314</matchedlines>
+  <extractedlines>3147</extractedlines>
+  <package>
+    <name>busybox</name>
+    <uniquematches>
+        <unique>%d heads, %d sectors/track, %d cylinders</unique>
+        ...
+    </uniquematches>
+    <rank>1</rank>
+    <percentage>98.3386895181</percentage>
+  </package>
+  ...
+</ranking>
+\end{verbatim}
+
+About 98\% of the total score was for BusyBox, so it is a clear match. In
+programs were two or more packages are embedded percentages will be distributed
+in a different, more uniform, way.
+
+\subsection{Database design}
+
+The database currently has 5 tables:
+
+\begin{itemize}
+\item \texttt{processed}
+\item \texttt{processed\_file}
+\item \texttt{extracted\_file}
+\item \texttt{licenses}
+\item \texttt{ninkacomments}
+\end{itemize}
+
+\subsubsection{\texttt{processed} table}
+
+This table is to keep track of which versions of which packages were scanned.
+Its only purpose is to avoid scanning packages multiple times. It is not
+actively used in the ranking code.
+
+It has the following fields:
+
+\begin{itemize}
+\item name of the package
+\item version of the package
+\item name of the archive that was processed
+\item sha256 of the archive that was processed
+\end{itemize}
+
+\subsubsection{\texttt{processed} table}
+This table contains information about of individual source code files that were
+scanned.
+
+It has the following fields:
+
+\begin{itemize}
+\item name of the package the file is from
+\item version of the package the file is from
+\item relative path inside the source code archive
+\item sha256 of the file
+\end{itemize}
+
+\subsubsection{\texttt{processed} table}
+This table stores the individual strings that were extracted from files and
+that could possibly end up in binaries.
+
+It has the following fields:
+
+\begin{itemize}
+\item string that was extracted
+\item sha256 of file the string was extracted from
+\item language of the source code file
+\item line number where the extracted string can be found in the source code
+file, or $0$ if unknown. This information is determined using
+\texttt{xgettext}.
+\end{itemize}
+
+\subsubsection{\texttt{licenses} table}
+
+This table stores the licenses that were extracted from files using a source
+code scanner, like Ninka or FOSSology. If a file has more than one licenses
+there will be multiple rows for a file. It has these fields:
+
+\begin{itemize}
+\item sha256 checksum of file
+\item license as found by the scanner
+\item scanner name. Currently only Ninka and FOSSology are used. Of course, the
+scanner could also be a person doing a manual review.
+\item version of scanner. This is useful if there is for example a bug in a
+scanner, or to compare results from various versions.
+\end{itemize}
+
+\subsubsection{\texttt{ninkacomments} table}
+
+This is a helper table that keeps track of which licenses were associated with
+a file header as extracted by Ninka. Ninka determines licenses by looking at
+just the header of the file. Since the headers in a single program are often
+similar it is possible to get some speed improvements by first determining if a
+header has already been scanned.
+
+It has the following fields:
+
+\begin{itemize}
+\item sha256 of the header as extracted by Ninka. Ninka stores these in
+separate files.
+\item license as found by Ninka
+\item name of the scanner (hardcoded to 'Ninka')
+\item version of Ninka
+\end{itemize}
+
+\section{BusyBox script internals}
+
+The BusyBox processing scripts look simple, but behind the internals are a bit
+hairy. Especially extracting the correct configuration is not trivial.
+
+\subsection{Detecting BusyBox}
+
+Detecting if a binary is indeed BusyBox is trivial, since in a BusyBox binary
+there are almost always clear indication strings if BusyBox is used (unless
+they it was specifically altered to hide the use of BusyBox).
+
+A significant set of strings to look for is:
+
+\begin{verbatim}
+        BusyBox is a multi-call binary that combines many common Unix
+        utilities into a single executable.  Most people will create a
+        link to busybox for each function they wish to use and BusyBox
+        will act like whatever it was invoked as!
+\end{verbatim}
+
+Another clear indicator is a BusyBox version string, for example:
+
+\begin{verbatim}
+BusyBox v1.15.2 (2009-12-03 00:14:42 CET)
+\end{verbatim}
+
+As an exception a BusyBox binary configured to include just a single applet
+will not contain contain the marker strings, or the BusyBox version string. In
+such a case a different detection mechanism will have to be used, for example
+the ranking code as used in \texttt{bruteforce.py}, although this will only be
+necessary in a very small percentage of cases, since the vast majority of
+BusyBox instances include more than one applet.
+
+\subsection{BusyBox version strings}
+
+The BusyBox version strings have remained fairly consistent over the years:
+
+\begin{verbatim}
+BusyBox v1.00-rc2 (2006.09.14-03:08+0000) multi-call binary
+BusyBox v1.1.3 (2009.09.11-12:49+0000) multi-call binary
+BusyBox v1.15.2 (2009-12-03 00:14:42 CET)
+\end{verbatim}
+
+The time stamps in the version string are irrelevant, since they are generated
+during build time and are not hardcoded in the source code.
+
+Extracting version information from the BusyBox binary is not difficult.
+Using regular expression it is possible to look for \texttt{BusyBox v} which
+indicates the start of a BusyBox version string. The version number can be
+found immediately following this substring until \texttt{ (} (including
+leading space) is found.
+
+Apart from reporting, the BusyBox version number is also used for other
+things, such as determining the right configuration format and accessing a
+knowledgebase of known applet names extracted from the standard BusyBox
+releases from \url{busybox.net}.
+
+\subsection{BusyBox configuration format}
+
+During the compilation of BusyBox a configuration file is used to determine
+which functionality will be included in the binary. The format of this
+configuration file has changed a few times over the years. Early versions used
+a simple header format file, with GNU C/C++ style defines. Later versions,
+starting 1.00pre1, moved to Kbuild, the same configuration system as used by
+for example the Linux kernel or OpenWrt. This format is still in use today
+(BusyBox 1.19.2 being the latest version at the time of writing).
+
+Each configuration directive determines whether or not a certain piece of
+source code will be compiled and up in the BusyBox binary. This source code can
+either be a full applet, or just a piece of functionality that merely extends
+an existing applet.
+
+\subsection{Extracting a configuration from a BusyBox binary}
+
+Extracting the BusyBox configuration from a binary is not entirely trivial.
+There are a few methods which can be used:
+
+\begin{enumerate}
+\item run \texttt{busybox} (on a device, or inside a sandbox) and see what
+functionality is reported. This is probably the most accurate method, but also
+the hardest, since it requires access to a device, or a sandbox that has been
+properly set up, with all the right dependencies, and so on.
+
+When running \texttt{busybox} without any arguments, or with the \texttt{--help}
+parameter it will output a list of functions that are defined inside the
+binary:
+
+\begin{verbatim}
+Currently defined functions:
+        ar, cal, cpio, dpkg, dpkg-deb, gunzip, zcat
+\end{verbatim}
+
+These can be mapped to a configuration, using information extracted from
+BusyBox source code about which applets map to which configuration option.
+\item extract the configuration from the binary by searching for known applet
+names in the firmware. The end result is the same as a previous step, but
+possibly with less accuracy in some cases but it is the only feasible solution
+when you only have a binary.
+\end{enumerate}
+
+The BusyBox binary has a string embedded for every applet that is included.
+This is the string that is printed out if \texttt{--help} is given as a
+parameter to an invocation of \texttt{busybox}.
+
+Using information about the configuration extracted from BusyBox source code
+these strings can be mapped to a configuration directive and a possible
+configuration can be reconstructed.
+
+Depending on how the binary was compiled this can be trivial, or quite hard.
+
+\subsubsection{Binaries linked with uClibc}
+
+In binaries that link against uClibc (a particular C library) the name of the
+main function of the applet is sometimes (but not always) included in the
+\texttt{busybox} binary as follows (a good way is to run \texttt{strings} on
+the binary and look at the output).
+
+\begin{verbatim}
+wget_main
+\end{verbatim}
+
+This string maps to the name of the main function for the \texttt{wget} applet
+(\texttt{networking/wget.c}):
+
+\begin{verbatim}
+int wget_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
+\end{verbatim}
+
+The BusyBox authors are pretty strict in their naming and usually have a
+configuration directive in the a specific format
+(\texttt{CONFIG-\$appletname}) in the Makefile, like:
+
+\begin{verbatim}
+lib-$(CONFIG_WGET)         += wget.o
+\end{verbatim}
+
+(example taken from \texttt{networking/Kbuild} in BusyBox 1.15.2). There are
+cases where the format could be slightly different.
+
+\subsubsection{Binaries linked with glibc \& uClibc exceptions}
+
+Sometimes the method described in the previous section does not work for
+binaries that are linked with uClibc. It also does not work with binaries
+compiled with glibc.
+
+If the binary is unstripped and the binary still contains symbol information
+it is possible to extract the right information using \texttt{readelf} (part
+of GNU binutils) in a similar fashion as the earlier described method.
+
+In case there is no information available it is still possible to search inside
+the binary for the applet names. Because most instances of BusyBox that are
+installed on devices have not been modified the list of applets in the stock
+version of BusyBox serves as an excellent starting point.
+
+The list as printed by \texttt{busybox} if the \texttt{--help} parameter is
+given is embedded in the binary. The applet names are alphabetically sorted
+and separated by NUL characters.
+
+By searching for this list and splitting it accordingly it is possible to get
+the list of all applets that are defined. The only caveats are that a new
+applet that was added appears alphabetically before any of the applets that
+can be recognized using a list of applet names extracted from the source code,
+or it appears alphabetically after the last one that can be recognized.
+
+The current code is suboptimal and will be rewritten in the near future.
+
+\subsection{Pretty printing a configuration}
+
+Pretty printing a configuration is fairly straightforward, but there are a few
+cases where it is hard to make a good guess:
+
+\begin{enumerate}
+\item aliases
+\item functionality that is added to an applet, depending on a configuration
+directive
+\item applets that use non-standard configuration names (like
+\texttt{CONFIG\_APP\_UDHCPD} instead of \texttt{CONFIG\_UDHCPD} in some
+versions of BusyBox)
+\item features
+\end{enumerate}
+
+For some applets aliases are installed by default as symlinks. These aliases
+are recorded in the binary, but there is no separate applet for it. In the
+BusyBox sources (1.15.2, others might be different) these are defined as:
+
+\begin{verbatim}
+IF_CRYPTPW(APPLET_ODDNAME(mkpasswd, cryptpw, _BB_DIR_USR_BIN,
+    _BB_SUID_DROP, mkpasswd))
+\end{verbatim}
+
+So if the \texttt{cryptw} tool is built, an additional symlink called
+\texttt{mkpasswd} is added during installation.
+
+If extra functionality is added to an applet in BusyBox it is defined in the
+source code by macros like the following:
+
+\begin{verbatim}
+IF_SHA256SUM(APPLET_ODDNAME(sha256sum, md5_sha1_sum, _BB_DIR_USR_BIN,
+    _BB_SUID_DROP, sha256sum))
+IF_SHA512SUM(APPLET_ODDNAME(sha512sum, md5_sha1_sum, _BB_DIR_USR_BIN,
+    _BB_SUID_DROP, sha512sum))
+\end{verbatim}
+
+The above configuration tells to add extra symlinks for \texttt{sha256sum} and
+\texttt{sha512sum} if BusyBox is configured for suppport for the SHA256 and
+SHA512 algorithms. The applet that implements this functionality is
+\texttt{md5\_sha1\_sum}.
+
+Non-standard configuration names can be fixed by using a translation table that
+translates to the non-standard name. The current code has a translation table
+for BusyBox 1.15 and higher.
+
+Detecting features is really hard to do in a generic way. In most cases it will
+even be impossible, because there are no clear markers (strings, applet names)
+in the binary that indicate that a certain feature is enabled. In cases there
+are clear marker strings these would still need to be linked to specific
+features. One possibility would be to parse the BusyBox sources and link
+strings to features, for example (from BusyBox 1.15.3,
+\texttt{editors/diff.c}):
+
+\begin{verbatim}
+#if ENABLE_FEATURE_DIFF_DIR
+       diffdir(f1, f2);
+       return exit_status;
+#else
+       bb_error_msg_and_die("no support for directory comparison");
+#endif
+\end{verbatim}
+
+The string \texttt{"no support for directory comparison"} only appears if the
+feature \texttt{ENABLE\_FEATURE\_DIFF\_DIR} is not enabled.
+
+Implementing this will be a lot of work and it will likely not be very useful.
+
+\subsection{Feeding information into the tool}
+
+By referencing with information extracted from the standard BusyBox sourcecode
+it is possible to get a far more accurate configuration, because it is known
+which applets use which configuration, unless:
+
+\begin{itemize}
+\item new applets were added to BusyBox
+\item applets use old names, but contain different code
+\end{itemize}
+
+The names of applets that are defined in BusyBox serve as a very good starting
+point. How these are recorded in the sources has changed a few times and
+depends on the version of BusyBox. The tool \texttt{appletname-extractor.py}
+can extract these from the BusyBox sources and store them for later reference
+as a simple lookup table in Python pickle format.
+
+Names of applets per version breakdown:
+
+\begin{itemize}
+\item 1.15.x and later: \texttt{include/applets.h} IF syntax
+\item 1.1.1-1.14.x: \texttt{include/applets.h} USE syntax
+\item 1.00-1.1.0: \texttt{include/applets.h} (different syntax)
+\item 0.60.5 and earlier: \texttt{applets.h}, like 1.00-1.1.0 but with a
+slightly different syntax
+\end{itemize}
+
+In one particular version of BusyBox (namely 1.1.0) there is a mix of three
+different syntaxes: (0.60.5, 1.00 and another) for a few applets
+(\texttt{runlevel}, \texttt{watchdog}, \texttt{tr}).
+
+There are also a few applets in 1.1.0 which seem to be a bit harder to detect:
+\texttt{busybox}, \texttt{mkfs.ext3}, \texttt{e3fsck} and \texttt{[[}. These
+can easily be added by hand, since there are just four of them.
+
+Another issue that is currently unresolved is that not all the shells are
+correctly recognized.
+
+\subsection{Extracting configurations from BusyBox sourcecode}
+
+The \texttt{busybox.py} script makes use of a table that maps applet names to
+configuration directives. These tables are stored in a Python pickle and read
+by \texttt{busybox.py} upon startup. To generate these pickle files the
+\texttt{appletname-extractor.py} should be used. In the standard distribution
+for BAT the configurations for most versions of BusyBox are shipped.
+
+The applet names are extracted from a file called \texttt{applets.h} or
+\texttt{applets.src.h}.
+
+\begin{verbatim}
+python appletname-extractor.py -a /path/to/applets.h -n $VERSION
+\end{verbatim}
+
+The configuration will be written to a file \texttt{\$VERSION-config} and
+should be moved into the directory containing the other configurations.
+
+\section{Linux kernel scripts internals}
+
+The Linux kernel processing scripts are at the moment still very experimental.
+This is because there are a few challenges when working with Linux kernel
+source code and Linux kernel binaries. Because there are so many variants of
+the Linux kernel plus associated kernel drivers floating around (vendor
+versions, specific hardware ports, out of tree kernel drivers, etcetera) it is
+difficult to do a really good job.
+
+Although the scripts are right now doing a ``good enough'' job for core Linux
+kernel functionality, it will take a few more iterations to declare it fit for
+production use.
+
+\subsection{Extracting visible strings from the Linux kernel binary}
+
+If a kernel is an ELF binary (sometimes) the relevant sections of the
+binary can be read using \texttt{readelf}. Otherwise \texttt{strings} can be
+run on the binary. This method will return more strings than if using
+\texttt{readelf}, but the extra strings are only extra cruft that won't be
+matched.
+
+\subsection{Extracting visible strings from a Linux kernel module}
+
+If a kernel module is an ELF binary (most cases) the relevant sections of the
+binary can be read using \texttt{readelf}. Otherwise \texttt{strings} can be
+run on the binary. This method will return more strings than if using
+\texttt{readelf}, but the extra strings are only extra cruft that won't be
+matched.
+
+\subsection{Extracting strings from the Linux kernel sources}
+
+The Linux kernel is full of strings that can end up in a binary. Some
+programmers have defined macros just specific to their part of the kernel for
+ease of use (often a wrapper around \texttt{printk}, other programmers use
+more standard mechanisms like \texttt{printk}. Most strings can be extracted
+from the Linux kernel using \texttt{xgettext}. A minority of strings needs to
+be extracted using a custom regular expression.
+
+The following two cases are worth a closer look:
+
+\subsubsection{\texttt{EXPORT\_SYMBOL} and \texttt{EXPORT\_SYMBOL\_GPL}}
+
+The symbols defined in the \texttt{EXPORT\_SYMBOL} and
+\texttt{EXPORT\_SYMBOL\_GPL} macros end up in the kernel image. The
+\texttt{EXPORT\_SYMBOL\_GPL} symbol could be interesting for licensing
+reporting as well, since anything that uses this symbol should be released
+under the GPLv2. This is a topic for future research.
+
+\subsubsection{\texttt{module\_param}}
+
+The names of parameters for kernel modules can end up in the kernel, or in the
+kernel module itself. The names of these parameters are typically prefixed
+with the name of the module (which is often, but not always) and a dot, but
+without the extension of the file. In cases where the module name does not
+match the name of the file it was defined in extra information from the
+build system needs to be added to determine the right string. This is future
+work.
+
+The code for this is in the function \texttt{\_\_init param\_sysfs\_builtin} in
+\texttt{kernel/params.c}.
+
+\subsection{Forward porting and back porting}
+
+There are some strings we scan for which might not be present in certain
+versions, because they were removed, or not yet included in the mainline
+kernel. A good example is devfs. This subsystem was removed in Linux kernel
+2.6.17, but it is not safe to assume that this was done for every 2.6.17 (or
+later) kernel that is out in the wild, since some vendors might have kept it
+and ported it to newer versions (forward porting). Similarly code from newer
+kernels might have been included in older versions
+(backporting).
+
+\subsection{Corner cases}
+
+Sometimes a \texttt{\#define} or some configuration directive causes that our 
+string matching method will not work, because the string is prepended with
+extra characters.
+
+An example from \texttt{arch/arm/mach-sa1100/dma.c} from kernel 2.6.32.9:
+
+\begin{verbatim}
+#undef DEBUG
+#ifdef DEBUG
+#define DPRINTK( s, arg... )  printk( "dma<%p>: " s, regs , ##arg )
+#else
+#define DPRINTK( x... )
+#endif
+\end{verbatim}
+
+Other examples include \texttt{pr\_debug}, \texttt{DBG}, \texttt{DPRINTK} and
+\texttt{pr\_info}.
+
+To work around this there are two ways:
+
+\begin{enumerate}
+\item do substring matches
+\item parse the source code and record where extra code is being added as in
+the example above and only do substring matches in a small number of cases.
+\end{enumerate}
+
+Substring matching is expensive and since it only happens in a minority of
+cases the second method, although not trivial to implement, would be easier.
+This is future work.
+\end{document}

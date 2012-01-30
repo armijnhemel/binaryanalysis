@@ -1,0 +1,9 @@
+Reading contents from file systems and compressed files
+
+Apart from the kernel a device has one or more file systems. The contents of these file systems can contain all kinds of files: normal files (including more file systems), directories, device nodes, etc.
+
+http://sourceforge.net/apps/mediawiki/fuse/index.php?title=CompressedFileSystems
+
+   Nullsoft installer
+
+http://nsis.svn.sourceforge.net/viewvc/nsis/NSIS/trunk/Source/exehead/fileform.h?revision=6101&view=markup

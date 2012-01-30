@@ -1,0 +1,746 @@
+2012-01-30
+* add uncompression of compress'd files
+* tagging 6.0
+
+2012-01-23
+* avoid duplicate license scanning
+
+2012-01-22
+* actually make a copy of the environment, to prevent "Argument list too long"
+errors
+
+2012-01-20
+* determine the size of JFFS2 file systems
+* remove limit of JFFS2 scanning (whole file). JFFS2 file systems can now also
+be carved from the middle of a file.
+* return order in which identifiers are found. This is not yet used.
+
+2012-01-19
+* big file fixes for byteswapping
+* rework identifiers for .exe files
+* big file fixes for PDF files
+
+2012-01-16
+* add lrzip unpacking
+* enable cramfs checking by default
+* add another squashfs variant (from DD-WRT)
+
+2012-01-14
+* prepare for 6.0 release
+* fix bugs in RPM unpacking
+
+2012-01-13
+* further preprocess strings that go into the database. Specifically we split
+on strings that 'strings' will split on when reading a binary file
+* remove control characters in escaped form at the start of a string
+* make multiprocessing configurable in the configuration
+
+2012-01-10
+* don't run leaf scans on duplicate files. Instead run the scans just once and
+recombine the results later.
+
+2012-01-09
+* don't unnecessarily run program scans and postrun scans if none are defined
+in the configuration
+* only pass the configuration of the program scans to the program scans. This
+can save a lot of memory for big runs.
+
+2012-01-04
+* add infrastructure for postrun scans
+
+2012-01-03
+* parallellise unpacking. Hardcoded to 1 worker for now.
+* big file improvements for lzip, lzo and 7z unpacking
+
+2012-01-01
+* change copyright statements
+* extract strings from JavaScript files too
+* sort scans for leafs first, so big files are scanned first
+* send tasks to the pool in chunks of size 1, so each process in the worker
+pool runs for roughly the same time.
+* fix an error in the ranking code, which significantly speeds up the
+algorithm...again
+* tag bz2 and gzip files
+
+2011-12-31
+* parallellise leafscans. Especially when ranking is enabled this pays off a
+lot and shaves off another 30% of runtime (even more if caches are hot). It
+seems to be faster even when there is only one worker process in the pool. There
+is one caveat: this will only work correctly if the caching database for the
+ranking scan has been *FULLY* generated, or else it will try to write to the
+database, which could lead to errors. The default process is therefore
+hardcoded to 1, but this will be made configurable in the near future.
+
+2011-12-28
+* for some ext4 file systems tune2fs needs 8192 bytes to run correctly
+2011-12-27
+* unpack scans also can return tags
+
+2011-12-25
+* select scans based on the actual offsets that were found. Also make sure
+that scans for which magic was found at offset 0 are tried first.
+
+2011-12-24
+* add a very simple verifyGraphics pre-run scan. Right now it only verifies if
+a file is a JPEG file.
+* always run the marker search program and no longer as an optional pre-run
+scan. This also simplifies the other pre-run scans a bit.
+* only run the marker searches for the magic types that are defined in the
+configuration. This speeds up scanning a tiny bit.
+* move code outside of loops in ranking scan, slashing runtime with an
+additional 60%.
+
+2011-12-23
+* stubs for adding a 'noscan' directive that scans can use to say which
+category of files they don't want to scan.
+* move pre-run scans to separate file
+* pre-run scans can return a list of tags. Right now it is just file type, but
+they could be anything. The contents of the list of tags is compared to the
+value of 'noscan' in the configuration file. If a tag can be found in the
+'noscan' list, the scan is skipped. This way we have a fine grained model to
+enable and disable scans for specific files.
+* add prerun scan for verifying if a file consists of just printable text
+characters
+
+2011-12-22
+* add extraction of PDFs
+
+2011-12-21
+* speedups in creation of temporary strings cache, which reduces runtime
+vastly.
+* enable new variant (realtek) of squashfs+lzma
+
+2011-12-20
+* avoid duplicated rows in the strings cache database for ranking. This can
+save quite a bit of space.
+
+2011-12-19
+* for each file first determine it is a valid XML file, so other methods no
+longer need to scan it. This is especially to prevent the ranking method from
+scanning these files.
+* add yet another squashfs+lzma variant to bat-extratools
+
+2011-12-18
+* rework extraction of ELF sections from ELF binaries. Just using 'strings'
+got too many strings. The previous version of the extraction of the right
+sections (using readelf -p) did not work, because readelf -p ate leading tabs
+and converted them into spaces, so sometimes some strings were not matched
+properly. Now we first cut the right ELF sections from the binary, then use
+strings on the temporary binary, which gives much better results.
+
+2011-12-17
+* filter out scans we don't need to run anyway, removing the need to
+dynamically load and eval() the code
+* big file improvements for ICO scanning
+* rework unpack scans: no longer return offsets, since only one of the prerun
+scans scans for/alters those.
+* ranking: if none of the strings we have for gains is significant enough we
+should stop processing
+* ranking: fix bug where only one result per string was fetched, which led to
+vastly incorrect results.
+
+2011-12-15
+* big file improvements for squashfs, ARJ and ar
+* simple scanner that looks for presence of strings that might indicate the
+code was from a forge, like sourceforge or code.google.com. In the future it
+might be good to use the scanner from FOSSology for this.
+* very simplistic scanner for scanning for a few license identifiers. This is
+*not* meant to obtain proof that a program is under GPL, just as an indicator
+for further investigation.
+
+2011-12-14
+* big file improvements for lzma, serialized Java, RAR and ZIP
+* replace using output of libmagic for determining device files, sockets, etc.
+by using standard Python functionality
+* big file improvements: use hardlinks instead of shutil.copy(). This will
+give us some more improvements, since files don't need to be copied around.
+
+2011-12-13
+* stop unpacking a file when the whole file has been blacklisted
+* remove duplicate code in bruteforce.py
+* unpackGzip: don't read in a file and then write it out again if it is the
+same data, but use shutil.copy() instead. Also write files out with dd instead
+of reading the data ourselves. It is a lot more efficient. Finally don't read
+the output of zcat, but write it to a file directly. This really pays off in
+the case of big files.
+* don't read in the file at once when determining the hash, because this will
+be very resource intensive for large files.
+* unpackTar: like unpackGzip: don't read a file, but use shutil.copy() and dd
+instead. This pays off with big files.
+* big file improvements for byteswap and iso9660 scanning, plus fix dd command
+for gzip and tar
+* big file improvements for ext2
+* big file improvements for bzip2
+
+2011-12-12
+* add another squashfs+LZMA variant (for Atheros devices) to bat-extratools
+* add unpacking for squashfs+LZMA variant for Atheros devices to squashfs
+unpacking
+* rework code for unpacking files that contain multiple zip files, almost done
+* add workaround for certain files that contain multiple zip files. This
+works for now, but it might be that we will need additional fixes in the
+future.
+* fix ranking bug that was triggered when there was a blacklist active
+* fix unpacking code for unsquashfs (openwrt, lzma). When unqsuashfs tried to
+unpack and tried to create inodes the scan thought unpacking had failed while
+it was in fact successful.
+
+2011-12-11
+* if unyaffs seems successful, but actually does not unpack any data, it is
+unsuccessful, so treat it as such.
+* if zipinfo is unsuccessful we should bail out
+
+2011-12-10
+* add unpacking for 7z files, only when 7zip header can be found at offset 0,
+until figured out what's safe (7z can unpack a lot more)
+
+2011-12-08
+* rework unpacking for GIF
+* don't always create a temporary directory for 'byteswap', only when
+necessary
+* rewrite cramfs unpacking to new style
+* don't try to unpack encrypted ZIP files
+
+2011-12-07
+* add unpacking for executables packed with UPX
+* rewrite tar unpacking to standard format
+* add extraction of PDF meta information using pdfinfo
+
+2011-12-06
+* enable yaffs2 unpacking
+
+2011-12-05
+* remove unused database
+
+2011-12-01
+* don't follow symlinks for chmod
+* unsquashfs from openwrt with lzma cannot unpack to an existing directory, so
+use an extra directory to work around that limitation
+* add alternative LZMA identifier that is sometimes used in OpenWrt, rework
+LZMA unpacking to work with multiple identifiers
+
+2011-11-25
+* add jdeserialize to bat-extratools
+* add unpacking for Java serialized files using jdeserialize
+
+2011-11-01
+* treat Groovy files as Java
+* treat JSP files as Java
+
+2011-10-30
+* add dedexer to bat-extratools
+
+2011-10-21
+* add field 'envvars' to pass around extra information to scans. These should
+be put into the environment in some cases (ranking scan)
+
+2011-10-20
+* add string constant extraction for Dalvik files, using dedexer. This needs
+to be added to bat-extratools
+
+2011-10-19
+* add string constant extraction for Java class files, so we can do better
+matching in the ranking code for Java.
+
+2011-10-18
+* release version 5.0
+* release first version of bat-extratools, keep it in sync version wise with
+BAT
+
+2011-10-17
+* RPM specfile fixes
+* enable squashfs variants, plus fix bug in Squashfs LZMA (Broadcom variant)
+* add Squashfs LZMA (slax.org/Ralink variant)
+* add Debian package installation files for bat-extratools
+
+2011-09-25
+* add more documentation to the user guide
+
+2011-09-24
+* update version of Ninka that's used, also scan with FOSSology by default.
+* scan .qml files and treat them as C
+
+2011-09-23
+* add unpack ZIP files to batchextractprogramstrings.py
+
+2011-09-22
+* add more sections to the user guide
+
+2011-09-21
+* started work on incorporating snippets of documentation into a comprehensive
+user guide, giving it a much needed quality boost as well.
+
+2011-09-20
+* finished SWF unpacking. Right now it is assumed that the entire file is a
+flash file and it's compressed.
+
+2011-09-19
+* finished JFFS2 support
+
+2011-09-18
+* start on JFFS2 unpacker that uses output from jffs2dump and carves the right
+bits from the JFFS2 file. Far from finished, still needs work.
+
+2011-09-17
+* add stubs for unpacking of SWF files
+* add mapping from extension to language as used in the database
+
+2011-09-10
+* if we have ELF files we can do a much better job at getting the strings from
+the binary by just looking at a few sections which we can get using readelf.
+All other files are still checked using the old 'strings' method.
+
+2011-09-06
+* rework splitting \r because it didn't work for various reasons. Also, we are
+actually right now just interested in getting rid of \r\n in HTTP code.
+
+2011-09-05
+* add unpacking for base64 encoded files. This will not always work, because we
+can't determine where a base64 encoded starts or ends.
+* split at \r, similar to \n. The 'strings' command will split at either and
+so should we to get better matches.
+* remove double quotes before putting strings in database in case we are
+processing a multiline msgid
+* report amount of unique strings for ranking scan
+
+2011-09-04
+* add experimental virus scanning method using clamscan, just for Windows
+executables
+* fix offset for RAR endofarchive variable
+* rewrite Zip processing code to new format. For some reason this was not done
+yet :-/
+* also rewrite RAR processing code to new format. For some reason this was not
+done yet :-/
+
+2011-09-02
+* fix bugs in extraction code using xgettext
+* store line numbers for extracted strings. This might come in handy in future
+reporting.
+
+2011-08-29
+* ignore strings that will not significantly contribute to a score in the
+ranking algorithm. This speeds up the algorithm by vast amounts.
+
+2011-08-27
+* add unpacking ar archives, such as Debian packages
+
+2011-08-24
+* replace homebrew string extraction code with a call to xgettext. It's
+cleaner and gives better results. A small wrapper around it to parse output is
+all that was needed.
+
+2011-08-08
+* fix InstallShield unpacking
+* rewrite ARJ unpacking to new style unpacking
+
+2011-08-07
+* unpack .ico files
+* start on unpacking InstallShield files. Unfortunately we can only process a
+subset of files, because "unshield" can't process all files.
+
+2011-08-02
+* add scanning for ISO9660 file systems. Still need to determine the size of
+the file system for the blacklist. This functionality needs FUSE and fuseiso.
+
+2011-07-31
+* move the RPM unpacking to an external file so BAT will not fail on systems
+where there is no RPM Python and where unpacking RPM has been disabled.
+* add identifiers for ISO9660
+
+2011-07-26
+* add mergeBlacklist method to merge sections in blacklists that overlap.
+
+2011-07-25
+* fix copyright statements
+* remove more duplicate code from bruteforce.py
+* move dynamic library scanning to a separate check
+* move architecture scanning to a separate check
+* fix cramfs scanning
+
+2011-07-24
+* finish ranking method from MSR 2011 paper, except reporting
+* remove (some) duplicate code from bruteforce.py
+
+2011-07-17
+* don't barf if we can't generate a proper LIST for the batch extraction
+program
+
+2011-07-16
+* start on reimplementing ranking methods from MSR 2011 paper
+
+2011-07-10
+* introduce generic method to create directories with the right names
+* rewrite most search* methods to use the prescanned offsets
+
+2011-07-09
+* (partial) rewrite to use seek() and read() for searching offsets instead of
+first reading the entire file and then find()
+* start on generic marker search, so we only have to read a file once, instead
+for every 'unpack' scan we want to run
+
+2011-06-19
+* ugly byte swapping hack for Realtek RTL8196C based routers
+
+2011-06-03
+* start working on crawlers to help maintain archive of source code files that
+are needed to create knowledgebases
+
+2011-05-31
+* add support for lzo unpacking
+
+2011-05-30
+* rework SquashFS code
+* add length checking for cramfs for blacklisting
+
+2011-04-28
+* partially integrate preliminary support for extracted assemblies for
+installers for Microsoft Windows
+
+2011-04-27
+* start on extracting XML descriptions from Windows installers so we can make
+better guesses as to which program to use to unpack the data
+
+2011-04-03
+* add extra ext2 sanity checks to vastly speed up scanning
+
+2011-03-26
+* add proper ext2 unpacking
+* add unpacking with unsquashfs with LZMA from OpenWrt
+
+2011-03-14
+* introduce wrapper for squashfs, so we can easily add other squashfs
+unpackers too, plus fix some cleanup bugs for unpackSquashfs
+
+2011-03-13
+* add PNG unpacking
+* fix tempdirs for ext2 unpacking
+
+2011-03-06
+* rework leaf scans to properly use blacklisting
+* reenable ext2fs scanning
+
+2011-03-05
+* fold walktempdir() into scan()
+* remove some clashes between names of variables and built-in function for
+clarity
+
+2011-03-04
+* rework GIF scanning so we don't unnecessarily loop: merge searchUnpackGIF
+and unpackGIF, add extra checks.
+
+2011-03-02
+* first copy the file to scan to the temporary scanning directory
+* start on reworking hierachical unpacking which will make it easier to find
+where and how things were unpacked.
+* add more hierarchical unpacking
+* unpack squashfs to the temporary directory directly, without having
+unsquashfs create the 'squashfs-root' directory
+* add speedups for GIF images, also fix a few indexing bugs, argh.
+
+2011-02-28
+* add a 'noscan' attribute for directories that don't need extra 'unpack'
+scans for its contents
+* add 'noscan' for unpacking GIF
+* reenable GIF
+
+2011-02-27
+* disable GIF scanning due to endless looping. We should start marking certain
+files as 'noscan' to avoid looping.
+* add giflib-utils as a dependency for the RPM
+* rework blacklisting, so we don't overload the datastructure for passing on
+the results.
+* remove Dutchims
+* add yaffs2 unpacking, not enabled by default
+
+2011-02-26
+* don't exclude files to scan. The unpack scripts should be able to handle
+this nicely.
+
+2011-02-25
+* don't clear the blacklist by accident
+* start on extracting GIF images
+* add extraction of GIF images
+* fix another bug in blacklisting
+
+2011-02-23
+* fix some bugs in unpacking RAR
+* rework scanning for EXE files. Currently only grabs files that can be
+unpacked with RAR.
+* add unpack7z for use in exe unpacking. Still need to rework generic 7z
+unpacking itself.
+
+2011-02-22
+* rework unpacking for CAB
+* give 7zip more priority than other scans such as CAB to prevent duplicate
+scanning
+* add blacklisting to 7z. This is very crude and needs to be reworked.
+
+2011-02-21
+* add unpacking for ARJ
+* fix small bug in ubifs searching
+
+2011-02-20
+* fix XZ unpacking
+* fix unsquashfs unpacking encountering a sqsh we can't unpack yet
+
+2011-02-18
+* change upperbound of blacklist checking from <= to <
+* add lzip unpacking
+
+2011-02-16
+* add search method for XZ footer
+* make lzip a dependency for the RPM
+* start on XZ support. This does not yet work, so don't use.
+* rework cpio unpacking slightly. There are still a few logic errors here that
+need some love.
+
+2011-02-15
+* use 'file' to determine the size of squashfs file systems.
+* introduce "genericSearch" and rewrite all checks in checks.py to use
+genericSearch
+* add stubs for XZ support
+* small comment fixes and removal from dead code
+* add stubs for lzip support
+
+2011-02-13
+* only pass data between cpio header and trailer to the cpio unpacker.
+* start inlining methods in certain checks that don't have to be separate
+* inline more methods, merge a few checks into one file
+* add extra checks to cpio unpacking to ensure we are actually unpacking valid
+cpio archives.
+
+2011-02-12
+* add proper options to license scanning program
+* determine sha256 hashes for files scanned by license scanner
+* fix cpio searching bug, might break some runs at the moment
+* only license check certain files
+
+2011-02-07
+* move temporary directory creation into the while loop for
+searching/unpacking gzip files to prevent duplicate scanning. This should be
+done for other searches as well.
+* add stub for adding directories containing the names of the compression to
+make it easier to find things after a scan.
+* move temporary dir creation into the while loop for most other scans as well
+
+2011-02-06
+* implement priorities for scanning, get rid of looping over configuration for
+every scan, which was a bit silly.
+* remove looping over configuration in XML printing
+* small cleanups
+
+2011-02-04
+* add documentation for blacklisting
+* add blacklisting for individual program scans
+
+2011-02-03
+* add blacklisting for tar, cpio and RPM
+
+2011-01-30
+* don't scan block devices or character devices
+* don't enable ubifs, since I have not added the code yet :-/
+* add code to store the configuration globally
+* reenable ubifs
+* add unpacker for ubifs, currently does not work correctly, but unpacks too
+much. This needs to be fixed.
+* fix unpacker for ubifs. Needs testing with more real data.
+* remove temporary dirs in the bzip2 unpacker
+* add stubs for working with priorities, as announced on the mailinglist
+* make "config" global, eventually we will replace this with something else
+that should significantly clean up the code
+
+2011-01-29
+* add -d to cpio, so it actually creates directories
+* add unpacking RPMs. RPM contains a gzip file so we get some duplicates.
+* actually enable bzip2 in the standard configuration, sigh.
+
+2011-01-27
+* add stubs for using Ninka to get licensing information per file
+
+2011-01-26
+* return the type of the squashfs file system we find. We don't yet use the
+information, but eventually we will use it to choose the right unpacker for
+squashfs, and be able to add some more meta information about what kind of
+squashfs file system it is.
+* update the README, it was still very old (and still can use cleanups)
+* add mtd-utils-ubi as a dependency for the RPM (package name needs to be
+checked for DEB)
+
+2011-01-25
+* cleanups
+* add markers for ubifs (used a lot on Android)
+
+2011-01-24
+* (finally) add support for bzip2 archives
+
+2011-01-20
+* add option to switch between absolute and relative reporting of paths, to
+make unpacked files easier to find in /tmp after a scan
+* always report both absolute and relative paths, remove switch
+* unpack into a single directory, instead of scattering things over lots of
+directories in /tmp. This makes it easier to pack the results of a scan for
+later analysis.
+
+2011-01-17
+* add configuration for BusyBox 1.18.2
+* bump version number to 4.0
+
+2011-01-13
+* last PyLucene dependencies removed
+* rename name2program.py to program2package.py
+* add a hack to fix different paths for unsquashfs
+
+2011-01-07
+* various cleanups
+
+2011-01-06
+* various cleanups
+
+2010-12-28
+* make a configuration file for bruteforce.py mandatory
+* add configuration, plus default configuration, to bat.busybox.py
+* add documentation for generating RPMs
+
+2010-12-22
+* add configuration for BusyBox 1.18.1
+
+2010-12-20
+* remove dependency on PyLucene, replace with sqlite3
+
+2010-12-15
+* add configuration for BusyBox 1.17.4 and 1.18.0
+
+2010-10-19
+* bruteforce.py: change help message, since we can scan more than firmwares
+
+2010-10-18
+* busybox.py: exit printing an error when we can't find a version number
+
+2010-10-10
+* add configuration for BusyBox 1.17.3
+* change helptext for BusyBox config extraction script
+
+2010-10-08
+* iconv fixes, some extra comments
+
+2010-10-07
+* rename unpack types in the bruteforce configuration
+* replace per scan specific unpack elements with a generic "unpack" element, add
+type of unpack to a new element "type", which specifies the type.
+* extractprogramstrings.py: strip comments first, optionally run through
+iconv first, make regex more reliable
+* add public domain sed script that removes C/C++ style comments
+
+2010-09-15
+* store scanned strings to Lucene
+
+2010-09-13
+* start on a program to extract strings from sourcecode
+
+2010-09-04
+* add configuration for BusyBox 1.17.2
+
+2010-08-18
+* add configurations for BusyBox 1.17.0 and 1.17.1
+* fix README for appletname-extractor.py
+
+2010-06-17
+* add configuration for BusyBox 1.16.2
+
+2010-06-09
+* add preliminary support for cramfs (only tested with little endian cramfs).
+Some extra work is needed to get this to work (apply a patch, rebuild a tool),
+so it is disabled by default for now.
+
+2010-06-08
+* compatibility fixes for unzip 6.0
+
+2010-06-03
+* reinstate 'magic' attribute in the configuration
+* tool to extract information from the XML output and add it to knowledgebase
+
+2010-06-02
+* started work on a script to take the results from the output of the
+bruteforce tool and put the results into the knowledgebase
+
+2010-06-01
+* add a simple check for hostapd
+* add some more stubs for integrating the knowledgebase
+
+2010-05-10
+* add a simple check for wpa_supplicant
+* use data from the knowledgebase to report additional data
+* add a script to initialize a knowledgebase (sqlite) , as well as several separate
+scripts to maintain the knowledgebase
+
+2010-05-09
+* add a script for creating a knowledgebase and fill it with some test data
+
+2010-05-05
+* add simple checks for iptables, iproute, dproxy, ez-ipupdate
+* add simple check for libusb 0.1
+* add simple check for vsftpd
+* move documentation to the 'doc' directory
+* document adding new checks
+
+2010-05-04
+* small speedup for BusyBox (40 characters should be enough for the BusyBox
+version number)
+* stub for XML reporting for BusyBox, not yet used
+* cleanup fsmagic.py, add markers for cpio archives
+* add beginnings of tools to build and query a searchbase with a file name to
+package mapping, useful for quick sweep scanning
+* make the tool run silent by default (no reporting)
+* add reporting of bruteforce scanning in XML (enable with -x flag)
+* remove old text reporting
+* add infrastructure to have custom XML snippets printed for checks that don't
+fit the default XML reporting model
+* add unpack code for cpio, tar, Windows executables (cabinet archive files,
+7z), rar, zip
+* add code to determine architecture for ELF files
+* document code more
+
+2010-05-01
+* remove some calls to addDocument() in the extractkernel* scripts, since they
+are unnecessary. It also brings down the size of the Lucene indexes with about
+a quarter, and lets the scripts run a bit faster.
+
+2010-04-30
+* remove a marker string for U-Boot which falsely identified some instances of
+CFE as possibly U-Boot
+
+2010-04-27
+* add a check for loadlin, which you can still find in some embedded devices
+* speedup for BusyBox version extraction
+* speedup for Linux kernel version extraction
+
+2010-04-26
+* close files when we don't need them anymore. This prevents running out of
+limits for open files.
+
+2010-04-23
+* add more documentation for the bruteforce scanning tool
+
+2010-04-21
+* add first scan for U-Boot. More marker strings need to be added to make it more reliable.
+
+2010-04-18
+* remove wrong marker line for ALSA, leading to false positives
+* add LZMA decompression. This is not too reliable according to Debian bug #364260
+
+2010-04-17
+* add basic pretty printing
+* speedup scanning for BusyBox version number
+* Python 2.5 compatibility fixes (thanks to Brett Smith)
+* only check for module license strings in actual modules
+* return the correct offset for finding squashfs file systems
+* filter out more files, that are not immediately interesting, like HTML pages
+* add the kernel checks from the kernelanalysis script to the brute force scanner
+
+2010-04-16
+* add scan for RedBoot to brute force scanning tool
+* add scan for wireless tools to brute force scanning tool
+* add scan for dynamically linked libraries to brute force scanning tool
+* add scan for licenses in kernel modules to brute force scanning tool
+
+2010-04-15 - initial release
