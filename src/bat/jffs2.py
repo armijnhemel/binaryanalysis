@@ -5,7 +5,10 @@ import os, sys, subprocess, re, zlib, tempfile
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 def readJFFS2Inodes(path):
-	p = subprocess.Popen(['jffs2dump', '-cv', path], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	unpackenv = os.environ.copy()
+	unpackenv['PATH'] = unpackenv['PATH'] + ":/usr/sbin"
+
+	p = subprocess.Popen(['jffs2dump', '-cv', path], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, env=unpackenv)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		return ([], [])
