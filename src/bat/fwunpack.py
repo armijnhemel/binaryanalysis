@@ -1498,6 +1498,51 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [])
 
+def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if offsets['compress'] == []:
+		return ([], blacklist, [])
+
+	## counter to remember how many gzip file systems we have
+	## discovered, so we can use this to append to the directory
+	## name containing the unpacked contents.
+	counter = 1
+	diroffsets = []
+	for offset in offsets['compress']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		tmpdir = dirsetup(tempdir, filename, "compress", counter)
+		## and zcat can also uncompress this format, so just reuse
+		res = unpackCompress(filename, offset, tmpdir)
+		if res != None:
+			diroffsets.append((res, offset))
+			counter = counter + 1
+		else:
+			## cleanup
+			os.rmdir(tmpdir)
+	return (diroffsets, blacklist, [])
+
+def unpackCompress(filename, offset, tempdir=None):
+	tmpdir = unpacksetup(tempdir)
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.fdopen(tmpfile[0]).close()
+
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
+
+	outtmpfile = tempfile.mkstemp(dir=tmpdir)
+	p = subprocess.Popen(['uncompress', '-c', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if os.stat(outtmpfile[1]).st_size == 0:
+		os.fdopen(outtmpfile[0]).close()
+		os.unlink(outtmpfile[1])
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	os.fdopen(outtmpfile[0]).close()
+	os.unlink(tmpfile[1])
+	return tmpdir
+
 ## tries to unpack stuff using bzcat. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
 ## We use bzcat instead of the bz2 module because that can't handle trailing

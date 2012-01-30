@@ -1,3 +1,6 @@
+2012-01-30
+* add uncompression of compress'd files
+
 2012-01-23
 * avoid duplicate license scanning
 
