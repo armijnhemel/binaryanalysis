@@ -98,6 +98,14 @@ priority = 1
 magic = cab
 noscan   = text:xml:graphics:pdf:compressed
 
+[compress]
+type     = unpack
+module   = bat.fwunpack
+method   = searchUnpackCompress
+priority = 1
+magic    = compress
+noscan   = text:xml:graphics:pdf
+
 [cpio]
 type    = unpack
 module  = bat.fwunpack
