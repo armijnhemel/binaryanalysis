@@ -220,7 +220,7 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 	osgen = os.walk(srcdir)
 
 	if license:
-		ninkaversion = "80a290e"
+		ninkaversion = "bf83428"
 		ninkaenv = os.environ.copy()
 		ninkaenv['PATH'] = ninkaenv['PATH'] + ":/tmp/dmgerman-ninka-%s/comments/comments" % ninkaversion
 	try:
