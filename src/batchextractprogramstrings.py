@@ -114,6 +114,11 @@ def unpack(directory, filename):
  		p = subprocess.Popen(['tar', 'jxf', "%s/%s" % (directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		return tmpdir
+        elif 'XZ compressed data' in filemagic:
+       		tmpdir = tempfile.mkdtemp()
+ 		p = subprocess.Popen(['tar', 'Jxf', "%s/%s" % (directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+		(stanout, stanerr) = p.communicate()
+		return tmpdir
         elif 'gzip compressed data' in filemagic:
 		try:
 	        	tar = tarfile.open("%s/%s" % (directory, filename), 'r:gz')
