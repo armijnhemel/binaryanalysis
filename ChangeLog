@@ -1,3 +1,6 @@
+2012-02-15
+* remove use of dynamic symbols in ranking.py, to decrease false positives
+
 2012-01-30
 * add uncompression of compress'd files
 * tagging 6.0

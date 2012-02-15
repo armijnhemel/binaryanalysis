@@ -127,7 +127,9 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
                         				lines.append(printstring)
 					os.unlink(i)
 
+				'''
 				## sometimes we can extract useful information from the dynamic symbols
+				## but mostly they lead to false positives.
 			 	p = subprocess.Popen(['readelf', '-W', '--dyn-syms', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				st = stanout.split("\n")
@@ -141,6 +143,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
                 				continue
         				if len(printstring) >= stringcutoff:
 						lines.append(printstring)
+				'''
 
 			else:
 				## extract all strings from the binary. Only look at strings
