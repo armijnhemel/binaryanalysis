@@ -66,7 +66,7 @@ def searchDynamicLibs(path, blacklist=[], envvars=None):
 		else:
 			return libs
 
-def dynamicLibsPrettyPrint(res, root):
+def dynamicLibsPrettyPrint(res, root, envvars=None):
 	tmpnode = root.createElement('libs')
 	for lib in res:
 		tmpnode2 = root.createElement('lib')
@@ -194,7 +194,7 @@ def searchWindowsDependencies(path, blacklist=[], envvars=None):
 	else:
 		return deps
 
-def xmlPrettyPrintWindowsDeps(res, root):
+def xmlPrettyPrintWindowsDeps(res, root, envvars=None):
 	pass
 
 ## method to extract meta information from PDF files
@@ -244,7 +244,7 @@ def scanPDF(path, blacklist=[], envvars=None):
 					pdfinfo['version'] = value.strip()
 			return pdfinfo
 
-def pdfPrettyPrint(res, root):
+def pdfPrettyPrint(res, root, envvars=None):
 	tmpnode = root.createElement('pdfinfo')
 	for key in res.keys():
 		tmpnode2 = root.createElement(key)
@@ -284,7 +284,7 @@ def scanLicenses(path, blacklist=[], envvars=None):
 	else:
 		return None
 
-def licensesPrettyPrint(res, root):
+def licensesPrettyPrint(res, root, envvars=None):
 	tmpnode = root.createElement('licenses')
 	for key in res.keys():
 		tmpnode2 = root.createElement(key)
@@ -320,7 +320,7 @@ def scanForges(path, blacklist=[], envvars=None):
 	else:
 		return None
 
-def forgesPrettyPrint(res, root):
+def forgesPrettyPrint(res, root, envvars=None):
 	tmpnode = root.createElement('forges')
 	for key in res.keys():
 		tmpnode2 = root.createElement(key)
