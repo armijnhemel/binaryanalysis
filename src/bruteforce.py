@@ -83,8 +83,12 @@ def prettyprintresxmlsnippet(res, root, unpackscans, programscans):
 				try:
 					module = confs['module']
 					method = confs['xmloutput']
+					if confs.has_key('envvars'):
+						envvars = confs['envvars']
+					else:
+						envvars = None
 					exec "from %s import %s as bat_%s" % (module, method, method)
-					xmlres = eval("bat_%s(res[i], root)" % (method))
+					xmlres = eval("bat_%s(res[i], root, envvars)" % (method))
 					if xmlres != None:
                 				topnode = xmlres
 					else:

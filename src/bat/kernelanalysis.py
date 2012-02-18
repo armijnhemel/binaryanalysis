@@ -13,7 +13,7 @@ import xml.dom.minidom
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
-def xmlprettyprint(res, root):
+def xmlprettyprint(res, root, envvars=None):
 	topnode = root.createElement("kernelchecks")
 	for i in res.keys():
 		tmpnode = root.createElement(i)
