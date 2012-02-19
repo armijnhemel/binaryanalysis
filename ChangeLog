@@ -1,3 +1,6 @@
+2012-02-19
+* correctly process scans that don't define "noscan"
+
 2012-02-18
 * pass environment variables to XML pretty printing methods
 

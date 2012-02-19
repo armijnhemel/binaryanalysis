@@ -58,6 +58,8 @@ def filterScans(scans, tags):
 				continue
 			else:
 				filteredscans.append(scan)
+		else:
+			filteredscans.append(scan)
 	return filteredscans
 
 ## pretty printing for various elements
