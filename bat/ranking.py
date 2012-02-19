@@ -275,6 +275,10 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	c.execute("create index if not exists stringscache.programstring_index on stringscache(programstring, language)")
 	conn.commit()
 
+	rankingfull = False
+	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
+		rankingfull = True
+
 	## (package, version) => count
 	packagelist = {}
 
@@ -306,7 +310,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 		res = conn.execute('''select distinct package, filename FROM stringscache.stringscache WHERE programstring=? AND language=?''', (line,language)).fetchall()
 
 		## nothing in the cache
-		if len(res) == 0:
+		if len(res) == 0 and not rankingfull:
 			## do we actually have a result?
 			checkres = conn.execute('''select sha256, language from extracted_file WHERE programstring=? LIMIT 1''', (line,)).fetchall()
 			res = []
