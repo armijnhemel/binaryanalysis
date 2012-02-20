@@ -294,7 +294,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	oldline = None
 	matched = False
 	for line in lines:
-		print >>sys.stderr, "processing <|%s|>" % line
+		#print >>sys.stderr, "processing <|%s|>" % line
 		## speedup if the lines happen to be the same as the old one
 		if line == oldline:
 			if matched:
@@ -341,108 +341,109 @@ def extractGeneric(lines, path, language='C', envvars=None):
 			## for statistics it's nice to see how many lines we matched
 			matchedlines = matchedlines + 1
 			packageres = {}
-			allStrings[line] = []
+			#allStrings[line] = []
 
 			print >>sys.stderr, "\n%d matches found for <(|%s|)> in %s" % (len(res), line, path)
 
+			pkgs = {}    ## {package name: [filenames without path]}
+
+			## For each string we determine in how many packages (without version) the string
+			## is found.
+			## If the string is only found in one package the string is unique to the package
+			## and we record it as such and add its length to a score.
 			for result in res:
 				(package, filename) = result
-				## record per line all (package, filename) combinations
-				## in which this string was found.
-				allStrings[line].append({'package': package, 'filename': filename})
-				if newmatch:
+				## in case we don't know this match yet record it in the database
+				if newmatch and not rankingfull:
 					c.execute('''insert into stringscache.stringscache values (?, ?, ?, ?)''', (line, language, package, filename))
-			conn.commit()
+				match = {'package': package, 'filename': filename}
+				i = line
+				if not pkgs.has_key(match['package']):
+					pkgs[match['package']] = [os.path.basename(match['filename'])]
+				else:
+					pkgs[match['package']].append(os.path.basename(match['filename']))
+			if len(pkgs.values()) == 1:
+				## the string is unique to this package and this package only
+				uniqueScore[match['package']] = uniqueScore.get(match['package'], 0) + len(i)
+				uniqueMatches[match['package']] = uniqueMatches.get(match['package'], []) + [i]
+
+				if not allMatches.has_key(match['package']):
+					allMatches[match['package']] = {}
+
+				allMatches[match['package']][i] = allMatches[match['package']].get(i,0) + len(i)
+
+				nrUniqueMatches = nrUniqueMatches + 1
+			else:
+				## The string we found is not unique to a package, but is it 
+				## unique to a filename?
+				## This method does assume that files that are named the same
+				## also contain the same or similar content.
+				filenames = {}
+
+				for packagename in pkgs.items():
+					## packagename = (name of package, [list of filenames with 'i'])
+					## we record in how many different packages we find the
+					## same filename that contain i
+					for fn in list(set(packagename[1])):
+						if not filenames.has_key(fn):
+							filenames[fn] = {}
+						filenames[fn][packagename[0]] = 1
+				## now we can determine the score for the string
+				try:
+					score = len(i) / pow(alpha, (len(filenames.keys()) - 1))
+				except Exception, e:
+					## pow(alpha, (len(filenames.keys()) - 1)) is overflowing here
+					## so the score would be very close to 0. The largest value
+					## we have is sys.maxint, so use that one. The score will be
+					## small enough...
+					score = len(i) / sys.maxint
+
+				## After having computed a score we determine if the files
+				## we have found the string in are all called the same.
+				## filenames {name of file: { name of package: 1} }
+				for fn in filenames.keys():
+					nonUniqueMatches.append(i)
+					if len(filenames[fn].values()) == 1:
+						## The filename fn containing the matched string can only
+						## be found in one package.
+						## For example: string 'foobar' is present in 'foo.c' in package 'foo'
+						## and 'bar.c' in package 'bar', but not in 'foo.c' in package 'bar'
+						## or 'bar.c' in foo (if any).
+						fnkey = filenames[fn].keys()[0]
+						nonUniqueScore[fnkey] = nonUniqueScore.get(fnkey,0) + score
+					else:
+						## There are multiple packages in which the same
+						## filename contains this string, for example 'foo.c'
+						## in packages 'foo' and 'bar. This is likely to be
+						## internal cloning in the repo.  This string is
+						## assigned to a single package in the loop below.
+						## Some strings will not signficantly contribute to the score, so they
+						## could be ignored and not added to the list.
+						## For now we exclude them, but in the future we could include them for
+						## completeness.
+						#if score > 1.0e-200:
+						if score > 1.0e-20:
+							stringsLeft['%s\t%s' % (i, fn)] = {'string': i, 'score': score, 'filename': fn, 'pkgs' : filenames[fn].keys()}
+
+			if newmatch:
+				conn.commit()
 			newmatch = False
 
 	if lenlines != 0:
-		print >>sys.stderr, "matchedlines: %d for %s" % (matchedlines, path)
-		print >>sys.stderr, matchedlines/(lenlines * 1.0)
+		pass
+		#print >>sys.stderr, "matchedlines: %d for %s" % (matchedlines, path)
+		#print >>sys.stderr, matchedlines/(lenlines * 1.0)
 
 	del lines
 
-	## For each string we determine in how many packages (without version) the string
-	## is found.
-	## If the string is only found in one package the string is unique to the package
-	## and we record it as such and add its length to a score.
-	##
-	## If not, we have to do a little bit more work to determine which file is
-	## the most likely, so we also record the filename.
+	## If the string is not unique, we have to do a little bit more work to determine which
+	## file is the most likely, so we also record the filename.
 	##
 	## 1. determine whether the string is unique to a package
 	## 2. if not, determine which filenames the string is in
 	## 3. for each filename, determine whether or not this file (containing the string)
 	##    is unique to a package
 	## 4. if not, try to determine the most likely package the string was found in
-	for i in allStrings.keys():
-		pkgs = {}    ## {package name: [filenames without path]}
-		for match in allStrings[i]:
-			if not pkgs.has_key(match['package']):
-				pkgs[match['package']] = [os.path.basename(match['filename'])]
-			else:
-				pkgs[match['package']].append(os.path.basename(match['filename']))
-		if len(pkgs.values()) == 1:
-			## the string is unique to this package and this package only
-			uniqueScore[match['package']] = uniqueScore.get(match['package'], 0) + len(i)
-			uniqueMatches[match['package']] = uniqueMatches.get(match['package'], []) + [i]
-
-			if not allMatches.has_key(match['package']):
-				allMatches[match['package']] = {}
-
-			allMatches[match['package']][i] = allMatches[match['package']].get(i,0) + len(i)
-
-			nrUniqueMatches = nrUniqueMatches + 1
-		else:
-			## The string we found is not unique to a package, but is it 
-			## unique to a filename?
-			## This method does assume that files that are named the same
-			## also contain the same or similar content.
-			filenames = {}
-
-			for packagename in pkgs.items():
-				## packagename = (name of package, [list of filenames with 'i'])
-				## we record in how many different packages we find the
-				## same filename that contain i
-				for fn in list(set(packagename[1])):
-					if not filenames.has_key(fn):
-						filenames[fn] = {}
-					filenames[fn][packagename[0]] = 1
-			## now we can determine the score for the string
-			try:
-				score = len(i) / pow(alpha, (len(filenames.keys()) - 1))
-			except Exception, e:
-				## pow(alpha, (len(filenames.keys()) - 1)) is overflowing here
-				## so the score would be very close to 0. The largest value
-				## we have is sys.maxint, so use that one. The score will be
-				## small enough...
-				score = len(i) / sys.maxint
-
-			## After having computed a score we determine if the files
-			## we have found the string in are all called the same.
-			## filenames {name of file: { name of package: 1} }
-			for fn in filenames.keys():
-				nonUniqueMatches.append(i)
-				if len(filenames[fn].values()) == 1:
-					## The filename fn containing the matched string can only
-					## be found in one package.
-					## For example: string 'foobar' is present in 'foo.c' in package 'foo'
-					## and 'bar.c' in package 'bar', but not in 'foo.c' in package 'bar'
-					## or 'bar.c' in foo (if any).
-					fnkey = filenames[fn].keys()[0]
-					nonUniqueScore[fnkey] = nonUniqueScore.get(fnkey,0) + score
-				else:
-					## There are multiple packages in which the same
-					## filename contains this string, for example 'foo.c'
-					## in packages 'foo' and 'bar. This is likely to be
-					## internal cloning in the repo.  This string is
-					## assigned to a single package in the loop below.
-					## Some strings will not signficantly contribute to the score, so they
-					## could be ignored and not added to the list.
-					## For now we exclude them, but in the future we could include them for
-					## completeness.
-					#if score > 1.0e-200:
-					if score > 1.0e-20:
-						stringsLeft['%s\t%s' % (i, fn)] = {'string': i, 'score': score, 'filename': fn, 'pkgs' : filenames[fn].keys()}
 	nonUniqueMatches = list(set(nonUniqueMatches))
 
 	## For each string that occurs in the same filename in multiple
@@ -469,7 +470,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	strleft = len(stringsLeft.keys())
 	while strleft > 0:
 		roundNr = roundNr + 1
-		print >>sys.stderr, "round %d: %d strings left" % (roundNr, strleft)
+		#print >>sys.stderr, "round %d: %d strings left" % (roundNr, strleft)
 		gain = {}
 		stringsPerPkg = {}
 		## Determine to which packages the remaining strings belong.
@@ -509,7 +510,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 
 			allMatches[best][x['string']] = allMatches[best].get(x['string'],0) + x['score']
 			sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
-			print >>sys.stderr, "GAIN", gain[best], best, x
+			#print >>sys.stderr, "GAIN", gain[best], best
 			del stringsLeft[xy]
 		if gain[best] < gaincutoff:
 			break

@@ -2,6 +2,7 @@
 * correctly process scans that don't define "noscan"
 * introduce environment variable to indicate whether or not there is a fully
 generated caching database
+* inline some code in ranking.py, reducing memory consumption
 
 2012-02-18
 * pass environment variables to XML pretty printing methods
