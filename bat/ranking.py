@@ -233,7 +233,6 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 
 ## Extract the strings
 def extractGeneric(lines, path, language='C', envvars=None):
-	allStrings = {}                ## {string, {package, version}}
 	lenStringsFound = 0
 	uniqueMatches = {}
 	allMatches = {}
@@ -307,7 +306,8 @@ def extractGeneric(lines, path, language='C', envvars=None):
                 if line == "": continue
 
 		## first see if we have anything in the cache at all
-		res = conn.execute('''select distinct package, filename FROM stringscache.stringscache WHERE programstring=? AND language=?''', (line,language)).fetchall()
+		#res = conn.execute('''select distinct package, filename FROM stringscache.stringscache WHERE programstring=? AND language=?''', (line,language)).fetchall()
+		res = conn.execute('''select package, filename FROM stringscache.stringscache WHERE programstring=? AND language=?''', (line,language)).fetchall()
 
 		## nothing in the cache
 		if len(res) == 0 and not rankingfull:
@@ -326,7 +326,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 						continue
 					else:
 						## overwrite 'res' here
-						res = res + conn.execute('''select package, filename FROM processed_file p WHERE sha256=?''', (checksha,)).fetchall()
+						res = conn.execute('''select package, filename FROM processed_file p WHERE sha256=?''', (checksha,)).fetchall()
 			newmatch = True
 		if len(res) != 0:
 			## we don't need versions, only need the filename
@@ -340,8 +340,6 @@ def extractGeneric(lines, path, language='C', envvars=None):
 
 			## for statistics it's nice to see how many lines we matched
 			matchedlines = matchedlines + 1
-			packageres = {}
-			#allStrings[line] = []
 
 			print >>sys.stderr, "\n%d matches found for <(|%s|)> in %s" % (len(res), line, path)
 
@@ -357,20 +355,19 @@ def extractGeneric(lines, path, language='C', envvars=None):
 				if newmatch and not rankingfull:
 					c.execute('''insert into stringscache.stringscache values (?, ?, ?, ?)''', (line, language, package, filename))
 				match = {'package': package, 'filename': filename}
-				i = line
 				if not pkgs.has_key(match['package']):
 					pkgs[match['package']] = [os.path.basename(match['filename'])]
 				else:
 					pkgs[match['package']].append(os.path.basename(match['filename']))
-			if len(pkgs.values()) == 1:
+			if len(pkgs) == 1:
 				## the string is unique to this package and this package only
-				uniqueScore[match['package']] = uniqueScore.get(match['package'], 0) + len(i)
-				uniqueMatches[match['package']] = uniqueMatches.get(match['package'], []) + [i]
+				uniqueScore[match['package']] = uniqueScore.get(match['package'], 0) + len(line)
+				uniqueMatches[match['package']] = uniqueMatches.get(match['package'], []) + [line]
 
 				if not allMatches.has_key(match['package']):
 					allMatches[match['package']] = {}
 
-				allMatches[match['package']][i] = allMatches[match['package']].get(i,0) + len(i)
+				allMatches[match['package']][line] = allMatches[match['package']].get(line,0) + len(line)
 
 				nrUniqueMatches = nrUniqueMatches + 1
 			else:
@@ -380,29 +377,29 @@ def extractGeneric(lines, path, language='C', envvars=None):
 				## also contain the same or similar content.
 				filenames = {}
 
-				for packagename in pkgs.items():
-					## packagename = (name of package, [list of filenames with 'i'])
+				for packagename in pkgs:
+					## packagename = (name of package, [list of filenames with 'line'])
 					## we record in how many different packages we find the
-					## same filename that contain i
-					for fn in list(set(packagename[1])):
+					## same filename that contain line
+					for fn in list(set(pkgs[packagename])):
 						if not filenames.has_key(fn):
 							filenames[fn] = {}
-						filenames[fn][packagename[0]] = 1
+						filenames[fn][packagename] = 1
 				## now we can determine the score for the string
 				try:
-					score = len(i) / pow(alpha, (len(filenames.keys()) - 1))
+					score = len(line) / pow(alpha, (len(filenames) - 1))
 				except Exception, e:
 					## pow(alpha, (len(filenames.keys()) - 1)) is overflowing here
 					## so the score would be very close to 0. The largest value
 					## we have is sys.maxint, so use that one. The score will be
 					## small enough...
-					score = len(i) / sys.maxint
+					score = len(line) / sys.maxint
 
 				## After having computed a score we determine if the files
 				## we have found the string in are all called the same.
 				## filenames {name of file: { name of package: 1} }
-				for fn in filenames.keys():
-					nonUniqueMatches.append(i)
+				for fn in filenames:
+					nonUniqueMatches.append(line)
 					if len(filenames[fn].values()) == 1:
 						## The filename fn containing the matched string can only
 						## be found in one package.
@@ -423,7 +420,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 						## completeness.
 						#if score > 1.0e-200:
 						if score > 1.0e-20:
-							stringsLeft['%s\t%s' % (i, fn)] = {'string': i, 'score': score, 'filename': fn, 'pkgs' : filenames[fn].keys()}
+							stringsLeft['%s\t%s' % (line, fn)] = {'string': line, 'score': score, 'filename': fn, 'pkgs' : filenames[fn].keys()}
 
 			if newmatch:
 				conn.commit()
@@ -452,7 +449,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	## package that would gain the highest score increment across all
 	## strings that are left.  This is repeated until no strings are left.
 	pkgsScorePerString = {}
-	for stri in stringsLeft.keys():
+	for stri in stringsLeft:
 		pkgsSortedTmp = map(lambda x: {'package': x, 'uniquescore': uniqueScore.get(x, 0)}, stringsLeft[stri]['pkgs'])
 
 		## get the unique score per package and sort in reverse order
@@ -467,14 +464,14 @@ def extractGeneric(lines, path, language='C', envvars=None):
 		pkgsScorePerString[stri] = pkgs2
 
 	roundNr = 0
-	strleft = len(stringsLeft.keys())
+	strleft = len(stringsLeft)
 	while strleft > 0:
 		roundNr = roundNr + 1
 		#print >>sys.stderr, "round %d: %d strings left" % (roundNr, strleft)
 		gain = {}
 		stringsPerPkg = {}
 		## Determine to which packages the remaining strings belong.
-		for stri in stringsLeft.keys():
+		for stri in stringsLeft:
 			for p2 in pkgsScorePerString[stri]:
 				gain[p2] = gain.get(p2, 0) + stringsLeft[stri]['score']
 				stringsPerPkg[p2] = stringsPerPkg.get(p2, []) + [stri]
@@ -514,7 +511,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 			del stringsLeft[xy]
 		if gain[best] < gaincutoff:
 			break
-		strleft = len(stringsLeft.keys())
+		strleft = len(stringsLeft)
 
 	scores = {}
 	for k in uniqueScore.keys() + sameFileScore.keys():
