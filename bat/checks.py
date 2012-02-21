@@ -246,7 +246,7 @@ def scanPDF(path, blacklist=[], envvars=None):
 
 def pdfPrettyPrint(res, root, envvars=None):
 	tmpnode = root.createElement('pdfinfo')
-	for key in res.keys():
+	for key in res:
 		tmpnode2 = root.createElement(key)
 		tmpnodetext = xml.dom.minidom.Text()
 		tmpnodetext.data = str(res[key])
@@ -286,7 +286,7 @@ def scanLicenses(path, blacklist=[], envvars=None):
 
 def licensesPrettyPrint(res, root, envvars=None):
 	tmpnode = root.createElement('licenses')
-	for key in res.keys():
+	for key in res:
 		tmpnode2 = root.createElement(key)
 		tmpnode.appendChild(tmpnode2)
 	return tmpnode
@@ -322,7 +322,7 @@ def scanForges(path, blacklist=[], envvars=None):
 
 def forgesPrettyPrint(res, root, envvars=None):
 	tmpnode = root.createElement('forges')
-	for key in res.keys():
+	for key in res:
 		tmpnode2 = root.createElement(key)
 		tmpnode.appendChild(tmpnode2)
 	return tmpnode
