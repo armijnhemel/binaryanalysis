@@ -79,7 +79,7 @@ def generateNodes(elem, root, confs):
 ## one.
 def prettyprintresxmlsnippet(res, root, unpackscans, programscans):
 	## this should always be len == 1, have more checks
-	for i in res.keys():
+	for i in res:
 		for confs in programscans:
 			if i == confs['name']:
 				try:
@@ -247,7 +247,7 @@ def scan((path, filename, scans, prerunscans, magicscans, lentempdir, tempdir)):
 	## them first.
 	filterscans = []
 	zerooffsets = []
-	for magictype in offsets.keys():
+	for magictype in offsets:
 		if offsets[magictype] != []:
 			filterscans.append(magictype)
 			if offsets[magictype][0] - bat.fsmagic.correction.get(magictype, 0) == 0:
@@ -588,7 +588,7 @@ def main(argv):
 			else:
 				sha256leaf[i[-2]] = [i[0]]
 		sha256_tmp = {}
-		for i in sha256leaf.keys():
+		for i in sha256leaf:
 			if len(sha256leaf[i]) > 0:
 				sha256_tmp[i] = sha256leaf[i][0]
 		leaftasks_tmp = []
@@ -600,7 +600,7 @@ def main(argv):
 		leaftasks_tmp.sort(key=lambda x: x[-1], reverse=True)
 		poolresult = pool.map(leafScan, leaftasks_tmp, 1)
 		leafreports = dict(poolresult)
-		for i in sha256leaf.keys():
+		for i in sha256leaf:
 			if len(sha256leaf[i]) > 1:
 				for j in sha256leaf[i][1:]:
 					leafreports[j] = leafreports[sha256leaf[i][0]]
@@ -610,7 +610,7 @@ def main(argv):
 
 	## we have a list of dicts and we just want one dict
 	for i in unpackreports_tmp:
-		for k in i.keys():
+		for k in i:
 			unpackreports[k] = i[k]
 
 	res = flatten("%s/%s" % (tempdir, os.path.basename(scan_binary)), unpackreports, leafreports)
@@ -626,7 +626,7 @@ def main(argv):
 	## in leaf scans.
 	if scans['postrunscans'] != []:
 		postrunscans = []
-		for i in unpackreports.keys():
+		for i in unpackreports:
 			if leafreports.has_key(i):
 				postrunscans.append((i, unpackreports[i], leafreports[i], scans['postrunscans']))
 			else:
