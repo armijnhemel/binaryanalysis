@@ -1,3 +1,7 @@
+2012-02-22
+* add plugin that queries a database with packages extracted from sources from
+distributions
+
 2012-02-21
 * several cleanups, remove unnecessary calls and conversions
 
