@@ -329,10 +329,13 @@ def extractGeneric(lines, path, language='C', envvars=None):
 						res = conn.execute('''select package, filename FROM processed_file p WHERE sha256=?''', (checksha,)).fetchall()
 			newmatch = True
 		if len(res) != 0:
-			## we don't need versions, only need the filename
-			## not the full path
-			res = map(lambda (x,y): (x, os.path.basename(y)), res)
-			res = list(set(res))
+			## We are assuming:
+			## * database has no duplicates
+			## * filenames in the database have been processed using os.path.basename()
+			## If not, uncomment the following few lines:
+			#res = map(lambda (x,y): (x, os.path.basename(y)), res)
+			#res = list(set(res))
+
 			## Add the length of the string to lenStringsFound.
 			## We're not really using it, except for reporting.
 			lenStringsFound = lenStringsFound + len(line)
@@ -354,20 +357,19 @@ def extractGeneric(lines, path, language='C', envvars=None):
 				## in case we don't know this match yet record it in the database
 				if newmatch and not rankingfull:
 					c.execute('''insert into stringscache.stringscache values (?, ?, ?, ?)''', (line, language, package, filename))
-				match = {'package': package, 'filename': filename}
-				if not pkgs.has_key(match['package']):
-					pkgs[match['package']] = [os.path.basename(match['filename'])]
+				if not pkgs.has_key(package):
+					pkgs[package] = [filename]
 				else:
-					pkgs[match['package']].append(os.path.basename(match['filename']))
+					pkgs[package].append(filename)
 			if len(pkgs) == 1:
 				## the string is unique to this package and this package only
-				uniqueScore[match['package']] = uniqueScore.get(match['package'], 0) + len(line)
-				uniqueMatches[match['package']] = uniqueMatches.get(match['package'], []) + [line]
+				uniqueScore[package] = uniqueScore.get(package, 0) + len(line)
+				uniqueMatches[package] = uniqueMatches.get(package, []) + [line]
 
-				if not allMatches.has_key(match['package']):
-					allMatches[match['package']] = {}
+				if not allMatches.has_key(package):
+					allMatches[package] = {}
 
-				allMatches[match['package']][line] = allMatches[match['package']].get(line,0) + len(line)
+				allMatches[package][line] = allMatches[package].get(line,0) + len(line)
 
 				nrUniqueMatches = nrUniqueMatches + 1
 			else:
