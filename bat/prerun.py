@@ -54,6 +54,8 @@ def genericMarkerSearch(filename, magicscans, envvars=None):
 	return (offsets, order)
 
 ## XML files actually only need to be verified and tagged so other scans can decide to ignore it
+## Actually we could do this with xml.dom.minidom (although some parser settings should be set
+## to deal with unresolved entities) to avoid launching another process
 def searchXML(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
 	p = subprocess.Popen(['xmllint','--noout', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
