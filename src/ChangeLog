@@ -1,5 +1,6 @@
 2012-02-23
 * start moving maintenance scripts into the 'maintenance' directory
+* add code to generate images of files
 
 2012-02-22
 * add plugin that queries a database with packages extracted from sources from
