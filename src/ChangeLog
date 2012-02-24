@@ -1,3 +1,7 @@
+2012-02-24
+* split caching database per language family
+* determine version based on strings extracted from the binary
+
 2012-02-23
 * start moving maintenance scripts into the 'maintenance' directory
 * add code to generate images of files

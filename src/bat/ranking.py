@@ -13,9 +13,11 @@ presented at the Mining Software Repositories 2011 conference.
 
 Configuration parameters for databases are:
 
-BAT_SQLITE_DB            :: location of database containing extracted strings
-BAT_SQLITE_AVG           :: location of database containing average strings per package
-BAT_SQLITE_STRINGSCACHE  :: location of database that stores temporary results for future lookups
+BAT_SQLITE_DB :: location of database containing extracted strings
+
+Per language:
+BAT_SQLITE_AVG_$LANGUAGE          :: location of database containing average strings in $LANGUAGE per package
+BAT_SQLITE_STRINGSCACHE_$LANGUAGE :: location of database that caches strings in $LANGUAGE per package future lookups
 '''
 
 import string, re, os, os.path, magic, sys, tempfile, shutil
@@ -26,6 +28,19 @@ import extractor
 
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
+
+## mapping of names for databases per language
+avgdbperlanguage = { 'C':              'BAT_SQLITE_AVG_C'
+                   , 'Java':           'BAT_SQLITE_AVG_Java'
+                   , 'C#':             'BAT_SQLITE_AVG_C#'
+                   , 'ActionScript':   'BAT_SQLITE_AVG_ActionScript'
+                   }
+
+stringsdbperlanguage = { 'C':              'BAT_SQLITE_STRINGSCACHE_C'
+                       , 'Java':           'BAT_SQLITE_STRINGSCACHE_Java'
+                       , 'C#':             'BAT_SQLITE_STRINGSCACHE_C#'
+                       , 'ActionScript':   'BAT_SQLITE_STRINGSCACHE_ActionScript'
+                       }
 
 ## extract the strings using 'strings' and only consider strings >= 5,
 ## although this should be configurable
@@ -43,7 +58,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 	## * Windows executables and libraries
 	## * Mono/.NET files
 	## * Flash/ActionScript
-	## Focus is first on ELF
+	## Focus is on ELF
         mstype = ms.file(path)
         if "ELF" in mstype:
 		language = 'C'
@@ -264,22 +279,29 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	## create extra tables and attach them to the current database connection
 	## These databases should be wiped and/or recreated when the database with
 	## strings has been changed!!
-	avgdb = scanenv.get('BAT_SQLITE_AVG', '/tmp/avg')
+	avgdb = scanenv.get(avgdbperlanguage[language], '/tmp/avg')
 	c.execute("attach ? as avg", (avgdb,))
 	c.execute("create table if not exists avg.avgstringscache (package text, avgstrings real, primary key (package))")
 
-	stringscache = scanenv.get('BAT_SQLITE_STRINGSCACHE', '/tmp/stringscache')
+	stringscache = scanenv.get(stringsdbperlanguage[language], '/tmp/stringscache')
 	c.execute("attach ? as stringscache", (stringscache,))
-	c.execute("create table if not exists stringscache.stringscache (programstring text, language text, package text, filename text)")
-	c.execute("create index if not exists stringscache.programstring_index on stringscache(programstring, language)")
+	c.execute("create table if not exists stringscache.stringscache (programstring text, package text, filename text)")
+	c.execute("create index if not exists stringscache.programstring_index on stringscache(programstring)")
 	conn.commit()
 
 	rankingfull = False
 	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
 		rankingfull = True
 
-	## (package, version) => count
-	packagelist = {}
+	if scanenv.get('BAT_RANKING_VERSION', 0) == '1':
+		determineversion = True
+	else:
+		determineversion = False
+
+	## keep a list of versions per package we found
+	packageversions = {}
+	## keep a list of versions per sha256, since source files often contain more than one line
+	sha256_versions = {}
 
 	## sort the lines first, so we can easily skip duplicates
 	lines.sort()
@@ -306,8 +328,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
                 if line == "": continue
 
 		## first see if we have anything in the cache at all
-		#res = conn.execute('''select distinct package, filename FROM stringscache.stringscache WHERE programstring=? AND language=?''', (line,language)).fetchall()
-		res = conn.execute('''select package, filename FROM stringscache.stringscache WHERE programstring=? AND language=?''', (line,language)).fetchall()
+		res = conn.execute('''select package, filename FROM stringscache.stringscache WHERE programstring=?''', (line,)).fetchall()
 
 		## nothing in the cache
 		if len(res) == 0 and not rankingfull:
@@ -356,7 +377,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 				(package, filename) = result
 				## in case we don't know this match yet record it in the database
 				if newmatch and not rankingfull:
-					c.execute('''insert into stringscache.stringscache values (?, ?, ?, ?)''', (line, language, package, filename))
+					c.execute('''insert into stringscache.stringscache values (?, ?, ?, ?)''', (line, package, filename))
 				if not pkgs.has_key(package):
 					pkgs[package] = [filename]
 				else:
@@ -372,6 +393,33 @@ def extractGeneric(lines, path, language='C', envvars=None):
 				allMatches[package][line] = allMatches[package].get(line,0) + len(line)
 
 				nrUniqueMatches = nrUniqueMatches + 1
+
+				if determineversion:
+					c.execute("select distinct sha256 from extracted_file where programstring=?", (line,))
+					versionsha256s = c.fetchall()
+
+					pv = {}
+					for s in versionsha256s:
+						if not sha256_versions.has_key(s):
+							c.execute("select distinct version from processed_file where package=? and sha256=?", (package,s[0]))
+							versions = c.fetchall()
+							sha256_versions[s] = map(lambda x: x[0], versions)
+							for v in versions:
+								if not pv.has_key(v[0]):
+									pv[v[0]] = 1
+						else:   
+							for v in sha256_versions[s]:
+								if not pv.has_key(v):
+									pv[v] = 1
+					for v in pv:
+						if packageversions.has_key(package):
+							if packageversions[package].has_key(v):
+								packageversions[package][v] = packageversions[package][v] + 1
+							else:
+								packageversions[package][v] = 1
+						else:   
+							packageversions[package] = {}
+							packageversions[package][v] = 1
 			else:
 				## The string we found is not unique to a package, but is it 
 				## unique to a filename?
@@ -531,7 +579,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 			percentage = (scores[s]/totalscore)*100.0
 		except:
 			percentage = 0.0
-		reports.append((rank, s, uniqueMatches.get(s,[]), percentage))
+		reports.append((rank, s, uniqueMatches.get(s,[]), percentage, packageversions.get(s, {})))
 		rank = rank+1
 	return {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches}
 
@@ -574,7 +622,7 @@ def xmlprettyprint(res, root, envvars=None):
 	tmpnode.appendChild(extractedlines)
 
 	for k in res['reports']:
-		(rank, name, uniqueMatches, percentage) = k
+		(rank, name, uniqueMatches, percentage, packageversions) = k
 
 		## add package name
 		packagenode = root.createElement('package')
@@ -615,6 +663,25 @@ def xmlprettyprint(res, root, envvars=None):
 		tmpnodetext.data = str(percentage)
 		percentagenode.appendChild(tmpnodetext)
 
+		## add versions
+		if not packageversions == {}:
+			sortedversions = sorted(packageversions, key=lambda x: packageversions.__getitem__(x), reverse=True)
+			for v in sortedversions:
+				versionsnode = root.createElement('version')
+				versionnode = root.createElement('number')
+				tmpnodetext = xml.dom.minidom.Text()
+				tmpnodetext.data = str(v)
+				versionnode.appendChild(tmpnodetext)
+
+				countnode = root.createElement('count')
+				tmpnodetext = xml.dom.minidom.Text()
+				tmpnodetext.data = str(packageversions[v])
+				countnode.appendChild(tmpnodetext)
+				versionsnode.appendChild(versionnode)
+				versionsnode.appendChild(countnode)
+				packagenode.appendChild(versionsnode)
+
+		## add everything to the root node
 		packagenode.appendChild(ranknode)
 		packagenode.appendChild(percentagenode)
 		tmpnode.appendChild(packagenode)
