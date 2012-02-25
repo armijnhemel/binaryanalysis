@@ -102,8 +102,10 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 		lines = []
 		if language == 'C':
 			## For ELF binaries we can concentrate on just a few sections of the
-			## binary namely the .rodata and .data sections and the dynamic
-			## symbols.
+			## binary, namely the .rodata and .data sections.
+			## The .rodata section might also contain other data, so we can expect
+			## false positives until we have found a way to get only the string
+			## constants :-(
 
         		if "ELF" in mstype and blacklist == []:
 				datafile = open(path, 'rb')
@@ -293,15 +295,30 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
 		rankingfull = True
 
+	determineversion = False
 	if scanenv.get('BAT_RANKING_VERSION', 0) == '1':
 		determineversion = True
-	else:
-		determineversion = False
+
+	determinelicense = False
+	if scanenv.get('BAT_RANKING_LICENSE', 0) == '1':
+		determinelicense = True
 
 	## keep a list of versions per package we found
 	packageversions = {}
+
+	## keep a list of licenses per package we found
+	## WARNING WARNING WARNING
+	## Just because a license is in here, it does not necessarily
+	## mean that the package is under that license!
+	## There are very likely false positives and false negatives and
+	## the information is for informative purposes only!
+	packagelicenses = {}
+
 	## keep a list of versions per sha256, since source files often contain more than one line
 	sha256_versions = {}
+
+	## keep a list of versions per sha256, since source files often contain more than one line
+	sha256_licenses = {}
 
 	## sort the lines first, so we can easily skip duplicates
 	lines.sort()
@@ -394,32 +411,48 @@ def extractGeneric(lines, path, language='C', envvars=None):
 
 				nrUniqueMatches = nrUniqueMatches + 1
 
-				if determineversion:
+				if determineversion or determinelicense:
 					c.execute("select distinct sha256 from extracted_file where programstring=?", (line,))
 					versionsha256s = c.fetchall()
 
-					pv = {}
-					for s in versionsha256s:
-						if not sha256_versions.has_key(s):
-							c.execute("select distinct version from processed_file where package=? and sha256=?", (package,s[0]))
-							versions = c.fetchall()
-							sha256_versions[s] = map(lambda x: x[0], versions)
-							for v in versions:
-								if not pv.has_key(v[0]):
-									pv[v[0]] = 1
-						else:   
-							for v in sha256_versions[s]:
-								if not pv.has_key(v):
-									pv[v] = 1
-					for v in pv:
-						if packageversions.has_key(package):
-							if packageversions[package].has_key(v):
-								packageversions[package][v] = packageversions[package][v] + 1
-							else:
+					if determineversion:
+						pv = {}
+						for s in versionsha256s:
+							if not sha256_versions.has_key(s):
+								c.execute("select distinct version from processed_file where package=? and sha256=?", (package,s[0]))
+								versions = c.fetchall()
+								sha256_versions[s] = map(lambda x: x[0], versions)
+								for v in versions:
+									if not pv.has_key(v[0]):
+										pv[v[0]] = 1
+							else:   
+								for v in sha256_versions[s]:
+									if not pv.has_key(v):
+										pv[v] = 1
+						for v in pv:
+							if packageversions.has_key(package):
+								if packageversions[package].has_key(v):
+									packageversions[package][v] = packageversions[package][v] + 1
+								else:
+									packageversions[package][v] = 1
+							else:   
+								packageversions[package] = {}
 								packageversions[package][v] = 1
-						else:   
-							packageversions[package] = {}
-							packageversions[package][v] = 1
+					if determinelicense:
+						pv = []
+						for s in versionsha256s:
+							if not sha256_licenses.has_key(s):
+								c.execute("select distinct license from licenses where sha256=?", (s[0],))
+								licenses = c.fetchall()
+								sha256_licenses[s] = map(lambda x: x[0], licenses)
+								for v in licenses[0]:
+									if v == 'NONE':
+										continue
+									pv.append(v)
+						if packagelicenses.has_key(package):
+							packagelicenses[package] = list(set(packagelicenses[package] + pv))
+						else:
+							packagelicenses[package] = list(set(pv))
 			else:
 				## The string we found is not unique to a package, but is it 
 				## unique to a filename?
@@ -579,7 +612,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 			percentage = (scores[s]/totalscore)*100.0
 		except:
 			percentage = 0.0
-		reports.append((rank, s, uniqueMatches.get(s,[]), percentage, packageversions.get(s, {})))
+		reports.append((rank, s, uniqueMatches.get(s,[]), percentage, packageversions.get(s, {}), packagelicenses.get(s, [])))
 		rank = rank+1
 	return {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches}
 
@@ -622,7 +655,7 @@ def xmlprettyprint(res, root, envvars=None):
 	tmpnode.appendChild(extractedlines)
 
 	for k in res['reports']:
-		(rank, name, uniqueMatches, percentage, packageversions) = k
+		(rank, name, uniqueMatches, percentage, packageversions, packagelicenses) = k
 
 		## add package name
 		packagenode = root.createElement('package')
@@ -680,6 +713,17 @@ def xmlprettyprint(res, root, envvars=None):
 				versionsnode.appendChild(versionnode)
 				versionsnode.appendChild(countnode)
 				packagenode.appendChild(versionsnode)
+
+		## add licenses
+		if not packagelicenses == []:
+			licensesnode = root.createElement('licenses')
+			for v in packagelicenses:
+				licensenode = root.createElement('license')
+				tmpnodetext = xml.dom.minidom.Text()
+				tmpnodetext.data = str(v)
+				licensenode.appendChild(tmpnodetext)
+				licensesnode.appendChild(licensenode)
+			packagenode.appendChild(licensesnode)
 
 		## add everything to the root node
 		packagenode.appendChild(ranknode)
