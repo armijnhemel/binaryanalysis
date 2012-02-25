@@ -193,9 +193,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 						printstring = l.split("=", 1)[1][1:-1]
         					if len(printstring) >= stringcutoff:
 							lines.append(printstring)
-			#elif "Dalvik dex" in mstype and blacklist == [] and False:
 			elif "Dalvik dex" in mstype and blacklist == []:
-				## we should find a way to extract strings from Dalvik files
 				## Using dedexer http://dedexer.sourceforge.net/ we can extract string constants from Dalvik files
 				## java -jar ~/Downloads/ddx1.15.jar -d $tmpdir classes.dex
 				## then process each file in $tmpdir and search file for lines containing "const-string"
@@ -248,7 +246,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 			os.unlink(tmpfile[1])
                 return None
 
-## Extract the strings
+## Look up strings in the database and determine which packages/versions/licenses were used
 def extractGeneric(lines, path, language='C', envvars=None):
 	lenStringsFound = 0
 	uniqueMatches = {}
@@ -308,7 +306,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 
 	## keep a list of licenses per package we found
 	## WARNING WARNING WARNING
-	## Just because a license is in here, it does not necessarily
+	## Just because a license is reported, it does not necessarily
 	## mean that the package is under that license!
 	## There are very likely false positives and false negatives and
 	## the information is for informative purposes only!
@@ -411,6 +409,10 @@ def extractGeneric(lines, path, language='C', envvars=None):
 
 				nrUniqueMatches = nrUniqueMatches + 1
 
+				## Actually we should store the license with the version number.
+				## There are good reasons for this: files are sometimes collectively
+				## relicensed when there is a new release (example: Samba 3.2 relicensed
+				## to GPLv3+) so the version number can be very significant.
 				if determineversion or determinelicense:
 					c.execute("select distinct sha256 from extracted_file where programstring=?", (line,))
 					versionsha256s = c.fetchall()
@@ -446,6 +448,8 @@ def extractGeneric(lines, path, language='C', envvars=None):
 								licenses = c.fetchall()
 								sha256_licenses[s] = map(lambda x: x[0], licenses)
 								for v in licenses[0]:
+									## Ninka was not able to determine a license, so
+									## no need reporting it
 									if v == 'NONE':
 										continue
 									pv.append(v)
