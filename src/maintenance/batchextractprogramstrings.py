@@ -304,7 +304,7 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 							#		print >>sys.stderr, "FOSSOLOGY %s/%s" % (i[0],p), license
 							#		cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "nomos", "1.4.0"))
 							#print >> sys.stderr
-						sqlres = extractsourcestrings(p, i[0], package, version, srcdirlen)
+						sqlres = extractsourcestrings(p, i[0], package, version, srcdirlen, extensions[extension])
 						for res in sqlres:
 							(pstring, linenumber) = res
 							cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (pstring, filehash, extensions[extension], linenumber))
@@ -316,7 +316,6 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 	conn.commit()
 	return
 
-##
 ## Extract strings using xgettext. Apparently this does not always work correctly. For example for busybox 1.6.1:
 ## $ xgettext -a -o - fdisk.c
 ##  xgettext: Non-ASCII string at fdisk.c:203.
@@ -324,8 +323,11 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 ## We fix this by rerunning xgettext with --from-code=utf-8
 ## The results might not be perfect, but they are acceptable.
 ## TODO: use version from bat/extractor.py
-def extractsourcestrings(filename, filedir, package, version, srcdirlen):
+def extractsourcestrings(filename, filedir, package, version, srcdirlen, language):
 	sqlres = []
+	## TODO: for files that we think are in the 'C' family we first should check for
+	## unprintable characters like \0 that xgettext doesn't like and replace them with for
+	## example \n, then run xgettext and supply the input via stdin
 	p1 = subprocess.Popen(['xgettext', '-a', "--omit-header", "--no-wrap", "%s/%s" % (filedir, filename), '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p1.communicate()
 	if p1.returncode != 0:
