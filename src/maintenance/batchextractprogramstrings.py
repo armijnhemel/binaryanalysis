@@ -324,10 +324,26 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 ## The results might not be perfect, but they are acceptable.
 ## TODO: use version from bat/extractor.py
 def extractsourcestrings(filename, filedir, package, version, srcdirlen, language):
+	remove_chars = ["\\a", "\\b", "\\v", "\\f", "\\e", "\\0"]
 	sqlres = []
-	## TODO: for files that we think are in the 'C' family we first should check for
-	## unprintable characters like \0 that xgettext doesn't like and replace them with for
-	## example \n, then run xgettext and supply the input via stdin
+	## for files that we think are in the 'C' family we first check for unprintable
+	## characters like \0. xgettext doesn't like these and will stop as soon as it
+	## encounters one of these characters, possibly missing out on some very significant
+	## strings that we *do* want to see because they end up in the binary. We replace
+	## them with \n, then run xgettext.
+	if language == 'C':
+		changed = False
+		scanfile = open("%s/%s" % (filedir, filename))
+		filecontents = scanfile.read()
+		scanfile.close()
+		for r in remove_chars:
+			if r in filecontents:
+				changed = True
+				filecontents = filecontents.replace(r, '\\n')
+		if changed:
+			scanfile = open("%s/%s" % (filedir, filename), 'w')
+			scanfile.write(filecontents)
+			scanfile.close()
 	p1 = subprocess.Popen(['xgettext', '-a', "--omit-header", "--no-wrap", "%s/%s" % (filedir, filename), '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p1.communicate()
 	if p1.returncode != 0:

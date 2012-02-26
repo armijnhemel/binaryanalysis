@@ -1,3 +1,7 @@
+2012-02-26
+* work around standard behaviour in xgettext that caused strings to be not
+extracted
+
 2012-02-24
 * split caching database per language family
 * determine version based on strings extracted from the binary
