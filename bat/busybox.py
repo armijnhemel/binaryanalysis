@@ -62,7 +62,6 @@ def prettyprint_configuration(configuration, version):
 ## If it succeeds the second pass will pretty print the configuration.
 ## If it fails the configuration has to be found the hard way.
 def extract_configuration(lines, busybox, bbconfig):
-	printables = extractor.extract_printables(lines)
 	tmpconfig = extract_configuration_pass1(lines, busybox)
 
 	if tmpconfig != []:
@@ -117,7 +116,7 @@ def extract_configuration(lines, busybox, bbconfig):
 					results2.append((i, offset))
 
 		## We have a list of applets, plus their offsets. It is expected that
-		## for all applets we find that the offsets we find is in increasing
+		## for all applets we found that the offsets we found is in ascending
 		## order. Of course, there might be unknown applets that have been
 		## added in between the names that we do know.
 		low = 0
@@ -157,10 +156,8 @@ def extract_configuration(lines, busybox, bbconfig):
 			else:
 				discounter = discounter + 1
 
-		## assuming we have a good value for low and high we can just
-		## use the offsets in the original file to search for stuff
-		## and split accordingly
-		tmp2config = printables[results2[low][1]:results2[high][1] + len(results2[high][0])].split()
+		## assuming we have a good value for low and high we can extract the appletnames
+		tmp2config = lines[results2[low][1]:results2[high][1] + len(results2[high][0])].split('\x00')
 		return tmp2config
 
 ## If we can get the configuration in this pass, we can be really accurate.
@@ -215,6 +212,9 @@ def prettyprint_undefined_apps(undefined_apps):
 def extract_version(filename):
 	offset = 0
 	bboffset = 0
+
+	## we use a buffer here to read data, because files we are scanning
+	## might be incredibly big and we don't want to hog memory
 	databuffer = []
 	datafile = open(filename)
 	datafile.seek(offset)
@@ -225,10 +225,13 @@ def extract_version(filename):
 		if markeroffset != -1:
 			bboffset = offset + markeroffset
 			break
-		## move the offset 100000
-		datafile.seek(offset + 100000)
-		offset = offset + 100000
+		## move the offset 99950, allowing some overlap
+		datafile.seek(offset + 99950)
 		databuffer = datafile.read(100000)
+		if len(databuffer) >= 50:
+			offset = offset + 99950
+		else:
+			offset = offset + len(databuffer)
 	datafile.close()
 	busybox = open(filename, 'rb')
 	lines = busybox.read()
