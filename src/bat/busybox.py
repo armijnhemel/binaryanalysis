@@ -99,10 +99,7 @@ def extract_configuration(lines, busybox, bbconfig):
 		## first two items in the busybox config are [ and [[, ignore them
 		pos = 2
 
-		## search through the original binary, not the one with all spaces
-		## to reduce the amount of false positives
-		## TODO: we need to rewrite this and take into account that the applet names in
-		## BusyBox are actually separated by 0x00 and not just any non-printable character.
+		## search through the binary
 		offset = lines.find(keys[pos])
 		while pos < len(keys)-1:
 			if offset == -1:
