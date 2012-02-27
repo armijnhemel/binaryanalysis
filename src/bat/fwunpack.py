@@ -1031,7 +1031,7 @@ def unpackCpio(data, offset, tempdir=None):
 	(stanout, stanerr) = p.communicate(data[offset:])
 	return tmpdir
 
-## unpacking cramfs file systems. This will file on file systems from some
+## unpacking cramfs file systems. This will fail on file systems from some
 ## devices most notably from Sigma Designs, since they seem to have tweaked
 ## the file system.
 def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
