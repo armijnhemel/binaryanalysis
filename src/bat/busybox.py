@@ -111,14 +111,12 @@ def extract_configuration(lines, busybox, bbconfig):
 				## search through the original binary until we have an exact match
 				## that is surrounded by non-printable characters, which is
 				## exactly how the applet list in BusyBox works (currently)
-				#res = extractor.check_nonprintable(lines, offset, keys[pos])
 				res = extractor.check_null(lines, offset, keys[pos])
 				while res == False:
 					offset = lines.find(keys[pos], offset+1)
 					if offset == -1:
 						break
 					else:
-						#res = extractor.check_nonprintable(lines, offset, keys[pos])
 						res = extractor.check_null(lines, offset, keys[pos])
 				if offset != -1:
 					results2.append((keys[pos], offset))
@@ -216,8 +214,7 @@ def prettyprint_undefined_apps(undefined_apps):
 			print "* ", undef_app
 
 ## Helper method that extracts the BusyBox version using a regular
-## expression. It needs printable characters for this.
-## If it can't be found, it will return 'None' instead.
+## expression. If it can't be found, it will return 'None' instead.
 ## This won't always work: if just one applet is compiled in it is
 ## likely that the "BusyBox v" string is not even included at all, which
 ## also means we can't extract a version number from it.
@@ -242,9 +239,9 @@ def extract_version(filename):
 	busybox = open(filename, 'rb')
 	lines = busybox.read()
 	busybox.close()
-	## BusyBox version numbers should fit in 40 characters
-	printables = extractor.extract_printables(lines[bboffset:bboffset + 40])
-	res = re.search("BusyBox v([\d\.\d\w-]+) \(", printables)
+
+	bracket_offset = lines.find("(", bboffset)
+	res = re.search("BusyBox v([\d\.\d\w-]+) \(", lines[bboffset:bracket_offset+1])
 	if res != None:
 		return res.groups(0)[0]
 	else:
