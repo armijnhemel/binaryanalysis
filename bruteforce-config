@@ -249,6 +249,14 @@ priority = 1
 magic = rar
 noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip
 
+#[romfs]
+#type    = unpack
+#module  = bat.fwunpack
+#method  = searchUnpackRomfs
+#priority = 1
+#magic = romfs
+#noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip
+
 [rpm]
 type    = unpack
 module  = bat.unpackrpm

@@ -15,7 +15,7 @@ Optionally, we return a range of bytes that should be excluded in same cases
 where we want to prevent other scans from (re)scanning (part of) the data.
 '''
 
-import sys, os, subprocess, os.path, shutil, stat, array
+import sys, os, subprocess, os.path, shutil, stat, array, struct
 import tempfile, bz2, re, magic, tarfile, zlib
 import fsmagic, fssearch, extractor, ext2, jffs2
 from xml.dom import minidom
@@ -1030,6 +1030,61 @@ def unpackCpio(data, offset, tempdir=None):
 	p = subprocess.Popen(['cpio', '-i', '-d', '--no-absolute-filenames'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate(data[offset:])
 	return tmpdir
+
+def searchUnpackRomfs(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if offsets['romfs'] == []:
+		return ([], blacklist, [])
+	diroffsets = []
+	counter = 1
+	for offset in offsets['romfs']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		tmpdir = dirsetup(tempdir, filename, "romfs", counter)
+		res = unpackRomfs(filename, offset, tmpdir)
+		if res != None:
+			(romfsdir, size) = res
+			diroffsets.append((romfsdir, offset))
+			blacklist.append((offset, offset + size))
+			counter = counter + 1
+		else:
+			os.rmdir(tmpdir)
+        return (diroffsets, blacklist, [])
+
+def unpackRomfs(filename, offset, tempdir=None):
+	tmpdir = unpacksetup(tempdir)
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.fdopen(tmpfile[0]).close()
+
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
+
+	## temporary dir to unpack stuff in
+	tmpdir2 = tempfile.mkdtemp()
+
+	## TODO: change this path to romfsck from bat-extratools
+	p = subprocess.Popen(['/tmp/romfsck', '-x', tmpdir2, tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		shutil.rmtree(tmpdir2)
+		return None
+	## then we move all the contents using shutil.move()
+	mvfiles = os.listdir(tmpdir2)
+	for f in mvfiles:
+		shutil.move(os.path.join(tmpdir2, f), tmpdir)
+	## then we cleanup the temporary dir
+	shutil.rmtree(tmpdir2)
+
+	## determine the size
+	datafile = open(tmpfile[1])
+	datafile.seek(8)
+	sizedata = datafile.read(4)
+	size = struct.unpack('>I', sizedata)[0]
+	datafile.close()
+	os.unlink(tmpfile[1])
+	return (tmpdir, size)
 
 ## unpacking cramfs file systems. This will fail on file systems from some
 ## devices most notably from Sigma Designs, since they seem to have tweaked

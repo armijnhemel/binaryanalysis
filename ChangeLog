@@ -1,6 +1,8 @@
 2012-02-27
 * rework BusyBox configuration extraction: some things could be done a lot
 easier and also give better results.
+* add romfs unpacking using romfsck. Not enabled by default, since it needs
+some more cleanups
 
 2012-02-26
 * work around standard behaviour in xgettext that caused strings to be not
