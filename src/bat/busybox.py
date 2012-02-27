@@ -66,21 +66,19 @@ def extract_configuration(lines, busybox, bbconfig):
 	tmpconfig = extract_configuration_pass1(lines, busybox)
 
 	if tmpconfig != []:
-		## This needs to be reworked to be more reliable, as in the other case
-		## Lots of refactoring coming up, yay!
 		## The configuration we have is not empty, so we're lucky.
 		## Search through lines, using the configuration we got earlier
-		## and try to extract the appletnames. This is not fool proof.
+		## and try to extract the appletnames. This is not fool proof, but
+		## should be good enough.
 
 		## first make sure that everything we have is in alphabetical order
 		tmpconfig.sort()
 
-		## offset for first appletname we have found earlier, surrounded by spaces
-		## this needs to be reworked to avoid false positives
+		## offset for first appletname we have found earlier, surrounded by NULL characters
 		offset = lines.find("\x00" + tmpconfig[0] + "\x00")
 
-		## offset for first occurance of last appletname, following first appletname, surrounded by spaces
-		## this needs to be reworked to avoid false positives
+		## offset for first occurance of last appletname after offset of first appletname
+		## surrounded  by NULL characters
 		offset2 = lines.find("\x00" + tmpconfig[-1] + "\x00", offset)
 
 		## split everything, we should have a reasonable config
@@ -88,42 +86,40 @@ def extract_configuration(lines, busybox, bbconfig):
 		tmp2config = filter(lambda x: x != '', tmp2config)
 		return tmp2config
 	else:
-		## we don't have a configuration, so we will just have to guess by inspecting the binary
+		## we don't have a configuration, so we will just have to guess one by inspecting the binary
 		results = []
 		results2 = []
 
 		## use the configuration for this version of BusyBox as a starting point
 		keys = bbconfig.keys()
+
+		## the list of applets in BusyBox is sorted alphabetically
 		keys.sort()
-
-		## first two items in the busybox config are [ and [[, ignore them
-		pos = 2
-
-		## search through the binary
-		offset = lines.find(keys[pos])
-		while pos < len(keys)-1:
+		for i in keys:
+			if i == '[' or i == '[[':
+				continue
+			offset = lines.find(i)
 			if offset == -1:
 				## nothing found, continue searching for the next applet in the list
-				pass
+				continue
 			else:
 				## search through the original binary until we have an exact match
-				## that is surrounded by non-printable characters, which is
-				## exactly how the applet list in BusyBox works (currently)
-				res = extractor.check_null(lines, offset, keys[pos])
+				## that is surrounded by NULL characters, which is how the applet
+				## list in BusyBox works
+				res = extractor.check_null(lines, offset, i)
 				while res == False:
-					offset = lines.find(keys[pos], offset+1)
+					offset = lines.find(i, offset+1)
 					if offset == -1:
 						break
 					else:
-						res = extractor.check_null(lines, offset, keys[pos])
+						res = extractor.check_null(lines, offset, i)
 				if offset != -1:
-					results2.append((keys[pos], offset))
-			pos = pos+1
-			offset = lines.find(keys[pos])
+					results2.append((i, offset))
 
-		## Find the applets which are reasonably grouped together.
-		## Take the one with the lowest offset and the highest one and
-		## split just as in the other case, to also catch unknown applets.
+		## We have a list of applets, plus their offsets. It is expected that
+		## for all applets we find that the offsets we find is in increasing
+		## order. Of course, there might be unknown applets that have been
+		## added in between the names that we do know.
 		low = 0
 		high = len(results2) - 1
 
@@ -182,7 +178,7 @@ def extract_configuration_pass1(lines, busybox):
 				offset = lines.find("_main", offset+1)
 		elif lines[offset2+1:offset] == '__libc_start':
 			# glibc
-			p = subprocess.Popen(['readelf', '-s', busybox], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			p = subprocess.Popen(['readelf', '-sW', busybox], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 			(stanout, stanerr) = p.communicate()
 			if p.returncode != 0:
 				return []

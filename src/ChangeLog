@@ -1,3 +1,7 @@
+2012-02-27
+* rework BusyBox configuration extraction: some things could be done a lot
+easier and also give better results.
+
 2012-02-26
 * work around standard behaviour in xgettext that caused strings to be not
 extracted
