@@ -331,6 +331,7 @@ def extractsourcestrings(filename, filedir, package, version, srcdirlen, languag
 	## encounters one of these characters, possibly missing out on some very significant
 	## strings that we *do* want to see because they end up in the binary. We replace
 	## them with \n, then run xgettext.
+	## TODO: fix for octal values, like \010
 	if language == 'C':
 		changed = False
 		scanfile = open("%s/%s" % (filedir, filename))
