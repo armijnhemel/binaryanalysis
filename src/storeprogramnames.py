@@ -19,9 +19,6 @@ import os.path
 from optparse import OptionParser
 import sqlite3
 
-def namecleanup(names):
-	return map(lambda x: os.path.basename(x), names)
-
 ## (packagename, [programnames])
 def storematch(packagename, programnames, dbcursor):
 	for programname in programnames:
@@ -40,7 +37,7 @@ def main(argv):
         if options.programlist == None:
                 parser.error("Programlist needed")
 
-	programnames = namecleanup(open(options.programlist).readlines())
+	programnames = map(lampda(x: os.path.basename(x), (open(options.programlist).readlines()))
 
         conn = sqlite3.connect(options.id)
         c = conn.cursor()
