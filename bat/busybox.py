@@ -63,7 +63,7 @@ def prettyprint_configuration(configuration, version):
 ## If it fails the configuration has to be found the hard way.
 def extract_configuration(lines, busybox, bbconfig):
 	printables = extractor.extract_printables(lines)
-	tmpconfig = extract_configuration_pass1(lines, busybox, printables)
+	tmpconfig = extract_configuration_pass1(lines, busybox)
 
 	if tmpconfig != []:
 		## This needs to be reworked to be more reliable, as in the other case
@@ -77,14 +77,15 @@ def extract_configuration(lines, busybox, bbconfig):
 
 		## offset for first appletname we have found earlier, surrounded by spaces
 		## this needs to be reworked to avoid false positives
-		offset = printables.find(" " + tmpconfig[0] + " ")
+		offset = lines.find("\x00" + tmpconfig[0] + "\x00")
 
 		## offset for first occurance of last appletname, following first appletname, surrounded by spaces
 		## this needs to be reworked to avoid false positives
-		offset2 = printables.find(" " + tmpconfig[-1] + " ", offset)
+		offset2 = lines.find("\x00" + tmpconfig[-1] + "\x00", offset)
 
 		## split everything, we should have a reasonable config
-		tmp2config = printables[offset+1:offset2 + 1 + len(tmpconfig[-1])].split()
+		tmp2config = lines[offset+1:offset2 + 1 + len(tmpconfig[-1])].split('\x00')
+		tmp2config = filter(lambda x: x != '', tmp2config)
 		return tmp2config
 	else:
 		## we don't have a configuration, so we will just have to guess by inspecting the binary
@@ -170,19 +171,19 @@ def extract_configuration(lines, busybox, bbconfig):
 		return tmp2config
 
 ## If we can get the configuration in this pass, we can be really accurate.
-def extract_configuration_pass1(lines, busybox, printables):
+def extract_configuration_pass1(lines, busybox):
 	config = []
-	offset = printables.find("_main")
+	offset = lines.find("_main")
 	if offset != -1:
-		offset2 = printables.rfind(" ", 0, offset)
-		if printables[offset2+1:offset] == "__uClibc":
+		offset2 = lines.rfind("\x00", 0, offset)
+		if lines[offset2+1:offset] == "__uClibc":
 			# uClibc
-			offset = printables.find("_main", offset+1)
+			offset = lines.find("_main", offset+1)
 			while offset != -1:
-				offset2 = printables.rfind(" ", 0, offset)
-				config.append(printables[offset2+1:offset])
-				offset = printables.find("_main", offset+1)
-		elif printables[offset2+1:offset] == '__libc_start':
+				offset2 = lines.rfind("\x00", 0, offset)
+				config.append(lines[offset2+1:offset])
+				offset = lines.find("_main", offset+1)
+		elif lines[offset2+1:offset] == '__libc_start':
 			# glibc
 			p = subprocess.Popen(['readelf', '-s', busybox], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 			(stanout, stanerr) = p.communicate()
