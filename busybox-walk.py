@@ -11,11 +11,12 @@ have been removed) it might come in handy as an extra tool.
 '''
 
 import os, sys
+from optparse import OptionParser
 
-def busyboxWalk(dir):
+def busyboxWalk(busyboxdir):
 	busybox_applets = []
 
-	osgen = os.walk(dir)
+	osgen = os.walk(busyboxdir)
 
 	try:
 		while True:
@@ -28,3 +29,19 @@ def busyboxWalk(dir):
 
 	busybox_applets.sort()
 	return busybox_applets
+
+def main(argv):
+	parser = OptionParser()
+	parser.add_option("-d", "--directory", dest="bd", help="directory", metavar="DIR")
+	(options, args) = parser.parse_args()
+	if options.bd == None:
+		parser.error("Path to top level directory of unpacked firmware needed")
+	applets = busyboxWalk(options.bd)
+	if applets != []:
+		print "The following applets were found as symlinks:"
+		for a in applets:
+			if a != 'busybox':
+				print "* %s" % a
+
+if __name__ == "__main__":
+        main(sys.argv)
