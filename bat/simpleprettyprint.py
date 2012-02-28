@@ -5,12 +5,17 @@
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
-Simple pretty printer for results of BAT
+Simple pretty printer for results of BAT. This one is defined as the default. If you want to change it provide
+a method that has the same parameters as prettyprintresxml
+* res: full result set of the scan
+* scandate
+* scans: full configuration of scans that were run
+* envvars: a set of environment variables, possibly None
 '''
 
 import xml.dom.minidom
 
-## pretty printing for various elements
+## generic method for pretty printing of an elements
 def generateNodes(elem, root, confs):
 	nodes = []
 	for conf in confs:
@@ -25,6 +30,7 @@ def generateNodes(elem, root, confs):
 ## This method recursively generates XML snippets. If a method for a 'program'
 ## has a pretty printing method defined, it will be used instead of the generic
 ## one.
+## All interesting data can be found in the 'res' parameter
 def prettyprintresxmlsnippet(res, root, unpackscans, programscans):
 	## this should always be len == 1, have more checks
 	for i in res:
