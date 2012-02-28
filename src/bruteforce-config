@@ -4,6 +4,8 @@
 
 [batconfig]
 multiprocessing = no
+#module = bruteforce
+#xmloutput = prettyprintresxml
 
 ####################
 ### prerun scans ###
