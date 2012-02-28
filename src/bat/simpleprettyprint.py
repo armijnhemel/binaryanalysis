@@ -113,4 +113,4 @@ def prettyprintresxml(res, scandate, scans, envvars=None):
 				tmpnode.appendChild(childscannode)
 			topnode.appendChild(tmpnode)
 	root.appendChild(topnode)
-	return root
+	return root.toxml()

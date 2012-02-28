@@ -12,7 +12,6 @@ and pretty print the analysis in a simple XML format.
 import sys, os, os.path, magic, hashlib, subprocess, tempfile, shutil, stat, multiprocessing
 from optparse import OptionParser
 import ConfigParser
-import xml.dom.minidom
 import datetime
 import sqlite3
 import bat.extractor
@@ -323,7 +322,7 @@ def readconfig(config):
 			except:
 				batconf['multiprocessing'] = False
 			try:
-				batconf['xmloutput'] = config.get(section, 'xmloutput')
+				batconf['output'] = config.get(section, 'output')
 				batconf['module'] = config.get(section, 'module')
 				batconf['method'] = config.get(section, 'method')
 			except:
@@ -374,7 +373,7 @@ def readconfig(config):
 	prerunscans = sorted(prerunscans, key=lambda x: x['priority'], reverse=True)
 	return {'batconfig': batconf, 'unpackscans': unpackscans, 'programscans': programscans, 'prerunscans': prerunscans, 'postrunscans': postrunscans}
 
-## combine all results that we have into a format that xmlresprettyprint() can handle
+## combine all results that we have into a format that the pretty printer can handle
 def flatten(toplevel, unpackreports, leafreports):
 	res = {}
 	for i in ['realpath', 'magic', 'name', 'path', 'sha256', 'size']:
@@ -402,7 +401,7 @@ def flatten(toplevel, unpackreports, leafreports):
 
 def prettyprint(batconf, res, scandate, scans):
 	module = batconf['module']
-	method = batconf['xmloutput']
+	method = batconf['output']
 	## if there is extra information we need to pass, like locations of databases
 	## we can use the environment for it
 	if batconf.has_key('envvars'):
@@ -410,8 +409,8 @@ def prettyprint(batconf, res, scandate, scans):
 	else:
 		envvars = None
 	exec "from %s import %s as bat_%s" % (module, method, method)
-	xml = eval("bat_%s(res, scandate, scans, envvars)" % (method))
-	return xml
+	output = eval("bat_%s(res, scandate, scans, envvars)" % (method))
+	return output
 
 def main(argv):
 	config = ConfigParser.ConfigParser()
@@ -528,12 +527,12 @@ def main(argv):
 			unpackreports[k] = i[k]
 
 	res = flatten("%s/%s" % (tempdir, os.path.basename(scan_binary)), unpackreports, leafreports)
-	if not scans['batconfig'].has_key('xmloutput'):
+	if not scans['batconfig'].has_key('output'):
 		## no printing?
 		pass
 	else:
-		xml = prettyprint(scans['batconfig'], res, scandate, scans)
-		print xml.toxml()
+		output = prettyprint(scans['batconfig'], res, scandate, scans)
+		print output
 
 	## run postrunscans here, again in parallel, if needed/wanted
 	## These scans typically only have a few side effects, but don't change
