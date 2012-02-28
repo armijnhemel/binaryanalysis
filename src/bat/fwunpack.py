@@ -1061,8 +1061,7 @@ def unpackRomfs(filename, offset, tempdir=None):
 	## temporary dir to unpack stuff in
 	tmpdir2 = tempfile.mkdtemp()
 
-	## TODO: change this path to romfsck from bat-extratools
-	p = subprocess.Popen(['/tmp/romfsck', '-x', tmpdir2, tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['bat-romfsck', '-x', tmpdir2, tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.unlink(tmpfile[1])
