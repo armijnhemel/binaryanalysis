@@ -355,6 +355,13 @@ module  = bat.checks
 method  = searchEzIpupdate
 noscan  = text:xml:graphics:pdf:compressed
 
+#[file2package]
+#type    = program
+#module  = bat.file2package
+#method  = filename2package
+#xmloutput = xmlprettyprint
+#envvars = BAT_PACKAGE_DB=/tmp/filepackages
+
 [forges]
 type    = program
 module  = bat.checks
