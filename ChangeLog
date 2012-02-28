@@ -1,3 +1,6 @@
+2012-02-28
+* make pretty printer configurable
+
 2012-02-27
 * rework BusyBox configuration extraction: some things could be done a lot
 easier and also give better results.

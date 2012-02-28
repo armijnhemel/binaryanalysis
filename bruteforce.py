@@ -138,7 +138,7 @@ def prettyprintresxmlsnippet(res, root, unpackscans, programscans):
 	return topnode
 
 ## top level XML pretty printing, view results with xml_pp or Firefox
-def prettyprintresxml(res, scandate, scans):
+def prettyprintresxml(res, scandate, scans, envvars=None):
 	root = xml.dom.minidom.Document()
 	topnode = root.createElement("report")
 	tmpnode = root.createElement('scandate')
@@ -427,6 +427,12 @@ def readconfig(config):
 					batconf['multiprocessing'] = False
 			except:
 				batconf['multiprocessing'] = False
+			try:
+				batconf['xmloutput'] = config.get(section, 'xmloutput')
+				batconf['module'] = config.get(section, 'module')
+				batconf['method'] = config.get(section, 'method')
+			except:
+				pass
 			continue
 		
 		elif config.has_option(section, 'type'):
@@ -498,6 +504,19 @@ def flatten(toplevel, unpackreports, leafreports):
 		for s in leafreports[toplevel]:
 			res['scans'].append(s)
 	return res
+
+def prettyprint(batconf, res, scandate, scans):
+	module = batconf['module']
+	method = batconf['xmloutput']
+	## if there is extra information we need to pass, like locations of databases
+	## we can use the environment for it
+	if batconf.has_key('envvars'):
+		envvars = batconf['envvars']
+	else:
+		envvars = None
+	exec "from %s import %s as bat_%s" % (module, method, method)
+	xml = eval("bat_%s(res, scandate, scans, envvars)" % (method))
+	return xml
 
 def main(argv):
 	config = ConfigParser.ConfigParser()
@@ -614,7 +633,10 @@ def main(argv):
 			unpackreports[k] = i[k]
 
 	res = flatten("%s/%s" % (tempdir, os.path.basename(scan_binary)), unpackreports, leafreports)
-	xml = prettyprintresxml(res, scandate, scans)
+	if not scans['batconfig'].has_key('xmloutput'):
+		xml = prettyprintresxml(res, scandate, scans)
+	else:
+		xml = prettyprint(scans['batconfig'], res, scandate, scans)
 	print xml.toxml()
 
 	## run postrunscans here, again in parallel, if needed/wanted
