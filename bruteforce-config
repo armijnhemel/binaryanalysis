@@ -5,7 +5,7 @@
 [batconfig]
 multiprocessing = no
 module = bat.simpleprettyprint
-xmloutput = prettyprintresxml
+output = prettyprintresxml
 
 ####################
 ### prerun scans ###
