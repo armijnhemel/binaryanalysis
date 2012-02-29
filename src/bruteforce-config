@@ -16,24 +16,28 @@ type    = prerun
 module  = bat.prerun
 method  = searchXML
 priority = 100
+description = Check XML validity
 
 #[verifybz2]
 #type    = prerun
 #module  = bat.prerun
 #method  = verifyBZ2
 #priority = 1
+#description = Check if complete file is a valid bzip2 file
 
 #[verifygzip]
 #type    = prerun
 #module  = bat.prerun
 #method  = verifyGzip
 #priority = 1
+#description = Check if complete file is a valid gzip file
 
 [verifytext]
 type    = prerun
 module  = bat.prerun
 method  = verifyText
 priority = 2
+description = Check if file contains just ASCII text
 
 [verifygraphics]
 type    = prerun
@@ -41,6 +45,7 @@ module  = bat.prerun
 method  = verifyGraphics
 magic   = bmp
 priority = 1
+description = Check if file is a valid graphics file, or consists of just graphics files
 
 ####################
 ### unpack scans ###
@@ -53,6 +58,7 @@ method  = searchUnpack7z
 priority = 1
 magic = 7z
 noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip
+description = Unpack 7z compressed files
 
 [ar]
 type    = unpack
@@ -61,6 +67,7 @@ method  = searchUnpackAr
 priority = 2
 magic = ar
 noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip
+description = Unpack ar archives
 
 #[arj]
 #type    = unpack
@@ -69,6 +76,7 @@ noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip
 #priority = 1
 #magic = arj
 #noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip
+#description = Unpack ARJ compressed files
 
 [base64]
 type    = unpack
@@ -76,6 +84,7 @@ module  = bat.fwunpack
 method  = searchUnpackBase64
 priority = 0
 noscan   = xml:graphics:binary:pdf:compressed
+description = Decode base64 encoded files
 
 [byteswap]
 type    = unpack
@@ -83,6 +92,7 @@ module  = bat.fwunpack
 method  = searchUnpackByteSwap
 priority = 100
 noscan   = xml:graphics:pdf:compressed
+description = Byteswap files for 16 bit flash
 
 [bzip2]
 type    = unpack
@@ -91,6 +101,7 @@ method  = searchUnpackBzip2
 priority = 1
 magic = bz2
 noscan   = text:xml:graphics:pdf:gzip:lrzip
+description = Unpack bzip2 compressed files
 
 [cab]
 type    = unpack
@@ -99,6 +110,7 @@ method  = searchUnpackCab
 priority = 1
 magic = cab
 noscan   = text:xml:graphics:pdf:compressed
+description = Unpack MS Windows Cabinet archives
 
 [compress]
 type     = unpack
@@ -107,6 +119,7 @@ method   = searchUnpackCompress
 priority = 1
 magic    = compress
 noscan   = text:xml:graphics:pdf
+description = Unpack files compressed with compress
 
 [cpio]
 type    = unpack
@@ -115,6 +128,7 @@ method  = searchUnpackCpio
 priority = 2
 magic = cpio1:cpio2:cpio3:cpiotrailer
 noscan   = text:xml:graphics:pdf:compressed
+description = Unpack CPIO archives
 
 [cramfs]
 type    = unpack
@@ -123,6 +137,7 @@ method  = searchUnpackCramfs
 priority = 3
 magic = cramfs
 noscan   = text:xml:graphics:pdf:compressed
+description = Unpack cramfs file systems
 
 [exe]
 type    = unpack
@@ -138,6 +153,7 @@ method  = searchUnpackExt2fs
 priority = 3
 magic = ext2
 noscan   = text:xml:graphics:pdf:compressed
+description = Unpack EXT2/3/4 file systems
 
 [gif]
 type    = unpack
@@ -146,6 +162,7 @@ method  = searchUnpackGIF
 priority = 0
 magic = gif87:gif89
 noscan   = text:xml:jpeg:bmp:pdf:png:compressed
+description = Carve GIF files from a file
 
 [gzip]
 type    = unpack
@@ -154,6 +171,7 @@ method  = searchUnpackGzip
 priority = 1
 magic = gzip
 noscan   = text:xml:graphics:pdf:bz2:lrzip
+description = Unpack gzip compressed files
 
 #[ico]
 #type    = unpack
