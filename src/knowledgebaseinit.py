@@ -26,10 +26,10 @@ def main(argv):
 	c = conn.cursor()
 
 	## create some tables
-	c.execute('''create table chipset (name text, vendor text, family text)''')
-	c.execute('''create table filesystem (id integer primary key autoincrement, sha256 text, type text, compression text, offset integer, parentid integer, firmware integer)''')
-	c.execute('''create table device (id integer primary key autoincrement, vendor text, name text, version text, chipset text, upstream text)''')
-	c.execute('''create table firmware (id integer primary key autoincrement, sha256 text, version text, deviceid integer)''')
+	c.execute('''create table if not exists chipset (name text, vendor text, family text)''')
+	c.execute('''create table if not exists device (id integer primary key autoincrement, vendor text, name text, version text, chipset text, upstream text)''')
+	c.execute('''create table if not exists binary (id integer primary key autoincrement, sha256 text, deviceid integer)''')
+	c.execute('''create index if not exists sha256_index on binary (sha256)''')
 
 	conn.commit()
 	c.close()
