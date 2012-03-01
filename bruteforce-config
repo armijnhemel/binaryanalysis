@@ -5,6 +5,7 @@
 [batconfig]
 multiprocessing = no
 module = bat.simpleprettyprint
+#module = bat.ppknowledgebase
 output = prettyprintresxml
 
 ####################
