@@ -20,12 +20,12 @@ def gethash(path):
 
 def main(argv):
         parser = OptionParser()
+	parser.add_option("-b", "--binary", dest="binary", help="path to binary", metavar="FILE")
 	parser.add_option("-d", "--database", dest="db", help="path to database", metavar="FILE")
 	parser.add_option("-c", "--chipset", dest="chipset", help="name of chipset", metavar="CHIPSET")
 	parser.add_option("-f", "--firmwareversion", dest="fwversion", help="firmware version", metavar="FWVERSION")
 	parser.add_option("-m", "--manufacturer", dest="vendor", help="name of manufacturer", metavar="MANUFACTURER")
 	parser.add_option("-n", "--name", dest="name", help="name of device", metavar="NAME")
-	parser.add_option("-p", "--firmware", dest="firmware", help="path to firmware", metavar="FILE")
 	parser.add_option("-u", "--upstream", dest="upstream", help="upstream vendor (optional)", metavar="UPSTREAM")
 	parser.add_option("-w", "--hardwareversion", dest="hwversion", help="hardware version", metavar="HWVERSION")
 	(options, args) = parser.parse_args()
@@ -50,24 +50,28 @@ def main(argv):
 		parser.error("Need device name")
 	if options.upstream == None:
 		options.upstream = ''
-	if options.firmware == None:
-		parser.error("Need path to firmware")
+	if options.binary == None:
+		parser.error("Need path to binary")
 	else:
 		try:
-			firmware = open(options.firmware)
+			os.stat(options.binary)
 		except:
-			print >>sys.stderr, "Can't open firmware"
+			print >>sys.stderr, "Can't open binary"
 			sys.exit(1)
 
 	c = conn.cursor()
+
+	c.execute('''create table if not exists device (id integer primary key autoincrement, vendor text, name text, version text, chipset text, upstream text)''')
+	c.execute('''create table if not exists binary (id integer primary key autoincrement, sha256 text, deviceid integer)''')
+	c.execute('''create index if not exists sha256_index on binary (sha256)''')
 
 	t = (options.vendor, options.name, options.hwversion, options.chipset, options.upstream)
 	c.execute('''insert into device(vendor, name, version,chipset, upstream) values (?, ?, ?, ?, ?)''', t)
 	conn.commit()
 	lastrow = c.lastrowid
 
-	fwhash = gethash(options.firmware)
-	c.execute('''insert into firmware (sha256, version, deviceid) values (?, ?, ?)''', (fwhash, options.fwversion, lastrow))
+	fwhash = gethash(options.binary)
+	c.execute('''insert into binary (sha256, deviceid) values (?, ?)''', (fwhash, lastrow))
 	conn.commit()
 	c.close()
 
