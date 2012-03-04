@@ -4,4 +4,7 @@ This directory contains a few patches that need to be applied to programs before
 
 * code2html-0.9.1-add-qml.patch : this patch lets code2html also process QML files (more and more frequently used in Qt programs)
 
+* code2html-0.9.1-add-groovyscala.patch : this patch lets code2html also process Scala and Groovy files as Java
+
+
 * code2html-0.9.1-add-csharp.patch : this patch lets code2html process C# files. It is a direct copy of the Java config, with a few minor modifications

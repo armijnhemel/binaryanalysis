@@ -1,0 +1,12 @@
+diff -ruN code2html-0.9.1/code2html code2html-0.9.1.new/code2html
+--- code2html-0.9.1/code2html	2002-01-12 22:17:02.000000000 +0100
++++ code2html-0.9.1.new/code2html	2012-03-04 17:27:14.207492320 +0100
+@@ -2549,7 +2549,7 @@
+ # taken from nedit
+ # modified by PP
+ $LANGUAGE{'java'}       = {
+-                            'filename'   => '\\.java$',
++                            'filename'   => '\\.(java|groovy|scala)$',
+                             'regex'      => '',
+                             'patterns'   => [
+                                               {
