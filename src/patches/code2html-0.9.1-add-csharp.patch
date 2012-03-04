@@ -1,0 +1,114 @@
+diff -ruN code2html-0.9.1/code2html code2html-0.9.1.new/code2html
+--- code2html-0.9.1/code2html	2002-01-12 22:17:02.000000000 +0100
++++ code2html-0.9.1.new/code2html	2012-03-04 14:22:11.944248285 +0100
+@@ -3811,6 +3811,109 @@
+ };
+ 
+ $LANGUAGE{'sh'} = $LANGUAGE{'shellscript'};
+-return \%LANGUAGE;
+ 
++$LANGUAGE{'c#'}       = {
++                            'filename'   => '\\.cs$',
++                            'regex'      => '',
++                            'patterns'   => [
++                                              {
++                                                'name'       => 'doc comment',
++                                                'regex'      => '/\\*\\*.*?\\*/',
++					        'style'      => 'doc comment',
++                                                'childregex' => []
++                                              },
++                                              {
++                                                'name'       => 'comment',
++                                                'regex'      => '/\\*.*?\\*/',
++					        'style'      => 'comment',
++                                                'childregex' => []
++                                              },
++                                              {
++                                                'name'       => 'cplus comment',
++                                                'regex'      => '//.*?$',
++					        'style'      => 'comment',
++                                                'childregex' => []
++                                              },
++                                              {
++                                                'name'       => 'string',
++                                                'regex'      => '""|".*?([^\\\\](\\\\\\\\)*)"|"\\\\\\\\"',
++                                                #'regex'      => '""|"\\\\\\\\"|".*?([^\\\\](\\\\\\\\)*)"',
++#                                                'regex'      => '""|"\\\\\\\\"|"[^"\\\\]"|"[^"].*?[^\\\\]"',
++					        'style'      => 'string',
++                                                'childregex' => [
++                                                                  {
++                                                                    'name'       => 'esc character',
++                                                                    'regex'      => '\\\\.',
++					                            'style'      => 'esc character',
++                                                                    'childregex' => []
++                                                                  }
++                                                                ]
++                                              },
++                                              {
++                                                'name'       => 'single quoted',
++                                                'regex'      => '\'\'|\'.*?([^\\\\](\\\\\\\\)*)\'|\'\\\\\\\\\'',
++#                                                'regex'      => '\'\'|\'\\\\\\\\\'|\'[^\'\\\\]\'|\'[^\'].*?[^\\\\]\'',
++					        'style'      => 'string',
++                                                'childregex' => []
++                                              },
++                                              {
++                                                'name'       => 'numeric constant',
++                                                'regex'      => '\\b((0(x|X)[0-9a-fA-F]*)|(([0-9]+\\.?[0-9]*)|(\\.[0-9]+))((e|E)(\\+|-)?[0-9]+)?)(L|l|UL|ul|u|U|F|f)?\\b',
++					        'style'      => 'numeric',
++                                                'childregex' => []
++                                              },
++                                              {
++                                                'name'       => 'include',
++                                                'regex'      => '\\b(using|package)\\b.*?$',
++					        'style'      => 'include',
++                                                'childregex' => [
++                                                                  {
++                                                                    'name'       => 'esc character',
++                                                                    'regex'      => '\\\\(.|\\n)',
++					                            'style'      => 'esc character',
++                                                                    'childregex' => []
++                                                                  },
++                                                                  {
++                                                                    'name'       => 'comment',
++                                                                    'regex'      => '[^/]/\\*.*?\\*/',
++					                            'style'      => 'comment',
++                                                                    'childregex' => []
++                                                                  }
++                                                                ]
++                                              },
++                                              {
++                                                'name'       => 'storage keyword',
++                                                'regex'      => '\\b(abstract|boolean|byte|char|class|double|enum|extends|final|float|int|interface|long|native|private|protected|public|short|static|transient|synchronized|uint|void|volatile|implements|namespace)\\b',
++					        'style'      => 'reserved word',
++                                                'childregex' => []
++                                              },
++                                              {
++                                                'name'       => 'keyword',
++                                                'regex'      => '\\b(break|case|catch|continue|default|do|else|false|finally|for|if|instanceof|new|null|return|super|switch|this|throw|throws|true|try|while)\\b',
++					        'style'      => 'reserved word',
++                                                'childregex' => []
++                                              },
++                                              {
++                                                'name'       => 'braces and parens',
++                                                'regex'      => '[\\{\\}\\(\\)\\[\\]]',
++					        'style'      => 'braces',
++                                                'childregex' => []
++                                              },
++                                              {
++                                                'name'       => 'identifiers',
++                                                'regex'      => '\\b[a-zA-Z_][a-zA-Z0-9_]*\\b',
++					        'style'      => 'identifier',
++                                                'childregex' => []
++                                              },
++                                              {
++                                                'name'       => 'symbols',
++                                                'regex'      => '([\\*\\-\\+=:;%&\\|<>!])',
++					        'style'      => 'symbol',
++                                                'childregex' => []
++                                              }
++                                            ]
++                          };
++ 
++
++return \%LANGUAGE;
+ };
