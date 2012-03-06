@@ -8,3 +8,6 @@ file systems:
 compression:
 * rzip
 * E00
+
+string extraction:
+* .txx (templates, see insight toolkit for examples)
