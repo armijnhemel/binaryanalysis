@@ -58,3 +58,10 @@ def generateImages(filename, unpackreport, leafscans, envvars={}):
 	if width > 100:
 		imthumb = im.thumbnail((height/4, width/4))
 		im.save("%s/%s-thumbnail.png" % (imagedir, unpackreport['sha256']))
+
+	'''
+	p = subprocess.Popen(['python', '/home/armijn/gpltool/trunk/bat-extratools/bat-visualisation/bat-generate-histogram.py', '-i', filename, '-o', '%s/%s-histogram.png' % (imagedir, unpackreport['sha256'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		print >>sys.stderr, stanerr
+	'''
