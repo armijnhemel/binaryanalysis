@@ -17,7 +17,7 @@ import os, os.path, sys, subprocess, gzip
 def generateHexdump(filename, unpackreport, leafscans, envvars={}):
 	if not unpackreport.has_key('sha256'):
 		return
-	scanenv = os.environ
+	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):
 			try:
