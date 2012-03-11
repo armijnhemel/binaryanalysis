@@ -557,7 +557,7 @@ def main(argv):
 	## * a copy of the report
 	## * a pickle of all data, it saves parsing the XML report (or any other format for that matter)
 	picklefile = open('%s/scandata.pickle' % (tempdir,), 'wb')
-	cPickle.dump((unpackreports, scans), picklefile)
+	cPickle.dump((unpackreports, leafreports, scans), picklefile)
 	picklefile.close()
 
 if __name__ == "__main__":
