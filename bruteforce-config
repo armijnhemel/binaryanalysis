@@ -492,3 +492,10 @@ noscan  = text:xml:graphics:pdf:compressed
 #method  = generateImages
 #noscan  = text:xml:graphics:pdf
 #envvars = BAT_IMAGEDIR=/tmp/images
+#
+#[hexdump]
+#type    = postrun
+#module  = bat.generatehexdump
+#method  = generateHexdump
+#noscan  = text:xml:graphics:pdf
+#envvars = BAT_REPORTDIR=/tmp/images
