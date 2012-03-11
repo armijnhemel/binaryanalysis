@@ -1,6 +1,8 @@
 2012-03-11
 * move the unpacking to a directory called 'data'. Dump the state of the
 program in a pickle so it can be read back for later use.
+* remove hardcoded paths from the data that is pickled. This makes it easier
+to relocate the results for future processing.
 
 2012-03-08
 * add script that uses hexdump -Cv to generate files to be used in a GUI. It's

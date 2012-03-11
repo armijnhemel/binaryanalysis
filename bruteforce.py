@@ -74,8 +74,12 @@ def gethash(path, filename):
 
 ## scan a single file and recurse. Optionally supply a filehash for
 ## checking a knowledgebase, which is future work.
-def scan((path, filename, scans, prerunscans, magicscans, lentempdir, tempdir)):
+def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir)):
+	lentempdir = len(tempdir)
 	filetoscan = "%s/%s" % (path, filename)
+	relfiletoscan = "%s/%s" % (path[lentempdir:], filename)
+	if relfiletoscan.startswith('/'):
+		relfiletoscan = relfiletoscan[1:]
 	## we reset the reports, blacklist, offsets and tags for each new scan
 	leaftasks = []
 	scantasks = []
@@ -83,19 +87,20 @@ def scan((path, filename, scans, prerunscans, magicscans, lentempdir, tempdir)):
 	blacklist = []
 	offsets = {}
 	tags = []
-	unpackreports[filetoscan] = {}
-	unpackreports[filetoscan]['name'] = filename
+	unpackreports[relfiletoscan] = {}
+	unpackreports[relfiletoscan]['name'] = filename
 
 	magic = ms.file(filetoscan)
-	unpackreports[filetoscan]['magic'] = magic
+	unpackreports[relfiletoscan]['magic'] = magic
 
 	## Add both the path to indicate the position inside the file sytem
         ## or file we have unpacked, as well as the position of the files as unpacked
 	## by BAT, convenient for later analysis of binaries.
 	## In case of squashfs we remove the "squashfs-root" part of the temporary
 	## directory too, if it is present (not always).
-	unpackreports[filetoscan]['path'] = path[lentempdir:].replace("/squashfs-root", "")
-	unpackreports[filetoscan]['realpath'] = path
+	storepath = path[lenscandir:].replace("/squashfs-root", "")
+	unpackreports[relfiletoscan]['path'] = storepath
+	unpackreports[relfiletoscan]['realpath'] = path
 
 	if os.path.islink("%s/%s" % (path, filename)):
 		return (scantasks, leaftasks, unpackreports)
@@ -104,7 +109,7 @@ def scan((path, filename, scans, prerunscans, magicscans, lentempdir, tempdir)):
 		return (scantasks, leaftasks, unpackreports)
 
 	filesize = os.lstat("%s/%s" % (path, filename)).st_size
-	unpackreports[filetoscan]['size'] = filesize
+	unpackreports[relfiletoscan]['size'] = filesize
 
 	## empty file, not interested in further scanning
 	if filesize == 0:
@@ -113,7 +118,7 @@ def scan((path, filename, scans, prerunscans, magicscans, lentempdir, tempdir)):
 	## Store the hash of the file for identification and for possibly
 	## querying the knowledgebase later on.
 	filehash = gethash(path, filename)
-	unpackreports[filetoscan]['sha256'] = filehash
+	unpackreports[relfiletoscan]['sha256'] = filehash
 
 	## scan for markers
 	(offsets, order) =  bat.prerun.genericMarkerSearch(filetoscan, magicscans)
@@ -179,7 +184,7 @@ def scan((path, filename, scans, prerunscans, magicscans, lentempdir, tempdir)):
 	scanfirst = sorted(scanfirst, key=lambda x: x['priority'], reverse=True)
 	unpackscans = scanfirst + unpackscans
 
-	unpackreports[filetoscan]['scans'] = []
+	unpackreports[relfiletoscan]['scans'] = []
 
 	for unpackscan in unpackscans:
 		## the whole file has already been scanned by other scans, so we can
@@ -229,13 +234,15 @@ def scan((path, filename, scans, prerunscans, magicscans, lentempdir, tempdir)):
 							if not os.path.islink("%s/%s" % (i[0], p)):
 								os.chmod("%s/%s" % (i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 							scantasks.append((i[0], p, scans, prerunscans, magicscans, len(scandir), tempdir))
-							scanreports.append("%s/%s" % (i[0], p))
+							relscanpath = "%s/%s" % (i[0][lentempdir:], p)
+							if relscanpath.startswith('/'):
+								relscanpath = relscanpath[1:]
+							scanreports.append(relscanpath)
 						except Exception, e:
-							#print e
 							pass
 			except StopIteration:
         			pass
-			unpackreports[filetoscan]['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1]})
+			unpackreports[relfiletoscan]['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1]})
 	leaftasks.append((filetoscan, magic, tags, blacklist, tempdir, filehash, filesize))
 	return (scantasks, leaftasks, unpackreports)
 
@@ -514,21 +521,33 @@ def main(argv):
 		leaftasks_tmp = map(lambda x: x[:2] + (filterScans(scans['programscans'], x[2]),) + x[2:], leaftasks_tmp)
 		leaftasks_tmp.sort(key=lambda x: x[-1], reverse=True)
 		poolresult = pool.map(leafScan, leaftasks_tmp, 1)
-		leafreports = dict(poolresult)
+		#poolresult = map(lambda x: (x[0][len(scantempdir):], x[1]), poolresult)
+		poolresult_tmp = []
+		for p in poolresult:
+			pname = p[0][len(scantempdir):]
+			if pname.startswith('/'):
+				pname = pname[1:]
+			poolresult_tmp.append((pname, p[1]))
+		leafreports = dict(poolresult_tmp)
 		for i in sha256leaf:
 			if len(sha256leaf[i]) > 1:
 				for j in sha256leaf[i][1:]:
-					leafreports[j] = leafreports[sha256leaf[i][0]]
+					j_name = j[len(scantempdir):]
+					if j_name.startswith('/'):
+						j_name = j_name[1:]
+					sha256_name = sha256leaf[i][0][len(scantempdir):]
+					if sha256_name.startswith('/'):
+						sha256_name = sha256_name[1:]
+					leafreports[j_name] = leafreports[sha256_name]
 	else:
 		leafreports = {}
-
 
 	## we have a list of dicts and we just want one dict
 	for i in unpackreports_tmp:
 		for k in i:
 			unpackreports[k] = i[k]
 
-	res = flatten("%s/%s" % (scantempdir, os.path.basename(scan_binary)), unpackreports, leafreports)
+	res = flatten("%s" % (os.path.basename(scan_binary)), unpackreports, leafreports)
 	if not scans['batconfig'].has_key('output'):
 		## no printing?
 		pass
