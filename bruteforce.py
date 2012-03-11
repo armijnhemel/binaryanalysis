@@ -9,7 +9,7 @@ This script tries to analyse binary blobs, using a "brute force" approach
 and pretty print the analysis in a simple XML format.
 '''
 
-import sys, os, os.path, magic, hashlib, subprocess, tempfile, shutil, stat, multiprocessing
+import sys, os, os.path, magic, hashlib, subprocess, tempfile, shutil, stat, multiprocessing, cPickle
 from optparse import OptionParser
 import ConfigParser
 import datetime
@@ -455,14 +455,16 @@ def main(argv):
 	## more lists in some fields, like libraries, or more result lists if
 	## the file inside a file system we looked at was in fact a file system.
 	tempdir=tempfile.mkdtemp()
-	shutil.copy(scan_binary, tempdir)
+	os.makedirs("%s/data" % (tempdir,))
+	scantempdir = "%s/data" % (tempdir,)
+	shutil.copy(scan_binary, scantempdir)
 
 	## multithread it. Sometimes we hit http://bugs.python.org/issue9207
 	## Amount of threats can be configured in the configuration file, but
 	## often it is wise to have it set to 'no. This is because ranking writes
 	## to databases and you don't want concurrent writes.
 
-	scantasks = [(tempdir, os.path.basename(scan_binary), scans['unpackscans'], scans['prerunscans'], magicscans, len(tempdir), tempdir)]
+	scantasks = [(scantempdir, os.path.basename(scan_binary), scans['unpackscans'], scans['prerunscans'], magicscans, len(scantempdir), scantempdir)]
 	leaftasks = []
 	unpackreports_tmp = []
 	unpackreports = {}
@@ -526,7 +528,7 @@ def main(argv):
 		for k in i:
 			unpackreports[k] = i[k]
 
-	res = flatten("%s/%s" % (tempdir, os.path.basename(scan_binary)), unpackreports, leafreports)
+	res = flatten("%s/%s" % (scantempdir, os.path.basename(scan_binary)), unpackreports, leafreports)
 	if not scans['batconfig'].has_key('output'):
 		## no printing?
 		pass
@@ -549,6 +551,14 @@ def main(argv):
 			else:
 				postrunscans.append((i, unpackreports[i], [], scans['postrunscans']))
 		postrunresults = pool.map(postrunscan, postrunscans, 1)
+
+	## if we make a dump of all the result we should have:
+	## * a copy of all the unpacked data
+	## * a copy of the report
+	## * a pickle of all data, it saves parsing the XML report (or any other format for that matter)
+	picklefile = open('%s/scandata.pickle' % (tempdir,), 'wb')
+	cPickle.dump((unpackreports, scans), picklefile)
+	picklefile.close()
 
 if __name__ == "__main__":
         main(sys.argv)
