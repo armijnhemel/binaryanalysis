@@ -14,7 +14,7 @@ This should be run as a postrun scan
 
 import os, os.path, sys, subprocess, gzip
 
-def generateHexdump(filename, unpackreport, leafscans, envvars={}):
+def generateHexdump(filename, unpackreport, leafscans, scantempdir, envvars={}):
 	if not unpackreport.has_key('sha256'):
 		return
 	scanenv = os.environ.copy()
@@ -29,7 +29,7 @@ def generateHexdump(filename, unpackreport, leafscans, envvars={}):
 	## TODO: check if BAT_REPORTDIR exists
 	reportdir = scanenv.get('BAT_REPORTDIR', '.')
 
-	p = subprocess.Popen(['hexdump', '-Cv', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['hexdump', '-Cv', "%s/%s" % (scantempdir, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if stanout != "":
 		gf = gzip.open("%s/%s-hexdump.gz" % (reportdir, unpackreport['sha256']), 'w')
