@@ -21,7 +21,7 @@ This should be run as a postrun scan
 import os, os.path, sys, subprocess, array
 from PIL import Image
 
-def generateImages(filename, unpackreport, leafscans, envvars={}):
+def generateImages(filename, unpackreport, leafscans, scantempdir, envvars={}):
 	if not unpackreport.has_key('sha256'):
 		return
 	scanenv = os.environ.copy()
@@ -36,7 +36,7 @@ def generateImages(filename, unpackreport, leafscans, envvars={}):
 	## TODO: check if BAT_IMAGEDIR exists
 	imagedir = scanenv.get('BAT_IMAGEDIR', '.')
 
-	fwfile = open(filename)
+	fwfile = open("%s/%s" % (scantempdir, filename))
 
 	## this is very inefficient for large files, but we *really* need all the data :-(
 	fwdata = fwfile.read()
@@ -66,7 +66,7 @@ def generateImages(filename, unpackreport, leafscans, envvars={}):
 
 	'''
 	## generate histogram
-	p = subprocess.Popen(['python', '/home/armijn/gpltool/trunk/bat-extratools/bat-visualisation/bat-generate-histogram.py', '-i', filename, '-o', '%s/%s-histogram.png' % (imagedir, unpackreport['sha256'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['python', '/home/armijn/gpltool/trunk/bat-extratools/bat-visualisation/bat-generate-histogram.py', '-i', "%s/%s" % (scantempdir, filename), '-o', '%s/%s-histogram.png' % (imagedir, unpackreport['sha256'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		print >>sys.stderr, stanerr
