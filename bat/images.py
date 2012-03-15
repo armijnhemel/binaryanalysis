@@ -44,8 +44,8 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, envvars={}):
 
 	fwlen = len(fwdata)
 
-	if fwlen > 1024:
-		height = 1024
+	if fwlen > 512:
+		height = 512
 	else:
 		height = fwlen
 	width = fwlen/height
