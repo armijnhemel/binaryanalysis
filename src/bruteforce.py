@@ -467,8 +467,8 @@ def main(argv):
 	shutil.copy(scan_binary, scantempdir)
 
 	## multithread it. Sometimes we hit http://bugs.python.org/issue9207
-	## Amount of threats can be configured in the configuration file, but
-	## often it is wise to have it set to 'no. This is because ranking writes
+	## Amount of threads can be configured in the configuration file, but
+	## often it is wise to have it set to 'no'. This is because ranking writes
 	## to databases and you don't want concurrent writes.
 
 	scantasks = [(scantempdir, os.path.basename(scan_binary), scans['unpackscans'], scans['prerunscans'], magicscans, len(scantempdir), scantempdir)]
@@ -575,6 +575,8 @@ def main(argv):
 	## * a copy of all the unpacked data
 	## * a copy of the report
 	## * a pickle of all data, it saves parsing the XML report (or any other format for that matter)
+	## TODO: make a postrunscan that copies artefacts we might have generated (pictures, hexdumps, etc.)
+	## to the dump directory
 	picklefile = open('%s/scandata.pickle' % (tempdir,), 'wb')
 	cPickle.dump((unpackreports, leafreports, scans), picklefile)
 	picklefile.close()
