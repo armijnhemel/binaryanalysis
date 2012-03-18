@@ -72,7 +72,6 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, envvars={}):
 		print >>sys.stderr, stanerr
 	'''
 
-	'''
 	## generate piechart
 	for i in leafscans:
 		if i.keys()[0] == 'ranking':
@@ -82,9 +81,8 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, envvars={}):
 					pickledata.append((j[1], j[3]))
 				tmppickle = tempfile.mkstemp()
 				cPickle.dump(pickledata, os.fdopen(tmppickle[0], 'w'))
-				p = subprocess.Popen(['python', '/home/armijn/gpltool/trunk/bat-extratools/bat-visualisation/bat-generate-piechart.py', '-i', "%s/%s" % (scantempdir, tmppickle), '-o', '%s/%s-piechart.png' % (imagedir, unpackreport['sha256'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+				p = subprocess.Popen(['python', '/home/armijn/gpltool/trunk/bat-extratools/bat-visualisation/bat-generate-piecharts.py', '-i', tmppickle[1], '-o', '%s/%s-piechart.png' % (imagedir, unpackreport['sha256'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				if p.returncode != 0:
 					print >>sys.stderr, stanerr
 				os.unlink(tmppickle[1])
-	'''
