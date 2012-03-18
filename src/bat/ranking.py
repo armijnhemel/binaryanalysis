@@ -260,6 +260,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	gaincutoff = 1
 	nonUniqueMatches = {}
 	nonUniqueMatchLines = []
+	nonUniqueAssignments = {}
 
 	scanenv = os.environ.copy()
 	if envvars != None:
@@ -591,9 +592,11 @@ def extractGeneric(lines, path, language='C', envvars=None):
 			close_sorted = map(lambda x: (x, averageStringsPerPkgVersion(x, conn)), close)
 			close_sorted = sorted(close_sorted, key = lambda x: x[1], reverse=True)
 			best = close_sorted[0][0]
+		best_score = 0
 		## for each string in the package with the best gain we add the score
 		## to the package and move on to the next package.
 		for xy in stringsPerPkg[best]:
+			best_score += 1
 
 			x = stringsLeft[xy]
 			if not allMatches.has_key(best):
@@ -603,6 +606,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 			sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
 			#print >>sys.stderr, "GAIN", gain[best], best
 			del stringsLeft[xy]
+		nonUniqueAssignments[best] = best_score
 		if gain[best] < gaincutoff:
 			break
 		strleft = len(stringsLeft)
@@ -640,7 +644,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 		for c in corr_sorted:
 			print >>sys.stderr, s, c, correlation_sort[c]
 	'''
-	return {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches}
+	return {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments}
 
 
 def averageStringsPerPkgVersion(pkg, conn):
