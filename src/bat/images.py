@@ -18,7 +18,7 @@ significantly deviate from this could mean something interesting.
 This should be run as a postrun scan
 '''
 
-import os, os.path, sys, subprocess, array
+import os, os.path, sys, subprocess, array, cPickle, tempfile
 from PIL import Image
 
 def generateImages(filename, unpackreport, leafscans, scantempdir, envvars={}):
@@ -70,4 +70,21 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, envvars={}):
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		print >>sys.stderr, stanerr
+	'''
+
+	'''
+	## generate piechart
+	for i in leafscans:
+		if i.keys()[0] == 'ranking':
+			if i['ranking']['reports'] != []:
+				pickledata = []
+				for j in i['ranking']['reports']:
+					pickledata.append((j[1], j[3]))
+				tmppickle = tempfile.mkstemp()
+				cPickle.dump(pickledata, os.fdopen(tmppickle[0], 'w'))
+				p = subprocess.Popen(['python', '/home/armijn/gpltool/trunk/bat-extratools/bat-visualisation/bat-generate-piechart.py', '-i', "%s/%s" % (scantempdir, tmppickle), '-o', '%s/%s-piechart.png' % (imagedir, unpackreport['sha256'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+				(stanout, stanerr) = p.communicate()
+				if p.returncode != 0:
+					print >>sys.stderr, stanerr
+				os.unlink(tmppickle[1])
 	'''
