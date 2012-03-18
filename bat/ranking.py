@@ -258,7 +258,8 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	sameFileScore = {}
 	alpha = 5.0
 	gaincutoff = 1
-	nonUniqueMatches = []
+	nonUniqueMatches = {}
+	nonUniqueMatchLines = []
 
 	scanenv = os.environ.copy()
 	if envvars != None:
@@ -459,6 +460,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 						else:
 							packagelicenses[package] = list(set(pv))
 			else:
+				nonUniqueMatchLines.append(line)
 				## The string we found is not unique to a package, but is it 
 				## unique to a filename?
 				## This method does assume that files that are named the same
@@ -483,11 +485,16 @@ def extractGeneric(lines, path, language='C', envvars=None):
 					## small enough...
 					score = len(line) / sys.maxint
 
+				if score > 1.0e-20:
+					for packagename in pkgs:
+						if not nonUniqueMatches.has_key(packagename):
+							nonUniqueMatches[packagename] = [line]
+						else:
+							nonUniqueMatches[packagename] = nonUniqueMatches[packagename] + [line]
 				## After having computed a score we determine if the files
 				## we have found the string in are all called the same.
 				## filenames {name of file: { name of package: 1} }
 				for fn in filenames:
-					nonUniqueMatches.append(line)
 					if len(filenames[fn].values()) == 1:
 						## The filename fn containing the matched string can only
 						## be found in one package.
@@ -529,7 +536,6 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	## 3. for each filename, determine whether or not this file (containing the string)
 	##    is unique to a package
 	## 4. if not, try to determine the most likely package the string was found in
-	nonUniqueMatches = list(set(nonUniqueMatches))
 
 	## For each string that occurs in the same filename in multiple
 	## packages (e.g., "debugXML.c", a cloned file of libxml2 in several
@@ -619,6 +625,21 @@ def extractGeneric(lines, path, language='C', envvars=None):
 			percentage = 0.0
 		reports.append((rank, s, uniqueMatches.get(s,[]), percentage, packageversions.get(s, {}), packagelicenses.get(s, [])))
 		rank = rank+1
+	'''
+	for s in scores_sorted:
+		if not nonUniqueMatches.has_key(s):
+			continue
+		correlation_sort = {}
+		for r in nonUniqueMatches:
+			if r == s:
+				continue
+			correlation = len(set(nonUniqueMatches[s]).intersection(nonUniqueMatches[r]))
+			if correlation != 0:
+				correlation_sort[r] = correlation
+		corr_sorted = sorted(correlation_sort, key = lambda x: correlation_sort.__getitem__(x), reverse=True)
+		for c in corr_sorted:
+			print >>sys.stderr, s, c, correlation_sort[c]
+	'''
 	return {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches}
 
 

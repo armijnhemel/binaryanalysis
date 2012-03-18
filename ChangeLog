@@ -1,3 +1,7 @@
+2012-03-18
+* add code to determineinformation about correlation between packages for
+non-unique matches.
+
 2012-03-11
 * move the unpacking to a directory called 'data'. Dump the state of the
 program in a pickle so it can be read back for later use.
