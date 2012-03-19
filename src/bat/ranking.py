@@ -424,8 +424,9 @@ def extractGeneric(lines, path, language='C', envvars=None):
 						line_sha256_version = []
 						for s in versionsha256s:
 							if not sha256_versions.has_key(s):
-								c.execute("select distinct version from processed_file where package=? and sha256=?", (package,s[0]))
+								c.execute("select distinct version, package from processed_file where sha256=?", (s[0],))
 								versions = c.fetchall()
+								versions = filter(lambda x: x[1] == package, versions)
 								sha256_versions[s] = map(lambda x: x[0], versions)
 								for v in versions:
 									if not pv.has_key(v[0]):
