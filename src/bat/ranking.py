@@ -403,7 +403,6 @@ def extractGeneric(lines, path, language='C', envvars=None):
 			if len(pkgs) == 1:
 				## the string is unique to this package and this package only
 				uniqueScore[package] = uniqueScore.get(package, 0) + len(line)
-				uniqueMatches[package] = uniqueMatches.get(package, []) + [line]
 
 				if not allMatches.has_key(package):
 					allMatches[package] = {}
@@ -422,6 +421,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 
 					if determineversion:
 						pv = {}
+						line_sha256_version = []
 						for s in versionsha256s:
 							if not sha256_versions.has_key(s):
 								c.execute("select distinct version from processed_file where package=? and sha256=?", (package,s[0]))
@@ -430,10 +430,12 @@ def extractGeneric(lines, path, language='C', envvars=None):
 								for v in versions:
 									if not pv.has_key(v[0]):
 										pv[v[0]] = 1
+									line_sha256_version.append((s[0], v[0]))
 							else:   
 								for v in sha256_versions[s]:
 									if not pv.has_key(v):
 										pv[v] = 1
+									line_sha256_version.append((s[0], v))
 						for v in pv:
 							if packageversions.has_key(package):
 								if packageversions[package].has_key(v):
@@ -443,6 +445,9 @@ def extractGeneric(lines, path, language='C', envvars=None):
 							else:   
 								packageversions[package] = {}
 								packageversions[package][v] = 1
+						uniqueMatches[package] = uniqueMatches.get(package, []) + [(line, line_sha256_version)]
+					else:
+						uniqueMatches[package] = uniqueMatches.get(package, []) + [(line, )]
 					if determinelicense:
 						pv = []
 						for s in versionsha256s:
@@ -460,6 +465,9 @@ def extractGeneric(lines, path, language='C', envvars=None):
 							packagelicenses[package] = list(set(packagelicenses[package] + pv))
 						else:
 							packagelicenses[package] = list(set(pv))
+				else:
+					## store the uniqueMatches without any information about checksums
+					uniqueMatches[package] = uniqueMatches.get(package, []) + [(line, )]
 			else:
 				nonUniqueMatchLines.append(line)
 				## The string we found is not unique to a package, but is it 
@@ -704,7 +712,7 @@ def xmlprettyprint(res, root, envvars=None):
 				## TODO: not every character is legal in XML,
 				## so we actually need to have a translation step
 				## here that rewrites illegal characters!
-				tmpnodetext.data = match
+				tmpnodetext.data = match[0]
 				matchnode.appendChild(tmpnodetext)
 				uniquenode.appendChild(matchnode)
 			countnode = root.createElement('uniquecount')
