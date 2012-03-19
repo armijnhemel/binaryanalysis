@@ -1,3 +1,6 @@
+2012-03-19
+* also pass top level scan directory to postrunscans
+
 2012-03-18
 * add code to determineinformation about correlation between packages for
 non-unique matches.

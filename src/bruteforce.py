@@ -291,7 +291,7 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize)):
 			reports.append(report)
 	return (filetoscan, reports)
 
-def postrunscan((filetoscan, unpackreports, leafreports, scans, scantempdir)):
+def postrunscan((filetoscan, unpackreports, leafreports, scans, scantempdir, toplevelscandir)):
 	for scan in scans:
 		module = scan['module']
 		method = scan['method']
@@ -303,7 +303,7 @@ def postrunscan((filetoscan, unpackreports, leafreports, scans, scantempdir)):
 			envvars = None
 		exec "from %s import %s as bat_%s" % (module, method, method)
 
-		res = eval("bat_%s(filetoscan, unpackreports, leafreports, scantempdir, envvars=envvars)" % (method))
+		res = eval("bat_%s(filetoscan, unpackreports, leafreports, scantempdir, toplevelscandir ,envvars=envvars)" % (method))
 		## TODO: find out what we want to do with this
 		if res != None:
 			pass
@@ -566,9 +566,9 @@ def main(argv):
 		postrunscans = []
 		for i in unpackreports:
 			if leafreports.has_key(i):
-				postrunscans.append((i, unpackreports[i], leafreports[i], scans['postrunscans'], scantempdir))
+				postrunscans.append((i, unpackreports[i], leafreports[i], scans['postrunscans'], scantempdir, tempdir))
 			else:
-				postrunscans.append((i, unpackreports[i], [], scans['postrunscans'], scantempdir))
+				postrunscans.append((i, unpackreports[i], [], scans['postrunscans'], scantempdir, tempdir))
 		postrunresults = pool.map(postrunscan, postrunscans, 1)
 
 	## if we make a dump of all the result we should have:
