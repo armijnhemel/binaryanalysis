@@ -21,7 +21,7 @@ This should be run as a postrun scan
 import os, os.path, sys, subprocess, array, cPickle, tempfile
 from PIL import Image
 
-def generateImages(filename, unpackreport, leafscans, scantempdir, envvars={}):
+def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscandir, envvars={}):
 	if not unpackreport.has_key('sha256'):
 		return
 	scanenv = os.environ.copy()
@@ -34,7 +34,15 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, envvars={}):
 				pass
 
 	## TODO: check if BAT_IMAGEDIR exists
-	imagedir = scanenv.get('BAT_IMAGEDIR', '.')
+	imagedir = scanenv.get('BAT_IMAGEDIR', "%s/%s" % (toplevelscandir, "images"))
+	try:
+		os.stat(imagedir)
+	except:
+		## BAT_IMAGEDIR does not exist
+		try:
+			os.makedirs(imagedir)
+		except Exception, e:
+			return
 
 	fwfile = open("%s/%s" % (scantempdir, filename))
 
