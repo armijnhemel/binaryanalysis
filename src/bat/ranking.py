@@ -416,7 +416,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 				## relicensed when there is a new release (example: Samba 3.2 relicensed
 				## to GPLv3+) so the version number can be very significant.
 				if determineversion or determinelicense:
-					c.execute("select distinct sha256 from extracted_file where programstring=?", (line,))
+					c.execute("select distinct sha256, linenumber from extracted_file where programstring=?", (line,))
 					versionsha256s = c.fetchall()
 
 					if determineversion:
@@ -430,12 +430,12 @@ def extractGeneric(lines, path, language='C', envvars=None):
 								for v in versions:
 									if not pv.has_key(v[0]):
 										pv[v[0]] = 1
-									line_sha256_version.append((s[0], v[0]))
+									line_sha256_version.append((s[0], v[0], s[1]))
 							else:   
 								for v in sha256_versions[s]:
 									if not pv.has_key(v):
 										pv[v] = 1
-									line_sha256_version.append((s[0], v))
+									line_sha256_version.append((s[0], v, s[1]))
 						for v in pv:
 							if packageversions.has_key(package):
 								if packageversions[package].has_key(v):
