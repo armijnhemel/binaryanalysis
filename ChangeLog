@@ -1,3 +1,6 @@
+2012-03-21
+* pass size hints, if available
+
 2012-03-19
 * also pass top level scan directory to postrunscans
 
