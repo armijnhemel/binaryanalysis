@@ -13,39 +13,39 @@ output = prettyprintresxml
 ####################
 
 [checkXML]
-type    = prerun
-module  = bat.prerun
-method  = searchXML
-priority = 100
+type        = prerun
+module      = bat.prerun
+method      = searchXML
+priority    = 100
 description = Check XML validity
 
 #[verifybz2]
-#type    = prerun
-#module  = bat.prerun
-#method  = verifyBZ2
-#priority = 1
+#type        = prerun
+#module      = bat.prerun
+#method      = verifyBZ2
+#priority    = 1
 #description = Check if complete file is a valid bzip2 file
 
 #[verifygzip]
-#type    = prerun
-#module  = bat.prerun
-#method  = verifyGzip
-#priority = 1
+#type        = prerun
+#module      = bat.prerun
+#method      = verifyGzip
+#priority    = 1
 #description = Check if complete file is a valid gzip file
 
 [verifytext]
-type    = prerun
-module  = bat.prerun
-method  = verifyText
-priority = 2
+type        = prerun
+module      = bat.prerun
+method      = verifyText
+priority    = 2
 description = Check if file contains just ASCII text
 
 [verifygraphics]
-type    = prerun
-module  = bat.prerun
-method  = verifyGraphics
-magic   = bmp
-priority = 1
+type        = prerun
+module      = bat.prerun
+method      = verifyGraphics
+magic       = bmp
+priority    = 1
 description = Check if file is a valid graphics file, or consists of just graphics files
 
 ####################
@@ -53,134 +53,136 @@ description = Check if file is a valid graphics file, or consists of just graphi
 ####################
 
 [7z]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpack7z
-priority = 1
-magic = 7z
-noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpack7z
+priority    = 1
+magic       = 7z
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip
 description = Unpack 7z compressed files
 
 [ar]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackAr
-priority = 2
-magic = ar
-noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackAr
+priority    = 2
+magic       = ar
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip
 description = Unpack ar archives
 
 #[arj]
-#type    = unpack
-#module  = bat.fwunpack
-#method  = searchUnpackARJ
-#priority = 1
-#magic = arj
-#noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip
+#type        = unpack
+#module      = bat.fwunpack
+#method      = searchUnpackARJ
+#priority    = 1
+#magic       = arj
+#noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip
 #description = Unpack ARJ compressed files
 
 [base64]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackBase64
-priority = 0
-noscan   = xml:graphics:binary:pdf:compressed
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackBase64
+priority    = 0
+noscan      = xml:graphics:binary:pdf:compressed
 description = Decode base64 encoded files
 
 [byteswap]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackByteSwap
-priority = 100
-noscan   = xml:graphics:pdf:compressed
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackByteSwap
+priority    = 100
+noscan      = xml:graphics:pdf:compressed
 description = Byteswap files for 16 bit flash
 
 [bzip2]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackBzip2
-priority = 1
-magic = bz2
-noscan   = text:xml:graphics:pdf:gzip:lrzip
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackBzip2
+priority    = 1
+magic       = bz2
+noscan      = text:xml:graphics:pdf:gzip:lrzip
 description = Unpack bzip2 compressed files
 
 [cab]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackCab
-priority = 1
-magic = cab
-noscan   = text:xml:graphics:pdf:compressed
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackCab
+priority    = 1
+magic       = cab
+noscan      = text:xml:graphics:pdf:compressed
 description = Unpack MS Windows Cabinet archives
 
 [compress]
-type     = unpack
-module   = bat.fwunpack
-method   = searchUnpackCompress
-priority = 1
-magic    = compress
-noscan   = text:xml:graphics:pdf
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackCompress
+priority    = 1
+magic       = compress
+noscan      = text:xml:graphics:pdf
 description = Unpack files compressed with compress
 
 [cpio]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackCpio
-priority = 2
-magic = cpio1:cpio2:cpio3:cpiotrailer
-noscan   = text:xml:graphics:pdf:compressed
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackCpio
+priority    = 2
+magic       = cpio1:cpio2:cpio3:cpiotrailer
+noscan      = text:xml:graphics:pdf:compressed
 description = Unpack CPIO archives
 
 [cramfs]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackCramfs
-priority = 3
-magic = cramfs
-noscan   = text:xml:graphics:pdf:compressed
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackCramfs
+priority    = 3
+magic       = cramfs
+noscan      = text:xml:graphics:pdf:compressed
 description = Unpack cramfs file systems
 
 [exe]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackExe
-priority = 2
-noscan   = text:xml:graphics:pdf:compressed
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackExe
+priority    = 2
+noscan      = text:xml:graphics:pdf:compressed
+description = Unpack Microsoft Windows Executable files
 
 [ext2fs]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackExt2fs
-priority = 3
-magic = ext2
-noscan   = text:xml:graphics:pdf:compressed
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackExt2fs
+priority    = 3
+magic       = ext2
+noscan      = text:xml:graphics:pdf:compressed
 description = Unpack EXT2/3/4 file systems
 
 [gif]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackGIF
-priority = 0
-magic = gif87:gif89
-noscan   = text:xml:jpeg:bmp:pdf:png:compressed
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackGIF
+priority    = 0
+magic       = gif87:gif89
+noscan      = text:xml:jpeg:bmp:pdf:png:compressed
 description = Carve GIF files from a file
 
 [gzip]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackGzip
-priority = 1
-magic = gzip
-noscan   = text:xml:graphics:pdf:bz2:lrzip
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackGzip
+priority    = 1
+magic       = gzip
+noscan      = text:xml:graphics:pdf:bz2:lrzip
 description = Unpack gzip compressed files
 
 #[ico]
-#type    = unpack
-#module  = bat.fwunpack
-#method  = searchUnpackIco
-#priority = 0
-#magic = ico
-#noscan   = text:xml:jpeg:bmp:pdf:gif:png:compressed
+#type        = unpack
+#module      = bat.fwunpack
+#method      = searchUnpackIco
+#priority    = 0
+#magic       = ico
+#noscan      = text:xml:jpeg:bmp:pdf:gif:png:compressed
+#description = Carve ICO files from a file
 
 [installshield]
 type    = unpack
