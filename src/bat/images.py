@@ -80,7 +80,7 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscand
 		print >>sys.stderr, stanerr
 	'''
 
-	## generate piechart
+	## generate piechart and version information
 	for i in leafscans:
 		if i.keys()[0] == 'ranking':
 			if i['ranking']['reports'] != []:
@@ -94,3 +94,16 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscand
 				if p.returncode != 0:
 					print >>sys.stderr, stanerr
 				os.unlink(tmppickle[1])
+				## do the same for version information
+				for j in i['ranking']['reports']:
+					if j[4] != {}:
+						tmppickle = tempfile.mkstemp()
+						pickledata = []
+						j_sorted = sorted(j[4], key=lambda x: j[4][x])
+						for v in j_sorted:
+							pickledata.append((v, j[4][v]))
+						cPickle.dump(pickledata, os.fdopen(tmppickle[0], 'w'))
+						p = subprocess.Popen(['python', '/home/armijn/gpltool/trunk/bat-extratools/bat-visualisation/bat-generate-version-chart.py', '-i', tmppickle[1], '-o', '%s/%s-%s-version.png' % (imagedir, unpackreport['sha256'], j[1])], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+						(stanout, stanerr) = p.communicate()
+						if p.returncode != 0:
+							print >>sys.stderr, stanerr
