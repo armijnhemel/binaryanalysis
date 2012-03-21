@@ -54,7 +54,7 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		tmpdir = fwunpack.dirsetup(tempdir, filename, "rpm", rpmcounter)
 		res = unpackRPM(filename, offset, tmpdir)
 		if res != None:
-			diroffsets.append((res, offset))
+			diroffsets.append((res, offset, 0))
 			rpmcounter = rpmcounter + 1
 			## determine which compression is used, so we can
 			## find the right offset for the blacklist. Code from the
