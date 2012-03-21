@@ -242,7 +242,7 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir)):
 							pass
 			except StopIteration:
         			pass
-			unpackreports[relfiletoscan]['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1]})
+			unpackreports[relfiletoscan]['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
 	leaftasks.append((filetoscan, magic, tags, blacklist, tempdir, filehash, filesize))
 	return (scantasks, leaftasks, unpackreports)
 
