@@ -107,3 +107,4 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscand
 						(stanout, stanerr) = p.communicate()
 						if p.returncode != 0:
 							print >>sys.stderr, stanerr
+						os.unlink(tmppickle[1])
