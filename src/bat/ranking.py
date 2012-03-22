@@ -335,6 +335,9 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	for line in lines:
 		#print >>sys.stderr, "processing <|%s|>" % line
 		## speedup if the lines happen to be the same as the old one
+		## This does *not* alter the score in any way, but perhaps
+		## it should: having a very significant string a few times
+		## is a strong indication.
 		if line == oldline:
 			if matched:
 				matchedlines = matchedlines + 1
