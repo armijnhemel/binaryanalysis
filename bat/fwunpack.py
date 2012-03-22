@@ -476,21 +476,23 @@ def unpackTar(filename, offset, tempdir=None):
 ## http://code.google.com/p/unyaffs/
 def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	tmpdir = dirsetup(tempdir, filename, "yaffs", 1)
+	diroffsets = []
 	p = subprocess.Popen(['bat-unyaffs', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.rmdir(tmpdir)
-		return ([], blacklist, [])
+		return (diroffsets, blacklist, [])
 	## unfortunately unyaffs also returns 0 when it fails
 	if len(stanerr) != 0:
 		os.rmdir(tmpdir)
-		return ([], blacklist, [])
+		return (diroffsets, blacklist, [])
 	## we need to check if there was actually any data unpacked.
 	if os.listdir(tmpdir) == []:
 		os.rmdir(tmpdir)
-		return ([], blacklist, [])
+		return (diroffsets, blacklist, [])
 	blacklist.append((0, os.stat(filename).st_size))
-	return ([(tmpdir,0)], blacklist, [])
+	diroffsets.append((tmpdir, 0, os.stat(filename).st_size))
+	return (diroffsets, blacklist, [])
 
 ## Windows executables can be unpacked in many ways.
 ## We should try various methods:
