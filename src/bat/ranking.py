@@ -414,10 +414,11 @@ def extractGeneric(lines, path, language='C', envvars=None):
 
 				nrUniqueMatches = nrUniqueMatches + 1
 
-				## Actually we should store the license with the version number.
+				## We should store the version number with the license.
 				## There are good reasons for this: files are sometimes collectively
 				## relicensed when there is a new release (example: Samba 3.2 relicensed
 				## to GPLv3+) so the version number can be very significant.
+				## determinelicense should *always* imply determineversion
 				if determineversion or determinelicense:
 					c.execute("select distinct sha256, linenumber from extracted_file where programstring=?", (line,))
 					versionsha256s = c.fetchall()

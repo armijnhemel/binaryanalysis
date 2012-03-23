@@ -5,7 +5,7 @@
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
-This module contains helper functions that are run before any of the other
+This module contains helper functions that should be run before any of the other
 scans.
 '''
 
@@ -68,7 +68,7 @@ def searchXML(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 ## Since the default encoding in Python 2 is 'ascii' and we can't guarantee
 ## that it has been set by the user to something else this will not work
 ## on UTF-8 encoded files, unless we ask the user to set the encoding in
-## site.py which we can't.
+## site.py which we can't. So this is not fool proof.
 ##
 ## Interesting link with background info:
 ## * http://fedoraproject.org/wiki/Features/PythonEncodingUsesSystemLocale

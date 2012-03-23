@@ -5,8 +5,8 @@
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
-This module contains only the RPM specific parts. This is so we don't get
-failures in the systems that don't have Python RPM bindings.
+This module contains only code specific to RPM unpacking. This is so we don't get
+failures on systems that don't have the Python RPM bindings installed.
 '''
 
 import sys, os, subprocess, os.path
@@ -37,9 +37,10 @@ def unpackRPM(filename, offset, tempdir=None):
                 	os.rmdir(tmpdir)
 		return None
 
-## RPM is basically a header, plus some compressed files, so we are getting
+## RPM is basically a header, plus some compressed files, so we might get
 ## duplicates at the moment. We can defeat this easily by setting the blacklist
-## upperbound to the start of compression + 1. This is ugly and should be fixed.
+## upperbound to the start of compression + 1. This is ugly and should actually
+## be fixed.
 def searchUnpackRPM(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	if offsets['rpm'] == []:
 		return ([], blacklist, [])
