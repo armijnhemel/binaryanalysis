@@ -673,12 +673,6 @@ def averageStringsPerPkgVersion(pkg, conn):
 	return count
 
 
-## TODO: implement pretty printing for the reports. The question is:
-## when should we report and when not? There are various possibilities:
-## * best x packages
-## * packages that together have a percentage of total the score (say 98%)
-## * everything
-## Drawbacks are reporting too much or too little
 def xmlprettyprint(res, root, envvars=None):
 	if res['matchedlines'] == 0:
 		return None
