@@ -423,36 +423,33 @@ def extractGeneric(lines, path, language='C', envvars=None):
 					c.execute("select distinct sha256, linenumber from extracted_file where programstring=?", (line,))
 					versionsha256s = c.fetchall()
 
-					if determineversion:
-						pv = {}
-						line_sha256_version = []
-						for s in versionsha256s:
-							if not sha256_versions.has_key(s[0]):
-								c.execute("select distinct version, package, filename from processed_file where sha256=?", (s[0],))
-								versions = c.fetchall()
-								versions = filter(lambda x: x[1] == package, versions)
-								sha256_versions[s[0]] = map(lambda x: (x[0], x[2]), versions)
-								for v in versions:
-									if not pv.has_key(v[0]):
-										pv[v[0]] = 1
-									line_sha256_version.append((s[0], v[0], s[1], v[2]))
-							else:   
-								for v in sha256_versions[s[0]]:
-									if not pv.has_key(v[0]):
-										pv[v[0]] = 1
-									line_sha256_version.append((s[0], v[0], s[1], v[1]))
-						for v in pv:
-							if packageversions.has_key(package):
-								if packageversions[package].has_key(v):
-									packageversions[package][v] = packageversions[package][v] + 1
-								else:
-									packageversions[package][v] = 1
-							else:   
-								packageversions[package] = {}
+					pv = {}
+					line_sha256_version = []
+					for s in versionsha256s:
+						if not sha256_versions.has_key(s[0]):
+							c.execute("select distinct version, package, filename from processed_file where sha256=?", (s[0],))
+							versions = c.fetchall()
+							versions = filter(lambda x: x[1] == package, versions)
+							sha256_versions[s[0]] = map(lambda x: (x[0], x[2]), versions)
+							for v in versions:
+								if not pv.has_key(v[0]):
+									pv[v[0]] = 1
+								line_sha256_version.append((s[0], v[0], s[1], v[2]))
+						else:   
+							for v in sha256_versions[s[0]]:
+								if not pv.has_key(v[0]):
+									pv[v[0]] = 1
+								line_sha256_version.append((s[0], v[0], s[1], v[1]))
+					for v in pv:
+						if packageversions.has_key(package):
+							if packageversions[package].has_key(v):
+								packageversions[package][v] = packageversions[package][v] + 1
+							else:
 								packageversions[package][v] = 1
-						uniqueMatches[package] = uniqueMatches.get(package, []) + [(line, line_sha256_version)]
-					else:
-						uniqueMatches[package] = uniqueMatches.get(package, []) + [(line, )]
+						else:   
+							packageversions[package] = {}
+							packageversions[package][v] = 1
+					uniqueMatches[package] = uniqueMatches.get(package, []) + [(line, line_sha256_version)]
 					if determinelicense:
 						pv = []
 						for s in versionsha256s:
