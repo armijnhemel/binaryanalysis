@@ -185,116 +185,130 @@ description = Unpack gzip compressed files
 #description = Carve ICO files from a file
 
 [installshield]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackInstallShield
-priority = 1
-magic = installshield
-noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackInstallShield
+priority    = 1
+magic       = installshield
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip
+description = Unpack InstallShield compressed files
 
 [iso9660]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackISO9660
-priority = 4
-magic = iso9660
-noscan   = text:xml:graphics:pdf:compressed
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackISO9660
+priority    = 4
+magic       = iso9660
+noscan      = text:xml:graphics:pdf:compressed
+description = Unpack ISO9660 (CD-ROM) file systems
 
 #[java_serialized]
-#type    = unpack
-#module  = bat.fwunpack
-#method  = searchUnpackJavaSerialized
-#priority = 2
-#magic = java_serialized
-#noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip
+#type        = unpack
+#module      = bat.fwunpack
+#method      = searchUnpackJavaSerialized
+#priority    = 2
+#magic       = java_serialized
+#noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip
+#description = Unpack Java serialized files
 
 [jffs2]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackJffs2
-priority = 1
-magic = jffs2_le
-noscan   = text:xml:graphics:pdf:compressed
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackJffs2
+priority    = 1
+magic       = jffs2_le
+noscan      = text:xml:graphics:pdf:compressed
+description = Unpack JFFS2 file systems
 
 [lrzip]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackLRZIP
-priority = 1
-magic = lrzip
-noscan   = text:xml:graphics:pdf:bz2:gzip:lzip
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackLRZIP
+priority    = 1
+magic       = lrzip
+noscan      = text:xml:graphics:pdf:bz2:gzip:lzip
+description = Unpack LRZIP compressed files
 
 [lzip]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackLzip
-priority = 1
-magic = lzip
-noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackLzip
+priority    = 1
+magic       = lzip
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip
+description = Unpack LZIP compressed files
 
 [lzma]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackLZMA
-priority = 1
-magic = lzma_alone:lzma_alone_alt
-noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackLZMA
+priority    = 1
+magic       = lzma_alone:lzma_alone_alt
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip
+description = Unpack LZMA compressed files
 
 [lzo]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackLzo
-priority = 1
-magic = lzo
-noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackLzo
+priority    = 1
+magic       = lzo
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip
+description = Unpack LZO compressed files
 
 [pdf_unpack]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackPDF
-priority = 10
-magic = pdf:pdftrailer
-noscan   = text:xml:graphics:compressed
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackPDF
+priority    = 10
+magic       = pdf:pdftrailer
+noscan      = text:xml:graphics:compressed
+description = Carve PDF files from a file
 
 [png]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackPNG
-priority = 0
-magic = png:pngtrailer
-noscan   = text:xml:jpeg:bmp:pdf:gif:compressed
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackPNG
+priority    = 0
+magic       = png:pngtrailer
+noscan      = text:xml:jpeg:bmp:pdf:gif:compressed
+description = Carve PNG files from a file
 
 [rar]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackRar
-priority = 1
-magic = rar
-noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackRar
+priority    = 1
+magic       = rar
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip
+description = Unpack RAR archives
 
 #[romfs]
-#type    = unpack
-#module  = bat.fwunpack
-#method  = searchUnpackRomfs
-#priority = 1
-#magic = romfs
-#noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip
+#type        = unpack
+#module      = bat.fwunpack
+#method      = searchUnpackRomfs
+#priority    = 1
+#magic       = romfs
+#noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip
+#description = Unpack romfs file systems
 
 [rpm]
-type    = unpack
-module  = bat.unpackrpm
-method  = searchUnpackRPM
-priority = 2
-magic = rpm:gzip:xz:xztrailer
-noscan   = text:xml:graphics:pdf:compressed
+type        = unpack
+module      = bat.unpackrpm
+method      = searchUnpackRPM
+priority    = 2
+magic       = rpm:gzip:xz:xztrailer
+noscan      = text:xml:graphics:pdf:compressed
+description = Unpack RPM files
 
 [squashfs]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackSquashfs
-priority = 1
-magic = squashfs1:squashfs2:squashfs3:squashfs4:squashfs5:squashfs6
-noscan   = text:xml:graphics:pdf:compressed
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackSquashfs
+priority    = 1
+magic       = squashfs1:squashfs2:squashfs3:squashfs4:squashfs5:squashfs6
+noscan      = text:xml:graphics:pdf:compressed
+description = Unpack squashfs file systmes
 
 [swf]
 type    = unpack
@@ -488,6 +502,10 @@ module  = bat.checks
 method  = searchWpaSupplicant
 noscan  = text:xml:graphics:pdf:compressed
 
+#####################
+### postrun scans ###
+#####################
+#
 #[images]
 #type    = postrun
 #module  = bat.images
