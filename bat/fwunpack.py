@@ -474,6 +474,7 @@ def unpackTar(filename, offset, tempdir=None):
 ## This is why, for now, we will only try to unpack at offset 0.
 ## For this you will need the unyaffs program from
 ## http://code.google.com/p/unyaffs/
+## TODO: check out http://code.google.com/p/yaffs2utils/
 def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	tmpdir = dirsetup(tempdir, filename, "yaffs", 1)
 	diroffsets = []
