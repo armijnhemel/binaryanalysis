@@ -29,7 +29,7 @@ extensions = {'.c'      : 'C',
              }
 
 def extractfunctionnames(srcdir):
-	kerneldirlen = len(srcdir)+1
+	srcdirlen = len(srcdir)+1
 	osgen = os.walk(srcdir)
 
 	try:
