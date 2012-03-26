@@ -9,7 +9,7 @@ This script tries to analyse binary blobs, using a "brute force" approach
 and pretty print the analysis in a simple XML format.
 '''
 
-import sys, os, os.path, magic, hashlib, subprocess, tempfile, shutil, stat, multiprocessing, cPickle
+import sys, os, os.path, magic, hashlib, subprocess, tempfile, shutil, stat, multiprocessing, cPickle, glob, tarfile
 from optparse import OptionParser
 import ConfigParser
 import datetime
@@ -424,6 +424,7 @@ def main(argv):
         parser = OptionParser()
 	parser.add_option("-b", "--binary", action="store", dest="fw", help="path to binary file", metavar="FILE")
 	parser.add_option("-c", "--config", action="store", dest="cfg", help="path to configuration file", metavar="FILE")
+	parser.add_option("-o", "--outputfile", action="store", dest="outputfile", help="path to output file", metavar="FILE")
 	parser.add_option("-z", "--cleanup", action="store_true", dest="cleanup", help="cleanup after analysis? (default: false)")
 	(options, args) = parser.parse_args()
 	if options.fw == None:
@@ -438,11 +439,21 @@ def main(argv):
 		try:
         		configfile = open(options.cfg, 'r')
 		except:
-			print "Need configuration file"
+			print >>sys.stderr, "Need configuration file"
 			sys.exit(1)
 	else:
-		print "Need configuration file"
+		print >>sys.stderr, "Need configuration file"
 		sys.exit(1)
+
+	if options.outputfile == None:
+        	parser.error("Path to output file needed")
+		sys.exit(1)
+	try:
+		os.stat(options.outputfile)
+		print >>sys.stderr, "output file already exists"
+		sys.exit(1)
+	except Exception, e:
+		pass
 
 	config.readfp(configfile)
 
@@ -575,11 +586,53 @@ def main(argv):
 	## * a copy of all the unpacked data
 	## * a copy of the report
 	## * a pickle of all data, it saves parsing the XML report (or any other format for that matter)
-	## TODO: make a postrunscan that copies artefacts we might have generated (pictures, hexdumps, etc.)
-	## to the dump directory
+	## We dump data here. There is some hardcoded data. Too bad.
+	sha256spack = []
+	for p in unpackreports:
+		if unpackreports[p].has_key('sha256'):
+			sha256spack.append(unpackreports[p]['sha256'])
+	for i in scans['postrunscans']:
+		if i['name'] == 'images':
+			os.mkdir(os.path.join(tempdir, 'images'))
+			if i.has_key('envvars'):
+				envvars = i['envvars'].split(':')
+				for e in envvars:
+					envsplit = e.split('=')
+					if envsplit[0] == 'BAT_IMAGEDIR':
+						for s in sha256spack:
+							copyfiles = glob.glob(os.path.join(envsplit[1], "*%s*.png" % s))
+							for c in copyfiles:
+								shutil.copy(c, os.path.join(tempdir, 'images'))
+		elif i['name'] == 'hexdump':
+			os.mkdir(os.path.join(tempdir, 'reports'))
+			if i.has_key('envvars'):
+				envvars = i['envvars'].split(':')
+				for e in envvars:
+					envsplit = e.split('=')
+					if envsplit[0] == 'BAT_REPORTDIR':
+						for s in sha256spack:
+							copyfiles = glob.glob(os.path.join(envsplit[1], "*%s*-hexdump.gz" % s))
+							for c in copyfiles:
+								shutil.copy(c, os.path.join(tempdir, 'reports'))
+			pass
 	picklefile = open('%s/scandata.pickle' % (tempdir,), 'wb')
 	cPickle.dump((unpackreports, leafreports, scans), picklefile)
 	picklefile.close()
+	## now add everything to a TAR archive
+	dumpfile = tarfile.TarFile(options.outputfile, 'w')
+	os.chdir(tempdir)
+	dumpfile.add('scandata.pickle')
+	dumpfile.add('data')
+	try:
+		os.stat('images')
+		dumpfile.add('images')
+	except:	pass
+	try:
+		os.stat('reports')
+		dumpfile.add('reports')
+	except:	pass
+	dumpfile.close()
+	
 
 if __name__ == "__main__":
         main(sys.argv)
