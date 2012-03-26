@@ -1,3 +1,7 @@
+2012-03-26
+* add tool to check whether or not a binary + libraries can be combined at
+runtime
+
 2012-03-24
 * remove unused and no longer maintained file
 

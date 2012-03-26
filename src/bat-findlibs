@@ -1,0 +1,209 @@
+#!/usr/bin/python
+
+## Binary Analysis Tool
+## Copyright 2012 Armijn Hemel for Tjaldur Software Governance Solutions
+## Licensed under Apache 2.0, see LICENSE file for details
+
+import os, os.path, sys, subprocess, hashlib, copy
+from optparse import OptionParser
+
+'''
+This program can be used to check whether a binary could be dynamically linked
+at runtime given the libraries in any subdirectory under a specified root path.
+'''
+
+def gethash(filename):
+	scanfile = open("%s/%s" % (path, filename), 'r')
+	h = hashlib.new('sha256')
+	scanfile.seek(0)
+	hashdata = scanfile.read(10000000)
+	while hashdata != '':
+		h.update(hashdata)
+		hashdata = scanfile.read(10000000)
+	scanfile.close()
+	return h.hexdigest()
+
+def scanArchitecture(scanfile):
+	p = subprocess.Popen(['readelf', '-h', "%s" % (scanfile,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		return None
+	for line in stanout.split('\n'):
+		if "Machine:" in line:
+			return line.split(':')[1].strip()
+
+## we need to find the correct dynamic libraries for an executable. There might be more than one copy or version
+## for a particular library (multiple file systems, etc.) and we might not know how the dynamic linker is configured,
+## or which file systems are mounted where and when.
+## We need to do the following:
+## * scan for compatible architecture
+## * multiple copies of libraries need to be dealt with properly
+## * handle symlinks, since not the fully qualified file name might have been used in the binary, but the name
+##   of a symlink
+def processLibs(libs, rootpath):
+	scanlibs = []
+	liboccurence = {}
+	'''
+	standardpaths = ['lib', 'usr/lib', 'usr/local/lib', 'lib64', 'usr/lib64', 'usr/local/lib64', 'usr/lib/perl5/CORE', 'usr/lib64/perl5/CORE', '.']
+	for lib in libs:
+		## TODO: make this configurable, but do it using some intelligence
+		## like standard library directories first:
+		## * /lib
+		## * /usr/lib
+		## etc.
+		## Typically this will be the files in result directory after
+		## running BAT unpacking
+		for p in standardpaths:
+			libpath = os.path.join(rootpath, p, lib)
+			if not os.path.lexists(libpath):
+				continue
+			libarch = scanArchitecture(libpath)
+			if arch == libarch:
+				scanlibs.append(libpath)
+				if not liboccurence.has_key(lib):
+					liboccurence[lib] = [libpath]
+				else:
+					liboccurence[lib].append([libpath])
+				if len(scanlibs) == len(libs):
+					return liboccurence
+	'''
+	## as long as we have not found all libraries we continue
+	if len(scanlibs) != len(libs):
+		osgen = os.walk(rootpath)
+		try:
+			while True:
+				i = osgen.next()
+				for lib in list(set(libs).difference(set(scanlibs))):
+					for dirpath in i[1]:
+						libpath = os.path.join(i[0], dirpath, lib)
+						if not os.path.lexists(libpath):
+							continue
+						libarch = scanArchitecture(libpath)
+						if arch == libarch and libpath not in scanlibs:
+							scanlibs.append(libpath)
+							if not liboccurence.has_key(lib):
+								liboccurence[lib] = [libpath]
+							else:
+								liboccurence[lib].append([libpath])
+							if len(scanlibs) == len(libs):
+								return liboccurence
+		except StopIteration, e:
+			print e
+	return liboccurence
+
+
+parser = OptionParser()
+parser.add_option("-b", "--binary", action="store", dest="fw", help="path to binary file", metavar="FILE")
+parser.add_option("-l", "--librootpath", action="store", dest="librootpath", help="root directory for libraries", metavar="DIR")
+(options, args) = parser.parse_args()
+
+if options.fw == None:
+	parser.error("Path to binary file needed")
+try:
+	os.stat(options.fw)
+except:
+	parser.error("Path to binary file needed")
+
+## TODO: we actually should be able to supply multiple root paths
+if options.librootpath == None:
+	parser.error("Path to root directory containing libraries needed")
+try:
+	os.stat(options.librootpath)
+except:
+	parser.error("Path to root directory containing libraries needed")
+
+arch = scanArchitecture(options.fw)
+if arch == None:
+	sys.exit(1)
+
+libs = []
+p = subprocess.Popen(['readelf', '-d', options.fw], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+(stanout, stanerr) = p.communicate()
+if p.returncode != 0:
+	sys.exit(1)
+for line in stanout.split('\n'):
+	if "Shared library:" in line:
+		libs.append(line.split(': ')[1][1:-1])
+
+p = subprocess.Popen(['readelf', '-W', '--dyn-syms', options.fw], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+(stanout, stanerr) = p.communicate()
+st = stanout.split("\n")
+funcstrings = []
+for s in st[3:]:
+	if len(s.split()) <= 7:
+		continue
+	functionstrings = s.split()
+	## we only want functions
+	if functionstrings[3] != 'FUNC' and functionstrings != 'IFUNC':
+		continue
+	## we don't want any local functions
+	elif functionstrings[6] != 'UND':
+		continue
+	## See http://gcc.gnu.org/ml/gcc/2002-06/msg00112.html
+	if functionstrings[7].split('@')[0] == '_Jv_RegisterClasses':
+		continue
+	## we can probably make use of the fact some are annotated with '@'
+	funcstrings.append(functionstrings[7].split('@')[0])
+
+
+liboccurence = processLibs(libs, options.librootpath)
+
+## something went wrong, we found less libraries than we need
+if len(liboccurence.keys()) < len(libs):
+	print >>sys.stderr, "libraries are missing, impossible to run this executable with these libraries"
+	sys.exit(1)
+
+scanlibs = []
+dupes = []
+for lib in liboccurence.keys():
+	if len(liboccurence[lib]) != 1:
+		## we have multiple candidates for this particular library, so what to do?
+		## if the files are identical (same checksum), we can skip them
+		libhashes = map(lambda x: gethash(x), liboccurence[lib])
+		if len(list(set(libhashes))) == 1:
+			scanlibs = scanlibs + [liboccurence[lib][0]]
+		## libs with the same name are actually different so remember them.
+		else:
+			dupes.append(lib)
+	else:
+		scanlibs = scanlibs + liboccurence[lib]
+
+foundFunctions = []
+for lib in list(set(scanlibs).difference(set(dupes))):
+	p = subprocess.Popen(['readelf', '-W', '--dyn-syms', lib], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	st = stanout.split("\n")
+	libfuncstrings = []
+	for s in st[3:]:
+		if len(s.split()) <= 7:
+			continue
+		libfunctionstrings = s.split()
+		if libfunctionstrings[3] != 'FUNC' and libfunctionstrings[3] != 'IFUNC':
+			continue
+		elif libfunctionstrings[6] == 'UND':
+			continue
+		libfuncstrings.append(libfunctionstrings[7].split('@')[0])
+	foundFunctions = foundFunctions + list(set(funcstrings).intersection(set(libfuncstrings)))
+
+## check if we have function names that we need, but could
+## not find in any of the libraries that we scanned
+## 'notfound' should be empty, otherwise we have missing libraries
+notfound = list(set(funcstrings).difference(set(foundFunctions)))
+
+## If 'dupes' is not empty there are duplicates. If there are duplicates for multiple
+## libraries it makes sense to group them based on the prefix: libs with the
+## same prefixes are on the same file system and are expected to be in the same
+## searchpath of the dynamic linker.
+## Not sure how to handle this yet
+
+if dupes != [] and notfound != []:
+	## create a working copy of notfound which we can modify
+	notfoundwc = copy.copy(notfound)
+	## for each lib in dupes, find stuff
+	## recurse, and run for every combination of libraries
+	print "multiple possibilities for libraries found"
+
+if notfound != []:
+	print "unaccounted for: ", notfound
+else:
+	print "all functions in %s could be found" % options.fw
