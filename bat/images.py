@@ -20,6 +20,9 @@ This should be run as a postrun scan
 
 import os, os.path, sys, subprocess, array, cPickle, tempfile
 from PIL import Image
+import matplotlib
+matplotlib.use('cairo')
+import pylab
 
 def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscandir, envvars={}):
 	if not unpackreport.has_key('sha256'):
@@ -84,6 +87,10 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscand
 	for i in leafscans:
 		if i.keys()[0] == 'ranking':
 			if i['ranking']['reports'] != []:
+				## this is done using pychart, and an external script using pychart
+				## It is quite a lot of overhead, so disabled
+				## Alternative method using matplotlib below
+				'''
 				pickledata = []
 				for j in i['ranking']['reports']:
 					pickledata.append((j[1], j[3]))
@@ -95,6 +102,33 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscand
 					print >>sys.stderr, stanerr
 				os.unlink(tmppickle[1])
 				## do the same for version information
+				'''
+				piedata = []
+				pielabels = []
+				totals = 0.0
+				others = 0.0
+				for j in i['ranking']['reports']:
+					## less than half a percent, that's not significant anymore
+					if j[3] < 0.5:
+						totals += j[3]
+						others += j[3]
+						if totals <= 99.0:
+							continue
+					if totals >= 99.0:
+						pielabels.append("others")
+						piedata.append(others + 100.0 - totals)
+						break
+					else:
+						pielabels.append(j[1])
+						piedata.append(j[3])
+						totals += j[3]
+				pylab.figure(1, figsize=(6.5,6.5))
+				ax = pylab.axes([0.2, 0.15, 0.6, 0.6])
+
+				pylab.pie(piedata, labels=pielabels)
+
+				pylab.savefig('%s/%s-piechart.png' % (imagedir, unpackreport['sha256']))
+				pylab.gcf().clear()
 				for j in i['ranking']['reports']:
 					if j[4] != {}:
 						tmppickle = tempfile.mkstemp()
