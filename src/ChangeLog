@@ -1,6 +1,9 @@
 2012-03-26
 * add tool to check whether or not a binary + libraries can be combined at
 runtime
+* replace piechart generation using external script and pychart with
+matplotlib. It's faster, doesn't require an external script and better fits
+the license.
 
 2012-03-24
 * remove unused and no longer maintained file
