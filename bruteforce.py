@@ -615,7 +615,8 @@ def main(argv):
 							for c in copyfiles:
 								shutil.copy(c, os.path.join(tempdir, 'reports'))
 		elif i['name'] == 'uniquehtml':
-			os.mkdir(os.path.join(tempdir, 'reports'))
+			if not os.path.exists(os.path.join(tempdir, 'reports')):
+				os.mkdir(os.path.join(tempdir, 'reports'))
 			if i.has_key('envvars'):
 				envvars = i['envvars'].split(':')
 				for e in envvars:
