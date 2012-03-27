@@ -48,10 +48,40 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 						uniquehtml = uniquehtml + "<hr><h2><a name=\"%s\" href=\"#%s\">Matches for: %s (%d)</a></h2>" % (h[0], h[0], h[0], len(h[1]))
 						for k in h[1]:
 							## we have a list of tuples, per unique string we have a list of sha256sums and meta info
+							## This is really hairy
 							if len(k) > 1:
-								uniquehtml = uniquehtml + "<h5>%s</h5><p><table><td><b>Filename</b></td><td><b>Version</b></td><td><b>Line number</b></td><td><b>SHA256</b></td></tr>" % cgi.escape(k[0])
-								uniqtablerows = map(lambda x: "<tr><td>%s</td><td><a href=\"unique:/%s#%d\">%s</a></td><td>%d</td><td>%s</td></tr>" % (x[3], x[0], x[2], x[1], x[2], x[0]), k[1])
-								uniquehtml = uniquehtml + reduce(lambda x, y: x + y, uniqtablerows) + "</table></p>\n"
+								uniquehtml = uniquehtml + "<h5>%s</h5><p><table><td><b>Filename</b></td><td><b>Version(s)</b></td><td><b>Line number</b></td><td><b>SHA256</b></td></tr>" % cgi.escape(k[0])
+								uniqtablerows = []
+								sh = {}
+								for s in k[1]:
+									(pv, fp) = s[3].split('/', 1)
+									## clean up some names
+									for e in ["+dfsg", "~dfsg", ".orig", ".dfsg1", ".dfsg2"]:
+										if pv.endswith(e):
+											pv = pv[:-len(e)]
+											break
+									if pv == "%s-%s" % (h[0], s[1]) or pv == "%s_%s" % (h[0], s[1]):
+										if sh.has_key(s[0]):
+											sh[s[0]].append((fp,s[1], s[2]))
+										else:
+											sh[s[0]] = [(fp, s[1], s[2])]
+									else:	
+										uniqtablerows.append("<tr><td>%s</td><td><a href=\"unique:/%s#%d\">%s</a></td><td>%d</td><td>%s</td></tr>\n" % (s[3], s[0], s[2], s[1], s[2], s[0]))
+								for s in sh:
+									## per checksum we have a list of (filename, version)
+									## Now we need to check if we only have one filename, or if there are multiple.
+									## If there is just one it is easy:
+									if len(set(map(lambda x: x[0], sh[s]))) == 1:
+										lines = sorted(set(map(lambda x: (x[2]), sh[s])))
+										versions = sorted(set(map(lambda x: (x[1]), sh[s])))
+										for v in lines:
+											versionline = reduce(lambda x, y: x + ", " + y, versions)
+											uniqtablerows.append("<tr><td>%s</td><td><a href=\"unique:/%s#%d\">%s</a></td><td>%d</td><td>%s</td></tr>\n" % (sh[s][0][0], s, v, versionline, v, s))
+									else:
+										for d in sh[s]:
+											uniqtablerows.append("<tr><td>%s</td><td><a href=\"unique:/%s#%d\">%s</a></td><td>%d</td><td>%s</td></tr>\n" % (d[0], s, d[2], d[1], d[2], s))
+									pass
+								uniquehtml = uniquehtml + reduce(lambda x, y: x + y, uniqtablerows, "") + "</table></p>\n"
 							else:
 								uniquehtml = uniquehtml + "<h5>%s</h5>" % cgi.escape(k[0])
 					uniquehtml = uniquehtml + "</body></html>"
