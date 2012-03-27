@@ -78,9 +78,17 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 										numlines = reduce(lambda x, y: x + ", " + y, map(lambda x: "<a href=\"unique:/%s#%d\">%d</a>" % (s, x, x), lines))
 										uniqtablerows.append("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (sh[s][0][0], versionline, numlines, s))
 									else:
+										'''
 										for d in sh[s]:
 											uniqtablerows.append("<tr><td>%s</td><td>%s</td><td><a href=\"unique:/%s#%d\">%d</a></td><td>%s</td></tr>\n" % (d[0], d[1], s, d[2], d[2], s))
-									pass
+										'''
+										for d in list(set(map(lambda x: x[0], sh[s]))):
+											filterd = filter(lambda x: x[0] == d, sh[s])
+											lines = sorted(set(map(lambda x: (x[2]), filterd)))
+											versions = sorted(set(map(lambda x: (x[1]), filterd)))
+											versionline = reduce(lambda x, y: x + ", " + y, versions)
+											numlines = reduce(lambda x, y: x + ", " + y, map(lambda x: "<a href=\"unique:/%s#%d\">%d</a>" % (s, x, x), lines))
+											uniqtablerows.append("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (d, versionline, numlines, s))
 								uniquehtml = uniquehtml + reduce(lambda x, y: x + y, uniqtablerows, "") + "</table></p>\n"
 							else:
 								uniquehtml = uniquehtml + "<h5>%s</h5>" % cgi.escape(k[0])
