@@ -66,7 +66,7 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 										else:
 											sh[s[0]] = [(fp, s[1], s[2])]
 									else:	
-										uniqtablerows.append("<tr><td>%s</td><td><a href=\"unique:/%s#%d\">%s</a></td><td>%d</td><td>%s</td></tr>\n" % (s[3], s[0], s[2], s[1], s[2], s[0]))
+										uniqtablerows.append("<tr><td>%s</td><td>%s</td><td><a href=\"unique:/%s#%d\">%d</a></td><td>%s</td></tr>\n" % (s[3], s[1], s[0], s[2], s[2], s[0]))
 								for s in sh:
 									## per checksum we have a list of (filename, version)
 									## Now we need to check if we only have one filename, or if there are multiple.
@@ -74,12 +74,12 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 									if len(set(map(lambda x: x[0], sh[s]))) == 1:
 										lines = sorted(set(map(lambda x: (x[2]), sh[s])))
 										versions = sorted(set(map(lambda x: (x[1]), sh[s])))
-										for v in lines:
-											versionline = reduce(lambda x, y: x + ", " + y, versions)
-											uniqtablerows.append("<tr><td>%s</td><td><a href=\"unique:/%s#%d\">%s</a></td><td>%d</td><td>%s</td></tr>\n" % (sh[s][0][0], s, v, versionline, v, s))
+										versionline = reduce(lambda x, y: x + ", " + y, versions)
+										numlines = reduce(lambda x, y: x + ", " + y, map(lambda x: "<a href=\"unique:/%s#%d\">%d</a>" % (s, x, x), lines))
+										uniqtablerows.append("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (sh[s][0][0], versionline, numlines, s))
 									else:
 										for d in sh[s]:
-											uniqtablerows.append("<tr><td>%s</td><td><a href=\"unique:/%s#%d\">%s</a></td><td>%d</td><td>%s</td></tr>\n" % (d[0], s, d[2], d[1], d[2], s))
+											uniqtablerows.append("<tr><td>%s</td><td>%s</td><td><a href=\"unique:/%s#%d\">%d</a></td><td>%s</td></tr>\n" % (d[0], d[1], s, d[2], d[2], s))
 									pass
 								uniquehtml = uniquehtml + reduce(lambda x, y: x + y, uniqtablerows, "") + "</table></p>\n"
 							else:
