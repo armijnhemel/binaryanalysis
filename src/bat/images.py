@@ -47,33 +47,35 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscand
 		except Exception, e:
 			return
 
-	fwfile = open("%s/%s" % (scantempdir, filename))
+	## this stuff is easily cached
+	if not os.path.exists("%s/%s.png" % (imagedir, unpackreport['sha256'])):
+		fwfile = open("%s/%s" % (scantempdir, filename))
 
-	## this is very inefficient for large files, but we *really* need all the data :-(
-	fwdata = fwfile.read()
-	fwfile.close()
+		## this is very inefficient for large files, but we *really* need all the data :-(
+		fwdata = fwfile.read()
+		fwfile.close()
 
-	fwlen = len(fwdata)
+		fwlen = len(fwdata)
 
-	if fwlen > 512:
-		height = 512
-	else:
-		height = fwlen
-	width = fwlen/height
+		if fwlen > 512:
+			height = 512
+		else:
+			height = fwlen
+		width = fwlen/height
 
-	## we might need to add some bytes so we can create a valid picture
-	if fwlen%height > 0:
-		width = width + 1
-		for i in range(0, height - (fwlen%height)):
-			fwdata = fwdata + chr(0)
+		## we might need to add some bytes so we can create a valid picture
+		if fwlen%height > 0:
+			width = width + 1
+			for i in range(0, height - (fwlen%height)):
+				fwdata = fwdata + chr(0)
 
-	imgbuffer = buffer(bytearray(fwdata))
+		imgbuffer = buffer(bytearray(fwdata))
 
-	im = Image.frombuffer("L", (height, width), imgbuffer, "raw", "L", 0, 1)
-	im.save("%s/%s.png" % (imagedir, unpackreport['sha256']))
-	if width > 100:
-		imthumb = im.thumbnail((height/4, width/4))
-		im.save("%s/%s-thumbnail.png" % (imagedir, unpackreport['sha256']))
+		im = Image.frombuffer("L", (height, width), imgbuffer, "raw", "L", 0, 1)
+		im.save("%s/%s.png" % (imagedir, unpackreport['sha256']))
+		if width > 100:
+			imthumb = im.thumbnail((height/4, width/4))
+			im.save("%s/%s-thumbnail.png" % (imagedir, unpackreport['sha256']))
 
 	'''
 	## generate histogram
