@@ -614,7 +614,17 @@ def main(argv):
 							copyfiles = glob.glob(os.path.join(envsplit[1], "*%s*-hexdump.gz" % s))
 							for c in copyfiles:
 								shutil.copy(c, os.path.join(tempdir, 'reports'))
-			pass
+		elif i['name'] == 'uniquehtml':
+			os.mkdir(os.path.join(tempdir, 'reports'))
+			if i.has_key('envvars'):
+				envvars = i['envvars'].split(':')
+				for e in envvars:
+					envsplit = e.split('=')
+					if envsplit[0] == 'BAT_REPORTDIR':
+						for s in sha256spack:
+							copyfiles = glob.glob(os.path.join(envsplit[1], "*%s*-unique.html" % s))
+							for c in copyfiles:
+								shutil.copy(c, os.path.join(tempdir, 'reports'))
 	picklefile = open('%s/scandata.pickle' % (tempdir,), 'wb')
 	cPickle.dump((unpackreports, leafreports, scans), picklefile)
 	picklefile.close()
