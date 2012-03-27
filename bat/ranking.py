@@ -420,12 +420,14 @@ def extractGeneric(lines, path, language='C', envvars=None):
 				## to GPLv3+) so the version number can be very significant.
 				## determinelicense should *always* imply determineversion
 				if determineversion or determinelicense:
-					c.execute("select distinct sha256, linenumber from extracted_file where programstring=?", (line,))
+					c.execute("select distinct sha256, linenumber, language from extracted_file where programstring=?", (line,))
 					versionsha256s = c.fetchall()
 
 					pv = {}
 					line_sha256_version = []
 					for s in versionsha256s:
+						if s[2] != language:
+							continue
 						if not sha256_versions.has_key(s[0]):
 							c.execute("select distinct version, package, filename from processed_file where sha256=?", (s[0],))
 							versions = c.fetchall()
