@@ -4,7 +4,7 @@
 ## Copyright 2010-2012 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
-import sys, os, string, re
+import sys, os, os.path, string, re
 from optparse import OptionParser
 import sqlite3
 
@@ -29,26 +29,24 @@ extensions = {'.c'      : 'C',
              }
 
 def extractfunctionnames(srcdir):
-	srcdirlen = len(srcdir)+1
+	srcdirlen = len(os.path.normpath(srcdir)) + 1
 	osgen = os.walk(srcdir)
 
 	try:
 		while True:
                 	i = osgen.next()
-			## everything inside the Documentation directory can be skipped for now
-			if "/Documentation" in i[0]:
-				continue
                 	for p in i[2]:
 				p_nocase = p.lower()
 				## right now we are just interested in C/C++/assembler files
 				for extension in extensions.keys():
                                 	if (p_nocase.endswith(extension)):
-						source = open("%s/%s" % (i[0], p)).read()
+						source = open(os.path.join(i[0], p)).read()
 		
 						results = []
 						for funex in funexprs:
 							results = results + funex.findall(source)
-						print results, i[0] + '/' + p
+						if results != []:
+							print results, os.path.join(i[0][srcdirlen:], p)
 	
 	except StopIteration:
 		pass
