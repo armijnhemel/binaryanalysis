@@ -1451,8 +1451,6 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, envvars
 			diroffsets.append((ext2tmpdir, offset - 0x438, ext2size))
 			blacklist.append((offset - 0x438, offset - 0x438 + ext2size))
 			counter = counter + 1
-			## this needs to be moved to unpackExt2fs, since it fails if 'filename' contains
-			## an ext2 file system, but has data prepended.
 		else:
 			os.rmdir(tmpdir)
 	datafile.close()
