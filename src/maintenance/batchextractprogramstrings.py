@@ -314,12 +314,12 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 						if extensions[extension] == 'C':
 							source = open(os.path.join(i[0], p)).read()
 
-						results = []
-						for funex in funexprs:
-							results = results + funex.findall(source)
-						if results != []:
-							for res in list(set(results)):
-								cursor.execute('''insert into extracted_function (sha256, functionname) values (?,?)''', (filehash, res))
+							results = []
+							for funex in funexprs:
+								results = results + funex.findall(source)
+							if results != []:
+								for res in list(set(results)):
+									cursor.execute('''insert into extracted_function (sha256, functionname) values (?,?)''', (filehash, res))
 
 	except Exception, e:
 		if str(e) != "":
