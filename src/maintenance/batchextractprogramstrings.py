@@ -30,6 +30,9 @@ tarmagic = ['POSIX tar archive (GNU)'
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
+funexprs = []
+funexprs.append(re.compile("(?:static|extern|unsigned|const|void|int)\s+(?:\w+\s+)*\*?\s*(\w+)\s*\(", re.MULTILINE))
+
 ## list of extensions, plus what language they should be mapped to
 ## This is not necessarily correct, but right now it is the best we have.
 extensions = {'.c'      : 'C',
@@ -308,7 +311,16 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 						for res in sqlres:
 							(pstring, linenumber) = res
 							cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (pstring, filehash, extensions[extension], linenumber))
-							pass
+						if extensions[extension] == 'C':
+							source = open(os.path.join(i[0], p)).read()
+
+						results = []
+						for funex in funexprs:
+							results = results + funex.findall(source)
+						if results != []:
+							for res in list(set(results)):
+								cursor.execute('''insert into extracted_function (sha256, functionname) values (?,?)''', (filehash, res))
+
 	except Exception, e:
 		if str(e) != "":
 			print >>sys.stderr, package, version, e
@@ -474,32 +486,36 @@ def main(argv):
         try:
 		## Keep an archive of which packages and archive files (tar.gz, tar.bz2, etc.) we've already
 		## processed, so we don't repeat work.
-		c.execute('''create table processed (package text, version text, filename text, origin text, sha256 text)''')
-		c.execute('''create index processed_index on processed(package, version)''')
+		c.execute('''create table if not exists processed (package text, version text, filename text, origin text, sha256 text)''')
+		c.execute('''create index if not exists processed_index on processed(package, version)''')
 
 		## Since there is a lot of duplication inside source packages we store strings per checksum
 		## which we can later link with files
-		c.execute('''create table processed_file (package text, version text, filename text, sha256 text)''')
-		c.execute('''create index processedfile_index on processed_file(sha256)''')
-		c.execute('''create index processedfile__package_index on processed_file(package)''')
-		c.execute('''create unique index processedfile_package_index_unique on processed_file(package, version, filename, sha256)''')
+		c.execute('''create table if not exists processed_file (package text, version text, filename text, sha256 text)''')
+		c.execute('''create index if not exists processedfile_index on processed_file(sha256)''')
+		c.execute('''create index if not exists processedfile__package_index on processed_file(package)''')
+		c.execute('''create unique index if not exists processedfile_package_index_unique on processed_file(package, version, filename, sha256)''')
 
 		## Store the extracted strings per checksum, not per (package, version, filename).
 		## This saves a lot of space in the database
 		## The field 'language' denotes what 'language' (family) the file the string is extracted from
 		## is in. Current values: 'C' (C and C++) and Java
-		c.execute('''create table extracted_file (programstring text, sha256 text, language text, linenumber int)''')
-		c.execute('''create index programstring_index on extracted_file(programstring)''')
-		c.execute('''create index extracted_hash on extracted_file(sha256)''')
-		c.execute('''create index extracted_language on extracted_file(language);''')
+		c.execute('''create table if not exists extracted_file (programstring text, sha256 text, language text, linenumber int)''')
+		c.execute('''create index if not exists programstring_index on extracted_file(programstring)''')
+		c.execute('''create index if not exists extracted_hash on extracted_file(sha256)''')
+		c.execute('''create index if not exists extracted_language on extracted_file(language);''')
 
 		## Store the extracted licenses per checksum.
-		c.execute('''create table licenses (sha256 text, license text, scanner text, version text)''')
-		c.execute('''create index license_index on licenses(sha256);''')
+		c.execute('''create table if not exists licenses (sha256 text, license text, scanner text, version text)''')
+		c.execute('''create index if not exists license_index on licenses(sha256);''')
 
 		## Store the comments extracted by Ninka per checksum.
-		c.execute('''create table ninkacomments (sha256 text, license text, scanner text, version text)''')
-		c.execute('''create index comments_index on ninkacomments(sha256);''')
+		c.execute('''create table if not exists ninkacomments (sha256 text, license text, scanner text, version text)''')
+		c.execute('''create index if not exists comments_index on ninkacomments(sha256);''')
+
+		## Store the function names extracted, per checksum
+		c.execute('''create table if not exists extracted_function (sha256 text, functionname text)''')
+		c.execute('''create index if not exists function_index on extracted_function(sha256);''')
 		conn.commit()
 	except Exception, e:
 		print >>sys.stderr, e
