@@ -1445,30 +1445,14 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, envvars
 		if not checkExt2fs(ext2checkdata, 0, tmpdir):
 			os.rmdir(tmpdir)
 			continue
-		res = unpackExt2fs(filename, offset - 0x438, tmpdir)
+		res = unpackExt2fs(filename, offset - 0x438, tmpdir, unpackenv=unpackenv)
 		if res != None:
 			(ext2tmpdir, ext2size) = res
 			diroffsets.append((ext2tmpdir, offset - 0x438, ext2size))
+			blacklist.append((offset - 0x438, offset - 0x438 + ext2size))
+			counter = counter + 1
 			## this needs to be moved to unpackExt2fs, since it fails if 'filename' contains
 			## an ext2 file system, but has data prepended.
-			p = subprocess.Popen(['tune2fs', '-l', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, env=unpackenv)
-			(stanout, stanerr) = p.communicate()
-			if p.returncode == 0:
-				if len(stanerr) == 0:
-					blockcount = 0
-					blocksize = 0
-					## we want block count and block size
-					for line in stanout.split("\n"):
-						if 'Block count' in line:
-							blockcount = int(line.split(":")[1].strip())
-						if 'Block size' in line:
-							blocksize = int(line.split(":")[1].strip())
-					blacklist.append((offset - 0x438, offset - 0x438 + blockcount * blocksize))
-					counter = counter + 1
-				else:
-					os.rmdir(tmpdir)
-			else:
-				os.rmdir(tmpdir)
 		else:
 			os.rmdir(tmpdir)
 	datafile.close()
@@ -1497,7 +1481,7 @@ def checkExt2fs(data, offset, tempdir=None):
 	return True
 
 ## Unpack an ext2 file system using e2tools and some custom written code from our own ext2 module
-def unpackExt2fs(filename, offset, tempdir=None):
+def unpackExt2fs(filename, offset, tempdir=None, unpackenv={}):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
 	tmpdir = unpacksetup(tempdir)
@@ -1507,8 +1491,29 @@ def unpackExt2fs(filename, offset, tempdir=None):
 	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
 	ext2.copyext2fs(tmpfile[1], tmpdir)
-	os.unlink(tmpfile[1])
+
+	## determine size
 	ext2size = 0
+	p = subprocess.Popen(['tune2fs', '-l', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, env=unpackenv)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode == 0:
+		if len(stanerr) == 0:
+			blockcount = 0
+			blocksize = 0
+			## we want block count and block size
+			for line in stanout.split("\n"):
+				if 'Block count' in line:
+					blockcount = int(line.split(":")[1].strip())
+				if 'Block size' in line:
+					blocksize = int(line.split(":")[1].strip())
+			ext2size = blockcount * blocksize
+		else:
+			## do something here
+			pass
+	else:
+		## do something here
+		pass
+	os.unlink(tmpfile[1])
 	return (tmpdir, ext2size)
 
 ## tries to unpack stuff using zcat. If it is successful, it will
