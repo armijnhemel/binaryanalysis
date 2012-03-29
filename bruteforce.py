@@ -276,6 +276,7 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize)):
 			if list(set(noscans).intersection(set(tags))) != []:
 				continue
 		report = {}
+		report['tags'] = tags
 		module = scan['module']
 		method = scan['method']
 		## if there is extra information we need to pass, like locations of databases
