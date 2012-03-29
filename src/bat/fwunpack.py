@@ -1913,13 +1913,10 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 
 ## tries to unpack stuff using lzma -cd. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
-## With XZ Utils >= 5.0.0 we should be able to use the -l option for integrity
-## testing. It will not be faster, but probably more accurate.
-## This would require Fedora 15 or later (not sure about which Ubuntu).
+## Newer versions of XZ (>= 5.0.0) have an option to test and list archives.
+## Unfortunately this does not work for files with trailing data, so we can't
+## use it to filter out "bad" files.
 def unpackLZMA(filename, offset, filesize, tempdir=None):
-	## first unpack things, write things to a file and return
-	## the directory if the file is not empty
-	## Assumes (for now) that lzma is in the path
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
@@ -2345,7 +2342,7 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 					os.unlink(tmpfile[1])
 					os.rmdir(tmpdir)
 					blacklist.append((0,len(data)))
-					return (diroffsets, blacklist, ['png'])
+					return (diroffsets, blacklist, ['graphics', 'png'])
 				else:
 					diroffsets.append((tmpdir, offset, 0))
 					counter = counter + 1
