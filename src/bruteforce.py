@@ -261,6 +261,7 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize)):
                             , "romfs filesystem, version 1"
                             ]
 
+	reports.append({'tags': tags})
 	for scan in scans:
 		## TODO: rework this. Having blacklists is enough for this.
 		skip = False
@@ -276,7 +277,6 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize)):
 			if list(set(noscans).intersection(set(tags))) != []:
 				continue
 		report = {}
-		report['tags'] = tags
 		module = scan['module']
 		method = scan['method']
 		## if there is extra information we need to pass, like locations of databases
