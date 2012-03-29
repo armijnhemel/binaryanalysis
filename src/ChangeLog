@@ -1,3 +1,7 @@
+2012-03-29
+* add a very simplistic method to tag binary XML for Android (file name check,
+plus the first four bytes)
+
 2012-03-26
 * add tool to check whether or not a binary + libraries can be combined at
 runtime
