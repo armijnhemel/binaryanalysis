@@ -600,7 +600,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 	tmpdir = dirsetup(tempdir, filename, "exe", counter)
 	res = unpack7z(filename, 0, tmpdir)
 	if res != None:
-		diroffsets.append((res, 0, os.stat(filename).st_siz))
+		diroffsets.append((res, 0, os.stat(filename).st_size))
 		blacklist.append((0, os.stat(filename).st_size))
 		return (diroffsets, blacklist, [])
 	else:
