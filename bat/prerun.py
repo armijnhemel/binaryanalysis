@@ -181,3 +181,23 @@ def verifyBZ2(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags.append("bz2")
 	newtags.append("compressed")
 	return newtags
+
+## verify if this is an Android "binary XML" file. We check if the name of the
+## file ends on '.xml', plus check the first four bytes of the file
+## If it is an Android XML file, we mark it as a 'resource' file
+def verifyAndroidXML(filename, tempdir=None, tags=[], offsets={}, envvars=None):
+	newtags = []
+	if not 'binary' in tags:
+		return newtags
+	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags:
+		return newtags
+	if not filename.endswith('.xml'):
+		return newtags
+	## now we read the first four bytes
+	androidfile = open(filename, 'rb')
+	androidbytes = androidfile.read(4)
+	androidfile.close()
+	if androidbytes == '\x03\x00\x08\x00':
+		newtags.append('androidxml')
+		newtags.append('resource')
+	return newtags
