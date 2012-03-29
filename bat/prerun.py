@@ -183,7 +183,7 @@ def verifyBZ2(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	return newtags
 
 ## verify if this is an Android "binary XML" file. We check if the name of the
-## file ends on '.xml', plus check the first four bytes of the file
+## file ends in '.xml', plus check the first four bytes of the file
 ## If it is an Android XML file, we mark it as a 'resource' file
 def verifyAndroidXML(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
@@ -199,5 +199,31 @@ def verifyAndroidXML(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	androidfile.close()
 	if androidbytes == '\x03\x00\x08\x00':
 		newtags.append('androidxml')
+		newtags.append('resource')
+	return newtags
+
+## verify if this is a GNU message catalog. We check if the name of the
+## file ends in '.po', plus check the first few bytes of the file
+## If it is a GNU message catalog, we mark it as a 'resource' file
+def verifyMessageCatalog(filename, tempdir=None, tags=[], offsets={}, envvars=None):
+	newtags = []
+	if not 'binary' in tags:
+		return newtags
+	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags:
+		return newtags
+	if not filename.endswith('.mo'):
+		return newtags
+	## now we read the first four bytes
+	catalogfile = open(filename, 'rb')
+	catbytes = catalogfile.read(4)
+	catalogfile.close()
+	if catbytes == '\xde\x12\x04\x95' or catbytes == '\x95\x04\x12\xde':
+		## now check if it is a valid file by running msgunfmt
+		p = subprocess.Popen(['msgunfmt', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			return newtags
+		## we now know for sure this is a valid GNU message catalog, so tag it as such
+		newtags.append('messagecatalog')
 		newtags.append('resource')
 	return newtags
