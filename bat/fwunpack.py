@@ -2271,7 +2271,7 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 					os.unlink(tmpfile[1])
 					os.rmdir(tmpdir)
 					blacklist.append((0, os.stat(filename).st_size))
-					return (diroffsets, blacklist, ['gif'])
+					return (diroffsets, blacklist, ['graphics', 'gif'])
 				else:
 					diroffsets.append((tmpdir, offset, 0))
 					counter = counter + 1
