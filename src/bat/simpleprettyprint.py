@@ -32,6 +32,7 @@ def generateNodes(elem, root, confs):
 ## one.
 ## All interesting data can be found in the 'res' parameter
 def prettyprintresxmlsnippet(res, root, unpackscans, programscans):
+	topnode = None
 	## this should always be len == 1, have more checks
 	for i in res:
 		for confs in programscans:
@@ -46,14 +47,14 @@ def prettyprintresxmlsnippet(res, root, unpackscans, programscans):
 					exec "from %s import %s as bat_%s" % (module, method, method)
 					xmlres = eval("bat_%s(res[i], root, envvars)" % (method))
 					if xmlres != None:
-                				topnode = xmlres
+						topnode = xmlres
 					else:
 						topnode = None
 				except Exception, e:
-                			topnode = root.createElement(i)
-                			tmpnodetext = xml.dom.minidom.Text()
-                			tmpnodetext.data = str(res[i])
-                			topnode.appendChild(tmpnodetext)
+					topnode = root.createElement(i)
+					tmpnodetext = xml.dom.minidom.Text()
+					tmpnodetext.data = str(res[i])
+					topnode.appendChild(tmpnodetext)
 		for confs in unpackscans:
 			if i == confs['name']:
                 		topnode = root.createElement('unpack')
