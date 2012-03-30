@@ -314,6 +314,7 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 						if extensions[extension] == 'C':
 							source = open(os.path.join(i[0], p)).read()
 
+							## TODO: rewrite to use ctags instead
 							results = []
 							for funex in funexprs:
 								results = results + funex.findall(source)
