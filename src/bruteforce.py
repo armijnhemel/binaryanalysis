@@ -76,7 +76,9 @@ def mergeBlacklist(blacklist):
 		blacklist = res
 	return blacklist
 
-
+## method to filter scans, based on the tags that were found for a
+## file, plus a list of tags that the scan should skip.
+## This is done to avoid scans running unnecessarily.
 def filterScans(scans, tags):
 	filteredscans = []
 	for scan in scans:
@@ -90,7 +92,7 @@ def filterScans(scans, tags):
 			filteredscans.append(scan)
 	return filteredscans
 
-## computer a SHA256 hash. This is done in chunks to prevent a big file from
+## compute a SHA256 hash. This is done in chunks to prevent a big file from
 ## being read in its entirety at once, slowing down a machine.
 def gethash(path, filename):
 	scanfile = open("%s/%s" % (path, filename), 'r')
@@ -192,6 +194,7 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir)):
 	scanfirst = []
 
 	## Filter scans
+	## TODO: use filterScans
 	for unpackscan in scans:
 		if unpackscan['noscan'] != None:
 			noscans = unpackscan['noscan'].split(':')
