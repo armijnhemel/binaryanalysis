@@ -517,6 +517,7 @@ def main(argv):
 		## Store the function names extracted, per checksum
 		c.execute('''create table if not exists extracted_function (sha256 text, functionname text)''')
 		c.execute('''create index if not exists function_index on extracted_function(sha256);''')
+		c.execute('''create index functionname_index on extracted_function(functionname)''')
 		conn.commit()
 	except Exception, e:
 		print >>sys.stderr, e
