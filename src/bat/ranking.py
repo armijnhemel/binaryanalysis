@@ -20,7 +20,7 @@ BAT_SQLITE_AVG_$LANGUAGE          :: location of database containing average str
 BAT_SQLITE_STRINGSCACHE_$LANGUAGE :: location of database that caches strings in $LANGUAGE per package future lookups
 '''
 
-import string, re, os, os.path, magic, sys, tempfile, shutil
+import string, re, os, os.path, magic, sys, tempfile, shutil, copy
 import sqlite3
 import subprocess
 import xml.dom.minidom
@@ -108,6 +108,9 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 			## constants :-(
 
         		if "ELF" in mstype and blacklist == []:
+				#extractDynamic(path, envvars)
+				#print >>sys.stderr, path
+				#return
 				datafile = open(path, 'rb')
 				data = datafile.read()
 				datafile.close()
@@ -144,23 +147,6 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
                         				lines.append(printstring)
 					os.unlink(i)
 
-				'''
-				## sometimes we can extract useful information from the dynamic symbols
-				## but mostly they lead to false positives.
-			 	p = subprocess.Popen(['readelf', '-W', '--dyn-syms', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-				(stanout, stanerr) = p.communicate()
-				st = stanout.split("\n")
-
-				for s in st[3:]:
-        				if len(s.split()) <= 7:
-                				continue
-        				printstring = s.split()[7]
-					## remove references to functions in other libraries such as glibc
-        				if '@' in printstring:
-                				continue
-        				if len(printstring) >= stringcutoff:
-						lines.append(printstring)
-				'''
 
 			else:
 				## extract all strings from the binary. Only look at strings
@@ -245,6 +231,65 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 			## cleanup the tempfile
 			os.unlink(tmpfile[1])
                 return None
+
+def extractDynamic(scanfile, envvars):
+	scanenv = os.environ.copy()
+	if envvars != None:
+		for en in envvars.split(':'):
+			try:
+				(envname, envvalue) = en.split('=')
+				scanenv[envname] = envvalue
+			except Exception, e:
+				pass
+	## sometimes we can extract useful information from the dynamic symbols
+	## but mostly they lead to false positives.
+ 	p = subprocess.Popen(['readelf', '-W', '--dyn-syms', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		return
+
+	st = stanout.strip().split("\n")
+
+	if st == '':
+		return
+
+	## open the database containing all the strings that were extracted
+	## from source code.
+	conn = sqlite3.connect(scanenv.get('BAT_SQLITE_DB', '/tmp/master'))
+	## we have byte strings in our database, not utf-8 characters...I hope
+	conn.text_factory = str
+	c = conn.cursor()
+
+	## keep a list of versions per sha256, since source files often contain more than one line
+	sha256_packages = {}
+	pkgcnt = {}
+	for i in st[3:]:
+		dynstr = i.split()
+		if dynstr[6] == 'UND':
+			continue
+		if dynstr[3] != 'FUNC':
+			continue
+		## every program has 'main', so skip
+		if dynstr[7] == 'main':
+			continue
+		## _init _fini _start are in the ELF standard and/or added by GCC to everything, so skip
+		if dynstr[7] == '_init' or dynstr[7] == '_fini' or dynstr[7] == '_start':
+			continue
+		## __libc_csu_init __libc_csu_fini are in the ELF standard and/or added by GCC to everything, so skip
+		if dynstr[7] == '__libc_csu_init' or dynstr[7] == '__libc_csu_fini':
+			continue
+		c.execute('select sha256 from extracted_function where functionname=?', (dynstr[7],))
+		res = c.fetchall()
+		pkgs = []
+		for r in res:
+			if sha256_packages.has_key(r[0]):
+				pkgs = pkgs + copy.copy(sha256_packages[r[0]])
+				continue
+			c.execute('select package, version from processed_file where sha256=?', r)
+			s = c.fetchall()
+			pkgs = pkgs + s
+			sha256_packages[r[0]] = s
+		print >>sys.stderr, list(set(pkgs)), dynstr[7]
 
 ## Look up strings in the database and determine which packages/versions/licenses were used
 def extractGeneric(lines, path, language='C', envvars=None):
