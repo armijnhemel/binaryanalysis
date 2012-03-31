@@ -90,6 +90,8 @@ def filterScans(scans, tags):
 			filteredscans.append(scan)
 	return filteredscans
 
+## computer a SHA256 hash. This is done in chunks to prevent a big file from
+## being read in its entirety at once, slowing down a machine.
 def gethash(path, filename):
 	scanfile = open("%s/%s" % (path, filename), 'r')
 	h = hashlib.new('sha256')
@@ -207,6 +209,7 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir)):
 
 	## sort 'unpackscans' in decreasing priority, so highest
 	## priority scans are run first.
+	## TODO: sort per priority per offset for scans that are the most promising
 	unpackscans = sorted(unpackscans, key=lambda x: x['priority'], reverse=True)
 
 	## prepend the most promising scans at offset 0 (if any)
@@ -287,7 +290,6 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize)):
 	## not rely on this.
 	programignorelist = [ "POSIX tar archive (GNU)"
                             , "Zip archive data, at least v1.0 to extract"
-                            , "romfs filesystem, version 1"
                             ]
 
 	reports.append({'tags': tags})
@@ -508,7 +510,7 @@ def main(argv):
 	shutil.copy(scan_binary, scantempdir)
 
 	## multithread it. Sometimes we hit http://bugs.python.org/issue9207
-	## Amount of threads can be configured in the configuration file, but
+	## Threading can be configured in the configuration file, but
 	## often it is wise to have it set to 'no'. This is because ranking writes
 	## to databases and you don't want concurrent writes.
 
