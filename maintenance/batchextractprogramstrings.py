@@ -30,9 +30,6 @@ tarmagic = ['POSIX tar archive (GNU)'
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
-funexprs = []
-funexprs.append(re.compile("(?:static|extern|unsigned|const|void|int)\s+(?:\w+\s+)*\*?\s*(\w+)\s*\(", re.MULTILINE))
-
 ## list of extensions, plus what language they should be mapped to
 ## This is not necessarily correct, but right now it is the best we have.
 extensions = {'.c'      : 'C',
@@ -316,8 +313,18 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 
 							## TODO: rewrite to use ctags instead
 							results = []
-							for funex in funexprs:
-								results = results + funex.findall(source)
+							p2 = subprocess.Popen(["ctags", "-f", "-", "%s/%s" % (i[0], p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+							(stanout2, stanerr2) = p2.communicate()
+							if p2.returncode != 0:
+								results = []
+							elif stanout2.strip() == "":
+								results = []
+							else:
+								stansplit = stanout2.strip().split("\n")
+								for res in stansplit:
+									csplit = res.strip().split('\t')
+									if csplit[3] == 'f':
+										results.append(csplit[0])
 							if results != []:
 								for res in list(set(results)):
 									cursor.execute('''insert into extracted_function (sha256, functionname) values (?,?)''', (filehash, res))
@@ -517,7 +524,7 @@ def main(argv):
 		## Store the function names extracted, per checksum
 		c.execute('''create table if not exists extracted_function (sha256 text, functionname text)''')
 		c.execute('''create index if not exists function_index on extracted_function(sha256);''')
-		c.execute('''create index functionname_index on extracted_function(functionname)''')
+		c.execute('''create index if not exists functionname_index on extracted_function(functionname)''')
 		conn.commit()
 	except Exception, e:
 		print >>sys.stderr, e
