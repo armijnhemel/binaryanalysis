@@ -44,7 +44,7 @@ def generatelist(filedir, origin):
 						(packageversion, extension, compression) = p.rsplit('.', 2)
 					except:
 						continue
-					if not (extension in ["tar"] and compression in ["gz", "bz2"]):
+					if not (extension in ["tar"] and compression in ["gz", "bz2", "xz"]):
 						continue
 				## exceptions go here
 				if "wireless_tools" in packageversion:
