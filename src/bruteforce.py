@@ -628,7 +628,8 @@ def main(argv):
 			sha256spack.append(unpackreports[p]['sha256'])
 	for i in scans['postrunscans']:
 		if i['name'] == 'images':
-			os.mkdir(os.path.join(tempdir, 'images'))
+			if not os.path.exists(os.path.join(tempdir, 'images')):
+				os.mkdir(os.path.join(tempdir, 'images'))
 			if i.has_key('envvars'):
 				envvars = i['envvars'].split(':')
 				for e in envvars:
@@ -639,7 +640,8 @@ def main(argv):
 							for c in copyfiles:
 								shutil.copy(c, os.path.join(tempdir, 'images'))
 		elif i['name'] == 'hexdump':
-			os.mkdir(os.path.join(tempdir, 'reports'))
+			if not os.path.exists(os.path.join(tempdir, 'reports')):
+				os.mkdir(os.path.join(tempdir, 'reports'))
 			if i.has_key('envvars'):
 				envvars = i['envvars'].split(':')
 				for e in envvars:
