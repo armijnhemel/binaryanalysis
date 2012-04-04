@@ -99,6 +99,8 @@ def verifyGraphics(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 		return newtags
 	newtags = verifyJPEG(filename, tempdir, tags, offsets, envvars)
 	if newtags == []:
+		newtags = verifyPNG(filename, tempdir, tags, offsets, envvars)
+	if newtags == []:
 		newtags = verifyBMP(filename, tempdir, tags, offsets, envvars)
 	return newtags
 
@@ -126,6 +128,24 @@ def verifyJPEG(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	if len(stanerr.strip().split("\n")) > 1:
 		return newtags
 	newtags.append("jpeg")
+	newtags.append("graphics")
+	return newtags
+
+## very quick and dirty method to check whether or not a file is a PNG
+def verifyPNG(filename, tempdir=None, tags=[], offsets={}, envvars=None):
+	newtags = []
+	if offsets['png'] == [] or offsets['pngtrailer'] == []:
+		return newtags
+	if offsets['png'][0] != 0:
+		return newtags
+	if (offsets['pngtrailer'][0] - 8) != os.stat(filename).st_size -1:
+		return newtags
+	## now we have a good chance that we have a PNG image, so verify
+	p = subprocess.Popen(['webpng', '-d', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		return newtags
+	newtags.append("png")
 	newtags.append("graphics")
 	return newtags
 
