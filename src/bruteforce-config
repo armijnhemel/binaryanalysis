@@ -3,7 +3,7 @@
 #############################
 
 [batconfig]
-multiprocessing = no
+multiprocessing = yes
 module = bat.simpleprettyprint
 #module = bat.ppknowledgebase
 output = prettyprintresxml
@@ -277,7 +277,7 @@ module      = bat.fwunpack
 method      = searchUnpackPNG
 priority    = 0
 magic       = png:pngtrailer
-noscan      = text:xml:jpeg:bmp:pdf:gif:compressed
+noscan      = text:xml:jpeg:bmp:pdf:gif:compressed:png
 description = Carve PNG files from a file
 
 [rar]

@@ -138,7 +138,7 @@ def verifyPNG(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 		return newtags
 	if offsets['png'][0] != 0:
 		return newtags
-	if (offsets['pngtrailer'][0] - 8) != os.stat(filename).st_size -1:
+	if (offsets['pngtrailer'][0] + 8) != os.stat(filename).st_size:
 		return newtags
 	## now we have a good chance that we have a PNG image, so verify
 	p = subprocess.Popen(['webpng', '-d', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
