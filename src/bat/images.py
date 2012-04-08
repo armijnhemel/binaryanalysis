@@ -27,6 +27,13 @@ import pylab
 def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscandir, envvars={}):
 	if not unpackreport.has_key('sha256'):
 		return
+	## not interested in text files or graphics
+	## TODO: make this configurable
+	for s in leafscans:
+		if s.keys()[0] == 'tags':
+			if 'graphics' in s['tags'] or 'text' in s['tags']:
+				return
+
 	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):
