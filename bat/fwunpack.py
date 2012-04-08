@@ -2151,6 +2151,8 @@ def searchUnpackPDF(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 				break
 			else:
 				os.rmdir(tmpdir)
+		if offsets['pdftrailer'] == []:
+			break
 		offsets['pdftrailer'].remove(trailer)
 
 	return (diroffsets, blacklist, [])
