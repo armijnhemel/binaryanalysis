@@ -58,7 +58,7 @@ def genericMarkerSearch(filename, magicscans, envvars=None):
 ## to deal with unresolved entities) to avoid launching another process
 def searchXML(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
-	p = subprocess.Popen(['xmllint','--noout', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['xmllint','--noout', "--nonet", filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode == 0:
 		newtags.append("xml")
