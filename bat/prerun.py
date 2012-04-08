@@ -151,7 +151,7 @@ def verifyPNG(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 
 def verifyGzip(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
-	if "text" in tags or "graphics" in tags:
+	if "text" in tags or "graphics" in tags or "compressed" in tags:
 		return newtags
 	if not 0 in offsets['gzip']:
 		return newtags
@@ -169,7 +169,7 @@ def verifyGzip(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 
 def verifyBZ2(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
-	if "text" in tags or "graphics" in tags:
+	if "text" in tags or "graphics" in tags or "compressed" in tags:
 		return newtags
 	if not 0 in offsets['bz2']:
 		return newtags
