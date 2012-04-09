@@ -308,7 +308,8 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 						for res in sqlres:
 							(pstring, linenumber) = res
 							cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (pstring, filehash, extensions[extension], linenumber))
-						if extensions[extension] == 'C':
+						## extract using ctags, except code from the Linux kernel, since it will never be dynamically linked
+						if extensions[extension] == 'C' and package != 'linux':
 							source = open(os.path.join(i[0], p)).read()
 
 							## TODO: rewrite to use ctags instead
