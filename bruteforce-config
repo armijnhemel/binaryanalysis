@@ -33,12 +33,20 @@ description = Check XML validity
 #priority    = 1
 #description = Check if complete file is a valid gzip file
 
+[verifyandroiddex]
+type        = prerun
+module      = bat.prerun
+method      = verifyAndroidDex
+priority    = 1
+description = Check if file is an Android binary XML file
+
 [verifyandroidxml]
 type        = prerun
 module      = bat.prerun
 method      = verifyAndroidXML
 priority    = 1
 description = Check if file is an Android binary XML file
+
 [verifytext]
 type        = prerun
 module      = bat.prerun
@@ -50,7 +58,7 @@ description = Check if file contains just ASCII text
 type        = prerun
 module      = bat.prerun
 method      = verifyGraphics
-magic       = bmp
+#magic       = bmp
 priority    = 2
 description = Check if file is a valid graphics file, or consists of just graphics files
 
@@ -169,7 +177,7 @@ module      = bat.fwunpack
 method      = searchUnpackGIF
 priority    = 0
 magic       = gif87:gif89
-noscan      = text:xml:jpeg:bmp:pdf:png:compressed
+noscan      = text:xml:graphics:pdf:compressed:resource
 description = Carve GIF files from a file
 
 [gzip]
@@ -187,7 +195,7 @@ description = Unpack gzip compressed files
 #method      = searchUnpackIco
 #priority    = 0
 #magic       = ico
-#noscan      = text:xml:jpeg:bmp:pdf:gif:png:compressed
+#noscan      = text:xml:pdf:compressed:graphics:resource
 #description = Carve ICO files from a file
 
 [installshield]
@@ -250,7 +258,7 @@ module      = bat.fwunpack
 method      = searchUnpackLZMA
 priority    = 1
 magic       = lzma_alone:lzma_alone_alt
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:resource:dalvik
 description = Unpack LZMA compressed files
 
 [lzo]
@@ -277,7 +285,7 @@ module      = bat.fwunpack
 method      = searchUnpackPNG
 priority    = 0
 magic       = png:pngtrailer
-noscan      = text:xml:jpeg:bmp:pdf:gif:compressed:png
+noscan      = text:xml:pdf:compressed:graphics:resource
 description = Carve PNG files from a file
 
 [rar]
@@ -322,7 +330,7 @@ module  = bat.fwunpack
 method  = searchUnpackSwf
 priority = 0
 magic = swf
-noscan   = text:xml:jpeg:bmp:pdf:png:gif:compressed
+noscan   = text:xml:pdf:compressed:graphics:resource
 
 [tar]
 type    = unpack
