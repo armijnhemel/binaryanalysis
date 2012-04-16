@@ -9,7 +9,7 @@ This module contains helper functions that should be run before any of the other
 scans.
 '''
 
-import sys, os, subprocess, os.path, shutil, stat
+import sys, os, subprocess, os.path, shutil, stat, array
 import tempfile, re, magic
 import fsmagic, fssearch, extractor
 
@@ -228,7 +228,7 @@ def verifyAndroidXML(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 ## The main reason for this check is to bring down false positives for lzma unpacking
 def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
-	if not filename == 'classes.dex':
+	if not os.path.basename(filename) == 'classes.dex':
 		return newtags
 	if not 'binary' in tags:
 		return newtags
@@ -236,11 +236,18 @@ def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 		return newtags
 	## now we read the first four bytes
 	androidfile = open(filename, 'rb')
-	androidbytes = androidfile.read(4)
+	androidbytes = androidfile.read(36)
 	androidfile.close()
-	if androidbytes == 'dex\n':
-		#good chance we have an Android Dex file, so verify more
-		pass
+	if len(androidbytes) != 36:
+		return newtags
+	if androidbytes[:4] == 'dex\n':
+		#good chance we have an Android Dex file, so verify more by
+		## checking the size header in the header
+		dexarray = array.array('I')
+		dexarray.fromstring(androidbytes[-4:])
+		dexsize = os.stat(filename).st_size
+		if dexarray.pop() == dexsize:
+			newtags.append('dalvik')
 	return newtags
 
 ## verify if this is a GNU message catalog. We check if the name of the
