@@ -120,6 +120,10 @@ def verifyBMP(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 
 def verifyJPEG(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
+	if not offsets.has_key('jpeg') or not offsets.has_key('jpegtrailer'):
+		return newtags
+	if not 0 in offsets['jpeg']:
+		return newtags
 	p = subprocess.Popen(['jpegtopnm', '-multiple', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
@@ -134,7 +138,9 @@ def verifyJPEG(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 ## very quick and dirty method to check whether or not a file is a PNG
 def verifyPNG(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
-	if offsets['png'] == [] or offsets['pngtrailer'] == []:
+	if not offsets.has_key('png'):
+		return newtags
+	if not offsets.has_key('pngtrailer'):
 		return newtags
 	if offsets['png'][0] != 0:
 		return newtags
@@ -153,6 +159,8 @@ def verifyGzip(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
 	if "text" in tags or "graphics" in tags or "compressed" in tags:
 		return newtags
+	if not offsets.has_key('gzip'):
+		return newtags
 	if not 0 in offsets['gzip']:
 		return newtags
 	p = subprocess.Popen(['gunzip', '-t', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -170,6 +178,8 @@ def verifyGzip(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 def verifyBZ2(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
 	if "text" in tags or "graphics" in tags or "compressed" in tags:
+		return newtags
+	if not offsets.has_key('bz2'):
 		return newtags
 	if not 0 in offsets['bz2']:
 		return newtags

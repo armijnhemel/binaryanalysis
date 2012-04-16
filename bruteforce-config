@@ -58,7 +58,7 @@ description = Check if file contains just ASCII text
 type        = prerun
 module      = bat.prerun
 method      = verifyGraphics
-#magic       = bmp
+magic       = bmp:jpeg:jpegtrailer:gif87:gif89:png:pngtrailer
 priority    = 2
 description = Check if file is a valid graphics file, or consists of just graphics files
 
