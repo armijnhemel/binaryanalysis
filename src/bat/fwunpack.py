@@ -133,6 +133,7 @@ def searchUnpackUPX(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		return ([], blacklist, [])
+	tags = []
 	counter = 1
 	diroffsets = []
 	tmpdir = dirsetup(tempdir, filename, "upx", counter)
@@ -140,17 +141,20 @@ def searchUnpackUPX(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.rmdir(tmpdir)
-		return ([], blacklist, [])
+		return ([], blacklist, tags)
 	else:
 		## the whole file is blacklisted
 		blacklist.append((0, os.stat(filename).st_size))
+		tags.append("compressed")
+		tags.append("upx")
 		diroffsets.append((tmpdir, 0, os.stat(filename).st_size))
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, tags)
 
 ## unpack Java serialized data
 def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	if offsets['java_serialized'] == []:
 		return ([], blacklist, [])
+	tags = []
 	counter = 1
 	diroffsets = []
 	for offset in offsets['java_serialized']:
@@ -167,7 +171,7 @@ def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={},
 			counter = counter + 1
 		else:
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, tags)
 
 def unpackJavaSerialized(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
@@ -1896,13 +1900,12 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 	diroffsets = []
 	counter = 1
 
-	filesize = os.stat(filename).st_size
 	for offset in lzmaoffsets:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "lzma", counter)
-		res = unpackLZMA(filename, offset, filesize, tmpdir)
+		res = unpackLZMA(filename, offset, tmpdir)
 		if res != None:
 			diroffsets.append((res, offset, 0))
 			counter = counter + 1
@@ -1916,7 +1919,7 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 ## Newer versions of XZ (>= 5.0.0) have an option to test and list archives.
 ## Unfortunately this does not work for files with trailing data, so we can't
 ## use it to filter out "bad" files.
-def unpackLZMA(filename, offset, filesize, tempdir=None):
+def unpackLZMA(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
