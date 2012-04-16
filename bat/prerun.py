@@ -222,6 +222,27 @@ def verifyAndroidXML(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 		newtags.append('resource')
 	return newtags
 
+## verify if this is an Android/Dalvik classes file. We check if the name of the
+## file is 'classes.dex', plus check the first four bytes of the file.
+## This check is not meant to be perfect, just to filter out the most common case.
+## The main reason for this check is to bring down false positives for lzma unpacking
+def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, envvars=None):
+	newtags = []
+	if not filename == 'classes.dex':
+		return newtags
+	if not 'binary' in tags:
+		return newtags
+	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags:
+		return newtags
+	## now we read the first four bytes
+	androidfile = open(filename, 'rb')
+	androidbytes = androidfile.read(4)
+	androidfile.close()
+	if androidbytes == 'dex\n':
+		#good chance we have an Android Dex file, so verify more
+		pass
+	return newtags
+
 ## verify if this is a GNU message catalog. We check if the name of the
 ## file ends in '.po', plus check the first few bytes of the file
 ## If it is a GNU message catalog, we mark it as a 'resource' file
