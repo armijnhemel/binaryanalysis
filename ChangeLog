@@ -1,6 +1,7 @@
 2012-04-17
 * replace glob.glob() with our own filtering. This prevents os.listdir() from
 being called numerous times
+* very simplistic check for tagging Ogg files, needs vorbis-tools.
 
 2012-03-29
 * add a very simplistic method to tag binary XML for Android (file name check,
