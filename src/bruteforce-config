@@ -47,6 +47,14 @@ method      = verifyAndroidXML
 priority    = 1
 description = Check if file is an Android binary XML file
 
+[verifyogg]
+type        = prerun
+module      = bat.prerun
+method      = verifyOgg
+priority    = 1
+magic       = ogg
+description = Check if file is a valid Ogg file
+
 [verifytext]
 type        = prerun
 module      = bat.prerun
@@ -72,7 +80,7 @@ module      = bat.fwunpack
 method      = searchUnpack7z
 priority    = 1
 magic       = 7z
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio
 description = Unpack 7z compressed files
 
 [ar]
@@ -81,7 +89,7 @@ module      = bat.fwunpack
 method      = searchUnpackAr
 priority    = 2
 magic       = ar
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio
 description = Unpack ar archives
 
 #[arj]
@@ -90,7 +98,7 @@ description = Unpack ar archives
 #method      = searchUnpackARJ
 #priority    = 1
 #magic       = arj
-#noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip
+#noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio
 #description = Unpack ARJ compressed files
 
 [base64]
@@ -98,7 +106,7 @@ type        = unpack
 module      = bat.fwunpack
 method      = searchUnpackBase64
 priority    = 0
-noscan      = xml:graphics:binary:pdf:compressed
+noscan      = xml:graphics:binary:pdf:compressed:audio
 description = Decode base64 encoded files
 
 [byteswap]
@@ -106,7 +114,7 @@ type        = unpack
 module      = bat.fwunpack
 method      = searchUnpackByteSwap
 priority    = 100
-noscan      = xml:graphics:pdf:compressed
+noscan      = xml:graphics:pdf:compressed:audio
 description = Byteswap files for 16 bit flash
 
 [bzip2]
@@ -115,7 +123,7 @@ module      = bat.fwunpack
 method      = searchUnpackBzip2
 priority    = 1
 magic       = bz2
-noscan      = text:xml:graphics:pdf:gzip:lrzip
+noscan      = text:xml:graphics:pdf:gzip:lrzip:audio
 description = Unpack bzip2 compressed files
 
 [cab]
@@ -124,7 +132,7 @@ module      = bat.fwunpack
 method      = searchUnpackCab
 priority    = 1
 magic       = cab
-noscan      = text:xml:graphics:pdf:compressed
+noscan      = text:xml:graphics:pdf:compressed:audio
 description = Unpack MS Windows Cabinet archives
 
 [compress]
@@ -133,7 +141,7 @@ module      = bat.fwunpack
 method      = searchUnpackCompress
 priority    = 1
 magic       = compress
-noscan      = text:xml:graphics:pdf
+noscan      = text:xml:graphics:pdf:audio
 description = Unpack files compressed with compress
 
 [cpio]
@@ -142,7 +150,7 @@ module      = bat.fwunpack
 method      = searchUnpackCpio
 priority    = 2
 magic       = cpio1:cpio2:cpio3:cpiotrailer
-noscan      = text:xml:graphics:pdf:compressed
+noscan      = text:xml:graphics:pdf:compressed:audio
 description = Unpack CPIO archives
 
 [cramfs]
@@ -151,7 +159,7 @@ module      = bat.fwunpack
 method      = searchUnpackCramfs
 priority    = 3
 magic       = cramfs
-noscan      = text:xml:graphics:pdf:compressed
+noscan      = text:xml:graphics:pdf:compressed:audio
 description = Unpack cramfs file systems
 
 [exe]
@@ -159,7 +167,7 @@ type        = unpack
 module      = bat.fwunpack
 method      = searchUnpackExe
 priority    = 2
-noscan      = text:xml:graphics:pdf:compressed
+noscan      = text:xml:graphics:pdf:compressed:audio
 description = Unpack Microsoft Windows Executable files
 
 [ext2fs]
@@ -168,7 +176,7 @@ module      = bat.fwunpack
 method      = searchUnpackExt2fs
 priority    = 3
 magic       = ext2
-noscan      = text:xml:graphics:pdf:compressed
+noscan      = text:xml:graphics:pdf:compressed:audio
 description = Unpack EXT2/3/4 file systems
 
 [gif]
@@ -177,7 +185,7 @@ module      = bat.fwunpack
 method      = searchUnpackGIF
 priority    = 0
 magic       = gif87:gif89
-noscan      = text:xml:graphics:pdf:compressed:resource
+noscan      = text:xml:graphics:pdf:compressed:resource:audio
 description = Carve GIF files from a file
 
 [gzip]
@@ -186,7 +194,7 @@ module      = bat.fwunpack
 method      = searchUnpackGzip
 priority    = 1
 magic       = gzip
-noscan      = text:xml:graphics:pdf:bz2:lrzip
+noscan      = text:xml:graphics:pdf:bz2:lrzip:audio
 description = Unpack gzip compressed files
 
 #[ico]
@@ -195,7 +203,7 @@ description = Unpack gzip compressed files
 #method      = searchUnpackIco
 #priority    = 0
 #magic       = ico
-#noscan      = text:xml:pdf:compressed:graphics:resource
+#noscan      = text:xml:pdf:compressed:graphics:resource:audio
 #description = Carve ICO files from a file
 
 [installshield]
@@ -204,7 +212,7 @@ module      = bat.fwunpack
 method      = searchUnpackInstallShield
 priority    = 1
 magic       = installshield
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio
 description = Unpack InstallShield compressed files
 
 [iso9660]
@@ -213,7 +221,7 @@ module      = bat.fwunpack
 method      = searchUnpackISO9660
 priority    = 4
 magic       = iso9660
-noscan      = text:xml:graphics:pdf:compressed
+noscan      = text:xml:graphics:pdf:compressed:audio
 description = Unpack ISO9660 (CD-ROM) file systems
 
 #[java_serialized]
@@ -222,7 +230,7 @@ description = Unpack ISO9660 (CD-ROM) file systems
 #method      = searchUnpackJavaSerialized
 #priority    = 2
 #magic       = java_serialized
-#noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip
+#noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio
 #description = Unpack Java serialized files
 
 [jffs2]
@@ -231,7 +239,7 @@ module      = bat.fwunpack
 method      = searchUnpackJffs2
 priority    = 1
 magic       = jffs2_le
-noscan      = text:xml:graphics:pdf:compressed
+noscan      = text:xml:graphics:pdf:compressed:audio
 description = Unpack JFFS2 file systems
 
 [lrzip]
@@ -240,7 +248,7 @@ module      = bat.fwunpack
 method      = searchUnpackLRZIP
 priority    = 1
 magic       = lrzip
-noscan      = text:xml:graphics:pdf:bz2:gzip:lzip
+noscan      = text:xml:graphics:pdf:bz2:gzip:lzip:audio
 description = Unpack LRZIP compressed files
 
 [lzip]
@@ -249,7 +257,7 @@ module      = bat.fwunpack
 method      = searchUnpackLzip
 priority    = 1
 magic       = lzip
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio
 description = Unpack LZIP compressed files
 
 [lzma]
@@ -258,7 +266,7 @@ module      = bat.fwunpack
 method      = searchUnpackLZMA
 priority    = 1
 magic       = lzma_alone:lzma_alone_alt
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:resource:dalvik
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:resource:dalvik:audio
 description = Unpack LZMA compressed files
 
 [lzo]
@@ -267,7 +275,7 @@ module      = bat.fwunpack
 method      = searchUnpackLzo
 priority    = 1
 magic       = lzo
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio
 description = Unpack LZO compressed files
 
 [pdf_unpack]
@@ -276,7 +284,7 @@ module      = bat.fwunpack
 method      = searchUnpackPDF
 priority    = 10
 magic       = pdf:pdftrailer
-noscan      = text:xml:graphics:compressed
+noscan      = text:xml:graphics:compressed:audio
 description = Carve PDF files from a file
 
 [png]
@@ -285,7 +293,7 @@ module      = bat.fwunpack
 method      = searchUnpackPNG
 priority    = 0
 magic       = png:pngtrailer
-noscan      = text:xml:pdf:compressed:graphics:resource
+noscan      = text:xml:pdf:compressed:graphics:resource:audio
 description = Carve PNG files from a file
 
 [rar]
@@ -294,7 +302,7 @@ module      = bat.fwunpack
 method      = searchUnpackRar
 priority    = 1
 magic       = rar
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio
 description = Unpack RAR archives
 
 #[romfs]
@@ -303,7 +311,7 @@ description = Unpack RAR archives
 #method      = searchUnpackRomfs
 #priority    = 1
 #magic       = romfs
-#noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip
+#noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio
 #description = Unpack romfs file systems
 
 [rpm]
@@ -312,7 +320,7 @@ module      = bat.unpackrpm
 method      = searchUnpackRPM
 priority    = 2
 magic       = rpm:gzip:xz:xztrailer
-noscan      = text:xml:graphics:pdf:compressed
+noscan      = text:xml:graphics:pdf:compressed:audio
 description = Unpack RPM files
 
 [squashfs]
@@ -321,7 +329,7 @@ module      = bat.fwunpack
 method      = searchUnpackSquashfs
 priority    = 1
 magic       = squashfs1:squashfs2:squashfs3:squashfs4:squashfs5:squashfs6
-noscan      = text:xml:graphics:pdf:compressed
+noscan      = text:xml:graphics:pdf:compressed:audio
 description = Unpack squashfs file systmes
 
 [swf]
@@ -330,7 +338,7 @@ module  = bat.fwunpack
 method  = searchUnpackSwf
 priority = 0
 magic = swf
-noscan   = text:xml:pdf:compressed:graphics:resource
+noscan   = text:xml:pdf:compressed:graphics:resource:audio
 
 [tar]
 type    = unpack
@@ -338,7 +346,7 @@ module  = bat.fwunpack
 method  = searchUnpackTar
 priority = 3
 magic = tar1:tar2
-noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip
+noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip:audio
 
 #[ubifs]
 #type    = unpack
@@ -346,14 +354,14 @@ noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip
 #method  = searchUnpackUbifs
 #priority = 3
 #magic = ubifs
-#noscan   = text:xml:graphics:pdf:compressed
+#noscan   = text:xml:graphics:pdf:compressed:audio
 
 [upx]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackUPX
 priority = 3
-noscan   = text:xml:graphics:pdf:compressed
+noscan   = text:xml:graphics:pdf:compressed:audio
 
 [xz]
 type    = unpack
@@ -361,14 +369,14 @@ module  = bat.fwunpack
 method  = searchUnpackXZ
 priority = 1
 magic = xz:xztrailer
-noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip
+noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip:audio
 
 [yaffs]
 type    = unpack
 module  = bat.fwunpack
 method  = searchUnpackYaffs2
 priority = 2
-noscan   = text:xml:graphics:pdf:compressed
+noscan   = text:xml:graphics:pdf:compressed:audio
 
 [zip]
 type    = unpack
@@ -376,7 +384,7 @@ module  = bat.fwunpack
 method  = searchUnpackZip
 priority = 1
 magic = zip
-noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip
+noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip:audio
 
 ##################
 ### leaf scans ###
@@ -386,25 +394,25 @@ noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip
 type    = program
 module  = bat.checks
 method  = scanArchitecture
-noscan  = text:xml:graphics:pdf:compressed
+noscan  = text:xml:graphics:pdf:compressed:audio
 
 [busybox-version]
 type    = program
 module  = bat.busyboxversion
 method  = busybox_version
-noscan  = text:xml:graphics:pdf:compressed
+noscan  = text:xml:graphics:pdf:compressed:audio
 
 [dproxy]
 type    = program
 module  = bat.checks
 method  = searchDproxy
-noscan  = text:xml:graphics:pdf:compressed
+noscan  = text:xml:graphics:pdf:compressed:audio
 
 [ez-ipupdate]
 type    = program
 module  = bat.checks
 method  = searchEzIpupdate
-noscan  = text:xml:graphics:pdf:compressed
+noscan  = text:xml:graphics:pdf:compressed:audio
 
 #[file2package]
 #type    = program
@@ -418,45 +426,45 @@ type    = program
 module  = bat.checks
 method  = scanForges
 xmloutput = forgesPrettyPrint
-noscan  = graphics:compressed
+noscan  = graphics:compressed:audio
 
 [iproute]
 type    = program
 module  = bat.checks
 method  = searchIproute
-noscan  = text:xml:graphics:pdf:compressed
+noscan  = text:xml:graphics:pdf:compressed:audio
 
 [iptables]
 type    = program
 module  = bat.checks
 method  = searchIptables
-noscan  = text:xml:graphics:pdf:compressed
+noscan  = text:xml:graphics:pdf:compressed:audio
 
 [kernelchecks]
 type    = program
 module  = bat.kernelanalysis
 method  = kernelChecks
 xmloutput = xmlprettyprint
-noscan  = text:xml:graphics:pdf:compressed
+noscan  = text:xml:graphics:pdf:compressed:audio
 
 [kernelmodulelicense]
 type    = program
 module  = bat.kernelanalysis
 method  = analyseModuleLicense
-noscan  = text:xml:graphics:pdf:compressed
+noscan  = text:xml:graphics:pdf:compressed:audio
 
 [libs]
 type    = program
 module  = bat.checks
 method  = searchDynamicLibs
 xmloutput = dynamicLibsPrettyPrint
-noscan  = text:xml:graphics:pdf:compressed
+noscan  = text:xml:graphics:pdf:compressed:audio
 
 [libusb]
 type    = program
 module  = bat.checks
 method  = searchLibusb
-noscan  = text:xml:graphics:pdf:compressed
+noscan  = text:xml:graphics:pdf:compressed:audio
 
 [licenses]
 type    = program
@@ -469,14 +477,14 @@ noscan    = compressed
 type    = program
 module  = bat.checks
 method  = searchLoadLin
-noscan  = text:xml:graphics:pdf:compressed
+noscan  = text:xml:graphics:pdf:compressed:audio
 
 [pdf]
 type    = program
 module  = bat.checks
 method  = scanPDF
 xmloutput = pdfPrettyPrint
-noscan  = text:xml:graphics:compressed
+noscan  = text:xml:graphics:compressed:audio
 
 #[ranking]
 #type    = program
@@ -485,37 +493,37 @@ noscan  = text:xml:graphics:compressed
 #xmloutput = xmlprettyprint
 #envvars = BAT_SQLITE_AVG_C=/home/armijn/master/avg:BAT_SQLITE_STRINGSCACHE_C=/home/armijn/master/stringscache_c:BAT_SQLITE_DB=/home/armijn/master/master:BAT_RANKING_FULLCACHE=1:BAT_RANKING_LICENSE=1
 #envvars = BAT_SQLITE_AVG_C=/home/armijn/master/avg:BAT_SQLITE_STRINGSCACHE_C=/home/armijn/master/stringscache_c:BAT_SQLITE_DB=/home/armijn/master/master:BAT_RANKING_FULLCACHE=1
-#noscan  = text:xml:graphics:pdf:compressed:resource
+#noscan  = text:xml:graphics:pdf:compressed:resource:audio
 
 [redboot]
 type    = program
 module  = bat.checks
 method  = searchRedBoot
-noscan  = text:xml:graphics:pdf:compressed
+noscan  = text:xml:graphics:pdf:compressed:audio
 
 [uboot]
 type    = program
 module  = bat.checks
 method  = searchUBoot
-noscan  = text:xml:graphics:pdf:compressed
+noscan  = text:xml:graphics:pdf:compressed:audio
 
 [vsftpd]
 type    = program
 module  = bat.checks
 method  = searchVsftpd
-noscan  = text:xml:graphics:pdf:compressed
+noscan  = text:xml:graphics:pdf:compressed:audio
 
 [wireless-tools]
 type    = program
 module  = bat.checks
 method  = searchWirelessTools
-noscan  = text:xml:graphics:pdf:compressed
+noscan  = text:xml:graphics:pdf:compressed:audio
 
 [wpa-supplicant]
 type    = program
 module  = bat.checks
 method  = searchWpaSupplicant
-noscan  = text:xml:graphics:pdf:compressed
+noscan  = text:xml:graphics:pdf:compressed:audio
 
 #####################
 ### postrun scans ###
@@ -525,19 +533,19 @@ noscan  = text:xml:graphics:pdf:compressed
 #type    = postrun
 #module  = bat.images
 #method  = generateImages
-#noscan  = text:xml:graphics:pdf
+#noscan  = text:xml:graphics:pdf:audio
 #envvars = BAT_IMAGEDIR=/tmp/images
 #
 #[hexdump]
 #type    = postrun
 #module  = bat.generatehexdump
 #method  = generateHexdump
-#noscan  = text:xml:graphics:pdf
+#noscan  = text:xml:graphics:pdf:audio
 #envvars = BAT_REPORTDIR=/tmp/images
 #
 #[uniquehtml]
 #type    = postrun
 #module  = bat.generateuniquehtml
 #method  = generateHTML
-#noscan  = text:xml:graphics:pdf
+#noscan  = text:xml:graphics:pdf:audio
 #envvars = BAT_REPORTDIR=/tmp/images

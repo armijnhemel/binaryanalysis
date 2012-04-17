@@ -215,6 +215,7 @@ def verifyBZ2(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 ## verify if this is an Android "binary XML" file. We check if the name of the
 ## file ends in '.xml', plus check the first four bytes of the file
 ## If it is an Android XML file, we mark it as a 'resource' file
+## TODO: have a better check here to increase fidelity
 def verifyAndroidXML(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
 	if not 'binary' in tags:
@@ -284,4 +285,28 @@ def verifyMessageCatalog(filename, tempdir=None, tags=[], offsets={}, envvars=No
 		## we now know for sure this is a valid GNU message catalog, so tag it as such
 		newtags.append('messagecatalog')
 		newtags.append('resource')
+	return newtags
+
+## extremely simple verifier for Ogg files.
+## This will not catch all of the Ogg files, but it will be good enough
+## for the vast majority of them.
+def verifyOgg(filename, tempdir=None, tags=[], offsets={}, envvars=None):
+	newtags = []
+	if not filename.endswith('ogg'):
+		return newtags
+	if not 'binary' in tags:
+		return newtags
+	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags:
+		return newtags
+	if not offsets.has_key('ogg'):
+		return newtags
+	if not 0 in offsets['ogg']:
+		return newtags
+	## now check if it is a valid file by running ogginfo
+	p = subprocess.Popen(['ogginfo', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		return newtags
+	newtags.append('ogg')
+	newtags.append('audio')
 	return newtags

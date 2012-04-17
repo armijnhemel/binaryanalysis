@@ -69,6 +69,7 @@ fsmagic = {
             'tar1':             'ustar\x00',
             'tar2':             'ustar\x20',
             'java_serialized':  '\xac\xed\x00',
+            'ogg':  		'OggS',
           }
 
 ## some offsets can be found after a certain number of bytes, but
