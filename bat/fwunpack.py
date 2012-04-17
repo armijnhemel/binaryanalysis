@@ -2181,7 +2181,6 @@ def unpackPDF(filename, offset, trailer, tempdir=None):
 		else:
 			p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 			(stanout, stanerr) = p.communicate()
-			shutil.copy(tmpfile[1], '/tmp/truncatedebug')
 		pdflength = trailer + 5 - offset
 		p = subprocess.Popen(['truncate', "-s", "%d" % pdflength, tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
