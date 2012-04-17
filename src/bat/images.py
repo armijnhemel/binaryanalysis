@@ -27,12 +27,14 @@ import pylab
 def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscandir, envvars={}):
 	if not unpackreport.has_key('sha256'):
 		return
+	ignorelist = ['graphics', 'text', 'compressed', 'pdf']
 	## not interested in text files, graphics or compressed files
 	## TODO: make this configurable
 	for s in leafscans:
 		if s.keys()[0] == 'tags':
-			if 'graphics' in s['tags'] or 'text' in s['tags'] or 'compressed' in s['tags']:
-				return
+			for i in ignorelist:
+				if i in s['tags']:
+					return
 
 	scanenv = os.environ.copy()
 	if envvars != None:
