@@ -17,7 +17,7 @@ import os, os.path, sys, subprocess, gzip
 def generateHexdump(filename, unpackreport, leafscans, scantempdir, toplevelscandir, envvars={}):
 	if not unpackreport.has_key('sha256'):
 		return
-	ignorelist = ['graphics', 'text', 'compressed', 'pdf']
+	ignorelist = ['graphics', 'text', 'compressed', 'pdf', 'xml']
 	## not interested in text files or graphics
 	## TODO: make this configurable
 	for s in leafscans:
