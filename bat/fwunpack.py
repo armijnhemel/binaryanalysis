@@ -658,8 +658,9 @@ def searchUnpackInstallShield(filename, tempdir=None, blacklist=[], offsets={}, 
 
 ## unpacker for Microsoft Cabinet Archive files.
 def searchUnpackCab(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	newtags = []
 	if offsets['cab'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, newtags)
 	diroffsets = []
 	counter = 1
 	## TODO: fix for big files
@@ -680,7 +681,7 @@ def searchUnpackCab(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, newtags)
 
 ## This method will not work when the CAB is embedded in a bigger file, such as
 ## a MINIX file system. We need to use more data from the metadata and perhaps
