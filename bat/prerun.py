@@ -142,7 +142,7 @@ def verifyPNG(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 		return newtags
 	if not offsets.has_key('pngtrailer'):
 		return newtags
-	if offsets['png'][0] != 0:
+	if not 0 in offsets['png']:
 		return newtags
 	if (offsets['pngtrailer'][0] + 8) != os.stat(filename).st_size:
 		return newtags
