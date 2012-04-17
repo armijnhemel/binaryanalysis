@@ -635,10 +635,14 @@ def main(argv):
 				for e in envvars:
 					envsplit = e.split('=')
 					if envsplit[0] == 'BAT_IMAGEDIR':
+						target = os.path.join(tempdir, 'images')
+						copyfiles = []
+						## instead of globbing all the time we do the filtering ourselves
+						dirlisting = filter(lambda x: x.endswith(".png"), os.listdir(envsplit[1]))
 						for s in sha256spack:
-							copyfiles = glob.glob(os.path.join(envsplit[1], "*%s*.png" % s))
-							for c in copyfiles:
-								shutil.copy(c, os.path.join(tempdir, 'images'))
+							copyfiles = copyfiles + filter(lambda x: x.startswith(s), dirlisting)
+						for c in copyfiles:
+							shutil.copy(os.path.join(envsplit[1], c), target)
 		elif i['name'] == 'hexdump':
 			if not os.path.exists(os.path.join(tempdir, 'reports')):
 				os.mkdir(os.path.join(tempdir, 'reports'))
@@ -647,10 +651,13 @@ def main(argv):
 				for e in envvars:
 					envsplit = e.split('=')
 					if envsplit[0] == 'BAT_REPORTDIR':
+						target = os.path.join(tempdir, 'reports')
+						copyfiles = []
+						dirlisting = filter(lambda x: x.endswith("-hexdump.gz"), os.listdir(envsplit[1]))
 						for s in sha256spack:
-							copyfiles = glob.glob(os.path.join(envsplit[1], "*%s*-hexdump.gz" % s))
-							for c in copyfiles:
-								shutil.copy(c, os.path.join(tempdir, 'reports'))
+							copyfiles = copyfiles + filter(lambda x: x.startswith(s), dirlisting)
+						for c in copyfiles:
+							shutil.copy(os.path.join(envsplit[1], c), target)
 		elif i['name'] == 'uniquehtml':
 			if not os.path.exists(os.path.join(tempdir, 'reports')):
 				os.mkdir(os.path.join(tempdir, 'reports'))
@@ -659,10 +666,14 @@ def main(argv):
 				for e in envvars:
 					envsplit = e.split('=')
 					if envsplit[0] == 'BAT_REPORTDIR':
+						target = os.path.join(tempdir, 'reports')
+						copyfiles = []
+						dirlisting = filter(lambda x: x.endswith("-unique.html"), os.listdir(envsplit[1]))
 						for s in sha256spack:
-							copyfiles = glob.glob(os.path.join(envsplit[1], "*%s*-unique.html" % s))
-							for c in copyfiles:
-								shutil.copy(c, os.path.join(tempdir, 'reports'))
+							copyfiles = copyfiles + filter(lambda x: x.startswith(s), dirlisting)
+						for c in copyfiles:
+							shutil.copy(os.path.join(envsplit[1], c), target)
+
 	picklefile = open('%s/scandata.pickle' % (tempdir,), 'wb')
 	cPickle.dump((unpackreports, leafreports, scans), picklefile)
 	picklefile.close()
