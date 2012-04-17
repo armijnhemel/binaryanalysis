@@ -21,7 +21,7 @@ def generateHexdump(filename, unpackreport, leafscans, scantempdir, toplevelscan
 	## TODO: make this configurable
 	for s in leafscans:
 		if s.keys()[0] == 'tags':
-			if 'graphics' in s['tags'] or 'text' in s['tags']:
+			if 'graphics' in s['tags'] or 'text' in s['tags'] or 'compressed' in s['tags']:
 				return
 	scanenv = os.environ.copy()
 	if envvars != None:
