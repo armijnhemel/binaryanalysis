@@ -1,3 +1,8 @@
+2012-04-18
+* set a maximum size for picture generation: if file is bigger than a certain
+size no picture ("tv static") will be generated.
+* outcomment code for generating thumbnails for now
+
 2012-04-17
 * replace glob.glob() with our own filtering. This prevents os.listdir() from
 being called numerous times
