@@ -292,7 +292,7 @@ def verifyMessageCatalog(filename, tempdir=None, tags=[], offsets={}, envvars=No
 ## for the vast majority of them.
 def verifyOgg(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
-	if not filename.endswith('ogg'):
+	if not filename.endswith('.ogg'):
 		return newtags
 	if not 'binary' in tags:
 		return newtags
@@ -309,4 +309,30 @@ def verifyOgg(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 		return newtags
 	newtags.append('ogg')
 	newtags.append('audio')
+	return newtags
+
+## very simplistic verifier for some TrueType fonts
+def verifyTTF(filename, tempdir=None, tags=[], offsets={}, envvars=None):
+	newtags = []
+	if not filename.endswith('.ttf'):
+		return newtags
+	if not 'binary' in tags:
+		return newtags
+	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags:
+		return newtags
+	## a TrueType font file starts with '\x00\x01\x00\x00\x00'
+	## Since this is a very generic marker it is best to just search
+	## for it here, instead of in every file.
+	ttffile = open(filename, 'rb')
+	ttfbytes = ttffile.read(5)
+	ttffile.close()
+	if ttfbytes != '\x00\x01\x00\x00\x00':
+		return newtags
+	p = subprocess.Popen(['mkeot', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		return newtags
+	newtags.append('ttf')
+	newtags.append('resource')
+	newtags.append('font')
 	return newtags
