@@ -37,6 +37,10 @@ def generateHexdump(filename, unpackreport, leafscans, scantempdir, toplevelscan
 	## TODO: check if BAT_REPORTDIR exists
 	reportdir = scanenv.get('BAT_REPORTDIR', '.')
 
+	maxsize = int(scanenv.get('BAT_IMAGE_MAXFILESIZE', sys.maxint))
+	filesize = os.stat("%s/%s" % (scantempdir, filename)).st_size
+	if filesize > maxsize:
+		return
 	if not os.path.exists("%s/%s-hexdump.gz" % (reportdir, unpackreport['sha256'])):
 		p = subprocess.Popen(['hexdump', '-Cv', "%s/%s" % (scantempdir, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
