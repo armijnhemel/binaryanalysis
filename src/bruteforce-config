@@ -62,6 +62,13 @@ method      = verifyText
 priority    = 3
 description = Check if file contains just ASCII text
 
+[verifyttf]
+type        = prerun
+module      = bat.prerun
+method      = verifyTTF
+priority    = 1
+description = Check if file contains a single TTF font
+
 [verifygraphics]
 type        = prerun
 module      = bat.prerun
