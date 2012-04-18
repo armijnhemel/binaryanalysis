@@ -56,6 +56,10 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscand
 		except Exception, e:
 			return
 
+	maxsize = int(scanenv.get('BAT_IMAGE_MAXFILESIZE', sys.maxint))
+	filesize = os.stat("%s/%s" % (scantempdir, filename)).st_size
+	if filesize > maxsize:
+		return
 	## this stuff is easily cached
 	if not os.path.exists("%s/%s.png" % (imagedir, unpackreport['sha256'])):
 		fwfile = open("%s/%s" % (scantempdir, filename))
@@ -82,9 +86,11 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscand
 
 		im = Image.frombuffer("L", (height, width), imgbuffer, "raw", "L", 0, 1)
 		im.save("%s/%s.png" % (imagedir, unpackreport['sha256']))
+		'''
 		if width > 100:
 			imthumb = im.thumbnail((height/4, width/4))
 			im.save("%s/%s-thumbnail.png" % (imagedir, unpackreport['sha256']))
+		'''
 
 	'''
 	## generate histogram

@@ -541,7 +541,7 @@ noscan  = text:xml:graphics:pdf:compressed:audio
 #module  = bat.images
 #method  = generateImages
 #noscan  = text:xml:graphics:pdf:audio
-#envvars = BAT_IMAGEDIR=/tmp/images
+#envvars = BAT_IMAGEDIR=/tmp/images:BAT_IMAGE_MAXFILESIZE=100000000
 #
 #[hexdump]
 #type    = postrun
