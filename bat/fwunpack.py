@@ -1231,11 +1231,17 @@ def unpackSquashfsWrapper(filename, offset, tempdir=None):
 		os.unlink(tmpfile[1])
 		return retval
 
+	## Realtek variant
+	retval = unpackSquashfsRealtekLZMA(tmpfile[1],offset,tmpdir)
+	if retval != None:
+		os.unlink(tmpfile[1])
+		return retval
+
 	## Broadcom variant
 	## WARNING!!
-	## Sometimes, for example when the OpenWrt version from above
-	## can't unpack a file, this scan will pick it up and eat
-	## 100% CPU for a long long long time, without producing any
+	## Sometimes, for example when the OpenWrt version or (some cases)
+	## the Realtek vaariant can't unpack a file, this scan will pick it up
+	## and eat 100% CPU for a long long long time, without producing any
 	## result. This is not a bug in BAT, but in this version of
 	## unsquashfs!
 	retval = unpackSquashfsBroadcomLZMA(tmpfile[1],offset,tmpdir)
@@ -1251,12 +1257,6 @@ def unpackSquashfsWrapper(filename, offset, tempdir=None):
 
 	## Atheros variant
 	retval = unpackSquashfsAtherosLZMA(tmpfile[1],offset,tmpdir)
-	if retval != None:
-		os.unlink(tmpfile[1])
-		return retval
-
-	## Realtek variant
-	retval = unpackSquashfsRealtekLZMA(tmpfile[1],offset,tmpdir)
 	if retval != None:
 		os.unlink(tmpfile[1])
 		return retval
