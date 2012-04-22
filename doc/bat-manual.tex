@@ -93,6 +93,8 @@ elaborate ranking method to guess which sources were used to build a program.
 
 \subsubsection{Running \texttt{bruteforce.py}}
 
+\texttt{python bruteforce.py -c /path/to/configuration -b /path/to/binary -o /path/to/outputfile}
+
 \subsubsection{Configuring \texttt{bruteforce.py}}
 
 The \texttt{bruteforce.py} tool uses a configuration file that is in Windows
@@ -1167,8 +1169,6 @@ the list of all applets that are defined. The only caveats are that a new
 applet that was added appears alphabetically before any of the applets that
 can be recognized using a list of applet names extracted from the source code,
 or it appears alphabetically after the last one that can be recognized.
-
-The current code is suboptimal and will be rewritten in the near future.
 
 \subsection{Pretty printing a configuration}
 
