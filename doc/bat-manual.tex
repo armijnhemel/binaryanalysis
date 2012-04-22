@@ -93,6 +93,8 @@ elaborate ranking method to guess which sources were used to build a program.
 
 \subsubsection{Running \texttt{bruteforce.py}}
 
+\subsubsection{Configuring \texttt{bruteforce.py}}
+
 The \texttt{bruteforce.py} tool uses a configuration file that is in Windows
 INI format. The main configuration directive is \texttt{batconfig}, which
 currently only allows setting a single setting, namely whether or not multiple
@@ -153,9 +155,9 @@ unpacked or extracted:
 
 \begin{itemize}
 \item file systems: cramfs, ext2/ext3/ext4, ISO9660, JFFS2, SquashFS (several
-variants), UBIFS (not on Debian/Ubuntu), YAFFS2 (specific variants)
+variants), romfs, YAFFS2 (specific variants)
 \item compressed files and executable formats: 7z, ar, ARJ, BASE64, BZIP2,
-compressed Flash, CAB, CPIO, EXE (specific compression methods only) GZIP,
+compressed Flash, CAB, CPIO, EXE (specific compression methods only), GZIP,
 InstallShield (old versions), LRZIP, LZIP, LZMA, LZO, RAR, RPM, serialized
 Java, TAR, UPX, XZ, ZIP
 \item media files: GIF, ICO, PDF, PNG
