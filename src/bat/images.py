@@ -104,22 +104,6 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscand
 	for i in leafscans:
 		if i.keys()[0] == 'ranking':
 			if i['ranking']['reports'] != []:
-				## this is done using pychart, and an external script using pychart
-				## It is quite a lot of overhead, so disabled
-				## Alternative method using matplotlib below
-				'''
-				pickledata = []
-				for j in i['ranking']['reports']:
-					pickledata.append((j[1], j[3]))
-				tmppickle = tempfile.mkstemp()
-				cPickle.dump(pickledata, os.fdopen(tmppickle[0], 'w'))
-				p = subprocess.Popen(['python', '/home/armijn/gpltool/trunk/bat-extratools/bat-visualisation/bat-generate-piecharts.py', '-i', tmppickle[1], '-o', '%s/%s-piechart.png' % (imagedir, unpackreport['sha256'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-				(stanout, stanerr) = p.communicate()
-				if p.returncode != 0:
-					print >>sys.stderr, stanerr
-				os.unlink(tmppickle[1])
-				## do the same for version information
-				'''
 				piedata = []
 				pielabels = []
 				totals = 0.0
@@ -154,7 +138,7 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscand
 						for v in j_sorted:
 							pickledata.append((v, j[4][v]))
 						cPickle.dump(pickledata, os.fdopen(tmppickle[0], 'w'))
-						p = subprocess.Popen(['python', '/home/armijn/gpltool/trunk/bat-extratools/bat-visualisation/bat-generate-version-chart.py', '-i', tmppickle[1], '-o', '%s/%s-%s-version.png' % (imagedir, unpackreport['sha256'], j[1])], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+						p = subprocess.Popen(['bat-generate-version-chart.py', '-i', tmppickle[1], '-o', '%s/%s-%s-version.png' % (imagedir, unpackreport['sha256'], j[1])], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 						(stanout, stanerr) = p.communicate()
 						if p.returncode != 0:
 							print >>sys.stderr, stanerr
