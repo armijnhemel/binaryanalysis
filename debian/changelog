@@ -1,3 +1,11 @@
+bat (7.0) unstable; urgency=low
+
+  * Updated release, includes much new functionality. See ChangeLog in SVN repo for
+    details
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Tue, 24 Apr 2012 00:07:43 +0200
+
+
 bat (6.0) unstable; urgency=low
 
   * Updated release, includes much new functionality. See ChangeLog in SVN repo for
