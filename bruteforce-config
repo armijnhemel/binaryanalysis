@@ -231,14 +231,14 @@ magic       = iso9660
 noscan      = text:xml:graphics:pdf:compressed:audio
 description = Unpack ISO9660 (CD-ROM) file systems
 
-#[java_serialized]
-#type        = unpack
-#module      = bat.fwunpack
-#method      = searchUnpackJavaSerialized
-#priority    = 2
-#magic       = java_serialized
-#noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio
-#description = Unpack Java serialized files
+[java_serialized]
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackJavaSerialized
+priority    = 2
+magic       = java_serialized
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio
+description = Unpack Java serialized files
 
 [jffs2]
 type        = unpack
@@ -312,14 +312,14 @@ magic       = rar
 noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio
 description = Unpack RAR archives
 
-#[romfs]
-#type        = unpack
-#module      = bat.fwunpack
-#method      = searchUnpackRomfs
-#priority    = 1
-#magic       = romfs
-#noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio
-#description = Unpack romfs file systems
+[romfs]
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackRomfs
+priority    = 1
+magic       = romfs
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio
+description = Unpack romfs file systems
 
 [rpm]
 type        = unpack
