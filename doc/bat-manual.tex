@@ -93,6 +93,19 @@ elaborate ranking method to guess which sources were used to build a program.
 
 \subsubsection{Running \texttt{bruteforce.py}}
 
+Invoking \texttt{bruteforce.py} is relatively simple. You will need to supply
+three parameters:
+
+\begin{enumerate}
+\item \texttt{-c} : path to a configuration file
+\item \texttt{-b} : path to the binary to be scanned
+\item \texttt{-o} : path to an output file, where the unpacked files, plus the
+final state of the program will be written to
+\end{enumerate}
+
+The output, if enabled in the configuration file, will be written to standard
+output.
+
 \texttt{python bruteforce.py -c /path/to/configuration -b /path/to/binary -o /path/to/outputfile}
 
 \subsubsection{Configuring \texttt{bruteforce.py}}
