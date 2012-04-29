@@ -16,6 +16,13 @@ the same type (like ELF binaries) are actually quite similar, so binaries that
 significantly deviate from this could mean something interesting.
 
 This should be run as a postrun scan
+
+Parameters for configuration file:
+
+* BAT_IMAGE_MAXFILESIZE :: maximum size of the *source* file, to prevent
+  ridiculously large files from being turned into even ridiculously larger
+  pictures
+* BAT_IMAGEDIR :: location to where images should be written
 '''
 
 import os, os.path, sys, subprocess, array, cPickle, tempfile
