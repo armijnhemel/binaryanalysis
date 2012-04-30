@@ -261,8 +261,8 @@ def extractDynamic(scanfile, envvars):
 	c = conn.cursor()
 
 	## keep a list of versions per sha256, since source files often contain more than one line
-	sha256_packages = {}
-	pkgcnt = {}
+	scanstr = []
+	mangles = []
 	for i in st[3:]:
 		dynstr = i.split()
 		if dynstr[6] == 'UND':
@@ -278,18 +278,56 @@ def extractDynamic(scanfile, envvars):
 		## __libc_csu_init __libc_csu_fini are in the ELF standard and/or added by GCC to everything, so skip
 		if dynstr[7] == '__libc_csu_init' or dynstr[7] == '__libc_csu_fini':
 			continue
-		c.execute('select sha256 from extracted_function where functionname=?', (dynstr[7],))
+		## C++ string, needs to be demangled first
+		if dynstr[7].startswith("_Z"):
+			mangles.append(dynstr[7])
+		else:
+			funcname = dynstr[7]
+			scanstr.append(funcname)
+
+	step = 100
+	if mangles != []:
+		for i in range(0, len(mangles), step):
+			offset = i
+			args = ['c++filt'] + mangles[offset:offset+step]
+			offset = offset + step
+			p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate()
+			if p.returncode != 0:
+				continue
+			for f in stanout.strip().split('\n'):
+				funcname = f.split('(', 1)[0].rsplit('::', 1)[-1].strip()
+				scanstr.append(funcname)
+
+	sha256_packages = {}
+	pkgcnt = {}
+	uniquepackages = []
+	namesmatched = 0
+
+	## demangling can lead to identical results, so we prune first
+	for funcname in list(set(scanstr)):
+		matched = False
+		c.execute('select sha256 from extracted_function where functionname=?', (funcname,))
 		res = c.fetchall()
 		pkgs = []
 		for r in res:
 			if sha256_packages.has_key(r[0]):
 				pkgs = pkgs + copy.copy(sha256_packages[r[0]])
+				matched = True
 				continue
 			c.execute('select package, version from processed_file where sha256=?', r)
 			s = c.fetchall()
+			if s != []:
+				matched = True
 			pkgs = pkgs + s
 			sha256_packages[r[0]] = s
-		print >>sys.stderr, list(set(pkgs)), dynstr[7]
+		differentpackages = map(lambda x: x[0], pkgs)
+		if len(list(set(differentpackages))) == 1:
+			uniquepackages = uniquepackages + pkgs
+		if matched:
+			namesmatched += 1
+	for i in list(set(uniquepackages)):
+		print >>sys.stderr, i, uniquepackages.count(i), namesmatched
 
 ## Look up strings in the database and determine which packages/versions/licenses were used
 def extractGeneric(lines, path, language='C', envvars=None):
