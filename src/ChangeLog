@@ -1,3 +1,7 @@
+2012-05-02
+* add very simplistic verifier for MP4 files to reduce false positives
+further. Only works on a subset of files for now
+
 2012-04-24
 * tagging 7.0
 

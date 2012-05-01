@@ -311,6 +311,33 @@ def verifyOgg(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags.append('audio')
 	return newtags
 
+## extremely simple verifier for MP4 to reduce false positives further
+def verifyMP4(filename, tempdir=None, tags=[], offsets={}, envvars=None):
+	newtags = []
+	if not filename.endswith('.mp4'):
+		return newtags
+	if not 'binary' in tags:
+		return newtags
+	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags or 'audio' in tags:
+		return newtags
+	mp4file = open(filename, 'rb')
+	mp4bytes = mp4file.read(8)
+	mp4file.close()
+	## only check for "ISO Media" at the moment. As soon as I get more
+	## test files more will be added.
+	if not mp4bytes.endswith('ftyp'):
+		return newtags
+	## now check if it is a valid file by running mp4dump
+	p = subprocess.Popen(['mp4dump', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		return newtags
+	if "invalid atom size" in stanout:
+		return newtags
+	newtags.append('mp4')
+	newtags.append('video')
+	return newtags
+
 ## very simplistic verifier for some TrueType fonts
 def verifyTTF(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
@@ -328,6 +355,7 @@ def verifyTTF(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	ttffile.close()
 	if ttfbytes != '\x00\x01\x00\x00\x00':
 		return newtags
+	## we are getting close. Now run mkeot to verify.
 	p = subprocess.Popen(['mkeot', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
