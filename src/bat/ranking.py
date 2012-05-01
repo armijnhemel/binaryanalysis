@@ -237,7 +237,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 ## external libraries, but also lists local functions.
 ## By searching a database that contain which function names can be found in
 ## which packages.
-def extractDynamic(scanfile, envvars):
+def extractDynamic(scanfile, envvars=None):
 	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):
