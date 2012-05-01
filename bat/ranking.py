@@ -373,7 +373,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 
 	stringscache = scanenv.get(stringsdbperlanguage[language], '/tmp/stringscache')
 	c.execute("attach ? as stringscache", (stringscache,))
-	c.execute("create table if not exists stringscache.stringscache (programstring text, package text, filename text)")
+	c.execute("create table if not exists stringscache.stringscache (programstring text, package text, filename text, versions text)")
 	c.execute("create index if not exists stringscache.programstring_index on stringscache(programstring)")
 	conn.commit()
 
@@ -484,7 +484,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 				(package, filename) = result
 				## in case we don't know this match yet record it in the database
 				if newmatch and not rankingfull:
-					c.execute('''insert into stringscache.stringscache values (?, ?, ?, ?)''', (line, package, filename))
+					c.execute('''insert into stringscache.stringscache values (?, ?, ?, ?)''', (line, package, filename, ""))
 				if not pkgs.has_key(package):
 					pkgs[package] = [filename]
 				else:
