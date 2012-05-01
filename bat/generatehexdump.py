@@ -9,6 +9,11 @@ This is a plugin for the Binary Analysis Tool. It takes the output of hexdump -C
 and writes it to a file with gzip compression. The output is later used in the
 (upcoming) graphical user interface.
 
+Parameters:
+
+BAT_REPORTDIR :: directory where output should be written to. This is useful for caching
+BAT_IMAGE_MAXFILESIZE :: maximum size of source file
+
 This should be run as a postrun scan
 '''
 
