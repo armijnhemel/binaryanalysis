@@ -1,0 +1,577 @@
+#!/usr/bin/python
+
+#-*- coding: utf-8 -*-
+
+## Binary Analysis Tool
+## Copyright 2012 Armijn Hemel for Tjaldur Software Governance Solutions
+## Licensed under Apache 2.0, see LICENSE file for details
+
+'''
+This is a program for viewing results of the Binary Analysis Tool.
+In the future it will also allow for a more interactive way if scanning.
+'''
+
+import sys, os, string, gzip, cPickle, bz2, tarfile, tempfile
+from optparse import OptionParser
+import ConfigParser
+import wx, wx.html, wx.lib, wx.lib.statbmp, wx.aui, wx.lib.agw.flatnotebook
+import sqlite3, cgi
+#import bruteforce
+
+helphtml = '''<html>
+<title>Binary Analysis Tool result viewer</title>
+<h1>Binary Analysis tool result viewer</h1>
+<p>
+On the left you will find a tree that can be browsed. Results can be shown by clicking on the item. The tree contains extra information to help you get to the right information straightaway:
+
+<ul>
+<li>&empty; means the file is empty</li>
+<li>&rarr; means the file is a symbolic link, pointing to the file following &rarr;</li>
+<!-- <li>&#x24e7; means that strings were found that could be matched with Open Source software</li> -->
+<li>&#x272a; means that strings were found that could be matched with Open Source software</li>
+<li>&#x24c9; means that the file only contains text</li>
+<li>&#x24bc; means that the file is a graphics file</li>
+<li>&#x24b8; means that the file is a compressed file</li>
+<li>&#x24b9; means that the file is a directory (possibly empty)</li>
+</ul>
+</p>
+
+<p>
+On the right there are views of the file. There are three main views of the file:
+
+<ol>
+<li>Overview</li>
+<li>Matches view</li>
+<li>Alternate view</li>
+</ol>
+</p>
+<h2>Overview</h2>
+<p>
+The overview displays various types of information about the file, such as name, relative path inside a file system or compressed file, size, SHA256 checksum (if any), information about which packages were found (if available), and so on.
+</p>
+<h2>Matches view</h2>
+<p>
+In this window you will see a list of unique matches per package. For each unique match you will see:
+<ul>
+<li>file name</li>
+<li>version(s)</li>
+<li>line number</li>
+<li>SHA256 checksum</li>
+</ul>
+
+Each line number is clickable. If there is an archive of pregenerated HTML source code files the corresponding source code file will be shown when clicking on the link.
+</p>
+<h2>Alternate view</h2>
+<p>
+In this tab you will find two different representations of the binary file:
+
+<ol>
+<li>picture view: each byte value in the binary file has been assigned a grayscale value. Bytes with value <tt>0x00</tt> are black, bytes with value <tt>0xff</tt> are white. Other bytes are assigned values in between.</li>
+<li>hexdump view</li>
+</ol>
+</p>
+<p>
+By clicking somewhere on the picture the hexdump view will automatically scroll to the textual representation of the clicked byte. This will quickly allow you to view interesting boundaries.
+</p>
+</html>
+'''
+
+class BATHtmlWindow(wx.html.HtmlWindow):
+	def __init__(self, parent, target):
+		wx.html.HtmlWindow.__init__(self, parent)
+		self.target = target
+	def OnLinkClicked(self, link):
+		href = link.GetHref()
+		if href.startswith('unique:/'):
+			## TODO: remove hardcoded path
+			htmldir = "/home/armijn/html/files"
+			(linksha256sum, linenumber) = href[8:].split('#')
+			pphtml = bz2.BZ2File("%s/%s/%s/%s/%s.html.bz2" % (htmldir, linksha256sum[0], linksha256sum[1], linksha256sum[2], linksha256sum), 'r')
+			htmlcontent = pphtml.read()
+			pphtml.close()
+			## grab the sha256sum of the files we found stuff in from the clicked link and display it
+			self.target.SetPage(htmlcontent)
+			self.target.ScrollToAnchor("line%s" % linenumber)
+			self.target.Refresh(True)
+		elif href.startswith("#"):
+			anchor = href.split('#')[-1]
+			self.ScrollToAnchor(anchor)
+
+
+class BatFrame(wx.Frame):
+	def __init__(self, parent, title):
+		wx.Frame.__init__(self, parent, title=title, size=(1280,768))
+
+		## add a few menus
+		filemenu = wx.Menu()
+		menuOpen = filemenu.Append(wx.ID_OPEN,"&Open"," Terminate the program")
+		menuSave = filemenu.Append(wx.ID_SAVE,"&Save"," Terminate the program")
+		menuSaveAs = filemenu.Append(wx.ID_SAVEAS,"Save &As..."," Terminate the program")
+		filemenu.AppendSeparator()
+		menuExit = filemenu.Append(wx.ID_EXIT,"E&xit"," Terminate the program")
+
+		helpmenu = wx.Menu()
+		menuHelp = helpmenu.Append(wx.ID_HELP_CONTENTS, "&Contents"," Help")
+		menuAbout = helpmenu.Append(wx.ID_ABOUT, "&About"," Information about this program")
+
+		menuBar = wx.MenuBar()
+		menuBar.Append(filemenu,"&File")
+		menuBar.Append(helpmenu,"&Help")
+		self.SetMenuBar(menuBar)
+		self.Bind(wx.EVT_MENU, self.onAbout, menuAbout)
+		self.Bind(wx.EVT_MENU, self.onExit, menuExit)
+		self.Bind(wx.EVT_MENU, self.onOpen, menuOpen)
+		self.Bind(wx.EVT_MENU, self.onSave, menuSave)
+		self.Bind(wx.EVT_MENU, self.onSave, menuSaveAs)
+		self.Bind(wx.EVT_MENU, self.onHelp, menuHelp)
+
+		## next we should have a toolbar
+		battoolbar = self.CreateToolBar()
+
+		## we create a sizer to position the elements
+		## one row, two columns
+		## column 0: file tree
+		## column 1: display of all kinds of data
+		## column 1 should be allowed to grow
+		flexgrid = wx.FlexGridSizer(1, 2)
+		flexgrid.AddGrowableCol(0, 3)
+		flexgrid.AddGrowableCol(1, 15)
+		flexgrid.AddGrowableRow(0)
+		flexgrid.SetHGap(10)
+		self.SetSizerAndFit(flexgrid)
+
+		## Then we have two panels
+		## The left panel is to show the file tree
+		self.tree = wx.TreeCtrl(self, style=wx.TR_DEFAULT_STYLE|wx.TR_LINES_AT_ROOT|wx.TR_HAS_BUTTONS|wx.TR_FULL_ROW_HIGHLIGHT|wx.ALWAYS_SHOW_SB)
+		flexgrid.Add(self.tree, flag=wx.EXPAND)
+		self.tree.Bind(wx.EVT_TREE_SEL_CHANGED, self.treeHasChanged)
+		
+		## The right panel is to show all the other information. As soon as one of the items in the tree is selected
+		## that is not a directory we change the information in all the panels.
+		#notebookpanel = wx.Notebook(self)
+		#self.notebookpanel = wx.aui.AuiNotebook(self)
+		self.notebookpanel = wx.lib.agw.flatnotebook.FlatNotebook(self, agwStyle=wx.lib.agw.flatnotebook.FNB_NO_X_BUTTON|wx.lib.agw.flatnotebook.FNB_NO_NAV_BUTTONS)
+		flexgrid.Add(self.notebookpanel, flag=wx.EXPAND)
+
+		## There is an overview tab containing a window with some information, initially showing help text
+		#overviewtab = wx.NotebookPage(notebookpanel)
+		self.overviewwindow = wx.html.HtmlWindow(self.notebookpanel)
+		self.notebookpanel.AddPage(self.overviewwindow, "Overview")
+		self.overviewwindow.SetPage(helphtml)
+
+		## We have a tab for detailed information about matches
+		matchestab = wx.SplitterWindow(self.notebookpanel)
+		self.notebookpanel.AddPage(matchestab, "Matches")
+		## One window to display corresponding source code, initially empty
+		self.matchesbrowser = wx.html.HtmlWindow(matchestab)
+		self.matchesbrowser.SetPage("<html></html")
+		## One window to display the matches, initially empty
+		self.matcheswindow = BATHtmlWindow(matchestab, self.matchesbrowser)
+		self.matcheswindow.SetPage("<html></html>")
+		matchestab.SplitVertically(self.matcheswindow, self.matchesbrowser)
+		matchestab.SetSashGravity(0.5)
+
+		## We have a tab for visual information and hexdumps about a file
+		self.alternateviewtab = wx.SplitterWindow(self.notebookpanel)
+		self.notebookpanel.AddPage(self.alternateviewtab, "Alternate view")
+
+		## with one textctrl on the right
+		hexdumpStyle = wx.TextAttr()
+		hexdumpStyle.SetFont(wx.FFont(10, family=wx.FONTFAMILY_TELETYPE))
+		self.textCtrl = wx.TextCtrl(self.alternateviewtab, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
+		self.textCtrl.SetDefaultStyle(hexdumpStyle)
+
+		## and pictures on the left
+		self.picturepanel = wx.ScrolledWindow(self.alternateviewtab)
+		vbox = wx.FlexGridSizer(2, 1)
+		vbox.AddGrowableRow(0,1)
+		vbox.AddGrowableRow(1,1)
+		vbox.SetVGap(5)
+		self.picturepanel.SetSizerAndFit(vbox)
+
+		self.histo2 = wx.EmptyBitmap(width=1, height=1)
+		self.histogram2 = wx.lib.statbmp.GenStaticBitmap(self.picturepanel, ID=-1, bitmap=self.histo2)
+		#self.histogram = wx.StaticBitmap(self.picturepanel, bitmap=histo2)
+		#self.histogram2 = wx.lib.statbmp.GenStaticBitmap(self.picturepanel, ID=-1, bitmap=histo2)
+		#self.histogram2.Bind(wx.EVT_LEFT_DOWN, self.onHexdumpClick)
+		vbox.Add(self.histogram2, flag=wx.EXPAND)
+		#vbox.Add(self.histogram, flag=wx.EXPAND)
+		self.picturepanel.SetScrollbars(20, 20, 10, 10)
+		self.alternateviewtab.SplitVertically(self.picturepanel, self.textCtrl)
+		self.alternateviewtab.SetSashGravity(0.4)
+
+		## We have a tab for visual information and hexdumps about a file
+		self.textpicturetab = wx.SplitterWindow(self.notebookpanel)
+		self.textpicturetab.SetSashGravity(0.4)
+		self.notebookpanel.AddPage(self.textpicturetab, "Text/pictures")
+		self.notebookpanel.EnableTab(3,False)
+
+		## with one textctrl on the right
+		plaintextStyle = wx.TextAttr()
+		plaintextStyle.SetFont(wx.FFont(10, family=wx.FONTFAMILY_TELETYPE))
+		self.plaintextDisplay = wx.TextCtrl(self.textpicturetab, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
+		self.plaintextDisplay.SetDefaultStyle(plaintextStyle)
+
+		## and pictures on the left
+		self.picturedisplay = wx.ScrolledWindow(self.textpicturetab)
+		displayvbox = wx.FlexGridSizer(2, 1)
+		displayvbox.AddGrowableRow(0,1)
+		displayvbox.AddGrowableRow(1,1)
+		displayvbox.SetVGap(5)
+		self.picturedisplay.SetSizerAndFit(displayvbox)
+
+		'''
+		self.histo2 = wx.EmptyBitmap(width=1, height=1)
+		self.histogram2 = wx.lib.statbmp.GenStaticBitmap(self.picturepanel, ID=-1, bitmap=self.histo2)
+		#self.histogram = wx.StaticBitmap(self.picturepanel, bitmap=histo2)
+		#self.histogram2 = wx.lib.statbmp.GenStaticBitmap(self.picturepanel, ID=-1, bitmap=histo2)
+		#self.histogram2.Bind(wx.EVT_LEFT_DOWN, self.onHexdumpClick)
+		vbox.Add(self.histogram2, flag=wx.EXPAND)
+		#vbox.Add(self.histogram, flag=wx.EXPAND)
+		self.picturepanel.SetScrollbars(20, 20, 10, 10)
+		'''
+		self.alternateviewtab.SplitVertically(self.picturedisplay, self.plaintextDisplay)
+		self.alternateviewtab.SetSashGravity(0.4)
+
+		self.Show(True)
+
+	def onHexdumpClick(self, event):
+		## get a rough approximation of where to scroll to in the hexdump file
+		(xpos,ypos) = event.GetPositionTuple()
+		pos = ((xpos + ypos * 512)/16) * 79
+		self.textCtrl.SetInsertionPoint(pos)
+
+	def textctrlupdate(self):
+		## in case the file had already been changed, and CallLater() had not yet run we would
+		## get an error. It is actually better to make sure CallLater() is aborted on time
+		if self.data == '':
+			return
+		offset = 1000000
+		self.textCtrl.Freeze()
+		self.textCtrl.AppendText(self.data[offset:])
+
+		unpackedfiles = []
+		for i in self.unpackreports[self.selectedfile]['scans']:
+			unpackedfiles.append((i['offset'], i['scanname'], i['size']))
+
+		## work our way backwards, so we don't have to remember to do funky math with offsets
+		unpackedfiles = sorted(unpackedfiles, reverse=True)
+		for i in unpackedfiles:
+			if len(self.data) < 78:
+				continue
+			pos = (i[0]/16) * 79 + 78
+			labelStyle = wx.TextAttr()
+			labelStyle.SetFlags(wx.TEXT_ATTR_TEXT_COLOUR)
+			labelStyle.SetTextColour('RED')
+			self.textCtrl.SetInsertionPoint(pos)
+			insertionText = " %s at 0x%08x" % (i[1], i[0])
+			self.textCtrl.WriteText(insertionText)
+			self.textCtrl.SetStyle(pos, pos + len(insertionText), style=labelStyle)
+		self.textCtrl.SetInsertionPoint(0)
+		self.textCtrl.Thaw()
+
+	def treeHasChanged(self, event):
+		self.selectedfile = self.tree.GetItemData(event.GetItem()).GetData()
+
+		## first clean all the windows
+		self.overviewwindow.SetPage("<html></html>")
+		self.matcheswindow.SetPage('<html></html>')
+		self.matchesbrowser.SetPage("<html></html>")
+		## clean the pictures
+		self.histo2 = wx.EmptyBitmap(width=1, height=1)
+		self.histogram2.SetBitmap(bitmap=self.histo2)
+		self.histogram2.Refresh(True)
+		self.picturepanel.FitInside()
+		## clean the hexdump
+		self.textCtrl.Clear()
+
+		## enable all tabs again
+		self.notebookpanel.EnableTab(1,True)
+		self.notebookpanel.EnableTab(2,True)
+
+		## if / is selected we print the help page again
+		if self.selectedfile == None:
+			self.overviewwindow.SetPage(helphtml)
+
+		if self.unpackreports.has_key(self.selectedfile):
+			sha256sum = ''
+			if self.unpackreports[self.selectedfile].has_key('sha256'):
+				sha256sum = self.unpackreports[self.selectedfile]['sha256']
+			## now we have to change all the tabs. First the overview
+			name = self.unpackreports[self.selectedfile]['name']
+			path = self.unpackreports[self.selectedfile]['path']
+			realpath = self.unpackreports[self.selectedfile]['realpath']
+			magic = self.unpackreports[self.selectedfile]['magic']
+			if not "symbolic link" in magic:
+				size = self.unpackreports[self.selectedfile]['size']
+			else:
+				size = 0
+			## very simplistic HTML table we show for individual elements
+			## All in 1990s HTML!
+			overviewstring = '''
+<html>
+<body>
+<h2>Overview</h2>
+<table>
+<tr><td><b>Name</b></td><td>%s</td></tr>
+<tr><td><b>Path</b></td><td>%s</td></tr>
+<tr><td><b>Absolute path</b></td><td>%s</td></tr>
+<tr><td><b>Size</b></td><td>%s bytes</td></tr>
+<tr><td><b>File type</b></td><td>%s</td></tr>
+			'''
+			footer = '''
+</body>
+</html>
+			'''
+			tag = ""
+			tablerows = ''
+			matchesrows = ''
+			if sha256sum != '':
+				tablerows = tablerows + "<tr><td><b>SHA256</b></td><td>%s</td></tr>\n" % sha256sum
+			if self.leafreports.has_key(self.selectedfile):
+				applications = []
+				for i in self.leafreports[self.selectedfile]:
+					if i.keys()[0] == 'busybox-version':
+						tablerows = tablerows + "<tr><td><b>BusyBox version</b></td><td>%s</td></tr>\n" % i['busybox-version']
+					elif i.keys()[0] == 'architecture':
+						tablerows = tablerows + "<tr><td><b>Architecture</b></td><td>%s</td></tr>\n" % i['architecture']
+					elif i.keys()[0] == 'kernelmodulelicense':
+						tablerows = tablerows + "<tr><td><b>Kernel module license</b></td><td>%s</td></tr>\n" % i['kernelmodulelicense']
+					elif i.keys()[0] == 'libs':
+						tablerows = tablerows + "<tr><td><b>Shared libraries</b></td><td>%s</td></tr>\n" % reduce(lambda x, y: "%s, %s" % (x,y), i['libs'])
+					elif i.keys()[0] == 'licenses':
+						tablerows = tablerows + "<tr><td><b>Licenses/license families</b></td><td>%s</td></tr>\n" % reduce(lambda x, y: "%s, %s" % (x,y), i['licenses'].keys())
+					elif i.keys()[0] == 'forges':
+						tablerows = tablerows + "<tr><td><b>Forges</b></td><td>%s</td></tr>\n" % reduce(lambda x, y: "%s, %s" % (x,y), i['forges'].keys())
+					elif i.keys()[0] == 'kernelchecks':
+						for j in i['kernelchecks']:
+							if j == 'version':
+								tablerows = tablerows + "<tr><td><b>Linux kernel</b></td><td>%s</td></tr>\n" % i['kernelchecks']['version']
+					elif i.keys()[0] == 'redboot':
+						tablerows = tablerows + "<tr><td><b>Bootloader</b></td><td>RedBoot</td></tr>\n"
+					elif i.keys()[0] in ['dproxy', 'ez-ipupdate', 'iproute', 'iptables', 'libusb', 'loadlin', 'vsftpd', 'wireless-tools', 'wpa-supplicant']:
+						applications.append(i.keys()[0])
+					elif i.keys()[0] == 'tags':
+						if 'graphics' in i['tags']:
+							self.notebookpanel.EnableTab(2,False)
+							tag = 'graphics'
+						if 'text' in i['tags']:
+							self.notebookpanel.EnableTab(2,False)
+							tag = 'graphics'
+					elif i.keys()[0] == 'ranking':
+						if not (i['ranking']['extractedlines']) == 0 and not (i['ranking']['matchedlines']) == 0:
+							matchesrows = '''
+<h2>Match statistics</h2>
+<table>
+<tr><td><b>Extracted lines</b></td><td>%d</td></tr>
+<tr><td><b>Matched lines</b></td><td>%d</td></tr>
+<tr><td><b>Match percentage</b></td><td>%f%%</td></tr>
+</table>
+							'''
+							matchesrows = matchesrows % (i['ranking']['extractedlines'], i['ranking']['matchedlines'], (float(i['ranking']['matchedlines'])/i['ranking']['extractedlines']*100))
+							if len(i['ranking']['reports']) != 0:
+								htmllinks = []
+								versionhtml = ""
+								## nested table, urgghhhh
+								matchesrows = matchesrows + '''<h3>Matched packages</h3>
+<table><tr><td>
+  <table>
+    <tr><td><b>Rank</b></td><td><b>Name</b></td><td><b>Percentage</b></td><td><b>Unique matches</b></td><td><b>Non unique matches assigned</b></td></tr>\n'''
+
+								for j in i['ranking']['reports']:
+									matchesrows = matchesrows + "    <tr><td>%d</td><td>%s</td><td>%f%%</td><td>%d</td><td>%d</td></tr>\n" % (j[0], j[1], j[3], len(j[2]), i['ranking']['nonUniqueAssignments'].get(j[1], 0))
+									# nonUniqueMatches, matchedlines, reports, extractedlines
+									if len(j[2]) != 0:
+										versionhtml = versionhtml + "<h5>%s</h5><p><img src=\"%s\"/></p>\n" % (j[1], "%s/%s-%s-version.png" % (self.imagesdir, sha256sum, j[1]))
+										## here we should either do a database lookup to get the checksum,
+										## or check if they are already in the report
+										htmllinks.append((j[1], j[2]))
+								matchesrows = matchesrows + "</table><td><img src=\"%s\"/></td></tr></table>" % ("%s/%s-piechart.png" % (self.imagesdir, sha256sum))
+								if versionhtml != "":
+									matchesrows = matchesrows + "<h2>Versions per package</h2>" + versionhtml
+								if os.path.exists(os.path.join(self.reportsdir, "%s-unique.html" % sha256sum)):
+									uniquehtmlfile = open(os.path.join(self.reportsdir, "%s-unique.html" % sha256sum), 'r')
+									uniquehtml = uniquehtmlfile.read()
+									uniquehtmlfile.close()
+									self.matcheswindow.SetPage(uniquehtml)
+				if applications != []:
+					tablerows = tablerows + "<tr><td><b>Applications</b></td><td>%s</td></tr>\n" % reduce(lambda x, y: "%s, %s" % (x,y), applications)
+			overviewstring = overviewstring % (name, path, realpath, size, magic)
+			overviewstring = overviewstring + tablerows + "</table>" + matchesrows + footer
+			self.overviewwindow.SetPage(overviewstring)
+
+			if sha256sum != '' and tag not in ['graphics', 'text']:
+				try:
+					os.stat("%s/%s-hexdump.gz" % (self.reportsdir, sha256sum))
+					datafile = gzip.open('%s/%s-hexdump.gz' % (self.reportsdir, sha256sum))
+					hexdump = datafile.read()
+					datafile.close()
+					self.data = hexdump
+					self.datalen = len(self.data)
+					## if file is small enough load it at once
+					if size > 1000000:
+						self.textCtrl.WriteText(self.data[:1000000])
+						self.bla = wx.CallLater(2000, self.textctrlupdate)
+					else:
+						self.textCtrl.WriteText(self.data)
+						self.bla = wx.CallLater(0, self.textctrlupdate)
+					self.textCtrl.SetInsertionPoint(0)
+				except Exception, e:
+					print e
+					pass
+				try:
+					os.stat("%s/%s.png" % (self.imagesdir, sha256sum))
+					self.histo2 = wx.Image('%s/%s.png' % (self.imagesdir, sha256sum), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+		
+					self.histogram2.SetBitmap(bitmap=self.histo2)
+					self.histogram2.Bind(wx.EVT_LEFT_DOWN, self.onHexdumpClick)
+					self.histogram2.Refresh(True)
+					self.picturepanel.FitInside()
+				except Exception, e:
+					print e
+					pass
+
+	def initTree(self, tree, tmpdir):
+		tree.DeleteAllItems()
+
+		## TODO: refactor this
+		## first clean all the windows
+		self.overviewwindow.SetPage(helphtml)
+		self.matcheswindow.SetPage('<html></html>')
+		self.matchesbrowser.SetPage("<html></html>")
+		## clean the pictures
+		self.histo2 = wx.EmptyBitmap(width=1, height=1)
+		self.histogram2.SetBitmap(bitmap=self.histo2)
+		self.histogram2.Refresh(True)
+		self.picturepanel.FitInside()
+		## clean the hexdump
+		self.textCtrl.Clear()
+
+		## construct a tree from a directory, or a pickle
+		if tmpdir.endswith('/'):
+			tmpdir = tmpdir[:-1]
+		srcdirlen = len(os.path.normpath(tmpdir))
+		## TODO: use data from scandata pickle for this
+		osgen = os.walk(tmpdir)
+		rootnode = tree.AddRoot('/')
+		nodes = {}
+		try:
+			while True:
+				i = osgen.next()
+				dirlist = i[1]
+				dirlist.sort()
+				for j in dirlist:
+					if i[0][srcdirlen:] == "":
+						## would have been nice to use this unicode character
+						#linktext = u" \u1f4c1"
+						linktext = u"%s  \u24b9" % j
+						dirnode = tree.AppendItem(rootnode, linktext, data=wx.TreeItemData(j))
+						nodes[j] = dirnode
+					else:
+						searchkey = i[0][srcdirlen:]
+						if searchkey.startswith('/'):
+							searchkey = searchkey[1:]
+						if not nodes.has_key(searchkey):
+							continue
+						else:
+							#linktext = u"%s \u1f4c1" % j
+							#linktext = j
+							linktext = u"%s  \u24b9" % j
+							dirnode = tree.AppendItem(nodes[searchkey], linktext, data=wx.TreeItemData(os.path.normpath("%s/%s" % (searchkey, j))))
+							nodes[os.path.normpath("%s/%s" % (searchkey, j))] = dirnode
+				filelist = i[2]
+				filelist.sort()
+				for j in filelist:
+					linktext = j
+					linkpath = os.path.normpath("%s/%s" % (i[0][srcdirlen:], j))
+					if linkpath.startswith('/'):
+						linkpath = linkpath[1:]
+					if self.leafreports.has_key(linkpath):
+						for r in self.leafreports[linkpath]:
+							if r.keys()[0] == 'ranking':
+								if r['ranking']['matchedlines'] != 0:
+									## give a visual clue to people to tell them that strings could be matched
+									#linktext = u"%s  \u24e7" % j
+									linktext = u"%s  \u272a" % j
+							if r.keys()[0] == 'tags':
+								if 'text' in r['tags']:
+									linktext = u"%s  \u24c9" % j
+								if 'graphics' in r['tags']:
+									linktext = u"%s  \u24bc" % j
+								if 'compressed' in r['tags']:
+									linktext = u"%s  \u24b8" % j
+					if os.path.islink(os.path.normpath("%s/%s" % (i[0], j))):
+						## if we have a link, then add the value of where the link points to
+						## to give a visual clue to people
+						linktext = u"%s \u2192 %s" % (j, os.readlink(u"%s/%s" % (i[0], j)))
+						#linktext = u"%s \u21fe %s" % (j, os.readlink(u"%s/%s" % (i[0], j)))
+					else:
+						## if files are empty we mark them as empty
+						## TODO: use information from scandata pickle for this
+						if os.stat("%s/%s" % (i[0], j)).st_size == 0:
+							linktext = u"%s  \u2205" % j
+					if i[0][srcdirlen:] == "":
+						tree.AppendItem(rootnode, linktext, data=wx.TreeItemData(j))
+					else:
+						searchkey = i[0][srcdirlen:]
+						if searchkey.startswith('/'):
+							searchkey = searchkey[1:]
+						if not nodes.has_key(searchkey):
+							continue
+						else:
+							tree.AppendItem(nodes[searchkey], text=linktext, data=wx.TreeItemData(os.path.normpath("%s/%s" % (searchkey, j))))
+					pass
+		except StopIteration:
+			pass
+
+	## show a dialog window with some information about BAT
+	def onAbout(self,e):
+		# A message dialog box with an OK button. wx.OK is a standard ID in wxWidgets.
+		dlg = wx.MessageDialog( self, "Binary Analysis Tool Viewer", "About the Binary Analysis Tool Viewer", wx.OK)
+		dlg.ShowModal()
+		dlg.Destroy()
+
+	def onExit(self,e):
+		self.Close(True)  # Close the frame.
+
+	def onHelp(self,e):
+		print e.GetString()
+		self.Close(True)  # Close the frame.
+
+	def onSave(self,e):
+		dlg = wx.FileDialog(self, 'Save BAT results', style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT)
+		if dlg.ShowModal() == wx.ID_OK:
+			pass
+
+	def onOpen(self,e):
+		dlg = wx.FileDialog(self, 'Open BAT results', style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST)
+		if dlg.ShowModal() == wx.ID_OK:
+			## should be an archive with inside:
+			## * scandata.pickle
+			## * data directory
+			## * images directory (optional)
+			self.tmpdir = tempfile.mkdtemp()
+			try:
+				tar = tarfile.open(dlg.GetPath())
+				tar.extractall(self.tmpdir)
+				tar.close()
+			except Exception, e:
+				os.rmdir(self.tmpdir)
+				return
+			datadir = "%s/data" % self.tmpdir
+			self.imagesdir = "%s/images" % self.tmpdir
+			self.reportsdir = "%s/reports" % self.tmpdir
+			(self.unpackreports, self.leafreports, scans) = cPickle.load(open("%s/scandata.pickle" % self.tmpdir, 'rb'))
+			self.initTree(self.tree, datadir)
+			self.tree.Refresh()
+			self.tree.ExpandAll()
+
+
+def main(argv):
+	app = wx.App(False)  # Create a new app, don't redirect stdout/stderr to a window.
+	frame = BatFrame(None, "Binary Analysis Tool") # A Frame is a top-level window.
+	frame.Show(True)     # Show the frame.
+	app.MainLoop()
+
+if __name__ == "__main__":
+	main(sys.argv)
