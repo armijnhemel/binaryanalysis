@@ -232,6 +232,11 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 			os.unlink(tmpfile[1])
                 return None
 
+## From dynamically linked ELF files it is possible to extract the dynamic
+## symbol table. This table lists the functions which are needed from
+## external libraries, but also lists local functions.
+## By searching a database that contain which function names can be found in
+## which packages.
 def extractDynamic(scanfile, envvars):
 	scanenv = os.environ.copy()
 	if envvars != None:
@@ -241,8 +246,6 @@ def extractDynamic(scanfile, envvars):
 				scanenv[envname] = envvalue
 			except Exception, e:
 				pass
-	## sometimes we can extract useful information from the dynamic symbols
-	## but mostly they lead to false positives.
  	p = subprocess.Popen(['readelf', '-W', '--dyn-syms', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
@@ -253,7 +256,7 @@ def extractDynamic(scanfile, envvars):
 	if st == '':
 		return
 
-	## open the database containing all the strings that were extracted
+	## open the database containing function names that were extracted
 	## from source code.
 	conn = sqlite3.connect(scanenv.get('BAT_SQLITE_DB', '/tmp/master'))
 	## we have byte strings in our database, not utf-8 characters...I hope
