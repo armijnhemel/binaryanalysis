@@ -438,6 +438,82 @@ def prettyprint(batconf, res, scandate, scans):
 	output = eval("bat_%s(res, scandate, scans, envvars)" % (method))
 	return output
 
+def writeDumpfile(unpackreports, leafreports, scans, outputfile, tempdir):
+	## if we make a dump of all the result we should have:
+	## * a copy of all the unpacked data
+	## * a copy of the report
+	## * a pickle of all data, it saves parsing the XML report (or any other format for that matter)
+	## We dump data here. There is some hardcoded data. Too bad.
+	sha256spack = []
+	for p in unpackreports:
+		if unpackreports[p].has_key('sha256'):
+			sha256spack.append(unpackreports[p]['sha256'])
+	for i in scans['postrunscans']:
+		if i['name'] == 'images':
+			if not os.path.exists(os.path.join(tempdir, 'images')):
+				os.mkdir(os.path.join(tempdir, 'images'))
+			if i.has_key('envvars'):
+				envvars = i['envvars'].split(':')
+				for e in envvars:
+					envsplit = e.split('=')
+					if envsplit[0] == 'BAT_IMAGEDIR':
+						target = os.path.join(tempdir, 'images')
+						copyfiles = []
+						## instead of globbing all the time we do the filtering ourselves
+						dirlisting = filter(lambda x: x.endswith(".png"), os.listdir(envsplit[1]))
+						for s in sha256spack:
+							copyfiles = copyfiles + filter(lambda x: x.startswith(s), dirlisting)
+						for c in copyfiles:
+							shutil.copy(os.path.join(envsplit[1], c), target)
+		elif i['name'] == 'hexdump':
+			if not os.path.exists(os.path.join(tempdir, 'reports')):
+				os.mkdir(os.path.join(tempdir, 'reports'))
+			if i.has_key('envvars'):
+				envvars = i['envvars'].split(':')
+				for e in envvars:
+					envsplit = e.split('=')
+					if envsplit[0] == 'BAT_REPORTDIR':
+						target = os.path.join(tempdir, 'reports')
+						copyfiles = []
+						dirlisting = filter(lambda x: x.endswith("-hexdump.gz"), os.listdir(envsplit[1]))
+						for s in sha256spack:
+							copyfiles = copyfiles + filter(lambda x: x.startswith(s), dirlisting)
+						for c in copyfiles:
+							shutil.copy(os.path.join(envsplit[1], c), target)
+		elif i['name'] == 'uniquehtml':
+			if not os.path.exists(os.path.join(tempdir, 'reports')):
+				os.mkdir(os.path.join(tempdir, 'reports'))
+			if i.has_key('envvars'):
+				envvars = i['envvars'].split(':')
+				for e in envvars:
+					envsplit = e.split('=')
+					if envsplit[0] == 'BAT_REPORTDIR':
+						target = os.path.join(tempdir, 'reports')
+						copyfiles = []
+						dirlisting = filter(lambda x: x.endswith("-unique.html"), os.listdir(envsplit[1]))
+						for s in sha256spack:
+							copyfiles = copyfiles + filter(lambda x: x.startswith(s), dirlisting)
+						for c in copyfiles:
+							shutil.copy(os.path.join(envsplit[1], c), target)
+
+	picklefile = open('%s/scandata.pickle' % (tempdir,), 'wb')
+	cPickle.dump((unpackreports, leafreports, scans), picklefile)
+	picklefile.close()
+	## now add everything to a TAR archive
+	dumpfile = tarfile.TarFile(outputfile, 'w')
+	os.chdir(tempdir)
+	dumpfile.add('scandata.pickle')
+	dumpfile.add('data')
+	try:
+		os.stat('images')
+		dumpfile.add('images')
+	except:	pass
+	try:
+		os.stat('reports')
+		dumpfile.add('reports')
+	except:	pass
+	dumpfile.close()
+
 def main(argv):
 	config = ConfigParser.ConfigParser()
         parser = OptionParser()
@@ -601,81 +677,7 @@ def main(argv):
 				postrunscans.append((i, unpackreports[i], [], scans['postrunscans'], scantempdir, tempdir))
 		postrunresults = pool.map(postrunscan, postrunscans, 1)
 
-	## if we make a dump of all the result we should have:
-	## * a copy of all the unpacked data
-	## * a copy of the report
-	## * a pickle of all data, it saves parsing the XML report (or any other format for that matter)
-	## We dump data here. There is some hardcoded data. Too bad.
-	sha256spack = []
-	for p in unpackreports:
-		if unpackreports[p].has_key('sha256'):
-			sha256spack.append(unpackreports[p]['sha256'])
-	for i in scans['postrunscans']:
-		if i['name'] == 'images':
-			if not os.path.exists(os.path.join(tempdir, 'images')):
-				os.mkdir(os.path.join(tempdir, 'images'))
-			if i.has_key('envvars'):
-				envvars = i['envvars'].split(':')
-				for e in envvars:
-					envsplit = e.split('=')
-					if envsplit[0] == 'BAT_IMAGEDIR':
-						target = os.path.join(tempdir, 'images')
-						copyfiles = []
-						## instead of globbing all the time we do the filtering ourselves
-						dirlisting = filter(lambda x: x.endswith(".png"), os.listdir(envsplit[1]))
-						for s in sha256spack:
-							copyfiles = copyfiles + filter(lambda x: x.startswith(s), dirlisting)
-						for c in copyfiles:
-							shutil.copy(os.path.join(envsplit[1], c), target)
-		elif i['name'] == 'hexdump':
-			if not os.path.exists(os.path.join(tempdir, 'reports')):
-				os.mkdir(os.path.join(tempdir, 'reports'))
-			if i.has_key('envvars'):
-				envvars = i['envvars'].split(':')
-				for e in envvars:
-					envsplit = e.split('=')
-					if envsplit[0] == 'BAT_REPORTDIR':
-						target = os.path.join(tempdir, 'reports')
-						copyfiles = []
-						dirlisting = filter(lambda x: x.endswith("-hexdump.gz"), os.listdir(envsplit[1]))
-						for s in sha256spack:
-							copyfiles = copyfiles + filter(lambda x: x.startswith(s), dirlisting)
-						for c in copyfiles:
-							shutil.copy(os.path.join(envsplit[1], c), target)
-		elif i['name'] == 'uniquehtml':
-			if not os.path.exists(os.path.join(tempdir, 'reports')):
-				os.mkdir(os.path.join(tempdir, 'reports'))
-			if i.has_key('envvars'):
-				envvars = i['envvars'].split(':')
-				for e in envvars:
-					envsplit = e.split('=')
-					if envsplit[0] == 'BAT_REPORTDIR':
-						target = os.path.join(tempdir, 'reports')
-						copyfiles = []
-						dirlisting = filter(lambda x: x.endswith("-unique.html"), os.listdir(envsplit[1]))
-						for s in sha256spack:
-							copyfiles = copyfiles + filter(lambda x: x.startswith(s), dirlisting)
-						for c in copyfiles:
-							shutil.copy(os.path.join(envsplit[1], c), target)
-
-	picklefile = open('%s/scandata.pickle' % (tempdir,), 'wb')
-	cPickle.dump((unpackreports, leafreports, scans), picklefile)
-	picklefile.close()
-	## now add everything to a TAR archive
-	dumpfile = tarfile.TarFile(options.outputfile, 'w')
-	os.chdir(tempdir)
-	dumpfile.add('scandata.pickle')
-	dumpfile.add('data')
-	try:
-		os.stat('images')
-		dumpfile.add('images')
-	except:	pass
-	try:
-		os.stat('reports')
-		dumpfile.add('reports')
-	except:	pass
-	dumpfile.close()
-	
+	writeDumpfile(unpackreports, leafreports, scans, options.outputfile, tempdir)
 
 if __name__ == "__main__":
         main(sys.argv)
