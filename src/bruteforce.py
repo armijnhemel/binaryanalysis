@@ -15,7 +15,7 @@ media formats), if available. This information is later used to filter scans and
 carve files.
 
 2. prerun phase for tagging files. This is a first big rough sweep for low hanging fruit,
-so we don't have to spend little or no time on useless scanning in the following phases.
+so we only have to spend little or no time on useless scanning in the following phases.
 Some things that are tagged here are text files, XML files, various graphics formats and
 some other files.
 
