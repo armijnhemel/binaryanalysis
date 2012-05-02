@@ -31,9 +31,9 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 
 	for i in leafscans:
 		if i.keys()[0] == 'ranking':
-			if len(i['ranking']['reports']) != 0:
+			if len(i['ranking'][0]['reports']) != 0:
 				htmllinks = []
-				for j in i['ranking']['reports']:
+				for j in i['ranking'][0]['reports']:
 					if len(j[2]) != 0:
 						## here we should either do a database lookup to get the checksum,
 						## or check if they are already in the report
