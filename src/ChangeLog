@@ -2,6 +2,8 @@
 * add very simplistic verifier for MP4 files to reduce false positives
 further. Only works on a subset of files for now
 * add first version of a graphical viewer of results made with BAT
+* add stubs for extra method for scanning dynamically linked binaries, by
+searching for function names. Prepare rest of the code for the change.
 
 2012-04-24
 * tagging 7.0

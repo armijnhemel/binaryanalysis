@@ -110,12 +110,12 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscand
 	## generate piechart and version information
 	for i in leafscans:
 		if i.keys()[0] == 'ranking':
-			if i['ranking']['reports'] != []:
+			if i['ranking'][0]['reports'] != []:
 				piedata = []
 				pielabels = []
 				totals = 0.0
 				others = 0.0
-				for j in i['ranking']['reports']:
+				for j in i['ranking'][0]['reports']:
 					## less than half a percent, that's not significant anymore
 					if j[3] < 0.5:
 						totals += j[3]
@@ -137,7 +137,7 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscand
 
 				pylab.savefig('%s/%s-piechart.png' % (imagedir, unpackreport['sha256']))
 				pylab.gcf().clear()
-				for j in i['ranking']['reports']:
+				for j in i['ranking'][0]['reports']:
 					if j[4] != {}:
 						'''
 						j_sorted = sorted(j[4], key=lambda x: j[4][x])

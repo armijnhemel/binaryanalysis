@@ -100,6 +100,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 		scanfile = tmpfile[1]
         try:
 		lines = []
+		dynamicRes = {}
 		if language == 'C':
 			## For ELF binaries we can concentrate on just a few sections of the
 			## binary, namely the .rodata and .data sections.
@@ -108,9 +109,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 			## constants :-(
 
         		if "ELF" in mstype and blacklist == []:
-				#extractDynamic(path, envvars)
-				#print >>sys.stderr, path
-				#return
+				#dynamicRes = extractDynamic(path, envvars)
 				datafile = open(path, 'rb')
 				data = datafile.read()
 				datafile.close()
@@ -219,7 +218,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 			if blacklist != []:
 				## we made a tempfile because of blacklisting, so cleanup
 				os.unlink(tmpfile[1])
-			return res
+			return (res, dynamicRes)
 		else:
 			if blacklist != []:
 				## we made a tempfile because of blacklisting, so cleanup
@@ -238,6 +237,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 ## By searching a database that contain which function names can be found in
 ## which packages.
 def extractDynamic(scanfile, envvars=None):
+	dynamicRes = {}
 	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):
@@ -249,12 +249,12 @@ def extractDynamic(scanfile, envvars=None):
  	p = subprocess.Popen(['readelf', '-W', '--dyn-syms', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		return
+		return dynamicRes
 
 	st = stanout.strip().split("\n")
 
 	if st == '':
-		return
+		return dynamicRes
 
 	## open the database containing function names that were extracted
 	## from source code.
@@ -262,6 +262,11 @@ def extractDynamic(scanfile, envvars=None):
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
+	c.execute("attach ? as functionnamecache", ('/tmp/funccache',))
+
+	rankingfull = False
+	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
+		rankingfull = True
 
 	## keep a list of versions per sha256, since source files often contain more than one line
 	scanstr = []
@@ -288,6 +293,7 @@ def extractDynamic(scanfile, envvars=None):
 			funcname = dynstr[7]
 			scanstr.append(funcname)
 
+	## run c++filt in batched mode to avoid launching many processes
 	step = 100
 	if mangles != []:
 		for i in range(0, len(mangles), step):
@@ -300,15 +306,32 @@ def extractDynamic(scanfile, envvars=None):
 				continue
 			for f in stanout.strip().split('\n'):
 				funcname = f.split('(', 1)[0].rsplit('::', 1)[-1].strip()
+				## TODO more sanity checks here
 				scanstr.append(funcname)
 
-	sha256_packages = {}
-	pkgcnt = {}
-	uniquepackages = []
+	uniquepackages = {}
 	namesmatched = 0
+	matches = []
+	uniquematches = 0
 
 	## demangling can lead to identical results, so we prune first
 	for funcname in list(set(scanstr)):
+		c.execute('select package from functionnamecache.functionnamecache where functionname=?', (funcname,))
+		res = c.fetchall()
+		pkgs = []
+		if res != []:
+			matches.append(funcname)
+			namesmatched += 1
+			## unique match
+			if len(res) == 1:
+				uniquematches += 1
+				if uniquepackages.has_key(res[0][0]):
+					uniquepackages[res[0][0]] += [funcname]
+				else:
+					uniquepackages[res[0][0]] = [funcname]
+		#elif res != [] and not rankingfull:
+		#	pass
+		'''
 		matched = False
 		c.execute('select sha256 from extracted_function where functionname=?', (funcname,))
 		res = c.fetchall()
@@ -329,8 +352,30 @@ def extractDynamic(scanfile, envvars=None):
 			uniquepackages = uniquepackages + pkgs
 		if matched:
 			namesmatched += 1
-	for i in list(set(uniquepackages)):
-		print >>sys.stderr, i, uniquepackages.count(i), namesmatched
+		'''
+	dynamicRes['namesmatched'] = namesmatched
+	dynamicRes['totalnames'] = len(list(set(scanstr)))
+	dynamicRes['uniquematches'] = uniquematches
+	if uniquematches != 0:
+		dynamicRes['packages'] = {}
+	## these are the unique strings only
+	for i in uniquepackages:
+		versions = []
+		for p in uniquepackages[i]:
+			c.execute('select distinct sha256 from extracted_function where functionname=?', (p,))
+			res = c.fetchall()
+			for s in res:
+				c.execute('select distinct package, version from processed_file where sha256=?', s)
+				packageversions = c.fetchall()
+				for pv in packageversions:
+					## shouldn't happen!
+					if pv[0] != i:
+						continue
+					versions.append(pv[1])
+		dynamicRes['packages'] = []
+		for v in list(set(versions)):
+			dynamicRes['packages'].append((v, versions.count(v)))
+	return dynamicRes
 
 ## Look up strings in the database and determine which packages/versions/licenses were used
 def extractGeneric(lines, path, language='C', envvars=None):
@@ -759,7 +804,8 @@ def averageStringsPerPkgVersion(pkg, conn):
 	return count
 
 
-def xmlprettyprint(res, root, envvars=None):
+def xmlprettyprint(matchres, root, envvars=None):
+	(res, dynamicRes) = matchres
 	if res['matchedlines'] == 0:
 		return None
 	tmpnode = root.createElement('ranking')
