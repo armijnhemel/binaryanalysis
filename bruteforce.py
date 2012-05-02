@@ -105,8 +105,7 @@ def gethash(path, filename):
 	scanfile.close()
 	return h.hexdigest()
 
-## scan a single file and recurse. Optionally supply a filehash for
-## checking a knowledgebase, which is future work.
+## scan a single file, possibly unpack and recurse
 def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir)):
 	lentempdir = len(tempdir)
 	filetoscan = "%s/%s" % (path, filename)
