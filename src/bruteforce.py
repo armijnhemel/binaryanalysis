@@ -283,29 +283,9 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir)):
 
 def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize)):
 	reports = []
-	## list of magic file types that 'program' checks should skip
-	## to avoid false positives and superfluous scanning. Does not work
-	## correctly yet, for romfs for example.
-	## If we use priorities we can rework this. The benefit of
-	## the current approach is that it is a lot faster.
-	## The drawback is that we might miss things that have been appended
-	## to any of the things in this list. So for correctness we should
-	## not rely on this.
-	programignorelist = [ "POSIX tar archive (GNU)"
-                            , "Zip archive data, at least v1.0 to extract"
-                            ]
 
 	reports.append({'tags': tags})
 	for scan in scans:
-		## TODO: rework this. Having blacklists is enough for this.
-		skip = False
-		for prog in programignorelist:
-			if prog in magic:
-				skip = True
-				break
-		if skip:
-			continue
-
 		if scan['noscan'] != None:
 			noscans = scan['noscan'].split(':')
 			if list(set(noscans).intersection(set(tags))) != []:
