@@ -108,10 +108,15 @@ def gethash(path, filename):
 ## scan a single file, possibly unpack and recurse
 def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir)):
 	lentempdir = len(tempdir)
+
+	## absolute path of the file in the file system (so including temporary dir)
 	filetoscan = "%s/%s" % (path, filename)
+
+	## relative path of the file in the temporary dir
 	relfiletoscan = "%s/%s" % (path[lentempdir:], filename)
 	if relfiletoscan.startswith('/'):
 		relfiletoscan = relfiletoscan[1:]
+
 	## we reset the reports, blacklist, offsets and tags for each new scan
 	leaftasks = []
 	scantasks = []
