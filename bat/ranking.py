@@ -262,7 +262,7 @@ def extractDynamic(scanfile, envvars=None):
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
-	c.execute("attach ? as functionnamecache", ('/tmp/funccache',))
+	c.execute("attach ? as functionnamecache", (scanenv.get('BAT_SQLITE_FUNCTIONNAME_CACHE', '/tmp/funccache'),))
 
 	rankingfull = False
 	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
@@ -294,6 +294,8 @@ def extractDynamic(scanfile, envvars=None):
 			scanstr.append(funcname)
 
 	## run c++filt in batched mode to avoid launching many processes
+	## C++ demangling is tricky: the types declared in the function in the source code
+	## are not necessarily what demangling will return.
 	step = 100
 	if mangles != []:
 		for i in range(0, len(mangles), step):
@@ -306,7 +308,8 @@ def extractDynamic(scanfile, envvars=None):
 				continue
 			for f in stanout.strip().split('\n'):
 				funcname = f.split('(', 1)[0].rsplit('::', 1)[-1].strip()
-				## TODO more sanity checks here
+				## TODO more sanity checks here, since demangling
+				## will sometimes not return a single function name
 				scanstr.append(funcname)
 
 	uniquepackages = {}
@@ -314,7 +317,9 @@ def extractDynamic(scanfile, envvars=None):
 	matches = []
 	uniquematches = 0
 
-	## demangling can lead to identical results, so we prune first
+	## the database made from ctags output only has function names, not the types. Since
+	## C++ functions could be in an executable several times with different times we
+	## deduplicate first
 	for funcname in list(set(scanstr)):
 		c.execute('select package from functionnamecache.functionnamecache where functionname=?', (funcname,))
 		res = c.fetchall()
@@ -355,6 +360,8 @@ def extractDynamic(scanfile, envvars=None):
 		'''
 	dynamicRes['namesmatched'] = namesmatched
 	dynamicRes['totalnames'] = len(list(set(scanstr)))
+
+	## unique matches we found. 
 	dynamicRes['uniquematches'] = uniquematches
 	if uniquematches != 0:
 		dynamicRes['packages'] = {}
@@ -362,6 +369,7 @@ def extractDynamic(scanfile, envvars=None):
 	for i in uniquepackages:
 		versions = []
 		for p in uniquepackages[i]:
+			pversions = []
 			c.execute('select distinct sha256 from extracted_function where functionname=?', (p,))
 			res = c.fetchall()
 			for s in res:
@@ -371,7 +379,10 @@ def extractDynamic(scanfile, envvars=None):
 					## shouldn't happen!
 					if pv[0] != i:
 						continue
-					versions.append(pv[1])
+					pversions.append(pv[1])
+			## functions with different signatures might be present in different files.
+			## Since we are ignoring signatures we need to deduplicate here too.
+			versions = versions + list(set(pversions))
 		dynamicRes['packages'] = []
 		for v in list(set(versions)):
 			dynamicRes['packages'].append((v, versions.count(v)))
