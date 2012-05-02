@@ -104,11 +104,12 @@ class BatFrame(wx.Frame):
 
 		## add a few menus
 		filemenu = wx.Menu()
-		menuOpen = filemenu.Append(wx.ID_OPEN,"&Open"," Terminate the program")
-		menuSave = filemenu.Append(wx.ID_SAVE,"&Save"," Terminate the program")
-		menuSaveAs = filemenu.Append(wx.ID_SAVEAS,"Save &As..."," Terminate the program")
+		menuOpen = filemenu.Append(wx.ID_OPEN,"&Open"," Open a scan archive")
+		menuSaveAs = filemenu.Append(wx.ID_SAVEAS,"Save &As..."," Save results from a scan")
 		filemenu.AppendSeparator()
 		menuExit = filemenu.Append(wx.ID_EXIT,"E&xit"," Terminate the program")
+
+		scanmenu = wx.Menu()
 
 		helpmenu = wx.Menu()
 		menuHelp = helpmenu.Append(wx.ID_HELP_CONTENTS, "&Contents"," Help")
@@ -116,12 +117,12 @@ class BatFrame(wx.Frame):
 
 		menuBar = wx.MenuBar()
 		menuBar.Append(filemenu,"&File")
+		menuBar.Append(scanmenu,"&Scan")
 		menuBar.Append(helpmenu,"&Help")
 		self.SetMenuBar(menuBar)
 		self.Bind(wx.EVT_MENU, self.onAbout, menuAbout)
 		self.Bind(wx.EVT_MENU, self.onExit, menuExit)
 		self.Bind(wx.EVT_MENU, self.onOpen, menuOpen)
-		self.Bind(wx.EVT_MENU, self.onSave, menuSave)
 		self.Bind(wx.EVT_MENU, self.onSave, menuSaveAs)
 		self.Bind(wx.EVT_MENU, self.onHelp, menuHelp)
 
