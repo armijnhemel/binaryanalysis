@@ -480,7 +480,7 @@ def unpackTar(filename, offset, tempdir=None):
 ## http://code.google.com/p/unyaffs/
 ## TODO: check out http://code.google.com/p/yaffs2utils/
 def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
-	tmpdir = dirsetup(tempdir, filename, "yaffs", 1)
+	tmpdir = dirsetup(tempdir, filename, "yaffs2", 1)
 	diroffsets = []
 	p = subprocess.Popen(['bat-unyaffs', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
