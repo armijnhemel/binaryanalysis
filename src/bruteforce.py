@@ -514,52 +514,18 @@ def writeDumpfile(unpackreports, leafreports, scans, outputfile, tempdir):
 	except:	pass
 	dumpfile.close()
 
-def main(argv):
-	config = ConfigParser.ConfigParser()
-        parser = OptionParser()
-	parser.add_option("-b", "--binary", action="store", dest="fw", help="path to binary file", metavar="FILE")
-	parser.add_option("-c", "--config", action="store", dest="cfg", help="path to configuration file", metavar="FILE")
-	parser.add_option("-o", "--outputfile", action="store", dest="outputfile", help="path to output file", metavar="FILE")
-	parser.add_option("-z", "--cleanup", action="store_true", dest="cleanup", help="cleanup after analysis? (default: false)")
-	(options, args) = parser.parse_args()
-	if options.fw == None:
-        	parser.error("Path to binary file needed")
-	try:
-        	scan_binary = options.fw
-	except:
-        	print "No file to scan found"
-        	sys.exit(1)
+def runscan(tempdir, scans, scan_binary):
 
-	if options.cfg != None:
-		try:
-        		configfile = open(options.cfg, 'r')
-		except:
-			print >>sys.stderr, "Need configuration file"
-			sys.exit(1)
-	else:
-		print >>sys.stderr, "Need configuration file"
-		sys.exit(1)
+	os.makedirs("%s/data" % (tempdir,))
+	scantempdir = "%s/data" % (tempdir,)
+	shutil.copy(scan_binary, scantempdir)
 
-	if options.outputfile == None:
-        	parser.error("Path to output file needed")
-		sys.exit(1)
-	try:
-		os.stat(options.outputfile)
-		print >>sys.stderr, "output file already exists"
-		sys.exit(1)
-	except Exception, e:
-		pass
-
-	config.readfp(configfile)
-
-	scans = readconfig(config)
 	magicscans = []
 	for k in ["prerunscans", "unpackscans", "programscans", "postrunscans"]:
 		for s in scans[k]:
 			if s['magic'] != None:
 				magicscans = magicscans + s['magic'].split(':')
 	magicscans = list(set(magicscans))
-	scandate = datetime.datetime.utcnow()
 
 	## Per binary scanned we get a list with results.
 	## Each file system or compressed file we can unpack gives a list with
@@ -567,20 +533,16 @@ def main(argv):
 	## within the inner list there is a result tuple, which could contain
 	## more lists in some fields, like libraries, or more result lists if
 	## the file inside a file system we looked at was in fact a file system.
-	tempdir=tempfile.mkdtemp()
-	os.makedirs("%s/data" % (tempdir,))
-	scantempdir = "%s/data" % (tempdir,)
-	shutil.copy(scan_binary, scantempdir)
-
-	## multithread it. Sometimes we hit http://bugs.python.org/issue9207
-	## Threading can be configured in the configuration file, but
-	## often it is wise to have it set to 'no'. This is because ranking writes
-	## to databases and you don't want concurrent writes.
-
-	scantasks = [(scantempdir, os.path.basename(scan_binary), scans['unpackscans'], scans['prerunscans'], magicscans, len(scantempdir), scantempdir)]
 	leaftasks = []
 	unpackreports_tmp = []
 	unpackreports = {}
+
+	scantasks = [(scantempdir, os.path.basename(scan_binary), scans['unpackscans'], scans['prerunscans'], magicscans, len(scantempdir), scantempdir)]
+
+	## Use multithreading to speed up scanning. Sometimes we hit http://bugs.python.org/issue9207
+	## Threading can be configured in the configuration file, but
+	## often it is wise to have it set to 'no'. This is because ranking writes
+	## to databases and you don't want concurrent writes.
 
 	if scans['batconfig']['multiprocessing']:
 		pool = multiprocessing.Pool()
@@ -653,14 +615,6 @@ def main(argv):
 		for k in i:
 			unpackreports[k] = i[k]
 
-	res = flatten("%s" % (os.path.basename(scan_binary)), unpackreports, leafreports)
-	if not scans['batconfig'].has_key('output'):
-		## no printing?
-		pass
-	else:
-		output = prettyprint(scans['batconfig'], res, scandate, scans)
-		print output
-
 	## run postrunscans here, again in parallel, if needed/wanted
 	## These scans typically only have a few side effects, but don't change
 	## the reporting/scanning, just process the results. Examples: generate
@@ -676,6 +630,62 @@ def main(argv):
 			else:
 				postrunscans.append((i, unpackreports[i], [], scans['postrunscans'], scantempdir, tempdir))
 		postrunresults = pool.map(postrunscan, postrunscans, 1)
+
+	return (unpackreports, leafreports)
+
+def main(argv):
+	config = ConfigParser.ConfigParser()
+        parser = OptionParser()
+	parser.add_option("-b", "--binary", action="store", dest="fw", help="path to binary file", metavar="FILE")
+	parser.add_option("-c", "--config", action="store", dest="cfg", help="path to configuration file", metavar="FILE")
+	parser.add_option("-o", "--outputfile", action="store", dest="outputfile", help="path to output file", metavar="FILE")
+	parser.add_option("-z", "--cleanup", action="store_true", dest="cleanup", help="cleanup after analysis? (default: false)")
+	(options, args) = parser.parse_args()
+	if options.fw == None:
+        	parser.error("Path to binary file needed")
+	try:
+        	scan_binary = options.fw
+	except:
+        	print "No file to scan found"
+        	sys.exit(1)
+
+	if options.cfg != None:
+		try:
+        		configfile = open(options.cfg, 'r')
+		except:
+			print >>sys.stderr, "Need configuration file"
+			sys.exit(1)
+	else:
+		print >>sys.stderr, "Need configuration file"
+		sys.exit(1)
+
+	if options.outputfile == None:
+        	parser.error("Path to output file needed")
+		sys.exit(1)
+	try:
+		os.stat(options.outputfile)
+		print >>sys.stderr, "output file already exists"
+		sys.exit(1)
+	except Exception, e:
+		pass
+
+	config.readfp(configfile)
+	scans = readconfig(config)
+
+	scandate = datetime.datetime.utcnow()
+
+	## create temporary directory to store results in
+	tempdir=tempfile.mkdtemp()
+
+	(unpackreports, leafreports) = runscan(tempdir, scans, scan_binary)
+
+	res = flatten("%s" % (os.path.basename(scan_binary)), unpackreports, leafreports)
+	if not scans['batconfig'].has_key('output'):
+		## no printing?
+		pass
+	else:
+		output = prettyprint(scans['batconfig'], res, scandate, scans)
+		print output
 
 	writeDumpfile(unpackreports, leafreports, scans, options.outputfile, tempdir)
 
