@@ -347,50 +347,56 @@ noscan      = text:xml:graphics:pdf:compressed:audio:video
 description = Unpack squashfs file systmes
 
 [swf]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackSwf
-priority = 0
-magic = swf
-noscan   = text:xml:pdf:compressed:graphics:resource:audio:video
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackSwf
+priority    = 0
+magic       = swf
+noscan      = text:xml:pdf:compressed:graphics:resource:audio:video
+description = Unpack compressed Shockwave Flash files
 
 [tar]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackTar
-priority = 3
-magic = tar1:tar2
-noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackTar
+priority    = 3
+magic       = tar1:tar2
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video
+description = Unpack tar archives
 
 #[ubifs]
-#type    = unpack
-#module  = bat.fwunpack
-#method  = searchUnpackUbifs
-#priority = 3
-#magic = ubifs
-#noscan   = text:xml:graphics:pdf:compressed:audio:video
+#type        = unpack
+#module      = bat.fwunpack
+#method      = searchUnpackUbifs
+#priority    = 3
+#magic       = ubifs
+#noscan      = text:xml:graphics:pdf:compressed:audio:video
+#description = Unpack UBI file systems
 
 [upx]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackUPX
-priority = 3
-noscan   = text:xml:graphics:pdf:compressed:audio:video
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackUPX
+priority    = 3
+noscan      = text:xml:graphics:pdf:compressed:audio:video
+description = Unpack UPX compressed executables
 
 [xz]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackXZ
-priority = 1
-magic = xz:xztrailer
-noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackXZ
+priority    = 1
+magic       = xz:xztrailer
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video
+description = Unpack XZ compressed files
 
-[yaffs]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackYaffs2
-priority = 2
-noscan   = text:xml:graphics:pdf:compressed:audio:video
+[yaffs2]
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackYaffs2
+priority    = 2
+noscan      = text:xml:graphics:pdf:compressed:audio:video
+description = Unpack YAFFS2 file systems
 
 [zip]
 type    = unpack
