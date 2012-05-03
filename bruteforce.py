@@ -356,6 +356,11 @@ def readconfig(config):
 			continue
 		
 		elif config.has_option(section, 'type'):
+			## scans have to be explicitely enabled
+			if not config.has_option(section, 'enabled'):
+				continue
+			if config.get(section, 'enabled') == 'no':
+				continue
 			conf = {}
 			conf['name']   = section
 			conf['module'] = config.get(section, 'module')
