@@ -637,23 +637,29 @@ enabled     = yes
 ### postrun scans ###
 #####################
 
-#[images]
-#type    = postrun
-#module  = bat.images
-#method  = generateImages
-#noscan  = text:xml:graphics:pdf:audio:video
-#envvars = BAT_IMAGEDIR=/tmp/images:BAT_IMAGE_MAXFILESIZE=100000000
-#
-#[hexdump]
-#type    = postrun
-#module  = bat.generatehexdump
-#method  = generateHexdump
-#noscan  = text:xml:graphics:pdf:audio:video
-#envvars = BAT_REPORTDIR=/tmp/images:BAT_IMAGE_MAXFILESIZE=100000000
-#
-#[uniquehtml]
-#type    = postrun
-#module  = bat.generateuniquehtml
-#method  = generateHTML
-#noscan  = text:xml:graphics:pdf:audio:video
-#envvars = BAT_REPORTDIR=/tmp/images
+[hexdump]
+type        = postrun
+module      = bat.generatehexdump
+method      = generateHexdump
+noscan      = text:xml:graphics:pdf:audio:video
+envvars     = BAT_REPORTDIR=/tmp/images:BAT_IMAGE_MAXFILESIZE=100000000
+description = Create hexdump output of files
+enabled     = no
+
+[images]
+type        = postrun
+module      = bat.images
+method      = generateImages
+noscan      = text:xml:graphics:pdf:audio:video
+envvars     = BAT_IMAGEDIR=/tmp/images:BAT_IMAGE_MAXFILESIZE=100000000
+description = Generate images of results
+enabled     = no
+
+[uniquehtml]
+type        = postrun
+module      = bat.generateuniquehtml
+method      = generateHTML
+noscan      = text:xml:graphics:pdf:audio:video
+envvars     = BAT_REPORTDIR=/tmp/images
+description = Generate HTML files with links to pretty printed source code for unique matches
+enabled     = no
