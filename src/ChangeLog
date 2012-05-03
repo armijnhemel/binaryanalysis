@@ -1,5 +1,7 @@
 2012-05-03
 * rework bruteforce.py so it is easier to make different frontends
+* introduce "enable" configuration directive. This will make it easier for a
+graphical frontend to enable/disable checks
 
 2012-05-02
 * add very simplistic verifier for MP4 files to reduce false positives
