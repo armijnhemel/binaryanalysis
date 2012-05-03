@@ -20,22 +20,6 @@ priority    = 100
 description = Check XML validity
 enabled     = yes
 
-[verifybz2]
-type        = prerun
-module      = bat.prerun
-method      = verifyBZ2
-priority    = 1
-description = Check if complete file is a valid bzip2 file
-enabled     = no
-
-[verifygzip]
-type        = prerun
-module      = bat.prerun
-method      = verifyGzip
-priority    = 1
-description = Check if complete file is a valid gzip file
-enabled     = no
-
 [verifyandroiddex]
 type        = prerun
 module      = bat.prerun
@@ -51,6 +35,31 @@ method      = verifyAndroidXML
 priority    = 1
 description = Check if file is an Android binary XML file
 enabled     = yes
+
+[verifybz2]
+type        = prerun
+module      = bat.prerun
+method      = verifyBZ2
+priority    = 1
+description = Check if complete file is a valid bzip2 file
+enabled     = no
+
+[verifygraphics]
+type        = prerun
+module      = bat.prerun
+method      = verifyGraphics
+magic       = bmp:jpeg:jpegtrailer:gif87:gif89:png:pngtrailer
+priority    = 2
+description = Check if file is a valid graphics file, or consists of just graphics files
+enabled     = yes
+
+[verifygzip]
+type        = prerun
+module      = bat.prerun
+method      = verifyGzip
+priority    = 1
+description = Check if complete file is a valid gzip file
+enabled     = no
 
 [verifymp4]
 type        = prerun
@@ -83,15 +92,6 @@ module      = bat.prerun
 method      = verifyTTF
 priority    = 1
 description = Check if file contains a single TTF font
-enabled     = yes
-
-[verifygraphics]
-type        = prerun
-module      = bat.prerun
-method      = verifyGraphics
-magic       = bmp:jpeg:jpegtrailer:gif87:gif89:png:pngtrailer
-priority    = 2
-description = Check if file is a valid graphics file, or consists of just graphics files
 enabled     = yes
 
 ####################
