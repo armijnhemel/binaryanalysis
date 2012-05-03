@@ -11,7 +11,7 @@ This is a program for viewing results of the Binary Analysis Tool.
 In the future it will also allow for a more interactive way if scanning.
 '''
 
-import sys, os, string, gzip, cPickle, bz2, tarfile, tempfile
+import sys, os, string, gzip, cPickle, bz2, tarfile, tempfile, copy
 from optparse import OptionParser
 import ConfigParser
 import wx, wx.html, wx.lib, wx.lib.statbmp, wx.aui, wx.lib.agw.flatnotebook
@@ -99,10 +99,13 @@ class BATHtmlWindow(wx.html.HtmlWindow):
 
 
 class BatFrame(wx.Frame):
-	def __init__(self, parent, title):
+	def __init__(self, parent, title, config):
 		wx.Frame.__init__(self, parent, title=title, size=(1280,768))
+		self.origconfig = copy.copy(config)
 
-		## add a few menus
+		self.config = None
+
+		## add a few menus. This is heavily inspired by the tutorial code from wxPython
 		filemenu = wx.Menu()
 		menuOpen = filemenu.Append(wx.ID_OPEN,"&Open"," Open a scan archive")
 		menuSaveAs = filemenu.Append(wx.ID_SAVEAS,"Save &As..."," Save results from a scan")
@@ -110,6 +113,7 @@ class BatFrame(wx.Frame):
 		menuExit = filemenu.Append(wx.ID_EXIT,"E&xit"," Terminate the program")
 
 		scanmenu = wx.Menu()
+		menuConfig = scanmenu.Append(wx.ID_ANY, "&Configuration"," Configure the scans")
 
 		helpmenu = wx.Menu()
 		menuHelp = helpmenu.Append(wx.ID_HELP_CONTENTS, "&Contents"," Help")
@@ -125,6 +129,7 @@ class BatFrame(wx.Frame):
 		self.Bind(wx.EVT_MENU, self.onOpen, menuOpen)
 		self.Bind(wx.EVT_MENU, self.onSave, menuSaveAs)
 		self.Bind(wx.EVT_MENU, self.onHelp, menuHelp)
+		self.Bind(wx.EVT_MENU, self.onConfig, menuConfig)
 
 		## next we should have a toolbar
 		battoolbar = self.CreateToolBar()
@@ -235,6 +240,12 @@ class BatFrame(wx.Frame):
 		self.alternateviewtab.SetSashGravity(0.4)
 
 		self.Show(True)
+
+	## Filter a configuration, based on a selection of checks.
+	## Initially this will be the default configuration that is passed to the program,
+	## or read from a default location.
+	def processConfig(self, selection):
+		pass
 
 	def onHexdumpClick(self, event):
 		## get a rough approximation of where to scroll to in the hexdump file
@@ -532,8 +543,16 @@ class BatFrame(wx.Frame):
 		dlg.ShowModal()
 		dlg.Destroy()
 
+
+	def onConfig(self,e):
+		dlg = wx.MultiChoiceDialog(self, "Binary Analysis Tool scan configurator", "", [])
+		if dlg.ShowModal() == wx.ID_OK:
+			pass
+		dlg.Destroy()
+		#self.close(True)
+
 	def onExit(self,e):
-		self.Close(True)  # Close the frame.
+		self.Close(True)
 
 	def onHelp(self,e):
 		print e.GetString()
@@ -569,8 +588,20 @@ class BatFrame(wx.Frame):
 
 
 def main(argv):
+	config = ConfigParser.ConfigParser()
+	parser = OptionParser()
+	parser.add_option("-c", "--config", action="store", dest="cfg", help="path to configuration file", metavar="FILE")
+	(options, args) = parser.parse_args()
+
+	if options.cfg != None:
+		try:
+			configfile = open(options.cfg, 'r')
+		except:
+			print >>sys.stderr, "Need configuration file"
+			sys.exit(1)
+
 	app = wx.App(False)  # Create a new app, don't redirect stdout/stderr to a window.
-	frame = BatFrame(None, "Binary Analysis Tool") # A Frame is a top-level window.
+	frame = BatFrame(None, "Binary Analysis Tool", options.cfg) # A Frame is a top-level window.
 	frame.Show(True)     # Show the frame.
 	app.MainLoop()
 
