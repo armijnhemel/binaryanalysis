@@ -399,40 +399,45 @@ noscan      = text:xml:graphics:pdf:compressed:audio:video
 description = Unpack YAFFS2 file systems
 
 [zip]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackZip
-priority = 1
-magic = zip
-noscan   = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackZip
+priority    = 1
+magic       = zip
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video
+description = Unpack ZIP compressed files
 
 ##################
 ### leaf scans ###
 ##################
 
 [architecture]
-type    = program
-module  = bat.checks
-method  = scanArchitecture
-noscan  = text:xml:graphics:pdf:compressed:audio:video
+type        = program
+module      = bat.checks
+method      = scanArchitecture
+noscan      = text:xml:graphics:pdf:compressed:audio:video
+description = Scan executable file architecture
 
 [busybox-version]
-type    = program
-module  = bat.busyboxversion
-method  = busybox_version
-noscan  = text:xml:graphics:pdf:compressed:audio:video
+type        = program
+module      = bat.busyboxversion
+method      = busybox_version
+noscan      = text:xml:graphics:pdf:compressed:audio:video
+description = Extract BusyBox version number
 
 [dproxy]
-type    = program
-module  = bat.checks
-method  = searchDproxy
-noscan  = text:xml:graphics:pdf:compressed:audio:video
+type        = program
+module      = bat.checks
+method      = searchDproxy
+noscan      = text:xml:graphics:pdf:compressed:audio:video
+description = Determine presence of dproxy
 
 [ez-ipupdate]
-type    = program
-module  = bat.checks
-method  = searchEzIpupdate
-noscan  = text:xml:graphics:pdf:compressed:audio:video
+type        = program
+module      = bat.checks
+method      = searchEzIpupdate
+noscan      = text:xml:graphics:pdf:compressed:audio:video
+description = Determine presence of ez-update
 
 #[file2package]
 #type    = program
@@ -442,23 +447,26 @@ noscan  = text:xml:graphics:pdf:compressed:audio:video
 #envvars = BAT_PACKAGE_DB=/tmp/filepackages
 
 [forges]
-type    = program
-module  = bat.checks
-method  = scanForges
-xmloutput = forgesPrettyPrint
-noscan  = graphics:compressed:audio:video
+type        = program
+module      = bat.checks
+method      = scanForges
+xmloutput   = forgesPrettyPrint
+noscan      = graphics:compressed:audio:video
+description = Scan for presence of markers of forges/collaborative software development sites
 
 [iproute]
-type    = program
-module  = bat.checks
-method  = searchIproute
-noscan  = text:xml:graphics:pdf:compressed:audio:video
+type        = program
+module      = bat.checks
+method      = searchIproute
+noscan      = text:xml:graphics:pdf:compressed:audio:video
+description = Determine presence of iproute
 
 [iptables]
-type    = program
-module  = bat.checks
-method  = searchIptables
-noscan  = text:xml:graphics:pdf:compressed:audio:video
+type        = program
+module      = bat.checks
+method      = searchIptables
+noscan      = text:xml:graphics:pdf:compressed:audio:video
+description = Determine presence of iptables
 
 [kernelchecks]
 type    = program
@@ -468,36 +476,41 @@ xmloutput = xmlprettyprint
 noscan  = text:xml:graphics:pdf:compressed:audio:video
 
 [kernelmodulelicense]
-type    = program
-module  = bat.kernelanalysis
-method  = analyseModuleLicense
-noscan  = text:xml:graphics:pdf:compressed:audio:video
+type        = program
+module      = bat.kernelanalysis
+method      = analyseModuleLicense
+noscan      = text:xml:graphics:pdf:compressed:audio:video
+description = Determine declared Linux kernel module license
 
 [libs]
-type    = program
-module  = bat.checks
-method  = searchDynamicLibs
-xmloutput = dynamicLibsPrettyPrint
-noscan  = text:xml:graphics:pdf:compressed:audio:video
+type        = program
+module      = bat.checks
+method      = searchDynamicLibs
+xmloutput   = dynamicLibsPrettyPrint
+noscan      = text:xml:graphics:pdf:compressed:audio:video
+description = Determine dynamically linked libraries
 
 [libusb]
-type    = program
-module  = bat.checks
-method  = searchLibusb
-noscan  = text:xml:graphics:pdf:compressed:audio:video
+type        = program
+module      = bat.checks
+method      = searchLibusb
+noscan      = text:xml:graphics:pdf:compressed:audio:video
+description = Determine presence of libusb
 
 [licenses]
-type    = program
-module  = bat.checks
-method  = scanLicenses
-xmloutput = licensesPrettyPrint
-noscan    = compressed
+type        = program
+module      = bat.checks
+method      = scanLicenses
+xmloutput   = licensesPrettyPrint
+noscan      = compressed
+description = Scan for presence of license markers
 
 [loadlin]
-type    = program
-module  = bat.checks
-method  = searchLoadLin
-noscan  = text:xml:graphics:pdf:compressed:audio:video
+type        = program
+module      = bat.checks
+method      = searchLoadLin
+noscan      = text:xml:graphics:pdf:compressed:audio:video
+description = Determine presence of libusb
 
 [pdf]
 type    = program
@@ -515,34 +528,39 @@ noscan  = text:xml:graphics:compressed:audio:video
 #noscan  = text:xml:graphics:pdf:compressed:resource:audio:video
 
 [redboot]
-type    = program
-module  = bat.checks
-method  = searchRedBoot
-noscan  = text:xml:graphics:pdf:compressed:audio:video
+type        = program
+module      = bat.checks
+method      = searchRedBoot
+noscan      = text:xml:graphics:pdf:compressed:audio:video
+description = Determine presence of RedBoot
 
 [uboot]
-type    = program
-module  = bat.checks
-method  = searchUBoot
-noscan  = text:xml:graphics:pdf:compressed:audio:video
+type        = program
+module      = bat.checks
+method      = searchUBoot
+noscan      = text:xml:graphics:pdf:compressed:audio:video
+description = Determine presence of U-Boot
 
 [vsftpd]
-type    = program
-module  = bat.checks
-method  = searchVsftpd
-noscan  = text:xml:graphics:pdf:compressed:audio:video
+type        = program
+module      = bat.checks
+method      = searchVsftpd
+noscan      = text:xml:graphics:pdf:compressed:audio:video
+description = Determine presence of vsftpd
 
 [wireless-tools]
-type    = program
-module  = bat.checks
-method  = searchWirelessTools
-noscan  = text:xml:graphics:pdf:compressed:audio:video
+type        = program
+module      = bat.checks
+method      = searchWirelessTools
+noscan      = text:xml:graphics:pdf:compressed:audio:video
+description = Determine presence of wireless-tools
 
 [wpa-supplicant]
-type    = program
-module  = bat.checks
-method  = searchWpaSupplicant
-noscan  = text:xml:graphics:pdf:compressed:audio:video
+type        = program
+module      = bat.checks
+method      = searchWpaSupplicant
+noscan      = text:xml:graphics:pdf:compressed:audio:video
+description = Determine presence of wpa-supplicant
 
 #####################
 ### postrun scans ###
