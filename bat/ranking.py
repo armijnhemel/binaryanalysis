@@ -13,11 +13,22 @@ presented at the Mining Software Repositories 2011 conference.
 
 Configuration parameters for databases are:
 
-BAT_SQLITE_DB :: location of database containing extracted strings
+BAT_SQLITE_DB         :: location of database containing extracted strings
+BAT_RANKING_FULLCACHE :: indication whether or not a full cached database is
+                         used, reducing the need to generate it "just in time"
 
 Per language:
-BAT_SQLITE_AVG_$LANGUAGE          :: location of database containing average strings in $LANGUAGE per package
-BAT_SQLITE_STRINGSCACHE_$LANGUAGE :: location of database that caches strings in $LANGUAGE per package future lookups
+BAT_SQLITE_AVG_$LANGUAGE          :: location of database containing average
+                                     strings in $LANGUAGE per package
+BAT_SQLITE_STRINGSCACHE_$LANGUAGE :: location of database with cached strings
+                                     in $LANGUAGE per package to reduce lookups
+
+An additional classification method for dynamically linked executables based
+on function names takes an additional parameter:
+
+BAT_SQLITE_FUNCTIONNAME_CACHE     :: location of database containing cached
+                                     function names per package to reduce
+                                     lookups
 '''
 
 import string, re, os, os.path, magic, sys, tempfile, shutil, copy
