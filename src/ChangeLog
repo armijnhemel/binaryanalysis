@@ -1,6 +1,8 @@
 2012-05-04
 * introduce LZMA_MINIMUM_SIZE parameter to set minimum size of results of for
 LZMA unpacking. This is to reduce false positives.
+* add simplistic verifier for ELF files. This is to reduce false positives in
+LZMA scanning.
 
 2012-05-03
 * rework bruteforce.py so it is easier to make different frontends
