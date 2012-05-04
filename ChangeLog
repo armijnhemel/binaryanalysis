@@ -1,3 +1,7 @@
+2012-05-04
+* introduce LZMA_MINIMUM_SIZE parameter to set minimum size of results of for
+LZMA unpacking. This is to reduce false positives.
+
 2012-05-03
 * rework bruteforce.py so it is easier to make different frontends
 * introduce "enable" configuration directive. This will make it easier for a
