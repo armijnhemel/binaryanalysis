@@ -1901,12 +1901,22 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 	diroffsets = []
 	counter = 1
 
+	scanenv = os.environ.copy()
+
+	if envvars != None:
+		for en in envvars.split(':'):
+			try:
+				(envname, envvalue) = en.split('=')
+				scanenv[envname] = envvalue
+			except Exception, e:
+				pass
+
 	for offset in lzmaoffsets:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "lzma", counter)
-		res = unpackLZMA(filename, offset, tmpdir)
+		res = unpackLZMA(filename, offset, tmpdir, int(scanenv.get('LZMA_MINIMUM_SIZE', 1)))
 		if res != None:
 			diroffsets.append((res, offset, 0))
 			counter = counter + 1
@@ -1920,7 +1930,7 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 ## Newer versions of XZ (>= 5.0.0) have an option to test and list archives.
 ## Unfortunately this does not work for files with trailing data, so we can't
 ## use it to filter out "bad" files.
-def unpackLZMA(filename, offset, tempdir=None):
+def unpackLZMA(filename, offset, tempdir=None, minbytesize=1):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
@@ -1930,7 +1940,7 @@ def unpackLZMA(filename, offset, tempdir=None):
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
 	p = subprocess.Popen(['lzma', '-cd', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
-        if os.stat(outtmpfile[1]).st_size == 0:
+        if os.stat(outtmpfile[1]).st_size < minbytesize:
                 os.fdopen(outtmpfile[0]).close()
                 os.unlink(outtmpfile[1])
                 os.unlink(tmpfile[1])
