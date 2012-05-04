@@ -334,7 +334,8 @@ def extractDynamic(scanfile, envvars=None):
 					uniquepackages[res[0][0]] += [funcname]
 				else:
 					uniquepackages[res[0][0]] = [funcname]
-		#elif res != [] and not rankingfull:
+		#elif res == [] and not rankingfull:
+		#	## we don't have a cache, so we need to create it. This is expensive.
 		#	pass
 		'''
 		matched = False
