@@ -364,3 +364,74 @@ def verifyTTF(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags.append('resource')
 	newtags.append('font')
 	return newtags
+
+## simplistic method to verify if a file is an ELF file
+## This might not work for all ELF files and it is a conservative verification, only used to
+## reduce false positives of LZMA scans
+def verifyELF(filename, tempdir=None, tags=[], offsets={}, envvars=None):
+	newtags = []
+	if not 'binary' in tags:
+		return newtags
+	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags:
+		return newtags
+	elffile = open(filename, 'rb')
+	elfbytes = elffile.read(4)
+	elffile.close()
+	if elfbytes != '\x7f\x45\x4c\x46':
+		return newtags
+	p = subprocess.Popen(['readelf', '-h', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		return newtags
+	## process output of readelf
+	for i in stanout.strip().split("\n"):
+		if "Size of this header" in i:
+			res = re.match("\s*Size of this header:\s+(\d+)\s+\(bytes\)", i)
+			if res == None:
+				return newtags
+			else:
+				thisheadersize = int(res.groups()[0])
+		if "Size of program headers" in i:
+			res = re.match("\s*Size of program headers:\s+(\d+)\s+\(bytes\)", i)
+			if res == None:
+				return newtags
+			else:
+				programheadersize = int(res.groups()[0])
+		if "Number of program headers" in i:
+			res = re.match("\s*Number of program headers:\s+(\d+)", i)
+			if res == None:
+				return newtags
+			else:
+				numberprogramheaders = int(res.groups()[0])
+		if "Size of section headers" in i:
+			res = re.match("\s*Size of section headers:\s+(\d+)\s+\(bytes\)", i)
+			if res == None:
+				return newtags
+			else:
+				sectionheadersize = int(res.groups()[0])
+		if "Number of section headers" in i:
+			res = re.match("\s*Number of section headers:\s+(\d+)", i)
+			if res == None:
+				return newtags
+			else:
+				numbersectionheaders = int(res.groups()[0])
+		if "Start of section headers" in i:
+			res = re.match("\s*Start of section headers:\s+(\d+)\s+\(bytes into file\)", i)
+			if res == None:
+				return newtags
+			else:
+				startsectionheader = int(res.groups()[0])
+
+		if "Start of program headers" in i:
+			res = re.match("\s*Start of program headers:\s+(\d+)\s+\(bytes into file\)", i)
+			if res == None:
+				return newtags
+			else:
+				startprogramheader = int(res.groups()[0])
+
+	if thisheadersize != startprogramheader:
+		return newtags
+	totalsize = startsectionheader + sectionheadersize * numbersectionheaders
+	if totalsize == os.stat(filename).st_size:
+		newtags.append("elf")
+	return newtags

@@ -44,6 +44,15 @@ priority    = 1
 description = Check if complete file is a valid bzip2 file
 enabled     = no
 
+[verifyelf]
+type        = prerun
+module      = bat.prerun
+method      = verifyELF
+magic       = bmp:jpeg:jpegtrailer:gif87:gif89:png:pngtrailer
+priority    = 2
+description = Check if file is a valid ELF library/executable/object
+enabled     = yes
+
 [verifygraphics]
 type        = prerun
 module      = bat.prerun
@@ -311,7 +320,7 @@ module      = bat.fwunpack
 method      = searchUnpackLZMA
 priority    = 1
 magic       = lzma_alone:lzma_alone_alt
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:resource:dalvik:audio:video
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:resource:dalvik:audio:video:elf
 description = Unpack LZMA compressed files
 envvars     = LZMA_MINIMUM_SIZE=10
 enabled     = yes
