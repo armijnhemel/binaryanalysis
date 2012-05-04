@@ -159,21 +159,25 @@ to \texttt{unpack}, for example:
 
 \begin{verbatim}
 [jffs2]
-type    = unpack
-module  = bat.fwunpack
-method  = searchUnpackJffs2
-priority = 1
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackJffs2
+priority    = 1
+magic       = jffs2_le
+noscan      = text:xml:graphics:pdf:compressed:audio:video
+description = Unpack JFFS2 file systems
+enabled     = yes
 \end{verbatim}
 
-In BAT 6.0 the following file systems, compressed files and media files can be
+In BAT 8.0 the following file systems, compressed files and media files can be
 unpacked or extracted:
 
 \begin{itemize}
 \item file systems: cramfs, ext2/ext3/ext4, ISO9660, JFFS2, SquashFS (several
 variants), romfs, YAFFS2 (specific variants)
 \item compressed files and executable formats: 7z, ar, ARJ, BASE64, BZIP2,
-compressed Flash, CAB, CPIO, EXE (specific compression methods only), GZIP,
-InstallShield (old versions), LRZIP, LZIP, LZMA, LZO, RAR, RPM, serialized
+compressed Flash, CAB, compress, CPIO, EXE (specific compression methods only),
+GZIP, InstallShield (old versions), LRZIP, LZIP, LZMA, LZO, RAR, RPM, serialized
 Java, TAR, UPX, XZ, ZIP
 \item media files: GIF, ICO, PDF, PNG
 \end{itemize}
@@ -207,9 +211,12 @@ set to \texttt{program}, for example:
 
 \begin{verbatim}
 [iptables]
-type    = program
-module  = bat.checks
-method  = searchIptables
+type        = program
+module      = bat.checks
+method      = searchIptables
+noscan      = text:xml:graphics:pdf:compressed:audio:video
+description = Determine presence of iptables
+enabled     = yes
 \end{verbatim}
 
 The current program scans that are available in BAT are:
@@ -221,6 +228,11 @@ Linux kernel, loadlin, RedBoot, U-Boot, vsftpd, wireless-tools, wpa-supplicant
 \item BusyBox version number
 \item dynamic library dependencies (ELF files only)
 \item Linux kernel module license (Linux kernel modules only)
+\item Linux kernel version number, plus detection for several subsystems
+\item PDF meta data extraction
+\item architecture
+\item presence of URLs indicating an open source license
+\item presence of URLs indicating a forge/collaborative software development site (SourceForge, GitHub, etcetera)
 \end{itemize}
 
 The fast string searches are meant for quick sweep scanning only. They have
