@@ -308,11 +308,11 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 						for res in sqlres:
 							(pstring, linenumber) = res
 							cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (pstring, filehash, extensions[extension], linenumber))
-						## extract using ctags, except code from the Linux kernel, since it will never be dynamically linked
+						## extract function names using ctags, except code from
+						## the Linux kernel, since it will never be dynamically linked
 						if extensions[extension] == 'C' and package != 'linux':
 							source = open(os.path.join(i[0], p)).read()
 
-							## TODO: rewrite to use ctags instead
 							results = []
 							p2 = subprocess.Popen(["ctags", "-f", "-", "%s/%s" % (i[0], p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 							(stanout2, stanerr2) = p2.communicate()
