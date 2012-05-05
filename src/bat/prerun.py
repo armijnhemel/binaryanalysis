@@ -212,7 +212,7 @@ def verifyBZ2(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags.append("compressed")
 	return newtags
 
-## verify if this is an Android "binary XML" file. We check if the name of the
+## Verify if this is an Android "binary XML" file. We check if the name of the
 ## file ends in '.xml', plus check the first four bytes of the file
 ## If it is an Android XML file, we mark it as a 'resource' file
 ## TODO: have a better check here to increase fidelity
@@ -233,8 +233,9 @@ def verifyAndroidXML(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 		newtags.append('resource')
 	return newtags
 
-## verify if this is an Android/Dalvik classes file. We check if the name of the
-## file is 'classes.dex', plus check the first four bytes of the file.
+## Verify if this is an Android/Dalvik classes file. We check if the name of
+## the file is 'classes.dex', plus check the first four bytes of the file, plus
+## a length checksum in the header.
 ## This check is not meant to be perfect, just to filter out the most common case.
 ## The main reason for this check is to bring down false positives for lzma unpacking
 def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, envvars=None):
@@ -245,14 +246,14 @@ def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 		return newtags
 	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags:
 		return newtags
-	## now we read the first four bytes
+	## now we read the first 36 bytes
 	androidfile = open(filename, 'rb')
 	androidbytes = androidfile.read(36)
 	androidfile.close()
 	if len(androidbytes) != 36:
 		return newtags
 	if androidbytes[:4] == 'dex\n':
-		#good chance we have an Android Dex file, so verify more by
+		## good chance we have an Android Dex file, so verify more by
 		## checking the size header in the header
 		dexarray = array.array('I')
 		dexarray.fromstring(androidbytes[-4:])
