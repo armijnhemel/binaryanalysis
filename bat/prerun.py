@@ -5,8 +5,22 @@
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
-This module contains helper functions that should be run before any of the other
+This module contains methods that should be run before any of the other
 scans.
+
+Most of these methods are to verify the type of a file, so it can be tagged
+and subsequently be ignored by other scans. For example, if it can already be
+determined that an entire file is a GIF file, it can safely be ignored by a
+method that only applies to file systems.
+
+Tagging files reduces false positives (especially ones caused by LZMA
+unpacking), and in many cases also speeds up the process, because it is clear
+very early in the process which files can be ignored.
+
+The methods here are conservative: not all files that could be tagged will be
+tagged. Since tagging is just an optimisation this does not really matter: the
+files will be scanned and tagged properly later on, but more time might be
+spent, plus there might be false positives (mostly LZMA).
 '''
 
 import sys, os, subprocess, os.path, shutil, stat, array
@@ -43,8 +57,9 @@ def genericMarkerSearch(filename, magicscans, envvars=None):
 						order.append(key)
 		## move the offset 99950
 		datafile.seek(offset + 99950)
-		## read 100000 bytes with a 50 bytes overlap
-		## overlap with the previous read
+		## read 100000 bytes with a 50 bytes overlap with the previous
+		## read so we don't miss any pattern. This needs to be updated
+		## as soon as we have patterns >= 50
 		databuffer = datafile.read(100000)
 		if len(databuffer) >= 50:
 			offset = offset + 99950
@@ -53,8 +68,8 @@ def genericMarkerSearch(filename, magicscans, envvars=None):
 	datafile.close()
 	return (offsets, order)
 
-## XML files actually only need to be verified and tagged so other scans can decide to ignore it
-## Actually we could do this with xml.dom.minidom (although some parser settings should be set
+## Verify a file is an XML file using xmllint.
+## Actually we *could* do this with xml.dom.minidom (although some parser settings should be set
 ## to deal with unresolved entities) to avoid launching another process
 def searchXML(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
@@ -64,11 +79,11 @@ def searchXML(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 		newtags.append("xml")
 	return newtags
 
-## method to verify if a file only contains text
-## Since the default encoding in Python 2 is 'ascii' and we can't guarantee
-## that it has been set by the user to something else this will not work
-## on UTF-8 encoded files, unless we ask the user to set the encoding in
-## site.py which we can't. So this is not fool proof.
+## Verify a file only contains text. This depends on the settings of the
+## Python installation.
+## The default encoding in Python 2 is 'ascii'. We can't guarantee
+## that it has been set by the user to another encoding (possibly we could).
+## Since other encodings also contain ASCII it should not be much of an issue.
 ##
 ## Interesting link with background info:
 ## * http://fedoraproject.org/wiki/Features/PythonEncodingUsesSystemLocale
@@ -92,10 +107,10 @@ def verifyText(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	datafile.close()
 	return newtags
 
-## quick check to verify if a file is a graphics file.
+## Quick check to verify if a file is a graphics file.
 def verifyGraphics(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
-	if "text" in tags or "compressed" in tags:
+	if "text" in tags or "compressed" in tags or "audio" in tags:
 		return newtags
 	newtags = verifyJPEG(filename, tempdir, tags, offsets, envvars)
 	if newtags == []:
@@ -135,7 +150,6 @@ def verifyJPEG(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags.append("graphics")
 	return newtags
 
-## very quick and dirty method to check whether or not a file is a PNG
 def verifyPNG(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
 	if not offsets.has_key('png'):
@@ -155,9 +169,12 @@ def verifyPNG(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags.append("graphics")
 	return newtags
 
+## Check to verify if a file is a gzip compressed file. This requires
+## launching an external process, possibly for big files, so we first run a
+## few checks to make sure we only do that in promising cases.
 def verifyGzip(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
-	if "text" in tags or "graphics" in tags or "compressed" in tags:
+	if "text" in tags or "graphics" in tags or "compressed" in tags or "audio" in tags:
 		return newtags
 	if not offsets.has_key('gzip'):
 		return newtags
@@ -235,8 +252,7 @@ def verifyAndroidXML(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 
 ## Verify if this is an Android/Dalvik classes file. We check if the name of
 ## the file is 'classes.dex', plus check the first four bytes of the file, plus
-## a length checksum in the header.
-## This check is not meant to be perfect, just to filter out the most common case.
+## verify a length checksum in the header.
 ## The main reason for this check is to bring down false positives for lzma unpacking
 def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
@@ -288,9 +304,9 @@ def verifyMessageCatalog(filename, tempdir=None, tags=[], offsets={}, envvars=No
 		newtags.append('resource')
 	return newtags
 
-## extremely simple verifier for Ogg files.
-## This will not catch all of the Ogg files, but it will be good enough
-## for the vast majority of them.
+## Extremely simple verifier for Ogg files.
+## This will not tag all Ogg files, but it will be good enough
+## for the common cases
 def verifyOgg(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
 	if not filename.endswith('.ogg'):
@@ -312,7 +328,7 @@ def verifyOgg(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags.append('audio')
 	return newtags
 
-## extremely simple verifier for MP4 to reduce false positives further
+## extremely simple verifier for MP4 to reduce false positives
 def verifyMP4(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
 	if not filename.endswith('.mp4'):
