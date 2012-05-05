@@ -328,6 +328,9 @@ def extractDynamic(scanfile, envvars=None):
 	matches = []
 	uniquematches = 0
 
+	## caching datastructure, only needed in case there is no full cache
+	sha256_packages = {}
+
 	## the database made from ctags output only has function names, not the types. Since
 	## C++ functions could be in an executable several times with different times we
 	## deduplicate first
@@ -347,29 +350,21 @@ def extractDynamic(scanfile, envvars=None):
 					uniquepackages[res[0][0]] = [funcname]
 		#elif res == [] and not rankingfull:
 		#	## we don't have a cache, so we need to create it. This is expensive.
-		#	pass
-		'''
-		matched = False
-		c.execute('select sha256 from extracted_function where functionname=?', (funcname,))
-		res = c.fetchall()
-		pkgs = []
-		for r in res:
-			if sha256_packages.has_key(r[0]):
-				pkgs = pkgs + copy.copy(sha256_packages[r[0]])
-				matched = True
-				continue
-			c.execute('select package, version from processed_file where sha256=?', r)
-			s = c.fetchall()
-			if s != []:
-				matched = True
-			pkgs = pkgs + s
-			sha256_packages[r[0]] = s
-		differentpackages = map(lambda x: x[0], pkgs)
-		if len(list(set(differentpackages))) == 1:
-			uniquepackages = uniquepackages + pkgs
-		if matched:
-			namesmatched += 1
-		'''
+		#	c.execute('select sha256 from extracted_function where functionname=?', (funcname,))
+		#	res = c.fetchall()
+		#	pkgs = []
+		#	for r in res:
+		#		if sha256_packages.has_key(r[0]):
+		#			pkgs = list(set(pkgs + copy.copy(sha256_packages[r[0]])))
+		#		else:
+		#			c.execute('select package from processed_file where sha256=?', r)
+		#			s = c.fetchall()
+		#			if s != []:
+		#				pkgs = list(set(pkgs + map(lambda x: x[0], s)))
+		#				sha256_packages[r[0]] = s
+		#	for p in pkgs:
+		#		c.execute('''insert into functionnamecache (functionname, package) values (?,?)''', (funcname, p))
+		#	conn.commit()
 	dynamicRes['namesmatched'] = namesmatched
 	dynamicRes['totalnames'] = len(list(set(scanstr)))
 
