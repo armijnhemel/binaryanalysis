@@ -359,7 +359,7 @@ def extractDynamic(scanfile, envvars=None):
 			conn.commit()
 			c.execute('select package from functionnamecache.functionnamecache where functionname=?', (funcname,))
 			res = c.fetchall()
-		elif res != []:
+		if res != []:
 			matches.append(funcname)
 			namesmatched += 1
 			## unique match
@@ -394,9 +394,10 @@ def extractDynamic(scanfile, envvars=None):
 			## functions with different signatures might be present in different files.
 			## Since we are ignoring signatures we need to deduplicate here too.
 			versions = versions + list(set(pversions))
-		dynamicRes['packages'] = []
+		dynamicRes['packages'] = {}
+		dynamicRes['packages'][i] = []
 		for v in list(set(versions)):
-			dynamicRes['packages'].append((v, versions.count(v)))
+			dynamicRes['packages'][i].append((v, versions.count(v)))
 	print >>sys.stderr, dynamicRes
 	return dynamicRes
 
