@@ -384,7 +384,8 @@ def verifyTTF(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 
 ## simplistic method to verify if a file is an ELF file
 ## This might not work for all ELF files and it is a conservative verification, only used to
-## reduce false positives of LZMA scans
+## reduce false positives of LZMA scans.
+## This does for sure not work for Linux kernel modules on some devices.
 def verifyELF(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
 	if not 'binary' in tags:
