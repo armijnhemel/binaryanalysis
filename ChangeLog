@@ -1,5 +1,6 @@
 2012-05-06
 * enable function name scanning in ranking method
+* fix and enable gzip verifier in prerun.py
 
 2012-05-04
 * introduce LZMA_MINIMUM_SIZE parameter to set minimum size of results of for
