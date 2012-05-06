@@ -833,18 +833,20 @@ def xmlprettyprint(matchres, root, envvars=None):
 	if res['matchedlines'] == 0:
 		return None
 	tmpnode = root.createElement('ranking')
+	stringsnode = root.createElement('strings')
+	tmpnode.appendChild(stringsnode)
 
 	matchedlines = root.createElement('matchedlines')
 	tmpnodetext = xml.dom.minidom.Text()
 	tmpnodetext.data = str(res['matchedlines'])
 	matchedlines.appendChild(tmpnodetext)
-	tmpnode.appendChild(matchedlines)
+	stringsnode.appendChild(matchedlines)
 
 	extractedlines = root.createElement('extractedlines')
 	tmpnodetext = xml.dom.minidom.Text()
 	tmpnodetext.data = str(res['extractedlines'])
 	extractedlines.appendChild(tmpnodetext)
-	tmpnode.appendChild(extractedlines)
+	stringsnode.appendChild(extractedlines)
 
 	for k in res['reports']:
 		(rank, name, uniqueMatches, percentage, packageversions, packagelicenses) = k
@@ -920,5 +922,35 @@ def xmlprettyprint(matchres, root, envvars=None):
 		## add everything to the root node
 		packagenode.appendChild(ranknode)
 		packagenode.appendChild(percentagenode)
-		tmpnode.appendChild(packagenode)
+		stringsnode.appendChild(packagenode)
+
+	## process any results for dynamically linked executables
+	if dynamicRes != {}:
+		functionnode = root.createElement('functions')
+		packages = dynamicRes['packages']
+		for p in packages:
+			packagenode = root.createElement('package')
+			namenode = root.createElement('name')
+			packagenode.appendChild(namenode)
+			tmpnodetext = xml.dom.minidom.Text()
+			tmpnodetext.data = str(p)
+			namenode.appendChild(tmpnodetext)
+			functionnode.appendChild(packagenode)
+			for pv in packages[p]:
+				versionnode = root.createElement('version')
+
+				numbernode = root.createElement('number')
+				tmpnodetext = xml.dom.minidom.Text()
+				tmpnodetext.data = str(pv[0])
+				numbernode.appendChild(tmpnodetext)
+
+				countnode = root.createElement('count')
+				tmpnodetext = xml.dom.minidom.Text()
+				tmpnodetext.data = str(pv[1])
+				countnode.appendChild(tmpnodetext)
+
+				versionnode.appendChild(numbernode)
+				versionnode.appendChild(countnode)
+				packagenode.appendChild(versionnode)
+		tmpnode.appendChild(functionnode)
 	return tmpnode
