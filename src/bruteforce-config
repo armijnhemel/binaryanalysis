@@ -68,7 +68,7 @@ module      = bat.prerun
 method      = verifyGzip
 priority    = 1
 description = Check if complete file is a valid gzip file
-enabled     = no
+enabled     = yes
 
 [verifymp4]
 type        = prerun

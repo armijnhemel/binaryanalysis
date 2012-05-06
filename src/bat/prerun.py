@@ -178,13 +178,19 @@ def verifyGzip(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 		return newtags
 	if not offsets.has_key('gzip'):
 		return newtags
-	if not 0 in offsets['gzip']:
+	## if gzip identifier 0x1f 0x8b 0x08 happens to be in there multiple times
+	## it might be that we have several gzip files that are concatenated, without
+	## padding or extra data and we can't easily see that without full unpacking,
+	## so we move on for now.
+	if len(offsets['gzip']) != 1:
+		return newtags
+	if offsets['gzip'][0] != 0:
 		return newtags
 	p = subprocess.Popen(['gunzip', '-t', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		return newtags
-	## possibly multiple gzips in this file, or bzip2 with trailing data
+	## possibly multiple gzips in this file, or gzip with trailing data
 	if "trailing garbage ignored" in stanerr:
 		return newtags
 	## the file contains one or more gzip archives
