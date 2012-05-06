@@ -927,6 +927,26 @@ def xmlprettyprint(matchres, root, envvars=None):
 	## process any results for dynamically linked executables
 	if dynamicRes != {}:
 		functionnode = root.createElement('functions')
+
+		totalnamesnode = root.createElement('totalnames')
+		tmpnodetext = xml.dom.minidom.Text()
+		tmpnodetext.data = str(dynamicRes['totalnames'])
+		totalnamesnode.appendChild(tmpnodetext)
+
+		uniquematchesnode = root.createElement('uniquematches')
+		tmpnodetext = xml.dom.minidom.Text()
+		tmpnodetext.data = str(dynamicRes['uniquematches'])
+		uniquematchesnode.appendChild(tmpnodetext)
+
+		namesmatchednode = root.createElement('namesmatched')
+		tmpnodetext = xml.dom.minidom.Text()
+		tmpnodetext.data = str(dynamicRes['namesmatched'])
+		namesmatchednode.appendChild(tmpnodetext)
+
+		functionnode.appendChild(totalnamesnode)
+		functionnode.appendChild(uniquematchesnode)
+		functionnode.appendChild(namesmatchednode)
+
 		packages = dynamicRes['packages']
 		for p in packages:
 			packagenode = root.createElement('package')
