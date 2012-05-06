@@ -120,7 +120,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 			## constants :-(
 
         		if "ELF" in mstype and blacklist == []:
-				#dynamicRes = extractDynamic(path, envvars)
+				dynamicRes = extractDynamic(path, envvars)
 				datafile = open(path, 'rb')
 				data = datafile.read()
 				datafile.close()
@@ -398,7 +398,7 @@ def extractDynamic(scanfile, envvars=None):
 		dynamicRes['packages'][i] = []
 		for v in list(set(versions)):
 			dynamicRes['packages'][i].append((v, versions.count(v)))
-	print >>sys.stderr, dynamicRes
+	#print >>sys.stderr, dynamicRes
 	return dynamicRes
 
 ## Look up strings in the database and determine which packages/versions/licenses were used
