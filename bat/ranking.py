@@ -274,7 +274,9 @@ def extractDynamic(scanfile, envvars=None):
 	conn.text_factory = str
 	c = conn.cursor()
 	c.execute("attach ? as functionnamecache", (scanenv.get('BAT_SQLITE_FUNCTIONNAME_CACHE', '/tmp/funccache'),))
-
+	c.execute("create table if not exists functionnamecache.functionnamecache (functionname text, package text)")
+	c.execute("create index if not exists functionnamecache.functionname_index on functionnamecache(functionname)")
+	conn.commit()
 	rankingfull = False
 	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
 		rankingfull = True
@@ -338,7 +340,26 @@ def extractDynamic(scanfile, envvars=None):
 		c.execute('select package from functionnamecache.functionnamecache where functionname=?', (funcname,))
 		res = c.fetchall()
 		pkgs = []
-		if res != []:
+		if res == [] and not rankingfull:
+			## we don't have a cache, so we need to create it. This is expensive.
+			c.execute('select sha256 from extracted_function where functionname=?', (funcname,))
+			res2 = c.fetchall()
+			pkgs = []
+			for r in res2:
+				if sha256_packages.has_key(r[0]):
+					pkgs = list(set(pkgs + copy.copy(sha256_packages[r[0]])))
+				else:
+					c.execute('select package from processed_file where sha256=?', r)
+					s = c.fetchall()
+					if s != []:
+						pkgs = list(set(pkgs + map(lambda x: x[0], s)))
+						sha256_packages[r[0]] = map(lambda x: x[0], s)
+			for p in pkgs:
+				c.execute('''insert into functionnamecache (functionname, package) values (?,?)''', (funcname, p))
+			conn.commit()
+			c.execute('select package from functionnamecache.functionnamecache where functionname=?', (funcname,))
+			res = c.fetchall()
+		elif res != []:
 			matches.append(funcname)
 			namesmatched += 1
 			## unique match
@@ -348,23 +369,6 @@ def extractDynamic(scanfile, envvars=None):
 					uniquepackages[res[0][0]] += [funcname]
 				else:
 					uniquepackages[res[0][0]] = [funcname]
-		#elif res == [] and not rankingfull:
-		#	## we don't have a cache, so we need to create it. This is expensive.
-		#	c.execute('select sha256 from extracted_function where functionname=?', (funcname,))
-		#	res = c.fetchall()
-		#	pkgs = []
-		#	for r in res:
-		#		if sha256_packages.has_key(r[0]):
-		#			pkgs = list(set(pkgs + copy.copy(sha256_packages[r[0]])))
-		#		else:
-		#			c.execute('select package from processed_file where sha256=?', r)
-		#			s = c.fetchall()
-		#			if s != []:
-		#				pkgs = list(set(pkgs + map(lambda x: x[0], s)))
-		#				sha256_packages[r[0]] = s
-		#	for p in pkgs:
-		#		c.execute('''insert into functionnamecache (functionname, package) values (?,?)''', (funcname, p))
-		#	conn.commit()
 	dynamicRes['namesmatched'] = namesmatched
 	dynamicRes['totalnames'] = len(list(set(scanstr)))
 
@@ -393,6 +397,7 @@ def extractDynamic(scanfile, envvars=None):
 		dynamicRes['packages'] = []
 		for v in list(set(versions)):
 			dynamicRes['packages'].append((v, versions.count(v)))
+	print >>sys.stderr, dynamicRes
 	return dynamicRes
 
 ## Look up strings in the database and determine which packages/versions/licenses were used
