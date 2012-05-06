@@ -1547,9 +1547,6 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 	if offsets['gzip'] == []:
 		return ([], blacklist, [])
 
-	## counter to remember how many gzip file systems we have
-	## discovered, so we can use this to append to the directory
-	## name containing the unpacked contents.
 	counter = 1
 	diroffsets = []
 	for offset in offsets['gzip']:
@@ -1570,9 +1567,6 @@ def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, envva
 	if offsets['compress'] == []:
 		return ([], blacklist, [])
 
-	## counter to remember how many gzip file systems we have
-	## discovered, so we can use this to append to the directory
-	## name containing the unpacked contents.
 	counter = 1
 	diroffsets = []
 	for offset in offsets['compress']:
@@ -1580,7 +1574,6 @@ def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, envva
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "compress", counter)
-		## and zcat can also uncompress this format, so just reuse
 		res = unpackCompress(filename, offset, tmpdir)
 		if res != None:
 			diroffsets.append((res, offset, 0))
