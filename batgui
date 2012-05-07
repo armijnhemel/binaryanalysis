@@ -349,6 +349,7 @@ class BatFrame(wx.Frame):
 			tag = ""
 			tablerows = ''
 			matchesrows = ''
+			functionmatches = ''
 			if sha256sum != '':
 				tablerows = tablerows + "<tr><td><b>SHA256</b></td><td>%s</td></tr>\n" % sha256sum
 			if self.leafreports.has_key(self.selectedfile):
@@ -382,27 +383,45 @@ class BatFrame(wx.Frame):
 							self.notebookpanel.EnableTab(2,False)
 							tag = 'graphics'
 					elif i.keys()[0] == 'ranking':
-						if not (i['ranking'][0]['extractedlines']) == 0 and not (i['ranking'][0]['matchedlines']) == 0:
+						(stringsres, dynamicres) = i['ranking']
+						if dynamicres.has_key('packages'):
+							functionmatches = '''<h2>Function match statistics</h2>
+<table>
+<tr><td><b>Extracted function names</b></td><td>%d</td></tr>
+<tr><td><b>Matched function names</b></td><td>%d</td></tr>
+</table>
+'''
+							functionmatches = functionmatches % (dynamicres['totalnames'], (dynamicres['namesmatched']))
+							functionmatches = functionmatches + '''<h3>Matched packages (function names method)</h3>
+<table><tr><td>
+  <table>
+    <tr><td><b>Name</b></td><td><b>Unique matches</b></td></tr>\n'''
+							for j in dynamicres['packages']:
+									## for now: just take the version with the most matches, only report the amount of matches
+									functionmatches = functionmatches + "    <tr><td>%s</td><td>%d</td></tr>\n" % (j, max(map(lambda x: x[1], dynamicres['packages'][j])))
+							functionmatches = functionmatches + "</table>"
+
+						if not (stringsres['extractedlines']) == 0 and not (stringsres['matchedlines']) == 0:
 							matchesrows = '''
-<h2>Match statistics</h2>
+<h2>String match statistics</h2>
 <table>
 <tr><td><b>Extracted lines</b></td><td>%d</td></tr>
 <tr><td><b>Matched lines</b></td><td>%d</td></tr>
 <tr><td><b>Match percentage</b></td><td>%f%%</td></tr>
 </table>
 							'''
-							matchesrows = matchesrows % (i['ranking'][0]['extractedlines'], i['ranking'][0]['matchedlines'], (float(i['ranking'][0]['matchedlines'])/i['ranking'][0]['extractedlines']*100))
-							if len(i['ranking'][0]['reports']) != 0:
+							matchesrows = matchesrows % (stringsres['extractedlines'], stringsres['matchedlines'], (float(stringsres['matchedlines'])/stringsres['extractedlines']*100))
+							if len(stringsres['reports']) != 0:
 								htmllinks = []
 								versionhtml = ""
 								## nested table, urgghhhh
-								matchesrows = matchesrows + '''<h3>Matched packages</h3>
+								matchesrows = matchesrows + '''<h3>Matched packages (strings method)</h3>
 <table><tr><td>
   <table>
     <tr><td><b>Rank</b></td><td><b>Name</b></td><td><b>Percentage</b></td><td><b>Unique matches</b></td><td><b>Non unique matches assigned</b></td></tr>\n'''
 
-								for j in i['ranking'][0]['reports']:
-									matchesrows = matchesrows + "    <tr><td>%d</td><td>%s</td><td>%f%%</td><td>%d</td><td>%d</td></tr>\n" % (j[0], j[1], j[3], len(j[2]), i['ranking'][0]['nonUniqueAssignments'].get(j[1], 0))
+								for j in stringsres['reports']:
+									matchesrows = matchesrows + "    <tr><td>%d</td><td>%s</td><td>%f%%</td><td>%d</td><td>%d</td></tr>\n" % (j[0], j[1], j[3], len(j[2]), stringsres['nonUniqueAssignments'].get(j[1], 0))
 									# nonUniqueMatches, matchedlines, reports, extractedlines
 									if len(j[2]) != 0:
 										versionhtml = versionhtml + "<h5>%s</h5><p><img src=\"%s\"/></p>\n" % (j[1], "%s/%s-%s-version.png" % (self.imagesdir, sha256sum, j[1]))
@@ -420,7 +439,7 @@ class BatFrame(wx.Frame):
 				if applications != []:
 					tablerows = tablerows + "<tr><td><b>Applications</b></td><td>%s</td></tr>\n" % reduce(lambda x, y: "%s, %s" % (x,y), applications)
 			overviewstring = overviewstring % (name, path, realpath, size, magic)
-			overviewstring = overviewstring + tablerows + "</table>" + matchesrows + footer
+			overviewstring = overviewstring + tablerows + "</table>" + functionmatches + matchesrows + footer
 			self.overviewwindow.SetPage(overviewstring)
 
 			if sha256sum != '' and tag not in ['graphics', 'text', 'compressed', 'audio', 'video', 'resource']:
@@ -485,7 +504,8 @@ class BatFrame(wx.Frame):
 				dirlist.sort()
 				for j in dirlist:
 					if i[0][srcdirlen:] == "":
-						## would have been nice to use this unicode character
+						## would have been nice to be able to use this unicode character, but not
+						## supported in standard Linux fonts
 						#linktext = u" \u1f4c1"
 						linktext = u"%s  \u24b9" % j
 						dirnode = tree.AppendItem(rootnode, linktext, data=wx.TreeItemData(j))
