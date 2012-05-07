@@ -28,7 +28,7 @@ def processPackages(destinationcursor, destinationconn, contentsfile):
 		(filepath, categorypackage) = i.strip().rsplit(' ', 1)
 		package = categorypackage.rsplit('/')[1].strip()
 		
-		destinationcursor.execute("insert into file values (?,?,?,?, 'debian')", (os.path.basename(filepath.strip()), os.path.dirname(filepath.strip()), package, ''))
+		destinationcursor.execute("insert into file values (?,?,?,?, 'debian', ?)", (os.path.basename(filepath.strip()), os.path.dirname(filepath.strip()), package, ''))
 		#destinationconn.commit()
 	return
 
@@ -50,9 +50,9 @@ def main(argv):
 	destinationcursor.execute("attach '%s' as disk" % (options.destination))
 
 	try:
-		destinationcursor.execute("create table if not exists file(filename text, directory text, package text, version text, source text)")
+		destinationcursor.execute("create table if not exists file(filename text, directory text, package text, packageversion text, source text, distroversion text)")
         	destinationcursor.execute("create index if not exists file_index on file(filename, directory)")
-		destinationcursor.execute("create table if not exists disk.file(filename text, directory text, package text, version text, source text)")
+		destinationcursor.execute("create table if not exists disk.file(filename text, directory text, package text, packageversion text, source text, distroversion text)")
         	destinationcursor.execute("create index if not exists disk.file_index on file(filename, directory)")
 		destinationconn.commit()
 	except:
