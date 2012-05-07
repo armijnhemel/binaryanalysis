@@ -23,7 +23,7 @@ def filename2package(path, blacklist=[], envvars=None):
 	## select the packages that are available. It would be better to also have the directory
 	## name available, so we should get rid of 'path' and use something else that is better
 	## suited
-	c.execute("select distinct package, version, source from file where filename = '%s'" % (os.path.basename(path),))
+	c.execute("select distinct package, packageversion, source from file where filename = '%s'" % (os.path.basename(path),))
 	res = c.fetchall()
 	if res != []:
 		return res
