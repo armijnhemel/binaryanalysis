@@ -63,7 +63,7 @@ def main(argv):
 	packagecursor = packageconn.cursor()
 
 	try:
-		destinationcursor.execute("create table if not exists file(filename text, directory text, package text, version text, source text)")
+		destinationcursor.execute("create table if not exists file(filename text, directory text, package text, packageversion text, source text, distroversion text)")
         	destinationcursor.execute("create index if not exists file_index on file(filename, directory)")
 	except:
 		print >>sys.stderr, "Can't create tables in destination database"
