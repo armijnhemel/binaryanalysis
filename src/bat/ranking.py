@@ -394,12 +394,13 @@ def extractDynamic(scanfile, envvars=None):
 			## functions with different signatures might be present in different files.
 			## Since we are ignoring signatures we need to deduplicate here too.
 			versions = versions + list(set(pversions))
-		dynamicRes['packages'] = {}
 		dynamicRes['packages'][i] = []
 		for v in list(set(versions)):
 			dynamicRes['packages'][i].append((v, versions.count(v)))
-	#print >>sys.stderr, dynamicRes
-	return dynamicRes
+	if namesmatched != 0:
+		return dynamicRes
+	else:
+		return {}
 
 ## Look up strings in the database and determine which packages/versions/licenses were used
 def extractGeneric(lines, path, language='C', envvars=None):
