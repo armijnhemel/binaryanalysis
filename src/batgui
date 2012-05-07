@@ -612,7 +612,7 @@ def main(argv):
 			sys.exit(1)
 
 	app = wx.App(False)  # Create a new app, don't redirect stdout/stderr to a window.
-	frame = BatFrame(None, "Binary Analysis Tool", options.cfg) # A Frame is a top-level window.
+	frame = BatFrame(None, "Binary Analysis Tool", configfile) # A Frame is a top-level window.
 	frame.Show(True)     # Show the frame.
 	app.MainLoop()
 
