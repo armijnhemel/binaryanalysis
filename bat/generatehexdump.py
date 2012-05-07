@@ -7,7 +7,7 @@
 '''
 This is a plugin for the Binary Analysis Tool. It takes the output of hexdump -Cv
 and writes it to a file with gzip compression. The output is later used in the
-(upcoming) graphical user interface.
+graphical user interface.
 
 Parameters:
 
