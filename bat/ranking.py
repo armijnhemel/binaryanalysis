@@ -947,30 +947,31 @@ def xmlprettyprint(matchres, root, envvars=None):
 		functionnode.appendChild(uniquematchesnode)
 		functionnode.appendChild(namesmatchednode)
 
-		packages = dynamicRes['packages']
-		for p in packages:
-			packagenode = root.createElement('package')
-			namenode = root.createElement('name')
-			packagenode.appendChild(namenode)
-			tmpnodetext = xml.dom.minidom.Text()
-			tmpnodetext.data = str(p)
-			namenode.appendChild(tmpnodetext)
-			functionnode.appendChild(packagenode)
-			for pv in packages[p]:
-				versionnode = root.createElement('version')
-
-				numbernode = root.createElement('number')
+		if dynamicRes.has_key('packages'):
+			packages = dynamicRes['packages']
+			for p in packages:
+				packagenode = root.createElement('package')
+				namenode = root.createElement('name')
+				packagenode.appendChild(namenode)
 				tmpnodetext = xml.dom.minidom.Text()
-				tmpnodetext.data = str(pv[0])
-				numbernode.appendChild(tmpnodetext)
+				tmpnodetext.data = str(p)
+				namenode.appendChild(tmpnodetext)
+				functionnode.appendChild(packagenode)
+				for pv in packages[p]:
+					versionnode = root.createElement('version')
 
-				countnode = root.createElement('count')
-				tmpnodetext = xml.dom.minidom.Text()
-				tmpnodetext.data = str(pv[1])
-				countnode.appendChild(tmpnodetext)
+					numbernode = root.createElement('number')
+					tmpnodetext = xml.dom.minidom.Text()
+					tmpnodetext.data = str(pv[0])
+					numbernode.appendChild(tmpnodetext)
 
-				versionnode.appendChild(numbernode)
-				versionnode.appendChild(countnode)
-				packagenode.appendChild(versionnode)
+					countnode = root.createElement('count')
+					tmpnodetext = xml.dom.minidom.Text()
+					tmpnodetext.data = str(pv[1])
+					countnode.appendChild(tmpnodetext)
+
+					versionnode.appendChild(numbernode)
+					versionnode.appendChild(countnode)
+					packagenode.appendChild(versionnode)
 		tmpnode.appendChild(functionnode)
 	return tmpnode
