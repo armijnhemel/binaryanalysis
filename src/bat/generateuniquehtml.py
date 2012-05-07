@@ -5,9 +5,9 @@
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
-This is a plugin for the Binary Analysis Tool. It takes the output of hexdump -Cv
-and writes it to a file with gzip compression. The output is later used in the
-(upcoming) graphical user interface.
+This is a plugin for the Binary Analysis Tool. It generates a HTML file which
+contains unique strings that were matched, with links to pretty printed source
+code, which can be displayed in the BAT GUI.
 
 This should be run as a postrun scan
 '''
