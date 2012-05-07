@@ -382,7 +382,7 @@ class BatFrame(wx.Frame):
 							self.notebookpanel.EnableTab(2,False)
 							tag = 'graphics'
 					elif i.keys()[0] == 'ranking':
-						if not (i['ranking']['extractedlines']) == 0 and not (i['ranking']['matchedlines']) == 0:
+						if not (i['ranking'][0]['extractedlines']) == 0 and not (i['ranking'][0]['matchedlines']) == 0:
 							matchesrows = '''
 <h2>Match statistics</h2>
 <table>
@@ -391,8 +391,8 @@ class BatFrame(wx.Frame):
 <tr><td><b>Match percentage</b></td><td>%f%%</td></tr>
 </table>
 							'''
-							matchesrows = matchesrows % (i['ranking']['extractedlines'], i['ranking']['matchedlines'], (float(i['ranking']['matchedlines'])/i['ranking']['extractedlines']*100))
-							if len(i['ranking']['reports']) != 0:
+							matchesrows = matchesrows % (i['ranking'][0]['extractedlines'], i['ranking'][0]['matchedlines'], (float(i['ranking'][0]['matchedlines'])/i['ranking'][0]['extractedlines']*100))
+							if len(i['ranking'][0]['reports']) != 0:
 								htmllinks = []
 								versionhtml = ""
 								## nested table, urgghhhh
@@ -401,8 +401,8 @@ class BatFrame(wx.Frame):
   <table>
     <tr><td><b>Rank</b></td><td><b>Name</b></td><td><b>Percentage</b></td><td><b>Unique matches</b></td><td><b>Non unique matches assigned</b></td></tr>\n'''
 
-								for j in i['ranking']['reports']:
-									matchesrows = matchesrows + "    <tr><td>%d</td><td>%s</td><td>%f%%</td><td>%d</td><td>%d</td></tr>\n" % (j[0], j[1], j[3], len(j[2]), i['ranking']['nonUniqueAssignments'].get(j[1], 0))
+								for j in i['ranking'][0]['reports']:
+									matchesrows = matchesrows + "    <tr><td>%d</td><td>%s</td><td>%f%%</td><td>%d</td><td>%d</td></tr>\n" % (j[0], j[1], j[3], len(j[2]), i['ranking'][0]['nonUniqueAssignments'].get(j[1], 0))
 									# nonUniqueMatches, matchedlines, reports, extractedlines
 									if len(j[2]) != 0:
 										versionhtml = versionhtml + "<h5>%s</h5><p><img src=\"%s\"/></p>\n" % (j[1], "%s/%s-%s-version.png" % (self.imagesdir, sha256sum, j[1]))
@@ -512,7 +512,7 @@ class BatFrame(wx.Frame):
 					if self.leafreports.has_key(linkpath):
 						for r in self.leafreports[linkpath]:
 							if r.keys()[0] == 'ranking':
-								if r['ranking']['matchedlines'] != 0:
+								if r['ranking'][0]['matchedlines'] != 0:
 									## give a visual clue to people to tell them that strings could be matched
 									#linktext = u"%s  \u24e7" % j
 									linktext = u"%s  \u272a" % j
