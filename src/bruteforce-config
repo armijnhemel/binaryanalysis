@@ -8,6 +8,13 @@ module = bat.simpleprettyprint
 #module = bat.ppknowledgebase
 output = prettyprintresxml
 
+############################
+### viewer configuration ###
+############################
+
+#[viewer]
+#filter = graphics:text:empty:link
+
 ####################
 ### prerun scans ###
 ####################
