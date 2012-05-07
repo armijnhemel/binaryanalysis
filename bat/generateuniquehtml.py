@@ -54,6 +54,10 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 								uniqtablerows = []
 								sh = {}
 								for s in k[1]:
+									## if possible, remove the package name, plus version number, from the path
+									## that is displayed. This is to prevent that a line is printed for every
+									## version, even when the code has not changed. Usually it will be clear
+									## which file is meant.
 									(pv, fp) = s[3].split('/', 1)
 									## clean up some names
 									for e in ["+dfsg", "~dfsg", ".orig", ".dfsg1", ".dfsg2"]:
