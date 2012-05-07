@@ -105,7 +105,7 @@ class BatFrame(wx.Frame):
 
 		self.configmapping = []
 		for s in self.origconfig.sections():
-			if section == 'batconfig':
+			if s == 'batconfig':
 				continue
 			else:
 				## process each section. We need: section name, description, enabled
@@ -607,12 +607,13 @@ def main(argv):
 	if options.cfg != None:
 		try:
 			configfile = open(options.cfg, 'r')
+			config.readfp(configfile)
 		except:
 			print >>sys.stderr, "Need configuration file"
 			sys.exit(1)
 
 	app = wx.App(False)  # Create a new app, don't redirect stdout/stderr to a window.
-	frame = BatFrame(None, "Binary Analysis Tool", configfile) # A Frame is a top-level window.
+	frame = BatFrame(None, "Binary Analysis Tool", config) # A Frame is a top-level window.
 	frame.Show(True)     # Show the frame.
 	app.MainLoop()
 
