@@ -423,7 +423,7 @@ class BatFrame(wx.Frame):
 			overviewstring = overviewstring + tablerows + "</table>" + matchesrows + footer
 			self.overviewwindow.SetPage(overviewstring)
 
-			if sha256sum != '' and tag not in ['graphics', 'text']:
+			if sha256sum != '' and tag not in ['graphics', 'text', 'compressed', 'audio', 'video', 'resource']:
 				try:
 					os.stat("%s/%s-hexdump.gz" % (self.reportsdir, sha256sum))
 					datafile = gzip.open('%s/%s-hexdump.gz' % (self.reportsdir, sha256sum))
@@ -523,15 +523,14 @@ class BatFrame(wx.Frame):
 									linktext = u"%s  \u24bc" % j
 								if 'compressed' in r['tags']:
 									linktext = u"%s  \u24b8" % j
-					if os.path.islink(os.path.normpath("%s/%s" % (i[0], j))):
+					if "symbolic link" in self.unpackreports[linkpath]['magic']:
 						## if we have a link, then add the value of where the link points to
 						## to give a visual clue to people
 						linktext = u"%s \u2192 %s" % (j, os.readlink(u"%s/%s" % (i[0], j)))
 						#linktext = u"%s \u21fe %s" % (j, os.readlink(u"%s/%s" % (i[0], j)))
 					else:
 						## if files are empty we mark them as empty
-						## TODO: use information from scandata pickle for this
-						if os.stat("%s/%s" % (i[0], j)).st_size == 0:
+						if self.unpackreports[linkpath]['size'] == 0:
 							linktext = u"%s  \u2205" % j
 					if i[0][srcdirlen:] == "":
 						tree.AppendItem(rootnode, linktext, data=wx.TreeItemData(j))
