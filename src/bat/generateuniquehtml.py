@@ -59,7 +59,7 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 									## version, even when the code has not changed. Usually it will be clear
 									## which file is meant.
 									(pv, fp) = s[3].split('/', 1)
-									## clean up some names
+									## clean up some names first, especially when they have been changed by Debian
 									for e in ["+dfsg", "~dfsg", ".orig", ".dfsg1", ".dfsg2"]:
 										if pv.endswith(e):
 											pv = pv[:-len(e)]
@@ -70,7 +70,10 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 										else:
 											sh[s[0]] = [(fp, s[1], s[2])]
 									else:	
-										uniqtablerows.append("<tr><td>%s</td><td>%s</td><td><a href=\"unique:/%s#%d\">%d</a></td><td>%s</td></tr>\n" % (s[3], s[1], s[0], s[2], s[2], s[0]))
+										if sh.has_key(s[0]):
+											sh[s[0]].append((s[3],s[1], s[2]))
+										else:
+											sh[s[0]] = [(s[3], s[1], s[2])]
 								for s in sh:
 									## per checksum we have a list of (filename, version)
 									## Now we need to check if we only have one filename, or if there are multiple.
@@ -82,13 +85,12 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 										numlines = reduce(lambda x, y: x + ", " + y, map(lambda x: "<a href=\"unique:/%s#%d\">%d</a>" % (s, x, x), lines))
 										uniqtablerows.append("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (sh[s][0][0], versionline, numlines, s))
 									else:
-										'''
-										for d in sh[s]:
-											uniqtablerows.append("<tr><td>%s</td><td>%s</td><td><a href=\"unique:/%s#%d\">%d</a></td><td>%s</td></tr>\n" % (d[0], d[1], s, d[2], d[2], s))
-										'''
 										for d in list(set(map(lambda x: x[0], sh[s]))):
 											filterd = filter(lambda x: x[0] == d, sh[s])
 											lines = sorted(set(map(lambda x: (x[2]), filterd)))
+
+											## TODO: if there are many versions (for example: Linux kernel)
+											## we should condense it a bit more
 											versions = sorted(set(map(lambda x: (x[1]), filterd)))
 											versionline = reduce(lambda x, y: x + ", " + y, versions)
 											numlines = reduce(lambda x, y: x + ", " + y, map(lambda x: "<a href=\"unique:/%s#%d\">%d</a>" % (s, x, x), lines))
