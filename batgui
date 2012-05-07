@@ -526,7 +526,9 @@ class BatFrame(wx.Frame):
 					if "symbolic link" in self.unpackreports[linkpath]['magic']:
 						## if we have a link, then add the value of where the link points to
 						## to give a visual clue to people
-						linktext = u"%s \u2192 %s" % (j, os.readlink(u"%s/%s" % (i[0], j)))
+						## example: "symbolic link to `../../bin/busybox'"
+						linkname = self.unpackreports[linkpath]['magic'][:-1].rsplit("symbolic link to `", 1)[-1]
+						linktext = u"%s \u2192 %s" % (j, linkname)
 						#linktext = u"%s \u21fe %s" % (j, os.readlink(u"%s/%s" % (i[0], j)))
 					else:
 						## if files are empty we mark them as empty
@@ -591,7 +593,9 @@ class BatFrame(wx.Frame):
 			datadir = "%s/data" % self.tmpdir
 			self.imagesdir = "%s/images" % self.tmpdir
 			self.reportsdir = "%s/reports" % self.tmpdir
-			(self.unpackreports, self.leafreports, scans) = cPickle.load(open("%s/scandata.pickle" % self.tmpdir, 'rb'))
+			picklefile = open("%s/scandata.pickle" % self.tmpdir, 'rb')
+			(self.unpackreports, self.leafreports, scans) = cPickle.load(picklefile)
+			picklefile.close()
 			self.initTree(self.tree, datadir)
 			self.tree.Refresh()
 			self.tree.ExpandAll()
