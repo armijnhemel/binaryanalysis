@@ -498,7 +498,6 @@ class BatFrame(wx.Frame):
 							continue
 						else:
 							#linktext = u"%s \u1f4c1" % j
-							#linktext = j
 							linktext = u"%s  \u24b9" % j
 							dirnode = tree.AppendItem(nodes[searchkey], linktext, data=wx.TreeItemData(os.path.normpath("%s/%s" % (searchkey, j))))
 							nodes[os.path.normpath("%s/%s" % (searchkey, j))] = dirnode
