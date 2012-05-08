@@ -3,6 +3,7 @@
 
 2012-05-07
 * fix edge case in Java deserialisation
+* add function name match reporting to GUI
 
 2012-05-06
 * enable function name scanning in ranking method
