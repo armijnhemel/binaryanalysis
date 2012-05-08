@@ -114,6 +114,19 @@ class BatFrame(wx.Frame):
 
 		self.advanced = True
 
+		## hardcode configuration paramaters
+		self.batconfig = ["Advanced mode"]
+		self.batconfigstate = []
+
+		self.filterconfig = [(["png", "bmp", "jpg", "gif", "graphics"], "Graphics files"),
+                                     (["text", "xml"], "Text files"),
+                                     (["audio", "mp3", "ogg"], "Audio files"),
+                                     (["video", "mp4"], "Video files"),
+                                     (["empty"], "Empty files"),
+                                     (["symlink"], "Symbolic links")]
+		self.filterconfigstate = []
+		self.filters = []
+
 		## add a few menus. This is heavily inspired by the tutorial code from wxPython
 		filemenu = wx.Menu()
 		menuOpen = filemenu.Append(wx.ID_OPEN,"&Open"," Open a scan archive")
@@ -123,7 +136,9 @@ class BatFrame(wx.Frame):
 
 		configmenu = wx.Menu()
 		menuConfigGeneral = configmenu.Append(wx.ID_ANY, "&General"," General configuration")
-		menuConfigScans = configmenu.Append(wx.ID_ANY, "&Scans"," Configure the scans")
+		menuConfigFilter = configmenu.Append(wx.ID_ANY, "&Filter"," Configure filters")
+		configmenu.AppendSeparator()
+		menuConfigScans = configmenu.Append(wx.ID_ANY, "&Scans"," Configure scans")
 
 		helpmenu = wx.Menu()
 		menuHelp = helpmenu.Append(wx.ID_HELP_CONTENTS, "&Contents"," Help")
@@ -139,7 +154,9 @@ class BatFrame(wx.Frame):
 		self.Bind(wx.EVT_MENU, self.onOpen, menuOpen)
 		self.Bind(wx.EVT_MENU, self.onSave, menuSaveAs)
 		self.Bind(wx.EVT_MENU, self.onHelp, menuHelp)
-		self.Bind(wx.EVT_MENU, self.onConfig, menuConfigScans)
+		self.Bind(wx.EVT_MENU, self.onScanConfig, menuConfigScans)
+		self.Bind(wx.EVT_MENU, self.onConfig, menuConfigGeneral)
+		self.Bind(wx.EVT_MENU, self.onFilterConfig, menuConfigFilter)
 
 		## next we should have a toolbar
 		battoolbar = self.CreateToolBar()
@@ -530,6 +547,7 @@ class BatFrame(wx.Frame):
 				filelist = i[2]
 				filelist.sort()
 				for j in filelist:
+					ignore = False
 					linktext = j
 					linkpath = os.path.normpath("%s/%s" % (i[0][srcdirlen:], j))
 					if linkpath.startswith('/'):
@@ -542,6 +560,9 @@ class BatFrame(wx.Frame):
 									#linktext = u"%s  \u24e7" % j
 									linktext = u"%s  \u272a" % j
 							if r.keys()[0] == 'tags':
+								if list(set(r['tags']).intersection(set(self.filters))) != []:
+									ignore = True
+									continue
 								if 'text' in r['tags']:
 									linktext = u"%s  \u24c9" % j
 								if 'graphics' in r['tags']:
@@ -549,6 +570,9 @@ class BatFrame(wx.Frame):
 								if 'compressed' in r['tags']:
 									linktext = u"%s  \u24b8" % j
 					if "symbolic link" in self.unpackreports[linkpath]['magic']:
+						if "symlink" in self.filters:
+							ignore = True
+							continue
 						## if we have a link, then add the value of where the link points to
 						## to give a visual clue to people
 						## example: "symbolic link to `../../bin/busybox'"
@@ -558,7 +582,12 @@ class BatFrame(wx.Frame):
 					else:
 						## if files are empty we mark them as empty
 						if self.unpackreports[linkpath]['size'] == 0:
-							linktext = u"%s  \u2205" % j
+							if "empty" in self.filters:
+								ignore = True
+							else:
+								linktext = u"%s  \u2205" % j
+					if ignore:
+						continue
 					if i[0][srcdirlen:] == "":
 						tree.AppendItem(rootnode, linktext, data=wx.TreeItemData(j))
 					else:
@@ -573,6 +602,14 @@ class BatFrame(wx.Frame):
 		except StopIteration:
 			pass
 
+	## based on configuration we enable/disable certain features
+	def redrawGUI(self):
+		pass
+
+	## based on settings in self.filterconfig we don't show certain files
+	def redrawTree(self):
+		pass
+
 	## show a dialog window with some information about BAT
 	def onAbout(self,e):
 		# A message dialog box with an OK button. wx.OK is a standard ID in wxWidgets.
@@ -581,7 +618,24 @@ class BatFrame(wx.Frame):
 		dlg.Destroy()
 
 
+	def onFilterConfig(self,e):
+		dlg = wx.MultiChoiceDialog(self, "Choose file types that should be ignored in the file tree.\nChosen files will not be displayed.", "Binary Analysis Tool file type filter", map(lambda x: x[1], self.filterconfig))
+		dlg.SetSelections(self.filterconfigstate)
+		if dlg.ShowModal() == wx.ID_OK:
+			self.filterconfigstate = dlg.GetSelections()
+			self.filters = reduce(lambda x, y: x + y, map(lambda x: self.filterconfig[x][0], self.filterconfigstate), [])
+			self.redrawTree()
+		dlg.Destroy()
+
 	def onConfig(self,e):
+		dlg = wx.MultiChoiceDialog(self, "Binary Analysis Tool configurator", "", self.batconfig)
+		dlg.SetSelections(self.batconfigstate)
+		if dlg.ShowModal() == wx.ID_OK:
+			self.batconfigstate = dlg.GetSelections()
+			self.redrawGUI()
+		dlg.Destroy()
+
+	def onScanConfig(self,e):
 		dlg = wx.MultiChoiceDialog(self, "Binary Analysis Tool scan configurator", "", [])
 		if dlg.ShowModal() == wx.ID_OK:
 			pass
