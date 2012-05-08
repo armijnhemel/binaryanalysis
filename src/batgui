@@ -121,8 +121,9 @@ class BatFrame(wx.Frame):
 		filemenu.AppendSeparator()
 		menuExit = filemenu.Append(wx.ID_EXIT,"E&xit"," Terminate the program")
 
-		scanmenu = wx.Menu()
-		menuConfig = scanmenu.Append(wx.ID_ANY, "&Configuration"," Configure the scans")
+		configmenu = wx.Menu()
+		menuConfigGeneral = configmenu.Append(wx.ID_ANY, "&General"," General configuration")
+		menuConfigScans = configmenu.Append(wx.ID_ANY, "&Scans"," Configure the scans")
 
 		helpmenu = wx.Menu()
 		menuHelp = helpmenu.Append(wx.ID_HELP_CONTENTS, "&Contents"," Help")
@@ -130,7 +131,7 @@ class BatFrame(wx.Frame):
 
 		menuBar = wx.MenuBar()
 		menuBar.Append(filemenu,"&File")
-		menuBar.Append(scanmenu,"&Scan")
+		menuBar.Append(configmenu,"&Configuration")
 		menuBar.Append(helpmenu,"&Help")
 		self.SetMenuBar(menuBar)
 		self.Bind(wx.EVT_MENU, self.onAbout, menuAbout)
@@ -138,7 +139,7 @@ class BatFrame(wx.Frame):
 		self.Bind(wx.EVT_MENU, self.onOpen, menuOpen)
 		self.Bind(wx.EVT_MENU, self.onSave, menuSaveAs)
 		self.Bind(wx.EVT_MENU, self.onHelp, menuHelp)
-		self.Bind(wx.EVT_MENU, self.onConfig, menuConfig)
+		self.Bind(wx.EVT_MENU, self.onConfig, menuConfigScans)
 
 		## next we should have a toolbar
 		battoolbar = self.CreateToolBar()
