@@ -42,7 +42,7 @@ On the right there are views of the file. There are three main views of the file
 <ol>
 <li>Overview</li>
 <li>Matches view</li>
-<li>Alternate view</li>
+<li>Alternate view (advanced mode only)</li>
 </ol>
 </p>
 <h2>Overview</h2>
@@ -111,6 +111,8 @@ class BatFrame(wx.Frame):
 				## process each section. We need: section name, description, enabled
 				pass
 			
+
+		self.advanced = True
 
 		## add a few menus. This is heavily inspired by the tutorial code from wxPython
 		filemenu = wx.Menu()
@@ -184,7 +186,37 @@ class BatFrame(wx.Frame):
 		matchestab.SplitVertically(self.matcheswindow, self.matchesbrowser)
 		matchestab.SetSashGravity(0.5)
 
+		## We have a tab for visual information and hexdumps about a file, only in advanced mode
+		if self.advanced:
+			self.initAlternateViewtab()
+
 		## We have a tab for visual information and hexdumps about a file
+		self.textpicturetab = wx.SplitterWindow(self.notebookpanel)
+		self.textpicturetab.SetSashGravity(0.4)
+		self.notebookpanel.AddPage(self.textpicturetab, "Text/pictures")
+		self.notebookpanel.EnableTab(3,False)
+
+		## with one textctrl on the right
+		plaintextStyle = wx.TextAttr()
+		plaintextStyle.SetFont(wx.FFont(10, family=wx.FONTFAMILY_TELETYPE))
+		self.plaintextDisplay = wx.TextCtrl(self.textpicturetab, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
+		self.plaintextDisplay.SetDefaultStyle(plaintextStyle)
+
+		## and pictures on the left
+		self.picturedisplay = wx.ScrolledWindow(self.textpicturetab)
+		displayvbox = wx.FlexGridSizer(2, 1)
+		displayvbox.AddGrowableRow(0,1)
+		displayvbox.AddGrowableRow(1,1)
+		displayvbox.SetVGap(5)
+		self.picturedisplay.SetSizerAndFit(displayvbox)
+
+		self.textpicturetab.SplitVertically(self.picturedisplay, self.plaintextDisplay)
+		self.textpicturetab.SetSashGravity(0.4)
+
+		self.Show(True)
+
+	def initAlternateViewtab(self):
+		pass
 		self.alternateviewtab = wx.SplitterWindow(self.notebookpanel)
 		self.notebookpanel.AddPage(self.alternateviewtab, "Alternate view")
 
@@ -212,41 +244,6 @@ class BatFrame(wx.Frame):
 		self.picturepanel.SetScrollbars(20, 20, 10, 10)
 		self.alternateviewtab.SplitVertically(self.picturepanel, self.textCtrl)
 		self.alternateviewtab.SetSashGravity(0.4)
-
-		## We have a tab for visual information and hexdumps about a file
-		self.textpicturetab = wx.SplitterWindow(self.notebookpanel)
-		self.textpicturetab.SetSashGravity(0.4)
-		self.notebookpanel.AddPage(self.textpicturetab, "Text/pictures")
-		self.notebookpanel.EnableTab(3,False)
-
-		## with one textctrl on the right
-		plaintextStyle = wx.TextAttr()
-		plaintextStyle.SetFont(wx.FFont(10, family=wx.FONTFAMILY_TELETYPE))
-		self.plaintextDisplay = wx.TextCtrl(self.textpicturetab, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
-		self.plaintextDisplay.SetDefaultStyle(plaintextStyle)
-
-		## and pictures on the left
-		self.picturedisplay = wx.ScrolledWindow(self.textpicturetab)
-		displayvbox = wx.FlexGridSizer(2, 1)
-		displayvbox.AddGrowableRow(0,1)
-		displayvbox.AddGrowableRow(1,1)
-		displayvbox.SetVGap(5)
-		self.picturedisplay.SetSizerAndFit(displayvbox)
-
-		'''
-		self.histo2 = wx.EmptyBitmap(width=1, height=1)
-		self.histogram2 = wx.lib.statbmp.GenStaticBitmap(self.picturepanel, ID=-1, bitmap=self.histo2)
-		#self.histogram = wx.StaticBitmap(self.picturepanel, bitmap=histo2)
-		#self.histogram2 = wx.lib.statbmp.GenStaticBitmap(self.picturepanel, ID=-1, bitmap=histo2)
-		#self.histogram2.Bind(wx.EVT_LEFT_DOWN, self.onHexdumpClick)
-		vbox.Add(self.histogram2, flag=wx.EXPAND)
-		#vbox.Add(self.histogram, flag=wx.EXPAND)
-		self.picturepanel.SetScrollbars(20, 20, 10, 10)
-		'''
-		self.alternateviewtab.SplitVertically(self.picturedisplay, self.plaintextDisplay)
-		self.alternateviewtab.SetSashGravity(0.4)
-
-		self.Show(True)
 
 	## Filter a configuration, based on a selection of checks.
 	## Initially this will be the default configuration that is passed to the program,
