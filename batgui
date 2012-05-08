@@ -194,7 +194,10 @@ class BatFrame(wx.Frame):
 		self.textpicturetab = wx.SplitterWindow(self.notebookpanel)
 		self.textpicturetab.SetSashGravity(0.4)
 		self.notebookpanel.AddPage(self.textpicturetab, "Text/pictures")
-		self.notebookpanel.EnableTab(3,False)
+		if self.advanced:
+			self.notebookpanel.EnableTab(3,False)
+		else:
+			self.notebookpanel.EnableTab(2,False)
 
 		## with one textctrl on the right
 		plaintextStyle = wx.TextAttr()
@@ -297,17 +300,18 @@ class BatFrame(wx.Frame):
 		self.overviewwindow.SetPage("<html></html>")
 		self.matcheswindow.SetPage('<html></html>')
 		self.matchesbrowser.SetPage("<html></html>")
-		## clean the pictures
-		self.histo2 = wx.EmptyBitmap(width=1, height=1)
-		self.histogram2.SetBitmap(bitmap=self.histo2)
-		self.histogram2.Refresh(True)
-		self.picturepanel.FitInside()
-		## clean the hexdump
-		self.textCtrl.Clear()
+		if self.advanced:
+			## clean the pictures
+			self.histo2 = wx.EmptyBitmap(width=1, height=1)
+			self.histogram2.SetBitmap(bitmap=self.histo2)
+			self.histogram2.Refresh(True)
+			self.picturepanel.FitInside()
+			## clean the hexdump
+			self.textCtrl.Clear()
+			## enable tabs again
+			self.notebookpanel.EnableTab(2,True)
 
-		## enable all tabs again
-		self.notebookpanel.EnableTab(1,True)
-		self.notebookpanel.EnableTab(2,True)
+		#self.notebookpanel.EnableTab(1,True)
 
 		## if / is selected we print the help page again
 		if self.selectedfile == None:
@@ -374,11 +378,13 @@ class BatFrame(wx.Frame):
 						applications.append(i.keys()[0])
 					elif i.keys()[0] == 'tags':
 						if 'graphics' in i['tags']:
-							self.notebookpanel.EnableTab(2,False)
+							if self.advanced:
+								self.notebookpanel.EnableTab(2,False)
 							tag = 'graphics'
 						if 'text' in i['tags']:
-							self.notebookpanel.EnableTab(2,False)
-							tag = 'graphics'
+							if self.advanced:
+								self.notebookpanel.EnableTab(2,False)
+							tag = 'text'
 					elif i.keys()[0] == 'ranking':
 						(stringsres, dynamicres) = i['ranking']
 						if dynamicres.has_key('packages'):
@@ -440,35 +446,36 @@ class BatFrame(wx.Frame):
 			self.overviewwindow.SetPage(overviewstring)
 
 			if sha256sum != '' and tag not in ['graphics', 'text', 'compressed', 'audio', 'video', 'resource']:
-				try:
-					os.stat("%s/%s-hexdump.gz" % (self.reportsdir, sha256sum))
-					datafile = gzip.open('%s/%s-hexdump.gz' % (self.reportsdir, sha256sum))
-					hexdump = datafile.read()
-					datafile.close()
-					self.data = hexdump
-					self.datalen = len(self.data)
-					## if file is small enough load it at once
-					if size > 1000000:
-						self.textCtrl.WriteText(self.data[:1000000])
-						self.bla = wx.CallLater(2000, self.textctrlupdate)
-					else:
-						self.textCtrl.WriteText(self.data)
-						self.bla = wx.CallLater(0, self.textctrlupdate)
-					self.textCtrl.SetInsertionPoint(0)
-				except Exception, e:
-					print e
-					pass
-				try:
-					os.stat("%s/%s.png" % (self.imagesdir, sha256sum))
-					self.histo2 = wx.Image('%s/%s.png' % (self.imagesdir, sha256sum), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+				if self.advanced:
+					try:
+						os.stat("%s/%s-hexdump.gz" % (self.reportsdir, sha256sum))
+						datafile = gzip.open('%s/%s-hexdump.gz' % (self.reportsdir, sha256sum))
+						hexdump = datafile.read()
+						datafile.close()
+						self.data = hexdump
+						self.datalen = len(self.data)
+						## if file is small enough load it at once
+						if size > 1000000:
+							self.textCtrl.WriteText(self.data[:1000000])
+							self.bla = wx.CallLater(2000, self.textctrlupdate)
+						else:
+							self.textCtrl.WriteText(self.data)
+							self.bla = wx.CallLater(0, self.textctrlupdate)
+						self.textCtrl.SetInsertionPoint(0)
+					except Exception, e:
+						print e
+						pass
+					try:
+						os.stat("%s/%s.png" % (self.imagesdir, sha256sum))
+						self.histo2 = wx.Image('%s/%s.png' % (self.imagesdir, sha256sum), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
 		
-					self.histogram2.SetBitmap(bitmap=self.histo2)
-					self.histogram2.Bind(wx.EVT_LEFT_DOWN, self.onHexdumpClick)
-					self.histogram2.Refresh(True)
-					self.picturepanel.FitInside()
-				except Exception, e:
-					print e
-					pass
+						self.histogram2.SetBitmap(bitmap=self.histo2)
+						self.histogram2.Bind(wx.EVT_LEFT_DOWN, self.onHexdumpClick)
+						self.histogram2.Refresh(True)
+						self.picturepanel.FitInside()
+					except Exception, e:
+						print e
+						pass
 
 	def initTree(self, tree, tmpdir):
 		tree.DeleteAllItems()
@@ -478,13 +485,14 @@ class BatFrame(wx.Frame):
 		self.overviewwindow.SetPage(helphtml)
 		self.matcheswindow.SetPage('<html></html>')
 		self.matchesbrowser.SetPage("<html></html>")
-		## clean the pictures
-		self.histo2 = wx.EmptyBitmap(width=1, height=1)
-		self.histogram2.SetBitmap(bitmap=self.histo2)
-		self.histogram2.Refresh(True)
-		self.picturepanel.FitInside()
-		## clean the hexdump
-		self.textCtrl.Clear()
+		if self.advanced:
+			## clean the pictures
+			self.histo2 = wx.EmptyBitmap(width=1, height=1)
+			self.histogram2.SetBitmap(bitmap=self.histo2)
+			self.histogram2.Refresh(True)
+			self.picturepanel.FitInside()
+			## clean the hexdump
+			self.textCtrl.Clear()
 
 		## construct a tree from a directory, or a pickle
 		if tmpdir.endswith('/'):
