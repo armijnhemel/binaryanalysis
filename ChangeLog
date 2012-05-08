@@ -1,3 +1,9 @@
+2012-05-08
+* add filtering capabilities to GUI
+
+2012-05-07
+* fix edge case in Java deserialisation
+
 2012-05-06
 * enable function name scanning in ranking method
 * fix and enable gzip verifier in prerun.py
