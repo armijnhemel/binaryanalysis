@@ -501,6 +501,10 @@ def writeDumpfile(unpackreports, leafreports, scans, outputfile, tempdir):
 						for c in copyfiles:
 							shutil.copy(os.path.join(envsplit[1], c), target)
 
+	## TODO: dump unique matches for ranking scan (if available) to separate file(s)
+	## It is taking a lot of space in the pickle, and it is not always used:
+	## the GUI for example has almost all data pregenerated.
+
 	picklefile = open('%s/scandata.pickle' % (tempdir,), 'wb')
 	cPickle.dump((unpackreports, leafreports, scans), picklefile)
 	picklefile.close()
