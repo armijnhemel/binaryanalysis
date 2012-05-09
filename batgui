@@ -514,12 +514,10 @@ class BatFrame(wx.Frame):
 			## clean the hexdump
 			self.textCtrl.Clear()
 
-		## construct a tree from a directory, or a pickle
+		## construct a tree from a pickle
 		if tmpdir.endswith('/'):
 			tmpdir = tmpdir[:-1]
-		srcdirlen = len(os.path.normpath(tmpdir))
-		## TODO: use data from scandata pickle for this
-		osgen = os.walk(tmpdir)
+
 		rootnode = tree.AddRoot('/')
 		nodes = {}
 
@@ -557,66 +555,62 @@ class BatFrame(wx.Frame):
 					dirnode = tree.AppendItem(nodes[parent], linktext, data=wx.TreeItemData(os.path.normpath(d)))
 					nodes[d] = dirnode
 
-		try:
-			while True:
-				i = osgen.next()
-				filelist = i[2]
-				filelist.sort()
-				for j in filelist:
-					ignore = False
-					linktext = j
-					linkpath = os.path.normpath("%s/%s" % (i[0][srcdirlen:], j))
-					if linkpath.startswith('/'):
-						linkpath = linkpath[1:]
-					if self.leafreports.has_key(linkpath):
-						for r in self.leafreports[linkpath]:
-							if r.keys()[0] == 'ranking':
-								if r['ranking'][0]['matchedlines'] != 0:
-									## give a visual clue to people to tell them that strings could be matched
-									#linktext = u"%s  \u24e7" % j
-									linktext = u"%s  \u272a" % j
-							if r.keys()[0] == 'tags':
-								if list(set(r['tags']).intersection(set(self.filters))) != []:
-									ignore = True
-									continue
-								if 'text' in r['tags']:
-									linktext = u"%s  \u24c9" % j
-								if 'graphics' in r['tags']:
-									linktext = u"%s  \u24bc" % j
-								if 'compressed' in r['tags']:
-									linktext = u"%s  \u24b8" % j
-					if "symbolic link" in self.unpackreports[linkpath]['magic']:
-						if "symlink" in self.filters:
+		filelist = self.unpackreports.keys()
+		filelist.sort()
+
+		for j in filelist:
+			if j.startswith('/'):
+				j = j[1:]
+			parent = os.path.dirname(j)
+			## length of parent, plus 1 for trailing slash
+			parentlen = len(parent) + 1
+			ignore = False
+			if parent == "":
+				linktext = j
+			else:
+				linktext = j[parentlen:]
+			if self.leafreports.has_key(j):
+				for r in self.leafreports[j]:
+					if r.keys()[0] == 'ranking':
+						if r['ranking'][0]['matchedlines'] != 0:
+							## give a visual clue to people to tell them that strings could be matched
+							#linktext = u"%s  \u24e7" % linktext
+							linktext = u"%s  \u272a" % linktext
+					if r.keys()[0] == 'tags':
+						if list(set(r['tags']).intersection(set(self.filters))) != []:
 							ignore = True
 							continue
-						## if we have a link, then add the value of where the link points to
-						## to give a visual clue to people
-						## example: "symbolic link to `../../bin/busybox'"
-						linkname = self.unpackreports[linkpath]['magic'][:-1].rsplit("symbolic link to `", 1)[-1]
-						linktext = u"%s \u2192 %s" % (j, linkname)
-						#linktext = u"%s \u21fe %s" % (j, os.readlink(u"%s/%s" % (i[0], j)))
+						if 'text' in r['tags']:
+							linktext = u"%s  \u24c9" % linktext
+						if 'graphics' in r['tags']:
+							linktext = u"%s  \u24bc" % linktext
+						if 'compressed' in r['tags']:
+							linktext = u"%s  \u24b8" % linktext
+			elif "symbolic link" in self.unpackreports[j]['magic']:
+				if "symlink" in self.filters:
+					ignore = True
+					continue
+				## if we have a link, then add the value of where the link points to
+				## to give a visual clue to people
+				## example: "symbolic link to `../../bin/busybox'"
+				linkname = self.unpackreports[j]['magic'][:-1].rsplit("symbolic link to `", 1)[-1]
+				linktext = u"%s \u2192 %s" % (linktext, linkname)
+			else:
+				## if files are empty we mark them as empty
+				if self.unpackreports[j]['size'] == 0:
+					if "empty" in self.filters:
+						ignore = True
 					else:
-						## if files are empty we mark them as empty
-						if self.unpackreports[linkpath]['size'] == 0:
-							if "empty" in self.filters:
-								ignore = True
-							else:
-								linktext = u"%s  \u2205" % j
-					if ignore:
-						continue
-					if i[0][srcdirlen:] == "":
-						tree.AppendItem(rootnode, linktext, data=wx.TreeItemData(j))
-					else:
-						searchkey = i[0][srcdirlen:]
-						if searchkey.startswith('/'):
-							searchkey = searchkey[1:]
-						if not nodes.has_key(searchkey):
-							continue
-						else:
-							tree.AppendItem(nodes[searchkey], text=linktext, data=wx.TreeItemData(os.path.normpath("%s/%s" % (searchkey, j))))
-					pass
-		except StopIteration:
-			pass
+						linktext = u"%s  \u2205" % linktext
+			if ignore:
+				continue
+			if parent == "":
+				tree.AppendItem(rootnode, linktext, data=wx.TreeItemData(j))
+			else:
+				if not nodes.has_key(parent):
+					continue
+				else:
+					tree.AppendItem(nodes[parent], text=linktext, data=wx.TreeItemData(os.path.normpath(j)))
 
 	## based on configuration we enable/disable certain features
 	def redrawGUI(self):
@@ -683,7 +677,7 @@ class BatFrame(wx.Frame):
 				tarmembers = tar.getmembers()
 				members = []
 				## only unpack certain files and directories
-				for i in ['scandata.pickle', 'data', 'images', 'reports']:
+				for i in ['scandata.pickle', 'images', 'reports']:
 					members = members + filter(lambda x: x.name.startswith(i), tarmembers)
 				tar.extractall(self.tmpdir, members)
 				tar.close()

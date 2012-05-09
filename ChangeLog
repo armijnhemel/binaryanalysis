@@ -4,6 +4,8 @@ not used in the GUI directly and is just wasting memory and CPU time.
 * adapt GUI to reflect change in dump data format. Also don't unpacking
 'ranking' directory with new pickle files: they are not used and unpacking
 takes time.
+* construct file tree from scandata.pickle instead of walking the data
+directory from the dump
 
 2012-05-08
 * add filtering capabilities to GUI
