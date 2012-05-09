@@ -76,6 +76,9 @@ By clicking somewhere on the picture the hexdump view will automatically scroll 
 </html>
 '''
 
+## Specialized HTML window for handling links to pretty printed source code
+## Basically just replaces 'unique:/' with the proper path to the pretty printed
+## source code files.
 class BATHtmlWindow(wx.html.HtmlWindow):
 	def __init__(self, parent, target):
 		wx.html.HtmlWindow.__init__(self, parent)
@@ -124,6 +127,8 @@ class BatFrame(wx.Frame):
                                      (["video", "mp4"], "Video files"),
                                      (["empty"], "Empty files"),
                                      (["symlink"], "Symbolic links")]
+
+		## initial values of filters
 		self.filterconfigstate = []
 		self.filters = []
 
@@ -521,7 +526,7 @@ class BatFrame(wx.Frame):
 		rootnode = tree.AddRoot('/')
 		nodes = {}
 
-		dirlist = list(set(map(lambda x: os.path.dirname(x), self.leafreports)))
+		dirlist = list(set(map(lambda x: os.path.dirname(x), self.unpackreports.keys())))
 
 		## make sure that we have all directories
 		for d in dirlist:
