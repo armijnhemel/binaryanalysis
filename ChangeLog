@@ -6,6 +6,7 @@ not used in the GUI directly and is just wasting memory and CPU time.
 takes time.
 * construct file tree from scandata.pickle instead of walking the data
 directory from the dump
+* enable interactive filtering of file types via menu
 
 2012-05-08
 * add filtering capabilities to GUI
