@@ -1,3 +1,7 @@
+2012-05-09
+* write original ranking dump data to separate pickle files. This data is
+not used in the GUI directly and is just wasting memory and CPU time.
+
 2012-05-08
 * add filtering capabilities to GUI
 
