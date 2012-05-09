@@ -546,9 +546,22 @@ def writeDumpfile(unpackreports, leafreports, scans, outputfile, tempdir):
 						for c in copyfiles:
 							shutil.copy(os.path.join(envsplit[1], c), target)
 
-	## TODO: dump unique matches for ranking scan (if available) to separate file(s)
+	## Dump unique matches for ranking scan (if available) to separate file(s)
 	## It is taking a lot of space in the pickle, and it is not always used:
 	## the GUI for example has almost all data pregenerated.
+	if not os.path.exists(os.path.join(tempdir, 'ranking')):
+		os.mkdir(os.path.join(tempdir, 'ranking'))
+	for l in leafreports:
+		picklefile = open('%s/ranking/%s-ranking.pickle' % (tempdir,unpackreports[l]['sha256']), 'wb')
+		cPickle.dump(leafreports[l], picklefile)
+		picklefile.close()
+		for lr in leafreports[l]:
+			if lr.keys()[0] == 'ranking':
+				for report in range(0, len(lr['ranking'][0]['reports'])):
+					## We have: (rank, s, uniqueMatches.get(s,[]), percentage, packageversions.get(s, {}), packagelicenses.get(s, []))
+					## We want: (rank, s, #unique matches, percentage, packageversions, packagelicenses)
+					if type(lr['ranking'][0]['reports'][report][2]) != int:
+						lr['ranking'][0]['reports'][report] = (lr['ranking'][0]['reports'][report][0], lr['ranking'][0]['reports'][report][1], len(lr['ranking'][0]['reports'][report][2]), lr['ranking'][0]['reports'][report][3], lr['ranking'][0]['reports'][report][4], lr['ranking'][0]['reports'][report][5])
 
 	picklefile = open('%s/scandata.pickle' % (tempdir,), 'wb')
 	cPickle.dump((unpackreports, leafreports, scans), picklefile)
@@ -558,6 +571,10 @@ def writeDumpfile(unpackreports, leafreports, scans, outputfile, tempdir):
 	os.chdir(tempdir)
 	dumpfile.add('scandata.pickle')
 	dumpfile.add('data')
+	try:
+		os.stat('ranking')
+		dumpfile.add('ranking')
+	except:	pass
 	try:
 		os.stat('images')
 		dumpfile.add('images')
