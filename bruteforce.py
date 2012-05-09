@@ -218,6 +218,49 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir)):
 	## priority scans are run first.
 	## TODO: sort per priority per offset for scans that are the most promising
 	unpackscans = sorted(unpackscans, key=lambda x: x['priority'], reverse=True)
+	'''
+	if unpackscans != []:
+		prio = unpackscans[0]['priority']
+		minoffset = sys.maxint
+		scanorder = []
+		perprioorder = []
+		for u in unpackscans:
+			if u['priority'] < prio:
+				## reset values
+				prio = u['priority']
+				minoffset = sys.maxint
+				scanorder = scanorder + perprioorder
+				perprioorder = []
+			if offsets.has_key(u['name']):
+				if offsets[u['name']] != []:
+					if offsets[u['name']][0] < minoffset:
+						print >>sys.stderr, "PREPENDING", u['name'], filename, "\n"
+						perprioorder.insert(0, u)
+					else:
+						inserted = False
+						for p in range(0,len(perprioorder)):
+							if not offsets.has_key(perprioorder[p['name']]):
+								perprioorder.insert(p, u)
+								inserted = True
+								break
+							else:
+								if offsets[u['name']] < offsets[perprioorder[p['name']]][0]:
+									perprioorder.insert(p, u)
+									inserted = True
+									break
+						if not inserted:
+							print >>sys.stderr, "APPENDING", u['name'], filename, "\n"
+							perprioorder.append(u)
+				else:
+					print >>sys.stderr, "APPENDING", u, filename, "\n"
+					perprioorder.append(u)
+			else:
+				print >>sys.stderr, "APPENDING", u['name'], filename, "\n"
+				perprioorder.append(u)
+		scanorder = scanorder + perprioorder
+		print >>sys.stderr, "BEFORE", unpackscans, filename, len(unpackscans)
+		print >>sys.stderr, "AFTER", scanorder, filename, len(scanorder)
+	'''
 
 	## prepend the most promising scans at offset 0 (if any)
 	scanfirst = sorted(scanfirst, key=lambda x: x['priority'], reverse=True)
