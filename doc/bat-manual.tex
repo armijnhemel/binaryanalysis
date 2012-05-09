@@ -74,8 +74,8 @@ enabling extra repositories such as Debian \texttt{non-free}.
 BAT consists of several programs and a few helper scripts (not meant to be
 used directly).
 
-The programs in the Binary Analysis Tool are \texttt{bruteforce.py},
-\texttt{busybox-compare-configs.py} and \texttt{busybox.py}
+The programs in the Binary Analysis Tool are \texttt{bruteforce.py}, \texttt{batgui},
+\texttt{busybox.py} and \texttt{busybox-compare-configs.py}.
 
 \subsection{\texttt{bruteforce.py}}
 
@@ -111,10 +111,11 @@ output.
 \subsubsection{Configuring \texttt{bruteforce.py}}
 
 The \texttt{bruteforce.py} tool uses a configuration file that is in Windows
-INI format. The main configuration directive is \texttt{batconfig}, which
-currently only allows setting a single setting, namely whether or not multiple
-CPUs (or cores) should be used during scanning. The default configuration as
-shipped in the official BAT distribution is to not use multiple CPUs:
+INI format. The main configuration directive is \texttt{batconfig}. In this
+section various global settings are defined, such as \texttt{multiprocessing}
+which sets whether or not multiple CPUs (or cores) should be used during
+scanning. The default configuration as shipped in the official BAT distribution
+is to not use multiple CPUs:
 
 \begin{verbatim}
 [batconfig]
@@ -260,14 +261,23 @@ from the configuration file.
 
 \subsubsection{Interpreting the results}
 
-\texttt{bruteforce.py} outputs its results in XML format on standard output.
-After redirecting the output to a file it is possible to look at this file with
-a commandline tool such as \texttt{xml\_pp} or a webbrowser such as Mozilla
-Firefox.
+There are two formats in which \texttt{bruteforce.py} outputs its results:
 
-Since XML is not meant for human consumption a graphical user interface is
-planned that wraps around BAT that will make it easier to interpret the
-results in a more interactive way.
+\begin{enumerate}
+\item dump file containing program state, complete unpacked directory tree
+containing all unpacked data, plus possibly some extra generated data, such
+as pictures and more reporting. This format is meant to be used in
+\texttt{batgui}.
+\item XML file (configurable)
+\end{enumerate}
+
+If configured \texttt{bruteforce.py} outputs its results in XML format on
+standard output. After redirecting the output to a file it is possible to look
+at this file with a commandline tool such as \texttt{xml\_pp} or a webbrowser
+such as Mozilla Firefox.
+
+This XML file is not meant for human consumption, but for use by for example
+reporting tools.
 
 The XML file starts with metadata, such as:
 
@@ -292,6 +302,11 @@ configuration file)
 \item offset in the parent file of the compressed file, file system or media
 file
 \end{itemize}
+
+\subsection{\texttt{batgui}}
+
+The \texttt{batgui} program is a graphical viewer for the results of
+\texttt{bruteforce.py}.
 
 \subsection{\texttt{busybox.py} and \texttt{busybox-compare-configs.py}}
 
@@ -406,15 +421,7 @@ their main purpose.
 
 \subsubsection{Writing a pre-run method}
 
-Pre-run methods have a strict interface:
-
-\begin{verbatim}
-def prerunMethod(filename, tempdir=None, tags=[],
-          offsets={}, envvars=None):
-	newtags = []
-	newtags.append('helloworld')
-	return newtags
-\end{verbatim}
+Pre-run methods have a strict interface. Parameters are:
 
 \begin{itemize}
 \item \texttt{filename} is the absolute path of the file that needs to be tagged
@@ -432,6 +439,16 @@ Return values are:
 \begin{itemize}
 \item a list containing tags
 \end{itemize}
+
+Example:
+
+\begin{verbatim}
+def prerunMethod(filename, tempdir=None, tags=[],
+          offsets={}, envvars=None):
+        newtags = []
+        newtags.append('helloworld')
+        return newtags
+\end{verbatim}
 
 \subsection{Unpackers}
 
@@ -970,7 +987,7 @@ It has the following fields:
 \item sha256 of the archive that was processed
 \end{itemize}
 
-\subsubsection{\texttt{processed} table}
+\subsubsection{\texttt{processed\_file} table}
 This table contains information about of individual source code files that were
 scanned.
 
@@ -983,7 +1000,7 @@ It has the following fields:
 \item sha256 of the file
 \end{itemize}
 
-\subsubsection{\texttt{processed} table}
+\subsubsection{\texttt{extracted\_file} table}
 This table stores the individual strings that were extracted from files and
 that could possibly end up in binaries.
 
