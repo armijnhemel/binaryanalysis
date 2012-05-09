@@ -4,7 +4,9 @@ import os, sys, subprocess, re, zlib, tempfile
 ## Copyright 2011-2012 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
+## method to process output of jffs2dump and read all the inodes from a JFFS2 file system.
 def readJFFS2Inodes(path):
+	## quick hack for systems that don't have /usr/sbin in $PATH (such as Debian and Ubuntu)
 	unpackenv = os.environ.copy()
 	unpackenv['PATH'] = unpackenv['PATH'] + ":/usr/sbin"
 
@@ -91,18 +93,17 @@ def unpackJFFS2(path, tempdir=None):
 	jffs2size = maxoffset
 
 	for n in direntries.keys():
-		## create directory structure
+		## recreate directory structure
 		if n in directories:
 			parentdirs = direntries[n]['name']
 			parent = direntries[n]['parent']
 			while parent != 1:
 				parentdirs = direntries[parent]['name'] + "/" + parentdirs
 				parent = direntries[parent]['parent']
-			##
 			pathinodes[n] = parentdirs
 			parentdirs = tmpdir + "/" +  parentdirs
 			os.makedirs(parentdirs)
-		## we have a leaf node, so we need to unpack data here
+		## we have a leaf node, so we need to unpack data here. Data is zlib compressed per inode.
 		else:
 			unzfiledata = ""
 			for node in nodeentries:
