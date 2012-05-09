@@ -616,10 +616,6 @@ class BatFrame(wx.Frame):
 	def redrawGUI(self):
 		pass
 
-	## based on settings in self.filterconfig we don't show certain files
-	def redrawTree(self):
-		pass
-
 	## show a dialog window with some information about BAT
 	def onAbout(self,e):
 		# A message dialog box with an OK button. wx.OK is a standard ID in wxWidgets.
@@ -634,7 +630,9 @@ class BatFrame(wx.Frame):
 		if dlg.ShowModal() == wx.ID_OK:
 			self.filterconfigstate = dlg.GetSelections()
 			self.filters = reduce(lambda x, y: x + y, map(lambda x: self.filterconfig[x][0], self.filterconfigstate), [])
-			self.redrawTree()
+			self.initTree(self.tree, self.datadir)
+			self.tree.Refresh()
+			self.tree.ExpandAll()
 		dlg.Destroy()
 
 	def onConfig(self,e):
@@ -684,13 +682,13 @@ class BatFrame(wx.Frame):
 			except Exception, e:
 				os.rmdir(self.tmpdir)
 				return
-			datadir = "%s/data" % self.tmpdir
+			self.datadir = "%s/data" % self.tmpdir
 			self.imagesdir = "%s/images" % self.tmpdir
 			self.reportsdir = "%s/reports" % self.tmpdir
 			picklefile = open("%s/scandata.pickle" % self.tmpdir, 'rb')
 			(self.unpackreports, self.leafreports, scans) = cPickle.load(picklefile)
 			picklefile.close()
-			self.initTree(self.tree, datadir)
+			self.initTree(self.tree, self.datadir)
 			self.tree.Refresh()
 			self.tree.ExpandAll()
 
