@@ -115,6 +115,8 @@ class BatFrame(wx.Frame):
 				pass
 			
 
+		self.datadir = ""
+
 		self.advanced = True
 
 		## hardcode configuration paramaters
@@ -131,6 +133,8 @@ class BatFrame(wx.Frame):
 		## initial values of filters
 		self.filterconfigstate = []
 		self.filters = []
+
+		self.scanconfig = []
 
 		## add a few menus. This is heavily inspired by the tutorial code from wxPython
 		filemenu = wx.Menu()
@@ -503,6 +507,8 @@ class BatFrame(wx.Frame):
 						pass
 
 	def initTree(self, tree, tmpdir):
+		if tmpdir == None:
+			return
 		tree.DeleteAllItems()
 
 		## TODO: refactor this
@@ -630,14 +636,15 @@ class BatFrame(wx.Frame):
 
 
 	def onFilterConfig(self,e):
-		dlg = wx.MultiChoiceDialog(self, "Choose file types that should be ignored in the file tree.\nChosen files will not be displayed.", "Binary Analysis Tool file type filter", map(lambda x: x[1], self.filterconfig))
+		dlg = wx.MultiChoiceDialog(self, "Choose file types that should be ignored in the file tree.\nChosen file types will NOT be displayed.", "Binary Analysis Tool file type filter", map(lambda x: x[1], self.filterconfig))
 		dlg.SetSelections(self.filterconfigstate)
 		if dlg.ShowModal() == wx.ID_OK:
 			self.filterconfigstate = dlg.GetSelections()
 			self.filters = reduce(lambda x, y: x + y, map(lambda x: self.filterconfig[x][0], self.filterconfigstate), [])
-			self.initTree(self.tree, self.datadir)
-			self.tree.Refresh()
-			self.tree.ExpandAll()
+			if self.datadir != "":
+				self.initTree(self.tree, self.datadir)
+				self.tree.Refresh()
+				self.tree.ExpandAll()
 		dlg.Destroy()
 
 	def onConfig(self,e):
@@ -649,7 +656,7 @@ class BatFrame(wx.Frame):
 		dlg.Destroy()
 
 	def onScanConfig(self,e):
-		dlg = wx.MultiChoiceDialog(self, "Binary Analysis Tool scan configurator", "", [])
+		dlg = wx.MultiChoiceDialog(self, "Binary Analysis Tool scan configurator", "", self.scanconfig)
 		if dlg.ShowModal() == wx.ID_OK:
 			pass
 		dlg.Destroy()
