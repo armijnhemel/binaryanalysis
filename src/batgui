@@ -442,9 +442,11 @@ class BatFrame(wx.Frame):
     <tr><td><b>Rank</b></td><td><b>Name</b></td><td><b>Percentage</b></td><td><b>Unique matches</b></td><td><b>Non unique matches assigned</b></td></tr>\n'''
 
 								for j in stringsres['reports']:
-									matchesrows = matchesrows + "    <tr><td>%d</td><td>%s</td><td>%f%%</td><td>%d</td><td>%d</td></tr>\n" % (j[0], j[1], j[3], len(j[2]), stringsres['nonUniqueAssignments'].get(j[1], 0))
+									#matchesrows = matchesrows + "    <tr><td>%d</td><td>%s</td><td>%f%%</td><td>%d</td><td>%d</td></tr>\n" % (j[0], j[1], j[3], len(j[2]), stringsres['nonUniqueAssignments'].get(j[1], 0))
+									matchesrows = matchesrows + "    <tr><td>%d</td><td>%s</td><td>%f%%</td><td>%d</td><td>%d</td></tr>\n" % (j[0], j[1], j[3], j[2], stringsres['nonUniqueAssignments'].get(j[1], 0))
 									# nonUniqueMatches, matchedlines, reports, extractedlines
-									if len(j[2]) != 0:
+									#if len(j[2]) != 0:
+									if j[2] != 0:
 										versionhtml = versionhtml + "<h5>%s</h5><p><img src=\"%s\"/></p>\n" % (j[1], "%s/%s-%s-version.png" % (self.imagesdir, sha256sum, j[1]))
 										## here we should either do a database lookup to get the checksum,
 										## or check if they are already in the report
@@ -664,7 +666,12 @@ class BatFrame(wx.Frame):
 			self.tmpdir = tempfile.mkdtemp()
 			try:
 				tar = tarfile.open(dlg.GetPath())
-				tar.extractall(self.tmpdir)
+				tarmembers = tar.getmembers()
+				members = []
+				## only unpack certain files and directories
+				for i in ['scandata.pickle', 'data', 'images', 'reports']:
+					members = members + filter(lambda x: x.name.startswith(i), tarmembers)
+				tar.extractall(self.tmpdir, members)
 				tar.close()
 			except Exception, e:
 				os.rmdir(self.tmpdir)
