@@ -522,30 +522,44 @@ class BatFrame(wx.Frame):
 		osgen = os.walk(tmpdir)
 		rootnode = tree.AddRoot('/')
 		nodes = {}
+
+		dirlist = list(set(map(lambda x: os.path.dirname(x), self.leafreports)))
+
+		## make sure that we have all directories
+		for d in dirlist:
+			if os.path.dirname(d) in dirlist:
+				continue
+			else:
+				dirlist.append(os.path.dirname(d))
+		dirlist.sort()
+
+		for d in dirlist:
+			if d == "":
+				continue
+			else:
+				if d.startswith('/'):
+					d = d[1:]
+				parent = os.path.dirname(d)
+				if parent == "":
+					linktext = u"%s  \u24b9" % d
+					dirnode = tree.AppendItem(rootnode, linktext, data=wx.TreeItemData(d))
+					nodes[d] = dirnode
+				else:
+					## length of parent, plus 1 for trailing slash
+					parentlen = len(parent) + 1
+
+					## check if the parent directory is actually there. If not, we have
+					## a problem. Should not occur.
+					if not nodes.has_key(parent):
+						continue
+					#linktext = u"%s \u1f4c1" % j
+					linktext = u"%s  \u24b9" % d[parentlen:]
+					dirnode = tree.AppendItem(nodes[parent], linktext, data=wx.TreeItemData(os.path.normpath(d)))
+					nodes[d] = dirnode
+
 		try:
 			while True:
 				i = osgen.next()
-				dirlist = i[1]
-				dirlist.sort()
-				for j in dirlist:
-					if i[0][srcdirlen:] == "":
-						## would have been nice to be able to use this unicode character, but not
-						## supported in standard Linux fonts
-						#linktext = u" \u1f4c1"
-						linktext = u"%s  \u24b9" % j
-						dirnode = tree.AppendItem(rootnode, linktext, data=wx.TreeItemData(j))
-						nodes[j] = dirnode
-					else:
-						searchkey = i[0][srcdirlen:]
-						if searchkey.startswith('/'):
-							searchkey = searchkey[1:]
-						if not nodes.has_key(searchkey):
-							continue
-						else:
-							#linktext = u"%s \u1f4c1" % j
-							linktext = u"%s  \u24b9" % j
-							dirnode = tree.AppendItem(nodes[searchkey], linktext, data=wx.TreeItemData(os.path.normpath("%s/%s" % (searchkey, j))))
-							nodes[os.path.normpath("%s/%s" % (searchkey, j))] = dirnode
 				filelist = i[2]
 				filelist.sort()
 				for j in filelist:
