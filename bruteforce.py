@@ -217,9 +217,11 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir)):
 	## sort 'unpackscans' in decreasing priority, so highest
 	## priority scans are run first.
 	## TODO: sort per priority per offset for scans that are the most promising
+	## but only for files that are fairly big, otherwise it has no use at all
+	## since scanning smaller files is very fast.
 	unpackscans = sorted(unpackscans, key=lambda x: x['priority'], reverse=True)
 	'''
-	if unpackscans != []:
+	if unpackscans != [] and filesize > 10000000:
 		prio = unpackscans[0]['priority']
 		minoffset = sys.maxint
 		scanorder = []
