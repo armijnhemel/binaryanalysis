@@ -114,12 +114,10 @@ class BatFrame(wx.Frame):
 				## process each section. We need: section name, description, enabled
 				pass
 			
-
 		self.datadir = ""
 
-		self.advanced = True
-
-		## hardcode configuration paramaters
+		## we start in "simple" mode
+		self.advanced = False
 		self.batconfig = ["Advanced mode"]
 		self.batconfigstate = []
 
@@ -621,7 +619,12 @@ class BatFrame(wx.Frame):
 
 	## based on configuration we enable/disable certain features
 	def redrawGUI(self):
-		pass
+		if not 0 in self.batconfigstate and self.advanced == True:
+			self.advanced = False
+			self.notebookpanel.RemovePage(2)
+		if 0 in self.batconfigstate and self.advanced == False:
+			self.initAlternateViewtab()
+			self.advanced = True
 
 	## show a dialog window with some information about BAT
 	def onAbout(self,e):
