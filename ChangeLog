@@ -1,3 +1,9 @@
+2012-05-10
+* move bruteforce scanning functionality to separate file in 'bat'
+subdirectory. This will make it a lot easier to make other front ends for BAT,
+for example GUI or networked service. Rework top level bruteforce.py to
+reflect change.
+
 2012-05-09
 * write original ranking dump data to separate pickle files. This data is
 not used in the GUI directly and is just wasting memory and CPU time.
