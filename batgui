@@ -631,6 +631,7 @@ class BatFrame(wx.Frame):
 					tar = tarfile.open(self.tarfile)
 					members = []
 					## only unpack certain files and directories
+					members = members + filter(lambda x: x.name.startswith('images') and len(os.path.basename(x.name)) == 68, self.tarmembers)
 					members = members + filter(lambda x: x.name.startswith('reports') and x.name.endswith('-hexdump.gz'), self.tarmembers)
 					tar.extractall(self.tmpdir, members)
 					tar.close()
@@ -638,6 +639,7 @@ class BatFrame(wx.Frame):
 				except Exception, e:
 					pass
 			self.initAlternateViewtab()
+			self.Refresh()
 
 	## show a dialog window with some information about BAT
 	def onAbout(self,e):
@@ -699,16 +701,16 @@ class BatFrame(wx.Frame):
 				tar = tarfile.open(self.tarfile)
 				self.tarmembers = tar.getmembers()
 				members = []
-				## only unpack certain files and directories
-				for i in ['scandata.pickle', 'images']:
+				for i in ['scandata.pickle']:
 					members = members + filter(lambda x: x.name.startswith(i), self.tarmembers)
-				## if we are not in advanced mode, there is no need to unpack everything. The hexdump
-				## files usually are quite big.
-				## TODO: filter the right files and unpack them on the fly if advanced mode is entered
+				## If we are not in advanced mode, there is no need to unpack everything. The hexdump
+				## files and "TV static" pictures can be quite big, so don't unpack them when not needed.
 				if not self.advanced:
 					members = members + filter(lambda x: x.name.startswith('reports') and x.name.endswith('unique.html'), self.tarmembers)
+					members = members + filter(lambda x: x.name.startswith('images') and len(os.path.basename(x.name)) != 68, self.tarmembers)
 				else:
 					members = members + filter(lambda x: x.name.startswith('reports'), self.tarmembers)
+					members = members + filter(lambda x: x.name.startswith('images'), self.tarmembers)
 					self.advancedunpacked = True
 				tar.extractall(self.tmpdir, members)
 				tar.close()
