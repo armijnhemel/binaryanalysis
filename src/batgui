@@ -128,6 +128,7 @@ class BatFrame(wx.Frame):
 		self.filterconfig = [(["audio", "mp3", "ogg"], "Audio files"),
                                      (["empty"], "Empty files"),
                                      (["png", "bmp", "jpg", "gif", "graphics"], "Graphics files"),
+                                     (["pdf"], "PDF files"),
                                      (["resource"], "Resource files"),
                                      (["symlink"], "Symbolic links"),
                                      (["text", "xml"], "Text files"),
