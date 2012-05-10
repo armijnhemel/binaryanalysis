@@ -118,6 +118,8 @@ class BatFrame(wx.Frame):
 
 		## we start in "simple" mode
 		self.advanced = False
+		self.advancedunpacked = False
+		self.tarfile = None
 		self.batconfig = ["Advanced mode"]
 		self.batconfigstate = []
 
@@ -623,8 +625,19 @@ class BatFrame(wx.Frame):
 			self.advanced = False
 			self.notebookpanel.RemovePage(2)
 		if 0 in self.batconfigstate and self.advanced == False:
-			self.initAlternateViewtab()
 			self.advanced = True
+			if self.advancedunpacked == False and self.tarfile != None:
+				try:
+					tar = tarfile.open(self.tarfile)
+					members = []
+					## only unpack certain files and directories
+					members = members + filter(lambda x: x.name.startswith('reports') and x.name.endswith('-hexdump.gz'), self.tarmembers)
+					tar.extractall(self.tmpdir, members)
+					tar.close()
+					self.advancedunpacked = True
+				except Exception, e:
+					pass
+			self.initAlternateViewtab()
 
 	## show a dialog window with some information about BAT
 	def onAbout(self,e):
@@ -682,19 +695,21 @@ class BatFrame(wx.Frame):
 			## * images directory (optional)
 			self.tmpdir = tempfile.mkdtemp()
 			try:
-				tar = tarfile.open(dlg.GetPath())
-				tarmembers = tar.getmembers()
+				self.tarfile = dlg.GetPath()
+				tar = tarfile.open(self.tarfile)
+				self.tarmembers = tar.getmembers()
 				members = []
 				## only unpack certain files and directories
 				for i in ['scandata.pickle', 'images']:
-					members = members + filter(lambda x: x.name.startswith(i), tarmembers)
+					members = members + filter(lambda x: x.name.startswith(i), self.tarmembers)
 				## if we are not in advanced mode, there is no need to unpack everything. The hexdump
 				## files usually are quite big.
 				## TODO: filter the right files and unpack them on the fly if advanced mode is entered
 				if not self.advanced:
-					members = members + filter(lambda x: x.name.startswith('reports'), tarmembers)
+					members = members + filter(lambda x: x.name.startswith('reports') and x.name.endswith('unique.html'), self.tarmembers)
 				else:
-					members = members + filter(lambda x: x.name.startswith('reports'), tarmembers)
+					members = members + filter(lambda x: x.name.startswith('reports'), self.tarmembers)
+					self.advancedunpacked = True
 				tar.extractall(self.tmpdir, members)
 				tar.close()
 			except Exception, e:
