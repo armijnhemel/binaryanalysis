@@ -5,37 +5,9 @@
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
-This script tries to analyse binary blobs, using a "brute force" approach
-and pretty print the analysis in a simple XML format.
+CLI front end for running the scans in bat/bruteforce.py
 
-The script has a few separate scanning phases:
-
-1. marker scanning phase, to search for specific markers (compression, file systems,
-media formats), if available. This information is later used to filter scans and to
-carve files.
-
-2. prerun phase for tagging files. This is a first big rough sweep for low hanging fruit,
-so we only have to spend little or no time on useless scanning in the following phases.
-Some things that are tagged here are text files, XML files, various graphics formats and
-some other files.
-
-3. unpack phase for unpacking files. In this phase several methods for unpacking files are
-run, using the information from the marker scanning phase (if a file system file or
-compressed file actually uses markers, which is not always the case). Also some simple
-metadata about files is recorded in this phase. This method runs recursively: if a file
-system was found and unpacked all the scans from steps 1, 2, 3 are run on the files that
-were unpacked.
-
-4. individual file scanning phase. Here each file will be inspected individually. Based on
-the configuration that was given this could be basically anything.
-
-5. output phase. Using a pretty printer a report is pretty printed.
-
-6. postrun phase. In this phase methods that are not necessary for generating output, but
-which should be run anyway, are run. Examples are generating pictures or running statistics.
-
-7. packing phase. In this phase several datafiles, plus the state of the running program,
-are packed in a tar file.
+See documentation in that file to see how it works.
 '''
 
 import sys, os, os.path, tempfile
