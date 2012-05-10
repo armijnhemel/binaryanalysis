@@ -3,6 +3,13 @@
 subdirectory. This will make it a lot easier to make other front ends for BAT,
 for example GUI or networked service. Rework top level bruteforce.py to
 reflect change.
+* move some functionality that is likely not to be used much in GUI to
+"advanced mode".
+* unpack files that are only needed in advanced mode on the fly instead of
+always. This significantly reduces waiting time when opening an archive for
+viewing in "simple" mode
+* enable "advanced mode" in GUI
+* add more filters (resources, PDFs) to GUI
 
 2012-05-09
 * write original ranking dump data to separate pickle files. This data is
