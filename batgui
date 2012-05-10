@@ -246,9 +246,8 @@ class BatFrame(wx.Frame):
 		self.Show(True)
 
 	def initAlternateViewtab(self):
-		pass
 		self.alternateviewtab = wx.SplitterWindow(self.notebookpanel)
-		self.notebookpanel.AddPage(self.alternateviewtab, "Alternate view")
+		self.notebookpanel.InsertPage(2, self.alternateviewtab, "Alternate view", select=False)
 
 		## with one textctrl on the right
 		hexdumpStyle = wx.TextAttr()
