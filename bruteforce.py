@@ -38,7 +38,7 @@ which should be run anyway, are run. Examples are generating pictures or running
 are packed in a tar file.
 '''
 
-import sys, os, os.path, magic, hashlib, subprocess, tempfile, shutil, stat, multiprocessing, cPickle, glob, tarfile
+import sys, os, os.path, tempfile
 from optparse import OptionParser
 import ConfigParser
 import bat.bruteforce
