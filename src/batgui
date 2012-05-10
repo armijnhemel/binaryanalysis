@@ -120,6 +120,7 @@ class BatFrame(wx.Frame):
 		self.advanced = False
 		self.advancedunpacked = False
 		self.tarfile = None
+		self.timer = None
 		self.batconfig = ["Advanced mode"]
 		self.batconfigstate = []
 
@@ -322,6 +323,9 @@ class BatFrame(wx.Frame):
 	def treeHasChanged(self, event):
 		self.selectedfile = self.tree.GetItemData(event.GetItem()).GetData()
 
+		## if there are any times, stop and destroy them
+		if self.timer != None:
+			self.timer.Stop()
 		## first clean all the windows
 		self.overviewwindow.SetPage("<html></html>")
 		self.matcheswindow.SetPage('<html></html>')
@@ -482,10 +486,10 @@ class BatFrame(wx.Frame):
 						## if file is small enough load it at once
 						if size > 1000000:
 							self.textCtrl.WriteText(self.data[:1000000])
-							self.bla = wx.CallLater(2000, self.textctrlupdate)
+							self.timer = wx.CallLater(2000, self.textctrlupdate)
 						else:
 							self.textCtrl.WriteText(self.data)
-							self.bla = wx.CallLater(0, self.textctrlupdate)
+							self.timer = wx.CallLater(0, self.textctrlupdate)
 						self.textCtrl.SetInsertionPoint(0)
 					except Exception, e:
 						print e
