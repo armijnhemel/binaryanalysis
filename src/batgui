@@ -25,14 +25,14 @@ helphtml = '''<html>
 On the left you will find a tree that can be browsed. Results can be shown by clicking on the item. The tree contains extra information to help you get to the right information straightaway:
 
 <ul>
-<li>&empty; means the file is empty</li>
-<li>&rarr; means the file is a symbolic link, pointing to the file following &rarr;</li>
-<!-- <li>&#x24e7; means that strings were found that could be matched with Open Source software</li> -->
-<li>&#x272a; means that strings were found that could be matched with Open Source software</li>
-<li>&#x24c9; means that the file only contains text</li>
-<li>&#x24bc; means that the file is a graphics file</li>
-<li>&#x24b8; means that the file is a compressed file</li>
-<li>&#x24b9; means that the file is a directory (possibly empty)</li>
+<li>&empty; : the file is empty</li>
+<li>&rarr; : the file is a symbolic link, pointing to the file following &rarr;</li>
+<!-- <li>&#x24e7; : strings were found that could be matched with Open Source software</li> -->
+<li>&#x272a; : strings were found that could be matched with Open Source software</li>
+<li>&#x24c9; : the file only contains text</li>
+<li>&#x24bc; : the file is a graphics file</li>
+<li>&#x24b8; : the file is a compressed file</li>
+<li>&#x24b9; : the file is a directory (possibly empty)</li>
 </ul>
 </p>
 
