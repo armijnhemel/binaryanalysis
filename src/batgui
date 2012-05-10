@@ -686,8 +686,15 @@ class BatFrame(wx.Frame):
 				tarmembers = tar.getmembers()
 				members = []
 				## only unpack certain files and directories
-				for i in ['scandata.pickle', 'images', 'reports']:
+				for i in ['scandata.pickle', 'images']:
 					members = members + filter(lambda x: x.name.startswith(i), tarmembers)
+				## if we are not in advanced mode, there is no need to unpack everything. The hexdump
+				## files usually are quite big.
+				## TODO: filter the right files and unpack them on the fly if advanced mode is entered
+				if not self.advanced:
+					members = members + filter(lambda x: x.name.startswith('reports'), tarmembers)
+				else:
+					members = members + filter(lambda x: x.name.startswith('reports'), tarmembers)
 				tar.extractall(self.tmpdir, members)
 				tar.close()
 			except Exception, e:
