@@ -16,7 +16,7 @@ from optparse import OptionParser
 import ConfigParser
 import wx, wx.html, wx.lib, wx.lib.statbmp, wx.aui, wx.lib.agw.flatnotebook
 import sqlite3, cgi
-#import bruteforce
+#import bat.bruteforce
 
 helphtml = '''<html>
 <title>Binary Analysis Tool result viewer</title>
