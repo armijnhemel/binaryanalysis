@@ -32,6 +32,7 @@ On the left you will find a tree that can be browsed. Results can be shown by cl
 <li>&#x24c9; : the file only contains text</li>
 <li>&#x24bc; : the file is a graphics file</li>
 <li>&#x24b8; : the file is a compressed file</li>
+<li>&#x24c7; : the file is a resources file</li>
 <li>&#x24b9; : the file is a directory (possibly empty)</li>
 </ul>
 </p>
@@ -124,12 +125,13 @@ class BatFrame(wx.Frame):
 		self.batconfig = ["Advanced mode"]
 		self.batconfigstate = []
 
-		self.filterconfig = [(["png", "bmp", "jpg", "gif", "graphics"], "Graphics files"),
-                                     (["text", "xml"], "Text files"),
-                                     (["audio", "mp3", "ogg"], "Audio files"),
-                                     (["video", "mp4"], "Video files"),
+		self.filterconfig = [(["audio", "mp3", "ogg"], "Audio files"),
                                      (["empty"], "Empty files"),
-                                     (["symlink"], "Symbolic links")]
+                                     (["png", "bmp", "jpg", "gif", "graphics"], "Graphics files"),
+                                     (["resource"], "Resource files"),
+                                     (["symlink"], "Symbolic links"),
+                                     (["text", "xml"], "Text files"),
+                                     (["video", "mp4"], "Video files"),]
 
 		## initial values of filters
 		self.filterconfigstate = []
@@ -597,6 +599,8 @@ class BatFrame(wx.Frame):
 							linktext = u"%s  \u24bc" % linktext
 						if 'compressed' in r['tags']:
 							linktext = u"%s  \u24b8" % linktext
+						if 'resource' in r['tags']:
+							linktext = u"%s  \u24c7" % linktext
 			elif "symbolic link" in self.unpackreports[j]['magic']:
 				if "symlink" in self.filters:
 					ignore = True
