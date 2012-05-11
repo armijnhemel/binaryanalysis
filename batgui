@@ -122,7 +122,11 @@ class BatFrame(wx.Frame):
 					self.scanconfig.append((s, description, enabled))
 				except:
 					pass
-			
+		self.scanconfigstate = []
+		for s in self.scanconfig:
+			if s[2] == 'yes':
+				self.scanconfigstate.append(self.scanconfig.index(s))
+
 		## some defaults
 		self.datadir = ""
 		self.tarfile = None
@@ -708,7 +712,8 @@ class BatFrame(wx.Frame):
 		dlg.Destroy()
 
 	def onScanConfig(self,e):
-		dlg = wx.MultiChoiceDialog(self, "Binary Analysis Tool scan configurator", "", self.scanconfig)
+		dlg = wx.MultiChoiceDialog(self, "Binary Analysis Tool scan configurator", "", map(lambda x: x[1], self.scanconfig))
+		dlg.SetSelections(self.scanconfigstate)
 		if dlg.ShowModal() == wx.ID_OK:
 			pass
 		dlg.Destroy()
