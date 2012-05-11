@@ -108,24 +108,30 @@ class BatFrame(wx.Frame):
 		wx.Frame.__init__(self, parent, title=self.title, size=(1280,768))
 		self.origconfig = copy.copy(config)
 
-		self.configmapping = []
+		self.scanconfig = []
 		for s in self.origconfig.sections():
 			if s == 'batconfig':
+				continue
+			elif s == 'viewer':
 				continue
 			else:
 				## process each section. We need: section name, description, enabled
 				pass
 			
+		## some defaults
 		self.datadir = ""
+		self.tarfile = None
+		self.timer = None
 
 		## we start in "simple" mode
 		self.advanced = False
 		self.advancedunpacked = False
-		self.tarfile = None
-		self.timer = None
 		self.batconfig = ["Advanced mode"]
 		self.batconfigstate = []
 
+		## initial values of filters
+		self.filterconfigstate = []
+		self.filters = []
 		self.filterconfig = [(["audio", "mp3", "ogg"], "Audio files"),
                                      (["emptydir"], "Empty directories (after filters have been applied)"),
                                      (["empty"], "Empty files"),
@@ -136,11 +142,6 @@ class BatFrame(wx.Frame):
                                      (["text", "xml"], "Text files"),
                                      (["video", "mp4"], "Video files"),]
 
-		## initial values of filters
-		self.filterconfigstate = []
-		self.filters = []
-
-		self.scanconfig = []
 
 		## add a few menus. This is heavily inspired by the tutorial code from wxPython
 		filemenu = wx.Menu()
