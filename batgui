@@ -115,8 +115,13 @@ class BatFrame(wx.Frame):
 			elif s == 'viewer':
 				continue
 			else:
-				## process each section. We need: section name, description, enabled
-				pass
+				try:
+					## process each section. We need: section name, description, enabled
+					description = self.origconfig.get(s, 'description')
+					enabled = self.origconfig.get(s, 'enabled')
+					self.scanconfig.append((s, description, enabled))
+				except:
+					pass
 			
 		## some defaults
 		self.datadir = ""
