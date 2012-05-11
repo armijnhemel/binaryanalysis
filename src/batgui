@@ -715,9 +715,8 @@ class BatFrame(wx.Frame):
 		dlg = wx.MultiChoiceDialog(self, "Binary Analysis Tool scan configurator", "", map(lambda x: x[1], self.scanconfig))
 		dlg.SetSelections(self.scanconfigstate)
 		if dlg.ShowModal() == wx.ID_OK:
-			pass
+			self.scanconfigstate = dlg.GetSelections()
 		dlg.Destroy()
-		#self.close(True)
 
 	def onExit(self,e):
 		self.Close(True)
