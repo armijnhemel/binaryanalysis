@@ -1,3 +1,8 @@
+2012-05-11
+* cut more data from scandata.pickle that is not used in the GUI
+* add very conservative tagger for GIF files
+* add filter to hide (seemingly) empty directories
+
 2012-05-10
 * move bruteforce scanning functionality to separate file in 'bat'
 subdirectory. This will make it a lot easier to make other front ends for BAT,
