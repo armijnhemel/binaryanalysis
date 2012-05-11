@@ -562,6 +562,8 @@ def writeDumpfile(unpackreports, leafreports, scans, outputfile, tempdir):
 					## We want: (rank, s, #unique matches, percentage, packageversions, packagelicenses)
 					if type(lr['ranking'][0]['reports'][report][2]) != int:
 						lr['ranking'][0]['reports'][report] = (lr['ranking'][0]['reports'][report][0], lr['ranking'][0]['reports'][report][1], len(lr['ranking'][0]['reports'][report][2]), lr['ranking'][0]['reports'][report][3], lr['ranking'][0]['reports'][report][4], lr['ranking'][0]['reports'][report][5])
+					## we should also replace nonUniqueMatches with {}
+					lr['ranking'][0]['nonUniqueMatches'] = {}
 
 	picklefile = open('%s/scandata.pickle' % (tempdir,), 'wb')
 	cPickle.dump((unpackreports, leafreports, scans), picklefile)
