@@ -62,7 +62,7 @@ In this window you will see a list of unique matches per package. For each uniqu
 
 Each line number is clickable. If there is an archive of pregenerated HTML source code files the corresponding source code file will be shown when clicking on the link.
 </p>
-<h2>Alternate view</h2>
+<h2>Alternate view (advanced mode only)</h2>
 <p>
 In this tab you will find two different representations of the binary file:
 
@@ -135,7 +135,7 @@ class BatFrame(wx.Frame):
 		## we start in "simple" mode
 		self.advanced = False
 		self.advancedunpacked = False
-		self.batconfig = ["Advanced mode"]
+		self.batconfig = ["Advanced mode", "Scanning mode"]
 		self.batconfigstate = []
 
 		## initial values of filters
@@ -166,6 +166,7 @@ class BatFrame(wx.Frame):
 		menuConfigScans = configmenu.Append(wx.ID_ANY, "&Scans"," Configure scans")
 
 		scanmenu = wx.Menu()
+		menuScanOpen = scanmenu.Append(wx.ID_OPEN,"&Open"," Open a file to scan")
 
 		helpmenu = wx.Menu()
 		menuHelp = helpmenu.Append(wx.ID_HELP_CONTENTS, "&Contents"," Help")
