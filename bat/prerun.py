@@ -116,6 +116,8 @@ def verifyGraphics(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	if newtags == []:
 		newtags = verifyPNG(filename, tempdir, tags, offsets, envvars)
 	if newtags == []:
+		newtags = verifyGIF(filename, tempdir, tags, offsets, envvars)
+	if newtags == []:
 		newtags = verifyBMP(filename, tempdir, tags, offsets, envvars)
 	return newtags
 
@@ -133,9 +135,55 @@ def verifyBMP(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags.append("graphics")
 	return newtags
 
+def verifyGIF(filename, tempdir=None, tags=[], offsets={}, envvars=None):
+	newtags = []
+	## sanity checks
+	if not filename.lower().endswith('.gif'):
+		return newtags
+	if not offsets.has_key('gif87') and not offsets.has_key('gif89'):
+		return newtags
+	if len(offsets['gif87'] + offsets['gif89']) > 1:
+		return newtags
+	if not 0 in (offsets['gif87'] + offsets['gif89']):
+		return newtags
+	filesize = os.stat(filename).st_size
+	giffile = open(filename)
+	giffile.seek(filesize - 1)
+	## read last byte, it should be ';' according to GIF specifications
+	lastbyte = giffile.read(1)
+	giffile.close()
+	if lastbyte != ';':
+		return newtags
+	## Now we have a good chance that the file is indeed a GIF file, but
+	## we need to be more sure. gifinfo will happily classify files as GIF,
+	## even when there is a lot of other stuff following the actual GIF
+	## file, so we need to be very very careful here.
+	## 1. read the entire file and if there is more than one match for a
+	##    trailer, we return. Since the GIF trailer is very very generic
+	##    this will also happen for correct GIFs. This is not a problem.
+	## 2. run gifinfo
+	## 3. for every file that remains we are *very* sure it is a GIF file
+	## TODO: make this more efficient
+	giffile = open(filename)
+	gifdata = giffile.read()
+	giffile.close()
+	trailer = gifdata.find(';')
+	if trailer != filesize - 1:
+		return newtags
+
+	p = subprocess.Popen(['gifinfo', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		return newtags
+	newtags.append('graphics')
+	newtags.append('gif')
+	return newtags
+
 def verifyJPEG(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
 	if not offsets.has_key('jpeg') or not offsets.has_key('jpegtrailer'):
+		return newtags
+	if len(offsets['jpeg']) != 1:
 		return newtags
 	if not 0 in offsets['jpeg']:
 		return newtags
