@@ -805,7 +805,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 		for r in nonUniqueMatches:
 			if r == s:
 				continue
-			correlation = len(set(nonUniqueMatches[s]).intersection(nonUniqueMatches[r]))
+			correlation = len(set(nonUniqueMatches[s]).intersection(set(nonUniqueMatches[r])))
 			if correlation != 0:
 				correlation_sort[r] = correlation
 		corr_sorted = sorted(correlation_sort, key = lambda x: correlation_sort.__getitem__(x), reverse=True)
