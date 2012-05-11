@@ -104,7 +104,8 @@ class BATHtmlWindow(wx.html.HtmlWindow):
 
 class BatFrame(wx.Frame):
 	def __init__(self, parent, title, config):
-		wx.Frame.__init__(self, parent, title=title, size=(1280,768))
+		self.title = title
+		wx.Frame.__init__(self, parent, title=self.title, size=(1280,768))
 		self.origconfig = copy.copy(config)
 
 		self.configmapping = []
@@ -653,6 +654,7 @@ class BatFrame(wx.Frame):
 		if not 0 in self.batconfigstate and self.advanced == True:
 			self.advanced = False
 			self.notebookpanel.RemovePage(2)
+			self.SetTitle(self.title)
 		if 0 in self.batconfigstate and self.advanced == False:
 			self.advanced = True
 			if self.advancedunpacked == False and self.tarfile != None:
@@ -668,6 +670,7 @@ class BatFrame(wx.Frame):
 				except Exception, e:
 					pass
 			self.initAlternateViewtab()
+			self.SetTitle(self.title + " (advanced mode)")
 		self.Refresh()
 
 	## show a dialog window with some information about BAT
