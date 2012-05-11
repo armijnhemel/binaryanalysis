@@ -126,6 +126,7 @@ class BatFrame(wx.Frame):
 		self.batconfigstate = []
 
 		self.filterconfig = [(["audio", "mp3", "ogg"], "Audio files"),
+                                     (["emptydir"], "Empty directories (after filters have been applied)"),
                                      (["empty"], "Empty files"),
                                      (["png", "bmp", "jpg", "gif", "graphics"], "Graphics files"),
                                      (["pdf"], "PDF files"),
@@ -627,6 +628,23 @@ class BatFrame(wx.Frame):
 					continue
 				else:
 					tree.AppendItem(nodes[parent], text=linktext, data=wx.TreeItemData(os.path.normpath(j)))
+
+		## Remove empty, or seemingly empty, directories from the
+		## view to declutter the interface.
+		## We keep traversing the tree until we know for sure that
+		## there are only directories with visible items left. There
+		## is probably a more efficient way, but this is still fast.
+		if "emptydir" in self.filters:
+			stillempty = True
+			while stillempty:
+				stillempty = False
+				for i in dirlist:
+					if nodes.has_key(i):
+						if not tree.ItemHasChildren(nodes[i]):
+							tree.Delete(nodes[i])
+							del nodes[i]
+							stillempty = True
+			pass
 
 	## based on configuration we enable/disable certain features
 	def redrawGUI(self):
