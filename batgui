@@ -59,7 +59,8 @@ In this window you will see a list of unique matches per package. For each uniqu
 <li>line number</li>
 <li>SHA256 checksum</li>
 </ul>
-
+</p>
+<p>
 Each line number is clickable. If there is an archive of pregenerated HTML source code files the corresponding source code file will be shown when clicking on the link.
 </p>
 <h2>Alternate view (advanced mode only)</h2>
@@ -74,6 +75,10 @@ In this tab you will find two different representations of the binary file:
 <p>
 By clicking somewhere on the picture the hexdump view will automatically scroll to the textual representation of the clicked byte. This will quickly allow you to view interesting boundaries.
 </p>
+<h1>Configuring the BAT viewer</h1>
+<h2>Filters</h2>
+<h2>Advanced mode</h2>
+<h2>Scanning mode</h2>
 </html>
 '''
 
