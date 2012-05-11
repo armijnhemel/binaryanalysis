@@ -165,6 +165,8 @@ class BatFrame(wx.Frame):
 		configmenu.AppendSeparator()
 		menuConfigScans = configmenu.Append(wx.ID_ANY, "&Scans"," Configure scans")
 
+		scanmenu = wx.Menu()
+
 		helpmenu = wx.Menu()
 		menuHelp = helpmenu.Append(wx.ID_HELP_CONTENTS, "&Contents"," Help")
 		menuAbout = helpmenu.Append(wx.ID_ABOUT, "&About"," Information about this program")
@@ -172,6 +174,7 @@ class BatFrame(wx.Frame):
 		menuBar = wx.MenuBar()
 		menuBar.Append(filemenu,"&File")
 		menuBar.Append(configmenu,"&Configuration")
+		menuBar.Append(scanmenu,"&Scan")
 		menuBar.Append(helpmenu,"&Help")
 		self.SetMenuBar(menuBar)
 		self.Bind(wx.EVT_MENU, self.onAbout, menuAbout)
@@ -233,6 +236,7 @@ class BatFrame(wx.Frame):
 		if self.advanced:
 			self.initAlternateViewtab()
 
+		'''
 		## We have a tab for visual information and hexdumps about a file
 		self.textpicturetab = wx.SplitterWindow(self.notebookpanel)
 		self.textpicturetab.SetSashGravity(0.4)
@@ -258,6 +262,7 @@ class BatFrame(wx.Frame):
 
 		self.textpicturetab.SplitVertically(self.picturedisplay, self.plaintextDisplay)
 		self.textpicturetab.SetSashGravity(0.4)
+		'''
 
 		self.Show(True)
 
