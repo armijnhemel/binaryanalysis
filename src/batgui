@@ -460,10 +460,12 @@ class BatFrame(wx.Frame):
 								for j in stringsres['reports']:
 									matchesrows = matchesrows + "    <tr><td>%d</td><td>%s</td><td>%f%%</td><td>%d</td><td>%d</td></tr>\n" % (j[0], j[1], j[3], j[2], stringsres['nonUniqueAssignments'].get(j[1], 0))
 									if j[2] != 0:
+										## don't replace %s/% with os.path.join here, since this is valid in HTML
 										versionhtml = versionhtml + "<h5>%s</h5><p><img src=\"%s\"/></p>\n" % (j[1], "%s/%s-%s-version.png" % (self.imagesdir, sha256sum, j[1]))
 										## here we should either do a database lookup to get the checksum,
 										## or check if they are already in the report
 										htmllinks.append((j[1], j[2]))
+								## don't replace %s/% with os.path.join here, since this is valid in HTML
 								matchesrows = matchesrows + "</table><td><img src=\"%s\"/></td></tr></table>" % ("%s/%s-piechart.png" % (self.imagesdir, sha256sum))
 								if versionhtml != "":
 									matchesrows = matchesrows + "<h2>Versions per package</h2>" + versionhtml
@@ -481,8 +483,8 @@ class BatFrame(wx.Frame):
 			if sha256sum != '' and tag not in ['graphics', 'text', 'compressed', 'audio', 'video', 'resource']:
 				if self.advanced:
 					try:
-						os.stat("%s/%s-hexdump.gz" % (self.reportsdir, sha256sum))
-						datafile = gzip.open('%s/%s-hexdump.gz' % (self.reportsdir, sha256sum))
+						os.stat(os.path.join(self.reportsdir, "%s-hexdump.gz" % (sha256sum,)))
+						datafile = gzip.open(os.path.join(self.reportsdir, '%s-hexdump.gz' % (sha256sum,)))
 						hexdump = datafile.read()
 						datafile.close()
 						self.data = hexdump
@@ -499,8 +501,8 @@ class BatFrame(wx.Frame):
 						print e
 						pass
 					try:
-						os.stat("%s/%s.png" % (self.imagesdir, sha256sum))
-						self.histo2 = wx.Image('%s/%s.png' % (self.imagesdir, sha256sum), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+						os.stat(os.path.join(self.imagesdir, "%s.png" % (sha256sum,)))
+						self.histo2 = wx.Image(os.path.join(self.imagesdir, '%s.png' % (sha256sum,)), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
 		
 						self.histogram2.SetBitmap(bitmap=self.histo2)
 						self.histogram2.Bind(wx.EVT_LEFT_DOWN, self.onHexdumpClick)
@@ -744,10 +746,10 @@ class BatFrame(wx.Frame):
 			except Exception, e:
 				os.rmdir(self.tmpdir)
 				return
-			self.datadir = "%s/data" % self.tmpdir
-			self.imagesdir = "%s/images" % self.tmpdir
-			self.reportsdir = "%s/reports" % self.tmpdir
-			picklefile = open("%s/scandata.pickle" % self.tmpdir, 'rb')
+			self.datadir = os.path.join(self.tmpdir, "data")
+			self.imagesdir = os.path.join(self.tmpdir, "images")
+			self.reportsdir = os.path.join(self.tmpdir, "reports")
+			picklefile = open(os.path.join(self.tmpdir, "scandata.pickle") , 'rb')
 			(self.unpackreports, self.leafreports, scans) = cPickle.load(picklefile)
 			picklefile.close()
 			self.initTree(self.tree, self.datadir)
