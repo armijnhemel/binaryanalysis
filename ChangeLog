@@ -1,3 +1,6 @@
+2012-05-12
+* don't show scanning menu for non-Linux systems
+
 2012-05-11
 * cut more data from scandata.pickle that is not used in the GUI
 * add very conservative tagger for GIF files

@@ -158,37 +158,40 @@ class BatFrame(wx.Frame):
 
 
 		## add a few menus. This is heavily inspired by the tutorial code from wxPython
+		menuBar = wx.MenuBar()
+
 		filemenu = wx.Menu()
 		menuOpen = filemenu.Append(wx.ID_OPEN,"&Open"," Open a scan archive")
 		menuSaveAs = filemenu.Append(wx.ID_SAVEAS,"Save &As..."," Save results from a scan")
 		filemenu.AppendSeparator()
 		menuExit = filemenu.Append(wx.ID_EXIT,"E&xit"," Terminate the program")
+		menuBar.Append(filemenu,"&File")
 
 		configmenu = wx.Menu()
 		menuConfigGeneral = configmenu.Append(wx.ID_ANY, "&General"," General configuration")
 		menuConfigFilter = configmenu.Append(wx.ID_ANY, "&Filter"," Configure filters")
 		configmenu.AppendSeparator()
-		menuConfigScans = configmenu.Append(wx.ID_ANY, "&Scans"," Configure scans")
+		menuBar.Append(configmenu,"&Configuration")
 
-		scanmenu = wx.Menu()
-		menuScanOpen = scanmenu.Append(wx.ID_OPEN,"&Open"," Open a file to scan")
+		if sys.platform == 'linux2':
+			menuConfigScans = configmenu.Append(wx.ID_ANY, "&Scans"," Configure scans")
+
+			scanmenu = wx.Menu()
+			menuScanOpen = scanmenu.Append(wx.ID_OPEN,"&Open"," Open a file to scan")
+			menuBar.Append(scanmenu,"&Scan")
+			self.Bind(wx.EVT_MENU, self.onScanConfig, menuConfigScans)
 
 		helpmenu = wx.Menu()
 		menuHelp = helpmenu.Append(wx.ID_HELP_CONTENTS, "&Contents"," Help")
 		menuAbout = helpmenu.Append(wx.ID_ABOUT, "&About"," Information about this program")
-
-		menuBar = wx.MenuBar()
-		menuBar.Append(filemenu,"&File")
-		menuBar.Append(configmenu,"&Configuration")
-		menuBar.Append(scanmenu,"&Scan")
 		menuBar.Append(helpmenu,"&Help")
+
 		self.SetMenuBar(menuBar)
 		self.Bind(wx.EVT_MENU, self.onAbout, menuAbout)
 		self.Bind(wx.EVT_MENU, self.onExit, menuExit)
 		self.Bind(wx.EVT_MENU, self.onOpen, menuOpen)
 		self.Bind(wx.EVT_MENU, self.onSave, menuSaveAs)
 		self.Bind(wx.EVT_MENU, self.onHelp, menuHelp)
-		self.Bind(wx.EVT_MENU, self.onScanConfig, menuConfigScans)
 		self.Bind(wx.EVT_MENU, self.onConfig, menuConfigGeneral)
 		self.Bind(wx.EVT_MENU, self.onFilterConfig, menuConfigFilter)
 
