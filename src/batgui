@@ -174,13 +174,15 @@ class BatFrame(wx.Frame):
 		menuBar.Append(configmenu,"&Configuration")
 
 		if sys.platform == 'linux2':
+			self.batscanfile = ""
 			menuScanOpenConfiguration = configmenu.Append(wx.ID_OPEN,"&Configuration"," Open a configuration file with scans")
 			menuConfigScans = configmenu.Append(wx.ID_ANY, "&Scans"," Configure scans")
+			#self.Bind(wx.EVT_MENU, self.onScanConfig, menuConfigScans)
 
 			scanmenu = wx.Menu()
 			menuScanOpen = scanmenu.Append(wx.ID_OPEN,"&Open"," Open a file to scan")
 			menuBar.Append(scanmenu,"&Scan")
-			self.Bind(wx.EVT_MENU, self.onScanConfig, menuConfigScans)
+			#self.Bind(wx.EVT_MENU, self.onLaunchScan, menuScanOpen)
 
 		helpmenu = wx.Menu()
 		menuHelp = helpmenu.Append(wx.ID_HELP_CONTENTS, "&Contents"," Help")
@@ -195,6 +197,9 @@ class BatFrame(wx.Frame):
 		self.Bind(wx.EVT_MENU, self.onHelp, menuHelp)
 		self.Bind(wx.EVT_MENU, self.onConfig, menuConfigGeneral)
 		self.Bind(wx.EVT_MENU, self.onFilterConfig, menuConfigFilter)
+		if sys.platform == 'linux2':
+			self.Bind(wx.EVT_MENU, self.onScanConfig, menuConfigScans)
+			self.Bind(wx.EVT_MENU, self.onLaunchScan, menuScanOpen)
 
 		## next we should have a toolbar
 		battoolbar = self.CreateToolBar()
@@ -731,6 +736,13 @@ class BatFrame(wx.Frame):
 		dlg.SetSelections(self.scanconfigstate)
 		if dlg.ShowModal() == wx.ID_OK:
 			self.scanconfigstate = dlg.GetSelections()
+		dlg.Destroy()
+
+	def onLaunchScan(self,e):
+		dlg = wx.FileDialog(self, 'Open BAT results', style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST)
+		print >>sys.stderr, "BLAA"
+		if dlg.ShowModal() == wx.ID_OK:
+			print dlg.GetPath()
 		dlg.Destroy()
 
 	def onExit(self,e):
