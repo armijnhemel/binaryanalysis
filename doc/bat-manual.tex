@@ -31,6 +31,14 @@ configuration from a Linux kernel image.
 
 \section{Installing the Binary Analysis Tool}
 
+\subsection{Hardware requirements}
+
+The tools in the Binary Analysis Tool can be quite resource intensive. Most of
+them seem to be memorybound and I/O-bound, and it makes more sense to invest
+in more memory and faster disks than in raw CPU power. Using more cores is
+highly recommended, since most of the programs in the Binary Analysis Tool will
+benefit from this.
+
 \subsection{Software requirements}
 
 To run BAT a recent Linux distribution is needed. Development is (currently)
@@ -41,13 +49,6 @@ build binary releases.
 If the latest version from version control is used it is important to look at
 the file \texttt{setup.cfg} to get a list of the dependencies that should be
 met.
-
-\subsection{Hardware requirements}
-
-The tools in the Binary Analysis Tool can be quite resource intensive. Most of
-the tools seem to be memorybound and I/O-bound, and it makes more sense to
-invest in more memory and faster disks than in raw CPU power, although using
-more cores definitely will speed up the scanning process.
 
 \subsubsection{Installing on Fedora}
 
@@ -346,7 +347,7 @@ python bat/busybox.py -b /path/to/busybox/binary -c
 This command will save the configuration to a file, which can be used as an
 input to \texttt{busybox-compare-configs.py}.
 
-\subsubsection{Comparing two configurations}
+\subsubsection{Comparing two BusyBox configurations}
 
 After extracting the configuration the extracted configuration can be compared
 to another configuration, for example a configuration as supplied by a vendor:
