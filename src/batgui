@@ -151,18 +151,18 @@ class BatFrame(wx.Frame):
 		menuBar.Append(filemenu,"&File")
 
 		configmenu = wx.Menu()
-		menuConfigGeneral = configmenu.Append(wx.ID_ANY, "&General"," General configuration")
-		menuConfigFilter = configmenu.Append(wx.ID_ANY, "&Filter"," Configure filters")
+		menuConfigGeneral = configmenu.Append(wx.ID_ANY, "&General Configuration"," General configuration")
+		menuConfigFilter = configmenu.Append(wx.ID_ANY, "&Filter Configuration"," Configure filters")
 		configmenu.AppendSeparator()
 		menuBar.Append(configmenu,"&Configuration")
 
 		if sys.platform == 'linux2':
 			self.batscanfile = ""
-			menuScanOpenConfiguration = configmenu.Append(wx.ID_ANY,"&Configuration"," Open a configuration file with scans")
-			menuConfigScans = configmenu.Append(wx.ID_ANY, "&Scans"," Configure scans")
+			menuScanOpenConfiguration = configmenu.Append(wx.ID_ANY,"Open &Configuration File"," Open a BAT configuration file")
+			menuConfigScans = configmenu.Append(wx.ID_ANY, "Configure &Scans"," Configure scans")
 
 			scanmenu = wx.Menu()
-			menuScanOpen = scanmenu.Append(wx.ID_ANY,"&Open"," Open a file to scan")
+			menuScanOpen = scanmenu.Append(wx.ID_ANY,"&Open file"," Open a file to scan")
 			menuBar.Append(scanmenu,"&Scan")
 
 		helpmenu = wx.Menu()
