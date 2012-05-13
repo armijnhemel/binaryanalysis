@@ -113,24 +113,7 @@ class BatFrame(wx.Frame):
 		wx.Frame.__init__(self, parent, title=self.title, size=(1280,768))
 		self.origconfig = copy.copy(config)
 
-		self.scanconfig = []
-		for s in self.origconfig.sections():
-			if s == 'batconfig':
-				continue
-			elif s == 'viewer':
-				continue
-			else:
-				try:
-					## process each section. We need: section name, description, enabled
-					description = self.origconfig.get(s, 'description')
-					enabled = self.origconfig.get(s, 'enabled')
-					self.scanconfig.append((s, description, enabled))
-				except:
-					pass
-		self.scanconfigstate = []
-		for s in self.scanconfig:
-			if s[2] == 'yes':
-				self.scanconfigstate.append(self.scanconfig.index(s))
+		self.initConfig(self.origconfig)
 
 		## some defaults
 		self.datadir = ""
@@ -177,12 +160,10 @@ class BatFrame(wx.Frame):
 			self.batscanfile = ""
 			menuScanOpenConfiguration = configmenu.Append(wx.ID_OPEN,"&Configuration"," Open a configuration file with scans")
 			menuConfigScans = configmenu.Append(wx.ID_ANY, "&Scans"," Configure scans")
-			#self.Bind(wx.EVT_MENU, self.onScanConfig, menuConfigScans)
 
 			scanmenu = wx.Menu()
 			menuScanOpen = scanmenu.Append(wx.ID_OPEN,"&Open"," Open a file to scan")
 			menuBar.Append(scanmenu,"&Scan")
-			#self.Bind(wx.EVT_MENU, self.onLaunchScan, menuScanOpen)
 
 		helpmenu = wx.Menu()
 		menuHelp = helpmenu.Append(wx.ID_HELP_CONTENTS, "&Contents"," Help")
@@ -200,6 +181,7 @@ class BatFrame(wx.Frame):
 		if sys.platform == 'linux2':
 			self.Bind(wx.EVT_MENU, self.onScanConfig, menuConfigScans)
 			self.Bind(wx.EVT_MENU, self.onLaunchScan, menuScanOpen)
+			self.Bind(wx.EVT_MENU, self.onScanOpenConfigFile, menuScanOpenConfiguration)
 
 		## next we should have a toolbar
 		battoolbar = self.CreateToolBar()
@@ -281,6 +263,26 @@ class BatFrame(wx.Frame):
 
 		self.Show(True)
 
+	def initConfig(self, config):
+		self.scanconfig = []
+		for s in config.sections():
+			if s == 'batconfig':
+				continue
+			elif s == 'viewer':
+				continue
+			else:
+				try:
+					## process each section. We need: section name, description, enabled
+					description = config.get(s, 'description')
+					enabled = config.get(s, 'enabled')
+					self.scanconfig.append((s, description, enabled))
+				except:
+					pass
+		self.scanconfigstate = []
+		for s in self.scanconfig:
+			if s[2] == 'yes':
+				self.scanconfigstate.append(self.scanconfig.index(s))
+
 	def initAlternateViewtab(self):
 		self.alternateviewtab = wx.SplitterWindow(self.notebookpanel)
 		self.notebookpanel.InsertPage(2, self.alternateviewtab, "Alternate view", select=False)
@@ -309,16 +311,6 @@ class BatFrame(wx.Frame):
 		self.picturepanel.SetScrollbars(20, 20, 10, 10)
 		self.alternateviewtab.SplitVertically(self.picturepanel, self.textCtrl)
 		self.alternateviewtab.SetSashGravity(0.4)
-
-	## Filter a configuration, based on a selection of checks.
-	## Initially this will be the default configuration that is passed to the program,
-	## or read from a default location.
-	def processConfig(self, selection):
-		## initially the selection is None
-		if selection == None:
-			pass
-		else:
-			pass
 
 	def onHexdumpClick(self, event):
 		## get a rough approximation of where to scroll to in the hexdump file
@@ -738,9 +730,22 @@ class BatFrame(wx.Frame):
 			self.scanconfigstate = dlg.GetSelections()
 		dlg.Destroy()
 
+	def onScanOpenConfigFile(self,e):
+		dlg = wx.FileDialog(self, 'Open BAT configuration file', style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST)
+		if dlg.ShowModal() == wx.ID_OK:
+			config = ConfigParser.ConfigParser()
+			try:
+				configfile = open(dlg.GetPath(), 'r')
+				config.readfp(configfile)
+				self.origconfig = copy.copy(config)
+				self.initConfig(self.origconfig)
+			except:
+				errordiag = wx.MessageDialog(None, 'Not a valid configuration file', 'Error', wx.OK | wx.ICON_ERROR)
+				errordiag.ShowModal()
+		dlg.Destroy()
+
 	def onLaunchScan(self,e):
 		dlg = wx.FileDialog(self, 'Open BAT results', style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST)
-		print >>sys.stderr, "BLAA"
 		if dlg.ShowModal() == wx.ID_OK:
 			print dlg.GetPath()
 		dlg.Destroy()
