@@ -1,6 +1,7 @@
 2012-05-13
 * load scan configuration via the menu too
 * display tags in GUI
+* portability fixes, add stubs for scanning directly from interface
 
 2012-05-12
 * don't show scanning menu for non-Linux systems
