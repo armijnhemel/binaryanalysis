@@ -2,6 +2,8 @@
 * load scan configuration via the menu too
 * display tags in GUI
 * portability fixes, add stubs for scanning directly from interface
+* launch scans via interface and display results in interface. Still to be
+added: saving results, plus better filtering of scans
 
 2012-05-12
 * don't show scanning menu for non-Linux systems
