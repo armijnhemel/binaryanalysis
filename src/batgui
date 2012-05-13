@@ -434,6 +434,8 @@ class BatFrame(wx.Frame):
 					elif i.keys()[0] in ['dproxy', 'ez-ipupdate', 'iproute', 'iptables', 'libusb', 'loadlin', 'vsftpd', 'wireless-tools', 'wpa-supplicant']:
 						applications.append(i.keys()[0])
 					elif i.keys()[0] == 'tags':
+						if i['tags'] != []:
+							tablerows = tablerows + "<tr><td><b>Tags</b></td><td>" + reduce(lambda x, y: x + ", " + y, i['tags']) + "</td></tr>"
 						if 'graphics' in i['tags']:
 							if self.advanced:
 								self.notebookpanel.EnableTab(2,False)
