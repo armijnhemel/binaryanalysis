@@ -777,15 +777,18 @@ class BatFrame(wx.Frame):
 			## create a new temporary directory
 			if self.origconfig != []:
 				self.tmpdir = tempfile.mkdtemp()
-				config = copy.copy(self.origconfig)
+				config = ConfigParser.ConfigParser()
 				enabled_configs = []
 				for i in self.scanconfigstate:
 					enabled_configs.append(self.scanconfig[i][0])
-				for c in config.sections():
-					if c == 'batconfig' or c == 'viewer':
-						continue
-					if not c in enabled_configs:
-						config.remove_section(c)
+				enabled_configs.append('batconfig')
+				enabled_configs.append('viewer')
+
+				for c in self.origconfig.sections():
+					if c in enabled_configs:
+						config.add_section(c)
+						for i in self.origconfig.items(c):
+							config.set(c, i[0], i[1])
 				self.scans = bat.bruteforce.readconfig(config)
 				(self.unpackreports, self.leafreports) = bat.bruteforce.runscan(self.tmpdir, self.scans, dlg.GetPath())
 				bat.bruteforce.dumpData(self.unpackreports, self.leafreports, self.scans, self.tmpdir)
