@@ -659,12 +659,14 @@ class BatFrame(wx.Frame):
 			if ignore:
 				continue
 			if parent == "":
-				tree.AppendItem(rootnode, linktext, data=wx.TreeItemData(j))
+				leafnode = tree.AppendItem(rootnode, linktext, data=wx.TreeItemData(j))
+				nodes[j] = leafnode
 			else:
 				if not nodes.has_key(parent):
 					continue
 				else:
-					tree.AppendItem(nodes[parent], text=linktext, data=wx.TreeItemData(os.path.normpath(j)))
+					leafnode = tree.AppendItem(nodes[parent], text=linktext, data=wx.TreeItemData(os.path.normpath(j)))
+					nodes[j] = leafnode
 
 		## Remove empty, or seemingly empty, directories from the
 		## view to declutter the interface.
@@ -681,7 +683,16 @@ class BatFrame(wx.Frame):
 							tree.Delete(nodes[i])
 							del nodes[i]
 							stillempty = True
-			pass
+		tree.Refresh()
+		tree.ExpandAll()
+
+		if self.selectedfile != None:
+			## reselect the already selected item and scroll to the right place
+			if nodes.has_key(self.selectedfile):
+				tree.SelectItem(nodes[self.selectedfile])
+				tree.ScrollTo(nodes[self.selectedfile])
+			else:
+				self.selectedfile = None
 
 	## based on configuration we enable/disable certain features
 	def redrawGUI(self):
@@ -723,8 +734,6 @@ class BatFrame(wx.Frame):
 			self.filters = reduce(lambda x, y: x + y, map(lambda x: self.filterconfig[x][0], self.filterconfigstate), [])
 			if self.datadir != "":
 				self.initTree(self.tree, self.datadir)
-				self.tree.Refresh()
-				self.tree.ExpandAll()
 		dlg.Destroy()
 
 	def onConfig(self,e):
@@ -773,8 +782,6 @@ class BatFrame(wx.Frame):
 				self.imagesdir = os.path.join(self.tmpdir, "images")
 				self.reportsdir = os.path.join(self.tmpdir, "reports")
 				self.initTree(self.tree, self.datadir)
-				self.tree.Refresh()
-				self.tree.ExpandAll()
 		dlg.Destroy()
 
 	def onExit(self,e):
@@ -825,9 +832,8 @@ class BatFrame(wx.Frame):
 			picklefile = open(os.path.join(self.tmpdir, "scandata.pickle") , 'rb')
 			(self.unpackreports, self.leafreports, scans) = cPickle.load(picklefile)
 			picklefile.close()
+			self.selectedfile = None
 			self.initTree(self.tree, self.datadir)
-			self.tree.Refresh()
-			self.tree.ExpandAll()
 
 
 def main(argv):
