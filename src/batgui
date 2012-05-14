@@ -752,6 +752,10 @@ class BatFrame(wx.Frame):
 
 	def onScanConfig(self,e):
 		dlg = wx.MultiChoiceDialog(self, "Binary Analysis Tool scan configurator", "", map(lambda x: x[1], self.scanconfig))
+		## we don't get a maximize_box
+		## see http://stackoverflow.com/questions/8579189/wxwidgets-dialog-doesnt-get-a-maximize-box
+		#dlg.SetExtraStyle(wx.MAXIMIZE_BOX)
+		#dlg.Refresh()
 		dlg.SetSelections(self.scanconfigstate)
 		if dlg.ShowModal() == wx.ID_OK:
 			self.scanconfigstate = dlg.GetSelections()
