@@ -121,6 +121,7 @@ class BatFrame(wx.Frame):
 		self.datadir = ""
 		self.tarfile = None
 		self.timer = None
+		self.selectedfile = None
 
 		## we start in "simple" mode
 		self.advanced = False
@@ -154,7 +155,9 @@ class BatFrame(wx.Frame):
 		## Since scans are just on Linux there is no need to enable this option for anything else
 		## right now.
 		if sys.platform.startswith('linux'):
-			menuSaveAs = filemenu.Append(wx.ID_SAVEAS,"Save &As..."," Save results from a scan")
+			self.menuSaveAs = filemenu.Append(wx.ID_SAVEAS,"Save &As..."," Save results from a scan")
+			if self.tarfile == None:
+				self.menuSaveAs.Enable(False)
 
 		filemenu.AppendSeparator()
 		menuExit = filemenu.Append(wx.ID_EXIT,"E&xit"," Terminate the program")
@@ -188,7 +191,7 @@ class BatFrame(wx.Frame):
 		self.Bind(wx.EVT_MENU, self.onConfig, menuConfigGeneral)
 		self.Bind(wx.EVT_MENU, self.onFilterConfig, menuConfigFilter)
 		if sys.platform.startswith('linux'):
-			self.Bind(wx.EVT_MENU, self.onSave, menuSaveAs)
+			self.Bind(wx.EVT_MENU, self.onSave, self.menuSaveAs)
 			self.Bind(wx.EVT_MENU, self.onScanConfig, menuConfigScans)
 			self.Bind(wx.EVT_MENU, self.onLaunchScan, menuScanOpen)
 			self.Bind(wx.EVT_MENU, self.onScanOpenConfigFile, menuScanOpenConfiguration)
@@ -785,6 +788,7 @@ class BatFrame(wx.Frame):
 				self.imagesdir = os.path.join(self.tmpdir, "images")
 				self.reportsdir = os.path.join(self.tmpdir, "reports")
 				self.initTree(self.tree, self.datadir)
+				self.menuSaveAs.Enable(True)
 		dlg.Destroy()
 
 	def onExit(self,e):
@@ -837,6 +841,8 @@ class BatFrame(wx.Frame):
 			picklefile.close()
 			self.selectedfile = None
 			self.initTree(self.tree, self.datadir)
+			if sys.platform.startswith('linux'):
+				self.menuSaveAs.Enable(False)
 
 
 def main(argv):
