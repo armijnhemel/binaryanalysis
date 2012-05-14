@@ -6,6 +6,7 @@
 * keep data in tabs if selected file has not changed. Especially if there are
 lots of matches, or large files in advanced mode this will save unnecessary
 waiting.
+* gzip unique html reports to decrease unpacking time in GUI + update GUI
 
 2012-05-13
 * load scan configuration via the menu too

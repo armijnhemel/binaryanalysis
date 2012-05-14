@@ -507,8 +507,8 @@ class BatFrame(wx.Frame):
 								matchesrows = matchesrows + "</table><td><img src=\"%s\"/></td></tr></table>" % ("%s/%s-piechart.png" % (self.imagesdir, sha256sum))
 								if versionhtml != "":
 									matchesrows = matchesrows + "<h2>Versions per package</h2>" + versionhtml
-								if os.path.exists(os.path.join(self.reportsdir, "%s-unique.html" % sha256sum)):
-									uniquehtmlfile = open(os.path.join(self.reportsdir, "%s-unique.html" % sha256sum), 'r')
+								if os.path.exists(os.path.join(self.reportsdir, "%s-unique.html.gz" % sha256sum)):
+									uniquehtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-unique.html.gz" % sha256sum), 'r')
 									uniquehtml = uniquehtmlfile.read()
 									uniquehtmlfile.close()
 									self.matcheswindow.SetPage(uniquehtml)
@@ -818,7 +818,7 @@ class BatFrame(wx.Frame):
 				## If we are not in advanced mode, there is no need to unpack everything. The hexdump
 				## files and "TV static" pictures can be quite big, so don't unpack them when not needed.
 				if not self.advanced:
-					members = members + filter(lambda x: x.name.startswith('reports') and x.name.endswith('unique.html'), self.tarmembers)
+					members = members + filter(lambda x: x.name.startswith('reports') and x.name.endswith('unique.html.gz'), self.tarmembers)
 					members = members + filter(lambda x: x.name.startswith('images') and len(os.path.basename(x.name)) != 68, self.tarmembers)
 				else:
 					members = members + filter(lambda x: x.name.startswith('reports'), self.tarmembers)
