@@ -761,20 +761,17 @@ class BatFrame(wx.Frame):
 		if dlg.ShowModal() == wx.ID_OK:
 			## create a new temporary directory
 			if self.origconfig != []:
-				tempdir = tempfile.mkdtemp()
+				self.tmpdir = tempfile.mkdtemp()
 				config = copy.copy(self.origconfig)
-				scans = bat.bruteforce.readconfig(config)
-				(unpackreports, leafreports) = bat.bruteforce.runscan(tempdir, scans, dlg.GetPath())
-				bat.bruteforce.dumpData(unpackreports, leafreports, scans, tempdir)
+				self.scans = bat.bruteforce.readconfig(config)
+				(self.unpackreports, self.leafreports) = bat.bruteforce.runscan(self.tmpdir, self.scans, dlg.GetPath())
+				bat.bruteforce.dumpData(self.unpackreports, self.leafreports, self.scans, self.tmpdir)
 
 				## After running the scan we dump the results, repopulate the tree and
 				## work from there.
-				self.datadir = os.path.join(tempdir, "data")
-				self.imagesdir = os.path.join(tempdir, "images")
-				self.reportsdir = os.path.join(tempdir, "reports")
-				picklefile = open(os.path.join(tempdir, "scandata.pickle") , 'rb')
-				(self.unpackreports, self.leafreports, scans) = cPickle.load(picklefile)
-				picklefile.close()
+				self.datadir = os.path.join(self.tmpdir, "data")
+				self.imagesdir = os.path.join(self.tmpdir, "images")
+				self.reportsdir = os.path.join(self.tmpdir, "reports")
 				self.initTree(self.tree, self.datadir)
 				self.tree.Refresh()
 				self.tree.ExpandAll()
@@ -790,8 +787,8 @@ class BatFrame(wx.Frame):
 	def onSave(self,e):
 		dlg = wx.FileDialog(self, 'Save BAT results', style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT)
 		if dlg.ShowModal() == wx.ID_OK:
-			pass
-			#bat.bruteforce.writeDumpfile(unpackreports, leafreports, scans, options.outputfile, tempdir)
+			self.tarfile = dlg.GetPath()
+			bat.bruteforce.writeDumpfile(self.unpackreports, self.leafreports, self.scans, self.tarfile, self.tmpdir)
 
 	def onOpen(self,e):
 		dlg = wx.FileDialog(self, 'Open BAT results', style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST)
