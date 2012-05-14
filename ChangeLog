@@ -3,6 +3,9 @@
 * save data from scan in GUI
 * rename "ranking" dir to "filereports", since it is far more accurate
 * keep focus on selected file after applying filters
+* keep data in tabs if selected file has not changed. Especially if there are
+lots of matches, or large files in advanced mode this will save unnecessary
+waiting.
 
 2012-05-13
 * load scan configuration via the menu too
