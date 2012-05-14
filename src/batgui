@@ -358,7 +358,10 @@ class BatFrame(wx.Frame):
 		self.textCtrl.Thaw()
 
 	def treeHasChanged(self, event):
-		self.selectedfile = self.tree.GetItemData(event.GetItem()).GetData()
+		selected = self.tree.GetItemData(event.GetItem()).GetData()
+		if selected == self.selectedfile:
+			return
+		self.selectedfile = selected
 
 		## if there are any times, stop and destroy them
 		if self.timer != None:
@@ -552,20 +555,6 @@ class BatFrame(wx.Frame):
 			return
 		tree.DeleteAllItems()
 
-		## TODO: refactor this
-		## first clean all the windows
-		self.overviewwindow.SetPage(helphtml)
-		self.matcheswindow.SetPage('<html></html>')
-		self.matchesbrowser.SetPage("<html></html>")
-		if self.advanced:
-			## clean the pictures
-			self.histo2 = wx.EmptyBitmap(width=1, height=1)
-			self.histogram2.SetBitmap(bitmap=self.histo2)
-			self.histogram2.Refresh(True)
-			self.picturepanel.FitInside()
-			## clean the hexdump
-			self.textCtrl.Clear()
-
 		## construct a tree from a pickle
 		if tmpdir.endswith('/'):
 			tmpdir = tmpdir[:-1]
@@ -692,6 +681,20 @@ class BatFrame(wx.Frame):
 				tree.SelectItem(nodes[self.selectedfile])
 				tree.ScrollTo(nodes[self.selectedfile])
 			else:
+				## TODO: refactor this
+				## first clean all the windows
+				self.overviewwindow.SetPage(helphtml)
+				self.matcheswindow.SetPage('<html></html>')
+				self.matchesbrowser.SetPage("<html></html>")
+				if self.advanced:
+					## clean the pictures
+					self.histo2 = wx.EmptyBitmap(width=1, height=1)
+					self.histogram2.SetBitmap(bitmap=self.histo2)
+					self.histogram2.Refresh(True)
+					self.picturepanel.FitInside()
+					## clean the hexdump
+					self.textCtrl.Clear()
+
 				self.selectedfile = None
 
 	## based on configuration we enable/disable certain features
