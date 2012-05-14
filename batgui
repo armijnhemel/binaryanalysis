@@ -765,9 +765,7 @@ class BatFrame(wx.Frame):
 				config = copy.copy(self.origconfig)
 				scans = bat.bruteforce.readconfig(config)
 				(unpackreports, leafreports) = bat.bruteforce.runscan(tempdir, scans, dlg.GetPath())
-				picklefile = open('%s/scandata.pickle' % (tempdir,), 'wb')
-				cPickle.dump((unpackreports, leafreports, scans), picklefile)
-				picklefile.close()
+				bat.bruteforce.dumpData(unpackreports, leafreports, scans, tempdir)
 
 				## After running the scan we dump the results, repopulate the tree and
 				## work from there.
