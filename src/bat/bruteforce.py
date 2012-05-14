@@ -488,7 +488,7 @@ def prettyprint(batconf, res, scandate, scans):
 	output = eval("bat_%s(res, scandate, scans, envvars)" % (method))
 	return output
 
-def writeDumpfile(unpackreports, leafreports, scans, outputfile, tempdir):
+def dumpData(unpackreports, leafreports, scans, tempdir):
 	## if we make a dump of all the result we should have:
 	## * a copy of all the unpacked data
 	## * a copy of the report
@@ -565,9 +565,12 @@ def writeDumpfile(unpackreports, leafreports, scans, outputfile, tempdir):
 					## we should also replace nonUniqueMatches with {}
 					lr['ranking'][0]['nonUniqueMatches'] = {}
 
-	picklefile = open('%s/scandata.pickle' % (tempdir,), 'wb')
+	picklefile = open(os.path.join(tempdir, 'scandata.pickle'), 'wb')
 	cPickle.dump((unpackreports, leafreports, scans), picklefile)
 	picklefile.close()
+
+def writeDumpfile(unpackreports, leafreports, scans, outputfile, tempdir):
+	dumpData(unpackreports, leafreports, scans, tempdir)
 	## now add everything to a TAR archive
 	dumpfile = tarfile.TarFile(outputfile, 'w')
 	os.chdir(tempdir)
