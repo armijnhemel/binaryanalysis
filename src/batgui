@@ -95,12 +95,23 @@ Each file is tagged (if possible) by the scanning process. Filters for the follo
 </ul>
 </p>
 <p>
-By default no filters have been applied.
+By default no filters have been applied. The filters can be accessed via Configuration &rarr; Filter Configuration.
 </p>
 <!-- <h2>Advanced mode</h2> -->
 <h2>Scanning mode</h2>
 <p>
-The scanning mode can only be used on Linux systems. On other systems it will be automatically disabled. Right now scanning mode is automatically enabled on Linux systems. Tgese
+The scanning mode can only be used on Linux systems. On other systems it will be automatically disabled. Right now scanning mode is automatically enabled on Linux systems. This will change in the near futur and scanning mode will have to be explicitely enabled.
+</p>
+<p>
+Before scans can be run a configuration file needs to be loaded. There are two ways this can be done:
+
+<ol>
+<li>supply it on the commandline as a parameter: <code>-c /path/to/configuration/file</code>
+<li>load it via the menu Configuration &rarr; Open Configuration File
+</ol>
+</p>
+<p>
+Individual scans can be enabled and disabled via the check boxes under Configuration &rarr; Configure Scans
 </p>
 </body>
 </html>
@@ -201,15 +212,15 @@ class BatFrame(wx.Frame):
 			menuBar.Append(scanmenu,"&Scan")
 
 		helpmenu = wx.Menu()
-		menuHelp = helpmenu.Append(wx.ID_HELP_CONTENTS, "&Contents"," Help")
-		menuAbout = helpmenu.Append(wx.ID_ABOUT, "&About"," Information about this program")
-		menuBar.Append(helpmenu,"&Help")
+		#menuHelp = helpmenu.Append(wx.ID_HELP_CONTENTS, "&Contents"," Help")
+		#menuAbout = helpmenu.Append(wx.ID_ABOUT, "&About"," Information about this program")
+		#menuBar.Append(helpmenu,"&Help")
 
 		self.SetMenuBar(menuBar)
-		self.Bind(wx.EVT_MENU, self.onAbout, menuAbout)
+		#self.Bind(wx.EVT_MENU, self.onAbout, menuAbout)
 		self.Bind(wx.EVT_MENU, self.onExit, menuExit)
 		self.Bind(wx.EVT_MENU, self.onOpen, menuOpen)
-		self.Bind(wx.EVT_MENU, self.onHelp, menuHelp)
+		#self.Bind(wx.EVT_MENU, self.onHelp, menuHelp)
 		self.Bind(wx.EVT_MENU, self.onConfig, menuConfigGeneral)
 		self.Bind(wx.EVT_MENU, self.onFilterConfig, menuConfigFilter)
 		if sys.platform.startswith('linux'):
