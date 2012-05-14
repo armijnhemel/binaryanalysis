@@ -540,7 +540,7 @@ def dumpData(unpackreports, leafreports, scans, tempdir):
 					if envsplit[0] == 'BAT_REPORTDIR':
 						target = os.path.join(tempdir, 'reports')
 						copyfiles = []
-						dirlisting = filter(lambda x: x.endswith("-unique.html"), os.listdir(envsplit[1]))
+						dirlisting = filter(lambda x: x.endswith("-unique.html.gz"), os.listdir(envsplit[1]))
 						for s in sha256spack:
 							copyfiles = copyfiles + filter(lambda x: x.startswith(s), dirlisting)
 						for c in copyfiles:

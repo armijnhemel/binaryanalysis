@@ -99,6 +99,6 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 							else:
 								uniquehtml = uniquehtml + "<h5>%s</h5>" % cgi.escape(k[0])
 					uniquehtml = uniquehtml + "</body></html>"
-					uniquehtmlfile = open("%s/%s-unique.html" % (reportdir, unpackreport['sha256']), 'w')
+					uniquehtmlfile = gzip.open("%s/%s-unique.html.gz" % (reportdir, unpackreport['sha256']), 'wb')
 					uniquehtmlfile.write(uniquehtml)
 					uniquehtmlfile.close()
