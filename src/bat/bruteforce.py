@@ -549,10 +549,10 @@ def dumpData(unpackreports, leafreports, scans, tempdir):
 	## Dump unique matches for ranking scan (if available) to separate file(s)
 	## It is taking a lot of space in the pickle, and it is not always used:
 	## the GUI for example has almost all data pregenerated.
-	if not os.path.exists(os.path.join(tempdir, 'ranking')):
-		os.mkdir(os.path.join(tempdir, 'ranking'))
+	if not os.path.exists(os.path.join(tempdir, 'filereports')):
+		os.mkdir(os.path.join(tempdir, 'filereports'))
 	for l in leafreports:
-		picklefile = open('%s/ranking/%s-ranking.pickle' % (tempdir,unpackreports[l]['sha256']), 'wb')
+		picklefile = open('%s/filereports/%s-filereport.pickle' % (tempdir,unpackreports[l]['sha256']), 'wb')
 		cPickle.dump(leafreports[l], picklefile)
 		picklefile.close()
 		for lr in leafreports[l]:
@@ -577,8 +577,8 @@ def writeDumpfile(unpackreports, leafreports, scans, outputfile, tempdir):
 	dumpfile.add('scandata.pickle')
 	dumpfile.add('data')
 	try:
-		os.stat('ranking')
-		dumpfile.add('ranking')
+		os.stat('filereports')
+		dumpfile.add('filereports')
 	except:	pass
 	try:
 		os.stat('images')

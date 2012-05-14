@@ -1,6 +1,7 @@
 2012-05-14
 * split data dump method, so it can be reused in the GUI more easily
 * save data from scan in GUI
+* rename "ranking" dir to "filereports", since it is far more accurate
 
 2012-05-13
 * load scan configuration via the menu too
