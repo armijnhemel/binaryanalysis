@@ -775,7 +775,7 @@ class BatFrame(wx.Frame):
 		dlg = wx.FileDialog(self, 'Open BAT results', style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST)
 		if dlg.ShowModal() == wx.ID_OK:
 			## create a new temporary directory
-			if self.origconfig != []:
+			if self.scanconfig != []:
 				self.tmpdir = tempfile.mkdtemp()
 				config = ConfigParser.ConfigParser()
 				enabled_configs = []
@@ -800,6 +800,9 @@ class BatFrame(wx.Frame):
 				self.reportsdir = os.path.join(self.tmpdir, "reports")
 				self.initTree(self.tree, self.datadir)
 				self.menuSaveAs.Enable(True)
+			else:
+				errordiag = wx.MessageDialog(None, 'No configuration defined', 'Error', wx.OK | wx.ICON_ERROR)
+				errordiag.ShowModal()
 		dlg.Destroy()
 
 	def onExit(self,e):
