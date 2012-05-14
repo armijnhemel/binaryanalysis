@@ -21,7 +21,8 @@ if sys.platform.startswith('linux'):
 	import bat.bruteforce
 
 helphtml = '''<html>
-<title>Binary Analysis Tool result viewer</title>
+<head><title>Binary Analysis Tool result viewer</title></head>
+<body>
 <h1>Binary Analysis tool result viewer</h1>
 <p>
 On the left you will find a tree that can be browsed. Results can be shown by clicking on the item. The tree contains extra information to help you get to the right information straightaway:
@@ -78,9 +79,30 @@ In this tab you will find two different representations of the binary file:
 By clicking somewhere on the picture the hexdump view will automatically scroll to the textual representation of the clicked byte. This will quickly allow you to view interesting boundaries.
 </p>
 <h1>Configuring the BAT viewer</h1>
-<h2>Filters</h2>
-<h2>Advanced mode</h2>
+<h2>Display filters</h2>
+<p>
+Each file is tagged (if possible) by the scanning process. Filters for the following file types are currently defined:
+
+<ul>
+<li>audio files</li>
+<li>empty files</li>
+<li>graphics files</li>
+<li>PDF files</li>
+<li>resource files</li>
+<li>symbolic links</li>
+<li>text files</li>
+<li>video files</li>
+</ul>
+</p>
+<p>
+By default no filters have been applied.
+</p>
+<!-- <h2>Advanced mode</h2> -->
 <h2>Scanning mode</h2>
+<p>
+The scanning mode can only be used on Linux systems. On other systems it will be automatically disabled. Right now scanning mode is automatically enabled on Linux systems. Tgese
+</p>
+</body>
 </html>
 '''
 
@@ -812,9 +834,10 @@ class BatFrame(wx.Frame):
 	def onExit(self,e):
 		self.Close(True)
 
+	## TODO: create help
 	def onHelp(self,e):
 		print e.GetString()
-		self.Close(True)  # Close the frame.
+		return
 
 	def onSave(self,e):
 		dlg = wx.FileDialog(self, 'Save BAT results', style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT)
