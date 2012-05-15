@@ -42,15 +42,15 @@ ms.load()
 
 ## mapping of names for databases per language
 avgdbperlanguage = { 'C':              'BAT_SQLITE_AVG_C'
-                   , 'Java':           'BAT_SQLITE_AVG_Java'
+                   , 'Java':           'BAT_SQLITE_AVG_JAVA'
                    , 'C#':             'BAT_SQLITE_AVG_C#'
-                   , 'ActionScript':   'BAT_SQLITE_AVG_ActionScript'
+                   , 'ActionScript':   'BAT_SQLITE_AVG_ACTIONSCRIPT'
                    }
 
 stringsdbperlanguage = { 'C':              'BAT_SQLITE_STRINGSCACHE_C'
-                       , 'Java':           'BAT_SQLITE_STRINGSCACHE_Java'
+                       , 'Java':           'BAT_SQLITE_STRINGSCACHE_JAVA'
                        , 'C#':             'BAT_SQLITE_STRINGSCACHE_C#'
-                       , 'ActionScript':   'BAT_SQLITE_STRINGSCACHE_ActionScript'
+                       , 'ActionScript':   'BAT_SQLITE_STRINGSCACHE_ACTIONSCRIPT'
                        }
 
 ## extract the strings using 'strings' and only consider strings >= 5,
