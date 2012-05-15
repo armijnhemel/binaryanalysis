@@ -663,16 +663,12 @@ def searchUnpackCab(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		return ([], blacklist, newtags)
 	diroffsets = []
 	counter = 1
-	## TODO: fix for big files
-	datafile = open(filename, 'rb')
-	data = datafile.read()
-	datafile.close()
 	for offset in offsets['cab']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "cab", counter)
-		res = unpackCab(data, offset, tmpdir)
+		res = unpackCab(filename, offset, tmpdir)
 		if res != None:
 			(cabdir, cabsize) = res
 			diroffsets.append((cabdir, offset, cabsize))
@@ -686,14 +682,16 @@ def searchUnpackCab(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 ## This method will not work when the CAB is embedded in a bigger file, such as
 ## a MINIX file system. We need to use more data from the metadata and perhaps
 ## adjust for certificates.
-def unpackCab(data, offset, tempdir=None):
+def unpackCab(filename, offset, tempdir=None):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
-	tmpdir = unpacksetup(tempdir)
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(tmpfile[0], data[offset:])
-	os.fdopen(tmpfile[0]).close()
-	## copied from the python-magic examples
+
+        tmpdir = unpacksetup(tempdir)
+        tmpfile = tempfile.mkstemp(dir=tmpdir)
+        os.fdopen(tmpfile[0]).close()
+
+        unpackFile(filename, offset, tmpfile[1], tmpdir)
+
 	cab = file(tmpfile[1], "r")
 	buffer = cab.read(100)
 	cab.close()
