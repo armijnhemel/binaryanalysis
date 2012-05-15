@@ -3,6 +3,7 @@
 more symbols and decorate the file tree
 * sort file tree
 * decorate Android files in file tree
+* big file fixes (finally!) for cramfs unpacking
 
 2012-05-14
 * split data dump method, so it can be reused in the GUI more easily

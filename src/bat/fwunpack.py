@@ -1099,10 +1099,6 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, envvars
 	if offsets['cramfs'] == []:
 		return ([], blacklist, [])
 
-	datafile = open(filename, 'rb')
-	## TODO: fix for big files
-	data = datafile.read()
-	datafile.close()
 	diroffsets = []
 	counter = 1
 	for offset in offsets['cramfs']:
@@ -1110,7 +1106,7 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, envvars
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "cramfs", counter)
-		retval = unpackCramfs(data, offset, tmpdir)
+		retval = unpackCramfs(filename, offset, tmpdir)
 		if retval != None:
 			(res, cramfssize) = retval
 			if cramfssize != 0:
@@ -1124,22 +1120,21 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, envvars
 
 ## tries to unpack stuff using fsck.cramfs. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
-def unpackCramfs(data, offset, tempdir=None):
+def unpackCramfs(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
-	## fsck.cramfs needs to unpack in a separate directory. So, create a new temporary
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.fdopen(tmpfile[0]).close()
+
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
+
 	## directory to avoid name clashes
         tmpdir2 = tempfile.mkdtemp()
-	## since fsck.cramfs can't deal with data via stdin first write it to
-	## a temporary location
-	tmpfile = tempfile.mkstemp()
-	os.write(tmpfile[0], data[offset:])
 
 	## right now this is a path to a specially adapted fsck.cramfs that ignores special inodes
 	## We actually need to create a new subdirectory inside tmpdir, otherwise the tool will complain
 	p = subprocess.Popen(['bat-fsck.cramfs', '-x', tmpdir2 + "/cramfs", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
@@ -1157,8 +1152,7 @@ def unpackCramfs(data, offset, tempdir=None):
 		if len(stanerr) != 0:
 			cramfssize = 0
 		else:
-			cramfssize = len(data)
-		os.fdopen(tmpfile[0]).close()
+			cramfssize = os.stat(tmpfile[1]).st_size
 		os.unlink(tmpfile[1])
 		shutil.rmtree(tmpdir2)
 		return (tmpdir, cramfssize)
