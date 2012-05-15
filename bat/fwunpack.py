@@ -899,6 +899,7 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, envvars=Non
 		return ([], blacklist, [])
 	diroffsets = []
 	counter = 1
+	## TODO: big file fixes
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
@@ -975,6 +976,7 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 
 	diroffsets = []
 	counter = 1
+	## TODO: big file fixes
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
@@ -1948,6 +1950,7 @@ def searchUnpackUbifs(filename, tempdir=None, blacklist=[], offsets={}, envvars=
 	## to determine the ranges for the blacklist.
 	diroffsets = []
 	counter = 1
+	## TODO: big file fixes
 	data = datafile.read()
 	datafile.close()
 	for offset in offsets['ubifs']:
