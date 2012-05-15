@@ -403,9 +403,7 @@ class BatFrame(wx.Frame):
 		if self.timer != None:
 			self.timer.Stop()
 		## first clean all the windows
-		self.overviewwindow.SetPage("<html></html>")
-		self.matcheswindow.SetPage('<html></html>')
-		self.matchesbrowser.SetPage("<html></html>")
+		self.cleanWindows()
 		if self.advanced:
 			## clean the pictures
 			self.histo2 = wx.EmptyBitmap(width=1, height=1)
@@ -717,9 +715,7 @@ class BatFrame(wx.Frame):
 			else:
 				## TODO: refactor this
 				## first clean all the windows
-				self.overviewwindow.SetPage(helphtml)
-				self.matcheswindow.SetPage('<html></html>')
-				self.matchesbrowser.SetPage("<html></html>")
+				self.cleanWindows()
 				if self.advanced:
 					## clean the pictures
 					self.histo2 = wx.EmptyBitmap(width=1, height=1)
@@ -730,6 +726,11 @@ class BatFrame(wx.Frame):
 					self.textCtrl.Clear()
 
 				self.selectedfile = None
+
+	def cleanWindows(self):
+		self.overviewwindow.SetPage(helphtml)
+		self.matcheswindow.SetPage('<html></html>')
+		self.matchesbrowser.SetPage("<html></html>")
 
 	## based on configuration we enable/disable certain features
 	def redrawGUI(self):
