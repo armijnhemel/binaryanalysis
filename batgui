@@ -653,18 +653,17 @@ class BatFrame(wx.Frame):
 							## give a visual clue to people to tell them that strings could be matched
 							#linktext = u"%s  \u24e7" % linktext
 							linktext = u"%s  \u272a" % linktext
+					tagsentities = {'text': u'\u24c9', 'graphics': u'\u24bc', 'compressed': u'\u24b8', 'resource': u'\u24c7'}
 					if r.keys()[0] == 'tags':
 						if list(set(r['tags']).intersection(set(self.filters))) != []:
 							ignore = True
 							continue
-						if 'text' in r['tags']:
-							linktext = u"%s  \u24c9" % linktext
-						if 'graphics' in r['tags']:
-							linktext = u"%s  \u24bc" % linktext
-						if 'compressed' in r['tags']:
-							linktext = u"%s  \u24b8" % linktext
-						if 'resource' in r['tags']:
-							linktext = u"%s  \u24c7" % linktext
+						tagappend = u""
+						for t in r['tags']:
+							if tagsentities.has_key(t):
+								tagappend += tagsentities[t]
+						if tagappend != u"":
+							linktext = linktext + u"  %s" % tagappend
 			elif "symbolic link" in self.unpackreports[j]['magic']:
 				if "symlink" in self.filters:
 					ignore = True

@@ -1,3 +1,7 @@
+2012-05-15
+* files can have multiple symbols in the file tree, so make it easier to add
+more symbols and decorate the file tree
+
 2012-05-14
 * split data dump method, so it can be reused in the GUI more easily
 * save data from scan in GUI
