@@ -97,7 +97,10 @@ Each file is tagged (if possible) by the scanning process. Filters for the follo
 <p>
 By default no filters have been applied. The filters can be accessed via Configuration &rarr; Filter Configuration.
 </p>
-<!-- <h2>Advanced mode</h2> -->
+<h2>Advanced mode</h2>
+<p>
+Advanced mode can be entered via Configuration &rarr; General Configuration. The box Advanced mode should be checked to enter advanced mode. As soon as advanced mode is entered extra data from the results file (if available) will be unpacked and an extra tab will appear. It is not advised to run advanced mode: it can be a big strain on resources.
+</p>
 <h2>Scanning mode</h2>
 <p>
 The scanning mode can only be used on Linux systems. On other systems it will be automatically disabled. Right now scanning mode is automatically enabled on Linux systems. This will change in the near futur and scanning mode will have to be explicitely enabled.
