@@ -30,13 +30,13 @@ On the left you will find a tree that can be browsed. Results can be shown by cl
 <ul>
 <li>&empty; : the file is empty</li>
 <li>&rarr; : the file is a symbolic link, pointing to the file following &rarr;</li>
-<!-- <li>&#x24e7; : strings were found that could be matched with Open Source software</li> -->
-<li>&#x272a; : strings were found that could be matched with Open Source software</li>
-<li>&#x24c9; : the file only contains text</li>
-<li>&#x24bc; : the file is a graphics file</li>
+<li>&#x24b6; : the file is an Android Dalvik file</li>
 <li>&#x24b8; : the file is a compressed file</li>
-<li>&#x24c7; : the file is a resources file</li>
 <li>&#x24b9; : the file is a directory (possibly empty)</li>
+<li>&#x24bc; : the file is a graphics file</li>
+<li>&#x24c7; : the file is a resources file</li>
+<li>&#x24c9; : the file only contains text</li>
+<li>&#x272a; : strings were found that could be matched with Open Source software</li>
 </ul>
 </p>
 
@@ -651,7 +651,7 @@ class BatFrame(wx.Frame):
 							## give a visual clue to people to tell them that strings could be matched
 							#linktext = u"%s  \u24e7" % linktext
 							linktext = u"%s  \u272a" % linktext
-					tagsentities = {'text': u'\u24c9', 'graphics': u'\u24bc', 'compressed': u'\u24b8', 'resource': u'\u24c7'}
+					tagsentities = {'text': u'\u24c9', 'graphics': u'\u24bc', 'compressed': u'\u24b8', 'resource': u'\u24c7', 'dalvik': u'\u24b6'}
 					if r.keys()[0] == 'tags':
 						if list(set(r['tags']).intersection(set(self.filters))) != []:
 							ignore = True
@@ -704,6 +704,9 @@ class BatFrame(wx.Frame):
 							tree.Delete(nodes[i])
 							del nodes[i]
 							stillempty = True
+		tree.SortChildren(rootnode)
+		for n in nodes:
+			tree.SortChildren(nodes[n])
 		tree.Refresh()
 		tree.ExpandAll()
 
