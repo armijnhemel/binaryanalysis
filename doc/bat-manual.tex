@@ -16,10 +16,10 @@
 
 \section{Introducing the Binary Analysis Tool}
 
-The Binary Analysis Tool (BAT) is a tool that can help developers and companies
-check binary files. Its primary application is for Open Source software license
-compliance, with a special focus on supply chain management in consumer
-electronics.
+The Binary Analysis Tool (BAT) is a framework that can help developers and
+companies check binary files. Its primary application is for Open Source
+software license compliance, with a special focus on supply chain management
+in consumer electronics.
 
 BAT consists of several scripts written in Python. The most important program
 is the scanner for binary objects to detect the presence of Open Source
@@ -70,6 +70,9 @@ dependencies that should be installed to let BAT work successfully. Some of
 these packages are not in Debian by default but need to be installed by
 enabling extra repositories such as Debian \texttt{non-free}.
 
+The graphical interface might not work on Debian 6, because of a too old
+version of \texttt{wxPython}.
+
 \section{Using the programs in the Binary Analysis Tool}
 
 BAT consists of several programs and a few helper scripts (not meant to be
@@ -100,11 +103,11 @@ three parameters:
 \begin{enumerate}
 \item \texttt{-c} : path to a configuration file
 \item \texttt{-b} : path to the binary to be scanned
-\item \texttt{-o} : path to an output file, where the unpacked files, plus the
-final state of the program will be written to
+\item \texttt{-o} : path to an output file, where unpacked files, reports,
+plus the final program state be written to
 \end{enumerate}
 
-The output, if enabled in the configuration file, will be written to standard
+XML output, if enabled in the configuration file, will be written to standard
 output.
 
 \texttt{python bruteforce.py -c /path/to/configuration -b /path/to/binary -o /path/to/outputfile}
@@ -250,8 +253,16 @@ alter the scan results in any way, but just use the information from the
 scanning process. A typical use case would be to present the data in a nicer
 to use format than the standard report, or to use more external data sources.
 
-While there are no post-run methods in BAT by default it is fairly easy to
-write them.
+\begin{verbatim}
+[hexdump]
+type        = postrun
+module      = bat.generatehexdump
+method      = generateHexdump
+noscan      = text:xml:graphics:pdf:audio:video
+envvars     = BAT_REPORTDIR=/tmp/images:BAT_IMAGE_MAXFILESIZE=100000000
+description = Create hexdump output of files
+enabled     = no
+\end{verbatim}
 
 \subsubsection{Enabling and disabling scans and methods}
 
@@ -642,7 +653,7 @@ Post-run methods have a strict interface:
 
 \begin{verbatim}
 def postrunHelloWorld(filename, unpackreports, leafreports, envvars={}):
-	print "Hello World"
+        print "Hello World"
 \end{verbatim}
 
 \begin{itemize}
@@ -743,21 +754,6 @@ If you don't want to spend much time on downloading and processing
 packages, please contact Tjaldur Software Governance Solutions for
 purchasing a copy of a fully prepared database at \url{info@tjaldur.nl}.
 
-\subsection{Crawling FTP mirrors}
-
-In the directory \texttt{crawlers} a sample crawler is given for downloading
-source packages from the GNU project. The code is fairly straightforward. The
-script (written in Python) tries to intelligently download packages from a GNU
-FTP mirror, skipping packages that are in a blacklist (either parts of the
-filename, whole directories, or extensions) or that have already been
-downloaded in the past.
-
-The default configuration points to a mirror in the Netherlands. It is advised
-to update the location of the GNU mirror in the configuration file. Specifying
-a local mirror will result in faster downloads. It will also not put an
-unnecessary strain on the FTP mirror mentioned in the default configuration
-file.
-
 \subsection{Generating the package list}
 
 The code and license extractor wants a description file of which packages to
@@ -773,7 +769,7 @@ The file contains four values per line:
 \item name
 \item version
 \item archivename
-\item origin (or ``unknown'' if not specified)
+\item origin (defaults to ``unknown'' if not specified)
 \end{itemize}
 
 separated by whitespace (spaces or tabs). An example would look like this:
