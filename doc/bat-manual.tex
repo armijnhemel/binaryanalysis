@@ -860,7 +860,7 @@ If you want to enable license scanning, you will have to install Ninka first
 and change one hardcoded path in \texttt{batchextractprogramstrings.py} that
 point to the main Ninka script.
 
-\subsection{Setting the databases}
+\subsection{Configuring the ranking method}
 
 The location of the strings database and the caching databases can
 be set in the configuration file:
@@ -895,9 +895,11 @@ caching databases a lot smaller so they can easier fit into memory. There are
 of course programs with language embeddeding and better support for these will
 be added in the future.
 
-The names of the caching databases start with \texttt{BAT\_SQLITE\_AVG} and
-\texttt{BAT\_SQLITE\_STRINGSCACHE} and are postfixed with an underscore and
-the name of the programming language family, for example \texttt{\_JAVA}.
+The names of the caching databases start with
+\texttt{BAT\_SQLITE\_STRINGSCACHE} and \texttt{BAT\_SQLITE\_AVG} and are
+postfixed with an underscore and the name of the programming language family.
+The strings cache database for Java for example is configured using the environment
+variable \texttt{BAT\_SQLITE\_STRINGSCACHE\_JAVA}.
 
 The entire database with all information is \texttt{BAT\_SQLITE\_DB}. If there
 is no value supplied via the environment it will use a hardcoded value
@@ -906,8 +908,6 @@ is no value supplied via the environment it will use a hardcoded value
 \begin{verbatim}
 conn = sqlite3.connect(scanenv.get('BAT_SQLITE_DB', '/tmp/master'))
 \end{verbatim}
-
-\subsection{Enabling the ranking scan}
 
 The ranking scan is configured in the configuration file or in the
 configuration in the graphical user interface. In the configuration file
