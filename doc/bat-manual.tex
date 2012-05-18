@@ -134,6 +134,18 @@ it is unsafe to use multiprocessing. If ranking is used and there is a fully
 generated database it is completely safe and even strongly advised to use
 multiprocessing, since it vastly speeds up running the program.
 
+\subsubsection{Enabling and disabling scans and methods}
+
+The standard configuration file enables most of the scans and methods
+implemented in BAT by default. Scans can be enabled and disabled by setting the
+option \texttt{enabled} to \texttt{yes} and \texttt{no} respectively. Disabling
+a scan will still make it possible to enable it later in the graphical user
+interface.
+
+To prevent a scan from being enabled in the graphical user interface outcomment
+the entry in the configuration file (by starting the line with the \texttt{\#}
+character), or remove the section from the configuration file.
+
 \subsubsection{Marker search}
 
 The first action performed by \texttt{bruteforce.py} is to scan a file for
@@ -141,6 +153,8 @@ known markers from compressed files and file systems. Which markers are
 searched for depends on the contents of the configuration file (specifically
 the \texttt{magic} attribute). These markers are subsequently used to choose
 which other methods, such as unpackers, to run.
+
+The marker search cannot be enabled or disabled via the configuration file.
 
 \subsubsection{Pre-run checks}
 
@@ -229,7 +243,8 @@ The current program scans that are available in BAT are:
 \begin{itemize}
 \item fast string searches: dproxy, ez-ipupdate, iptables, iproute, libusb,
 Linux kernel, loadlin, RedBoot, U-Boot, vsftpd, wireless-tools, wpa-supplicant
-\item advanced search mode using ranking and a large database
+\item advanced search mode using ranking of strings and function names, using a
+database
 \item BusyBox version number
 \item dynamic library dependencies (ELF files only)
 \item Linux kernel module license (Linux kernel modules only)
@@ -237,7 +252,8 @@ Linux kernel, loadlin, RedBoot, U-Boot, vsftpd, wireless-tools, wpa-supplicant
 \item PDF meta data extraction
 \item architecture
 \item presence of URLs indicating an open source license
-\item presence of URLs indicating a forge/collaborative software development site (SourceForge, GitHub, etcetera)
+\item presence of URLs indicating forges/collaborative software development
+sites (SourceForge, GitHub, etcetera)
 \end{itemize}
 
 The fast string searches are meant for quick sweep scanning only. They have
@@ -251,7 +267,10 @@ Since BAT 6.0 there is the possibility to add methods that are run after all
 the regular work has been performed, or ``post-run''. These methods should not
 alter the scan results in any way, but just use the information from the
 scanning process. A typical use case would be to present the data in a nicer
-to use format than the standard report, or to use more external data sources.
+to use format than the standard report, to use more external data sources or
+generate graphical representations of data.
+
+The post-run methods have the type \texttt{postrun} in the configuration.
 
 \begin{verbatim}
 [hexdump]
@@ -264,12 +283,6 @@ description = Create hexdump output of files
 enabled     = no
 \end{verbatim}
 
-\subsubsection{Enabling and disabling scans and methods}
-
-The standard configuration file enables most of the scans and methods
-implemented in BAT by default. To disable a scan it can be outcommented in the
-file (by starting the line with the \texttt{\#} character), or by removing it
-from the configuration file.
 
 \subsubsection{Interpreting the results}
 
