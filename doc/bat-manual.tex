@@ -350,6 +350,44 @@ output.
 The \texttt{batgui} program is a graphical viewer for the results of
 \texttt{bruteforce.py} as well as a front end for invoking the scanner itself.
 
+\subsubsection{Viewing results with \texttt{batgui}}
+
+The \texttt{batgui} program was made to view the results of the analysis
+process easily, without having to dig through XML. The viewer has two modes:
+simple and advanced. In simple mode a tree of the unpack results will be shown,
+and each file in the tree can be clicked to display more information. Depending
+on which scans were run the tree will be decorated with more information, such
+as the type of the file (based on tags), or if matches were found with the
+ranking method. Using a filtering system (available from the menu) files that
+are typically uninteresting for license compliance engineering (empty
+files/directories, symbolic links, graphics files) can be ignored.
+
+Information that is shown per file depends on the scans that were run and the
+type of file. For most files information like size, type, path (both relative
+inside the unpacked binary, as well as absolute in the scanning tree) will be
+shown. If the ranking method was enabled results of the ranking process will
+be displayed as well.
+
+In advanced mode more results will be shown, such as a graphical representation
+of a file, where every bit in the binary has been assigned a grayscale value,
+plus a textual representation of a file generated with \texttt{hexdump}.
+Advanced mode is disabled by default, since loading the additional pictures and
+data is quite resource intensive and it will only be useful in very specific
+cases.
+
+\subsubsection{Scanning with \texttt{batgui}}
+
+Scanning binaries is only supported on Linux systems. If \texttt{batgui} is run
+on another system than Linux scanning capabilities will automatically be
+disabled.
+
+To scan a binary first a configuration needs to be loaded. This can be done in
+two ways: the configuration file can be supplied on the commandline when
+starting \texttt{batgui}, or it can be loaded (and reloaded) via the menu.
+Scans can be individually enabled and disabled via the menu.
+
+After the scan has completed the result can be saved as a tar file.
+
 \section{Additional programs in the Binary Analysis Tool}
 
 \subsection{\texttt{busybox.py} and \texttt{busybox-compare-configs.py}}
@@ -461,6 +499,10 @@ least 5 or more versions of SquashFS with LZMA compression out there).
 
 \subsection{Code organisation}
 
+Both \texttt{bruteforce.py} and \texttt{batgui} are merely frontends for the
+real scanner and only determine the list of scans, the binary to scan and the
+output file.
+
 The meaty bits of the analyser can be found in files in the \texttt{bat}
 subdirectory.
 
@@ -504,8 +546,8 @@ binary using various ranking methods. It is explained in more detail later.
 \subsection{Pre-run methods}
 
 Pre-run methods check and tag files, so the files can be ignored by later
-methods and scans. While tagging is not exclusive to pre-run methods it is
-their main purpose.
+methods and scans, reducing scanning time and preventing false positives. While
+tagging is not exclusive to pre-run methods it is their main purpose.
 
 \subsubsection{Writing a pre-run method}
 
