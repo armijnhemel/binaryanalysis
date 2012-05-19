@@ -78,16 +78,16 @@ version of \texttt{wxPython}.
 BAT consists of several programs and a few helper scripts (not meant to be
 used directly).
 
-The programs in the Binary Analysis Tool are \texttt{bruteforce.py}, \texttt{batgui},
-\texttt{busybox.py} and \texttt{busybox-compare-configs.py}.
+The programs in the Binary Analysis Tool are \texttt{bruteforce.py},
+\texttt{batgui}, \texttt{busybox.py} and \texttt{busybox-compare-configs.py}.
 
 \subsection{\texttt{bruteforce.py}}
 
 The main program in BAT is \texttt{bruteforce.py}. As the name suggests uses a
 brute force approach for scanning a binary. It assumes no prior knowledge of
 how a binary is constructed or what is inside the binary. Instead it tries to
-determine what is inside by applying several methods, such as looking for
-known identifiers of file systems and compressed files and running external
+determine what is inside by applying a wide range of methods, such as looking
+for known identifiers of file systems and compressed files and running external
 tools to find contents in the binary.
 
 After successful identification it unpacks compressed files, media files and
@@ -122,57 +122,56 @@ INI format. The main configuration directive is \texttt{batconfig}. In this
 section various global settings are defined, such as \texttt{multiprocessing}
 which sets whether or not multiple CPUs (or cores) should be used during
 scanning. The default configuration as shipped in the official BAT distribution
-is to not use multiple CPUs:
+is to use a single CPU:
 
 \begin{verbatim}
 [batconfig]
 multiprocessing = no
 \end{verbatim}
 
-By setting this to \texttt{yes} the program will start an extra process per CPU
-that is available. In most cases it is completely safe to use multiprocessing,
-but there is one important exception: if the ranking method (described later)
-is used, without pregenerating the proper caching database (or purchasing one)
-it is unsafe to use multiprocessing. If ranking is used and there is a fully
-generated database it is completely safe and even strongly advised to use
-multiprocessing, since it vastly speeds up running the program.
+By setting this setting to \texttt{yes} the program will start an extra process
+per CPU that is available. In most cases it is completely safe to use
+multiprocessing, but there is one important exception: if the ranking method
+(described later) is used, without pregenerating the proper caching database
+(or purchasing one) it is unsafe to use multiprocessing. If ranking is used and
+there is a fully generated database it is completely safe and even strongly
+advised to use multiprocessing, since it vastly speeds up running the program.
 
 \subsubsection{Enabling and disabling scans and methods}
 
 The standard configuration file enables most of the scans and methods
 implemented in BAT by default. Scans can be enabled and disabled by setting the
 option \texttt{enabled} to \texttt{yes} and \texttt{no} respectively. Disabling
-a scan will still make it possible to enable it later in the graphical user
-interface.
+a scan will still allow you to enable it later in the graphical user interface.
 
-To prevent a scan from being enabled in the graphical user interface outcomment
-the entry in the configuration file (by starting the line with the \texttt{\#}
-character), or remove the section from the configuration file.
+To prevent a scan from being enabled in the graphical user interface completely
+outcomment the entry in the configuration file (by starting the line with the
+\texttt{\#} character), or remove the section from the configuration file.
 
 \subsubsection{Marker search}
 
 The first action performed by \texttt{bruteforce.py} is to scan a file for
-known markers from compressed files and file systems. Which markers are
-searched for depends on the contents of the configuration file (specifically
-the \texttt{magic} attribute). These markers are subsequently used to choose
-which other methods, such as unpackers, to run.
+known markers of compressed files and file systems. Which markers are searched
+for depends on the contents of the configuration file (specifically the
+\texttt{magic} attribute). These markers determine other methods, such as
+unpackers, are run.
 
 The marker search cannot be enabled or disabled via the configuration file.
 
 \subsubsection{Pre-run checks}
 
-Before files are unpacked they are briefly inspected and tagged, so methods
-that are applied later do not unnecessarily have to process files, reducing
-run time and false positives.
+Before files are unpacked they are briefly inspected and if possible tagged.
+Tags are used to pass hints to methods that are run later to reduce execution
+time and false positives.
 
-For example, files that only contain text are tagged as \texttt{text}, and the
-rest as \texttt{binary} (this depends on the implementation of Python. Python 2
-only considers (by default) ASCII to be valid text). Methods that only work on
-binaries can ignore anything that has been tagged with \texttt{text}.
+For example, files that only contain text are tagged as \texttt{text}, other
+files are tagged as \texttt{binary} (this depends on the implementation of
+Python. Python 2 only considers (by default) ASCII to be valid text). Methods
+that only work on binaries can ignore anything that has been tagged with
+\texttt{text}.
 
-There are similar checks to determine valid XML and images, plus there are a
-few example methods for more sophisticated checks, such as detecting
-\texttt{gzip} and \texttt{bzip2} compression, which are disabled by default.
+Other checks that are available are for valid XML, various Android formats,
+ELF executables and libraries, graphics files, and so on.
 
 \subsubsection{Unpackers}
 
