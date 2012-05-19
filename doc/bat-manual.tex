@@ -430,13 +430,19 @@ distribution.
 Currently the collection consists of:
 
 \begin{itemize}
+\item modified version of \texttt{code2html} (which is unmaintained by the
+upstream author) that adds support for various more programming languages.
+\item unmodified version of \texttt{romfsck} needed for unpacking romfs file
+systems.
 \item modified version of \texttt{cramfsck} that enables unpacking cramfs
-file systems
+file systems.
 \item unmodified version of \texttt{unyaffs} that enables unpacking for some
 (but not all) YAFFS2 file systems.
 \item various versions of \texttt{unsquashfs} that enable unpacking variants
 of SquashFS. These versions have either been lifted from vendor SDKs, the
 OpenWrt project, or upstream SquashFS project.
+\item \texttt{bat-visualisation} containing a few custom tools to help generate
+pictures. These might be removed in the future.
 \item two Java projects: \texttt{jdeserialze} and \texttt{ddex}, to help
 respectively with unpacking serialized Java files and scanning binary files
 from the Dalvik VM (Android).
