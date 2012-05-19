@@ -73,52 +73,45 @@ enabling extra repositories such as Debian \texttt{non-free}.
 The graphical interface might not work on Debian 6, because of a too old
 version of \texttt{wxPython}.
 
-\section{Using the programs in the Binary Analysis Tool}
+\section{Analysing binaries with the Binary Analysis Tool}
 
 BAT consists of several programs and a few helper scripts (not meant to be
-used directly).
+used directly). The main purpose of the Binary Analysis tool is to analyse
+arbitrary binaries and review results. There are two ways to do this: via the
+commandline, or via a graphical user interface.
 
-The programs in the Binary Analysis Tool are \texttt{bruteforce.py},
-\texttt{batgui}, \texttt{busybox.py} and \texttt{busybox-compare-configs.py}.
+The commandline interface functionality can be found in \texttt{bruteforce.py}.
+The graphical user interface is provided by \texttt{batgui} (although the
+graphical user interface can do more than just scanning). Both programs are a
+front end for the same functionality.
 
-\subsection{\texttt{bruteforce.py}}
+\subsection{Inner workings of the analysis process}
 
-The main program in BAT is \texttt{bruteforce.py}. As the name suggests uses a
-brute force approach for scanning a binary. It assumes no prior knowledge of
-how a binary is constructed or what is inside the binary. Instead it tries to
-determine what is inside by applying a wide range of methods, such as looking
-for known identifiers of file systems and compressed files and running external
-tools to find contents in the binary.
+BAT uses a brute force approach for analysing a binary. It assumes no prior
+knowledge of how a binary is constructed or what is inside the binary. Instead
+it tries to determine what is inside by applying a wide range of methods, such
+as looking for known identifiers of file systems and compressed files and
+running external tools to find contents in the binary.
 
 After successful identification it unpacks compressed files, media files and
 file systems recursively. Finally several individual scans are applied to each
 extracted file, ranging from determining dynamically linked libraries to an
 elaborate ranking method to guess which sources were used to build a program.
 
-\subsubsection{Running \texttt{bruteforce.py}}
+In this section a short overview of the configuration and inner workings are
+given. A more detailed description, including how to write scans, can be found
+in the appendix.
 
-Invoking \texttt{bruteforce.py} is relatively simple. You will need to supply
-three parameters:
+\subsubsection{Analysis configuration}
 
-\begin{enumerate}
-\item \texttt{-c} : path to a configuration file
-\item \texttt{-b} : path to the binary to be scanned
-\item \texttt{-o} : path to an output file, where unpacked files, reports,
-plus the final program state be written to
-\end{enumerate}
+The analysis process is highly configurable: methods can be simply enabled and
+disabled, based on need: some methods can run for quite a long time, which
+might be undesirable at times. Configuration is done via a simple configuration
+file in Windows INI format.
 
-A typical invocation looks like this:
+Most sections are specific to scanning methods, except two sections.
 
-\texttt{python bruteforce.py -c /path/to/configuration -b /path/to/binary -o
-/path/to/outputfile}
-
-XML output, if enabled in the configuration file, will be written to standard
-output.
-
-\subsubsection{Configuring \texttt{bruteforce.py}}
-
-The \texttt{bruteforce.py} tool uses a configuration file that is in Windows
-INI format. The main configuration directive is \texttt{batconfig}. In this
+The main configuration directive is \texttt{batconfig}. In this
 section various global settings are defined, such as \texttt{multiprocessing}
 which sets whether or not multiple CPUs (or cores) should be used during
 scanning. The default configuration as shipped in the official BAT distribution
@@ -137,6 +130,9 @@ multiprocessing, but there is one important exception: if the ranking method
 there is a fully generated database it is completely safe and even strongly
 advised to use multiprocessing, since it vastly speeds up running the program.
 
+The other global section is \texttt{viewer}. This section is specific for the
+graphical frontend and is currently not used.
+
 \subsubsection{Enabling and disabling scans and methods}
 
 The standard configuration file enables most of the scans and methods
@@ -150,11 +146,10 @@ outcomment the entry in the configuration file (by starting the line with the
 
 \subsubsection{Marker search}
 
-The first action performed by \texttt{bruteforce.py} is to scan a file for
-known markers of compressed files and file systems. Which markers are searched
-for depends on the contents of the configuration file (specifically the
-\texttt{magic} attribute). These markers determine other methods, such as
-unpackers, are run.
+The first action performed is scanning a file for known markers of compressed
+files and file systems. Which markers are searched for depends on the contents
+of the configuration file (specifically the \texttt{magic} attribute). These
+markers determine other methods, such as unpackers, are run.
 
 The marker search cannot be enabled or disabled via the configuration file.
 
@@ -293,7 +288,7 @@ There are two formats in which \texttt{bruteforce.py} outputs its results:
 \begin{enumerate}
 \item dump file containing program state, complete unpacked directory tree
 containing all unpacked data, plus possibly some extra generated data, such
-as pictures and more reporting. This format is meant to be used in
+as pictures and more reporting. These dumps are meant to be used by
 \texttt{batgui}.
 \item XML file (configurable)
 \end{enumerate}
@@ -330,10 +325,32 @@ configuration file)
 file
 \end{itemize}
 
+\subsubsection{Running \texttt{bruteforce.py}}
+
+Invoking \texttt{bruteforce.py} is relatively simple. You will need to supply
+three parameters:
+
+\begin{enumerate}
+\item \texttt{-c} : path to a configuration file
+\item \texttt{-b} : path to the binary to be scanned
+\item \texttt{-o} : path to an output file, where unpacked files, reports,
+plus the final program state be written to
+\end{enumerate}
+
+A typical invocation looks like this:
+
+\texttt{python bruteforce.py -c /path/to/configuration -b /path/to/binary -o
+/path/to/outputfile}
+
+XML output, if enabled in the configuration file, will be written to standard
+output.
+
 \subsection{\texttt{batgui}}
 
 The \texttt{batgui} program is a graphical viewer for the results of
 \texttt{bruteforce.py} as well as a front end for invoking the scanner itself.
+
+\section{Additional programs in the Binary Analysis Tool}
 
 \subsection{\texttt{busybox.py} and \texttt{busybox-compare-configs.py}}
 
@@ -430,15 +447,53 @@ the two Java packages, the \texttt{bat-extratools} package contains the rest.
 
 \appendix
 
-\section{\texttt{bruteforce.py} internals}
+\section{Analyser internals}
 
-The \texttt{bruteforce.py} program processsed binaries: it unpacks files by
-running unpackers, it runs scans on individual files with program/leaf
-scans, processes and prettyprints output and performs cleanups, if necessary.
-
-\texttt{bruteforce.py} was written with extensibility in mind: new file systems
-or variants of old ones tend to appear regularly (for example: there are at
+The analyser was written with extensibility in mind: new file systems or
+variants of old ones tend to appear regularly (for example: there are at
 least 5 or more versions of SquashFS with LZMA compression out there).
+
+\subsection{Code organisation}
+
+The meaty bits of the analyser can be found in files in the \texttt{bat}
+subdirectory.
+
+\begin{itemize}
+\item \texttt{bruteforce.py} contains the main logic of the program: it
+launches scans based on what is inside the binary and the scans that are
+enabled, collects results from scans and writes results to an output file.
+\item \texttt{busybox.py} and \texttt{busyboxversion.py} contain code to
+extract useful information from a BusyBox binary, such as the version number.
+\item \texttt{checks.py} contains various leaf scans, like scanning for certain
+marker strings, or the presence of license texts and URLs of
+forges/collaborative software development sites.
+\item \texttt{ext2.py} implements some functionality needed for unpacking ext2
+file systems.
+\item \texttt{extractor.py} provides convenience functions that are used
+throughout the code.
+\item \texttt{file2package.py} has code to match names of files to names of
+packages from popular distributions in a database.
+\item \texttt{fsmagic.py} contains identifiers of various file systems and
+compressed files, like magic headers and offsets for which might need to be
+corrected.
+\item \texttt{fssearch.py} defines convenience functions for searching for
+certain headers. It is not widely used and likely to be removed in future
+versions.
+\item \texttt{fwunpack.py} includes most of the functionality for unpacking
+compressed files and file systems.
+\item \texttt{generatehexdump.py}, \texttt{generateuniquehtml.py} and
+\texttt{images.py} have code to generate textual and graphical representations
+of input files and results of the analysis.
+\item \texttt{jffs2.py} has code specific to handling JFFS2 file systems.
+\item \texttt{kernelanalysis.py} includes code to extract information from
+Linux kernel images and Linux kernel modules.
+\item \texttt{prerun.py} contains scans that are run in the pre-run phase
+for correctly tagging files as early in the process as possible.
+\item \texttt{ranking.py} implements an advanced method for classifying a
+binary using various ranking methods. It is explained in more detail later.
+\item \texttt{simpleprettyprint.py} has the default XML prettyprinter.
+\item \texttt{unpackrpm.py} has code specific to handling RPM archives.
+\end{itemize}
 
 \subsection{Pre-run methods}
 
@@ -1127,7 +1182,7 @@ configuration file has changed a few times over the years. Early versions used
 a simple header format file, with GNU C/C++ style defines. Later versions,
 starting 1.00pre1, moved to Kbuild, the same configuration system as used by
 for example the Linux kernel or OpenWrt. This format is still in use today
-(BusyBox 1.19.2 being the latest version at the time of writing).
+(BusyBox 1.20.0 being the latest version at the time of writing).
 
 Each configuration directive determines whether or not a certain piece of
 source code will be compiled and up in the BusyBox binary. This source code can
