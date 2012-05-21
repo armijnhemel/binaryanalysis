@@ -1434,8 +1434,9 @@ def searchUnpackMinix(filename, tempdir=None, blacklist=[], offsets={}, envvars=
 		## we should actually scan the data starting from offset - 0x438
 		res = unpackMinix(filename, offset - 0x410, tmpdir)
 		if res != None:
-			minixtmpdir = res
-			diroffsets.append((minixtmpdir, offset - 0x410, 0))
+			(minixtmpdir, minixsize) = res
+			diroffsets.append((minixtmpdir, offset - 0x410, minixsize))
+			blacklist.append((offset - 0x410, offset - 0x410 + minixsize))
 			counter = counter + 1
 		else:
 			os.rmdir(tmpdir)
@@ -1462,6 +1463,8 @@ def unpackMinix(filename, offset, tempdir=None, unpackenv={}):
 			os.rmdir(tmpdir)
 		shutil.rmtree(tmpdir2)
 		return None
+	else:
+		minixsize = int(stanout.strip())
 	## then we move all the contents using shutil.move()
 	mvfiles = os.listdir(tmpdir2)
 	for f in mvfiles:
@@ -1469,7 +1472,7 @@ def unpackMinix(filename, offset, tempdir=None, unpackenv={}):
 	## then we cleanup the temporary dir
 	shutil.rmtree(tmpdir2)
 	os.unlink(tmpfile[1])
-	return tmpdir
+	return (tmpdir, minixsize)
 
 ## We use tune2fs to get the size of the file system so we know what to
 ## blacklist.
