@@ -264,20 +264,20 @@ def pdfPrettyPrint(res, root, envvars=None):
 ## never as proof that a binary is actually licensed under a license!
 def scanLicenses(path, blacklist=[], envvars=None):
 	results = {}
-	if genericSearch(path, ["General Public License", "http://www.gnu.org/licenses/", "http://gnu.org/licenses/"]):
+	if genericSearch(path, ["General Public License", "http://www.gnu.org/licenses/", "http://gnu.org/licenses/"], blacklist):
 		results['GNU'] = True
 	if genericSearch(path, ["http://gnu.org/licenses/gpl.html", "http://www.gnu.org/licenses/gpl.html",
-                                "http://www.opensource.org/licenses/gpl-license.php", "http://www.gnu.org/copyleft/gpl.html"]):
+                                "http://www.opensource.org/licenses/gpl-license.php", "http://www.gnu.org/copyleft/gpl.html"], blacklist):
 		results['GPL'] = True
-	if genericSearch(path, ["http://gnu.org/licenses/gpl-2.0.html", "http://www.gnu.org/licenses/old-licenses/gpl-2.0.html"]):
+	if genericSearch(path, ["http://gnu.org/licenses/gpl-2.0.html", "http://www.gnu.org/licenses/old-licenses/gpl-2.0.html"], blacklist):
 		results['GPLv2'] = True
-	if genericSearch(path, ["http://gnu.org/licenses/old-licenses/lgpl-2.1.html"]):
+	if genericSearch(path, ["http://gnu.org/licenses/old-licenses/lgpl-2.1.html"], blacklist):
 		results['LGPLv2.1'] = True
-	if genericSearch(path, ["http://www.apache.org/licenses/LICENSE-2.0", "http://opensource.org/licenses/apache2.0.php"]):
+	if genericSearch(path, ["http://www.apache.org/licenses/LICENSE-2.0", "http://opensource.org/licenses/apache2.0.php"], blacklist):
 		results['Apache2.0'] = True
-	if genericSearch(path, ["http://www.mozilla.org/MPL/"]):
+	if genericSearch(path, ["http://www.mozilla.org/MPL/"], blacklist):
 		results['MPL'] = True
-	if genericSearch(path, ["http://www.bittorrent.com/license/"]):
+	if genericSearch(path, ["http://www.bittorrent.com/license/"], blacklist):
 		results['BitTorrent'] = True
 	if results != {}:
 		return results
@@ -296,21 +296,21 @@ def licensesPrettyPrint(res, root, envvars=None):
 ## might still pop up in binaries.
 def scanForges(path, blacklist=[], envvars=None):
 	results = {}
-	if genericSearch(path, ["sourceforge.net"]):
+	if genericSearch(path, ["sourceforge.net"], blacklist):
 		results['sourceforge.net'] = True
-	if genericSearch(path, ["http://cvs.freedesktop.org/", "http://cgit.freedesktop.org/"]):
+	if genericSearch(path, ["http://cvs.freedesktop.org/", "http://cgit.freedesktop.org/"], blacklist):
 		results['freedesktop.org'] = True
-	if genericSearch(path, ["code.google.com", "googlecode.com"]):
+	if genericSearch(path, ["code.google.com", "googlecode.com"], blacklist):
 		results['code.google.com'] = True
-	if genericSearch(path, ["savannah.gnu.org/"]):
+	if genericSearch(path, ["savannah.gnu.org/"], blacklist):
 		results['savannah.gnu.org'] = True
-	if genericSearch(path, ["github.com"]):
+	if genericSearch(path, ["github.com"], blacklist):
 		results['github.com'] = True
-	if genericSearch(path, ["bitbucket.org"]):
+	if genericSearch(path, ["bitbucket.org"], blacklist):
 		results['bitbucket.org'] = True
-	if genericSearch(path, ["tigris.org"]):
+	if genericSearch(path, ["tigris.org"], blacklist):
 		results['tigris.org'] = True
-	if genericSearch(path, ["http://svn.apache.org/"]):
+	if genericSearch(path, ["http://svn.apache.org/"], blacklist):
 		results['svn.apache.org'] = True
 	## various gits:
 	## http://git.fedoraproject.org/git/
