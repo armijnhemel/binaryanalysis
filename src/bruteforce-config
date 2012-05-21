@@ -350,7 +350,7 @@ priority    = 1
 magic       = minix
 noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video
 description = Unpack Minix file systems
-enabled     = no
+enabled     = yes
 
 [pdf_unpack]
 type        = unpack

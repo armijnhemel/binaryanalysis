@@ -1455,7 +1455,7 @@ def unpackMinix(filename, offset, tempdir=None, unpackenv={}):
 	## create an extra temporary directory
 	tmpdir2 = tempfile.mkdtemp()
 
-	p = subprocess.Popen(['python', '/home/armijn/gpltool/trunk/bat-extratools/bat-minix/bat-minix', '-i', tmpfile[1], '-o', tmpdir2], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['bat-minix', '-i', tmpfile[1], '-o', tmpdir2], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.unlink(tmpfile[1])
