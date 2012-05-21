@@ -77,7 +77,7 @@ fsmagic = {
 ## the actual file system or file starts earlier
 correction = {
                'ext2':    0x438,
-               'minix'    0x410,
+               'minix':    0x410,
                'iso9660': 32769,
                'tar1':    0x101,
                'tar2':    0x101,
