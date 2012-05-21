@@ -1,3 +1,6 @@
+2012-05-20
+* add first version of minix unpacker to bat-extratools
+
 2012-05-15
 * files can have multiple symbols in the file tree, so make it easier to add
 more symbols and decorate the file tree
