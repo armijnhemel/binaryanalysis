@@ -350,6 +350,7 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, envvar
 def unpackISO9660(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.fdopen(tmpfile[0]).close()
 
 	if offset != 32769:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset - 32769,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -364,7 +365,6 @@ def unpackISO9660(filename, offset, tempdir=None):
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.rmdir(mountdir)
-		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
@@ -395,7 +395,6 @@ def unpackISO9660(filename, offset, tempdir=None):
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		## this should not happen
-		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
@@ -406,7 +405,6 @@ def unpackISO9660(filename, offset, tempdir=None):
 	(stanout, stanerr) = p.communicate()
 	## TODO: check exit codes
 	os.rmdir(mountdir)
-	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
 	return (tmpdir, size)
 
