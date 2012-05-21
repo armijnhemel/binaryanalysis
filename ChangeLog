@@ -1,5 +1,7 @@
 2012-05-21
 * extra sanity checks for BAT_REPORTDIR
+* add wrapper code for scanning Minix v1 file systems
+* add configuration for scanning Minix v1 file systems
 
 2012-05-20
 * add first version of minix unpacker to bat-extratools

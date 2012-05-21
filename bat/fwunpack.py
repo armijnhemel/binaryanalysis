@@ -1416,6 +1416,63 @@ def unpackSquashfsRealtekLZMA(filename, offset, tmpdir):
 		squashsize = 1
 		return (tmpdir, squashsize)
 
+def searchUnpackMinix(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if offsets['minix'] == []:
+		return ([], blacklist, [])
+	## right now just allow file systems that are only Minix
+	if not 0x410 in offsets['minix']:
+		return ([], blacklist, [])
+	diroffsets = []
+	counter = 1
+	for offset in offsets['minix']:
+		## according to /usr/share/magic the magic header starts at 0x438
+		if offset < 0x410:
+			continue
+		## check if the offset we find is in a blacklist
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		tmpdir = dirsetup(tempdir, filename, "minix", counter)
+		## we should actually scan the data starting from offset - 0x438
+		res = unpackMinix(filename, offset - 0x410, tmpdir)
+		if res != None:
+			minixtmpdir = res
+			diroffsets.append((minixtmpdir, offset - 0x410, 0))
+			counter = counter + 1
+		else:
+			os.rmdir(tmpdir)
+	return (diroffsets, blacklist, [])
+
+## Unpack an ext2 file system using e2tools and some custom written code from our own ext2 module
+def unpackMinix(filename, offset, tempdir=None, unpackenv={}):
+	## first unpack things, write things to a file and return
+	## the directory if the file is not empty
+	tmpdir = unpacksetup(tempdir)
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.fdopen(tmpfile[0]).close()
+
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
+
+	## create an extra temporary directory
+	tmpdir2 = tempfile.mkdtemp()
+
+	p = subprocess.Popen(['python', '/home/armijn/gpltool/trunk/bat-extratools/bat-minix/bat-minix', '-i', tmpfile[1], '-o', tmpdir2], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		shutil.rmtree(tmpdir2)
+		return None
+	## then we move all the contents using shutil.move()
+	mvfiles = os.listdir(tmpdir2)
+	for f in mvfiles:
+		shutil.move(os.path.join(tmpdir2, f), tmpdir)
+	## then we cleanup the temporary dir
+	shutil.rmtree(tmpdir2)
+	os.unlink(tmpfile[1])
+	return tmpdir
+
 ## We use tune2fs to get the size of the file system so we know what to
 ## blacklist.
 def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
