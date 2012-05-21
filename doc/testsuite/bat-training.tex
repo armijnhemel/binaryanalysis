@@ -127,6 +127,7 @@ If you can relate many strings from a binary file to source code it becomes stat
 \frame{
 \frametitle{Binary analysis}
 A firmware seems to be a blob with random data. Often there is a structure.
+Steps needed for binary analysis are:
 
 \begin{enumerate}
 \item find file systems and compressed files
@@ -137,7 +138,7 @@ A firmware seems to be a blob with random data. Often there is a structure.
 
 \frame{
 \frametitle{Obtaining binary files}
-Firmwares are often not enough:
+Firmwares are not enough for a proper analysis of a \textit{device}:
 
 \begin{itemize}
 \item not all software that is on the device is in the firmware (bootloader, recovery, etc.)
@@ -146,7 +147,7 @@ Firmwares are often not enough:
 \end{itemize}
 
 Via other methods (serial port, security holes) you need to gain access to the device to get
-access to the full firmware.
+access to the full contents of the flash chip.
 
 Obtaining firmwares via these methods is out of scope for this course.
 }
