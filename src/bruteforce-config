@@ -83,7 +83,7 @@ module      = bat.prerun
 method      = verifyMP4
 priority    = 1
 description = Check if file is a valid MP4 file
-enabled     = yes
+enabled     = no
 
 [verifyogg]
 type        = prerun
