@@ -26,8 +26,15 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 			except Exception, e:
 				pass
 
-	## TODO: check if BAT_REPORTDIR exists
 	reportdir = scanenv.get('BAT_REPORTDIR', '.')
+	try:
+		os.stat(reportdir)
+	except:
+		## BAT_REPORTDIR does not exist
+		try:
+			os.makedirs(reportdir)
+		except Exception, e:
+			return
 
 	for i in leafscans:
 		if i.keys()[0] == 'ranking':

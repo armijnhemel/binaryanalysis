@@ -52,7 +52,6 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscand
 			except Exception, e:
 				pass
 
-	## TODO: check if BAT_IMAGEDIR exists
 	imagedir = scanenv.get('BAT_IMAGEDIR', "%s/%s" % (toplevelscandir, "images"))
 	try:
 		os.stat(imagedir)

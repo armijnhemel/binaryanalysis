@@ -39,8 +39,15 @@ def generateHexdump(filename, unpackreport, leafscans, scantempdir, toplevelscan
 			except Exception, e:
 				pass
 
-	## TODO: check if BAT_REPORTDIR exists
 	reportdir = scanenv.get('BAT_REPORTDIR', '.')
+	try:
+		os.stat(reportdir)
+	except:
+		## BAT_REPORTDIR does not exist
+		try:
+			os.makedirs(reportdir)
+		except Exception, e:
+			return
 
 	maxsize = int(scanenv.get('BAT_IMAGE_MAXFILESIZE', sys.maxint))
 	filesize = os.stat("%s/%s" % (scantempdir, filename)).st_size
