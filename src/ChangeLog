@@ -1,3 +1,6 @@
+2012-05-21
+* extra sanity checks for BAT_REPORTDIR
+
 2012-05-20
 * add first version of minix unpacker to bat-extratools
 
