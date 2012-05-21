@@ -45,6 +45,7 @@ fsmagic = {
             'ubifs':            '\x55\x42\x49\x23',
             'rpm':              '\xed\xab\xee\xdb',
             'ext2':             '\x53\xef',        # little endian
+            'minix':            '\x8f\x13',        # specific version of Minix v1 file system
             'arj':              '\x60\xea',
             'cab':              'MSCF',
             'installshield':    'ISc(',
@@ -76,6 +77,7 @@ fsmagic = {
 ## the actual file system or file starts earlier
 correction = {
                'ext2':    0x438,
+               'minix'    0x410,
                'iso9660': 32769,
                'tar1':    0x101,
                'tar2':    0x101,
