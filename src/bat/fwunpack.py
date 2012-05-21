@@ -1441,7 +1441,7 @@ def searchUnpackMinix(filename, tempdir=None, blacklist=[], offsets={}, envvars=
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [])
 
-## Unpack an ext2 file system using e2tools and some custom written code from our own ext2 module
+## Unpack an minix v1 file system using bat-minix. Needs hints for size of minix file system
 def unpackMinix(filename, offset, tempdir=None, unpackenv={}):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
