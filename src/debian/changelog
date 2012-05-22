@@ -1,3 +1,14 @@
+bat (8.0) unstable; urgency=low
+
+  * GUI
+  * romfs unpacking
+  * minix fs v1 unpacking
+  * function name matching
+  * much more (see changelog)
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Tue, 22 May 2012 22:00:43 +0200
+
+
 bat (7.0) unstable; urgency=low
 
   * Updated release, includes much new functionality. See ChangeLog in SVN repo for
