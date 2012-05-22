@@ -1,0 +1,387 @@
+\documentclass[11pt]{beamer}
+
+\usepackage{url}
+\usepackage{tikz}
+\author{Armijn Hemel}
+\title{Using the Binary Analysis Tool - part 1}
+\date{January 17, 2012}
+
+\begin{document}
+
+\setlength{\parskip}{4pt}
+
+\frame{\titlepage}
+
+\frame{
+\frametitle{Subjects}
+
+In this course you will learn:
+
+\begin{itemize}
+\item backgrounds of the Binary Analysis Tool
+\item identifying compressed files and file systems within a bigger binary blob
+\item extracting and verifying compressed files and file systems
+\item using the Binary Analysis Tool to extract and verify compressed files and file systems
+\end{itemize}
+}
+
+\frame{
+\frametitle{Course materials}
+
+For this course you will need:
+
+\begin{itemize}
+\item a computer running a recent installation of Fedora (version 14 or higher), Debian 7, or Ubuntu (version 12.04 or later)
+\item a copy of the Binary Analysis Tool user and developer guide
+\end{itemize}
+}
+
+\frame{
+\frametitle{Binary Analysis Tool - introduction}
+
+The Binary Analysis Tool (BAT) is a generic framework for automated analysis of binary files:
+
+\begin{itemize}
+\item license compliance engineering
+\item security research
+\item \dots
+\end{itemize}
+
+Focus is on license compliance engineering.
+}
+
+\frame{
+\frametitle{Binary Analysis Tool - motivations}
+
+\begin{itemize}
+\item demystify compliance engineering by codifying knowledge
+\item reproducable results
+\item common language for binary analysis
+\item no more excuses for companies (``we didn't know and it is hard to detect'')
+\end{itemize}
+}
+
+\frame{
+\frametitle{Binary Analysis Tool - facts}
+\begin{itemize}
+\item Apache 2 licensed
+\item written in Python
+\item lightweight
+\item uses standard Linux tools, or standard tools with some slight tweaks
+\item has spawned academic research
+\item only analyses, but draws no legal conclusions
+\end{itemize}
+
+BAT is currently maintained and enhanced by Tjaldur Software Governance Solutions.
+}
+
+\frame{
+\frametitle{GPL compliance engineering}
+
+\begin{itemize}
+\item extract programs from blobs (firmwares, installers, etc.)
+\item extract human readable strings from programs and compare this to (publicly available) source code
+\item use other information like file names, other files, etc. for circumstantial evidence
+\end{itemize}
+
+If you can relate many strings from a binary file to source code it becomes statistically hard to deny (re)use of software.
+}
+
+\begin{frame}[fragile]
+\frametitle{What's in this blob?}
+
+{\scriptsize\color{blue}{
+\begin{verbatim}
+00000000  50 4b 03 04 14 00 00 00  08 00 29 52 57 3c fa c0  |PK........)RW<..|
+00000010  03 a7 26 9e 16 01 f4 ae  19 01 15 00 00 00 76 31  |..&...........v1|
+00000020  2e 31 2e 31 2e 31 37 5f  53 4d 43 5f 61 6c 6c 2e  |.1.1.17_SMC_all.|
+00000030  65 78 65 ec 3a 6d 78 53  55 9a f7 26 69 9a 42 ca  |exe.:mxSU..&i.B.|
+00000040  0d d0 38 65 69 30 60 50  94 96 56 43 91 98 06 03  |..8ei0`P..VC....|
+00000050  92 18 9f e1 e3 d6 c8 4d  03 f4 03 69 6b b8 a3 88  |.......M...ik...|
+00000060  78 2f 83 da 76 c3 a6 d9  6d 7a 37 0f 38 8b 33 ae  |x/..v...mz7.8.3.|
+00000070  33 ce d0 89 ee 8a f8 38  ae 3a 88 1f 30 61 c2 52  |3......8.:..0a.R|
+00000080  3a ea 33 ac e3 02 0e 3c  b3 38 ea ee e9 a4 ce d4  |:.3....<.8......|
+00000090  85 2d 01 0b 77 df f7 dc  f4 03 1c 67 66 9f fd db  |.-..w......gf...|
+000000a0  ab 37 f7 9c f7 bc e7 fd  38 e7 bc 5f a7 ac 5c bb  |.7......8.._..\.|
+000000b0  8b d1 33 0c 63 80 57 55  19 e6 00 a3 3d 5e e6 cf  |..3.c.WU....=^..|
+000000c0  3f 67 e1 9d 72 fd 5b 53  98 d7 8b de 9f 7d 80 5d  |?g..r.[S.....}.]|
+000000d0  f1 fe ec fb 22 9b 1e b5  6f d9 fa f0 03 5b 37 3c  |...."...o....[7<|
+000000e0  64 df b8 61 f3 e6 87 25  fb fd 2d f6 ad f2 66 fb  |d..a...%..-...f.|
+000000f0  a6 cd f6 e5 ab 83 f6 87  1e 6e 6e 59 50 5c 3c c9  |.........nnYP\<.|
+00000100  91 a7 d1 fc c1 99 4b f6  d7 5e dd 3b f2 5e da f5  |......K..^.;.^..|
+00000110  f2 de 6a f8 ae 7e e9 cd  bd f3 e0 9b fa c9 3b 7b  |..j..~........;{|
+00000120  17 d2 fe 81 bd 9b e0 fb  eb 5d fb f6 56 52 dc d7  |.........]..VR..|
+00000130  f6 7e 1f be 37 ee 7a 73  ef 2d f0 fd af 9f be be  |.~..7.zs.-......|
+00000140  77 36 7c ef dd b4 31 82  74 46 64 e4 7d 0c b3 82  |w6|...1.tFd.}...|
+00000150  35 30 43 1b fd 9e 31 b9  39 76 32 6b 64 98 2a 96  |50C...1.9v2kd.*.|
+00000160  61 9a f4 14 76 a1 1b 7e  2c a8 38 ab 69 6f d1 fa  |a...v..~,.8.io..|
+00000170  86 fc 9c 91 2f b3 c7 a0  8d c1 a3 a3 bf 96 7c df  |..../.........|.|
+00000180  32 0a b7 8c 5b a3 c8 3d  2c b3 07 1b c7 59 e6 85  |2...[..=,....Y..|
+00000190  5f e8 fe 82 55 fd 0b 1f  90 d3 a0 ff fa e1 05 52  |_...U..........R|
+000001a0  cb 76 09 be 8b 1c ac 26  50 15 7b b5 60 f0 d8 41  |.v.....&P.{.`..A|
+\end{verbatim}
+}}
+
+\end{frame}
+
+\frame{
+\frametitle{Binary analysis}
+A firmware seems to be a blob with random data. Often there is a structure.
+Steps needed for binary analysis are:
+
+\begin{enumerate}
+\item find file systems and compressed files
+\item unpack them
+\item research unpacked files, goto 1 if needed
+\end{enumerate}
+}
+
+\frame{
+\frametitle{Obtaining binary files}
+Firmwares are not enough for a proper analysis of a \textit{device}:
+
+\begin{itemize}
+\item not all software that is on the device is in the firmware (bootloader, recovery, etc.)
+\item firmware might be encrypted
+\item no firmware available
+\end{itemize}
+
+Via other methods (serial port, security holes) you need to gain access to the device to get
+access to the full contents of the flash chip.
+
+Obtaining firmwares via these methods is out of scope for this course.
+}
+
+\frame{
+\frametitle{Firmwares used in this course}
+
+\begin{itemize}
+\item based on OpenWrt 10.03 (``Backfire'')
+\item full corresponding source code available and GPL compliant: \url{http://www.openwrt.org/}
+\end{itemize}
+}
+
+\frame{
+\frametitle{Manual compliance engineering}
+To understand what BAT does under the hood it is good to do it yourself manually a few times. We will look at:
+
+\begin{itemize}
+\item manual discovery of offsets
+\item manually unpacking of file systems
+\item manual analysis of binaries (next course)
+\end{itemize}
+}
+
+\frame{
+\frametitle{Discovery of offsets}
+Two clear indicators where compressed files or file systems can start:
+
+\begin{itemize}
+\item known identifiers
+\item padding
+\end{itemize}
+
+Displaying files in a readable format is essential for manual analysis.
+}
+
+\begin{frame}[fragile]
+\frametitle{\texttt{hexdump}}
+
+\texttt{hexdump} is a great tool for displaying files in hexadecimal format.
+
+The switch \texttt{-C} displays three columns:
+
+\begin{enumerate}
+\item hexadecimal offset in the file
+\item hexadecimal value of bytes
+\item human readable representation of bytes
+\end{enumerate}
+
+\texttt{hexdump -C \$file | less}
+
+{\scriptsize\color{blue}{
+\begin{verbatim}
+00000000  48 44 52 30 00 10 21 00  0a 07 eb 3d 00 00 01 00  |HDR0..!....=....|
+00000010  1c 00 00 00 04 09 00 00  00 b4 07 00 1f 8b 08 00  |................|
+00000020  00 00 00 00 02 03 a5 57  4d 6c 5b 59 19 3d be ef  |.......WMl[Y.=..|
+\end{verbatim}
+}}
+\end{frame}
+
+\frame{
+\frametitle{Known identifiers}
+Many compressed files and file systems start, or end, with identifiers.
+
+\begin{itemize}
+\item \texttt{PK} for ZIP files
+\item \texttt{ELF} for ELF files
+\item \texttt{0x1f 0x8b 0x08} for gzip compression
+\item \dots
+\end{itemize}
+
+Many identifiers are well documented, for example in \texttt{/usr/share/magic} or file specification.
+}
+
+\begin{frame}[fragile]
+\frametitle{Padding in firmwares}
+Firmwares are typically written to flash chips. The bootloader on devices is often configured with offsets that indicate:
+
+\begin{itemize}
+\item start of file systems
+\item start of bootloader
+\item location of (compressed) kernel
+\item \dots
+\end{itemize}
+
+There is often not enough data to completely fill the allocated space, so \textit{padding} is used, usually NUL characters.
+{\scriptsize\color{blue}{
+\begin{verbatim}
+0007b130  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+\end{verbatim}
+}}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Recognizing padding}
+\texttt{hexdump} will compress duplicate lines and replace them with \texttt{*}:
+
+{\scriptsize\color{blue}{
+\begin{verbatim}
+0007b130  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+*
+0007b400  68 73 71 73 06 02 00 00  e0 05 62 0f 3f 00 00 00  |hsqs......b.?...|
+\end{verbatim}
+}}
+
+If there are large amounts of NUL characters it often indicates a partition boundary.
+
+For example, here the padding directly precedes a SquashFS file system.
+\end{frame}
+
+\frame{
+\frametitle{Excercise 1: discover offsets}
+
+Copy the first firmware (\texttt{openwrt-brcm-2.4-squashfs.trx}) to a temporary directory and do the following:
+
+\begin{enumerate}
+\item use \texttt{hexdump -C} to display the contents of the file
+\item report likely offsets for gzip compressed file and SquashFS file system
+\end{enumerate}
+}
+
+\frame{
+\frametitle{Extracting files}
+After finding the right offsets you need to carve out the right parts of the file:
+
+\begin{itemize}
+\item editor that can process binary files (vim, emacs, etcetera)
+\item \texttt{dd}
+\end{itemize}
+
+Example with \texttt{dd}:
+
+\texttt{dd if=/path/to/firmware of=/path/to/outfile bs=\$offset skip=1}
+}
+
+\frame{
+\frametitle{Verifying and unpacking files}
+
+\begin{itemize}
+\item remove all bytes preceding an identifier
+\item run an unpacker tool
+\item verify contents were successfully unpacked
+\end{itemize}
+}
+
+\begin{frame}[fragile]
+\frametitle{Example: gzip}
+Firmware has a gzip file at offset \texttt{0x1C}. Remove the bytes in front:
+
+\texttt{dd if=/path/to/firmware of=/path/to/outfile bs=28 skip=1}
+
+and verify using \texttt{file} that the file is actually a gzip file:
+
+\begin{verbatim}
+$ file /path/to/outfile 
+/path/to/outfile: gzip compressed data, from Unix,
+    max compression
+\end{verbatim}
+
+Then you can unpack using \texttt{zcat}:
+
+\begin{verbatim}
+$ zcat /path/to/outfile > /path/to/outfile2
+gzip: /path/to/outfile: decompression OK,
+    trailing garbage ignored
+\end{verbatim}
+\end{frame}
+
+\frame{
+\frametitle{Excercise 2: extract, verify and unpack files}
+Extract the following:
+
+\begin{itemize}
+\item gzip compressed file at offset \texttt{0x1C}
+\item LZMA compressed file at offset \texttt{0x904}
+\item SquashFS file system (find the offset yourself). Use \texttt{bat-unsquashfs-openwrt} to extract this file system.
+\end{itemize}
+}
+
+\frame{
+\frametitle{Automated extraction using BAT}
+Manually extracting files is a lot of work and it is easy to miss files. BAT automates extraction:
+
+\begin{itemize}
+\item search for identifiers
+\item extraction
+\item verification
+\end{itemize}
+
+BAT works recursively and can unpack nested files and file systems.
+}
+
+\frame{
+\frametitle{Running BAT}
+First make sure BAT (version 6 or higher), plus all necessary dependencies are installed. Then run:
+
+\texttt{bruteforce.py -c /path/to/configuration -b /path/to/firmware > /path/to/output}
+}
+
+\frame{
+\frametitle{Reading and interpreting results}
+
+The output from BAT is in XML format. To display it use a command like this:
+
+\texttt{xml\_pp /path/to/bat/output | less}
+
+or use a web browser such as Firefox to navigate the XML file.
+
+In the near future a GUI for easier navigation of the results will be made.
+}
+
+\frame{
+\frametitle{Exercise 3: run BAT and interpret results}
+Run BAT on the test firmware and confirm:
+
+\begin{itemize}
+\item three \texttt{unpack} scans were successfully run
+\item the offset for the gzip file is 28, the offset for the LZMA file is 2308, the offset for SquashFS is 504832
+\end{itemize}
+}
+
+\frame{
+\frametitle{Conclusion}
+
+In this course you have learned about:
+
+\begin{itemize}
+\item backgrounds of the Binary Analysis Tool
+\item identifying compressed files and file systems within a bigger binary blob
+\item extracting and verifying compressed files and file systems
+\item configuring and using the Binary Analysis Tool to extract and verify compressed files and file systems
+\end{itemize}
+
+In the next course we will dig into per file analysis.
+}
+
+\end{document}
