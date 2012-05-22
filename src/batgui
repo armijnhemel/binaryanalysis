@@ -124,16 +124,15 @@ Individual scans can be enabled and disabled via the check boxes under Configura
 ## Basically just replaces 'unique:/' with the proper path to the pretty printed
 ## source code files.
 class BATHtmlWindow(wx.html.HtmlWindow):
-	def __init__(self, parent, target):
+	def __init__(self, parent, target, htmldir):
 		wx.html.HtmlWindow.__init__(self, parent)
 		self.target = target
+		self.htmldir = htmldir
 	def OnLinkClicked(self, link):
 		href = link.GetHref()
 		if href.startswith('unique:/'):
-			## TODO: remove hardcoded path
-			htmldir = "/home/armijn/html/files"
 			(linksha256sum, linenumber) = href[8:].split('#')
-			pphtml = bz2.BZ2File("%s/%s/%s/%s/%s.html.bz2" % (htmldir, linksha256sum[0], linksha256sum[1], linksha256sum[2], linksha256sum), 'r')
+			pphtml = bz2.BZ2File("%s/%s/%s/%s/%s.html.bz2" % (self.htmldir, linksha256sum[0], linksha256sum[1], linksha256sum[2], linksha256sum), 'r')
 			htmlcontent = pphtml.read()
 			pphtml.close()
 			## grab the sha256sum of the files we found stuff in from the clicked link and display it
@@ -273,7 +272,8 @@ class BatFrame(wx.Frame):
 		self.matchesbrowser = wx.html.HtmlWindow(matchestab)
 		self.matchesbrowser.SetPage("<html></html")
 		## One window to display the matches, initially empty
-		self.matcheswindow = BATHtmlWindow(matchestab, self.matchesbrowser)
+		## TODO: remove hardcoded path
+		self.matcheswindow = BATHtmlWindow(matchestab, self.matchesbrowser, '/home/armijn/html/files')
 		self.matcheswindow.SetPage("<html></html>")
 		matchestab.SplitVertically(self.matcheswindow, self.matchesbrowser)
 		matchestab.SetSashGravity(0.5)
