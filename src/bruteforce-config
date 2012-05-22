@@ -12,7 +12,8 @@ output = prettyprintresxml
 ### viewer configuration ###
 ############################
 
-#[viewer]
+[viewer]
+htmldir = /home/armijn/html/files
 #filter = graphics:text:empty:link
 
 ####################
