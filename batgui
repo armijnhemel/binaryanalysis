@@ -128,6 +128,8 @@ class BATHtmlWindow(wx.html.HtmlWindow):
 		wx.html.HtmlWindow.__init__(self, parent)
 		self.target = target
 		self.htmldir = htmldir
+	def setHtmlDir(self, htmldir):
+		self.htmldir = htmldir
 	def OnLinkClicked(self, link):
 		if self.htmldir == None:
 			return
@@ -322,6 +324,7 @@ class BatFrame(wx.Frame):
 			elif s == 'viewer':
 				if config.has_option(s, 'htmldir'):
 					self.htmldir = config.get(s, 'htmldir')
+					self.matcheswindow.setHtmlDir(self.htmldir)
 			else:
 				try:
 					## process each section. We need: section name, description, enabled
