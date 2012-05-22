@@ -321,7 +321,7 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 						try:
 							if not os.path.islink("%s/%s" % (i[0], p)):
 								os.chmod("%s/%s" % (i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-							scantasks.append((i[0], p, scans, prerunscans, magicscans, len(scandir), tempdir))
+							scantasks.append((i[0], p, scans, prerunscans, magicscans, len(scandir), tempdir, debug))
 							relscanpath = "%s/%s" % (i[0][lentempdir:], p)
 							if relscanpath.startswith('/'):
 								relscanpath = relscanpath[1:]
@@ -331,10 +331,10 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 			except StopIteration:
         			pass
 			unpackreports[relfiletoscan]['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
-	leaftasks.append((filetoscan, magic, tags, blacklist, tempdir, filehash, filesize))
+	leaftasks.append((filetoscan, magic, tags, blacklist, tempdir, filehash, filesize, debug))
 	return (scantasks, leaftasks, unpackreports)
 
-def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize)):
+def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize, debug)):
 	reports = []
 
 	reports.append({'tags': tags})
@@ -346,6 +346,8 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize)):
 		report = {}
 		module = scan['module']
 		method = scan['method']
+		if debug:
+			print >>sys.stderr, method
 		## if there is extra information we need to pass, like locations of databases
 		## we can use the environment for it
 		if scan.has_key('envvars'):
@@ -359,10 +361,12 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize)):
 			reports.append(report)
 	return (filetoscan, reports)
 
-def postrunscan((filetoscan, unpackreports, leafreports, scans, scantempdir, toplevelscandir)):
+def postrunscan((filetoscan, unpackreports, leafreports, scans, scantempdir, toplevelscandir, debug)):
 	for scan in scans:
 		module = scan['module']
 		method = scan['method']
+		if debug:
+			print >>sys.stderr, method
 		## if there is extra information we need to pass, like locations of databases
 		## we can use the environment for it
 		if scan.has_key('envvars'):
@@ -632,7 +636,7 @@ def runscan(tempdir, scans, scan_binary):
 	## often it is wise to have it set to 'no'. This is because ranking writes
 	## to databases and you don't want concurrent writes.
 
-	if scans['batconfig']['multiprocessing']:
+	if scans['batconfig']['multiprocessing'] and not scans['batconfig']['debug']:
 		pool = multiprocessing.Pool()
 	else:
 		pool = multiprocessing.Pool(processes=1)
@@ -714,9 +718,9 @@ def runscan(tempdir, scans, scan_binary):
 		postrunscans = []
 		for i in unpackreports:
 			if leafreports.has_key(i):
-				postrunscans.append((i, unpackreports[i], leafreports[i], scans['postrunscans'], scantempdir, tempdir))
+				postrunscans.append((i, unpackreports[i], leafreports[i], scans['postrunscans'], scantempdir, tempdir, scans['batconfig']['debug']))
 			else:
-				postrunscans.append((i, unpackreports[i], [], scans['postrunscans'], scantempdir, tempdir))
+				postrunscans.append((i, unpackreports[i], [], scans['postrunscans'], scantempdir, tempdir, scans['batconfig']['debug']))
 		postrunresults = pool.map(postrunscan, postrunscans, 1)
 
 	return (unpackreports, leafreports)
