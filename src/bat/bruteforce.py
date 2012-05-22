@@ -106,7 +106,7 @@ def gethash(path, filename):
 	return h.hexdigest()
 
 ## scan a single file, possibly unpack and recurse
-def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir)):
+def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, debug)):
 	lentempdir = len(tempdir)
 
 	## absolute path of the file in the file system (so including temporary dir)
@@ -164,6 +164,8 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir)):
 	for prerunscan in prerunscans:
 		module = prerunscan['module']
 		method = prerunscan['method']
+		if debug:
+			print >>sys.stderr, method
 		## if there is extra information we need to pass, like locations of databases
 		## we can use the environment for it
 		if prerunscan.has_key('envvars'):
@@ -278,6 +280,8 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir)):
 		
 		module = unpackscan['module']
 		method = unpackscan['method']
+		if debug:
+			print >>sys.stderr, method
 		## if there is extra information we need to pass, like locations of databases
 		## we can use the environment for it
 		if unpackscan.has_key('envvars'):
@@ -398,6 +402,14 @@ def readconfig(config):
 				batconf['method'] = config.get(section, 'method')
 			except:
 				pass
+			try:
+				debug = config.get(section, 'debug')
+				if debug == 'yes':
+					batconf['debug'] = True
+				else:
+					batconf['debug'] = False
+			except:
+				batconf['debug'] = False
 			continue
 		
 		elif config.has_option(section, 'type'):
@@ -613,7 +625,7 @@ def runscan(tempdir, scans, scan_binary):
 	unpackreports_tmp = []
 	unpackreports = {}
 
-	scantasks = [(scantempdir, os.path.basename(scan_binary), scans['unpackscans'], scans['prerunscans'], magicscans, len(scantempdir), scantempdir)]
+	scantasks = [(scantempdir, os.path.basename(scan_binary), scans['unpackscans'], scans['prerunscans'], magicscans, len(scantempdir), scantempdir, scans['batconfig']['debug'])]
 
 	## Use multithreading to speed up scanning. Sometimes we hit http://bugs.python.org/issue9207
 	## Threading can be configured in the configuration file, but
