@@ -129,6 +129,8 @@ class BATHtmlWindow(wx.html.HtmlWindow):
 		self.target = target
 		self.htmldir = htmldir
 	def OnLinkClicked(self, link):
+		if self.htmldir == None:
+			return
 		href = link.GetHref()
 		if href.startswith('unique:/'):
 			(linksha256sum, linenumber) = href[8:].split('#')
@@ -150,13 +152,14 @@ class BatFrame(wx.Frame):
 		wx.Frame.__init__(self, parent, title=self.title, size=(1280,768))
 		self.origconfig = copy.copy(config)
 
-		self.initConfig(self.origconfig)
-
 		## some defaults
 		self.datadir = ""
 		self.tarfile = None
 		self.timer = None
 		self.selectedfile = None
+		self.htmldir = None
+
+		self.initConfig(self.origconfig)
 
 		## we start in "simple" mode
 		self.advanced = False
@@ -272,8 +275,7 @@ class BatFrame(wx.Frame):
 		self.matchesbrowser = wx.html.HtmlWindow(matchestab)
 		self.matchesbrowser.SetPage("<html></html")
 		## One window to display the matches, initially empty
-		## TODO: remove hardcoded path
-		self.matcheswindow = BATHtmlWindow(matchestab, self.matchesbrowser, '/home/armijn/html/files')
+		self.matcheswindow = BATHtmlWindow(matchestab, self.matchesbrowser, self.htmldir)
 		self.matcheswindow.SetPage("<html></html>")
 		matchestab.SplitVertically(self.matcheswindow, self.matchesbrowser)
 		matchestab.SetSashGravity(0.5)
@@ -318,7 +320,8 @@ class BatFrame(wx.Frame):
 			if s == 'batconfig':
 				continue
 			elif s == 'viewer':
-				continue
+				if config.has_option(s, 'htmldir'):
+					self.htmldir = config.get(s, 'htmldir')
 			else:
 				try:
 					## process each section. We need: section name, description, enabled
@@ -573,7 +576,6 @@ class BatFrame(wx.Frame):
 							self.timer = wx.CallLater(0, self.textctrlupdate)
 						self.textCtrl.SetInsertionPoint(0)
 					except Exception, e:
-						print e
 						pass
 					try:
 						os.stat(os.path.join(self.imagesdir, "%s.png" % (sha256sum,)))
@@ -584,7 +586,6 @@ class BatFrame(wx.Frame):
 						self.histogram2.Refresh(True)
 						self.picturepanel.FitInside()
 					except Exception, e:
-						print e
 						pass
 
 	def initTree(self, tree, tmpdir):
@@ -808,7 +809,7 @@ class BatFrame(wx.Frame):
 				config.readfp(configfile)
 				self.origconfig = copy.copy(config)
 				self.initConfig(self.origconfig)
-			except:
+			except Exception, e:
 				errordiag = wx.MessageDialog(None, 'Not a valid configuration file', 'Error', wx.OK | wx.ICON_ERROR)
 				errordiag.ShowModal()
 		dlg.Destroy()
