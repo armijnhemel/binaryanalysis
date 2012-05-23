@@ -440,7 +440,10 @@ class BatFrame(wx.Frame):
 			realpath = self.unpackreports[self.selectedfile]['realpath']
 			magic = self.unpackreports[self.selectedfile]['magic']
 			if not "symbolic link" in magic:
-				size = self.unpackreports[self.selectedfile]['size']
+				if self.unpackreports[self.selectedfile].has_key('size'):
+					size = self.unpackreports[self.selectedfile]['size']
+				else:
+					size = 0
 			else:
 				size = 0
 			## very simplistic HTML table we show for individual elements

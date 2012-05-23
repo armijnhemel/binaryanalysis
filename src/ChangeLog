@@ -1,8 +1,12 @@
+2012-05-23
+* fix in GUI for fifo files
+
 2012-05-22
 * add 'debug' statement for helping debugging
 * make location of HTML files for viewer more configurable. This needs more
 work.
 * htmldir can now be set on the fly by loading a new configuration
+* tag and release 8.0
 
 2012-05-21
 * extra sanity checks for BAT_REPORTDIR
