@@ -128,36 +128,44 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 				## first we need to determine the size and offset of .data and .rodata and carve it from the file
         			p = subprocess.Popen(['readelf', '-SW', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         			(stanout, stanerr) = p.communicate()
-				## TODO: check if we actually get sections. On some systems the
+				## check if we actually get sections. On some systems the
 				## binary is somewhat corrupted and does not have section headers
-				st = stanout.strip().split("\n")
-				for s in st[3:]:
-					for section in [".data", ".rodata"]:
-						if section in s:
-							elfsplits = s[8:].split()
-							if section == "." + elfsplits[0]:
-								elfoffset = int(elfsplits[3], 16)
-								elfsize = int(elfsplits[4], 16)
-								elftmp = tempfile.mkstemp(suffix=section)
-								os.write(elftmp[0], data[elfoffset:elfoffset+elfsize])
-								os.fdopen(elftmp[0]).close()
-								elfscanfiles.append(elftmp[1])
+				if "There are no sections in this file." in stanout:
+					p = subprocess.Popen(['strings', '-n', str(stringcutoff), scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+					(stanout, stanerr) = p.communicate()
+					if p.returncode != 0:
+						if blacklist != []:
+							## cleanup the tempfile
+							os.unlink(tmpfile[1])
+						return None
+					lines = stanout.split("\n")
+				else:
+					st = stanout.strip().split("\n")
+					for s in st[3:]:
+						for section in [".data", ".rodata"]:
+							if section in s:
+								elfsplits = s[8:].split()
+								if section == "." + elfsplits[0]:
+									elfoffset = int(elfsplits[3], 16)
+									elfsize = int(elfsplits[4], 16)
+									elftmp = tempfile.mkstemp(suffix=section)
+									os.write(elftmp[0], data[elfoffset:elfoffset+elfsize])
+									os.fdopen(elftmp[0]).close()
+									elfscanfiles.append(elftmp[1])
 
-				for i in elfscanfiles:
-					## run strings to get rid of weird characters that we don't even want to scan
-					## TODO: check if we need -Tbinary or not
-        				p = subprocess.Popen(['strings', '-n', str(stringcutoff), i], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-        				(stanout, stanerr) = p.communicate()
+					for i in elfscanfiles:
+						## run strings to get rid of weird characters that we don't even want to scan
+						## TODO: check if we need -Tbinary or not
+        					p = subprocess.Popen(['strings', '-n', str(stringcutoff), i], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+        					(stanout, stanerr) = p.communicate()
 
-        				st = stanout.split("\n")
+        					st = stanout.split("\n")
 
-        				for s in st:
-                        			printstring = s
-                				if len(printstring) >= stringcutoff:
-                        				lines.append(printstring)
-					os.unlink(i)
-
-
+        					for s in st:
+                        				printstring = s
+                					if len(printstring) >= stringcutoff:
+                        					lines.append(printstring)
+						os.unlink(i)
 			else:
 				## extract all strings from the binary. Only look at strings
 				## that are a certain amount of characters or longer. This is

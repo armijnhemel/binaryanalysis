@@ -1,3 +1,7 @@
+2012-05-24
+* fix ranking method for corrupted ELF files. It is not as accurate as the
+usual methods we use for ELF, but better than nothing...
+
 2012-05-23
 * fix in GUI for fifo files
 
