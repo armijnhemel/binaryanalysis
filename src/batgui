@@ -678,12 +678,13 @@ class BatFrame(wx.Frame):
 				## example: "symbolic link to `../../bin/busybox'"
 				linkname = self.unpackreports[j]['magic'][:-1].rsplit("symbolic link to `", 1)[-1]
 				linktext = u"%s \u2192 %s" % (linktext, linkname)
-			elif self.unpackreports[j]['size'] == 0:
-				## if files are empty we mark them as empty
-				if "empty" in self.filters:
-					ignore = True
-				else:
-					linktext = u"%s  \u2205" % linktext
+			elif self.unpackreports[j].has_key('size'):
+				if self.unpackreports[j]['size'] == 0:
+					## if files are empty we mark them as empty
+					if "empty" in self.filters:
+						ignore = True
+					else:
+						linktext = u"%s  \u2205" % linktext
 			if ignore:
 				continue
 			if parent == "":
