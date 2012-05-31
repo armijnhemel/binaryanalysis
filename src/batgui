@@ -132,6 +132,8 @@ class BATHtmlWindow(wx.html.HtmlWindow):
 		self.htmldir = htmldir
 	def OnLinkClicked(self, link):
 		if self.htmldir == None:
+			self.target.SetPage("<html><body><h1>Configuration not complete</h1><p>htmldir not defined. Please supply a configuration file via the menu, or restart with a configuration file.</p></body></html>")
+			self.target.Refresh(True)
 			return
 		href = link.GetHref()
 		if href.startswith('unique:/'):

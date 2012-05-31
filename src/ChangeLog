@@ -1,3 +1,6 @@
+2012-05-31
+* add warning if htmldir is not set
+
 2012-05-24
 * fix ranking method for corrupted ELF files. It is not as accurate as the
 usual methods we use for ELF, but better than nothing...
