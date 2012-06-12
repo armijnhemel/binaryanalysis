@@ -585,13 +585,14 @@ def dumpData(unpackreports, leafreports, scans, tempdir):
 	cPickle.dump((unpackreports, leafreports, scans), picklefile)
 	picklefile.close()
 
-def writeDumpfile(unpackreports, leafreports, scans, outputfile, tempdir):
+def writeDumpfile(unpackreports, leafreports, scans, outputfile, tempdir, lite=False):
 	dumpData(unpackreports, leafreports, scans, tempdir)
 	## now add everything to a TAR archive
 	dumpfile = tarfile.TarFile(outputfile, 'w')
 	os.chdir(tempdir)
 	dumpfile.add('scandata.pickle')
-	dumpfile.add('data')
+	if not lite:
+		dumpfile.add('data')
 	try:
 		os.stat('filereports')
 		dumpfile.add('filereports')
