@@ -2,9 +2,10 @@
 
 \usepackage{url}
 \usepackage{tikz}
-\author{Armijn Hemel}
+%\author{Armijn Hemel}
 \title{Using the Binary Analysis Tool - part 2}
-\date{January 17, 2011}
+%\date{January 17, 2011}
+\date{}
 
 \begin{document}
 
@@ -40,7 +41,7 @@ It is important to keep in mind that this is only for finding evidence. Whether 
 }
 
 \frame{
-\frametitle{Type of a file}
+\frametitle{Determining file types}
 There are various types of files we are interested in for license issues:
 
 \begin{itemize}
@@ -50,13 +51,15 @@ There are various types of files we are interested in for license issues:
 \item Linux kernel images
 \end{itemize}
 
-Most files can be 
+You can make a good first guess with the \texttt{file} command, which uses the magic database using \texttt{libmagic}.
+
+\texttt{libmagic} uses the so called magic database which is a description of all kinds of files. It is usually found in \texttt{/usr/share/magic} on Linux systems.
 }
 
 \frame{
 \frametitle{Excercise: determine the type of files}
 
-Use the \texttt{file} command to recognize various files.
+Use the \texttt{file} command to recognize various files on your system.
 }
 
 \frame{
@@ -64,15 +67,21 @@ Use the \texttt{file} command to recognize various files.
 There are some drawbacks of using commands like \texttt{file} or tools that use \texttt{libmagic}:
 
 \begin{itemize}
-\item the descriptions in the magic database (often found in \texttt{/usr/share/magic}) can change over time
-\item not the entire file is considered, but just a number of bytes (up to a few hundred)
+\item the descriptions in the magic database can and will change over time and sometimes contains errors.
+\item the magic database is not complete.
+\item some file types don't have a fixed magic type.
+\item not the entire file is considered, but just a number of bytes (up to a few hundred), so false positives can happen.
 \end{itemize}
 
-Using BAT to unpack files first will get rid of this problem.
+In BAT data from \texttt{libmagic} is mostly used for reporting, but not for searching and unpacking, just a few occassional verification steps.
 }
 
 \frame{
-\frametitle{Dynamically linked libraries}
+\frametitle{File type verification in BAT}
+}
+
+\frame{
+\frametitle{Inspecting dynamically linked libraries}
 
 In case the file is an ELF executable (executable program) or shared object (library for dynamic linking) ...
 }
