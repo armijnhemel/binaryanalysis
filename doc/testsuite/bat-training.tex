@@ -2,9 +2,10 @@
 
 \usepackage{url}
 \usepackage{tikz}
-\author{Armijn Hemel}
+%\author{Armijn Hemel}
 \title{Using the Binary Analysis Tool - part 1}
-\date{January 17, 2012}
+%\date{January 17, 2012}
+\date{}
 
 \begin{document}
 
@@ -33,6 +34,7 @@ For this course you will need:
 \begin{itemize}
 \item a computer running a recent installation of Fedora (version 14 or higher), Debian 7, or Ubuntu (version 12.04 or later)
 \item a copy of the Binary Analysis Tool user and developer guide
+\item firmwares to test with
 \end{itemize}
 }
 
@@ -44,7 +46,7 @@ The Binary Analysis Tool (BAT) is a generic framework for automated analysis of 
 \begin{itemize}
 \item license compliance engineering
 \item security research
-\item \dots
+\item etcetera
 \end{itemize}
 
 Focus is on license compliance engineering.
@@ -59,15 +61,17 @@ Focus is on license compliance engineering.
 \item common language for binary analysis
 \item no more excuses for companies (``we didn't know and it is hard to detect'')
 \end{itemize}
+
+In short: making compliance engineering easier and more transparant for \textit{everyone}.
 }
 
 \frame{
 \frametitle{Binary Analysis Tool - facts}
 \begin{itemize}
-\item Apache 2 licensed
+\item Apache 2 licensed, some plugins GPLv2, GPLv2+ or public domain
 \item written in Python
 \item lightweight
-\item uses standard Linux tools, or standard tools with some slight tweaks
+\item wraps around standard Linux tools, or standard tools with some slight tweaks
 \item has spawned academic research
 \item only analyses, but draws no legal conclusions
 \end{itemize}
@@ -80,11 +84,12 @@ BAT is currently maintained and enhanced by Tjaldur Software Governance Solution
 
 \begin{itemize}
 \item extract programs from blobs (firmwares, installers, etc.)
-\item extract human readable strings from programs and compare this to (publicly available) source code
+\item extract human readable strings from binaries and compare this to (publicly available) source code
+\item (if possible) extract function names from binaries and compare this to (publicly available) source code
 \item use other information like file names, other files, etc. for circumstantial evidence
 \end{itemize}
 
-If you can relate many strings from a binary file to source code it becomes statistically hard to deny (re)use of software.
+If you can relate enough (unique) strings and/or function names from a binary file to source code it becomes statistically hard to deny (re)use of software.
 }
 
 \begin{frame}[fragile]
@@ -138,22 +143,23 @@ Steps needed for binary analysis are:
 
 \frame{
 \frametitle{Obtaining binary files}
-Firmwares are not enough for a proper analysis of a \textit{device}:
+Firmwares are not enough for a \textit{complete} analysis of a device:
 
 \begin{itemize}
-\item not all software that is on the device is in the firmware (bootloader, recovery, etc.)
+\item not all software that is on the device is in the firmware (bootloader, recovery partition, etc.)
 \item firmware might be encrypted
-\item no firmware available
+\item no firmware might be available for download
 \end{itemize}
 
-Via other methods (serial port, security holes) you need to gain access to the device to get
+Via other methods (serial port, JTAG, security holes) you might need to gain access to the device to get
 access to the full contents of the flash chip.
 
-Obtaining firmwares via these methods is out of scope for this course.
+Obtaining firmwares via these methods is out of scope for this course, we use complete firmwares.
 }
 
 \frame{
 \frametitle{Firmwares used in this course}
+We use several firmwares in this course, which were specifically prepared:
 
 \begin{itemize}
 \item based on OpenWrt 10.03 (``Backfire'')
@@ -163,7 +169,7 @@ Obtaining firmwares via these methods is out of scope for this course.
 
 \frame{
 \frametitle{Manual compliance engineering}
-To understand what BAT does under the hood it is good to do it yourself manually a few times. We will look at:
+To understand what BAT does under the hood it is useful to take a step back and look at manual analysis:
 
 \begin{itemize}
 \item manual discovery of offsets
@@ -181,7 +187,7 @@ Two clear indicators where compressed files or file systems can start:
 \item padding
 \end{itemize}
 
-Displaying files in a readable format is essential for manual analysis.
+Displaying files in a readable format, for example with \texttt{hexdump}, is very helpful for manual analysis.
 }
 
 \begin{frame}[fragile]
@@ -210,27 +216,28 @@ The switch \texttt{-C} displays three columns:
 
 \frame{
 \frametitle{Known identifiers}
-Many compressed files and file systems start, or end, with identifiers.
+Many compressed files and file systems start, or end, with identifiers, for example:
 
 \begin{itemize}
-\item \texttt{PK} for ZIP files
-\item \texttt{ELF} for ELF files
-\item \texttt{0x1f 0x8b 0x08} for gzip compression
-\item \dots
+\item the string \texttt{PK} for ZIP files
+\item the string \texttt{ELF} for ELF files
+\item the hexadecimal sequence \texttt{0x1f 0x8b 0x08} for gzip compression
 \end{itemize}
 
-Many identifiers are well documented, for example in \texttt{/usr/share/magic} or file specification.
+Many identifiers are well documented, for example in \texttt{/usr/share/magic} or file specifications. In practice only a few file systems and compressed files are in widespread use.
+
+Some identifiers are very generic and false positives are likely to occur so you always need some verification step.
 }
 
 \begin{frame}[fragile]
 \frametitle{Padding in firmwares}
-Firmwares are typically written to flash chips. The bootloader on devices is often configured with offsets that indicate:
+Firmwares are typically written to flash memory. The bootloader on devices is often configured with offsets for:
 
 \begin{itemize}
 \item start of file systems
 \item start of bootloader
 \item location of (compressed) kernel
-\item \dots
+\item etcetera
 \end{itemize}
 
 There is often not enough data to completely fill the allocated space, so \textit{padding} is used, usually NUL characters.
@@ -239,6 +246,8 @@ There is often not enough data to completely fill the allocated space, so \texti
 0007b130  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
 \end{verbatim}
 }}
+
+You can look for padding in a firmware file and search around it for identifiers.
 \end{frame}
 
 \begin{frame}[fragile]
@@ -253,9 +262,9 @@ There is often not enough data to completely fill the allocated space, so \texti
 \end{verbatim}
 }}
 
-If there are large amounts of NUL characters it often indicates a partition boundary.
+Large amounts of NUL characters often indicate a partition boundary.
 
-For example, here the padding directly precedes a SquashFS file system.
+For example, in the example above the padding is followed by a SquashFS file system.
 \end{frame}
 
 \frame{
@@ -264,14 +273,14 @@ For example, here the padding directly precedes a SquashFS file system.
 Copy the first firmware (\texttt{openwrt-brcm-2.4-squashfs.trx}) to a temporary directory and do the following:
 
 \begin{enumerate}
-\item use \texttt{hexdump -C} to display the contents of the file
-\item report likely offsets for gzip compressed file and SquashFS file system
+\item use \texttt{hexdump -C} to display the contents of the file. You might want to use a pager like \texttt{less}, or redirect output to a file for later inspection.
+\item report likely offsets for gzip compressed file and SquashFS file system you found.
 \end{enumerate}
 }
 
 \frame{
 \frametitle{Extracting files}
-After finding the right offsets you need to carve out the right parts of the file:
+After finding the right offsets you need to carve out the file system or compressed file from the firmware. There are a few ways to do this and depends on personal preference:
 
 \begin{itemize}
 \item editor that can process binary files (vim, emacs, etcetera)
@@ -281,16 +290,8 @@ After finding the right offsets you need to carve out the right parts of the fil
 Example with \texttt{dd}:
 
 \texttt{dd if=/path/to/firmware of=/path/to/outfile bs=\$offset skip=1}
-}
 
-\frame{
-\frametitle{Verifying and unpacking files}
-
-\begin{itemize}
-\item remove all bytes preceding an identifier
-\item run an unpacker tool
-\item verify contents were successfully unpacked
-\end{itemize}
+Please note that \texttt{\$offset} has to be in decimal, not in hexadecimal, so you might need to convert it first.
 }
 
 \begin{frame}[fragile]
@@ -328,13 +329,12 @@ Extract the following:
 }
 
 \frame{
-\frametitle{Automated extraction using BAT}
-Manually extracting files is a lot of work and it is easy to miss files. BAT automates extraction:
+\frametitle{Automated extraction using the Binary Analysis Tool}
+Manually extracting files is a lot of work and it is easy to miss files. The Binary Analysis Tool automates extraction:
 
 \begin{itemize}
 \item search for identifiers
-\item extraction
-\item verification
+\item extraction and verification
 \end{itemize}
 
 BAT works recursively and can unpack nested files and file systems.
@@ -342,21 +342,28 @@ BAT works recursively and can unpack nested files and file systems.
 
 \frame{
 \frametitle{Running BAT}
-First make sure BAT (version 6 or higher), plus all necessary dependencies are installed. Then run:
+First make sure BAT (version 8 or higher), plus all necessary dependencies are installed. Then run:
 
-\texttt{bruteforce.py -c /path/to/configuration -b /path/to/firmware > /path/to/output}
+\texttt{bruteforce.py -c /path/to/configuration -b /path/to/firmware -o /path/to/resultfile > /path/to/redirect/stdout}
+
+The mandatory parameters are as follows:
+
+\begin{itemize}
+\item \texttt{-c} is the path to a configuration file for BAT
+\item \texttt{-b} is the path to the binary file that needs to be scanned
+\item \texttt{-o} is the path to an output file (TAR file which will contain unpacked file tree, plus results)
+\end{itemize}
+
+By default a XML result file is written to standard output. This can be redirected to a file for later inspection.
 }
 
 \frame{
-\frametitle{Reading and interpreting results}
+\frametitle{Using the BAT viewer to interpret results}
+To review results the BAT viewer can be used. The BAT viewer (called \texttt{batgui}) reads output the TAR output files generated by \texttt{bruteforce.py}.
 
-The output from BAT is in XML format. To display it use a command like this:
+\texttt{batgui} is written in wxPython.
 
-\texttt{xml\_pp /path/to/bat/output | less}
-
-or use a web browser such as Firefox to navigate the XML file.
-
-In the near future a GUI for easier navigation of the results will be made.
+A word of warning: result files can become rather large and unpacking files can be slow.
 }
 
 \frame{
