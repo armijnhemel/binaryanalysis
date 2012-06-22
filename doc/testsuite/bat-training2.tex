@@ -52,14 +52,14 @@ There are various types of files we are interested in for license issues:
 \item Linux kernel images
 \end{itemize}
 
-Other files, such as audio, video or graphics, can be interesting too for trademarks, or licensing (Creative Commons).
+Other files, such as audio, video or graphics files, can be interesting too for trademarks, or licensing (Creative Commons), but are outside of the scope of this course.
 }
 
 \frame{
 \frametitle{Determining file types}
 You can make a good first guess with the \texttt{file} command, which uses the magic database using \texttt{libmagic}.
 
-\texttt{libmagic} uses the so called magic database which is a description of all kinds of files. It is usually found in \texttt{/usr/share/magic} on Linux systems.
+\texttt{libmagic} uses the so called magic database which contains a description for many sorts of files. It is usually found in \texttt{/usr/share/magic} on Linux systems.
 }
 
 \frame{
@@ -70,7 +70,7 @@ Use the \texttt{file} command to recognize various files on your system.
 
 \frame{
 \frametitle{Drawbacks of using \texttt{file} and \texttt{libmagic}}
-There are some drawbacks of using commands like \texttt{file} or tools that use \texttt{libmagic}:
+There are some drawbacks to using commands like \texttt{file} or tools that use \texttt{libmagic}:
 
 \begin{itemize}
 \item the descriptions in the magic database can and will change over time and sometimes contains errors.
@@ -79,22 +79,55 @@ There are some drawbacks of using commands like \texttt{file} or tools that use 
 \item not the entire file is considered, but just a number of bytes (up to a few hundred), so false positives can happen.
 \end{itemize}
 
-In BAT data from \texttt{libmagic} is mostly used for reporting, but not for searching and unpacking, just a few occassional verification steps.
+In BAT data from \texttt{libmagic} is used for reporting, but not for searching and unpacking, only for a few occassional verification steps.
 }
 
 \frame{
 \frametitle{File type verification in BAT}
+In BAT a \textit{conservative} approach is used:
+
+\begin{itemize}
+\item use standard tools to verify, even though sometimes it costs more time, for example \texttt{gifinfo} for GIF files. These tools often take the whole file into account.
+\item err on the safe side: if not entirely sure (or sure enough) then don't assume a file is of a certain type
+\end{itemize}
 }
 
 \frame{
-\frametitle{Inspecting dynamically linked libraries}
-
-In case the file is an ELF executable (executable program) or shared object (library for dynamic linking) ...
+\frametitle{Inspecting dynamically linked ELF files}
+In case the file is an ELF executable (executable program) or shared object (library for dynamic linking) it is important to find the runtime dependencies.
 }
 
 \frame{
-\frametitle{Excercise: find the dynamically linked libraries of a file}
+\frametitle{Dynamic linking 101}
+ELF executables can be linked in two ways:
+
+\begin{itemize}
+\item static linking: all dependencies (C library, other libraries) are included into the final executable.
+\item dynamic linking: dependencies are resolved at the moment the program is run.
+\end{itemize}
+
+For license requirements it is very significant to see what a program links to (either dynamically or statically). If a program is dynamically linked you need to inspect the file to find the dependencies.
 }
+
+\begin{frame}[fragile]
+\frametitle{Using \texttt{readelf} to display shared libraries}
+The best tool to display shared libraries is to use the \texttt{readelf}, which is part of GNU binutils.
+
+The command:
+
+\texttt{readelf -d | grep NEEDED}
+
+will display the shared libraries that are used, for example (output formatted using \texttt{cut}):
+
+\begin{verbatim}
+$ readelf -d /bin/ls | grep NEEDED | cut -f 4- -d " "
+            Shared library: [libselinux.so.1]
+            Shared library: [librt.so.1]
+            Shared library: [libcap.so.2]
+            Shared library: [libacl.so.1]
+            Shared library: [libc.so.6]
+\end{verbatim}
+\end{frame}
 
 \frame{
 \frametitle{Why not use \texttt{ldd}?}
@@ -103,7 +136,17 @@ One reason to not use \texttt{ldd} is that \texttt{ldd} uses the dynamic linker 
 
 It might seem that an executable or library is linked with a certain library, while in fact it is not and just a dependency on the \textit{local} system.
 
-Another reason is that it will not work for executables that were compiled for a different CPU architecture.
+Also, it will not work for executables compiled for different architectures.
+}
+
+\frame{
+\frametitle{Excercise: find the dynamically linked libraries of a file}
+\begin{enumerate}
+\item Look at several dynamically linked executables on your system with \texttt{readelf}. Also look at them with \texttt{ldd} and try to spot differences.
+\item repeat, but with files from the test firmware(s)
+\end{enumerate}
+
+
 }
 
 \frame{
