@@ -19,14 +19,17 @@
 In this course you will learn:
 
 \begin{itemize}
-\item examining individual files for clues of which software is being used
-\item automated scanning of individual files with the Binary Analysis Tool
+\item to determine file type
+\item to find dependencies of dynamically linked files
+\item to extract human readable strings from files
+\item to extract function names from dynamically linked ELF files
+\item how these methods are implemented in the Binary Analysis Tool
 \end{itemize}
 }
 
 \frame{
 \frametitle{Before we start}
-It is important to keep in mind that this is only for finding evidence. Whether or not someone violates a license is a legal question, not a technical one.
+It is important to keep in mind that this is only for finding evidence. Whether or not someone violates a license is a legal question, not a technical one, so don't jump to conclusions.
 }
 
 \frame{
@@ -44,7 +47,7 @@ It is important to keep in mind that this is only for finding evidence. Whether 
 
 \frame{
 \frametitle{Interesting files for compliance analysis}
-There are various types of files we are interested in for license issues:
+There are various types of files we are interested in for license compliance:
 
 \begin{itemize}
 \item executables (ELF, bFLT, Java, Windows executables)
@@ -78,13 +81,13 @@ There are some drawbacks to using commands like \texttt{file} or tools that use 
 \item some file types don't have a fixed magic type.
 \item not the entire file is considered, but just a number of bytes (up to a few hundred), so false positives can happen.
 \end{itemize}
-
-In BAT data from \texttt{libmagic} is used for reporting, but not for searching and unpacking, only for a few occassional verification steps.
 }
 
 \frame{
 \frametitle{File type verification in BAT}
-In BAT a \textit{conservative} approach is used:
+In BAT data from \texttt{libmagic} is used for reporting, but not for searching and unpacking, only for a few occassional verification steps.
+
+Instead, a \textit{conservative} approach is used:
 
 \begin{itemize}
 \item use standard tools to verify, even though sometimes it costs more time, for example \texttt{gifinfo} for GIF files. These tools often take the whole file into account.
@@ -148,26 +151,100 @@ Also, it will not work for executables compiled for different architectures.
 }
 
 \frame{
-\frametitle{Extracting human readable strings}
+\frametitle{Extracting human readable strings from a file}
 With the \texttt{strings} program it is possible to extract sequences of human readable text (in the ASCII range)
 from a file (by default sequences of length 4 or greater):
 
+\texttt{strings /path/to/file}
+
+These sequences are (possibly) string constants that are not stripped by the compiler:
+
+\begin{itemize}
+\item output messages
+\item error messages
+\item debug messages
+\item etcetera
+\end{itemize}
 }
 
 \frame{
-\frametitle{Excercise: }
+\frametitle{Excercise: extracting strings from a file using \texttt{strings}}
+
+Examine a few executables on your system by running \texttt{strings} on it:
+
+\texttt{strings /path/to/file}
+
+It is useful to play with the size parameter and see how output differs: smaller sequences will give more output, but also have more noise. Example (to extract sequences of size 6):
+
+\texttt{strings -n 6 /path/to/file}
 }
 
 \frame{
 \frametitle{Matching strings from binaries with source code}
+
+After extracting strings you need to find out where they come from. Good sources are:
+
+\begin{itemize}
+\item search engines
+\item database containing strings from source code
+\end{itemize}
+
+BAT has mechanisms available to use databases and there are companies that offer pregenerated databases.
 }
 
 \frame{
-\frametitle{Excercise: }
+\frametitle{Non-unique matches}
+
+There are several reasons why strings might appear in multiple programs:
+
+\begin{itemize}
+\item copying of code between programs (``cloning''), \texttt{zlib} and \texttt{libjpeg} are great examples of this
+\item protocols and standards (POSIX, RFCs, W3C, C, etcetera)
+\item coding styles (GNU, others)
+\end{itemize}
+
+You always have to make sure you have more than one string, or a unique string, before you draw conclusions.
+}
+
+
+\frame{
+\frametitle{String extraction in the Binary Analysis Tool}
+In the Binary Analysis Tool only strings with length of 5 or longer are considered. There are two ways to compare strings:
+
+\begin{enumerate}
+\item checks with a few hardcoded strings (that are most likely unique for some packages)
+\item advanced check using database backend (needs database)
+\end{enumerate}
+
+The first method is very quick, the second method is much more accurate, but requires a lot of data. Generating a database is out of scope for this course, but scripts to generate databases are freely available.
 }
 
 \frame{
-\frametitle{Extracting function names from dynamically linked ELF files}
+\frametitle{Extracting function names from a dynamically linked ELF file}
+}
+
+\frame{
+\frametitle{Excercise: extract function names from a dynamically linked ELF file}
+Extract function names from several dynamically linked ELF files on your system using the following command:
+
+\texttt{readelf --dyn-syms /path/to/file | grep FUNC | grep -v UND | tr -s " " | cut -f 9 -d " "}
+}
+
+\frame{
+\frametitle{Matching function names from binaries with source code}
+
+After extracting function names you need to find out where they come from, just like with strings. Good sources are:
+
+\begin{itemize}
+\item search engines
+\item database containing function names extracted from source code
+\end{itemize}
+
+BAT has mechanisms available to use databases and there are companies that offer pregenerated databases.
+}
+
+\frame{
+\frametitle{Function name extraction in the Binary Analysis Tool}
 }
 
 \end{document}
