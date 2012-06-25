@@ -433,6 +433,7 @@ noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video
 description = Unpack tar archives
 enabled     = yes
 
+###### DO NOT USE UNLESS YOU HAVE the "unubi" tool!
 [ubifs]
 type        = unpack
 module      = bat.fwunpack
