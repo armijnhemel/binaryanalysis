@@ -18,7 +18,12 @@ import wx, wx.html, wx.lib, wx.lib.statbmp, wx.aui, wx.lib.agw.flatnotebook
 import sqlite3, cgi
 
 if sys.platform.startswith('linux'):
-	import bat.bruteforce
+	try:
+		import bat.bruteforce
+		scanning = True
+	except ImportError:
+		scanning = False
+		
 
 helphtml = '''<html>
 <head><title>Binary Analysis Tool result viewer</title></head>
@@ -169,7 +174,10 @@ class BatFrame(wx.Frame):
 		self.advanced = False
 		self.advancedunpacked = False
 		if sys.platform.startswith('linux'):
-			self.batconfig = ["Advanced mode", "Scanning mode"]
+			if scanning:
+				self.batconfig = ["Advanced mode", "Scanning mode"]
+			else:
+				self.batconfig = ["Advanced mode"]
 		else:
 			self.batconfig = ["Advanced mode"]
 		self.batconfigstate = []
@@ -197,9 +205,10 @@ class BatFrame(wx.Frame):
 		## Since scans are just on Linux there is no need to enable this option for anything else
 		## right now.
 		if sys.platform.startswith('linux'):
-			self.menuSaveAs = filemenu.Append(wx.ID_SAVEAS,"Save &As..."," Save results from a scan")
-			if self.tarfile == None:
-				self.menuSaveAs.Enable(False)
+			if scanning:
+				self.menuSaveAs = filemenu.Append(wx.ID_SAVEAS,"Save &As..."," Save results from a scan")
+				if self.tarfile == None:
+					self.menuSaveAs.Enable(False)
 
 		filemenu.AppendSeparator()
 		menuExit = filemenu.Append(wx.ID_EXIT,"E&xit"," Terminate the program")
@@ -214,11 +223,12 @@ class BatFrame(wx.Frame):
 		if sys.platform.startswith('linux'):
 			self.batscanfile = ""
 			menuScanOpenConfiguration = configmenu.Append(wx.ID_ANY,"Open &Configuration File"," Open a BAT configuration file")
-			menuConfigScans = configmenu.Append(wx.ID_ANY, "Configure &Scans"," Configure scans")
 
-			scanmenu = wx.Menu()
-			menuScanOpen = scanmenu.Append(wx.ID_ANY,"&Open file"," Open a file to scan")
-			menuBar.Append(scanmenu,"&Scan")
+			if scanning:
+				menuConfigScans = configmenu.Append(wx.ID_ANY, "Configure &Scans"," Configure scans")
+				scanmenu = wx.Menu()
+				menuScanOpen = scanmenu.Append(wx.ID_ANY,"&Open file"," Open a file to scan")
+				menuBar.Append(scanmenu,"&Scan")
 
 		helpmenu = wx.Menu()
 		#menuHelp = helpmenu.Append(wx.ID_HELP_CONTENTS, "&Contents"," Help")
@@ -232,7 +242,7 @@ class BatFrame(wx.Frame):
 		#self.Bind(wx.EVT_MENU, self.onHelp, menuHelp)
 		self.Bind(wx.EVT_MENU, self.onConfig, menuConfigGeneral)
 		self.Bind(wx.EVT_MENU, self.onFilterConfig, menuConfigFilter)
-		if sys.platform.startswith('linux'):
+		if sys.platform.startswith('linux') and scanning:
 			self.Bind(wx.EVT_MENU, self.onSave, self.menuSaveAs)
 			self.Bind(wx.EVT_MENU, self.onScanConfig, menuConfigScans)
 			self.Bind(wx.EVT_MENU, self.onLaunchScan, menuScanOpen)
@@ -908,7 +918,7 @@ class BatFrame(wx.Frame):
 			picklefile.close()
 			self.selectedfile = None
 			self.initTree(self.tree, self.datadir)
-			if sys.platform.startswith('linux'):
+			if sys.platform.startswith('linux') and scanning:
 				self.menuSaveAs.Enable(False)
 
 
