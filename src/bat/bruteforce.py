@@ -465,7 +465,21 @@ def readconfig(config):
 	prerunscans = sorted(prerunscans, key=lambda x: x['priority'], reverse=True)
 	return {'batconfig': batconf, 'unpackscans': unpackscans, 'programscans': programscans, 'prerunscans': prerunscans, 'postrunscans': postrunscans}
 
-## combine all results that we have into a format that the pretty printer can handle
+## Combine all results that we have into a format that the pretty printer can handle
+## The result is a Python dictionary. In its simplest form it looks like this:
+## Example:
+##  {
+##    'realpath': '/tmp/tmp12345678/foo/bar/baz',
+##    'magic': 'data',
+##    'name': 'baz',
+##    'path': '/foo/bar/baz',
+##    'sha256': 'abcdefghijkl17876546',
+##    'size': 1,
+##  }
+##
+## In case any of the "leaf scans" were successful there will be an additional
+## element called 'scans'. This is a list of dictionaries with a dictionary per
+## leafscan.
 def flatten(toplevel, unpackreports, leafreports):
 	res = {}
 	for i in ['realpath', 'magic', 'name', 'path', 'sha256', 'size']:
