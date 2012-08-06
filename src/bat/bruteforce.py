@@ -469,17 +469,17 @@ def readconfig(config):
 ## The result is a Python dictionary. In its simplest form it looks like this:
 ## Example:
 ##  {
-##    'realpath': '/tmp/tmp12345678/foo/bar/baz',
+##    'realpath': '/tmp/tmp12345678/foo/bar',
 ##    'magic': 'data',
 ##    'name': 'baz',
-##    'path': '/foo/bar/baz',
+##    'path': '/foo/bar',
 ##    'sha256': 'abcdefghijkl17876546',
 ##    'size': 1,
 ##  }
 ##
 ## In case any of the "leaf scans" were successful there will be an additional
 ## element called 'scans'. This is a list of dictionaries with a dictionary per
-## leafscan.
+## leafscan:
 ##
 ## Example:
 ## [
@@ -489,6 +489,27 @@ def readconfig(config):
 ##   'libacl.so.1', 'libgpm.so.2', 'libdl.so.2', 'libperl.so',
 ##   'libpthread.so.0', 'libc.so.6', 'libpython2.7.so.1.0', 'libruby.so.1.8']}
 ## ]
+## 
+## Results of unpacking are also put in 'scans'. The name of the dictionary is the
+## name of the unpacker. It can be recognized because it has an element 'offset'.
+## Example:
+##
+##  'scans': [
+##           {'zip': 
+##                 [
+##                  {'offset': 0}, 
+##                  {'realpath': '/tmp/tmpvZfamq/data/foo/bar/baz-zip-1',
+##                   'magic': 'PEM certificate',
+##                   'name': 'baz.crt',
+##                   'path': '',
+##                   'sha256': 'd206aa4b1333580e5075a6b22ce803491cc36bd40ab77dfdf4a1d98dd9caf032',
+##                   'scans': [{'tags': ['text']}],
+##                   'size': 1822
+##                  }
+##                 ]
+##           ]
+##
+## The 'scans' element is used to recurse.
 def flatten(toplevel, unpackreports, leafreports):
 	res = {}
 	for i in ['realpath', 'magic', 'name', 'path', 'sha256', 'size']:
