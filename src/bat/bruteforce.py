@@ -480,6 +480,15 @@ def readconfig(config):
 ## In case any of the "leaf scans" were successful there will be an additional
 ## element called 'scans'. This is a list of dictionaries with a dictionary per
 ## leafscan.
+##
+## Example:
+## [
+##  {'tags': ['binary', 'elf']},
+##  {'architecture': 'Advanced Micro Devices X86-64'},
+##  {'libs': ['libm.so.6', 'libselinux.so.1', 'libtinfo.so.5',
+##   'libacl.so.1', 'libgpm.so.2', 'libdl.so.2', 'libperl.so',
+##   'libpthread.so.0', 'libc.so.6', 'libpython2.7.so.1.0', 'libruby.so.1.8']}
+## ]
 def flatten(toplevel, unpackreports, leafreports):
 	res = {}
 	for i in ['realpath', 'magic', 'name', 'path', 'sha256', 'size']:
