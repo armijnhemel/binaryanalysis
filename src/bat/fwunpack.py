@@ -1414,6 +1414,39 @@ def unpackSquashfsRealtekLZMA(filename, offset, tmpdir):
 		squashsize = 1
 		return (tmpdir, squashsize)
 
+'''
+def searchUnpackFAT(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if offsets['fat12'] == []:
+		return ([], blacklist, [])
+	## right now just allow file systems that are only FAT12
+	if not 54 in offsets['fat12']:
+		return ([], blacklist, [])
+	diroffsets = []
+	counter = 1
+	for offset in offsets['fat12']:
+		## according to /usr/share/magic the magic header starts at 0x438
+		if offset < 54:
+			continue
+		## check if the offset we find is in a blacklist
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		tmpdir = dirsetup(tempdir, filename, "fat", counter)
+		## we should actually scan the data starting from offset - 0x438
+		res = unpackFAT(filename, offset - 54, tmpdir)
+		if res != None:
+			(fattmpdir, fatsize) = res
+			diroffsets.append((fattmpdir, offset - 54, fatsize))
+			blacklist.append((offset - 54, offset - 54 + fatsize))
+			counter = counter + 1
+		else:
+			os.rmdir(tmpdir)
+	return (diroffsets, blacklist, [])
+
+def unpackFAT(filename, offset, tempdir=None, unpackenv={}):
+	return None
+'''
+
 def searchUnpackMinix(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	if offsets['minix'] == []:
 		return ([], blacklist, [])

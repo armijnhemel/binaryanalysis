@@ -71,6 +71,8 @@ fsmagic = {
             'tar2':             'ustar\x20',
             'java_serialized':  '\xac\xed\x00',
             'ogg':  		'OggS',
+            'fat12':  		'FAT12',
+            'fat16':  		'FAT16',
           }
 
 ## some offsets can be found after a certain number of bytes, but
@@ -81,6 +83,8 @@ correction = {
                'iso9660': 32769,
                'tar1':    0x101,
                'tar2':    0x101,
+               'fat12':   54,
+               'fat16':   54,
              }
 
 ## collection of markers that should be scanned together
