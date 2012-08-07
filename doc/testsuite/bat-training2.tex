@@ -97,7 +97,7 @@ Instead, a \textit{conservative} approach is used:
 
 \frame{
 \frametitle{Inspecting dynamically linked ELF files}
-In case the file is an ELF executable (executable program) or shared object (library for dynamic linking) it is important to find the runtime dependencies.
+In case the file is an ELF executable (executable program) or shared object (library for dynamic linking) it is important to find the run time dependencies (also called \textit{shared libraries}) because linking creates a \textit{derivative work}.
 }
 
 \frame{
@@ -106,7 +106,7 @@ ELF executables can be linked in two ways:
 
 \begin{itemize}
 \item static linking: all dependencies (C library, other libraries) are included into the final executable.
-\item dynamic linking: dependencies are resolved at the moment the program is run.
+\item dynamic linking: dependencies are recorded at build time, but only resolved when the program is run (run time)
 \end{itemize}
 
 For license requirements it is very significant to see what a program links to (either dynamically or statically). If a program is dynamically linked you need to inspect the file to find the dependencies.
