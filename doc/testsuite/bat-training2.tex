@@ -19,9 +19,9 @@
 In this course you will learn:
 
 \begin{itemize}
-\item to determine file type
-\item to find dependencies of dynamically linked files
-\item to extract human readable strings from files
+\item to determine the type of a file
+\item to find dependencies of dynamically linked binary files (ELF format)
+\item to extract human readable strings from binary files
 \item to extract function names from dynamically linked ELF files
 \item how these methods are implemented in the Binary Analysis Tool
 \end{itemize}
@@ -35,6 +35,8 @@ It is important to keep in mind that this is only for finding evidence. Whether 
 \frame{
 \frametitle{Examining individual files}
 
+Possible types of analysis that could be performed on an individual file:
+
 \begin{itemize}
 \item file type
 \item dynamically linked libraries
@@ -47,7 +49,7 @@ It is important to keep in mind that this is only for finding evidence. Whether 
 
 \frame{
 \frametitle{Interesting files for compliance analysis}
-There are various types of files we are interested in for license compliance:
+There are various types of files that are interesting in for license compliance:
 
 \begin{itemize}
 \item executables (ELF, bFLT, Java, Windows executables)
@@ -60,9 +62,11 @@ Other files, such as audio, video or graphics files, can be interesting too for 
 
 \frame{
 \frametitle{Determining file types}
-You can make a good first guess with the \texttt{file} command, which uses the magic database using \texttt{libmagic}.
+You can make a good first guess with the \texttt{file} command, which uses \texttt{libmagic}.
 
-\texttt{libmagic} uses the so called magic database which contains a description for many sorts of files. It is usually found in \texttt{/usr/share/magic} on Linux systems.
+\texttt{libmagic} uses the so called ``magic database'' which contains descriptions for many sorts of files. It is usually found in \texttt{/usr/share/magic} on Linux systems.
+
+By looking at a significant number of bytes and it can make an educated guess which type a file has, since many files have unique identifiers or characteristics.
 }
 
 \frame{
@@ -79,29 +83,29 @@ There are some drawbacks to using commands like \texttt{file} or tools that use 
 \item the descriptions in the magic database can and will change over time and sometimes contains errors.
 \item the magic database is not complete.
 \item some file types don't have a fixed magic type.
-\item not the entire file is considered, but just a number of bytes (up to a few hundred), so false positives can happen.
+\item not the entire file is considered, but just a number of bytes (up to a few hundred), so false positives can happen, especially if extra data has been appended to the file (this happens frequently with firmware images).
 \end{itemize}
 }
 
 \frame{
 \frametitle{File type verification in BAT}
-In BAT data from \texttt{libmagic} is used for reporting, but not for searching and unpacking, only for a few occassional verification steps.
+In BAT data from \texttt{libmagic} is used for reporting, but not for searching and unpacking. It is used sometimes as a verification step.
 
-Instead, a \textit{conservative} approach is used:
+Instead, a more \textit{conservative} approach is used:
 
 \begin{itemize}
-\item use standard tools to verify, even though sometimes it costs more time, for example \texttt{gifinfo} for GIF files. These tools often take the whole file into account.
-\item err on the safe side: if not entirely sure (or sure enough) then don't assume a file is of a certain type
+\item BAT uses standard tools to verify, even though this sometimes costs more time. For example \texttt{gifinfo} is used to verify GIF files. Compared to \texttt{file} these tools often actually do take the whole file into account.
+\item BAT errs on the safe side: if not sure (or sure enough) that a file is of a certain type then it is treated as an unknown file type.
 \end{itemize}
 }
 
 \frame{
 \frametitle{Inspecting dynamically linked ELF files}
-In case the file is an ELF executable (executable program) or shared object (library for dynamic linking) it is important to find the run time dependencies (also called \textit{shared libraries}) because linking creates a \textit{derivative work}.
+In case the file is an ELF executable (executable program) or shared object (library for dynamic linking) it is important to find the run time dependencies (also called \textit{shared libraries}) because linking creates a \textit{derivative work} which is very significant for fullfilling licensing conditions.
 }
 
 \frame{
-\frametitle{Dynamic linking 101}
+\frametitle{ELF dynamic linking 101}
 ELF executables can be linked in two ways:
 
 \begin{itemize}
