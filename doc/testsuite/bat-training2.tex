@@ -29,7 +29,7 @@ In this course you will learn:
 
 \frame{
 \frametitle{Before we start}
-It is important to keep in mind that this is only for finding evidence. Whether or not someone violates a license is a legal question, not a technical one, so don't jump to conclusions.
+It is important to keep in mind that the methods outlined below are only for finding evidence. Whether or not someone violates a license is a legal question, not a technical one. It is easy to jump to incorrect conclusions. Interpretation of legal results should be done by legal professionals, not engineers.
 }
 
 \frame{
@@ -178,7 +178,7 @@ Examine a few executables on your system by running \texttt{strings} on it:
 
 \texttt{strings /path/to/file}
 
-It is useful to play with the size parameter and see how output differs: smaller sequences will give more output, but also have more noise. Example (to extract sequences of size 6):
+It is useful to play with the size parameter (\texttt{-n}) and see how output willdiffer: smaller sequences will give more output, but also have significantly more noise. Example to extract sequences of size 6:
 
 \texttt{strings -n 6 /path/to/file}
 }
