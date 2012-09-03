@@ -197,17 +197,24 @@ BAT has mechanisms available to use databases and there are companies that offer
 }
 
 \frame{
+\frametitle{Unique matches}
+If a string can only be found in one package (counting different versions, or rebranded packages, as one package) it is a \textit{unique match}.
+
+If there are many unique matches, it is a good sign that a certain piece of software was used in the binary.
+
+However: you should never base a conclusion on just one unique match.
+}
+
+\frame{
 \frametitle{Non-unique matches}
 
 There are several reasons why strings might appear in multiple programs:
 
 \begin{itemize}
-\item copying of code between programs (``cloning''), \texttt{zlib} and \texttt{libjpeg} are great examples of this
+\item massive reuse of (open source) code and copying of code between programs (``cloning''): good examples are \texttt{zlib} and \texttt{libjpeg}
 \item protocols and standards (POSIX, RFCs, W3C, C, etcetera)
 \item coding styles (GNU, others)
 \end{itemize}
-
-You always have to make sure you have more than one string, or a unique string, before you draw conclusions.
 }
 
 
