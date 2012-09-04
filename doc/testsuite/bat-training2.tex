@@ -169,6 +169,8 @@ These sequences are (possibly) string constants that are not stripped by the com
 \item debug messages
 \item etcetera
 \end{itemize}
+
+If extracted strings can be matched to source code they can provide a fingerprint of what source code was used.
 }
 
 \frame{
@@ -178,7 +180,7 @@ Examine a few executables on your system by running \texttt{strings} on it:
 
 \texttt{strings /path/to/file}
 
-It is useful to play with the size parameter (\texttt{-n}) and see how output willdiffer: smaller sequences will give more output, but also have significantly more noise. Example to extract sequences of size 6:
+It is useful to play with the size parameter (\texttt{-n}) and see how output will differ: smaller sequences will give more output, but also have significantly more noise. Example to extract sequences of size 6:
 
 \texttt{strings -n 6 /path/to/file}
 }
@@ -220,7 +222,9 @@ There are several reasons why strings might appear in multiple programs:
 
 \frame{
 \frametitle{String extraction in the Binary Analysis Tool}
-In the Binary Analysis Tool only strings with length of 5 or longer are considered. There are two ways to compare strings:
+In the Binary Analysis Tool only strings with length of 5 or longer are considered.
+
+Two ways to compare strings are implemented:
 
 \begin{enumerate}
 \item checks with a few hardcoded strings (that are most likely unique for some packages)
@@ -232,6 +236,11 @@ The first method is very quick, the second method is much more accurate, but req
 
 \frame{
 \frametitle{Extracting function names from a dynamically linked ELF file}
+Another way to fingerprint a binary is to extract \textit{function names} from the binary and compare them to function names extracted from source code.
+
+%Function names ...
+
+%Because function names need to be resolved during runtime (``dynamic linking'') they need to be declared ...
 }
 
 \frame{
@@ -256,6 +265,21 @@ BAT has mechanisms available to use databases and there are companies that offer
 
 \frame{
 \frametitle{Function name extraction in the Binary Analysis Tool}
+}
+
+\frame{
+\frametitle{Circumventing detection techniques}
+
+Above techniques are quite easy to beat. String comparisons can be beaten by changing strings. Function name comparisons can be beaten by changing function names.
+
+Trying to foil detection is not hard, but it is costly:
+
+\begin{itemize}
+\item extra costs replacing function names and strings (and maintaining compatibility)
+\item maintenance costs
+\end{itemize}
+
+plus these are not the only possible detection methods that could be used in the future.
 }
 
 \end{document}
