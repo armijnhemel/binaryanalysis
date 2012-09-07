@@ -78,6 +78,14 @@ priority    = 1
 description = Check if complete file is a valid gzip file
 enabled     = yes
 
+[verifymessagecatalog]
+type        = prerun
+module      = bat.prerun
+method      = verifyMessageCatalog
+priority    = 1
+description = Check if file is a valid GNU Message Catalog file
+enabled     = yes
+
 [verifymp4]
 type        = prerun
 module      = bat.prerun
