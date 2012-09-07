@@ -622,13 +622,14 @@ def extractGeneric(lines, path, language='C', envvars=None):
 							if not sha256_licenses.has_key(s):
 								c.execute("select distinct license from licenses where sha256=?", (s[0],))
 								licenses = c.fetchall()
-								sha256_licenses[s] = map(lambda x: x[0], licenses)
-								for v in licenses[0]:
-									## Ninka was not able to determine a license, so
-									## no need reporting it
-									if v == 'NONE':
-										continue
-									pv.append(v)
+								if not len(licenses) == 0:
+									sha256_licenses[s] = map(lambda x: x[0], licenses)
+									for v in licenses[0]:
+										## Ninka was not able to determine a license, so
+										## no need reporting it
+										if v == 'NONE':
+											continue
+										pv.append(v)
 						if packagelicenses.has_key(package):
 							packagelicenses[package] = list(set(packagelicenses[package] + pv))
 						else:
