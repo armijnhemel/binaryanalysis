@@ -49,8 +49,12 @@ def readfiles(source, fspath):
 	for i in stanout.strip().split("\n"):
 		if i.startswith(">"):
 			continue
-		modeflag = int(i.split()[1][0:-3])
-		filename = i.split()[7]
+		isplits = i.split()
+		modeflag = int(isplits[1][0:-3])
+		if len(isplits) < 8:
+			continue
+		else:
+			filename = isplits[7]
 		if modeflag == 40:
 			dirs.append(filename)
 		## also take sticky bit, suid, sgid, etc. into account
