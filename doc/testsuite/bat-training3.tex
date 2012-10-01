@@ -17,9 +17,59 @@
 In this course you will learn:
 
 \begin{itemize}
+\item scan order in the Binary Analysis Tool
 \item to configure the Binary Analysis Tool
 \item to browse results of a scan made with the Binary Analysis Tool
 \end{itemize}
 }
+
+\frame{
+\frametitle{Scan order in the Binary Analsysis Tool}
+}
+
+\frame{
+\frametitle{Identifier search}
+}
+
+\frame{
+\frametitle{Prerun scans}
+}
+
+\frame{
+\frametitle{Unpacking scans}
+}
+
+\frame{
+\frametitle{Configuring the Binary Analysis Tool}
+
+The Binary Analysis Tool is highly configurable and uses plugins. These plugins can be enabled and disabled via a configuration file.
+
+The configuration file is in Windows INI format and contains several parts:
+
+\begin{itemize}
+\item general configuration
+\item configuration directives for ``prerun'' scans
+\item configuration directives for ``unpack'' scans
+\item configuration directives for per file scans
+\end{itemize}
+
+The general configuration is mandatory, the other directives are optional.
+}
+
+\begin{frame}[fragile]
+\frametitle{General configuration directive}
+
+\begin{verbatim}
+[batconfig]
+multiprocessing = no
+module = bat.simpleprettyprint
+output = prettyprintresxml
+\end{verbatim}
+
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Prerun scans configuration directive}
+\end{frame}
 
 \end{document}
