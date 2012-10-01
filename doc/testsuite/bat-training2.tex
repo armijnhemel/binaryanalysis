@@ -260,12 +260,18 @@ BAT has mechanisms available to use databases and there are companies that offer
 
 \frame{
 \frametitle{Function name extraction in the Binary Analysis Tool}
+
+Function names are extracted from source code using \texttt{ctags} and stored in a database.
+
+During analysis of the binary the right ELF section is extracted using \texttt{readelf}, similar to shown before. Function names that come from C++ are \textit{demangled} first, using \texttt{c++filt} to restore function names.
+
+Then function names are matched with the database. Currently only unique function names are used in reporting.
 }
 
 \frame{
 \frametitle{Circumventing detection techniques}
 
-Above techniques are quite easy to beat. String comparisons can be beaten by changing strings. Function name comparisons can be beaten by changing function names.
+The techniques mentioned above are quite easy to beat. String comparisons can be beaten by changing strings. Function name comparisons can be beaten by changing function names.
 
 Trying to foil detection is not hard, but it is costly:
 
@@ -275,6 +281,24 @@ Trying to foil detection is not hard, but it is costly:
 \end{itemize}
 
 plus these are not the only possible detection methods that could be used in the future.
+
+From a compliance enforcement point of view the idea of these techniques is to make circumvention more expensive than complying with the licenses in the first place.
+}
+
+\frame{
+\frametitle{Conclusion}
+
+In this course you have learned about:
+
+\begin{itemize}
+\item determining the type of a file
+\item determining names of dynamically linked libraries
+\item extracting human readable strings from binary files
+\item extracting function names from dynamically linked ELF executables
+\item how the above are implemented in the Binary Analysis Tool
+\end{itemize}
+
+In the next course we will dig into how the Binary Analysis Tool can be configured and how results can be read.
 }
 
 \end{document}
