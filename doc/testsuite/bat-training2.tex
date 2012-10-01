@@ -233,9 +233,9 @@ The first method is very quick, the second method is much more accurate, but req
 \frametitle{Extracting function names from a dynamically linked ELF file}
 Another way to fingerprint a binary is to extract \textit{function names} from the binary and compare them to function names extracted from source code.
 
-%Function names ...
+Because function names need to be resolved during runtime (``dynamic linking'') they need to be declared so the dynamic linker knows which function names to find where. Therefore all function names are found in a table with function names.
 
-%Because function names need to be resolved during runtime (``dynamic linking'') they need to be declared ...
+Local function names (that have associated code in the binary) have an address associated with them, while remote functions are declared ``undefined''. It is very easy to extract local functions.
 }
 
 \frame{
