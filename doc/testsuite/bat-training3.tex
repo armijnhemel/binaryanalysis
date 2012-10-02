@@ -25,18 +25,48 @@ In this course you will learn:
 
 \frame{
 \frametitle{Scan order in the Binary Analsysis Tool}
+
+\begin{enumerate}
+\item the binary is read and file type specific identifiers (from a hardcoded list) are searched for in the binary
+\item prerun scans are run to tag files to filter out specific file types later
+\item unpacking scans are run to unpack any compressed files or file systems and scans 1 - 3 are run recursively
+\item file specific scans are run on all unpacked files
+\item post run scans are run for each individual file
+\end{enumerate}
 }
 
 \frame{
 \frametitle{Identifier search}
+The identifier search uses a hardcoded list of identifiers that indicate where a certain file starts or stops. Not all file types have identifiers, but most do.
+
+The locations of identifiers are passed to later scans, which can use this information to work in a more efficient way.
 }
 
 \frame{
 \frametitle{Prerun scans}
+Prerun scans are run to determine the type of file and to tag it. Tags can be used by later scans to ignore files: a scan to unpack a file system won't work on a graphics file or a text file.
+
+Some tags that are set by prerun scans as shipped by BAT are:
+
+\begin{itemize}
+\item text
+\item binary
+\item graphics
+\item audio
+\item elf
+\end{itemize}
 }
 
 \frame{
 \frametitle{Unpacking scans}
+}
+
+\frame{
+\frametitle{File specific scans}
+}
+
+\frame{
+\frametitle{Postrun scans}
 }
 
 \frame{
@@ -71,5 +101,22 @@ output = prettyprintresxml
 \begin{frame}[fragile]
 \frametitle{Prerun scans configuration directive}
 \end{frame}
+
+\frame{
+\frametitle{Examining the results of the Binary Analysis Tool}
+The output of the Binary Analysis Tool is written as a tar archive. The tar archive consists of:
+
+\begin{itemize}
+\item full directory tree of unpacked files (if any)
+\item Python pickles with the results of the scan
+\item (optional) pictures with results of the scan
+\end{itemize}
+
+The results can be viewed using the Binary Analysis Tool result viewer.
+}
+
+\frame{
+\frametitle{Using the Binary Analysis Tool result viewer}
+}
 
 \end{document}
