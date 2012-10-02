@@ -56,7 +56,6 @@ enabled     = no
 type        = prerun
 module      = bat.prerun
 method      = verifyELF
-magic       = bmp:jpeg:jpegtrailer:gif87:gif89:png:pngtrailer
 priority    = 2
 description = Check if file is a valid ELF library/executable/object
 enabled     = yes
