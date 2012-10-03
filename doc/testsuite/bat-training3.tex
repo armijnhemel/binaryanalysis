@@ -44,7 +44,7 @@ The locations of identifiers are passed to later scans, which can use this infor
 
 \frame{
 \frametitle{Prerun scans}
-Prerun scans are run to determine the type of file and to tag it. Tags can be used by later scans to ignore files: a scan to unpack a file system won't work on a graphics file or a text file.
+Prerun scans are run to determine the type of the \textit{entire} file and to tag it. Tags can be used by later scans to ignore files: a scan to unpack a file system won't work on a graphics file or a text file.
 
 Some tags that can be set by prerun scans as shipped by BAT are:
 
@@ -79,6 +79,12 @@ Java, TAR, UPX, XZ, ZIP
 
 \frame{
 \frametitle{Postrun scans}
+Postrun scans are scans that don't modify the files (unpacking, or scanning files), but merely act on results of scans, for example:
+
+\begin{itemize}
+\item generating reports
+\item generating pictures
+\end{itemize}
 }
 
 \frame{
@@ -99,7 +105,7 @@ The general configuration is mandatory, the other directives are optional.
 }
 
 \begin{frame}[fragile]
-\frametitle{General configuration directive}
+\frametitle{General configuration}
 
 \begin{verbatim}
 [batconfig]
@@ -107,6 +113,10 @@ multiprocessing = no
 module = bat.simpleprettyprint
 output = prettyprintresxml
 \end{verbatim}
+
+The \texttt{multiprocessing} option is to enable the use of multiple processors. Usually this is safe, unless one of the scans is not safe (for example because it writes to a database).
+
+%The \texttt{output} and \texttt{module} options are used together to 
 
 \end{frame}
 
@@ -134,7 +144,7 @@ The configuration for each type of scan has a few mandatory options:
 }
 
 \begin{frame}[fragile]
-\frametitle{Prerun scans configuration directive}
+\frametitle{Prerun scans configuration directive example}
 
 \begin{verbatim}
 [checkXML]
@@ -149,7 +159,9 @@ enabled     = yes
 \end{frame}
 
 \begin{frame}[fragile]
-\frametitle{Unpacking scans configuration directive}
+\frametitle{Unpacking scans configuration directive example}
+
+The following example is for unpacking of 7z archives. The priority is rather low, only the identifier for \texttt{7z} is used, and a bunch of file types can safely be ignored by this scan:
 
 \begin{verbatim}
 [7z]
