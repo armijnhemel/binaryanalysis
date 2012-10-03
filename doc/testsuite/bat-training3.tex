@@ -46,7 +46,7 @@ The locations of identifiers are passed to later scans, which can use this infor
 \frametitle{Prerun scans}
 Prerun scans are run to determine the type of file and to tag it. Tags can be used by later scans to ignore files: a scan to unpack a file system won't work on a graphics file or a text file.
 
-Some tags that are set by prerun scans as shipped by BAT are:
+Some tags that can be set by prerun scans as shipped by BAT are:
 
 \begin{itemize}
 \item text
@@ -59,6 +59,18 @@ Some tags that are set by prerun scans as shipped by BAT are:
 
 \frame{
 \frametitle{Unpacking scans}
+
+Unpacking scans try to extract file systems and compressed files, sometimes from a larger binary blob, by ``carving'' it from a larger binary. Currently some 30 file systems and compressed files are supported:
+
+\begin{itemize}
+\item file systems: cramfs, ext2/ext3/ext4, ISO9660, JFFS2, Minix (specific
+variant of v1), SquashFS (several variants), romfs, YAFFS2 (specific variants)
+\item compressed files and executable formats: 7z, ar, ARJ, BASE64, BZIP2,
+compressed Flash, CAB, compress, CPIO, EXE (specific compression methods only),
+GZIP, InstallShield (old versions), LRZIP, LZIP, LZMA, LZO, RAR, RPM, serialized
+Java, TAR, UPX, XZ, ZIP
+\item media files: GIF, ICO, PDF, PNG
+\end{itemize}
 }
 
 \frame{
@@ -173,6 +185,14 @@ The Binary Analysis Tool result viewer is a Python program using wxPython. It ca
 \texttt{batgui}
 
 which will launch the GUI.
+
+For some functionality the BAT configuration file is needed. The configuration file can be loaded from the GUI, or supplied on the commandline:
+
+\texttt{batgui -c /path/to/configuration/file}
 }
+
+\begin{frame}[fragile]
+\frametitle{Configuring the Binary Analysis Tool result viewer}
+\end{frame}
 
 \end{document}
