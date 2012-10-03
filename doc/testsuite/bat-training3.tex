@@ -98,8 +98,59 @@ output = prettyprintresxml
 
 \end{frame}
 
+\frame{
+\frametitle{Mandatory scan configuration options}
+The configuration for each type of scan has a few mandatory options:
+
+\begin{itemize}
+\item \texttt{type} - \texttt{prerun}, \texttt{unpack}, \texttt{program} or \texttt{postrun}
+\item \texttt{module} - Python module (including package) the scan can be found
+\item \texttt{method} - the method for the scan
+\item \texttt{enabled} - \texttt{yes} enables a scan, \texttt{no} disables a scan
+\end{itemize}
+}
+
+\frame{
+\frametitle{Optional scan configuration options}
+
+\begin{itemize}
+\item \texttt{priority}
+\item \texttt{noscan}
+\item \texttt{magic}
+\item \texttt{description}
+\end{itemize}
+}
+
 \begin{frame}[fragile]
 \frametitle{Prerun scans configuration directive}
+
+\begin{verbatim}
+[checkXML]
+type        = prerun
+module      = bat.prerun
+method      = searchXML
+priority    = 100
+description = Check XML validity
+enabled     = yes
+\end{verbatim}
+
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Unpacking scans configuration directive}
+
+\begin{verbatim}
+[7z]
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpack7z
+priority    = 1
+magic       = 7z
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video
+description = Unpack 7z compressed files
+enabled     = yes
+\end{verbatim}
+
 \end{frame}
 
 \frame{
@@ -117,6 +168,11 @@ The results can be viewed using the Binary Analysis Tool result viewer.
 
 \frame{
 \frametitle{Using the Binary Analysis Tool result viewer}
+The Binary Analysis Tool result viewer is a Python program using wxPython. It can be invoked using the command:
+
+\texttt{batgui}
+
+which will launch the GUI.
 }
 
 \end{document}
