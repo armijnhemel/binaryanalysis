@@ -1,3 +1,10 @@
+bat (9.0) unstable; urgency=low
+
+  * GUI fixes
+  * ext2fs unpacking crash fix
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Thu, 4 Oct 2012 20:18:13 +0200
+
 bat (8.0) unstable; urgency=low
 
   * GUI
@@ -7,7 +14,6 @@ bat (8.0) unstable; urgency=low
   * much more (see changelog)
 
  -- Armijn Hemel <armijn@binaryanalysis.org>  Tue, 22 May 2012 22:00:43 +0200
-
 
 bat (7.0) unstable; urgency=low
 
