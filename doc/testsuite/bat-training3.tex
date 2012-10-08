@@ -209,10 +209,44 @@ For some functionality the BAT configuration file is needed. The configuration f
 
 \frame{
 \frametitle{Loading a file in the BAT result viewer}
+
+Via File $\rightarrow$ Open in the menu a result file can be loaded and will be unpacked.
+
+On the left there will be a file tree, on the right results will be displayed.
 }
 
 \frame{
 \frametitle{Filtering results in the BAT result viewer}
+Not every file type might be interesting. To unclutter the user interface and the directory tree a display filter is present that will hide certain file types from the directory tree.
+
+Configuration $\rightarrow$ Filter Configuration will show a list of checkboxes of file types to ignore.
+}
+
+\frame{
+\frametitle{Interpreting results of a scan}
+For each file a few attributes will be shown by default:
+
+\begin{itemize}
+\item name of the binary
+\item absolute file path
+\item relative file path if it is nested and parent is an unpacked compressed file or file system
+\item size
+\item SHA256 checksum
+\item tags (as determined by pre run scans)
+\end{itemize}
+
+In addition results of file specific scans might be shown (architecture, shared libraries, etcetera)
+}
+
+\frame{
+\frametitle{Interpreting results of advanced ranking scan}
+If the advanced ranking scan is enabled a lot more information becomes available:
+
+\begin{itemize}
+\item function names matching
+\item string constants matching
+\item version number guess
+\end{itemize}
 }
 
 \frame{
@@ -227,4 +261,27 @@ For some functionality the BAT configuration file is needed. The configuration f
 \frametitle{Interpreting results: version numbers}
 }
 
+\frame{
+\frametitle{Advanced mode in BAT result viewer}
+The BAT result viewer also has an ``advanced mode''. Advanced mode can be enabled via:
+
+Configuration $\rightarrow$ General Configuration $\rightarrow$ Advanced mode
+
+When enabled a tab ``Alternate view'' will appear.
+
+When during scanning the scans \texttt{hexdump} and \texttt{images} (available in default BAT distribution) were enabled, different representations of files have been generated:
+
+\begin{itemize}
+\item output of \texttt{hexdump -C}
+\item picture where every byte has been replaced by a grayscale pixel
+\end{itemize}
+
+These two representations are correlated: clicking on the picture will display the corresponding section in the \texttt{hexdump} output.
+
+This is not enabled by default since it is quite resource intensive.
+}
+
+\frame{
+\frametitle{Scanning via the BAT result viewer}
+}
 \end{document}
