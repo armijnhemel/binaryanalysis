@@ -17,7 +17,7 @@
 In this course you will learn:
 
 \begin{itemize}
-\item scan order in the Binary Analysis Tool
+\item about the scan order in the Binary Analysis Tool
 \item to configure the Binary Analysis Tool
 \item to browse results of a scan made with the Binary Analysis Tool
 \end{itemize}
@@ -136,10 +136,10 @@ The configuration for each type of scan has a few mandatory options:
 \frametitle{Optional scan configuration options}
 
 \begin{itemize}
-\item \texttt{priority}
-\item \texttt{noscan}
-\item \texttt{magic}
-\item \texttt{description}
+\item \texttt{priority} - the priority of the scan: a higher priority means that the scan is run before scans with a lower priority.
+\item \texttt{noscan} - a list of tags. Files that are tagged with any of these tags are ignored by this scan.
+\item \texttt{magic} - a list of specific identifiers this scan is meant for (if possible). This is for an internal optimisation.
+\item \texttt{description} - a human readable description of the scan, mostly for documentation purposes.
 \end{itemize}
 }
 
@@ -161,7 +161,7 @@ enabled     = yes
 \begin{frame}[fragile]
 \frametitle{Unpacking scans configuration directive example}
 
-The following example is for unpacking of 7z archives. The priority is rather low, only the identifier for \texttt{7z} is used, and a bunch of file types can safely be ignored by this scan:
+The following example is for unpacking of 7z archives. The priority is very low, only the identifier for \texttt{7z} is used, and a bunch of file types can safely be ignored by this scan:
 
 \begin{verbatim}
 [7z]
@@ -170,7 +170,8 @@ module      = bat.fwunpack
 method      = searchUnpack7z
 priority    = 1
 magic       = 7z
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:
+              audio:video
 description = Unpack 7z compressed files
 enabled     = yes
 \end{verbatim}
@@ -210,9 +211,9 @@ For some functionality the BAT configuration file is needed. The configuration f
 \frame{
 \frametitle{Loading a file in the BAT result viewer}
 
-Via File $\rightarrow$ Open in the menu a result file can be loaded and will be unpacked.
+Via File $\rightarrow$ Open in the menu a result file can be loaded and displayed.
 
-On the left there will be a file tree, on the right results will be displayed.
+On the left there will be a file tree, on the right results for individual files will be displayed.
 }
 
 \frame{
@@ -247,14 +248,25 @@ If the advanced ranking scan is enabled a lot more information becomes available
 \item string constants matching
 \item version number guess
 \end{itemize}
+
+This information should be carefully analysed and not blindly trusted.
 }
 
 \frame{
 \frametitle{Interpreting results: function names}
+%For dynamically linked ELF executables
 }
 
 \frame{
 \frametitle{Interpreting results: string constants}
+For a good classification the following things are important:
+
+\begin{itemize}
+\item amount of recognized strings
+\item distribution of recognized strings
+\end{itemize}
+
+%If there are only few strings that can be recognized, the results are likely to be not very reliable.
 }
 
 \frame{
@@ -283,5 +295,25 @@ This is not enabled by default since it is quite resource intensive.
 
 \frame{
 \frametitle{Scanning via the BAT result viewer}
+It is possible to launch scans via the BAT result viewer, although this is not recommended due to possibly long processing time during which the GUI will be unresponsive.
+
+Before scans can be done first a configuration file has to be loaded, via Configuration $\rightarrow$ Open Configuration File.
+
+Scans can be selected via Configuration $\rightarrow$ Configure Scans
+
+This will not work on non-Linux systems.
+}
+
+\frame{
+\frametitle{Conclusion}
+In this course you have learned about:
+
+\begin{itemize}
+\item about the scan order in the Binary Analysis Tool
+\item to configure the Binary Analysis Tool
+\item to browse results of a scan made with the Binary Analysis Tool
+\end{itemize}
+
+In the next course we will dig into how the Binary Analysis Tool can be extended.
 }
 \end{document}
