@@ -20,3 +20,27 @@ In this course you will learn:
 \item extending the Binary Analysis Tool
 \end{itemize}
 }
+
+\frame{
+\frametitle{Adding identifiers to identifier search}
+Identifiers for files are stored in \texttt{bat/fsmagic.py}. To add an identifier:
+
+\begin{enumerate}
+\item add it to the \texttt{fsmagic} dictionary
+\item add an offset to the \texttt{correction} dictionary if the identifier does not start at byte 0
+\item optionally group identifiers in an array, similar to \texttt{squashtypes}
+\end{enumerate}
+
+A new identifier will be scanned as soon as there is a scan that has declared it in the configuration in the \texttt{magic} option for the scan.
+}
+
+\begin{frame}[fragile]
+\frametitle{Using identifiers in scans}
+Identifiers can be accessed in a dictionary called \texttt{offsets}. This dictionary is passed around as an argument
+
+\end{frame}
+
+\frame{
+}
+
+\end{document}
