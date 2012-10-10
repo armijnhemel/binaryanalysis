@@ -17,6 +17,146 @@
 In this course you will learn:
 
 \begin{itemize}
-\item extending the Binary Analysis Tool
+\item to browse results of a scan made with the Binary Analysis Tool
 \end{itemize}
 }
+
+\frame{
+\frametitle{Starting the Binary Analysis Tool result viewer}
+The Binary Analysis Tool result viewer is a Python program using wxPython. It can be invoked using the command:
+
+\texttt{batgui}
+
+which will launch the GUI.
+
+For some functionality the BAT configuration file is needed. The configuration file can be loaded from the GUI, or supplied on the commandline:
+
+\texttt{batgui -c /path/to/configuration/file}
+}
+
+\begin{frame}[fragile]
+\frametitle{Configuring the Binary Analysis Tool result viewer}
+\end{frame}
+
+\frame{
+\frametitle{Loading a file in the BAT result viewer}
+
+Via File $\rightarrow$ Open in the menu a result file can be loaded and displayed.
+
+On the left there will be a file tree, on the right results for individual files will be displayed.
+}
+
+\frame{
+\frametitle{Filtering results in the BAT result viewer}
+Not every file type might be interesting. To unclutter the user interface and the directory tree a display filter is present that will hide certain file types from the directory tree.
+
+Configuration $\rightarrow$ Filter Configuration will show a list of checkboxes of file types to ignore.
+}
+
+\frame{
+\frametitle{Interpreting results of a scan}
+For each file a few attributes will be shown by default:
+
+\begin{itemize}
+\item name of the binary
+\item absolute file path
+\item relative file path if it is nested and parent is an unpacked compressed file or file system
+\item size
+\item SHA256 checksum
+\item tags (as determined by pre run scans)
+\end{itemize}
+
+In addition results of file specific scans might be shown (architecture, shared libraries, etcetera)
+}
+
+\frame{
+\frametitle{Interpreting results of advanced ranking scan}
+If the advanced ranking scan is enabled a lot more information becomes available:
+
+\begin{itemize}
+\item function names matching
+\item string constants matching
+\item version number guess
+\end{itemize}
+
+This information should be carefully analysed and not blindly trusted.
+}
+
+\frame{
+\frametitle{Interpreting results: function names}
+%For dynamically linked ELF executables
+}
+
+\frame{
+\frametitle{Interpreting results: string constants}
+For a good classification the following things are important:
+
+\begin{itemize}
+\item amount of matched string constants
+\item distribution of matched string constants
+\end{itemize}
+
+If there are only few strings that can be matched, the results are likely to be not very reliable.
+
+An even distribution of scores, combined with few matched unique strings and non-unique strings means that nothing was reliably matched.
+}
+
+\begin{frame}[fragile]
+\frametitle{Interpreting results: browsing unique matches}
+\begin{verbatim}
+[viewer]
+htmldir = /path/to/html/files
+\end{verbatim}
+\end{frame}
+
+\frame{
+\frametitle{Interpreting results: version numbers}
+Based on unique strings BAT tries to determine version numbers of matched packages.
+
+Because version number guessing is tied to unique strings version number guessing is likely to be unreliable if there are just a few unique strings.
+}
+
+\frame{
+\frametitle{Advanced mode in BAT result viewer}
+The BAT result viewer also has an ``advanced mode''. Advanced mode can be enabled via:
+
+Configuration $\rightarrow$ General Configuration $\rightarrow$ Advanced mode
+
+When enabled a tab ``Alternate view'' will appear.
+
+When during scanning the scans \texttt{hexdump} and \texttt{images} (available in default BAT distribution) were enabled, different representations of files have been generated:
+
+\begin{itemize}
+\item output of \texttt{hexdump -C}
+\item picture where every byte has been replaced by a grayscale pixel
+\end{itemize}
+
+These two representations are correlated: clicking on the picture will display the corresponding section in the \texttt{hexdump} output.
+
+This is not enabled by default since it is quite resource intensive.
+}
+
+\frame{
+\frametitle{Scanning via the BAT result viewer}
+It is possible to launch scans via the BAT result viewer, although this is not recommended due to possibly long processing time during which the GUI will be unresponsive.
+
+Before scans can be done first a configuration file has to be loaded, via Configuration $\rightarrow$ Open Configuration File.
+
+Scans can be selected via Configuration $\rightarrow$ Configure Scans
+
+This will not work on non-Linux systems.
+}
+
+\frame{
+\frametitle{Conclusion}
+In this course you have learned about:
+
+\begin{itemize}
+\item about the scan order in the Binary Analysis Tool
+\item to configure the Binary Analysis Tool
+\item to browse results of a scan made with the Binary Analysis Tool
+\end{itemize}
+
+In the next course we will dig into how the Binary Analysis Tool can be extended.
+}
+\end{document}
