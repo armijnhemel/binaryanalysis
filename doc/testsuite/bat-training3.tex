@@ -19,7 +19,6 @@ In this course you will learn:
 \begin{itemize}
 \item about the scan order in the Binary Analysis Tool
 \item to configure the Binary Analysis Tool
-\item to browse results of a scan made with the Binary Analysis Tool
 \end{itemize}
 }
 
@@ -46,7 +45,7 @@ The locations of identifiers are passed to later scans, which can use this infor
 \frametitle{Prerun scans}
 Prerun scans are run to determine the type of the \textit{entire} file and to tag it. Tags can be used by later scans to ignore files: a scan to unpack a file system won't work on a graphics file or a text file.
 
-Some tags that can be set by prerun scans as shipped by BAT are:
+Some tags that can be set by prerun scans in the current version of BAT are:
 
 \begin{itemize}
 \item text
@@ -75,6 +74,16 @@ Java, TAR, UPX, XZ, ZIP
 
 \frame{
 \frametitle{File specific scans}
+
+\begin{itemize}
+\item dynamically linked libraries
+\item quick scan for identifiers of several programs (iptables, wireless-tools, etcetera)
+\item quick scan for identifiers of several licenses
+\item quick scan for identifiers of several collaborative software development sites (sourceforge, github, etcetera)
+\item Linux kernel version check
+\item BusyBox version check
+\item advanced string matching scan using information from a large database extracted from source code
+\end{itemize}
 }
 
 \frame{
@@ -116,7 +125,7 @@ output = prettyprintresxml
 
 The \texttt{multiprocessing} option is to enable the use of multiple processors. Usually this is safe, unless one of the scans is not safe (for example because it writes to a database).
 
-%The \texttt{output} and \texttt{module} options are used together to 
+The \texttt{output} and \texttt{module} options are used together to specify where an (optional) method that prints results in XML can be found.
 
 \end{frame}
 
@@ -138,8 +147,10 @@ The configuration for each type of scan has a few mandatory options:
 \begin{itemize}
 \item \texttt{priority} - the priority of the scan: a higher priority means that the scan is run before scans with a lower priority.
 \item \texttt{noscan} - a list of tags. Files that are tagged with any of these tags are ignored by this scan.
+\item \texttt{envvars} - a colon separated list of environment variables that will be set in the scan
 \item \texttt{magic} - a list of specific identifiers this scan is meant for (if possible). This is for an internal optimisation.
 \item \texttt{description} - a human readable description of the scan, mostly for documentation purposes.
+\item \texttt{xmloutput} - custom output method for XML output of BAT (if enabled in main configuration). This method should be in the same file as the scan code.
 \end{itemize}
 }
 
@@ -161,7 +172,7 @@ enabled     = yes
 \begin{frame}[fragile]
 \frametitle{Unpacking scans configuration directive example}
 
-The following example is for unpacking of 7z archives. The priority is very low, only the identifier for \texttt{7z} is used, and a bunch of file types can safely be ignored by this scan:
+The following example is for unpacking 7z compressed files. The priority is very low, only the identifier for \texttt{7z} is used, and a bunch of file types can safely be ignored by this scan:
 
 \begin{verbatim}
 [7z]
@@ -176,11 +187,47 @@ description = Unpack 7z compressed files
 enabled     = yes
 \end{verbatim}
 
+Note: \texttt{noscan} has been split for readability but is actually one line in the configuration file.
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{File specific scans configuration directive example}
+The following example is for querying a database to see if the name of the file is known in package databases of well known distributions. The location of the database is passed as an environment variable:
+
+\begin{verbatim}
+[file2package]
+type        = program
+module      = bat.file2package
+method      = filename2package
+xmloutput   = xmlprettyprint
+envvars     = BAT_PACKAGE_DB=/tmp/filepackages
+description = Look up name of file name in popular
+              distributions
+enabled     = no
+\end{verbatim}
+Note: \texttt{description} has been split for readability but is actually one line in the configuration file.
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Postrun scans configuration directive example}
+\begin{verbatim}
+[hexdump]
+type        = postrun
+module      = bat.generatehexdump
+method      = generateHexdump
+noscan      = text:xml:graphics:pdf:audio:video
+envvars     = BAT_REPORTDIR=/tmp/images:
+              BAT_IMAGE_MAXFILESIZE=100000000
+description = Create hexdump output of files
+enabled     = no
+\end{verbatim}
+
+Note: \texttt{envvars} has been split for readability but is actually one line in the configuration file.
 \end{frame}
 
 \frame{
-\frametitle{Examining the results of the Binary Analysis Tool}
-The output of the Binary Analysis Tool is written as a tar archive. The tar archive consists of:
+\frametitle{Output the results of the Binary Analysis Tool}
+The raw output of the Binary Analysis Tool is written as a tar archive. The tar archive consists of:
 
 \begin{itemize}
 \item full directory tree of unpacked files (if any)
@@ -189,6 +236,8 @@ The output of the Binary Analysis Tool is written as a tar archive. The tar arch
 \end{itemize}
 
 The results can be viewed using the Binary Analysis Tool result viewer.
+
+If enabled in the configuration a representation of the results in XML will be printed to standard output after the scan.
 }
 
 \frame{
