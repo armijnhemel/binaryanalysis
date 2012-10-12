@@ -559,7 +559,7 @@ def dumpData(unpackreports, leafreports, scans, tempdir):
 		if unpackreports[p].has_key('sha256'):
 			sha256spack.append(unpackreports[p]['sha256'])
 	for i in scans['postrunscans']:
-		if i['name'] == 'images':
+		if i['name'] == 'images' or i['name'] == 'rankimages':
 			if not os.path.exists(os.path.join(tempdir, 'images')):
 				os.mkdir(os.path.join(tempdir, 'images'))
 			if i.has_key('envvars'):
