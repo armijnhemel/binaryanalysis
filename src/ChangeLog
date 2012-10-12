@@ -1,5 +1,6 @@
 2012-10-12
 * split creation of images into a generic part and a part for ranking
+* add simple script to verify integrity of database
 
 2012-10-03
 * clear old results when opening new results file
