@@ -688,7 +688,16 @@ module      = bat.images
 method      = generateImages
 noscan      = text:xml:graphics:pdf:audio:video
 envvars     = BAT_IMAGEDIR=/tmp/images:BAT_IMAGE_MAXFILESIZE=100000000
-description = Generate images of results
+description = Generate graphical representation of files
+enabled     = no
+
+[rankimages]
+type        = postrun
+module      = bat.rankimages
+method      = generateImages
+noscan      = text:xml:graphics:pdf:audio:video
+envvars     = BAT_IMAGEDIR=/tmp/images
+description = Generate images of results of ranking
 enabled     = no
 
 [uniquehtml]
