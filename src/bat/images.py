@@ -27,9 +27,6 @@ Parameters for configuration file:
 
 import os, os.path, sys, subprocess, array, cPickle, tempfile
 from PIL import Image
-import matplotlib
-matplotlib.use('cairo')
-import pylab
 
 def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscandir, envvars={}):
 	if not unpackreport.has_key('sha256'):
