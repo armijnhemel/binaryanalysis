@@ -1,3 +1,6 @@
+2012-10-12
+* split creation of images into a generic part and a part for ranking
+
 2012-10-03
 * clear old results when opening new results file
 
