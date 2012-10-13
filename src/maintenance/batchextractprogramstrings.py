@@ -371,7 +371,6 @@ def extractlicenses(conn, cursor, i, p, filehash, commentshash):
 	#	for license in licenses:
 	#		print >>sys.stderr, "FOSSOLOGY %s/%s" % (i,p), license
 	#		cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "nomos", "1.4.0"))
-	#print >> sys.stderr
 
 def extractstrings((package, version, i, p, language, filehash)):
 	sqlres = extractsourcestrings(p, i, language)
@@ -590,11 +589,6 @@ def main(argv):
 		print >>sys.stderr, e
 	c.close()
 	conn.close()
-	#print pkgmeta
-
-	## TODO: make this a configuration parameter
-	#pool = Pool(processes=2)
-	#pool = Pool(processes=1)
 
 	pkgmeta = []
 	## TODO: do all kinds of checks here
