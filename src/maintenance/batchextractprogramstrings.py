@@ -221,6 +221,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license):
 
 	try:
 		filestoscan = []
+		filehashes = {}
 		while True:
 			i = osgen.next()
 			for p in i[2]:
@@ -248,6 +249,10 @@ def traversefiletree(srcdir, conn, cursor, package, version, license):
 							#print >>sys.stderr, "duplicate %s %s: %s/%s" % (package, version, i[0], p)
 							continue
 						filestoscan.append((package, version, i[0], p, extensions[extension], filehash))
+						if filehashes.has_key(filehash):
+							filehashes[filehash].append((i[0], p))
+						else:
+							filehashes[filehash] = [(i[0], p)]
 	except Exception, e:
 		if str(e) != "":
 			print >>sys.stderr, package, version, e
@@ -255,18 +260,51 @@ def traversefiletree(srcdir, conn, cursor, package, version, license):
 
 	pool = Pool()
 
-	comments_results = pool.map(extractcomments, filestoscan)
-	commentshash = {}
-	for c in comments_results:
-		if commentshash.has_key(c[0]):
-			continue
-		else:
-			commentshash[c[0]] = c[1]
-
 	## first check licenses, since we do sometimes manipulate some source code files
 	if license:
-		for f in filestoscan:
-			extractlicenses(conn, cursor, f[2], f[3], f[5], commentshash[f[5]])
+		comments_results = pool.map(extractcomments, filestoscan)
+		commentshash = {}
+		commentshash2 = {}
+		for c in comments_results:
+			if commentshash.has_key(c[0]):
+				continue
+			else:
+				commentshash[c[0]] = c[1]
+			if commentshash2.has_key(c[1]):
+				commentshash2[c[1]].append(c[0])
+			else:
+				commentshash2[c[1]] = [c[0]]
+
+		licensefilestoscan = []
+		for c in commentshash2:
+			cursor.execute('''select license, version from ninkacomments where sha256=?''', (c,))
+			res = cursor.fetchall()
+			if len(res) > 0:
+				## store all the licenses we already know for this comment
+				for r in res:
+					(filelicense, scannerversion) = r
+					for f in commentshash2[c]:
+						cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (f, filelicense, "ninka", scannerversion))
+			else:
+				licensefilestoscan.append(commentshash2[c][0])
+
+		licensescanfiles = []
+		for l in licensefilestoscan:
+			licensescanfiles.append((filehashes[l][0][0], filehashes[l][0][1], l))
+		license_results = pool.map(runfullninka, licensescanfiles)
+
+		ninkaversion = "bf83428"
+		## we now know the licenses for files we didn't know before. So:
+		## 1. find the corresponding commentshash
+		## 2. store the licenses for this file, plus for the commentshash
+		## 3. for each file that has the same commentshash, store the license as well
+		for l in license_results:
+			licenses = l[1]
+			for license in licenses:
+				cursor.execute('''insert into ninkacomments (sha256, license, scanner, version) values (?,?,?,?)''', (commentshash[l[0]], license, "ninka", ninkaversion))
+				for f in commentshash2[commentshash[l[0]]]:
+					cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (f, license, "ninka", ninkaversion))
+
 
 	## process the files we want to scan in parallel, then process the results
 	extracted_results = pool.map(extractstrings, filestoscan)
@@ -283,6 +321,10 @@ def traversefiletree(srcdir, conn, cursor, package, version, license):
 
 ## extract comments in parallel
 def extractcomments((package, version, i, p, language, filehash)):
+	## first we generate just a .comments file and see if we've already seen it
+	## before. This is because often license headers are very similar, so we
+	## don't need to rescan everything.
+	## For gtk+ 2.20.1 scanning time dropped with about 25%.
 	ninkaversion = "bf83428"
 	ninkaenv = os.environ.copy()
 	ninkaenv['PATH'] = ninkaenv['PATH'] + ":/tmp/dmgerman-ninka-%s/comments/comments" % ninkaversion
@@ -296,44 +338,27 @@ def extractcomments((package, version, i, p, language, filehash)):
 	commentshash = ch.hexdigest()
 	return (filehash, commentshash)
 
-def extractlicenses(conn, cursor, i, p, filehash, commentshash):
-	## if we want to scan for licenses, run Ninka and (future work) FOSSology
-	## first we generate just a .comments file and see if we've already seen it
-	## before. This is because often license headers are very similar, so we
-	## don't need to rescan everything.
-	## For gtk+ 2.20.1 scanning time dropped with about 25%.
+def runfullninka((i, p, filehash)):
 	ninkaversion = "bf83428"
 	ninkaenv = os.environ.copy()
 	ninkaenv['PATH'] = ninkaenv['PATH'] + ":/tmp/dmgerman-ninka-%s/comments/comments" % ninkaversion
 
-	cursor.execute('''select license, version from ninkacomments where sha256=?''', (commentshash,))
-	res = cursor.fetchall()
-	if len(res) > 0:
-		#print >>sys.stderr, "duplicate comment %s %s: %s/%s" % (package, version, i, p)
-		## store all the licenses we already know for this file
-		for r in res:
-			(filelicense, scannerversion) = r
-			#print >>sys.stderr, "NINKA     %s/%s" % (i, p), filelicense
-			## hardcode the scanner to 'ninka'. This could/should change in the future.
-			cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, filelicense, "ninka", scannerversion))
+	ninkares = []
+
+	p2 = subprocess.Popen(["/tmp/dmgerman-ninka-%s/ninka.pl" % ninkaversion, "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=ninkaenv)
+	(stanout, stanerr) = p2.communicate()
+	ninkasplit = stanout.strip().split(';')[1:]
+	## filter out the licenses we can't determine.
+	## We actually should run these through FOSSology to try and obtain a match.
+	if ninkasplit[0] == '':
+		ninkares = ['UNKNOWN']
 	else:
-		## we don't have any information about this .comments file yet, so
-		## restart Ninka for a full scan.
-		p2 = subprocess.Popen(["/tmp/dmgerman-ninka-%s/ninka.pl" % ninkaversion, "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=ninkaenv)
-		(stanout, stanerr) = p2.communicate()
-		ninkasplit = stanout.strip().split(';')[1:]
-		## filter out the licenses we can't determine.
-		## We actually should run these through FOSSology to try and obtain a match.
-		if ninkasplit[0] == '':
-			#print >>sys.stderr, "NINKA     %s/%s" % (i, p), "UNKNOWN"
-			cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, "UNKNOWN", "ninka", ninkaversion))
-			cursor.execute('''insert into ninkacomments (sha256, license, scanner, version) values (?,?,?,?)''', (commentshash, "UNKNOWN", "ninka", ninkaversion))
-		else:
-			licenses = ninkasplit[0].split(',')
-			for license in list(set(licenses)):
-				#print >>sys.stderr, "NINKA     %s/%s" % (i, p), license
-				cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "ninka", ninkaversion))
-				cursor.execute('''insert into ninkacomments (sha256, license, scanner, version) values (?,?,?,?)''', (commentshash, license, "ninka", ninkaversion))
+		licenses = ninkasplit[0].split(',')
+		ninkares = list(set(licenses))
+	return (filehash, ninkares)
+
+def extractlicenses(conn, cursor, i, p, filehash, commentshash):
+	pass
 	## Also run FOSSology. Since licenses might appear halfway a file we should not look at the ninkacomments table!
 	## This requires that the user has enough privileges to actually connect to the FOSSology database!
 	#p2 = subprocess.Popen(["/usr/lib/fossology/agents/nomos", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
@@ -347,7 +372,6 @@ def extractlicenses(conn, cursor, i, p, filehash, commentshash):
 	#		print >>sys.stderr, "FOSSOLOGY %s/%s" % (i,p), license
 	#		cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "nomos", "1.4.0"))
 	#print >> sys.stderr
-	conn.commit()
 
 def extractstrings((package, version, i, p, language, filehash)):
 	sqlres = extractsourcestrings(p, i, language)
