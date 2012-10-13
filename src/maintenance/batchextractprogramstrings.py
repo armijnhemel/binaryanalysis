@@ -247,19 +247,28 @@ def traversefiletree(srcdir, conn, cursor, package, version, license):
 						if len(cursor.fetchall()) != 0:
 							#print >>sys.stderr, "duplicate %s %s: %s/%s" % (package, version, i[0], p)
 							continue
-						filestoscan.append((package, version, i[0],p, extensions[extension], filehash))
+						filestoscan.append((package, version, i[0], p, extensions[extension], filehash))
 	except Exception, e:
 		if str(e) != "":
 			print >>sys.stderr, package, version, e
 		pass
 
+	pool = Pool()
+
+	comments_results = pool.map(extractcomments, filestoscan)
+	commentshash = {}
+	for c in comments_results:
+		if commentshash.has_key(c[0]):
+			continue
+		else:
+			commentshash[c[0]] = c[1]
+
 	## first check licenses, since we do sometimes manipulate some source code files
 	if license:
 		for f in filestoscan:
-			extractlicenses(conn, cursor, f[2], f[3], f[5])
+			extractlicenses(conn, cursor, f[2], f[3], f[5], commentshash[f[5]])
 
 	## process the files we want to scan in parallel, then process the results
-	pool = Pool()
 	extracted_results = pool.map(extractstrings, filestoscan)
 
 	for extractres in extracted_results:
@@ -272,12 +281,8 @@ def traversefiletree(srcdir, conn, cursor, package, version, license):
 	conn.commit()
 
 
-def extractlicenses(conn, cursor, i, p, filehash):
-	## if we want to scan for licenses, run Ninka and (future work) FOSSology
-	## first we generate just a .comments file and see if we've already seen it
-	## before. This is because often license headers are very similar, so we
-	## don't need to rescan everything.
-	## For gtk+ 2.20.1 scanning time dropped with about 25%.
+## extract comments in parallel
+def extractcomments((package, version, i, p, language, filehash)):
 	ninkaversion = "bf83428"
 	ninkaenv = os.environ.copy()
 	ninkaenv['PATH'] = ninkaenv['PATH'] + ":/tmp/dmgerman-ninka-%s/comments/comments" % ninkaversion
@@ -289,6 +294,18 @@ def extractlicenses(conn, cursor, i, p, filehash):
 	ch.update(scanfile.read())
 	scanfile.close()
 	commentshash = ch.hexdigest()
+	return (filehash, commentshash)
+
+def extractlicenses(conn, cursor, i, p, filehash, commentshash):
+	## if we want to scan for licenses, run Ninka and (future work) FOSSology
+	## first we generate just a .comments file and see if we've already seen it
+	## before. This is because often license headers are very similar, so we
+	## don't need to rescan everything.
+	## For gtk+ 2.20.1 scanning time dropped with about 25%.
+	ninkaversion = "bf83428"
+	ninkaenv = os.environ.copy()
+	ninkaenv['PATH'] = ninkaenv['PATH'] + ":/tmp/dmgerman-ninka-%s/comments/comments" % ninkaversion
+
 	cursor.execute('''select license, version from ninkacomments where sha256=?''', (commentshash,))
 	res = cursor.fetchall()
 	if len(res) > 0:
