@@ -183,7 +183,7 @@ def unpack_getstrings((filedir, package, version, filename, origin, dbpath, clea
 	if len(c.fetchall()) != 0:
 		c.execute('''delete from processed_file where package=? and version=?''', (package, version))
 		conn.commit()
-	sqlres = extractstrings(temporarydir, conn, c, package, version, license)
+	sqlres = traversefiletree(temporarydir, conn, c, package, version, license)
 	## Add the file to the database: name of archive, sha256, packagename and version
 	## This is to be able to just update the database instead of recreating it.
 	c.execute('''insert into processed (package, version, filename, origin, sha256) values (?,?,?,?,?)''', (package, version, filename, origin, filehash))
@@ -215,15 +215,12 @@ def unpack_getstrings((filedir, package, version, filename, origin, dbpath, clea
 			pass
 	return
 
-def extractstrings(srcdir, conn, cursor, package, version, license):
+def traversefiletree(srcdir, conn, cursor, package, version, license):
 	srcdirlen = len(srcdir)+1
 	osgen = os.walk(srcdir)
 
-	if license:
-		ninkaversion = "bf83428"
-		ninkaenv = os.environ.copy()
-		ninkaenv['PATH'] = ninkaenv['PATH'] + ":/tmp/dmgerman-ninka-%s/comments/comments" % ninkaversion
 	try:
+		filestoscan = []
 		while True:
 			i = osgen.next()
 			for p in i[2]:
@@ -241,101 +238,122 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 						h.update(scanfile.read())
 						scanfile.close()
 						filehash = h.hexdigest()
-						cursor.execute('''select * from processed_file where sha256=?''', (filehash,))
-						if len(cursor.fetchall()) != 0:
-							cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, "%s/%s" % (i[0][srcdirlen:],p), filehash))
-							continue
+						cursor.execute("select * from processed_file where sha256=?", (filehash,))
+						testres = cursor.fetchall()
 						cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, "%s/%s" % (i[0][srcdirlen:],p), filehash))
+						if len(testres) != 0:
+							continue
 						cursor.execute('''select * from extracted_file where sha256=?''', (filehash,))
 						if len(cursor.fetchall()) != 0:
 							#print >>sys.stderr, "duplicate %s %s: %s/%s" % (package, version, i[0], p)
 							continue
-						## if we want to scan for licenses, run Ninka and (future work) FOSSology
-						if license:
-							## first we generate just a .comments file and see if we've already seen it
-							## before. This is because often license headers are very similar, so we
-							## don't need to rescan everything.
-							## For gtk+ 2.20.1 scanning time dropped with about 25%.
-							p1 = subprocess.Popen(["/tmp/dmgerman-ninka-%s/ninka.pl" % ninkaversion, "-c", "%s/%s" % (i[0], p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=ninkaenv)
-                                			(stanout, stanerr) = p1.communicate()
-							scanfile = open("%s/%s.comments" % (i[0], p), 'r')
-							ch = hashlib.new('sha256')
-							ch.update(scanfile.read())
-							scanfile.close()
-							commentshash = ch.hexdigest()
-							cursor.execute('''select license, version from ninkacomments where sha256=?''', (commentshash,))
-							res = cursor.fetchall()
-							if len(res) > 0:
-								#print >>sys.stderr, "duplicate comment %s %s: %s/%s" % (package, version, i[0], p)
-								## store all the licenses we already know for this file
-								for r in res:
-									(filelicense, scannerversion) = r
-									#print >>sys.stderr, "NINKA     %s/%s" % (i[0],p), filelicense
-									## hardcode the scanner to 'ninka'. This could/should change in the future.
-									cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, filelicense, "ninka", scannerversion))
-							else:
-								## we don't have any information about this .comments file yet, so
-								## restart Ninka for a full scan.
-								p2 = subprocess.Popen(["/tmp/dmgerman-ninka-%s/ninka.pl" % ninkaversion, "%s/%s" % (i[0], p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=ninkaenv)
-                                				(stanout, stanerr) = p2.communicate()
-								ninkasplit = stanout.strip().split(';')[1:]
-								## filter out the licenses we can't determine.
-								## We actually should run these through FOSSology to try and obtain a match.
-								if ninkasplit[0] == '':
-									#print >>sys.stderr, "NINKA     %s/%s" % (i[0],p), "UNKNOWN"
-									cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, "UNKNOWN", "ninka", ninkaversion))
-									cursor.execute('''insert into ninkacomments (sha256, license, scanner, version) values (?,?,?,?)''', (commentshash, "UNKNOWN", "ninka", ninkaversion))
-								else:
-									licenses = ninkasplit[0].split(',')
-									for license in list(set(licenses)):
-										#print >>sys.stderr, "NINKA     %s/%s" % (i[0],p), license
-										cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "ninka", ninkaversion))
-										cursor.execute('''insert into ninkacomments (sha256, license, scanner, version) values (?,?,?,?)''', (commentshash, license, "ninka", ninkaversion))
-							## Also run FOSSology. Since licenses might appear halfway a file we should not look at the ninkacomments table!
-							## This requires that the user has enough privileges to actually connect to the FOSSology database!
-							#p2 = subprocess.Popen(["/usr/lib/fossology/agents/nomos", "%s/%s" % (i[0], p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-                                			#(stanout, stanerr) = p2.communicate()
-							#if "FATAL" in stanout:
-							#	pass
-							#else:
-							#	fossysplit = stanout.strip().rsplit(" ", 1)
-							#	licenses = fossysplit[-1].split(',')
-							#	for license in licenses:
-							#		print >>sys.stderr, "FOSSOLOGY %s/%s" % (i[0],p), license
-							#		cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "nomos", "1.4.0"))
-							#print >> sys.stderr
-						sqlres = extractsourcestrings(p, i[0], package, version, srcdirlen, extensions[extension])
-						for res in sqlres:
-							(pstring, linenumber) = res
-							cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (pstring, filehash, extensions[extension], linenumber))
-						## extract function names using ctags, except code from
-						## the Linux kernel, since it will never be dynamically linked
-						if extensions[extension] == 'C' and package != 'linux':
-							source = open(os.path.join(i[0], p)).read()
-
-							results = []
-							p2 = subprocess.Popen(["ctags", "-f", "-", "%s/%s" % (i[0], p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-							(stanout2, stanerr2) = p2.communicate()
-							if p2.returncode != 0:
-								results = []
-							elif stanout2.strip() == "":
-								results = []
-							else:
-								stansplit = stanout2.strip().split("\n")
-								for res in stansplit:
-									csplit = res.strip().split('\t')
-									if csplit[3] == 'f':
-										results.append(csplit[0])
-							if results != []:
-								for res in list(set(results)):
-									cursor.execute('''insert into extracted_function (sha256, functionname) values (?,?)''', (filehash, res))
-
+						filestoscan.append((package, version, i[0],p, extensions[extension], filehash))
 	except Exception, e:
 		if str(e) != "":
 			print >>sys.stderr, package, version, e
 		pass
+
+	## first check licenses, since we do sometimes manipulate some source code files
+	if license:
+		for f in filestoscan:
+			extractlicenses(conn, cursor, f[2], f[3], f[5])
+
+	## process the files we want to scan in parallel, then process the results
+	pool = Pool()
+	extracted_results = pool.map(extractstrings, filestoscan)
+
+	for extractres in extracted_results:
+		(filehash, language, sqlres, funcresults) = extractres
+		for res in sqlres:
+			(pstring, linenumber) = res
+			cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (pstring, filehash, language, linenumber))
+		for res in list(set(funcresults)):
+			cursor.execute('''insert into extracted_function (sha256, functionname) values (?,?)''', (filehash, res))
 	conn.commit()
-	return
+
+
+def extractlicenses(conn, cursor, i, p, filehash):
+	## if we want to scan for licenses, run Ninka and (future work) FOSSology
+	## first we generate just a .comments file and see if we've already seen it
+	## before. This is because often license headers are very similar, so we
+	## don't need to rescan everything.
+	## For gtk+ 2.20.1 scanning time dropped with about 25%.
+	ninkaversion = "bf83428"
+	ninkaenv = os.environ.copy()
+	ninkaenv['PATH'] = ninkaenv['PATH'] + ":/tmp/dmgerman-ninka-%s/comments/comments" % ninkaversion
+
+	p1 = subprocess.Popen(["/tmp/dmgerman-ninka-%s/ninka.pl" % ninkaversion, "-c", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=ninkaenv)
+	(stanout, stanerr) = p1.communicate()
+	scanfile = open("%s/%s.comments" % (i, p), 'r')
+	ch = hashlib.new('sha256')
+	ch.update(scanfile.read())
+	scanfile.close()
+	commentshash = ch.hexdigest()
+	cursor.execute('''select license, version from ninkacomments where sha256=?''', (commentshash,))
+	res = cursor.fetchall()
+	if len(res) > 0:
+		#print >>sys.stderr, "duplicate comment %s %s: %s/%s" % (package, version, i, p)
+		## store all the licenses we already know for this file
+		for r in res:
+			(filelicense, scannerversion) = r
+			#print >>sys.stderr, "NINKA     %s/%s" % (i, p), filelicense
+			## hardcode the scanner to 'ninka'. This could/should change in the future.
+			cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, filelicense, "ninka", scannerversion))
+	else:
+		## we don't have any information about this .comments file yet, so
+		## restart Ninka for a full scan.
+		p2 = subprocess.Popen(["/tmp/dmgerman-ninka-%s/ninka.pl" % ninkaversion, "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=ninkaenv)
+		(stanout, stanerr) = p2.communicate()
+		ninkasplit = stanout.strip().split(';')[1:]
+		## filter out the licenses we can't determine.
+		## We actually should run these through FOSSology to try and obtain a match.
+		if ninkasplit[0] == '':
+			#print >>sys.stderr, "NINKA     %s/%s" % (i, p), "UNKNOWN"
+			cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, "UNKNOWN", "ninka", ninkaversion))
+			cursor.execute('''insert into ninkacomments (sha256, license, scanner, version) values (?,?,?,?)''', (commentshash, "UNKNOWN", "ninka", ninkaversion))
+		else:
+			licenses = ninkasplit[0].split(',')
+			for license in list(set(licenses)):
+				#print >>sys.stderr, "NINKA     %s/%s" % (i, p), license
+				cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "ninka", ninkaversion))
+				cursor.execute('''insert into ninkacomments (sha256, license, scanner, version) values (?,?,?,?)''', (commentshash, license, "ninka", ninkaversion))
+	## Also run FOSSology. Since licenses might appear halfway a file we should not look at the ninkacomments table!
+	## This requires that the user has enough privileges to actually connect to the FOSSology database!
+	#p2 = subprocess.Popen(["/usr/lib/fossology/agents/nomos", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+	#(stanout, stanerr) = p2.communicate()
+	#if "FATAL" in stanout:
+	#	pass
+	#else:
+	#	fossysplit = stanout.strip().rsplit(" ", 1)
+	#	licenses = fossysplit[-1].split(',')
+	#	for license in licenses:
+	#		print >>sys.stderr, "FOSSOLOGY %s/%s" % (i,p), license
+	#		cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "nomos", "1.4.0"))
+	#print >> sys.stderr
+	conn.commit()
+
+def extractstrings((package, version, i, p, language, filehash)):
+	sqlres = extractsourcestrings(p, i, language)
+	## extract function names using ctags, except code from
+	## the Linux kernel, since it will never be dynamically linked
+	funcresults = []
+	if language == 'C' and package != 'linux':
+		source = open(os.path.join(i, p)).read()
+
+		p2 = subprocess.Popen(["ctags", "-f", "-", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+		(stanout2, stanerr2) = p2.communicate()
+		if p2.returncode != 0:
+			funcresults = []
+		elif stanout2.strip() == "":
+			funcresults = []
+		else:
+			stansplit = stanout2.strip().split("\n")
+			for res in stansplit:
+				csplit = res.strip().split('\t')
+				if csplit[3] == 'f':
+					funcresults.append(csplit[0])
+
+	return (filehash, language, sqlres, funcresults)
 
 ## Extract strings using xgettext. Apparently this does not always work correctly. For example for busybox 1.6.1:
 ## $ xgettext -a -o - fdisk.c
@@ -344,7 +362,7 @@ def extractstrings(srcdir, conn, cursor, package, version, license):
 ## We fix this by rerunning xgettext with --from-code=utf-8
 ## The results might not be perfect, but they are acceptable.
 ## TODO: use version from bat/extractor.py
-def extractsourcestrings(filename, filedir, package, version, srcdirlen, language):
+def extractsourcestrings(filename, filedir, language):
 	remove_chars = ["\\a", "\\b", "\\v", "\\f", "\\e", "\\0"]
 	sqlres = []
 	## for files that we think are in the 'C' family we first check for unprintable
