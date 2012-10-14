@@ -331,10 +331,6 @@ def forgesPrettyPrint(res, root, envvars=None):
 ## Always run freshclam before scanning to get the latest
 ## virus signatures!
 def scanVirus(path, blacklist=[], envvars=None):
-	ms = magic.open(magic.MAGIC_NONE)
-	ms.load()
-	mstype = ms.file(path)
-	ms.close()
 	p = subprocess.Popen(['clamscan', "%s" % (path,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode == 0:
