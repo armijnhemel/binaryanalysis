@@ -150,7 +150,7 @@ def unpack_verify(filedir, filename):
 
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
-def unpack_getstrings((filedir, package, version, filename, origin, dbpath, cleanup, license)):
+def unpack_getstrings((filedir, package, version, filename, origin, dbpath, cleanup, license, pool)):
 	print >>sys.stdout, filename
 	scanfile = open("%s/%s" % (filedir, filename), 'r')
 	h = hashlib.new('sha256')
@@ -183,7 +183,7 @@ def unpack_getstrings((filedir, package, version, filename, origin, dbpath, clea
 	if len(c.fetchall()) != 0:
 		c.execute('''delete from processed_file where package=? and version=?''', (package, version))
 		conn.commit()
-	sqlres = traversefiletree(temporarydir, conn, c, package, version, license)
+	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, pool)
 	## Add the file to the database: name of archive, sha256, packagename and version
 	## This is to be able to just update the database instead of recreating it.
 	c.execute('''insert into processed (package, version, filename, origin, sha256) values (?,?,?,?,?)''', (package, version, filename, origin, filehash))
@@ -215,7 +215,7 @@ def unpack_getstrings((filedir, package, version, filename, origin, dbpath, clea
 			pass
 	return
 
-def traversefiletree(srcdir, conn, cursor, package, version, license):
+def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 	srcdirlen = len(srcdir)+1
 	osgen = os.walk(srcdir)
 
@@ -257,8 +257,6 @@ def traversefiletree(srcdir, conn, cursor, package, version, license):
 		if str(e) != "":
 			print >>sys.stderr, package, version, e
 		pass
-
-	pool = Pool()
 
 	## first check licenses, since we do sometimes manipulate some source code files
 	if license:
@@ -590,6 +588,8 @@ def main(argv):
 	c.close()
 	conn.close()
 
+	pool = Pool()
+
 	pkgmeta = []
 	## TODO: do all kinds of checks here
 	filelist = open(options.filedir + "/LIST").readlines()
@@ -604,11 +604,10 @@ def main(argv):
 			#pkgmeta.append((options.filedir, package, version, filename, origin, options.db, cleanup, license))
 			if options.verify:
 				unpack_verify(options.filedir, filename)
-			res = unpack_getstrings((options.filedir, package, version, filename, origin, options.db, cleanup, license))
+			res = unpack_getstrings((options.filedir, package, version, filename, origin, options.db, cleanup, license, pool))
 		except Exception, e:
 			# oops, something went wrong
 			print >>sys.stderr, e
-	#result = pool.map(unpack_getstrings, pkgmeta)
 
 if __name__ == "__main__":
     main(sys.argv)
