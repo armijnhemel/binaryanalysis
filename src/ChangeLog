@@ -1,3 +1,7 @@
+2012-10-14
+* fix multiprocessing code in database creation
+* add script to mass rename packages in the database
+
 2012-10-13
 * make better use of multiprocessing in database creation
 
