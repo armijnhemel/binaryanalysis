@@ -49,9 +49,99 @@ if offsets['java_serialized'] == []:
 \end{verbatim}
 \end{frame}
 
+\frame{
+\frametitle{Writing a new prerun scan}
+A prerun scan takes 5 parameters:
+
+\begin{itemize}
+\item \texttt{filename} - the full filename of the file during scanning
+\item \texttt{tempdir} (default \texttt{None}) - the temporary directory where the file has been unpacked
+\item \texttt{tags} (default \texttt{[]}) - any existing tags for this file (from other prerun scans)
+\item \texttt{offsets} (default \texttt{\{\}}) - offsets of identifiers
+\item \texttt{envvars} (default \texttt{None}) - optional environment variables
+\end{itemize}
+The return value should be a list of tags (strings), or an empty list.
+}
+
 \begin{frame}[fragile]
-\frametitle{Using identifiers in scans}
+\frametitle{Prerun scan example}
+\begin{verbatim}
+def searchXML(filename, tempdir=None, tags=[],
+              offsets={}, envvars=None):
+
+    newtags = []
+
+    p = subprocess.Popen(['xmllint','--noout',
+        "--nonet", filename], stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE, close_fds=True)
+
+    (stanout, stanerr) = p.communicate()
+
+    if p.returncode == 0:
+        newtags.append("xml")
+
+    return newtags
+\end{verbatim}
 \end{frame}
+
+\frame{
+\frametitle{Writing a new unpacking scan}
+\begin{itemize}
+\item \texttt{filename} - the full filename of the file during scanning
+\item \texttt{tempdir} (default \texttt{None}) - the temporary directory where the file has been unpacked
+\item \texttt{blacklist} (default \texttt{[]}) -
+\item \texttt{offsets} (default \texttt{\{\}}) - offsets of identifiers
+\item \texttt{envvars} (default \texttt{None}) - optional environment variables
+\end{itemize}
+}
+
+\frame{
+\frametitle{Writing a new file scan}
+
+\begin{itemize}
+\item \texttt{path} - the full filename of the file during scanning
+\item \texttt{blacklist} (default \texttt{[]}) -
+\item \texttt{envvars} (default \texttt{None}) - optional environment variables
+\end{itemize}
+}
+
+\begin{frame}[fragile]
+\frametitle{File scan example}
+\begin{verbatim}
+def scanVirus(path, blacklist=[], envvars=None):
+
+  p = subprocess.Popen(['clamscan', "%s" % (path,)],
+      stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+      close_fds=True)
+
+  (stanout, stanerr) = p.communicate()
+
+  if p.returncode == 0:
+    return
+  else:
+    # virus found
+    viruslines = stanout.split("\n")
+    virusname = viruslines[0].strip()[len(path) + 2:-6]
+    return virusname
+\end{verbatim}
+\end{frame}
+
+\frame{
+\frametitle{Writing a new postrun scan}
+
+\begin{itemize}
+\item \texttt{filename} - the full filename of the file during scanning
+\item \texttt{unpackreport}
+\item \texttt{leafscans}
+\item \texttt{scantempdir}
+\item \texttt{toplevelscandir}
+\item \texttt{envvars} (default \texttt{None}) - optional environment variables
+\end{itemize}
+
+Since postrun scans are only supposed to have side effects no return value is expected.
+
+Example: \texttt{bat/generatehexdump.py}
+}
 
 \frame{
 \frametitle{Conclusion}
