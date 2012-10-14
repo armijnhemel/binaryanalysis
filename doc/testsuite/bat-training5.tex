@@ -17,7 +17,11 @@
 In this course you will learn:
 
 \begin{itemize}
-\item extending the Binary Analysis Tool
+\item adding new identifiers to BAT
+\item writing a new prerun scan
+\item writing a new unpack scan
+\item writing a new file specific scan
+\item writing a new postrun scan
 \end{itemize}
 }
 
@@ -37,10 +41,31 @@ A new identifier will be scanned as soon as there is a scan that has declared it
 \begin{frame}[fragile]
 \frametitle{Using identifiers in scans}
 Identifiers can be accessed in a dictionary called \texttt{offsets}. This dictionary is passed around as an argument
+ to each scan and can be accessed by the keys from the \texttt{fsmagic} dictionary, for example:
 
+\begin{verbatim}
+if offsets['java_serialized'] == []:
+        return ([], blacklist, [])
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Using identifiers in scans}
 \end{frame}
 
 \frame{
+\frametitle{Conclusion}
+In this course you have learned about:
+
+\begin{itemize}
+\item adding new identifiers to BAT
+\item writing a new prerun scan
+\item writing a new unpack scan
+\item writing a new file specific scan
+\item writing a new postrun scan
+\end{itemize}
+
+In the next course we will show how a database for the Binary Analysis Tool can be created.
 }
 
 \end{document}
