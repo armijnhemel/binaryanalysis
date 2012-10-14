@@ -253,6 +253,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 							filehashes[filehash].append((i[0], p))
 						else:
 							filehashes[filehash] = [(i[0], p)]
+		conn.commit()
 	except Exception, e:
 		if str(e) != "":
 			print >>sys.stderr, package, version, e
@@ -285,6 +286,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 						cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (f, filelicense, "ninka", scannerversion))
 			else:
 				licensefilestoscan.append(commentshash2[c][0])
+		conn.commit()
 
 		licensescanfiles = []
 		for l in licensefilestoscan:
@@ -302,6 +304,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 				cursor.execute('''insert into ninkacomments (sha256, license, scanner, version) values (?,?,?,?)''', (commentshash[l[0]], license, "ninka", ninkaversion))
 				for f in commentshash2[commentshash[l[0]]]:
 					cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (f, license, "ninka", ninkaversion))
+		conn.commit()
 
 
 	## process the files we want to scan in parallel, then process the results
