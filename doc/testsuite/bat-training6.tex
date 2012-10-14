@@ -22,6 +22,32 @@ In this course you will learn:
 }
 
 \frame{
+\frametitle{Understanding the database}
+}
+
+\frame{
+\frametitle{Collecting a dataset}
+
+\begin{itemize}
+\item upstream projects
+\item distributions
+\end{itemize}
+}
+
+\frame{
+\frametitle{Generating the database}
+}
+
+\frame{
+\frametitle{Caching databases}
+The ranking scan uses caching databases. These are automatically generated at runtime and will vastly speed up the same search later.
+
+The configuration setting \texttt{multiprocessing} should be set to \texttt{no}: multiple programs trying to update the same database does not work well.
+
+As soon as the caching databases are fully generated (or fully enough) \texttt{multiprocessing} can be set to \texttt{yes}.
+}
+
+\frame{
 \frametitle{Conclusion}
 In this course you have learned about:
 
