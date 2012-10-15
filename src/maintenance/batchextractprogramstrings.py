@@ -245,7 +245,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 				for extension in extensions.keys():
 					if (p_nocase.endswith(extension)):
         					filemagic = ms.file(os.path.realpath("%s/%s" % (i[0], p)))
-						if filemagic == "AppleDouble encoded Macintosh file":	continue
+						if filemagic == "AppleDouble encoded Macintosh file":	break
 						scanfile = open("%s/%s" % (i[0], p), 'r')
 						h = hashlib.new('sha256')
 						h.update(scanfile.read())
@@ -255,16 +255,17 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 						testres = cursor.fetchall()
 						cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, "%s/%s" % (i[0][srcdirlen:],p), filehash))
 						if len(testres) != 0:
-							continue
+							break
 						cursor.execute('''select * from extracted_file where sha256=?''', (filehash,))
 						if len(cursor.fetchall()) != 0:
 							#print >>sys.stderr, "duplicate %s %s: %s/%s" % (package, version, i[0], p)
-							continue
+							break
 						filestoscan.append((package, version, i[0], p, extensions[extension], filehash))
 						if filehashes.has_key(filehash):
 							filehashes[filehash].append((i[0], p))
 						else:
 							filehashes[filehash] = [(i[0], p)]
+						break
 		conn.commit()
 	except Exception, e:
 		if str(e) != "":
