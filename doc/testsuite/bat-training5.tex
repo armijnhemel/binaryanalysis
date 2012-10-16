@@ -21,6 +21,7 @@ In this course you will learn:
 \item writing a new prerun scan
 \item writing a new unpack scan
 \item writing a new file specific scan
+\item writing a pretty printer for file specific scans
 \item writing a new postrun scan
 \end{itemize}
 }
@@ -86,23 +87,36 @@ def searchXML(filename, tempdir=None, tags=[],
 
 \frame{
 \frametitle{Writing a new unpacking scan}
+An unpack scan takes the following parameters:
+
 \begin{itemize}
 \item \texttt{filename} - the full filename of the file during scanning
 \item \texttt{tempdir} (default \texttt{None}) - the temporary directory where the file has been unpacked
-\item \texttt{blacklist} (default \texttt{[]}) -
+\item \texttt{blacklist} (default \texttt{[]}) - a list of tuples of byte ranges in the file that should not be scanned
 \item \texttt{offsets} (default \texttt{\{\}}) - offsets of identifiers
 \item \texttt{envvars} (default \texttt{None}) - optional environment variables
+\end{itemize}
+
+The return value is a tuple containing:
+
+\begin{itemize}
+\item list of tuples with directories where unpacked files can be found, offsets in the original file where the compressed file/file system can be found, plus (if possible), the size of the compressed file/file system
+\item updated blacklist
+\item list of tags
 \end{itemize}
 }
 
 \frame{
 \frametitle{Writing a new file scan}
+A file scan takes the following parameters:
 
 \begin{itemize}
 \item \texttt{path} - the full filename of the file during scanning
-\item \texttt{blacklist} (default \texttt{[]}) -
+\item \texttt{blacklist} (default \texttt{[]}) - a list of tuples of byte ranges in the file that should not be scanned
 \item \texttt{envvars} (default \texttt{None}) - optional environment variables
 \end{itemize}
+
+The return value can be an arbitrary value. If XML output is enabled and the return value is a complex data structure a XML pretty printer should be written (simple values, like integers, strings or booleans, will be included verbatim).
 }
 
 \begin{frame}[fragile]
@@ -127,14 +141,43 @@ def scanVirus(path, blacklist=[], envvars=None):
 \end{frame}
 
 \frame{
+\frametitle{Writing a XML pretty printer for file scans}
+
+\begin{itemize}
+\item \texttt{res} - result of file specific scan
+\item \texttt{root} - top level XML node (for creating new XML elements)
+\item \texttt{envvars} (default \texttt{None}) - optional environment variables
+\end{itemize}
+
+The return value should be a XML node.
+}
+
+\begin{frame}[fragile]
+\frametitle{XML pretty printer example}
+\begin{verbatim}
+def dynamicLibsPrettyPrint(res, root, envvars=None):
+    tmpnode = root.createElement('libs')
+    for lib in res:
+        tmpnode2 = root.createElement('lib')
+        tmpnodetext = xml.dom.minidom.Text()
+        tmpnodetext.data = lib
+        tmpnode2.appendChild(tmpnodetext)
+        tmpnode.appendChild(tmpnode2)
+    return tmpnode
+\end{verbatim}
+
+\end{frame}
+
+\frame{
 \frametitle{Writing a new postrun scan}
+A postrun scan takes a few parameters:
 
 \begin{itemize}
 \item \texttt{filename} - the full filename of the file during scanning
-\item \texttt{unpackreport}
-\item \texttt{leafscans}
-\item \texttt{scantempdir}
-\item \texttt{toplevelscandir}
+\item \texttt{unpackreport} - results from unpack scans
+\item \texttt{leafscans} - results from file specific scans
+\item \texttt{scantempdir} - relative directory in the scan tree of where the original file can be found
+\item \texttt{toplevelscandir} - top level directory of the scan
 \item \texttt{envvars} (default \texttt{None}) - optional environment variables
 \end{itemize}
 
