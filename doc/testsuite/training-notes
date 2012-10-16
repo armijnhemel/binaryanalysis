@@ -1,13 +1,15 @@
-Notes/transcript for presentation
+Notes/transcript for presentation.
+
+File: bat-training.pdf
 
 Slide 1: no notes
 
 Slide 2: Welcome to this first course about using the Binary Analysis Tool.
 This course is the first in a series of courses about analysing binaries with
-the Binary Analysis Tool
+the Binary Analysis Tool.
 
-In this course you will learn about what the Binary Analysis Tool is and why it
-was made. You will also learn about the backgrounds of how to identify
+In this first course you will learn about what the Binary Analysis Tool is and
+why it was made. You will also learn about the backgrounds of how to identify
 compressed files and file systems within a larger binary blob and how to
 extract these from the blob.
 
@@ -17,53 +19,87 @@ will make your life a lot easier.
 Slide 3: Before whe can start you need to make sure you have all he right
 materials. You will need to have a (recent) copy of the Binary Analysis Tool
 plus dependencies installed. A copy of the Binary Analysis Tool user and
-developer guide is highly recommended. Finally, a set of firmwares (the
-standard firmwares of this course, plus anything else you would like to scan).
+developer guide is highly recommended. Finally, a set of firmwares like the
+standard firmwares of this course, plus anything else you would like to scan.
 
 Slide 4: The Binary Analysis Tool, or BAT, is a generic framework for
 automating analysis of binary files. It can be used for various purposes, like
 license compliance engineering, or security research, or basically any problem
 for which you want to analyse a binary file.
 
-The main focus of the Binary Analysis Tool is on license compliance engineering.
+The main focus of the authors of the Binary Analysis Tool is on license
+compliance engineering.
 
-Slide 5: the Binary Analysis Tool was created with a few goals in mind. The
-first goal is to demystify compliance engineering. To many people compliance
-engineering is a form of black art, while to a trained engineer it actually is
-just another form of debugging.  With the Binary Analysis Tool it is easier
-to get up to speed with compliance engineering.
+Slide 5: the Binary Analysis Tool, or in short BAT, was created with a few
+goals in mind. The most important goal is to demystify compliance engineering.
+To many people compliance engineering is a form of black art, while to a
+trained engineer it actually is just another form of debugging.  With the
+Binary Analysis Tool it is easier to get up to speed with compliance
+engineering.
 
 Very important is that results can be reproduced by someone else who is also
 running the tool, without having to solely rely on someone's expert opinion
 that is hard to verify.
 
 By making a common language for binary analysis it is easier to talk to other
-people about analysing binaries, and accelerate research in this field.
+people about analysing binaries and compare results as well as to accelerate
+research in this field.
 
-But, one of the most important reasons was to take away excuses for companies
-that insist that for them it is impossible to find out what they ship. By
-giving them a tool that automates this task they can no longer use this excuse,
-but at the same time are not left in the cold, because the tool is available to
-them as well.
+But, one of the most important reasons behind creating BAT was to take away
+excuses for companies that insist that for them it is impossible to find out
+what they ship. By giving them a tool that automates this task and reduces it
+to a job that can be done in under a few hours they can no longer use this
+excuse, but at the same time are not left in the cold, because the tool is
+available to them as well and they can use it before they get caught.
+
+In short: it creates a more level playing field.
 
 Slide 6: BAT is released under the Apache 2 license, with some plugins and
-extra tools under GPLv2, GPLv2+ or as public domain. It is written in Python
-and is a lightweight wrapper around standard and well-tested Linux tools, or
-standard tools with some slight tweaks (available in separate packages). The
-heavy lifting is done by these tools, while BAT takes care of all the
-infrastructure, such as setting up directories, invoking the tools with the
-proper parameters, cleaning up after tools, collecting results, and so on.
+extra (external) tools under GPLv2, GPLv2+ or as public domain. It is written
+in Python and is a lightweight wrapper around standard and well-tested Linux
+tools, or standard tools with some slight tweaks (available in separate
+packages). The heavy lifting (unpacking and verifying files) is mostly done by
+these tools, while BAT takes care of all the infrastructure, such as setting up
+directories, invoking the tools with the correct parameters, cleaning up after
+tools, collecting results, pretty printing results, and so on.
 
 In the past few years BAT has actively been used in academic research, of which
-results have been put back into BAT.
+results have been merged back into BAT (like an advanced ranking method).
 
 One very important thing to remember is that BAT is just a tool that analyses
 binaries, but it does not draw any legal conclusions. The results should always
 be interpreted by a human.
 
-Slide 7: 
+Slide 7: In our experience many people starting in license compliance
+engineering are jumping to conclusions too quickly, often driven by anger
+because someone is *supposedly* ignoring one of the vital reasons that makes
+FLOSS work: the license. While completely understandable anger does not fix
+issues and only allows you to make mistakes and oversee things, which could
+lead to falsely accusing companies of breaching a license.
 
-Slide 8: When looking at a binary file it looks rather overwhelming at first
+Compliance engineering should just be used to gather technical evidence of a
+possible license violation and answer questions as:
+
+* is program XYZ included in the firmware?
+* are there matching sources for XYZ in the source code release, if any?
+
+The rest should be dealt with by legal professionals.
+
+Slide 8: GPL compliance engineering consists of a few steps: first extract
+individual files from larger blobs, like firmwares, installers or other files.
+This extraction might involve multiple steps, like first extracting a file
+system from a firmware, then extracting individual files from the extracted
+file system, and so on.
+
+Then the individual files are examined, for example by extracting strings or
+function names from the binary and comparing these to publicly available
+information like source code.
+
+Another good source is to use circumstantial evidence, like search for
+configuration files, or files that are commonly installed together with the
+file you are examining.
+
+Slide 9: When looking at a binary file it looks rather overwhelming at first
 sight.  On this slide you see what a file looks like if you look at it with the
 tool 'hexdump'.  The first column displays the offset in the file (in
 hexadecimal notation), the second column has the hexadecimal values of 16 bytes
@@ -74,7 +110,7 @@ This slide actually displays the first few hundred bytes of a file in ZIP
 format. The first bytes ('PK') are (part of) the identifier that is used for
 ZIP files.
 
-Slide 9: A binary file, for example a firmware, looks like random data. But
+Slide 10: A binary file, for example a firmware, looks like random data. But
 actually there is a hidden structure, that is sometimes easy to find, and
 sometimes harder, or almost impossible to find (for example if a firmware has
 been encrypted and you don't have any decryption key). In most cases it is
@@ -85,7 +121,7 @@ compressed files, then unpack them and for every file that has been extracted
 you need to do the same, until you can't unpack anymore. After that you can
 start analysing each individual file that you have unpacked.
 
-Slide 10: Analysing a firmware that was downloaded from a website will not
+Slide 11: Analysing a firmware that was downloaded from a website will not
 always tell you everything on a device. Often firmware updates only update a
 part of the data that you can find on the flash chip. Software like the
 bootloader, which often is GPL licensed software, is not included in the
@@ -102,29 +138,29 @@ transferring the contents of the flash chip. Other methods could be exploiting
 security bugs in the device, or, in case of Android devices using the (remote)
 Android debugger. These topics are out of scope for this course.
 
-Slide 11: The firmwares that will be used in this course are all based on
+Slide 12: The firmwares that will be used in this course are all based on
 OpenWrt. We will not be using firmwares of commercially available firmwares for
 a few reasons: we don't want to single out companies and by distributing their
 firmwares we could possibly be infringing the license terms ourselves. By using
 OpenWrt, for which we have complete sources, we avoid both issues.
 
-Slide 12: Before we can explain how the Binary Analysis Tool works you need to
+Slide 13: Before we can explain how the Binary Analysis Tool works you need to
 understand the workflow that BAT implements, also because it makes it easier to
 debug in case BAT does not work correctly and you need to look into files by
 hand.
 
 We will therefore look at discovering offsets of compressed files and file
-systems and unpacking file systems. Compliance engineering for binaries after
-unpacking them is the main subject for the next course.
+systems and unpacking file systems manually. Compliance engineering for binaries
+after unpacking them is the main subject for the next course.
 
-Slide 13: The discover the start of a compressed file or file system there are
+Slide 14: The discover the start of a compressed file or file system there are
 two things we can search for in a firmware: known identifiers of compressed
 files and file systems and something called `padding'.
 
 Before you can search for these it is essential to have the right tools to
 display files.
 
-Slide 14: A tool that easily allows you to view a file in several formats
+Slide 15: A tool that easily allows you to view a file in several formats
 simultaneously is hexdump. It is intended to display hexadecimal values of the
 bytes in a file. When you use the flag '-C' you get the values of the bytes in
 both hexadecimal format, plus, if possible, a human readable representation of
@@ -135,7 +171,7 @@ hexadecimal notation), the second column has the hexadecimal values of 16 bytes
 per row, and the third column displays the bytes as human readable characters,
 if possible.
 
-Slide 15: Many compressed files, file systems or media files start, or end,
+Slide 16: Many compressed files, file systems or media files start, or end,
 with a file specific identifier, such as 'PK' for ZIP files, 'ELF' for ELF
 executables or object files or the hexadecimal sequence 0x1f 0x8b 0x08 for gzip
 compressed files.
@@ -143,7 +179,7 @@ compressed files.
 On almost all Linux systems you can find identifiers for many file types in the
 so called `magic' file, or database, located in /usr/share/magic.
 
-Slide 16: Another good way to find offsets is to seach for so called `padding
+Slide 17: Another good way to find offsets is to seach for so called `padding
 characters' or simply `padding'. On many embedded devices the flash chip is
 divided in partitions. The bootloader is configured in such a way that it knows
 at which offset it can find for example the (compressed) kernel, or the root
@@ -154,7 +190,7 @@ is reserved for it, so padding is used to fill out the remaining space. Often
 the NUL character (hexadecimal value 0x00) is used, but other values (for
 example 0xff) are used as well.
 
-Slide 17: When using hexdump it is quite easy to recognize padding, since
+Slide 18: When using hexdump it is quite easy to recognize padding, since
 hexdump will not display duplicate lines, but instead replace them with the
 asterisk character, If you see a lot of NUL characters it is safe to assume
 that it is padding and something interesting is following the padding.
@@ -162,32 +198,41 @@ that it is padding and something interesting is following the padding.
 In the example here you can see padding, followed by the identifier for a
 SquashFS file system.
 
-Slide 18: No notes
+Slide 19: No notes
 
-Slide 19: After finding the right offsets for a compressed file or file system
+Slide 20: After finding the right offsets for a compressed file or file system
 you can carve it from the file. There are several ways you can do this. One way
 is to use an editor like Vim or Emacs and edit the file by hand. An easier way
 is to use a tool like dd to write the right bytes to a file, for example like
 shown on the slide.
 
-Slide 20: No notes
-
 Slide 21: No notes
 
-Slide 22: Extracting files and file systems manually is doable but it is a lot
+Slide 22: No notes
+
+Slide 23: Extracting files and file systems manually is doable but it is a lot
 of work and it is easy to miss things. The Binary Analysis Tool automates the
 boring work and searches for identifiers, extracts files and file systems,
 unpacks them and verifies unpacking was done successfully. It then recursively
 applies the same methods to the unpacked files, so you can unpack nested files
 and file systems.
 
-Slide 23: 
+Slide 24: The main program in BAT is a Python script that takes a few
+parameters to control the configuration (BAT is highly configurable and
+pluggable), the input file and the output file.
 
-Slide 24: 
+Parameters for these three are mandatory and without it the program will exit
+with an error message.
 
-Slide 25: No notes
+Slide 25: The results of a scan of BAT can be viewed with the BAT results
+viewer. Later we will dig deeper into fully using and configuring this program.
 
-Slide 26: In this course you have learned about the backgrounds of the Binary
+Running it is fairly straightforward: open the result file from BAT via the
+menu and browse.
+
+Slide 26: No notes
+
+Slide 27: In this course you have learned about the backgrounds of the Binary
 Analysis Tool, you have learned to identify file systems and compressed files
 within a bigger binary blob such as a firmware. You have learned how to extract
 file systems and compressed files manually and also to do this automatically
