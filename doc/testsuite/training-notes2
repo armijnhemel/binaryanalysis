@@ -1,0 +1,109 @@
+Notes/transcript for presentation.
+
+File: bat-training2.pdf
+
+Slide 1: no notes
+
+Slide 2 + 3: In this course we will dive deeper into some of the nitty gritty
+details of GPL compliance engineering. We will look into examining individual
+files in depth, for example determining the type of a file, finding runtime
+dependencies of dynamically linked executables, extracting human readable
+strings from binary files and function names from dynamically linked
+executables. We will also look a bit into how these things are done in BAT.
+
+Slide 4: Some files are especially interesting from a software license
+compliance perspective, because they were generated from source code under a
+FLOSS license: executables, libraries, and Linux kernel images are prime
+examples of files that are good candidates for analysis.
+
+Of course, other files, like graphics, text, audio and video, can also be
+covered by copyright, or licenses like Creative Commons but this is outside of
+the scope of this course.
+
+Slide 5: To help decide quickly which files you should analyse it helps to
+determine what a file actually is: is it an executable, or a text file, or a
+graphics file, and so on, so you can focus on the important files and skip
+the uninteresting files.
+
+A good first guess can be made by running the command "file" on the actual
+file. This program uses a database with signatures of common files. This works
+well for most files on systems, since a single file is indeed of a single
+type.
+
+Slide 6: no comments
+
+Slide 7: There are instances where "file" does not work correctly, for example
+if two files have been concatenated, which is what happens frequently in for
+example firmware images, or if a certain file type has no clear identifiers
+like with the YAFFS2 file system, or if the magic database on the system lacks
+the identifier.
+
+In those cases "file" will not work correctly. That does not make it less
+useful though.
+
+Slide 8: In the Binary Analysis Tool a few extra verification steps are taken
+to deal with for example concatenation of files. The output from "file" and the
+underlying "libmagic" library is still used for reporting and sometimes for
+verification, but never as the sole method for determining the type of a file.
+
+BAT also takes a more conservative approach: if there is not enough certainty
+to conclude a certain file type, then no file type is concluded and the file is
+treated as an opaque object with bytes.
+
+Slide 9-10-11-12: ELF executables (ELF is the executable format used on
+virtually all current Linux systems) are sometimes "dynamically linked" to
+libraries. This is an optimisation to save space on the storage of a device
+(libraries can be shared between applications), plus in memory during
+execution.
+
+It is very important for licensing conditions to find out to which libraries
+the executable is linked. There are various tools to find out. The best one to
+inspect an ELF executable is readelf.
+
+Most people know "ldd" but this is not the right choice, since it actually
+invokes the dynamic linker on the system that is used to analyse to resolve the
+dependencies, which is likely to give incorrect results.
+
+Slide 13: no comments
+
+Slide 14: Most evidence of the presence of a particular piece of software
+inside a program is extract string constants from the binary and comparing
+these to source code.
+
+String constants include output messages and error messages, and so on. These
+are reliable, because the compiler does not remove these from the binary. Using
+the "strings" program it is possible to extract ASCII characters frm the
+binary.
+
+Slide 15: no comments
+
+Slide 16: Matching strings is often not difficult. Sometimes there are hints
+that make it very clear that a certain program was used, such as copyright
+messages, or URLs, or program names.
+
+Another good way is to find a string that looks quite unique and to search for
+it using a search engine. Quite often it only takes a few searches to find out
+which program was used.
+
+Of course, this can be automated and this is what BAT can do.
+
+Slide 17: The presence of a single unique match (or seemingly unique match) is
+not a good base to draw conclusions. The more unique matches you can find, the
+stronger the evidence is. Often it is possible to find dozens, and in some
+cases even hundreds or thousands of unique matches.
+
+Slide 18:
+
+Slide 19:
+
+Slide 20:
+
+Slide 21: no comments
+
+Slide 22:
+
+Slide 23:
+
+Slide 24:
+
+Slide 25: no comments
