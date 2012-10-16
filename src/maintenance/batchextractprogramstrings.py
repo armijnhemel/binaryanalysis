@@ -120,14 +120,18 @@ def unpack(directory, filename):
 		(stanout, stanerr) = p.communicate()
 		return tmpdir
         elif 'gzip compressed data' in filemagic:
-		try:
-	        	tar = tarfile.open("%s/%s" % (directory, filename), 'r:gz')
-       			tmpdir = tempfile.mkdtemp()
-       			tar.extractall(path=tmpdir)
-        		tar.close()
-			return tmpdir
-		except Exception, e:
-			print e
+       		tmpdir = tempfile.mkdtemp()
+ 		p = subprocess.Popen(['tar', 'zxf', "%s/%s" % (directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+		(stanout, stanerr) = p.communicate()
+		return tmpdir
+		#try:
+	        #	tar = tarfile.open("%s/%s" % (directory, filename), 'r:gz')
+       		#	tmpdir = tempfile.mkdtemp()
+       		#	tar.extractall(path=tmpdir)
+        	#	tar.close()
+		#	return tmpdir
+		#except Exception, e:
+		#	print e
 	elif 'Zip archive data' in filemagic:
 		try:
        			tmpdir = tempfile.mkdtemp()
