@@ -17,16 +17,14 @@
 In this course you will learn:
 
 \begin{itemize}
-\item
+\item to generate a database for BAT ranking
+\item to configure BAT to use the ranking database
 \end{itemize}
 }
 
 \frame{
-\frametitle{Understanding the database}
-}
-
-\frame{
 \frametitle{Collecting a dataset}
+Before you can generate the database you need a dataset. A good dataset can be built from downloads from for example:
 
 \begin{itemize}
 \item upstream projects
@@ -35,24 +33,109 @@ In this course you will learn:
 }
 
 \frame{
+\frametitle{Generating a file list for database extraction}
+The database generating script that is used expects a file listing all files that should be processed. There is a helper script called \texttt{generatelist.py} that helps generating this list. It can be found in the source repository of BAT in the directory \texttt{maintenance}.
+
+\texttt{python generatelist.py -f /path/to/dir/with/files -o origin | sort > /path/to/dir/with/files/LIST}
+
+The parameter \texttt{-o} allows you to set an origin of where the source was downloaded, for example \texttt{debian} or \texttt{gnome}. If not set, it will be set to \texttt{unknown}.
+}
+
+\frame{
 \frametitle{Generating the database}
+There is a script for generating a database called \texttt{batchextractprogramstrings.py}. It can be found in the source repository of BAT in the directory \texttt{maintenance}. It is a bit of a misnomer, because it can extract a lot more than string constants:
+
+\begin{itemize}
+\item string constants
+\item function names
+\item license information (using Ninka)
+\end{itemize}
+
+It can be invoked as follows:
+
+\texttt{python batchextractprogramstrings.py -z -d /path/to/database -f /path/to/dir/with/files}
+
+If license information should be extracted Ninka should first be installed. The \texttt{-l} flag should be added to the above command.
+}
+
+\frame{
+\frametitle{Installing Ninka}
+The Ninka scanner can be used to extract licensing information from source code files. It can be downloaded from:
+
+\url{https://github.com/dmgerman/ninka/}
+
+As of the time of writing the latest version is \texttt{bf83428}. This version number is hardcoded a few times in \texttt{batchextractprogramstrings.py} and should be changed if the version of Ninka changes.
+
+Installing it works as follows:
+
+\begin{enumerate}
+\item unpack in \texttt{/tmp}
+\item \texttt{cd /tmp/dmgerman-ninka-bf83428/comments/}
+\item \texttt{tar zxf comments.tar.gz}
+\item \texttt{cd comments}
+\item \texttt{make clean; make}
+\end{enumerate}
+
+Now Ninka is ready to be used by \texttt{batchextractprogramstrings.py}.
 }
 
 \frame{
 \frametitle{Caching databases}
-The ranking scan uses caching databases. These are automatically generated at runtime and will vastly speed up the same search later.
+The ranking scan uses several caching databases:
+
+\begin{itemize}
+\item strings for each programming language
+\item average amount of string sper package for each programming language
+\item function names
+\end{itemize}
+
+These are automatically generated at runtime and will vastly speed up the same search later.
 
 The configuration setting \texttt{multiprocessing} should be set to \texttt{no}: multiple programs trying to update the same database does not work well.
 
 As soon as the caching databases are fully generated (or fully enough) \texttt{multiprocessing} can be set to \texttt{yes}.
 }
 
+\begin{frame}[fragile]
+\frametitle{Database configuration}
+The parameters for the database are passed via the environment:
+
+\begin{verbatim}
+[ranking]
+...
+envvars = BAT_SQLITE_AVG_C=/path/to/avg/db/for/c
+ :BAT_SQLITE_STRINGSCACHE_C=/path/to/caching/db/for/c
+ :BAT_SQLITE_DB=/path/to/main/db
+ :BAT_SQLITE_FUNCTIONNAME_CACHE=/path/to/funcname/cache
+ :BAT_RANKING_FULLCACHE=0
+...
+\end{verbatim}
+
+Caches for other programming language families (like Java) can be added in a similar way.
+
+If caches are fully generated \texttt{BAT\_RANKING\_FULLCACHE} should be set to \texttt{1} to let BAT skip some code and speed up execution.
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Further ranking configuration}
+To enable license scanning and reporting the parameter \texttt{BAT\_RANKING\_LICENSE} should be set to \texttt{1}:
+
+\begin{verbatim}
+[ranking]
+...
+envvars = ...
+ :BAT_RANKING_LICENSE=1
+...
+\end{verbatim}
+\end{frame}
+
 \frame{
 \frametitle{Conclusion}
 In this course you have learned about:
 
 \begin{itemize}
-\item
+\item to generate a database for BAT ranking
+\item to configure BAT to use the ranking database
 \end{itemize}
 
 This concludes the Binary Analysis Tool training.
