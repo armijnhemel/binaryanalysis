@@ -36,6 +36,19 @@ For some functionality the BAT configuration file is needed. The configuration f
 
 \begin{frame}[fragile]
 \frametitle{Configuring the Binary Analysis Tool result viewer}
+The results viewer can be configured in the configuration file. Currently there is only one option:
+
+\begin{verbatim}
+[viewer]
+htmldir = /path/to/pregenerated/html/files
+\end{verbatim}
+
+This option sets the path of a directory with pretty printed source code, created with \texttt{code2html} then BZIP2 compressed.
+
+The directory structure is as follows: the first three level of directories are the first three bytes of the SHA256sum of the source code file, the filename is the SHA256sum, followed by \texttt{.html.bz2}, for example (linebreak added for clarity):
+
+\texttt{4/2/a/42af693e926f7d6ca5cfa2d4b821a33
+  1cf7c7b4d00ce1ce17fba02d82aa941a4.html.bz2}
 \end{frame}
 
 \frame{
@@ -84,7 +97,9 @@ This information should be carefully analysed and not blindly trusted.
 
 \frame{
 \frametitle{Interpreting results: function names}
-%For dynamically linked ELF executables
+For dynamically linked ELF executables unique function names (if matched) will be displayed.
+
+Many unique function names is a clear indicator of software reuse.
 }
 
 \frame{
@@ -100,14 +115,6 @@ If there are only few strings that can be matched, the results are likely to be 
 
 An even distribution of scores, combined with few matched unique strings and non-unique strings means that nothing was reliably matched.
 }
-
-\begin{frame}[fragile]
-\frametitle{Interpreting results: browsing unique matches}
-\begin{verbatim}
-[viewer]
-htmldir = /path/to/html/files
-\end{verbatim}
-\end{frame}
 
 \frame{
 \frametitle{Interpreting results: version numbers}
