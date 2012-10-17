@@ -65,20 +65,64 @@ The configuration for scanning is conceptually divided in four main parts
 a main part, plus a configuration part per category. Only the general
 configuration part is mandatory.
 
-Slide 10:
+Slide 10: The main configuration defines two things: whether or not BAT should
+write the results of a scan in a simple XML format (default: yes) and if BAT
+should be run using parallel processing (default: no).
 
-Slide 11:
+The XML pretty printer can be replaced at will by pointing to a different XML
+pretty printer.
 
-Slide 12:
+Multiprocessing can safely be turned on if there are no scans that have side
+effects, such as modifying a database. In the default configuration it is safe
+to turn this on.
 
-Slide 13:
+Slide 11: The configurations for scans are all slightly similar. Depending on
+the type of scan there might be a few differences, but each one has a few
+mandatory options: type of the scan, the module where the method that
+implements the scan can be found, the method name of the scan and if it is
+enabled or disabled.
 
-Slide 14:
+Slide 12: There are also a few optional configuration parameters that can be
+set by individual scans. Depending on the type it might, or might not, make
+sense in the context. The description option can be set for all scans since it
+has no influence. The envvars option can also be set for all scans, but it
+depends on the scan whether or not it is supported.
 
-Slide 15:
+The other scan values are specific per context and it depends on the scan type
+and the individual scan whether or not it is implemented.
 
-Slide 16:
+The noscan parameter can be set for all scans, except prerun scans. Files that
+are tagged with a value in this list will be automatically ignored for a
+particular scan.
 
-Slide 17:
+The magic parameter can be set for prerun scans and unpack scans. Only files
+that have an identifier with any of the identifiers in it will be processed by
+the scan.
+
+The priority parameter can be set for prerun scans and unpack scans. This is to
+avoid false positives: file systems that do not mangle or compress contents
+should be scanned first.
+
+Slide 13: no comments
+
+Slide 14: This scan has a low priority, is only run for files where the
+identifier for 7z can be found in and ignores files which have already been
+classified as something that is not 7z.
+
+Slide 15: This scan uses an environment variable, namely the location of a
+database with extra information. It is passed to the scan using the envvars
+configuration parameter.
+
+Slide 16: Similarly, this scan uses a few environment variables (please note
+that in the configuration these should be on one line), and ignores quite a few
+file types.
+
+Slide 17: After all scans are done BAT writes its output to a tar file. This
+file will contain everything: the original file, the unpacked files, the scan
+results as Python pickle files, possibly more output files like pictures and
+reports.
+
+If enabled it will also output a simplified XML representation of the scan
+results.
 
 Slide 18: no comments
