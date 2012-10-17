@@ -1,0 +1,84 @@
+Notes/transcript for presentation.
+
+File: bat-training3.pdf
+
+Slide 1: no notes
+
+Slide 2: In this course we will look at how to configure the Binary Analysis
+Tool in detail. For this we first need to look at how BAT works internally.
+
+Slide 3: The Binary Analysis Tool has a few distinct phases. First the binary
+is scanned for identifiers that might indicate the start or end of a file
+system, compressed file or media file (graphics, audio, video, PDF).
+
+Then each file is inspected to quickly determine a few types, such as finding
+if a file is a valid text file, or a valid XML file, and so on, to be able to
+quickly filter types and making sure that subsequent scans only get the files
+they can actually process.
+
+If the file can be unpacked (file systems, compresed files, media files, etc.)
+the file will be unpacked. After that the first three steps will be repeated
+for all the unpacked files.
+
+After the files can no not be unpacked any further each file is scanned by file
+specific scans and postrun scans.
+
+Slide 4: The identifiers that are searched for are hardcoded in a list in the
+source code. The identifiers tell where a file starts or ends. The list can
+easily be extended (covered in a next course).
+
+After the identifier search the list of identifiers that were found is passed
+to each scan.
+
+Slide 5: The current prerun scans try to determine as quickly as possible what
+the type of a file is. The idea is that later scans can ignore files they are
+not interested in. For example: a scan to unpack a file system won't work on
+a text file or PDF.
+
+Some tags that are currently given are text, binary, xml, graphics, audio, and
+elf. Tagging a file only means that a file was positively identified as such,
+but the absence of a tag should not be used to draw any conclusions. For
+example, UTF-8 files will not be tagged as 'text' since only ASCII files are
+tagged as 'text'. Tags are really just an optimisation to avoid unnecessary
+scanning later on.
+
+Slide 6: Unpacking scans unpack file systems, compressed files and media files
+possibly from a larger file (in case of concatenated data, such as firmwares).
+Around 30 file systems, compressed files and media files can currently be
+unpacked.
+
+Slide 7: There are quite a few file specific scans, ranging from simple
+identifier checks, dynamically linked libraries to more advanced matching
+scans.
+
+Slide 8: Postrun scans are scans that simply take the results of previous scans
+and process them, but don't change the results, but merely have side effects,
+such as generating pictures of the results, or making reports.
+
+Slide 9: The Binary Analysis Tool is extremely configurable: each scan, aprt
+from the identifier search, can be enabled or disabled by simply editing a
+configuration file. This configuration file is in a very simple Windows INI
+format.
+
+The configuration for scanning is conceptually divided in four main parts
+(there are a few other configuration sections which do not apply to scanning):
+a main part, plus a configuration part per category. Only the general
+configuration part is mandatory.
+
+Slide 10:
+
+Slide 11:
+
+Slide 12:
+
+Slide 13:
+
+Slide 14:
+
+Slide 15:
+
+Slide 16:
+
+Slide 17:
+
+Slide 18: no comments
