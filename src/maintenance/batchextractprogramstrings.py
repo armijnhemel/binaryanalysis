@@ -154,13 +154,8 @@ def unpack_verify(filedir, filename):
 
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
-def unpack_getstrings((filedir, package, version, filename, origin, dbpath, cleanup, license, pool)):
+def unpack_getstrings((filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, pool)):
 	print >>sys.stdout, filename
-	scanfile = open("%s/%s" % (filedir, filename), 'r')
-	h = hashlib.new('sha256')
-	h.update(scanfile.read())
-	scanfile.close()
-	filehash = h.hexdigest()
 
 	## Check if we've already processed this file. If so, we can easily skip it and return.
 	## TODO: we should take the origin into account, because sometimes there are differences
@@ -168,13 +163,6 @@ def unpack_getstrings((filedir, package, version, filename, origin, dbpath, clea
 	## example got a license change in mid-2011, without package names being updated)
         conn = sqlite3.connect(dbpath, check_same_thread = False)
 	c = conn.cursor()
-	#c.execute('PRAGMA journal_mode=off')
-	#c.execute('''select * from processed where package=? and version=? and origin=?''', (package, version, origin))
-	c.execute('''select * from processed where package=? and version=?''', (package, version))
-	if len(c.fetchall()) != 0:
-		c.close()
-		conn.close()
-		return
 	## unpack the archive. If we fail, cleanup and return.
 	temporarydir = unpack(filedir, filename)
 	if temporarydir == None:
@@ -506,6 +494,31 @@ def extractsourcestrings(filename, filedir, language):
 			lines.append(l[1:-1])
 	return sqlres
 
+def checkalreadyscanned((filedir, package, version, filename, origin, dbpath)):
+	#print >>sys.stdout, filename
+	scanfile = open("%s/%s" % (filedir, filename), 'r')
+	h = hashlib.new('sha256')
+	h.update(scanfile.read())
+	scanfile.close()
+	filehash = h.hexdigest()
+
+	## Check if we've already processed this file. If so, we can easily skip it and return.
+	## TODO: we should take the origin into account, because sometimes there are differences
+	## in packages with the same name from different sources (binutils-2.1[567] from GNU for
+	## example got a license change in mid-2011, without package names being updated)
+        conn = sqlite3.connect(dbpath, check_same_thread = False)
+	c = conn.cursor()
+	#c.execute('PRAGMA journal_mode=off')
+	#c.execute('''select * from processed where package=? and version=? and origin=?''', (package, version, origin))
+	c.execute('''select * from processed where package=? and version=?''', (package, version))
+	if len(c.fetchall()) != 0:
+		res = None
+	else:
+		res = (package, version, filename, origin, filehash)
+	c.close()
+	conn.close()
+	return res
+
 def main(argv):
 	parser = OptionParser()
 	parser.add_option("-d", "--database", action="store", dest="db", help="path to database", metavar="FILE")
@@ -621,13 +634,24 @@ def main(argv):
 				(package, version, filename) = unpacks
 			else:
 				(package, version, filename, origin) = unpacks
-			#pkgmeta.append((options.filedir, package, version, filename, origin, options.db, cleanup, license))
-			if options.verify:
-				unpack_verify(options.filedir, filename)
-			res = unpack_getstrings((options.filedir, package, version, filename, origin, options.db, cleanup, license, pool))
+			pkgmeta.append((options.filedir, package, version, filename, origin, options.db))
 		except Exception, e:
 			# oops, something went wrong
 			print >>sys.stderr, e
+	res = pool.map(checkalreadyscanned, pkgmeta)
+
+	for i in res:
+		if i == None:
+			continue
+		else:
+			try:
+				(package, version, filename, origin, filehash) = i
+				if options.verify:
+					unpack_verify(options.filedir, filename)
+				res = unpack_getstrings((options.filedir, package, version, filename, origin, filehash, options.db, cleanup, license, pool))
+			except Exception, e:
+				# oops, something went wrong
+				print >>sys.stderr, e
 
 if __name__ == "__main__":
     main(sys.argv)
