@@ -554,6 +554,7 @@ def dumpData(unpackreports, leafreports, scans, tempdir):
 	## * a copy of the report
 	## * a pickle of all data, it saves parsing the XML report (or any other format for that matter)
 	## We dump data here. There is some hardcoded data. Too bad.
+	## TODO: add configuration options for packing data and make this less hardcoded
 	sha256spack = []
 	for p in unpackreports:
 		if unpackreports[p].has_key('sha256'):
@@ -680,6 +681,9 @@ def runscan(tempdir, scans, scan_binary):
 	## Threading can be configured in the configuration file, but
 	## often it is wise to have it set to 'no'. This is because ranking writes
 	## to databases and you don't want concurrent writes.
+	## TODO: some categories of scans can still be run in parallel. For example
+	## if only one of the program scans causes a side effect, then prerun, unpack
+	## and unpack scans can still be run in parallel.
 
 	if scans['batconfig']['multiprocessing'] and not scans['batconfig']['debug']:
 		pool = multiprocessing.Pool()
