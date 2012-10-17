@@ -1,0 +1,51 @@
+Notes/transcript for presentation.
+
+File: bat-training4.pdf
+
+Slide 1: no notes
+
+Slide 2: The Binary Analysis Tool has a simple viewer that allows you to view
+and browse results of a scan (stored as a tar archive) in a simple graphical
+interface.
+
+Slide 3: The BAT results viewer needs to be configured for some functionality
+to work. The configuration file can either be loaded through the interface, or
+be supplied on the commandline.
+
+Slide 4: In the configuration file there is one section that is specific for
+the viewer. Right now the only thing that is specifically for the viewer that
+can be configured it is the location of a directory of pregenerated pretty
+printed source code in HTML.
+
+Slide 5: Opening a result file in the BAT results viewer is simple: via
+File -> Open a file selection menu will be opened, after which a file can be
+loaded. The results file will be unpacked. On the left there will be a file
+tree that can be browsed, on the right results will be displayed in tabs.
+
+Slide 6: Because not every file will be interesting it is possible to filter
+uninteresting files from the file tree. Especially in larger firmwares, such
+as Android images, there can be thousands of files, like graphics files or
+text files or Android resource files, that are not directly interesting for
+license compliance engineering, but which clutter the interface and which make
+it easy to get lost in the amount of data.
+
+The filter can be configured via Configuration -> Filter Configuration.
+
+Slide 7: For each file a few attributes (as far as applicable) will be shown,
+like size, checksum, tags, file name, and absolute and relative paths.
+Depending on the file some other results (like scan results, architecture, list
+of dynamically linked libraries) might be shown as well.
+
+Slide 8:
+
+Slide 9:
+
+Slide 10:
+
+Slide 11:
+
+Slide 12:
+
+Slide 13:
+
+Slide 14: no notes
