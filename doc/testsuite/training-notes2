@@ -92,18 +92,54 @@ not a good base to draw conclusions. The more unique matches you can find, the
 stronger the evidence is. Often it is possible to find dozens, and in some
 cases even hundreds or thousands of unique matches.
 
-Slide 18:
+Slide 18: In many binaries you will find strings that are so called "non-unique
+matches". These strings can be found in many applications. The reasons for that
+is because the strings are for example part of a protocol specification (like
+HTTP), or a coding standard, or because code has been copied around between
+programs. A good example of the latter is zlib or libjpeg, which have been
+massively copied and reused in all kinds of applications.
 
-Slide 19:
+If the non-unique matches can be found in a many packages it is circumstantial
+evidence at best, but if they are only shared amongst a very small amount of
+packages they are good to effectively narrow down the amount of possible
+candidates.
 
-Slide 20:
+Slide 19: In the Binary Analysis Tool there are two different methods that use
+string comparisons to determine the presence of software. The first method
+uses hardcoded strings from a few very well known packages. The choice of
+strings is based on personal experience of the BAT authors.
 
-Slide 21: no comments
+Although this is extremely fast, the drawback is that it does not scale well:
+the choice if strings is manual and it is easy to miss things.
 
-Slide 22:
+The second method uses a database of strings extracted from source code and
+statistics to determine which software is included in a binary. This method
+a far better fingerprint, but it requires a large database with data to work
+properly.
 
-Slide 23:
+Slide 20 + 21 + 22: Another good method for fingerprinting is to look at
+function names that are included in the binary. This only reliably works if
+that information can be extracted from the binary. For Java binaries this can
+be done using introspection and separate tools, like Joa
+( https://github.com/dmgerman/joa ), are available for this.
 
-Slide 24:
+For ELF binaries a list of function names can be extracted if the binary is
+dynamically linked: the lookup table with function names that need to be
+resolved will also include the names of local functions. By searching for these
+and comparing them to publicly available source code, similar to strings, it
+is possible to find the presence of software.
+
+Slide 23: In BAT function name matching is done by first extracting the right
+section of a dynamically linked ELF executable, possibly demangling function
+names (if the program was written in C++) and comparing it to a database of
+function names.
+
+Slide 24: The techniques described in this course are not fool proof, nore are
+they very hard to beat: rewriting strings and function names is trivial.
+However, making sure that programs still work correctly and that all function
+names still resolve correctly (in case of a library also everything that uses
+those functions need to be rewritten), and redoing that work when a newer
+version comes out is a maintenance cost: in practice very few companies want
+to do this.
 
 Slide 25: no comments
