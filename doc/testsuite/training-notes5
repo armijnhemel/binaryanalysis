@@ -1,0 +1,76 @@
+Notes/transcript for presentation.
+
+File: bat-training5.pdf
+
+Slide 1: no notes
+
+Slide 2: In this course we look at extending the Binary Analysis Tool and look
+at adding new identifiers and new scans.
+
+Slide 3: Identifiers of supported compressed files, file systems and media
+files are hardcoded in a file in the BAT source tree, namely bat/fsmagic.py.
+The structure is a simple Python dictionary called "fsmagic" that can easily be
+extended.
+
+Depending on the file type the identifier might start at the beginning of the
+file, the end of the file, or somewhere after the beginning of the file. For
+identifiers that start after the beginning of the file a special dictionary
+with "correction" offsets should also be modified.
+
+A new identifier will only be scanned as soon as there is a scan that actually
+uses it and declares it in the configuration file in the "magic" configuration
+parameter.
+
+Slide 4: Identifiers can be used in scans by accessing the dictionary "offsets"
+that is passed to each of the scans. The keys for the dictionary are the same
+keys as in the "fsmagic" dictionary.
+
+Slide 5: Prerun scans are used to quickly tag files. It takes a few parameters
+including the offsets and previous tags that were given to the file and returns
+a list of new tags the scan has found.
+
+Slide 6: no comments
+
+Slide 7: Unpacking scans try to carve a file out of a larger file and unpack
+its contents. Parameters to methods include a blacklist, which contains tuples
+of with start/end values of byte ranges in the file that should be ignored,
+since these ranges have already been scanned for example by another unpack
+scan.
+
+The return value of an unpack scan should be a list with three values:
+1. a list of tuples containing the names of directories where files have been
+unpacked and the byte offset in the original file where the compressed file or
+file system or media file can be found
+2. an updated blacklist to which new byte ranges have been added in case of
+successful unpacking
+3. a list of tags, the same as are returned by prerun scans
+
+Slide 8: a new file scan is fairly simple and only has a few parameters, namely
+the full path of the file, the blacklist with byte ranges that should be
+ignored, and environment variables.
+
+The result can be an arbitrary Python value. Depending on if XML output is
+enabled it might be necessary to write a custom XML pretty printer for return
+values that are more complex than basic types (integer, boolean, float,
+strings).
+
+Slide 9: no comments
+
+Slide 10: Writing a XML pretty printer for file scans is not difficult. There
+are three parameters: the result of the scan, a top level XML node for creating
+new XML nodes, plus optional environment variables.
+
+The result should be a valid XML node.
+
+Slide 11: no comments
+
+Slide 12: Postrun scans do not alter the scan results, but merely process them
+to for example create a different representation of the results, like reports
+or graphics.
+
+The parameters are the results of the previous scans, plus some extra meta
+information like paths in the file system and environment variables.
+
+There is no return value for post run scans.
+
+Slide 13: no comments
