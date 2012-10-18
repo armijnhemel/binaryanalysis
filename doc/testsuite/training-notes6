@@ -1,0 +1,59 @@
+Notes/transcript for presentation.
+
+File: bat-training6.pdf
+
+Slide 1: no notes
+
+Slide 2: In this final course we will look at how to generate a database for
+the advanced ranking scan discussed in previous courses, plus how to configure
+it so BAT can use it.
+
+Slide 3: A good dataset is important for the ranking to work. If there is too
+little data the classifications will be strongly biased to what is in the
+database and programs will be wrongly identified.
+
+The database works best if there is a wide range of software in it. Good
+sources for software are open source projects and Linux distributions.
+
+Slide 4: There is a database generation script available in the BAT source code
+repository. This script processes files, but it needs to have a list of files
+with some metadata (like packagename, version, and the origin of the download).
+Creating this list is very easy (it is a simple format), but if there are many
+source code archives that need to be processed it can be quite a lot of work.
+
+To help with that work there is a script that can generate these lists.
+
+Slide 5: The actual script that processes the source code files can be found in
+the BAT source code repository. It extracts string constants and function names
+(for C/C++ programs) and can be instructed to extract license texts from source
+code if instructed to using the Ninka license scanner.
+
+Slide 6: The Ninka license scanner can be used to extract license texts.
+Installing it is a bit tricky and BAT has, right now, a few hardcoded paths for
+Ninka, so it needs to be installed in a (semi-)fixed location before licenses
+can be scanned with the database extraction script.
+
+Slide 7: The ranking scan makes use of several caching databases to speed up
+scanning. These databases are created on the fly by BAT if they don't exist
+yet or can be pregenerated. The caching databases contain information that is
+needed by the scanning process, such as the average number of strings in a
+package, string constants, and function names.
+
+Since the caching databases are generated on the fly it means that
+multiprocessing can not be used for the ranking scan if there is no fully
+(pre)generated cache.
+
+Slide 8: The locations of the main database and the caching databases are set
+in the environment.
+
+The caching databases are split per language family (strings in one language
+can be very significant in one language and not in the other and vice versa).
+
+If there is a fully (pre)generated cache the variable BAT_RANKING_FULLCACHE
+should be set to 1.
+
+Slide 9: If licensing information (determined by looking at licenses of files
+in which unique strings were found) should be reported as well another
+environment variable called BAT_RANKING_LICENSE should be set to 1.
+
+Slide 10: no comments
