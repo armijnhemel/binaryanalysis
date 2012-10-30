@@ -207,6 +207,14 @@ def unpack_getstrings((filedir, package, version, filename, origin, filehash, db
 			pass
 	return
 
+def computehash((path, filename)):
+	scanfile = open("%s/%s" % (path, filename), 'r')
+	h = hashlib.new('sha256')
+	h.update(scanfile.read())
+	scanfile.close()
+	filehash = h.hexdigest()
+	return (path, filename, filehash)
+
 def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 	srcdirlen = len(srcdir)+1
 	osgen = os.walk(srcdir)
@@ -214,6 +222,9 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 	try:
 		filestoscan = []
 		filehashes = {}
+		insertfiles = []
+		tmpsha256s = []
+		scanfiles = []
 		while True:
 			i = osgen.next()
 			## make sure we can access all directories
@@ -238,31 +249,34 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 					if (p_nocase.endswith(extension)):
         					filemagic = ms.file(os.path.realpath("%s/%s" % (i[0], p)))
 						if filemagic == "AppleDouble encoded Macintosh file":	break
-						scanfile = open("%s/%s" % (i[0], p), 'r')
-						h = hashlib.new('sha256')
-						h.update(scanfile.read())
-						scanfile.close()
-						filehash = h.hexdigest()
-						cursor.execute("select * from processed_file where sha256=?", (filehash,))
-						testres = cursor.fetchall()
-						cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, "%s/%s" % (i[0][srcdirlen:],p), filehash))
-						if len(testres) != 0:
-							break
-						cursor.execute('''select * from extracted_file where sha256=?''', (filehash,))
-						if len(cursor.fetchall()) != 0:
-							#print >>sys.stderr, "duplicate %s %s: %s/%s" % (package, version, i[0], p)
-							break
-						filestoscan.append((package, version, i[0], p, extensions[extension], filehash))
-						if filehashes.has_key(filehash):
-							filehashes[filehash].append((i[0], p))
-						else:
-							filehashes[filehash] = [(i[0], p)]
-						break
-		conn.commit()
+						scanfiles.append((i[0], p))
 	except Exception, e:
 		if str(e) != "":
 			print >>sys.stderr, package, version, e
+			return
 		pass
+
+	scanfile_result = pool.map(computehash, scanfiles)
+
+	for s in scanfile_result:
+		(path, filename, filehash) = s
+		insertfiles.append(("%s/%s" % (path[srcdirlen:],filename), filehash))
+		cursor.execute("select * from processed_file where sha256=?", (filehash,))
+		testres = cursor.fetchall()
+		if len(testres) != 0:
+			continue
+		if filehash in tmpsha256s:
+			continue
+		tmpsha256s.append(filehash)
+		cursor.execute('''select * from extracted_file where sha256=?''', (filehash,))
+		if len(cursor.fetchall()) != 0:
+			#print >>sys.stderr, "duplicate %s %s: %s/%s" % (package, version, i[0], p)
+			continue
+		filestoscan.append((package, version, path, filename, extensions[extension], filehash))
+		if filehashes.has_key(filehash):
+			filehashes[filehash].append((path, filename))
+		else:
+			filehashes[filehash] = [(path, filename)]
 
 	## first check licenses, since we do sometimes manipulate some source code files
 	if license:
@@ -322,6 +336,9 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 			cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (pstring, filehash, language, linenumber))
 		for res in list(set(funcresults)):
 			cursor.execute('''insert into extracted_function (sha256, functionname) values (?,?)''', (filehash, res))
+
+	for i in insertfiles:
+		cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, i[0], i[1]))
 	conn.commit()
 
 
