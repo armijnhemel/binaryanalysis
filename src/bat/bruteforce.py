@@ -445,6 +445,14 @@ def readconfig(config):
 			except:
 				conf['noscan'] = None
 			try:
+				parallel = config.get(section, 'parallel')
+				if parallel == 'yes':
+					conf['parallel'] = True
+				else:
+					conf['parallel'] = False
+			except:
+				conf['parallel'] = True
+			try:
 				conf['priority'] = int(config.get(section, 'priority'))
 			except:
 				conf['priority'] = 0
@@ -681,14 +689,21 @@ def runscan(tempdir, scans, scan_binary):
 	## Threading can be configured in the configuration file, but
 	## often it is wise to have it set to 'no'. This is because ranking writes
 	## to databases and you don't want concurrent writes.
-	## TODO: some categories of scans can still be run in parallel. For example
-	## if only one of the program scans causes a side effect, then prerun, unpack
+	## some categories of scans can still be run in parallel. For example
+	## if only one of the program scans has a side effect, then prerun, unpack
 	## and unpack scans can still be run in parallel.
+	## By setting 'multiprocessing' to 'yes' and indicating that some scans should
+	## not be run in parallel (which will be for the whole category of scans) it is
+	## possible to have partial parallel scanning.
 
 	if scans['batconfig']['multiprocessing'] and not scans['batconfig']['debug']:
-		pool = multiprocessing.Pool()
+		if False in map(lambda x: x['parallel'], scans['unpackscans'] + scans['prerunscans']):
+			pool = multiprocessing.Pool(processes=1)
+		else:
+			pool = multiprocessing.Pool()
 	else:
 		pool = multiprocessing.Pool(processes=1)
+
 	while True:
 		scansplusleafs = pool.map(scan, scantasks, 1)
 		scantasks = []
@@ -699,6 +714,8 @@ def runscan(tempdir, scans, scan_binary):
 				unpackreports_tmp += [i[2]]
 		if scantasks == []:
 			break
+	pool.terminate()
+
 	poolresult = []
 	if scans['programscans'] != []:
 		## Sometimes there are duplicate files inside a blob. We
@@ -729,6 +746,15 @@ def runscan(tempdir, scans, scan_binary):
 		leaftasks_tmp = map(lambda x: x[:-2] + (x[-1],), leaftasks_tmp)
 		leaftasks_tmp = map(lambda x: x[:2] + (filterScans(scans['programscans'], x[2]),) + x[2:], leaftasks_tmp)
 		leaftasks_tmp.sort(key=lambda x: x[-1], reverse=True)
+
+		if scans['batconfig']['multiprocessing'] and not scans['batconfig']['debug']:
+			if False in map(lambda x: x['parallel'], scans['programscans']):
+				pool = multiprocessing.Pool(processes=1)
+			else:
+				pool = multiprocessing.Pool()
+		else:
+			pool = multiprocessing.Pool(processes=1)
+
 		poolresult = pool.map(leafScan, leaftasks_tmp, 1)
 		#poolresult = map(lambda x: (x[0][len(scantempdir):], x[1]), poolresult)
 		poolresult_tmp = []
@@ -748,6 +774,7 @@ def runscan(tempdir, scans, scan_binary):
 					if sha256_name.startswith('/'):
 						sha256_name = sha256_name[1:]
 					leafreports[j_name] = leafreports[sha256_name]
+		pool.terminate()
 	else:
 		leafreports = {}
 
@@ -770,6 +797,15 @@ def runscan(tempdir, scans, scan_binary):
 				postrunscans.append((i, unpackreports[i], leafreports[i], scans['postrunscans'], scantempdir, tempdir, scans['batconfig']['debug']))
 			else:
 				postrunscans.append((i, unpackreports[i], [], scans['postrunscans'], scantempdir, tempdir, scans['batconfig']['debug']))
+
+		if scans['batconfig']['multiprocessing'] and not scans['batconfig']['debug']:
+			if False in map(lambda x: x['parallel'], scans['postrunscans']):
+				pool = multiprocessing.Pool(processes=1)
+			else:
+				pool = multiprocessing.Pool()
+		else:
+			pool = multiprocessing.Pool(processes=1)
+
 		postrunresults = pool.map(postrunscan, postrunscans, 1)
 
 	return (unpackreports, leafreports)

@@ -1,5 +1,6 @@
 2012-10-30
 * parallellise more in database creation script
+* add some more granularity to scanning in parallel
 
 2012-10-17
 * parallellise more in database creation script
