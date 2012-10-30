@@ -208,6 +208,9 @@ def unpack_getstrings((filedir, package, version, filename, origin, filehash, db
 	return
 
 def computehash((path, filename)):
+	filemagic = ms.file(os.path.realpath("%s/%s" % (path, filename)))
+	if filemagic == "AppleDouble encoded Macintosh file":
+		return None
 	scanfile = open("%s/%s" % (path, filename), 'r')
 	h = hashlib.new('sha256')
 	h.update(scanfile.read())
@@ -222,7 +225,6 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 	try:
 		filestoscan = []
 		filehashes = {}
-		insertfiles = []
 		tmpsha256s = []
 		scanfiles = []
 		while True:
@@ -247,8 +249,6 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 				p_nocase = p.lower()
 				for extension in extensions.keys():
 					if (p_nocase.endswith(extension)):
-        					filemagic = ms.file(os.path.realpath("%s/%s" % (i[0], p)))
-						if filemagic == "AppleDouble encoded Macintosh file":	break
 						scanfiles.append((i[0], p))
 	except Exception, e:
 		if str(e) != "":
@@ -256,9 +256,13 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 			return
 		pass
 
+	## compute the hashes in parallel
 	scanfile_result = pool.map(computehash, scanfiles)
 
+	insertfiles = []
 	for s in scanfile_result:
+		if s == None:
+			continue
 		(path, filename, filehash) = s
 		insertfiles.append(("%s/%s" % (path[srcdirlen:],filename), filehash))
 		cursor.execute("select * from processed_file where sha256=?", (filehash,))
