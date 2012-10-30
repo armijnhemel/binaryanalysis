@@ -265,11 +265,11 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 			continue
 		(path, filename, filehash) = s
 		insertfiles.append(("%s/%s" % (path[srcdirlen:],filename), filehash))
+		if filehash in tmpsha256s:
+			continue
 		cursor.execute("select * from processed_file where sha256=?", (filehash,))
 		testres = cursor.fetchall()
 		if len(testres) != 0:
-			continue
-		if filehash in tmpsha256s:
 			continue
 		tmpsha256s.append(filehash)
 		cursor.execute('''select * from extracted_file where sha256=?''', (filehash,))
