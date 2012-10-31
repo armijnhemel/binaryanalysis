@@ -1,7 +1,6 @@
 2012-10-31
 * introduce new configuration parameters for postrunscans to store results in
-a more generic way. Rewrite data dumping routine (partially) to take advantage
-of this.
+a more generic way. Rewrite data dumping routine to take advantage of this.
 
 2012-10-30
 * parallellise more in database creation script

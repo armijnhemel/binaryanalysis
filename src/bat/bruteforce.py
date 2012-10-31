@@ -568,8 +568,10 @@ def prettyprint(batconf, res, scandate, scans):
 def dumpData(unpackreports, leafreports, scans, tempdir):
 	## if we make a dump of all the result we should have:
 	## * a copy of all the unpacked data
-	## * a copy of the report
-	## * a pickle of all data, it saves parsing the XML report (or any other format for that matter)
+	## * whatever results from postrunscans that should be stored (defined in the config file)
+	## * a pickle of all data, it saves parsing the XML report (or any other format for that matter),
+	##   minus the data from the ranking scan
+	## * separate pickles of the data of the ranking scan
 	sha256spack = []
 	for p in unpackreports:
 		if unpackreports[p].has_key('sha256'):
@@ -595,6 +597,7 @@ def dumpData(unpackreports, leafreports, scans, tempdir):
 			pass
 
 	## Dump unique matches for ranking scan (if available) to separate file(s)
+	## and remove the ranking data from each leafreport.
 	## It is taking a lot of space in the pickle, and it is not always used:
 	## the GUI for example has almost all data pregenerated.
 	if not os.path.exists(os.path.join(tempdir, 'filereports')):
@@ -620,7 +623,6 @@ def dumpData(unpackreports, leafreports, scans, tempdir):
 def writeDumpfile(unpackreports, leafreports, scans, outputfile, tempdir, lite=False):
 	dumpData(unpackreports, leafreports, scans, tempdir)
 	## now add everything to a TAR archive
-	## TODO: remove hardcoded directories 'images' and 'reports'
 	dumpfile = tarfile.TarFile(outputfile, 'w')
 	os.chdir(tempdir)
 	dumpfile.add('scandata.pickle')
@@ -630,18 +632,16 @@ def writeDumpfile(unpackreports, leafreports, scans, outputfile, tempdir, lite=F
 		os.stat('filereports')
 		dumpfile.add('filereports')
 	except:	pass
-	try:
-		os.stat('images')
-		dumpfile.add('images')
-	except:	pass
-	try:
-		os.stat('reports')
-		dumpfile.add('reports')
-	except:	pass
+
+	for i in scans['postrunscans']:
+		if i['storedir'] != None and i['storetarget'] != None and i['storetype'] != None:
+			try:
+				os.stat(i['storetarget'])
+				dumpfile.add(i['storetarget'])
+			except:	pass
 	dumpfile.close()
 
 def runscan(tempdir, scans, scan_binary):
-
 	os.makedirs("%s/data" % (tempdir,))
 	scantempdir = "%s/data" % (tempdir,)
 	shutil.copy(scan_binary, scantempdir)
@@ -725,6 +725,8 @@ def runscan(tempdir, scans, scan_binary):
 				leaftasks_tmp.append(i)
 		leaftasks_tmp = map(lambda x: x[:-2] + (x[-1],), leaftasks_tmp)
 		leaftasks_tmp = map(lambda x: x[:2] + (filterScans(scans['programscans'], x[2]),) + x[2:], leaftasks_tmp)
+
+		## reverse sort on size: scan largest files first
 		leaftasks_tmp.sort(key=lambda x: x[-1], reverse=True)
 
 		if scans['batconfig']['multiprocessing'] and not scans['batconfig']['debug']:
@@ -736,7 +738,6 @@ def runscan(tempdir, scans, scan_binary):
 			pool = multiprocessing.Pool(processes=1)
 
 		poolresult = pool.map(leafScan, leaftasks_tmp, 1)
-		#poolresult = map(lambda x: (x[0][len(scantempdir):], x[1]), poolresult)
 		poolresult_tmp = []
 		for p in poolresult:
 			pname = p[0][len(scantempdir):]

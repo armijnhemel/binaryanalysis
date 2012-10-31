@@ -15,5 +15,7 @@ queueing system:
 * let top level script also read from a queue
 * add script to add files to and remove files from scanning queue
 
-packing:
-* introduce new configuration parameters that control which result files should be packed and where they should be written to
+postrunscans:
+* support "noscan"
+* rework code to avoid duplicate processing
+* aggregate ranking results for JAR file scanning
