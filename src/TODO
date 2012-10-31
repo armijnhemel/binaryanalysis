@@ -15,8 +15,5 @@ queueing system:
 * let top level script also read from a queue
 * add script to add files to and remove files from scanning queue
 
-parallel scanning:
-* introduce new configuration parameter "parallel" that indicates whether or not a scan can be run as parallel (default: yes). This is to parallellise parts of BAT (such as unpacking), but leave other parts alone.
-
 packing:
 * introduce new configuration parameters that control which result files should be packed and where they should be written to
