@@ -457,6 +457,15 @@ def readconfig(config):
 			except:
 				conf['priority'] = 0
 			try:
+				## all three parameters should be there together
+				conf['storedir'] = config.get(section, 'storedir')
+				conf['storetarget'] = config.get(section, 'storetarget')
+				conf['storetype'] = config.get(section, 'storetype')
+			except:
+				conf['storedir'] = None
+				conf['storetarget'] = None
+				conf['storetype'] = None
+			try:
 				conf['xmloutput'] = config.get(section, 'xmloutput')
 			except:
 				pass
@@ -561,59 +570,29 @@ def dumpData(unpackreports, leafreports, scans, tempdir):
 	## * a copy of all the unpacked data
 	## * a copy of the report
 	## * a pickle of all data, it saves parsing the XML report (or any other format for that matter)
-	## We dump data here. There is some hardcoded data. Too bad.
-	## TODO: add configuration options for packing data and make this less hardcoded
 	sha256spack = []
 	for p in unpackreports:
 		if unpackreports[p].has_key('sha256'):
 			sha256spack.append(unpackreports[p]['sha256'])
 	for i in scans['postrunscans']:
-		if i['name'] == 'images' or i['name'] == 'rankimages':
-			if not os.path.exists(os.path.join(tempdir, 'images')):
-				os.mkdir(os.path.join(tempdir, 'images'))
-			if i.has_key('envvars'):
-				envvars = i['envvars'].split(':')
-				for e in envvars:
-					envsplit = e.split('=')
-					if envsplit[0] == 'BAT_IMAGEDIR':
-						target = os.path.join(tempdir, 'images')
-						copyfiles = []
-						## instead of globbing all the time we do the filtering ourselves
-						dirlisting = filter(lambda x: x.endswith(".png"), os.listdir(envsplit[1]))
-						for s in sha256spack:
-							copyfiles = copyfiles + filter(lambda x: x.startswith(s), dirlisting)
-						for c in copyfiles:
-							shutil.copy(os.path.join(envsplit[1], c), target)
-		elif i['name'] == 'hexdump':
-			if not os.path.exists(os.path.join(tempdir, 'reports')):
-				os.mkdir(os.path.join(tempdir, 'reports'))
-			if i.has_key('envvars'):
-				envvars = i['envvars'].split(':')
-				for e in envvars:
-					envsplit = e.split('=')
-					if envsplit[0] == 'BAT_REPORTDIR':
-						target = os.path.join(tempdir, 'reports')
-						copyfiles = []
-						dirlisting = filter(lambda x: x.endswith("-hexdump.gz"), os.listdir(envsplit[1]))
-						for s in sha256spack:
-							copyfiles = copyfiles + filter(lambda x: x.startswith(s), dirlisting)
-						for c in copyfiles:
-							shutil.copy(os.path.join(envsplit[1], c), target)
-		elif i['name'] == 'uniquehtml':
-			if not os.path.exists(os.path.join(tempdir, 'reports')):
-				os.mkdir(os.path.join(tempdir, 'reports'))
-			if i.has_key('envvars'):
-				envvars = i['envvars'].split(':')
-				for e in envvars:
-					envsplit = e.split('=')
-					if envsplit[0] == 'BAT_REPORTDIR':
-						target = os.path.join(tempdir, 'reports')
-						copyfiles = []
-						dirlisting = filter(lambda x: x.endswith("-unique.html.gz"), os.listdir(envsplit[1]))
-						for s in sha256spack:
-							copyfiles = copyfiles + filter(lambda x: x.startswith(s), dirlisting)
-						for c in copyfiles:
-							shutil.copy(os.path.join(envsplit[1], c), target)
+		## use parameters from configuration file. This assumes that the names of the
+		## all output files of a particular scan start with the checksum of the scanned
+		## file and have a common suffix.
+		if i['storedir'] != None and i['storetarget'] != None and i['storetype'] != None:
+			if not os.path.exists(os.path.join(tempdir, i['storetarget'])):
+				os.mkdir(os.path.join(tempdir, i['storetarget']))
+			target = os.path.join(tempdir, i['storetarget'])
+			copyfiles = []
+			## instead of using globbing we do the filtering ourselves, since we already know
+			## how the file was created.
+			dirlisting = filter(lambda x: x.endswith(i['storetype']), os.listdir(i['storedir']))
+			for s in sha256spack:
+				copyfiles = copyfiles + filter(lambda x: x.startswith(s), dirlisting)
+				for c in copyfiles:
+					shutil.copy(os.path.join(i['storedir'], c), target)
+		else:
+			## nothing will be dumped if one of the three parameters is missing
+			pass
 
 	## Dump unique matches for ranking scan (if available) to separate file(s)
 	## It is taking a lot of space in the pickle, and it is not always used:
@@ -641,6 +620,7 @@ def dumpData(unpackreports, leafreports, scans, tempdir):
 def writeDumpfile(unpackreports, leafreports, scans, outputfile, tempdir, lite=False):
 	dumpData(unpackreports, leafreports, scans, tempdir)
 	## now add everything to a TAR archive
+	## TODO: remove hardcoded directories 'images' and 'reports'
 	dumpfile = tarfile.TarFile(outputfile, 'w')
 	os.chdir(tempdir)
 	dumpfile.add('scandata.pickle')

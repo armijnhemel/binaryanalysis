@@ -681,6 +681,9 @@ noscan      = text:xml:graphics:pdf:audio:video
 envvars     = BAT_REPORTDIR=/tmp/images:BAT_IMAGE_MAXFILESIZE=100000000
 description = Create hexdump output of files
 enabled     = no
+storetarget = reports
+storedir    = /tmp/images
+storetype   = -hexdump.gz
 
 [images]
 type        = postrun
@@ -690,6 +693,9 @@ noscan      = text:xml:graphics:pdf:audio:video
 envvars     = BAT_IMAGEDIR=/tmp/images:BAT_IMAGE_MAXFILESIZE=100000000
 description = Generate graphical representation of files
 enabled     = no
+storetarget = images
+storedir    = /tmp/images
+storetype   = .png
 
 [rankimages]
 type        = postrun
@@ -699,6 +705,9 @@ noscan      = text:xml:graphics:pdf:audio:video
 envvars     = BAT_IMAGEDIR=/tmp/images
 description = Generate images of results of ranking
 enabled     = no
+storetarget = images
+storedir    = /tmp/images
+storename   = -piechart.png
 
 [uniquehtml]
 type        = postrun
@@ -708,3 +717,6 @@ noscan      = text:xml:graphics:pdf:audio:video
 envvars     = BAT_REPORTDIR=/tmp/images
 description = Generate HTML files with links to pretty printed source code for unique matches
 enabled     = no
+storetarget = reports
+storedir    = /tmp/images
+storetype   = -unique.html.gz
