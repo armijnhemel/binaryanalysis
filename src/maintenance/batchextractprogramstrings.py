@@ -250,6 +250,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 				for extension in extensions.keys():
 					if (p_nocase.endswith(extension)):
 						scanfiles.append((i[0], p))
+						break
 	except Exception, e:
 		if str(e) != "":
 			print >>sys.stderr, package, version, e
