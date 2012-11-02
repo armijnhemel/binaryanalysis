@@ -8,8 +8,9 @@ compression:
 * rzip
 * E00
 
-string extraction:
+string + function name extraction:
 * .txx (templates, see insight toolkit for examples)
+* rewrite ctags invocation to use -x and also extract line numbers of function names
 
 queueing system:
 * let top level script also read from a queue
