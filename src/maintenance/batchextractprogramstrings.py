@@ -312,12 +312,12 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 				licensefilestoscan.append(commentshash2[c][0])
 		conn.commit()
 
+		ninkaversion = "bf83428"
 		licensescanfiles = []
 		for l in licensefilestoscan:
-			licensescanfiles.append((filehashes[l][0][0], filehashes[l][0][1], l))
+			licensescanfiles.append((filehashes[l][0][0], filehashes[l][0][1], l, ninkaversion))
 		license_results = pool.map(runfullninka, licensescanfiles)
 
-		ninkaversion = "bf83428"
 		## we now know the licenses for files we didn't know before. So:
 		## 1. find the corresponding commentshash
 		## 2. store the licenses for this file, plus for the commentshash
@@ -367,8 +367,7 @@ def extractcomments((package, version, i, p, language, filehash)):
 	commentshash = ch.hexdigest()
 	return (filehash, commentshash)
 
-def runfullninka((i, p, filehash)):
-	ninkaversion = "bf83428"
+def runfullninka((i, p, filehash, ninkaversion)):
 	ninkaenv = os.environ.copy()
 	ninkaenv['PATH'] = ninkaenv['PATH'] + ":/tmp/dmgerman-ninka-%s/comments/comments" % ninkaversion
 
