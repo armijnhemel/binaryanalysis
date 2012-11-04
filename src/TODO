@@ -18,4 +18,6 @@ queueing system:
 postrunscans:
 * support "noscan"
 * rework code to avoid duplicate processing
+
+aggregate scanning:
 * aggregate ranking results for JAR file scanning
