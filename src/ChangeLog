@@ -1,3 +1,6 @@
+2012-11-04
+* also store line numbers for function names
+
 2012-10-31
 * introduce new configuration parameters for postrunscans to store results in
 a more generic way. Rewrite data dumping routine to take advantage of this.

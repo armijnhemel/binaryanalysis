@@ -340,9 +340,8 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 			(pstring, linenumber) = res
 			cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (pstring, filehash, language, linenumber))
 		for res in list(set(funcresults)):
-			# (funcname, linenumber) = res
-			#cursor.execute('''insert into extracted_function (sha256, functionname, linenumber) values (?,?,?)''', (filehash, funcname, linenumber))
-			cursor.execute('''insert into extracted_function (sha256, functionname) values (?,?)''', (filehash, res))
+			(funcname, linenumber) = res
+			cursor.execute('''insert into extracted_function (sha256, functionname, linenumber) values (?,?,?)''', (filehash, funcname, linenumber))
 
 	for i in insertfiles:
 		cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, i[0], i[1]))
@@ -410,8 +409,7 @@ def extractstrings((package, version, i, p, language, filehash)):
 	if language == 'C' and package != 'linux':
 		source = open(os.path.join(i, p)).read()
 
-		#p2 = subprocess.Popen(["ctags", "-f", "-", "-x", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-		p2 = subprocess.Popen(["ctags", "-f", "-", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+		p2 = subprocess.Popen(["ctags", "-f", "-", "-x", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 		(stanout2, stanerr2) = p2.communicate()
 		if p2.returncode != 0:
 			funcresults = []
@@ -420,12 +418,9 @@ def extractstrings((package, version, i, p, language, filehash)):
 		else:
 			stansplit = stanout2.strip().split("\n")
 			for res in stansplit:
-				#csplit = res.strip().split()
-				#if csplit[1] == 'function':
-				#	funcresults.append((csplit[0], int(csplit[2])))
-				csplit = res.strip().split('\t')
-				if csplit[3] == 'f':
-					funcresults.append(csplit[0])
+				csplit = res.strip().split()
+				if csplit[1] == 'function':
+					funcresults.append((csplit[0], int(csplit[2])))
 
 	return (filehash, language, sqlres, funcresults)
 
