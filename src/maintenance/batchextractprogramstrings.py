@@ -208,6 +208,27 @@ def unpack_getstrings((filedir, package, version, filename, origin, filehash, db
 	return
 
 def computehash((path, filename)):
+	try:
+		if not os.path.islink("%s/%s" % (path, filename)):
+			os.chmod("%s/%s" % (path, filename), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+	except Exception, e:
+		pass
+	## skip links
+	if os.path.islink("%s/%s" % (path, filename)):
+        	return None
+	## we can't determine anything about an empty file, so skip
+	if os.stat("%s/%s" % (path, filename)).st_size == 0:
+		return None
+	## some filenames might have uppercase extensions, so lowercase them first
+	p_nocase = filename.lower()
+	process = False
+	for extension in extensions.keys():
+		if (p_nocase.endswith(extension)):
+			process = True
+			break
+
+	if not process:
+		return None
 	filemagic = ms.file(os.path.realpath("%s/%s" % (path, filename)))
 	if filemagic == "AppleDouble encoded Macintosh file":
 		return None
@@ -216,7 +237,7 @@ def computehash((path, filename)):
 	h.update(scanfile.read())
 	scanfile.close()
 	filehash = h.hexdigest()
-	return (path, filename, filehash)
+	return (path, filename, filehash, extension)
 
 def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 	srcdirlen = len(srcdir)+1
@@ -234,6 +255,8 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 				if not os.path.islink("%s/%s" % (i[0], d)):
 					os.chmod("%s/%s" % (i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 			for p in i[2]:
+				scanfiles.append((i[0], p))
+				'''
 				try:
 					if not os.path.islink("%s/%s" % (i[0], p)):
 						os.chmod("%s/%s" % (i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
@@ -249,8 +272,9 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 				p_nocase = p.lower()
 				for extension in extensions.keys():
 					if (p_nocase.endswith(extension)):
-						scanfiles.append((i[0], p))
+						#scanfiles.append((i[0], p))
 						break
+				'''
 	except Exception, e:
 		if str(e) != "":
 			print >>sys.stderr, package, version, e
@@ -264,7 +288,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 	for s in scanfile_result:
 		if s == None:
 			continue
-		(path, filename, filehash) = s
+		(path, filename, filehash, extension) = s
 		insertfiles.append(("%s/%s" % (path[srcdirlen:],filename), filehash))
 		if filehash in tmpsha256s:
 			continue
