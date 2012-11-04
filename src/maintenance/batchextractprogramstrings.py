@@ -340,6 +340,8 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 			(pstring, linenumber) = res
 			cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (pstring, filehash, language, linenumber))
 		for res in list(set(funcresults)):
+			# (funcname, linenumber) = res
+			#cursor.execute('''insert into extracted_function (sha256, functionname, linenumber) values (?,?,?)''', (filehash, funcname, linenumber))
 			cursor.execute('''insert into extracted_function (sha256, functionname) values (?,?)''', (filehash, res))
 
 	for i in insertfiles:
@@ -408,6 +410,7 @@ def extractstrings((package, version, i, p, language, filehash)):
 	if language == 'C' and package != 'linux':
 		source = open(os.path.join(i, p)).read()
 
+		#p2 = subprocess.Popen(["ctags", "-f", "-", "-x", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 		p2 = subprocess.Popen(["ctags", "-f", "-", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 		(stanout2, stanerr2) = p2.communicate()
 		if p2.returncode != 0:
@@ -417,6 +420,9 @@ def extractstrings((package, version, i, p, language, filehash)):
 		else:
 			stansplit = stanout2.strip().split("\n")
 			for res in stansplit:
+				#csplit = res.strip().split()
+				#if csplit[1] == 'function':
+				#	funcresults.append((csplit[0], int(csplit[2])))
 				csplit = res.strip().split('\t')
 				if csplit[3] == 'f':
 					funcresults.append(csplit[0])
@@ -634,7 +640,7 @@ def main(argv):
 		c.execute('''create index if not exists comments_index on ninkacomments(sha256);''')
 
 		## Store the function names extracted, per checksum
-		c.execute('''create table if not exists extracted_function (sha256 text, functionname text)''')
+		c.execute('''create table if not exists extracted_function (sha256 text, functionname text, linenumber int)''')
 		c.execute('''create index if not exists function_index on extracted_function(sha256);''')
 		c.execute('''create index if not exists functionname_index on extracted_function(functionname)''')
 		conn.commit()
