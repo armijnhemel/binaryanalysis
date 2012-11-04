@@ -256,25 +256,6 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 					os.chmod("%s/%s" % (i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 			for p in i[2]:
 				scanfiles.append((i[0], p))
-				'''
-				try:
-					if not os.path.islink("%s/%s" % (i[0], p)):
-						os.chmod("%s/%s" % (i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-				except Exception, e:
-					pass
-				## skip links
-				if os.path.islink("%s/%s" % (i[0], p)):
-                                        continue
-				## we can't determine anything about an empty file, so skip
-				if os.stat("%s/%s" % (i[0], p)).st_size == 0:
-					continue
-				## some filenames might have uppercase extensions, so lowercase them first
-				p_nocase = p.lower()
-				for extension in extensions.keys():
-					if (p_nocase.endswith(extension)):
-						#scanfiles.append((i[0], p))
-						break
-				'''
 	except Exception, e:
 		if str(e) != "":
 			print >>sys.stderr, package, version, e
