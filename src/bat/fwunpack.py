@@ -897,10 +897,6 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, envvars=Non
 		return ([], blacklist, [])
 	diroffsets = []
 	counter = 1
-	## TODO: big file fixes
-	datafile = open(filename, 'rb')
-	data = datafile.read()
-	datafile.close()
 	extracted = 0
 	## If we only have one header, it makes more sense to work backwards
 	## since most archives are probably complete files.
@@ -924,9 +920,10 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, envvars=Non
 				continue
 			else:
 				tmpdir = dirsetup(tempdir, filename, "xz", counter)
-				res = unpackXZ(data, offset, trail, tmpdir)
+				res = unpackXZ(filename, offset, trail, tmpdir)
 				if res != None:
 					diroffsets.append((res, offset, 0))
+					blacklist.append((offset, trail))
 					counter = counter + 1
 					extracted = extracted + 1
 				else:
@@ -934,10 +931,15 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, envvars=Non
 					os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [])
 
-def unpackXZ(data, offset, trailer, tempdir=None):
+def unpackXZ(filename, offset, trailer, tempdir=None):
 	## first unpack the data, write things to a file and return
 	## the directory if the file is not empty
 	## Assumes (for now) that xz is in the path
+	## TODO: big file fixes
+	datafile = open(filename, 'rb')
+	data = datafile.read()
+	datafile.close()
+
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	## trailer has size of 2. Add 1 because [lower, upper)
