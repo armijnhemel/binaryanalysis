@@ -41,21 +41,22 @@ def unpacksetup(tempdir):
 	return tmpdir
 
 def unpackFile(filename, offset, tmpfile, tmpdir, length=0):
-	filesize = os.stat(filename).st_size
-	if offset != 0:
-		## if the offset is small, the blocksize of dd will be small, so it will be slow. In that case using
-		## tail is faster, especially for big files.
-		if offset < 128:
-			tmptmpfile = open(tmpfile, 'wb')
-			p = subprocess.Popen(['tail', filename, '-c', "%d" % (filesize - offset)], stdout=tmptmpfile, stderr=subprocess.PIPE, close_fds=True)
-			(stanout, stanerr) = p.communicate()
-			tmptmpfile.close()
-		else:
-			p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile,), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-			(stanout, stanerr) = p.communicate()
-	else:
+	if offset == 0 and length == 0:
 		os.link(filename, "%s/%s" % (tmpdir, "templink"))
 		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile)
+	else:
+		filesize = os.stat(filename).st_size
+		if length == 0:
+			## if the offset is small, the blocksize of dd will be small, so it will be slow. In that case using
+			## tail is faster, especially for big files.
+			if offset < 128:
+				tmptmpfile = open(tmpfile, 'wb')
+				p = subprocess.Popen(['tail', filename, '-c', "%d" % (filesize - offset)], stdout=tmptmpfile, stderr=subprocess.PIPE, close_fds=True)
+				(stanout, stanerr) = p.communicate()
+				tmptmpfile.close()
+			else:
+				p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile,), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+				(stanout, stanerr) = p.communicate()
 
 ## There are certain routers that have all bytes swapped, because they use 16
 ## bytes NOR flash instead of 8 bytes SPI flash. This is an ugly hack to first
@@ -945,13 +946,17 @@ def unpackXZ(filename, offset, trailer, tempdir=None):
 
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	## trailer has size of 2. Add 1 because [lower, upper)
+	#os.fdopen(tmpfile[0]).close()
+	### trailer has size of 2. Add 1 because [lower, upper)
 	os.write(tmpfile[0], data[offset:trailer+3])
+	os.fdopen(tmpfile[0]).close()
+
+	#unpackFile(filename, offset, tmpfile[1], tmpdir, trailer+3)
+
 	## test integrity of the file
 	p = subprocess.Popen(['xz', '-t', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		return None
 	## unpack
@@ -964,13 +969,11 @@ def unpackXZ(filename, offset, trailer, tempdir=None):
 	if os.stat(outtmpfile[1]).st_size == 0:
 		os.fdopen(outtmpfile[0]).close()
 		os.unlink(outtmpfile[1])
-		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
 	os.fdopen(outtmpfile[0]).close()
-	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
 	return tmpdir
 
