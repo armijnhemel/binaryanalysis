@@ -707,7 +707,7 @@ description = Generate images of results of ranking
 enabled     = no
 storetarget = images
 storedir    = /tmp/images
-storename   = -piechart.png
+storetype   = -piechart.png
 
 [uniquehtml]
 type        = postrun
