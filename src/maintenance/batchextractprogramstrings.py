@@ -154,7 +154,7 @@ def unpack_verify(filedir, filename):
 
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
-def unpack_getstrings((filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, pool)):
+def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, pool):
 	print >>sys.stdout, filename
 
 	## Check if we've already processed this file. If so, we can easily skip it and return.
@@ -675,7 +675,7 @@ def main(argv):
 				(package, version, filename, origin, filehash) = i
 				if options.verify:
 					unpack_verify(options.filedir, filename)
-				res = unpack_getstrings((options.filedir, package, version, filename, origin, filehash, options.db, cleanup, license, pool))
+				res = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, options.db, cleanup, license, pool)
 			except Exception, e:
 				# oops, something went wrong
 				print >>sys.stderr, e
