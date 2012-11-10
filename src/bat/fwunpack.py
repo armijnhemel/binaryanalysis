@@ -477,6 +477,7 @@ def unpackTar(filename, offset, tempdir=None):
 ## For this you will need the unyaffs program from
 ## http://code.google.com/p/unyaffs/
 ## TODO: check out http://code.google.com/p/yaffs2utils/
+## TODO: search blacklists
 def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	tmpdir = dirsetup(tempdir, filename, "yaffs2", 1)
 	diroffsets = []
@@ -897,7 +898,7 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, envvars=Non
 		return ([], blacklist, [])
 	diroffsets = []
 	counter = 1
-	extracted = 0
+	extracted = []
 	## If we only have one header, it makes more sense to work backwards
 	## since most archives are probably complete files.
 	if len(offsets['xz']) == 1:
@@ -905,13 +906,15 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, envvars=Non
 	for trail in offsets['xztrailer']:
 		## there is no need to continue if the maximum amount of possible
 		## file systems have already been extracted from the file
-		if extracted >= len(offsets['xz']):
+		if len(extracted) >= len(offsets['xz']):
 			break
 		## check if the trailer is in the blacklist
 		blacklistoffset = extractor.inblacklist(trail, blacklist)
 		if blacklistoffset != None:
 			continue
 		for offset in offsets['xz']:
+			if offset in extracted:
+				continue
 			## only check offsets that make sense
 			if offset >= trail:
 				continue
@@ -925,7 +928,7 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, envvars=Non
 					diroffsets.append((res, offset, 0))
 					blacklist.append((offset, trail))
 					counter = counter + 1
-					extracted = extracted + 1
+					extracted.append(offset)
 				else:
 					## cleanup
 					os.rmdir(tmpdir)
