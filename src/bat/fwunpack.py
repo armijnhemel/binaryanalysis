@@ -40,7 +40,7 @@ def unpacksetup(tempdir):
 		tmpdir = tempdir
 	return tmpdir
 
-def unpackFile(filename, offset, tmpfile, tmpdir):
+def unpackFile(filename, offset, tmpfile, tmpdir, length=0):
 	filesize = os.stat(filename).st_size
 	if offset != 0:
 		## if the offset is small, the blocksize of dd will be small, so it will be slow. In that case using
@@ -901,7 +901,16 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, envvars=Non
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
+	extracted = 0
+	## If we only have one header, it makes more sense to work backwards
+	## since most archives are probably complete files.
+	if len(offsets['xz']) == 1:
+		offsets['xztrailer'] = sorted(offsets['xztrailer'], reverse=True)
 	for trail in offsets['xztrailer']:
+		## there is no need to continue if the maximum amount of possible
+		## file systems have already been extracted from the file
+		if extracted >= len(offsets['xz']):
+			break
 		## check if the trailer is in the blacklist
 		blacklistoffset = extractor.inblacklist(trail, blacklist)
 		if blacklistoffset != None:
@@ -919,6 +928,7 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, envvars=Non
 				if res != None:
 					diroffsets.append((res, offset, 0))
 					counter = counter + 1
+					extracted = extracted + 1
 				else:
 					## cleanup
 					os.rmdir(tmpdir)
