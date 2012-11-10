@@ -954,7 +954,7 @@ def unpackXZ(filename, offset, trailer, tempdir=None):
 	#unpackFile(filename, offset, tmpfile[1], tmpdir, trailer+3)
 
 	## test integrity of the file
-	p = subprocess.Popen(['xz', '-t', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['xz', '-l', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.unlink(tmpfile[1])
