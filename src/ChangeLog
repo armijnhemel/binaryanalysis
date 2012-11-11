@@ -3,6 +3,7 @@
 * display licensing information in GUI
 * XZ unpacking cleanups
 * condense filenames in generateuniquehtml.py for easier display in GUI
+* assume .txx files are C files
 
 2012-11-10
 * stop processing XZ files as soon as all possible XZ files have been extracted.

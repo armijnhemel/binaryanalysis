@@ -8,9 +8,6 @@ compression:
 * rzip
 * E00
 
-string + function name extraction:
-* .txx (templates, see insight toolkit for examples)
-
 queueing system:
 * let top level script also read from a queue
 * add script to add files to and remove files from scanning queue
