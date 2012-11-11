@@ -74,6 +74,9 @@ In this window you will see a list of unique matches per package. For each uniqu
 <p>
 Each line number is clickable. If there is an archive of pregenerated HTML source code files the corresponding source code file will be shown when clicking on the link.
 </p>
+<p>
+If the characters { and } are in the version number it means that the version numbers have been collapsed for space reasons. The full version number can be reconstructed by taking the part before the { and a version number in between { and }. Example: "2.6.{0, 1, 2}" expands to "2.6.0, 2.6.1, 2.6.2".
+</p>
 <h2>Alternate view (advanced mode only)</h2>
 <p>
 In this tab you will find two different representations of the binary file:
