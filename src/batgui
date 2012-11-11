@@ -552,9 +552,17 @@ class BatFrame(wx.Frame):
 								versionhtml = ""
 								## nested table, urgghhhh
 								matchesrows = matchesrows + '''<h3>Matched packages (strings method)</h3>
-<table><tr><td>
-  <table>
-    <tr><td><b>Rank</b></td><td><b>Name</b></td><td><b>Percentage</b></td><td><b>Unique matches</b></td><td><b>Non unique matches assigned</b></td><td><b>Possible licenses</b></td></tr>\n'''
+<table>
+  <tr><td>
+    <table>
+      <tr>
+        <td><b>Rank</b></td>
+        <td><b>Name</b></td>
+        <td><b>Percentage</b></td>
+        <td><b>Unique matches</b></td>
+        <td><b>Non unique matches assigned</b></td>
+        <td><b>Possible licenses</b></td>
+      </tr>\n'''
 
 								for j in stringsres['reports']:
 									if len(j[5]) > 0:
