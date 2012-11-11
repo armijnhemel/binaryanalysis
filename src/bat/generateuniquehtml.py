@@ -14,6 +14,41 @@ This should be run as a postrun scan
 
 import os, os.path, sys, gzip, cgi
 
+## helper function to condense version numbers and squash numbers.
+def squash_versions(versions):
+	if len(versions) <= 3:
+		versionline = reduce(lambda x, y: x + ", " + y, versions)
+		return versionline
+	# check if we have versions without '.'
+	if len(filter(lambda x: '.' not in x, versions)) != 0:
+		versionline = reduce(lambda x, y: x + ", " + y, versions)
+		return versionline
+	versionparts = []
+	# get the major version number first
+	majorv = list(set(map(lambda x: x.split('.')[0], versions)))
+	for m in majorv:
+		maxconsolidationlevel = 0
+		## determine how many subcomponents we have at max
+		filterversions = filter(lambda x: x.startswith(m + "."), versions)
+		if len(filterversions) == 1:
+			versionparts.append(reduce(lambda x, y: x + ", " + y, filterversions))
+			continue
+		minversionsplits = min(list(set(map(lambda x: len(x.split('.')), filterversions)))) - 1
+		## split with a maximum of minversionsplits splits
+		splits = map(lambda x: x.split('.', minversionsplits), filterversions)
+		for c in range(0, minversionsplits):
+			if len(list(set(map(lambda x: x[c], splits)))) == 1:
+				maxconsolidationlevel = maxconsolidationlevel + 1
+			else: break
+		if minversionsplits != maxconsolidationlevel:
+			splits = map(lambda x: x.split('.', maxconsolidationlevel), filterversions)
+		versionpart = reduce(lambda x, y: x + "." + y, splits[0][:maxconsolidationlevel]) + ".{" + reduce(lambda x, y: x + ", " + y, map(lambda x: x[-1], splits)) + "}"
+		versionparts.append(versionpart)
+	if len(versionparts) != 1:
+		sys.stdout.flush()
+	versionline = reduce(lambda x, y: x + ", " + y, versionparts)
+	return versionline
+
 def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir, envvars={}):
 	if not unpackreport.has_key('sha256'):
 		return
@@ -88,7 +123,7 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 									if len(set(map(lambda x: x[0], sh[s]))) == 1:
 										lines = sorted(set(map(lambda x: (x[2]), sh[s])))
 										versions = sorted(set(map(lambda x: (x[1]), sh[s])))
-										versionline = reduce(lambda x, y: x + ", " + y, versions)
+										versionline = squash_versions(versions)
 										numlines = reduce(lambda x, y: x + ", " + y, map(lambda x: "<a href=\"unique:/%s#%d\">%d</a>" % (s, x, x), lines))
 										uniqtablerows.append("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (sh[s][0][0], versionline, numlines, s))
 									else:
@@ -96,10 +131,8 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 											filterd = filter(lambda x: x[0] == d, sh[s])
 											lines = sorted(set(map(lambda x: (x[2]), filterd)))
 
-											## TODO: if there are many versions (for example: Linux kernel)
-											## we should condense it a bit more
 											versions = sorted(set(map(lambda x: (x[1]), filterd)))
-											versionline = reduce(lambda x, y: x + ", " + y, versions)
+											versionline = squash_versions(versions)
 											numlines = reduce(lambda x, y: x + ", " + y, map(lambda x: "<a href=\"unique:/%s#%d\">%d</a>" % (s, x, x), lines))
 											uniqtablerows.append("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (d, versionline, numlines, s))
 								uniquehtml = uniquehtml + reduce(lambda x, y: x + y, uniqtablerows, "") + "</table></p>\n"
