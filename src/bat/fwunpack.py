@@ -960,20 +960,17 @@ def unpackXZ(filename, offset, trailer, tempdir=None):
 		os.unlink(tmpfile[1])
 		return None
 	## unpack
-	p = subprocess.Popen(['xzcat', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(outtmpfile[0], stanout)
-	#os.fdopen(outtmpfile[0]).flush()
+	p = subprocess.Popen(['xzcat', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
 	os.fsync(outtmpfile[0])
+	os.fdopen(outtmpfile[0]).close()
 	if os.stat(outtmpfile[1]).st_size == 0:
-		os.fdopen(outtmpfile[0]).close()
 		os.unlink(outtmpfile[1])
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
-	os.fdopen(outtmpfile[0]).close()
 	os.unlink(tmpfile[1])
 	return tmpdir
 
