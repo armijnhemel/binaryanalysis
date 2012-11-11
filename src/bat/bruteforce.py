@@ -557,12 +557,13 @@ def dumpData(unpackreports, leafreports, scans, tempdir):
 			copyfiles = []
 			## instead of using globbing we do the filtering ourselves, since we already know
 			## how the file was created.
-			## TODO: allow different types of files to be specified, using : as a separator
-			dirlisting = filter(lambda x: x.endswith(i['storetype']), os.listdir(i['storedir']))
-			for s in sha256spack:
-				copyfiles = copyfiles + filter(lambda x: x.startswith(s), dirlisting)
-				for c in copyfiles:
-					shutil.copy(os.path.join(i['storedir'], c), target)
+			filetypes = i['storetype'].split(':')
+			for f in filetypes:
+				dirlisting = filter(lambda x: x.endswith(f), os.listdir(i['storedir']))
+				for s in sha256spack:
+					copyfiles = copyfiles + filter(lambda x: x.startswith(s), dirlisting)
+					for c in copyfiles:
+						shutil.copy(os.path.join(i['storedir'], c), target)
 		else:
 			## nothing will be dumped if one of the three parameters is missing
 			pass

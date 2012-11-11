@@ -1,3 +1,6 @@
+2012-11-11
+* allow multiple values in 'storetype'
+
 2012-11-10
 * stop processing XZ files as soon as all possible XZ files have been extracted.
 * put extracted XZ files in blacklist
