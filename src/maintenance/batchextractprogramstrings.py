@@ -242,6 +242,7 @@ def computehash((path, filename)):
 def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 	srcdirlen = len(srcdir)+1
 	osgen = os.walk(srcdir)
+	ninkaversion = "bf83428"
 
 	try:
 		filestoscan = []
@@ -282,7 +283,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 		if len(cursor.fetchall()) != 0:
 			#print >>sys.stderr, "duplicate %s %s: %s/%s" % (package, version, i[0], p)
 			continue
-		filestoscan.append((package, version, path, filename, extensions[extension], filehash))
+		filestoscan.append((package, version, path, filename, extensions[extension], filehash, ninkaversion))
 		if filehashes.has_key(filehash):
 			filehashes[filehash].append((path, filename))
 		else:
@@ -317,7 +318,6 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 				licensefilestoscan.append(commentshash2[c][0])
 		conn.commit()
 
-		ninkaversion = "bf83428"
 		licensescanfiles = []
 		for l in licensefilestoscan:
 			licensescanfiles.append((filehashes[l][0][0], filehashes[l][0][1], l, ninkaversion))
@@ -354,12 +354,11 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 
 
 ## extract comments in parallel
-def extractcomments((package, version, i, p, language, filehash)):
+def extractcomments((package, version, i, p, language, filehash, ninkaversion)):
 	## first we generate just a .comments file and see if we've already seen it
 	## before. This is because often license headers are very similar, so we
 	## don't need to rescan everything.
 	## For gtk+ 2.20.1 scanning time dropped with about 25%.
-	ninkaversion = "bf83428"
 	ninkaenv = os.environ.copy()
 	ninkaenv['PATH'] = ninkaenv['PATH'] + ":/tmp/dmgerman-ninka-%s/comments/comments" % ninkaversion
 
@@ -624,7 +623,7 @@ def main(argv):
 		## Store the extracted strings per checksum, not per (package, version, filename).
 		## This saves a lot of space in the database
 		## The field 'language' denotes what 'language' (family) the file the string is extracted from
-		## is in. Current values: 'C' (C and C++) and Java
+		## is in. Possible values: extensions.values()
 		c.execute('''create table if not exists extracted_file (programstring text, sha256 text, language text, linenumber int)''')
 		c.execute('''create index if not exists programstring_index on extracted_file(programstring)''')
 		c.execute('''create index if not exists extracted_hash on extracted_file(sha256)''')
