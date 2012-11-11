@@ -1,5 +1,6 @@
 2012-11-11
 * allow multiple values in 'storetype'
+* display licensing information in GUI
 
 2012-11-10
 * stop processing XZ files as soon as all possible XZ files have been extracted.

@@ -58,6 +58,9 @@ On the right there are views of the file. There are three main views of the file
 <p>
 The overview displays various types of information about the file, such as name, relative path inside a file system or compressed file, size, SHA256 checksum (if any), information about which packages were found (if available), and so on.
 </p>
+<p>
+If licensing information was available during scanning it is also displayed here. Licensing information is currently only based on unique matches. Non-unique matches are not taken into account. The licensing information is not per se correct!
+</p>
 <h2>Matches view</h2>
 <p>
 In this window you will see a list of unique matches per package. For each unique match you will see:
@@ -551,10 +554,17 @@ class BatFrame(wx.Frame):
 								matchesrows = matchesrows + '''<h3>Matched packages (strings method)</h3>
 <table><tr><td>
   <table>
-    <tr><td><b>Rank</b></td><td><b>Name</b></td><td><b>Percentage</b></td><td><b>Unique matches</b></td><td><b>Non unique matches assigned</b></td></tr>\n'''
+    <tr><td><b>Rank</b></td><td><b>Name</b></td><td><b>Percentage</b></td><td><b>Unique matches</b></td><td><b>Non unique matches assigned</b></td><td><b>Possible licenses</b></td></tr>\n'''
 
 								for j in stringsres['reports']:
-									matchesrows = matchesrows + "    <tr><td>%d</td><td>%s</td><td>%f%%</td><td>%d</td><td>%d</td></tr>\n" % (j[0], j[1], j[3], j[2], stringsres['nonUniqueAssignments'].get(j[1], 0))
+									if len(j[5]) > 0:
+										if len(j[5]) > 1:
+											licensestring = j[5][0] + reduce(lambda x, y: x + " " + y, j[5][1:], "")
+										else:
+											licensestring = j[5][0]
+									else:
+										licensestring = ""
+									matchesrows = matchesrows + "    <tr><td>%d</td><td>%s</td><td>%f%%</td><td>%d</td><td>%d</td><td>%s</td></tr>\n" % (j[0], j[1], j[3], j[2], stringsres['nonUniqueAssignments'].get(j[1], 0), licensestring)
 									if j[2] != 0:
 										## don't replace %s/% with os.path.join here, since this is valid in HTML
 										versionhtml = versionhtml + "<h5>%s</h5><p><img src=\"%s\"/></p>\n" % (j[1], "%s/%s-%s-version.png" % (self.imagesdir, sha256sum, j[1]))
