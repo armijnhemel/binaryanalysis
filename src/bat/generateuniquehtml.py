@@ -92,7 +92,7 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 							## we have a list of tuples, per unique string we have a list of sha256sums and meta info
 							## This is really hairy
 							if len(k) > 1:
-								uniquehtml = uniquehtml + "<h5>%s</h5><p><table><td><b>Filename</b></td><td><b>Version(s)</b></td><td><b>Line number</b></td><td><b>SHA256</b></td></tr>" % cgi.escape(k[0])
+								uniquehtml = uniquehtml + "<h5>%s</h5><p><table><tr><td><b>Filename</b></td><td><b>Version(s)</b></td><td><b>Line number</b></td><td><b>SHA256</b></td></tr>" % cgi.escape(k[0])
 								uniqtablerows = []
 								sh = {}
 								for s in k[1]:
