@@ -2,6 +2,7 @@
 * fix config initialization bug in batgui
 * add extra sanity checks in XZ unpacking based on 'streamflags'
 * significantly rework XZ unpacking to make it more sane
+* introduce 'scanonly' to filter out scans. This is complementary to 'noscan'
 
 2012-11-11
 * allow multiple values in 'storetype'

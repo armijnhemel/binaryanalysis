@@ -82,6 +82,10 @@ def mergeBlacklist(blacklist):
 def filterScans(scans, tags):
 	filteredscans = []
 	for scan in scans:
+		if scan['scanonly'] != None:
+			scanonly = scan['scanonly'].split(':')
+			if list(set(tags).intersection(set(scanonly))) == []:
+				continue
 		if scan['noscan'] != None:
 			noscans = scan['noscan'].split(':')
 			if list(set(noscans).intersection(set(tags))) != []:
