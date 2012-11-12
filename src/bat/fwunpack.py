@@ -899,7 +899,6 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, envvars=Non
 		return ([], blacklist, [])
 	diroffsets = []
 	counter = 1
-	extracted = []
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
@@ -907,29 +906,23 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, envvars=Non
 	## since most archives are probably complete files.
 	if len(offsets['xz']) == 1:
 		offsets['xztrailer'] = sorted(offsets['xztrailer'], reverse=True)
-	for trail in offsets['xztrailer']:
-		## there is no need to continue if the maximum amount of possible
-		## file systems have already been extracted from the file
-		if len(extracted) >= len(offsets['xz']):
-			break
-		## check if the trailer is in the blacklist
-		blacklistoffset = extractor.inblacklist(trail, blacklist)
+	for offset in offsets['xz']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
-		for offset in offsets['xz']:
-			if offset in extracted:
-				continue
-			## only check offsets that make sense
-			if offset >= trail:
-				continue
-			blacklistoffset = extractor.inblacklist(offset, blacklist)
-			if blacklistoffset != None:
-				continue
-			else:
-				## bytes 7 and 8 in the stream are streamflags. These exact bytes
-				## should also be present just before the trailer according to the
-				## XZ file format documentation.
-				streamflags = data[offset+6:offset+8]
+		else:
+			## bytes 7 and 8 in the stream are "streamflags"
+			streamflags = data[offset+6:offset+8]
+			for trail in offsets['xztrailer']:
+				## check if the trailer is in the blacklist
+				blacklistoffset = extractor.inblacklist(trail, blacklist)
+				if blacklistoffset != None:
+					continue
+				## only check offsets that make sense
+				if trail < offset:
+					continue
+				## The "streamflag" bytes should also be present just before the
+				## trailer according to the XZ file format documentation.
 				if data[trail-2:trail] != streamflags:
 					continue
 				tmpdir = dirsetup(tempdir, filename, "xz", counter)
@@ -938,7 +931,7 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, envvars=Non
 					diroffsets.append((res, offset, 0))
 					blacklist.append((offset, trail))
 					counter = counter + 1
-					extracted.append(offset)
+					break
 				else:
 					## cleanup
 					os.rmdir(tmpdir)
@@ -952,7 +945,7 @@ def unpackXZ(data, offset, trailer, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	### trailer has size of 2. Add 1 because [lower, upper)
-	os.write(tmpfile[0], data[offset:trailer+3])
+	os.write(tmpfile[0], data[offset:trailer+2])
 	os.fdopen(tmpfile[0]).close()
 
 	## test integrity of the file
