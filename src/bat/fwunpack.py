@@ -409,6 +409,7 @@ def unpackISO9660(filename, offset, tempdir=None):
 	os.unlink(tmpfile[1])
 	return (tmpdir, size)
 
+## unpacking POSIX or GNU tar archives. This does not work yet for the V7 tar format
 def searchUnpackTar(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	taroffsets = []
 	for marker in fsmagic.tar:
