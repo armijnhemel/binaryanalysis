@@ -18,3 +18,6 @@ postrunscans:
 
 aggregate scanning:
 * aggregate ranking results for JAR file scanning
+
+GUI:
+* rewrite to PyQt to take advantage of better rendering engine (webkit)
