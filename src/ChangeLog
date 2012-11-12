@@ -1,3 +1,6 @@
+2012-11-12
+* fix config initialization bug in batgui
+
 2012-11-11
 * allow multiple values in 'storetype'
 * display licensing information in GUI
