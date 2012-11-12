@@ -103,6 +103,7 @@ def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, envva
 ## unpack base64 files
 def searchUnpackBase64(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	## first determine if we are dealing with ASCII text
+	## TODO: better do this using tags
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
 	mstype = ms.file(filename)

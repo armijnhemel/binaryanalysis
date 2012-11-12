@@ -104,6 +104,7 @@ def verifyText(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 		databuffer = datafile.read(100000)
 		offset = offset + len(databuffer)
 	newtags.append("text")
+	newtags.append("ascii")
 	datafile.close()
 	return newtags
 
