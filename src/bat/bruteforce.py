@@ -309,6 +309,8 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize, debu
 
 	reports.append({'tags': tags})
 	for scan in scans:
+
+		## TODO: this code can probably go since it is done by filterScans
 		if scan['noscan'] != None:
 			noscans = scan['noscan'].split(':')
 			if list(set(noscans).intersection(set(tags))) != []:
@@ -762,6 +764,9 @@ def runscan(tempdir, scans, scan_binary):
 		postrunscans = []
 		for i in unpackreports:
 			if leafreports.has_key(i):
+				## found out what the tags for the report are. It should be possible
+				## to do this in a less convoluted way.
+				tags = map(lambda x: x['tags'], filter(lambda x: x.keys()[0] == 'tags', leafreports[i]))[0]
 				postrunscans.append((i, unpackreports[i], leafreports[i], scans['postrunscans'], scantempdir, tempdir, scans['batconfig']['debug']))
 			else:
 				postrunscans.append((i, unpackreports[i], [], scans['postrunscans'], scantempdir, tempdir, scans['batconfig']['debug']))
