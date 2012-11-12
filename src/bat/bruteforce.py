@@ -200,12 +200,8 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 	scanfirst = []
 
 	## Filter scans
-	## TODO: use filterScans
-	for unpackscan in scans:
-		if unpackscan['noscan'] != None:
-			noscans = unpackscan['noscan'].split(':')
-			if list(set(noscans).intersection(set(tags))) != []:
-				continue
+	filteredscans = filterScans(scans, tags)
+	for unpackscan in filteredscans:
 		if unpackscan['magic'] != None:
 			scanmagic = unpackscan['magic'].split(':')
 			if list(set(scanmagic).intersection(set(filterscans))) != []:
@@ -415,6 +411,10 @@ def readconfig(config):
 				conf['noscan'] = config.get(section, 'noscan')
 			except:
 				conf['noscan'] = None
+			try:
+				conf['scanonly'] = config.get(section, 'scanonly')
+			except:
+				conf['scanonly'] = None
 			try:
 				parallel = config.get(section, 'parallel')
 				if parallel == 'yes':
