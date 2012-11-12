@@ -449,6 +449,8 @@ def readconfig(config):
 				prerunscans.append(conf)
 			elif config.get(section, 'type') == 'postrun':
 				postrunscans.append(conf)
+			elif config.get(section, 'type') == 'aggregate':
+				aggregatescans.append(conf)
 	## sort the prerun scans on priority (highest priority first)
 	prerunscans = sorted(prerunscans, key=lambda x: x['priority'], reverse=True)
 	return {'batconfig': batconf, 'unpackscans': unpackscans, 'programscans': programscans, 'prerunscans': prerunscans, 'postrunscans': postrunscans, 'aggregatescans': aggregatescans}
@@ -736,6 +738,14 @@ def runscan(tempdir, scans, scan_binary):
 	for i in unpackreports_tmp:
 		for k in i:
 			unpackreports[k] = i[k]
+
+	## aggregate scans look at the entire result and possibly modify it.
+	## The best example is JAR files: individual .class files will not be
+	## very significant (or even insignificant), but combined results are.
+	## Because aggregate scans have to look at the whole, these cannot be
+	## run in parallel.
+	if scans['aggregatescans'] != []:
+		pass
 
 	## run postrunscans here, again in parallel, if needed/wanted
 	## These scans typically only have a few side effects, but don't change
