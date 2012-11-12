@@ -359,6 +359,7 @@ def readconfig(config):
 	programscans = []
 	prerunscans = []
 	postrunscans = []
+	aggregatescans = []
 	batconf = {}
 	for section in config.sections():
 		if section == "batconfig":
@@ -450,7 +451,7 @@ def readconfig(config):
 				postrunscans.append(conf)
 	## sort the prerun scans on priority (highest priority first)
 	prerunscans = sorted(prerunscans, key=lambda x: x['priority'], reverse=True)
-	return {'batconfig': batconf, 'unpackscans': unpackscans, 'programscans': programscans, 'prerunscans': prerunscans, 'postrunscans': postrunscans}
+	return {'batconfig': batconf, 'unpackscans': unpackscans, 'programscans': programscans, 'prerunscans': prerunscans, 'postrunscans': postrunscans, 'aggregatescans': aggregatescans}
 
 ## Combine all results that we have into a format that the pretty printer can handle
 ## The result is a Python dictionary. In its simplest form it looks like this:
