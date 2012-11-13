@@ -13,7 +13,6 @@ queueing system:
 * add script to add files to and remove files from scanning queue
 
 postrunscans:
-* support "noscan"
 * rework code to avoid duplicate processing
 
 aggregate scanning:
