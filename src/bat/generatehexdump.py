@@ -22,14 +22,6 @@ import os, os.path, sys, subprocess, gzip
 def generateHexdump(filename, unpackreport, leafscans, scantempdir, toplevelscandir, envvars={}):
 	if not unpackreport.has_key('sha256'):
 		return
-	ignorelist = ['graphics', 'text', 'compressed', 'pdf', 'xml', 'resources']
-	## not interested in text files or graphics
-	## TODO: make this configurable
-	for s in leafscans:
-		if s.keys()[0] == 'tags':
-			for i in ignorelist:
-				if i in s['tags']:
-					return
 	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):
