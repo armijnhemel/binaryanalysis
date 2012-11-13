@@ -255,6 +255,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 ## external libraries, but also lists local functions.
 ## By searching a database that contain which function names can be found in
 ## which packages.
+## TODO: report which function names were matched.
 def extractDynamic(scanfile, envvars=None):
 	dynamicRes = {}
 	scanenv = os.environ.copy()
@@ -384,7 +385,7 @@ def extractDynamic(scanfile, envvars=None):
 	dynamicRes['uniquematches'] = uniquematches
 	if uniquematches != 0:
 		dynamicRes['packages'] = {}
-	## these are the unique strings only
+	## these are the unique function names only
 	for i in uniquepackages:
 		versions = []
 		for p in uniquepackages[i]:
