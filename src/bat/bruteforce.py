@@ -767,7 +767,7 @@ def runscan(tempdir, scans, scan_binary):
 				## found out what the tags for the report are. It should be possible
 				## to do this in a less convoluted way.
 				tags = map(lambda x: x['tags'], filter(lambda x: x.keys()[0] == 'tags', leafreports[i]))[0]
-				postrunscans.append((i, unpackreports[i], leafreports[i], scans['postrunscans'], scantempdir, tempdir, scans['batconfig']['debug']))
+				postrunscans.append((i, unpackreports[i], leafreports[i], filterScans(scans['postrunscans'], tags), scantempdir, tempdir, scans['batconfig']['debug']))
 			else:
 				postrunscans.append((i, unpackreports[i], [], scans['postrunscans'], scantempdir, tempdir, scans['batconfig']['debug']))
 
