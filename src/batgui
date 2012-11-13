@@ -50,7 +50,7 @@ On the right there are views of the file. There are three main views of the file
 
 <ol>
 <li>Overview</li>
-<li>Matches view</li>
+<li>String matches view</li>
 <li>Alternate view (advanced mode only)</li>
 </ol>
 </p>
@@ -61,7 +61,7 @@ The overview displays various types of information about the file, such as name,
 <p>
 If licensing information was available during scanning it is also displayed here. Licensing information is currently only based on unique matches. Non-unique matches are not taken into account. The licensing information is not per se correct!
 </p>
-<h2>Matches view</h2>
+<h2>String matches view</h2>
 <p>
 In this window you will see a list of unique matches per package. For each unique match you will see:
 <ul>
@@ -288,7 +288,7 @@ class BatFrame(wx.Frame):
 
 		## We have a tab for detailed information about matches
 		matchestab = wx.SplitterWindow(self.notebookpanel)
-		self.notebookpanel.AddPage(matchestab, "Matches")
+		self.notebookpanel.AddPage(matchestab, "String matches")
 		## One window to display corresponding source code, initially empty
 		self.matchesbrowser = wx.html.HtmlWindow(matchestab)
 		self.matchesbrowser.SetPage("<html></html")
