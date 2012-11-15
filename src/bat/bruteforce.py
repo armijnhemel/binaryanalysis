@@ -305,6 +305,7 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 	return (scantasks, leaftasks, unpackreports)
 
 def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize, debug)):
+	## TODO: make reports a dictionary instead
 	reports = []
 
 	reports.append({'tags': tags})
@@ -486,6 +487,11 @@ def readconfig(config):
 ##   'libpthread.so.0', 'libc.so.6', 'libpython2.7.so.1.0', 'libruby.so.1.8']}
 ## ]
 ## 
+## TODO: this should really become a dictionary, as opposed to a list of dictionaries
+## to simplify the rest of the code. Since the other code is implying that there will
+## be a maximum of 1 dictionary with for example ranking information we might as well
+## put it all in 1 dictionary.
+##
 ## Results of unpacking are also put in 'scans'. The name of the dictionary is the
 ## name of the unpacker. It can be recognized because it has an element 'offset'.
 ## Example:
