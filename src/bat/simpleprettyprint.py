@@ -14,6 +14,7 @@ a method that has the same parameters as prettyprintresxml
 '''
 
 import xml.dom.minidom
+import sys
 
 ## generic method for pretty printing of an elements
 def generateNodes(elem, root, confs):

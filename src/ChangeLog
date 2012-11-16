@@ -1,3 +1,6 @@
+2012-11-16
+* rewrite leafscans to return a dictionary instead of a list of dictionaries
+
 2012-11-13
 * support "noscan" and "scanonly" for postrunscans, for as far as applicable
 

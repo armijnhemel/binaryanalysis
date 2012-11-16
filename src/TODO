@@ -18,8 +18,5 @@ postrunscans:
 aggregate scanning:
 * aggregate ranking results for JAR file scanning
 
-leaf scans:
-* turn 'reports' from a list of dictionaries into a dictionary, rewrite all code that uses this datastructure (incl. postrunscans, flattener, GUI)
-
 GUI:
 * rewrite to PyQt to take advantage of better rendering engine (webkit)
