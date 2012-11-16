@@ -485,76 +485,78 @@ class BatFrame(wx.Frame):
 			tablerows = ''
 			matchesrows = ''
 			functionmatches = ''
+			tablerowtemplate = "<tr><td><b>%s</b></td><td>%s</td></tr>\n"
 			if sha256sum != '':
-				tablerows = tablerows + "<tr><td><b>SHA256</b></td><td>%s</td></tr>\n" % sha256sum
+				tablerows = tablerows + tablerowtemplate % ("SHA256", sha256sum)
 			if self.leafreports.has_key(self.selectedfile):
 				applications = []
-				for i in self.leafreports[self.selectedfile]:
-					if i.keys()[0] == 'busybox-version':
-						tablerows = tablerows + "<tr><td><b>BusyBox version</b></td><td>%s</td></tr>\n" % i['busybox-version']
-					elif i.keys()[0] == 'architecture':
-						tablerows = tablerows + "<tr><td><b>Architecture</b></td><td>%s</td></tr>\n" % i['architecture']
-					elif i.keys()[0] == 'kernelmodulelicense':
-						tablerows = tablerows + "<tr><td><b>Kernel module license</b></td><td>%s</td></tr>\n" % i['kernelmodulelicense']
-					elif i.keys()[0] == 'libs':
-						tablerows = tablerows + "<tr><td><b>Shared libraries</b></td><td>%s</td></tr>\n" % reduce(lambda x, y: "%s, %s" % (x,y), i['libs'])
-					elif i.keys()[0] == 'licenses':
-						tablerows = tablerows + "<tr><td><b>Licenses/license families</b></td><td>%s</td></tr>\n" % reduce(lambda x, y: "%s, %s" % (x,y), i['licenses'].keys())
-					elif i.keys()[0] == 'forges':
-						tablerows = tablerows + "<tr><td><b>Forges</b></td><td>%s</td></tr>\n" % reduce(lambda x, y: "%s, %s" % (x,y), i['forges'].keys())
-					elif i.keys()[0] == 'kernelchecks':
-						for j in i['kernelchecks']:
-							if j == 'version':
-								tablerows = tablerows + "<tr><td><b>Linux kernel</b></td><td>%s</td></tr>\n" % i['kernelchecks']['version']
-					elif i.keys()[0] == 'redboot':
-						tablerows = tablerows + "<tr><td><b>Bootloader</b></td><td>RedBoot</td></tr>\n"
-					elif i.keys()[0] in ['dproxy', 'ez-ipupdate', 'iproute', 'iptables', 'libusb', 'loadlin', 'vsftpd', 'wireless-tools', 'wpa-supplicant']:
-						applications.append(i.keys()[0])
-					elif i.keys()[0] == 'tags':
-						if i['tags'] != []:
-							tablerows = tablerows + "<tr><td><b>Tags</b></td><td>" + reduce(lambda x, y: x + ", " + y, i['tags']) + "</td></tr>"
-						if 'graphics' in i['tags']:
-							if self.advanced:
-								self.notebookpanel.EnableTab(2,False)
-							tag = 'graphics'
-						if 'text' in i['tags']:
-							if self.advanced:
-								self.notebookpanel.EnableTab(2,False)
-							tag = 'text'
-					elif i.keys()[0] == 'ranking':
-						(stringsres, dynamicres) = i['ranking']
-						if dynamicres.has_key('packages'):
-							functionmatches = '''<h2>Function match statistics</h2>
+				i = self.leafreports[self.selectedfile]
+				if i.has_key('busybox-version'):
+					tablerows = tablerows + tablerowtemplate % ("BusyBox version", i['busybox-version'])
+				if i.has_key('architecture'):
+					tablerows = tablerows + tablerowtemplate % ("Architecture", i['architecture'])
+				if i.has_key('kernelmodulelicense'):
+					tablerows = tablerows + tablerowtemplate % ("Kernel module license", i['kernelmodulelicense'])
+				if i.has_key('libs'):
+					tablerows = tablerows + tablerowtemplate % ("Shared libraries", reduce(lambda x, y: "%s, %s" % (x,y), i['libs']))
+				if i.has_key('licenses'):
+					tablerows = tablerows + tablerowtemplate % ("Licenses/license families", reduce(lambda x, y: "%s, %s" % (x,y), i['licenses'].keys()))
+				if i.has_key('forges'):
+					tablerows = tablerows + tablerowtemplate % ("Forges", reduce(lambda x, y: "%s, %s" % (x,y), i['forges'].keys()))
+				if i.has_key('redboot'):
+					tablerows = tablerows + tablerowtemplate % ("Bootloader", "RedBoot")
+				for j in ['dproxy', 'ez-ipupdate', 'iproute', 'iptables', 'libusb', 'loadlin', 'vsftpd', 'wireless-tools', 'wpa-supplicant']:
+					if i.has_key(j):
+						applications.append(j)
+				if i.has_key('kernelchecks'):
+					for j in i['kernelchecks']:
+						if j == 'version':
+							tablerows = tablerows + tablerowtemplate % ("Linux kernel", i['kernelchecks']['version'])
+				if i.has_key('tags'):
+					if i['tags'] != []:
+						tablerows = tablerows + "<tr><td><b>Tags</b></td><td>" + reduce(lambda x, y: x + ", " + y, i['tags']) + "</td></tr>"
+					if 'graphics' in i['tags']:
+						if self.advanced:
+							self.notebookpanel.EnableTab(2,False)
+						tag = 'graphics'
+					if 'text' in i['tags']:
+						if self.advanced:
+							self.notebookpanel.EnableTab(2,False)
+						tag = 'text'
+				if i.has_key('ranking'):
+					(stringsres, dynamicres) = i['ranking']
+					if dynamicres.has_key('packages'):
+						functionmatches = '''<h2>Function match statistics</h2>
 <table>
 <tr><td><b>Extracted function names</b></td><td>%d</td></tr>
 <tr><td><b>Matched function names</b></td><td>%d</td></tr>
 </table>
 '''
-							functionmatches = functionmatches % (dynamicres['totalnames'], (dynamicres['namesmatched']))
-							functionmatches = functionmatches + '''<h3>Matched packages (function names method)</h3>
+						functionmatches = functionmatches % (dynamicres['totalnames'], (dynamicres['namesmatched']))
+						functionmatches = functionmatches + '''<h3>Matched packages (function names method)</h3>
 <table><tr><td>
   <table>
     <tr><td><b>Name</b></td><td><b>Unique matches</b></td></tr>\n'''
-							for j in dynamicres['packages']:
-									## for now: just take the version with the most matches, only report the amount of matches
-									functionmatches = functionmatches + "    <tr><td>%s</td><td>%d</td></tr>\n" % (j, max(map(lambda x: x[1], dynamicres['packages'][j])))
-							functionmatches = functionmatches + "</table>"
+						for j in dynamicres['packages']:
+								## for now: just take the version with the most matches, only report the amount of matches
+								functionmatches = functionmatches + "    <tr><td>%s</td><td>%d</td></tr>\n" % (j, max(map(lambda x: x[1], dynamicres['packages'][j])))
+						functionmatches = functionmatches + "</table>"
 
-						if not (stringsres['extractedlines']) == 0 and not (stringsres['matchedlines']) == 0:
-							matchesrows = '''
+					if not (stringsres['extractedlines']) == 0 and not (stringsres['matchedlines']) == 0:
+						matchesrows = '''
 <h2>String match statistics</h2>
 <table>
 <tr><td><b>Extracted lines</b></td><td>%d</td></tr>
 <tr><td><b>Matched lines</b></td><td>%d</td></tr>
 <tr><td><b>Match percentage</b></td><td>%f%%</td></tr>
 </table>
-							'''
-							matchesrows = matchesrows % (stringsres['extractedlines'], stringsres['matchedlines'], (float(stringsres['matchedlines'])/stringsres['extractedlines']*100))
-							if len(stringsres['reports']) != 0:
-								htmllinks = []
-								versionhtml = ""
-								## nested table, urgghhhh
-								matchesrows = matchesrows + '''<h3>Matched packages (strings method)</h3>
+						'''
+						matchesrows = matchesrows % (stringsres['extractedlines'], stringsres['matchedlines'], (float(stringsres['matchedlines'])/stringsres['extractedlines']*100))
+						if len(stringsres['reports']) != 0:
+							htmllinks = []
+							versionhtml = ""
+							## nested table, urgghhhh
+							matchesrows = matchesrows + '''<h3>Matched packages (strings method)</h3>
 <table>
   <tr><td>
     <table>
@@ -567,30 +569,31 @@ class BatFrame(wx.Frame):
         <td><b>Possible licenses</b></td>
       </tr>\n'''
 
-								for j in stringsres['reports']:
-									if len(j[5]) > 0:
-										if len(j[5]) > 1:
-											licensestring = j[5][0] + reduce(lambda x, y: x + " " + y, j[5][1:], "")
-										else:
-											licensestring = j[5][0]
+							for j in stringsres['reports']:
+								if len(j[5]) > 0:
+									if len(j[5]) > 1:
+										licensestring = j[5][0] + reduce(lambda x, y: x + " " + y, j[5][1:], "")
 									else:
-										licensestring = ""
-									matchesrows = matchesrows + "    <tr><td>%d</td><td>%s</td><td>%f%%</td><td>%d</td><td>%d</td><td>%s</td></tr>\n" % (j[0], j[1], j[3], j[2], stringsres['nonUniqueAssignments'].get(j[1], 0), licensestring)
-									if j[2] != 0:
-										## don't replace %s/% with os.path.join here, since this is valid in HTML
-										versionhtml = versionhtml + "<h5>%s</h5><p><img src=\"%s\"/></p>\n" % (j[1], "%s/%s-%s-version.png" % (self.imagesdir, sha256sum, j[1]))
-										## here we should either do a database lookup to get the checksum,
-										## or check if they are already in the report
-										htmllinks.append((j[1], j[2]))
-								## don't replace %s/% with os.path.join here, since this is valid in HTML
-								matchesrows = matchesrows + "</table><td><img src=\"%s\"/></td></tr></table>" % ("%s/%s-piechart.png" % (self.imagesdir, sha256sum))
-								if versionhtml != "":
-									matchesrows = matchesrows + "<h2>Versions per package</h2>" + versionhtml
-								if os.path.exists(os.path.join(self.reportsdir, "%s-unique.html.gz" % sha256sum)):
-									uniquehtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-unique.html.gz" % sha256sum), 'r')
-									uniquehtml = uniquehtmlfile.read()
-									uniquehtmlfile.close()
-									self.matcheswindow.SetPage(uniquehtml)
+										licensestring = j[5][0]
+								else:
+									licensestring = ""
+								matchesrows = matchesrows + "    <tr><td>%d</td><td>%s</td><td>%f%%</td><td>%d</td><td>%d</td><td>%s</td></tr>\n" % (j[0], j[1], j[3], j[2], stringsres['nonUniqueAssignments'].get(j[1], 0), licensestring)
+								if j[2] != 0:
+									## don't replace %s/% with os.path.join here, since this is valid in HTML
+									versionhtml = versionhtml + "<h5>%s</h5><p><img src=\"%s\"/></p>\n" % (j[1], "%s/%s-%s-version.png" % (self.imagesdir, sha256sum, j[1]))
+									## here we should either do a database lookup to get the checksum,
+									## or check if they are already in the report
+									htmllinks.append((j[1], j[2]))
+							## don't replace %s/% with os.path.join here, since this is valid in HTML
+							matchesrows = matchesrows + "</table><td><img src=\"%s\"/></td></tr></table>" % ("%s/%s-piechart.png" % (self.imagesdir, sha256sum))
+							if versionhtml != "":
+								matchesrows = matchesrows + "<h2>Versions per package</h2>" + versionhtml
+							if os.path.exists(os.path.join(self.reportsdir, "%s-unique.html.gz" % sha256sum)):
+								uniquehtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-unique.html.gz" % sha256sum), 'r')
+								uniquehtml = uniquehtmlfile.read()
+								uniquehtmlfile.close()
+								self.matcheswindow.SetPage(uniquehtml)
+				## TOT HIER
 				if applications != []:
 					tablerows = tablerows + "<tr><td><b>Applications</b></td><td>%s</td></tr>\n" % reduce(lambda x, y: "%s, %s" % (x,y), applications)
 			overviewstring = overviewstring % (name, path, realpath, size, magic)
@@ -690,18 +693,18 @@ class BatFrame(wx.Frame):
 				linktext = j[parentlen:]
 			if self.leafreports.has_key(j):
 				for r in self.leafreports[j]:
-					if r.keys()[0] == 'ranking':
-						if r['ranking'][0]['matchedlines'] != 0:
+					if r == 'ranking':
+						if self.leafreports[j]['ranking'][0]['matchedlines'] != 0:
 							## give a visual clue to people to tell them that strings could be matched
 							#linktext = u"%s  \u24e7" % linktext
 							linktext = u"%s  \u272a" % linktext
 					tagsentities = {'text': u'\u24c9', 'graphics': u'\u24bc', 'compressed': u'\u24b8', 'resource': u'\u24c7', 'dalvik': u'\u24b6'}
-					if r.keys()[0] == 'tags':
-						if list(set(r['tags']).intersection(set(self.filters))) != []:
+					if r == 'tags':
+						if list(set(self.leafreports[j]['tags']).intersection(set(self.filters))) != []:
 							ignore = True
 							continue
 						tagappend = u""
-						for t in r['tags']:
+						for t in self.leafreports[j]['tags']:
 							if tagsentities.has_key(t):
 								tagappend += tagsentities[t]
 						if tagappend != u"":
