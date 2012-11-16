@@ -514,7 +514,7 @@ class BatFrame(wx.Frame):
 							tablerows = tablerows + tablerowtemplate % ("Linux kernel", i['kernelchecks']['version'])
 				if i.has_key('tags'):
 					if i['tags'] != []:
-						tablerows = tablerows + "<tr><td><b>Tags</b></td><td>" + reduce(lambda x, y: x + ", " + y, i['tags']) + "</td></tr>"
+						tablerows = tablerows + tablerowtemplate % ("Tags", reduce(lambda x, y: x + ", " + y, i['tags']))
 					if 'graphics' in i['tags']:
 						if self.advanced:
 							self.notebookpanel.EnableTab(2,False)
