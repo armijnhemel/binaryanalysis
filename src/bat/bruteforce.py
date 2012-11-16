@@ -474,29 +474,23 @@ def readconfig(config):
 ##  }
 ##
 ## In case any of the "leaf scans" were successful there will be an additional
-## element called 'scans'. This is a list of dictionaries with a dictionary per
-## leafscan:
+## element called 'scans'. This is a dictionary with results per leafscan
 ##
 ## Example:
-## [
-##  {'tags': ['binary', 'elf']},
-##  {'architecture': 'Advanced Micro Devices X86-64'},
-##  {'libs': ['libm.so.6', 'libselinux.so.1', 'libtinfo.so.5',
+## {
+##  'tags': ['binary', 'elf'],
+##  'architecture': 'Advanced Micro Devices X86-64',
+##  'libs': ['libm.so.6', 'libselinux.so.1', 'libtinfo.so.5',
 ##   'libacl.so.1', 'libgpm.so.2', 'libdl.so.2', 'libperl.so',
-##   'libpthread.so.0', 'libc.so.6', 'libpython2.7.so.1.0', 'libruby.so.1.8']}
-## ]
+##   'libpthread.so.0', 'libc.so.6', 'libpython2.7.so.1.0', 'libruby.so.1.8']
+## }
 ## 
-## TODO: this should really become a dictionary, as opposed to a list of dictionaries
-## to simplify the rest of the code. Since the other code is implying that there will
-## be a maximum of 1 dictionary with for example ranking information we might as well
-## put it all in 1 dictionary.
-##
 ## Results of unpacking are also put in 'scans'. The name of the dictionary is the
 ## name of the unpacker. It can be recognized because it has an element 'offset'.
 ## Example:
 ##
-##  'scans': [
-##           {'zip': 
+##  'scans': {
+##           'zip': 
 ##                 [
 ##                  {'offset': 0}, 
 ##                  {'realpath': '/tmp/tmpvZfamq/data/foo/bar/baz-zip-1',
@@ -504,11 +498,11 @@ def readconfig(config):
 ##                   'name': 'baz.crt',
 ##                   'path': '',
 ##                   'sha256': 'd206aa4b1333580e5075a6b22ce803491cc36bd40ab77dfdf4a1d98dd9caf032',
-##                   'scans': [{'tags': ['text']}],
+##                   'scans': {'tags': ['text']},
 ##                   'size': 1822
 ##                  }
 ##                 ]
-##           ]
+##           }
 ##
 ## The 'scans' element is used to recurse.
 def flatten(toplevel, unpackreports, leafreports):
@@ -601,7 +595,6 @@ def dumpData(unpackreports, leafreports, scans, tempdir):
 				## We want: (rank, s, #unique matches, percentage, packageversions, packagelicenses)
 				if type(report[2]) != int:
 					newreports.append((report[0], report[1], len(report[2]), report[3], report[4], report[5]))
-					#report = (report[0], report[1], len(report[2]), report[3], report[4], report[5])
 			## we should also replace nonUniqueMatches with {}
 			leafreports[l]['ranking'][0]['nonUniqueMatches'] = {}
 			leafreports[l]['ranking'][0]['reports'] = newreports
