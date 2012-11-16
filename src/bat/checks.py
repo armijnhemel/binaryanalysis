@@ -277,6 +277,8 @@ def scanLicenses(path, blacklist=[], envvars=None):
 		results['Apache2.0'] = True
 	if genericSearch(path, ["http://www.mozilla.org/MPL/"], blacklist):
 		results['MPL'] = True
+	if genericSearch(path, ["http://www.openoffice.org/license.html"], blacklist):
+		results['OpenOffice'] = True
 	if genericSearch(path, ["http://www.bittorrent.com/license/"], blacklist):
 		results['BitTorrent'] = True
 	if results != {}:
