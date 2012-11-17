@@ -20,3 +20,9 @@ aggregate scanning:
 
 GUI:
 * rewrite to PyQt to take advantage of better rendering engine (webkit)
+
+error handling:
+* better handle errors to give users a better indication if something went wrong
+
+function names:
+* generate list of function names and where they were found, optionally with line numbers
