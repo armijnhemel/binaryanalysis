@@ -540,6 +540,7 @@ def checkalreadyscanned((filedir, package, version, filename, origin, dbpath)):
 
 def main(argv):
 	parser = OptionParser()
+	parser.add_option("-b", "--blacklist", action="store", dest="blacklist", help="path to blacklist file", metavar="FILE")
 	parser.add_option("-d", "--database", action="store", dest="db", help="path to database", metavar="FILE")
 	parser.add_option("-f", "--filedir", action="store", dest="filedir", help="path to directory containing files to unpack", metavar="DIR")
 	parser.add_option("-v", "--verify", action="store_true", dest="verify", help="verify files, don't process (default: false)")
@@ -548,12 +549,21 @@ def main(argv):
 	parser.add_option("-l", "--licenses", action="store_true", dest="licenses", help="extract licenses (default: false)")
 	(options, args) = parser.parse_args()
 	if options.filedir == None:
-		print >>sys.stderr, "Specify dir with files"
-		sys.exit(1)
+		parser.error("Specify dir with files")
+	else:
+		try:
+			filelist = open(options.filedir + "/LIST").readlines()
+		except:
+			parser.error("'LIST' not found in file dir")
 
 	if options.db == None:
-		print >>sys.stderr, "Specify path to database"
-		sys.exit(1)
+		parser.error("Specify path to database")
+
+	if options.blacklist != None:
+		try:
+			os.stat(options.blacklist)
+		except:
+			parser.error("blacklist defined but not found")
 
 	if options.cleanup != None:
 		cleanup = True
@@ -644,7 +654,6 @@ def main(argv):
 
 	pkgmeta = []
 	## TODO: do all kinds of checks here
-	filelist = open(options.filedir + "/LIST").readlines()
 	for unpackfile in filelist:
 		try:
 			unpacks = unpackfile.strip().split()
