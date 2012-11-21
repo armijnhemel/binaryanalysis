@@ -397,7 +397,8 @@ def extractlicenses(conn, cursor, i, p, filehash, commentshash):
 	#		print >>sys.stderr, "FOSSOLOGY %s/%s" % (i,p), license
 	#		cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "nomos", "1.4.0"))
 
-def extractstrings((package, version, i, p, language, filehash)):
+## TODO: get rid of ninkaversion before we call this method
+def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 	sqlres = extractsourcestrings(p, i, language)
 	## extract function names using ctags, except code from
 	## the Linux kernel, since it will never be dynamically linked
@@ -561,9 +562,24 @@ def main(argv):
 
 	if options.blacklist != None:
 		try:
-			os.stat(options.blacklist)
+			blacklistlines = open(options.blacklist).readlines()
 		except:
-			parser.error("blacklist defined but not found")
+			parser.error("blacklist defined but not found/accessible")
+	else:
+		blacklistlines = []
+
+	## TODO: fix format for blacklist
+	## package version filename origin sha256sum
+	## with sha256sum being decisive 
+	blacklistsha256sums = []
+	for i in blacklistlines:
+		try:
+			unpacks = i.strip().split()
+			(package, version, filename, origin, sha256sum) = unpacks
+			blacklistsha256sums.append(sha256sum)
+		except Exception, e:
+			# oops, something went wrong
+			print >>sys.stderr, e
 
 	if options.cleanup != None:
 		cleanup = True
@@ -674,6 +690,8 @@ def main(argv):
 		else:
 			try:
 				(package, version, filename, origin, filehash) = i
+				if filehash in blacklistsha256sums:
+					continue
 				if options.verify:
 					unpack_verify(options.filedir, filename)
 				res = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, options.db, cleanup, license, pool)
