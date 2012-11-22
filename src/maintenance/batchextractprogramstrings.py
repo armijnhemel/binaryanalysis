@@ -382,10 +382,14 @@ def runfullninka((i, p, filehash, ninkaversion)):
 		ninkares = list(set(licenses))
 	return (filehash, ninkares)
 
-def extractlicenses(conn, cursor, i, p, filehash, commentshash):
+## TODO: extract copyrights using FOSSology
+def extractcopyrights((i, p, filehash)):
 	pass
-	## Also run FOSSology. Since licenses might appear halfway a file we should not look at the ninkacomments table!
-	## This requires that the user has enough privileges to actually connect to the FOSSology database!
+
+def licensefossology((i, p, filehash)):
+	pass
+	## Also run FOSSology. This requires that the user has enough privileges to actually connect to the
+	## FOSSology database!
 	#p2 = subprocess.Popen(["/usr/lib/fossology/agents/nomos", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 	#(stanout, stanerr) = p2.communicate()
 	#if "FATAL" in stanout:
@@ -395,7 +399,6 @@ def extractlicenses(conn, cursor, i, p, filehash, commentshash):
 	#	licenses = fossysplit[-1].split(',')
 	#	for license in licenses:
 	#		print >>sys.stderr, "FOSSOLOGY %s/%s" % (i,p), license
-	#		cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "nomos", "1.4.0"))
 
 ## TODO: get rid of ninkaversion before we call this method
 def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
