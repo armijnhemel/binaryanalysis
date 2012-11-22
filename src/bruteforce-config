@@ -78,6 +78,14 @@ priority    = 1
 description = Check if complete file is a valid gzip file
 enabled     = yes
 
+[verifyjar]
+type        = prerun
+module      = bat.prerun
+method      = verifyJAR
+priority    = 1
+description = Check if complete file is a valid JAR file
+enabled     = no
+
 [verifymessagecatalog]
 type        = prerun
 module      = bat.prerun

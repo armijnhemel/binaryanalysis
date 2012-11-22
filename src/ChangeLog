@@ -3,6 +3,8 @@
 size, which could have lead to misclassifications
 * add configuration option 'outputlite' to make smaller archives (without a
 dump of all data)
+* add simple verifier to tag Java JAR files (incomplete and needs more sanity
+checks)
 
 2012-11-21
 * fix errors in database creation script, add preliminary blacklisting
