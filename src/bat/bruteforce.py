@@ -694,17 +694,17 @@ def runscan(tempdir, scans, scan_binary):
 		## * copy results in case there are duplicates
 		sha256leaf = {}
 		for i in leaftasks:
-			if sha256leaf.has_key(i[-2]):
-				sha256leaf[i[-2]].append(i[0])
+			if sha256leaf.has_key(i[-3]):
+				sha256leaf[i[-3]].append(i[0])
 			else:
-				sha256leaf[i[-2]] = [i[0]]
+				sha256leaf[i[-3]] = [i[0]]
 		sha256_tmp = {}
 		for i in sha256leaf:
 			if len(sha256leaf[i]) > 0:
 				sha256_tmp[i] = sha256leaf[i][0]
 		leaftasks_tmp = []
 		for i in leaftasks:
-			if sha256_tmp[i[-2]] == i[0]:
+			if sha256_tmp[i[-3]] == i[0]:
 				leaftasks_tmp.append(i)
 		leaftasks_tmp = map(lambda x: x[:-2] + (x[-1],), leaftasks_tmp)
 		leaftasks_tmp = map(lambda x: x[:2] + (filterScans(scans['programscans'], x[2]),) + x[2:], leaftasks_tmp)
