@@ -342,6 +342,7 @@ def aggregatescan(unpackreports, leafreports, scans, debug):
 	for scan in scans['aggregatescans']:
 		module = scan['module']
 		method = scan['method']
+		print module, method
 		if debug:
 			print >>sys.stderr, method
 		## if there is extra information we need to pass, like locations of databases
@@ -784,7 +785,7 @@ def runscan(tempdir, scans, scan_binary):
 			unpackreports[k] = i[k]
 
 	if scans['aggregatescans'] != []:
-		aggregatescan(unpackreports, leafreports, scans, debug)
+		aggregatescan(unpackreports, leafreports, scans, scans['batconfig']['debug'])
 
 	## run postrunscans here, again in parallel, if needed/wanted
 	## These scans typically only have a few side effects, but don't change
