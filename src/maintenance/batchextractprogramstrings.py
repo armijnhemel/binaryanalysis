@@ -628,6 +628,10 @@ def main(argv):
 			c.execute('''drop table ninkacomments''')
 		except:
 			pass
+		#try:
+		#	c.execute('''drop table copyright''')
+		#except:
+		#	pass
 		conn.commit()
         try:
 		## Keep an archive of which packages and archive files (tar.gz, tar.bz2, etc.) we've already
@@ -663,6 +667,10 @@ def main(argv):
 		c.execute('''create table if not exists extracted_function (sha256 text, functionname text, linenumber int)''')
 		c.execute('''create index if not exists function_index on extracted_function(sha256);''')
 		c.execute('''create index if not exists functionname_index on extracted_function(functionname)''')
+
+		## Store the copyrights extracted by FOSSology, per checksum
+		#c.execute('''create table if not exists extracted_copyright (sha256 text, copyright text)''')
+		#c.execute('''create index if not exists copyright_index on extracted_copyright(sha256);''')
 		conn.commit()
 	except Exception, e:
 		print >>sys.stderr, e
