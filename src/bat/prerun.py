@@ -508,3 +508,31 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	if totalsize == os.stat(filename).st_size:
 		newtags.append("elf")
 	return newtags
+
+## Method to verify if a ZIP file is actually a JAR and tag it as such.
+def verifyJAR(filename, tempdir=None, tags=[], offsets={}, envvars=None):
+	newtags = []
+	## if the file is not a ZIP file it can never be a JAR
+	if not offsets.has_key('zip'):
+		return newtags
+	## JAR files usually have a naming convention
+	if not filename.lower().endswith('.jar'):
+		return newtags
+	## Unpack the directory to a temporary directory
+	jardir = tempfile.mkdtemp()
+	shutil.rmtree(jardir)
+	## check if there is a directory 'META-INF' inside the archive
+	## if so, extract 'MANIFEST.MF' and parse it
+	## Also check that the archive actually has Java bytecode files
+	## mflines = open('META-INF/MANIFEST.MF').readlines()
+	## manifestfound = False
+	## for m in mflines:
+	##	splits = m.split(':')
+	##	if splits[0] == 'Manifest-Version' and splits[1] == '1.0':
+	##		## valid manifest file
+	##		manifestfound = True
+	##		break
+	## if not manifestfound:
+	##	return newtags
+	## Now traverse the directory and check if we can find at least one Java bytecode file
+	return newtags
