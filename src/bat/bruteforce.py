@@ -348,7 +348,7 @@ def postrunscan((filetoscan, unpackreports, leafreports, scans, scantempdir, top
 			envvars = None
 		exec "from %s import %s as bat_%s" % (module, method, method)
 
-		res = eval("bat_%s(filetoscan, unpackreports, leafreports, scantempdir, toplevelscandir ,envvars=envvars)" % (method))
+		res = eval("bat_%s(filetoscan, unpackreports, leafreports, scantempdir, toplevelscandir, envvars=envvars)" % (method))
 		## TODO: find out what we want to do with this
 		if res != None:
 			pass
@@ -762,10 +762,26 @@ def runscan(tempdir, scans, scan_binary):
 	## aggregate scans look at the entire result and possibly modify it.
 	## The best example is JAR files: individual .class files will not be
 	## very significant (or even insignificant), but combined results are.
-	## Because aggregate scans have to look at the whole, these cannot be
-	## run in parallel.
+	## Because aggregate scans have to look at everything as a whole, these
+	## cannot be run in parallel.
 	if scans['aggregatescans'] != []:
-		pass
+		for scan in scans['aggregatescans']:
+			module = scan['module']
+			method = scan['method']
+			if debug:
+				print >>sys.stderr, method
+			## if there is extra information we need to pass, like locations of databases
+			## we can use the environment for it
+			if scan.has_key('envvars'):
+				envvars = scan['envvars']
+			else:
+				envvars = None
+			exec "from %s import %s as bat_%s" % (module, method, method)
+
+			res = eval("bat_%s(unpackreports, leafreports, envvars=envvars)" % (method))
+			## TODO: find out what we want to do with this
+			if res != None:
+				pass
 
 	## run postrunscans here, again in parallel, if needed/wanted
 	## These scans typically only have a few side effects, but don't change
