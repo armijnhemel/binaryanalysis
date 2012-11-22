@@ -5,6 +5,7 @@ size, which could have lead to misclassifications
 dump of all data)
 * add simple verifier to tag Java JAR files (incomplete and needs more sanity
 checks)
+* add extra sanity check for yaffs2 unpacking
 
 2012-11-21
 * fix errors in database creation script, add preliminary blacklisting
