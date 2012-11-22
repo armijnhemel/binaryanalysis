@@ -342,7 +342,6 @@ def aggregatescan(unpackreports, leafreports, scans, debug):
 	for scan in scans['aggregatescans']:
 		module = scan['module']
 		method = scan['method']
-		print module, method
 		if debug:
 			print >>sys.stderr, method
 		## if there is extra information we need to pass, like locations of databases
