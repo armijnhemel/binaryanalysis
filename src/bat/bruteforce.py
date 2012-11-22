@@ -387,6 +387,14 @@ def readconfig(config):
 					batconf['debug'] = False
 			except:
 				batconf['debug'] = False
+			try:
+				outputlite = config.get(section, 'outputlite')
+				if outputlite == 'yes':
+					batconf['outputlite'] = True
+				else:
+					batconf['outputlite'] = False
+			except:
+				batconf['outputlite'] = False
 			continue
 		
 		elif config.has_option(section, 'type'):
@@ -603,9 +611,12 @@ def dumpData(unpackreports, leafreports, scans, tempdir):
 	cPickle.dump((unpackreports, leafreports, scans), picklefile)
 	picklefile.close()
 
+## Write everything to a dump file. A few directories that always should be
+## packed are hardcoded, the other files are determined from the configuration.
+## The configuration option 'lite' allows to leave out the extracted data, to
+## speed up extraction of data in the GUI.
 def writeDumpfile(unpackreports, leafreports, scans, outputfile, tempdir, lite=False):
 	dumpData(unpackreports, leafreports, scans, tempdir)
-	## now add everything to a TAR archive
 	dumpfile = tarfile.TarFile(outputfile, 'w')
 	os.chdir(tempdir)
 	dumpfile.add('scandata.pickle')

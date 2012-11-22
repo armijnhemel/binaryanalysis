@@ -1,6 +1,8 @@
 2012-11-22
 * fix error in bat/bruteforce.py: actually use the checksum instead of the
 size, which could have lead to misclassifications
+* add configuration option 'outputlite' to make smaller archives (without a
+dump of all data)
 
 2012-11-21
 * fix errors in database creation script, add preliminary blacklisting

@@ -70,7 +70,7 @@ def main(argv):
 		output = bat.bruteforce.prettyprint(scans['batconfig'], res, scandate, scans)
 		print output
 
-	bat.bruteforce.writeDumpfile(unpackreports, leafreports, scans, options.outputfile, tempdir)
+	bat.bruteforce.writeDumpfile(unpackreports, leafreports, scans, options.outputfile, tempdir, scans['batconfig']['outputlite'])
 
 if __name__ == "__main__":
         main(sys.argv)
