@@ -509,21 +509,63 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 		newtags.append("elf")
 	return newtags
 
+## simple helper method to verify if a file is a valid Java class file
+def verifyJavaClass(filename):
+	if not filename.lower().endswith('class'):
+		return False
+	datafile = open(filename, 'rb')
+	databuffer = datafile.read(100)
+	datafile.close()
+	if not databuffer[0:4] == "\xca\xfe\xba\xbe":
+		return False
+	## TODO: add more checks
+	return True
+
 ## Method to verify if a ZIP file is actually a JAR and tag it as such.
 def verifyJAR(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
+	## assume JAR files have a naming convention
+	if not filename.lower().endswith('.jar'):
+		return newtags
 	## if the file is not a ZIP file it can never be a JAR
 	if not offsets.has_key('zip'):
 		return newtags
-	## JAR files usually have a naming convention
-	if not filename.lower().endswith('.jar'):
+	## TODO: do a much much better sanity check here, share with ZIP unpacking if possible
+	#if len(offsets['zip']) != 1:
+	#	return newtags
+	if offsets['zip'][0] != 0:
 		return newtags
 	## Unpack the directory to a temporary directory
 	jardir = tempfile.mkdtemp()
-	shutil.rmtree(jardir)
+	p = subprocess.Popen(['unzip', '-o', filename, '-d', jardir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0 and p.returncode != 1:
+		shutil.rmtree(jardir)
+		return newtags
+
+	bytecodefound = False
+	## Now traverse the directory and check if we can find at least one Java bytecode file
+	osgen = os.walk(jardir)
+	try:
+		while not bytecodefound:
+			i = osgen.next()
+			for p in i[2]:
+				scanfile = "%s/%s" % (i[0], p)
+				if scanfile.lower().endswith('class'):
+					res = verifyJavaClass(scanfile)
+					if res:
+						bytecodefound = True
+						break
+	except StopIteration:
+		pass
+
+	## if we don't have any Java bytecode, we might as well stop
+	if not bytecodefound:
+		shutil.rmtree(jardir)
+		return newtags
+
 	## check if there is a directory 'META-INF' inside the archive
 	## if so, extract 'MANIFEST.MF' and parse it
-	## Also check that the archive actually has Java bytecode files
 	## mflines = open('META-INF/MANIFEST.MF').readlines()
 	## manifestfound = False
 	## for m in mflines:
@@ -534,5 +576,9 @@ def verifyJAR(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	##		break
 	## if not manifestfound:
 	##	return newtags
-	## Now traverse the directory and check if we can find at least one Java bytecode file
+
+	## Remove the directory
+	shutil.rmtree(jardir)
+	newtags.append('jar')
+	newtags.append('zip')
 	return newtags
