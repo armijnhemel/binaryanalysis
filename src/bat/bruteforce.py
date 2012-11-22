@@ -29,7 +29,8 @@ were unpacked.
 4. individual file scanning phase. Here each file will be inspected individually. Based on
 the configuration that was given this could be basically anything.
 
-5. output phase. Using a pretty printer a report is pretty printed.
+5. output phase. Using a pretty printer a report is pretty printed. The pretty printer is
+set in the configuration file and is optional.
 
 6. postrun phase. In this phase methods that are not necessary for generating output, but
 which should be run anyway, are run. Examples are generating pictures or running statistics.
@@ -489,8 +490,8 @@ def readconfig(config):
 ##  'tags': ['binary', 'elf'],
 ##  'architecture': 'Advanced Micro Devices X86-64',
 ##  'libs': ['libm.so.6', 'libselinux.so.1', 'libtinfo.so.5',
-##   'libacl.so.1', 'libgpm.so.2', 'libdl.so.2', 'libperl.so',
-##   'libpthread.so.0', 'libc.so.6', 'libpython2.7.so.1.0', 'libruby.so.1.8']
+##    'libacl.so.1', 'libgpm.so.2', 'libdl.so.2', 'libperl.so',
+##    'libpthread.so.0', 'libc.so.6', 'libpython2.7.so.1.0', 'libruby.so.1.8']
 ## }
 ## 
 ## Results of unpacking are also put in 'scans'. The name of the dictionary is the
