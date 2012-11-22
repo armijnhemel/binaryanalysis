@@ -333,6 +333,30 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize, debu
 			reports[scan['name']] = res
 	return (filetoscan, reports)
 
+def aggregatescan(unpackreports, leafreports, scans, debug):
+	## aggregate scans look at the entire result and possibly modify it.
+	## The best example is JAR files: individual .class files will not be
+	## very significant (or even insignificant), but combined results are.
+	## Because aggregate scans have to look at everything as a whole, these
+	## cannot be run in parallel.
+	for scan in scans['aggregatescans']:
+		module = scan['module']
+		method = scan['method']
+		if debug:
+			print >>sys.stderr, method
+		## if there is extra information we need to pass, like locations of databases
+		## we can use the environment for it
+		if scan.has_key('envvars'):
+			envvars = scan['envvars']
+		else:
+			envvars = None
+		exec "from %s import %s as bat_%s" % (module, method, method)
+
+		res = eval("bat_%s(unpackreports, leafreports, envvars=envvars)" % (method))
+		## TODO: find out what we want to do with this
+		if res != None:
+			pass
+
 def postrunscan((filetoscan, unpackreports, leafreports, scans, scantempdir, toplevelscandir, debug)):
 	sys.stdout.flush()
 	for scan in scans:
@@ -759,29 +783,8 @@ def runscan(tempdir, scans, scan_binary):
 		for k in i:
 			unpackreports[k] = i[k]
 
-	## aggregate scans look at the entire result and possibly modify it.
-	## The best example is JAR files: individual .class files will not be
-	## very significant (or even insignificant), but combined results are.
-	## Because aggregate scans have to look at everything as a whole, these
-	## cannot be run in parallel.
 	if scans['aggregatescans'] != []:
-		for scan in scans['aggregatescans']:
-			module = scan['module']
-			method = scan['method']
-			if debug:
-				print >>sys.stderr, method
-			## if there is extra information we need to pass, like locations of databases
-			## we can use the environment for it
-			if scan.has_key('envvars'):
-				envvars = scan['envvars']
-			else:
-				envvars = None
-			exec "from %s import %s as bat_%s" % (module, method, method)
-
-			res = eval("bat_%s(unpackreports, leafreports, envvars=envvars)" % (method))
-			## TODO: find out what we want to do with this
-			if res != None:
-				pass
+		aggregatescan(unpackreports, leafreports, scans, debug)
 
 	## run postrunscans here, again in parallel, if needed/wanted
 	## These scans typically only have a few side effects, but don't change
