@@ -2066,7 +2066,7 @@ def searchUnpackUbifs(filename, tempdir=None, blacklist=[], offsets={}, envvars=
 		if res != None:
 			(ubitmpdir, ubisize) = res
 			diroffsets.append((ubitmpdir, offset, ubisize))
-			## TODO use ubisize to make set the blacklist correctly
+			## TODO use ubisize to set the blacklist correctly
 			counter = counter + 1
 		else:
 			## cleanup
