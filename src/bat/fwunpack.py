@@ -480,10 +480,11 @@ def unpackTar(filename, offset, tempdir=None):
 ## For this you will need the unyaffs program from
 ## http://code.google.com/p/unyaffs/
 ## TODO: check out http://code.google.com/p/yaffs2utils/
-## TODO: search blacklists
 def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
-	tmpdir = dirsetup(tempdir, filename, "yaffs2", 1)
 	diroffsets = []
+	if blacklist != []:
+		return (diroffsets, blacklist, [])
+	tmpdir = dirsetup(tempdir, filename, "yaffs2", 1)
 	p = subprocess.Popen(['bat-unyaffs', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
