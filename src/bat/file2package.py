@@ -25,6 +25,7 @@ def filename2package(path, blacklist=[], envvars=None):
 	## suited
 	c.execute("select distinct package, packageversion, source from file where filename = '%s'" % (os.path.basename(path),))
 	res = c.fetchall()
+	## TODO: filter results, only return files that are not in tons of packages
 	if res != []:
 		return res
 	return None
