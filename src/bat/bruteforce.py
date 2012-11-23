@@ -358,7 +358,6 @@ def aggregatescan(unpackreports, leafreports, scans, debug):
 			pass
 
 def postrunscan((filetoscan, unpackreports, leafreports, scans, scantempdir, toplevelscandir, debug)):
-	sys.stdout.flush()
 	for scan in scans:
 		module = scan['module']
 		method = scan['method']
