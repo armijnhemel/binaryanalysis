@@ -29,7 +29,7 @@ import fsmagic, fssearch, extractor
 
 ## method to search for all the markers in magicscans
 ## Although it is in this method it is actually not a pre-run scan, so perhaps
-## it should be moved to bruteforce.py instead.
+## it should be moved to bruteforcescan.py instead.
 def genericMarkerSearch(filename, magicscans, envvars=None):
 	datafile = open(filename, 'rb')
 	databuffer = []

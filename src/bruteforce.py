@@ -5,7 +5,7 @@
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
-CLI front end for running the scans in bat/bruteforce.py
+CLI front end for running the scans in bat/bruteforcescan.py
 
 See documentation in that file to see how it works.
 '''
@@ -13,7 +13,7 @@ See documentation in that file to see how it works.
 import sys, os, os.path, tempfile
 from optparse import OptionParser
 import ConfigParser
-import bat.bruteforce
+import bat.bruteforcescan
 import datetime
 
 def main(argv):
@@ -53,24 +53,24 @@ def main(argv):
 		pass
 
 	config.readfp(configfile)
-	scans = bat.bruteforce.readconfig(config)
+	scans = bat.bruteforcescan.readconfig(config)
 
 	scandate = datetime.datetime.utcnow()
 
 	## create temporary directory to store results in
 	tempdir=tempfile.mkdtemp()
 
-	(unpackreports, leafreports) = bat.bruteforce.runscan(tempdir, scans, scan_binary)
+	(unpackreports, leafreports) = bat.bruteforcescan.runscan(tempdir, scans, scan_binary)
 
-	res = bat.bruteforce.flatten("%s" % (os.path.basename(scan_binary)), unpackreports, leafreports)
+	res = bat.bruteforcescan.flatten("%s" % (os.path.basename(scan_binary)), unpackreports, leafreports)
 	if not scans['batconfig'].has_key('output'):
 		## no printing?
 		pass
 	else:
-		output = bat.bruteforce.prettyprint(scans['batconfig'], res, scandate, scans)
+		output = bat.bruteforcescan.prettyprint(scans['batconfig'], res, scandate, scans)
 		print output
 
-	bat.bruteforce.writeDumpfile(unpackreports, leafreports, scans, options.outputfile, tempdir, scans['batconfig']['outputlite'])
+	bat.bruteforcescan.writeDumpfile(unpackreports, leafreports, scans, options.outputfile, tempdir, scans['batconfig']['outputlite'])
 
 if __name__ == "__main__":
         main(sys.argv)

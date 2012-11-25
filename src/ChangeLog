@@ -1,3 +1,7 @@
+2012-11-25
+* rename bat/bruteforce.py to bat/bruteforcescan.py to avoid nameclashes.
+Actually bruteforce.py should be renamed as well.
+
 2012-11-22
 * fix error in bat/bruteforce.py: actually use the checksum instead of the
 size, which could have lead to misclassifications

@@ -19,7 +19,7 @@ import sqlite3, cgi
 
 if sys.platform.startswith('linux'):
 	try:
-		import bat.bruteforce
+		import bat.bruteforcescan
 		scanning = True
 	except ImportError:
 		scanning = False
@@ -876,9 +876,9 @@ class BatFrame(wx.Frame):
 						config.add_section(c)
 						for i in self.origconfig.items(c):
 							config.set(c, i[0], i[1])
-				self.scans = bat.bruteforce.readconfig(config)
-				(self.unpackreports, self.leafreports) = bat.bruteforce.runscan(self.tmpdir, self.scans, dlg.GetPath())
-				bat.bruteforce.dumpData(self.unpackreports, self.leafreports, self.scans, self.tmpdir)
+				self.scans = bat.bruteforcescan.readconfig(config)
+				(self.unpackreports, self.leafreports) = bat.bruteforcescan.runscan(self.tmpdir, self.scans, dlg.GetPath())
+				bat.bruteforcescan.dumpData(self.unpackreports, self.leafreports, self.scans, self.tmpdir)
 
 				## After running the scan we dump the results, repopulate the tree and
 				## work from there.
@@ -904,7 +904,7 @@ class BatFrame(wx.Frame):
 		dlg = wx.FileDialog(self, 'Save BAT results', style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT)
 		if dlg.ShowModal() == wx.ID_OK:
 			self.tarfile = dlg.GetPath()
-			bat.bruteforce.writeDumpfile(self.unpackreports, self.leafreports, self.scans, self.tarfile, self.tmpdir)
+			bat.bruteforcescan.writeDumpfile(self.unpackreports, self.leafreports, self.scans, self.tarfile, self.tmpdir)
 
 	def onOpen(self,e):
 		dlg = wx.FileDialog(self, 'Open BAT results', style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST)
