@@ -30,3 +30,4 @@ function names:
 database creation:
 * extract copyrights with FOSSology
 * reenable license scanning with FOSSology
+* deal with embedded archives (ZIP files, tarballs, etc.)
