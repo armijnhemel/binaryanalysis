@@ -1,3 +1,10 @@
+2012-11-26
+* remove non-functioning code from bat/images.py and replace it with
+configuration options
+* remove unused code from bat/bruteforcescan.py
+* remove unused code from bat/fwunpack.py
+* start on verifier for PE executables
+
 2012-11-25
 * rename bat/bruteforce.py to bat/bruteforcescan.py to avoid nameclashes.
 Actually bruteforce.py should be renamed as well.
