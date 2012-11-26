@@ -21,11 +21,6 @@ def generatelist(filedir, origin):
 	try:
         	while True:
 			i = files.next()
-			## we harvest Debian and have stored it in a separate
-			## dir. Since some file names need to be mangled first
-			## we skip it for now...
-			if 'debian' in i[0]:
-				continue
 			for p in i[2]:
 				if p == "LIST":
 					continue
