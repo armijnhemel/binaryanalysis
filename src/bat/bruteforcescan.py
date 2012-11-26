@@ -782,11 +782,12 @@ def runscan(tempdir, scans, scan_binary):
 	## run postrunscans here, again in parallel, if needed/wanted
 	## These scans typically only have a few side effects, but don't change
 	## the reporting/scanning, just process the results. Examples: generate
-	## fancier reports, use microblogging to post scan results,
-	## order a pizza, whatever...
+	## fancier reports, use microblogging to post scan results, etc.
 	## TODO: make sure we don't process duplicates here as well, just like
 	## in leaf scans.
-	if scans['postrunscans'] != []:
+	if scans['postrunscans'] != [] and unpackreports != {}:
+		## if unpackreports != {} we know that we have done deduplication
+		## already, so we can just reuse it here.
 		postrunscans = []
 		for i in unpackreports:
 			if leafreports.has_key(i):
