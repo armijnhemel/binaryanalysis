@@ -14,7 +14,7 @@ def findSquashfs(data, offset=0):
 	marker = -1
 	squashtype = None
 	for t in fsmagic.squashtypes:
-		sqshmarker = findMarker2(fsmagic.fsmagic[t], data, offset)
+		sqshmarker = findMarker(fsmagic.fsmagic[t], data, offset)
 		if sqshmarker == -1:
 			continue
 		if marker == -1:
@@ -23,12 +23,9 @@ def findSquashfs(data, offset=0):
 			marker = min(marker, sqshmarker)
 	return marker
 
-def findMarker(marker, data, offset=0):
-	return data.find(marker, offset)
-
-## version of findMarker that uses seek() and read()
-## which should come in handy for big files
-def findMarker2(marker, datafile, offset=0):
+## Find a marker. To more efficiently deal with big files we don't read in
+## the entire file at once, but use read() and seek()
+def findMarker(marker, datafile, offset=0):
 	databuffer = []
 	datafile.seek(offset)
 	databuffer = datafile.read(100000)
@@ -51,13 +48,13 @@ def findMarker2(marker, datafile, offset=0):
 	return -1
 
 def findType(type, data, offset=0):
-	res = findMarker2(fsmagic.fsmagic[type], data, offset)
+	res = findMarker(fsmagic.fsmagic[type], data, offset)
 	return res
 
 def findCpio(data, offset=0):
 	cpiomarker = -1
 	for marker in fsmagic.cpio:
-		res = findMarker2(fsmagic.fsmagic[marker], data, offset)
+		res = findMarker(fsmagic.fsmagic[marker], data, offset)
 		if res != -1 and cpiomarker == -1:
 			cpiomarker = res
 		elif res != -1:
@@ -136,7 +133,7 @@ def findJFIF(data, offset=0):
 def findGIF(data, offset=0):
 	gifmarker = -1
 	for marker in fsmagic.gif:
-		res = findMarker2(fsmagic.fsmagic[marker], data, offset)
+		res = findMarker(fsmagic.fsmagic[marker], data, offset)
 		if res != -1 and gifmarker == -1:
 			gifmarker = res
 		elif res != -1:
