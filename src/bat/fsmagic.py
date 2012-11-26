@@ -73,6 +73,7 @@ fsmagic = {
             'ogg':  		'OggS',
             'fat12':  		'FAT12',
             'fat16':  		'FAT16',
+            'pe':  		'MZ',
           }
 
 ## some offsets can be found after a certain number of bytes, but

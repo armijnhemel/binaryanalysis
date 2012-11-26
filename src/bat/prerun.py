@@ -586,4 +586,20 @@ def verifyJAR(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 ## Method to verify if a program is a valid PE executable
 def verifyPE(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
+	if not offsets.has_key('pe'):
+		return newtags
+	## a PE file *has* to start with the identifier 'MZ'
+	if offsets['pe'][0] != 0:
+		return newtags
+	datafile = open(filename, 'rb')
+	databuffer = datafile.read(100000)
+	datafile.close()
+	## the string 'PE\0\0' has to appear fairly early in the file
+	if not 'PE\0\0' in databuffer:
+		return newtags
+	## this is a dead giveaway
+	## TODO: we should verify if the entire file is a PE executable
+	## or if it is part of a larger blob
+	if "This program cannot be run in DOS mode." in databuffer:
+		pass
 	return newtags
