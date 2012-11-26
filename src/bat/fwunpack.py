@@ -172,7 +172,6 @@ def unpackJavaSerialized(filename, offset, tempdir=None):
 
 	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
-	## TODO: remove hardcoded path
 	p = subprocess.Popen(['java', '-jar', '/usr/share/java/bat-jdeserialize.jar', '-blockdata', 'deserialize', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
         (stanout, stanerr) = p.communicate()
         if p.returncode != 0 or 'file version mismatch!' in stanerr or "error while attempting to decode file" in stanerr:
@@ -469,7 +468,6 @@ def unpackTar(filename, offset, tempdir=None):
 ## This is why, for now, we will only try to unpack at offset 0.
 ## For this you will need the unyaffs program from
 ## http://code.google.com/p/unyaffs/
-## TODO: check out http://code.google.com/p/yaffs2utils/
 def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	diroffsets = []
 	if blacklist != []:
@@ -504,6 +502,7 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, envvars
 ## Some Windows executables can only be unpacked interactively using Wine :-(
 def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	## first determine if we are dealing with a MS Windows executable
+	## TODO: replace this with a better check for PE checking and use tags
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
 	mstype = ms.file(filename)
