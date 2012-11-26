@@ -274,8 +274,11 @@ def main(argv):
 
 	## read the location of the BAT configuration, default to /etc/bat
 	if options.bbconfigs != None:
-		## TODO: verify the location actually exists
-		bbconfigs = options.bbconfigs
+		try:
+			os.stat(options.bbconfig)
+			bbconfigs = options.bbconfigs
+		except:
+			bbconfigs = "/etc/bat"
 	else:
 		bbconfigs = "/etc/bat"
 
