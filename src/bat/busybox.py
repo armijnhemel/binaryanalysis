@@ -132,30 +132,30 @@ def extract_configuration(lines, busybox, bbconfig):
 		distances = map(lambda x,y: y[1] - x[1], results2[:-1], results2[1:])
 
 		## loop through the elements and see if we see closely grouped elements
-		discounter = 0
-		while discounter < len(distances):
-			if distances[discounter] < maxlen and distances[discounter] > 0:
+		offsetcounter = 0
+		while offsetcounter < len(distances):
+			if distances[offsetcounter] < maxlen and distances[offsetcounter] > 0:
 				## we have found two things which are closely together
 				## check if it is also close to high
-				res = results2[high][1] - results2[discounter][1]
+				res = results2[high][1] - results2[offsetcounter][1]
 				if res < maxlen and res > 0:
 					# we have our offset, set low to it, and break out of the loop
-					low = discounter
+					low = offsetcounter
 					break
 				else:
 					# it is more likely that high needs to be lowered
 					lowered = False
-					for i in range(high, discounter, -1):
-						res = results2[i][1] - results2[discounter][1]
+					for i in range(high, offsetcounter, -1):
+						res = results2[i][1] - results2[offsetcounter][1]
 						if res < maxlen and res > 0:
 							high = high - 1
 							lowered = True
 							break
 					# we have not lowered high, so we'll raise low and try again
 					if not lowered:
-						discounter = discounter + 1
+						offsetcounter = offsetcounter + 1
 			else:
-				discounter = discounter + 1
+				offsetcounter = offsetcounter + 1
 
 		## assuming we have a good value for low and high we can extract the appletnames
 		tmp2config = lines[results2[low][1]:results2[high][1] + len(results2[high][0])].split('\x00')
