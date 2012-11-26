@@ -111,6 +111,15 @@ magic       = ogg
 description = Check if file is a valid Ogg file
 enabled     = yes
 
+[verifype]
+type        = prerun
+module      = bat.prerun
+method      = verifyPE
+priority    = 1
+magic       = pe
+description = Check if file is a valid PE executable
+enabled     = no
+
 [verifytext]
 type        = prerun
 module      = bat.prerun
