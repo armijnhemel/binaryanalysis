@@ -164,7 +164,7 @@ def verifyGIF(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	##    this will also happen for correct GIFs. This is not a problem.
 	## 2. run gifinfo
 	## 3. for every file that remains we are *very* sure it is a GIF file
-	## TODO: make this more efficient
+	## TODO: make this more efficient using seek()
 	giffile = open(filename)
 	gifdata = giffile.read()
 	giffile.close()
