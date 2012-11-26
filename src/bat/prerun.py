@@ -582,3 +582,8 @@ def verifyJAR(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags.append('jar')
 	newtags.append('zip')
 	return newtags
+
+## Method to verify if a program is a valid PE executable
+def verifyPE(filename, tempdir=None, tags=[], offsets={}, envvars=None):
+	newtags = []
+	return newtags
