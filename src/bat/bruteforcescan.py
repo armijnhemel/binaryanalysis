@@ -310,12 +310,6 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize, debu
 
 	reports['tags'] = tags
 	for scan in scans:
-
-		## TODO: this code can probably go since it is done by filterScans
-		if scan['noscan'] != None:
-			noscans = scan['noscan'].split(':')
-			if list(set(noscans).intersection(set(tags))) != []:
-				continue
 		report = {}
 		module = scan['module']
 		method = scan['method']
