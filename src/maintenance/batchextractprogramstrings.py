@@ -639,6 +639,11 @@ def main(argv):
 		c.execute('''create table if not exists processed (package text, version text, filename text, origin text, sha256 text)''')
 		c.execute('''create index if not exists processed_index on processed(package, version)''')
 
+		## Keep an archive of which packages are blacklisted. This is useful during database creation,
+		## or during database expansion.
+		#c.execute('''create table if not exists blacklist (package text, version text, filename text, origin text, sha256 text)''')
+		#c.execute('''create index if not exists blacklist_index on blacklist(package, version)''')
+
 		## Since there is a lot of duplication inside source packages we store strings per checksum
 		## which we can later link with files
 		c.execute('''create table if not exists processed_file (package text, version text, filename text, sha256 text)''')
