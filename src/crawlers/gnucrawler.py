@@ -76,8 +76,8 @@ def processline(line):
 		filelist.append("%s/%s" % (prefix, ftpfilename))
 
 ## get rid of all duplicates, also make sure we don't get all the gcc subpackages
-## prefer bz2 files, then gz, then xz, then lzma
-## TODO Also first check (for now just the storedir, later perhaps query a database)
+## prefer bz2 files, then gz, then xz, then lzma.
+## Also first check (for now just the storedir, later perhaps query a database)
 ## to see if we already have downloaded this version of the package.
 def prune(storedir):
 	grablist = []
