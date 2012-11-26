@@ -261,7 +261,7 @@ def main(argv):
 	try:
 		busybox_binary = open(options.bb, 'rb')
 	except:
-		print "No valid BusyBox file"
+		print >>sys.stderr, "No valid BusyBox file"
 		sys.exit(1)
 
 	## determine the BusyBox binary
@@ -269,7 +269,7 @@ def main(argv):
 
 	## ... and read in names from all applets we have extracted from the BusyBox source
 	if version == None:
-		print "File does not appear to contain BusyBox"
+		print >>sys.stderr, "File does not appear to contain BusyBox"
 		sys.exit(1)
 
 	## read the location of the BAT configuration, default to /etc/bat
@@ -282,7 +282,10 @@ def main(argv):
 	else:
 		bbconfigs = "/etc/bat"
 
-	bbconfig = pickle.load(open('%s/configs/%s-config' % (bbconfigs, version)))
+	try:
+		bbconfig = pickle.load(open('%s/configs/%s-config' % (bbconfigs, version)))
+	except:
+		print >>sys.stderr, "No configuration for %s found" % version
 
 	busybox_lines = busybox_binary.read()
 	busybox_binary.close()
