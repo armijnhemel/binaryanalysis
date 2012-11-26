@@ -95,6 +95,12 @@ The noscan parameter can be set for all scans, except prerun scans. Files that
 are tagged with a value in this list will be automatically ignored for a
 particular scan.
 
+The scanonly parameter can be set for the same scans as noscan can be set for.
+Only files that are tagged with a value in this list will be scanned by this
+particular scan. If this parameter is omitted or an empty list all files will
+be considered for scanning. The noscan parameter takes precedence: if a tag
+appears in both, then the file will not be scanned.
+
 The magic parameter can be set for prerun scans and unpack scans. Only files
 that have an identifier with any of the identifiers in it will be processed by
 the scan.

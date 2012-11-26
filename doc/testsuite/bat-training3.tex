@@ -147,6 +147,7 @@ The configuration for each type of scan has a few mandatory options:
 \begin{itemize}
 \item \texttt{priority} - the priority of the scan: a higher priority means that the scan is run before scans with a lower priority.
 \item \texttt{noscan} - a list of tags. Files that are tagged with any of these tags are ignored by this scan.
+\item \texttt{scanonly} - a list of tags. Only files that are tagged with any of these tags will be scanned. If there are also files in \texttt{noscan} than the intersection of these two lists will be scanned.
 \item \texttt{envvars} - a colon separated list of environment variables that will be set in the scan
 \item \texttt{magic} - a list of specific identifiers this scan is meant for (if possible). This is for an internal optimisation.
 \item \texttt{description} - a human readable description of the scan, mostly for documentation purposes.
