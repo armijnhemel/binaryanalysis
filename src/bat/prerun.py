@@ -161,10 +161,12 @@ def verifyGIF(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	## file, so we need to be very very careful here.
 	## 1. read the entire file and if there is more than one match for a
 	##    trailer, we return. Since the GIF trailer is very very generic
-	##    this will also happen for correct GIFs. This is not a problem.
+	##    this will also likely happen for correct GIFs. This is not a
+	##    problem since we are making a conservative guess. Reading the
+	##    entire file at once is not a big problem, since we already
+	##    filtered out most files.
 	## 2. run gifinfo
 	## 3. for every file that remains we are *very* sure it is a GIF file
-	## TODO: make this more efficient using seek()
 	giffile = open(filename)
 	gifdata = giffile.read()
 	giffile.close()
