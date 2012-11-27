@@ -466,7 +466,12 @@ def extractGeneric(lines, path, language='C', envvars=None):
 
 	determinelicense = False
 	if scanenv.get('BAT_RANKING_LICENSE', 0) == '1':
-		## TODO: if extracted_license does not exist we should always set this to False
+		## TODO: if licenses does not exist we should always set this to False
+		## c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='licenses';")
+		## if c.fetchall() != []:
+		##	determinelicense = True
+		## else:
+		##	determinelicense = False
 		determinelicense = True
 
 	## keep a list of versions per package we found
