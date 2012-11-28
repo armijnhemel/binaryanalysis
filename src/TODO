@@ -28,5 +28,4 @@ function names:
 * generate list of function names and where they were found, optionally with line numbers, for GUI
 
 database creation:
-* extract copyrights with FOSSology
 * deal with embedded archives (ZIP files, tarballs, etc.)
