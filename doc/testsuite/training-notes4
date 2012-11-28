@@ -62,7 +62,15 @@ between versions.
 If just a few unique strings were matched then version guessing will not be
 very reliable.
 
-Slide 12: The BAT results viewer has an "advanced mode" which can provide a
+Slide 12: Similarly to version numbers a guess is made of possible licenses.
+The possible licenses are also based upon unique matches only. If there are
+few unique matches this will not be reliable.
+
+Also, currently guessed versions are not taken into account when determining
+the license. Since code can have a different license per version this is
+important. Now all possible licenses are reported.
+
+Slide 13: The BAT results viewer has an "advanced mode" which can provide a
 different view on files, namely a graphical representation and a text
 representation (created with hexdump) of the file. For most files this is not
 necessary at all (and so this mode is disabled by default), but it can be
@@ -75,8 +83,8 @@ representations (postrun scans "images" and "hexdump" have to be enabled). The
 generated files can be really big and slow down the interface significantly, so
 it is not enabled by default.
 
-Slide 13: Scanning via the BAT results viewer is also possible (Linux systems
+Slide 14: Scanning via the BAT results viewer is also possible (Linux systems
 only), but not recommended: it can take long time to scan a large file, even on
 a machines with fast SSD disks, many cores and plenty of memory.
 
-Slide 14: no notes
+Slide 15: no notes

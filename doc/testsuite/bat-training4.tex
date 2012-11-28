@@ -90,6 +90,7 @@ If the advanced ranking scan is enabled a lot more information becomes available
 \item function names matching
 \item string constants matching
 \item version number guess
+\item possible licenses guess
 \end{itemize}
 
 This information should be carefully analysed and not blindly trusted.
@@ -121,6 +122,13 @@ An even distribution of scores, combined with few matched unique strings and non
 Based on unique strings BAT tries to determine version numbers of matched packages.
 
 Because version number guessing is tied to unique strings version number guessing is likely to be unreliable if there are just a few unique strings.
+}
+
+\frame{
+\frametitle{Interpreting results: license guess}
+Based on unique strings BAT tries to determine possible used licenses for matched packages.
+
+License guessing is likely to be unreliable if there are just a few unique strings. Versions are not taken into account when determining the license: all possible licenses are reported, also if the software is relicensed in some version.
 }
 
 \frame{
