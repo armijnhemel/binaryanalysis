@@ -3,6 +3,8 @@
 * update database creation to work with FOSSology 2.1.0.
 * extract copyrights (currently only e-mail addresses and URLs) using the
 copyright agent from FOSSology.
+* store other copyright statements. There is quite a bit of bogus data in
+there, so we probably need an extra step to clean up.
 
 2012-11-26
 * remove non-functioning code from bat/images.py and replace it with
@@ -54,6 +56,7 @@ capabilities.
 
 2012-11-04
 * also store line numbers for function names
+* release BAT 9.0
 
 2012-10-31
 * introduce new configuration parameters for postrunscans to store results in
