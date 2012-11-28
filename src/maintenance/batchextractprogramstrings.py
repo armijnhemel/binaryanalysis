@@ -423,32 +423,40 @@ def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)
 			## the binary.
 			res = re.match('^\[\d+:\d+:(\w+)] \'(.*)\'', c.strip())
 			if res != None:
+				if continuation:
+					if bufstr != "" and buftype != "":
+						copyrightsres.append((buftype, bufstr))
+				continuation = False
+				bufstr = ""
+				buftype = ""
 				## e-mail addresses are never on multiple lines
 				if res.groups()[0] == 'email':
 					copyrightsres.append(('email', res.groups()[1]))
-					continuation = False
-					bufstr = ""
-					buftype = ""
 				## urls should are never on multiple lines
 				elif res.groups()[0] == 'url':
 					copyrightsres.append(('url', res.groups()[1]))
-					continuation = False
-					bufstr = ""
-					buftype = ""
-			'''
-			if c.strip().startswith('['] and continuation:
-				## first store old result
-				## then reset values
-				continuation = False
-				buftype = ""
-				bufstr = ""
-			elif continuation:
-				bufstr = bufstr + c.strip()
-				continue
+				## copyright statements can be on multiple lines, but this is
+				## the start of a new statement
+				elif res.groups()[0] == 'statement':
+					continuation = True
+					buftype = "statement"
+					bufstr = res.groups()[1]
 			else:
-				pass
-			print c.strip()
-			'''
+				res = re.match('^\[\d+:\d+:(\w+)] \'(.*)', c.strip())
+				if res != None:
+					if res.groups()[0] == 'statement':
+						continuation = True
+						buftype = "statement"
+						bufstr = res.groups()[1]
+				else:
+					bufstr = bufstr + "\n" + c.strip()
+					continuation = True
+		## perhaps some lingering data
+		if continuation:
+			if bufstr != "" and buftype != "":
+				copyrightsres.append((buftype, bufstr))
+		## TODO: clean up 'statement', since there is quite a
+		## bit of bogus data present.
 	return (filehash, copyrightsres)
 
 def licensefossology((package, version, i, p, language, filehash, ninkaversion)):
@@ -584,7 +592,6 @@ def extractsourcestrings(filename, filedir, language):
 	return sqlres
 
 def checkalreadyscanned((filedir, package, version, filename, origin, dbpath)):
-	#print >>sys.stdout, filename
 	scanfile = open("%s/%s" % (filedir, filename), 'r')
 	h = hashlib.new('sha256')
 	h.update(scanfile.read())
