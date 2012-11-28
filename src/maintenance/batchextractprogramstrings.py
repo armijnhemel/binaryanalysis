@@ -327,6 +327,8 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 				for f in commentshash2[commentshash[l[0]]]:
 					cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (f, license, "ninka", ninkaversion))
 		conn.commit()
+		# TODO: sync names of licenses as found by FOSSology and Ninka
+		#fossology_res = pool.map(licensefossology, filestoscan)
 
 
 	## process the files we want to scan in parallel, then process the results
@@ -386,19 +388,21 @@ def runfullninka((i, p, filehash, ninkaversion)):
 def extractcopyrights((i, p, filehash)):
 	pass
 
-def licensefossology((i, p, filehash)):
-	pass
+#def licensefossology((i, p, filehash)):
+def licensefossology((package, version, i, p, language, filehash, ninkaversion)):
+	fossologyres = []
 	## Also run FOSSology. This requires that the user has enough privileges to actually connect to the
-	## FOSSology database!
-	#p2 = subprocess.Popen(["/usr/lib/fossology/agents/nomos", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-	#(stanout, stanerr) = p2.communicate()
-	#if "FATAL" in stanout:
-	#	pass
-	#else:
-	#	fossysplit = stanout.strip().rsplit(" ", 1)
-	#	licenses = fossysplit[-1].split(',')
-	#	for license in licenses:
-	#		print >>sys.stderr, "FOSSOLOGY %s/%s" % (i,p), license
+	## FOSSology database, for example by being in the correct group.
+	p2 = subprocess.Popen(["/usr/share/fossology/nomos/agent/nomos", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+	(stanout, stanerr) = p2.communicate()
+	if "FATAL" in stanout:
+		## TODO: better error handling
+		return None
+	else:
+		fossysplit = stanout.strip().rsplit(" ", 1)
+		licenses = fossysplit[-1].split(',')
+		fossologyres = list(set(licenses))
+	return (filehash, fossologyres)
 
 ## TODO: get rid of ninkaversion before we call this method
 def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
