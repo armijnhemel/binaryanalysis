@@ -327,8 +327,13 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 				for f in commentshash2[commentshash[l[0]]]:
 					cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (f, license, "ninka", ninkaversion))
 		conn.commit()
+
 		# TODO: sync names of licenses as found by FOSSology and Ninka
-		#fossology_res = pool.map(licensefossology, filestoscan)
+		fossology_res = pool.map(licensefossology, filestoscan)
+		for f in fossology_res:
+			(filehash, fres) = f
+			for license in fres:
+				cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "fossology", '2.1.0'))
 
 
 	## extract copyrights
@@ -429,7 +434,6 @@ def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)
 			'''
 	return (filehash, copyrightsres)
 
-#def licensefossology((i, p, filehash)):
 def licensefossology((package, version, i, p, language, filehash, ninkaversion)):
 	fossologyres = []
 	## Also run FOSSology. This requires that the user has enough privileges to actually connect to the
