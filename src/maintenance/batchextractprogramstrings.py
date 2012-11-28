@@ -147,7 +147,7 @@ def unpack_verify(filedir, filename):
 
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
-def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, pool):
+def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, copyrights, pool):
 	print >>sys.stdout, filename
 
 	## Check if we've already processed this file. If so, we can easily skip it and return.
@@ -168,7 +168,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 	if len(c.fetchall()) != 0:
 		c.execute('''delete from processed_file where package=? and version=?''', (package, version))
 		conn.commit()
-	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, pool)
+	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool)
 	## Add the file to the database: name of archive, sha256, packagename and version
 	## This is to be able to just update the database instead of recreating it.
 	c.execute('''insert into processed (package, version, filename, origin, sha256) values (?,?,?,?,?)''', (package, version, filename, origin, filehash))
@@ -232,7 +232,7 @@ def computehash((path, filename)):
 	filehash = h.hexdigest()
 	return (path, filename, filehash, extension)
 
-def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
+def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, pool):
 	srcdirlen = len(srcdir)+1
 	osgen = os.walk(srcdir)
 	ninkaversion = "bf83428"
@@ -331,6 +331,16 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, pool):
 		#fossology_res = pool.map(licensefossology, filestoscan)
 
 
+	## extract copyrights
+	if copyrights:
+		copyrightsres = pool.map(extractcopyrights, filestoscan)
+		if copyrightsres != None:
+			for c in copyrightsres:
+				(filehash, cres) = c
+				for cr in cres:
+					cursor.execute('''insert into extracted_copyright (sha256, copyright, type) values (?,?,?)''', (filehash, cr[1], cr[0]))
+		conn.commit()
+
 	## process the files we want to scan in parallel, then process the results
 	extracted_results = pool.map(extractstrings, filestoscan)
 
@@ -385,8 +395,39 @@ def runfullninka((i, p, filehash, ninkaversion)):
 	return (filehash, ninkares)
 
 ## TODO: extract copyrights using FOSSology
-def extractcopyrights((i, p, filehash)):
-	pass
+def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)):
+	copyrightsres = []
+	p2 = subprocess.Popen(["/usr/share/fossology/copyright/agent/copyright", "-C", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+	(stanout, stanerr) = p2.communicate()
+	if "FATAL" in stanout:
+		## TODO: better error handling
+		return None
+	else:
+		clines = stanout.split("\n")
+		continuation = True
+		bufstr = ""
+		buftype = ""
+		for c in clines[1:]:
+			## for now just extract email addresses
+			## copyright statements and URLs are not very accurate
+			res = re.match('^\[\d+:\d+:email] \'(.*)\'', c.strip())
+			if res != None:
+				copyrightsres.append(('email', res.groups()[0]))
+			'''
+			if c.strip().startswith('['] and continuation:
+				## first store old result
+				## then reset values
+				continuation = False
+				buftype = ""
+				bufstr = ""
+			elif continuation:
+				bufstr = bufstr + c.strip()
+				continue
+			else:
+				pass
+			print c.strip()
+			'''
+	return (filehash, copyrightsres)
 
 #def licensefossology((i, p, filehash)):
 def licensefossology((package, version, i, p, language, filehash, ninkaversion)):
@@ -549,12 +590,13 @@ def checkalreadyscanned((filedir, package, version, filename, origin, dbpath)):
 def main(argv):
 	parser = OptionParser()
 	parser.add_option("-b", "--blacklist", action="store", dest="blacklist", help="path to blacklist file", metavar="FILE")
+	parser.add_option("-c", "--copyrights", action="store_true", dest="copyrights", help="extract copyrights (default: false)")
 	parser.add_option("-d", "--database", action="store", dest="db", help="path to database", metavar="FILE")
 	parser.add_option("-f", "--filedir", action="store", dest="filedir", help="path to directory containing files to unpack", metavar="DIR")
-	parser.add_option("-v", "--verify", action="store_true", dest="verify", help="verify files, don't process (default: false)")
-	parser.add_option("-z", "--cleanup", action="store_true", dest="cleanup", help="cleanup after unpacking? (default: false)")
-	parser.add_option("-w", "--wipe", action="store_true", dest="wipe", help="wipe database instead of update (default: false)")
 	parser.add_option("-l", "--licenses", action="store_true", dest="licenses", help="extract licenses (default: false)")
+	parser.add_option("-v", "--verify", action="store_true", dest="verify", help="verify files, don't process (default: false)")
+	parser.add_option("-w", "--wipe", action="store_true", dest="wipe", help="wipe database instead of update (default: false)")
+	parser.add_option("-z", "--cleanup", action="store_true", dest="cleanup", help="cleanup after unpacking? (default: false)")
 	(options, args) = parser.parse_args()
 	if options.filedir == None:
 		parser.error("Specify dir with files")
@@ -603,6 +645,10 @@ def main(argv):
 	else:
 		license = False
 
+	if options.copyrights != None:
+		copyrights = True
+	else:
+		copyrights = False
 	conn = sqlite3.connect(options.db, check_same_thread = False)
 	c = conn.cursor()
 	#c.execute('PRAGMA journal_mode=off')
@@ -632,10 +678,10 @@ def main(argv):
 			c.execute('''drop table ninkacomments''')
 		except:
 			pass
-		#try:
-		#	c.execute('''drop table copyright''')
-		#except:
-		#	pass
+		try:
+			c.execute('''drop table extracted_copyright''')
+		except:
+			pass
 		conn.commit()
         try:
 		## Keep an archive of which packages and archive files (tar.gz, tar.bz2, etc.) we've already
@@ -678,8 +724,12 @@ def main(argv):
 		c.execute('''create index if not exists functionname_index on extracted_function(functionname)''')
 
 		## Store the copyrights extracted by FOSSology, per checksum
-		#c.execute('''create table if not exists extracted_copyright (sha256 text, copyright text)''')
-		#c.execute('''create index if not exists copyright_index on extracted_copyright(sha256);''')
+		## type can be:
+		## * email
+		## * statement
+		## * url
+		c.execute('''create table if not exists extracted_copyright (sha256 text, copyright text, type text)''')
+		c.execute('''create index if not exists copyright_index on extracted_copyright(sha256);''')
 		conn.commit()
 	except Exception, e:
 		print >>sys.stderr, e
@@ -714,7 +764,7 @@ def main(argv):
 					continue
 				if options.verify:
 					unpack_verify(options.filedir, filename)
-				res = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, options.db, cleanup, license, pool)
+				res = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, options.db, cleanup, license, copyrights, pool)
 			except Exception, e:
 				# oops, something went wrong
 				print >>sys.stderr, e
