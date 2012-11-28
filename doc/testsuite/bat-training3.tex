@@ -53,12 +53,14 @@ Some tags that can be set by prerun scans in the current version of BAT are:
 \item graphics
 \item audio
 \item elf
+\item compressed
 \end{itemize}
+
+plus more to come.
 }
 
 \frame{
 \frametitle{Unpacking scans}
-
 Unpacking scans try to extract file systems and compressed files, sometimes from a larger binary blob, by ``carving'' it from a larger binary. Currently some 30 file systems and compressed files are supported:
 
 \begin{itemize}
@@ -91,8 +93,8 @@ Java, TAR, UPX, XZ, ZIP
 Postrun scans are scans that don't modify the files (unpacking, or scanning files), but merely act on results of scans, for example:
 
 \begin{itemize}
-\item generating reports
-\item generating pictures
+\item generating reports of the results
+\item generating pictures of the results
 \end{itemize}
 }
 
@@ -108,6 +110,7 @@ The configuration file is in Windows INI format and contains several parts:
 \item configuration directives for ``prerun'' scans
 \item configuration directives for ``unpack'' scans
 \item configuration directives for per file scans
+\item configuration directives for ``postrun'' scans
 \end{itemize}
 
 The general configuration is mandatory, the other directives are optional.
@@ -147,13 +150,14 @@ The configuration for each type of scan has a few mandatory options:
 \frametitle{Optional scan configuration options}
 
 \begin{itemize}
-\item \texttt{priority} - the priority of the scan: a higher priority means that the scan is run before scans with a lower priority.
-\item \texttt{noscan} - a list of tags. Files that are tagged with any of these tags are ignored by this scan.
-\item \texttt{scanonly} - a list of tags. Only files that are tagged with any of these tags will be scanned. If there are also files in \texttt{noscan} than the intersection of these two lists will be scanned.
-\item \texttt{envvars} - a colon separated list of environment variables that will be set in the scan
-\item \texttt{magic} - a list of specific identifiers this scan is meant for (if possible). This is for an internal optimisation.
-\item \texttt{description} - a human readable description of the scan, mostly for documentation purposes.
-\item \texttt{xmloutput} - custom output method for XML output of BAT (if enabled in main configuration). This method should be in the same file as the scan code.
+\item \texttt{priority} - scan priority: a higher priority means it is run before scans with a lower priority.
+\item \texttt{noscan} - list of tags. Files that are tagged with any of these tags are ignored by this scan.
+\item \texttt{scanonly} - list of tags. Only files that are tagged with any of these tags will be scanned. If \texttt{noscan} is also set the intersection of the two will be scanned.
+\item \texttt{envvars} - colon separated list of environment variables that will be set in the scan
+\item \texttt{magic} - list of specific identifiers this scan is meant for
+\item \texttt{description} - a human readable description of the scan
+\item \texttt{xmloutput} - custom output method for XML output of BAT. The code should be in the same file as the actual scan code.
+\item \texttt{storetype}, \texttt{storetarget} and \texttt{storedir} - used for postrun scans to describe which files to store in the output, where to store them and where to get them
 \end{itemize}
 }
 
@@ -223,6 +227,9 @@ envvars     = BAT_REPORTDIR=/tmp/images:
               BAT_IMAGE_MAXFILESIZE=100000000
 description = Create hexdump output of files
 enabled     = no
+storetarget = images
+storedir    = /tmp/images
+storetype   = .png
 \end{verbatim}
 
 Note: \texttt{envvars} has been split for readability but is actually one line in the configuration file.

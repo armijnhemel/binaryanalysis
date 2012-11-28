@@ -109,6 +109,10 @@ The priority parameter can be set for prerun scans and unpack scans. This is to
 avoid false positives: file systems that do not mangle or compress contents
 should be scanned first.
 
+The storetarget, storetype and storedir parameters need to be set together if a
+postrun scan creates output (like a report or a picture) that needs to be
+stored in the final output.
+
 Slide 13: no comments
 
 Slide 14: This scan has a low priority, is only run for files where the
