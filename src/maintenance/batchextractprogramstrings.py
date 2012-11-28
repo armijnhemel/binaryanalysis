@@ -413,11 +413,12 @@ def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)
 		bufstr = ""
 		buftype = ""
 		for c in clines[1:]:
-			## For now just extract email addresses and URLs.
-			## copyright statements and URLs are not very accurate
+			## Extract copyright information, like URLs, e-mail
+			## addresses and copyright statements.
+			## Copyright statements and URLs are not very accurate.
 			## URLs extracted from BusyBox for example contain links
 			## to standards, RFCs, other project's bug trackers, and
-			## so on. It is not a good indicator of everything
+			## so on. It is not a good indicator of anything
 			## unless some extra filtering is added, like searching for
 			## URLs that point to licenses that were not included in
 			## the binary.
@@ -455,7 +456,7 @@ def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)
 		if continuation:
 			if bufstr != "" and buftype != "":
 				copyrightsres.append((buftype, bufstr))
-		## TODO: clean up 'statement', since there is quite a
+		## TODO: clean up 'statement' and 'url', since there is quite a
 		## bit of bogus data present.
 	return (filehash, copyrightsres)
 
