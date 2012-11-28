@@ -33,7 +33,12 @@ Installing it is a bit tricky and BAT has, right now, a few hardcoded paths for
 Ninka, so it needs to be installed in a (semi-)fixed location before licenses
 can be scanned with the database extraction script.
 
-Slide 7: The ranking scan makes use of several caching databases to speed up
+Slide 7: Similarly FOSSology can be used for extracting licenses and copyright
+statements like e-mail addresses, URLs and more. For this FOSSology needs to
+be installed. Installing FOSSology is quite complex, but there are ready made
+packages for most distributions available.
+
+Slide 8: The ranking scan makes use of several caching databases to speed up
 scanning. These databases are created on the fly by BAT if they don't exist
 yet or can be pregenerated. The caching databases contain information that is
 needed by the scanning process, such as the average number of strings in a
@@ -43,7 +48,7 @@ Since the caching databases are generated on the fly it means that
 multiprocessing can not be used for the ranking scan if there is no fully
 (pre)generated cache.
 
-Slide 8: The locations of the main database and the caching databases are set
+Slide 9: The locations of the main database and the caching databases are set
 in the environment.
 
 The caching databases are split per language family (strings in one language
@@ -52,8 +57,8 @@ can be very significant in one language and not in the other and vice versa).
 If there is a fully (pre)generated cache the variable BAT_RANKING_FULLCACHE
 should be set to 1.
 
-Slide 9: If licensing information (determined by looking at licenses of files
+Slide 10: If licensing information (determined by looking at licenses of files
 in which unique strings were found) should be reported as well another
 environment variable called BAT_RANKING_LICENSE should be set to 1.
 
-Slide 10: no comments
+Slide 11: no comments

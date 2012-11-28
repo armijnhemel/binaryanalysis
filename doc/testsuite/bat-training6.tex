@@ -45,19 +45,21 @@ The parameter \texttt{-o} allows you to set an origin of where the source was do
 
 \frame{
 \frametitle{Generating the database}
-There is a script for generating a database called \texttt{batchextractprogramstrings.py}. It can be found in the source repository of BAT in the directory \texttt{maintenance}. It is a bit of a misnomer, because it can extract a lot more than string constants:
+The script to generate the database is called \texttt{batchextractprogramstrings.py}. It can be found in the source repository of BAT in the directory \texttt{maintenance}. It can extract a lot more than kust string constants:
 
 \begin{itemize}
-\item string constants
-\item function names
-\item license information (using Ninka)
+\item string constants (\texttt{xgettext}) and function names (\texttt{ctags})
+\item license information (using Ninka and FOSSology)
+\item copyright information (using FOSSology)
 \end{itemize}
 
 It can be invoked as follows:
 
 \texttt{python batchextractprogramstrings.py -z -d /path/to/database -f /path/to/dir/with/files}
 
-If license information should be extracted Ninka should first be installed. The \texttt{-l} flag should be added to the above command.
+For license information Ninka and FOSSology should be installed. The \texttt{-l} flag should be added to invocation.
+
+For copyright information and FOSSology should be installed. The \texttt{-c} flag should be added to invocation.
 }
 
 \frame{
@@ -79,6 +81,13 @@ Installing it works as follows:
 \end{enumerate}
 
 Now Ninka is ready to be used by \texttt{batchextractprogramstrings.py}.
+}
+
+\frame{
+\frametitle{Installing FOSSology}
+There are binary packages available for most distributions. They can either be already found inside the distribution, or downloaded from:
+
+\url{http://www.fossology.org/}
 }
 
 \frame{
