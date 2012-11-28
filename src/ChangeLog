@@ -1,7 +1,8 @@
 2012-11-28
 * extra sanity check for existence of database table in bat/ranking.py
 * update database creation to work with FOSSology 2.1.0.
-* extract copyrights (currently only e-mail addresses) using FOSSology.
+* extract copyrights (currently only e-mail addresses and URLs) using the
+copyright agent from FOSSology.
 
 2012-11-26
 * remove non-functioning code from bat/images.py and replace it with

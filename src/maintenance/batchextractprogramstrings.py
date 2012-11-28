@@ -362,7 +362,6 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, i[0], i[1]))
 	conn.commit()
 
-
 ## extract comments in parallel
 def extractcomments((package, version, i, p, language, filehash, ninkaversion)):
 	## first we generate just a .comments file and see if we've already seen it
@@ -413,11 +412,28 @@ def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)
 		bufstr = ""
 		buftype = ""
 		for c in clines[1:]:
-			## for now just extract email addresses
+			## For now just extract email addresses and URLs.
 			## copyright statements and URLs are not very accurate
-			res = re.match('^\[\d+:\d+:email] \'(.*)\'', c.strip())
+			## URLs extracted from BusyBox for example contain links
+			## to standards, RFCs, other project's bug trackers, and
+			## so on. It is not a good indicator of everything
+			## unless some extra filtering is added, like searching for
+			## URLs that point to licenses that were not included in
+			## the binary.
+			res = re.match('^\[\d+:\d+:(\w+)] \'(.*)\'', c.strip())
 			if res != None:
-				copyrightsres.append(('email', res.groups()[0]))
+				## e-mail addresses are never on multiple lines
+				if res.groups()[0] == 'email':
+					copyrightsres.append(('email', res.groups()[1]))
+					continuation = False
+					bufstr = ""
+					buftype = ""
+				## urls should are never on multiple lines
+				elif res.groups()[0] == 'url':
+					copyrightsres.append(('url', res.groups()[1]))
+					continuation = False
+					bufstr = ""
+					buftype = ""
 			'''
 			if c.strip().startswith('['] and continuation:
 				## first store old result
