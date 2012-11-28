@@ -1191,7 +1191,6 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, envva
 	return (diroffsets, blacklist, [])
 
 ## wrapper around all the different squashfs types
-## TODO: verify if all the squashfs unpacking works on SMP machines (sometimes it does not)
 def unpackSquashfsWrapper(filename, offset, tempdir=None):
 	## since unsquashfs can't deal with data via stdin first write it to
 	## a temporary location
