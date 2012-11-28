@@ -42,13 +42,13 @@ benefit from this.
 \subsection{Software requirements}
 
 To run BAT a recent Linux distribution is needed. Development is (currently)
-done on Fedora 14, 15 and 16, so those platforms are likely to work best.
-Other platforms (Debian 7, Ubuntu 12.04 and later) are tested with, but only to
+done on Fedora 16 and 17 and Ubuntu 12.04, so those platforms are likely to
+work best. Other platforms (like Debian 7) are tested with, but only to
 build binary releases.
 
 If the latest version from version control is used it is important to look at
 the file \texttt{setup.cfg} to get a list of the dependencies that should be
-met.
+met on the host system before installing BAT.
 
 \subsubsection{Installing on Fedora}
 
@@ -93,63 +93,26 @@ it tries to determine what is inside by applying a wide range of methods, such
 as looking for known identifiers of file systems and compressed files and
 running external tools to find contents in the binary.
 
-After successful identification it unpacks compressed files, media files and
-file systems recursively. Finally several individual scans are applied to each
-extracted file, ranging from determining dynamically linked libraries to an
-elaborate ranking method to guess which sources were used to build a program.
+During scanning of a file the following steps are taken:
 
-In this section a short overview of the configuration and inner workings are
-given. A more detailed description, including how to write scans, can be found
-in the appendix.
+\begin{enumerate}
+\item identifier search, using a list of known identifiers
+\item verifying file type of a file and, if successful, tagging it for later
+use.
+\item unpacking file systems, compressed files and media files from the file,
+possibly carving it out of a larger file first.
+\item repeat steps 1 - 3 for each file that was unpacked in step 3
+\item run individual scans on each file if no further unpacking is possible
+\item process results from scans in step 5
+\item pack results
+\end{enumerate}
 
-\subsubsection{Analysis configuration}
+\subsubsection{Identifier search}
 
-The analysis process is highly configurable: methods can be simply enabled and
-disabled, based on need: some methods can run for quite a long time, which
-might be undesirable at times. Configuration is done via a simple configuration
-file in Windows INI format.
-
-Most sections are specific to scanning methods, except two sections.
-
-The main configuration directive is \texttt{batconfig}. In this
-section various global settings are defined, such as \texttt{multiprocessing}
-which sets whether or not multiple CPUs (or cores) should be used during
-scanning. The default configuration as shipped in the official BAT distribution
-is to use a single CPU:
-
-\begin{verbatim}
-[batconfig]
-multiprocessing = no
-\end{verbatim}
-
-By setting this setting to \texttt{yes} the program will start an extra process
-per CPU that is available. In most cases it is completely safe to use
-multiprocessing, but there is one important exception: if the ranking method
-(described later) is used, without pregenerating the proper caching database
-(or purchasing one) it is unsafe to use multiprocessing. If ranking is used and
-there is a fully generated database it is completely safe and even strongly
-advised to use multiprocessing, since it vastly speeds up running the program.
-
-The other global section is \texttt{viewer}. This section is specific for the
-graphical frontend and is currently not used.
-
-\subsubsection{Enabling and disabling scans and methods}
-
-The standard configuration file enables most of the scans and methods
-implemented in BAT by default. Scans can be enabled and disabled by setting the
-option \texttt{enabled} to \texttt{yes} and \texttt{no} respectively. Disabling
-a scan will still allow you to enable it later in the graphical user interface.
-
-To prevent a scan from being enabled in the graphical user interface completely
-outcomment the entry in the configuration file (by starting the line with the
-\texttt{\#} character), or remove the section from the configuration file.
-
-\subsubsection{Marker search}
-
-The first action performed is scanning a file for known markers of compressed
-files and file systems. Which markers are searched for depends on the contents
-of the configuration file (specifically the \texttt{magic} attribute). These
-markers determine other methods, such as unpackers, are run.
+The first action performed is scanning a file for known identifiers of
+compressed files, file systems and media files. The identifers are important
+in determining which other methods are run (using the \texttt{magic}
+attribute) and are used frequently in the code for verification and unpacking.
 
 The marker search cannot be enabled or disabled via the configuration file.
 
@@ -157,16 +120,16 @@ The marker search cannot be enabled or disabled via the configuration file.
 
 Before files are unpacked they are briefly inspected and if possible tagged.
 Tags are used to pass hints to methods that are run later to reduce execution
-time and false positives.
+time and the amount of false positives.
 
-For example, files that only contain text are tagged as \texttt{text}, other
+For example, files that only contain text are tagged as \texttt{text}, all other
 files are tagged as \texttt{binary} (this depends on the implementation of
 Python. Python 2 only considers (by default) ASCII to be valid text). Methods
-that only work on binaries can ignore anything that has been tagged with
+that only work on binaries can then ignore anything that has been tagged with
 \texttt{text}.
 
 Other checks that are available are for valid XML, various Android formats,
-ELF executables and libraries, graphics files, and so on.
+ELF executables and libraries, graphics files, audio files, and so on.
 
 \subsubsection{Unpackers}
 
@@ -185,7 +148,7 @@ description = Unpack JFFS2 file systems
 enabled     = yes
 \end{verbatim}
 
-In BAT 8.0 the following file systems, compressed files and media files can be
+In BAT 10.0 the following file systems, compressed files and media files can be
 unpacked or extracted:
 
 \begin{itemize}
@@ -267,7 +230,8 @@ case would be to present the data in a nicer to use format than the standard
 report, to use more external data sources or generate graphical representations
 of data.
 
-The post-run methods have the type \texttt{postrun} in the configuration.
+The post-run methods have the type \texttt{postrun} in the configuration, for
+example:
 
 \begin{verbatim}
 [hexdump]
@@ -278,19 +242,129 @@ noscan      = text:xml:graphics:pdf:audio:video
 envvars     = BAT_REPORTDIR=/tmp/images:BAT_IMAGE_MAXFILESIZE=100000000
 description = Create hexdump output of files
 enabled     = no
+storetarget = reports
+storedir    = /tmp/images
+storetype   = -hexdump.gz
 \end{verbatim}
 
+\subsection{Configuring BAT}
 
-\subsubsection{Interpreting the results}
+The analysis process is highly configurable: methods can be simply enabled and
+disabled, based on need: some methods can run for quite a long time, which
+might be undesirable at times. Configuration is done via a simple configuration
+file in Windows INI format.
+
+Most sections are specific to scanning methods, except two sections.
+
+The main configuration directive is \texttt{batconfig}. In this
+section various global settings are defined, such as \texttt{multiprocessing}
+which sets whether or not multiple CPUs (or cores) should be used during
+scanning. The default configuration as shipped in the official BAT distribution
+is to use a single CPU:
+
+\begin{verbatim}
+[batconfig]
+multiprocessing = no
+\end{verbatim}
+
+By setting this setting to \texttt{yes} the program will start an extra process
+per CPU that is available. In most cases it is completely safe to use
+multiprocessing, but there is one important exception: if the ranking method
+(described later) is used, without pregenerating the proper caching database
+(or purchasing one) it is unsafe to use multiprocessing. If ranking is used and
+there is a fully generated database it is completely safe and even strongly
+advised to use multiprocessing, since it vastly speeds up running the program.
+
+Another setting in this section is \texttt{outputlite}:
+
+\begin{verbatim}
+outputlite = no
+\end{verbatim}
+
+It defaults to \texttt{no}. If set to \texttt{yes} the output archive will omit
+a full copy of the unpacked data, significantly decreasing the size of the
+output archive, but making it harder to do a ``post mortem'' on the unpacked
+data (a new analysis should be run to get it again).
+
+There are two settings that determine where the code of the optional XML pretty
+printer can be found:
+
+\begin{verbatim}
+module = bat.simpleprettyprint
+output = prettyprintresxml
+\end{verbatim}
+
+These two settings should always be used together.
+
+The other global section is \texttt{viewer}. This section is specific for the
+graphical frontend and is currently not used.
+
+\subsubsection{Enabling and disabling scans}
+
+The standard configuration file enables most of the scans and methods
+implemented in BAT by default. Scans can be enabled and disabled by setting the
+option \texttt{enabled} to \texttt{yes} and \texttt{no} respectively. Disabling
+a scan will still allow you to enable it later in the graphical user interface.
+
+To prevent a scan from being enabled in the graphical user interface completely
+outcomment the entry in the configuration file (by starting the line with the
+\texttt{\#} character), or remove the section from the configuration file.
+
+\subsubsection{Blacklisting and whitelisting scans}
+
+Files can be explicitely blacklisted for scanning by using the \texttt{noscan}
+configuration setting. The value of this parameter is a list of tags, separated
+by colons:
+
+\begin{verbatim}
+noscan      = text:xml:graphics:pdf:audio:video
+\end{verbatim}
+
+Similarly files can be whitelisted by using the \texttt{scanonly} setting. Only
+files that are tagged with any of the values in this list (if not empty) will
+be scanned. If there is an overlapping value in \texttt{scanonly} and
+\texttt{noscan} then the file will not be scanned.
+
+\subsubsection{Passing environment variables}
+
+All scans have an optional parameter \texttt{envvars} defaulting to an empty
+Python dictionary. In the configuration file a colon separated list of
+name/value pairs can be specified. These will then become available in the
+environment of the scan:
+
+\begin{verbatim}
+envvars     = BAT_REPORTDIR=/tmp/images:BAT_IMAGE_MAXFILESIZE=100000000
+\end{verbatim}
+
+\subsubsection{Storing results}
+
+Postrun scans that output data, for example graphics files or reports, can
+specify which files should be added to the output file. There are three
+settings that should be set together:
+
+\begin{verbatim}
+storetarget = images
+storedir    = /tmp/images
+storetype   = -piechart.png:-version.png
+\end{verbatim}
+
+The \texttt{storetarget} setting specifies the relative directory inside the
+output TAR archive. The \texttt{storedir} setting tells where to get the files
+that need to be stored can be found (this should be where the postrun scan
+stores its result). The \texttt{storetype} setting is a colon separated list of
+extensions/partial file names that the files should end in (typically the rest
+of the filename is a SHA256 value).
+
+\subsection{Interpreting the results}
 
 There are two formats in which \texttt{bruteforce.py} outputs its results:
 
 \begin{enumerate}
 \item dump file containing program state, complete unpacked directory tree
-containing all unpacked data, plus possibly some extra generated data, such
-as pictures and more reporting. These dumps are meant to be used by
-\texttt{batgui}.
-\item XML file (configurable)
+containing all unpacked data (unless \texttt{outputlite} was set), plus
+possibly some extra generated data, such as pictures and more reporting. These
+dumps are meant to be used by \texttt{batgui}.
+\item XML file (optional/configurable)
 \end{enumerate}
 
 If configured \texttt{bruteforce.py} outputs its results in XML format on
@@ -301,7 +375,8 @@ such as Mozilla Firefox.
 This XML file is not meant for human consumption, but for use by for example
 reporting tools.
 
-The XML file starts with metadata, such as:
+The default XML pretty printer as shipped by BAT outputs a file that starts
+with metadata, such as:
 
 \begin{itemize}
 \item date, plus time of the scan (local time of the computer, in UTC)
@@ -325,7 +400,7 @@ configuration file)
 file
 \end{itemize}
 
-\subsubsection{Running \texttt{bruteforce.py}}
+\subsection{Running \texttt{bruteforce.py}}
 
 Invoking \texttt{bruteforce.py} is relatively simple. You will need to supply
 three parameters:
@@ -365,21 +440,23 @@ files/directories, symbolic links, graphics files) can be ignored.
 Information that is shown per file depends on the scans that were run and the
 type of file. For most files information like size, type, path (both relative
 inside the unpacked binary, as well as absolute in the scanning tree) will be
-shown. If the ranking method was enabled results of the ranking process will
-be displayed as well.
+shown. If the ranking method was enabled results of the ranking process such as
+matched strings, function names and a license guess will be displayed as well.
 
-In advanced mode more results will be shown, such as a graphical representation
-of a file, where every bit in the binary has been assigned a grayscale value,
-plus a textual representation of a file generated with \texttt{hexdump}.
-Advanced mode is disabled by default, since loading the additional pictures and
-data is quite resource intensive and it will only be useful in very specific
-cases.
+In the optional advanced mode more results will be shown, such as a graphical
+representation of a file, where every bit in the binary has been assigned a
+grayscale value, plus a textual representation of a file generated with
+\texttt{hexdump}. Advanced mode is disabled by default, since loading the
+additional pictures and data is quite resource intensive and it will only be
+useful in very specific case and might be removed in future versions of BAT.
 
 \subsubsection{Scanning with \texttt{batgui}}
 
 Scanning binaries is only supported on Linux systems. If \texttt{batgui} is run
 on another system than Linux scanning capabilities will automatically be
-disabled.
+disabled. Scanning via \texttt{batgui} is not recommended, since scanning might
+take a very long time. It is likely that this functionality will be removed
+from BAT in the near future.
 
 To scan a binary first a configuration needs to be loaded. This can be done in
 two ways: the configuration file can be supplied on the commandline when
@@ -468,6 +545,8 @@ distribution.
 Currently the collection consists of:
 
 \begin{itemize}
+\item \texttt{bat-minix} has a Python script to unpack Minix v1 file systems
+that are frequently found on older embedded Linux systems, such as IP cameras.
 \item modified version of \texttt{code2html} (which is unmaintained by the
 upstream author) that adds support for various more programming languages.
 \item unmodified version of \texttt{romfsck} needed for unpacking romfs file
@@ -507,7 +586,7 @@ The meaty bits of the analyser can be found in files in the \texttt{bat}
 subdirectory.
 
 \begin{itemize}
-\item \texttt{bruteforce.py} contains the main logic of the program: it
+\item \texttt{bruteforcescan.py} contains the main logic of the program: it
 launches scans based on what is inside the binary and the scans that are
 enabled, collects results from scans and writes results to an output file.
 \item \texttt{busybox.py} and \texttt{busyboxversion.py} contain code to
@@ -529,9 +608,10 @@ certain headers. It is not widely used and likely to be removed in future
 versions.
 \item \texttt{fwunpack.py} includes most of the functionality for unpacking
 compressed files and file systems.
-\item \texttt{generatehexdump.py}, \texttt{generateuniquehtml.py} and
-\texttt{images.py} have code to generate textual and graphical representations
-of input files and results of the analysis.
+\item \texttt{generatehexdump.py} and \texttt{images.py} generate textual
+and graphical representations of the input files.
+\item \texttt{generateuniquehtml.py} and \texttt{rankimages.py} generate
+textual and graphical representations of results of the analysis.
 \item \texttt{jffs2.py} has code specific to handling JFFS2 file systems.
 \item \texttt{kernelanalysis.py} includes code to extract information from
 Linux kernel images and Linux kernel modules.
@@ -947,12 +1027,18 @@ give suboptimal results.
 \subsection{Running the extraction program}
 
 The program to extract strings from sourcecode is
-\texttt{batchextractprogramstrings.py}. It parses the file generated by
-\texttt{generatelist.py}, unpacks the files (gzip compressed TAR, bzip2
-compressed TAR, XZ compressed tar and ZIP are currently supported) and scans
-each individual source code file (at the moment just C/C++/assembler/QML files,
-assembler files, C\# files, Java/Scala/JSP/Groovy files and ActionScript files)
-for strings and, if enabled, licenses using Ninka.
+\texttt{batchextractprogramstrings.py}. It is not part of the standard
+installation of BAT, but needs to be retrieved separately from version control
+together with \texttt{generatelist.py}.  This will be changed at some point in
+the future.
+
+It parses the file generated by \texttt{generatelist.py}, unpacks the files
+(gzip compressed TAR, bzip2 compressed TAR, XZ compressed tar and ZIP are
+currently supported) and scans each individual source code file (at the moment
+just C/C++/assembler/QML files, assembler files, C\# files,
+Java/Scala/JSP/Groovy files and ActionScript files) for strings and, if
+enabled, licenses using Ninka and FOSSology and copyright information using
+FOSSology.
 
 \texttt{batchextractprogramstrings.py} can be invoked as follows:
 
@@ -961,22 +1047,25 @@ python batchextractprogramstrings.py -f
     /path/to/directory/with/files -d /path/to/database
 \end{verbatim}
 
-\subsection{License scanning}
+\subsection{License extraction and copyright information extraction}
 
 \texttt{batchextractprogramstrings.py} has a few additional commandline
 options. The most important is whether or not to also extract licenses from
 the source code files.  License extraction is done using the Ninka license
-scanner, with support for the Nomos license scanner from FOSSology being added
-in the near future. This option is disabled by default for a few reasons:
+scanner and the Nomos license scanner from FOSSology. This option is disabled
+by default for a few reasons:
 
 \begin{itemize}
-\item scanning licenses costs significantly more time
+\item extracting licenses costs significantly more time
 \item there are no packages for Fedora and Debian/Ubuntu for Ninka
 \end{itemize}
 
-If you want to enable license scanning, you will have to install Ninka first
+If you want to enable license extraction, you will have to install Ninka first
 and change one hardcoded path in \texttt{batchextractprogramstrings.py} that
-point to the main Ninka script.
+points to the main Ninka script. You will also have to install FOSSology.
+
+License extraction is enabled by passing the \texttt{-l} to the script.
+Copyright extraction can be enabled by supplying \texttt{-c} to the script.
 
 \subsection{Configuring the ranking method}
 
@@ -1079,11 +1168,12 @@ in a different, more uniform, way.
 
 \subsection{Database design}
 
-The database currently has 5 tables:
+The database currently has 6 tables:
 
 \begin{itemize}
 \item \texttt{processed}
 \item \texttt{processed\_file}
+\item \texttt{extracted\_copyright}
 \item \texttt{extracted\_file}
 \item \texttt{licenses}
 \item \texttt{ninkacomments}
@@ -1115,6 +1205,19 @@ It has the following fields:
 \item version of the package the file is from
 \item relative path inside the source code archive
 \item sha256 of the file
+\end{itemize}
+
+\subsubsection{\texttt{extracted\_copyright} table}
+This table stores copyright information that was extracted from files by
+FOSSology.
+
+It has the following fields:
+
+\begin{itemize}
+\item sha256 of file the string was extracted from
+\item copyright information that was extracted
+\item type of information that was extracted, currently \texttt{url},
+\texttt{email} or \texttt{statement}
 \end{itemize}
 
 \subsubsection{\texttt{extracted\_file} table}
@@ -1194,7 +1297,7 @@ BusyBox v1.15.2 (2009-12-03 00:14:42 CET)
 As an exception a BusyBox binary configured to include just a single applet
 will not contain contain the marker strings, or the BusyBox version string. In
 such a case a different detection mechanism will have to be used, for example
-the ranking code as used in \texttt{bruteforce.py}, although this will only be
+the ranking code as used by \texttt{bruteforce.py}, although this will only be
 necessary in a very small percentage of cases, since the vast majority of
 BusyBox instances include more than one applet.
 
