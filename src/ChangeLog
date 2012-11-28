@@ -1,3 +1,6 @@
+2012-11-28
+* extra sanity check for existence of database table in bat/ranking.py
+
 2012-11-26
 * remove non-functioning code from bat/images.py and replace it with
 configuration options
