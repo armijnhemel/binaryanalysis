@@ -344,7 +344,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			for c in copyrightsres:
 				(filehash, cres) = c
 				for cr in cres:
-					cursor.execute('''insert into extracted_copyright (sha256, copyright, type) values (?,?,?)''', (filehash, cr[1], cr[0]))
+					cursor.execute('''insert into extracted_copyright (sha256, copyright, type, offset) values (?,?,?,?)''', (filehash, cr[1], cr[0], cr[2]))
 		conn.commit()
 
 	## process the files we want to scan in parallel, then process the results
@@ -412,6 +412,7 @@ def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)
 		continuation = True
 		bufstr = ""
 		buftype = ""
+		offset = 0
 		for c in clines[1:]:
 			## Extract copyright information, like URLs, e-mail
 			## addresses and copyright statements.
@@ -422,40 +423,43 @@ def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)
 			## unless some extra filtering is added, like searching for
 			## URLs that point to licenses that were not included in
 			## the binary.
-			res = re.match('^\[\d+:\d+:(\w+)] \'(.*)\'', c.strip())
+			res = re.match('^\[(\d+):\d+:(\w+)] \'(.*)\'', c.strip())
 			if res != None:
 				if continuation:
 					if bufstr != "" and buftype != "":
-						copyrightsres.append((buftype, bufstr))
+						copyrightsres.append((buftype, bufstr, offset))
 				continuation = False
 				bufstr = ""
 				buftype = ""
+				offset = res.groups()[0]
 				## e-mail addresses are never on multiple lines
-				if res.groups()[0] == 'email':
-					copyrightsres.append(('email', res.groups()[1]))
+				if res.groups()[1] == 'email':
+					copyrightsres.append(('email', res.groups()[2], offset))
+					offset
 				## urls should are never on multiple lines
-				elif res.groups()[0] == 'url':
-					copyrightsres.append(('url', res.groups()[1]))
+				elif res.groups()[1] == 'url':
+					copyrightsres.append(('url', res.groups()[2], offset))
 				## copyright statements can be on multiple lines, but this is
 				## the start of a new statement
-				elif res.groups()[0] == 'statement':
+				elif res.groups()[1] == 'statement':
 					continuation = True
 					buftype = "statement"
-					bufstr = res.groups()[1]
+					bufstr = res.groups()[2]
 			else:
-				res = re.match('^\[\d+:\d+:(\w+)] \'(.*)', c.strip())
+				res = re.match('^\[(\d+):\d+:(\w+)] \'(.*)', c.strip())
 				if res != None:
-					if res.groups()[0] == 'statement':
+					if res.groups()[1] == 'statement':
 						continuation = True
 						buftype = "statement"
-						bufstr = res.groups()[1]
+						bufstr = res.groups()[2]
+						offset = res.groups()[0]
 				else:
 					bufstr = bufstr + "\n" + c.strip()
 					continuation = True
 		## perhaps some lingering data
 		if continuation:
 			if bufstr != "" and buftype != "":
-				copyrightsres.append((buftype, bufstr))
+				copyrightsres.append((buftype, bufstr, offset))
 		## TODO: clean up 'statement' and 'url', since there is quite a
 		## bit of bogus data present.
 	return (filehash, copyrightsres)
@@ -757,7 +761,7 @@ def main(argv):
 		## * email
 		## * statement
 		## * url
-		c.execute('''create table if not exists extracted_copyright (sha256 text, copyright text, type text)''')
+		c.execute('''create table if not exists extracted_copyright (sha256 text, copyright text, type text, offset)''')
 		c.execute('''create index if not exists copyright_index on extracted_copyright(sha256);''')
 		c.execute('''create index if not exists copyright_type_index on extracted_copyright(copyright, type);''')
 		conn.commit()
