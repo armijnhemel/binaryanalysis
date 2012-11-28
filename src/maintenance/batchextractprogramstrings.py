@@ -751,6 +751,7 @@ def main(argv):
 		## * url
 		c.execute('''create table if not exists extracted_copyright (sha256 text, copyright text, type text)''')
 		c.execute('''create index if not exists copyright_index on extracted_copyright(sha256);''')
+		c.execute('''create index if not exists copyright_type_index on extracted_copyright(copyright, type);''')
 		conn.commit()
 	except Exception, e:
 		print >>sys.stderr, e
