@@ -21,15 +21,26 @@ def main(argv):
 	except:
 		parser.error("'LIST' not found in file dir")
 
+	prev_split = None
 	for unpackfile in filelist:
+		## simple format check
 		try:
 			unpacks = unpackfile.strip().split()
 			if len(unpacks) != 4:
-				print >>sys.stderr, "FORMAT ERROR", unpackfile
+				print >>sys.stderr, "FORMAT ERROR", unpackfile.strip()
 				sys.stderr.flush()
+				continue
 		except Exception, e:
 			# oops, something went wrong
 			print >>sys.stderr, e
+		if prev_split == None:
+			prev_split = unpacks
+			continue
+		## see if we have the same package with different case
+		if unpacks[0] != prev_split[0] and unpacks[0].lower() == prev_split[0].lower():
+			print >>sys.stderr, "CASE ERROR", unpackfile.strip()
+			sys.stderr.flush()
+		prev_split = unpacks
 
 if __name__ == "__main__":
 	main(sys.argv)
