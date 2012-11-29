@@ -328,8 +328,10 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 					cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (f, license, "ninka", ninkaversion))
 		conn.commit()
 
-		# TODO: sync names of licenses as found by FOSSology and Ninka
-		# TODO: dynamically determine the version of FOSSology
+		## TODO: sync names of licenses as found by FOSSology and Ninka
+		## TODO: dynamically determine the version of FOSSology
+		## TODO: determine all licenses at once to avoid the overhead of
+		## starting nomos for each scan.
 		fossology_res = pool.map(licensefossology, filestoscan)
 		for f in fossology_res:
 			(filehash, fres) = f
