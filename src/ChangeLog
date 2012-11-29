@@ -60,7 +60,6 @@ capabilities.
 
 2012-11-04
 * also store line numbers for function names
-* release BAT 9.0
 
 2012-10-31
 * introduce new configuration parameters for postrunscans to store results in
@@ -86,6 +85,7 @@ a more generic way. Rewrite data dumping routine to take advantage of this.
 
 2012-10-03
 * clear old results when opening new results file
+* release BAT 9.0
 
 2012-09-24
 * add extra sanity check to prevent ext2 unpacking from barfing after
