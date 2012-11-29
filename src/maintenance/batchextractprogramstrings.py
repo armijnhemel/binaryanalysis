@@ -95,8 +95,8 @@ def splitSpecialChars(s):
 	return final_splits
 
 ## unpack the directories to be scanned. For speed improvements it might be
-## wise to use a ramdisk or tmpfs for this, although the program does not
-## seem to be I/O bound...
+## wise to use a ramdisk or tmpfs for this, although when using Ninka and
+## FOSSology it is definitely not I/O bound...
 def unpack(directory, filename):
 	try:
 		os.stat("%s/%s" % (directory, filename))
@@ -391,7 +391,6 @@ def runfullninka((i, p, filehash, ninkaversion)):
 	(stanout, stanerr) = p2.communicate()
 	ninkasplit = stanout.strip().split(';')[1:]
 	## filter out the licenses we can't determine.
-	## We actually should run these through FOSSology to try and obtain a match.
 	if ninkasplit[0] == '':
 		ninkares = ['UNKNOWN']
 	else:
