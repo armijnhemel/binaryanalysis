@@ -330,13 +330,17 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 
 		## TODO: sync names of licenses as found by FOSSology and Ninka
 		## TODO: dynamically determine the version of FOSSology
-		## TODO: determine all licenses at once to avoid the overhead of
-		## starting nomos for each scan.
-		fossology_res = pool.map(licensefossology, filestoscan)
+		fossology_chunksize = 10
+		fossology_filestoscan = []
+		for i in range(0,len(filestoscan),fossology_chunksize):
+			fossology_filestoscan.append((filestoscan[i:i+fossology_chunksize]))
+		fossology_res = pool.map(licensefossology, fossology_filestoscan)
 		for f in fossology_res:
-			(filehash, fres) = f
-			for license in fres:
-				cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "fossology", '2.1.0'))
+			for ff in f:
+				(filehash, fres) = ff
+				for license in fres:
+					cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "fossology", '2.1.0'))
+		conn.commit()
 
 
 	## extract copyrights
@@ -465,10 +469,24 @@ def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)
 		## bit of bogus data present.
 	return (filehash, copyrightsres)
 
-def licensefossology((package, version, i, p, language, filehash, ninkaversion)):
-	fossologyres = []
+def licensefossology((packages)):
 	## Also run FOSSology. This requires that the user has enough privileges to actually connect to the
 	## FOSSology database, for example by being in the correct group.
+	fossologyres = []
+	fossscanfiles = map(lambda x: "%s/%s" % (x[2], x[3]), packages)
+	scanargs = ["/usr/share/fossology/nomos/agent/nomos"] + fossscanfiles
+	p2 = subprocess.Popen(scanargs, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+	(stanout, stanerr) = p2.communicate()
+	if "FATAL" in stanout:
+		## TODO: better error handling
+		return None
+	else:
+		fosslines = stanout.strip().split("\n")
+		for j in range(0,len(fosslines)):
+			fossysplit = fosslines[j].strip().rsplit(" ", 1)
+			licenses = fossysplit[-1].split(',')
+			fossologyres.append((packages[j][5], list(set(licenses))))
+	return fossologyres
 	p2 = subprocess.Popen(["/usr/share/fossology/nomos/agent/nomos", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 	(stanout, stanerr) = p2.communicate()
 	if "FATAL" in stanout:
