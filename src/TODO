@@ -30,3 +30,6 @@ function names:
 database creation:
 * handle embedded archives (ZIP files, tarballs, etc.)
 * handle patches
+* extract method names from Java files
+* extract constants from Java files
+* extract constants from C files
