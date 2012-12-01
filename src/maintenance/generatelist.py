@@ -67,7 +67,7 @@ def main(argv):
 	if options.filedir == None:
 		print >>sys.stderr, "Specify dir with files"
 		sys.exit(1)
-	if options.filedir == None:
+	if options.origin == None:
 		origin = "unknown"
 	else:
 		origin = options.origin
