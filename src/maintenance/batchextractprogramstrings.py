@@ -323,7 +323,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		for l in license_results:
 			licenses = l[1]
 			for license in licenses:
-				cursor.execute('''insert into ninkacomments (sha256, license, scanner, version) values (?,?,?,?)''', (commentshash[l[0]], license, "ninka", ninkaversion))
+				cursor.execute('''insert into ninkacomments (sha256, license, version) values (?,?,?)''', (commentshash[l[0]], license, ninkaversion))
 				for f in commentshash2[commentshash[l[0]]]:
 					cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (f, license, "ninka", ninkaversion))
 		conn.commit()
@@ -777,8 +777,7 @@ def main(argv):
 		c.execute('''create index if not exists license_index on licenses(sha256);''')
 
 		## Store the comments extracted by Ninka per checksum.
-		## TODO: remove column 'scanner' since it is not needed: this table is only used for Ninka
-		c.execute('''create table if not exists ninkacomments (sha256 text, license text, scanner text, version text)''')
+		c.execute('''create table if not exists ninkacomments (sha256 text, license text, version text)''')
 		c.execute('''create index if not exists comments_index on ninkacomments(sha256);''')
 
 		## Store the function names extracted, per checksum
