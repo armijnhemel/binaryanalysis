@@ -777,6 +777,7 @@ def main(argv):
 		c.execute('''create index if not exists license_index on licenses(sha256);''')
 
 		## Store the comments extracted by Ninka per checksum.
+		## TODO: remove column 'scanner' since it is not needed: this table is only used for Ninka
 		c.execute('''create table if not exists ninkacomments (sha256 text, license text, scanner text, version text)''')
 		c.execute('''create index if not exists comments_index on ninkacomments(sha256);''')
 
