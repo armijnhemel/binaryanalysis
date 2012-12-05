@@ -378,7 +378,7 @@ def extractcomments((package, version, i, p, language, filehash, ninkaversion)):
 	ninkaenv = os.environ.copy()
 	ninkaenv['PATH'] = ninkaenv['PATH'] + ":/tmp/dmgerman-ninka-%s/comments/comments" % ninkaversion
 
-	p1 = subprocess.Popen(["/tmp/dmgerman-ninka-%s/ninka.pl" % ninkaversion, "-c", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=ninkaenv)
+	p1 = subprocess.Popen(["/tmp/dmgerman-ninka-%s/ninka.pl" % ninkaversion, "-c", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
 	(stanout, stanerr) = p1.communicate()
 	scanfile = open("%s/%s.comments" % (i, p), 'r')
 	ch = hashlib.new('sha256')
@@ -393,7 +393,7 @@ def runfullninka((i, p, filehash, ninkaversion)):
 
 	ninkares = []
 
-	p2 = subprocess.Popen(["/tmp/dmgerman-ninka-%s/ninka.pl" % ninkaversion, "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=ninkaenv)
+	p2 = subprocess.Popen(["/tmp/dmgerman-ninka-%s/ninka.pl" % ninkaversion, "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
 	(stanout, stanerr) = p2.communicate()
 	ninkasplit = stanout.strip().split(';')[1:]
 	## filter out the licenses we can't determine.
@@ -404,10 +404,9 @@ def runfullninka((i, p, filehash, ninkaversion)):
 		ninkares = list(set(licenses))
 	return (filehash, ninkares)
 
-## TODO: extract copyrights using FOSSology
 def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)):
 	copyrightsres = []
-	p2 = subprocess.Popen(["/usr/share/fossology/copyright/agent/copyright", "-C", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+	p2 = subprocess.Popen(["/usr/share/fossology/copyright/agent/copyright", "-C", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 	(stanout, stanerr) = p2.communicate()
 	if "FATAL" in stanout:
 		## TODO: better error handling
@@ -487,7 +486,7 @@ def licensefossology((packages)):
 			licenses = fossysplit[-1].split(',')
 			fossologyres.append((packages[j][5], list(set(licenses))))
 	return fossologyres
-	p2 = subprocess.Popen(["/usr/share/fossology/nomos/agent/nomos", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+	p2 = subprocess.Popen(["/usr/share/fossology/nomos/agent/nomos", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 	(stanout, stanerr) = p2.communicate()
 	if "FATAL" in stanout:
 		## TODO: better error handling
@@ -507,7 +506,7 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 	if language == 'C' and package != 'linux':
 		source = open(os.path.join(i, p)).read()
 
-		p2 = subprocess.Popen(["ctags", "-f", "-", "-x", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+		p2 = subprocess.Popen(["ctags", "-f", "-", "-x", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 		(stanout2, stanerr2) = p2.communicate()
 		if p2.returncode != 0:
 			funcresults = []
@@ -694,11 +693,22 @@ def main(argv):
 
 	if options.licenses != None:
 		license = True
+		## check if FOSSology is actually running
+		p2 = subprocess.Popen(["/usr/share/fossology/nomos/agent/nomos", "-h"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		(stanout, stanerr) = p2.communicate()
+		if "FATAL" in stanerr:
+			print >>sys.stderr, "ERROR: license scanning enabled, but FOSSology not running"
+			sys.exit(1)
 	else:
 		license = False
 
 	if options.copyrights != None:
 		copyrights = True
+		p2 = subprocess.Popen(["/usr/share/fossology/copyright/agent/copyright", "-h"], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+		(stanout, stanerr) = p2.communicate()
+		if "FATAL" in stanout:
+			print >>sys.stderr, "ERROR: copyright extraction enabled, but FOSSology not running"
+			sys.exit(1)
 	else:
 		copyrights = False
 	conn = sqlite3.connect(options.db, check_same_thread = False)
