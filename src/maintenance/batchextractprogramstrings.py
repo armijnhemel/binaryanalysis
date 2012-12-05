@@ -760,7 +760,7 @@ def main(argv):
 		## which we can later link with files
 		c.execute('''create table if not exists processed_file (package text, version text, filename text, sha256 text)''')
 		c.execute('''create index if not exists processedfile_index on processed_file(sha256)''')
-		c.execute('''create index if not exists processedfile__package_index on processed_file(package)''')
+		c.execute('''create index if not exists processedfile_package_index on processed_file(package)''')
 		c.execute('''create unique index if not exists processedfile_package_index_unique on processed_file(package, version, filename, sha256)''')
 
 		## Store the extracted strings per checksum, not per (package, version, filename).
