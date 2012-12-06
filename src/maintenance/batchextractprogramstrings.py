@@ -147,7 +147,7 @@ def unpack_verify(filedir, filename):
 
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
-def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, copyrights, pool, ninkacomments):
+def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, copyrights, pool, ninkacomments, licensedb):
 	print >>sys.stdout, filename
 
 	## Check if we've already processed this file. If so, we can easily skip it and return.
@@ -168,7 +168,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 	if len(c.fetchall()) != 0:
 		c.execute('''delete from processed_file where package=? and version=?''', (package, version))
 		conn.commit()
-	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments)
+	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb)
 	## Add the file to the database: name of archive, sha256, packagename and version
 	## This is to be able to just update the database instead of recreating it.
 	c.execute('''insert into processed (package, version, filename, origin, sha256) values (?,?,?,?,?)''', (package, version, filename, origin, filehash))
@@ -232,7 +232,7 @@ def computehash((path, filename)):
 	filehash = h.hexdigest()
 	return (path, filename, filehash, extension)
 
-def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, pool, ninkacomments):
+def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, pool, ninkacomments, licensedb):
 	srcdirlen = len(srcdir)+1
 	osgen = os.walk(srcdir)
 	ninkaversion = "bf83428"
@@ -287,6 +287,9 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		ninkaconn = sqlite3.connect(ninkacomments, check_same_thread = False)
 		ninkacursor = ninkaconn.cursor()
 
+		licenseconn = sqlite3.connect(licensedb, check_same_thread = False)
+		licensecursor = licenseconn.cursor()
+
 		comments_results = pool.map(extractcomments, filestoscan)
 		commentshash = {}
 		commentshash2 = {}
@@ -303,16 +306,16 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		licensefilestoscan = []
 		for c in commentshash2:
 			ninkacursor.execute('''select license, version from ninkacomments where sha256=?''', (c,))
-			res = cursor.fetchall()
+			res = ninkacursor.fetchall()
 			if len(res) > 0:
 				## store all the licenses we already know for this comment
 				for r in res:
 					(filelicense, scannerversion) = r
 					for f in commentshash2[c]:
-						cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (f, filelicense, "ninka", scannerversion))
+						licensecursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (f, filelicense, "ninka", scannerversion))
 			else:
 				licensefilestoscan.append(commentshash2[c][0])
-		conn.commit()
+		licenseconn.commit()
 
 		licensescanfiles = []
 		for l in licensefilestoscan:
@@ -328,9 +331,13 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			for license in licenses:
 				ninkacursor.execute('''insert into ninkacomments (sha256, license, version) values (?,?,?)''', (commentshash[l[0]], license, ninkaversion))
 				for f in commentshash2[commentshash[l[0]]]:
-					cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (f, license, "ninka", ninkaversion))
-		conn.commit()
+					licensecursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (f, license, "ninka", ninkaversion))
+		licenseconn.commit()
 		ninkaconn.commit()
+
+		## cleanup
+		ninkacursor.close()
+		ninkaconn.close()
 
 		## TODO: sync names of licenses as found by FOSSology and Ninka
 		## TODO: dynamically determine the version of FOSSology
@@ -343,19 +350,26 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			for ff in f:
 				(filehash, fres) = ff
 				for license in fres:
-					cursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "fossology", '2.1.0'))
-		conn.commit()
+					licensecursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "fossology", '2.1.0'))
+		licenseconn.commit()
+		licensecursor.close()
+		licenseconn.close()
 
 
 	## extract copyrights
 	if copyrights:
+		licenseconn = sqlite3.connect(licensedb, check_same_thread = False)
+		licensecursor = licenseconn.cursor()
+
 		copyrightsres = pool.map(extractcopyrights, filestoscan)
 		if copyrightsres != None:
 			for c in copyrightsres:
 				(filehash, cres) = c
 				for cr in cres:
-					cursor.execute('''insert into extracted_copyright (sha256, copyright, type, offset) values (?,?,?,?)''', (filehash, cr[1], cr[0], cr[2]))
-		conn.commit()
+					licensecursor.execute('''insert into extracted_copyright (sha256, copyright, type, offset) values (?,?,?,?)''', (filehash, cr[1], cr[0], cr[2]))
+		licenseconn.commit()
+		licensecursor.close()
+		licenseconn.close()
 
 	## process the files we want to scan in parallel, then process the results
 	extracted_results = pool.map(extractstrings, filestoscan)
@@ -650,6 +664,7 @@ def main(argv):
 	parser.add_option("-f", "--filedir", action="store", dest="filedir", help="path to directory containing files to unpack", metavar="DIR")
 	parser.add_option("-l", "--licenses", action="store_true", dest="licenses", help="extract licenses (default: false)")
 	parser.add_option("-n", "--ninkacomments", action="store", dest="ninkacomments", help="path to ninkacomments database", metavar="FILE")
+	parser.add_option("-r", "--licensedb", action="store", dest="licensedb", help="path to licenses/copyrights database", metavar="FILE")
 	parser.add_option("-v", "--verify", action="store_true", dest="verify", help="verify files, don't process (default: false)")
 	parser.add_option("-w", "--wipe", action="store_true", dest="wipe", help="wipe database instead of update (default: false)")
 	parser.add_option("-z", "--cleanup", action="store_true", dest="cleanup", help="cleanup after unpacking? (default: false)")
@@ -720,12 +735,21 @@ def main(argv):
 			sys.exit(1)
 	else:
 		copyrights = False
+
+	if options.licenses != None and options.copyrights != and options.licensedb == None:
+		parser.error("Specify path to licenses/copyrights database")
+
 	conn = sqlite3.connect(options.db, check_same_thread = False)
 	c = conn.cursor()
 	#c.execute('PRAGMA journal_mode=off')
 
-	ninkaconn = sqlite3.connect(options.ninkacomments, check_same_thread = False)
-	ninkac = ninkaconn.cursor()
+	if options.licenses:
+		ninkaconn = sqlite3.connect(options.ninkacomments, check_same_thread = False)
+		ninkac = ninkaconn.cursor()
+
+	if options.licenses or options.copyrights:
+		licenseconn = sqlite3.connect(options.licensedb, check_same_thread = False)
+		licensec = licensconn.cursor()
 
 	if wipe:
 		try:
@@ -745,17 +769,17 @@ def main(argv):
 		except:
 			pass
 		try:
-			c.execute('''drop table licenses''')
+			licensec.execute('''drop table licenses''')
+			licensec.execute('''drop table extracted_copyright''')
+			licenseconn.commit()
 		except:
 			pass
 		try:
 			ninkac.execute('''drop table ninkacomments''')
+			ninkaconn.commit()
 		except:
 			pass
-		try:
-			c.execute('''drop table extracted_copyright''')
-		except:
-			pass
+
 		conn.commit()
         try:
 		## Keep an archive of which packages and archive files (tar.gz, tar.bz2, etc.) we've already
@@ -784,36 +808,43 @@ def main(argv):
 		c.execute('''create index if not exists extracted_hash on extracted_file(sha256)''')
 		c.execute('''create index if not exists extracted_language on extracted_file(language);''')
 
-		## Store the extracted licenses per checksum.
-		c.execute('''create table if not exists licenses (sha256 text, license text, scanner text, version text)''')
-		c.execute('''create index if not exists license_index on licenses(sha256);''')
-
-		## Store the comments extracted by Ninka per checksum.
-		ninkac.execute('''create table if not exists ninkacomments (sha256 text, license text, version text)''')
-		ninkac.execute('''create index if not exists comments_index on ninkacomments(sha256);''')
-
 		## Store the function names extracted, per checksum
 		c.execute('''create table if not exists extracted_function (sha256 text, functionname text, linenumber int)''')
 		c.execute('''create index if not exists function_index on extracted_function(sha256);''')
 		c.execute('''create index if not exists functionname_index on extracted_function(functionname)''')
 
-		## Store the copyrights extracted by FOSSology, per checksum
-		## type can be:
-		## * email
-		## * statement
-		## * url
-		c.execute('''create table if not exists extracted_copyright (sha256 text, copyright text, type text, offset int)''')
-		c.execute('''create index if not exists copyright_index on extracted_copyright(sha256);''')
-		c.execute('''create index if not exists copyright_type_index on extracted_copyright(copyright, type);''')
 		conn.commit()
-		ninkaconn.commit()
+
+		if options.licenses or options.copyright:
+			## Store the extracted licenses per checksum.
+			licensec.execute('''create table if not exists licenses (sha256 text, license text, scanner text, version text)''')
+			licensec.execute('''create index if not exists license_index on licenses(sha256);''')
+
+			## Store the copyrights extracted by FOSSology, per checksum
+			## type can be:
+			## * email
+			## * statement
+			## * url
+			licensec.execute('''create table if not exists extracted_copyright (sha256 text, copyright text, type text, offset int)''')
+			licensec.execute('''create index if not exists copyright_index on extracted_copyright(sha256);''')
+			licensec.execute('''create index if not exists copyright_type_index on extracted_copyright(copyright, type);''')
+			licenseconn.commit()
+			licensec.close()
+			licenseconn.close()
+
+		if options.licenses:
+			## Store the comments extracted by Ninka per checksum.
+			ninkac.execute('''create table if not exists ninkacomments (sha256 text, license text, version text)''')
+			ninkac.execute('''create index if not exists comments_index on ninkacomments(sha256);''')
+
+			ninkaconn.commit()
+			ninkac.close()
+			ninkaconn.close()
 	except Exception, e:
 		print >>sys.stderr, e
+
 	c.close()
 	conn.close()
-
-	ninkac.close()
-	ninkaconn.close()
 
 	pool = Pool()
 
@@ -843,7 +874,7 @@ def main(argv):
 					continue
 				if options.verify:
 					unpack_verify(options.filedir, filename)
-				res = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, options.db, cleanup, license, copyrights, pool, options.ninkacomments)
+				res = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, options.db, cleanup, license, copyrights, pool, options.ninkacomments, options.licensedb)
 			except Exception, e:
 				# oops, something went wrong
 				print >>sys.stderr, e
