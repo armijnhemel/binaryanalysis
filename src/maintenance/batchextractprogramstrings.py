@@ -802,7 +802,7 @@ def main(argv):
 		## * email
 		## * statement
 		## * url
-		c.execute('''create table if not exists extracted_copyright (sha256 text, copyright text, type text, offset)''')
+		c.execute('''create table if not exists extracted_copyright (sha256 text, copyright text, type text, offset int)''')
 		c.execute('''create index if not exists copyright_index on extracted_copyright(sha256);''')
 		c.execute('''create index if not exists copyright_type_index on extracted_copyright(copyright, type);''')
 		conn.commit()
