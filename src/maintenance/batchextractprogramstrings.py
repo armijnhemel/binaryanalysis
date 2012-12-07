@@ -312,6 +312,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 				for r in res:
 					(filelicense, scannerversion) = r
 					for f in commentshash2[c]:
+						licensecursor.execute('''delete from licenses where sha256 = ? and license = ? and scanner = ? and version = ?''', (f, filelicense, "ninka", scannerversion))
 						licensecursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (f, filelicense, "ninka", scannerversion))
 			else:
 				licensefilestoscan.append(commentshash2[c][0])
@@ -346,11 +347,13 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		for i in range(0,len(filestoscan),fossology_chunksize):
 			fossology_filestoscan.append((filestoscan[i:i+fossology_chunksize]))
 		fossology_res = pool.map(licensefossology, fossology_filestoscan)
+		fossology_version = "2.1.0"
 		for f in fossology_res:
 			for ff in f:
 				(filehash, fres) = ff
 				for license in fres:
-					licensecursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "fossology", '2.1.0'))
+					licensecursor.execute('''delete from licenses where sha256 = ? and license = ? and scanner = ? and version = ?''', (filehash, license, "fossology", fossology_version))
+					licensecursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "fossology", fossology_version))
 		licenseconn.commit()
 		licensecursor.close()
 		licenseconn.close()
@@ -366,6 +369,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			for c in copyrightsres:
 				(filehash, cres) = c
 				for cr in cres:
+					licensecursor.execute('''delete from extracted_copyright where sha256 = ? and  copyright = ? and type = ? and offset = ?''', (filehash, cr[1], cr[0], cr[2]))
 					licensecursor.execute('''insert into extracted_copyright (sha256, copyright, type, offset) values (?,?,?,?)''', (filehash, cr[1], cr[0], cr[2]))
 		licenseconn.commit()
 		licensecursor.close()
@@ -381,6 +385,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (pstring, filehash, language, linenumber))
 		for res in list(set(funcresults)):
 			(funcname, linenumber) = res
+			cursor.execute('''delete from extracted_function where sha256 = ? and functionname = ? and linenumber = ?''', (filehash, funcname, linenumber))
 			cursor.execute('''insert into extracted_function (sha256, functionname, linenumber) values (?,?,?)''', (filehash, funcname, linenumber))
 
 	for i in insertfiles:
@@ -394,9 +399,10 @@ def extractcomments((package, version, i, p, language, filehash, ninkaversion)):
 	## don't need to rescan everything.
 	## For gtk+ 2.20.1 scanning time dropped with about 25%.
 	ninkaenv = os.environ.copy()
-	ninkaenv['PATH'] = ninkaenv['PATH'] + ":/tmp/dmgerman-ninka-%s/comments/comments" % ninkaversion
+	ninkabasepath = '/tmp/dmgerman-ninka-%s' % ninkaversion
+	ninkaenv['PATH'] = ninkaenv['PATH'] + ":%s/comments/comments" % ninkabasepath
 
-	p1 = subprocess.Popen(["/tmp/dmgerman-ninka-%s/ninka.pl" % ninkaversion, "-c", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
+	p1 = subprocess.Popen(["%s/ninka.pl" % ninkabasepath, "-c", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
 	(stanout, stanerr) = p1.communicate()
 	scanfile = open("%s/%s.comments" % (i, p), 'r')
 	ch = hashlib.new('sha256')
@@ -407,11 +413,12 @@ def extractcomments((package, version, i, p, language, filehash, ninkaversion)):
 
 def runfullninka((i, p, filehash, ninkaversion)):
 	ninkaenv = os.environ.copy()
-	ninkaenv['PATH'] = ninkaenv['PATH'] + ":/tmp/dmgerman-ninka-%s/comments/comments" % ninkaversion
+	ninkabasepath = '/tmp/dmgerman-ninka-%s' % ninkaversion
+	ninkaenv['PATH'] = ninkaenv['PATH'] + ":%s/comments/comments" % ninkabasepath
 
 	ninkares = []
 
-	p2 = subprocess.Popen(["/tmp/dmgerman-ninka-%s/ninka.pl" % ninkaversion, "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
+	p2 = subprocess.Popen(["%s/ninka.pl" % ninkabasepath, "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
 	(stanout, stanerr) = p2.communicate()
 	ninkasplit = stanout.strip().split(';')[1:]
 	## filter out the licenses we can't determine.
