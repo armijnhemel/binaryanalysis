@@ -736,7 +736,7 @@ def main(argv):
 	else:
 		copyrights = False
 
-	if options.licenses != None and options.copyrights != and options.licensedb == None:
+	if options.licenses != None and options.copyrights != None and options.licensedb == None:
 		parser.error("Specify path to licenses/copyrights database")
 
 	conn = sqlite3.connect(options.db, check_same_thread = False)
