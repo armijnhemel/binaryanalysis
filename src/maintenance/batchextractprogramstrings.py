@@ -164,10 +164,11 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 		return None
 	## Check if we already have any strings from program + version. If so,
 	## first remove them before we add them to avoid unnecessary duplication.
-	c.execute('''select * from processed_file where package=? and version=?''', (package, version))
+	c.execute('''select sha256 from processed_file where package=? and version=? LIMIT 1''', (package, version))
 	if len(c.fetchall()) != 0:
 		c.execute('''delete from processed_file where package=? and version=?''', (package, version))
 		conn.commit()
+
 	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb)
 	## Add the file to the database: name of archive, sha256, packagename and version
 	## This is to be able to just update the database instead of recreating it.
@@ -257,12 +258,18 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		pass
 
 	## compute the hashes in parallel
-	scanfile_result = pool.map(computehash, scanfiles)
+	scanfile_result = filter(lambda x: x != None, pool.map(computehash, scanfiles))
 
 	insertfiles = []
+
+	## loop through the files to see which files should be scanned.
+	## A few assumptions are made:
+	## * all tables are in a consistent state
+	## * all tables are generated at the same time
+	## So this is not robust if one of the databases (say, licenses)
+	## is modified by another tool, or deleted and needs to be
+	## regenerated.
 	for s in scanfile_result:
-		if s == None:
-			continue
 		(path, filename, filehash, extension) = s
 		insertfiles.append(("%s/%s" % (path[srcdirlen:],filename), filehash))
 		if filehash in tmpsha256s:
@@ -289,6 +296,18 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 
 		licenseconn = sqlite3.connect(licensedb, check_same_thread = False)
 		licensecursor = licenseconn.cursor()
+
+		## this is just an extra sanity check. This should not be triggered, but
+		## in case some data has been deleted it might come in handy.
+		#commentsfiletoscan = []
+		#for i in filestoscan:
+		#	lres = licensecursor.execute('''select sha256 from licenses where sha256 = ? and scanner = ? and version = ? LIMIT 1''', (i[5], "ninka", ninkaversion)).fetchall()
+		#	if lres != []:
+		#		continue
+		#	else:
+		#		commentsfiletoscan.append(i)
+
+		#comments_results = pool.map(extractcomments, commentsfiletoscan)
 
 		comments_results = pool.map(extractcomments, filestoscan)
 		commentshash = {}
@@ -319,6 +338,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		licenseconn.commit()
 
 		licensescanfiles = []
+
 		for l in licensefilestoscan:
 			licensescanfiles.append((filehashes[l][0][0], filehashes[l][0][1], l, ninkaversion))
 		license_results = pool.map(runfullninka, licensescanfiles)
@@ -387,6 +407,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			(funcname, linenumber) = res
 			cursor.execute('''delete from extracted_function where sha256 = ? and functionname = ? and linenumber = ?''', (filehash, funcname, linenumber))
 			cursor.execute('''insert into extracted_function (sha256, functionname, linenumber) values (?,?,?)''', (filehash, funcname, linenumber))
+	conn.commit()
 
 	for i in insertfiles:
 		cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, i[0], i[1]))
