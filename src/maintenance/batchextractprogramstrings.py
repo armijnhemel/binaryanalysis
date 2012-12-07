@@ -749,7 +749,7 @@ def main(argv):
 
 	if options.licenses or options.copyrights:
 		licenseconn = sqlite3.connect(options.licensedb, check_same_thread = False)
-		licensec = licensconn.cursor()
+		licensec = licenseconn.cursor()
 
 	if wipe:
 		try:
