@@ -274,12 +274,12 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		insertfiles.append(("%s/%s" % (path[srcdirlen:],filename), filehash))
 		if filehash in tmpsha256s:
 			continue
-		cursor.execute("select * from processed_file where sha256=?", (filehash,))
+		cursor.execute("select * from processed_file where sha256=? LIMIT 1", (filehash,))
 		testres = cursor.fetchall()
 		if len(testres) != 0:
 			continue
 		tmpsha256s.append(filehash)
-		cursor.execute('''select * from extracted_file where sha256=?''', (filehash,))
+		cursor.execute('''select * from extracted_file where sha256=? LIMIT 1''', (filehash,))
 		if len(cursor.fetchall()) != 0:
 			#print >>sys.stderr, "duplicate %s %s: %s/%s" % (package, version, i[0], p)
 			continue
@@ -675,7 +675,7 @@ def checkalreadyscanned((filedir, package, version, filename, origin, dbpath)):
 	c = conn.cursor()
 	#c.execute('PRAGMA journal_mode=off')
 	#c.execute('''select * from processed where package=? and version=? and origin=?''', (package, version, origin))
-	c.execute('''select * from processed where package=? and version=?''', (package, version))
+	c.execute('''select * from processed where package=? and version=? LIMIT 1''', (package, version))
 	if len(c.fetchall()) != 0:
 		res = None
 	else:
