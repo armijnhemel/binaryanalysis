@@ -84,6 +84,7 @@ def unpacksrpm(filedir):
 					p2 = subprocess.Popen(['rpm', '-qpl', "%s/%s" % (i[0], p)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 					(stanout, stanerr) = p2.communicate()
 					files = stanout.strip().rsplit("\n")
+					copyfiles = []
 					for f in files:
 						fsplit = f.lower().rsplit('.', 1)
 						if len(fsplit) == 1:
@@ -103,16 +104,24 @@ def unpacksrpm(filedir):
 							if not (extension in ["tar"] and compression in ["gz", "bz2", "xz"]):
 								continue
 							else:
-								print f
+								copyfiles.append(f)
 						## make a temporary directory
 						cpiodir = tempfile.mkdtemp()
 						## copy tarball to tmpdir
 						oldcwd = os.getcwd()
 						shutil.copy("%s/%s" % (i[0], p), cpiodir)
 						os.chdir(cpiodir)
-						#p1 = subprocess.Popen(['rpm2cpio'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
-						#p2 = subprocess.Popen(['cpio', '-i'], stdin=bla], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
-						#shutil.copy(f, tmpdir)
+						cpiotmp = tempfile.mkstemp(dir=cpiodir)
+						p1 = subprocess.Popen(['rpm2cpio', "%s/%s" % (cpiodir, p)], stdin=subprocess.PIPE, stdout=cpiotmp[0], stderr=subprocess.PIPE, close_fds=True, cwd=cpiodir)
+						(cpiostanout, cpiostanerr) = p1.communicate()
+						os.fsync(cpiotmp[0])
+						os.fdopen(cpiotmp[0]).close()
+						os.unlink("%s/%s" % (cpiodir, p))
+						p2 = subprocess.Popen(['cpio', '-i', '-d', '--no-absolute-filenames'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=cpiodir)
+						(cpiostanout, cpiostanerr) = p2.communicate(open(cpiotmp[1]).read())
+						for f in copyfiles:
+							shutil.copy(f, tmpdir)
+						shutil.rmtree(cpiodir)
 						os.chdir(oldcwd)
 	except Exception, e:
 		print >>sys.stderr, e
