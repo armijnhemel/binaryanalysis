@@ -16,7 +16,7 @@ directory.
 4. LIST file for temporary directory is created
 '''
 
-import sys, os, os.path, subprocess, tempfile
+import sys, os, os.path, subprocess, tempfile, shutil
 from optparse import OptionParser
 from multiprocessing import Pool
 
@@ -90,9 +90,11 @@ def unpacksrpm(filedir):
 							continue
 						(packageversion, extension) = fsplit
 						if extension in ["tgz", "tbz2"]:
-							pass
+							#pass
+							continue
 						elif extension in ["jar", "zip"]:
-							pass
+							#pass
+							continue
 						else:
 							try:
 								(packageversion, extension, compression) = f.lower().rsplit('.', 2)
@@ -102,11 +104,18 @@ def unpacksrpm(filedir):
 								continue
 							else:
 								print f
-					## make a temporary directory
-					## unpack
-					## copy tarball to tmpdir
+						## make a temporary directory
+						cpiodir = tempfile.mkdtemp()
+						## copy tarball to tmpdir
+						oldcwd = os.getcwd()
+						shutil.copy("%s/%s" % (i[0], p), cpiodir)
+						os.chdir(cpiodir)
+						#p1 = subprocess.Popen(['rpm2cpio'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+						#p2 = subprocess.Popen(['cpio', '-i'], stdin=bla], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+						#shutil.copy(f, tmpdir)
+						os.chdir(oldcwd)
 	except Exception, e:
-		pass
+		print >>sys.stderr, e
 	return tmpdir
 
 def main(argv):
