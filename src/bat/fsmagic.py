@@ -31,6 +31,7 @@ fsmagic = {
             'squashfs4':        '\x73\x68\x73\x71', # shsq
             'squashfs5':        '\x74\x71\x73\x68', # tqsh - used in DD-WRT
             'squashfs6':        '\x68\x73\x71\x74', # hsqt - used in DD-WRT
+            'squashfs7':        '\x73\x71\x6c\x7a', # sqlz
             'lzma_alone':       '\x5d\x00\x00',
             'lzma_alone_alt':   '\x6d\x00\x00',     # used in OpenWrt
             '7z':               '7z\xbc\xaf\x27\x1c',
