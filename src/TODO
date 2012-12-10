@@ -34,9 +34,3 @@ database creation:
 * extract constants from Java files
 * extract constants from C files
 * import licensing information from SPDX files
-
-database:
-* split copyright information and licensing information into a separate database. This would give a few more possibilities, like:
-  - enabling a lite mode without licensing information, or copyrights
-  - easier to regenerating and replace parts of the database
-  - easier to keep parts that are used a lot (strings + function names) on SSD, while less used parts (licenses, copyrights) can be kept on a normal disk
