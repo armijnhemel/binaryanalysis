@@ -1166,7 +1166,7 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, envva
 	squashoffsets = []
 	for marker in fsmagic.squashtypes:
 		squashoffsets = squashoffsets + offsets[marker]
-	if squashoffsets == []:
+	if squashoffsets == [] and offsets['squashfs7'] == []:
 		return ([], blacklist, [])
 
 	squashoffsets.sort()
@@ -1188,6 +1188,56 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, envva
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
+	## squashfs7 is different, we first need to rewrite the binary
+	## then run unsquashfsRealtekLZMA on it.
+	if offsets['squashfs7'] != []:
+		for offset in offsets['squashfs7']:
+			blacklistoffset = extractor.inblacklist(offset, blacklist)
+			if blacklistoffset != None:
+				continue
+			tmpdir = dirsetup(tempdir, filename, "squashfs", counter)
+
+			sqshtmpdir = unpacksetup(tmpdir)
+			tmpfile = tempfile.mkstemp(dir=sqshtmpdir)
+			os.fdopen(tmpfile[0]).close()
+
+			sqshtmpfile = tempfile.mkstemp()
+			os.fdopen(sqshtmpfile[0]).close()
+
+			## suck in the bytes up until the offset
+			sqshf = open(filename)
+			sqshf.seek(0)
+			sqshbytes = sqshf.read(offset)
+
+			## write out al the bytes until the offset
+			## then write 'sqsh'
+			sqshtmp = open(sqshtmpfile[1], 'w')
+			sqshtmp.write(sqshbytes + 'sqsh')
+
+			## read the rest of the bytes from offset + 4
+			sqshf.seek(offset + 4)
+			sqshbytes = sqshf.read()
+			sqshf.close()
+
+			## write them out
+			sqshtmp.write(sqshbytes)
+			sqshtmp.close()
+
+			## unpack, clean up, etc.
+			unpackFile(sqshtmpfile[1], offset, tmpfile[1], sqshtmpdir)
+			os.unlink(sqshtmpfile[1])
+
+			#retval = unpackSquashfsRealtekLZMA(filename, offset, tmpdir)
+			retval = unpackSquashfsRealtekLZMA(tmpfile[1], offset, tmpdir)
+			os.unlink(tmpfile[1])
+			if retval != None:
+				(res, squashsize) = retval
+				diroffsets.append((res, offset, squashsize))
+				blacklist.append((offset,offset+squashsize))
+				counter = counter + 1
+			else:
+				## cleanup
+				os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [])
 
 ## wrapper around all the different squashfs types
