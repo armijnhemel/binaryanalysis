@@ -130,7 +130,7 @@ def main(argv):
 	parser = OptionParser()
 	parser.add_option("-f", "--filedir", action="store", dest="filedir", help="path to directory containing files to unpack", metavar="DIR")
 	parser.add_option("-o", "--origin", action="store", dest="origin", help="origin of packages (default: unknown)", metavar="ORIGIN")
-	parser.add_option("-t", "--target-directory", action="store", dest="target", help="target directory where files are stored (default: generated temporary directory)", metavar="ORIGIN")
+	parser.add_option("-t", "--target-directory", action="store", dest="target", help="target directory where files are stored (default: generated temporary directory)", metavar="DIR")
 	(options, args) = parser.parse_args()
 	if options.filedir == None:
 		print >>sys.stderr, "Specify dir with files"
