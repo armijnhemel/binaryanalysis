@@ -435,7 +435,7 @@ method      = searchUnpackSquashfs
 priority    = 1
 magic       = squashfs1:squashfs2:squashfs3:squashfs4:squashfs5:squashfs6:squashfs7
 noscan      = text:xml:graphics:pdf:compressed:audio:video
-description = Unpack squashfs file systmes
+description = Unpack squashfs file systems
 enabled     = yes
 
 [swf]
