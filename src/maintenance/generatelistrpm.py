@@ -67,9 +67,8 @@ def generatelist(filedir, origin):
 	except Exception, e:
 		pass
 
-def unpacksrpm(filedir):
+def unpacksrpm(filedir, target):
 	extensions = [".tar.gz", ".tar.bz2", ".tar.xz", ".tgz", ".tbz2"]
-	tmpdir = tempfile.mkdtemp()
 	files = os.walk(filedir)
 	try:
         	while True:
@@ -81,7 +80,7 @@ def unpacksrpm(filedir):
 				if res[-1] != 'srpm' and (res[-1] != 'rpm' and res[-2] != 'src'):
 					continue
 				else:
-					p2 = subprocess.Popen(['rpm', '-qpl', "%s/%s" % (i[0], p)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+					p2 = subprocess.Popen(['rpm', '-qpl', "%s/%s" % (i[0], p)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=target)
 					(stanout, stanerr) = p2.communicate()
 					files = stanout.strip().rsplit("\n")
 					copyfiles = []
@@ -107,7 +106,7 @@ def unpacksrpm(filedir):
 								copyfiles.append(f)
 						## make a temporary directory
 						cpiodir = tempfile.mkdtemp()
-						## copy tarball to tmpdir
+						## copy tarball to target
 						oldcwd = os.getcwd()
 						shutil.copy("%s/%s" % (i[0], p), cpiodir)
 						os.chdir(cpiodir)
@@ -120,17 +119,18 @@ def unpacksrpm(filedir):
 						p2 = subprocess.Popen(['cpio', '-i', '-d', '--no-absolute-filenames'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=cpiodir)
 						(cpiostanout, cpiostanerr) = p2.communicate(open(cpiotmp[1]).read())
 						for f in copyfiles:
-							shutil.copy(f, tmpdir)
+							shutil.copy(f, target)
 						shutil.rmtree(cpiodir)
 						os.chdir(oldcwd)
 	except Exception, e:
 		print >>sys.stderr, e
-	return tmpdir
+	return target
 
 def main(argv):
 	parser = OptionParser()
 	parser.add_option("-f", "--filedir", action="store", dest="filedir", help="path to directory containing files to unpack", metavar="DIR")
 	parser.add_option("-o", "--origin", action="store", dest="origin", help="origin of packages (default: unknown)", metavar="ORIGIN")
+	parser.add_option("-t", "--target-directory", action="store", dest="target", help="target directory where files are stored (default: generated temporary directory)", metavar="ORIGIN")
 	(options, args) = parser.parse_args()
 	if options.filedir == None:
 		print >>sys.stderr, "Specify dir with files"
@@ -139,8 +139,20 @@ def main(argv):
 		origin = "unknown"
 	else:
 		origin = options.origin
-	srpmdir = unpacksrpm(options.filedir)
-	generatelist(srpmdir, origin)
+
+	if options.target == None:
+		target = tempfile.mkdtemp()[1]
+	else:
+		try:
+			os.mkdir(options.target)
+		except Exception, e:
+			#print e.args, type(e.args)
+			#if e.args.startswith("[Errno 17] File exists:"):
+			#	pass
+			pass
+		target = options.target
+	unpacksrpm(options.filedir, target)
+	generatelist(target, origin)
 
 if __name__ == "__main__":
 	main(sys.argv)
