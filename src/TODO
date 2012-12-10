@@ -3,6 +3,8 @@ TODO:
 file systems:
 * FAT
 * NTFS
+* ubifs (unubi was removed from mtd-utils)
+* more generic YAFFS2 support
 
 compression:
 * rzip
