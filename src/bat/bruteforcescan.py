@@ -657,6 +657,7 @@ def runscan(tempdir, scans, scan_binary):
 	os.makedirs("%s/data" % (tempdir,))
 	scantempdir = "%s/data" % (tempdir,)
 	shutil.copy(scan_binary, scantempdir)
+	debug = scans['batconfig']['debug']
 
 	magicscans = []
 	for k in ["prerunscans", "unpackscans", "programscans", "postrunscans"]:
@@ -675,7 +676,7 @@ def runscan(tempdir, scans, scan_binary):
 	unpackreports_tmp = []
 	unpackreports = {}
 
-	scantasks = [(scantempdir, os.path.basename(scan_binary), scans['unpackscans'], scans['prerunscans'], magicscans, len(scantempdir), scantempdir, scans['batconfig']['debug'])]
+	scantasks = [(scantempdir, os.path.basename(scan_binary), scans['unpackscans'], scans['prerunscans'], magicscans, len(scantempdir), scantempdir, debug)]
 
 	## Use multithreading to speed up scanning. Sometimes we hit http://bugs.python.org/issue9207
 	## Threading can be configured in the configuration file, but
@@ -688,7 +689,7 @@ def runscan(tempdir, scans, scan_binary):
 	## not be run in parallel (which will be for the whole category of scans) it is
 	## possible to have partial parallel scanning.
 
-	if scans['batconfig']['multiprocessing'] and not scans['batconfig']['debug']:
+	if scans['batconfig']['multiprocessing'] and not debug:
 		if False in map(lambda x: x['parallel'], scans['unpackscans'] + scans['prerunscans']):
 			pool = multiprocessing.Pool(processes=1)
 		else:
@@ -741,7 +742,7 @@ def runscan(tempdir, scans, scan_binary):
 		## reverse sort on size: scan largest files first
 		leaftasks_tmp.sort(key=lambda x: x[-1], reverse=True)
 
-		if scans['batconfig']['multiprocessing'] and not scans['batconfig']['debug']:
+		if scans['batconfig']['multiprocessing'] and not debug:
 			if False in map(lambda x: x['parallel'], scans['programscans']):
 				pool = multiprocessing.Pool(processes=1)
 			else:
@@ -777,7 +778,7 @@ def runscan(tempdir, scans, scan_binary):
 			unpackreports[k] = i[k]
 
 	if scans['aggregatescans'] != []:
-		aggregatescan(unpackreports, leafreports, scans, scans['batconfig']['debug'])
+		aggregatescan(unpackreports, leafreports, scans, debug)
 
 	## run postrunscans here, again in parallel, if needed/wanted
 	## These scans typically only have a few side effects, but don't change
@@ -791,11 +792,11 @@ def runscan(tempdir, scans, scan_binary):
 		postrunscans = []
 		for i in unpackreports:
 			if leafreports.has_key(i):
-				postrunscans.append((i, unpackreports[i], leafreports[i], filterScans(scans['postrunscans'], leafreports[i]['tags']), scantempdir, tempdir, scans['batconfig']['debug']))
+				postrunscans.append((i, unpackreports[i], leafreports[i], filterScans(scans['postrunscans'], leafreports[i]['tags']), scantempdir, tempdir, debug))
 			else:
-				postrunscans.append((i, unpackreports[i], [], scans['postrunscans'], scantempdir, tempdir, scans['batconfig']['debug']))
+				postrunscans.append((i, unpackreports[i], [], scans['postrunscans'], scantempdir, tempdir, debug))
 
-		if scans['batconfig']['multiprocessing'] and not scans['batconfig']['debug']:
+		if scans['batconfig']['multiprocessing'] and not debug:
 			if False in map(lambda x: x['parallel'], scans['postrunscans']):
 				pool = multiprocessing.Pool(processes=1)
 			else:
