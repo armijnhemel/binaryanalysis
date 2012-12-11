@@ -1189,7 +1189,10 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, envva
 			## cleanup
 			os.rmdir(tmpdir)
 	## squashfs7 is different, we first need to rewrite the binary
-	## then run unsquashfsRealtekLZMA on it.
+	## to replace the identifier 'sqlz' with 'sqsh', then we can unpack
+	## it with unsquashfsRealtekLZMA
+	## TODO: don't suck in the file at once and see if it is possible to
+	## remove some duplicate code that is shared with the above code.
 	if offsets['squashfs7'] != []:
 		for offset in offsets['squashfs7']:
 			blacklistoffset = extractor.inblacklist(offset, blacklist)
@@ -1227,7 +1230,6 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, envva
 			unpackFile(sqshtmpfile[1], offset, tmpfile[1], sqshtmpdir)
 			os.unlink(sqshtmpfile[1])
 
-			#retval = unpackSquashfsRealtekLZMA(filename, offset, tmpdir)
 			retval = unpackSquashfsRealtekLZMA(tmpfile[1], offset, tmpdir)
 			os.unlink(tmpfile[1])
 			if retval != None:
@@ -1236,7 +1238,6 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, envva
 				blacklist.append((offset,offset+squashsize))
 				counter = counter + 1
 			else:
-				## cleanup
 				os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [])
 
@@ -1283,7 +1284,7 @@ def unpackSquashfsWrapper(filename, offset, tempdir=None):
 	## Broadcom variant
 	## WARNING!!
 	## Sometimes, for example when the OpenWrt version or (some cases)
-	## the Realtek vaariant can't unpack a file, this scan will pick it up
+	## the Realtek variant can't unpack a file, this scan will pick it up
 	## and eat 100% CPU for a long long long time, without producing any
 	## result. This is not a bug in BAT, but in this version of
 	## unsquashfs!
@@ -2084,6 +2085,8 @@ def unpackLZMA(filename, offset, tempdir=None, minbytesize=1):
 ## file system by using ubifs we will have to use a different measurement to
 ## measure the size of ubifs. A good start is the sum of the size of the
 ## volumes that were unpacked.
+## TODO: replace with a different implementation since a unubi that can unpack
+## has been removed from Fedora and was never present in Debian or Ubuntu.
 def searchUnpackUbifs(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	if offsets['ubifs'] == []:
 		return ([], blacklist, [])
