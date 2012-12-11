@@ -296,6 +296,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 
 		licenseconn = sqlite3.connect(licensedb, check_same_thread = False)
 		licensecursor = licenseconn.cursor()
+		#licensecursor.execute('PRAGMA synchronous=off')
 
 		## this is just an extra sanity check. This should not be triggered, but
 		## in case some data has been deleted it might come in handy.
@@ -373,7 +374,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			for ff in f:
 				(filehash, fres) = ff
 				for license in fres:
-					licensecursor.execute('''delete from licenses where sha256 = ? and license = ? and scanner = ? and version = ?''', (filehash, license, "fossology", fossology_version))
+					#licensecursor.execute('''delete from licenses where sha256 = ? and license = ? and scanner = ? and version = ?''', (filehash, license, "fossology", fossology_version))
 					licensecursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "fossology", fossology_version))
 		licenseconn.commit()
 		licensecursor.close()
@@ -384,13 +385,14 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	if copyrights:
 		licenseconn = sqlite3.connect(licensedb, check_same_thread = False)
 		licensecursor = licenseconn.cursor()
+		#licensecursor.execute('PRAGMA synchronous=off')
 
 		copyrightsres = pool.map(extractcopyrights, filestoscan)
 		if copyrightsres != None:
 			for c in copyrightsres:
 				(filehash, cres) = c
 				for cr in cres:
-					licensecursor.execute('''delete from extracted_copyright where sha256 = ? and  copyright = ? and type = ? and offset = ?''', (filehash, cr[1], cr[0], cr[2]))
+					#licensecursor.execute('''delete from extracted_copyright where sha256 = ? and  copyright = ? and type = ? and offset = ?''', (filehash, cr[1], cr[0], cr[2]))
 					licensecursor.execute('''insert into extracted_copyright (sha256, copyright, type, offset) values (?,?,?,?)''', (filehash, cr[1], cr[0], cr[2]))
 		licenseconn.commit()
 		licensecursor.close()
@@ -406,7 +408,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (pstring, filehash, language, linenumber))
 		for res in list(set(funcresults)):
 			(funcname, linenumber) = res
-			cursor.execute('''delete from extracted_function where sha256 = ? and functionname = ? and linenumber = ?''', (filehash, funcname, linenumber))
+			#cursor.execute('''delete from extracted_function where sha256 = ? and functionname = ? and linenumber = ?''', (filehash, funcname, linenumber))
 			cursor.execute('''insert into extracted_function (sha256, functionname, linenumber) values (?,?,?)''', (filehash, funcname, linenumber))
 	conn.commit()
 
@@ -674,7 +676,7 @@ def checkalreadyscanned((filedir, package, version, filename, origin, dbpath)):
 	## example got a license change in mid-2011, without package names being updated)
         conn = sqlite3.connect(dbpath, check_same_thread = False)
 	c = conn.cursor()
-	#c.execute('PRAGMA journal_mode=off')
+	#c.execute('PRAGMA synchronous=off')
 	#c.execute('''select * from processed where package=? and version=? and origin=?''', (package, version, origin))
 	c.execute('''select * from processed where package=? and version=? LIMIT 1''', (package, version))
 	if len(c.fetchall()) != 0:
@@ -770,7 +772,7 @@ def main(argv):
 
 	conn = sqlite3.connect(options.db, check_same_thread = False)
 	c = conn.cursor()
-	#c.execute('PRAGMA journal_mode=off')
+	#c.execute('PRAGMA synchronous=off')
 
 	if options.licenses:
 		ninkaconn = sqlite3.connect(options.ninkacomments, check_same_thread = False)
@@ -779,6 +781,7 @@ def main(argv):
 	if options.licenses or options.copyrights:
 		licenseconn = sqlite3.connect(options.licensedb, check_same_thread = False)
 		licensec = licenseconn.cursor()
+		#licensec.execute('PRAGMA synchronous=off')
 
 	if wipe:
 		try:
