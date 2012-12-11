@@ -10,6 +10,8 @@ contains unique function names that were matched, with links to pretty printed
 source code, which can be displayed in the BAT GUI.
 
 This should be run as a postrun scan
+
+WARNING: THIS CODE DOES NOT WORK YET
 '''
 
 import os, os.path, sys, gzip, cgi
