@@ -331,7 +331,8 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 				for r in res:
 					(filelicense, scannerversion) = r
 					for f in commentshash2[c]:
-						licensecursor.execute('''delete from licenses where sha256 = ? and license = ? and scanner = ? and version = ?''', (f, filelicense, "ninka", scannerversion))
+						## only use this if we actually have duplications
+						#licensecursor.execute('''delete from licenses where sha256 = ? and license = ? and scanner = ? and version = ?''', (f, filelicense, "ninka", scannerversion))
 						licensecursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (f, filelicense, "ninka", scannerversion))
 			else:
 				licensefilestoscan.append(commentshash2[c][0])
