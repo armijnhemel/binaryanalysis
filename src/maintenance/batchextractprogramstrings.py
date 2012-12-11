@@ -677,6 +677,9 @@ def checkalreadyscanned((filedir, package, version, filename, origin, dbpath)):
 	## TODO: we should take the origin into account, because sometimes there are differences
 	## in packages with the same name from different sources (binutils-2.1[567] from GNU for
 	## example got a license change in mid-2011, without package names being updated)
+
+	## TODO: we actually should check if we know the *checksum* first, because a package could
+	## have been renamed.
         conn = sqlite3.connect(dbpath, check_same_thread = False)
 	c = conn.cursor()
 	#c.execute('PRAGMA synchronous=off')
