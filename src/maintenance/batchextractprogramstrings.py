@@ -156,6 +156,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 	## example got a license change in mid-2011, without package names being updated)
         conn = sqlite3.connect(dbpath, check_same_thread = False)
 	c = conn.cursor()
+	c.execute('PRAGMA synchronous=off')
 	## unpack the archive. If we fail, cleanup and return.
 	temporarydir = unpack(filedir, filename)
 	if temporarydir == None:
@@ -296,7 +297,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 
 		licenseconn = sqlite3.connect(licensedb, check_same_thread = False)
 		licensecursor = licenseconn.cursor()
-		#licensecursor.execute('PRAGMA synchronous=off')
+		licensecursor.execute('PRAGMA synchronous=off')
 
 		## this is just an extra sanity check. This should not be triggered, but
 		## in case some data has been deleted it might come in handy.
@@ -385,7 +386,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	if copyrights:
 		licenseconn = sqlite3.connect(licensedb, check_same_thread = False)
 		licensecursor = licenseconn.cursor()
-		#licensecursor.execute('PRAGMA synchronous=off')
+		licensecursor.execute('PRAGMA synchronous=off')
 
 		copyrightsres = pool.map(extractcopyrights, filestoscan)
 		if copyrightsres != None:
