@@ -392,7 +392,9 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			for c in copyrightsres:
 				(filehash, cres) = c
 				for cr in cres:
-					#licensecursor.execute('''delete from extracted_copyright where sha256 = ? and  copyright = ? and type = ? and offset = ?''', (filehash, cr[1], cr[0], cr[2]))
+					## OK, this delete is *really* stupid because we don't have an index for this
+					## combination of parameters.
+					#licensecursor.execute('''delete from extracted_copyright where sha256 = ? and copyright = ? and type = ? and offset = ?''', (filehash, cr[1], cr[0], cr[2]))
 					licensecursor.execute('''insert into extracted_copyright (sha256, copyright, type, offset) values (?,?,?,?)''', (filehash, cr[1], cr[0], cr[2]))
 		licenseconn.commit()
 		licensecursor.close()
