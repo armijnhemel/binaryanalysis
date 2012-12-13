@@ -36,3 +36,4 @@ database creation:
 * extract constants from Java files
 * extract constants from C files
 * import licensing information from SPDX files
+* rewrite ctags and xgettext invocations to scan multiple files at once to reduce overhead of calling ctags and xgettext
