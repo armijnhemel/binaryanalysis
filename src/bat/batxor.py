@@ -17,6 +17,7 @@ by tagging it as 'temporary' and removing it later on.
 '''
 
 import sys, os, os.path, tempfile
+import fwunpack
 
 ## some of the signatures we know about:
 ## * Splashtop (fast boot environment)
@@ -24,3 +25,31 @@ import sys, os, os.path, tempfile
 
 ## Finding new signatures is done by hand. A good helper tool can be found in
 ## the bat-visualisation directory in bat-extratools
+
+### WARNING: unfinished code ###
+
+signatures = { 'splashtop': ['\x51', '\x57', '\x45', '\x52']
+             , 'bococom':   ['\x3a', '\x93', '\xa2', '\x95', '\xc3', '\x63', '\x48', '\x45', '\x58', '\x09', '\x12', '\x03', '\x08', '\xc8', '\x3c']
+             }
+
+def unpackXOR(filename, offset, tempdir=None):
+	tmpdir = unpacksetup(tempdir)
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.fdopen(tmpfile[0]).close()
+
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
+
+	## suck in file, do XOR, write out again
+	# counter = 0
+	#for i in buf:
+	#	f2.write(chr(ord(i) ^ ord(hexs[counter])))
+	#	counter = (counter+1)%len(hexs)
+	#return None
+
+def searchUnpackXOR(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	counter = 1
+	diroffsets = []
+
+	## find signatures, run unpackXOR if any of the signatures were found,
+	## preferably multiple times close to eachother
+	return (diroffsets, blacklist, ['temporary'])
