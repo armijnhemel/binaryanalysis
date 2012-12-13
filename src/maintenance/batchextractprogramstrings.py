@@ -669,6 +669,11 @@ def extractsourcestrings(filename, filedir, language):
 	return sqlres
 
 def checkalreadyscanned((filedir, package, version, filename, origin, dbpath)):
+	try:
+		os.stat("%s/%s" % (filedir, filename))
+	except:
+		print >>sys.stderr, "Can't find %s" % filename
+		return None
 	scanfile = open("%s/%s" % (filedir, filename), 'r')
 	h = hashlib.new('sha256')
 	h.update(scanfile.read())
