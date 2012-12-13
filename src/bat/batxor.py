@@ -16,9 +16,7 @@ For this we need to keep some state, possibly even delete the file only later,
 by tagging it as 'temporary' and removing it later on.
 '''
 
-import sys, os, subprocess, os.path
-import tempfile
-import fsmagic, fssearch, extractor, fwunpack
+import sys, os, os.path, tempfile
 
 ## some of the signatures we know about:
 ## * Splashtop (fast boot environment)
