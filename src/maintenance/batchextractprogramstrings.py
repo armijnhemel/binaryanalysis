@@ -550,6 +550,7 @@ def licensefossology((packages)):
 	return (filehash, fossologyres)
 
 ## TODO: get rid of ninkaversion before we call this method
+## TODO: process more files at once to reduce overhead of calling ctags
 def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 	sqlres = extractsourcestrings(p, i, language)
 	## extract function names using ctags, except code from
@@ -580,6 +581,7 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 ## We fix this by rerunning xgettext with --from-code=utf-8
 ## The results might not be perfect, but they are acceptable.
 ## TODO: use version from bat/extractor.py
+## TODO: process more files at once to reduce overhead of calling xgettext
 def extractsourcestrings(filename, filedir, language):
 	remove_chars = ["\\a", "\\b", "\\v", "\\f", "\\e", "\\0"]
 	sqlres = []
