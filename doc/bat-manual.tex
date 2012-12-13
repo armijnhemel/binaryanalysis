@@ -915,7 +915,9 @@ Package building and testing is done on Ubuntu 12.04.% and Debian 7.
 
 To build a \texttt{.deb} package do an export of the Subversion repository
 first.  Change to the directory \texttt{src} and type:
-\texttt{debuild -uc -us} to build the package.
+\texttt{debuild -uc -us} to build the package. This assumes that you will have
+the necessary packages installed to build the package (like \texttt{devscripts}
+and \texttt{debhelper}).
 
 The build process might complain about not being able to find the original
 sources. In our experience it is safe to ignore this. The command will build a
