@@ -39,3 +39,6 @@ database creation:
 
 bat-extratools:
 * add patches for CVE-2012-4024 for unsquashfs42
+
+busybox scanning:
+* clean up finding ranges of applets in extract_configuration. It should be possible to do this less kludgy.
