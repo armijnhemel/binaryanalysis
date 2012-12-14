@@ -1,3 +1,14 @@
+bat (10.0) unstable; urgency=low
+
+  * XZ unpacking fixes
+  * split creation of images into two separate methods that can be invoked
+    separately
+  * introduce new configuration parameters for more granular scanning
+  * new variant of squashfs
+  * much more (see ChangeLog)
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Fri, 14 Dec 2012 18:10:13 +0100
+
 bat (9.0) unstable; urgency=low
 
   * GUI fixes
