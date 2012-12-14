@@ -19,6 +19,7 @@ postrunscans:
 
 aggregate scanning:
 * aggregate ranking results for JAR file scanning
+* cleanup if we used one of the squashfs + lzma variants where we can't determine the size.
 
 GUI:
 * rewrite to PyQt to take advantage of better rendering engine (webkit)
