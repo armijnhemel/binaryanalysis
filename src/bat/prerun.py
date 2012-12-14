@@ -504,8 +504,11 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 			else:
 				startprogramheader = int(res.groups()[0])
 
-	if thisheadersize != startprogramheader:
-		return newtags
+	## This does not work well, for example for Linux kernel modules
+	#if thisheadersize != startprogramheader:
+	#	return newtags
+
+	## This does not work well for some Linux kernel modules (architecture dependent?)
 	totalsize = startsectionheader + sectionheadersize * numbersectionheaders
 	if totalsize == os.stat(filename).st_size:
 		newtags.append("elf")
