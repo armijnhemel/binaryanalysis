@@ -7,7 +7,7 @@
 '''
 This is a plugin for the Binary Analysis Tool. It generates a HTML file which
 contains unique function names that were matched, with links to pretty printed
-source code, which can be displayed in the BAT GUI.
+source code, which can be displayed in the BAT GUI (future work).
 
 This should be run as a postrun scan
 
