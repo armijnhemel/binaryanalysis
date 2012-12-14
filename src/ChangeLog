@@ -3,6 +3,7 @@
 'decryption'.
 * add a preliminary implementation of XOR 'decryption'. There is a risk of
 getting into an endless loop, so the scan is disabled by default.
+* deduplicate postrunscans
 
 2012-12-10
 * add another variant of squashfs where only the identifier was changed. Code
