@@ -42,3 +42,7 @@ bat-extratools:
 
 busybox scanning:
 * clean up finding ranges of applets in extract_configuration. It should be possible to do this less kludgy.
+
+HTML generation:
+* finish function name reporting
+* clean up/rewrite/make it easier to use
