@@ -170,7 +170,8 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 		module = prerunscan['module']
 		method = prerunscan['method']
 		if debug:
-			print >>sys.stderr, method
+			print >>sys.stderr, method, filename
+			sys.stderr.flush()
 		## if there is extra information we need to pass, like locations of databases
 		## we can use the environment for it
 		if prerunscan.has_key('envvars'):
@@ -243,6 +244,7 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 
 	unpackreports[relfiletoscan]['scans'] = []
 
+	unpacked = False
 	for unpackscan in unpackscans:
 		## the whole file has already been scanned by other scans, so we can
 		## continue with the program scans.
@@ -252,13 +254,14 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 		module = unpackscan['module']
 		method = unpackscan['method']
 		if debug:
-			print >>sys.stderr, method
+			print >>sys.stderr, method, filetoscan
+			sys.stderr.flush()
 		## if there is extra information we need to pass, like locations of databases
 		## we can use the environment for it
 		if unpackscan.has_key('envvars'):
-			envvars = unpackscan['envvars']
+			envvars = unpackscan['envvars'] + ":BAT_UNPACKED=%s" % unpacked
 		else:
-			envvars = None
+			envvars = "BAT_UNPACKED=%s" % unpacked
 		## return value is the temporary dir, plus offset in the parent file
 		## plus a blacklist containing blacklisted ranges for the *original*
 		## file and a hash with offsets for each marker.
@@ -276,6 +279,7 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 			report = {}
 			if diroffset == None:
 				continue
+			unpacked = True
 			scandir = diroffset[0]
 
 			## recursively scan all files in the directory
@@ -302,7 +306,11 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 			except StopIteration:
         			pass
 			unpackreports[relfiletoscan]['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
-	leaftasks.append((filetoscan, magic, tags, blacklist, tempdir, filehash, filesize, debug))
+	if not unpacked and 'temporary' in tags:
+		os.unlink(filetoscan)
+		return (scantasks, leaftasks, unpackreports)
+	else:
+		leaftasks.append((filetoscan, magic, tags, blacklist, tempdir, filehash, filesize, debug))
 	return (scantasks, leaftasks, unpackreports)
 
 def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize, debug)):
@@ -314,7 +322,8 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize, debu
 		module = scan['module']
 		method = scan['method']
 		if debug:
-			print >>sys.stderr, method
+			print >>sys.stderr, method, filetoscan
+			sys.stderr.flush()
 		## if there is extra information we need to pass, like locations of databases
 		## we can use the environment for it
 		if scan.has_key('envvars'):
@@ -338,6 +347,7 @@ def aggregatescan(unpackreports, leafreports, scans, debug):
 		method = scan['method']
 		if debug:
 			print >>sys.stderr, method
+			sys.stderr.flush()
 		## if there is extra information we need to pass, like locations of databases
 		## we can use the environment for it
 		if scan.has_key('envvars'):
@@ -356,7 +366,8 @@ def postrunscan((filetoscan, unpackreports, leafreports, scans, scantempdir, top
 		module = scan['module']
 		method = scan['method']
 		if debug:
-			print >>sys.stderr, method
+			print >>sys.stderr, method, filetoscan
+			sys.stderr.flush()
 		## if there is extra information we need to pass, like locations of databases
 		## we can use the environment for it
 		if scan.has_key('envvars'):
