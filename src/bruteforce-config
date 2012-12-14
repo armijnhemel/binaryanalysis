@@ -478,6 +478,16 @@ noscan      = text:xml:graphics:pdf:compressed:audio:video
 description = Unpack UPX compressed executables
 enabled     = yes
 
+#[xor]
+#type        = unpack
+#module      = bat.batxor
+#method      = searchUnpackXOR
+#priority    = 0
+#noscan      = xml:graphics:pdf:compressed:audio:video:elf:temporary
+#scanonly    = binary
+#description = XOR 'decryption'
+#enabled     = no
+
 [xz]
 type        = unpack
 module      = bat.fwunpack
