@@ -14,9 +14,6 @@ queueing system:
 * let top level script also read from a queue
 * add script to add files to and remove files from scanning queue
 
-postrunscans:
-* rework code to avoid duplicate processing
-
 aggregate scanning:
 * aggregate ranking results for JAR file scanning
 * cleanup if we used one of the squashfs + lzma variants where we can't determine the size.
