@@ -13,13 +13,13 @@ from optparse import OptionParser
 
 def main(argv):
 	parser = OptionParser()
-	parser.add_option("-f", "--filedir", action="store", dest="filedir", help="path to directory containing files to unpack", metavar="DIR")
+	parser.add_option("-l", "--list", action="store", dest="listfile", help="path to LIST", metavar="DIR")
 	(options, args) = parser.parse_args()
 
 	try:
-		filelist = open(options.filedir + "/LIST").readlines()
+		filelist = open(options.listfile).readlines()
 	except:
-		parser.error("'LIST' not found in file dir")
+		parser.error("'LIST' not found")
 
 	prev_split = None
 	for unpackfile in filelist:
