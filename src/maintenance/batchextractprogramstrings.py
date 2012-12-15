@@ -405,14 +405,22 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	extracted_results = pool.map(extractstrings, filestoscan)
 
 	for extractres in extracted_results:
-		(filehash, language, sqlres, funcresults) = extractres
+		(filehash, language, sqlres, cresults, javaresults) = extractres
 		for res in sqlres:
 			(pstring, linenumber) = res
 			cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (pstring, filehash, language, linenumber))
-		for res in list(set(funcresults)):
-			(funcname, linenumber) = res
-			#cursor.execute('''delete from extracted_function where sha256 = ? and functionname = ? and linenumber = ?''', (filehash, funcname, linenumber))
-			cursor.execute('''insert into extracted_function (sha256, functionname, linenumber) values (?,?,?)''', (filehash, funcname, linenumber))
+		for res in list(set(cresults)):
+			(cname, linenumber, nametype) = res
+			if nametype == 'function':
+				cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'C', linenumber))
+			else:
+				cursor.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, 'C', linenumber))
+		for res in list(set(javaresults)):
+			(cname, linenumber, nametype) = res
+			if nametype == 'method':
+				cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'Java', linenumber))
+			else:
+				cursor.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, 'Java', linenumber))
 	conn.commit()
 
 	for i in insertfiles:
@@ -555,8 +563,13 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 	sqlres = extractsourcestrings(p, i, language)
 	## extract function names using ctags, except code from
 	## the Linux kernel, since it will never be dynamically linked
-	funcresults = []
-	if language == 'C' and package != 'linux':
+	# (name, linenumber, type)
+	cresults = []
+
+	## this is specifically for Java
+	# (name, type, linenumber)
+	javaresults = []
+	if (language == 'C' or language == 'Java') and package != 'linux':
 		source = open(os.path.join(i, p)).read()
 
 		p2 = subprocess.Popen(["ctags", "-f", "-", "-x", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
@@ -569,10 +582,16 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 			stansplit = stanout2.strip().split("\n")
 			for res in stansplit:
 				csplit = res.strip().split()
-				if csplit[1] == 'function':
-					funcresults.append((csplit[0], int(csplit[2])))
+				if language == 'C':
+					for i in ['function', 'variable']:
+						if csplit[1] == i:
+							cresults.append((csplit[0], int(csplit[2]), i))
+				if language == 'Java':
+					for i in ['method', 'class', 'field']:
+						if csplit[1] == i:
+							javaresults.append((csplit[0], int(csplit[2]), i))
 
-	return (filehash, language, sqlres, funcresults)
+	return (filehash, language, sqlres, cresults, javaresults)
 
 ## Extract strings using xgettext. Apparently this does not always work correctly. For example for busybox 1.6.1:
 ## $ xgettext -a -o - fdisk.c
