@@ -854,10 +854,17 @@ def main(argv):
 		c.execute('''create index if not exists extracted_language on extracted_file(language);''')
 
 		## Store the function names extracted, per checksum
-		c.execute('''create table if not exists extracted_function (sha256 text, functionname text, linenumber int)''')
+		c.execute('''create table if not exists extracted_function (sha256 text, functionname text, language text, linenumber int)''')
 		c.execute('''create index if not exists function_index on extracted_function(sha256);''')
 		c.execute('''create index if not exists functionname_index on extracted_function(functionname)''')
+		c.execute('''create index if not exists functionname_language on extracted_function(language);''')
 
+		## Store different information extracted with ctags
+		c.execute('''create table if not exists extracted_name (sha256 text, name text, type text, language text, linenumber int)''')
+		c.execute('''create index if not exists name_checksum_index on extracted_name(sha256);''')
+		c.execute('''create index if not exists name_name_index on extracted_name(name)''')
+		c.execute('''create index if not exists name_name_index on extracted_name(type)''')
+		c.execute('''create index if not exists name_language_index on extracted_name(language);''')
 		conn.commit()
 
 		if options.licenses or options.copyright:
