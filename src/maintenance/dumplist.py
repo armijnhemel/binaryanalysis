@@ -11,6 +11,9 @@ from optparse import OptionParser
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
+This script is to regenerate a LIST file from the contents of a database. This
+can be useful in situations like a diskcrash (and only the 'processed' table
+could be recovered), or in case of errors in the extraction scripts.
 '''
 
 def main(argv):
