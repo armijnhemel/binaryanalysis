@@ -2,6 +2,10 @@
 * bat/fwunpack.py: let unpackFile handle lengths properly, only when offset ==
 0. Only used in ZIP unpacking at the moment.
 * fix ZIP unpacking in case there is a single ZIP file, with trailing data.
+* add script to regenerate LIST from a database. This is convenient in case
+the analysis needs to be rerun (due to errors in scanning, crashed harddisk,
+etc.)
+* change parameters for verifylist.py
 
 2012-12-14
 * support 'temporary' files in bruteforcescan.py. This is needed for XOR
