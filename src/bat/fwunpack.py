@@ -57,9 +57,11 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0):
 			else:
 				p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile,), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
-		## TODO: fix if we want to get rid of trailing data
+		## TODO: fix if we want to get rid of trailing data and offset != 0
 		else:
-			pass
+			if offset == 0:
+				p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile,), 'bs=%s' % (length,), 'count=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+				(stanout, stanerr) = p.communicate()
 
 ## There are certain routers that have all bytes swapped, because they use 16
 ## bytes NOR flash instead of 8 bytes SPI flash. This is an ugly hack to first
@@ -1936,16 +1938,30 @@ def unpackZip(filename, offset, tempdir=None):
 			os.unlink(multitmpfile[1])
 			multicounter = multicounter + 1
 	else:
-		## we have a single zip file, but there is trailing data, which unzip does not like
+		## We have a single zip file, but there is trailing data, which unzip does not like
+		## Cut the trailing data, unpack the resulting file.
 		if endofcentraldir + 22 != os.stat(tmpfile[1]).st_size:
-			pass
-		p = subprocess.Popen(['unzip', '-o', tmpfile[1], '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-		if p.returncode != 0 and p.returncode != 1:
-			os.unlink(tmpfile[1])
-			if tempdir == None:
-				os.rmdir(tmpdir)
-			return (None, None)
+			tmpfile2 = tempfile.mkstemp(dir=tempdir)
+			os.fdopen(tmpfile2[0]).close()
+
+			unpackFile(tmpfile[1], offset, tmpfile2[1], tmpdir, endofcentraldir + 22)
+			p = subprocess.Popen(['unzip', '-o', tmpfile2[1], '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate()
+			if p.returncode != 0 and p.returncode != 1:
+				os.unlink(tmpfile2[1])
+				os.unlink(tmpfile[1])
+				if tempdir == None:
+					os.rmdir(tmpdir)
+				return (None, None)
+			os.unlink(tmpfile2[1])
+		else:
+			p = subprocess.Popen(['unzip', '-o', tmpfile[1], '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate()
+			if p.returncode != 0 and p.returncode != 1:
+				os.unlink(tmpfile[1])
+				if tempdir == None:
+					os.rmdir(tmpdir)
+				return (None, None)
 	os.unlink(tmpfile[1])
 	return (endofcentraldir, tmpdir)
 
