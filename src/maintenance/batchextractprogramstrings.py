@@ -259,7 +259,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		pass
 
 	## compute the hashes in parallel
-	scanfile_result = filter(lambda x: x != None, pool.map(computehash, scanfiles))
+	scanfile_result = filter(lambda x: x != None, pool.map(computehash, scanfiles, 1))
 
 	insertfiles = []
 
@@ -309,9 +309,9 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		#	else:
 		#		commentsfiletoscan.append(i)
 
-		#comments_results = pool.map(extractcomments, commentsfiletoscan)
+		#comments_results = pool.map(extractcomments, commentsfiletoscan, 1)
 
-		comments_results = pool.map(extractcomments, filestoscan)
+		comments_results = pool.map(extractcomments, filestoscan, 1)
 		commentshash = {}
 		commentshash2 = {}
 		for c in comments_results:
@@ -344,7 +344,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 
 		for l in licensefilestoscan:
 			licensescanfiles.append((filehashes[l][0][0], filehashes[l][0][1], l, ninkaversion))
-		license_results = pool.map(runfullninka, licensescanfiles)
+		license_results = pool.map(runfullninka, licensescanfiles, 1)
 
 		## we now know the licenses for files we didn't know before. So:
 		## 1. find the corresponding commentshash
@@ -369,7 +369,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		fossology_filestoscan = []
 		for i in range(0,len(filestoscan),fossology_chunksize):
 			fossology_filestoscan.append((filestoscan[i:i+fossology_chunksize]))
-		fossology_res = pool.map(licensefossology, fossology_filestoscan)
+		fossology_res = pool.map(licensefossology, fossology_filestoscan, 1)
 		fossology_version = "2.1.0"
 		for f in fossology_res:
 			for ff in f:
@@ -388,7 +388,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		licensecursor = licenseconn.cursor()
 		licensecursor.execute('PRAGMA synchronous=off')
 
-		copyrightsres = pool.map(extractcopyrights, filestoscan)
+		copyrightsres = pool.map(extractcopyrights, filestoscan, 1)
 		if copyrightsres != None:
 			for c in copyrightsres:
 				(filehash, cres) = c
@@ -402,7 +402,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		licenseconn.close()
 
 	## process the files we want to scan in parallel, then process the results
-	extracted_results = pool.map(extractstrings, filestoscan)
+	extracted_results = pool.map(extractstrings, filestoscan, 1)
 
 	for extractres in extracted_results:
 		(filehash, language, sqlres, cresults, javaresults) = extractres
@@ -933,7 +933,7 @@ def main(argv):
 		except Exception, e:
 			# oops, something went wrong
 			print >>sys.stderr, e
-	res = pool.map(checkalreadyscanned, pkgmeta)
+	res = pool.map(checkalreadyscanned, pkgmeta, 1)
 
 	for i in res:
 		if i == None:
