@@ -1,3 +1,7 @@
+2012-12-16
+* batchextractprogramstrings.py: distribute tasks over available workers
+differently to make it less likely that one worker gets all the big tasks.
+
 2012-12-15
 * bat/fwunpack.py: let unpackFile handle lengths properly, only when offset ==
 0. Only used in ZIP unpacking at the moment.
