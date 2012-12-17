@@ -5,6 +5,7 @@ file systems:
 * NTFS
 * ubifs (unubi was removed from mtd-utils)
 * more generic YAFFS2 support
+* squashfs as described at http://www.devttys0.com/2011/08/extracting-non-standard-squashfs-images/
 
 compression:
 * rzip
