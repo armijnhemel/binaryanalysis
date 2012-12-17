@@ -886,7 +886,7 @@ def main(argv):
 		c.execute('''create index if not exists name_language_index on extracted_name(language);''')
 		conn.commit()
 
-		if options.licenses or options.copyright:
+		if options.licenses or options.copyrights:
 			## Store the extracted licenses per checksum.
 			licensec.execute('''create table if not exists licenses (sha256 text, license text, scanner text, version text)''')
 			licensec.execute('''create index if not exists license_index on licenses(sha256);''')
