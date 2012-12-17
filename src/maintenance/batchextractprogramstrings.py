@@ -933,22 +933,19 @@ def main(argv):
 		except Exception, e:
 			# oops, something went wrong
 			print >>sys.stderr, e
-	res = pool.map(checkalreadyscanned, pkgmeta, 1)
+	res = filter(lambda x: x != None, pool.map(checkalreadyscanned, pkgmeta, 1))
 
 	for i in res:
-		if i == None:
-			continue
-		else:
-			try:
-				(package, version, filename, origin, filehash) = i
-				if filehash in blacklistsha256sums:
-					continue
-				if options.verify:
-					unpack_verify(options.filedir, filename)
-				res = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, options.db, cleanup, license, copyrights, pool, options.ninkacomments, options.licensedb)
-			except Exception, e:
-				# oops, something went wrong
-				print >>sys.stderr, e
+		try:
+			(package, version, filename, origin, filehash) = i
+			if filehash in blacklistsha256sums:
+				continue
+			if options.verify:
+				unpack_verify(options.filedir, filename)
+			res = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, options.db, cleanup, license, copyrights, pool, options.ninkacomments, options.licensedb)
+		except Exception, e:
+			# oops, something went wrong
+			print >>sys.stderr, e
 
 if __name__ == "__main__":
     main(sys.argv)
