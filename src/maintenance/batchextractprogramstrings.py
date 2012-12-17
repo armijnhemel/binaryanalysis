@@ -590,6 +590,8 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 			stansplit = stanout2.strip().split("\n")
 			for res in stansplit:
 				csplit = res.strip().split()
+				if filter(lambda x: x not in string.printable, csplit[0]) != "":
+					continue
 				if language == 'C':
 					for i in ['function', 'variable']:
 						if csplit[1] == i:
