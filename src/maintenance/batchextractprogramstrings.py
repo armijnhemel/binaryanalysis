@@ -147,7 +147,7 @@ def unpack_verify(filedir, filename):
 
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
-def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, copyrights, pool, ninkacomments, licensedb):
+def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256):
 	print >>sys.stdout, filename
 
 	## Check if we've already processed this file. If so, we can easily skip it and return.
@@ -170,7 +170,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 		c.execute('''delete from processed_file where package=? and version=?''', (package, version))
 		conn.commit()
 
-	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb)
+	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256)
 	## Add the file to the database: name of archive, sha256, packagename and version
 	## This is to be able to just update the database instead of recreating it.
 	c.execute('''insert into processed (package, version, filename, origin, sha256) values (?,?,?,?,?)''', (package, version, filename, origin, filehash))
@@ -200,7 +200,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 		except:
 			## nothing we can do right now, so just give up
 			pass
-	return
+	return sqlres
 
 def computehash((path, filename)):
 	try:
@@ -234,7 +234,7 @@ def computehash((path, filename)):
 	filehash = h.hexdigest()
 	return (path, filename, filehash, extension)
 
-def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, pool, ninkacomments, licensedb):
+def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256):
 	srcdirlen = len(srcdir)+1
 	osgen = os.walk(srcdir)
 	ninkaversion = "bf83428"
@@ -273,6 +273,13 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	for s in scanfile_result:
 		(path, filename, filehash, extension) = s
 		insertfiles.append(("%s/%s" % (path[srcdirlen:],filename), filehash))
+
+		## if we process many versions of a single package there is likely going to be
+		## overlap. We can avoid hitting the disk by remembering the SHA256 from a previous
+		## run.
+		if package == oldpackage:
+			if s[2] in oldsha256:
+				continue
 		if filehash in tmpsha256s:
 			continue
 		cursor.execute("select * from processed_file where sha256=? LIMIT 1", (filehash,))
@@ -426,6 +433,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	for i in insertfiles:
 		cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, i[0], i[1]))
 	conn.commit()
+	return (scanfile_result)
 
 ## extract comments in parallel
 def extractcomments((package, version, i, p, language, filehash, ninkaversion)):
@@ -935,6 +943,8 @@ def main(argv):
 			print >>sys.stderr, e
 	res = filter(lambda x: x != None, pool.map(checkalreadyscanned, pkgmeta, 1))
 
+	oldpackage = ""
+	oldres = []
 	for i in res:
 		try:
 			(package, version, filename, origin, filehash) = i
@@ -942,10 +952,14 @@ def main(argv):
 				continue
 			if options.verify:
 				unpack_verify(options.filedir, filename)
-			res = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, options.db, cleanup, license, copyrights, pool, options.ninkacomments, options.licensedb)
+			if package != oldpackage:
+				oldres = []
+			res = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, options.db, cleanup, license, copyrights, pool, options.ninkacomments, options.licensedb, oldpackage, oldres)
+			oldres = map(lambda x: x[2], res)
+			oldpackage = package
 		except Exception, e:
-			# oops, something went wrong
-			print >>sys.stderr, e
+				# oops, something went wrong
+				print >>sys.stderr, e
 
 if __name__ == "__main__":
     main(sys.argv)
