@@ -36,6 +36,7 @@ database creation:
 * handle patches
 * import licensing information from SPDX files
 * rewrite ctags and xgettext invocations to scan multiple files at once to reduce overhead of calling ctags and xgettext
+* create index for sha256 for processed
 
 bat-extratools:
 * add patches for CVE-2012-4024 for unsquashfs42
