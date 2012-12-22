@@ -860,6 +860,7 @@ def main(argv):
 		## processed, so we don't repeat work.
 		c.execute('''create table if not exists processed (package text, version text, filename text, origin text, sha256 text)''')
 		c.execute('''create index if not exists processed_index on processed(package, version)''')
+		c.execute('''create index if not exists processed_checksum on processed(sha256)''')
 
 		## Keep an archive of which packages are blacklisted. This is useful during database creation,
 		## or during database expansion.
