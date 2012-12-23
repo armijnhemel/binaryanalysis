@@ -13,7 +13,7 @@ from optparse import OptionParser
 
 def main(argv):
 	parser = OptionParser()
-	parser.add_option("-l", "--list", action="store", dest="listfile", help="path to LIST", metavar="DIR")
+	parser.add_option("-l", "--list", action="store", dest="listfile", help="path to LIST", metavar="FILE")
 	(options, args) = parser.parse_args()
 
 	try:
