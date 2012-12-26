@@ -376,7 +376,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		fossology_filestoscan = []
 		for i in range(0,len(filestoscan),fossology_chunksize):
 			fossology_filestoscan.append((filestoscan[i:i+fossology_chunksize]))
-		fossology_res = pool.map(licensefossology, fossology_filestoscan, 1)
+		fossology_res = filter(lambda x: x != None, pool.map(licensefossology, fossology_filestoscan, 1))
 		fossology_version = "2.1.0"
 		for f in fossology_res:
 			for ff in f:
@@ -397,7 +397,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 
 		copyrightsres = pool.map(extractcopyrights, filestoscan, 1)
 		if copyrightsres != None:
-			for c in copyrightsres:
+			for c in filter(lambda x: x != None, copyrightsres):
 				(filehash, cres) = c
 				for cr in cres:
 					## OK, this delete is *really* stupid because we don't have an index for this
