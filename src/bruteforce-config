@@ -3,7 +3,7 @@
 #############################
 
 [batconfig]
-multiprocessing = no
+multiprocessing = yes
 module = bat.simpleprettyprint
 #module = bat.ppknowledgebase
 output = prettyprintresxml
@@ -656,6 +656,7 @@ envvars     = BAT_SQLITE_AVG_C=/home/armijn/master/avg:BAT_SQLITE_STRINGSCACHE_C
 noscan      = text:xml:graphics:pdf:compressed:resource:audio:video
 description = Classify packages using advanced ranking mechanism
 enabled     = no
+parallel    = no
 
 [redboot]
 type        = program
