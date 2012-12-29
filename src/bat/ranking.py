@@ -56,7 +56,7 @@ stringsdbperlanguage = { 'C':              'BAT_SQLITE_STRINGSCACHE_C'
 ## extract the strings using 'strings' and only consider strings >= 5,
 ## although this should be configurable
 ## Then run it through extractGeneric, that queries the database and does
-## funky statistcs as described in our paper.
+## funky statistics as described in our paper.
 ## Original code (in Perl) was written by Eelco Dolstra.
 ## Reimplementation in Python done by Armijn Hemel.
 def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
@@ -249,6 +249,18 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 			## cleanup the tempfile
 			os.unlink(tmpfile[1])
                 return None
+
+
+## Extract the Java class name, variables and method names from the binary
+def extractJavaNames(scanfile, envvars=None):
+	scanenv = os.environ.copy()
+	if envvars != None:
+		for en in envvars.split(':'):
+			try:
+				(envname, envvalue) = en.split('=')
+				scanenv[envname] = envvalue
+			except Exception, e:
+				pass
 
 ## From dynamically linked ELF files it is possible to extract the dynamic
 ## symbol table. This table lists the functions which are needed from
@@ -724,6 +736,10 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	## packages), assign it to one package.  We do this by picking the
 	## package that would gain the highest score increment across all
 	## strings that are left.  This is repeated until no strings are left.
+	## TODO: this is actually incorrect. When a package is completely copied
+	## into another, bigger, package, the bigger package is actually reported
+	## now. For example: zlib was used, but chromium is reported. Better would
+	## be to look at some metadata about clones.
 	pkgsScorePerString = {}
 	for stri in stringsLeft:
 		pkgsSortedTmp = map(lambda x: {'package': x, 'uniquescore': uniqueScore.get(x, 0)}, stringsLeft[stri]['pkgs'])
