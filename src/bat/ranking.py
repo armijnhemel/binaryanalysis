@@ -252,6 +252,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 
 
 ## Extract the Java class name, variables and method names from the binary
+## For Java class files only at the moment, not for Dalvik
 def extractJavaNames(scanfile, envvars=None):
 	scanenv = os.environ.copy()
 	if envvars != None:
@@ -261,6 +262,34 @@ def extractJavaNames(scanfile, envvars=None):
 				scanenv[envname] = envvalue
 			except Exception, e:
 				pass
+ 	p = subprocess.Popen(['jcf-dump', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		return {}
+	javalines = stanout.split()
+	classname = None
+	sourcefile = None
+	fields = []
+	methods = []
+	for i in javalines:
+		## extract the classname
+		## TODO: deal with inner classes properly
+		if i.startswith("This class: "):
+			if re.match("This class: \d+=([\w$]+), super", i) != None:
+				classname = re.groups()[0]
+		## extract the SourceFile attribute, if available
+		if i.startswith("Attribute \"SourceFile\","):
+			if re.match("Attribute \"SourceFile\", length:\d+, #\d+=\"([\w\.]+)\"", i) != None:
+				sourcefile = re.groups()[0]
+		## extract fields
+		if i.startswith("Field name:\""):
+			if re.match("Field name:\"([\w$]+)\"", i) != None:
+				fields.append(re.groups()[0])
+		## extract methods
+		if i.startswith("Method name:\""):
+			if re.match("Method name:\"([\w$]+)\"", i) != None:
+				methods.append(re.groups()[0])
+	return {}
 
 ## From dynamically linked ELF files it is possible to extract the dynamic
 ## symbol table. This table lists the functions which are needed from
