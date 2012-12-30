@@ -1,3 +1,7 @@
+2012-12-30
+* change name of some databases in ranking code: remove "SQLITE_" to make
+things a bit less verbose.
+
 2012-12-29
 * change default setting for multiprocessing to 'yes'
 

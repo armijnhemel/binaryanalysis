@@ -18,17 +18,17 @@ BAT_RANKING_FULLCACHE :: indication whether or not a full cached database is
                          used, reducing the need to generate it "just in time"
 
 Per language:
-BAT_SQLITE_AVG_$LANGUAGE          :: location of database containing average
-                                     strings in $LANGUAGE per package
-BAT_SQLITE_STRINGSCACHE_$LANGUAGE :: location of database with cached strings
-                                     in $LANGUAGE per package to reduce lookups
+BAT_AVG_$LANGUAGE          :: location of database containing average
+                              strings in $LANGUAGE per package
+BAT_STRINGSCACHE_$LANGUAGE :: location of database with cached strings
+                              in $LANGUAGE per package to reduce lookups
 
 An additional classification method for dynamically linked executables based
 on function names takes an additional parameter:
 
-BAT_SQLITE_FUNCTIONNAME_CACHE     :: location of database containing cached
-                                     function names per package to reduce
-                                     lookups
+BAT_FUNCTIONNAME_CACHE     :: location of database containing cached
+                              function names per package to reduce
+                              lookups
 '''
 
 import string, re, os, os.path, magic, sys, tempfile, shutil, copy
@@ -41,16 +41,16 @@ ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
 ## mapping of names for databases per language
-avgdbperlanguage = { 'C':              'BAT_SQLITE_AVG_C'
-                   , 'Java':           'BAT_SQLITE_AVG_JAVA'
-                   , 'C#':             'BAT_SQLITE_AVG_C#'
-                   , 'ActionScript':   'BAT_SQLITE_AVG_ACTIONSCRIPT'
+avgdbperlanguage = { 'C':              'BAT_AVG_C'
+                   , 'Java':           'BAT_AVG_JAVA'
+                   , 'C#':             'BAT_AVG_C#'
+                   , 'ActionScript':   'BAT_AVG_ACTIONSCRIPT'
                    }
 
-stringsdbperlanguage = { 'C':              'BAT_SQLITE_STRINGSCACHE_C'
-                       , 'Java':           'BAT_SQLITE_STRINGSCACHE_JAVA'
-                       , 'C#':             'BAT_SQLITE_STRINGSCACHE_C#'
-                       , 'ActionScript':   'BAT_SQLITE_STRINGSCACHE_ACTIONSCRIPT'
+stringsdbperlanguage = { 'C':              'BAT_STRINGSCACHE_C'
+                       , 'Java':           'BAT_STRINGSCACHE_JAVA'
+                       , 'C#':             'BAT_STRINGSCACHE_C#'
+                       , 'ActionScript':   'BAT_STRINGSCACHE_ACTIONSCRIPT'
                        }
 
 ## extract the strings using 'strings' and only consider strings >= 5,
@@ -323,7 +323,7 @@ def extractDynamic(scanfile, envvars=None):
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
-	c.execute("attach ? as functionnamecache", (scanenv.get('BAT_SQLITE_FUNCTIONNAME_CACHE', '/tmp/funccache'),))
+	c.execute("attach ? as functionnamecache", (scanenv.get('BAT_FUNCTIONNAME_CACHE', '/tmp/funccache'),))
 	c.execute("create table if not exists functionnamecache.functionnamecache (functionname text, package text)")
 	c.execute("create index if not exists functionnamecache.functionname_index on functionnamecache(functionname)")
 	conn.commit()
