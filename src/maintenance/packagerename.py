@@ -38,6 +38,7 @@ def main(argv):
 	cursor = conn.cursor()
 	for r in renamefiles:
 		renamesha256 = []
+		removesha256 = []
 		cursor.execute('select sha256 from processed_file where package=? and version=?', ((r[0], r[1])))
 		sha256s = cursor.fetchall()
 		for sha256 in sha256s:
@@ -45,11 +46,15 @@ def main(argv):
 			res = cursor.fetchall()
 			if (r[0], r[1]) in res:
 				if (r[2], r[3]) in res:
+					removesha256.append(sha256)
 					continue
 				else:
 					renamesha256.append(sha256)
 		for s in renamesha256:
 			cursor.execute("update processed_file set package=?, version=? where sha256=? and package=? and version=?", (r[2], r[3], s[0], r[0], r[1]))
+		for s in removesha256:
+			cursor.execute("delete from processed_file where sha256=? and package=? and version=?", (s[0], r[0], r[1]))
+		conn.commit()
 		cursor.execute("select * from processed where package=? and version=?", (r[2], r[3]))
 		res = cursor.fetchall()
 		## only when doesn't exist in processed yet
