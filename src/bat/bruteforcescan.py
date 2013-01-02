@@ -607,8 +607,8 @@ def dumpData(unpackreports, leafreports, scans, tempdir):
 				dirlisting = filter(lambda x: x.endswith(f), os.listdir(i['storedir']))
 				for s in sha256spack:
 					copyfiles = copyfiles + filter(lambda x: x.startswith(s), dirlisting)
-					for c in copyfiles:
-						shutil.copy(os.path.join(i['storedir'], c), target)
+			for c in copyfiles:
+				shutil.copy(os.path.join(i['storedir'], c), target)
 		else:
 			## nothing will be dumped if one of the three parameters is missing
 			pass
