@@ -30,8 +30,14 @@ def main(argv):
 	c.execute('''create index if not exists renames_index on renames (originalname)''')
 	c.execute('''create index if not exists renames_index on renames (newname)''')
 
+	## insert some values as examples
+	c.execute('''insert into renames values ('ethereal', 'wireshark')''')
+	c.execute('''insert into renames values ('koffice', 'calligra')''')
+	c.execute('''insert into renames values ('ucd-snmp', 'net-snmp')''')
+	
 	conn.commit()
 	c.close()
+	conn.close()
 
 if __name__ == "__main__":
         main(sys.argv)
