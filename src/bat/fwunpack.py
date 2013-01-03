@@ -1183,8 +1183,15 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, envva
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
+		## determine the type of squashfs magic we have, plus
+		## do some extra sanity checks
+		squashes = filter(lambda x: offset in offsets[x], offsets)
+		if len(squashes) != 1:
+			continue
+		if squashes[0] not in fsmagic.squashtypes:
+			continue
 		tmpdir = dirsetup(tempdir, filename, "squashfs", counter)
-		retval = unpackSquashfsWrapper(filename, offset, tmpdir)
+		retval = unpackSquashfsWrapper(filename, offset, squashes[0], tmpdir)
 		if retval != None:
 			(res, squashsize) = retval
 			diroffsets.append((res, offset, squashsize))
@@ -1247,7 +1254,7 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, envva
 	return (diroffsets, blacklist, [])
 
 ## wrapper around all the different squashfs types
-def unpackSquashfsWrapper(filename, offset, tempdir=None):
+def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 	## since unsquashfs can't deal with data via stdin first write it to
 	## a temporary location
 	tmpdir = unpacksetup(tempdir)
@@ -1256,11 +1263,20 @@ def unpackSquashfsWrapper(filename, offset, tempdir=None):
 
 	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
-	## first try normal Squashfs unpacking
-	retval = unpackSquashfs(tmpfile[1], offset, tmpdir)
-	if retval != None:
-		os.unlink(tmpfile[1])
-		return retval
+	## DD-WRT variant uses special magic
+	if squashtype == 'squashfs5' or squashtype == 'squashfs6':
+		retval = unpackSquashfsDDWRTLZMA(tmpfile[1],offset,tmpdir)
+		if retval != None:
+			os.unlink(tmpfile[1])
+			return retval
+
+	## try normal Squashfs unpacking
+	if squashtype == 'squashfs1' or squashtype == 'squashfs2':
+		retval = unpackSquashfs(tmpfile[1], offset, tmpdir)
+		if retval != None:
+			os.unlink(tmpfile[1])
+			return retval
+
 	## then try other flavours
 	## first SquashFS 4.2
 	retval = unpackSquashfs42(tmpfile[1],offset,tmpdir)
@@ -1270,12 +1286,6 @@ def unpackSquashfsWrapper(filename, offset, tempdir=None):
 
 	## OpenWrt variant
 	retval = unpackSquashfsOpenWrtLZMA(tmpfile[1],offset,tmpdir)
-	if retval != None:
-		os.unlink(tmpfile[1])
-		return retval
-
-	## DD-WRT variant
-	retval = unpackSquashfsDDWRTLZMA(tmpfile[1],offset,tmpdir)
 	if retval != None:
 		os.unlink(tmpfile[1])
 		return retval
