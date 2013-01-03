@@ -1,6 +1,8 @@
 2013-01-03
 * give extra hints to squashfs unpacking, so it is possible to do better
 filtering.
+* don't overwrite picklefile if it already exists. This was causing display
+issues in the GUI, since some information would be lost.
 
 2013-01-02
 * fix loop packing results in ranking.py that potentially has a big

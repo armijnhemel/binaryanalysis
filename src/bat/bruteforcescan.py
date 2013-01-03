@@ -620,21 +620,24 @@ def dumpData(unpackreports, leafreports, scans, tempdir):
 	if not os.path.exists(os.path.join(tempdir, 'filereports')):
 		os.mkdir(os.path.join(tempdir, 'filereports'))
 	for l in leafreports:
-		picklefile = open('%s/filereports/%s-filereport.pickle' % (tempdir,unpackreports[l]['sha256']), 'wb')
-		cPickle.dump(leafreports[l], picklefile)
-		picklefile.close()
-		sys.stdout.flush()
-		if leafreports[l].has_key('ranking'):
-			(res, dynamicRes) = leafreports[l]['ranking']
-			newreports = []
-			for report in res['reports']:
-				## We have: (rank, s, uniqueMatches.get(s,[]), percentage, packageversions.get(s, {}), packagelicenses.get(s, []))
-				## We want: (rank, s, #unique matches, percentage, packageversions, packagelicenses)
-				if type(report[2]) != int:
-					newreports.append((report[0], report[1], len(report[2]), report[3], report[4], report[5]))
-			## we should also replace nonUniqueMatches with {}
-			leafreports[l]['ranking'][0]['nonUniqueMatches'] = {}
-			leafreports[l]['ranking'][0]['reports'] = newreports
+		try:
+			os.stat('%s/filereports/%s-filereport.pickle' % (tempdir,unpackreports[l]['sha256']))
+		except:
+			picklefile = open('%s/filereports/%s-filereport.pickle' % (tempdir,unpackreports[l]['sha256']), 'wb')
+			cPickle.dump(leafreports[l], picklefile)
+			picklefile.close()
+			sys.stdout.flush()
+			if leafreports[l].has_key('ranking'):
+				(res, dynamicRes) = leafreports[l]['ranking']
+				newreports = []
+				for report in res['reports']:
+					## We have: (rank, s, uniqueMatches.get(s,[]), percentage, packageversions.get(s, {}), packagelicenses.get(s, []))
+					## We want: (rank, s, #unique matches, percentage, packageversions, packagelicenses)
+					if type(report[2]) != int:
+						newreports.append((report[0], report[1], len(report[2]), report[3], report[4], report[5]))
+				## we should also replace nonUniqueMatches with {}
+				leafreports[l]['ranking'][0]['nonUniqueMatches'] = {}
+				leafreports[l]['ranking'][0]['reports'] = newreports
 
 	picklefile = open(os.path.join(tempdir, 'scandata.pickle'), 'wb')
 	cPickle.dump((unpackreports, leafreports, scans), picklefile)
@@ -820,5 +823,4 @@ def runscan(tempdir, scans, scan_binary):
 
 		sys.stdout.flush()
 		postrunresults = pool.map(postrunscan, postrunscans, 1)
-
 	return (unpackreports, leafreports)
