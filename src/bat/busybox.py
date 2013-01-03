@@ -105,7 +105,9 @@ def extract_configuration(lines, busybox, bbconfig):
 			else:
 				## search through the original binary until we have an exact match
 				## that is surrounded by NULL characters, which is how the applet
-				## list in BusyBox works
+				## list in BusyBox works.
+				## The risk is that the first hit we find is not in that list, but
+				## is somewhere else in the binary.
 				res = extractor.check_null(lines, offset, i)
 				while res == False:
 					offset = lines.find(i, offset+1)
@@ -119,7 +121,8 @@ def extract_configuration(lines, busybox, bbconfig):
 		## We have a list of applets, plus their offsets. It is expected that
 		## for all applets we found that the offsets we found is in ascending
 		## order. Of course, there might be unknown applets that have been
-		## added in between the names that we do know.
+		## added in between the names that we do know, or the offsets that we
+		## found were actually wrong.
 		low = 0
 		high = len(results2) - 1
 
@@ -251,7 +254,6 @@ def main(argv):
 	parser.add_option("-c", "--config", dest="bbconfigs", help="path to extracted BusyBox configs", metavar="DIR")
 	parser.add_option("-f", "--found", dest="found", action="store_true", help="print applets that can be found (default)")
 	parser.add_option("-m", "--missing", dest="missing", action="store_true", help="print applets that can't be found", metavar=None)
-	parser.add_option("-x", "--xml", dest="xmloutput", action="store_true", help="output in XML (default false)", metavar=None)
 	(options, args) = parser.parse_args()
 	if options.missing == None and options.found == None:
 		options.found = True
