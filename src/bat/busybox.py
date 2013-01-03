@@ -60,7 +60,7 @@ def prettyprint_configuration(configuration, version):
 
 ## Extracting configuration needs a two way pass.
 ## The first pass tries to extract configuration the easy way.
-## If it succeeds the second pass will pretty print the configuration.
+## If it succeeds the configuration can be pretty printed.
 ## If it fails the configuration has to be found the hard way.
 def extract_configuration(lines, busybox, bbconfig):
 	tmpconfig = extract_configuration_pass1(lines, busybox)
@@ -73,6 +73,7 @@ def extract_configuration(lines, busybox, bbconfig):
 
 		## first make sure that everything we have is in alphabetical order
 		tmpconfig.sort()
+		print tmpconfig
 
 		## offset for first appletname we have found earlier, surrounded by NULL characters
 		offset = lines.find("\x00" + tmpconfig[0] + "\x00")
@@ -84,6 +85,17 @@ def extract_configuration(lines, busybox, bbconfig):
 		## split everything, we should have a reasonable config
 		tmp2config = lines[offset+1:offset2 + 1 + len(tmpconfig[-1])].split('\x00')
 		tmp2config = filter(lambda x: x != '', tmp2config)
+		## TODO: sanity check
+		for i in tmpconfig:
+			if i == 'busybox':
+				continue
+			if i == 'ftpgetput':
+				continue
+			if i == 'swap_on_off':
+				continue
+			if not i in tmp2config:
+				## something went wrong, possibly offset that was wrong.
+				pass
 		return tmp2config
 	else:
 		## we don't have a configuration, so we will just have to guess one by inspecting the binary
@@ -287,7 +299,8 @@ def main(argv):
 	try:
 		bbconfig = pickle.load(open('%s/configs/%s-config' % (bbconfigs, version)))
 	except:
-		print >>sys.stderr, "No configuration for %s found" % version
+		print >>sys.stderr, "No configuration for %s found. Exiting." % version
+		sys.exit(1)
 
 	busybox_lines = busybox_binary.read()
 	busybox_binary.close()
