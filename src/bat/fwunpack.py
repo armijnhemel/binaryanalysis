@@ -2001,6 +2001,7 @@ def searchUnpackRar(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 			continue
 		tmpdir = dirsetup(tempdir, filename, "rar", counter)
 		res = unpackRar(filename, offset, tmpdir)
+		## TODO: verify endofarchive and use it for blacklisting
 		if res != None:
 			(endofarchive, rardir) = res
 			diroffsets.append((rardir, offset, 0))
