@@ -73,7 +73,6 @@ def extract_configuration(lines, busybox, bbconfig):
 
 		## first make sure that everything we have is in alphabetical order
 		tmpconfig.sort()
-		print tmpconfig
 
 		## offset for first appletname we have found earlier, surrounded by NULL characters
 		offset = lines.find("\x00" + tmpconfig[0] + "\x00")
