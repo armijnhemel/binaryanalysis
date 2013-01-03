@@ -248,7 +248,7 @@ def extract_version(filename):
 def main(argv):
 	parser = OptionParser()
 	parser.add_option("-b", "--binary", dest="bb", help="path to BusyBox binary", metavar="FILE")
-	parser.add_option("-c", "--config", dest="bbconfigs", help="path to extracted BusyBox configs", metavar="FILE")
+	parser.add_option("-c", "--config", dest="bbconfigs", help="path to extracted BusyBox configs", metavar="DIR")
 	parser.add_option("-f", "--found", dest="found", action="store_true", help="print applets that can be found (default)")
 	parser.add_option("-m", "--missing", dest="missing", action="store_true", help="print applets that can't be found", metavar=None)
 	parser.add_option("-x", "--xml", dest="xmloutput", action="store_true", help="output in XML (default false)", metavar=None)
@@ -275,7 +275,7 @@ def main(argv):
 	## read the location of the BAT configuration, default to /etc/bat
 	if options.bbconfigs != None:
 		try:
-			os.stat(options.bbconfig)
+			os.stat(options.bbconfigs)
 			bbconfigs = options.bbconfigs
 		except:
 			bbconfigs = "/etc/bat"
