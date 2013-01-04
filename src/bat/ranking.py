@@ -517,11 +517,19 @@ def extractGeneric(lines, path, language='C', envvars=None):
 
 	determinelicense = False
 	if scanenv.get('BAT_RANKING_LICENSE', 0) == '1':
-		c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='licenses';")
-		if c.fetchall() != []:
-			determinelicense = True
-		else:
-			determinelicense = False
+		if scanenv.get('BAT_LICENSE_DB') != None:
+			try:
+				licenseconn = sqlite3.connect(scanenv.get('BAT_LICENSE_DB'))
+				licensecursor = licenseconn.cursor()
+				licensecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='licenses';")
+				if licensecursor.fetchall() != []:
+					determinelicense = True
+				else:
+					determinelicense = False
+					licensecursor.close()
+					licenseconn.close()
+			except:
+				pass
 
 	## keep a list of versions per package we found
 	packageversions = {}
@@ -740,15 +748,11 @@ def extractGeneric(lines, path, language='C', envvars=None):
 						pv = []
 						for s in versionsha256s:
 							if not sha256_licenses.has_key(s):
-								c.execute("select distinct license from licenses where sha256=?", (s[0],))
-								licenses = c.fetchall()
+								licensecursor.execute("select distinct license from licenses where sha256=?", (s[0],))
+								licenses = licensecursor.fetchall()
 								if not len(licenses) == 0:
 									sha256_licenses[s] = map(lambda x: x[0], licenses)
-									for v in licenses[0]:
-										## Ninka was not able to determine a license, so
-										## no need reporting it
-										if v == 'NONE':
-											continue
+									for v in map(lambda x: x[0], licenses):
 										pv.append(v)
 						if packagelicenses.has_key(package):
 							packagelicenses[package] = list(set(packagelicenses[package] + pv))
