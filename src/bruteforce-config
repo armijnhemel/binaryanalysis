@@ -652,7 +652,7 @@ type        = program
 module      = bat.ranking
 method      = searchGeneric
 xmloutput   = xmlprettyprint
-envvars     = BAT_AVG_C=/home/armijn/master/avg:BAT_STRINGSCACHE_C=/home/armijn/master/stringscache_c:BAT_SQLITE_DB=/home/armijn/master/master:BAT_FUNCTIONNAME_CACHE=/home/armijn/master/funccache:BAT_RANKING_FULLCACHE=1:BAT_RANKING_LICENSE=1
+envvars     = BAT_AVG_C=/gpl/master/avg_c:BAT_STRINGSCACHE_C=/gpl/master/stringscache_c:BAT_AVG_JAVA=/gpl/master/avg_java:BAT_STRINGSCACHE_JAVA=/gpl/master/stringscache_java:BAT_DB=/gpl/master/master.sqlite3:BAT_FUNCTIONNAME_CACHE=/gpl/master/functioncache_c:BAT_RANKING_FULLCACHE=1:BAT_RANKING_LICENSE=1:BAT_RANKING_VERSION=1:BAT_CLONE_DB=/tmp/clonedb:BAT_LICENSE_DB=/gpl/master/licenses.sqlite3
 noscan      = text:xml:graphics:pdf:compressed:resource:audio:video
 description = Classify packages using advanced ranking mechanism
 enabled     = no
