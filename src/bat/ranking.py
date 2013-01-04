@@ -13,7 +13,7 @@ presented at the Mining Software Repositories 2011 conference.
 
 Configuration parameters for databases are:
 
-BAT_SQLITE_DB         :: location of database containing extracted strings
+BAT_DB                :: location of database containing extracted strings
 BAT_RANKING_FULLCACHE :: indication whether or not a full cached database is
                          used, reducing the need to generate it "just in time"
 
@@ -30,9 +30,11 @@ BAT_FUNCTIONNAME_CACHE     :: location of database containing cached
                               function names per package to reduce
                               lookups
 
-BAT_CLONEDB :: location of database containing information about which packages
-               should be treated as equivalent from a scanning point of view,
-               like renamed packages.
+BAT_CLONE_DB :: location of database containing information about which packages
+                should be treated as equivalent from a scanning point of view,
+                like renamed packages.
+
+BAT_LICENSE_DB :: location of database containing licensing information.
 '''
 
 import string, re, os, os.path, magic, sys, tempfile, shutil, copy
@@ -323,7 +325,7 @@ def extractDynamic(scanfile, envvars=None):
 
 	## open the database containing function names that were extracted
 	## from source code.
-	conn = sqlite3.connect(scanenv.get('BAT_SQLITE_DB', '/tmp/master'))
+	conn = sqlite3.connect(scanenv.get('BAT_DB', '/tmp/master'))
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
@@ -483,7 +485,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 		
 	## open the database containing all the strings that were extracted
 	## from source code.
-	conn = sqlite3.connect(scanenv.get('BAT_SQLITE_DB', '/tmp/master'))
+	conn = sqlite3.connect(scanenv.get('BAT_DB', '/tmp/master'))
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
