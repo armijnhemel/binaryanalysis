@@ -512,6 +512,16 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	totalsize = startsectionheader + sectionheadersize * numbersectionheaders
 	if totalsize == os.stat(filename).st_size:
 		newtags.append("elf")
+	p = subprocess.Popen(['readelf', '-d', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		return newtags
+	## OK, this completely does not work with localised versions
+	## TODO: come up with a method that works with localised versions
+	if stanout.strip() == "There is no dynamic section in this file.":
+		newtags.append("static")
+	else:
+		newtags.append("dynamic")
 	return newtags
 
 ## simple helper method to verify if a file is a valid Java class file
