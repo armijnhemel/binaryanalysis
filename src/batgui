@@ -40,6 +40,7 @@ On the left you will find a tree that can be browsed. Results can be shown by cl
 <li>&#x24b9; : the file is a directory (possibly empty)</li>
 <li>&#x24bc; : the file is a graphics file</li>
 <li>&#x24c7; : the file is a resources file</li>
+<li>&#x24c8; : the file is statically linked</li>
 <li>&#x24c9; : the file only contains text</li>
 <li>&#x272a; : strings were found that could be matched with Open Source software</li>
 </ul>
@@ -698,7 +699,7 @@ class BatFrame(wx.Frame):
 							## give a visual clue to people to tell them that strings could be matched
 							#linktext = u"%s  \u24e7" % linktext
 							linktext = u"%s  \u272a" % linktext
-					tagsentities = {'text': u'\u24c9', 'graphics': u'\u24bc', 'compressed': u'\u24b8', 'resource': u'\u24c7', 'dalvik': u'\u24b6'}
+					tagsentities = {'text': u'\u24c9', 'graphics': u'\u24bc', 'compressed': u'\u24b8', 'resource': u'\u24c7', 'static': u'\u24c8', 'dalvik': u'\u24b6'}
 					if r == 'tags':
 						if list(set(self.leafreports[j]['tags']).intersection(set(self.filters))) != []:
 							ignore = True

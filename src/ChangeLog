@@ -1,8 +1,17 @@
+2013-01-05
+* tag statically linked ELF files and display them in the GUI
+
+2013-01-04
+* rename more databases in ranking.py
+* licenses database now needs to be specified separately
+
 2013-01-03
 * give extra hints to squashfs unpacking, so it is possible to do better
 filtering.
 * don't overwrite picklefile if it already exists. This was causing display
 issues in the GUI, since some information would be lost.
+* add strings of renamed packages together to increase accurace in ranking.
+Uses a new configuration BAT_CLONE_DB
 
 2013-01-02
 * fix loop packing results in ranking.py that potentially has a big
