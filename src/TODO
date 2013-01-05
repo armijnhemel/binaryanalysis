@@ -47,3 +47,4 @@ busybox scanning:
 HTML generation:
 * finish function name reporting
 * clean up/rewrite/make it easier to use
+* add license information if available
