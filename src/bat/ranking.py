@@ -838,7 +838,16 @@ def extractGeneric(lines, path, language='C', envvars=None):
 			## reverse sort close, then best = close_sorted[0][0]
 			close_sorted = map(lambda x: (x, averageStringsPerPkgVersion(x, conn)), close)
 			close_sorted = sorted(close_sorted, key = lambda x: x[1], reverse=True)
-			best = close_sorted[0][0]
+			## If we don't have a unique score *at all* it is likely that everything
+			## is cloned. There could be a few reasons:
+			## 1. there are duplicates in the database due to renaming
+			## 2. package A is completely contained in package B (bundling).
+			## If there are no hits for package B, it is more likely we are
+			## actually seeing package A.
+			if uniqueScore == {}:
+				best = close_sorted[-1][0]
+			else:
+				best = close_sorted[0][0]
 		best_score = 0
 		## for each string in the package with the best gain we add the score
 		## to the package and move on to the next package.

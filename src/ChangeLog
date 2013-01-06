@@ -1,6 +1,11 @@
 2013-01-05
 * tag statically linked ELF files and display them in the GUI
 * tag version 11.0
+* add more examples to clonedbinit.py
+* add a workaround for ranking if we have packages A and B (or more) where A
+is contained in B but we're actually looking at the smaller package A and not
+at the larger package B. If we have no unique hits at all, we will report A,
+instead of B.
 
 2013-01-04
 * rename more databases in ranking.py
