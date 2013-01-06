@@ -51,6 +51,7 @@ def main(argv):
 	c.execute('''insert into renames values ('koffice', 'calligra')''')
 	c.execute('''insert into renames values ('ucd-snmp', 'net-snmp')''')
 	c.execute('''insert into renames values ('iproute', 'iproute2')''')
+	c.execute('''insert into renames values ('gaim', 'pidgin')''')
 	
 	conn.commit()
 	c.close()
