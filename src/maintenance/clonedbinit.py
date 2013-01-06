@@ -54,6 +54,7 @@ def main(argv):
 	c.execute('''insert into renames values ('gaim', 'pidgin')''')
 	c.execute('''insert into renames values ('kdebase-runtime', 'kde-runtime')''')
 	c.execute('''insert into renames values ('kdebase-workspace', 'kde-workspace')''')
+	c.execute('''insert into renames values ('eglibc', 'glibc')''')
 	
 	conn.commit()
 	c.close()
