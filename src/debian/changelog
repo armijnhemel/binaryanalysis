@@ -1,3 +1,11 @@
+bat (11.0) unstable; urgency=high
+
+  * fix file copying bug
+  * fix BusyBox configuration bug
+  * fix unnecessarily overwriting pickle result files bug
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Sun, 06 Dec 2013 17:26:13 +0100
+
 bat (10.0) unstable; urgency=low
 
   * XZ unpacking fixes
