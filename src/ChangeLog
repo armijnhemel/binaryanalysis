@@ -1,5 +1,6 @@
 2013-01-05
 * tag statically linked ELF files and display them in the GUI
+* tag version 11.0
 
 2013-01-04
 * rename more databases in ranking.py
