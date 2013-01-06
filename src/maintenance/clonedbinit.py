@@ -52,6 +52,8 @@ def main(argv):
 	c.execute('''insert into renames values ('ucd-snmp', 'net-snmp')''')
 	c.execute('''insert into renames values ('iproute', 'iproute2')''')
 	c.execute('''insert into renames values ('gaim', 'pidgin')''')
+	c.execute('''insert into renames values ('kdebase-runtime', 'kde-runtime')''')
+	c.execute('''insert into renames values ('kdebase-workspace', 'kde-workspace')''')
 	
 	conn.commit()
 	c.close()
