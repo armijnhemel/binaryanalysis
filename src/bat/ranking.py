@@ -53,8 +53,8 @@ avgdbperlanguage = { 'C':              'BAT_AVG_C'
                    , 'ActionScript':   'BAT_AVG_ACTIONSCRIPT'
                    }
 
-functionameperlanguage = { 'C':        'BAT_FUNCTIONAMECACHE_C'
-                         , 'Java':     'BAT_FUNCTIONAMECACHE_JAVA'
+functionameperlanguage = { 'C':        'BAT_FUNCTIONNAMECACHE_C'
+                         , 'Java':     'BAT_FUNCTIONNAMECACHE_JAVA'
                          }
 
 stringsdbperlanguage = { 'C':              'BAT_STRINGSCACHE_C'
