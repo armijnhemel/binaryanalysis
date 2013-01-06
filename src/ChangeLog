@@ -6,6 +6,8 @@
 is contained in B but we're actually looking at the smaller package A and not
 at the larger package B. If we have no unique hits at all, we will report A,
 instead of B.
+* rename BAT_FUNCTIONNAME_CACHE, to BAT_FUNCTIONNAMECACHE_C, since we want to
+scan for method names for Java too
 
 2013-01-04
 * rename more databases in ranking.py

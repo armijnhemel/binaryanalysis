@@ -53,6 +53,10 @@ avgdbperlanguage = { 'C':              'BAT_AVG_C'
                    , 'ActionScript':   'BAT_AVG_ACTIONSCRIPT'
                    }
 
+functionameperlanguage = { 'C':        'BAT_FUNCTIONAMECACHE_C'
+                         , 'Java':     'BAT_FUNCTIONAMECACHE_JAVA'
+                         }
+
 stringsdbperlanguage = { 'C':              'BAT_STRINGSCACHE_C'
                        , 'Java':           'BAT_STRINGSCACHE_JAVA'
                        , 'C#':             'BAT_STRINGSCACHE_C#'
@@ -329,7 +333,7 @@ def extractDynamic(scanfile, envvars=None):
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
-	c.execute("attach ? as functionnamecache", (scanenv.get('BAT_FUNCTIONNAME_CACHE', '/tmp/funccache'),))
+	c.execute("attach ? as functionnamecache", ((scanenv.get(functionameperlanguage['C'], '/tmp/funccache')),))
 	c.execute("create table if not exists functionnamecache.functionnamecache (functionname text, package text)")
 	c.execute("create index if not exists functionnamecache.functionname_index on functionnamecache(functionname)")
 	conn.commit()
