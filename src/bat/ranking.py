@@ -190,6 +190,8 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 					return None
 				lines = stanout.split("\n")
 		elif language == 'Java':
+			## TODO: get more information from Java binaries
+			#dynamicRes = extractJavaNames(path, "sun", envvars)
 			lines = []
 			## we really should think about whether or not we want to do this per class file,
 			## or per JAR file.
@@ -223,11 +225,14 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 							for ddx in ddxfiles[2]:
 								ddxlines = open("%s/%s" % (ddxfiles[0], ddx)).readlines()
 								for d in ddxlines:
-									reres = re.match("\s+const-string\s+v\d+", d)
-									if reres != None:
-										printstring = d.strip().split(',', 1)[1][1:-1]
-        									if len(printstring) >= stringcutoff:
-											lines.append(printstring)
+									if "const-string" in d:
+										reres = re.match("\s+const-string\s+v\d+", d)
+										if reres != None:
+											printstring = d.strip().split(',', 1)[1][1:-1]
+        										if len(printstring) >= stringcutoff:
+												lines.append(printstring)
+									elif ".method" in d:
+										pass
 					except StopIteration:
 						pass
 				## cleanup
@@ -262,8 +267,44 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 
 
 ## Extract the Java class name, variables and method names from the binary
-## For Java class files only at the moment, not for Dalvik
-def extractJavaNames(scanfile, envvars=None):
+def extractJavaNamesClass(scanfile, envvars=None):
+	classname = None
+	sourcefile = None
+	fields = []
+	methods = []
+
+ 	p = subprocess.Popen(['jcf-dump', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		return {}
+	javalines = stanout.splitlines()
+	for i in javalines:
+		## extract the classname
+		## TODO: deal with inner classes properly
+		if i.startswith("This class: "):
+			res = re.match("This class: ([\w\.$]+), super", i)
+			if res != None:
+				classname = res.groups()[0]
+		## extract the SourceFile attribute, if available
+		if i.startswith("Attribute \"SourceFile\","):
+			res = re.match("Attribute \"SourceFile\", length:\d+, #\d+=\"([\w\.]+)\"", i)
+			if res != None:
+				sourcefile = res.groups()[0]
+		## extract fields
+		if i.startswith("Field name:\""):
+			res = re.match("Field name:\"([\w$]+)\"", i)
+			if res != None:
+				fields.append(res.groups()[0])
+		## extract methods
+		if i.startswith("Method name:\""):
+			res = re.match("Method name:\"([\w$]+)\"", i)
+			if res != None:
+				methods.append(res.groups()[0])
+	return {'class': classname, 'methods': methods, 'fields': fields, 'sourcefile': sourcefile}
+
+## TODO: look up data in database and report
+def extractJavaNames(result, envvars=None):
+	dynamicRes = {}
 	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):
@@ -272,34 +313,23 @@ def extractJavaNames(scanfile, envvars=None):
 				scanenv[envname] = envvalue
 			except Exception, e:
 				pass
- 	p = subprocess.Popen(['jcf-dump', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		return {}
-	javalines = stanout.split()
-	classname = None
-	sourcefile = None
-	fields = []
-	methods = []
-	for i in javalines:
-		## extract the classname
-		## TODO: deal with inner classes properly
-		if i.startswith("This class: "):
-			if re.match("This class: \d+=([\w$]+), super", i) != None:
-				classname = re.groups()[0]
-		## extract the SourceFile attribute, if available
-		if i.startswith("Attribute \"SourceFile\","):
-			if re.match("Attribute \"SourceFile\", length:\d+, #\d+=\"([\w\.]+)\"", i) != None:
-				sourcefile = re.groups()[0]
-		## extract fields
-		if i.startswith("Field name:\""):
-			if re.match("Field name:\"([\w$]+)\"", i) != None:
-				fields.append(re.groups()[0])
-		## extract methods
-		if i.startswith("Method name:\""):
-			if re.match("Method name:\"([\w$]+)\"", i) != None:
-				methods.append(re.groups()[0])
-	return {}
+	return
+	## open the database containing function names that were extracted
+	## from source code.
+	conn = sqlite3.connect(scanenv.get('BAT_DB', '/tmp/master'))
+	conn.text_factory = str
+
+	c = conn.cursor()
+	c.execute("attach ? as functionnamecache", ((scanenv.get(functionameperlanguage['Java'], '/tmp/funccache')),))
+	c.execute("create table if not exists functionnamecache.functionnamecache (functionname text, package text)")
+	c.execute("create index if not exists functionnamecache.functionname_index on functionnamecache(functionname)")
+	conn.commit()
+	rankingfull = False
+	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
+		rankingfull = True
+	c.close()
+	conn.close()
+
 
 ## From dynamically linked ELF files it is possible to extract the dynamic
 ## symbol table. This table lists the functions which are needed from
