@@ -568,17 +568,27 @@ class BatFrame(wx.Frame):
         <td><b>Unique matches</b></td>
         <td><b>Non unique matches assigned</b></td>
         <td><b>Possible licenses</b></td>
+        <td><b>Determined licenses (Ninka &amp; FOSSology report the same)</b></td>
       </tr>\n'''
 
 							for j in stringsres['reports']:
-								if len(j[5]) > 0:
-									if len(j[5]) > 1:
-										licensestring = j[5][0] + reduce(lambda x, y: x + " " + y, j[5][1:], "")
+								determinedlicenses = map(lambda x: x[0], filter(lambda x: x[1] == 'squashed', j[5]))
+								licenses = map(lambda x: x[0], filter(lambda x: x[1] != 'squashed', j[5]))
+								if len(licenses) > 0:
+									if len(licenses) > 1:
+										licensestring = licenses[0] + reduce(lambda x, y: x + " " + y, licenses[1:], "")
 									else:
-										licensestring = j[5][0]
+										licensestring = licenses[0]
 								else:
 									licensestring = ""
-								matchesrows = matchesrows + "    <tr><td>%d</td><td>%s</td><td>%f%%</td><td>%d</td><td>%d</td><td>%s</td></tr>\n" % (j[0], j[1], j[3], j[2], stringsres['nonUniqueAssignments'].get(j[1], 0), licensestring)
+								if len(determinedlicenses) > 0:
+									if len(determinedlicenses) > 1:
+										determinedlicensestring = determinedlicenses[0] + reduce(lambda x, y: x + " " + y, determinedlicenses[1:], "")
+									else:
+										determinedlicensestring = determinedlicenses[0]
+								else:
+									determinedlicensestring = ""
+								matchesrows = matchesrows + "    <tr><td>%d</td><td>%s</td><td>%f%%</td><td>%d</td><td>%d</td><td>%s</td><td>%s</td></tr>\n" % (j[0], j[1], j[3], j[2], stringsres['nonUniqueAssignments'].get(j[1], 0), licensestring, determinedlicensestring)
 								if j[2] != 0:
 									## don't replace %s/% with os.path.join here, since this is valid in HTML
 									versionhtml = versionhtml + "<h5>%s</h5><p><img src=\"%s\"/></p>\n" % (j[1], "%s/%s-%s-version.png" % (self.imagesdir, sha256sum, j[1]))
