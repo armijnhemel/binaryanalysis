@@ -8,6 +8,7 @@ evidence and so this should be reported.
 * don't complain about missing configuration in the GUI when navigating
 'string matches', only when 'unique://' links are clicked and the
 configuration was not loaded.
+* display unmatched strings in the GUI
 
 2013-01-06
 * add a workaround for ranking if we have packages A and B (or more) where A
