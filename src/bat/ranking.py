@@ -657,15 +657,15 @@ def extractGeneric(lines, path, language='C', envvars=None):
 			## and we record it as such and add its length to a score.
 			for result in res:
 				(package, filename) = result
+				## in case we don't know this match yet record it in the database
+				if newmatch and not rankingfull:
+					c.execute('''insert into stringscache.stringscache values (?, ?, ?, ?)''', (line, package, filename, ""))
 				if clonedb != None:
 					pass
 					c.execute("select newname from renames where originalname=? LIMIT 1", (package,))
 					nn = c.fetchone()
 					if nn != None:
 						package = nn[0]
-				## in case we don't know this match yet record it in the database
-				if newmatch and not rankingfull:
-					c.execute('''insert into stringscache.stringscache values (?, ?, ?, ?)''', (line, package, filename, ""))
 				if not pkgs.has_key(package):
 					pkgs[package] = [filename]
 				else:
@@ -685,13 +685,14 @@ def extractGeneric(lines, path, language='C', envvars=None):
 					## same filename that contain line
 					for fn in list(set(pkgs[packagename])):
 						if not filenames.has_key(fn):
-							filenames[fn] = {}
-						filenames[fn][packagename] = 1
+							filenames[fn] = [packagename]
+						else:
+							filenames[fn].append(packagename)
 				## now we can determine the score for the string
 				try:
 					score = len(line) / pow(alpha, (len(filenames) - 1))
 				except Exception, e:
-					## pow(alpha, (len(filenames.keys()) - 1)) is overflowing here
+					## pow(alpha, (len(filenames) - 1)) is overflowing here
 					## so the score would be very close to 0. The largest value
 					## we have is sys.maxint, so use that one. The score will be
 					## small enough...
@@ -702,18 +703,20 @@ def extractGeneric(lines, path, language='C', envvars=None):
 						if not nonUniqueMatches.has_key(packagename):
 							nonUniqueMatches[packagename] = [line]
 						else:
-							nonUniqueMatches[packagename] = nonUniqueMatches[packagename] + [line]
+							nonUniqueMatches[packagename].append(line)
+				else:
+					continue
 				## After having computed a score we determine if the files
 				## we have found the string in are all called the same.
 				## filenames {name of file: { name of package: 1} }
 				for fn in filenames:
-					if len(filenames[fn].values()) == 1:
+					if len(filenames[fn]) == 1:
 						## The filename fn containing the matched string can only
 						## be found in one package.
 						## For example: string 'foobar' is present in 'foo.c' in package 'foo'
 						## and 'bar.c' in package 'bar', but not in 'foo.c' in package 'bar'
 						## or 'bar.c' in foo (if any).
-						fnkey = filenames[fn].keys()[0]
+						fnkey = filenames[fn][0]
 						nonUniqueScore[fnkey] = nonUniqueScore.get(fnkey,0) + score
 					else:
 						## There are multiple packages in which the same
@@ -727,7 +730,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 						## completeness.
 						#if score > 1.0e-200:
 						if score > 1.0e-20:
-							stringsLeft['%s\t%s' % (line, fn)] = {'string': line, 'score': score, 'filename': fn, 'pkgs' : filenames[fn].keys()}
+							stringsLeft['%s\t%s' % (line, fn)] = {'string': line, 'score': score, 'filename': fn, 'pkgs' : filenames[fn]}
 
 			if len(pkgs) == 1:
 				## the string is unique to this package and this package only
