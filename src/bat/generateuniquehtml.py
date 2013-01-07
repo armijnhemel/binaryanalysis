@@ -85,7 +85,7 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 				uniquehtml = "<html><body><h1>Unique matches per package</h1><p><ul>"
 				## first generate a header
 				for h in htmllinks:
-					uniquehtml = uniquehtml + "<li><a href=\"#%s\">%s</a>" % (h[0], h[0])
+					uniquehtml = uniquehtml + "<li><a href=\"#%s\">%s (%d)</a>" % (h[0], h[0], len(h[1]))
 				uniquehtml = uniquehtml + "</ul></p>"
 				for h in htmllinks:
 					uniquehtml = uniquehtml + "<hr><h2><a name=\"%s\" href=\"#%s\">Matches for: %s (%d)</a></h2>" % (h[0], h[0], h[0], len(h[1]))
