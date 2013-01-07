@@ -246,7 +246,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 				## cleanup
 				shutil.rmtree(dalvikdir)
 				javameta['methods'] = list(set(javameta['methods']))
-			#print >>sys.stderr, extractJavaNames(javameta, envvars)
+			dynamicRes = extractJavaNames(javameta, envvars)
 		elif language == 'JavaScipt':
 			## JavaScript can be minified, but using xgettext we
 			## can still extract the strings from it
@@ -314,11 +314,15 @@ def extractJavaNamesClass(scanfile):
 
 ## TODO: look up data in database and report
 def extractJavaNames(javameta, envvars=None):
+	dynamicRes = {}
 	classname = javameta['class']
 	methods = javameta['methods']
 	fields = javameta['fields']
 	sourcefile = javameta['sourcefile']
-	packages = []
+
+	namesmatched = 0
+	uniquematches = 0
+	uniquepackages = {}
 
 	scanenv = os.environ.copy()
 	if envvars != None:
@@ -347,11 +351,20 @@ def extractJavaNames(javameta, envvars=None):
 		res = c.execute("select distinct package from functionnamecache.functionnamecache where functionname=?", (i,)).fetchall()
 		#print >>sys.stderr, len(res), res, i
 		#print >>sys.stderr
+		if len(res) != 0:
+			namesmatched = namesmatched + 1
 		if len(res) == 1:
-			packages.append(res[0][0])
+			uniquematches = uniquematches + 1
 	c.close()
 	conn.close()
-	return packages
+	dynamicRes['namesmatched'] = namesmatched
+	dynamicRes['totalnames'] = len(list(set(methods)))
+
+	## unique matches we found. 
+	if uniquematches != 0:
+		dynamicRes['packages'] = {}
+	#return dynamicRes
+	return {}
 
 
 ## From dynamically linked ELF files it is possible to extract the dynamic
