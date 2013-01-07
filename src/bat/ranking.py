@@ -650,6 +650,8 @@ def extractGeneric(lines, path, language='C', envvars=None):
 			print >>sys.stderr, "\n%d matches found for <(|%s|)> in %s" % (len(res), line, path)
 
 			pkgs = {}    ## {package name: [filenames without path]}
+	
+			filenames = {}
 
 			## For each string we determine in how many packages (without version) the string
 			## is found.
@@ -670,6 +672,10 @@ def extractGeneric(lines, path, language='C', envvars=None):
 					pkgs[package] = [filename]
 				else:
 					pkgs[package].append(filename)
+				if not filenames.has_key(filename):
+					filenames[filename] = [package]
+				else:
+					filenames[filename] = list(set(filenames[filename] + [package]))
 
 			if len(pkgs) != 1:
 				nonUniqueMatchLines.append(line)
@@ -677,17 +683,6 @@ def extractGeneric(lines, path, language='C', envvars=None):
 				## unique to a filename?
 				## This method does assume that files that are named the same
 				## also contain the same or similar content.
-				filenames = {}
-
-				for packagename in pkgs:
-					## packagename = (name of package, [list of filenames with 'line'])
-					## we record in how many different packages we find the
-					## same filename that contain line
-					for fn in list(set(pkgs[packagename])):
-						if not filenames.has_key(fn):
-							filenames[fn] = [packagename]
-						else:
-							filenames[fn].append(packagename)
 				## now we can determine the score for the string
 				try:
 					score = len(line) / pow(alpha, (len(filenames) - 1))
@@ -732,7 +727,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 						if score > 1.0e-20:
 							stringsLeft['%s\t%s' % (line, fn)] = {'string': line, 'score': score, 'filename': fn, 'pkgs' : filenames[fn]}
 
-			if len(pkgs) == 1:
+			else:
 				## the string is unique to this package and this package only
 				uniqueScore[package] = uniqueScore.get(package, 0) + len(line)
 
