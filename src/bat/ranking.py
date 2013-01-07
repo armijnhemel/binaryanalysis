@@ -323,6 +323,7 @@ def extractJavaNames(javameta, envvars=None):
 	namesmatched = 0
 	uniquematches = 0
 	uniquepackages = {}
+	matches = []
 
 	scanenv = os.environ.copy()
 	if envvars != None:
@@ -345,26 +346,55 @@ def extractJavaNames(javameta, envvars=None):
 	rankingfull = False
 	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
 		rankingfull = True
-	for i in methods:
-		if i == 'main':
+	for meth in methods:
+		if meth == 'main':
 			continue
-		res = c.execute("select distinct package from functionnamecache.functionnamecache where functionname=?", (i,)).fetchall()
+		res = c.execute("select distinct package from functionnamecache.functionnamecache where functionname=?", (meth,)).fetchall()
 		#print >>sys.stderr, len(res), res, i
 		#print >>sys.stderr
-		if len(res) != 0:
-			namesmatched = namesmatched + 1
-		if len(res) == 1:
-			uniquematches = uniquematches + 1
-	c.close()
-	conn.close()
+		if res != []:
+			matches.append(meth)
+			namesmatched += 1
+			## unique match
+			if len(res) == 1:
+				uniquematches += 1
+				if uniquepackages.has_key(res[0][0]):
+					uniquepackages[res[0][0]] += [meth]
+				else:
+					uniquepackages[res[0][0]] = [meth]
 	dynamicRes['namesmatched'] = namesmatched
 	dynamicRes['totalnames'] = len(list(set(methods)))
+	dynamicRes['uniquematches'] = uniquematches
 
 	## unique matches we found. 
 	if uniquematches != 0:
 		dynamicRes['packages'] = {}
-	#return dynamicRes
-	return {}
+	## these are the unique function names only
+	for i in uniquepackages:
+		versions = []
+		for p in uniquepackages[i]:
+			pversions = []
+			c.execute('select distinct sha256, language from extracted_function where functionname=?', (p,))
+			res = c.fetchall()
+			for s in res:
+				if s[1] != 'Java':
+					continue
+				c.execute('select distinct package, version from processed_file where sha256=?', (s[0],))
+				packageversions = c.fetchall()
+				for pv in packageversions:
+					## shouldn't happen!
+					if pv[0] != i:
+						continue
+					pversions.append(pv[1])
+			## functions with different signatures might be present in different files.
+			## Since we are ignoring signatures we need to deduplicate here too.
+			versions = versions + list(set(pversions))
+		dynamicRes['packages'][i] = []
+		for v in list(set(versions)):
+			dynamicRes['packages'][i].append((v, versions.count(v)))
+	c.close()
+	conn.close()
+	return dynamicRes
 
 
 ## From dynamically linked ELF files it is possible to extract the dynamic
@@ -468,10 +498,12 @@ def extractDynamic(scanfile, envvars=None):
 		pkgs = []
 		if res == [] and not rankingfull:
 			## we don't have a cache, so we need to create it. This is expensive.
-			c.execute('select sha256 from extracted_function where functionname=?', (funcname,))
+			c.execute('select sha256, language from extracted_function where functionname=?', (funcname,))
 			res2 = c.fetchall()
 			pkgs = []
 			for r in res2:
+				if r[1] != 'C':
+					continue
 				if sha256_packages.has_key(r[0]):
 					pkgs = list(set(pkgs + copy.copy(sha256_packages[r[0]])))
 				else:
