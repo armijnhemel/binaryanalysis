@@ -682,6 +682,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	nonUniqueMatches = {}
 	nonUniqueMatchLines = []
 	nonUniqueAssignments = {}
+	unmatched = []
 
 	scanenv = os.environ.copy()
 	if envvars != None:
@@ -788,24 +789,28 @@ def extractGeneric(lines, path, language='C', envvars=None):
 		res = conn.execute('''select package, filename FROM stringscache.stringscache WHERE programstring=?''', (line,)).fetchall()
 
 		## nothing in the cache
-		if len(res) == 0 and not rankingfull:
-			## do we actually have a result?
-			checkres = conn.execute('''select sha256, language from extracted_file WHERE programstring=? LIMIT 1''', (line,)).fetchall()
-			res = []
-			if len(checkres) == 0:
-				print >>sys.stderr, "no matches found for <(|%s|)> in %s" % (line, path)
-				continue
+		if len(res) == 0:
+			if not rankingfull:
+				## do we actually have a result?
+				checkres = conn.execute('''select sha256, language from extracted_file WHERE programstring=? LIMIT 1''', (line,)).fetchall()
+				res = []
+				if len(checkres) == 0:
+					print >>sys.stderr, "no matches found for <(|%s|)> in %s" % (line, path)
+					unmatched.append(line)
+					continue
+				else:
+					## now fetch *all* sha256 checksums
+					checkres = conn.execute('''select sha256, language from extracted_file WHERE programstring=?''', (line,)).fetchall()
+					checkres = list(set(checkres))
+					for (checksha, checklan) in checkres:
+						if checklan != language:
+							continue
+						else:
+							## overwrite 'res' here
+							res = conn.execute('''select package, filename FROM processed_file p WHERE sha256=?''', (checksha,)).fetchall()
+				newmatch = True
 			else:
-				## now fetch *all* sha256 checksums
-				checkres = conn.execute('''select sha256, language from extracted_file WHERE programstring=?''', (line,)).fetchall()
-				checkres = list(set(checkres))
-				for (checksha, checklan) in checkres:
-					if checklan != language:
-						continue
-					else:
-						## overwrite 'res' here
-						res = conn.execute('''select package, filename FROM processed_file p WHERE sha256=?''', (checksha,)).fetchall()
-			newmatch = True
+				unmatched.append(line)
 		if len(res) != 0:
 			## We are assuming:
 			## * database has no duplicates
@@ -1103,7 +1108,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 		for c in corr_sorted:
 			print >>sys.stderr, s, c, correlation_sort[c]
 	'''
-	return {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments}
+	return {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched}
 
 
 def averageStringsPerPkgVersion(pkg, conn):
