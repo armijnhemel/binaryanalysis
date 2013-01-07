@@ -749,3 +749,15 @@ enabled     = no
 storetarget = reports
 storedir    = /tmp/images
 storetype   = -unique.html.gz
+
+[unmatchedhtml]
+type        = postrun
+module      = bat.generateunmatchedhtml
+method      = generateHTML
+noscan      = text:xml:graphics:pdf:audio:video
+envvars     = BAT_REPORTDIR=/tmp/images
+description = Generate HTML files with unmatched strings for use in GUI
+enabled     = no
+storetarget = reports
+storedir    = /tmp/images
+storetype   = -unmatched.html.gz
