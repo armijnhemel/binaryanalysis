@@ -53,9 +53,9 @@ avgdbperlanguage = { 'C':              'BAT_AVG_C'
                    , 'ActionScript':   'BAT_AVG_ACTIONSCRIPT'
                    }
 
-functionameperlanguage = { 'C':        'BAT_FUNCTIONNAMECACHE_C'
-                         , 'Java':     'BAT_FUNCTIONNAMECACHE_JAVA'
-                         }
+functionnameperlanguage = { 'C':       'BAT_FUNCTIONNAMECACHE_C'
+                          , 'Java':    'BAT_FUNCTIONNAMECACHE_JAVA'
+                          }
 
 stringsdbperlanguage = { 'C':              'BAT_STRINGSCACHE_C'
                        , 'Java':           'BAT_STRINGSCACHE_JAVA'
@@ -191,11 +191,12 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 				lines = stanout.split("\n")
 		elif language == 'Java':
 			## TODO: get more information from Java binaries
-			#dynamicRes = extractJavaNames(path, "sun", envvars)
 			lines = []
 			## we really should think about whether or not we want to do this per class file,
 			## or per JAR file.
         		if "compiled Java" in mstype and blacklist == []:
+				## TODO: integrate extractJavaNamesClass in here
+				javameta = extractJavaNamesClass(path)
 				p = subprocess.Popen(['jcf-dump', '--print-constants', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				if p.returncode != 0:
@@ -214,6 +215,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 				## java -jar ~/Downloads/ddx1.15.jar -d $tmpdir classes.dex
 				## then process each file in $tmpdir and search file for lines containing "const-string"
 				## alternatively, use code from here http://code.google.com/p/smali/
+				javameta = {'class': None, 'methods': [], 'fields': [], 'sourcefile': []}
 				dalvikdir = tempfile.mkdtemp()
 				p = subprocess.Popen(['java', '-jar', '/usr/share/java/bat-ddx.jar', '-d', dalvikdir, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
@@ -232,11 +234,19 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
         										if len(printstring) >= stringcutoff:
 												lines.append(printstring)
 									elif ".method" in d:
-										pass
+										method = (d.split('(')[0]).split(" ")[-1]
+										if method == '<init>' or method == '<clinit>':
+											pass
+										elif method.startswith('access$'):
+											pass
+										else:
+											javameta['methods'].append(method)
 					except StopIteration:
 						pass
 				## cleanup
 				shutil.rmtree(dalvikdir)
+				javameta['methods'] = list(set(javameta['methods']))
+			#print >>sys.stderr, extractJavaNames(javameta, envvars)
 		elif language == 'JavaScipt':
 			## JavaScript can be minified, but using xgettext we
 			## can still extract the strings from it
@@ -267,7 +277,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 
 
 ## Extract the Java class name, variables and method names from the binary
-def extractJavaNamesClass(scanfile, envvars=None):
+def extractJavaNamesClass(scanfile):
 	classname = None
 	sourcefile = None
 	fields = []
@@ -276,7 +286,7 @@ def extractJavaNamesClass(scanfile, envvars=None):
  	p = subprocess.Popen(['jcf-dump', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		return {}
+		return {'class': classname, 'methods': methods, 'fields': fields, 'sourcefile': sourcefile}
 	javalines = stanout.splitlines()
 	for i in javalines:
 		## extract the classname
@@ -300,11 +310,16 @@ def extractJavaNamesClass(scanfile, envvars=None):
 			res = re.match("Method name:\"([\w$]+)\"", i)
 			if res != None:
 				methods.append(res.groups()[0])
-	return {'class': classname, 'methods': methods, 'fields': fields, 'sourcefile': sourcefile}
+	return {'class': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefile': sourcefile}
 
 ## TODO: look up data in database and report
-def extractJavaNames(result, envvars=None):
-	dynamicRes = {}
+def extractJavaNames(javameta, envvars=None):
+	classname = javameta['class']
+	methods = javameta['methods']
+	fields = javameta['fields']
+	sourcefile = javameta['sourcefile']
+	packages = []
+
 	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):
@@ -313,22 +328,30 @@ def extractJavaNames(result, envvars=None):
 				scanenv[envname] = envvalue
 			except Exception, e:
 				pass
-	return
 	## open the database containing function names that were extracted
 	## from source code.
 	conn = sqlite3.connect(scanenv.get('BAT_DB', '/tmp/master'))
 	conn.text_factory = str
 
 	c = conn.cursor()
-	c.execute("attach ? as functionnamecache", ((scanenv.get(functionameperlanguage['Java'], '/tmp/funccache')),))
+	c.execute("attach ? as functionnamecache", ((scanenv.get(functionnameperlanguage['Java'], '/tmp/funccache')),))
 	c.execute("create table if not exists functionnamecache.functionnamecache (functionname text, package text)")
 	c.execute("create index if not exists functionnamecache.functionname_index on functionnamecache(functionname)")
 	conn.commit()
 	rankingfull = False
 	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
 		rankingfull = True
+	for i in methods:
+		if i == 'main':
+			continue
+		res = c.execute("select distinct package from functionnamecache.functionnamecache where functionname=?", (i,)).fetchall()
+		#print >>sys.stderr, len(res), res, i
+		#print >>sys.stderr
+		if len(res) == 1:
+			packages.append(res[0][0])
 	c.close()
 	conn.close()
+	return packages
 
 
 ## From dynamically linked ELF files it is possible to extract the dynamic
@@ -363,7 +386,7 @@ def extractDynamic(scanfile, envvars=None):
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
-	c.execute("attach ? as functionnamecache", ((scanenv.get(functionameperlanguage['C'], '/tmp/funccache')),))
+	c.execute("attach ? as functionnamecache", ((scanenv.get(functionnameperlanguage['C'], '/tmp/funccache')),))
 	c.execute("create table if not exists functionnamecache.functionnamecache (functionname text, package text)")
 	c.execute("create index if not exists functionnamecache.functionname_index on functionnamecache(functionname)")
 	conn.commit()
