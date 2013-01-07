@@ -314,6 +314,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 				## cleanup
 				shutil.rmtree(dalvikdir)
 				javameta['methods'] = list(set(javameta['methods']))
+			#extractVariablesJava(javameta, envvars)
 			dynamicRes = extractJavaNames(javameta, envvars)
 		elif language == 'JavaScipt':
 			## JavaScript can be minified, but using xgettext we
@@ -380,7 +381,6 @@ def extractJavaNamesClass(scanfile):
 				methods.append(res.groups()[0])
 	return {'class': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefile': sourcefile}
 
-## TODO: look up data in database and report
 def extractJavaNames(javameta, envvars=None):
 	dynamicRes = {}
 	classname = javameta['class']
@@ -464,6 +464,43 @@ def extractJavaNames(javameta, envvars=None):
 	conn.close()
 	return dynamicRes
 
+## stub for extracting variables from Java programs
+def extractVariablesJava(javameta, envvars=None):
+	fields = javameta['fields']
+	scanenv = os.environ.copy()
+	if envvars != None:
+		for en in envvars.split(':'):
+			try:
+				(envname, envvalue) = en.split('=')
+				scanenv[envname] = envvalue
+			except Exception, e:
+				pass
+	## open the database containing function names that were extracted
+	## from source code.
+	conn = sqlite3.connect(scanenv.get('BAT_DB', '/tmp/master'))
+	## we have byte strings in our database, not utf-8 characters...I hope
+	conn.text_factory = str
+	c = conn.cursor()
+	rankingfull = False
+	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
+		rankingfull = True
+	for f in fields:
+		pvs = []
+		res = c.execute("select sha256,type,language from extracted_name where name=?", (f,)).fetchall()
+		for r in res:
+			if r[2] != 'Java':
+				continue
+			pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
+			pvs = pvs + pv
+		pvs = list(set(pvs))
+		'''
+		pvs = list(set(map(lambda x: x[0], pvs)))
+		pvs.sort()
+		print >>sys.stderr, pvs
+		print >>sys.stderr
+		'''
+	c.close()
+	conn.close()
 
 ## From dynamically linked ELF files it is possible to extract the dynamic
 ## symbol table. This table lists the functions which are needed from
@@ -623,6 +660,8 @@ def extractDynamic(scanfile, envvars=None):
 		dynamicRes['packages'][i] = []
 		for v in list(set(versions)):
 			dynamicRes['packages'][i].append((v, versions.count(v)))
+	c.close()
+	conn.close()
 	if namesmatched != 0:
 		return dynamicRes
 	else:
