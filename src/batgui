@@ -794,7 +794,7 @@ class BatFrame(wx.Frame):
 			self.advanced = True
 			if self.advancedunpacked == False and self.tarfile != None:
 				try:
-					tar = tarfile.open(self.tarfile)
+					tar = tarfile.open(self.tarfile, 'r:gz')
 					members = []
 					## only unpack certain files and directories
 					members = members + filter(lambda x: x.name.startswith('images') and len(os.path.basename(x.name)) == 68, self.tarmembers)
@@ -917,7 +917,7 @@ class BatFrame(wx.Frame):
 			self.tmpdir = tempfile.mkdtemp()
 			try:
 				self.tarfile = dlg.GetPath()
-				tar = tarfile.open(self.tarfile)
+				tar = tarfile.open(self.tarfile, 'r:gz')
 				self.tarmembers = tar.getmembers()
 				members = []
 				for i in ['scandata.pickle']:
