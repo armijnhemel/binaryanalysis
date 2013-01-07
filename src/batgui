@@ -567,20 +567,32 @@ class BatFrame(wx.Frame):
         <td><b>Percentage</b></td>
         <td><b>Unique matches</b></td>
         <td><b>Non unique matches assigned</b></td>
-        <td><b>Possible licenses</b></td>
+        <td><b>Licenses (Ninka)</b></td>
+        <td><b>Licenses (FOSSology)</b></td>
         <td><b>Determined licenses (Ninka &amp; FOSSology report the same)</b></td>
       </tr>\n'''
 
 							for j in stringsres['reports']:
 								determinedlicenses = map(lambda x: x[0], filter(lambda x: x[1] == 'squashed', j[5]))
-								licenses = map(lambda x: x[0], filter(lambda x: x[1] != 'squashed', j[5]))
-								if len(licenses) > 0:
-									if len(licenses) > 1:
-										licensestring = licenses[0] + reduce(lambda x, y: x + " " + y, licenses[1:], "")
+								ninkalicenses = map(lambda x: x[0], filter(lambda x: x[1] == 'ninka', j[5]))
+								fossologylicenses = map(lambda x: x[0], filter(lambda x: x[1] == 'fossology', j[5]))
+								determinedlicenses.sort()
+								ninkalicenses.sort()
+								fossologylicenses.sort()
+								if len(ninkalicenses) > 0:
+									if len(ninkalicenses) > 1:
+										ninkalicensestring = ninkalicenses[0] + reduce(lambda x, y: x + " " + y, ninkalicenses[1:], "")
 									else:
-										licensestring = licenses[0]
+										ninkalicensestring = ninkalicenses[0]
 								else:
-									licensestring = ""
+									ninkalicensestring = ""
+								if len(fossologylicenses) > 0:
+									if len(fossologylicenses) > 1:
+										fossologylicensestring = fossologylicenses[0] + reduce(lambda x, y: x + " " + y, fossologylicenses[1:], "")
+									else:
+										fossologylicensestring = fossologylicenses[0]
+								else:
+									fossologylicensestring = ""
 								if len(determinedlicenses) > 0:
 									if len(determinedlicenses) > 1:
 										determinedlicensestring = determinedlicenses[0] + reduce(lambda x, y: x + " " + y, determinedlicenses[1:], "")
@@ -588,7 +600,7 @@ class BatFrame(wx.Frame):
 										determinedlicensestring = determinedlicenses[0]
 								else:
 									determinedlicensestring = ""
-								matchesrows = matchesrows + "    <tr><td>%d</td><td>%s</td><td>%f%%</td><td>%d</td><td>%d</td><td>%s</td><td>%s</td></tr>\n" % (j[0], j[1], j[3], j[2], stringsres['nonUniqueAssignments'].get(j[1], 0), licensestring, determinedlicensestring)
+								matchesrows = matchesrows + "    <tr><td>%d</td><td>%s</td><td>%f%%</td><td>%d</td><td>%d</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (j[0], j[1], j[3], j[2], stringsres['nonUniqueAssignments'].get(j[1], 0), ninkalicensestring, fossologylicensestring, determinedlicensestring)
 								if j[2] != 0:
 									## don't replace %s/% with os.path.join here, since this is valid in HTML
 									versionhtml = versionhtml + "<h5>%s</h5><p><img src=\"%s\"/></p>\n" % (j[1], "%s/%s-%s-version.png" % (self.imagesdir, sha256sum, j[1]))
