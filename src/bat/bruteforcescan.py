@@ -648,7 +648,7 @@ def dumpData(unpackreports, leafreports, scans, tempdir):
 ## speed up extraction of data in the GUI.
 def writeDumpfile(unpackreports, leafreports, scans, outputfile, tempdir, lite=False):
 	dumpData(unpackreports, leafreports, scans, tempdir)
-	dumpfile = tarfile.TarFile(outputfile, 'w')
+	dumpfile = tarfile.open(outputfile, 'w:gz')
 	os.chdir(tempdir)
 	dumpfile.add('scandata.pickle')
 	if not lite:

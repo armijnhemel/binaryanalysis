@@ -1,5 +1,6 @@
 2013-01-07
 * extract and report function names for Java class files and Dalvik dex files.
+* write reports as gzip compressed tar instead of uncompressed tar
 
 2013-01-06
 * workaround for some cases of package embedding where ranking would not find
