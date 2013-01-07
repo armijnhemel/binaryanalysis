@@ -63,6 +63,33 @@ stringsdbperlanguage = { 'C':              'BAT_STRINGSCACHE_C'
                        , 'ActionScript':   'BAT_STRINGSCACHE_ACTIONSCRIPT'
                        }
 
+fossology_to_ninka = { 'No_license_found': 'NONE'
+                     , 'GPL_v2+': 'GPLv2+'
+                     , 'GPL_v2': 'GPLv2'
+                     , 'GPL_v1': 'GPLv1'
+                     , 'QPL_v1.0': 'QTv1'
+                     , 'Apache_v2.0': 'Apachev2'
+                     , 'Apache_v1.1': 'Apachev1.1'
+                     }
+
+## The scanners that are used in BAT are Ninka and FOSSology. These scanners
+## don't always agree on output.
+def squashlicenses(licenses):
+	## licenses: [(license, scanner)]
+	if len(licenses) != 2:
+		return licenses
+	if licenses[0][1] == 'ninka':
+		if fossology_to_ninka.has_key(licenses[1][0]):
+			if fossology_to_ninka[licenses[1][0]] == licenses[0][0]:
+				licenses = [(licenses[0][0], 'squashed')]
+		else:
+			status = "difference"
+	elif licenses[1][1] == 'ninka':
+		if fossology_to_ninka.has_key(licenses[0][0]):
+			if fossology_to_ninka[licenses[0][0]] == licenses[1][0]:
+				licenses = [(licenses[0][0], 'squashed')]
+	return licenses
+
 ## extract the strings using 'strings' and only consider strings >= 5,
 ## although this should be configurable
 ## Then run it through extractGeneric, that queries the database and does
@@ -813,13 +840,11 @@ def extractGeneric(lines, path, language='C', envvars=None):
 				## determinelicense should *always* imply determineversion
 				if determineversion or determinelicense:
 					c.execute("select distinct sha256, linenumber, language from extracted_file where programstring=?", (line,))
-					versionsha256s = c.fetchall()
+					versionsha256s = filter(lambda x: x[2] == language, c.fetchall())
 
 					pv = {}
 					line_sha256_version = []
 					for s in versionsha256s:
-						if s[2] != language:
-							continue
 						if not sha256_versions.has_key(s[0]):
 							c.execute("select distinct version, package, filename from processed_file where sha256=?", (s[0],))
 							versions = c.fetchall()
@@ -848,12 +873,14 @@ def extractGeneric(lines, path, language='C', envvars=None):
 						pv = []
 						for s in versionsha256s:
 							if not sha256_licenses.has_key(s):
-								licensecursor.execute("select distinct license from licenses where sha256=?", (s[0],))
+								licensecursor.execute("select distinct license, scanner from licenses where sha256=?", (s[0],))
 								licenses = licensecursor.fetchall()
 								if not len(licenses) == 0:
+									licenses = squashlicenses(licenses)
 									sha256_licenses[s] = map(lambda x: x[0], licenses)
-									for v in map(lambda x: x[0], licenses):
-										pv.append(v)
+									pv = pv + licenses
+									#for v in map(lambda x: x[0], licenses):
+									#	pv.append(v)
 						if packagelicenses.has_key(package):
 							packagelicenses[package] = list(set(packagelicenses[package] + pv))
 						else:
@@ -1099,7 +1126,7 @@ def xmlprettyprint(matchres, root, envvars=None):
 			for v in packagelicenses:
 				licensenode = root.createElement('license')
 				tmpnodetext = xml.dom.minidom.Text()
-				tmpnodetext.data = str(v)
+				tmpnodetext.data = str(v[0])
 				licensenode.appendChild(tmpnodetext)
 				licensesnode.appendChild(licensenode)
 			packagenode.appendChild(licensesnode)
