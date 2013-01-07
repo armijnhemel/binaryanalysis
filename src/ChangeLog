@@ -3,8 +3,11 @@
 * write reports as gzip compressed tar instead of uncompressed tar
 * squash licenses: if Ninka and FOSSology agree we have a lot stronger
 evidence and so this should be reported.
-* report Ninka and FOSSology licenses separately i the GUI
+* report Ninka and FOSSology licenses separately in the GUI
 * record unmatched strings for later reporting
+* don't complain about missing configuration in the GUI when navigating
+'string matches', only when 'unique://' links are clicked and the
+configuration was not loaded.
 
 2013-01-06
 * add a workaround for ranking if we have packages A and B (or more) where A
