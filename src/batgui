@@ -143,12 +143,12 @@ class BATHtmlWindow(wx.html.HtmlWindow):
 	def setHtmlDir(self, htmldir):
 		self.htmldir = htmldir
 	def OnLinkClicked(self, link):
-		if self.htmldir == None:
-			self.target.SetPage("<html><body><h1>Configuration not complete</h1><p>htmldir not defined. Please supply a configuration file via the menu, or restart with a configuration file.</p></body></html>")
-			self.target.Refresh(True)
-			return
 		href = link.GetHref()
 		if href.startswith('unique:/'):
+			if self.htmldir == None:
+				self.target.SetPage("<html><body><h1>Configuration not complete</h1><p>htmldir not defined. Please supply a configuration file via the menu, or restart with a configuration file.</p></body></html>")
+				self.target.Refresh(True)
+				return
 			(linksha256sum, linenumber) = href[8:].split('#')
 			pphtml = bz2.BZ2File("%s/%s/%s/%s/%s.html.bz2" % (self.htmldir, linksha256sum[0], linksha256sum[1], linksha256sum[2], linksha256sum), 'r')
 			htmlcontent = pphtml.read()
