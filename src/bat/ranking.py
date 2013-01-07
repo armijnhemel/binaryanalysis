@@ -820,10 +820,6 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	## packages), assign it to one package.  We do this by picking the
 	## package that would gain the highest score increment across all
 	## strings that are left.  This is repeated until no strings are left.
-	## TODO: this is actually incorrect. When a package is completely copied
-	## into another, bigger, package, the bigger package is actually reported
-	## now. For example: zlib was used, but chromium is reported. Better would
-	## be to look at some metadata about clones.
 	pkgsScorePerString = {}
 	for stri in stringsLeft:
 		pkgsSortedTmp = map(lambda x: {'package': x, 'uniquescore': uniqueScore.get(x, 0)}, stringsLeft[stri]['pkgs'])
