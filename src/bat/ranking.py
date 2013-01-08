@@ -279,9 +279,9 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
         					if len(printstring) >= stringcutoff:
 							lines.append(printstring)
 			elif "Dalvik dex" in mstype and blacklist == []:
-				## Using dedexer http://dedexer.sourceforge.net/ we can extract string constants from Dalvik files
-				## java -jar ~/Downloads/ddx1.15.jar -d $tmpdir classes.dex
-				## then process each file in $tmpdir and search file for lines containing "const-string"
+				## Using dedexer http://dedexer.sourceforge.net/ we can extract information from Dalvik
+				## files then process each file in $tmpdir and search file for lines containing
+				## "const-string" and other things as well.
 				## alternatively, use code from here http://code.google.com/p/smali/
 				javameta = {'classes': [], 'methods': [], 'fields': [], 'sourcefiles': []}
 				classnames = []
@@ -298,12 +298,14 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 							for ddx in ddxfiles[2]:
 								ddxlines = open("%s/%s" % (ddxfiles[0], ddx)).readlines()
 								for d in ddxlines:
+									## search for string constants
 									if "const-string" in d:
 										reres = re.match("\s+const-string\s+v\d+", d)
 										if reres != None:
 											printstring = d.strip().split(',', 1)[1][1:-1]
         										if len(printstring) >= stringcutoff:
 												lines.append(printstring)
+									## extract method names
 									elif d.startswith(".method"):
 										method = (d.split('(')[0]).split(" ")[-1]
 										if method == '<init>' or method == '<clinit>':
@@ -312,11 +314,13 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 											pass
 										else:
 											methods.append(method)
+									## extract class files, including inner classes
 									elif d.startswith(".class") or d.startswith(".inner"):
 										classname = d.strip().split('/')[-1]
 										if "$" in classname:
 											classname = classname.split("$")[0]
 										classnames.append(classname)
+									## extract source code files
 									elif d.startswith(".source"):
 										sourcefile = d.strip().split(' ')[-1]
 										sourcefiles.append(sourcefile)
@@ -566,7 +570,6 @@ def extractVariablesJava(javameta, envvars=None):
 ## external libraries, but also lists local functions.
 ## By searching a database that contain which function names can be found in
 ## which packages.
-## TODO: report which function names were matched.
 def extractDynamic(scanfile, envvars=None):
 	dynamicRes = {}
 	scanenv = os.environ.copy()
@@ -604,12 +607,16 @@ def extractDynamic(scanfile, envvars=None):
 	## keep a list of versions per sha256, since source files often contain more than one line
 	scanstr = []
 	mangles = []
+	variables = []
 	for i in st[3:]:
 		dynstr = i.split()
 		if dynstr[6] == 'UND':
 			continue
 		if dynstr[3] != 'FUNC':
-			continue
+			if dynstr[3] == 'OBJECT':
+				if dynstr[4] == 'WEAK':
+					continue
+				variables.append(dynstr[7])
 		## every program has 'main', so skip
 		if dynstr[7] == 'main':
 			continue
