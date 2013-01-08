@@ -202,6 +202,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 				dynres = extractDynamic(path, envvars)
 				if dynres != None:
 					(dynamicRes,variablepvs) = dynres
+					variablepvs['language'] = 'C'
 				datafile = open(path, 'rb')
 				data = datafile.read()
 				datafile.close()
@@ -355,6 +356,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 				## cleanup
 				shutil.rmtree(dalvikdir)
 			variablepvs = extractVariablesJava(javameta, envvars)
+			variablepvs['language'] = 'Java'
 			dynamicRes = extractJavaNames(javameta, envvars)
 		elif language == 'JavaScipt':
 			## JavaScript can be minified, but using xgettext we
@@ -504,7 +506,6 @@ def extractJavaNames(javameta, envvars=None):
 	conn.close()
 	return dynamicRes
 
-## stub for extracting variables from Java programs
 def extractVariablesJava(javameta, envvars=None):
 	variablepvs = {}
 	fields = javameta['fields']
@@ -591,7 +592,6 @@ def extractVariablesJava(javameta, envvars=None):
 	variablepvs['fields'] = fieldspvs
 	variablepvs['sources'] = sourcepvs
 	variablepvs['classes'] = classpvs
-	variablepvs['language'] = 'Java'
 	c.close()
 	conn.close()
 	return variablepvs
@@ -781,7 +781,6 @@ def extractDynamic(scanfile, envvars=None):
 					pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
 					pvs = list(set(pvs + pv))
 			variablepvs[v] = pvs
-	variablepvs['language'] = 'C'
 	c.close()
 	conn.close()
 	return (dynamicRes, variablepvs)
