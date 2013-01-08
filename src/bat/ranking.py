@@ -283,8 +283,10 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 				## java -jar ~/Downloads/ddx1.15.jar -d $tmpdir classes.dex
 				## then process each file in $tmpdir and search file for lines containing "const-string"
 				## alternatively, use code from here http://code.google.com/p/smali/
-				javameta = {'class': [], 'methods': [], 'fields': [], 'sourcefile': []}
+				javameta = {'classes': [], 'methods': [], 'fields': [], 'sourcefiles': []}
 				classnames = []
+				sourcefiles = []
+				methods = []
 				dalvikdir = tempfile.mkdtemp()
 				p = subprocess.Popen(['java', '-jar', '/usr/share/java/bat-ddx.jar', '-d', dalvikdir, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
@@ -309,18 +311,23 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 										elif method.startswith('access$'):
 											pass
 										else:
-											javameta['methods'].append(method)
+											methods.append(method)
 									elif d.startswith(".class") or d.startswith(".inner"):
 										classname = d.strip().split('/')[-1]
 										if "$" in classname:
 											classname = classname.split("$")[0]
 										classnames.append(classname)
+									elif d.startswith(".source"):
+										sourcefile = d.strip().split(' ')[-1]
+										sourcefiles.append(sourcefile)
 					except StopIteration:
 						pass
-					javameta['class'] = list(set(classnames))
+				javameta['classes'] = list(set(classnames))
+				javameta['sourcefiles'] = list(set(sourcefiles))
+				javameta['methods'] = list(set(methods))
+
 				## cleanup
 				shutil.rmtree(dalvikdir)
-				javameta['methods'] = list(set(javameta['methods']))
 			#extractVariablesJava(javameta, envvars)
 			dynamicRes = extractJavaNames(javameta, envvars)
 		elif language == 'JavaScipt':
@@ -362,7 +369,7 @@ def extractJavaNamesClass(scanfile):
  	p = subprocess.Popen(['jcf-dump', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		return {'class': classname, 'methods': methods, 'fields': fields, 'sourcefile': []}
+		return {'classes': classname, 'methods': methods, 'fields': fields, 'sourcefiles': []}
 	javalines = stanout.splitlines()
 	for i in javalines:
 		## extract the classname
@@ -386,14 +393,14 @@ def extractJavaNamesClass(scanfile):
 			res = re.match("Method name:\"([\w$]+)\"", i)
 			if res != None:
 				methods.append(res.groups()[0])
-	return {'class': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefile': sourcefile}
+	return {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile}
 
 def extractJavaNames(javameta, envvars=None):
 	dynamicRes = {}
-	classname = javameta['class']
+	classname = javameta['classes']
 	methods = javameta['methods']
 	fields = javameta['fields']
-	sourcefile = javameta['sourcefile']
+	sourcefile = javameta['sourcefiles']
 
 	namesmatched = 0
 	uniquematches = 0
@@ -473,6 +480,7 @@ def extractJavaNames(javameta, envvars=None):
 
 ## stub for extracting variables from Java programs
 def extractVariablesJava(javameta, envvars=None):
+	#print >>sys.stderr, javameta
 	fields = javameta['fields']
 	scanenv = os.environ.copy()
 	if envvars != None:
@@ -491,9 +499,9 @@ def extractVariablesJava(javameta, envvars=None):
 	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
 		rankingfull = True
 	classpvs = {}
-	sourcepvs = []
-	if javameta.has_key('class'):
-		for i in javameta['class']:
+	sourcepvs = {}
+	if javameta.has_key('classes'):
+		for i in javameta['classes']:
 			pvs = []
 			## first try the name as found in the binary. If it can't
 			## be found and has dots in it we should split it on '.' and
@@ -512,7 +520,26 @@ def extractVariablesJava(javameta, envvars=None):
 					pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
 					pvs = pvs + pv
 			classpvs[classname] = list(set(pvs))
-	#print >>sys.stderr, "SOURCE", sourcepvs
+	if javameta.has_key('sourcefiles'):
+		for i in javameta['sourcefiles']:
+			pvs = []
+			## first try the name as found in the binary. If it can't
+			## be found and has dots in it we should split it on '.' and
+			## use the last component only.
+			if i.endswith('.java'):
+				classname = i[0:-5]
+			else:
+				classname = i
+			res = c.execute("select sha256,type,language from extracted_name where name=?", (classname,)).fetchall()
+			if res != []:
+				for r in res:
+					if r[2] != 'Java':
+						continue
+					if r[1] != 'class':
+						continue
+					pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
+					pvs = pvs + pv
+			sourcepvs[classname] = list(set(pvs))
 	fieldspvs = {}
 	for f in fields:
 		pvs = []
