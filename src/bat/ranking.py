@@ -198,7 +198,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 			## constants :-(
 
         		if "ELF" in mstype and blacklist == []:
-				dynamicRes = extractDynamic(path, envvars)
+				(dynamicRes,variablepvs) = extractDynamic(path, envvars)
 				datafile = open(path, 'rb')
 				data = datafile.read()
 				datafile.close()
@@ -572,6 +572,7 @@ def extractVariablesJava(javameta, envvars=None):
 ## which packages.
 def extractDynamic(scanfile, envvars=None):
 	dynamicRes = {}
+	variablepvs = {}
 	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):
@@ -583,12 +584,12 @@ def extractDynamic(scanfile, envvars=None):
  	p = subprocess.Popen(['readelf', '-W', '--dyn-syms', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		return dynamicRes
+		return (dynamicRes, variablepvs)
 
 	st = stanout.strip().split("\n")
 
 	if st == '':
-		return dynamicRes
+		return (dynamicRes, variablepvs)
 
 	## open the database containing function names that were extracted
 	## from source code.
@@ -610,6 +611,8 @@ def extractDynamic(scanfile, envvars=None):
 	variables = []
 	for i in st[3:]:
 		dynstr = i.split()
+		if '@' in dynstr[7]:
+			continue
 		if dynstr[6] == 'UND':
 			continue
 		if dynstr[3] != 'FUNC':
@@ -726,12 +729,28 @@ def extractDynamic(scanfile, envvars=None):
 		dynamicRes['packages'][i] = []
 		for v in list(set(versions)):
 			dynamicRes['packages'][i].append((v, versions.count(v)))
+	## now scan variables, but only if we have a table "extracted_names"
+	variable_scan = False
+	res = c.execute("select * from sqlite_master where type='table' and name='extracted_name'").fetchall()
+	if res != []:
+		variable_scan = True
+
+	if variable_scan:
+		for v in variables:
+			pvs = []
+			res = c.execute("select sha256,type,language from extracted_name where name=?", (v,)).fetchall()
+			if res != []:
+				for r in res:
+					if r[2] != 'C':
+						continue
+					if r[1] != 'variable':
+						continue
+					pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
+					pvs = list(set(pvs + pv))
+			variablepvs[v] = pvs
 	c.close()
 	conn.close()
-	if namesmatched != 0:
-		return dynamicRes
-	else:
-		return {}
+	return (dynamicRes, variablepvs)
 
 ## Look up strings in the database and determine which packages/versions/licenses were used
 def extractGeneric(lines, path, language='C', envvars=None):
