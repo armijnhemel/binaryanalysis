@@ -769,6 +769,7 @@ def extractDynamic(scanfile, envvars=None):
 		variable_scan = True
 
 	if variable_scan:
+		vvs = {}
 		for v in variables:
 			pvs = []
 			res = c.execute("select sha256,type,language from extracted_name where name=?", (v,)).fetchall()
@@ -780,7 +781,8 @@ def extractDynamic(scanfile, envvars=None):
 						continue
 					pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
 					pvs = list(set(pvs + pv))
-			variablepvs[v] = pvs
+			vvs[v] = pvs
+		variablepvs['variables'] = vvs
 	c.close()
 	conn.close()
 	return (dynamicRes, variablepvs)
