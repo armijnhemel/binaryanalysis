@@ -290,6 +290,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 				classnames = []
 				sourcefiles = []
 				methods = []
+				fields = []
 				dalvikdir = tempfile.mkdtemp()
 				p = subprocess.Popen(['java', '-jar', '/usr/share/java/bat-ddx.jar', '-d', dalvikdir, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
@@ -327,11 +328,29 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 									elif d.startswith(".source"):
 										sourcefile = d.strip().split(' ')[-1]
 										sourcefiles.append(sourcefile)
+									## extract fields
+									elif d.startswith(".field"):
+										field = d.strip().split(';')[0]
+										fieldstmp = field.split()
+										ctr = 1
+										for f in fieldstmp[1:]:
+											## these are keywords
+											if f in ['public', 'private', 'protected', 'static', 'final', 'volatile', 'transient']:
+												ctr = ctr + 1
+												continue
+											if '$' in f:
+												break
+											## often generated, so useless
+											if "serialVersionUID" in f:
+												break
+											fields.append(f)
+											break
 					except StopIteration:
 						pass
 				javameta['classes'] = list(set(classnames))
 				javameta['sourcefiles'] = list(set(sourcefiles))
 				javameta['methods'] = list(set(methods))
+				javameta['fields'] = list(set(fields))
 
 				## cleanup
 				shutil.rmtree(dalvikdir)
@@ -487,7 +506,7 @@ def extractJavaNames(javameta, envvars=None):
 
 ## stub for extracting variables from Java programs
 def extractVariablesJava(javameta, envvars=None):
-	#print >>sys.stderr, javameta
+	variablepvs = {}
 	fields = javameta['fields']
 	scanenv = os.environ.copy()
 	if envvars != None:
@@ -507,6 +526,7 @@ def extractVariablesJava(javameta, envvars=None):
 		rankingfull = True
 	classpvs = {}
 	sourcepvs = {}
+	fieldspvs = {}
 	if javameta.has_key('classes'):
 		for i in javameta['classes']:
 			pvs = []
@@ -547,26 +567,34 @@ def extractVariablesJava(javameta, envvars=None):
 					pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
 					pvs = pvs + pv
 			sourcepvs[classname] = list(set(pvs))
-	fieldspvs = {}
+	## Keep a list of which sha256s we've already seen. Since the files are
+	## likely only coming from a few packages we don't need to hit the database
+	## that often.
+	## This can be really slow, so we should perhaps use some caching database.
+	sha256cache = {}
 	for f in fields:
 		pvs = []
 		res = c.execute("select sha256,type,language from extracted_name where name=?", (f,)).fetchall()
-		for r in res:
+		for r in list(set(res)):
 			if r[2] != 'Java':
 				continue
 			if r[1] != 'field':
 				continue
-			pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
-			pvs = pvs + pv
-		fieldspvs['fields'] = list(set(pvs))
-		'''
-		pvs = list(set(map(lambda x: x[0], pvs)))
-		pvs.sort()
-		print >>sys.stderr, pvs
-		print >>sys.stderr
-		'''
+			if sha256cache.has_key(r[0]):
+				pv = sha256cache[r[0]]
+			else:
+				pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
+				sha256cache[r[0]] = pv
+			pvs = list(set(pvs + pv))
+		fieldspvs[f] = list(set(pvs))
+
+	variablepvs['fields'] = fieldspvs
+	variablepvs['sources'] = sourcepvs
+	variablepvs['classes'] = classpvs
+	variablepvs['language'] = 'Java'
 	c.close()
 	conn.close()
+	return variablepvs
 
 ## From dynamically linked ELF files it is possible to extract the dynamic
 ## symbol table. This table lists the functions which are needed from
@@ -753,6 +781,7 @@ def extractDynamic(scanfile, envvars=None):
 					pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
 					pvs = list(set(pvs + pv))
 			variablepvs[v] = pvs
+	variablepvs['language'] = 'C'
 	c.close()
 	conn.close()
 	return (dynamicRes, variablepvs)
