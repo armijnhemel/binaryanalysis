@@ -726,6 +726,19 @@ storetarget = images
 storedir    = /tmp/images
 storetype   = .png
 
+
+[matchednames]
+type        = postrun
+module      = bat.generatenameshtml
+method      = generateHTML
+noscan      = text:xml:graphics:pdf:audio:video
+envvars     = BAT_REPORTDIR=/tmp/images
+description = Generate HTML files with unmatched strings for use in GUI
+enabled     = no
+storetarget = reports
+storedir    = /tmp/images
+storetype   = -names.html.gz
+
 [rankimages]
 type        = postrun
 module      = bat.rankimages
