@@ -303,6 +303,10 @@ class BatFrame(wx.Frame):
 		self.notebookpanel.AddPage(self.unmatchedwindow, "Unmatched")
 		self.unmatchedwindow.SetPage("<html></html>")
 
+		self.nameswindow = wx.html.HtmlWindow(self.notebookpanel)
+		self.notebookpanel.AddPage(self.nameswindow, "Matched names")
+		self.nameswindow.SetPage("<html></html>")
+
 		## We have a tab for visual information and hexdumps about a file, only in advanced mode
 		if self.advanced:
 			self.initAlternateViewtab()
@@ -363,7 +367,7 @@ class BatFrame(wx.Frame):
 
 	def initAlternateViewtab(self):
 		self.alternateviewtab = wx.SplitterWindow(self.notebookpanel)
-		self.notebookpanel.InsertPage(3, self.alternateviewtab, "Alternate view", select=False)
+		self.notebookpanel.InsertPage(4, self.alternateviewtab, "Alternate view", select=False)
 
 		## with one textctrl on the right
 		hexdumpStyle = wx.TextAttr()
@@ -625,6 +629,11 @@ class BatFrame(wx.Frame):
 								unmatchedhtml = unmatchedhtmlfile.read()
 								unmatchedhtmlfile.close()
 								self.unmatchedwindow.SetPage(unmatchedhtml)
+							if os.path.exists(os.path.join(self.reportsdir, "%s-names.html.gz" % sha256sum)):
+								nameshtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-names.html.gz" % sha256sum), 'r')
+								nameshtml = nameshtmlfile.read()
+								nameshtmlfile.close()
+								self.nameswindow.SetPage(nameshtml)
 				## TOT HIER
 				if applications != []:
 					tablerows = tablerows + "<tr><td><b>Applications</b></td><td>%s</td></tr>\n" % reduce(lambda x, y: "%s, %s" % (x,y), applications)
@@ -815,12 +824,13 @@ class BatFrame(wx.Frame):
 		self.matcheswindow.SetPage('<html></html>')
 		self.matchesbrowser.SetPage("<html></html>")
 		self.unmatchedwindow.SetPage("<html></html>")
+		self.nameswindow.SetPage("<html></html>")
 
 	## based on configuration we enable/disable certain features
 	def redrawGUI(self):
 		if not 0 in self.batconfigstate and self.advanced == True:
 			self.advanced = False
-			self.notebookpanel.RemovePage(3)
+			self.notebookpanel.RemovePage(4)
 			self.SetTitle(self.title)
 		if 0 in self.batconfigstate and self.advanced == False:
 			self.advanced = True
@@ -959,6 +969,7 @@ class BatFrame(wx.Frame):
 				if not self.advanced:
 					members = members + filter(lambda x: x.name.startswith('reports') and x.name.endswith('unique.html.gz'), self.tarmembers)
 					members = members + filter(lambda x: x.name.startswith('reports') and x.name.endswith('unmatched.html.gz'), self.tarmembers)
+					members = members + filter(lambda x: x.name.startswith('reports') and x.name.endswith('names.html.gz'), self.tarmembers)
 					members = members + filter(lambda x: x.name.startswith('images') and len(os.path.basename(x.name)) != 68, self.tarmembers)
 				else:
 					members = members + filter(lambda x: x.name.startswith('reports'), self.tarmembers)
