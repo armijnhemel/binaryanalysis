@@ -627,7 +627,7 @@ def dumpData(unpackreports, leafreports, scans, tempdir):
 			picklefile.close()
 			sys.stdout.flush()
 			if leafreports[l].has_key('ranking'):
-				(res, dynamicRes) = leafreports[l]['ranking']
+				(res, dynamicRes, variablepvs) = leafreports[l]['ranking']
 				newreports = []
 				for report in res['reports']:
 					## We have: (rank, s, uniqueMatches.get(s,[]), percentage, packageversions.get(s, {}), packagelicenses.get(s, []))

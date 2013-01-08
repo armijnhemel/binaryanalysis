@@ -72,8 +72,8 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 			return
 
 	if leafscans.has_key('ranking') :
-		## the ranking result is (res, dynamicRes)
-		(res, dynamicRes) = leafscans['ranking']
+		## the ranking result is (res, dynamicRes, variablepvs)
+		(res, dynamicRes, variablepvs) = leafscans['ranking']
 		if res['reports'] != []:
 			htmllinks = []
 			for j in res['reports']:

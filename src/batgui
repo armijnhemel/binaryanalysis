@@ -529,7 +529,7 @@ class BatFrame(wx.Frame):
 							self.notebookpanel.EnableTab(2,False)
 						tag = 'text'
 				if i.has_key('ranking'):
-					(stringsres, dynamicres) = i['ranking']
+					(stringsres, dynamicres, variablepvs) = i['ranking']
 					if dynamicres.has_key('packages'):
 						functionmatches = '''<h2>Function match statistics</h2>
 <table>

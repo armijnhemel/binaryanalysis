@@ -46,8 +46,8 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscand
 
 	## generate piechart and version information
 	if leafscans.has_key('ranking'):
-		## the ranking result is (res, dynamicRes)
-		(res, dynamicRes) = leafscans['ranking']
+		## the ranking result is (res, dynamicRes, variablepvs)
+		(res, dynamicRes, variablepvs) = leafscans['ranking']
 		if res['reports'] != []:
 			piedata = []
 			pielabels = []

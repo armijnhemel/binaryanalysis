@@ -190,6 +190,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
         try:
 		lines = []
 		dynamicRes = {}
+		variablepvs = {}
 		if language == 'C':
 			## For ELF binaries we can concentrate on just a few sections of the
 			## binary, namely the .rodata and .data sections.
@@ -198,7 +199,9 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 			## constants :-(
 
         		if "ELF" in mstype and blacklist == []:
-				(dynamicRes,variablepvs) = extractDynamic(path, envvars)
+				dynres = extractDynamic(path, envvars)
+				if dynres != None:
+					(dynamicRes,variablepvs) = dynres
 				datafile = open(path, 'rb')
 				data = datafile.read()
 				datafile.close()
@@ -332,7 +335,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 
 				## cleanup
 				shutil.rmtree(dalvikdir)
-			#extractVariablesJava(javameta, envvars)
+			variablepvs = extractVariablesJava(javameta, envvars)
 			dynamicRes = extractJavaNames(javameta, envvars)
 		elif language == 'JavaScipt':
 			## JavaScript can be minified, but using xgettext we
@@ -349,7 +352,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 			if blacklist != []:
 				## we made a tempfile because of blacklisting, so cleanup
 				os.unlink(tmpfile[1])
-			return (res, dynamicRes)
+			return (res, dynamicRes, variablepvs)
 		else:
 			if blacklist != []:
 				## we made a tempfile because of blacklisting, so cleanup
@@ -611,6 +614,8 @@ def extractDynamic(scanfile, envvars=None):
 	variables = []
 	for i in st[3:]:
 		dynstr = i.split()
+		if len(dynstr) < 8:
+			continue
 		if '@' in dynstr[7]:
 			continue
 		if dynstr[6] == 'UND':
@@ -1211,7 +1216,7 @@ def averageStringsPerPkgVersion(pkg, conn):
 
 
 def xmlprettyprint(matchres, root, envvars=None):
-	(res, dynamicRes) = matchres
+	(res, dynamicRes, variablepvs) = matchres
 	if res['matchedlines'] == 0:
 		return None
 	tmpnode = root.createElement('ranking')
