@@ -284,7 +284,7 @@ viewing in "simple" mode
 2012-05-09
 * write original ranking dump data to separate pickle files. This data is
 not used in the GUI directly and is just wasting memory and CPU time.
-* adapt GUI to reflect change in dump data format. Also don't unpacking
+* adapt GUI to reflect change in dump data format. Also don't unpack
 'ranking' directory with new pickle files: they are not used and unpacking
 takes time.
 * construct file tree from scandata.pickle instead of walking the data
