@@ -675,7 +675,8 @@ class BatFrame(wx.Frame):
 		if tmpdir == None:
 			return
 		tree.DeleteAllItems()
-		self.cleanWindows()
+		if self.selectedfile == None:
+			self.cleanWindows()
 
 		## construct a tree from a pickle
 		if tmpdir.endswith('/'):
