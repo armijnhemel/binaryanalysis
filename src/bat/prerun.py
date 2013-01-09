@@ -531,7 +531,16 @@ def verifyJavaClass(filename):
 	datafile = open(filename, 'rb')
 	databuffer = datafile.read(100)
 	datafile.close()
+	## as an extra measure we should check that "\xca\xfe\xba\xbe" occurs only
+	## once in the entire file.
 	if not databuffer[0:4] == "\xca\xfe\xba\xbe":
+		return False
+	## This will only work if the file has either one or multiple valid class files,
+	## starting with a valid class file and ending with a valid class file, or random
+	## garbage, but no partial class file.
+	p = subprocess.Popen(['jcf-dump', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
 		return False
 	## TODO: add more checks
 	return True
