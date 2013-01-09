@@ -1,5 +1,6 @@
 2013-01-08
-* extract etra information from Java and C binaries
+* extract extra information from Java and C binaries
+* display extra information from Java and C binaries in GUI
 
 2013-01-07
 * extract and report function names for Java class files and Dalvik dex files.
