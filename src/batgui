@@ -624,16 +624,16 @@ class BatFrame(wx.Frame):
 								uniquehtml = uniquehtmlfile.read()
 								uniquehtmlfile.close()
 								self.matcheswindow.SetPage(uniquehtml)
-							if os.path.exists(os.path.join(self.reportsdir, "%s-unmatched.html.gz" % sha256sum)):
-								unmatchedhtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-unmatched.html.gz" % sha256sum), 'r')
-								unmatchedhtml = unmatchedhtmlfile.read()
-								unmatchedhtmlfile.close()
-								self.unmatchedwindow.SetPage(unmatchedhtml)
-							if os.path.exists(os.path.join(self.reportsdir, "%s-names.html.gz" % sha256sum)):
-								nameshtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-names.html.gz" % sha256sum), 'r')
-								nameshtml = nameshtmlfile.read()
-								nameshtmlfile.close()
-								self.nameswindow.SetPage(nameshtml)
+				if os.path.exists(os.path.join(self.reportsdir, "%s-unmatched.html.gz" % sha256sum)):
+					unmatchedhtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-unmatched.html.gz" % sha256sum), 'r')
+					unmatchedhtml = unmatchedhtmlfile.read()
+					unmatchedhtmlfile.close()
+					self.unmatchedwindow.SetPage(unmatchedhtml)
+				if os.path.exists(os.path.join(self.reportsdir, "%s-names.html.gz" % sha256sum)):
+					nameshtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-names.html.gz" % sha256sum), 'r')
+					nameshtml = nameshtmlfile.read()
+					nameshtmlfile.close()
+					self.nameswindow.SetPage(nameshtml)
 				## TOT HIER
 				if applications != []:
 					tablerows = tablerows + "<tr><td><b>Applications</b></td><td>%s</td></tr>\n" % reduce(lambda x, y: "%s, %s" % (x,y), applications)
