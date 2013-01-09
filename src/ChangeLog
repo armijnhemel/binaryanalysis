@@ -1,3 +1,8 @@
+2013-01-09
+* start on verifying whether or not combinations of libraries and executables
+in an archive (like a firmware) will work, by resolving symbols extracted from
+dynamic sections of ELF files.
+
 2013-01-08
 * extract extra information from Java and C binaries
 * display extra information from Java and C binaries in GUI
