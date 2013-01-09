@@ -56,6 +56,7 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 
 	## first store all local and remote function names for each dynamic
 	## ELF executable on the system.
+	## TODO: do something similar for variables
 	for i in elffiles:
 		remotefuncs = []
 		localfuncs = []
