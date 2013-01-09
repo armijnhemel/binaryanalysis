@@ -143,10 +143,11 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 					html = html + "<tr><td><b>Name</b></td><td><b>Unique matches</b></td></tr>"
 					for i in packagecount:
 						html = html + "<tr><td>%s</td><td>%d</td></tr>\n" % (i, packagecount[i])
-				html = html + "</table>\n"
+					html = html + "</table>\n"
 
 		footer = "</body></html>"
-		html = header + html + footer
-		nameshtmlfile = gzip.open("%s/%s-names.html.gz" % (reportdir, unpackreport['sha256']), 'wb')
-		nameshtmlfile.write(html)
-		nameshtmlfile.close()
+		if html != "":
+			html = header + html + footer
+			nameshtmlfile = gzip.open("%s/%s-names.html.gz" % (reportdir, unpackreport['sha256']), 'wb')
+			nameshtmlfile.write(html)
+			nameshtmlfile.close()
