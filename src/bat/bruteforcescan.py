@@ -336,7 +336,7 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize, debu
 			reports[scan['name']] = res
 	return (filetoscan, reports)
 
-def aggregatescan(unpackreports, leafreports, scans, debug):
+def aggregatescan(unpackreports, leafreports, scans, scantempdir, debug):
 	## aggregate scans look at the entire result and possibly modify it.
 	## The best example is JAR files: individual .class files will not be
 	## very significant (or even insignificant), but combined results are.
@@ -356,7 +356,7 @@ def aggregatescan(unpackreports, leafreports, scans, debug):
 			envvars = None
 		exec "from %s import %s as bat_%s" % (module, method, method)
 
-		res = eval("bat_%s(unpackreports, leafreports, envvars=envvars)" % (method))
+		res = eval("bat_%s(unpackreports, leafreports, scantempdir, envvars=envvars)" % (method))
 		## TODO: find out what we want to do with this
 		if res != None:
 			pass
@@ -791,7 +791,7 @@ def runscan(tempdir, scans, scan_binary):
 			unpackreports[k] = i[k]
 
 	if scans['aggregatescans'] != []:
-		aggregatescan(unpackreports, leafreports, scans, debug)
+		aggregatescan(unpackreports, leafreports, scans, scantempdir, debug)
 
 	## run postrunscans here, again in parallel, if needed/wanted
 	## These scans typically only have a few side effects, but don't change
