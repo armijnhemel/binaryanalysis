@@ -216,8 +216,9 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 					pass
 			if remotefuncswc != []:
 				print >>sys.stderr, "NOT FULLFILLED", i, remotefuncswc, remotevarswc
+				print >>sys.stderr, "POSSIBLY MISSING", list(set(leafreports[i]['libs']).difference(set(usedlibs)))
 				print >>sys.stderr
-			if list(set(leafreports[i]['libs']).difference(set(usedlibs))) != []:
+			if list(set(leafreports[i]['libs']).difference(set(usedlibs))) != [] and remotefuncswc == []:
 				print >>sys.stderr, "UNUSED LIBS", i, list(set(leafreports[i]['libs']).difference(set(usedlibs)))
 				print >>sys.stderr
 	print >>sys.stderr,"DUPES",  dupes
