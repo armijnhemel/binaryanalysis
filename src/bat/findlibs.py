@@ -25,6 +25,8 @@ executable or library.
 used in the binary, but the name of a symlink was used.
 * multiple copies of (possibly conflicting) libraries need to be dealt with
 properly.
+
+We do something similar for remote and local variables.
 '''
 
 def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
@@ -58,7 +60,6 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 
 	## first store all local and remote function names for each dynamic
 	## ELF executable on the system.
-	## TODO: do something similar for variables
 	varignores = ['__dl_ldso__']
 	for i in elffiles:
 		remotefuncs = []
@@ -106,15 +107,24 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 	for i in elffiles:
 		usedlibs = []
 		if leafreports[i].has_key('libs'):
+			if remotefunctionnames[i] == [] and remotevariablenames[i] == []:
+				if list(set(leafreports[i]['libs']).difference(set(usedlibs))) != []:
+					print >>sys.stderr, "UNUSED LIBS", i, list(set(leafreports[i]['libs']).difference(set(usedlibs)))
+				print >>sys.stderr
+				continue
 			## first create a copy of the names to resolve
 			remotefuncswc = copy.copy(remotefunctionnames[i])
+			remotevarswc = copy.copy(remotevariablenames[i])
 			funcsfound = []
+			varsfound = []
 			for l in leafreports[i]['libs']:
 				filtersquash = []
 				if not squashedelffiles.has_key(l):
 					## perhaps we have it as a symlink
 					if not symlinks.has_key(l):
-						## we can't resolve the dependencies
+						## we can't resolve the dependencies. There could be various
+						## reasons for that, such as a missing symlink that was not
+						## created during unpacking.
 						unresolvable.append(l)
 						break
 					## we have one or possibly more symlinks that can fullfill
@@ -156,24 +166,36 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 						if not difference:
 							dupes[filtersquash[0]] = filtersquash
 				if len(filtersquash) == 1:
-					## easy case
-					localfuncsfound = list(set(remotefuncswc).intersection(set(localfunctionnames[filtersquash[0]])))
-					if localfuncsfound != []:
-						if usedby.has_key(filtersquash[0]):
-							usedby[filtersquash[0]].append(i)
-						else:
-							usedby[filtersquash[0]] = [i]
-						usedlibs.append(l)
-					funcsfound = funcsfound + localfuncsfound
-					remotefuncswc = list(set(remotefuncswc).difference(set(funcsfound)))
+					if remotefuncswc != []:
+						## easy case
+						localfuncsfound = list(set(remotefuncswc).intersection(set(localfunctionnames[filtersquash[0]])))
+						if localfuncsfound != []:
+							if usedby.has_key(filtersquash[0]):
+								usedby[filtersquash[0]].append(i)
+							else:
+								usedby[filtersquash[0]] = [i]
+							usedlibs.append(l)
+						funcsfound = funcsfound + localfuncsfound
+						remotefuncswc = list(set(remotefuncswc).difference(set(funcsfound)))
+					if remotevarswc != []:
+						localvarsfound = list(set(remotevarswc).intersection(set(localvariablenames[filtersquash[0]])))
+						if localvarsfound != []:
+							if usedby.has_key(filtersquash[0]):
+								usedby[filtersquash[0]].append(i)
+							else:
+								usedby[filtersquash[0]] = [i]
+							usedlibs.append(l)
+						varsfound = varsfound + localvarsfound
+						remotevarswc = list(set(remotevarswc).difference(set(varsfound)))
+						pass
 				else:
 					## TODO
 					pass
 			if remotefuncswc != []:
-				print >>sys.stderr, "NOT FULLFILLED", i, remotefuncswc
+				print >>sys.stderr, "NOT FULLFILLED", i, remotefuncswc, remotevarswc
 				print >>sys.stderr
 			if list(set(leafreports[i]['libs']).difference(set(usedlibs))) != []:
-				print >>sys.stderr, "LIBS", i, list(set(leafreports[i]['libs']).difference(set(usedlibs)))
+				print >>sys.stderr, "UNUSED LIBS", i, list(set(leafreports[i]['libs']).difference(set(usedlibs)))
 				print >>sys.stderr
 	print >>sys.stderr,"DUPES",  dupes
 
