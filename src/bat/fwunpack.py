@@ -40,9 +40,14 @@ def unpacksetup(tempdir):
 		tmpdir = tempdir
 	return tmpdir
 
-def unpackFile(filename, offset, tmpfile, tmpdir, length=0):
+def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False):
 	if offset == 0 and length == 0:
-		os.link(filename, "%s/%s" % (tmpdir, "templink"))
+		## use copy if we intend to *modify* tmpfile, or we end up
+		## modifying the orginal
+		if not modify:
+			os.link(filename, "%s/%s" % (tmpdir, "templink"))
+		else:
+			shutil.copy(filename, "%s/%s" % (tmpdir, "templink"))
 		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile)
 	else:
 		filesize = os.stat(filename).st_size

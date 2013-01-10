@@ -37,7 +37,7 @@ def unpackXOR(filename, sig, tempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	fwunpack.unpackFile(filename, 0, tmpfile[1], tmpdir)
+	fwunpack.unpackFile(filename, 0, tmpfile[1], tmpdir, modify=True)
 	data = open(filename).read()
 
 	## read data, XOR, write data out again
