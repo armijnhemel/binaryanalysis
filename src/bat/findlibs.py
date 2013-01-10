@@ -11,13 +11,15 @@ This program can be used to check whether the dependencies of a dynamically
 linked executable or library can be satisfied at runtime given the libraries
 in a scanned archive.
 
-For this we need to find the correct dynamic libraries for an executable and for
-other libraries. There might be more than one copy or version for a particular
-library since there could for example be multiple file systems inside a firmware
-and we might not know how the dynamic linker is configured, or which file systems
-are mounted where and when and get the right combination of libraries.
+For this the correct dynamic libraries for an executable and for other libraries
+need to be found. There might be more than one copy or version for a particular
+library since there could for example be multiple file systems inside a firmware.
+It is hard to find out what the actual state at runtime might possibly be because
+it might be unknown how the dynamic linker is configured, or which file systems
+are mounted where and when. Although in the vast majority of cases it is crystal
+clear which libraries are used sometimes it can get tricky.
 
-We need to do the following:
+The following needs to be done:
 
 * verify the architectures of the dependencies are compatible with the
 executable or library.
@@ -26,17 +28,28 @@ used in the binary, but the name of a symlink was used.
 * multiple copies of (possibly conflicting) libraries need to be dealt with
 properly.
 
-We do something similar for remote and local variables.
+Something similar is done for remote and local variables.
 '''
 
 def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
+	## store names of all ELF files present in scan archive
 	elffiles = []
+
+	## keep track of which libraries map to what.
+	## For example, libm.so.0 could map to lib/libm.so.0 and lib2/libm.so.0
+	## libraryname -> [list of libraries]
 	squashedelffiles = {}
+
+	## cache the names of local and remote functions and variables
 	localfunctionnames = {}
 	remotefunctionnames = {}
 	localvariablenames = {}
 	remotevariablenames = {}
+
+	## a list of unresolvable files: they don't exist on the system
 	unresolvable = []
+
+	## store all symlinks in the scan archive, since they might point to libraries
 	symlinks = {}
 	for i in unpackreports:
 		if not leafreports.has_key(i):
@@ -58,11 +71,19 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 			squashedelffiles[os.path.basename(i)].append(i)
 		elffiles.append(i)
 
-	## first store all local and remote function names for each dynamic
-	## ELF executable on the system.
-	## Also store the soname of the library
+	## map functions to libraries. For each function name a list of libraries
+	## that define the function is kept.
+	funcstolibs = {}
+
+	## Map sonames to libraries For each soname a list of files that define the
+	## soname is kept.
 	sonames = {}
+
+	## a list of variable names to ignore.
 	varignores = ['__dl_ldso__']
+
+	## Store all local and remote function names for each dynamic ELF executable
+	## or library on the system.
 	for i in elffiles:
 		remotefuncs = []
 		localfuncs = []
@@ -76,13 +97,18 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 			functionstrings = s.split()
 			if len(functionstrings) <= 7:
 				continue
-			## we only want functions and objects
+			## only store functions and objects
 			if functionstrings[3] != 'FUNC' and functionstrings[3] != 'IFUNC' and functionstrings[3] != 'OBJECT':
 				continue
 			## store local functions
 			elif functionstrings[6] != 'UND':
 				if functionstrings[3] == 'FUNC' or functionstrings[3] == 'IFUNC':
-					localfuncs.append(functionstrings[7].split('@')[0])
+					funcname = functionstrings[7].split('@')[0]
+					localfuncs.append(funcname)
+					if funcstolibs.has_key(funcname):
+						funcstolibs[funcname].append(i)
+					else:
+						funcstolibs[funcname] = [i]
 				elif functionstrings[3] == 'OBJECT' and functionstrings[6] != 'ABS':
 					if functionstrings[7].split('@')[0] not in varignores:
 						localvars.append(functionstrings[7].split('@')[0])
@@ -90,7 +116,7 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 			## See http://gcc.gnu.org/ml/gcc/2002-06/msg00112.html
 			if functionstrings[7].split('@')[0] == '_Jv_RegisterClasses':
 				continue
-			## we can probably make use of the fact some are annotated with '@'
+			## some things are annotated with '@' which could come in handy in the future
 			if functionstrings[3] == 'FUNC' or functionstrings[3] == 'IFUNC':
 				remotefuncs.append(functionstrings[7].split('@')[0])
 			elif functionstrings[3] == 'OBJECT' and functionstrings[6] != 'ABS':
@@ -119,112 +145,145 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 
 	## TODO: look if RPATH is used, since that will give use more information
 	## by default
+
+	## For each file keep a list of other files that use this file. This is mostly
+	## for reporting.
 	usedby = {}
+
+	## Keep a list of files that are identical, for example copies of libraries
 	dupes = {}
 	for i in elffiles:
+		## per ELF file keep lists of used libraries and possibly used libraries.
+		## The later is kept if which libraries were used needs to be guessed.
 		usedlibs = []
+		possiblyused = []
 		if leafreports[i].has_key('libs'):
-			if remotefunctionnames[i] == [] and remotevariablenames[i] == []:
-				if list(set(leafreports[i]['libs']).difference(set(usedlibs))) != []:
-					print >>sys.stderr, "UNUSED LIBS", i, list(set(leafreports[i]['libs']).difference(set(usedlibs)))
-				print >>sys.stderr
-				continue
-			## first create a copy of the names to resolve
+
+			## keep copies of the original data
 			remotefuncswc = copy.copy(remotefunctionnames[i])
 			remotevarswc = copy.copy(remotevariablenames[i])
-			funcsfound = []
-			varsfound = []
-			for l in leafreports[i]['libs']:
-				filtersquash = []
-				if not squashedelffiles.has_key(l):
-					## perhaps we have the so as a symlink, or a missing symlink
-					if not symlinks.has_key(l):
-						## we can't resolve the dependencies. There could be various
-						## reasons for that, such as a missing symlink that was not
-						## created during unpacking.
-						if not sonames.has_key(l):
-							unresolvable.append(l)
-							continue
+
+			## only process if there actually is anything to process
+			if remotefunctionnames[i] != [] or remotevariablenames[i] != []:
+				funcsfound = []
+				varsfound = []
+				for l in leafreports[i]['libs']:
+
+					## temporary storage to hold the names of the libraries
+					## searched for. This list will be manipulated later on.
+					filtersquash = []
+
+					if not squashedelffiles.has_key(l):
+						## No library (or morelibraries ) with the name that has been declared
+						## in the ELF file can be found. It could be because the
+						## declared name is actually a symbolic link that could, or could
+						## not be present on the system.
+						if not symlinks.has_key(l):
+							## There are no symlinks that point to a library that's needed.
+							## There could be various reasons for this, such as a missing
+							## symlink that was not created during unpacking.
+							if not sonames.has_key(l):
+								unresolvable.append(l)
+								continue
+							else:
+								if len(sonames[l]) == 1:
+									possiblyused.append(sonames[l][0])
+									filtersquash = filtersquash + squashedelffiles[os.path.basename(sonames[l][0])]
+								else:
+									## TODO: more libraries could possibly
+									## fullfill the dependency.
+									unresolvable.append(l)
+									continue
 						else:
-							## TODO: we have one or more libraries which could
-							## possible fullfill the dependency.
-							unresolvable.append(l)
-							continue
-					## we have one or possibly more symlinks that can fullfill
-					## this requirement
-					for sl in symlinks[l]:
-						## absolute link, figure out how to deal with that
-						if sl['target'].startswith('/'):
-							pass
-						else:
-							filtersquash.append(os.path.normpath(os.path.join(os.path.dirname(sl['original']), sl['target'])))
-				else:
-					filtersquash = filter(lambda x: leafreports[x]['architecture'] == leafreports[i]['architecture'], squashedelffiles[l])
-				## now walk through the possible files that can resolve
-				## this dependency.
-				## First we verify how many possible files we have. Since there might be
-				## multiple files that satisfy a dependency (because they have the same name) we 
-				## need to verify if the libraries are the same or not:
-				## * checksums
-				## * equivalent localfuncs and remote funcs (and in the future localvars and remotevars)
-				if len(filtersquash) > 1:
-					if len(list(set(map(lambda x: unpackreports[x]['sha256'], filtersquash)))) == 1:
-						filtersquash = [filtersquash[0]]
-						## store so we can report later
-						dupes[filtersquash[0]] = filtersquash
+							## there are one or possibly more symlinks that can fullfill
+							## this requirement
+							for sl in symlinks[l]:
+								## absolute link, figure out how to deal with that
+								if sl['target'].startswith('/'):
+									pass
+								else:
+									## add all resolved symlinks to the list of
+									## libraries to consider
+									filtersquash.append(os.path.normpath(os.path.join(os.path.dirname(sl['original']), sl['target'])))
 					else:
-						difference = False
-						## now we compare the local and remote funcs and vars. If they
-						## are equivalent we
-						for f1 in filtersquash:
-							if difference == True:
-								break
-							for f2 in filtersquash:
-								if len(set(localfunctionnames[f1]).intersection(set(localfunctionnames[f2]))) == len(localfunctionnames[f1]):
-									difference = True
-									break
-								if len(set(remotefunctionnames[f1]).intersection(set(remotefunctionnames[f2]))) != len(remotefunctionnames[f1]):
-									difference = True
-									break
-						if not difference:
+						filtersquash = filter(lambda x: leafreports[x]['architecture'] == leafreports[i]['architecture'], squashedelffiles[l])
+					## now walk through the possible files that can resolve this dependency.
+					## First verify how many possible files are in 'filtersquash' have.
+					## In the common case this will be just one and then everything is easy.
+					## Since there might be multiple files that satisfy a dependency (because
+					## they have the same name) a few verification steps have to be taken.
+					## Quite often the copies will be the same as well, which is easy to check using:
+					## * SHA256 checksums
+					## * equivalent local and remote function names (and in the future localvars and remotevars)
+					if len(filtersquash) > 1:
+						if len(list(set(map(lambda x: unpackreports[x]['sha256'], filtersquash)))) == 1:
+							filtersquash = [filtersquash[0]]
+							## store duplicates for later reporting of alternatives
 							dupes[filtersquash[0]] = filtersquash
-				if len(filtersquash) == 1:
-					if remotefuncswc != []:
-						## easy case
-						localfuncsfound = list(set(remotefuncswc).intersection(set(localfunctionnames[filtersquash[0]])))
-						if localfuncsfound != []:
-							if usedby.has_key(filtersquash[0]):
-								usedby[filtersquash[0]].append(i)
-							else:
-								usedby[filtersquash[0]] = [i]
-							usedlibs.append(l)
-						funcsfound = funcsfound + localfuncsfound
-						remotefuncswc = list(set(remotefuncswc).difference(set(funcsfound)))
-					if remotevarswc != []:
-						localvarsfound = list(set(remotevarswc).intersection(set(localvariablenames[filtersquash[0]])))
-						if localvarsfound != []:
-							if usedby.has_key(filtersquash[0]):
-								usedby[filtersquash[0]].append(i)
-							else:
-								usedby[filtersquash[0]] = [i]
-							usedlibs.append(l)
-						varsfound = varsfound + localvarsfound
-						remotevarswc = list(set(remotevarswc).difference(set(varsfound)))
+						else:
+							difference = False
+							## compare the local and remote funcs and vars. If they
+							## are equivalent they can be treated as if they were identical
+							for f1 in filtersquash:
+								if difference == True:
+									break
+								for f2 in filtersquash:
+									if len(set(localfunctionnames[f1]).intersection(set(localfunctionnames[f2]))) == len(localfunctionnames[f1]):
+										difference = True
+										break
+									if len(set(remotefunctionnames[f1]).intersection(set(remotefunctionnames[f2]))) != len(remotefunctionnames[f1]):
+										difference = True
+										break
+							if not difference:
+								dupes[filtersquash[0]] = filtersquash
+					if len(filtersquash) == 1:
+						if remotefuncswc != []:
+							## easy case
+							localfuncsfound = list(set(remotefuncswc).intersection(set(localfunctionnames[filtersquash[0]])))
+							if localfuncsfound != []:
+								if usedby.has_key(filtersquash[0]):
+									usedby[filtersquash[0]].append(i)
+								else:
+									usedby[filtersquash[0]] = [i]
+								usedlibs.append(l)
+							funcsfound = funcsfound + localfuncsfound
+							remotefuncswc = list(set(remotefuncswc).difference(set(funcsfound)))
+						if remotevarswc != []:
+							localvarsfound = list(set(remotevarswc).intersection(set(localvariablenames[filtersquash[0]])))
+							if localvarsfound != []:
+								if usedby.has_key(filtersquash[0]):
+									usedby[filtersquash[0]].append(i)
+								else:
+									usedby[filtersquash[0]] = [i]
+								usedlibs.append(l)
+							varsfound = varsfound + localvarsfound
+							remotevarswc = list(set(remotevarswc).difference(set(varsfound)))
+					else:
+						## TODO
 						pass
-				else:
-					## TODO
-					pass
 			if remotefuncswc != []:
 				print >>sys.stderr, "NOT FULLFILLED", i, remotefuncswc, remotevarswc
 				possiblymissinglibs = list(set(leafreports[i]['libs']).difference(set(usedlibs)))
 				if possiblymissinglibs != []:
-					print >>sys.stderr, "POSSIBLY MISSING", possiblymissinglibs
+					print >>sys.stderr, "POSSIBLY MISSING AND/OR UNUSED", possiblymissinglibs
+				possiblesolutions = []
+				for r in remotefuncswc:
+					if funcstolibs.has_key(r):
+						possiblesolutions = possiblesolutions + funcstolibs[r]
+				if possiblesolutions != []:
+					print >>sys.stderr, "POSSIBLE LIBS TO SATISFY CONDITIONS", list(set(possiblesolutions))
 				print >>sys.stderr
 			if list(set(leafreports[i]['libs']).difference(set(usedlibs))) != [] and remotefuncswc == []:
 				print >>sys.stderr, "UNUSED LIBS", i, list(set(leafreports[i]['libs']).difference(set(usedlibs)))
 				print >>sys.stderr
+			print >>sys.stderr, "POSSIBLY USED", i, possiblyused
+			print >>sys.stderr
 	print >>sys.stderr,"DUPES",  dupes
 
 	for u in usedby:
 		print >>sys.stderr, "USED", u, usedby[u]
 		print >>sys.stderr
+	## return a dictionary, with for each ELF file for which there are results
+	## a separate dictionary with the results. These will be added to 'scans' in
+	## leafreports by the top level script.
+	return {}
