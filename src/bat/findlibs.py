@@ -67,9 +67,9 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 		if p.returncode != 0:
 			continue
 		for s in stanout.split("\n")[3:]:
-			if len(s.split()) <= 7:
-				continue
 			functionstrings = s.split()
+			if len(functionstrings) <= 7:
+				continue
 			## we only want functions
 			if functionstrings[3] != 'FUNC' and functionstrings != 'IFUNC':
 				continue
