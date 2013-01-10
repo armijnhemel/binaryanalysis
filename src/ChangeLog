@@ -1,3 +1,10 @@
+2013-01-10
+* fix JFFS2 unpacking which would fail if we would somewhere find just a
+single inode outside of a JFFS2 file system
+* if we hardlinked files, then modified them, we ended up modifying the
+original copy of a file too. Introduce a flag 'modify' that can be used to
+signal that the file should be copied instead. Apply this fix to batxor.py.
+
 2013-01-09
 * start on verifying whether or not combinations of libraries and executables
 in an archive (like a firmware) will work, by resolving symbols extracted from
