@@ -60,6 +60,8 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 	for i in elffiles:
 		remotefuncs = []
 		localfuncs = []
+		remotevars = []
+		localvars = []
 		p = subprocess.Popen(['readelf', '-W', '--dyn-syms', os.path.join(scantempdir, i)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
@@ -84,7 +86,10 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 		localfunctionnames[i] = localfuncs
 		remotefunctionnames[i] = remotefuncs
 
+	## TODO: look if RPATH is used, since that will give use more information
+	## by default
 	usedby = {}
+	dupes = {}
 	for i in elffiles:
 		usedlibs = []
 		if leafreports[i].has_key('libs'):
@@ -111,6 +116,32 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 					filtersquash = filter(lambda x: leafreports[x]['architecture'] == leafreports[i]['architecture'], squashedelffiles[l])
 				## now walk through the possible files that can resolve
 				## this dependency.
+				## First we verify how many possible files we have. Since there might be
+				## multiple files that satisfy a dependency (because they have the same name) we 
+				## need to verify if the libraries are the same or not:
+				## * checksums
+				## * equivalent localfuncs and remote funcs (and in the future localvars and remotevars)
+				if len(filtersquash) > 1:
+					if len(list(set(map(lambda x: unpackreports[x]['sha256'], filtersquash)))) == 1:
+						filtersquash = [filtersquash[0]]
+						## store so we can report later
+						dupes[filtersquash[0]] = filtersquash
+					else:
+						difference = False
+						## now we compare the local and remote funcs and vars. If they
+						## are equivalent we
+						for f1 in filtersquash:
+							if difference == True:
+								break
+							for f2 in filtersquash:
+								if len(set(localfunctionnames[f1]).intersection(set(localfunctionnames[f2]))) == len(localfunctionnames[f1]):
+									difference = True
+									break
+								if len(set(remotefunctionnames[f1]).intersection(set(remotefunctionnames[f2]))) != len(remotefunctionnames[f1]):
+									difference = True
+									break
+						if not difference:
+							dupes[filtersquash[0]] = filtersquash
 				if len(filtersquash) == 1:
 					## easy case
 					localfuncsfound = list(set(remotefuncswc).intersection(set(localfunctionnames[filtersquash[0]])))
@@ -123,8 +154,6 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 					funcsfound = funcsfound + localfuncsfound
 					remotefuncswc = list(set(remotefuncswc).difference(set(funcsfound)))
 				else:
-					## tough case. First: verify checksums of the possibilities.
-					## If they are the same, it is actually an easy case.
 					## TODO
 					pass
 			if remotefuncswc != []:
@@ -133,6 +162,7 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 			if list(set(leafreports[i]['libs']).difference(set(usedlibs))) != []:
 				print >>sys.stderr, "LIBS", i, list(set(leafreports[i]['libs']).difference(set(usedlibs)))
 				print >>sys.stderr
+	print >>sys.stderr,"DUPES",  dupes
 
 	for u in usedby:
 		print >>sys.stderr, "USED", u, usedby[u]
