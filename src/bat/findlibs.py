@@ -276,8 +276,9 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 			if list(set(leafreports[i]['libs']).difference(set(usedlibs))) != [] and remotefuncswc == []:
 				print >>sys.stderr, "UNUSED LIBS", i, list(set(leafreports[i]['libs']).difference(set(usedlibs)))
 				print >>sys.stderr
-			print >>sys.stderr, "POSSIBLY USED", i, possiblyused
-			print >>sys.stderr
+			if possiblyused != []:
+				print >>sys.stderr, "POSSIBLY USED", i, possiblyused
+				print >>sys.stderr
 	print >>sys.stderr,"DUPES",  dupes
 
 	for u in usedby:
