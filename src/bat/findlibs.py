@@ -60,6 +60,8 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 
 	## first store all local and remote function names for each dynamic
 	## ELF executable on the system.
+	## Also store the soname of the library
+	sonames = {}
 	varignores = ['__dl_ldso__']
 	for i in elffiles:
 		remotefuncs = []
@@ -99,6 +101,21 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 		remotefunctionnames[i] = remotefuncs
 		localvariablenames[i] = localvars
 		remotevariablenames[i] = remotevars
+
+		p = subprocess.Popen(['readelf', '-d', "%s" % os.path.join(scantempdir, i)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			return
+
+		for line in stanout.split('\n'):
+			if "Library soname:" in line:
+				soname = line.split(': ')[1][1:-1]
+				if sonames.has_key(soname):
+					sonames[soname].append(i)
+				else:
+					sonames[soname] = [i]
+				break
+
 
 	## TODO: look if RPATH is used, since that will give use more information
 	## by default
