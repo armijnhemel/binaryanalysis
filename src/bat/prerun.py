@@ -508,10 +508,26 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	#if thisheadersize != startprogramheader:
 	#	return newtags
 
-	## This does not work well for some Linux kernel modules (architecture dependent?)
+	## This does not work well for some Linux kernel modules as well as other files
+	## (architecture dependent?)
+	## One architecture where this sometimes seems to happen is ARM.
 	totalsize = startsectionheader + sectionheadersize * numbersectionheaders
 	if totalsize == os.stat(filename).st_size:
 		newtags.append("elf")
+	else:
+		## on some architectures we can probably look at the starting point
+		## of the last section, then use 
+		p = subprocess.Popen(['readelf', '-t', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			return newtags
+		st = stanout.strip().split("\n")
+		for s in st[-3:]:
+			spl = s.split()
+			if len(spl) == 8:
+				totalsize = int(spl[2], 16) + int(spl[3], 16)
+				if totalsize == os.stat(filename).st_size:
+					newtags.append("elf")
 	p = subprocess.Popen(['readelf', '-d', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
