@@ -92,6 +92,14 @@ def unpackJFFS2(path, tempdir=None):
 
 	jffs2size = maxoffset
 
+	## An extra sanity check to see if we actually have a valid file system. For each parent inode
+	## except '1' there should be an entry in direntries. If not, we have a dangling part of a JFFS2
+	## system.
+	for n in direntries.keys():
+		if direntries[n].has_key('parent'):
+			if not direntries[n]['parent'] in direntries.keys() and direntries[n]['parent'] != 1:
+				return None
+
 	for n in direntries.keys():
 		## recreate directory structure
 		if n in directories:
