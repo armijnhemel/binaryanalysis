@@ -32,6 +32,8 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 	squashedelffiles = {}
 	localfunctionnames = {}
 	remotefunctionnames = {}
+	localvariablenames = {}
+	remotevariablenames = {}
 	unresolvable = []
 	symlinks = {}
 	for i in unpackreports:
@@ -57,6 +59,7 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 	## first store all local and remote function names for each dynamic
 	## ELF executable on the system.
 	## TODO: do something similar for variables
+	varignores = ['__dl_ldso__']
 	for i in elffiles:
 		remotefuncs = []
 		localfuncs = []
@@ -70,21 +73,31 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 			functionstrings = s.split()
 			if len(functionstrings) <= 7:
 				continue
-			## we only want functions
-			if functionstrings[3] != 'FUNC' and functionstrings != 'IFUNC':
+			## we only want functions and objects
+			if functionstrings[3] != 'FUNC' and functionstrings[3] != 'IFUNC' and functionstrings[3] != 'OBJECT':
 				continue
 			## store local functions
 			elif functionstrings[6] != 'UND':
-				localfuncs.append(functionstrings[7].split('@')[0])
+				if functionstrings[3] == 'FUNC' or functionstrings[3] == 'IFUNC':
+					localfuncs.append(functionstrings[7].split('@')[0])
+				elif functionstrings[3] == 'OBJECT' and functionstrings[6] != 'ABS':
+					if functionstrings[7].split('@')[0] not in varignores:
+						localvars.append(functionstrings[7].split('@')[0])
 				continue
 			## See http://gcc.gnu.org/ml/gcc/2002-06/msg00112.html
 			if functionstrings[7].split('@')[0] == '_Jv_RegisterClasses':
 				continue
 			## we can probably make use of the fact some are annotated with '@'
-			remotefuncs.append(functionstrings[7].split('@')[0])
+			if functionstrings[3] == 'FUNC' or functionstrings[3] == 'IFUNC':
+				remotefuncs.append(functionstrings[7].split('@')[0])
+			elif functionstrings[3] == 'OBJECT' and functionstrings[6] != 'ABS':
+				if functionstrings[7].split('@')[0] not in varignores:
+					remotevars.append(functionstrings[7].split('@')[0])
 
 		localfunctionnames[i] = localfuncs
 		remotefunctionnames[i] = remotefuncs
+		localvariablenames[i] = localvars
+		remotevariablenames[i] = remotevars
 
 	## TODO: look if RPATH is used, since that will give use more information
 	## by default
