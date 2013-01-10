@@ -137,13 +137,19 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 			for l in leafreports[i]['libs']:
 				filtersquash = []
 				if not squashedelffiles.has_key(l):
-					## perhaps we have it as a symlink
+					## perhaps we have the so as a symlink, or a missing symlink
 					if not symlinks.has_key(l):
 						## we can't resolve the dependencies. There could be various
 						## reasons for that, such as a missing symlink that was not
 						## created during unpacking.
-						unresolvable.append(l)
-						break
+						if not sonames.has_key(l):
+							unresolvable.append(l)
+							continue
+						else:
+							## TODO: we have one or more libraries which could
+							## possible fullfill the dependency.
+							unresolvable.append(l)
+							continue
 					## we have one or possibly more symlinks that can fullfill
 					## this requirement
 					for sl in symlinks[l]:
