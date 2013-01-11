@@ -1075,6 +1075,21 @@ def unpackRomfs(filename, offset, tempdir=None):
 
 	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
+	## sanity check
+	## First check the size of the header. If it has some
+	## bizarre value (like bigger than the file it can unpack)
+	## it is not a valid romfs file system
+	romfsfile = open(tmpfile[1])
+	romfsdata = romfsfile.read(12)
+	romfsfile.close()
+	romfssize = struct.unpack('>L', romfsdata[8:12])[0]
+
+	if romfssize > os.stat(tmpfile[1]).st_size:
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+
 	## temporary dir to unpack stuff in
 	tmpdir2 = tempfile.mkdtemp()
 
