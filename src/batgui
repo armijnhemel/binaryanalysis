@@ -507,7 +507,16 @@ class BatFrame(wx.Frame):
 				if i.has_key('kernelmodulelicense'):
 					tablerows = tablerows + tablerowtemplate % ("Kernel module license", i['kernelmodulelicense'])
 				if i.has_key('libs'):
-					tablerows = tablerows + tablerowtemplate % ("Shared libraries", reduce(lambda x, y: "%s, %s" % (x,y), i['libs']))
+					tablerows = tablerows + tablerowtemplate % ("Declared shared libraries", reduce(lambda x, y: "%s, %s" % (x,y), i['libs']))
+				if i.has_key('elfused'):
+					if i['elfused'] != []:
+						tablerows = tablerows + tablerowtemplate % ("Used shared libraries", reduce(lambda x, y: "%s, %s" % (x,y), i['elfused']))
+				if i.has_key('elfunused'):
+					if i['elfunused'] != []:
+						tablerows = tablerows + tablerowtemplate % ("Unused (but declared) shared libraries", reduce(lambda x, y: "%s, %s" % (x,y), i['elfunused']))
+				if i.has_key('elfusedby'):
+					if i['elfusedby'] != []:
+						tablerows = tablerows + tablerowtemplate % ("Used by", reduce(lambda x, y: x + ", " + y, i['elfusedby']))
 				if i.has_key('licenses'):
 					tablerows = tablerows + tablerowtemplate % ("Licenses/license families", reduce(lambda x, y: "%s, %s" % (x,y), i['licenses'].keys()))
 				if i.has_key('forges'):
