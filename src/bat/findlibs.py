@@ -149,6 +149,8 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 	## For each file keep a list of other files that use this file. This is mostly
 	## for reporting.
 	usedby = {}
+	usedlibsperfile = {}
+	unusedlibsperfile = {}
 
 	## Keep a list of files that are identical, for example copies of libraries
 	dupes = {}
@@ -276,13 +278,19 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 					#print >>sys.stderr, "POSSIBLE LIBS TO SATISFY CONDITIONS", list(set(possiblesolutions))
 				#print >>sys.stderr
 			if list(set(leafreports[i]['libs']).difference(set(usedlibs))) != [] and remotefuncswc == []:
-				pass
+				unusedlibs = list(set(leafreports[i]['libs']).difference(set(usedlibs)))
+				unusedlibs.sort()
+				unusedlibsperfile[i] = unusedlibs
 				#print >>sys.stderr, "UNUSED LIBS", i, list(set(leafreports[i]['libs']).difference(set(usedlibs)))
 				#print >>sys.stderr
 			if possiblyused != []:
 				pass
 				#print >>sys.stderr, "POSSIBLY USED", i, possiblyused
 				#print >>sys.stderr
+			if not usedlibsperfile.has_key(i):
+				usedlibs = list(set(usedlibs))
+				usedlibs.sort()
+				usedlibsperfile[i] = usedlibs
 	#print >>sys.stderr,"DUPES",  dupes
 
 	## return a dictionary, with for each ELF file for which there are results
@@ -290,6 +298,12 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 	## leafreports by the top level script.
 	aggregatereturn = {}
 	for i in elffiles:
+		if not aggregatereturn.has_key(i):
+			aggregatereturn[i] = {}
 		if usedby.has_key(i):
-			aggregatereturn[i] = {'elfusedby': usedby[i]}
+			aggregatereturn[i]['elfusedby'] = usedby[i]
+		if usedlibsperfile.has_key(i):
+			aggregatereturn[i]['elfused'] = usedlibsperfile[i]
+		if unusedlibsperfile.has_key(i):
+			aggregatereturn[i]['elfunused'] = unusedlibsperfile[i]
 	return aggregatereturn
