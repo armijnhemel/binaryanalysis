@@ -107,7 +107,7 @@ def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, envva
 		blacklist.append((0, os.stat(filename).st_size))
 		datafile.close()
 		os.fdopen(tmpfile[0]).close()
-		return ([(tmpdir, 0)], blacklist, [])
+		return ([(tmpdir, 0, os.stat(filename).st_size)], blacklist, [])
 	return ([], blacklist, [])
 
 ## unpack base64 files
