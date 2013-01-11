@@ -152,6 +152,9 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 	usedlibsperfile = {}
 	unusedlibsperfile = {}
 
+	notfoundfuncsperfile = {}
+	notfoundvarssperfile = {}
+
 	## Keep a list of files that are identical, for example copies of libraries
 	dupes = {}
 	for i in elffiles:
@@ -263,7 +266,10 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 					else:
 						## TODO
 						pass
+			if remotevarswc != []:
+				notfoundvarssperfile[i] = remotevarswc
 			if remotefuncswc != []:
+				notfoundfuncsperfile[i] = remotefuncswc
 				#print >>sys.stderr, "NOT FULLFILLED", i, remotefuncswc, remotevarswc
 				possiblymissinglibs = list(set(leafreports[i]['libs']).difference(set(usedlibs)))
 				if possiblymissinglibs != []:
@@ -306,4 +312,8 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 			aggregatereturn[i]['elfused'] = usedlibsperfile[i]
 		if unusedlibsperfile.has_key(i):
 			aggregatereturn[i]['elfunused'] = unusedlibsperfile[i]
+		if notfoundfuncsperfile.has_key(i):
+			aggregatereturn[i]['notfoundfuncs'] = notfoundfuncsperfile[i]
+		if notfoundvarssperfile.has_key(i):
+			aggregatereturn[i]['notfoundvars'] = notfoundvarssperfile[i]
 	return aggregatereturn
