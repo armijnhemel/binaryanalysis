@@ -425,15 +425,15 @@ def extractJavaNamesClass(scanfile):
 
 def extractJavaNames(javameta, envvars=None):
 	dynamicRes = {}
-	classname = javameta['classes']
-	methods = javameta['methods']
-	fields = javameta['fields']
-	sourcefile = javameta['sourcefiles']
-
 	namesmatched = 0
 	uniquematches = 0
 	uniquepackages = {}
 	matches = []
+
+	classname = javameta['classes']
+	methods = javameta['methods']
+	fields = javameta['fields']
+	sourcefile = javameta['sourcefiles']
 
 	scanenv = os.environ.copy()
 	if envvars != None:
