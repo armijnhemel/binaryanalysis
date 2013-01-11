@@ -357,9 +357,19 @@ def aggregatescan(unpackreports, leafreports, scans, scantempdir, debug):
 		exec "from %s import %s as bat_%s" % (module, method, method)
 
 		res = eval("bat_%s(unpackreports, leafreports, scantempdir, envvars=envvars)" % (method))
-		## TODO: find out what we want to do with this
+		## return is a tuple with per item a list of results. The results need to be
+		## merged in the leafreports of the file.
 		if res != None:
-			pass
+			for i in res.keys():
+				if leafreports.has_key(i):
+					for k in res[i].keys():
+						if leafreports[i].has_key(k):
+							## we have a serious problem here
+							pass
+						else:
+							leafreports[i][k] = res[i][k]
+				else:
+					leafreports[i] = res[i]
 
 def postrunscan((filetoscan, unpackreports, leafreports, scans, scantempdir, toplevelscandir, debug)):
 	for scan in scans:
