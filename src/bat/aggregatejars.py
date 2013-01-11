@@ -18,8 +18,8 @@ def aggregatejars(unpackreports, leafreports, scantempdir, envvars=None):
 	## 1. checking the tags for 'zip'
 	## 2. verifying for unpacked files that there are .class files
 	## 3. possibly verifying there is a META-INF directory with a manifest
+	jarfiles = []
 	for i in unpackreports:
-		classfiles = []
 		if leafreports.has_key(i):
 			## add a name check. TODO: make case insensitive
 			if i.endswith('.jar'):
@@ -37,13 +37,55 @@ def aggregatejars(unpackreports, leafreports, scantempdir, envvars=None):
 								continue
 							if unpackreports[i]['scans'][0]['scanname'] != 'zip':
 								continue
-							classfiles = filter(lambda x: x.endswith('.class'), unpackreports[i]['scans'][0]['scanreports'])
+							jarfiles.append(i)
+	rankresults = {}
+
+	for i in jarfiles:
+		rankres = {}
+		classfiles = filter(lambda x: x.endswith('.class'), unpackreports[i]['scans'][0]['scanreports'])
+		matchedlines = 0
+		reports = []
+		extractedlines = 0
+		nonUniqueAssignments = {}
+		unmatched = []
+		nonUniqueMatches = {}
 		for c in classfiles:
 			if not leafreports.has_key(c):
 				continue
 			## sanity checks
+			if not leafreports[c].has_key('ranking'):
+				continue
 			if not leafreports[c].has_key('tags'):
 				continue
 			if not 'binary' in leafreports[c]['tags']:
 				continue
-			print >>sys.stderr, c, leafreports[c]
+			(stringmatches, statistics, varfunmatches) = leafreports[c]['ranking']
+			if varfunmatches['language'] != 'Java':
+				continue
+			matchedlines = matchedlines + stringmatches['matchedlines']
+			extractedlines = extractedlines + stringmatches['extractedlines']
+			if stringmatches['unmatched'] != []:
+				unmatched = unmatched + stringmatches['unmatched']
+			#print >>sys.stderr, stringmatches
+			if stringmatches['nonUniqueAssignments'] != {}:
+				for n in stringmatches['nonUniqueAssignments'].keys():
+					if nonUniqueAssignments.has_key(n):
+						nonUniqueAssignments[n] = nonUniqueAssignments[n] + stringmatches['nonUniqueAssignments'][n]
+					else:
+						nonUniqueAssignments[n] = stringmatches['nonUniqueAssignments'][n]
+			if stringmatches['nonUniqueMatches'] != {}:
+				for n in stringmatches['nonUniqueMatches'].keys():
+					if nonUniqueMatches.has_key(n):
+						nonUniqueMatches[n] = list(set(nonUniqueMatches[n] + stringmatches['nonUniqueMatches'][n]))
+					else:
+						nonUniqueMatches[n] = stringmatches['nonUniqueMatches'][n]
+			if stringmatches['reports'] != []:
+				print >>sys.stderr, stringmatches['reports']
+
+		rankres['unmatched'] = unmatched
+		rankres['matchedlines'] = matchedlines
+		rankres['extractedlines'] = extractedlines
+		rankres['nonUniqueAssignments'] = nonUniqueAssignments
+		rankres['nonUniqueMatches'] = nonUniqueMatches
+		rankresults[i] = (rankres, {}, {'language': 'Java'})
+		#print >>sys.stderr, rankres
