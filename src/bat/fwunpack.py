@@ -1472,7 +1472,21 @@ def unpackSquashfsWithLZMA(filename, offset, command, tmpdir):
 
 ## squashfs variant from Atheros, with LZMA
 def unpackSquashfsAtherosLZMA(filename, offset, tmpdir):
-	return unpackSquashfsWithLZMA(filename, offset, "bat-unsquashfs-atheros", tmpdir)
+	p = subprocess.Popen(["bat-unsquashfs-atheros", '-d', tmpdir, '-f', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		return None
+	else:
+		## it is possible to get a rough size estimate using the -s option	
+		p = subprocess.Popen(["bat-unsquashfs-atheros", '-s', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			squashsize = 1
+		else:
+			for s in stanout.splitlines():
+				if s.startswith('Filesystem size '):
+					squashsize = int(s.split(" ")[2].split('.')[0]) * 1024
+		return (tmpdir, squashsize)
 
 ## squashfs variant from Ralink, with LZMA
 def unpackSquashfsRalinkLZMA(filename, offset, tmpdir):
