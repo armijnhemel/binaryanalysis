@@ -2,6 +2,11 @@
 * add extra sanity check for romfs unpacking. romfsck sometimes segfaults if
 the romfs is not valid. By doing a few header checks in advance we can avoid
 these.
+* return data from ELF aggregate scan
+* display data from ELF aggregate scan
+* guess a size for Atheros LZMA squashfs variant using -s option for
+bat-unqsuashfs-atheros. This prevents individual inodes from being unpacked
+using LZMA or other methods, reducing false positives.
 
 2013-01-10
 * fix JFFS2 unpacking which would fail if we would somewhere find just a
