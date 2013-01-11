@@ -262,29 +262,34 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 						## TODO
 						pass
 			if remotefuncswc != []:
-				print >>sys.stderr, "NOT FULLFILLED", i, remotefuncswc, remotevarswc
+				#print >>sys.stderr, "NOT FULLFILLED", i, remotefuncswc, remotevarswc
 				possiblymissinglibs = list(set(leafreports[i]['libs']).difference(set(usedlibs)))
 				if possiblymissinglibs != []:
-					print >>sys.stderr, "POSSIBLY MISSING AND/OR UNUSED", possiblymissinglibs
+					pass
+					#print >>sys.stderr, "POSSIBLY MISSING AND/OR UNUSED", possiblymissinglibs
 				possiblesolutions = []
 				for r in remotefuncswc:
 					if funcstolibs.has_key(r):
 						possiblesolutions = possiblesolutions + funcstolibs[r]
 				if possiblesolutions != []:
-					print >>sys.stderr, "POSSIBLE LIBS TO SATISFY CONDITIONS", list(set(possiblesolutions))
-				print >>sys.stderr
+					pass
+					#print >>sys.stderr, "POSSIBLE LIBS TO SATISFY CONDITIONS", list(set(possiblesolutions))
+				#print >>sys.stderr
 			if list(set(leafreports[i]['libs']).difference(set(usedlibs))) != [] and remotefuncswc == []:
-				print >>sys.stderr, "UNUSED LIBS", i, list(set(leafreports[i]['libs']).difference(set(usedlibs)))
-				print >>sys.stderr
+				pass
+				#print >>sys.stderr, "UNUSED LIBS", i, list(set(leafreports[i]['libs']).difference(set(usedlibs)))
+				#print >>sys.stderr
 			if possiblyused != []:
-				print >>sys.stderr, "POSSIBLY USED", i, possiblyused
-				print >>sys.stderr
-	print >>sys.stderr,"DUPES",  dupes
+				pass
+				#print >>sys.stderr, "POSSIBLY USED", i, possiblyused
+				#print >>sys.stderr
+	#print >>sys.stderr,"DUPES",  dupes
 
-	for u in usedby:
-		print >>sys.stderr, "USED", u, usedby[u]
-		print >>sys.stderr
 	## return a dictionary, with for each ELF file for which there are results
 	## a separate dictionary with the results. These will be added to 'scans' in
 	## leafreports by the top level script.
-	return {}
+	aggregatereturn = {}
+	for i in elffiles:
+		if usedby.has_key(i):
+			aggregatereturn[i] = {'elfusedby': usedby[i]}
+	return aggregatereturn
