@@ -4,6 +4,9 @@ single inode outside of a JFFS2 file system
 * if we hardlinked files, then modified them, we ended up modifying the
 original copy of a file too. Introduce a flag 'modify' that can be used to
 signal that the file should be copied instead. Apply this fix to batxor.py.
+* expand ELF checks in prerun.py
+* expand dynamic libs scanning: guess libraries from sonames, extract and
+compare variables
 
 2013-01-09
 * start on verifying whether or not combinations of libraries and executables
