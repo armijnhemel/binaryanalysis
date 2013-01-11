@@ -514,6 +514,12 @@ class BatFrame(wx.Frame):
 				if i.has_key('elfunused'):
 					if i['elfunused'] != []:
 						tablerows = tablerows + tablerowtemplate % ("Unused (but declared) shared libraries", reduce(lambda x, y: "%s, %s" % (x,y), i['elfunused']))
+				if i.has_key('notfoundfuncs'):
+					if i['notfoundfuncs'] != []:
+						tablerows = tablerows + tablerowtemplate % ("Unresolved function symbols", reduce(lambda x, y: "%s, %s" % (x,y), i['notfoundfuncs']))
+				if i.has_key('notfoundvars'):
+					if i['notfoundvars'] != []:
+						tablerows = tablerows + tablerowtemplate % ("Unresolved variable symbols", reduce(lambda x, y: "%s, %s" % (x,y), i['notfoundvars']))
 				if i.has_key('elfusedby'):
 					if i['elfusedby'] != []:
 						tablerows = tablerows + tablerowtemplate % ("Used by", reduce(lambda x, y: x + ", " + y, i['elfusedby']))
