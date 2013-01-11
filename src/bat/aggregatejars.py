@@ -19,11 +19,31 @@ def aggregatejars(unpackreports, leafreports, scantempdir, envvars=None):
 	## 2. verifying for unpacked files that there are .class files
 	## 3. possibly verifying there is a META-INF directory with a manifest
 	for i in unpackreports:
+		classfiles = []
 		if leafreports.has_key(i):
 			## add a name check. TODO: make case insensitive
 			if i.endswith('.jar'):
 				if leafreports[i].has_key('tags'):
 					## check if it was tagged as a ZIP file
 					if 'zip' in leafreports[i]['tags']:
+						## sanity checks
 						if unpackreports[i]['scans'] != []:
-							print >>sys.stderr, unpackreports[i]['scans']
+							## since it was a single ZIP file there should be only
+							## one item in unpackreports[i]['scan']
+							if len(unpackreports[i]['scans']) != 1:
+								continue
+							## more sanity checks
+							if unpackreports[i]['scans'][0]['offset'] != 0:
+								continue
+							if unpackreports[i]['scans'][0]['scanname'] != 'zip':
+								continue
+							classfiles = filter(lambda x: x.endswith('.class'), unpackreports[i]['scans'][0]['scanreports'])
+		for c in classfiles:
+			if not leafreports.has_key(c):
+				continue
+			## sanity checks
+			if not leafreports[c].has_key('tags'):
+				continue
+			if not 'binary' in leafreports[c]['tags']:
+				continue
+			print >>sys.stderr, c, leafreports[c]
