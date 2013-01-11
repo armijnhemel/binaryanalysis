@@ -2025,8 +2025,9 @@ def unpackZip(filename, offset, tempdir=None):
 	return (endofcentraldir, tmpdir)
 
 def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	tags = []
 	if offsets['zip'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, tags)
 	diroffsets = []
 	counter = 1
 	endofcentraldir_offset = 0
@@ -2047,7 +2048,10 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		if endofcentraldir != None:
 			endofcentraldir_offset = endofcentraldir
 			blacklist.append((offset, offset + endofcentraldir))
-	return (diroffsets, blacklist, [])
+			if offset == 0 and res != None and offset + endofcentraldir +22 == os.stat(filename).st_size:
+				tags.append('zip')
+				tags.append('compressed')
+	return (diroffsets, blacklist, tags)
 
 def searchUnpackRar(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	if offsets['rar'] == []:
