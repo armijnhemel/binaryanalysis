@@ -833,9 +833,16 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	c.execute("create index if not exists stringscache.programstring_index on stringscache(programstring)")
 	conn.commit()
 
+	clonescan = False
 	clonedb = scanenv.get('BAT_CLONE_DB')
 	if clonedb != None:
 		c.execute("attach ? as clonedb", (clonedb,))
+		c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='licenses';")
+		if c.fetchall() != []:
+			clonescan = True
+		else:
+			clonescan = False
+			c.execute("detach clonedb")
 
 	rankingfull = False
 	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
@@ -962,8 +969,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 				## in case we don't know this match yet record it in the database
 				if newmatch and not rankingfull:
 					c.execute('''insert into stringscache.stringscache values (?, ?, ?, ?)''', (line, package, filename, ""))
-				if clonedb != None:
-					pass
+				if clonedb != None and clonescan:
 					c.execute("select newname from renames where originalname=? LIMIT 1", (package,))
 					nn = c.fetchone()
 					if nn != None:
