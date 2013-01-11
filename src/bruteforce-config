@@ -482,7 +482,7 @@ enabled     = yes
 #type        = unpack
 #module      = bat.batxor
 #method      = searchUnpackXOR
-#priority    = 0
+#priority    = 10
 #noscan      = xml:graphics:pdf:compressed:audio:video:elf:temporary
 #scanonly    = binary
 #description = XOR 'decryption'
@@ -697,6 +697,17 @@ method      = searchWpaSupplicant
 noscan      = text:xml:graphics:pdf:compressed:audio:video
 description = Determine presence of wpa-supplicant
 enabled     = yes
+
+#######################
+### aggregate scans ###
+#######################
+
+[findlibs]
+type        = aggregate
+module      = bat.findlibs
+method      = findlibs
+noscan      = text:xml:graphics:pdf:audio:video
+enabled     = no
 
 #####################
 ### postrun scans ###
