@@ -767,6 +767,15 @@ def unpack7z(filename, offset, tempdir=None):
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.unlink(tmpfile[1])
+		## 7z might have exited, but perhaps left some files behind, so remove them
+		tmpfiles = os.listdir(tmpdir)
+		if tmpfiles != []:
+			## TODO: This does not yet correctly process symlinks links
+			for f in tmpfiles:
+				try:
+					shutil.rmtree(os.path.join(tmpdir, f))
+				except:
+					os.remove(os.path.join(tmpdir, f))
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
