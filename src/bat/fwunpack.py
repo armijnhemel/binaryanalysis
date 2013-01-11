@@ -1343,14 +1343,14 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 		os.unlink(tmpfile[1])
 		return retval
 
-	## Ralink variant
-	retval = unpackSquashfsRalinkLZMA(tmpfile[1],offset,tmpdir)
+	## Atheros variant
+	retval = unpackSquashfsAtherosLZMA(tmpfile[1],offset,tmpdir)
 	if retval != None:
 		os.unlink(tmpfile[1])
 		return retval
 
-	## Atheros variant
-	retval = unpackSquashfsAtherosLZMA(tmpfile[1],offset,tmpdir)
+	## Ralink variant
+	retval = unpackSquashfsRalinkLZMA(tmpfile[1],offset,tmpdir)
 	if retval != None:
 		os.unlink(tmpfile[1])
 		return retval
