@@ -415,7 +415,9 @@ def extractJavaNamesClass(scanfile):
 		if i.startswith("Field name:\""):
 			res = re.match("Field name:\"([\w$]+)\"", i)
 			if res != None:
-				fields.append(res.groups()[0])
+				fieldname = res.groups()[0]
+				if fieldname != 'serialVersionUID':
+					fields.append(fieldname)
 		## extract methods
 		if i.startswith("Method name:\""):
 			res = re.match("Method name:\"([\w$]+)\"", i)
@@ -570,7 +572,7 @@ def extractVariablesJava(javameta, envvars=None):
 			classname = i
 		res = c.execute("select sha256,type,language from extracted_name where name=?", (classname,)).fetchall()
 		if res != []:
-			for r in res:
+			for r in list(set(res)):
 				if r[2] != 'Java':
 					continue
 				if r[1] != 'class':
