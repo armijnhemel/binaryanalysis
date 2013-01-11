@@ -508,7 +508,18 @@ def extractJavaNames(javameta, envvars=None):
 
 def extractVariablesJava(javameta, envvars=None):
 	variablepvs = {}
-	fields = javameta['fields']
+	if javameta.has_key('fields'):
+		fields = javameta['fields']
+	else:
+		fields = []
+	if javameta.has_key('classes'):
+		classes = javameta['classes']
+	else:
+		classes = []
+	if javameta.has_key('sourcefiles'):
+		sourcefiles = javameta['sourcefiles']
+	else:
+		sourcefiles = []
 	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):
@@ -528,46 +539,45 @@ def extractVariablesJava(javameta, envvars=None):
 	classpvs = {}
 	sourcepvs = {}
 	fieldspvs = {}
-	if javameta.has_key('classes'):
-		for i in javameta['classes']:
-			pvs = []
-			## first try the name as found in the binary. If it can't
-			## be found and has dots in it we should split it on '.' and
-			## use the last component only.
+	for i in classes:
+		pvs = []
+		## first try the name as found in the binary. If it can't
+		## be found and has dots in it we should split it on '.' and
+		## use the last component only.
+		classname = i
+		res = c.execute("select sha256,type,language from extracted_name where name=?", (classname,)).fetchall()
+		if res == []:
+			classname = classname.split('.')[-1]
+			res = c.execute("select sha256,type,language from extracted_name where name=?", (classname,)).fetchall()
+		if res != []:
+			for r in res:
+				if r[2] != 'Java':
+					continue
+				if r[1] != 'class':
+					continue
+				pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
+				pvs = pvs + pv
+		classpvs[classname] = list(set(pvs))
+
+	for i in javameta['sourcefiles']:
+		pvs = []
+		## first try the name as found in the binary. If it can't
+		## be found and has dots in it we should split it on '.' and
+		## use the last component only.
+		if i.endswith('.java'):
+			classname = i[0:-5]
+		else:
 			classname = i
-			res = c.execute("select sha256,type,language from extracted_name where name=?", (classname,)).fetchall()
-			if res == []:
-				classname = classname.split('.')[-1]
-				res = c.execute("select sha256,type,language from extracted_name where name=?", (classname,)).fetchall()
-			if res != []:
-				for r in res:
-					if r[2] != 'Java':
-						continue
-					if r[1] != 'class':
-						continue
-					pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
-					pvs = pvs + pv
-			classpvs[classname] = list(set(pvs))
-	if javameta.has_key('sourcefiles'):
-		for i in javameta['sourcefiles']:
-			pvs = []
-			## first try the name as found in the binary. If it can't
-			## be found and has dots in it we should split it on '.' and
-			## use the last component only.
-			if i.endswith('.java'):
-				classname = i[0:-5]
-			else:
-				classname = i
-			res = c.execute("select sha256,type,language from extracted_name where name=?", (classname,)).fetchall()
-			if res != []:
-				for r in res:
-					if r[2] != 'Java':
-						continue
-					if r[1] != 'class':
-						continue
-					pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
-					pvs = pvs + pv
-			sourcepvs[classname] = list(set(pvs))
+		res = c.execute("select sha256,type,language from extracted_name where name=?", (classname,)).fetchall()
+		if res != []:
+			for r in res:
+				if r[2] != 'Java':
+					continue
+				if r[1] != 'class':
+					continue
+				pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
+				pvs = pvs + pv
+		sourcepvs[classname] = list(set(pvs))
 	## Keep a list of which sha256s we've already seen. Since the files are
 	## likely only coming from a few packages we don't need to hit the database
 	## that often.
