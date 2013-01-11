@@ -39,7 +39,7 @@ which should be run anyway, are run. Examples are generating pictures or running
 are packed in a tar file.
 '''
 
-import sys, os, os.path, magic, hashlib, subprocess, tempfile, shutil, stat, multiprocessing, cPickle, glob, tarfile
+import sys, os, os.path, magic, hashlib, subprocess, tempfile, shutil, stat, multiprocessing, cPickle, glob, tarfile, copy
 from optparse import OptionParser
 import ConfigParser
 import datetime
@@ -790,7 +790,7 @@ def runscan(tempdir, scans, scan_binary):
 					sha256_name = sha256leaf[i][0][len(scantempdir):]
 					if sha256_name.startswith('/'):
 						sha256_name = sha256_name[1:]
-					leafreports[j_name] = leafreports[sha256_name]
+					leafreports[j_name] = copy.deepcopy(leafreports[sha256_name])
 		pool.terminate()
 	else:
 		leafreports = {}
