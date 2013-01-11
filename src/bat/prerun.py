@@ -643,3 +643,13 @@ def verifyPE(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	if "This program cannot be run in DOS mode." in databuffer:
 		pass
 	return newtags
+
+def verifyVimSwap(filename, tempdir=None, tags=[], offsets={}, envvars=None):
+	newtags = []
+	if filename.endswith('.swp'):
+		datafile = open(filename, 'rb')
+		databuffer = datafile.read(5)
+		datafile.close()
+		if databuffer == 'b0VIM\x20':
+			newtags.add('vimswap')
+	return newtags
