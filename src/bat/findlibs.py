@@ -207,9 +207,15 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 								if sl['target'].startswith('/'):
 									pass
 								else:
+									target = os.path.normpath(os.path.join(os.path.dirname(sl['original']), sl['target']))
+									## TODO: verify if any of the links are symlinks
+									## themselves. Add a safety mechanism for cyclical
+									## symlinks.
+									if os.path.islink(target):
+										pass
 									## add all resolved symlinks to the list of
 									## libraries to consider
-									filtersquash.append(os.path.normpath(os.path.join(os.path.dirname(sl['original']), sl['target'])))
+									filtersquash.append(target)
 					else:
 						filtersquash = filter(lambda x: leafreports[x]['architecture'] == leafreports[i]['architecture'], squashedelffiles[l])
 					## now walk through the possible files that can resolve this dependency.
@@ -243,26 +249,28 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 								dupes[filtersquash[0]] = filtersquash
 					if len(filtersquash) == 1:
 						if remotefuncswc != []:
-							## easy case
-							localfuncsfound = list(set(remotefuncswc).intersection(set(localfunctionnames[filtersquash[0]])))
-							if localfuncsfound != []:
-								if usedby.has_key(filtersquash[0]):
-									usedby[filtersquash[0]].append(i)
-								else:
-									usedby[filtersquash[0]] = [i]
-								usedlibs.append(l)
-							funcsfound = funcsfound + localfuncsfound
-							remotefuncswc = list(set(remotefuncswc).difference(set(funcsfound)))
+							if localfunctionnames.has_key(filtersquash[0]):
+								## easy case
+								localfuncsfound = list(set(remotefuncswc).intersection(set(localfunctionnames[filtersquash[0]])))
+								if localfuncsfound != []:
+									if usedby.has_key(filtersquash[0]):
+										usedby[filtersquash[0]].append(i)
+									else:
+										usedby[filtersquash[0]] = [i]
+									usedlibs.append(l)
+								funcsfound = funcsfound + localfuncsfound
+								remotefuncswc = list(set(remotefuncswc).difference(set(funcsfound)))
 						if remotevarswc != []:
-							localvarsfound = list(set(remotevarswc).intersection(set(localvariablenames[filtersquash[0]])))
-							if localvarsfound != []:
-								if usedby.has_key(filtersquash[0]):
-									usedby[filtersquash[0]].append(i)
-								else:
-									usedby[filtersquash[0]] = [i]
-								usedlibs.append(l)
-							varsfound = varsfound + localvarsfound
-							remotevarswc = list(set(remotevarswc).difference(set(varsfound)))
+							if localvariablenames.has_key(filtersquash[0]):
+								localvarsfound = list(set(remotevarswc).intersection(set(localvariablenames[filtersquash[0]])))
+								if localvarsfound != []:
+									if usedby.has_key(filtersquash[0]):
+										usedby[filtersquash[0]].append(i)
+									else:
+										usedby[filtersquash[0]] = [i]
+									usedlibs.append(l)
+								varsfound = varsfound + localvarsfound
+								remotevarswc = list(set(remotevarswc).difference(set(varsfound)))
 					else:
 						## TODO
 						pass
