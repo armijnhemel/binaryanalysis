@@ -552,7 +552,7 @@ def extractVariablesJava(javameta, envvars=None):
 			classname = classname.split('.')[-1]
 			res = c.execute("select sha256,type,language from extracted_name where name=?", (classname,)).fetchall()
 		if res != []:
-			for r in res:
+			for r in list(set(res)):
 				if r[2] != 'Java':
 					continue
 				if r[1] != 'class':
@@ -1246,7 +1246,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 		for c in corr_sorted:
 			print >>sys.stderr, s, c, correlation_sort[c]
 	'''
-	return {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched}
+	return {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched, 'scores': scores}
 
 
 def averageStringsPerPkgVersion(pkg, conn):
