@@ -416,6 +416,8 @@ def extractJavaNamesClass(scanfile):
 			res = re.match("Field name:\"([\w$]+)\"", i)
 			if res != None:
 				fieldname = res.groups()[0]
+				if '$' in fieldname:
+					continue
 				if fieldname != 'serialVersionUID':
 					fields.append(fieldname)
 		## extract methods
@@ -589,7 +591,7 @@ def extractVariablesJava(javameta, envvars=None):
 		## a few fields are so common that they will be completely useless
 		## for reporting, but processing them will take a *lot* of time, so
 		## just skip them.
-		if f in ['value', 'name', 'type', 'data', 'options']:
+		if f in ['value', 'name', 'type', 'data', 'options', 'parent', 'description', 'instance', 'port', 'out', 'properties', 'project', 'next', 'id', 'listeners', 'status', 'target', 'result', 'index', 'buffer', 'values', 'count', 'size', 'key', 'path', 'cache', 'map', 'file', 'context', 'initialized', 'verbose', 'version', 'debug', 'message', 'attributes', 'url', 'DEBUG', 'NAME', 'state', 'source', 'password', 'text', 'start', 'factory', 'entries', 'buf', 'args', 'logger', 'config', 'length', 'encoding', 'method', 'resources', 'timeout', 'filename', 'offset', 'server', 'mode', 'in', 'connection']:
 			continue
 		pvs = []
 		res = c.execute("select sha256,type,language from extracted_name where name=?", (f,)).fetchall()
