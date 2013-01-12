@@ -648,8 +648,8 @@ def verifyVimSwap(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
 	if filename.endswith('.swp'):
 		datafile = open(filename, 'rb')
-		databuffer = datafile.read(5)
+		databuffer = datafile.read(6)
 		datafile.close()
 		if databuffer == 'b0VIM\x20':
-			newtags.add('vimswap')
+			newtags.append('vimswap')
 	return newtags
