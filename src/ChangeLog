@@ -13,6 +13,7 @@ using LZMA or other methods, reducing false positives.
 default due to likely scan recursion.
 * 7z unpacking might only partially succeed, leaving files in the directory so
 they need to be removed.
+* expand Java aggregate scanning.
 
 2013-01-10
 * fix JFFS2 unpacking which would fail if we would somewhere find just a
