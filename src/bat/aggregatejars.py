@@ -79,8 +79,8 @@ def aggregatejars(unpackreports, leafreports, scantempdir, envvars=None):
 						nonUniqueMatches[n] = list(set(nonUniqueMatches[n] + stringmatches['nonUniqueMatches'][n]))
 					else:
 						nonUniqueMatches[n] = stringmatches['nonUniqueMatches'][n]
-			if stringmatches['reports'] != []:
-				print >>sys.stderr, stringmatches['reports']
+			if stringmatches['scores'] != {}:
+				print >>sys.stderr, stringmatches['scores']
 
 		rankres['unmatched'] = unmatched
 		rankres['matchedlines'] = matchedlines
