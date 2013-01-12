@@ -51,6 +51,9 @@ def aggregatejars(unpackreports, leafreports, scantempdir, envvars=None):
 		nonUniqueMatches = {}
 		totalscore = 0
 		scoresperpkg = {}
+		uniqueMatchesperpkg = {}
+		packageversionsperpkg = {}
+		packagelicensesperpkg = {}
 		for c in classfiles:
 			if not leafreports.has_key(c):
 				continue
@@ -88,6 +91,26 @@ def aggregatejars(unpackreports, leafreports, scantempdir, envvars=None):
 						scoresperpkg[s] = scoresperpkg[s] + stringmatches['scores'][s]
 					else:
 						scoresperpkg[s] = stringmatches['scores'][s]
+			if stringmatches['reports'] != []:
+				for r in stringmatches['reports']:
+					(rank, package, unique, percentage, packageversions, packagelicenses) = r
+					## ignore rank and percentage
+					if uniqueMatchesperpkg.has_key(package):
+						uniqueMatchesperpkg[package] = uniqueMatchesperpkg[package] + r[1]
+					else:
+						uniqueMatchesperpkg[package] = r[1]
+					if packageversions != {}:
+						if not packageversionsperpkg.has_key(package):
+							packageversionsperpkg[package] = {}
+						for k in packageversions:
+							if packageversionsperpkg[package].has_key(k):
+								packageversionsperpkg[package][k] = packageversionsperpkg[package][k] + packageversions[k]
+							else:
+								packageversionsperpkg[package][k] = packageversions[k]
+					if packagelicensesperpkg.has_key(package):
+						packagelicensesperpkg[package] = packagelicensesperpkg[package] + r[5]
+					else:
+						packagelicensesperpkg[package] = r[5]
 
 		scores_sorted = sorted(scoresperpkg, key = lambda x: scoresperpkg.__getitem__(x), reverse=True)
 
@@ -98,7 +121,7 @@ def aggregatejars(unpackreports, leafreports, scantempdir, envvars=None):
 				percentage = (scoresperpkg[s]/totalscore)*100.0
 			except:
 				percentage = 0.0
-			#reports.append((rank, s, uniqueMatches.get(s,[]), percentage, packageversions.get(s, {}), packagelicenses.get(s, [])))
+			reports.append((rank, s, uniqueMatchesperpkg.get(s,[]), percentage, packageversionsperpkg.get(s, {}), list(set(packagelicensesperpkg.get(s, [])))))
 			rank = rank+1
 
 
@@ -107,5 +130,6 @@ def aggregatejars(unpackreports, leafreports, scantempdir, envvars=None):
 		rankres['extractedlines'] = extractedlines
 		rankres['nonUniqueAssignments'] = nonUniqueAssignments
 		rankres['nonUniqueMatches'] = nonUniqueMatches
-		rankresults[i] = (rankres, {}, {'language': 'Java'})
-		#print >>sys.stderr, rankres
+		rankres['reports'] = reports
+		rankresults[i] = {'ranking': (rankres, {}, {'language': 'Java'})}
+	return rankresults
