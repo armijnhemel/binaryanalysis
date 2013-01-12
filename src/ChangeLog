@@ -1,3 +1,6 @@
+2013-01-12
+* merge reports of individual class files in Java aggregate scan
+
 2013-01-11
 * add extra sanity check for romfs unpacking. romfsck sometimes segfaults if
 the romfs is not valid. By doing a few header checks in advance we can avoid
