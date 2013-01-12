@@ -849,7 +849,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	clonedb = scanenv.get('BAT_CLONE_DB')
 	if clonedb != None:
 		c.execute("attach ? as clonedb", (clonedb,))
-		c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='licenses';")
+		c.execute("SELECT name FROM clonedb.sqlite_master WHERE type='table' AND name='renames';")
 		if c.fetchall() != []:
 			clonescan = True
 		else:
