@@ -717,12 +717,12 @@ method      = findlibs
 noscan      = text:xml:graphics:pdf:audio:video
 enabled     = no
 
-#[jars]
-#type        = aggregate
-#module      = bat.aggregatejars
-#method      = aggregatejars
-#noscan      = text:xml:graphics:pdf:audio:video
-#enabled     = no
+[jars]
+type        = aggregate
+module      = bat.aggregatejars
+method      = aggregatejars
+noscan      = text:xml:graphics:pdf:audio:video
+enabled     = yes
 
 #####################
 ### postrun scans ###
