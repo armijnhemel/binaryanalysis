@@ -586,6 +586,11 @@ def extractVariablesJava(javameta, envvars=None):
 	## This can be really slow, so we should perhaps use some caching database.
 	sha256cache = {}
 	for f in fields:
+		## a few fields are so common that they will be completely useless
+		## for reporting, but processing them will take a *lot* of time, so
+		## just skip them.
+		if f in ['value', 'name', 'type', 'data']:
+			continue
 		pvs = []
 		res = c.execute("select sha256,type,language from extracted_name where name=?", (f,)).fetchall()
 		for r in list(set(res)):
