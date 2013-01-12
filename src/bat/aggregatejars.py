@@ -96,9 +96,9 @@ def aggregatejars(unpackreports, leafreports, scantempdir, envvars=None):
 					(rank, package, unique, percentage, packageversions, packagelicenses) = r
 					## ignore rank and percentage
 					if uniqueMatchesperpkg.has_key(package):
-						uniqueMatchesperpkg[package] = uniqueMatchesperpkg[package] + r[1]
+						uniqueMatchesperpkg[package] = uniqueMatchesperpkg[package] + r[2]
 					else:
-						uniqueMatchesperpkg[package] = r[1]
+						uniqueMatchesperpkg[package] = r[2]
 					if packageversions != {}:
 						if not packageversionsperpkg.has_key(package):
 							packageversionsperpkg[package] = {}
