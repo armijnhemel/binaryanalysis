@@ -49,6 +49,8 @@ def aggregatejars(unpackreports, leafreports, scantempdir, envvars=None):
 		nonUniqueAssignments = {}
 		unmatched = []
 		nonUniqueMatches = {}
+		totalscore = 0
+		scoresperpkg = {}
 		for c in classfiles:
 			if not leafreports.has_key(c):
 				continue
@@ -80,7 +82,25 @@ def aggregatejars(unpackreports, leafreports, scantempdir, envvars=None):
 					else:
 						nonUniqueMatches[n] = stringmatches['nonUniqueMatches'][n]
 			if stringmatches['scores'] != {}:
-				print >>sys.stderr, stringmatches['scores']
+				for s in stringmatches['scores']:
+					totalscore = totalscore + stringmatches['scores'][s]
+					if scoresperpkg.has_key(s):
+						scoresperpkg[s] = scoresperpkg[s] + stringmatches['scores'][s]
+					else:
+						scoresperpkg[s] = stringmatches['scores'][s]
+
+		scores_sorted = sorted(scoresperpkg, key = lambda x: scoresperpkg.__getitem__(x), reverse=True)
+
+		rank = 1
+		reports = []
+		for s in scores_sorted:
+			try:
+				percentage = (scoresperpkg[s]/totalscore)*100.0
+			except:
+				percentage = 0.0
+			#reports.append((rank, s, uniqueMatches.get(s,[]), percentage, packageversions.get(s, {}), packagelicenses.get(s, [])))
+			rank = rank+1
+
 
 		rankres['unmatched'] = unmatched
 		rankres['matchedlines'] = matchedlines
