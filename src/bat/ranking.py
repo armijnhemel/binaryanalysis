@@ -429,7 +429,7 @@ def extractJavaNamesClass(scanfile):
 	return {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile}
 
 def extractJavaNames(javameta, envvars=None):
-	dynamicRes = {}
+	dynamicRes = {}  # {'namesmatched': [], 'totalnames': int, 'uniquematches': int, 'packages': {} }
 	namesmatched = 0
 	uniquematches = 0
 	uniquepackages = {}
@@ -448,9 +448,22 @@ def extractJavaNames(javameta, envvars=None):
 				scanenv[envname] = envvalue
 			except Exception, e:
 				pass
+
+	rankingfull = False
+	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
+		rankingfull = True
+
+	if not scanenv.has_key('BAT_DB'):
+		return dynamicRes
+
+	masterdb = scanenv.get('BAT_DB')
+
+	if not os.path.exists(masterdb):
+		return dynamicRes
+
 	## open the database containing function names that were extracted
 	## from source code.
-	conn = sqlite3.connect(scanenv.get('BAT_DB', '/tmp/master'))
+	conn = sqlite3.connect(masterdb)
 	conn.text_factory = str
 
 	c = conn.cursor()
@@ -458,9 +471,6 @@ def extractJavaNames(javameta, envvars=None):
 	c.execute("create table if not exists functionnamecache.functionnamecache (functionname text, package text)")
 	c.execute("create index if not exists functionnamecache.functionname_index on functionnamecache(functionname)")
 	conn.commit()
-	rankingfull = False
-	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
-		rankingfull = True
 	for meth in methods:
 		if meth == 'main':
 			continue
@@ -533,14 +543,17 @@ def extractVariablesJava(javameta, envvars=None):
 				scanenv[envname] = envvalue
 			except Exception, e:
 				pass
+
+	rankingfull = False
+	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
+		rankingfull = True
+
 	## open the database containing function names that were extracted
 	## from source code.
 	conn = sqlite3.connect(scanenv.get('BAT_DB', '/tmp/master'))
 	conn.text_factory = str
 	c = conn.cursor()
-	rankingfull = False
-	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
-		rankingfull = True
+
 	classpvs = {}
 	sourcepvs = {}
 	fieldspvs = {}
