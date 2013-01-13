@@ -67,6 +67,8 @@ def aggregatejars(unpackreports, leafreports, scantempdir, envvars=None):
 			(stringmatches, statistics, varfunmatches) = leafreports[c]['ranking']
 			if varfunmatches['language'] != 'Java':
 				continue
+			if stringmatches == None:
+				continue
 			matchedlines = matchedlines + stringmatches['matchedlines']
 			extractedlines = extractedlines + stringmatches['extractedlines']
 			if stringmatches['unmatched'] != []:

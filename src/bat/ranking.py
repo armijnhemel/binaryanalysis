@@ -374,12 +374,12 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 			if blacklist != []:
 				## we made a tempfile because of blacklisting, so cleanup
 				os.unlink(tmpfile[1])
-			return (res, dynamicRes, variablepvs)
 		else:
 			if blacklist != []:
 				## we made a tempfile because of blacklisting, so cleanup
 				os.unlink(tmpfile[1])
-			return None
+		return (res, dynamicRes, variablepvs)
+
         except Exception, e:
                 print >>sys.stderr, "string scan failed for:", path, e, type(e)
 		if blacklist != []:
@@ -1328,6 +1328,7 @@ def averageStringsPerPkgVersion(pkg, conn):
 
 def xmlprettyprint(matchres, root, envvars=None):
 	(res, dynamicRes, variablepvs) = matchres
+	## TODO: we might have different results available
 	if res['matchedlines'] == 0:
 		return None
 	tmpnode = root.createElement('ranking')
