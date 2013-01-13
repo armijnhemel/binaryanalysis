@@ -566,8 +566,9 @@ class BatFrame(wx.Frame):
 								functionmatches = functionmatches + "    <tr><td>%s</td><td>%d</td></tr>\n" % (j, max(map(lambda x: x[1], dynamicres['packages'][j])))
 						functionmatches = functionmatches + "</table>"
 
-					if not (stringsres['extractedlines']) == 0 and not (stringsres['matchedlines']) == 0:
-						matchesrows = '''
+					if not stringsres == None:
+						if not (stringsres['extractedlines']) == 0 and not (stringsres['matchedlines']) == 0:
+							matchesrows = '''
 <h2>String match statistics</h2>
 <table>
 <tr><td><b>Extracted lines</b></td><td>%d</td></tr>
@@ -575,12 +576,12 @@ class BatFrame(wx.Frame):
 <tr><td><b>Match percentage</b></td><td>%f%%</td></tr>
 </table>
 						'''
-						matchesrows = matchesrows % (stringsres['extractedlines'], stringsres['matchedlines'], (float(stringsres['matchedlines'])/stringsres['extractedlines']*100))
-						if len(stringsres['reports']) != 0:
-							htmllinks = []
-							versionhtml = ""
-							## nested table, urgghhhh
-							matchesrows = matchesrows + '''<h3>Matched packages (strings method)</h3>
+							matchesrows = matchesrows % (stringsres['extractedlines'], stringsres['matchedlines'], (float(stringsres['matchedlines'])/stringsres['extractedlines']*100))
+							if len(stringsres['reports']) != 0:
+								htmllinks = []
+								versionhtml = ""
+								## nested table, urgghhhh
+								matchesrows = matchesrows + '''<h3>Matched packages (strings method)</h3>
 <table>
   <tr><td>
     <table>
@@ -595,50 +596,50 @@ class BatFrame(wx.Frame):
         <td><b>Determined licenses (Ninka &amp; FOSSology report the same)</b></td>
       </tr>\n'''
 
-							for j in stringsres['reports']:
-								determinedlicenses = map(lambda x: x[0], filter(lambda x: x[1] == 'squashed', j[5]))
-								ninkalicenses = map(lambda x: x[0], filter(lambda x: x[1] == 'ninka', j[5]))
-								fossologylicenses = map(lambda x: x[0], filter(lambda x: x[1] == 'fossology', j[5]))
-								determinedlicenses.sort()
-								ninkalicenses.sort()
-								fossologylicenses.sort()
-								if len(ninkalicenses) > 0:
-									if len(ninkalicenses) > 1:
-										ninkalicensestring = ninkalicenses[0] + reduce(lambda x, y: x + " " + y, ninkalicenses[1:], "")
+								for j in stringsres['reports']:
+									determinedlicenses = map(lambda x: x[0], filter(lambda x: x[1] == 'squashed', j[5]))
+									ninkalicenses = map(lambda x: x[0], filter(lambda x: x[1] == 'ninka', j[5]))
+									fossologylicenses = map(lambda x: x[0], filter(lambda x: x[1] == 'fossology', j[5]))
+									determinedlicenses.sort()
+									ninkalicenses.sort()
+									fossologylicenses.sort()
+									if len(ninkalicenses) > 0:
+										if len(ninkalicenses) > 1:
+											ninkalicensestring = ninkalicenses[0] + reduce(lambda x, y: x + " " + y, ninkalicenses[1:], "")
+										else:
+											ninkalicensestring = ninkalicenses[0]
 									else:
-										ninkalicensestring = ninkalicenses[0]
-								else:
-									ninkalicensestring = ""
-								if len(fossologylicenses) > 0:
-									if len(fossologylicenses) > 1:
-										fossologylicensestring = fossologylicenses[0] + reduce(lambda x, y: x + " " + y, fossologylicenses[1:], "")
+										ninkalicensestring = ""
+									if len(fossologylicenses) > 0:
+										if len(fossologylicenses) > 1:
+											fossologylicensestring = fossologylicenses[0] + reduce(lambda x, y: x + " " + y, fossologylicenses[1:], "")
+										else:
+											fossologylicensestring = fossologylicenses[0]
 									else:
-										fossologylicensestring = fossologylicenses[0]
-								else:
-									fossologylicensestring = ""
-								if len(determinedlicenses) > 0:
-									if len(determinedlicenses) > 1:
-										determinedlicensestring = determinedlicenses[0] + reduce(lambda x, y: x + " " + y, determinedlicenses[1:], "")
+										fossologylicensestring = ""
+									if len(determinedlicenses) > 0:
+										if len(determinedlicenses) > 1:
+											determinedlicensestring = determinedlicenses[0] + reduce(lambda x, y: x + " " + y, determinedlicenses[1:], "")
+										else:
+											determinedlicensestring = determinedlicenses[0]
 									else:
-										determinedlicensestring = determinedlicenses[0]
-								else:
-									determinedlicensestring = ""
-								matchesrows = matchesrows + "    <tr><td>%d</td><td>%s</td><td>%f%%</td><td>%d</td><td>%d</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (j[0], j[1], j[3], j[2], stringsres['nonUniqueAssignments'].get(j[1], 0), ninkalicensestring, fossologylicensestring, determinedlicensestring)
-								if j[2] != 0:
-									## don't replace %s/% with os.path.join here, since this is valid in HTML
-									versionhtml = versionhtml + "<h5>%s</h5><p><img src=\"%s\"/></p>\n" % (j[1], "%s/%s-%s-version.png" % (self.imagesdir, sha256sum, j[1]))
-									## here we should either do a database lookup to get the checksum,
-									## or check if they are already in the report
-									htmllinks.append((j[1], j[2]))
-							## don't replace %s/% with os.path.join here, since this is valid in HTML
-							matchesrows = matchesrows + "</table><td><img src=\"%s\"/></td></tr></table>" % ("%s/%s-piechart.png" % (self.imagesdir, sha256sum))
-							if versionhtml != "":
-								matchesrows = matchesrows + "<h2>Versions per package</h2>" + versionhtml
-							if os.path.exists(os.path.join(self.reportsdir, "%s-unique.html.gz" % sha256sum)):
-								uniquehtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-unique.html.gz" % sha256sum), 'r')
-								uniquehtml = uniquehtmlfile.read()
-								uniquehtmlfile.close()
-								self.matcheswindow.SetPage(uniquehtml)
+										determinedlicensestring = ""
+									matchesrows = matchesrows + "    <tr><td>%d</td><td>%s</td><td>%f%%</td><td>%d</td><td>%d</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (j[0], j[1], j[3], j[2], stringsres['nonUniqueAssignments'].get(j[1], 0), ninkalicensestring, fossologylicensestring, determinedlicensestring)
+									if j[2] != 0:
+										## don't replace %s/% with os.path.join here, since this is valid in HTML
+										versionhtml = versionhtml + "<h5>%s</h5><p><img src=\"%s\"/></p>\n" % (j[1], "%s/%s-%s-version.png" % (self.imagesdir, sha256sum, j[1]))
+										## here we should either do a database lookup to get the checksum,
+										## or check if they are already in the report
+										htmllinks.append((j[1], j[2]))
+								## don't replace %s/% with os.path.join here, since this is valid in HTML
+								matchesrows = matchesrows + "</table><td><img src=\"%s\"/></td></tr></table>" % ("%s/%s-piechart.png" % (self.imagesdir, sha256sum))
+								if versionhtml != "":
+									matchesrows = matchesrows + "<h2>Versions per package</h2>" + versionhtml
+								if os.path.exists(os.path.join(self.reportsdir, "%s-unique.html.gz" % sha256sum)):
+									uniquehtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-unique.html.gz" % sha256sum), 'r')
+									uniquehtml = uniquehtmlfile.read()
+									uniquehtmlfile.close()
+									self.matcheswindow.SetPage(uniquehtml)
 				if os.path.exists(os.path.join(self.reportsdir, "%s-unmatched.html.gz" % sha256sum)):
 					unmatchedhtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-unmatched.html.gz" % sha256sum), 'r')
 					unmatchedhtml = unmatchedhtmlfile.read()
@@ -751,11 +752,12 @@ class BatFrame(wx.Frame):
 			if self.leafreports.has_key(j):
 				for r in self.leafreports[j]:
 					if r == 'ranking':
-						if self.leafreports[j]['ranking'][0]['matchedlines'] != 0:
-							## give a visual clue to people to tell them that strings could be matched
-							#linktext = u"%s  \u24e7" % linktext
-							linktext = u"%s  \u272a" % linktext
-					tagsentities = {'text': u'\u24c9', 'graphics': u'\u24bc', 'compressed': u'\u24b8', 'resource': u'\u24c7', 'static': u'\u24c8', 'dalvik': u'\u24b6'}
+						if self.leafreports[j]['ranking'][0] != None:
+							if self.leafreports[j]['ranking'][0]['matchedlines'] != 0:
+								## give a visual clue to people to tell them that strings could be matched
+								#linktext = u"%s  \u24e7" % linktext
+								linktext = u"%s  \u272a" % linktext
+						tagsentities = {'text': u'\u24c9', 'graphics': u'\u24bc', 'compressed': u'\u24b8', 'resource': u'\u24c7', 'static': u'\u24c8', 'dalvik': u'\u24b6'}
 					if r == 'tags':
 						if list(set(self.leafreports[j]['tags']).intersection(set(self.filters))) != []:
 							ignore = True
