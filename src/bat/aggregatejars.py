@@ -69,7 +69,7 @@ def aggregatejars(unpackreports, leafreports, scantempdir, envvars=None):
 				continue
 			if not 'binary' in leafreports[c]['tags']:
 				continue
-			(stringmatches, statistics, varfunmatches) = leafreports[c]['ranking']
+			(stringmatches, dynamicres, varfunmatches) = leafreports[c]['ranking']
 			if varfunmatches['language'] != 'Java':
 				continue
 			if varfunmatches.has_key('fields'):
