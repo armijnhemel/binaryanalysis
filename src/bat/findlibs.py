@@ -179,7 +179,7 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 					filtersquash = []
 
 					if not squashedelffiles.has_key(l):
-						## No library (or morelibraries ) with the name that has been declared
+						## No library (or libraries ) with the name that has been declared
 						## in the ELF file can be found. It could be because the
 						## declared name is actually a symbolic link that could, or could
 						## not be present on the system.
