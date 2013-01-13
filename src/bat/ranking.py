@@ -642,9 +642,17 @@ def extractDynamic(scanfile, envvars=None):
 	if st == '':
 		return (dynamicRes, variablepvs)
 
+	if not scanenv.has_key('BAT_DB'):
+		return (dynamicRes, variablepvs)
+
+	masterdb = scanenv.get('BAT_DB')
+
+	if not os.path.exists(masterdb):
+		return (dynamicRes, variablepvs)
+
 	## open the database containing function names that were extracted
 	## from source code.
-	conn = sqlite3.connect(scanenv.get('BAT_DB', '/tmp/master'))
+	conn = sqlite3.connect(masterdb)
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
@@ -833,9 +841,17 @@ def extractGeneric(lines, path, language='C', envvars=None):
 			except Exception, e:
 				pass
 		
+	if not scanenv.has_key('BAT_DB'):
+		return None
+
+	masterdb = scanenv.get('BAT_DB')
+
+	if not os.path.exists(masterdb):
+		return None
+
 	## open the database containing all the strings that were extracted
 	## from source code.
-	conn = sqlite3.connect(scanenv.get('BAT_DB', '/tmp/master'))
+	conn = sqlite3.connect(masterdb)
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
