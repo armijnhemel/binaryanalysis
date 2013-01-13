@@ -639,14 +639,15 @@ def dumpData(unpackreports, leafreports, scans, tempdir):
 			if leafreports[l].has_key('ranking'):
 				(res, dynamicRes, variablepvs) = leafreports[l]['ranking']
 				newreports = []
-				for report in res['reports']:
-					## We have: (rank, s, uniqueMatches.get(s,[]), percentage, packageversions.get(s, {}), packagelicenses.get(s, []))
-					## We want: (rank, s, #unique matches, percentage, packageversions, packagelicenses)
-					if type(report[2]) != int:
-						newreports.append((report[0], report[1], len(report[2]), report[3], report[4], report[5]))
-				## we should also replace nonUniqueMatches with {}
-				leafreports[l]['ranking'][0]['nonUniqueMatches'] = {}
-				leafreports[l]['ranking'][0]['reports'] = newreports
+				if res != None:
+					for report in res['reports']:
+						## We have: (rank, s, uniqueMatches.get(s,[]), percentage, packageversions.get(s, {}), packagelicenses.get(s, []))
+						## We want: (rank, s, #unique matches, percentage, packageversions, packagelicenses)
+						if type(report[2]) != int:
+							newreports.append((report[0], report[1], len(report[2]), report[3], report[4], report[5]))
+					## we should also replace nonUniqueMatches with {}
+					leafreports[l]['ranking'][0]['nonUniqueMatches'] = {}
+					leafreports[l]['ranking'][0]['reports'] = newreports
 
 	picklefile = open(os.path.join(tempdir, 'scandata.pickle'), 'wb')
 	cPickle.dump((unpackreports, leafreports, scans), picklefile)
