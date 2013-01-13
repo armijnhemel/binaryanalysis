@@ -38,6 +38,8 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 	if leafscans.has_key('ranking') :
 		## the ranking result is (res, dynamicRes, variablepvs)
 		(res, dynamicRes, variablepvs) = leafscans['ranking']
+		if res == None:
+			return
 		if res['unmatched'] != []:
 			unmatchedhtml = "<html><body><h1>Unmatched strings for %s</h1><p><ul>" % filename
 			for i in res['unmatched']:
