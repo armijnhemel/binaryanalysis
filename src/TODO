@@ -18,12 +18,10 @@ queueing system:
 * add script to add files to and remove files from scanning queue
 
 aggregate scanning:
-* aggregate ranking results for JAR file scanning
 * cleanup if we used one of the squashfs + lzma variants where we can't determine the size.
-* rework bat-findlibs to see if we have all dependencies of a program inside the firmware
 
 GUI:
-* rewrite to PyQt to take advantage of better rendering engine (webkit)
+* rewrite to PyQt or PySide to take advantage of better rendering engine (webkit)
 
 error handling:
 * better handle errors to give users a better indication if something went wrong
