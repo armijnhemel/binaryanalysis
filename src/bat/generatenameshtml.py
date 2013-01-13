@@ -56,6 +56,8 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 			sourcescount = {}
 			classescount = {}
 			for i in ['classes', 'sources', 'fields']:
+				if not variablepvs.has_key(i):
+					continue
 				packages = {}
 				packagecount = {}
 				if variablepvs[i] != []:
