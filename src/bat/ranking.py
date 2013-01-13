@@ -863,10 +863,11 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	## create extra tables and attach them to the current database connection
 	## These databases should be wiped and/or recreated when the database with
 	## strings has been changed!!
-	if scanenv.has_key(scanenv.get(avgdbperlanguage[language])):
+	if scanenv.has_key(avgdbperlanguage[language]):
 		if rankingfull:
 			if os.path.exists(scanenv.get(avgdbperlanguage[language])):
 				avgdb = scanenv.get(avgdbperlanguage[language])
+				## TODO: check if database schema is actually correct
 			else:
 				return None
 		else:
@@ -884,6 +885,7 @@ def extractGeneric(lines, path, language='C', envvars=None):
 		if rankingfull:
 			if os.path.exists(scanenv.get(stringsdbperlanguage[language])):
 				stringscache = scanenv.get(stringsdbperlanguage[language])
+				## TODO: check if database schema is actually correct
 			else:
 				return None
 		else:
