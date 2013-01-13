@@ -48,6 +48,8 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscand
 	if leafscans.has_key('ranking'):
 		## the ranking result is (res, dynamicRes, variablepvs)
 		(res, dynamicRes, variablepvs) = leafscans['ranking']
+		if res == None:
+			return
 		if res['reports'] != []:
 			piedata = []
 			pielabels = []
