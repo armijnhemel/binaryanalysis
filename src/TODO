@@ -43,6 +43,9 @@ ranking:
 * use version information to report most likely licenses
 * merge averages database into stringscache database
 
+aggregate scans:
+* report possible whole chain of dependencies for a program
+
 bat-extratools:
 * add patches for CVE-2012-4024 for unsquashfs42
 
