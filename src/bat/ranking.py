@@ -849,6 +849,10 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	if not os.path.exists(masterdb):
 		return None
 
+	rankingfull = False
+	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
+		rankingfull = True
+
 	## open the database containing all the strings that were extracted
 	## from source code.
 	conn = sqlite3.connect(masterdb)
@@ -859,11 +863,35 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	## create extra tables and attach them to the current database connection
 	## These databases should be wiped and/or recreated when the database with
 	## strings has been changed!!
-	avgdb = scanenv.get(avgdbperlanguage[language], '/tmp/avg')
+	if scanenv.has_key(scanenv.get(avgdbperlanguage[language])):
+		if rankingfull:
+			if os.path.exists(scanenv.get(avgdbperlanguage[language])):
+				avgdb = scanenv.get(avgdbperlanguage[language])
+			else:
+				return None
+		else:
+			avgdb = scanenv.get(avgdbperlanguage[language])
+	else:
+		if rankingfull:
+			return None
+		avgdb = scanenv.get(avgdbperlanguage[language], '/tmp/avg')
 	c.execute("attach ? as avg", (avgdb,))
 	c.execute("create table if not exists avg.avgstringscache (package text, avgstrings real, primary key (package))")
 
-	stringscache = scanenv.get(stringsdbperlanguage[language], '/tmp/stringscache')
+	if scanenv.has_key(stringsdbperlanguage[language]):
+		## sanity checks to see if the database exists. If not, and rankingfull
+		## is set to True, there should be no result.
+		if rankingfull:
+			if os.path.exists(scanenv.get(stringsdbperlanguage[language])):
+				stringscache = scanenv.get(stringsdbperlanguage[language])
+			else:
+				return None
+		else:
+			stringscache = scanenv.get(stringsdbperlanguage[language])
+	else:
+		if rankingfull:
+			return None
+		stringscache = scanenv.get(stringsdbperlanguage[language], '/tmp/stringscache')
 	c.execute("attach ? as stringscache", (stringscache,))
 	c.execute("create table if not exists stringscache.stringscache (programstring text, package text, filename text, versions text)")
 	c.execute("create index if not exists stringscache.programstring_index on stringscache(programstring)")
@@ -879,10 +907,6 @@ def extractGeneric(lines, path, language='C', envvars=None):
 		else:
 			clonescan = False
 			c.execute("detach clonedb")
-
-	rankingfull = False
-	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
-		rankingfull = True
 
 	determineversion = False
 	if scanenv.get('BAT_RANKING_VERSION', 0) == '1':
