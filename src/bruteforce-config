@@ -759,7 +759,7 @@ module      = bat.generatenameshtml
 method      = generateHTML
 noscan      = text:xml:graphics:pdf:audio:video
 envvars     = BAT_REPORTDIR=/tmp/images
-description = Generate HTML files with unmatched strings for use in GUI
+description = Generate HTML files with matched names (variables, methods, fields, etc.) for use in GUI
 enabled     = no
 storetarget = reports
 storedir    = /tmp/images
