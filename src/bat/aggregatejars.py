@@ -54,6 +54,11 @@ def aggregatejars(unpackreports, leafreports, scantempdir, envvars=None):
 		uniqueMatchesperpkg = {}
 		packageversionsperpkg = {}
 		packagelicensesperpkg = {}
+
+		fieldmatches = {}
+		classmatches = {}
+		sourcematches = {}
+
 		for c in classfiles:
 			if not leafreports.has_key(c):
 				continue
@@ -67,13 +72,27 @@ def aggregatejars(unpackreports, leafreports, scantempdir, envvars=None):
 			(stringmatches, statistics, varfunmatches) = leafreports[c]['ranking']
 			if varfunmatches['language'] != 'Java':
 				continue
+			if varfunmatches.has_key('fields'):
+				for f in varfunmatches['fields']:
+					## we only need one copy
+					if not fieldmatches.has_key(f):
+						fieldmatches[f] = varfunmatches['fields'][f]
+			if varfunmatches.has_key('classes'):
+				for c in varfunmatches['classes']:
+					## we only need one copy
+					if not classmatches.has_key(c):
+						classmatches[f] = varfunmatches['classes'][c]
+			if varfunmatches.has_key('sources'):
+				for c in varfunmatches['sources']:
+					## we only need one copy
+					if not sourcematches.has_key(c):
+						sourcematches[f] = varfunmatches['sources'][c]
 			if stringmatches == None:
 				continue
 			matchedlines = matchedlines + stringmatches['matchedlines']
 			extractedlines = extractedlines + stringmatches['extractedlines']
 			if stringmatches['unmatched'] != []:
 				unmatched = unmatched + stringmatches['unmatched']
-			#print >>sys.stderr, stringmatches
 			if stringmatches['nonUniqueAssignments'] != {}:
 				for n in stringmatches['nonUniqueAssignments'].keys():
 					if nonUniqueAssignments.has_key(n):
@@ -133,5 +152,5 @@ def aggregatejars(unpackreports, leafreports, scantempdir, envvars=None):
 		rankres['nonUniqueAssignments'] = nonUniqueAssignments
 		rankres['nonUniqueMatches'] = nonUniqueMatches
 		rankres['reports'] = reports
-		rankresults[i] = {'ranking': (rankres, {}, {'language': 'Java'})}
+		rankresults[i] = {'ranking': (rankres, {}, {'language': 'Java', 'classes': classmatches, 'fields': fieldmatches, 'sources': sourcematches})}
 	return rankresults
