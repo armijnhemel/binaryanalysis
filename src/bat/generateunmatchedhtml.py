@@ -41,8 +41,10 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 		if res == None:
 			return
 		if res['unmatched'] != []:
+			unmatches = list(set(res['unmatched']))
+			unmatches.sort()
 			unmatchedhtml = "<html><body><h1>Unmatched strings for %s</h1><p><ul>" % filename
-			for i in res['unmatched']:
+			for i in unmatches:
 				unmatchedhtml = unmatchedhtml + "%s<br>\n" % cgi.escape(i)
 			unmatchedhtml = unmatchedhtml + "</body></html>"
 			unmatchedhtmlfile = gzip.open("%s/%s-unmatched.html.gz" % (reportdir, unpackreport['sha256']), 'wb')
