@@ -262,7 +262,8 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 					return None
 				lines = stanout.split("\n")
 		elif language == 'Java':
-			## TODO: get more information from Java binaries
+			## TODO: check here if we have caches already or not. If there are none it makes
+			## no sense to continue.
 			lines = []
 			## we really should think about whether or not we want to do this per class file,
 			## or per JAR file.
