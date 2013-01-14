@@ -59,3 +59,4 @@ HTML generation:
 
 misc:
 * replay script to unpack firmware based on only the pickle with unpacking data
+* configuration checker to check if databases, etc. exist
