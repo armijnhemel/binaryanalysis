@@ -485,10 +485,12 @@ def readconfig(config):
 				conf['storedir'] = config.get(section, 'storedir')
 				conf['storetarget'] = config.get(section, 'storetarget')
 				conf['storetype'] = config.get(section, 'storetype')
+				conf['cleanup'] = config.get(section, 'cleanup')
 			except:
 				conf['storedir'] = None
 				conf['storetarget'] = None
 				conf['storetype'] = None
+				conf['cleanup'] = False
 			try:
 				conf['xmloutput'] = config.get(section, 'xmloutput')
 			except:
@@ -621,6 +623,22 @@ def dumpData(unpackreports, leafreports, scans, tempdir):
 		else:
 			## nothing will be dumped if one of the three parameters is missing
 			pass
+		## TODO: implement 'cleanup'. For this at least 'storedir' and 'storetype'
+		## have to be specified and 'cleanup' has to be set to True
+		#if i['storedir'] != None and i['storetype'] != None and i['cleanup']:
+		##
+		## 	removefiles = []
+		# 	filetypes = i['storetype'].split(':')
+		#	listdir = os.listdir(i['storedir'])
+		#	for f in filetypes:
+		#		dirlisting = filter(lambda x: x.endswith(f), listdir)
+		#		for s in sha256spack:
+		#			removefiles = filter(lambda x: x.startswith(s), dirlisting)
+		#	for r in list(set(removefiles)):
+		#		try:
+		#			os.unlink(r)
+		#		except:
+		#			pass
 
 	## Dump unique matches for ranking scan (if available) to separate file(s)
 	## and remove the ranking data from each leafreport.
