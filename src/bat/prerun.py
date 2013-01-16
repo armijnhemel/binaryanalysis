@@ -542,7 +542,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 
 ## simple helper method to verify if a file is a valid Java class file
 def verifyJavaClass(filename):
-	if not filename.lower().endswith('class'):
+	if not filename.lower().endswith('.class'):
 		return False
 	datafile = open(filename, 'rb')
 	databuffer = datafile.read(100)
@@ -552,8 +552,8 @@ def verifyJavaClass(filename):
 	if not databuffer[0:4] == "\xca\xfe\xba\xbe":
 		return False
 	## This will only work if the file has either one or multiple valid class files,
-	## starting with a valid class file and ending with a valid class file, or random
-	## garbage, but no partial class file.
+	## starting with a valid class file and ending with a valid class file, or class
+	## files followed by random garbage, but no partial class file.
 	p = subprocess.Popen(['jcf-dump', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
