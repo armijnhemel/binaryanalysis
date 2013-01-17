@@ -479,7 +479,25 @@ def extractJavaNames(javameta, envvars=None):
 	if res == []:
 		return dynamicRes
 
-	c.execute("attach ? as functionnamecache", ((scanenv.get(functionnameperlanguage['Java'], '/tmp/funccache')),))
+	if scanenv.has_key(functionnameperlanguage['Java']):
+		funccache = scanenv.get(functionnameperlanguage['Java'])
+		## sanity checks to see if the database exists. If not, and rankingfull
+		## is set to True, there should be no result.
+		if rankingfull:
+			## If rankingfull is set the cache should exist. If it doesn't exist
+			## then something is horribly wrong.
+			if not os.path.exists(funccache):
+				return dynamicRes
+		else:
+			## The cache may, or may not, exist, but at least we're not
+			## counting on it to exist and it may be generated on the fly.
+			funccache = scanenv.get(functionnameperlanguage['Java'])
+	else:
+		if rankingfull:
+			return dynamicRes
+
+	#c.execute("attach ? as functionnamecache", ((scanenv.get(functionnameperlanguage['Java'], '/tmp/funccache')),))
+	c.execute("attach ? as functionnamecache", (funccache,))
 	c.execute("create table if not exists functionnamecache.functionnamecache (functionname text, package text)")
 	c.execute("create index if not exists functionnamecache.functionname_index on functionnamecache(functionname)")
 	conn.commit()
@@ -920,36 +938,29 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	## These databases should be wiped and/or recreated when the database with
 	## strings has been changed!!
 	if scanenv.has_key(avgdbperlanguage[language]):
+		avgdb = scanenv.get(avgdbperlanguage[language])
 		if rankingfull:
-			if os.path.exists(scanenv.get(avgdbperlanguage[language])):
-				avgdb = scanenv.get(avgdbperlanguage[language])
-				## TODO: check if database schema is actually correct
-			else:
+			if not os.path.exists(avgdb):
 				return None
-		else:
-			avgdb = scanenv.get(avgdbperlanguage[language])
 	else:
 		if rankingfull:
 			return None
-		avgdb = scanenv.get(avgdbperlanguage[language], '/tmp/avg')
+		avgdb = avgdbperlanguage[language]
 	c.execute("attach ? as avg", (avgdb,))
 	c.execute("create table if not exists avg.avgstringscache (package text, avgstrings real, primary key (package))")
 
 	if scanenv.has_key(stringsdbperlanguage[language]):
 		## sanity checks to see if the database exists. If not, and rankingfull
 		## is set to True, there should be no result.
+		stringscache = scanenv.get(stringsdbperlanguage[language])
 		if rankingfull:
-			if os.path.exists(scanenv.get(stringsdbperlanguage[language])):
-				stringscache = scanenv.get(stringsdbperlanguage[language])
-				## TODO: check if database schema is actually correct
-			else:
+			## TODO: check if database schema is actually correct
+			if not os.path.exists(stringscache):
 				return None
-		else:
-			stringscache = scanenv.get(stringsdbperlanguage[language])
 	else:
 		if rankingfull:
 			return None
-		stringscache = scanenv.get(stringsdbperlanguage[language], '/tmp/stringscache')
+		stringscache = stringsdbperlanguage[language]
 	c.execute("attach ? as stringscache", (stringscache,))
 	c.execute("create table if not exists stringscache.stringscache (programstring text, package text, filename text, versions text)")
 	c.execute("create index if not exists stringscache.programstring_index on stringscache(programstring)")
