@@ -48,7 +48,7 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscand
 	if leafscans.has_key('ranking'):
 		## the ranking result is (res, dynamicRes, variablepvs)
 		(res, dynamicRes, variablepvs) = leafscans['ranking']
-		if res == None:
+		if res == None and dynamicRes == {}:
 			return
 		if res['reports'] != []:
 			piedata = []
@@ -119,12 +119,8 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscand
 						print >>sys.stderr, stanerr
 					os.unlink(tmppickle[1])
 
-	## generate version information
-	if leafscans.has_key('ranking'):
+		## generate version information
 		## the ranking result is (res, dynamicRes, variablepvs)
-		(res, dynamicRes, variablepvs) = leafscans['ranking']
-		if dynamicRes == {}:
-			return
 		if dynamicRes.has_key('packages'):
 			for package in dynamicRes['packages']:
 				packagedata = copy.copy(dynamicRes['packages'][package])
