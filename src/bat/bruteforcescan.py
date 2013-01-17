@@ -481,7 +481,14 @@ def readconfig(config):
 				conf['storedir'] = config.get(section, 'storedir')
 				conf['storetarget'] = config.get(section, 'storetarget')
 				conf['storetype'] = config.get(section, 'storetype')
-				conf['cleanup'] = config.get(section, 'cleanup')
+				try:
+					cleanup = config.get(section, 'cleanup')
+					if cleanup == 'yes':
+						conf['cleanup'] = True
+					else:
+						conf['cleanup'] = False
+				except:
+					conf['cleanup'] = False
 			except:
 				conf['storedir'] = None
 				conf['storetarget'] = None
@@ -621,6 +628,7 @@ def dumpData(unpackreports, leafreports, scans, tempdir):
 			pass
 		## Remove any results for which 'cleanup' has been set to True. For this at least 'storedir'
 		## and 'storetype' have to be specified and 'cleanup' has to be set to True
+
 		if i['storedir'] != None and i['storetype'] != None and i['cleanup']:
 			removefiles = []
 		 	filetypes = i['storetype'].split(':')
