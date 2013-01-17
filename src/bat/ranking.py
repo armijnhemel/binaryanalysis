@@ -463,6 +463,9 @@ def extractJavaNames(javameta, envvars=None):
 
 	## open the database containing function names that were extracted
 	## from source code.
+	## TODO: add sanity checks of the schema of both BAT_DB and the function name cache
+	## If the function name cache does not contain the field 'language' it is the old
+	## format of the database that only has C names in it.
 	conn = sqlite3.connect(masterdb)
 	conn.text_factory = str
 
