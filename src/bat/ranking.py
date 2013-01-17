@@ -468,8 +468,17 @@ def extractJavaNames(javameta, envvars=None):
 	## format of the database that only has C names in it.
 	conn = sqlite3.connect(masterdb)
 	conn.text_factory = str
-
 	c = conn.cursor()
+
+	## sanity checks
+	res = c.execute("select * from sqlite_master where type='table' and name='processed_file;").fetchall()
+	if res == []:
+		return dynamicRes
+
+	res = c.execute("select * from sqlite_master where type='table' and name='extracted_file;").fetchall()
+	if res == []:
+		return dynamicRes
+
 	c.execute("attach ? as functionnamecache", ((scanenv.get(functionnameperlanguage['Java'], '/tmp/funccache')),))
 	c.execute("create table if not exists functionnamecache.functionnamecache (functionname text, package text)")
 	c.execute("create index if not exists functionnamecache.functionname_index on functionnamecache(functionname)")
@@ -672,15 +681,31 @@ def extractDynamic(scanfile, envvars=None):
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
-	c.execute("attach ? as functionnamecache", ((scanenv.get(functionnameperlanguage['C'], '/tmp/funccache')),))
-	c.execute("create table if not exists functionnamecache.functionnamecache (functionname text, package text)")
-	c.execute("create index if not exists functionnamecache.functionname_index on functionnamecache(functionname)")
-	conn.commit()
+
 	rankingfull = False
 	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
 		rankingfull = True
 
-	## keep a list of versions per sha256, since source files often contain more than one line
+	dynamicscanning = True
+	if scanenv.has_key(functionnameperlanguage['C']):
+		funccache = scanenv.get(functionnameperlanguage['C'])
+		## sanity checks to see if the database exists. If not, and rankingfull
+		## is set to True, there should be no result.
+		if rankingfull:
+			## If rankingfull is set the cache should exist. If it doesn't exist
+			## then something is horribly wrong.
+			if not os.path.exists(funccache):
+				dynamicscanning = False
+		else:
+			## The cache may, or may not, exist, but at least we're not
+			## counting on it to exist and it may be generated on the fly.
+			funccache = scanenv.get(functionnameperlanguage['C'])
+	else:
+		if rankingfull:
+			dynamicscanning = False
+
+	## Walk through the output of readelf, and split results accordingly
+	## in function names and variables.
 	scanstr = []
 	mangles = []
 	variables = []
@@ -713,99 +738,106 @@ def extractDynamic(scanfile, envvars=None):
 			funcname = dynstr[7]
 			scanstr.append(funcname)
 
-	## run c++filt in batched mode to avoid launching many processes
-	## C++ demangling is tricky: the types declared in the function in the source code
-	## are not necessarily what demangling will return.
-	step = 100
-	if mangles != []:
-		for i in range(0, len(mangles), step):
-			offset = i
-			args = ['c++filt'] + mangles[offset:offset+step]
-			offset = offset + step
-			p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-			(stanout, stanerr) = p.communicate()
-			if p.returncode != 0:
-				continue
-			for f in stanout.strip().split('\n'):
-				funcname = f.split('(', 1)[0].rsplit('::', 1)[-1].strip()
-				## TODO more sanity checks here, since demangling
-				## will sometimes not return a single function name
-				scanstr.append(funcname)
+	if dynamicscanning:
+		c.execute("attach ? as functionnamecache", (funccache,))
+		c.execute("create table if not exists functionnamecache.functionnamecache (functionname text, package text)")
+		c.execute("create index if not exists functionnamecache.functionname_index on functionnamecache(functionname)")
+		conn.commit()
 
-	uniquepackages = {}
-	namesmatched = 0
-	matches = []
-	uniquematches = 0
-
-	## caching datastructure, only needed in case there is no full cache
-	sha256_packages = {}
-
-	## the database made from ctags output only has function names, not the types. Since
-	## C++ functions could be in an executable several times with different times we
-	## deduplicate first
-	for funcname in list(set(scanstr)):
-		c.execute('select package from functionnamecache.functionnamecache where functionname=?', (funcname,))
-		res = c.fetchall()
-		pkgs = []
-		if res == [] and not rankingfull:
-			## we don't have a cache, so we need to create it. This is expensive.
-			c.execute('select sha256, language from extracted_function where functionname=?', (funcname,))
-			res2 = c.fetchall()
-			pkgs = []
-			for r in res2:
-				if r[1] != 'C':
+		## run c++filt in batched mode to avoid launching many processes
+		## C++ demangling is tricky: the types declared in the function in the source code
+		## are not necessarily what demangling will return.
+		step = 100
+		if mangles != []:
+			for i in range(0, len(mangles), step):
+				offset = i
+				args = ['c++filt'] + mangles[offset:offset+step]
+				offset = offset + step
+				p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+				(stanout, stanerr) = p.communicate()
+				if p.returncode != 0:
 					continue
-				if sha256_packages.has_key(r[0]):
-					pkgs = list(set(pkgs + copy.copy(sha256_packages[r[0]])))
-				else:
-					c.execute('select package from processed_file where sha256=?', r)
-					s = c.fetchall()
-					if s != []:
-						pkgs = list(set(pkgs + map(lambda x: x[0], s)))
-						sha256_packages[r[0]] = map(lambda x: x[0], s)
-			for p in pkgs:
-				c.execute('''insert into functionnamecache (functionname, package) values (?,?)''', (funcname, p))
-			conn.commit()
+				for f in stanout.strip().split('\n'):
+					funcname = f.split('(', 1)[0].rsplit('::', 1)[-1].strip()
+					## TODO more sanity checks here, since demangling
+					## will sometimes not return a single function name
+					scanstr.append(funcname)
+
+		uniquepackages = {}
+		namesmatched = 0
+		matches = []
+		uniquematches = 0
+
+		## caching datastructure, only needed in case there is no full cache
+		sha256_packages = {}
+
+		## the database made from ctags output only has function names, not the types. Since
+		## C++ functions could be in an executable several times with different times we
+		## deduplicate first
+		for funcname in list(set(scanstr)):
 			c.execute('select package from functionnamecache.functionnamecache where functionname=?', (funcname,))
 			res = c.fetchall()
-		if res != []:
-			matches.append(funcname)
-			namesmatched += 1
-			## unique match
-			if len(res) == 1:
-				uniquematches += 1
-				if uniquepackages.has_key(res[0][0]):
-					uniquepackages[res[0][0]] += [funcname]
-				else:
-					uniquepackages[res[0][0]] = [funcname]
-	dynamicRes['namesmatched'] = namesmatched
-	dynamicRes['totalnames'] = len(list(set(scanstr)))
-
-	## unique matches we found. 
-	dynamicRes['uniquematches'] = uniquematches
-	if uniquematches != 0:
-		dynamicRes['packages'] = {}
-	## these are the unique function names only
-	for i in uniquepackages:
-		versions = []
-		for p in uniquepackages[i]:
-			pversions = []
-			c.execute('select distinct sha256 from extracted_function where functionname=?', (p,))
-			res = c.fetchall()
-			for s in res:
-				c.execute('select distinct package, version from processed_file where sha256=?', s)
-				packageversions = c.fetchall()
-				for pv in packageversions:
-					## shouldn't happen!
-					if pv[0] != i:
+			pkgs = []
+			if res == [] and not rankingfull:
+				## we don't have a cache, so we need to create it. This is expensive.
+				c.execute('select sha256, language from extracted_function where functionname=?', (funcname,))
+				res2 = c.fetchall()
+				pkgs = []
+				for r in res2:
+					if r[1] != 'C':
 						continue
-					pversions.append(pv[1])
-			## functions with different signatures might be present in different files.
-			## Since we are ignoring signatures we need to deduplicate here too.
-			versions = versions + list(set(pversions))
-		dynamicRes['packages'][i] = []
-		for v in list(set(versions)):
-			dynamicRes['packages'][i].append((v, versions.count(v)))
+					if sha256_packages.has_key(r[0]):
+						pkgs = list(set(pkgs + copy.copy(sha256_packages[r[0]])))
+					else:
+						c.execute('select package from processed_file where sha256=?', r)
+						s = c.fetchall()
+						if s != []:
+							pkgs = list(set(pkgs + map(lambda x: x[0], s)))
+							sha256_packages[r[0]] = map(lambda x: x[0], s)
+				for p in pkgs:
+					c.execute('''insert into functionnamecache (functionname, package) values (?,?)''', (funcname, p))
+				conn.commit()
+				c.execute('select package from functionnamecache.functionnamecache where functionname=?', (funcname,))
+				res = c.fetchall()
+			if res != []:
+				matches.append(funcname)
+				namesmatched += 1
+				## unique match
+				if len(res) == 1:
+					uniquematches += 1
+					if uniquepackages.has_key(res[0][0]):
+						uniquepackages[res[0][0]] += [funcname]
+					else:
+						uniquepackages[res[0][0]] = [funcname]
+		dynamicRes['namesmatched'] = namesmatched
+		dynamicRes['totalnames'] = len(list(set(scanstr)))
+
+		## unique matches we found. 
+		dynamicRes['uniquematches'] = uniquematches
+		if uniquematches != 0:
+			dynamicRes['packages'] = {}
+		## these are the unique function names only
+		for i in uniquepackages:
+			versions = []
+			for p in uniquepackages[i]:
+				pversions = []
+				c.execute('select distinct sha256 from extracted_function where functionname=?', (p,))
+				res = c.fetchall()
+				for s in res:
+					c.execute('select distinct package, version from processed_file where sha256=?', s)
+					packageversions = c.fetchall()
+					for pv in packageversions:
+						## shouldn't happen!
+						if pv[0] != i:
+							continue
+						pversions.append(pv[1])
+				## functions with different signatures might be present in different files.
+				## Since we are ignoring signatures we need to deduplicate here too.
+				versions = versions + list(set(pversions))
+			dynamicRes['packages'][i] = []
+			for v in list(set(versions)):
+				dynamicRes['packages'][i].append((v, versions.count(v)))
+
 	## now scan variables, but only if we have a table "extracted_names"
 	variable_scan = False
 	res = c.execute("select * from sqlite_master where type='table' and name='extracted_name'").fetchall()
