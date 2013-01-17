@@ -138,6 +138,15 @@ def squashlicenses(licenses):
 ## Original code (in Perl) was written by Eelco Dolstra.
 ## Reimplementation in Python done by Armijn Hemel.
 def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
+	scanenv = os.environ.copy()
+	if envvars != None:
+		for en in envvars.split(':'):
+			try:
+				(envname, envvalue) = en.split('=')
+				scanenv[envname] = envvalue
+			except Exception, e:
+				pass
+
 	## Only consider strings that are len(stringcutoff) or larger
 	stringcutoff = 5
 	## we want to use extra information for a few file types
@@ -199,7 +208,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 			## constants :-(
 
         		if "ELF" in mstype and blacklist == []:
-				dynres = extractDynamic(path, envvars)
+				dynres = extractDynamic(path, scanenv)
 				if dynres != None:
 					(dynamicRes,variablepvs) = dynres
 					variablepvs['language'] = 'C'
@@ -356,9 +365,9 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 
 				## cleanup
 				shutil.rmtree(dalvikdir)
-			variablepvs = extractVariablesJava(javameta, envvars)
+			variablepvs = extractVariablesJava(javameta, scanenv)
 			variablepvs['language'] = 'Java'
-			dynamicRes = extractJavaNames(javameta, envvars)
+			dynamicRes = extractJavaNames(javameta, scanenv)
 		elif language == 'JavaScipt':
 			## JavaScript can be minified, but using xgettext we
 			## can still extract the strings from it
@@ -369,7 +378,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 		else:
 			lines = []
 
-		res = extractGeneric(lines, path, language, envvars)
+		res = extractGeneric(lines, path, scanenv, language)
 		if res != None:
 			if blacklist != []:
 				## we made a tempfile because of blacklisting, so cleanup
@@ -428,7 +437,7 @@ def extractJavaNamesClass(scanfile):
 				methods.append(res.groups()[0])
 	return {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile}
 
-def extractJavaNames(javameta, envvars=None):
+def extractJavaNames(javameta, scanenv):
 	dynamicRes = {}  # {'namesmatched': [], 'totalnames': int, 'uniquematches': int, 'packages': {} }
 	namesmatched = 0
 	uniquematches = 0
@@ -439,15 +448,6 @@ def extractJavaNames(javameta, envvars=None):
 	methods = javameta['methods']
 	fields = javameta['fields']
 	sourcefile = javameta['sourcefiles']
-
-	scanenv = os.environ.copy()
-	if envvars != None:
-		for en in envvars.split(':'):
-			try:
-				(envname, envvalue) = en.split('=')
-				scanenv[envname] = envvalue
-			except Exception, e:
-				pass
 
 	rankingfull = False
 	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
@@ -551,7 +551,7 @@ def extractJavaNames(javameta, envvars=None):
 	conn.close()
 	return dynamicRes
 
-def extractVariablesJava(javameta, envvars=None):
+def extractVariablesJava(javameta, scanenv):
 	variablepvs = {}
 	if javameta.has_key('fields'):
 		fields = javameta['fields']
@@ -565,14 +565,6 @@ def extractVariablesJava(javameta, envvars=None):
 		sourcefiles = javameta['sourcefiles']
 	else:
 		sourcefiles = []
-	scanenv = os.environ.copy()
-	if envvars != None:
-		for en in envvars.split(':'):
-			try:
-				(envname, envvalue) = en.split('=')
-				scanenv[envname] = envvalue
-			except Exception, e:
-				pass
 
 	rankingfull = False
 	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
@@ -672,17 +664,10 @@ def extractVariablesJava(javameta, envvars=None):
 ## external libraries, but also lists local functions.
 ## By searching a database that contain which function names can be found in
 ## which packages.
-def extractDynamic(scanfile, envvars=None):
+def extractDynamic(scanfile, scanenv):
 	dynamicRes = {}
 	variablepvs = {}
-	scanenv = os.environ.copy()
-	if envvars != None:
-		for en in envvars.split(':'):
-			try:
-				(envname, envvalue) = en.split('=')
-				scanenv[envname] = envvalue
-			except Exception, e:
-				pass
+
  	p = subprocess.Popen(['readelf', '-W', '--dyn-syms', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
@@ -890,7 +875,7 @@ def extractDynamic(scanfile, envvars=None):
 	return (dynamicRes, variablepvs)
 
 ## Look up strings in the database and determine which packages/versions/licenses were used
-def extractGeneric(lines, path, language='C', envvars=None):
+def extractGeneric(lines, path, scanenv, language='C'):
 	lenStringsFound = 0
 	uniqueMatches = {}
 	allMatches = {}
@@ -906,15 +891,6 @@ def extractGeneric(lines, path, language='C', envvars=None):
 	nonUniqueAssignments = {}
 	unmatched = []
 
-	scanenv = os.environ.copy()
-	if envvars != None:
-		for en in envvars.split(':'):
-			try:
-				(envname, envvalue) = en.split('=')
-				scanenv[envname] = envvalue
-			except Exception, e:
-				pass
-		
 	if not scanenv.has_key('BAT_DB'):
 		return None
 
