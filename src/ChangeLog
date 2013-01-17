@@ -1,8 +1,14 @@
 2013-01-17
-* add more sanity checks
+* add more sanity checks in fwunpack.py, unpackrpm.py and ranking.py
 * add cleanup for postrunscans. This is to help prevent scans from leaving
 results that could possibly be packed into the result archive during a later
 scan.
+* create version charts for function names (not used in the version yet)
+* sort versions with the same amount of hits in version charts for strings
+* remove unused option from bruteforce.py
+* remove duplicate code from ranking.py
+* shrink size of top level pickle file
+* fix rewriting of leafreports now that they are first copied with deepcopy()
 
 2013-01-12
 * merge reports of individual class files in Java aggregate scan
