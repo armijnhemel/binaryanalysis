@@ -154,6 +154,8 @@ def searchUnpackUPX(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 
 ## unpack Java serialized data
 def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('java_serialized'):
+		return ([], blacklist, [])
 	if offsets['java_serialized'] == []:
 		return ([], blacklist, [])
 	tags = []
@@ -205,6 +207,8 @@ def unpackJavaSerialized(filename, offset, tempdir=None):
 ## so we can search more effectively.
 ## We are assuming that the whole file is an SWF file.
 def searchUnpackSwf(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('swf'):
+		return ([], blacklist, [])
 	if offsets['swf'] == []:
 		return ([], blacklist, [])
 	## right now we are dealing only with entire files. This might change in
@@ -238,6 +242,8 @@ def unpackSwf(data, tempdir=None):
 	return tmpdir
 
 def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('jffs2_le'):
+		return ([], blacklist, [])
 	if offsets['jffs2_le'] == []:
 		return ([], blacklist, [])
 	counter = 1
@@ -272,6 +278,8 @@ def unpackJffs2(filename, offset, tempdir=None):
 	return res
 
 def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('ar'):
+		return ([], blacklist, [])
 	if offsets['ar'] == []:
 		return ([], blacklist, [])
 	counter = 1
@@ -325,6 +333,8 @@ def unpackAr(filename, offset, tempdir=None):
 ## 4. make sure all permissions are correct (so use chmod)
 ## 5. unmount file system
 def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('iso9660'):
+		return ([], blacklist, [])
 	if offsets['iso9660'] == []:
 		return ([], blacklist, [])
 	diroffsets = []
@@ -660,6 +670,8 @@ def searchUnpackInstallShield(filename, tempdir=None, blacklist=[], offsets={}, 
 
 ## unpacker for Microsoft Cabinet Archive files.
 def searchUnpackCab(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('cab'):
+		return ([], blacklist, [])
 	newtags = []
 	if offsets['cab'] == []:
 		return ([], blacklist, newtags)
@@ -727,6 +739,8 @@ def unpackCab(filename, offset, tempdir=None):
 		return (tmpdir, int(cabsize.groups()[0]))
 
 def searchUnpack7z(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('7z'):
+		return ([], blacklist, [])
 	if offsets['7z'] == []:
 		return ([], blacklist, [])
 
@@ -785,6 +799,8 @@ def unpack7z(filename, offset, tempdir=None):
 ## unpack lzip archives.
 ## This method returns a blacklist.
 def searchUnpackLzip(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('lzip'):
+		return ([], blacklist, [])
 	if offsets['lzip'] == []:
 		return ([], blacklist, [])
 	diroffsets = []
@@ -846,6 +862,8 @@ def unpackLzip(filename, offset, tempdir=None):
 
 ## unpack lzo archives.
 def searchUnpackLzo(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('lzo'):
+		return ([], blacklist, [])
 	if offsets['lzo'] == []:
 		return ([], blacklist, [])
 	diroffsets = []
@@ -904,6 +922,10 @@ def unpackLzo(filename, offset, tempdir=None):
 ## so it is likely that we need to search for the trailer a lot more than
 ## for the header.
 def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('xz'):
+		return ([], blacklist, [])
+	if not offsets.has_key('xztrailer'):
+		return ([], blacklist, [])
 	if offsets['xz'] == []:
 		return ([], blacklist, [])
 	if offsets['xztrailer'] == []:
@@ -983,6 +1005,8 @@ def unpackXZ(data, offset, trailer, tempdir=None):
 ## Not sure how cpio works if we have a cpio archive within a cpio archive
 ## especially with regards to locating the proper cpio trailer.
 def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('cpiotrailer'):
+		return ([], blacklist, [])
 	cpiooffsets = []
 	for marker in fsmagic.cpio:
 		cpiooffsets = cpiooffsets + offsets[marker]
@@ -1058,6 +1082,8 @@ def unpackCpio(data, offset, tempdir=None):
 	return tmpdir
 
 def searchUnpackRomfs(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('romfs'):
+		return ([], blacklist, [])
 	if offsets['romfs'] == []:
 		return ([], blacklist, [])
 	diroffsets = []
@@ -1130,6 +1156,8 @@ def unpackRomfs(filename, offset, tempdir=None):
 ## devices most notably from Sigma Designs, since they seem to have tweaked
 ## the file system.
 def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('cramfs'):
+		return ([], blacklist, [])
 	if offsets['cramfs'] == []:
 		return ([], blacklist, [])
 
@@ -1841,6 +1869,8 @@ def unpackBzip2(filename, offset, tempdir=None):
 	return tmpdir
 
 def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('bz2'):
+		return ([], blacklist, [])
 	if offsets['bz2'] == []:
 		return ([], blacklist, [])
 
@@ -1861,6 +1891,8 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, envvars=
 	return (diroffsets, blacklist, [])
 
 def searchUnpackLRZIP(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('lrzip'):
+		return ([], blacklist, [])
 	if offsets['lrzip'] == []:
 		return ([], blacklist, [])
 
@@ -2033,6 +2065,8 @@ def unpackZip(filename, offset, tempdir=None):
 	return (endofcentraldir, tmpdir)
 
 def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('zip'):
+		return ([], blacklist, [])
 	tags = []
 	if offsets['zip'] == []:
 		return ([], blacklist, tags)
@@ -2062,6 +2096,8 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 	return (diroffsets, blacklist, tags)
 
 def searchUnpackRar(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('rar'):
+		return ([], blacklist, [])
 	if offsets['rar'] == []:
 		return ([], blacklist, [])
 	diroffsets = []
@@ -2182,6 +2218,8 @@ def unpackLZMA(filename, offset, tempdir=None, minbytesize=1):
 ## TODO: replace with a different implementation since a unubi that can unpack
 ## has been removed from Fedora and was never present in Debian or Ubuntu.
 def searchUnpackUbifs(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('ubifs'):
+		return ([], blacklist, [])
 	if offsets['ubifs'] == []:
 		return ([], blacklist, [])
 	datafile = open(filename, 'rb')
@@ -2254,6 +2292,8 @@ def unpackUbifs(data, offset, tempdir=None):
 ## systems it is advised to not enable it when scanning binaries intended for
 ## these systems.
 def searchUnpackARJ(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('arj'):
+		return ([], blacklist, [])
 	if offsets['arj'] == []:
 		return ([], blacklist, [])
 	diroffsets = []
@@ -2313,6 +2353,8 @@ def unpackARJ(filename, offset, tempdir=None):
 ## with relatively little gain. In the default distribution of BAT this scan
 ## is therefore disabled.
 def searchUnpackIco(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('ico'):
+		return ([], blacklist, [])
 	if offsets['ico'] == []:
 		return ([], blacklist, [])
 	diroffsets = []
@@ -2359,6 +2401,10 @@ def unpackIco(filename, offset, tempdir=None):
 
 ## PDFs end with %%EOF, sometimes followed by one or two extra characters
 def searchUnpackPDF(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('pdf'):
+		return ([], blacklist, [])
+	if not offsets.has_key('pdftrailer'):
+		return ([], blacklist, [])
 	if offsets['pdf'] == []:
 		return ([], blacklist, [])
 	if offsets['pdftrailer'] == []:
@@ -2538,6 +2584,10 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 ## PNG extraction is similar to GIF extraction, except there is a way better
 ## defined trailer.
 def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('png'):
+		return ([], blacklist, [])
+	if not offsets.has_key('pngtrailer'):
+		return ([], blacklist, [])
 	if offsets['png'] == []:
 		return ([], blacklist, [])
 	if offsets['pngtrailer'] == []:
