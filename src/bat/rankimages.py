@@ -15,7 +15,7 @@ Parameters for configuration file:
 * BAT_IMAGEDIR :: location to where images should be written
 '''
 
-import os, os.path, sys, subprocess, array, cPickle, tempfile
+import os, os.path, sys, subprocess, array, cPickle, tempfile, copy
 from PIL import Image
 import matplotlib
 matplotlib.use('cairo')
@@ -118,3 +118,24 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscand
 					if p.returncode != 0:
 						print >>sys.stderr, stanerr
 					os.unlink(tmppickle[1])
+
+	## generate version information
+	if leafscans.has_key('ranking'):
+		## the ranking result is (res, dynamicRes, variablepvs)
+		(res, dynamicRes, variablepvs) = leafscans['ranking']
+		if dynamicRes == {}:
+			return
+		if dynamicRes.has_key('packages'):
+			for package in dynamicRes['packages']:
+				packagedata = copy.copy(dynamicRes['packages'][package])
+				tmppickle = tempfile.mkstemp()
+				pickledata = []
+				p_sorted = sorted(packagedata, key=lambda x: x[1])
+				for v in p_sorted:
+					pickledata.append(v)
+				cPickle.dump(pickledata, os.fdopen(tmppickle[0], 'w'))
+				p = subprocess.Popen(['bat-generate-version-chart.py', '-i', tmppickle[1], '-o', '%s/%s-%s-funcversion.png' % (imagedir, unpackreport['sha256'], package)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+				(stanout, stanerr) = p.communicate()
+				if p.returncode != 0:
+					print >>sys.stderr, stanerr
+				os.unlink(tmppickle[1])
