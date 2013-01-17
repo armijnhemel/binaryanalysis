@@ -1,3 +1,9 @@
+2013-01-17
+* add more sanity checks
+* add cleanup for postrunscans. This is to help prevent scans from leaving
+results that could possibly be packed into the result archive during a later
+scan.
+
 2013-01-12
 * merge reports of individual class files in Java aggregate scan
 
