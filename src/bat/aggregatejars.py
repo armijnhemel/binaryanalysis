@@ -189,6 +189,6 @@ def aggregatejars(unpackreports, leafreports, scantempdir, envvars=None):
 		rankres['nonUniqueMatches'] = nonUniqueMatches
 		rankres['reports'] = reports
 
-		#rankresults[i] = {'ranking': (rankres, {}, {'language': 'Java', 'classes': classmatches, 'fields': fieldmatches, 'sources': sourcematches})}
-		rankresults[i] = {'ranking': (rankres, dynamicresfinal, {'language': 'Java', 'classes': classmatches, 'fields': fieldmatches, 'sources': sourcematches})}
+		rankresults[i] = {'ranking': (rankres, {}, {'language': 'Java', 'classes': classmatches, 'fields': fieldmatches, 'sources': sourcematches})}
+		#rankresults[i] = {'ranking': (rankres, dynamicresfinal, {'language': 'Java', 'classes': classmatches, 'fields': fieldmatches, 'sources': sourcematches})}
 	return rankresults
