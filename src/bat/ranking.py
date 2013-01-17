@@ -471,11 +471,11 @@ def extractJavaNames(javameta, envvars=None):
 	c = conn.cursor()
 
 	## sanity checks
-	res = c.execute("select * from sqlite_master where type='table' and name='processed_file;").fetchall()
+	res = c.execute("select * from sqlite_master where type='table' and name='processed_file'").fetchall()
 	if res == []:
 		return dynamicRes
 
-	res = c.execute("select * from sqlite_master where type='table' and name='extracted_file;").fetchall()
+	res = c.execute("select * from sqlite_master where type='table' and name='extracted_file'").fetchall()
 	if res == []:
 		return dynamicRes
 
@@ -562,7 +562,15 @@ def extractVariablesJava(javameta, envvars=None):
 
 	## open the database containing function names that were extracted
 	## from source code.
-	conn = sqlite3.connect(scanenv.get('BAT_DB', '/tmp/master'))
+	if not scanenv.has_key('BAT_DB'):
+		return variablepvs
+
+	masterdb = scanenv.get('BAT_DB')
+
+	if not os.path.exists(masterdb):
+		return variablepvs
+
+	conn = sqlite3.connect(masterdb)
 	conn.text_factory = str
 	c = conn.cursor()
 
