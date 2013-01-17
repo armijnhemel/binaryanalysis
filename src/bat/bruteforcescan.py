@@ -670,6 +670,8 @@ def dumpData(unpackreports, leafreports, scans, tempdir):
 					## we should also replace nonUniqueMatches with {}
 					leafreports[l]['ranking'][0]['nonUniqueMatches'] = {}
 					leafreports[l]['ranking'][0]['reports'] = newreports
+				if variablepvs != None:
+					leafreports[l]['ranking'] = (res, dynamicRes, None)
 
 	picklefile = open(os.path.join(tempdir, 'scandata.pickle'), 'wb')
 	cPickle.dump((unpackreports, leafreports, scans), picklefile)
