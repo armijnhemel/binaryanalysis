@@ -764,6 +764,7 @@ enabled     = no
 storetarget = reports
 storedir    = /tmp/images
 storetype   = -names.html.gz
+cleanup     = yes
 
 [rankimages]
 type        = postrun
@@ -776,6 +777,7 @@ enabled     = no
 storetarget = images
 storedir    = /tmp/images
 storetype   = -piechart.png:-version.png
+cleanup     = yes
 
 [uniquehtml]
 type        = postrun
@@ -788,6 +790,7 @@ enabled     = no
 storetarget = reports
 storedir    = /tmp/images
 storetype   = -unique.html.gz
+cleanup     = yes
 
 [unmatchedhtml]
 type        = postrun
@@ -800,3 +803,4 @@ enabled     = no
 storetarget = reports
 storedir    = /tmp/images
 storetype   = -unmatched.html.gz
+cleanup     = yes
