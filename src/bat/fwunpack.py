@@ -1564,6 +1564,8 @@ def unpackFAT(filename, offset, tempdir=None, unpackenv={}):
 '''
 
 def searchUnpackMinix(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('minix'):
+		return ([], blacklist, [])
 	if offsets['minix'] == []:
 		return ([], blacklist, [])
 	## right now just allow file systems that are only Minix
@@ -1626,6 +1628,8 @@ def unpackMinix(filename, offset, tempdir=None, unpackenv={}):
 ## We use tune2fs to get the size of the file system so we know what to
 ## blacklist.
 def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('ext2'):
+		return ([], blacklist, [])
 	if offsets['ext2'] == []:
 		return ([], blacklist, [])
 	datafile = open(filename, 'rb')
@@ -1745,6 +1749,8 @@ def unpackGzip(filename, offset, tempdir=None):
 	return tmpdir
 
 def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('gzip'):
+		return ([], blacklist, [])
 	if offsets['gzip'] == []:
 		return ([], blacklist, [])
 
@@ -1765,6 +1771,8 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 	return (diroffsets, blacklist, [])
 
 def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('compress'):
+		return ([], blacklist, [])
 	if offsets['compress'] == []:
 		return ([], blacklist, [])
 
