@@ -289,7 +289,7 @@ class BatFrame(wx.Frame):
 
 		## We have a tab for detailed information about matches
 		matchestab = wx.SplitterWindow(self.notebookpanel)
-		self.notebookpanel.AddPage(matchestab, "String matches")
+		self.notebookpanel.AddPage(matchestab, "Matched strings")
 		## One window to display corresponding source code, initially empty
 		self.matchesbrowser = wx.html.HtmlWindow(matchestab)
 		self.matchesbrowser.SetPage("<html></html")
@@ -300,12 +300,16 @@ class BatFrame(wx.Frame):
 		matchestab.SetSashGravity(0.5)
 
 		self.unmatchedwindow = wx.html.HtmlWindow(self.notebookpanel)
-		self.notebookpanel.AddPage(self.unmatchedwindow, "Unmatched")
+		self.notebookpanel.AddPage(self.unmatchedwindow, "Unmatched strings")
 		self.unmatchedwindow.SetPage("<html></html>")
 
 		self.nameswindow = wx.html.HtmlWindow(self.notebookpanel)
 		self.notebookpanel.AddPage(self.nameswindow, "Matched names")
 		self.nameswindow.SetPage("<html></html>")
+
+		self.functionnameswindow = wx.html.HtmlWindow(self.notebookpanel)
+		self.notebookpanel.AddPage(self.functionnameswindow, "Matched function names")
+		self.functionnameswindow.SetPage("<html></html>")
 
 		## We have a tab for visual information and hexdumps about a file, only in advanced mode
 		if self.advanced:
@@ -317,9 +321,9 @@ class BatFrame(wx.Frame):
 		self.textpicturetab.SetSashGravity(0.4)
 		self.notebookpanel.AddPage(self.textpicturetab, "Text/pictures")
 		if self.advanced:
-			self.notebookpanel.EnableTab(3,False)
+			self.notebookpanel.EnableTab(4,False)
 		else:
-			self.notebookpanel.EnableTab(2,False)
+			self.notebookpanel.EnableTab(3,False)
 
 		## with one textctrl on the right
 		plaintextStyle = wx.TextAttr()
@@ -449,7 +453,7 @@ class BatFrame(wx.Frame):
 			## clean the hexdump
 			self.textCtrl.Clear()
 			## enable tabs again
-			self.notebookpanel.EnableTab(2,True)
+			self.notebookpanel.EnableTab(4,True)
 
 		#self.notebookpanel.EnableTab(1,True)
 
@@ -650,7 +654,11 @@ class BatFrame(wx.Frame):
 					nameshtml = nameshtmlfile.read()
 					nameshtmlfile.close()
 					self.nameswindow.SetPage(nameshtml)
-				## TOT HIER
+				if os.path.exists(os.path.join(self.reportsdir, "%s-functionnames.html.gz" % sha256sum)):
+					functionnameshtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-functionnames.html.gz" % sha256sum), 'r')
+					functionnameshtml = functionnameshtmlfile.read()
+					functionnameshtmlfile.close()
+					self.functionnameswindow.SetPage(functionnameshtml)
 				if applications != []:
 					tablerows = tablerows + "<tr><td><b>Applications</b></td><td>%s</td></tr>\n" % reduce(lambda x, y: "%s, %s" % (x,y), applications)
 			overviewstring = overviewstring % (name, path, realpath, size, magic)
@@ -843,12 +851,13 @@ class BatFrame(wx.Frame):
 		self.matchesbrowser.SetPage("<html></html>")
 		self.unmatchedwindow.SetPage("<html></html>")
 		self.nameswindow.SetPage("<html></html>")
+		self.functionnameswindow.SetPage("<html></html>")
 
 	## based on configuration we enable/disable certain features
 	def redrawGUI(self):
 		if not 0 in self.batconfigstate and self.advanced == True:
 			self.advanced = False
-			self.notebookpanel.RemovePage(4)
+			self.notebookpanel.RemovePage(5)
 			self.SetTitle(self.title)
 		if 0 in self.batconfigstate and self.advanced == False:
 			self.advanced = True
