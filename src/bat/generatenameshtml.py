@@ -47,10 +47,14 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 			html = ""
 			if dynamicRes.has_key('uniquepackages'):
 				if dynamicRes['uniquepackages'] != {}:
+					html += "<h1>Unique function name matches per package</h1><p><ul>\n"
 					for i in dynamicRes['uniquepackages'].keys():
-						html += "<h3>Unique function name matches for %s (%d)</h3><p>\n" % (i, len(dynamicRes['uniquepackages'][i]))
+						html += "<li><a href=\"#%s\">%s (%d)</a>" % (i, i, len(dynamicRes['uniquepackages'][i]))
+					html += "</ul></p>"
+					for i in dynamicRes['uniquepackages'].keys():
+						html += "<hr><h2><a name=\"%s\" href=\"#%s\">Matches for %s (%d)</a></h2><p>\n" % (i, i, i, len(dynamicRes['uniquepackages'][i]))
 						for v in dynamicRes['uniquepackages'][i]:
-							html += "%s</br>\n" % v
+							html += "%s<br>\n" % v
 						html += "</p>\n"
 			footer = "</body></html>"
 			if html != "":

@@ -451,7 +451,7 @@ def extractJavaNamesClass(scanfile):
 	return {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile}
 
 def extractJavaNames(javameta, scanenv, rankingfull):
-	dynamicRes = {}  # {'namesmatched': [], 'totalnames': int, 'uniquematches': int, 'packages': {} }
+	dynamicRes = {}  # {'namesmatched': 0, 'totalnames': int, 'uniquematches': int, 'packages': {} }
 	namesmatched = 0
 	uniquematches = 0
 	uniquepackages = {}
@@ -804,6 +804,7 @@ def extractDynamic(scanfile, scanenv, rankingfull, olddb=False):
 					else:
 						uniquepackages[res[0][0]] = [funcname]
 		dynamicRes['namesmatched'] = namesmatched
+		dynamicRes['uniquepackages'] = uniquepackages
 		dynamicRes['totalnames'] = len(list(set(scanstr)))
 
 		## unique matches we found. 
