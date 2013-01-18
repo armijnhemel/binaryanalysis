@@ -5,9 +5,12 @@
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
-This is a plugin for the Binary Analysis Tool. It generates a HTML file which
-contains unique strings that were matched, with links to pretty printed source
-code, which can be displayed in the BAT GUI.
+This is a plugin for the Binary Analysis Tool. It generates HTML files for the
+following:
+
+* unique strings that were matched, with links to pretty printed source code,
+which can be displayed in the BAT GUI.
+* unmatched strings
 
 This should be run as a postrun scan
 '''
@@ -145,3 +148,14 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 				uniquehtmlfile = gzip.open("%s/%s-unique.html.gz" % (reportdir, unpackreport['sha256']), 'wb')
 				uniquehtmlfile.write(uniquehtml)
 				uniquehtmlfile.close()
+
+		if res['unmatched'] != []:
+			unmatches = list(set(res['unmatched']))
+			unmatches.sort()
+			unmatchedhtml = "<html><body><h1>Unmatched strings for %s</h1><p><ul>" % filename
+			for i in unmatches:
+				unmatchedhtml = unmatchedhtml + "%s<br>\n" % cgi.escape(i)
+			unmatchedhtml = unmatchedhtml + "</body></html>"
+			unmatchedhtmlfile = gzip.open("%s/%s-unmatched.html.gz" % (reportdir, unpackreport['sha256']), 'wb')
+			unmatchedhtmlfile.write(unmatchedhtml)
+			unmatchedhtmlfile.close()
