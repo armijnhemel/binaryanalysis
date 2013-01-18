@@ -1,3 +1,8 @@
+2013-01-18
+* remove more duplicate code from ranking.py
+* merge some reporting modules
+* add very basic reporting for function names
+
 2013-01-17
 * add more sanity checks in fwunpack.py, unpackrpm.py and ranking.py
 * add cleanup for postrunscans. This is to help prevent scans from leaving
