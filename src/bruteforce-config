@@ -759,11 +759,11 @@ module      = bat.generatenameshtml
 method      = generateHTML
 noscan      = text:xml:graphics:pdf:audio:video
 envvars     = BAT_REPORTDIR=/tmp/images
-description = Generate HTML files with matched names (variables, methods, fields, etc.) for use in GUI
+description = Generate HTML files with matched names (functions, methods, variables, fields, etc.) for use in GUI
 enabled     = no
 storetarget = reports
 storedir    = /tmp/images
-storetype   = -names.html.gz
+storetype   = -names.html.gz:-functionnames.html.gz
 cleanup     = yes
 
 [rankimages]
@@ -785,7 +785,7 @@ module      = bat.generateuniquehtml
 method      = generateHTML
 noscan      = text:xml:graphics:pdf:audio:video
 envvars     = BAT_REPORTDIR=/tmp/images
-description = Generate HTML files with links to pretty printed source code for unique matches
+description = Generate HTML files with links to pretty printed source code for matched and unmatched strings
 enabled     = no
 storetarget = reports
 storedir    = /tmp/images
