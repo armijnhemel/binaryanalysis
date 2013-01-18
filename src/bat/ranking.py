@@ -156,6 +156,10 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 	if not os.path.exists(masterdb):
 		return None
 
+	rankingfull = False
+	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
+		rankingfull = True
+
 	## Only consider strings that are len(stringcutoff) or larger
 	stringcutoff = 5
 	## we want to use extra information for a few file types
@@ -217,7 +221,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 			## constants :-(
 
         		if "ELF" in mstype and blacklist == []:
-				dynres = extractDynamic(path, scanenv)
+				dynres = extractDynamic(path, scanenv, rankingfull)
 				if dynres != None:
 					(dynamicRes,variablepvs) = dynres
 					variablepvs['language'] = 'C'
@@ -374,9 +378,9 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 
 				## cleanup
 				shutil.rmtree(dalvikdir)
-			variablepvs = extractVariablesJava(javameta, scanenv)
+			variablepvs = extractVariablesJava(javameta, scanenv, rankingfull)
 			variablepvs['language'] = 'Java'
-			dynamicRes = extractJavaNames(javameta, scanenv)
+			dynamicRes = extractJavaNames(javameta, scanenv, rankingfull)
 		elif language == 'JavaScipt':
 			## JavaScript can be minified, but using xgettext we
 			## can still extract the strings from it
@@ -387,7 +391,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 		else:
 			lines = []
 
-		res = extractGeneric(lines, path, scanenv, language)
+		res = extractGeneric(lines, path, scanenv, rankingfull, language)
 		if res != None:
 			if blacklist != []:
 				## we made a tempfile because of blacklisting, so cleanup
@@ -446,7 +450,7 @@ def extractJavaNamesClass(scanfile):
 				methods.append(res.groups()[0])
 	return {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile}
 
-def extractJavaNames(javameta, scanenv):
+def extractJavaNames(javameta, scanenv, rankingfull):
 	dynamicRes = {}  # {'namesmatched': [], 'totalnames': int, 'uniquematches': int, 'packages': {} }
 	namesmatched = 0
 	uniquematches = 0
@@ -457,10 +461,6 @@ def extractJavaNames(javameta, scanenv):
 	methods = javameta['methods']
 	fields = javameta['fields']
 	sourcefile = javameta['sourcefiles']
-
-	rankingfull = False
-	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
-		rankingfull = True
 
 	masterdb = scanenv.get('BAT_DB')
 
@@ -554,7 +554,7 @@ def extractJavaNames(javameta, scanenv):
 	conn.close()
 	return dynamicRes
 
-def extractVariablesJava(javameta, scanenv):
+def extractVariablesJava(javameta, scanenv, rankingfull):
 	variablepvs = {}
 	if javameta.has_key('fields'):
 		fields = javameta['fields']
@@ -568,10 +568,6 @@ def extractVariablesJava(javameta, scanenv):
 		sourcefiles = javameta['sourcefiles']
 	else:
 		sourcefiles = []
-
-	rankingfull = False
-	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
-		rankingfull = True
 
 	## open the database containing function names that were extracted
 	## from source code.
@@ -661,7 +657,7 @@ def extractVariablesJava(javameta, scanenv):
 ## external libraries, but also lists local functions.
 ## By searching a database that contain which function names can be found in
 ## which packages.
-def extractDynamic(scanfile, scanenv, olddb=False):
+def extractDynamic(scanfile, scanenv, rankingfull, olddb=False):
 	dynamicRes = {}
 	variablepvs = {}
 
@@ -683,10 +679,6 @@ def extractDynamic(scanfile, scanenv, olddb=False):
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
-
-	rankingfull = False
-	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
-		rankingfull = True
 
 	dynamicscanning = True
 	if scanenv.has_key(functionnameperlanguage['C']):
@@ -866,7 +858,7 @@ def extractDynamic(scanfile, scanenv, olddb=False):
 	return (dynamicRes, variablepvs)
 
 ## Look up strings in the database and determine which packages/versions/licenses were used
-def extractGeneric(lines, path, scanenv, language='C'):
+def extractGeneric(lines, path, scanenv, rankingfull, language='C'):
 	lenStringsFound = 0
 	uniqueMatches = {}
 	allMatches = {}
@@ -883,10 +875,6 @@ def extractGeneric(lines, path, scanenv, language='C'):
 	unmatched = []
 
 	masterdb = scanenv.get('BAT_DB')
-
-	rankingfull = False
-	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
-		rankingfull = True
 
 	## open the database containing all the strings that were extracted
 	## from source code.
