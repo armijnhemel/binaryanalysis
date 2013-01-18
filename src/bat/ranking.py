@@ -147,6 +147,15 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 			except Exception, e:
 				pass
 
+	## sanity checks for the database
+	if not scanenv.has_key('BAT_DB'):
+		return None
+
+	masterdb = scanenv.get('BAT_DB')
+
+	if not os.path.exists(masterdb):
+		return None
+
 	## Only consider strings that are len(stringcutoff) or larger
 	stringcutoff = 5
 	## we want to use extra information for a few file types
@@ -389,12 +398,12 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 				os.unlink(tmpfile[1])
 		return (res, dynamicRes, variablepvs)
 
-        except Exception, e:
-                print >>sys.stderr, "string scan failed for:", path, e, type(e)
+	except Exception, e:
+		print >>sys.stderr, "string scan failed for:", path, e, type(e)
 		if blacklist != []:
 			## cleanup the tempfile
 			os.unlink(tmpfile[1])
-                return None
+		return None
 
 
 ## Extract the Java class name, variables and method names from the binary
@@ -453,13 +462,7 @@ def extractJavaNames(javameta, scanenv):
 	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
 		rankingfull = True
 
-	if not scanenv.has_key('BAT_DB'):
-		return dynamicRes
-
 	masterdb = scanenv.get('BAT_DB')
-
-	if not os.path.exists(masterdb):
-		return dynamicRes
 
 	## open the database containing function names that were extracted
 	## from source code.
@@ -572,13 +575,7 @@ def extractVariablesJava(javameta, scanenv):
 
 	## open the database containing function names that were extracted
 	## from source code.
-	if not scanenv.has_key('BAT_DB'):
-		return variablepvs
-
 	masterdb = scanenv.get('BAT_DB')
-
-	if not os.path.exists(masterdb):
-		return variablepvs
 
 	conn = sqlite3.connect(masterdb)
 	conn.text_factory = str
@@ -664,7 +661,7 @@ def extractVariablesJava(javameta, scanenv):
 ## external libraries, but also lists local functions.
 ## By searching a database that contain which function names can be found in
 ## which packages.
-def extractDynamic(scanfile, scanenv):
+def extractDynamic(scanfile, scanenv, olddb=False):
 	dynamicRes = {}
 	variablepvs = {}
 
@@ -678,13 +675,7 @@ def extractDynamic(scanfile, scanenv):
 	if st == '':
 		return (dynamicRes, variablepvs)
 
-	if not scanenv.has_key('BAT_DB'):
-		return (dynamicRes, variablepvs)
-
 	masterdb = scanenv.get('BAT_DB')
-
-	if not os.path.exists(masterdb):
-		return (dynamicRes, variablepvs)
 
 	## open the database containing function names that were extracted
 	## from source code.
@@ -891,13 +882,7 @@ def extractGeneric(lines, path, scanenv, language='C'):
 	nonUniqueAssignments = {}
 	unmatched = []
 
-	if not scanenv.has_key('BAT_DB'):
-		return None
-
 	masterdb = scanenv.get('BAT_DB')
-
-	if not os.path.exists(masterdb):
-		return None
 
 	rankingfull = False
 	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
