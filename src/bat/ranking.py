@@ -923,6 +923,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, language='C'):
 	sameFileScore = {}
 	alpha = 5.0
 	gaincutoff = 1
+	scorecutoff = 1.0e-20
 	nonUniqueMatches = {}
 	nonUniqueMatchLines = []
 	nonUniqueAssignments = {}
@@ -1117,7 +1118,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, language='C'):
 					## small enough...
 					score = len(line) / sys.maxint
 
-				if score > 1.0e-20:
+				if score > scorecutoff:
 					for packagename in pkgs:
 						if not nonUniqueMatches.has_key(packagename):
 							nonUniqueMatches[packagename] = [line]
@@ -1148,7 +1149,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, language='C'):
 						## For now we exclude them, but in the future we could include them for
 						## completeness.
 						#if score > 1.0e-200:
-						if score > 1.0e-20:
+						if score > scorecutoff:
 							stringsLeft['%s\t%s' % (line, fn)] = {'string': line, 'score': score, 'filename': fn, 'pkgs' : filenames[fn]}
 
 			else:
