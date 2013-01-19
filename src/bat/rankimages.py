@@ -114,8 +114,8 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscand
 					for v in vals:
 						j_sorted = filter(lambda x: x[1] == v, j[4].items())
 						j_sorted.sort()
-						for v in j_sorted:
-							pickledata.append(v)
+						for v2 in j_sorted:
+							pickledata.append(v2)
 					cPickle.dump(pickledata, os.fdopen(tmppickle[0], 'w'))
 					p = subprocess.Popen(['bat-generate-version-chart.py', '-i', tmppickle[1], '-o', '%s/%s-%s-version.png' % (imagedir, unpackreport['sha256'], j[1])], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 					(stanout, stanerr) = p.communicate()
@@ -131,8 +131,13 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscand
 				tmppickle = tempfile.mkstemp()
 				pickledata = []
 				p_sorted = sorted(packagedata, key=lambda x: x[1])
-				for v in p_sorted:
-					pickledata.append(v)
+				vals = list(set(map(lambda x: x[1], p_sorted)))
+				vals.sort()
+				for v in vals:
+					j_sorted = filter(lambda x: x[1] == v, p_sorted)
+					j_sorted.sort()
+					for v2 in j_sorted:
+						pickledata.append(v2)
 				cPickle.dump(pickledata, os.fdopen(tmppickle[0], 'w'))
 				p = subprocess.Popen(['bat-generate-version-chart.py', '-i', tmppickle[1], '-o', '%s/%s-%s-funcversion.png' % (imagedir, unpackreport['sha256'], package)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
