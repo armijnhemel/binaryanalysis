@@ -53,7 +53,9 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 					html += "</ul></p>"
 					for i in dynamicRes['uniquepackages'].keys():
 						html += "<hr><h2><a name=\"%s\" href=\"#%s\">Matches for %s (%d)</a></h2><p>\n" % (i, i, i, len(dynamicRes['uniquepackages'][i]))
-						for v in dynamicRes['uniquepackages'][i]:
+						upkgs = dynamicRes['uniquepackages'][i]
+						upkgs.sort()
+						for v in upkgs:
 							html += "%s<br>\n" % v
 						html += "</p>\n"
 			footer = "</body></html>"
