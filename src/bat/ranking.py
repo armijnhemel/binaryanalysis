@@ -427,7 +427,6 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 		else:
 			lines = []
 
-		print >>sys.stderr, "GENERIC"
 		res = extractGeneric(lines, path, scanenv, rankingfull, clones, language)
 		if res != None:
 			if blacklist != []:
