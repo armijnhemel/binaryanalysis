@@ -147,7 +147,10 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 			except Exception, e:
 				pass
 
-	## sanity checks for the database
+	## sanity checks for the database:
+	## * is the master database defined
+	## * does the master database exist
+	## * does it have the right schema
 	if not scanenv.has_key('BAT_DB'):
 		return None
 
@@ -174,6 +177,9 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
 		rankingfull = True
 
+	## Some methods use a database to lookup renamed packages.
+	## Only use this if it is defined, exists and has the right
+	## schema.
 	clonescan = False
 	clonedb = scanenv.get('BAT_CLONE_DB')
 	if clonedb != None:
@@ -185,6 +191,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 				clonescan = True
 			c.close()
 			conn.close()
+
 	## Only consider strings that are len(stringcutoff) or larger
 	stringcutoff = 5
 	## we want to use extra information for a few file types
