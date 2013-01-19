@@ -48,12 +48,14 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 			if dynamicRes.has_key('uniquepackages'):
 				if dynamicRes['uniquepackages'] != {}:
 					html += "<h1>Unique function name matches per package</h1><p><ul>\n"
-					for i in dynamicRes['uniquepackages'].keys():
-						html += "<li><a href=\"#%s\">%s (%d)</a>" % (i, i, len(dynamicRes['uniquepackages'][i]))
+					ukeys = map(lambda x: (x[0], len(x[1])), dynamicRes['uniquepackages'].items())
+					ukeys.sort(key=lambda x: x[1], reverse=True)
+					for i in ukeys:
+						html += "<li><a href=\"#%s\">%s (%d)</a>" % (i[0], i[0], i[1])
 					html += "</ul></p>"
-					for i in dynamicRes['uniquepackages'].keys():
-						html += "<hr><h2><a name=\"%s\" href=\"#%s\">Matches for %s (%d)</a></h2><p>\n" % (i, i, i, len(dynamicRes['uniquepackages'][i]))
-						upkgs = dynamicRes['uniquepackages'][i]
+					for i in ukeys:
+						html += "<hr><h2><a name=\"%s\" href=\"#%s\">Matches for %s (%d)</a></h2><p>\n" % (i[0], i[0], i[0], i[1])
+						upkgs = dynamicRes['uniquepackages'][i[0]]
 						upkgs.sort()
 						for v in upkgs:
 							html += "%s<br>\n" % v
