@@ -2,6 +2,9 @@
 * expand function name reporting and display in the GUI
 * move sanity checks from various methods in ranking.py to top level methods,
 plus document the sanity checks.
+* check whether or not old format databases were used
+* load cloning database in memory to prevent accessing the cloning database
+many times.
 
 2013-01-18
 * remove more duplicate code from ranking.py
