@@ -180,15 +180,19 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 	## Some methods use a database to lookup renamed packages.
 	## Only use this if it is defined, exists and has the right
 	## schema.
-	clonescan = False
 	clonedb = scanenv.get('BAT_CLONE_DB')
+	clones = {}
 	if clonedb != None:
 		if os.path.exists(clonedb):
 			conn = sqlite3.connect(clonedb)
 			c = conn.cursor()
 			c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='renames';")
 			if c.fetchall() != []:
-				clonescan = True
+				clonestmp = c.execute("SELECT originalname,newname from renames").fetchall()
+				for cl in clonestmp:
+					(originalname,newname) = cl
+					if not clones.has_key(originalname):
+						clones[originalname] = newname
 			c.close()
 			conn.close()
 
@@ -253,7 +257,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 			## constants :-(
 
         		if "ELF" in mstype and blacklist == []:
-				dynres = extractDynamic(path, scanenv, clonescan, rankingfull)
+				dynres = extractDynamic(path, scanenv, rankingfull, clones)
 				if dynres != None:
 					(dynamicRes,variablepvs) = dynres
 					variablepvs['language'] = 'C'
@@ -423,7 +427,8 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 		else:
 			lines = []
 
-		res = extractGeneric(lines, path, scanenv, rankingfull, clonescan, language)
+		print >>sys.stderr, "GENERIC"
+		res = extractGeneric(lines, path, scanenv, rankingfull, clones, language)
 		if res != None:
 			if blacklist != []:
 				## we made a tempfile because of blacklisting, so cleanup
@@ -686,7 +691,7 @@ def extractVariablesJava(javameta, scanenv, rankingfull):
 ## external libraries, but also lists local functions.
 ## By searching a database that contain which function names can be found in
 ## which packages.
-def extractDynamic(scanfile, scanenv, rankingfull, clonescan, olddb=False):
+def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 	dynamicRes = {}
 	variablepvs = {}
 
@@ -726,10 +731,6 @@ def extractDynamic(scanfile, scanenv, rankingfull, clonescan, olddb=False):
 	else:
 		if rankingfull:
 			dynamicscanning = False
-
-	if clonescan:
-		clonedb = scanenv.get('BAT_CLONE_DB')
-		c.execute("attach ? as clonedb", (clonedb,))
 
 	## Walk through the output of readelf, and split results accordingly
 	## in function names and variables.
@@ -839,14 +840,9 @@ def extractDynamic(scanfile, scanenv, rankingfull, clonescan, olddb=False):
 			if res != []:
 				packages_tmp = []
 				for r in res:
-					if clonescan:
-						c.execute("select newname from clonedb.renames where originalname=? LIMIT 1", r)
-						nn = c.fetchone()
-						if nn != None:
-							package_tmp = nn[0]
-							packages_tmp.append(package_tmp)
-						else:
-							packages_tmp.append(r[0])
+					if clones.has_key(r[0]):
+						package_tmp = clones[r[0]]
+						packages_tmp.append(package_tmp)
 					else:
 						packages_tmp.append(r[0])
 				packages_tmp = list(set(packages_tmp))
@@ -878,11 +874,8 @@ def extractDynamic(scanfile, scanenv, rankingfull, clonescan, olddb=False):
 					c.execute('select distinct package, version from processed_file where sha256=?', s)
 					packageversions = c.fetchall()
 					for pv in packageversions:
-						if clonescan:
-							c.execute("select newname from clonedb.renames where originalname=? LIMIT 1", (pv[0],))
-							nn = c.fetchone()
-							if nn != None:
-								pv = (nn[0], pv[1])
+						if clones.has_key(pv[0]):
+							pv = (clones[pv[0]], pv[1])
 						## shouldn't happen!
 						if pv[0] != i:
 							continue
@@ -920,7 +913,7 @@ def extractDynamic(scanfile, scanenv, rankingfull, clonescan, olddb=False):
 	return (dynamicRes, variablepvs)
 
 ## Look up strings in the database and determine which packages/versions/licenses were used
-def extractGeneric(lines, path, scanenv, rankingfull, clonescan, language='C'):
+def extractGeneric(lines, path, scanenv, rankingfull, clones, language='C'):
 	lenStringsFound = 0
 	uniqueMatches = {}
 	allMatches = {}
@@ -976,10 +969,6 @@ def extractGeneric(lines, path, scanenv, rankingfull, clonescan, language='C'):
 	c.execute("create table if not exists stringscache.stringscache (programstring text, package text, filename text, versions text)")
 	c.execute("create index if not exists stringscache.programstring_index on stringscache(programstring)")
 	conn.commit()
-
-	if clonescan:
-		clonedb = scanenv.get('BAT_CLONE_DB')
-		c.execute("attach ? as clonedb", (clonedb,))
 
 	determineversion = False
 	if scanenv.get('BAT_RANKING_VERSION', 0) == '1':
@@ -1102,11 +1091,8 @@ def extractGeneric(lines, path, scanenv, rankingfull, clonescan, language='C'):
 				## in case we don't know this match yet record it in the database
 				if newmatch and not rankingfull:
 					c.execute('''insert into stringscache.stringscache values (?, ?, ?, ?)''', (line, package, filename, ""))
-				if clonescan:
-					c.execute("select newname from clonedb.renames where originalname=? LIMIT 1", (package,))
-					nn = c.fetchone()
-					if nn != None:
-						package = nn[0]
+				if clones.has_key(package):
+					package = clones[package]
 				if not pkgs.has_key(package):
 					pkgs[package] = [filename]
 				else:
