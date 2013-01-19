@@ -1,3 +1,8 @@
+2013-01-19
+* expand function name reporting and display in the GUI
+* move sanity checks from various methods in ranking.py to top level methods,
+plus document the sanity checks.
+
 2013-01-18
 * remove more duplicate code from ranking.py
 * merge some reporting modules
