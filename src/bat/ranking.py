@@ -522,6 +522,15 @@ def extractJavaNames(javameta, scanenv, rankingfull):
 		if rankingfull:
 			return dynamicRes
 
+	## extra sanity check. Previous versions only had function names from C in the database.
+	## When scripts were adapted to also allow Java methods a field 'language' was introduced.
+	## There are no official databases where there is no field 'language' and that contains
+	## method names from Java code, so there is no need to scan Java if there is no field
+	## 'language' in the database.
+	res = c.execute("select sql from sqlite_master where type='table' and name='extracted_function'").fetchall()
+	if not 'language' in res[0][0]:
+		return dynamicRes
+
 	c.execute("attach ? as functionnamecache", (funccache,))
 	c.execute("create table if not exists functionnamecache.functionnamecache (functionname text, package text)")
 	c.execute("create index if not exists functionnamecache.functionname_index on functionnamecache(functionname)")
@@ -530,8 +539,6 @@ def extractJavaNames(javameta, scanenv, rankingfull):
 		if meth == 'main':
 			continue
 		res = c.execute("select distinct package from functionnamecache.functionnamecache where functionname=?", (meth,)).fetchall()
-		#print >>sys.stderr, len(res), res, i
-		#print >>sys.stderr
 		if res != []:
 			matches.append(meth)
 			namesmatched += 1
@@ -791,6 +798,12 @@ def extractDynamic(scanfile, scanenv, rankingfull, clonescan, olddb=False):
 		## caching datastructure, only needed in case there is no full cache
 		sha256_packages = {}
 
+		## sanity check whether or not we have the new schema that has 'language' or the old one without
+		## when the scripts only had support for C.
+		res = c.execute("select sql from sqlite_master where type='table' and name='extracted_function'").fetchall()
+		oldschema = False
+		if not 'language' in res[0][0]:
+			oldschema = True
 		## the database made from ctags output only has function names, not the types. Since
 		## C++ functions could be in an executable several times with different times we
 		## deduplicate first
@@ -800,12 +813,16 @@ def extractDynamic(scanfile, scanenv, rankingfull, clonescan, olddb=False):
 			pkgs = []
 			if res == [] and not rankingfull:
 				## we don't have a cache, so we need to create it. This is expensive.
-				c.execute('select sha256, language from extracted_function where functionname=?', (funcname,))
+				if oldschema:
+					c.execute('select sha256 from extracted_function where functionname=?', (funcname,))
+				else:
+					c.execute('select sha256, language from extracted_function where functionname=?', (funcname,))
 				res2 = c.fetchall()
 				pkgs = []
 				for r in res2:
-					if r[1] != 'C':
-						continue
+					if not oldschema:
+						if r[1] != 'C':
+							continue
 					if sha256_packages.has_key(r[0]):
 						pkgs = list(set(pkgs + copy.copy(sha256_packages[r[0]])))
 					else:
