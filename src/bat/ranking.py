@@ -156,6 +156,20 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 	if not os.path.exists(masterdb):
 		return None
 
+	conn = sqlite3.connect(masterdb)
+	c = conn.cursor()
+	res = c.execute("select * from sqlite_master where type='table' and name='processed_file'").fetchall()
+	if res == []:
+		c.close()
+		conn.close()
+		return None
+
+	res = c.execute("select * from sqlite_master where type='table' and name='extracted_file'").fetchall()
+	if res == []:
+		c.close()
+		conn.close()
+		return None
+
 	rankingfull = False
 	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
 		rankingfull = True
@@ -484,15 +498,6 @@ def extractJavaNames(javameta, scanenv, rankingfull):
 	conn.text_factory = str
 	c = conn.cursor()
 
-	## sanity checks
-	res = c.execute("select * from sqlite_master where type='table' and name='processed_file'").fetchall()
-	if res == []:
-		return dynamicRes
-
-	res = c.execute("select * from sqlite_master where type='table' and name='extracted_file'").fetchall()
-	if res == []:
-		return dynamicRes
-
 	if scanenv.has_key(functionnameperlanguage['Java']):
 		funccache = scanenv.get(functionnameperlanguage['Java'])
 		## sanity checks to see if the database exists. If not, and rankingfull
@@ -510,7 +515,6 @@ def extractJavaNames(javameta, scanenv, rankingfull):
 		if rankingfull:
 			return dynamicRes
 
-	#c.execute("attach ? as functionnamecache", ((scanenv.get(functionnameperlanguage['Java'], '/tmp/funccache')),))
 	c.execute("attach ? as functionnamecache", (funccache,))
 	c.execute("create table if not exists functionnamecache.functionnamecache (functionname text, package text)")
 	c.execute("create index if not exists functionnamecache.functionname_index on functionnamecache(functionname)")
