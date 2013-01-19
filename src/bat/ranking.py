@@ -160,6 +160,17 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
 		rankingfull = True
 
+	clonescan = False
+	clonedb = scanenv.get('BAT_CLONE_DB')
+	if clonedb != None:
+		if os.path.exists(clonedb):
+			conn = sqlite3.connect(clonedb)
+			c = conn.cursor()
+			c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='renames';")
+			if c.fetchall() != []:
+				clonescan = True
+			c.close()
+			conn.close()
 	## Only consider strings that are len(stringcutoff) or larger
 	stringcutoff = 5
 	## we want to use extra information for a few file types
@@ -221,7 +232,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 			## constants :-(
 
         		if "ELF" in mstype and blacklist == []:
-				dynres = extractDynamic(path, scanenv, rankingfull)
+				dynres = extractDynamic(path, scanenv, clonescan, rankingfull)
 				if dynres != None:
 					(dynamicRes,variablepvs) = dynres
 					variablepvs['language'] = 'C'
@@ -391,7 +402,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 		else:
 			lines = []
 
-		res = extractGeneric(lines, path, scanenv, rankingfull, language)
+		res = extractGeneric(lines, path, scanenv, rankingfull, clonescan, language)
 		if res != None:
 			if blacklist != []:
 				## we made a tempfile because of blacklisting, so cleanup
@@ -657,7 +668,7 @@ def extractVariablesJava(javameta, scanenv, rankingfull):
 ## external libraries, but also lists local functions.
 ## By searching a database that contain which function names can be found in
 ## which packages.
-def extractDynamic(scanfile, scanenv, rankingfull, olddb=False):
+def extractDynamic(scanfile, scanenv, rankingfull, clonescan, olddb=False):
 	dynamicRes = {}
 	variablepvs = {}
 
@@ -697,6 +708,10 @@ def extractDynamic(scanfile, scanenv, rankingfull, olddb=False):
 	else:
 		if rankingfull:
 			dynamicscanning = False
+
+	if clonescan:
+		clonedb = scanenv.get('BAT_CLONE_DB')
+		c.execute("attach ? as clonedb", (clonedb,))
 
 	## Walk through the output of readelf, and split results accordingly
 	## in function names and variables.
@@ -794,15 +809,28 @@ def extractDynamic(scanfile, scanenv, rankingfull, olddb=False):
 				c.execute('select package from functionnamecache.functionnamecache where functionname=?', (funcname,))
 				res = c.fetchall()
 			if res != []:
+				packages_tmp = []
+				for r in res:
+					if clonescan:
+						c.execute("select newname from clonedb.renames where originalname=? LIMIT 1", r)
+						nn = c.fetchone()
+						if nn != None:
+							package_tmp = nn[0]
+							packages_tmp.append(package_tmp)
+						else:
+							packages_tmp.append(r[0])
+					else:
+						packages_tmp.append(r[0])
+				packages_tmp = list(set(packages_tmp))
 				matches.append(funcname)
 				namesmatched += 1
 				## unique match
-				if len(res) == 1:
+				if len(packages_tmp) == 1:
 					uniquematches += 1
-					if uniquepackages.has_key(res[0][0]):
-						uniquepackages[res[0][0]] += [funcname]
+					if uniquepackages.has_key(packages_tmp[0]):
+						uniquepackages[packages_tmp[0]] += [funcname]
 					else:
-						uniquepackages[res[0][0]] = [funcname]
+						uniquepackages[packages_tmp[0]] = [funcname]
 		dynamicRes['namesmatched'] = namesmatched
 		dynamicRes['uniquepackages'] = uniquepackages
 		dynamicRes['totalnames'] = len(list(set(scanstr)))
@@ -822,6 +850,11 @@ def extractDynamic(scanfile, scanenv, rankingfull, olddb=False):
 					c.execute('select distinct package, version from processed_file where sha256=?', s)
 					packageversions = c.fetchall()
 					for pv in packageversions:
+						if clonescan:
+							c.execute("select newname from clonedb.renames where originalname=? LIMIT 1", (pv[0],))
+							nn = c.fetchone()
+							if nn != None:
+								pv = (nn[0], pv[1])
 						## shouldn't happen!
 						if pv[0] != i:
 							continue
@@ -859,7 +892,7 @@ def extractDynamic(scanfile, scanenv, rankingfull, olddb=False):
 	return (dynamicRes, variablepvs)
 
 ## Look up strings in the database and determine which packages/versions/licenses were used
-def extractGeneric(lines, path, scanenv, rankingfull, language='C'):
+def extractGeneric(lines, path, scanenv, rankingfull, clonescan, language='C'):
 	lenStringsFound = 0
 	uniqueMatches = {}
 	allMatches = {}
@@ -916,16 +949,9 @@ def extractGeneric(lines, path, scanenv, rankingfull, language='C'):
 	c.execute("create index if not exists stringscache.programstring_index on stringscache(programstring)")
 	conn.commit()
 
-	clonescan = False
-	clonedb = scanenv.get('BAT_CLONE_DB')
-	if clonedb != None:
+	if clonescan:
+		clonedb = scanenv.get('BAT_CLONE_DB')
 		c.execute("attach ? as clonedb", (clonedb,))
-		c.execute("SELECT name FROM clonedb.sqlite_master WHERE type='table' AND name='renames';")
-		if c.fetchall() != []:
-			clonescan = True
-		else:
-			clonescan = False
-			c.execute("detach clonedb")
 
 	determineversion = False
 	if scanenv.get('BAT_RANKING_VERSION', 0) == '1':
@@ -1048,8 +1074,8 @@ def extractGeneric(lines, path, scanenv, rankingfull, language='C'):
 				## in case we don't know this match yet record it in the database
 				if newmatch and not rankingfull:
 					c.execute('''insert into stringscache.stringscache values (?, ?, ?, ?)''', (line, package, filename, ""))
-				if clonedb != None and clonescan:
-					c.execute("select newname from renames where originalname=? LIMIT 1", (package,))
+				if clonescan:
+					c.execute("select newname from clonedb.renames where originalname=? LIMIT 1", (package,))
 					nn = c.fetchone()
 					if nn != None:
 						package = nn[0]
