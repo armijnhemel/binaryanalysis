@@ -22,9 +22,8 @@ def aggregatejars(unpackreports, leafreports, scantempdir, envvars=None):
 	for i in unpackreports:
 		if leafreports.has_key(i):
 			## add a name check. TODO: make case insensitive
-			## TODO: check for WAR (Web ARchive) and other bean related
-			## things.
-			if i.endswith('.jar'):
+			## check extensions for JAR, WAR, RAR (not Resource adapter), EAR
+			if i.endswith('.jar') or i.endswith('.ear') or i.endswith('.war') or i.endswith('.rar'):
 				if leafreports[i].has_key('tags'):
 					## check if it was tagged as a ZIP file
 					if 'zip' in leafreports[i]['tags']:
