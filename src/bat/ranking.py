@@ -1018,9 +1018,14 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, language='C'):
 	matchedlines = 0
 	oldline = None
 	matched = False
+
+	## TODO: add an extra check for lines that score extremely low. This
+	## should possibly help reduce load on databases stored on slower disks
+	#c.execute('attach ? as scores', ('/gpl/master/scoresdb.sqlite3',))
+
 	for line in lines:
 		#print >>sys.stderr, "processing <|%s|>" % line
-		## speedup if the lines happen to be the same as the old one
+		## speedup if the line happens to be the same as the old one
 		## This does *not* alter the score in any way, but perhaps
 		## it should: having a very significant string a few times
 		## is a strong indication.
@@ -1033,6 +1038,16 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, language='C'):
 		newmatch = False
 		## skip empty lines
                 if line == "": continue
+
+		#scoreres = conn.execute("select packages, score from scores.scores where programstring=? LIMIT 1", (line,)).fetchone()
+		#if scoreres != None:
+		#	## if the score is so low, why bother hitting the disk?
+		#	if scoreres[1] < 1.0e-22:
+		#		lenStringsFound = lenStringsFound + len(line)
+		#		matched = True
+		#		matchedlines = matchedlines + 1
+		#		nonUniqueMatchLines.append(line)
+		#		continue
 
 		## first see if we have anything in the cache at all
 		res = conn.execute('''select package, filename FROM stringscache.stringscache WHERE programstring=?''', (line,)).fetchall()
