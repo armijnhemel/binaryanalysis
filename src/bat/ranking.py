@@ -108,7 +108,7 @@ fossology_to_ninka = { 'No_license_found': 'NONE'
                      }
 
 ## The scanners that are used in BAT are Ninka and FOSSology. These scanners
-## don't always agree on output.
+## don't always agree on results, but when they do, it is very reliable.
 def squashlicenses(licenses):
 	## licenses: [(license, scanner)]
 	if len(licenses) != 2:
@@ -221,6 +221,11 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 		## Else we will just consider it as 'C'.
 		language='C'
 
+	## If part of the file is blacklisted the blacklisted byte ranges
+	## should be ignored. Examples are firmwares, where there is a
+	## bootloader, followed by a file system. The bootloader should be
+	## analyzed, the file system should have been unpacked and been
+	## blacklisted.
 	if blacklist == []:
 		scanfile = path
 	else:
