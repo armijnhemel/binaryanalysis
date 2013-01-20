@@ -560,6 +560,7 @@ def extractJavaNames(javameta, scanenv, rankingfull):
 					uniquepackages[res[0][0]] = [meth]
 	dynamicRes['namesmatched'] = namesmatched
 	dynamicRes['totalnames'] = len(list(set(methods)))
+	dynamicRes['uniquepackages'] = uniquepackages
 	dynamicRes['uniquematches'] = uniquematches
 
 	## unique matches we found. 
