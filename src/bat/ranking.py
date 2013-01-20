@@ -772,9 +772,10 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 
 	if dynamicscanning:
 		c.execute("attach ? as functionnamecache", (funccache,))
-		c.execute("create table if not exists functionnamecache.functionnamecache (functionname text, package text)")
-		c.execute("create index if not exists functionnamecache.functionname_index on functionnamecache(functionname)")
-		conn.commit()
+		if not rankingfull:
+			c.execute("create table if not exists functionnamecache.functionnamecache (functionname text, package text)")
+			c.execute("create index if not exists functionnamecache.functionname_index on functionnamecache(functionname)")
+			conn.commit()
 
 		## run c++filt in batched mode to avoid launching many processes
 		## C++ demangling is tricky: the types declared in the function in the source code
@@ -900,6 +901,8 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 	if variable_scan:
 		vvs = {}
 		for v in variables:
+			if v in ['options', 'debug', 'options', 'verbose']:
+				continue
 			pvs = []
 			res = c.execute("select sha256,type,language from extracted_name where name=?", (v,)).fetchall()
 			if res != []:
@@ -956,7 +959,8 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, language='C'):
 			return None
 		avgdb = avgdbperlanguage[language]
 	c.execute("attach ? as avg", (avgdb,))
-	c.execute("create table if not exists avg.avgstringscache (package text, avgstrings real, primary key (package))")
+	if not rankingfull:
+		c.execute("create table if not exists avg.avgstringscache (package text, avgstrings real, primary key (package))")
 
 	if scanenv.has_key(stringsdbperlanguage[language]):
 		## sanity checks to see if the database exists. If not, and rankingfull
@@ -971,9 +975,10 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, language='C'):
 			return None
 		stringscache = stringsdbperlanguage[language]
 	c.execute("attach ? as stringscache", (stringscache,))
-	c.execute("create table if not exists stringscache.stringscache (programstring text, package text, filename text, versions text)")
-	c.execute("create index if not exists stringscache.programstring_index on stringscache(programstring)")
-	conn.commit()
+	if not rankingfull:
+		c.execute("create table if not exists stringscache.stringscache (programstring text, package text, filename text, versions text)")
+		c.execute("create index if not exists stringscache.programstring_index on stringscache(programstring)")
+		conn.commit()
 
 	determineversion = False
 	if scanenv.get('BAT_RANKING_VERSION', 0) == '1':
