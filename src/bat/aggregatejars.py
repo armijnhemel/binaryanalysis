@@ -141,6 +141,16 @@ def aggregatejars(unpackreports, leafreports, scantempdir, envvars=None):
 						packagelicensesperpkg[package] = packagelicensesperpkg[package] + r[5]
 					else:
 						packagelicensesperpkg[package] = r[5]
+			if dynamicres != {}:
+				if dynamicres.has_key('uniquepackages'):
+					if dynamicres['uniquepackages'] != {}:
+						if not dynamicresfinal.has_key('uniquepackages'):
+							dynamicresfinal['uniquepackages'] = {}
+						for d in dynamicres['uniquepackages'].keys():
+							if dynamicresfinal['uniquepackages'].has_key(d):
+								dynamicresfinal['uniquepackages'][d] = list(set(dynamicresfinal['uniquepackages'][d] + dynamicres['uniquepackages'][d]))
+							else:
+								dynamicresfinal['uniquepackages'][d] = dynamicres['uniquepackages'][d]
 			'''
 			## this is unreliable: we could be counting many unique method
 			## names twice. We actually need the names of the methods that
@@ -177,10 +187,13 @@ def aggregatejars(unpackreports, leafreports, scantempdir, envvars=None):
 			reports.append((rank, s, uniqueMatchesperpkg.get(s,[]), percentage, packageversionsperpkg.get(s, {}), list(set(packagelicensesperpkg.get(s, [])))))
 			rank = rank+1
 
+		if dynamicresfinal.has_key('uniquepackages'):
 
-		dynamicresfinal['totalnames'] = totalnames
+			dynamicresfinal['namesmatched'] = reduce(lambda x, y: x + y, map(lambda x: len(x[1]), dynamicresfinal['uniquepackages'].items()))
+		else:
+			dynamicresfinal['namesmatched'] = 0
 		dynamicresfinal['uniquematches'] = uniquematches
-		dynamicresfinal['namesmatched'] = namesmatched
+		dynamicresfinal['totalnames'] = namesmatched
 		dynamicresfinal['packages'] = packagesmatched
 
 		rankres['unmatched'] = unmatched
@@ -190,6 +203,6 @@ def aggregatejars(unpackreports, leafreports, scantempdir, envvars=None):
 		rankres['nonUniqueMatches'] = nonUniqueMatches
 		rankres['reports'] = reports
 
-		rankresults[i] = {'ranking': (rankres, {}, {'language': 'Java', 'classes': classmatches, 'fields': fieldmatches, 'sources': sourcematches})}
-		#rankresults[i] = {'ranking': (rankres, dynamicresfinal, {'language': 'Java', 'classes': classmatches, 'fields': fieldmatches, 'sources': sourcematches})}
+		#rankresults[i] = {'ranking': (rankres, {}, {'language': 'Java', 'classes': classmatches, 'fields': fieldmatches, 'sources': sourcematches})}
+		rankresults[i] = {'ranking': (rankres, dynamicresfinal, {'language': 'Java', 'classes': classmatches, 'fields': fieldmatches, 'sources': sourcematches})}
 	return rankresults
