@@ -904,6 +904,7 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 			if v in ['options', 'debug', 'options', 'verbose']:
 				continue
 			pvs = []
+			## TODO: replace with caching database to save a lot of work
 			res = c.execute("select sha256,type,language from extracted_name where name=?", (v,)).fetchall()
 			if res != []:
 				for r in res:
