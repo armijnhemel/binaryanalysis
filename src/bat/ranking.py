@@ -570,12 +570,12 @@ def extractJavaNames(javameta, scanenv, rankingfull):
 		versions = []
 		for p in uniquepackages[i]:
 			pversions = []
-			c.execute('select distinct sha256, language from extracted_function where functionname=?', (p,))
+			c.execute("select distinct sha256, language from extracted_function where functionname=?", (p,))
 			res = c.fetchall()
 			for s in res:
 				if s[1] != 'Java':
 					continue
-				c.execute('select distinct package, version from processed_file where sha256=?', (s[0],))
+				c.execute("select distinct package, version from processed_file where sha256=?", (s[0],))
 				packageversions = c.fetchall()
 				for pv in packageversions:
 					## shouldn't happen!
@@ -814,15 +814,15 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 		## C++ functions could be in an executable several times with different times we
 		## deduplicate first
 		for funcname in list(set(scanstr)):
-			c.execute('select package from functionnamecache.functionnamecache where functionname=?', (funcname,))
+			c.execute("select package from functionnamecache.functionnamecache where functionname=?", (funcname,))
 			res = c.fetchall()
 			pkgs = []
 			if res == [] and not rankingfull:
 				## we don't have a cache, so we need to create it. This is expensive.
 				if oldschema:
-					c.execute('select sha256 from extracted_function where functionname=?', (funcname,))
+					c.execute("select sha256 from extracted_function where functionname=?", (funcname,))
 				else:
-					c.execute('select sha256, language from extracted_function where functionname=?', (funcname,))
+					c.execute("select sha256, language from extracted_function where functionname=?", (funcname,))
 				res2 = c.fetchall()
 				pkgs = []
 				for r in res2:
@@ -832,15 +832,15 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 					if sha256_packages.has_key(r[0]):
 						pkgs = list(set(pkgs + copy.copy(sha256_packages[r[0]])))
 					else:
-						c.execute('select package from processed_file where sha256=?', r)
+						c.execute("select package from processed_file where sha256=?", r)
 						s = c.fetchall()
 						if s != []:
 							pkgs = list(set(pkgs + map(lambda x: x[0], s)))
 							sha256_packages[r[0]] = map(lambda x: x[0], s)
 				for p in pkgs:
-					c.execute('''insert into functionnamecache (functionname, package) values (?,?)''', (funcname, p))
+					c.execute("insert into functionnamecache (functionname, package) values (?,?)", (funcname, p))
 				conn.commit()
-				c.execute('select package from functionnamecache.functionnamecache where functionname=?', (funcname,))
+				c.execute("select package from functionnamecache.functionnamecache where functionname=?", (funcname,))
 				res = c.fetchall()
 			if res != []:
 				packages_tmp = []
@@ -873,10 +873,10 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 			versions = []
 			for p in uniquepackages[i]:
 				pversions = []
-				c.execute('select distinct sha256 from extracted_function where functionname=?', (p,))
+				c.execute("select distinct sha256 from extracted_function where functionname=?", (p,))
 				res = c.fetchall()
 				for s in res:
-					c.execute('select distinct package, version from processed_file where sha256=?', s)
+					c.execute("select distinct package, version from processed_file where sha256=?", s)
 					packageversions = c.fetchall()
 					for pv in packageversions:
 						if clones.has_key(pv[0]):
@@ -1031,7 +1031,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, language='C'):
 
 	## TODO: add an extra check for lines that score extremely low. This
 	## should possibly help reduce load on databases stored on slower disks
-	#c.execute('attach ? as scores', ('/gpl/master/scoresdb.sqlite3',))
+	#c.execute("attach ? as scores", ('/gpl/master/scoresdb.sqlite3',))
 
 	for line in lines:
 		#print >>sys.stderr, "processing <|%s|>" % line
@@ -1060,13 +1060,13 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, language='C'):
 		#		continue
 
 		## first see if we have anything in the cache at all
-		res = conn.execute('''select package, filename FROM stringscache.stringscache WHERE programstring=?''', (line,)).fetchall()
+		res = conn.execute("select package, filename FROM stringscache.stringscache WHERE programstring=?", (line,)).fetchall()
 
 		## nothing in the cache
 		if len(res) == 0:
 			if not rankingfull:
 				## do we actually have a result?
-				checkres = conn.execute('''select sha256, language from extracted_file WHERE programstring=? LIMIT 1''', (line,)).fetchall()
+				checkres = conn.execute("select sha256, language from extracted_file WHERE programstring=? LIMIT 1", (line,)).fetchall()
 				res = []
 				if len(checkres) == 0:
 					print >>sys.stderr, "no matches found for <(|%s|)> in %s" % (line, path)
@@ -1074,14 +1074,14 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, language='C'):
 					continue
 				else:
 					## now fetch *all* sha256 checksums
-					checkres = conn.execute('''select sha256, language from extracted_file WHERE programstring=?''', (line,)).fetchall()
+					checkres = conn.execute("select sha256, language from extracted_file WHERE programstring=?", (line,)).fetchall()
 					checkres = list(set(checkres))
 					for (checksha, checklan) in checkres:
 						if checklan != language:
 							continue
 						else:
 							## overwrite 'res' here
-							res = conn.execute('''select package, filename FROM processed_file p WHERE sha256=?''', (checksha,)).fetchall()
+							res = conn.execute("select package, filename FROM processed_file p WHERE sha256=?", (checksha,)).fetchall()
 				newmatch = True
 			else:
 				unmatched.append(line)
@@ -1115,7 +1115,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, language='C'):
 				(package, filename) = result
 				## in case we don't know this match yet record it in the database
 				if newmatch and not rankingfull:
-					c.execute('''insert into stringscache.stringscache values (?, ?, ?, ?)''', (line, package, filename, ""))
+					c.execute("insert into stringscache.stringscache values (?, ?, ?, ?)", (line, package, filename, ""))
 				if clones.has_key(package):
 					package = clones[package]
 				if not pkgs.has_key(package):
