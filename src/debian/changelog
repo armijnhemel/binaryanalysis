@@ -1,3 +1,13 @@
+bat (12.0) unstable; urgency=low
+
+  * add aggregate scanning
+  * romfs + squashfs + jffs2 + 7z fixes
+  * unlock more information (variables, Java methods + fields, etc.)
+  * combine licensing from FOSSology and Ninka
+  * much more (see ChangeLog)
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Sun, 20 Jan 2013 21:56:13 +0100
+
 bat (11.0) unstable; urgency=high
 
   * fix file copying bug
