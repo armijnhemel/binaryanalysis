@@ -18,7 +18,7 @@ import bat.bruteforcescan
 ## * BAT_PACKAGE
 
 ## Check if any of these have been defined for ranking and check database
-## schemas, whether it is the old or new format, etc.
+## schemas, whether it has the correct format, etc.
 ## * BAT_AVG_C
 ## * BAT_AVG_JAVA
 ## * BAT_AVG_C#
@@ -69,6 +69,7 @@ def main(argv):
 					continue
 				else:
 					rankingfull = False
+					licenses = False
 					masterdb = None
 					envvars = s['envvars']
 					for en in envvars.split(':'):
@@ -84,9 +85,18 @@ def main(argv):
 							print "Error: %s has too many values defined" % envsplits[0]
 							continue
 						if len(envsplits) == 1 and envsplits[1] == '':
-							print "Error: %s has too many values defined" % envsplits[0]
+							print "Error: %s has no value defined" % envsplits[0]
 							continue
+						if envsplits[0] == 'BAT_RANKING_LICENSE':
+							if envsplits[1] != '0' and envsplits[1] != '1':
+								print "Error: incorrect value for %s" % envsplits[0]
+								continue
+							if envsplits[1] == '1':
+								licenses = True
 						if envsplits[0] == 'BAT_RANKING_FULLCACHE':
+							if envsplits[1] != '0' and envsplits[1] != '1':
+								print "Error: incorrect value for %s" % envsplits[0]
+								continue
 							if envsplits[1] == '1':
 								rankingfull = True
 						if envsplits[0] in ["BAT_CLONE_DB", "BAT_LICENSE_DB"]:
@@ -114,11 +124,14 @@ def main(argv):
 							c.close()
 							conn.close()
 							if not db_correct:
-								print "Error: database for %s not in correct format" % envsplits[0]
+								print "Error: database %s does not have correct format" % envsplits[0]
 								continue
 					## BAT_DB always has to be defined
 					if masterdb == None:
 						print "Error: BAT_DB not defined"
+					if licenses:
+						if not "BAT_LICENSE_DB" in envvars:
+							print "Error: database for license does not exist, but license scanning defined"
 					## the following databases can be generated on the fly but if rankingfull
 					## is set they should be treated as "fixed" databases
 					for en in envvars.split(':'):
