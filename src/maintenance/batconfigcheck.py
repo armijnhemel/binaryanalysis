@@ -12,6 +12,7 @@ specifically is used to check the validity of databases for the ranking scan.
 import os, sys, sqlite3
 from optparse import OptionParser
 import ConfigParser
+import bat
 
 ## Check if this has been defined for file2package
 ## * BAT_PACKAGE
@@ -37,7 +38,35 @@ import ConfigParser
 ## * storedir
 
 def main(argv):
-	pass
+	config = ConfigParser.ConfigParser()
+	parser = OptionParser()
+	parser.add_option("-c", "--config", action="store", dest="cfg", help="path to configuration file", metavar="FILE")
+
+	(options, args) = parser.parse_args()
+	if options.cfg != None:
+		try:
+			configfile = open(options.cfg, 'r')
+		except:
+			parser.error("Need configuration file")
+	else:
+		parser.error("Need configuration file")
+
+	try:
+		config.readfp(configfile)
+	except:
+		print >>sys.stderr, "Error: Invalid config: %s" % options.cfg
+		sys.exit(1)
+	scans = bat.bruteforcescan.readconfig(config)
+
+	if scans.has_key('programscans'):
+		if scans['programscans'].has_key('ranking'):
+			pass
+
+	## for each postrunscan check:
+	## * BAT_REPORTDIR
+	## * storedir
+	if scans.has_key('postrunscans'):
+		pass
 
 if __name__ == "__main__":
 	main(sys.argv)
