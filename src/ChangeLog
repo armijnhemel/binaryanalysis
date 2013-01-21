@@ -1,3 +1,7 @@
+2013-01-21
+* add configuration checker batconfigcheck.py to check validity of
+configuration files
+
 2013-01-20
 * update documentation for BAT 12
 * return more information in JAR file aggregator
