@@ -60,7 +60,7 @@ def main(argv):
 
 	ranking_old = ["BAT_SQLITE_AVG_C", "BAT_SQLITE_AVG_JAVA", "BAT_SQLITE_AVG_C#", "BAT_SQLITE_AVG_ACTIONSCRIPT", "BAT_SQLITE_DB", "BAT_SQLITE_FUNCTIONNAME_CACHE", "BAT_SQLITE_STRINGSCACHE_C", "BAT_SQLITE_STRINGSCACHE_C#", "BAT_SQLITE_STRINGSCACHE_ACTIONSCRIPT", "BAT_SQLITE_STRINGSCACHE_JAVA"]
 
-	ranking_valid = ["BAT_AVG_C", "BAT_STRINGSCACHE_C", "BAT_AVG_JAVA", "BAT_STRINGSCACHE_JAVA", "BAT_DB", "BAT_FUNCTIONNAMECACHE_C", "BAT_FUNCTIONNAMECACHE_JAVA", "BAT_RANKING_FULLCACHE", "BAT_RANKING_LICENSE", "BAT_RANKING_VERSION", "BAT_CLONE_DB", "BAT_LICENSE_DB"]
+	ranking_valid = ["BAT_AVG_C", "BAT_STRINGSCACHE_C", "BAT_AVG_JAVA", "BAT_STRINGSCACHE_JAVA", "BAT_AVG_C#", "BAT_STRINGSCACHE_C#", "BAT_AVG_ACTIONSCRIPT", "BAT_STRINGSCACHE_ACTIONSCRIPT", "BAT_DB", "BAT_FUNCTIONNAMECACHE_C", "BAT_FUNCTIONNAMECACHE_JAVA", "BAT_RANKING_FULLCACHE", "BAT_RANKING_LICENSE", "BAT_RANKING_VERSION", "BAT_CLONE_DB", "BAT_LICENSE_DB"]
 	if scans.has_key('programscans'):
 		for s in scans['programscans']:
 			if s['name'] == 'ranking':
@@ -89,17 +89,38 @@ def main(argv):
 						if envsplits[0] == 'BAT_RANKING_FULLCACHE':
 							if envsplits[1] == '1':
 								rankingfull = True
-						if envsplits[0] in ["BAT_DB", "BAT_CLONE_DB", "BAT_LICENSE_DB"]:
+						if envsplits[0] in ["BAT_CLONE_DB", "BAT_LICENSE_DB"]:
 							if not os.path.exists(envsplits[1]):
 								print "Error: database for %s does not exist" % envsplits[0]
 								continue
 						if envsplits[0] == "BAT_DB":
+							if not os.path.exists(envsplits[1]):
+								print "Error: database for %s does not exist" % envsplits[0]
+								continue
 							masterdb = envsplits[1]
+							## now do some database checks
+							db_correct = True
+							conn = sqlite3.connect(masterdb)
+							c = conn.cursor()
+							res = c.execute("select * from sqlite_master where type='table' and name = 'processed'").fetchall()
+							if res == []:
+								db_correct = False
+							res = c.execute("select * from sqlite_master where type='table' and name = 'processed_file'").fetchall()
+							if res == []:
+								db_correct = False
+							res = c.execute("select * from sqlite_master where type='table' and name = 'extracted_file'").fetchall()
+							if res == []:
+								db_correct = False
+							c.close()
+							conn.close()
+							if not db_correct:
+								print "Error: database for %s not in correct format" % envsplits[0]
+								continue
 					## BAT_DB always has to be defined
 					if masterdb == None:
 						print "Error: BAT_DB not defined"
 					## the following databases can be generated on the fly but if rankingfull
-					## is set they should be treated as 'normal' databases
+					## is set they should be treated as "fixed" databases
 					for en in envvars.split(':'):
 						envsplits = en.split('=')
 						if envsplits[0] in ["BAT_AVG_C", "BAT_STRINGSCACHE_C", "BAT_AVG_JAVA", "BAT_STRINGSCACHE_JAVA", "BAT_FUNCTIONNAMECACHE_C", "BAT_FUNCTIONNAMECACHE_JAVA"]:
