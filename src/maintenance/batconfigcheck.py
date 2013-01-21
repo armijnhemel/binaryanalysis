@@ -12,7 +12,7 @@ specifically is used to check the validity of databases for the ranking scan.
 import os, sys, sqlite3
 from optparse import OptionParser
 import ConfigParser
-import bat
+import bat.bruteforcescan
 
 ## Check if this has been defined for file2package
 ## * BAT_PACKAGE
@@ -58,9 +58,55 @@ def main(argv):
 		sys.exit(1)
 	scans = bat.bruteforcescan.readconfig(config)
 
+	ranking_old = ["BAT_SQLITE_AVG_C", "BAT_SQLITE_AVG_JAVA", "BAT_SQLITE_AVG_C#", "BAT_SQLITE_AVG_ACTIONSCRIPT", "BAT_SQLITE_DB", "BAT_SQLITE_FUNCTIONNAME_CACHE", "BAT_SQLITE_STRINGSCACHE_C", "BAT_SQLITE_STRINGSCACHE_C#", "BAT_SQLITE_STRINGSCACHE_ACTIONSCRIPT", "BAT_SQLITE_STRINGSCACHE_JAVA"]
+
+	ranking_valid = ["BAT_AVG_C", "BAT_STRINGSCACHE_C", "BAT_AVG_JAVA", "BAT_STRINGSCACHE_JAVA", "BAT_DB", "BAT_FUNCTIONNAMECACHE_C", "BAT_FUNCTIONNAMECACHE_JAVA", "BAT_RANKING_FULLCACHE", "BAT_RANKING_LICENSE", "BAT_RANKING_VERSION", "BAT_CLONE_DB", "BAT_LICENSE_DB"]
 	if scans.has_key('programscans'):
-		if scans['programscans'].has_key('ranking'):
-			pass
+		for s in scans['programscans']:
+			if s['name'] == 'ranking':
+				if not s.has_key('envvars'):
+					print "Error: ranking has no environment for databases defined"
+					continue
+				else:
+					rankingfull = False
+					masterdb = None
+					envvars = s['envvars']
+					for en in envvars.split(':'):
+						envsplits = en.split('=')
+						if envsplits[0] in ranking_old:
+							print "Error: old configuration parameter found: %s" % envsplits[0]
+						if envsplits[0] not in ranking_valid:
+							print "Error: unknown configuration parameter found: %s" % envsplits[0]
+						if len(envsplits) == 1:
+							print "Error: %s has no value defined" % envsplits[0]
+							continue
+						if len(envsplits) > 2:
+							print "Error: %s has too many values defined" % envsplits[0]
+							continue
+						if len(envsplits) == 1 and envsplits[1] == '':
+							print "Error: %s has too many values defined" % envsplits[0]
+							continue
+						if envsplits[0] == 'BAT_RANKING_FULLCACHE':
+							if envsplits[1] == '1':
+								rankingfull = True
+						if envsplits[0] in ["BAT_DB", "BAT_CLONE_DB", "BAT_LICENSE_DB"]:
+							if not os.path.exists(envsplits[1]):
+								print "Error: database for %s does not exist" % envsplits[0]
+								continue
+						if envsplits[0] == "BAT_DB":
+							masterdb = envsplits[1]
+					## BAT_DB always has to be defined
+					if masterdb == None:
+						print "Error: BAT_DB not defined"
+					## the following databases can be generated on the fly but if rankingfull
+					## is set they should be treated as 'normal' databases
+					for en in envvars.split(':'):
+						envsplits = en.split('=')
+						if envsplits[0] in ["BAT_AVG_C", "BAT_STRINGSCACHE_C", "BAT_AVG_JAVA", "BAT_STRINGSCACHE_JAVA", "BAT_FUNCTIONNAMECACHE_C", "BAT_FUNCTIONNAMECACHE_JAVA"]:
+							if rankingfull:
+								if not os.path.exists(envsplits[1]):
+									print "Error: database for %s does not exist, but rankingfull defined" % envsplits[0]
+							
 
 	## for each postrunscan check:
 	## * BAT_REPORTDIR
