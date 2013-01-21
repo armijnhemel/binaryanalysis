@@ -1,6 +1,6 @@
 This work was packaged for Debian by:
 
-    Armijn Hemel <armijn@binaryanalysis.org> on Tue, 18 Oct 2011 15:01:43 +0200
+    Armijn Hemel <armijn@binaryanalysis.org> on Mon, 21 Jan 2013 15:01:43 +0100
 
 It was downloaded from:
 
@@ -12,7 +12,7 @@ Upstream Author:
 
 Copyright:
 
-    <Copyright (C) 2010-2012 Armijn Hemel>
+    <Copyright (C) 2010-2013 Armijn Hemel>
 
 License:
 
@@ -33,4 +33,4 @@ can be found in "/usr/share/common-licenses/Apache-2.0".
 
 The Debian packaging is:
 
-    Copyright (C) 2010,2011 Armijn Hemel <armijn@binaryanalysis.org>
+    Copyright (C) 2010-2013 Armijn Hemel <armijn@binaryanalysis.org>
