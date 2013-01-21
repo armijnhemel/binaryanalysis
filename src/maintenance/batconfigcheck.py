@@ -14,7 +14,7 @@ from optparse import OptionParser
 import ConfigParser
 import bat.bruteforcescan
 
-## Check if this has been defined for file2package
+## TODO: Check if this has been defined for file2package
 ## * BAT_PACKAGE
 
 ## Check if any of these have been defined for ranking and check database
@@ -34,8 +34,7 @@ import bat.bruteforcescan
 ## * BAT_STRINGSCACHE_ACTIONSCRIPT
 
 ## Check if any of these have been defined in any of the postrunscans
-## * BAT_REPORTDIR
-## * storedir
+## * BAT_REPORTDIR or BAT_IMAGEDIR, if storedir is defined
 
 def main(argv):
 	config = ConfigParser.ConfigParser()
@@ -58,8 +57,10 @@ def main(argv):
 		sys.exit(1)
 	scans = bat.bruteforcescan.readconfig(config)
 
+	## These are the configuration parameters that were used in BAT 10 and earlier
 	ranking_old = ["BAT_SQLITE_AVG_C", "BAT_SQLITE_AVG_JAVA", "BAT_SQLITE_AVG_C#", "BAT_SQLITE_AVG_ACTIONSCRIPT", "BAT_SQLITE_DB", "BAT_SQLITE_FUNCTIONNAME_CACHE", "BAT_SQLITE_STRINGSCACHE_C", "BAT_SQLITE_STRINGSCACHE_C#", "BAT_SQLITE_STRINGSCACHE_ACTIONSCRIPT", "BAT_SQLITE_STRINGSCACHE_JAVA"]
 
+	## These are the configuration parameters used in BAT 11, 12 and later
 	ranking_valid = ["BAT_AVG_C", "BAT_STRINGSCACHE_C", "BAT_AVG_JAVA", "BAT_STRINGSCACHE_JAVA", "BAT_AVG_C#", "BAT_STRINGSCACHE_C#", "BAT_AVG_ACTIONSCRIPT", "BAT_STRINGSCACHE_ACTIONSCRIPT", "BAT_DB", "BAT_FUNCTIONNAMECACHE_C", "BAT_FUNCTIONNAMECACHE_JAVA", "BAT_RANKING_FULLCACHE", "BAT_RANKING_LICENSE", "BAT_RANKING_VERSION", "BAT_CLONE_DB", "BAT_LICENSE_DB"]
 	if scans.has_key('programscans'):
 		for s in scans['programscans']:
@@ -74,10 +75,7 @@ def main(argv):
 					envvars = s['envvars']
 					for en in envvars.split(':'):
 						envsplits = en.split('=')
-						if envsplits[0] in ranking_old:
-							print "Error: old configuration parameter found: %s" % envsplits[0]
-						if envsplits[0] not in ranking_valid:
-							print "Error: unknown configuration parameter found: %s" % envsplits[0]
+						## some general sanity checks first
 						if len(envsplits) == 1:
 							print "Error: %s has no value defined" % envsplits[0]
 							continue
@@ -87,6 +85,19 @@ def main(argv):
 						if len(envsplits) == 1 and envsplits[1] == '':
 							print "Error: %s has no value defined" % envsplits[0]
 							continue
+
+						## check for old configuration parameters ...
+						if envsplits[0] in ranking_old:
+							print "Error: old configuration parameter found: %s" % envsplits[0]
+						## ... or non-existing configuration parameters
+						if envsplits[0] not in ranking_valid:
+							print "Error: unknown configuration parameter found: %s" % envsplits[0]
+						## sanity checks for parameters whose values do not point to databases,
+						## possibly keep some info for later sanity checking
+						if envsplits[0] == 'BAT_RANKING_VERSION':
+							if envsplits[1] != '0' and envsplits[1] != '1':
+								print "Error: incorrect value for %s" % envsplits[0]
+								continue
 						if envsplits[0] == 'BAT_RANKING_LICENSE':
 							if envsplits[1] != '0' and envsplits[1] != '1':
 								print "Error: incorrect value for %s" % envsplits[0]
@@ -99,16 +110,20 @@ def main(argv):
 								continue
 							if envsplits[1] == '1':
 								rankingfull = True
+
+						## if these databases are defined, they should point to existing databases
 						if envsplits[0] in ["BAT_CLONE_DB", "BAT_LICENSE_DB"]:
 							if not os.path.exists(envsplits[1]):
 								print "Error: database for %s does not exist" % envsplits[0]
 								continue
+
+						## the master database should always exist
 						if envsplits[0] == "BAT_DB":
 							if not os.path.exists(envsplits[1]):
 								print "Error: database for %s does not exist" % envsplits[0]
 								continue
 							masterdb = envsplits[1]
-							## now do some database checks
+							## now do some database checks to ensure we have a correct database
 							db_correct = True
 							conn = sqlite3.connect(masterdb)
 							c = conn.cursor()
@@ -129,6 +144,7 @@ def main(argv):
 					## BAT_DB always has to be defined
 					if masterdb == None:
 						print "Error: BAT_DB not defined"
+					## if license scanning is defined there should be a database for it
 					if licenses:
 						if not "BAT_LICENSE_DB" in envvars:
 							print "Error: database for license does not exist, but license scanning defined"
@@ -136,15 +152,15 @@ def main(argv):
 					## is set they should be treated as "fixed" databases
 					for en in envvars.split(':'):
 						envsplits = en.split('=')
-						if envsplits[0] in ["BAT_AVG_C", "BAT_STRINGSCACHE_C", "BAT_AVG_JAVA", "BAT_STRINGSCACHE_JAVA", "BAT_FUNCTIONNAMECACHE_C", "BAT_FUNCTIONNAMECACHE_JAVA"]:
+						if envsplits[0] in ["BAT_AVG_C", "BAT_STRINGSCACHE_C", "BAT_AVG_JAVA", "BAT_STRINGSCACHE_JAVA", "BAT_AVG_C#", "BAT_STRINGSCACHE_C#", "BAT_AVG_ACTIONSCRIPT", "BAT_STRINGSCACHE_ACTIONSCRIPT", "BAT_FUNCTIONNAMECACHE_C", "BAT_FUNCTIONNAMECACHE_JAVA"]:
 							if rankingfull:
 								if not os.path.exists(envsplits[1]):
 									print "Error: database for %s does not exist, but rankingfull defined" % envsplits[0]
 							
 
+	## TODO
 	## for each postrunscan check:
-	## * BAT_REPORTDIR
-	## * storedir
+	## * BAT_REPORTDIR or BAT_IMAGEDIR if storedir is defined
 	if scans.has_key('postrunscans'):
 		pass
 
