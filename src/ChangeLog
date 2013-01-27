@@ -1,3 +1,11 @@
+2013-01-27
+* fixes for patterns in bat-code2html. There are many more variants out there
+than the original authors ever encountered.
+
+2013-01-26
+* add reimplementation of romfsck.c (which segfaulted), done in Python, with
+more sanity checks.
+
 2013-01-21
 * add configuration checker batconfigcheck.py to check validity of
 configuration files
