@@ -82,9 +82,9 @@ def unpacksrpm(filedir, target):
 				else:
 					p2 = subprocess.Popen(['rpm', '-qpl', "%s/%s" % (i[0], p)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=target)
 					(stanout, stanerr) = p2.communicate()
-					files = stanout.strip().rsplit("\n")
+					rpmfiles = stanout.strip().rsplit("\n")
 					copyfiles = []
-					for f in files:
+					for f in rpmfiles:
 						fsplit = f.lower().rsplit('.', 1)
 						if len(fsplit) == 1:
 							continue
