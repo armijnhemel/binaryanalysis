@@ -16,7 +16,7 @@ directory.
 4. LIST file for temporary directory is created
 '''
 
-import sys, os, os.path, subprocess, tempfile, shutil
+import sys, os, os.path, subprocess, tempfile, shutil, stat
 from optparse import OptionParser
 from multiprocessing import Pool
 
@@ -120,6 +120,7 @@ def unpacksrpm(filedir, target):
 						(cpiostanout, cpiostanerr) = p2.communicate(open(cpiotmp[1]).read())
 						for f in copyfiles:
 							shutil.copy(f, target)
+							os.chmod("%s/%s" % (target, f), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 						shutil.rmtree(cpiodir)
 						os.chdir(oldcwd)
 	except Exception, e:
