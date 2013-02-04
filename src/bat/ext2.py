@@ -50,6 +50,9 @@ def readfiles(source, fspath):
 		if i.startswith(">"):
 			continue
 		isplits = i.split()
+		if len(isplits[1]) < 5:
+			## bogus file system, so continue
+			return ([], [])
 		modeflag = int(isplits[1][0:-3])
 		if len(isplits) < 8:
 			continue
