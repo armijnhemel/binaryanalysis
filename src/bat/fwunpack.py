@@ -1935,7 +1935,17 @@ def unpackLRZIP(filename, offset, tempdir=None):
 	p = subprocess.Popen(['lrunzip', '-vvv', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		os.unlink(tmpfile[1])
+		## if lrzip failed it might have left some things behind and
+		## removed the original file we tried to unpac with the .lrz
+		## extension.
+		rmfiles = os.listdir(tmpdir)
+		if rmfiles != []:
+			for rmfile in rmfiles:
+				os.unlink("%s/%s" % (tmpdir, rmfile))
+		if os.path.exists(tmpfile[1]):
+			os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
 		return None
 	
 	lrzipsize = 0
