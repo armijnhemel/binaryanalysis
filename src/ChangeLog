@@ -1,3 +1,6 @@
+2013-02-05
+* store variable names more efficiently
+
 2013-02-04
 * cleanup for LRZIP unpacking
 * more sanity checks for ext2/3/4 unpacking
