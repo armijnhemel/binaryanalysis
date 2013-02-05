@@ -170,7 +170,7 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 		module = prerunscan['module']
 		method = prerunscan['method']
 		if debug:
-			print >>sys.stderr, method, filename
+			print >>sys.stderr, module, method, filename
 			sys.stderr.flush()
 		## if there is extra information we need to pass, like locations of databases
 		## we can use the environment for it
@@ -254,7 +254,7 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 		module = unpackscan['module']
 		method = unpackscan['method']
 		if debug:
-			print >>sys.stderr, method, filetoscan
+			print >>sys.stderr, module, method, filetoscan
 			sys.stderr.flush()
 		## if there is extra information we need to pass, like locations of databases
 		## we can use the environment for it
@@ -346,7 +346,7 @@ def aggregatescan(unpackreports, leafreports, scans, scantempdir, debug):
 		module = scan['module']
 		method = scan['method']
 		if debug:
-			print >>sys.stderr, method
+			print >>sys.stderr, module, method
 			sys.stderr.flush()
 		## if there is extra information we need to pass, like locations of databases
 		## we can use the environment for it
@@ -376,7 +376,7 @@ def postrunscan((filetoscan, unpackreports, leafreports, scans, scantempdir, top
 		module = scan['module']
 		method = scan['method']
 		if debug:
-			print >>sys.stderr, method, filetoscan
+			print >>sys.stderr, module, method, filetoscan
 			sys.stderr.flush()
 		## if there is extra information we need to pass, like locations of databases
 		## we can use the environment for it
