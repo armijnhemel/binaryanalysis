@@ -916,7 +916,17 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 					pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
 					pvs = list(set(pvs + pv))
 			vvs[v] = pvs
-		variablepvs['variables'] = vvs
+
+		vvs_rewrite = {}
+		for v in vvs.keys():
+			vvs_rewrite[v] = {}
+			for vs in vvs[v]:
+				(program, version) = vs
+				if not vvs_rewrite[v].has_key(program):
+					vvs_rewrite[v][program] = [version]
+				else:
+					vvs_rewrite[v][program] = list(set(vvs_rewrite[v][program] + [version]))
+		variablepvs['variables'] = vvs_rewrite
 	c.close()
 	conn.close()
 	return (dynamicRes, variablepvs)

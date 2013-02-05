@@ -143,25 +143,27 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 				if variablepvs.has_key('variables'):
 					packages = {}
 					packagecount = {}
+					## for each variable name determine in how many packages it can be found.
+					## Only the unique packages are reported.
 					for c in variablepvs['variables']:
-						lenres = len(list(set(map(lambda x: x[0], variablepvs['variables'][c]))))
+						lenres = len(variablepvs['variables'][c])
 						if lenres == 1:
 							pvs = variablepvs['variables'][c]
-							(package,version) = variablepvs['variables'][c][0]
+							package = variablepvs['variables'][c].keys()[0]
 							if packagecount.has_key(package):
 								packagecount[package] = packagecount[package] + 1
 							else:
 								packagecount[package] = 1
 								
-							'''
-							## for later use
-							for p in pvs:
-								(package,version) = p
-								if packages.has_key(package):
-									packages[package].append(version)
-								else:
-									packages[package] = [version]
-							'''
+						'''
+						## for later use
+						for p in pvs:
+							(package,version) = p
+							if packages.has_key(package):
+								packages[package].append(version)
+							else:
+								packages[package] = [version]
+						'''
 	
 					if packagecount != {}:
 						html = html + "<h3>Unique matches of variables</h3>\n<table>\n"
