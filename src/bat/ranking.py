@@ -990,6 +990,8 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, language='C'):
 	if not rankingfull:
 		c.execute("create table if not exists stringscache.stringscache (programstring text, package text, filename text, versions text)")
 		c.execute("create index if not exists stringscache.programstring_index on stringscache(programstring)")
+		c.execute("create table if not exists stringscache.scores (programstring text, packages int, score real)")
+		c.execute("create index if not exists stringscache.scoresindex on scores(programstring)")
 		conn.commit()
 
 	determineversion = False
@@ -1041,9 +1043,11 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, language='C'):
 	oldline = None
 	matched = False
 
-	## TODO: add an extra check for lines that score extremely low. This
-	## should possibly help reduce load on databases stored on slower disks
-	#c.execute("attach ? as scores", ('/gpl/master/scoresdb.sqlite3',))
+	res = c.execute("select * from stringscache.sqlite_master where type='table' and name='scores'").fetchall()
+	if res != []:
+		precomputescore = True
+	else:
+		precomputescore = False
 
 	for line in lines:
 		#print >>sys.stderr, "processing <|%s|>" % line
@@ -1061,15 +1065,23 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, language='C'):
 		## skip empty lines
                 if line == "": continue
 
-		#scoreres = conn.execute("select packages, score from scores.scores where programstring=? LIMIT 1", (line,)).fetchone()
-		#if scoreres != None:
-		#	## if the score is so low, why bother hitting the disk?
-		#	if scoreres[1] < 1.0e-22:
-		#		lenStringsFound = lenStringsFound + len(line)
-		#		matched = True
-		#		matchedlines = matchedlines + 1
-		#		nonUniqueMatchLines.append(line)
-		#		continue
+		## An extra check for lines that score extremely low. This
+		## helps reduce load on databases stored on slower disks
+		if precomputescore:
+			scoreres = conn.execute("select packages, score from stringscache.scores where programstring=? LIMIT 1", (line,)).fetchone()
+		else:
+			scoreres = None
+		if scoreres != None:
+			## If the score is so low it will not have any influence on the final
+			## score, why even bother hitting the disk?
+			## Since there might be package rewrites this should be a bit less than the
+			## cut off value that was defined.
+			if scoreres[1] < scorecutoff/100:
+				lenStringsFound = lenStringsFound + len(line)
+				matched = True
+				matchedlines = matchedlines + 1
+				nonUniqueMatchLines.append(line)
+				continue
 
 		## first see if we have anything in the cache at all
 		res = conn.execute("select package, filename FROM stringscache.stringscache WHERE programstring=?", (line,)).fetchall()
@@ -1128,6 +1140,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, language='C'):
 				## in case we don't know this match yet record it in the database
 				if newmatch and not rankingfull:
 					c.execute("insert into stringscache.stringscache values (?, ?, ?, ?)", (line, package, filename, ""))
+					## TODO: also add the score to the cache
 				if clones.has_key(package):
 					package = clones[package]
 				if not pkgs.has_key(package):
