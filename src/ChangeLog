@@ -1,3 +1,10 @@
+2013-02-07
+* merge caching databases, decluttering configuration a bit
+* add conversion script to merge databases
+
+2013-02-06
+* if available use precomputed scores
+
 2013-02-05
 * store variable names more efficiently
 
