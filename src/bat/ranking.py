@@ -18,8 +18,6 @@ BAT_RANKING_FULLCACHE :: indication whether or not a full cached database is
                          used, reducing the need to generate it "just in time"
 
 Per language:
-BAT_AVG_$LANGUAGE          :: location of database containing average
-                              strings in $LANGUAGE per package
 BAT_STRINGSCACHE_$LANGUAGE :: location of database with cached strings
                               in $LANGUAGE per package to reduce lookups
 
@@ -47,12 +45,6 @@ ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
 ## mapping of names for databases per language
-avgdbperlanguage = { 'C':              'BAT_AVG_C'
-                   , 'Java':           'BAT_AVG_JAVA'
-                   , 'C#':             'BAT_AVG_C#'
-                   , 'ActionScript':   'BAT_AVG_ACTIONSCRIPT'
-                   }
-
 functionnameperlanguage = { 'C':       'BAT_FUNCTIONNAMECACHE_C'
                           , 'Java':    'BAT_FUNCTIONNAMECACHE_JAVA'
                           }
@@ -961,19 +953,6 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, language='C'):
 	## create extra tables and attach them to the current database connection
 	## These databases should be wiped and/or recreated when the database with
 	## strings has been changed!!
-	if scanenv.has_key(avgdbperlanguage[language]):
-		avgdb = scanenv.get(avgdbperlanguage[language])
-		if rankingfull:
-			if not os.path.exists(avgdb):
-				return None
-	else:
-		if rankingfull:
-			return None
-		avgdb = avgdbperlanguage[language]
-	c.execute("attach ? as avg", (avgdb,))
-	if not rankingfull:
-		c.execute("create table if not exists avg.avgstringscache (package text, avgstrings real, primary key (package))")
-
 	if scanenv.has_key(stringsdbperlanguage[language]):
 		## sanity checks to see if the database exists. If not, and rankingfull
 		## is set to True, there should be no result.
@@ -988,10 +967,12 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, language='C'):
 		stringscache = stringsdbperlanguage[language]
 	c.execute("attach ? as stringscache", (stringscache,))
 	if not rankingfull:
+		c.execute("create table if not exists stringscache.avgstringscache (package text, avgstrings real, primary key (package))")
 		c.execute("create table if not exists stringscache.stringscache (programstring text, package text, filename text, versions text)")
 		c.execute("create index if not exists stringscache.programstring_index on stringscache(programstring)")
 		c.execute("create table if not exists stringscache.scores (programstring text, packages int, score real)")
 		c.execute("create index if not exists stringscache.scoresindex on scores(programstring)")
+		c.execute("create index if not exists stringscache.package_index on avgstringscache(package)")
 		conn.commit()
 
 	determineversion = False
@@ -1410,10 +1391,10 @@ def averageStringsPerPkgVersion(pkg, conn):
 	## Cache the average number of strings per package in the DB.
 	## Danger: this table should be invalidated whenever the
 	## "extracted_file" and "processed_file" tables change!
-	res = conn.execute("select avgstrings from avg.avgstringscache where package = ?", (pkg,)).fetchall()
+	res = conn.execute("select avgstrings from stringscache.avgstringscache where package = ?", (pkg,)).fetchall()
 	if len(res) == 0:
             	count = conn.execute("select count(*) * 1.0 / (select count(distinct version) from processed_file where package = ?) from (select distinct e.programstring, p.version from extracted_file e JOIN processed_file p on e.sha256 = p.sha256 WHERE package = ?)", (pkg,pkg)).fetchone()[0]
-        	conn.execute("insert or ignore into avgstringscache(package, avgstrings) values (?, ?)", (pkg, count))
+        	conn.execute("insert or ignore into stringscache.avgstringscache(package, avgstrings) values (?, ?)", (pkg, count))
 		conn.commit()
 	else:
 		count = res[0][0]
