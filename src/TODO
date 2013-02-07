@@ -36,13 +36,11 @@ database creation:
 * import licensing information from SPDX files
 * rewrite ctags and xgettext invocations to scan multiple files at once to reduce overhead of calling ctags and xgettext
 * create index for sha256 for processed
-* possibly pre-compute score for strings to speed up scanning, store in a(nother) caching database
 
 ranking:
 * use version information to report most likely licenses
 * merge averages database into stringscache database
 * report correlation between packages (strings, variable names, function names) to detect cloning in the database
-* don't store (name, version) pairs for variables. Instead, store (name, [versions]) to reduce memory usage
 * store info about unique strings more efficiently since often they don't change in between versions. This is to reduce memory usage.
 
 aggregate scans:
