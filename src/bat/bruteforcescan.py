@@ -334,6 +334,7 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize, debu
 		res = eval("bat_%s(filetoscan, blacklist, envvars=envvars)" % (method))
 		if res != None:
 			reports[scan['name']] = res
+	## TODO: write pickles with information to disk here to reduce memory usage
 	return (filetoscan, reports)
 
 def aggregatescan(unpackreports, leafreports, scans, scantempdir, debug):
