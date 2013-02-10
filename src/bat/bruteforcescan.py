@@ -477,27 +477,30 @@ def readconfig(config):
 			except:
 				conf['priority'] = 0
 			try:
-				## all three parameters should be there together
-				conf['storedir'] = config.get(section, 'storedir')
-				conf['storetarget'] = config.get(section, 'storetarget')
-				conf['storetype'] = config.get(section, 'storetype')
-				try:
-					cleanup = config.get(section, 'cleanup')
-					if cleanup == 'yes':
-						conf['cleanup'] = True
-					else:
-						conf['cleanup'] = False
-				except:
-					conf['cleanup'] = False
-			except:
-				conf['storedir'] = None
-				conf['storetarget'] = None
-				conf['storetype'] = None
-				conf['cleanup'] = False
-			try:
 				conf['xmloutput'] = config.get(section, 'xmloutput')
 			except:
 				pass
+
+			## some things only make sense in a particular context
+			if config.get(section, 'type') == 'postrun':
+				try:
+					## all three parameters should be there together
+					conf['storedir'] = config.get(section, 'storedir')
+					conf['storetarget'] = config.get(section, 'storetarget')
+					conf['storetype'] = config.get(section, 'storetype')
+					try:
+						cleanup = config.get(section, 'cleanup')
+						if cleanup == 'yes':
+							conf['cleanup'] = True
+						else:
+							conf['cleanup'] = False
+					except:
+						conf['cleanup'] = False
+				except:
+					conf['storedir'] = None
+					conf['storetarget'] = None
+					conf['storetype'] = None
+					conf['cleanup'] = False
 
 			if config.get(section, 'type') == 'program':
 				programscans.append(conf)
