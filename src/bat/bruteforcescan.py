@@ -197,7 +197,6 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 			if offsets[magictype][0] - fsmagic.correction.get(magictype, 0) == 0:
 				zerooffsets.append(magictype)
 
-	filesize = os.stat(filetoscan).st_size
 	## Based on information about offsets we should reorder the scans,
 	## or at least if one scan has a match for offset 0 (after correction
 	## of the offset, like for tar, gzip, iso9660, etc.) make sure it is
@@ -310,10 +309,10 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 		os.unlink(filetoscan)
 		return (scantasks, leaftasks, unpackreports)
 	else:
-		leaftasks.append((filetoscan, magic, tags, blacklist, tempdir, filehash, filesize, debug))
+		leaftasks.append((filetoscan, magic, tags, blacklist, tempdir, filehash, debug))
 	return (scantasks, leaftasks, unpackreports)
 
-def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, filesize, debug)):
+def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, debug)):
 	reports = {}
 
 	reports['tags'] = tags
@@ -773,17 +772,17 @@ def runscan(tempdir, scans, scan_binary):
 		## * copy results in case there are duplicates
 		sha256leaf = {}
 		for i in leaftasks:
-			if sha256leaf.has_key(i[-3]):
-				sha256leaf[i[-3]].append(i[0])
+			if sha256leaf.has_key(i[-2]):
+				sha256leaf[i[-2]].append(i[0])
 			else:
-				sha256leaf[i[-3]] = [i[0]]
+				sha256leaf[i[-2]] = [i[0]]
 		sha256_tmp = {}
 		for i in sha256leaf:
 			if len(sha256leaf[i]) > 0:
 				sha256_tmp[i] = sha256leaf[i][0]
 		leaftasks_tmp = []
 		for i in leaftasks:
-			if sha256_tmp[i[-3]] == i[0]:
+			if sha256_tmp[i[-2]] == i[0]:
 				leaftasks_tmp.append(i)
 		leaftasks_tmp = map(lambda x: x[:-2] + (x[-1],), leaftasks_tmp)
 		leaftasks_tmp = map(lambda x: x[:2] + (filterScans(scans['programscans'], x[2]),) + x[2:], leaftasks_tmp)
