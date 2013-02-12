@@ -516,7 +516,8 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 		newtags.append("elf")
 	else:
 		## on some architectures we can probably look at the starting point
-		## of the last section, then use 
+		## of the last section, then use the offset value there and see if the offset
+		## of the last section, plus the size of the last section == file size
 		p = subprocess.Popen(['readelf', '-t', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
@@ -538,6 +539,8 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 		newtags.append("static")
 	else:
 		newtags.append("dynamic")
+	if not "elf" in newtags:
+		newtags.append("elf")
 	return newtags
 
 ## simple helper method to verify if a file is a valid Java class file
