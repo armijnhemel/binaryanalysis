@@ -21,7 +21,7 @@ import matplotlib
 matplotlib.use('cairo')
 import pylab
 
-def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscandir, envvars={}):
+def generateImages(filename, unpackreport, scantempdir, topleveldir, envvars={}):
 	if not unpackreport.has_key('sha256'):
 		return
 
@@ -34,7 +34,7 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscand
 			except Exception, e:
 				pass
 
-	imagedir = scanenv.get('BAT_IMAGEDIR', "%s/%s" % (toplevelscandir, "images"))
+	imagedir = scanenv.get('BAT_IMAGEDIR', "%s/%s" % (topleveldir, "images"))
 	try:
 		os.stat(imagedir)
 	except:
@@ -44,10 +44,16 @@ def generateImages(filename, unpackreport, leafscans, scantempdir, toplevelscand
 		except Exception, e:
 			return
 
+	filehash = unpackreport['sha256']
+
+	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+	leafreports = cPickle.load(leaf_file)
+	leaf_file.close()
+
 	## generate piechart and version information
-	if leafscans.has_key('ranking'):
+	if leafreports.has_key('ranking'):
 		## the ranking result is (res, dynamicRes, variablepvs)
-		(res, dynamicRes, variablepvs) = leafscans['ranking']
+		(res, dynamicRes, variablepvs) = leafreports['ranking']
 		if res == None and dynamicRes == {}:
 			return
 		if res['reports'] != []:

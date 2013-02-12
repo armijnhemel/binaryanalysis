@@ -12,9 +12,9 @@ can be displayed in the BAT GUI.
 This should be run as a postrun scan
 '''
 
-import os, os.path, sys, gzip, cgi
+import os, os.path, sys, gzip, cgi, cPickle
 
-def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir, envvars={}):
+def generateHTML(filename, unpackreport, scantempdir, topleveldir, envvars={}):
 	if not unpackreport.has_key('sha256'):
 		return
 	scanenv = os.environ.copy()
@@ -36,9 +36,15 @@ def generateHTML(filename, unpackreport, leafscans, scantempdir, toplevelscandir
 		except Exception, e:
 			return
 
-	if leafscans.has_key('ranking') :
+	filehash = unpackreport['sha256']
+
+	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+	leafreports = cPickle.load(leaf_file)
+	leaf_file.close()
+
+	if leafreports.has_key('ranking') :
 		## the ranking result is (res, dynamicRes, variablepvs)
-		(res, dynamicRes, variablepvs) = leafscans['ranking']
+		(res, dynamicRes, variablepvs) = leafreports['ranking']
 		if variablepvs == {} and dynamicRes == {}:
 			return
 

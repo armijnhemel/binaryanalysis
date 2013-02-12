@@ -4,7 +4,7 @@
 ## Copyright 2013 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
-import os, os.path, sys, subprocess, copy
+import os, os.path, sys, subprocess, copy, cPickle
 
 '''
 This plugin is used to aggregate ranking results for Java JAR files.
@@ -13,32 +13,40 @@ contain enough information. By aggregating the results of these classes
 it is possible to get a better view of what is inside a JAR.
 '''
 
-def aggregatejars(unpackreports, leafreports, scantempdir, envvars=None):
+def aggregatejars(unpackreports, scantempdir, topleveldir, envvars=None):
 	## find all JAR files. Do this by:
 	## 1. checking the tags for 'zip'
 	## 2. verifying for unpacked files that there are .class files
 	## 3. possibly verifying there is a META-INF directory with a manifest
 	jarfiles = []
 	for i in unpackreports:
-		if leafreports.has_key(i):
-			## add a name check. TODO: make case insensitive
-			## check extensions for JAR, WAR, RAR (not Resource adapter), EAR
-			if i.endswith('.jar') or i.endswith('.ear') or i.endswith('.war') or i.endswith('.rar'):
-				if leafreports[i].has_key('tags'):
-					## check if it was tagged as a ZIP file
-					if 'zip' in leafreports[i]['tags']:
-						## sanity checks
-						if unpackreports[i]['scans'] != []:
-							## since it was a single ZIP file there should be only
-							## one item in unpackreports[i]['scan']
-							if len(unpackreports[i]['scans']) != 1:
-								continue
-							## more sanity checks
-							if unpackreports[i]['scans'][0]['offset'] != 0:
-								continue
-							if unpackreports[i]['scans'][0]['scanname'] != 'zip':
-								continue
-							jarfiles.append(i)
+		if not unpackreports[i].has_key('sha256'):
+			continue
+		else:
+			filehash = unpackreports[i]['sha256']
+		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
+			continue
+		## check extension: JAR, WAR, RAR (not Resource adapter), EAR
+		i_nocase = i.lower()
+		if i_nocase.endswith('.jar') or i_nocase.endswith('.ear') or i_nocase.endswith('.war') or i_nocase.endswith('.rar'):
+			leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+			leafreports = cPickle.load(leaf_file)
+			leaf_file.close()
+			if leafreports.has_key('tags'):
+				## check if it was tagged as a ZIP file
+				if 'zip' in leafreports['tags']:
+					## sanity checks
+					if unpackreports[i]['scans'] != []:
+						## since it was a single ZIP file there should be only
+						## one item in unpackreports[i]['scan']
+						if len(unpackreports[i]['scans']) != 1:
+							continue
+						## more sanity checks
+						if unpackreports[i]['scans'][0]['offset'] != 0:
+							continue
+						if unpackreports[i]['scans'][0]['scanname'] != 'zip':
+							continue
+						jarfiles.append(i)
 	rankresults = {}
 
 	for i in jarfiles:
@@ -69,16 +77,20 @@ def aggregatejars(unpackreports, leafreports, scantempdir, envvars=None):
 		pv = {}
 
 		for c in classfiles:
-			if not leafreports.has_key(c):
+			filehash = unpackreports[c]['sha256']
+			if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 				continue
 			## sanity checks
-			if not leafreports[c].has_key('ranking'):
+			leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+			leafreports = cPickle.load(leaf_file)
+			leaf_file.close()
+			if not leafreports.has_key('ranking'):
 				continue
-			if not leafreports[c].has_key('tags'):
+			if not leafreports.has_key('tags'):
 				continue
-			if not 'binary' in leafreports[c]['tags']:
+			if not 'binary' in leafreports['tags']:
 				continue
-			(stringmatches, dynamicres, varfunmatches) = leafreports[c]['ranking']
+			(stringmatches, dynamicres, varfunmatches) = leafreports['ranking']
 			if varfunmatches['language'] != 'Java':
 				continue
 			if varfunmatches.has_key('fields'):
@@ -203,6 +215,16 @@ def aggregatejars(unpackreports, leafreports, scantempdir, envvars=None):
 		rankres['nonUniqueMatches'] = nonUniqueMatches
 		rankres['reports'] = reports
 
-		#rankresults[i] = {'ranking': (rankres, {}, {'language': 'Java', 'classes': classmatches, 'fields': fieldmatches, 'sources': sourcematches})}
 		rankresults[i] = {'ranking': (rankres, dynamicresfinal, {'language': 'Java', 'classes': classmatches, 'fields': fieldmatches, 'sources': sourcematches})}
-	return rankresults
+
+		## now write the new result
+		filehash = unpackreports[i]['sha256']
+		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+		leafreports = cPickle.load(leaf_file)
+		leaf_file.close()
+
+		leafreports['ranking'] = (rankres, dynamicresfinal, {'language': 'Java', 'classes': classmatches, 'fields': fieldmatches, 'sources': sourcematches})
+
+		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
+		leafreports = cPickle.dump(leafreports, leaf_file)
+		leaf_file.close()

@@ -4,7 +4,7 @@
 ## Copyright 2012-2013 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
-import os, os.path, sys, subprocess, copy
+import os, os.path, sys, subprocess, copy, cPickle
 
 '''
 This program can be used to check whether the dependencies of a dynamically
@@ -31,7 +31,7 @@ properly.
 Something similar is done for remote and local variables.
 '''
 
-def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
+def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 	## store names of all ELF files present in scan archive
 	elffiles = []
 
@@ -52,7 +52,10 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 	## store all symlinks in the scan archive, since they might point to libraries
 	symlinks = {}
 	for i in unpackreports:
-		if not leafreports.has_key(i):
+		if not unpackreports[i].has_key('sha256'):
+			continue
+		filehash = unpackreports[i]['sha256']
+		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			## possibly we're dealing with a symlink
 			## OK, so this does not work with localized systems.
 			## TODO: work around possible localization issues
@@ -63,7 +66,11 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 				else:
 					symlinks[os.path.basename(i)] = [{'original': i, 'target': target}]
 			continue
-		if not 'elf' in leafreports[i]['tags']:
+		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+		leafreports = cPickle.load(leaf_file)
+		leaf_file.close()
+
+		if not 'elf' in leafreports['tags']:
 			continue
 		if not squashedelffiles.has_key(os.path.basename(i)):
 			squashedelffiles[os.path.basename(i)] = [i]
@@ -162,7 +169,14 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 		## The later is kept if which libraries were used needs to be guessed.
 		usedlibs = []
 		possiblyused = []
-		if leafreports[i].has_key('libs'):
+
+		filehash = unpackreports[i]['sha256']
+
+		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+		leafreports = cPickle.load(leaf_file)
+		leaf_file.close()
+
+		if leafreports.has_key('libs'):
 
 			## keep copies of the original data
 			remotefuncswc = copy.copy(remotefunctionnames[i])
@@ -172,7 +186,7 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 			if remotefunctionnames[i] != [] or remotevariablenames[i] != []:
 				funcsfound = []
 				varsfound = []
-				for l in leafreports[i]['libs']:
+				for l in leafreports['libs']:
 
 					## temporary storage to hold the names of the libraries
 					## searched for. This list will be manipulated later on.
@@ -217,7 +231,7 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 									## libraries to consider
 									filtersquash.append(target)
 					else:
-						filtersquash = filter(lambda x: leafreports[x]['architecture'] == leafreports[i]['architecture'], squashedelffiles[l])
+						filtersquash = filter(lambda x: leafreports['architecture'] == leafreports['architecture'], squashedelffiles[l])
 					## now walk through the possible files that can resolve this dependency.
 					## First verify how many possible files are in 'filtersquash' have.
 					## In the common case this will be just one and then everything is easy.
@@ -279,7 +293,7 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 			if remotefuncswc != []:
 				notfoundfuncsperfile[i] = remotefuncswc
 				#print >>sys.stderr, "NOT FULLFILLED", i, remotefuncswc, remotevarswc
-				possiblymissinglibs = list(set(leafreports[i]['libs']).difference(set(usedlibs)))
+				possiblymissinglibs = list(set(leafreports['libs']).difference(set(usedlibs)))
 				if possiblymissinglibs != []:
 					pass
 					#print >>sys.stderr, "POSSIBLY MISSING AND/OR UNUSED", possiblymissinglibs
@@ -291,8 +305,8 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 					pass
 					#print >>sys.stderr, "POSSIBLE LIBS TO SATISFY CONDITIONS", list(set(possiblesolutions))
 				#print >>sys.stderr
-			if list(set(leafreports[i]['libs']).difference(set(usedlibs))) != [] and remotefuncswc == []:
-				unusedlibs = list(set(leafreports[i]['libs']).difference(set(usedlibs)))
+			if list(set(leafreports['libs']).difference(set(usedlibs))) != [] and remotefuncswc == []:
+				unusedlibs = list(set(leafreports['libs']).difference(set(usedlibs)))
 				unusedlibs.sort()
 				unusedlibsperfile[i] = unusedlibs
 				#print >>sys.stderr, "UNUSED LIBS", i, list(set(leafreports[i]['libs']).difference(set(usedlibs)))
@@ -312,16 +326,39 @@ def findlibs(unpackreports, leafreports, scantempdir, envvars=None):
 	## leafreports by the top level script.
 	aggregatereturn = {}
 	for i in elffiles:
+		writeback = False
+		filehash = unpackreports[i]['sha256']
+
 		if not aggregatereturn.has_key(i):
 			aggregatereturn[i] = {}
 		if usedby.has_key(i):
 			aggregatereturn[i]['elfusedby'] = usedby[i]
+			writeback = True
 		if usedlibsperfile.has_key(i):
 			aggregatereturn[i]['elfused'] = usedlibsperfile[i]
+			writeback = True
 		if unusedlibsperfile.has_key(i):
 			aggregatereturn[i]['elfunused'] = unusedlibsperfile[i]
+			writeback = True
 		if notfoundfuncsperfile.has_key(i):
 			aggregatereturn[i]['notfoundfuncs'] = notfoundfuncsperfile[i]
+			writeback = True
 		if notfoundvarssperfile.has_key(i):
 			aggregatereturn[i]['notfoundvars'] = notfoundvarssperfile[i]
+			writeback = True
+
+		## only write the new leafreport if there actually is something to write back
+		if writeback:
+			leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+			leafreports = cPickle.load(leaf_file)
+			leaf_file.close()
+
+			for e in aggregatereturn[i]:
+				if aggregatereturn[i].has_key(e):
+					leafreports[e] = copy.deepcopy(aggregatereturn[i][e])
+
+			leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
+			leafreports = cPickle.dump(leafreports, leaf_file)
+			leaf_file.close()
+
 	return aggregatereturn

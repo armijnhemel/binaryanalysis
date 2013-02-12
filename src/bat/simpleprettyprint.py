@@ -7,94 +7,72 @@
 '''
 Simple pretty printer for results of BAT. This one is defined as the default. If you want to change it provide
 a method that has the same parameters as prettyprintresxml
-* res: full result set of the scan
+* unpackreports: result set of the scan
 * scandate
 * scans: full configuration of scans that were run
+* toplevelfile: name of top level file so the root can be determined easily
+* topleveldir: name of the directory where results are stored so pickles with results can be found
 * envvars: a set of environment variables, possibly None
 '''
 
 import xml.dom.minidom
-import sys
+import sys, cPickle, os, os.path
 
-## generic method for pretty printing of an elements
-def generateNodes(elem, root, confs):
-	nodes = []
-	for conf in confs:
-		if conf in elem:
-			tmpnode = root.createElement(conf)
-			tmpnodetext = xml.dom.minidom.Text()
-			tmpnodetext.data = str(elem[conf])
-			tmpnode.appendChild(tmpnodetext)
-			nodes.append(tmpnode)
-	return nodes
+## generic method for pretty printing of an element
+## Parameters:
+## * root - top level root element of the DOM, needed to create XML nodes
+## * nodename - name the new element should get
+## * nodedata - content of the element
+def generateNode(root, nodename, nodedata):
+	tmpnode = root.createElement(nodename)
+	tmpnodetext = xml.dom.minidom.Text()
+	tmpnodetext.data = str(nodedata)
+	tmpnode.appendChild(tmpnodetext)
+	return tmpnode
 
-## This method recursively generates XML snippets. If a method for a 'program'
-## has a pretty printing method defined, it will be used instead of the generic
-## one.
-## All interesting data can be found in the 'res' parameter
-def prettyprintresxmlsnippet(res, root, unpackscans, programscans):
-	topnode = None
-	## this should always be len == 1, have more checks
-	for i in res:
-		for confs in programscans:
-			if i == confs['name']:
-				try:
-					module = confs['module']
-					method = confs['xmloutput']
-					if confs.has_key('envvars'):
-						envvars = confs['envvars']
-					else:
-						envvars = None
-					exec "from %s import %s as bat_%s" % (module, method, method)
-					xmlres = eval("bat_%s(res[i], root, envvars)" % (method))
-					if xmlres != None:
-						topnode = xmlres
-					else:
-						topnode = None
-				except Exception, e:
-					topnode = root.createElement(i)
-					tmpnodetext = xml.dom.minidom.Text()
-					tmpnodetext.data = str(res[i])
-					topnode.appendChild(tmpnodetext)
-		for confs in unpackscans:
-			if i == confs['name']:
-                		topnode = root.createElement('unpack')
-                		typenode = root.createElement('type')
-                		tmpnodetext = xml.dom.minidom.Text()
-                		tmpnodetext.data = str(i)
-                		typenode.appendChild(tmpnodetext)
-                		topnode.appendChild(typenode)
-				scanelems = res[i]
-				scanelems.sort()
-				for elem in scanelems:
-					if 'offset' in elem:
-                				tmpnode = root.createElement("offset")
-                				tmpnodetext = xml.dom.minidom.Text()
-                				tmpnodetext.data = str(elem['offset'])
-                				tmpnode.appendChild(tmpnodetext)
-                				topnode.appendChild(tmpnode)
-					else:
-                				tmpnode = root.createElement("file")
-						tmpnodes = generateNodes(elem, root, ["name", "path", "realpath", "magic", "sha256", "size"])
-						for tmpnode2 in tmpnodes:
-                					tmpnode.appendChild(tmpnode2)
+## generic method for pretty printing of an element
+## Parameters:
+## * root - top level root element of the DOM, needed to create XML nodes
+## * leafreports
+## * scanconfigs - list with configurations (dictionaries)
+def prettyprintxmlsnippet(root, leafreports, scanconfigs):
+	topnodes = []
+	for i in leafreports.keys():
+		## unfortunately we can't use a lambda expression here,
+		## because then the exec statement will barf.
+		#configs = filter(lambda x: x['name'] == i, scanconfigs)
+		config = None
+		for c in scanconfigs:
+			if c['name'] == i:
+				config = c
+				break
+		## no config found, so probably 'tags'
+		if config == None:
+			continue
 
-						if 'scans' in elem:
-							childscannodes = []
-							for scan in elem['scans']:
-								childscannode = prettyprintresxmlsnippet(scan, root, unpackscans, programscans)
-								if childscannode != None:
-									childscannodes.append(childscannode)
-							if childscannodes != []:
-								tmpnode2 = root.createElement('scans')
-								for childscannode in childscannodes:
-									tmpnode2.appendChild(childscannode)
-								tmpnode.appendChild(tmpnode2)
-                			topnode.appendChild(tmpnode)
-	return topnode
+		if config.has_key('xmloutput'):
+			try:
+				module = config['module']
+				method = config['xmloutput']
+				if config.has_key('envvars'):
+					envvars = config['envvars']
+				else:
+					envvars = None
+				exec "from %s import %s as bat_%s" % (module, method, method)
+				xmlres = eval("bat_%s(leafreports[i], root, envvars)" % (method))
+				if xmlres != None:
+					tmpnode = xmlres
+					topnodes.append(tmpnode)
+			except Exception, e:
+				tmpnode = generateNode(root, i, leafreports[i])
+				topnodes.append(tmpnode)
+		else:
+			tmpnode = generateNode(root, i, leafreports[i])
+			topnodes.append(tmpnode)
+	return topnodes
 
 ## top level XML pretty printing, view results with xml_pp or Firefox
-def prettyprintresxml(res, scandate, scans, envvars=None):
+def prettyprintresxml(unpackreports, scandate, scans, toplevelfile, topleveldir, envvars=None):
 	root = xml.dom.minidom.Document()
 	topnode = root.createElement("report")
 	tmpnode = root.createElement('scandate')
@@ -102,23 +80,81 @@ def prettyprintresxml(res, scandate, scans, envvars=None):
 	tmpnodetext.data = scandate.isoformat()
 	tmpnode.appendChild(tmpnodetext)
 	topnode.appendChild(tmpnode)
-
-	## there are a few things we always want to know about the top level node
-	tmpnodes = generateNodes(res, root, ["name", "path", "realpath", "magic", "sha256", "size"])
-	for tmpnode in tmpnodes:
-                topnode.appendChild(tmpnode)
-
-	## then we recurse into the results from the individual scans
-	if 'scans' in res:
-		childscannodes = []
-		for scan in res['scans']:
-			childscannode = prettyprintresxmlsnippet(scan, root, scans['unpackscans'], scans['programscans'])
-			if childscannode != None:
-				childscannodes.append(childscannode)
-		if childscannodes != []:
-			tmpnode = root.createElement('scans')
-			for childscannode in childscannodes:
-				tmpnode.appendChild(childscannode)
-			topnode.appendChild(tmpnode)
 	root.appendChild(topnode)
+
+	## something is horribly wrong and this should never happen.
+	if not unpackreports.has_key(toplevelfile):
+		return root.toxml()
+
+	## first add a few things for the top level node
+	for i in ["name", "path", "realpath", "magic", "sha256", "size"]:
+		if unpackreports[toplevelfile].has_key(i):
+			tmpnode = generateNode(root, i, unpackreports[toplevelfile][i])
+                	topnode.appendChild(tmpnode)
+
+	if unpackreports[toplevelfile].has_key('scans'):
+		scansnode = prettyprintscan(unpackreports, root, toplevelfile, scans, topleveldir)
+		if scansnode != None:
+			topnode.appendChild(scansnode)
+
 	return root.toxml()
+
+def prettyprintscan(unpackreports, root, scannode, scans, topleveldir):
+	scansnode = None
+	## pretty print the individual results for the top level file.
+	if unpackreports[scannode].has_key('sha256'):
+		filehash = unpackreports[scannode]['sha256']
+
+		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+		leafreports = cPickle.load(leaf_file)
+		leaf_file.close()
+		ppnodes = prettyprintxmlsnippet(root, leafreports, scans['programscans'])
+		for p in ppnodes:
+			if scansnode == None:
+				scansnode = root.createElement("scans")
+			scansnode.appendChild(p)
+	## recurse into the unpacked files
+	if unpackreports[scannode]['scans'] != []:
+		for s in unpackreports[scannode]['scans']:
+			## sanity checks
+			if not s.has_key('offset'):
+				continue
+			if not s.has_key('scanreports'):
+				continue
+			if not s.has_key('scanname'):
+				continue
+			## add unpack node
+			unpacknode = root.createElement("unpack")
+
+			## first the type
+			typenode = root.createElement("type")
+			typenodetext = xml.dom.minidom.Text()
+			typenodetext.data = str(s['scanname'])
+			typenode.appendChild(typenodetext)
+			unpacknode.appendChild(typenode)
+
+			## then the offset
+			offsetnode = root.createElement("offset")
+			offsetnodetext = xml.dom.minidom.Text()
+			offsetnodetext.data = str(s['offset'])
+			offsetnode.appendChild(offsetnodetext)
+			unpacknode.appendChild(offsetnode)
+
+			## then recurse for every file that was found
+			for r in s['scanreports']:
+				filenode = root.createElement("file")
+				for i in ["name", "path", "realpath", "magic", "sha256", "size"]:
+					if unpackreports[r].has_key(i):
+						tmpnode = generateNode(root, i, unpackreports[r][i])
+                				filenode.appendChild(tmpnode)
+				if unpackreports[r].has_key('scans'):
+					ss = prettyprintscan(unpackreports, root, r, scans, topleveldir)
+					if ss != None:
+						filenode.appendChild(ss)
+				unpacknode.appendChild(filenode)
+
+			## then add everything to the top level node
+			if scansnode == None:
+				scansnode = root.createElement("scans")
+			scansnode.appendChild(unpacknode)
+	return scansnode

@@ -56,20 +56,19 @@ def main(argv):
 
 	scandate = datetime.datetime.utcnow()
 
-	## create temporary directory to store results in
+	## create temporary directory for storing results
 	tempdir=tempfile.mkdtemp()
 
-	(unpackreports, leafreports) = bat.bruteforcescan.runscan(tempdir, scans, scan_binary)
+	unpackreports = bat.bruteforcescan.runscan(tempdir, scans, scan_binary)
 
-	res = bat.bruteforcescan.flatten("%s" % (os.path.basename(scan_binary)), unpackreports, leafreports)
 	if not scans['batconfig'].has_key('output'):
 		## no printing?
 		pass
 	else:
-		output = bat.bruteforcescan.prettyprint(scans['batconfig'], res, scandate, scans)
+		output = bat.bruteforcescan.prettyprint(scans['batconfig'], unpackreports, scandate, scans, os.path.basename(scan_binary), tempdir)
 		print output
 
-	bat.bruteforcescan.writeDumpfile(unpackreports, leafreports, scans, options.outputfile, tempdir, scans['batconfig']['outputlite'])
+	bat.bruteforcescan.writeDumpfile(unpackreports, scans, options.outputfile, tempdir, scans['batconfig']['outputlite'])
 
 if __name__ == "__main__":
         main(sys.argv)

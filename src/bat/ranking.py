@@ -1401,8 +1401,8 @@ def averageStringsPerPkgVersion(pkg, conn):
 	return count
 
 
-def xmlprettyprint(matchres, root, envvars=None):
-	(res, dynamicRes, variablepvs) = matchres
+def xmlprettyprint(leafreports, root, envvars=None):
+	(res, dynamicRes, variablepvs) = leafreports
 	## TODO: we might have different results available
 	if res['matchedlines'] == 0:
 		return None

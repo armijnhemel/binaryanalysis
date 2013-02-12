@@ -309,10 +309,10 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 		os.unlink(filetoscan)
 		return (scantasks, leaftasks, unpackreports)
 	else:
-		leaftasks.append((filetoscan, magic, tags, blacklist, tempdir, filehash, debug))
+		leaftasks.append((filetoscan, magic, tags, blacklist, filehash, filesize))
 	return (scantasks, leaftasks, unpackreports)
 
-def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, debug)):
+def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, debug)):
 	reports = {}
 
 	reports['tags'] = tags
@@ -333,10 +333,16 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, tempdir, debug)):
 		res = eval("bat_%s(filetoscan, blacklist, envvars=envvars)" % (method))
 		if res != None:
 			reports[scan['name']] = res
-	## TODO: write pickles with information to disk here to reduce memory usage
-	return (filetoscan, reports)
 
-def aggregatescan(unpackreports, leafreports, scans, scantempdir, debug):
+	## write pickles with information to disk here to reduce memory usage
+	try:
+		os.stat('%s/filereports/%s-filereport.pickle' % (topleveldir,filehash))
+	except:
+		picklefile = open('%s/filereports/%s-filereport.pickle' % (topleveldir,filehash), 'wb')
+		cPickle.dump(reports, picklefile)
+		picklefile.close()
+
+def aggregatescan(unpackreports, scans, scantempdir, topleveldir, debug):
 	## aggregate scans look at the entire result and possibly modify it.
 	## The best example is JAR files: individual .class files will not be
 	## very significant (or even insignificant), but combined results are.
@@ -356,22 +362,9 @@ def aggregatescan(unpackreports, leafreports, scans, scantempdir, debug):
 			envvars = None
 		exec "from %s import %s as bat_%s" % (module, method, method)
 
-		res = eval("bat_%s(unpackreports, leafreports, scantempdir, envvars=envvars)" % (method))
-		## return is a tuple with per item a list of results. The results need to be
-		## merged in the leafreports of the file.
-		if res != None:
-			for i in res.keys():
-				if leafreports.has_key(i):
-					for k in res[i].keys():
-						if leafreports[i].has_key(k):
-							## we have a serious problem here
-							pass
-						else:
-							leafreports[i][k] = res[i][k]
-				else:
-					leafreports[i] = res[i]
+		eval("bat_%s(unpackreports, scantempdir, topleveldir, envvars=envvars)" % (method))
 
-def postrunscan((filetoscan, unpackreports, leafreports, scans, scantempdir, toplevelscandir, debug)):
+def postrunscan((filetoscan, unpackreports, scans, scantempdir, topleveldir, debug)):
 	for scan in scans:
 		module = scan['module']
 		method = scan['method']
@@ -386,7 +379,7 @@ def postrunscan((filetoscan, unpackreports, leafreports, scans, scantempdir, top
 			envvars = None
 		exec "from %s import %s as bat_%s" % (module, method, method)
 
-		res = eval("bat_%s(filetoscan, unpackreports, leafreports, scantempdir, toplevelscandir, envvars=envvars)" % (method))
+		res = eval("bat_%s(filetoscan, unpackreports, scantempdir, topleveldir, envvars=envvars)" % (method))
 		## TODO: find out what we want to do with this
 		if res != None:
 			pass
@@ -516,76 +509,7 @@ def readconfig(config):
 	prerunscans = sorted(prerunscans, key=lambda x: x['priority'], reverse=True)
 	return {'batconfig': batconf, 'unpackscans': unpackscans, 'programscans': programscans, 'prerunscans': prerunscans, 'postrunscans': postrunscans, 'aggregatescans': aggregatescans}
 
-## Combine all results that we have into a format that the pretty printer can handle
-## The result is a Python dictionary. In its simplest form it looks like this:
-## Example:
-##  {
-##    'realpath': '/tmp/tmp12345678/foo/bar',
-##    'magic': 'data',
-##    'name': 'baz',
-##    'path': '/foo/bar',
-##    'sha256': 'abcdefghijkl17876546',
-##    'size': 1,
-##  }
-##
-## In case any of the "leaf scans" were successful there will be an additional
-## element called 'scans'. This is a dictionary with results per leafscan
-##
-## Example:
-## {
-##  'tags': ['binary', 'elf'],
-##  'architecture': 'Advanced Micro Devices X86-64',
-##  'libs': ['libm.so.6', 'libselinux.so.1', 'libtinfo.so.5',
-##    'libacl.so.1', 'libgpm.so.2', 'libdl.so.2', 'libperl.so',
-##    'libpthread.so.0', 'libc.so.6', 'libpython2.7.so.1.0', 'libruby.so.1.8']
-## }
-## 
-## Results of unpacking are also put in 'scans'. The name of the dictionary is the
-## name of the unpacker. It can be recognized because it has an element 'offset'.
-## Example:
-##
-##  'scans': {
-##           'zip': 
-##                 [
-##                  {'offset': 0}, 
-##                  {'realpath': '/tmp/tmpvZfamq/data/foo/bar/baz-zip-1',
-##                   'magic': 'PEM certificate',
-##                   'name': 'baz.crt',
-##                   'path': '',
-##                   'sha256': 'd206aa4b1333580e5075a6b22ce803491cc36bd40ab77dfdf4a1d98dd9caf032',
-##                   'scans': {'tags': ['text']},
-##                   'size': 1822
-##                  }
-##                 ]
-##           }
-##
-## The 'scans' element is used to recurse.
-def flatten(toplevel, unpackreports, leafreports):
-	res = {}
-	for i in ['realpath', 'magic', 'name', 'path', 'sha256', 'size']:
-		if unpackreports[toplevel].has_key(i):
-			res[i] = unpackreports[toplevel][i]
-	if unpackreports[toplevel].has_key('scans') or toplevel in leafreports:
-		res['scans'] = []
-	if unpackreports[toplevel].has_key('scans'):
-		for s in unpackreports[toplevel]['scans']:
-			scanres = {}
-			flattenres = []
-			for i in s['scanreports']:
-				flattenres.append(flatten(i, unpackreports, leafreports))
-			if flattenres != []:
-				scanres[s['scanname']] = []
-				if s.has_key('offset'):
-					scanres[s['scanname']].append({'offset': s['offset']})
-				scanres[s['scanname']] = scanres[s['scanname']] + flattenres
-			if scanres != {}:
-				res['scans'].append(scanres)
-	if toplevel in leafreports:
-		for s in leafreports[toplevel]:
-			res['scans'].append({s: leafreports[toplevel][s]})
-	return res
-
-def prettyprint(batconf, res, scandate, scans):
+def prettyprint(batconf, res, scandate, scans, toplevelfile, topleveldir):
 	module = batconf['module']
 	method = batconf['output']
 	## if there is extra information we need to pass, like locations of databases
@@ -595,10 +519,10 @@ def prettyprint(batconf, res, scandate, scans):
 	else:
 		envvars = None
 	exec "from %s import %s as bat_%s" % (module, method, method)
-	output = eval("bat_%s(res, scandate, scans, envvars)" % (method))
+	output = eval("bat_%s(res, scandate, scans, toplevelfile, topleveldir, envvars)" % (method))
 	return output
 
-def dumpData(unpackreports, leafreports, scans, tempdir):
+def dumpData(unpackreports, scans, tempdir):
 	## if we make a dump of all the result we should have:
 	## * a copy of all the unpacked data
 	## * whatever results from postrunscans that should be stored (defined in the config file)
@@ -647,12 +571,25 @@ def dumpData(unpackreports, leafreports, scans, tempdir):
 					print >>sys.stderr, "removing failed", r, e
 					pass
 
-	## Dump unique matches for ranking scan (if available) to separate file(s)
-	## and remove the ranking data from each leafreport.
-	## It is taking a lot of space in the pickle, and it is not always used:
-	## the GUI for example has almost all data pregenerated.
-	if not os.path.exists(os.path.join(tempdir, 'filereports')):
-		os.mkdir(os.path.join(tempdir, 'filereports'))
+	'''
+	## Include a light version of the file reports pickles in scandata.pickle that has just:
+	## * libs
+	## * busybox-version
+        ## * architecture
+        ## * kernelmodulelicense
+        ## * libs
+        ## * elfused
+        ## * elfunused
+        ## * notfoundfuncs
+        ## * notfoundvars
+        ## * elfusedby
+        ## * licenses
+        ## * forges
+        ## * redboot
+        ## * kernelchecks
+        ## * tags
+        ## * mention of ranking
+	## TODO: pregenerate as postrunscan
 	for l in leafreports:
 		try:
 			os.stat('%s/filereports/%s-filereport.pickle' % (tempdir,unpackreports[l]['sha256']))
@@ -675,17 +612,18 @@ def dumpData(unpackreports, leafreports, scans, tempdir):
 				leafreports[l]['ranking'][0]['reports'] = newreports
 			if variablepvs != None:
 				leafreports[l]['ranking'] = (res, dynamicRes, None)
+	'''
 
 	picklefile = open(os.path.join(tempdir, 'scandata.pickle'), 'wb')
-	cPickle.dump((unpackreports, leafreports, scans), picklefile)
+	cPickle.dump((unpackreports, scans), picklefile)
 	picklefile.close()
 
 ## Write everything to a dump file. A few directories that always should be
 ## packed are hardcoded, the other files are determined from the configuration.
 ## The configuration option 'lite' allows to leave out the extracted data, to
 ## speed up extraction of data in the GUI.
-def writeDumpfile(unpackreports, leafreports, scans, outputfile, tempdir, lite=False):
-	dumpData(unpackreports, leafreports, scans, tempdir)
+def writeDumpfile(unpackreports, scans, outputfile, tempdir, lite=False):
+	dumpData(unpackreports, scans, tempdir)
 	dumpfile = tarfile.open(outputfile, 'w:gz')
 	os.chdir(tempdir)
 	dumpfile.add('scandata.pickle')
@@ -704,9 +642,9 @@ def writeDumpfile(unpackreports, leafreports, scans, outputfile, tempdir, lite=F
 			except:	pass
 	dumpfile.close()
 
-def runscan(tempdir, scans, scan_binary):
-	os.makedirs("%s/data" % (tempdir,))
-	scantempdir = "%s/data" % (tempdir,)
+def runscan(topleveldir, scans, scan_binary):
+	os.makedirs("%s/data" % (topleveldir,))
+	scantempdir = "%s/data" % (topleveldir,)
 	shutil.copy(scan_binary, scantempdir)
 	debug = scans['batconfig']['debug']
 
@@ -787,8 +725,8 @@ def runscan(tempdir, scans, scan_binary):
 		for i in leaftasks:
 			if sha256_tmp[i[-2]] == i[0]:
 				leaftasks_tmp.append(i)
-		leaftasks_tmp = map(lambda x: x[:-2] + (x[-1],), leaftasks_tmp)
-		leaftasks_tmp = map(lambda x: x[:2] + (filterScans(scans['programscans'], x[2]),) + x[2:], leaftasks_tmp)
+
+		leaftasks_tmp = map(lambda x: x[:2] + (filterScans(scans['programscans'], x[2]),) + x[2:-1] + (topleveldir, debug), leaftasks_tmp)
 
 		## reverse sort on size: scan largest files first
 		leaftasks_tmp.sort(key=lambda x: x[-1], reverse=True)
@@ -801,27 +739,11 @@ def runscan(tempdir, scans, scan_binary):
 		else:
 			pool = multiprocessing.Pool(processes=1)
 
+		if not os.path.exists(os.path.join(topleveldir, 'filereports')):
+			os.mkdir(os.path.join(topleveldir, 'filereports'))
+
 		poolresult = pool.map(leafScan, leaftasks_tmp, 1)
-		poolresult_tmp = []
-		for p in poolresult:
-			pname = p[0][len(scantempdir):]
-			if pname.startswith('/'):
-				pname = pname[1:]
-			poolresult_tmp.append((pname, p[1]))
-		leafreports = dict(poolresult_tmp)
-		for i in sha256leaf:
-			if len(sha256leaf[i]) > 1:
-				for j in sha256leaf[i][1:]:
-					j_name = j[len(scantempdir):]
-					if j_name.startswith('/'):
-						j_name = j_name[1:]
-					sha256_name = sha256leaf[i][0][len(scantempdir):]
-					if sha256_name.startswith('/'):
-						sha256_name = sha256_name[1:]
-					leafreports[j_name] = copy.deepcopy(leafreports[sha256_name])
 		pool.terminate()
-	else:
-		leafreports = {}
 
 	## we have a list of dicts and we just want one dict
 	for i in unpackreports_tmp:
@@ -829,7 +751,7 @@ def runscan(tempdir, scans, scan_binary):
 			unpackreports[k] = i[k]
 
 	if scans['aggregatescans'] != []:
-		aggregatescan(unpackreports, leafreports, scans, scantempdir, debug)
+		aggregatescan(unpackreports, scans, scantempdir, topleveldir, debug)
 
 	## run postrunscans here, again in parallel, if needed/wanted
 	## These scans typically only have a few side effects, but don't change
@@ -843,12 +765,8 @@ def runscan(tempdir, scans, scan_binary):
 		## if unpackreports != {} we know that we have done deduplication
 		## already, so we can just reuse it here.
 		postrunscans = []
-		#for i in unpackreports:
 		for i in map(lambda x: x[len(scantempdir)+1:], sha256_tmp.values()):
-			if leafreports.has_key(i):
-				postrunscans.append((i, unpackreports[i], leafreports[i], filterScans(scans['postrunscans'], leafreports[i]['tags']), scantempdir, tempdir, debug))
-			else:
-				postrunscans.append((i, unpackreports[i], [], scans['postrunscans'], scantempdir, tempdir, debug))
+			postrunscans.append((i, unpackreports[i], scans['postrunscans'], scantempdir, topleveldir, debug))
 
 		if scans['batconfig']['multiprocessing'] and not debug:
 			if False in map(lambda x: x['parallel'], scans['postrunscans']):
@@ -858,6 +776,7 @@ def runscan(tempdir, scans, scan_binary):
 		else:
 			pool = multiprocessing.Pool(processes=1)
 
-		sys.stdout.flush()
 		postrunresults = pool.map(postrunscan, postrunscans, 1)
-	return (unpackreports, leafreports)
+		pool.terminate()
+
+	return unpackreports
