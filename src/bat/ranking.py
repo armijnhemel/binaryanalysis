@@ -14,25 +14,27 @@ presented at the Mining Software Repositories 2011 conference.
 Configuration parameters for databases are:
 
 BAT_DB                :: location of database containing extracted strings
+
 BAT_RANKING_FULLCACHE :: indication whether or not a full cached database is
                          used, reducing the need to generate it "just in time"
 
-Per language:
-BAT_STRINGSCACHE_$LANGUAGE :: location of database with cached strings
-                              in $LANGUAGE per package to reduce lookups
-
-An additional classification method for dynamically linked executables based
-on function names takes an additional parameter:
-
-BAT_FUNCTIONNAME_CACHE     :: location of database containing cached
-                              function names per package to reduce
-                              lookups
 
 BAT_CLONE_DB :: location of database containing information about which packages
                 should be treated as equivalent from a scanning point of view,
                 like renamed packages.
 
 BAT_LICENSE_DB :: location of database containing licensing information.
+
+Per language:
+BAT_STRINGSCACHE_$LANGUAGE :: location of database with cached strings
+                              in $LANGUAGE per package to reduce lookups
+
+An additional classification method for dynamically linked executables or
+Java binaries based on function or method names takes an additional parameter:
+
+BAT_FUNCTIONNAMECACHE_$LANGUAGE :: location of database containing cached
+                                   function names per package to reduce
+                                   lookups
 '''
 
 import string, re, os, os.path, magic, sys, tempfile, shutil, copy
