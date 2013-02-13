@@ -49,7 +49,6 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 	datafile = open(filename, 'rb')
 	diroffsets = []
 	rpmcounter = 1
-	data = datafile.read()
 	for offset in offsets['rpm']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
