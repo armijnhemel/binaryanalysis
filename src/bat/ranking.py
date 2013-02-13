@@ -260,9 +260,6 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 				if dynres != None:
 					(dynamicRes,variablepvs) = dynres
 					variablepvs['language'] = 'C'
-				datafile = open(path, 'rb')
-				data = datafile.read()
-				datafile.close()
 				elfscanfiles = []
 				## first we need to determine the size and offset of .data and .rodata and carve it from the file
         			p = subprocess.Popen(['readelf', '-SW', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -280,6 +277,8 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 					lines = stanout.split("\n")
 				else:
 					st = stanout.strip().split("\n")
+					datafile = open(path, 'rb')
+					datafile.seek(0)
 					for s in st[3:]:
 						for section in [".data", ".rodata"]:
 							if section in s:
@@ -288,9 +287,12 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 									elfoffset = int(elfsplits[3], 16)
 									elfsize = int(elfsplits[4], 16)
 									elftmp = tempfile.mkstemp(suffix=section)
-									os.write(elftmp[0], data[elfoffset:elfoffset+elfsize])
+									datafile.seek(elfoffset)
+									data = datafile.read(elfsize)
+									os.write(elftmp[0], data)
 									os.fdopen(elftmp[0]).close()
 									elfscanfiles.append(elftmp[1])
+					datafile.close()
 
 					for i in elfscanfiles:
 						## run strings to get rid of weird characters that we don't even want to scan
