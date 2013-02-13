@@ -1936,7 +1936,7 @@ def unpackLRZIP(filename, offset, tempdir=None):
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		## if lrzip failed it might have left some things behind and
-		## removed the original file we tried to unpac with the .lrz
+		## removed the original file we tried to unpack with the .lrz
 		## extension.
 		rmfiles = os.listdir(tmpdir)
 		if rmfiles != []:
@@ -1948,6 +1948,15 @@ def unpackLRZIP(filename, offset, tempdir=None):
 			os.rmdir(tmpdir)
 		return None
 	
+	## lrzip unpacks to a single file, so we can just check that one.
+	## If an empty file was unpacked it is a false positive.
+	if os.stat(tmpfile[1][:-4]).st_size == 0:
+		os.unlink(tmpfile[1][:-4])
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+
 	lrzipsize = 0
 	for i in stanout.strip().split("\n"):
 		if i.startswith("Starting thread"):
