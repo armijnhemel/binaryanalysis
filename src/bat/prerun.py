@@ -25,7 +25,7 @@ spent, plus there might be false positives (mostly LZMA).
 
 import sys, os, subprocess, os.path, shutil, stat, array
 import tempfile, re, magic
-import fsmagic, fssearch, extractor
+import fsmagic, extractor
 
 ## method to search for all the markers in magicscans
 ## Although it is in this method it is actually not a pre-run scan, so perhaps
