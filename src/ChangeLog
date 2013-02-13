@@ -1,3 +1,14 @@
+2013-02-12
+* fix ELF tagging in prerun.py. This prevents LZMA unpacking from being called
+needlessly.
+* write results of leafscans to disk earlier and don't keep them in memory
+until the very late end. Rewrite everything (except the GUI) that uses the old
+notation. This saves a significant chunk of memory (90% in some of my test
+cases) which makes it less likely swap is used, which just kills performance.
+
+2013-02-10
+* don't store unneeded data in scans that don't need it
+
 2013-02-07
 * merge caching databases, decluttering configuration a bit
 * add conversion script to merge databases
