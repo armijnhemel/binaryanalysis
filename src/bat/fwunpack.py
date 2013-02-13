@@ -17,7 +17,7 @@ where we want to prevent other scans from (re)scanning (part of) the data.
 
 import sys, os, subprocess, os.path, shutil, stat, array, struct
 import tempfile, bz2, re, magic, tarfile, zlib
-import fsmagic, fssearch, extractor, ext2, jffs2
+import fsmagic, extractor, ext2, jffs2
 from xml.dom import minidom
 
 ## generic method to create temporary directories, with the correct filenames
@@ -2582,23 +2582,6 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 					## go to the next header
 					break
 	return (diroffsets, blacklist, [])
-
-## use bmptopnm for this
-def searchUnpackBMP(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
-	pass
-
-## JPEG extraction can be tricky according to /usr/share/magic, so this is
-## not fool proof.
-## use jpeg2pnm for this
-def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
-	## first search for JFIF, then search for Exif, then search for plain
-	## JPEG and take the minimum value.
-	## Only do JFIF for now
-	datafile = open(filename, 'rb')
-	data = datafile.read()
-	datafile.close()
-	#print fssearch.findJFIF(data,0)
-	return ([], blacklist, [])
 
 ## PNG extraction is similar to GIF extraction, except there is a way better
 ## defined trailer.
