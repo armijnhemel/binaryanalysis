@@ -222,7 +222,7 @@ module      = bat.fwunpack
 method      = searchUnpackCompress
 priority    = 1
 magic       = compress
-noscan      = text:xml:graphics:pdf:audio:video
+noscan      = text:xml:graphics:pdf:audio:video:elf
 description = Unpack files compressed with compress
 enabled     = yes
 
@@ -242,7 +242,7 @@ module      = bat.fwunpack
 method      = searchUnpackCramfs
 priority    = 3
 magic       = cramfs
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:elf
 description = Unpack cramfs file systems
 enabled     = yes
 
@@ -261,7 +261,7 @@ module      = bat.fwunpack
 method      = searchUnpackExt2fs
 priority    = 3
 magic       = ext2
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:elf
 description = Unpack EXT2/3/4 file systems
 enabled     = yes
 
@@ -331,7 +331,7 @@ module      = bat.fwunpack
 method      = searchUnpackJffs2
 priority    = 1
 magic       = jffs2_le
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:elf
 description = Unpack JFFS2 file systems
 enabled     = yes
 
