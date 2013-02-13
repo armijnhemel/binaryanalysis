@@ -40,9 +40,9 @@ database creation:
 
 ranking:
 * use version information to report most likely licenses
-* merge averages database into stringscache database
 * report correlation between packages (strings, variable names, function names) to detect cloning in the database
 * store info about unique strings more efficiently since often they don't change in between versions. This is to reduce memory usage.
+* don't read entire ELF file, use seek() instead
 
 aggregate scans:
 * report possible whole chain of dependencies for a program
