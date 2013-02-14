@@ -42,7 +42,6 @@ ranking:
 * use version information to report most likely licenses
 * report correlation between packages (strings, variable names, function names) to detect cloning in the database
 * store info about unique strings more efficiently since often they don't change in between versions. This is to reduce memory usage.
-* don't read entire ELF file, use seek() instead
 
 aggregate scans:
 * report possible whole chain of dependencies for a program
@@ -66,6 +65,5 @@ misc:
 BOTTLENECKS:
 1. gzip unpacking does not return a size. This is because it is not easy to do this with the standard tools. However, for large files this actually is a problem, since there might be many hits for other compressed files/file systems that have very generic identifiers, such as ext2/3/4, lzma and compress.
 2. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
-3. variable names/class names/etc. information should be cached.
-4. RPM unpacking does not return a proper size for the entire RPM, just until a bit after the offset of the payload.
-5. ranking reads the whole file into memory, even if parts are blacklisted. This should be replaced with seek()
+3. RPM unpacking does not return a proper size for the entire RPM, just until a bit after the offset of the payload.
+4. ranking reads the whole file into memory, even if parts are blacklisted. This should be replaced with seek()
