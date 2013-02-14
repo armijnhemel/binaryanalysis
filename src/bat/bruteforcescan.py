@@ -641,6 +641,14 @@ def dumpData(unpackreports, scans, tempdir):
 	cPickle.dump((unpackreports, scans), picklefile)
 	picklefile.close()
 
+def compressPickle((infile)):
+	fin = open(infile, 'rb')
+	fout = gzip.open("%s.gz" % infile, 'wb')
+	fout.write(fin.read())
+	fout.close()
+	fin.close()
+	os.unlink(fin.name)
+
 ## Write everything to a dump file. A few directories that always should be
 ## packed are hardcoded, the other files are determined from the configuration.
 ## The configuration option 'lite' allows to leave out the extracted data, to
@@ -654,14 +662,12 @@ def writeDumpfile(unpackreports, scans, outputfile, tempdir, lite=False):
 		dumpfile.add('data')
 	try:
 		os.stat('filereports')
+		## compress pickle files in parallel
 		filereports = os.listdir('filereports')
-		#for f in filereports:
-		#	fin = open(os.path.join('filereports', f), 'rb')
-		#	fout = gzip.open(os.path.join('filereports', "%s.gz" % f), 'wb')
-		#	fout.write(fin.read())
-		#	fout.close()
-		#	fin.close()
-		#	os.unlink(fin.name)
+		pool = multiprocessing.Pool()
+		fnames = map(lambda x: os.path.join(tempdir, "filereports", x), filereports)
+		pool.map(compressPickle, fnames)
+		pool.terminate()
 		dumpfile.add('filereports')
 	except Exception,e:	print >>sys.stderr, e
 
