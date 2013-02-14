@@ -556,16 +556,22 @@ def dumpData(unpackreports, scans, tempdir):
 				oldlistdir = listdir
 			for f in filetypes:
 				dirlisting = filter(lambda x: x.endswith(f), listdir)
-				for s in sha256spack:
-					copyfiles = copyfiles + filter(lambda x: x.startswith(s), dirlisting)
-			for c in list(set(copyfiles)):
-				shutil.copy(os.path.join(i['storedir'], c), target)
-				if i['cleanup']:
-					try:
-						os.unlink(os.path.join(i['storedir'],c))
-					except Exception, e:
-						print >>sys.stderr, "removing failed", c, e
-						pass
+				## apply a few filters to more efficiently grab only the files
+				## that are really needed. This pays off in case there are tons
+				## of files that need to be copied.
+				dirfilter = list(set(map(lambda x: x.split('-')[0], dirlisting)))
+				inter = list(set(sha256spack).intersection(set(dirfilter)))
+				for s in inter:
+					copyfiles = filter(lambda x: s in x, dirlisting)
+					for c in copyfiles:
+						dirlisting.remove(c)
+					for c in list(set(copyfiles)):
+						shutil.copy(os.path.join(i['storedir'], c), target)
+						if i['cleanup']:
+							try:
+								os.unlink(os.path.join(i['storedir'],c))
+							except Exception, e:
+								print >>sys.stderr, "removing failed", c, e
 		else:
 			## nothing will be dumped if one of the three parameters is missing
 			pass
