@@ -39,7 +39,7 @@ which should be run anyway, are run. Examples are generating pictures or running
 are packed in a tar file.
 '''
 
-import sys, os, os.path, magic, hashlib, subprocess, tempfile, shutil, stat, multiprocessing, cPickle, glob, tarfile, copy
+import sys, os, os.path, magic, hashlib, subprocess, tempfile, shutil, stat, multiprocessing, cPickle, glob, tarfile, copy, gzip
 from optparse import OptionParser
 import ConfigParser
 import datetime
@@ -654,8 +654,16 @@ def writeDumpfile(unpackreports, scans, outputfile, tempdir, lite=False):
 		dumpfile.add('data')
 	try:
 		os.stat('filereports')
+		filereports = os.listdir('filereports')
+		#for f in filereports:
+		#	fin = open(os.path.join('filereports', f), 'rb')
+		#	fout = gzip.open(os.path.join('filereports', "%s.gz" % f), 'wb')
+		#	fout.write(fin.read())
+		#	fout.close()
+		#	fin.close()
+		#	os.unlink(fin.name)
 		dumpfile.add('filereports')
-	except:	pass
+	except Exception,e:	print >>sys.stderr, e
 
 	for i in scans['postrunscans']:
 		if i['storedir'] != None and i['storetarget'] != None and i['storetype'] != None:
