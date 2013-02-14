@@ -533,6 +533,9 @@ def dumpData(unpackreports, scans, tempdir):
 	for p in unpackreports:
 		if unpackreports[p].has_key('sha256'):
 			sha256spack.append(unpackreports[p]['sha256'])
+	sha256spack = list(set(sha256spack))
+	oldstoredir = None
+	oldlistdir = []
 	for i in scans['postrunscans']:
 		## use parameters from configuration file. This assumes that the names of the
 		## all output files of a particular scan start with the checksum of the scanned
@@ -543,19 +546,33 @@ def dumpData(unpackreports, scans, tempdir):
 			target = os.path.join(tempdir, i['storetarget'])
 			copyfiles = []
 			filetypes = i['storetype'].split(':')
-			listdir = os.listdir(i['storedir'])
+			## in case the storedir was also used in the previous run just reuse
+			## the data instead of rereading it using os.listdir.
+			if oldstoredir == i['storedir']:
+				listdir = oldlistdir
+			else:
+				listdir = os.listdir(i['storedir'])
+				oldstoredir = i['storedir']
+				oldlistdir = listdir
 			for f in filetypes:
 				dirlisting = filter(lambda x: x.endswith(f), listdir)
 				for s in sha256spack:
 					copyfiles = copyfiles + filter(lambda x: x.startswith(s), dirlisting)
 			for c in list(set(copyfiles)):
 				shutil.copy(os.path.join(i['storedir'], c), target)
+				if i['cleanup']:
+					try:
+						os.unlink(os.path.join(i['storedir'],c))
+					except Exception, e:
+						print >>sys.stderr, "removing failed", c, e
+						pass
 		else:
 			## nothing will be dumped if one of the three parameters is missing
 			pass
-		## Remove any results for which 'cleanup' has been set to True. For this at least 'storedir'
-		## and 'storetype' have to be specified and 'cleanup' has to be set to True
 
+		## Remove any results for which 'cleanup' has been set to True. For this at least 'storedir'
+		## and 'storetype' have to be specified and 'cleanup' has to be set to True. For example, this
+		## could be fluff from a previous run.
 		if i['storedir'] != None and i['storetype'] != None and i['cleanup']:
 			removefiles = []
 		 	filetypes = i['storetype'].split(':')
