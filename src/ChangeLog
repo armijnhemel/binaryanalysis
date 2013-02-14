@@ -1,3 +1,9 @@
+2013-02-14
+* use caching databases for Java fields and class names. This saves a ton of
+time (especially fields)
+* copy results more efficiently, which was a problem when there were lots of
+result files
+
 2013-02-13
 * prevent some scans for running on ELF files
 * remove false positives from LRZIP unpacking
