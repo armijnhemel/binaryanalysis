@@ -612,28 +612,75 @@ def extractVariablesJava(javameta, scanenv, rankingfull):
 	conn.text_factory = str
 	c = conn.cursor()
 
+	if scanenv.has_key(functionnameperlanguage['Java']):
+		funccache = scanenv.get(functionnameperlanguage['Java'])
+		## sanity checks to see if the database exists. If not, and rankingfull
+		## is set to True, there should be no result.
+		if rankingfull:
+			## If rankingfull is set the cache should exist. If it doesn't exist
+			## then something is horribly wrong.
+			if not os.path.exists(funccache):
+				return variablepvs
+		else:
+			## The cache may, or may not, exist, but at least we're not
+			## counting on it to exist and it may be generated on the fly.
+			funccache = scanenv.get(functionnameperlanguage['Java'])
+	else:
+		if rankingfull:
+			return variablepvs
+
+	class_scan = False
+	c.execute("attach ? as functionnamecache", (funccache,))
+	res = c.execute("select * from functionnamecache.sqlite_master where type='table' and name='classcache'").fetchall()
+	if res == []:
+		if not rankingfull:
+			## nothing in the cache and rankingfull is not set, so check if we have the results.
+			res2 = c.execute("select * from sqlite_master where type='table' and name='extracted_name'").fetchall()
+			if res2 != []:
+				class_scan = True
+				c.execute("create table if not exists functionnamecache.classcache (classname text, package text)")
+				c.execute("create index if not exists functionnamecache.classname_cache on classcache(classname)")
+				conn.commit()
+	else:
+		class_scan = True
+	c.execute("detach functionnamecache")
 	classpvs = {}
 	sourcepvs = {}
 	fieldspvs = {}
-	for i in classes:
-		pvs = []
-		## first try the name as found in the binary. If it can't
-		## be found and has dots in it we should split it on '.' and
-		## use the last component only.
-		classname = i
-		res = c.execute("select sha256,type,language from extracted_name where name=?", (classname,)).fetchall()
-		if res == []:
-			classname = classname.split('.')[-1]
-			res = c.execute("select sha256,type,language from extracted_name where name=?", (classname,)).fetchall()
-		if res != []:
-			for r in list(set(res)):
-				if r[2] != 'Java':
-					continue
-				if r[1] != 'class':
-					continue
-				pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
-				pvs = pvs + pv
-		classpvs[classname] = list(set(pvs))
+	if class_scan:
+		c.execute("attach ? as functionnamecache", (funccache,))
+		for i in classes:
+			pvs = []
+			## first try the name as found in the binary. If it can't
+			## be found and has dots in it we should split it on '.' and
+			## use the last component only.
+			classname = i
+			classres = c.execute("select package from functionnamecache.classcache where classname=?", (classname,)).fetchall()
+			if classres != []:
+				classres = map(lambda x: (x[0], 0), classres)
+				classpvs[classname] = classres
+			else:
+				if not rankingfull:
+					res = c.execute("select sha256,type,language from extracted_name where name=?", (classname,)).fetchall()
+					if res == []:
+						classname = classname.split('.')[-1]
+						res = c.execute("select sha256,type,language from extracted_name where name=?", (classname,)).fetchall()
+					if res != []:
+						for r in list(set(res)):
+							if r[2] != 'Java':
+								continue
+							if r[1] != 'class':
+								continue
+							pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
+							pvs = pvs + pv
+					classpvs[classname] = list(set(pvs))
+				else:
+					classname = classname.split('.')[-1]
+					classres = c.execute("select package from functionnamecache.classcache where classname=?", (classname,)).fetchall()
+					if classres != []:
+						classres = map(lambda x: (x[0], 0), classres)
+						classpvs[classname] = classres
+		c.execute("detach functionnamecache")
 
 	for i in javameta['sourcefiles']:
 		pvs = []
@@ -658,27 +705,53 @@ def extractVariablesJava(javameta, scanenv, rankingfull):
 	## likely only coming from a few packages we don't need to hit the database
 	## that often.
 	## This can be really slow, so we should perhaps use some caching database.
+	field_scan = False
+	c.execute("attach ? as functionnamecache", (funccache,))
+	res = c.execute("select * from functionnamecache.sqlite_master where type='table' and name='fieldcache'").fetchall()
+	if res == []:
+		if not rankingfull:
+			## nothing in the cache and rankingfull is not set, so check if we have the results.
+			res2 = c.execute("select * from sqlite_master where type='table' and name='extracted_name'").fetchall()
+			if res2 != []:
+				field_scan = True
+				c.execute("create table if not exists functionnamecache.fieldcache (classname text, package text)")
+				c.execute("create index if not exists functionnamecache.fieldname_cache on fieldcache(classname)")
+				conn.commit()
+	else:
+		field_scan = True
+	c.execute("detach functionnamecache")
 	sha256cache = {}
-	for f in fields:
-		## a few fields are so common that they will be completely useless
-		## for reporting, but processing them will take a *lot* of time, so
-		## just skip them.
-		if f in ['value', 'name', 'type', 'data', 'options', 'parent', 'description', 'instance', 'port', 'out', 'properties', 'project', 'next', 'id', 'listeners', 'status', 'target', 'result', 'index', 'buffer', 'values', 'count', 'size', 'key', 'path', 'cache', 'map', 'file', 'context', 'initialized', 'verbose', 'version', 'debug', 'message', 'attributes', 'url', 'DEBUG', 'NAME', 'state', 'source', 'password', 'text', 'start', 'factory', 'entries', 'buf', 'args', 'logger', 'config', 'length', 'encoding', 'method', 'resources', 'timeout', 'filename', 'offset', 'server', 'mode', 'in', 'connection']:
-			continue
-		pvs = []
-		res = c.execute("select sha256,type,language from extracted_name where name=?", (f,)).fetchall()
-		for r in list(set(res)):
-			if r[2] != 'Java':
-				continue
-			if r[1] != 'field':
-				continue
-			if sha256cache.has_key(r[0]):
-				pv = sha256cache[r[0]]
+	if field_scan:
+		c.execute("attach ? as functionnamecache", (funccache,))
+		for f in fields:
+			## a few fields are so common that they will be completely useless
+			## for reporting, but processing them will take a *lot* of time, so
+			## just skip them.
+			#if f in ['value', 'name', 'type', 'data', 'options', 'parent', 'description', 'instance', 'port', 'out', 'properties', 'project', 'next', 'id', 'listeners', 'status', 'target', 'result', 'index', 'buffer', 'values', 'count', 'size', 'key', 'path', 'cache', 'map', 'file', 'context', 'initialized', 'verbose', 'version', 'debug', 'message', 'attributes', 'url', 'DEBUG', 'NAME', 'state', 'source', 'password', 'text', 'start', 'factory', 'entries', 'buf', 'args', 'logger', 'config', 'length', 'encoding', 'method', 'resources', 'timeout', 'filename', 'offset', 'server', 'mode', 'in', 'connection']:
+			#	continue
+			pvs = []
+
+			###
+			fieldres = c.execute("select package from functionnamecache.fieldcache where fieldname=?", (f,)).fetchall()
+			if fieldres != []:
+				fieldres = map(lambda x: (x[0], 0), fieldres)
+				fieldspvs[f] = fieldres
 			else:
-				pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
-				sha256cache[r[0]] = pv
-			pvs = list(set(pvs + pv))
-		fieldspvs[f] = list(set(pvs))
+				if not rankingfull:
+					res = c.execute("select sha256,type,language from extracted_name where name=?", (f,)).fetchall()
+					for r in list(set(res)):
+						if r[2] != 'Java':
+							continue
+						if r[1] != 'field':
+							continue
+						if sha256cache.has_key(r[0]):
+							pv = sha256cache[r[0]]
+						else:
+							pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
+							sha256cache[r[0]] = pv
+						pvs = list(set(pvs + pv))
+					fieldspvs[f] = list(set(pvs))
+		c.execute("detach functionnamecache")
 
 	variablepvs['fields'] = fieldspvs
 	variablepvs['sources'] = sourcepvs
@@ -888,18 +961,40 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 			dynamicRes['packages'][i] = []
 			for v in list(set(versions)):
 				dynamicRes['packages'][i].append((v, versions.count(v)))
+		c.execute("detach functionnamecache")
 
-	## now scan variables, but only if we have a table "extracted_names"
+	## Scan variables. Ideally these should be in a table in functionname_cache.
+	## If this cache does not exist, but only if we have a table "extracted_names"
 	variable_scan = False
-	res = c.execute("select * from sqlite_master where type='table' and name='extracted_name'").fetchall()
-	if res != []:
+
+	## first attach the functionname cache again. If there is no table for variables, but
+	## ranking_full is set, then don't scan variable names.
+	## If 
+	c.execute("attach ? as functionnamecache", (funccache,))
+	res = c.execute("select * from functionnamecache.sqlite_master where type='table' and name='varnamecache'").fetchall()
+	if res == []:
+		if not rankingfull:
+			## nothing in the cache and rankingfull is not set, so check if we have the results.
+			res2 = c.execute("select * from sqlite_master where type='table' and name='extracted_name'").fetchall()
+			if res2 != []:
+				variable_scan = True
+				c.execute("create table if not exists functionnamecache.varnamecache (varname text, package text)")
+				c.execute("create index if not exists functionnamecache.varnamecache_index on varnamecache(varname)")
+				conn.commit()
+	else:
 		variable_scan = True
+	c.execute("detach functionnamecache")
 
 	if variable_scan:
+		c.execute("attach ? as functionnamecache", (funccache,))
 		vvs = {}
 		for v in variables:
 			if v in ['options', 'debug', 'options', 'verbose']:
 				continue
+			res = c.execute("select * distinct package from functionnnamecache where varname=?", (v,)).fetchall()
+			if res == []:
+				if rankingfull:
+					continue
 			pvs = []
 			## TODO: replace with caching database to save a lot of work
 			res = c.execute("select sha256,type,language from extracted_name where name=?", (v,)).fetchall()
@@ -923,6 +1018,7 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 				else:
 					vvs_rewrite[v][program] = list(set(vvs_rewrite[v][program] + [version]))
 		variablepvs['variables'] = vvs_rewrite
+		c.execute("detach functionnamecache")
 	c.close()
 	conn.close()
 	return (dynamicRes, variablepvs)
