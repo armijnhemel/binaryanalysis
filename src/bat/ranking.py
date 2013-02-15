@@ -230,16 +230,20 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 		## we have already scanned parts of the file
 		## we need to carve the right parts from the file first
 		datafile = open(path, 'rb')
-		data = datafile.read()
-		datafile.close()
 		lastindex = 0
 		databytes = ""
+		datafile.seek(lastindex)
 		for i in blacklist:
 			if i[0] > lastindex:
 				## just concatenate the bytes
-				databytes = databytes + data[lastindex:i[0]]
+				data = datafile.read(i[0] - lastindex)
+				databytes = databytes + data
 				## set lastindex to the next
 				lastindex = i[1] - 1
+				datafile.seek(lastindex)
+		datafile.close()
+		if len(databytes) == 0:
+			return None
 		tmpfile = tempfile.mkstemp()
 		os.write(tmpfile[0], databytes)
 		os.fdopen(tmpfile[0]).close()
