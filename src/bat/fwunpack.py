@@ -1265,8 +1265,8 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, envva
 	## squashfs7 is different, we first need to rewrite the binary
 	## to replace the identifier 'sqlz' with 'sqsh', then we can unpack
 	## it with unsquashfsRealtekLZMA
-	## TODO: don't suck in the file at once and see if it is possible to
-	## remove some duplicate code that is shared with the above code.
+	## TODO: see if it is possible to remove some duplicate code that is
+	## shared with the above code.
 	if offsets.has_key('squashfs7'):
 		if offsets['squashfs7'] != []:
 			for offset in offsets['squashfs7']:
