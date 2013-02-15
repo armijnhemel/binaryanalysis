@@ -11,7 +11,7 @@ failures on systems that don't have the Python RPM bindings installed.
 
 import sys, os, subprocess, os.path
 import tempfile, magic, rpm
-import fsmagic, fssearch, extractor, fwunpack
+import fsmagic, extractor, fwunpack
 
 def unpackRPM(filename, offset, tempdir=None):
 	## Assumes (for now) that rpm2cpio is in the path
@@ -46,7 +46,6 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		return ([], blacklist, [])
 	if offsets['rpm'] == []:
 		return ([], blacklist, [])
-	datafile = open(filename, 'rb')
 	diroffsets = []
 	rpmcounter = 1
 	for offset in offsets['rpm']:
@@ -77,9 +76,27 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 				## to the configuration for RPM.
 				compressor = header[rpm.RPMTAG_PAYLOADCOMPRESSOR]
 				if compressor == 'gzip':
-					payloadoffset = fssearch.findGzip(datafile, offset)
+					## this should not happen
+					if not offsets.has_key('gzip'):
+						pass
+					else:
+						for o in offsets['gzip']:
+							if offset > o:
+								continue
+							else:
+								payloadoffset = o
+								break
 				elif compressor == 'xz':
-					payloadoffset = fssearch.findXZ(datafile, offset)
+					## this should not happen
+					if not offsets.has_key('xz') and not offsets.has_key('xztrailer'):
+						pass
+					else:
+						for o in offsets['xz']:
+							if offset > o:
+								continue
+							else:
+								payloadoffset = o
+								break
 				try:
 					## this header describes the size of headers +
 					## compressed payload size. It might be a few bytes off
@@ -96,5 +113,4 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
-	datafile.close()
 	return (diroffsets, blacklist, [])

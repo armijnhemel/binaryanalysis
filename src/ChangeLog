@@ -2,6 +2,7 @@
 * optimize RPM unpacking: use size from RPM header
 * don't read file in its entirety into memory in ranking, but use seek() and
 read() instead
+* remove dependency on fssearch in RPM unpacking
 
 2013-02-14
 * use caching databases for Java fields and class names. This saves a ton of
