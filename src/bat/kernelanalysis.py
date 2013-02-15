@@ -1,12 +1,11 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2009-2012 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2009-2013 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
-import os, sys, string
-import re, subprocess
-import extractor, fssearch
+import os, sys, string, re, subprocess
+import extractor
 import magic
 import xml.dom.minidom
 
@@ -128,9 +127,6 @@ def findSysfs(lines):
 
 def findRedBoot(lines):
 	return lines.find("No RedBoot partition table detected in %s")
-
-def findInitFs(lines):
-	return fssearch.findGzip(lines)
 
 ## analyse a kernel module. Requires that the modinfo program from module-init-tools has been installed
 def analyseModuleLicense(path, blacklist=[], envvars=[]):
