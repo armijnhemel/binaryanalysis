@@ -42,6 +42,7 @@ ranking:
 * use version information to report most likely licenses
 * report correlation between packages (strings, variable names, function names) to detect cloning in the database
 * store info about unique strings more efficiently since often they don't change in between versions. This is to reduce memory usage.
+* deal with inner classes properly
 
 aggregate scans:
 * report possible whole chain of dependencies for a program
@@ -60,7 +61,6 @@ HTML generation:
 misc:
 * replay script to unpack firmware based on only the pickle with unpacking data
 * expand "debug"
-* replace calls to methods in fssearch with something else, preferably remove fssearch altogether
 
 BOTTLENECKS:
 1. gzip unpacking does not return a size. This is because it is not easy to do this with the standard tools. However, for large files this actually is a problem, since there might be many hits for other compressed files/file systems that have very generic identifiers, such as ext2/3/4, lzma and compress.
