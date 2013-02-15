@@ -1,3 +1,6 @@
+2013-02-15
+* optimize RPM unpacking: use size from RPM header
+
 2013-02-14
 * use caching databases for Java fields and class names. This saves a ton of
 time (especially fields)

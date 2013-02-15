@@ -78,10 +78,21 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 				compressor = header[rpm.RPMTAG_PAYLOADCOMPRESSOR]
 				if compressor == 'gzip':
 					payloadoffset = fssearch.findGzip(datafile, offset)
-					blacklist.append((offset, payloadoffset + 1))
 				elif compressor == 'xz':
 					payloadoffset = fssearch.findXZ(datafile, offset)
-					blacklist.append((offset, payloadoffset + 1))
+				try:
+					## this header describes the size of headers +
+					## compressed payload size. It might be a few bytes off
+					## with the actual size of the file.
+					bl = header[rpm.RPMTAG_SIGSIZE]
+					filesize = os.stat(filename).st_size
+					## sanity check. It should not happen with a properly
+					## formatted RPM file, but you never know.
+					if bl > filesize:
+						bl = payloadoffset + 1
+				except:
+					bl = payloadoffset + 1
+				blacklist.append((offset, bl))
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
