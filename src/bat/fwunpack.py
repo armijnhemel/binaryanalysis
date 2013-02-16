@@ -15,7 +15,7 @@ Optionally, we return a range of bytes that should be excluded in same cases
 where we want to prevent other scans from (re)scanning (part of) the data.
 '''
 
-import sys, os, subprocess, os.path, shutil, stat, array, struct
+import sys, os, subprocess, os.path, shutil, stat, array, struct, binascii
 import tempfile, bz2, re, magic, tarfile, zlib
 import fsmagic, extractor, ext2, jffs2
 from xml.dom import minidom
@@ -1773,8 +1773,50 @@ def unpackGzip(filename, offset, tempdir=None):
 			os.rmdir(tmpdir)
 		return None
 	os.fdopen(outtmpfile[0]).close()
+	## Do some checks here. First compute the CRC32 of the *uncompressed* data
+	## This is very costly, but unfortunately all data needs to be read for that, unless
+	## I find a better way.
+	## The trailer of the gzip file is CRC32 followed by file size of uncompressed data
+	datafile = open(outtmpfile[1], 'rb')
+	datafile.seek(0)
+	databuffer = datafile.read(10000000)
+	crc32 = binascii.crc32('')
+	while databuffer != '':
+		crc32 = binascii.crc32(databuffer, crc32)
+		databuffer = datafile.read(10000000)
+	datafile.close()
+	crc32 = crc32 & 0xffffffff
+
+	## find the crc32 in the original compressed data
+	datafile = open(filename, 'rb')
+	data = datafile.read()
+	datafile.close()
+	crcoffset = data.find(struct.pack('<I', crc32))
+	if crcoffset == -1:
+		## something is wrong here, so just set the size to 2 (first
+		## two bytes of the gzip header)
+		del data
+		os.unlink(tmpfile[1])
+		return (tmpdir, 2)
+
+	## find the offset of the filesize in the data, starting from the crcoffset
+	filesize = os.stat(outtmpfile[1]).st_size
+
+	## sanity check first: the crcoffset
+	filesizeoffset = data.find(struct.pack('<I', filesize), crcoffset)
+	if filesizeoffset == -1:
+		## something is wrong here
+		del data
+		os.unlink(tmpfile[1])
+		return (tmpdir, 2)
+	## these two should be following eachother immediately, if not, something is
+	## wrong.
+	if filesizeoffset - crcoffset != 4:
+		os.unlink(tmpfile[1])
+		del data
+		return (tmpdir, 2)
 	os.unlink(tmpfile[1])
-	return tmpdir
+	return (tmpdir, filesizeoffset + 4)
 
 def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	if not offsets.has_key('gzip'):
@@ -1791,7 +1833,9 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 		tmpdir = dirsetup(tempdir, filename, "gzip", counter)
 		res = unpackGzip(filename, offset, tmpdir)
 		if res != None:
-			diroffsets.append((res, offset, 0))
+			(gzipres, gzipsize) = res
+			diroffsets.append((gzipres, offset, gzipsize))
+			blacklist.append((offset, offset + gzipsize))
 			counter = counter + 1
 		else:
 			## cleanup
