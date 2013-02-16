@@ -65,5 +65,4 @@ misc:
 BOTTLENECKS:
 1. gzip unpacking does not return a size. This is because it is not easy to do this with the standard tools. However, for large files this actually is a problem, since there might be many hits for other compressed files/file systems that have very generic identifiers, such as ext2/3/4, lzma and compress.
 2. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
-3. read gzip data for determining CRC in using seek/read
-4. move tags to unpackreports to prevent unnecessary disk access in for example findlibs, rankimages and others reading every pickle file
+3. move tags to unpackreports to prevent unnecessary disk access in for example findlibs, rankimages and others reading every pickle file
