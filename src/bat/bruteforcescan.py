@@ -305,6 +305,7 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 			except StopIteration:
         			pass
 			unpackreports[relfiletoscan]['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
+	unpackreports[relfiletoscan]['tags'] = tags
 	if not unpacked and 'temporary' in tags:
 		os.unlink(filetoscan)
 		return (scantasks, leaftasks, unpackreports)
