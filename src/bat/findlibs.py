@@ -174,6 +174,9 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 		leafreports = cPickle.load(leaf_file)
 		leaf_file.close()
 
+		## This makes no sense for for example statically linked libraries and the
+		## pickle will have been read needlessly. TODO: only read files that are dynamically
+		## linked.
 		if leafreports.has_key('libs'):
 
 			## keep copies of the original data
