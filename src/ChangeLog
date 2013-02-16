@@ -1,3 +1,8 @@
+2013-02-16
+* determine size for gzip files, preventing false positives and scanning time
+* fix aggregate jars: use right index, prevent unnecessary storing of a ton of
+data
+
 2013-02-15
 * optimize RPM unpacking: use size from RPM header
 * don't read file in its entirety into memory in ranking, but use seek() and
