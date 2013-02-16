@@ -2,6 +2,8 @@
 * determine size for gzip files, preventing false positives and scanning time
 * fix aggregate jars: use right index, prevent unnecessary storing of a ton of
 data
+* start moving 'tags' to unpackreports instead of the leafreports. This will
+require some tweaks to how the leafscans are run as well.
 
 2013-02-15
 * optimize RPM unpacking: use size from RPM header
