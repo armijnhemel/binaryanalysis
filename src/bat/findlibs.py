@@ -70,10 +70,6 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 		if not 'elf' in unpackreports[i]['tags']:
 			continue
 
-		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
-		leafreports = cPickle.load(leaf_file)
-		leaf_file.close()
-
 		if not squashedelffiles.has_key(os.path.basename(i)):
 			squashedelffiles[os.path.basename(i)] = [i]
 		else:
