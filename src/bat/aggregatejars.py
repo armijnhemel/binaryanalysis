@@ -47,7 +47,6 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, envvars=None):
 						if unpackreports[i]['scans'][0]['scanname'] != 'zip':
 							continue
 						jarfiles.append(i)
-	rankresults = {}
 
 	for i in jarfiles:
 		rankres = {}
@@ -102,12 +101,12 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, envvars=None):
 				for c in varfunmatches['classes']:
 					## we only need one copy
 					if not classmatches.has_key(c):
-						classmatches[f] = varfunmatches['classes'][c]
+						classmatches[c] = varfunmatches['classes'][c]
 			if varfunmatches.has_key('sources'):
 				for c in varfunmatches['sources']:
 					## we only need one copy
 					if not sourcematches.has_key(c):
-						sourcematches[f] = varfunmatches['sources'][c]
+						sourcematches[c] = varfunmatches['sources'][c]
 			if stringmatches == None:
 				continue
 			matchedlines = matchedlines + stringmatches['matchedlines']
@@ -214,8 +213,6 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, envvars=None):
 		rankres['nonUniqueAssignments'] = nonUniqueAssignments
 		rankres['nonUniqueMatches'] = nonUniqueMatches
 		rankres['reports'] = reports
-
-		rankresults[i] = {'ranking': (rankres, dynamicresfinal, {'language': 'Java', 'classes': classmatches, 'fields': fieldmatches, 'sources': sourcematches})}
 
 		## now write the new result
 		filehash = unpackreports[i]['sha256']
