@@ -1795,7 +1795,6 @@ def unpackGzip(filename, offset, tempdir=None):
 	if crcoffset == -1:
 		## something is wrong here, so just set the size to 2 (first
 		## two bytes of the gzip header)
-		del data
 		os.unlink(tmpfile[1])
 		return (tmpdir, 2)
 
@@ -1806,14 +1805,12 @@ def unpackGzip(filename, offset, tempdir=None):
 	filesizeoffset = data.find(struct.pack('<I', filesize), crcoffset)
 	if filesizeoffset == -1:
 		## something is wrong here
-		del data
 		os.unlink(tmpfile[1])
 		return (tmpdir, 2)
 	## these two should be following eachother immediately, if not, something is
 	## wrong.
 	if filesizeoffset - crcoffset != 4:
 		os.unlink(tmpfile[1])
-		del data
 		return (tmpdir, 2)
 	os.unlink(tmpfile[1])
 	return (tmpdir, filesizeoffset + 4)
