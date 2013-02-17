@@ -55,6 +55,7 @@ busybox scanning:
 
 HTML generation:
 * finish function name reporting
+* merge generatenameshtml.py and generateuniquehtml.py
 * clean up/rewrite/make it easier to use
 * add license information if available
 
@@ -63,6 +64,8 @@ misc:
 * expand "debug"
 
 BOTTLENECKS:
-1. gzip unpacking does not return a size. This is because it is not easy to do this with the standard tools. However, for large files this actually is a problem, since there might be many hits for other compressed files/file systems that have very generic identifiers, such as ext2/3/4, lzma and compress.
-2. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
-3. move tags to unpackreports to prevent unnecessary disk access in for example findlibs, rankimages and others reading every pickle file
+1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
+2. move/copy tags to unpackreports to prevent unnecessary disk access in for example findlibs, rankimages and others reading every pickle file
+3. generatenameshtml.py and generateuniquehtml.py both read pickle files and generate reports, and both are processing data from the ranking scan. By merging these the pickle files only have to be read and processed once, which should make a difference for big pickle files.
+4. variable name scanning (for C programs) in ranking needs a caching database
+5. findlibs.py reads pickles for statically linked files. These pickles can get quite large and findlibs should not be run for statically linked binaries (also see 1.).
