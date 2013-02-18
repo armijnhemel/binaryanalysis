@@ -25,6 +25,12 @@ def generateImages(filename, unpackreport, scantempdir, topleveldir, envvars={})
 	if not unpackreport.has_key('sha256'):
 		return
 
+	if not unpackreport.has_key('tags'):
+		return
+	else:   
+		if not 'ranking' in unpackreport['tags']:
+			return
+
 	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):
