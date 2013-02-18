@@ -234,6 +234,8 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 		databytes = ""
 		datafile.seek(lastindex)
 		for i in blacklist:
+			## This is incorrect and will not work if a part of a file is blacklisted starting at offset 0
+			## TODO: fix this
 			if i[0] > lastindex:
 				## just concatenate the bytes
 				data = datafile.read(i[0] - lastindex)
@@ -653,6 +655,7 @@ def extractVariablesJava(javameta, scanenv, rankingfull):
 	fieldspvs = {}
 	if class_scan:
 		c.execute("attach ? as functionnamecache", (funccache,))
+		classes = list(set(map(lambda x: x.split('$')[0], classes)))
 		for i in classes:
 			pvs = []
 			## first try the name as found in the binary. If it can't
@@ -704,6 +707,7 @@ def extractVariablesJava(javameta, scanenv, rankingfull):
 					continue
 				pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
 				pvs = pvs + pv
+		pvs = map(lambda x: (x[0], 0), pvs)
 		sourcepvs[classname] = list(set(pvs))
 	## Keep a list of which sha256s we've already seen. Since the files are
 	## likely only coming from a few packages we don't need to hit the database
@@ -730,12 +734,12 @@ def extractVariablesJava(javameta, scanenv, rankingfull):
 		for f in fields:
 			## a few fields are so common that they will be completely useless
 			## for reporting, but processing them will take a *lot* of time, so
-			## just skip them.
-			#if f in ['value', 'name', 'type', 'data', 'options', 'parent', 'description', 'instance', 'port', 'out', 'properties', 'project', 'next', 'id', 'listeners', 'status', 'target', 'result', 'index', 'buffer', 'values', 'count', 'size', 'key', 'path', 'cache', 'map', 'file', 'context', 'initialized', 'verbose', 'version', 'debug', 'message', 'attributes', 'url', 'DEBUG', 'NAME', 'state', 'source', 'password', 'text', 'start', 'factory', 'entries', 'buf', 'args', 'logger', 'config', 'length', 'encoding', 'method', 'resources', 'timeout', 'filename', 'offset', 'server', 'mode', 'in', 'connection']:
-			#	continue
+			## just skip them. This list is based on research of many many Java
+			## source code files.
+			if f in ['value', 'name', 'type', 'data', 'options', 'parent', 'description', 'instance', 'port', 'out', 'properties', 'project', 'next', 'id', 'listeners', 'status', 'target', 'result', 'index', 'buffer', 'values', 'count', 'size', 'key', 'path', 'cache', 'map', 'file', 'context', 'initialized', 'verbose', 'version', 'debug', 'message', 'attributes', 'url', 'DEBUG', 'NAME', 'state', 'source', 'password', 'text', 'start', 'factory', 'entries', 'buf', 'args', 'logger', 'config', 'length', 'encoding', 'method', 'resources', 'timeout', 'filename', 'offset', 'server', 'mode', 'in', 'connection']:
+				continue
 			pvs = []
 
-			###
 			fieldres = c.execute("select package from functionnamecache.fieldcache where fieldname=?", (f,)).fetchall()
 			if fieldres != []:
 				fieldres = map(lambda x: (x[0], 0), fieldres)
