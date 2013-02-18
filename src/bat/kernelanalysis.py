@@ -50,7 +50,7 @@ def kernelChecks(path, blacklist=[], envvars=None):
 		results['sysfs'] = True
 	if findSquashfs(kernel_lines) != -1:
 		results['squashfs'] = True
-	return results
+	return (['kernelchecks'], results)
 
 ## Helper method that extracts the kernel version using a regular
 ## expression. It needs printable characters for this.
@@ -63,7 +63,7 @@ def extractKernelVersion(lines):
         printables = extractor.extract_printables(lines[offset:offset+100])
         res = re.search("Linux version ([\d\.\d\w-]+) \(", printables)
         if res != None:
-                return res.groups(0)[0]
+                return (['kernelversion'], res.groups(0)[0])
         else:
                 return
 
@@ -139,4 +139,4 @@ def analyseModuleLicense(path, blacklist=[], envvars=[]):
 	if stanout == "":
 		return None
         else:
-                return stanout.strip()
+                return (['modulelicense'], stanout.strip())

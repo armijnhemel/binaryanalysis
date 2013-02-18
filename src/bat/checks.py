@@ -64,7 +64,7 @@ def searchDynamicLibs(path, blacklist=[], envvars=None):
 		if libs == []:
 			return None
 		else:
-			return libs
+			return (['libs'], libs)
 
 def dynamicLibsPrettyPrint(res, root, envvars=None):
 	tmpnode = root.createElement('libs')
@@ -91,40 +91,50 @@ def scanArchitecture(path, blacklist=[], envvars=None):
 			return
 		for line in stanout.split('\n'):
 			if "Machine:" in line:
-				return line.split(':')[1].strip()
+				return (['architecture'], line.split(':')[1].strip())
 
 def searchLoadLin(path, blacklist=[], envvars=None):
 	markerStrings = [ 'Ooops..., size of "setup.S" has become too long for LOADLIN,'
 			, 'LOADLIN started from $'
 			]
-	return genericSearch(path, markerStrings, blacklist)
+	res = genericSearch(path, markerStrings, blacklist)
+	if res != None:
+		return (['loadlin'], res)
 
 def searchIptables(path, blacklist=[], envvars=None):
 	markerStrings = [ 'iptables who? (do you need to insmod?)'
 			, 'Will be implemented real soon.  I promise ;)'
 			, 'can\'t initialize iptables table `%s\': %s'
 			]
-	return genericSearch(path, markerStrings, blacklist)
+	res = genericSearch(path, markerStrings, blacklist)
+	if res != None:
+		return (['iptables'], res)
 
 def searchDproxy(path, blacklist=[], envvars=None):
 	markerStrings = [ '# dproxy monitors this file to determine when the machine is'
 			, '# If you want dproxy to log debug info specify a file here.'
 			]
-	return genericSearch(path, markerStrings, blacklist)
+	res = genericSearch(path, markerStrings, blacklist)
+	if res != None:
+		return (['dproxy'], res)
 
 def searchEzIpupdate(path, blacklist=[], envvars=None):
 	markerStrings = [ 'ez-ipupdate Version %s, Copyright (C) 1998-'
 			, '%s says that your IP address has not changed since the last update'
 			, 'you must provide either an interface or an address'
 			]
-	return genericSearch(path, markerStrings, blacklist)
+	res = genericSearch(path, markerStrings, blacklist)
+	if res != None:
+		return (['ez-ipupdate'], res)
 
 def searchLibusb(path, blacklist=[], envvars=None):
 	markerStrings = [ 'Check that you have permissions to write to %s/%s and, if you don\'t, that you set up hotplug (http://linux-hotplug.sourceforge.net/) correctly.'
 			, 'usb_os_find_busses: Skipping non bus directory %s'
 			, 'usb_os_init: couldn\'t find USB VFS in USB_DEVFS_PATH'
 			]
-	return genericSearch(path, markerStrings, blacklist)
+	res = genericSearch(path, markerStrings, blacklist)
+	if res != None:
+		return (['libusb'], res)
 
 def searchVsftpd(path, blacklist=[], envvars=None):
 	markerStrings = [ 'vsftpd: version'
@@ -132,24 +142,36 @@ def searchVsftpd(path, blacklist=[], envvars=None):
 			, 'VSFTPD_LOAD_CONF'
 			, 'run two copies of vsftpd for IPv4 and IPv6'
 			]
-	return genericSearch(path, markerStrings, blacklist)
+
+	res = genericSearch(path, markerStrings, blacklist)
+	if res != None:
+		return (['vsftpd'], res)
 
 def searchHostapd(path, blacklist=[], envvars=None):
 	markerStrings = [ 'hostapd v'
 			]
-	return genericSearch(path, markerStrings, blacklist)
+
+	res = genericSearch(path, markerStrings, blacklist)
+	if res != None:
+		return (['hostapd'], res)
 
 def searchWpaSupplicant(path, blacklist=[], envvars=None):
 	markerStrings = [ 'wpa_supplicant v'
 			]
-	return genericSearch(path, markerStrings, blacklist)
+
+	res = genericSearch(path, markerStrings, blacklist)
+	if res != None:
+		return (['wpasupplicant'], res)
 
 def searchIproute(path, blacklist=[], envvars=None):
 	markerStrings = [ 'Usage: tc [ OPTIONS ] OBJECT { COMMAND | help }'
 			, 'tc utility, iproute2-ss%s'
 			, 'Option "%s" is unknown, try "tc -help".'
 			]
-	return genericSearch(path, markerStrings, blacklist)
+
+	res = genericSearch(path, markerStrings, blacklist)
+	if res != None:
+		return (['iproute2'], res)
 
 def searchWirelessTools(path, blacklist=[], envvars=None):
 	markerStrings = [ "Driver has no Wireless Extension version information."
@@ -158,11 +180,17 @@ def searchWirelessTools(path, blacklist=[], envvars=None):
 			, "Wireless Extension, while we are using version %d."
 			, "Currently compiled with Wireless Extension v%d."
        	                ]
-	return genericSearch(path, markerStrings, blacklist)
+
+	res = genericSearch(path, markerStrings, blacklist)
+	if res != None:
+		return (['wireless-tools'], res)
 
 def searchRedBoot(path, blacklist=[], envvars=None):
 	markerStrings = ["Display RedBoot version information"]
-	return genericSearch(path, markerStrings, blacklist)
+
+	res = genericSearch(path, markerStrings, blacklist)
+	if res != None:
+		return (['redboot'], res)
 
 def searchUBoot(path, blacklist=[], envvars=None):
         markerStrings = [ "run script starting at addr"
@@ -170,7 +198,10 @@ def searchUBoot(path, blacklist=[], envvars=None):
 			, "## Binary (kermit) download aborted"
 			, "## Ready for binary (ymodem) download "
 			]
-	return genericSearch(path, markerStrings, blacklist)
+
+	res = genericSearch(path, markerStrings, blacklist)
+	if res != None:
+		return (['uboot'], res)
 
 ## What actually do these dependencies mean?
 ## Are they dependencies of the installer itself, or of the programs that are
@@ -192,7 +223,7 @@ def searchWindowsDependencies(path, blacklist=[], envvars=None):
 	if deps == []:
 		return None
 	else:
-		return deps
+		return (['windowsdependencies'], deps)
 
 def xmlPrettyPrintWindowsDeps(res, root, envvars=None):
 	pass
@@ -242,7 +273,7 @@ def scanPDF(path, blacklist=[], envvars=None):
 					pdfinfo['optimized'] = value.strip()
 				if tag == "PDF version":
 					pdfinfo['version'] = value.strip()
-			return pdfinfo
+			return (['pdfinfo'], pdfinfo)
 
 def pdfPrettyPrint(res, root, envvars=None):
 	tmpnode = root.createElement('pdfinfo')
@@ -288,7 +319,7 @@ def scanLicenses(path, blacklist=[], envvars=None):
 	if genericSearch(path, ["http://www.tizenopensource.org/license"], blacklist):
 		results['Tizen'] = True
 	if results != {}:
-		return results
+		return (['licenses'], results)
 	else:
 		return None
 
@@ -324,7 +355,7 @@ def scanForges(path, blacklist=[], envvars=None):
 	## http://git.fedoraproject.org/git/
 	## https://fedorahosted.org/
 	if results != {}:
-		return results
+		return (['forges'], results)
 	else:
 		return None
 
@@ -348,4 +379,4 @@ def scanVirus(path, blacklist=[], envvars=None):
 		viruslines = stanout.split("\n")
 		## first line contains the report:
 		virusname = viruslines[0].strip()[len(path) + 2:-6]
-		return virusname
+		return (['virus'], virusname)

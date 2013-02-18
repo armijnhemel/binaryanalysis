@@ -27,7 +27,7 @@ def filename2package(path, blacklist=[], envvars=None):
 	res = c.fetchall()
 	## TODO: filter results, only return files that are not in tons of packages
 	if res != []:
-		return res
+		return (['file2package'], res)
 	return None
 
 def xmlprettyprint(res, root, envvars=None):

@@ -17,7 +17,7 @@ def busybox_version(filename, blacklist=[], envvars=None):
 		## if the whole file is blacklisted, we don't have to scan
                 if extractor.inblacklist(0, blacklist) == filesize:
                         return None
-		return busybox.extract_version(filename)
+		return (['busybox'], busybox.extract_version(filename))
 	except Exception, e:
 		return None
 	

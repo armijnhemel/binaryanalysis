@@ -315,6 +315,7 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 
 def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, debug)):
 	reports = {}
+	newtags = []
 
 	reports['tags'] = tags
 	for scan in scans:
@@ -333,7 +334,9 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, 
 		exec "from %s import %s as bat_%s" % (module, method, method)
 		res = eval("bat_%s(filetoscan, blacklist, envvars=envvars)" % (method))
 		if res != None:
-			reports[scan['name']] = res
+			(nt, leafres) = res
+			reports[scan['name']] = leafres
+			newtags = newtags + nt
 
 	## write pickles with information to disk here to reduce memory usage
 	try:
@@ -342,6 +345,7 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, 
 		picklefile = open('%s/filereports/%s-filereport.pickle' % (topleveldir,filehash), 'wb')
 		cPickle.dump(reports, picklefile)
 		picklefile.close()
+	return (filehash, list(set(newtags)))
 
 def aggregatescan(unpackreports, scans, scantempdir, topleveldir, debug):
 	## aggregate scans look at the entire result and possibly modify it.
@@ -785,6 +789,10 @@ def runscan(topleveldir, scans, scan_binary):
 
 		poolresult = pool.map(leafScan, leaftasks_tmp, 1)
 		pool.terminate()
+
+		## filter the results for the leafscans. These are the ones that
+		## returned tags. These need to be merged into unpackreports.
+		mergetags = filter(lambda x: x[1] != [], poolresult)
 
 	## we have a list of dicts and we just want one dict
 	for i in unpackreports_tmp:

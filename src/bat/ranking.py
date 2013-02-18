@@ -441,7 +441,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 			if blacklist != []:
 				## we made a tempfile because of blacklisting, so cleanup
 				os.unlink(tmpfile[1])
-		return (res, dynamicRes, variablepvs)
+		return (['ranking'], (res, dynamicRes, variablepvs))
 
 	except Exception, e:
 		print >>sys.stderr, "string scan failed for:", path, e, type(e)
