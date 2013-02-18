@@ -66,5 +66,4 @@ misc:
 BOTTLENECKS:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
 2. move/copy tags to unpackreports to prevent unnecessary disk access in for example findlibs, rankimages and others reading every pickle file
-3. generatenameshtml.py and generateuniquehtml.py both read pickle files and generate reports, and both are processing data from the ranking scan. By merging these the pickle files only have to be read and processed once, which should make a difference for big pickle files.
-4. variable name scanning (for C programs) in ranking needs a caching database
+3. variable name scanning (for C programs) in ranking needs a caching database

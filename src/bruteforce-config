@@ -752,20 +752,6 @@ storetarget = images
 storedir    = /tmp/images
 storetype   = .png
 
-
-[matchednames]
-type        = postrun
-module      = bat.generatenameshtml
-method      = generateHTML
-noscan      = text:xml:graphics:pdf:audio:video
-envvars     = BAT_REPORTDIR=/tmp/images
-description = Generate HTML files with matched names (functions, methods, variables, fields, etc.) for use in GUI
-enabled     = no
-storetarget = reports
-storedir    = /tmp/images
-storetype   = -names.html.gz:-functionnames.html.gz
-cleanup     = yes
-
 [rankimages]
 type        = postrun
 module      = bat.rankimages
@@ -789,5 +775,5 @@ description = Generate HTML files with links to pretty printed source code for m
 enabled     = no
 storetarget = reports
 storedir    = /tmp/images
-storetype   = -unique.html.gz:-unmatched.html.gz
+storetype   = -unique.html.gz:-unmatched.html.gz:-names.html.gz:-functionnames.html.gz
 cleanup     = yes
