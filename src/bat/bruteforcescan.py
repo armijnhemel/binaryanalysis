@@ -672,12 +672,15 @@ def writeDumpfile(unpackreports, scans, outputfile, tempdir, lite=False):
 		dumpfile.add('filereports')
 	except Exception,e:	print >>sys.stderr, e
 
+	dumpadds = []
 	for i in scans['postrunscans']:
 		if i['storedir'] != None and i['storetarget'] != None and i['storetype'] != None:
 			try:
 				os.stat(i['storetarget'])
-				dumpfile.add(i['storetarget'])
+				dumpadds.append(i['storetarget'])
 			except:	pass
+	for i in list(set(dumpadds)):
+		dumpfile.add(i)
 	dumpfile.close()
 
 def runscan(topleveldir, scans, scan_binary):
