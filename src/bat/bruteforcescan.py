@@ -599,49 +599,6 @@ def dumpData(unpackreports, scans, tempdir):
 					print >>sys.stderr, "removing failed", r, e
 					pass
 
-	'''
-	## Include a light version of the file reports pickles in scandata.pickle that has just:
-	## * libs
-	## * busybox-version
-        ## * architecture
-        ## * kernelmodulelicense
-        ## * libs
-        ## * elfused
-        ## * elfunused
-        ## * notfoundfuncs
-        ## * notfoundvars
-        ## * elfusedby
-        ## * licenses
-        ## * forges
-        ## * redboot
-        ## * kernelchecks
-        ## * tags
-        ## * mention of ranking
-	## TODO: pregenerate as postrunscan
-	for l in leafreports:
-		try:
-			os.stat('%s/filereports/%s-filereport.pickle' % (tempdir,unpackreports[l]['sha256']))
-		except:
-			picklefile = open('%s/filereports/%s-filereport.pickle' % (tempdir,unpackreports[l]['sha256']), 'wb')
-			cPickle.dump(leafreports[l], picklefile)
-			picklefile.close()
-			sys.stdout.flush()
-		if leafreports[l].has_key('ranking'):
-			(res, dynamicRes, variablepvs) = leafreports[l]['ranking']
-			newreports = []
-			if res != None:
-				for report in res['reports']:
-					## We have: (rank, s, uniqueMatches.get(s,[]), percentage, packageversions.get(s, {}), packagelicenses.get(s, []))
-					## We want: (rank, s, #unique matches, percentage, packageversions, packagelicenses)
-					if type(report[2]) != int:
-						newreports.append((report[0], report[1], len(report[2]), report[3], report[4], report[5]))
-				## we should also replace nonUniqueMatches with {}
-				leafreports[l]['ranking'][0]['nonUniqueMatches'] = {}
-				leafreports[l]['ranking'][0]['reports'] = newreports
-			if variablepvs != None:
-				leafreports[l]['ranking'] = (res, dynamicRes, None)
-	'''
-
 	picklefile = open(os.path.join(tempdir, 'scandata.pickle'), 'wb')
 	cPickle.dump((unpackreports, scans), picklefile)
 	picklefile.close()
