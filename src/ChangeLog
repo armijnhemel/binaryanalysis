@@ -1,6 +1,10 @@
 2013-02-18
 * prevent adding duplicates to report tarball
 * merge generatenameshtml.py and generateuniquehtml.py
+* fix sorting of scans
+* add some tags from leafscans to unpackreports
+* ignore files which don't have ranking results in generateuniquehtml.py and
+rankimages.py
 
 2013-02-17
 * ignore statically linked files in findlibs.py
