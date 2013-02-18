@@ -19,6 +19,8 @@ queueing system:
 
 aggregate scanning:
 * cleanup if we used one of the squashfs + lzma variants where we can't determine the size.
+* add scan for reporting duplicate files
+* add option to remove results for .class files after aggregation in JARs (unless there is cloning or if there are dangling class files)
 
 GUI:
 * rewrite to PyQt or PySide to take advantage of better rendering engine (webkit)
@@ -61,6 +63,7 @@ HTML generation:
 misc:
 * replay script to unpack firmware based on only the pickle with unpacking data
 * expand "debug"
+* add support for ignoring some file types/extensions completely
 
 BOTTLENECKS:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
