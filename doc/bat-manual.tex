@@ -7,7 +7,7 @@
 \setlength{\parskip}{4pt}
 
 \author{Armijn Hemel -- Tjaldur Software Governance Solutions}
-\title{Binary Analysis Tool User and Developer Manual - describing version 12}
+\title{Binary Analysis Tool User and Developer Manual - describing version 13}
 
 \begin{document}
 
@@ -635,16 +635,12 @@ packages from popular distributions in a database.
 \item \texttt{fsmagic.py} contains identifiers of various file systems and
 compressed files, like magic headers and offsets for which might need to be
 corrected.
-\item \texttt{fssearch.py} defines convenience functions for searching for
-certain headers. It is not widely used and likely to be removed in future
-versions.
 \item \texttt{fwunpack.py} includes most of the functionality for unpacking
 compressed files and file systems.
 \item \texttt{generatehexdump.py} and \texttt{images.py} generate textual and
 graphical representations of the input files.
-\item \texttt{generatenameshtml.py}, \texttt{generateuniquehtml.py} and
-\texttt{rankimages.py} generate textual and graphical representations of
-results of the analysis.
+\item \texttt{generateuniquehtml.py} and \texttt{rankimages.py} generate
+textual and graphical representations of results of the analysis.
 \item \texttt{jffs2.py} has code specific to handling JFFS2 file systems.
 \item \texttt{kernelanalysis.py} includes code to extract information from
 Linux kernel images and Linux kernel modules.
