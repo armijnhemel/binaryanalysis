@@ -653,6 +653,11 @@ def extractVariablesJava(javameta, scanenv, rankingfull):
 	classpvs = {}
 	sourcepvs = {}
 	fieldspvs = {}
+
+	## classes and source file names are searched in a similar way.
+	## Of course, it could be that the source file is different from the
+	## class file (apart from the extension of course) but this is very
+	## uncommon. TODO: merge class name and source file name searching
 	if class_scan:
 		c.execute("attach ? as functionnamecache", (funccache,))
 		classes = list(set(map(lambda x: x.split('$')[0], classes)))
