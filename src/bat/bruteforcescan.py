@@ -744,6 +744,7 @@ def runscan(topleveldir, scans, scan_binary):
 	pool.terminate()
 
 	poolresult = []
+	tagdict = {}
 	if scans['programscans'] != []:
 		## Sometimes there are duplicate files inside a blob. We
 		## only want to scan them once to minimize time spent on
@@ -792,11 +793,21 @@ def runscan(topleveldir, scans, scan_binary):
 		## filter the results for the leafscans. These are the ones that
 		## returned tags. These need to be merged into unpackreports.
 		mergetags = filter(lambda x: x[1] != [], poolresult)
+		for m in mergetags:
+			tagdict[m[0]] = m[1]
 
 	## we have a list of dicts and we just want one dict
 	for i in unpackreports_tmp:
 		for k in i:
 			unpackreports[k] = i[k]
+
+	for i in unpackreports.keys():
+		if not unpackreports[i].has_key('sha256'):
+			continue
+		unpacksha256 = unpackreports[i]['sha256']
+		if tagdict.has_key(unpacksha256):
+			if unpackreports[i].has_key('tags'):
+				unpackreports[i]['tags'] = list(set(unpackreports[i]['tags'] + tagdict[unpacksha256]))
 
 	if scans['aggregatescans'] != []:
 		aggregatescan(unpackreports, scans, scantempdir, topleveldir, debug)
