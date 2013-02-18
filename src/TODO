@@ -55,7 +55,6 @@ busybox scanning:
 
 HTML generation:
 * finish function name reporting
-* merge generatenameshtml.py and generateuniquehtml.py
 * clean up/rewrite/make it easier to use
 * add license information if available
 
