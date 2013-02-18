@@ -771,10 +771,9 @@ def runscan(topleveldir, scans, scan_binary):
 			if sha256_tmp[i[-2]] == i[0]:
 				leaftasks_tmp.append(i)
 
-		leaftasks_tmp = map(lambda x: x[:2] + (filterScans(scans['programscans'], x[2]),) + x[2:-1] + (topleveldir, debug), leaftasks_tmp)
-
 		## reverse sort on size: scan largest files first
 		leaftasks_tmp.sort(key=lambda x: x[-1], reverse=True)
+		leaftasks_tmp = map(lambda x: x[:2] + (filterScans(scans['programscans'], x[2]),) + x[2:-1] + (topleveldir, debug), leaftasks_tmp)
 
 		if scans['batconfig']['multiprocessing'] and not debug:
 			if False in map(lambda x: x['parallel'], scans['programscans']):
