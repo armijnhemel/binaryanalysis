@@ -47,6 +47,7 @@ ranking:
 * store info about unique strings more efficiently since often they don't change in between versions. This is to reduce memory usage.
 * deal with inner classes properly
 * use clonedb information for variable names, field names, and so on
+* use information from special ELF sections from Linux kernels that are distributed as ELF files, such as Fedora's kernels, or Linux kernel modules: __ksymtab + friends and .symtab
 
 bat-extratools:
 * add patches for CVE-2012-4024 for unsquashfs42
@@ -63,8 +64,8 @@ misc:
 * replay script to unpack firmware based on only the pickle with unpacking data
 * expand "debug"
 * add support for ignoring some file types/extensions completely
+* fix blacklisting for CPIO unpacking, which should use trailercorrection instead of trailer
 
 BOTTLENECKS:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
-2. variable name scanning (for C programs) in ranking needs a caching database
-3. fix blacklist code in ranking.py, and also copy it to busyboxversion.py and other leaf scans
+2. fix blacklist code in ranking.py, and also copy it to busyboxversion.py and other leaf scans
