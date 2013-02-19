@@ -1002,23 +1002,27 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 		c.execute("attach ? as functionnamecache", (funccache,))
 		vvs = {}
 		for v in variables:
+			## These variable names are very generic and would not be useful, so skip.
+			## This is based on research of millions of C files.
 			if v in ['options', 'debug', 'options', 'verbose']:
 				continue
-			res = c.execute("select * distinct package from functionnnamecache where varname=?", (v,)).fetchall()
+			pvs = []
+			res = c.execute("select distinct package from varnamecache where varname=?", (v,)).fetchall()
 			if res == []:
 				if rankingfull:
 					continue
-			pvs = []
-			## TODO: replace with caching database to save a lot of work
-			res = c.execute("select sha256,type,language from extracted_name where name=?", (v,)).fetchall()
-			if res != []:
-				for r in res:
-					if r[2] != 'C':
-						continue
-					if r[1] != 'variable':
-						continue
-					pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
-					pvs = list(set(pvs + pv))
+				else:
+					res = c.execute("select sha256,type,language from extracted_name where name=?", (v,)).fetchall()
+					if res != []:
+						for r in res:
+							if r[2] != 'C':
+								continue
+							if r[1] != 'variable':
+								continue
+							pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
+							pvs = list(set(pvs + pv))
+			else:
+				pvs = map(lambda x: (x[0],0), res)
 			vvs[v] = pvs
 
 		vvs_rewrite = {}
