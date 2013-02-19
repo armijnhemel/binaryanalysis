@@ -20,7 +20,7 @@ Description: Modular framework to assist auditing binary files
 
 
 ## stuff we need to find an alternative for, one day
-#requires = mtd-utils-ubi, PyXML
+#requires = mtd-utils-ubi
 
 ## libmp4v2 has a suffix on Debian/Ubuntu. On Ubuntu 10.10 and lower it's -0, later it is -2
 ## libmp4v2 is not available on Debian < 7
