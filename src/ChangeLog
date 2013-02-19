@@ -1,6 +1,10 @@
 2013-02-19
 * remove dependency on PyXML
 * add caching database in ranking.py for C variable names
+* prevent empty directories being created by ext2 scan
+* start on deduplicating 'reports' from ranking scan: there is a ton of
+repetition in them, which takes up a lot of space in the on disk pickles,
+especially for large packages like the Linux kernel
 
 2013-02-18
 * prevent adding duplicates to report tarball
