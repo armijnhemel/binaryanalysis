@@ -789,7 +789,7 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 
 	st = stanout.strip().split("\n")
 
-	if st == '':
+	if st == ['']:
 		return (dynamicRes, variablepvs)
 
 	masterdb = scanenv.get('BAT_DB')
