@@ -20,6 +20,8 @@ We are mostly interested in regular files and directories:
 
 def copydir(source, fspath, target):
 	(scandirs, scanfiles) = readfiles(source, fspath)
+	if scandirs == [] and scanfiles == []:
+		return None
 	for scandir in scandirs:
 		os.mkdir(target + "/" + scandir)
 		copydir(source, fspath + "/" + scandir, target + "/" + scandir)
@@ -28,14 +30,16 @@ def copydir(source, fspath, target):
         	(stanout, stanerr) = p.communicate()
         	if p.returncode != 0:
 			continue
+	return target
 
 def copyext2fs(source, target=None):
 	if target == None:
 		targetdir = tempfile.mkdtemp()
 	else:
 		targetdir = target
-	copydir(source, "", targetdir)
-	return targetdir
+	res = copydir(source, "", targetdir)
+	if res != None:
+		return targetdir
 
 def readfiles(source, fspath):
 	files = []

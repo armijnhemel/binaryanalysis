@@ -1726,7 +1726,10 @@ def unpackExt2fs(filename, offset, tempdir=None, unpackenv={}):
 
 	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
-	ext2.copyext2fs(tmpfile[1], tmpdir)
+	res = ext2.copyext2fs(tmpfile[1], tmpdir)
+	if res == None:
+		os.unlink(tmpfile[1])
+		return
 
 	## determine size
 	ext2size = 0
