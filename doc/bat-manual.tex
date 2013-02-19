@@ -877,16 +877,18 @@ modify results.
 Aggregators have a strict interface:
 
 \begin{verbatim}
-def aggregateexample(unpackreports, leafreports, scantempdir, envvars=None)
+def aggregateexample(unpackreports, scantempdir, envvars=None)
 \end{verbatim}
 
 \begin{itemize}
 \item \texttt{unpackreports} are the reports of the unpackers for all files
-\item \texttt{leafreports} are the reports of the unpackers for all files
 \item \texttt{scantmpdir} is the location of the top level directory of the
 scan
 \item \texttt{envvars} is an optional dictionary of environment variables
 \end{itemize}
+
+The aggregators can read the results of the leaf scans from the on disk
+pickles.
 
 \subsection{Post-run methods}
 
@@ -900,7 +902,7 @@ method.
 Post-run methods have a strict interface:
 
 \begin{verbatim}
-def postrunHelloWorld(filename, unpackreports, leafreports, envvars={}):
+def postrunHelloWorld(filename, unpackreports, envvars={}):
         print "Hello World"
 \end{verbatim}
 
@@ -908,12 +910,12 @@ def postrunHelloWorld(filename, unpackreports, leafreports, envvars={}):
 \item \texttt{filename} is the absolute path of the scanned file, after
 unpacking.
 \item \texttt{unpackreports} are the reports of the unpackers for the file
-\item \texttt{leafreports} are the reports of the unpackers for the file
 \item \texttt{envvars} is an optional dictionary of environment variables
 \end{itemize}
 
-Since the post-run methods don't change the result in any way, but just have
-side effects there is no need to return anything.
+The post-run methods can read the results of the leaf scans from the on disk
+pickles. Since the post-run methods don't change the result in any way, but
+just have side effects there is no need to return anything.
 
 \section{Building binary packages of the Binary Analysis Tool}
 
