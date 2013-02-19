@@ -1479,11 +1479,23 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, language='C'):
 		totalscore = 0.0
 	else:
 		totalscore = float(reduce(lambda x, y: x + y, scores.values()))
+
 	for s in scores_sorted:
+		udicts = []
+		if uniqueMatches.get(s,[]) != []:
+			for j in uniqueMatches.get(s,[]):
+				udict = {}
+				for k in j[1]:
+					if udict.has_key((k[0], k[2])):
+						udict[(k[0], k[2])].append((k[1], k[3]))
+					else:
+						udict[(k[0], k[2])] = [(k[1], k[3])]
+				udicts.append((j[0],udict))
 		try:
 			percentage = (scores[s]/totalscore)*100.0
 		except:
 			percentage = 0.0
+		#reports.append((rank, s, udicts, percentage, packageversions.get(s, {}), packagelicenses.get(s, [])))
 		reports.append((rank, s, uniqueMatches.get(s,[]), percentage, packageversions.get(s, {}), packagelicenses.get(s, [])))
 		rank = rank+1
 	'''
