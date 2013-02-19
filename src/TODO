@@ -46,6 +46,7 @@ ranking:
 * report correlation between packages (strings, variable names, function names) to detect cloning in the database
 * store info about unique strings more efficiently since often they don't change in between versions. This is to reduce memory usage.
 * deal with inner classes properly
+* use clonedb information for variable names, field names, and so on
 
 bat-extratools:
 * add patches for CVE-2012-4024 for unsquashfs42
