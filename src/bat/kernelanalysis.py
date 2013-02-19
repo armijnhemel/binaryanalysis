@@ -63,7 +63,7 @@ def extractKernelVersion(lines):
         printables = extractor.extract_printables(lines[offset:offset+100])
         res = re.search("Linux version ([\d\.\d\w-]+) \(", printables)
         if res != None:
-                return (['kernelversion'], res.groups(0)[0])
+                return res.groups(0)[0]
         else:
                 return
 
