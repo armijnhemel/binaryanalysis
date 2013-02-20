@@ -64,7 +64,6 @@ misc:
 * replay script to unpack firmware based on only the pickle with unpacking data
 * expand "debug"
 * add support for ignoring some file types/extensions completely
-* fix blacklisting for CPIO unpacking, which should use trailercorrection instead of trailer
 
 BOTTLENECKS:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.

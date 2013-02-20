@@ -1035,12 +1035,12 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 				continue
 			tmpdir = dirsetup(tempdir, filename, "cpio", counter)
 			## length of 'TRAILER!!!' plus 1 to include the whole trailer
-			## and cpio archives are always rounded to blocks of 512 bytes
+			## Also, cpio archives are always rounded to blocks of 512 bytes
 			trailercorrection = (512 - len(data[offset:trailer+10])%512)
 			res = unpackCpio(data[offset:trailer+10 + trailercorrection], 0, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset, 0))
-				blacklist.append((offset, trailer))
+				blacklist.append((offset, trailer + 10 + trailercorrection))
 				counter = counter + 1
 				## success with unpacking, no need to continue with
 				## the next trailer for this offset
