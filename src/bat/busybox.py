@@ -37,6 +37,7 @@ translation_table = {'1.17': translation_table_1_15}
 translation_table = {'1.18': translation_table_1_15}
 translation_table = {'1.19': translation_table_1_15}
 translation_table = {'1.20': translation_table_1_15}
+translation_table = {'1.21': translation_table_1_15}
 
 ## helper method to extract the major version of a BusyBox program:
 ## 1.15.2 becomes 1.15
