@@ -421,9 +421,9 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 
 				## cleanup
 				shutil.rmtree(dalvikdir)
-			variablepvs = extractVariablesJava(javameta, scanenv, rankingfull)
+			variablepvs = extractVariablesJava(javameta, scanenv, clones, rankingfull)
 			variablepvs['language'] = 'Java'
-			dynamicRes = extractJavaNames(javameta, scanenv, rankingfull)
+			dynamicRes = extractJavaNames(javameta, scanenv, clones, rankingfull)
 		elif language == 'JavaScipt':
 			## JavaScript can be minified, but using xgettext we
 			## can still extract the strings from it
@@ -493,7 +493,7 @@ def extractJavaNamesClass(scanfile):
 				methods.append(res.groups()[0])
 	return {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile}
 
-def extractJavaNames(javameta, scanenv, rankingfull):
+def extractJavaNames(javameta, scanenv, clones, rankingfull):
 	dynamicRes = {}  # {'namesmatched': 0, 'totalnames': int, 'uniquematches': int, 'packages': {} }
 	namesmatched = 0
 	uniquematches = 0
@@ -551,6 +551,7 @@ def extractJavaNames(javameta, scanenv, rankingfull):
 			continue
 		res = c.execute("select distinct package from functionnamecache.functionnamecache where functionname=?", (meth,)).fetchall()
 		if res != []:
+			## TODO: use information from cloning database
 			matches.append(meth)
 			namesmatched += 1
 			## unique match
@@ -595,7 +596,7 @@ def extractJavaNames(javameta, scanenv, rankingfull):
 	conn.close()
 	return dynamicRes
 
-def extractVariablesJava(javameta, scanenv, rankingfull):
+def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 	variablepvs = {}
 	if javameta.has_key('fields'):
 		fields = javameta['fields']
@@ -668,6 +669,7 @@ def extractVariablesJava(javameta, scanenv, rankingfull):
 			## use the last component only.
 			classname = i
 			classres = c.execute("select package from functionnamecache.classcache where classname=?", (classname,)).fetchall()
+			## TODO: use information from cloning database
 			if classres != []:
 				classres = map(lambda x: (x[0], 0), classres)
 				classpvs[classname] = classres
@@ -704,6 +706,7 @@ def extractVariablesJava(javameta, scanenv, rankingfull):
 		else:
 			classname = i
 		res = c.execute("select sha256,type,language from extracted_name where name=?", (classname,)).fetchall()
+		## TODO: use information from cloning database
 		if res != []:
 			for r in list(set(res)):
 				if r[2] != 'Java':
@@ -746,6 +749,7 @@ def extractVariablesJava(javameta, scanenv, rankingfull):
 			pvs = []
 
 			fieldres = c.execute("select package from functionnamecache.fieldcache where fieldname=?", (f,)).fetchall()
+			## TODO: use information from cloning database
 			if fieldres != []:
 				fieldres = map(lambda x: (x[0], 0), fieldres)
 				fieldspvs[f] = fieldres
@@ -1023,7 +1027,14 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 							pvs = list(set(pvs + pv))
 			else:
 				pvs = map(lambda x: (x[0],0), res)
-			vvs[v] = pvs
+
+			pvs_tmp = []
+			for r in pvs:
+				if clones.has_key(r[0]):
+					pvs_tmp.append((clones[r[0]],r[1]))
+				else:
+					pvs_tmp.append(r)
+			vvs[v] = pvs_tmp
 
 		vvs_rewrite = {}
 		for v in vvs.keys():
