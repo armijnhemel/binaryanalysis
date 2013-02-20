@@ -92,10 +92,11 @@ def generateHTML(filename, unpackreport, scantempdir, topleveldir, envvars={}):
 			if res['reports'] != []:
 				htmllinks = []
 				for j in res['reports']:
-					if len(j[2]) != 0:
+					(rank, packagename, uniquematches, percentage, packageversions, licenses) = j
+					if len(uniquematches) != 0:
 						## here we should either do a database lookup to get the checksum,
 						## or check if they are already in the report
-						htmllinks.append((j[1], j[2]))
+						htmllinks.append((packagename, uniquematches))
 				if htmllinks != []:
 					uniquehtml = "<html><body><h1>Unique matches per package</h1><p><ul>"
 					## first generate a header
