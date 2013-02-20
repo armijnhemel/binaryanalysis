@@ -233,7 +233,12 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 		lastindex = 0
 		databytes = ""
 		datafile.seek(lastindex)
-		for i in blacklist:
+		## make a copy and add a bogus value for the last
+		## byte to a temporary blacklist to make the loop work
+		## well.
+		blacklist_tmp = copy.deepcopy(blacklist)
+		blacklist_tmp.append((filesize,filesize))
+		for i in blacklist_tmp:
 			if i[0] == lastindex:
 				lastindex = i[1] - 1
 				datafile.seek(lastindex)

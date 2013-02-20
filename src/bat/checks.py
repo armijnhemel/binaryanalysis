@@ -11,7 +11,7 @@ proof and false positives are likely, so either check the results, or replace
 it with your own more robust checks.
 '''
 
-import string, re, os, magic, subprocess, sys
+import string, re, os, magic, subprocess, sys, tempfile, copy
 import extractor
 import xml.dom.minidom
 
@@ -20,8 +20,41 @@ def genericSearch(path, markerStrings, blacklist=[]):
         try:
 		## first see if the entire file has been blacklisted
 		filesize = os.stat(path).st_size
-		if extractor.inblacklist(0, blacklist) == filesize:
-			return None
+		carved = False
+		if blacklist != []:
+			if extractor.inblacklist(0, blacklist) == filesize:
+				return None
+			datafile = open(path, 'rb')
+			lastindex = 0
+			databytes = ""
+			datafile.seek(lastindex)
+			## make a copy and add a bogus value for the last
+			## byte to a temporary blacklist to make the loop work
+			## well.
+			blacklist_tmp = copy.deepcopy(blacklist)
+			blacklist_tmp.append((filesize,filesize))
+			for i in blacklist_tmp:
+				if i[0] == lastindex:
+					lastindex = i[1] - 1
+					datafile.seek(lastindex)
+					continue
+				if i[0] > lastindex:
+					## just concatenate the bytes
+					data = datafile.read(i[0] - lastindex)
+					databytes = databytes + data
+					## set lastindex to the next
+					lastindex = i[1] - 1
+					datafile.seek(lastindex)
+			datafile.close()
+			if len(databytes) == 0:
+				return None
+			tmpfile = tempfile.mkstemp()
+			os.write(tmpfile[0], databytes)
+			os.fdopen(tmpfile[0]).close()
+			scanfile = tmpfile[1]
+			carved = True
+			path = tmpfile[1]
+
 		datafile = open(path, 'rb')
 		databuffer = []
 		offset = 0
@@ -30,13 +63,17 @@ def genericSearch(path, markerStrings, blacklist=[]):
 		while databuffer != '':
 			for marker in markerStrings:
 				markeroffset = databuffer.find(marker)
-				if markeroffset != -1 and not extractor.inblacklist(offset, blacklist):
+				if markeroffset != -1:
+					if carved:
+						os.unlink(path)
 					return True
 			## move the offset 100000
 			datafile.seek(offset + 100000)
 			databuffer = datafile.read(100000)
 			offset = offset + len(databuffer)
 		datafile.close()
+		if carved:
+			os.unlink(path)
         except Exception, e:
                 return None
 	return None

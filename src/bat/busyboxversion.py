@@ -7,7 +7,7 @@
 ## Stand alone module to determine the version of BusyBox. Has a method for being called
 ## from one of the default scans, but can also be invoked separately.
 
-import sys, os, tempfile
+import sys, os, tempfile, copy
 from optparse import OptionParser
 import busybox, extractor
 
@@ -18,11 +18,16 @@ def busybox_version(filename, blacklist=[], envvars=None):
 		if blacklist != []:
                 	if extractor.inblacklist(0, blacklist) == filesize:
 				return None
+			## make a copy and add a bogus value for the last
+			## byte to a temporary blacklist to make the loop work
+			## well.
+			blacklist_tmp = copy.deepcopy(blacklist)
+			blacklist_tmp.append((filesize,filesize))
 			datafile = open(filename, 'rb')
 			lastindex = 0
 			databytes = ""
 			datafile.seek(lastindex)
-			for i in blacklist:
+			for i in blacklist_tmp:
 				if i[0] == lastindex:
 					lastindex = i[1] - 1
 					datafile.seek(lastindex)
