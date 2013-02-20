@@ -1,3 +1,8 @@
+2013-02-20
+* use clearer variable names in generateuniquehtml.py
+* don't dump configuration as part of scandata.pickle, but copy the original
+configuration file into the result archive
+
 2013-02-19
 * remove dependency on PyXML
 * add caching database in ranking.py for C variable names

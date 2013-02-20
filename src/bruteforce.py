@@ -53,6 +53,7 @@ def main(argv):
 
 	config.readfp(configfile)
 	scans = bat.bruteforcescan.readconfig(config)
+	configfile.close()
 
 	scandate = datetime.datetime.utcnow()
 
@@ -68,7 +69,7 @@ def main(argv):
 		output = bat.bruteforcescan.prettyprint(scans['batconfig'], unpackreports, scandate, scans, os.path.basename(scan_binary), tempdir)
 		print output
 
-	bat.bruteforcescan.writeDumpfile(unpackreports, scans, options.outputfile, tempdir, scans['batconfig']['outputlite'])
+	bat.bruteforcescan.writeDumpfile(unpackreports, scans, options.outputfile, os.path.realpath(options.cfg), tempdir, scans['batconfig']['outputlite'])
 
 if __name__ == "__main__":
         main(sys.argv)

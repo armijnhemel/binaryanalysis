@@ -65,7 +65,6 @@ misc:
 * expand "debug"
 * add support for ignoring some file types/extensions completely
 * fix blacklisting for CPIO unpacking, which should use trailercorrection instead of trailer
-* copy BAT configuration file into dump directory, instead of dumping processed configuration in pickle
 
 BOTTLENECKS:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.

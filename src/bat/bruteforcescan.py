@@ -600,7 +600,7 @@ def dumpData(unpackreports, scans, tempdir):
 					pass
 
 	picklefile = open(os.path.join(tempdir, 'scandata.pickle'), 'wb')
-	cPickle.dump((unpackreports, scans), picklefile)
+	cPickle.dump(unpackreports, picklefile)
 	picklefile.close()
 
 def compressPickle((infile)):
@@ -615,10 +615,11 @@ def compressPickle((infile)):
 ## packed are hardcoded, the other files are determined from the configuration.
 ## The configuration option 'lite' allows to leave out the extracted data, to
 ## speed up extraction of data in the GUI.
-def writeDumpfile(unpackreports, scans, outputfile, tempdir, lite=False):
+def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=False):
 	dumpData(unpackreports, scans, tempdir)
 	dumpfile = tarfile.open(outputfile, 'w:gz')
 	os.chdir(tempdir)
+	shutil.copy(configfile, '.')
 	dumpfile.add('scandata.pickle')
 	if not lite:
 		dumpfile.add('data')
