@@ -234,8 +234,10 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 		databytes = ""
 		datafile.seek(lastindex)
 		for i in blacklist:
-			## This is incorrect and will not work if a part of a file is blacklisted starting at offset 0
-			## TODO: fix this
+			if i[0] == lastindex:
+				lastindex = i[1] - 1
+				datafile.seek(lastindex)
+				continue
 			if i[0] > lastindex:
 				## just concatenate the bytes
 				data = datafile.read(i[0] - lastindex)
