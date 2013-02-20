@@ -4,6 +4,7 @@
 configuration file into the result archive
 * update busybox scanning to also support 1.21
 * use cloning database for C variable names
+* fix blacklisting for ranking, busybox and individual checks
 
 2013-02-19
 * remove dependency on PyXML
