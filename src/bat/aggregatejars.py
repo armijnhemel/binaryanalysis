@@ -54,6 +54,7 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, envvars=None):
 		classreports = map(lambda x: unpackreports[x], classfiles)
 		jartasks.append((i, unpackreports[i], classreports, topleveldir))
 	res = pool.map(aggregate, jartasks, 1)
+	pool.terminate()
 
 def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 	rankres = {}
