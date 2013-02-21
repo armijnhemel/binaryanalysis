@@ -1,7 +1,7 @@
 import os, sys, subprocess, re, zlib, tempfile
 
 ## Binary Analysis Tool
-## Copyright 2011-2012 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2011-2013 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 ## method to process output of jffs2dump and read all the inodes from a JFFS2 file system.
