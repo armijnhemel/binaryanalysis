@@ -512,6 +512,7 @@ def readconfig(config):
 				aggregatescans.append(conf)
 	## sort the prerun scans on priority (highest priority first)
 	prerunscans = sorted(prerunscans, key=lambda x: x['priority'], reverse=True)
+	aggregatescans = sorted(aggregatescans, key=lambda x: x['priority'], reverse=True)
 	return {'batconfig': batconf, 'unpackscans': unpackscans, 'programscans': programscans, 'prerunscans': prerunscans, 'postrunscans': postrunscans, 'aggregatescans': aggregatescans}
 
 def prettyprint(batconf, res, scandate, scans, toplevelfile, topleveldir):
