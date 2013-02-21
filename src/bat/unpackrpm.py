@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2009-2012 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2009-2013 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -11,7 +11,7 @@ failures on systems that don't have the Python RPM bindings installed.
 
 import sys, os, subprocess, os.path
 import tempfile, magic, rpm
-import fsmagic, extractor, fwunpack
+import extractor, fwunpack
 
 def unpackRPM(filename, offset, tempdir=None):
 	## Assumes (for now) that rpm2cpio is in the path
