@@ -13,16 +13,14 @@ contain enough information. By aggregating the results of these classes
 it is possible to get a better view of what is inside a JAR.
 '''
 
-def generateversionchart((versionpickle, picklehash, package, versiontype, imagedir, pickledir)):
-	p = subprocess.Popen(['bat-generate-version-chart.py', '-i', os.path.join(pickledir, versionpickle), '-o', '%s/%s-%s-%s.png' % (imagedir, picklehash, package, versiontype)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+def generateversionchart((versionpickle, picklehash, imagedir, pickledir)):
+	p = subprocess.Popen(['bat-generate-version-chart.py', '-i', os.path.join(pickledir, versionpickle), '-o', '%s/%s.png' % (imagedir, picklehash)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		print >>sys.stderr, stanerr
-		os.unlink(os.path.join(pickledir, versionpickle))
 		return None
 	else:
-		os.unlink(os.path.join(pickledir, versionpickle))
-		return '%s-%s-%s.png' % (picklehash, package, versiontype)
+		return '%s.png' % (picklehash, )
 
 ## compute a SHA256 hash. This is done in chunks to prevent a big file from
 ## being read in its entirety at once, slowing down a machine.
@@ -112,6 +110,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 							pickletofile[picklehash].append(filehash)
 						else:
 							pickletofile[picklehash] = [filehash]
+						versionpicklespackages.append((picklehash, package))
 						os.unlink(tmppickle[1])
 					else:
 						shutil.move(tmppickle[1], pickledir)
@@ -144,6 +143,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 							pickletofile[picklehash].append(filehash)
 						else:
 							pickletofile[picklehash] = [filehash]
+						funcpicklespackages.append((picklehash, package))
 						os.unlink(tmppickle[1])
 					else:
 						shutil.move(tmppickle[1], pickledir)
@@ -156,13 +156,47 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 							pickletofile[picklehash] = [filehash]
 			processed.append(filehash)
 
+	funcpicklespackages = list(set(funcpicklespackages))
+	versionpicklespackages = list(set(versionpicklespackages))
+	#pool = multiprocessing.Pool(processes=1)
 	pool = multiprocessing.Pool()
-	generatetasks = map(lambda x: (picklehashes[x[0]],) + x + ("funcversion", imagedir, pickledir), funcpicklespackages) + map(lambda x: (picklehashes[x[0]],) + x + ("version", imagedir, pickledir), versionpicklespackages)
-	results = pool.map(generateversionchart, generatetasks)
+	generatetasks = map(lambda x: (picklehashes[x[0]], x[0], imagedir, pickledir), funcpicklespackages) + map(lambda x: (picklehashes[x[0]], x[0], imagedir, pickledir), versionpicklespackages)
+	results = pool.map(generateversionchart, list(set(generatetasks)), 1)
 	pool.terminate()
 	results = filter(lambda x: x != None, results)
-	for r in results:
-		(filehash, extension) = r.split('-', 1)
+
+	funcpickletopackage = {}
+	for r in list(set(funcpicklespackages)):
+		if funcpickletopackage.has_key(r[0]):
+			funcpickletopackage[r[0]].append(r[1])
+		else:
+			funcpickletopackage[r[0]] = [r[1]]
+	
+	versionpickletopackage = {}
+	for r in list(set(versionpicklespackages)):
+		if versionpickletopackage.has_key(r[0]):
+			versionpickletopackage[r[0]].append(r[1])
+		else:
+			versionpickletopackage[r[0]] = [r[1]]
+
+	## TODO: right now too many results are being copied.
+	for r in list(set(results)):
+		filehash = r.split('.', 1)[0]
+		## remove .png and either -funcversion or -version
 		for f in pickletofile[filehash]:
-			shutil.copy(os.path.join(imagedir, r), os.path.join(imagedir, "%s-%s" % (f, extension)))
+			if not funcpickletopackage.has_key(filehash) and not versionpickletopackage.has_key(filehash):
+				## this should not happen
+				continue
+			if versionpickletopackage.has_key(filehash):
+				for e in versionpickletopackage[filehash]:
+					extension = "version.png"
+					shutil.copy(os.path.join(imagedir, r), os.path.join(imagedir, "%s-%s-%s" % (f, e, extension)))
+			if funcpickletopackage.has_key(filehash):
+				for e in funcpickletopackage[filehash]:
+					extension = "funcversion.png"
+					shutil.copy(os.path.join(imagedir, r), os.path.join(imagedir, "%s-%s-%s" % (f, e, extension)))
 		os.unlink(os.path.join(imagedir, r))
+
+	## cleanup
+	for i in list(set(map(lambda x: x[0], funcpicklespackages + versionpicklespackages))):
+		os.unlink(os.path.join(pickledir, picklehashes[i]))
