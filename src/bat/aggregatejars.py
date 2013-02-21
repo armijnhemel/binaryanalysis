@@ -76,6 +76,10 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, envvars=None):
 		pv = {}
 
 		for c in classfiles:
+			if not unpackreports[c].has_key('tags'):
+				continue
+			if not 'ranking' in unpackreports[c]['tags']:
+				continue
 			filehash = unpackreports[c]['sha256']
 			if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 				continue
@@ -83,10 +87,6 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, envvars=None):
 			leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 			leafreports = cPickle.load(leaf_file)
 			leaf_file.close()
-			if not leafreports.has_key('ranking'):
-				continue
-			if not leafreports.has_key('tags'):
-				continue
 			if not 'binary' in leafreports['tags']:
 				continue
 			(stringmatches, dynamicres, varfunmatches) = leafreports['ranking']
