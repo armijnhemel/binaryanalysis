@@ -126,7 +126,6 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 			## generate version information for functions
 			if dynamicRes.has_key('packages'):
 				for package in dynamicRes['packages']:
-					print >>sys.stderr, "PACKAGE", package, filehash
 					packagedata = copy.copy(dynamicRes['packages'][package])
 					tmppickle = tempfile.mkstemp()
 					pickledata = []
