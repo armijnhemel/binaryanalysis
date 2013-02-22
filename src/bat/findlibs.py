@@ -94,6 +94,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 
 	## Store all local and remote function names for each dynamic ELF executable
 	## or library on the system.
+	## TODO: make parallel
 	for i in elffiles:
 		remotefuncs = []
 		localfuncs = []
