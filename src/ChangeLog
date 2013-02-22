@@ -1,7 +1,15 @@
+2013-02-21
+* let aggregatescans check unpackreports instead of leafreports for tags in
+sanity checks
+* add priority for aggregatescans
+* parallellise aggregatejars.py
+* start on deduplicating generating images
+
 2013-02-20
 * use clearer variable names in generateuniquehtml.py
 * don't dump configuration as part of scandata.pickle, but copy the original
 configuration file into the result archive
+* fix blacklisting for CPIO
 * update busybox scanning to also support 1.21
 * use cloning database for C variable names
 * fix blacklisting for ranking, busybox and individual checks
