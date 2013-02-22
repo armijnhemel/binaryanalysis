@@ -70,5 +70,3 @@ BOTTLENECKS:
 2. There can be a lot of duplication in generating the pictures, especially the version charts. In one of my test cases there are several thousands of duplicates. To avoid this an aggregate scan should first write the individual pickles and store what they belong to (possibly in parallel, but then there might be race conditions). Then the aggregatescan should generate the pictures in parallel (using a Pool of its own).
 3. After 2. it makes sense to let ranking (or the aggregate scan of 2) write data that rankimages.py can use to generate piecharts. This way rankimages.py would not have to read pickles, or only would have to read significantly smaller pickles.
 4. preread (in parallel) leafreports of Java .class files which are shared between several JAR files for aggregate jars. This saves opening and reading the same files.
-5. deduplicate in XML pretty printing: don't read the same files over and over again
-6. finish tagging of Java .class files to prevent LZMA from scanning: add identifier(s) for Java class files to fsmagic, add more checks
