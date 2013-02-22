@@ -13,6 +13,18 @@ a method that has the same parameters as prettyprintresxml
 * toplevelfile: name of top level file so the root can be determined easily
 * topleveldir: name of the directory where results are stored so pickles with results can be found
 * envvars: a set of environment variables, possibly None
+
+Ideally the XML snippets would be generated in parallel. Unfortunately it seems that the
+way that the XML is generated does not work nicely with multiprocessing which passes parameters
+as pickles and recursion depth is quickly reached, especially with ranking.
+
+Making a deepcopy() and returning that fixes it, but unfortunately there is this bug:
+
+http://bugs.python.org/issue10131
+
+Using cloneNode() does not work properly because of the way that the root document element
+is passed: its type is <'instance'> but it needs to be xml.dom.minidom.Element. The __class__
+variable is set to this value, but that does not help.
 '''
 
 import xml.dom.minidom
