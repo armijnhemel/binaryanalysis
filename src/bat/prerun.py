@@ -544,25 +544,29 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	return newtags
 
 ## simple helper method to verify if a file is a valid Java class file
-def verifyJavaClass(filename):
+def verifyJavaClass(filename, tempdir=None, tags=[], offsets={}, envvars=None):
+	newtags = []
+	if not offsets.has_key('java'):
+		return newtags
+	if offsets['java'] == []:
+		return newtags
+	if offsets['java'][0] != 0:
+		return newtags
+	if len(offsets['java']) != 1:
+		return newtags
 	if not filename.lower().endswith('.class'):
-		return False
-	datafile = open(filename, 'rb')
-	databuffer = datafile.read(100)
-	datafile.close()
-	## as an extra measure we should check that "\xca\xfe\xba\xbe" occurs only
-	## once in the entire file.
-	if not databuffer[0:4] == "\xca\xfe\xba\xbe":
-		return False
-	## This will only work if the file has either one or multiple valid class files,
-	## starting with a valid class file and ending with a valid class file, or class
-	## files followed by random garbage, but no partial class file.
-	p = subprocess.Popen(['jcf-dump', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		return newtags
+	## The following will only work if the file has either one or multiple valid class
+	## files, starting with a valid class file and ending with a valid class file, or
+	## class files followed by random garbage, but no partial class file.
+	## The only case that might slip through here is if there is a class file with random
+	## garbage following the class file
+	p = subprocess.Popen(['jcf-dump', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		return False
+		return newtags
 	## TODO: add more checks
-	return True
+	return ['java']
 
 ## Method to verify if a ZIP file is actually a JAR and tag it as such.
 def verifyJAR(filename, tempdir=None, tags=[], offsets={}, envvars=None):
