@@ -7,10 +7,26 @@
 import os, os.path, sys, subprocess, copy, cPickle, tempfile, hashlib, shutil, multiprocessing
 
 '''
-This plugin is used to aggregate ranking results for Java JAR files.
-The ranking scan only ranks individual class files, which often do not
-contain enough information. By aggregating the results of these classes
-it is possible to get a better view of what is inside a JAR.
+This plugin is used to generate pictures. It is run as an aggregate scan for
+a reason: as it turns out many pictures that are generated are identical:
+piecharts of programs from the same package are often the same, version
+information is often the same since the same database is used.
+
+This is especially true for Java class files where there are often just a few
+strings or methods from a single class file, which can lead to 80% of the
+pictures being exact duplicates.
+
+Since generating pictures can have quite a bit of overhead (especially with
+the current scripts) it makes sense to first deduplicate and then generate
+pictures.
+
+The method works as follows:
+
+1. All data from pickles that is needed to generate pictures is extracted.
+2. The checksum of the pickle is computed and recorded. If there is a duplicate
+the pickle is removed and it is recorded which file it originally belonged to.
+3. Pictures are generated in parallel for the remaining pickle files.
+4. The pictures are copied and renamed.
 '''
 
 def generateversionchart((versionpickle, picklehash, imagedir, pickledir)):
@@ -54,9 +70,11 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 			os.makedirs(imagedir)
 		except Exception, e:
 			return
-	## TODO: remove hardcoded path
+	## TODO: remove hardcoded path and verify pickledir actually exists
 	pickledir = '/tmp/pickle'
 	rankingfiles = []
+
+	## filter out the files which don't have ranking results
 	for i in unpackreports:
 		if not unpackreports[i].has_key('sha256'):
 			continue
@@ -79,18 +97,18 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 		filehash = unpackreports[r]['sha256']
 		if filehash in processed:
 			continue
+
 		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 		leafreports = cPickle.load(leaf_file)
 		leaf_file.close()
 
-		## generate piechart and version information
 		if leafreports.has_key('ranking'):
 			## the ranking result is (res, dynamicRes, variablepvs)
 			(res, dynamicRes, variablepvs) = leafreports['ranking']
 			if res == None and dynamicRes == {}:
 				continue
 
-			## generate version information for strings
+			## extract pickles with version information for strings
 			for j in res['reports']:
 				if j[4] != {}:
 					package = j[1]
@@ -122,7 +140,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 						else:
 							pickletofile[picklehash] = [filehash]
 
-			## generate version information for functions
+			## extract pickles with version information for functions
 			if dynamicRes.has_key('packages'):
 				for package in dynamicRes['packages']:
 					packagedata = copy.copy(dynamicRes['packages'][package])
@@ -158,7 +176,6 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 
 	funcpicklespackages = list(set(funcpicklespackages))
 	versionpicklespackages = list(set(versionpicklespackages))
-	#pool = multiprocessing.Pool(processes=1)
 	pool = multiprocessing.Pool()
 	generatetasks = map(lambda x: (picklehashes[x[0]], x[0], imagedir, pickledir), funcpicklespackages) + map(lambda x: (picklehashes[x[0]], x[0], imagedir, pickledir), versionpicklespackages)
 	results = pool.map(generateversionchart, list(set(generatetasks)), 1)
