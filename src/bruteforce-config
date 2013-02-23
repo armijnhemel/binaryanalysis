@@ -482,6 +482,7 @@ type        = unpack
 module      = bat.fwunpack
 method      = searchUnpackUPX
 priority    = 3
+magic       = upx
 noscan      = text:xml:graphics:pdf:compressed:audio:video
 description = Unpack UPX compressed executables
 enabled     = yes

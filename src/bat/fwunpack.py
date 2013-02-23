@@ -131,6 +131,10 @@ def searchUnpackBase64(filename, tempdir=None, blacklist=[], offsets={}, envvars
 
 ## decompress executables that have been compressed with UPX.
 def searchUnpackUPX(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('upx'):
+		return ([], blacklist, [])
+	if offsets['upx'] == []:
+		return ([], blacklist, [])
 	p = subprocess.Popen(['upx', '-t', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:

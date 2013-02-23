@@ -1,3 +1,6 @@
+2013-02-23
+* add identifier for UPX
+
 2013-02-21
 * let aggregatescans check unpackreports instead of leafreports for tags in
 sanity checks
