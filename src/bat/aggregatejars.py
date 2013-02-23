@@ -14,10 +14,24 @@ it is possible to get a better view of what is inside a JAR.
 '''
 
 def aggregatejars(unpackreports, scantempdir, topleveldir, envvars=None):
+	cleanclasses = False
+
+	scanenv = os.environ.copy()
+	if envvars != None:
+		for en in envvars.split(':'):
+			try:
+				(envname, envvalue) = en.split('=')
+				scanenv[envname] = envvalue
+			except Exception, e:
+				pass
+	if scanenv.has_key('AGGREGATE_CLEAN'):
+		cleanclasses = True
+
 	## find all JAR files. Do this by:
 	## 1. checking the tags for 'zip'
 	## 2. verifying for unpacked files that there are .class files
 	## 3. possibly verifying there is a META-INF directory with a manifest
+	sha256stofiles = {}
 	jarfiles = []
 	for i in unpackreports:
 		if not unpackreports[i].has_key('sha256'):
@@ -26,6 +40,11 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, envvars=None):
 			filehash = unpackreports[i]['sha256']
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue
+		if cleanclasses:
+			if sha256stofiles.has_key(filehash):
+				sha256stofiles[filehash].append(i)
+			else:
+				sha256stofiles[filehash] = [i]
 		## check extension: JAR, WAR, RAR (not Resource adapter), EAR
 		i_nocase = i.lower()
 		if i_nocase.endswith('.jar') or i_nocase.endswith('.ear') or i_nocase.endswith('.war') or i_nocase.endswith('.rar'):
@@ -56,6 +75,13 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, envvars=None):
 	res = pool.map(aggregate, jartasks, 1)
 	pool.terminate()
 
+	## if cleanclasses is set the following should be removed:
+	## * reference in unpackreports (always)
+	## * pickle of file, only if either unique to a JAR, or shared in several JARs,
+	##   but not when the class file can also be found outside of a JAR.
+	#if cleanclasses:
+	#	classfiles = filter(lambda x: x.endswith('.class'), unpackreports[i]['scans'][0]['scanreports'])
+
 def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 	rankres = {}
 	matchedlines = 0
@@ -83,6 +109,7 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 	pv = {}
 
 	for c in unpackreports:
+		## sanity checks
 		if not c.has_key('tags'):
 			continue
 		if not 'ranking' in c['tags']:
@@ -90,10 +117,13 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 		filehash = c['sha256']
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue
-		## sanity checks
+
+		## read pickle file
 		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 		leafreports = cPickle.load(leaf_file)
 		leaf_file.close()
+
+		## and more sanity checks
 		if not 'binary' in leafreports['tags']:
 			continue
 		(stringmatches, dynamicres, varfunmatches) = leafreports['ranking']
