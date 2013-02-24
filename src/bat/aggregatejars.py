@@ -24,7 +24,7 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, envvars=None):
 				scanenv[envname] = envvalue
 			except Exception, e:
 				pass
-	if scanenv.has_key('AGGREGATE_CLEAN'):
+	if scanenv.get('AGGREGATE_CLEAN', 0) == '1':
 		cleanclasses = True
 
 	## find all JAR files. Do this by:
