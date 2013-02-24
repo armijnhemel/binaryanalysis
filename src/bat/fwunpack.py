@@ -2157,6 +2157,8 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		if endofcentraldir != None:
 			endofcentraldir_offset = endofcentraldir
 			blacklist.append((offset, offset + endofcentraldir))
+			## this check is apparently not valid for files packed with PACK200
+			## TODO: fix this
 			if offset == 0 and res != None and offset + endofcentraldir +22 == os.stat(filename).st_size:
 				tags.append('zip')
 				tags.append('compressed')
