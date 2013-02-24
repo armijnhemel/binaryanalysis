@@ -34,6 +34,7 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, envvars=None):
 	sha256stofiles = {}
 	jarfiles = []
 	sha256seen = []
+	alljarfiles = []
 	for i in unpackreports:
 		if not unpackreports[i].has_key('sha256'):
 			continue
@@ -50,6 +51,7 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, envvars=None):
 		i_nocase = i.lower()
 		if i_nocase.endswith('.jar') or i_nocase.endswith('.ear') or i_nocase.endswith('.war') or i_nocase.endswith('.rar'):
 			if filehash in sha256seen:
+				alljarfiles.append(i)
 				continue
 			leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 			leafreports = cPickle.load(leaf_file)
@@ -70,6 +72,7 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, envvars=None):
 							continue
 						jarfiles.append(i)
 						sha256seen.append(filehash)
+						alljarfiles.append(i)
 	pool = multiprocessing.Pool()
 	jartasks = []
 
@@ -79,6 +82,14 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, envvars=None):
 		jartasks.append((i, unpackreports[i], classreports, topleveldir))
 	res = pool.map(aggregate, jartasks, 1)
 	pool.terminate()
+
+	## TODO: only for files for which there actually is a result, plus
+	## all the clones of these files
+	for i in alljarfiles:
+		if unpackreports[i].has_key('tags'):
+			unpackreports[i]['tags'].append('ranking')
+		else:
+			unpackreports[i]['tags'] = ['ranking']
 
 	## if cleanclasses is set the following should be removed:
 	## * reference in unpackreports (always)
@@ -270,6 +281,7 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 	rankres['reports'] = reports
 
 	## now write the new result
+	## TODO: only do this if there actually is an aggregate result
 	filehash = jarreport['sha256']
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 	leafreports = cPickle.load(leaf_file)
