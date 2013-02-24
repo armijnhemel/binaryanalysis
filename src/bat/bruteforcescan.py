@@ -784,7 +784,9 @@ def runscan(topleveldir, scans, scan_binary):
 		## already, so we can just reuse it here.
 		postrunscans = []
 		for i in map(lambda x: x[len(scantempdir)+1:], sha256_tmp.values()):
-			postrunscans.append((i, unpackreports[i], scans['postrunscans'], scantempdir, topleveldir, debug))
+			## results might have been changed by aggregate scans, so check if it still exists
+			if unpackreports.has_key(i):
+				postrunscans.append((i, unpackreports[i], scans['postrunscans'], scantempdir, topleveldir, debug))
 
 		if scans['batconfig']['multiprocessing'] and not debug:
 			if False in map(lambda x: x['parallel'], scans['postrunscans']):
