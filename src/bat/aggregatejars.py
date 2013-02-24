@@ -33,6 +33,7 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, envvars=None):
 	## 3. possibly verifying there is a META-INF directory with a manifest
 	sha256stofiles = {}
 	jarfiles = []
+	sha256seen = []
 	for i in unpackreports:
 		if not unpackreports[i].has_key('sha256'):
 			continue
@@ -48,6 +49,8 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, envvars=None):
 		## check extension: JAR, WAR, RAR (not Resource adapter), EAR
 		i_nocase = i.lower()
 		if i_nocase.endswith('.jar') or i_nocase.endswith('.ear') or i_nocase.endswith('.war') or i_nocase.endswith('.rar'):
+			if filehash in sha256seen:
+				continue
 			leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 			leafreports = cPickle.load(leaf_file)
 			leaf_file.close()
@@ -66,8 +69,10 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, envvars=None):
 						if unpackreports[i]['scans'][0]['scanname'] != 'zip':
 							continue
 						jarfiles.append(i)
+						sha256seen.append(filehash)
 	pool = multiprocessing.Pool()
 	jartasks = []
+
 	for i in jarfiles:
 		classfiles = filter(lambda x: x.endswith('.class'), unpackreports[i]['scans'][0]['scanreports'])
 		classreports = map(lambda x: unpackreports[x], classfiles)
@@ -79,8 +84,21 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, envvars=None):
 	## * reference in unpackreports (always)
 	## * pickle of file, only if either unique to a JAR, or shared in several JARs,
 	##   but not when the class file can also be found outside of a JAR.
-	#if cleanclasses:
-	#	classfiles = filter(lambda x: x.endswith('.class'), unpackreports[i]['scans'][0]['scanreports'])
+	if cleanclasses:
+		for i in jarfiles:
+			classfiles = filter(lambda x: x.endswith('.class'), unpackreports[i]['scans'][0]['scanreports'])
+			for c in classfiles:
+				filehash = unpackreports[c]['sha256']
+				if len(sha256stofiles[filehash]) == 1:
+					try:
+						os.unlink(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash))
+					except Exception, e:
+						print >>sys.stderr, "error removing", c, e
+						sys.stderr.flush()
+					sha256stofiles[filehash].remove(c)
+				else:
+					sha256stofiles[filehash].remove(c)
+				del unpackreports[c]
 
 def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 	rankres = {}
