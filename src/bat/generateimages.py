@@ -70,8 +70,17 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 			os.makedirs(imagedir)
 		except Exception, e:
 			return
-	## TODO: remove hardcoded path and verify pickledir actually exists
-	pickledir = '/tmp/pickle'
+
+	pickledir = scanenv.get('BAT_PICKLEDIR', "%s/%s" % (topleveldir, "pickles"))
+	try:
+		os.stat(pickledir)
+	except:
+		## BAT_PICKLEDIR does not exist
+		try:
+			os.makedirs(pickledir)
+		except Exception, e:
+			return
+
 	rankingfiles = []
 
 	## filter out the files which don't have ranking results
