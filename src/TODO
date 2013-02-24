@@ -12,6 +12,7 @@ compression:
 * E00
 * 7z only works if a whole file is compressed with 7z. Rework and test with D-Link firmware DSL-524T_FW_V3.00B01T02.UK-A.20060621.zip
 * create workaround for https://bugzilla.redhat.com/show_bug.cgi?id=907442
+* pack200 (unzip)
 
 queueing system:
 * let top level script also read from a queue

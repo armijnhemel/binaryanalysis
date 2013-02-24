@@ -1,3 +1,11 @@
+2013-02-24
+* don't scan identical JAR files in aggregatejars.py in parallel: it could
+lead to race conditions when writing the result file, plus also costs more
+time scanning.
+* add code to optionally remove results of .class files after aggregating JAR
+results. This saves time generating pictures for individual class files, which
+might not be very interesting.
+
 2013-02-23
 * add identifier for UPX
 
