@@ -21,12 +21,12 @@ companies check binary files. Its primary application is for Open Source
 software license compliance, with a special focus on supply chain management
 in consumer electronics.
 
-BAT consists of several scripts written in Python. The most important program
+BAT consists of several programs written in Python. The most important program
 is the scanner for binary objects to detect the presence of Open Source
 software inside binaries. There are also other programs to help with specific
 tasks, such as verifying if configurations for a given BusyBox binary match
 with the configuration in source code. Also included is a very experimental
-program to help scan Linux kernel images and a script to derive a Linux kernel
+program to help scan Linux kernel images and a script to derive a possible
 configuration from a Linux kernel image.
 
 \section{Installing the Binary Analysis Tool}
@@ -149,7 +149,7 @@ description = Unpack JFFS2 file systems
 enabled     = yes
 \end{verbatim}
 
-In BAT 12.0 the following file systems, compressed files and media files can be
+In BAT 13.0 the following file systems, compressed files and media files can be
 unpacked or extracted:
 
 \begin{itemize}
@@ -204,8 +204,8 @@ The current program scans that are available in BAT are:
 \begin{itemize}
 \item fast string searches: dproxy, ez-ipupdate, iptables, iproute, libusb,
 Linux kernel, loadlin, RedBoot, U-Boot, vsftpd, wireless-tools, wpa-supplicant
-\item advanced search mode using ranking of strings and function names, using a
-database
+\item advanced search mode using ranking of strings, function names, variable
+names, field names and Java class names using a database
 \item BusyBox version number
 \item dynamic library dependencies (ELF files only)
 \item Linux kernel module license (Linux kernel modules only)
@@ -224,18 +224,20 @@ investigation the advanced search mode should be used.
 
 \subsubsection{Aggregators}
 
-Sometimes it helps to aggregate results of a number of files, or other actions
-that can only be run after all the individual scans have run. The best example
-is dealing with JAR-files (Java ARchives). Individual Java class files often
-contain too little information to map them reliably to a source code file.
+Sometimes it helps to aggregate results of a number of files, or it could be
+useful to perform other actions after all the individual scans have run. The
+best example is dealing with JAR-files (Java ARchives). Individual Java class
+files often contain too little information to map them reliably to a source
+code file.
+
 Typically a class file contains just a few method names, or field names, or
 strings. If inner classes are used it can be even worse and information from a
 single source code file could be scattered across several class files.
 
 Since Java programs (note: excluding Android) are typically distributed as a
-JAR that is either included or directly executed, similar to an ELF library or
-ELF executable, it makes perfect sense to treat the JAR file as a single file
-and aggregate results.
+JAR that is either included at runtime or directly executed, similar to an ELF
+library or ELF executable, it makes perfect sense to treat the JAR file as a
+single file and aggregate results.
 
 Aggregators take all results of the entire scan as input.
 
@@ -1050,7 +1052,6 @@ python generatelist.py -f /path/to/directory/with/sources | sort >
    /path/to/directory/with/sources/LIST
 \end{verbatim}
 
-
 \texttt{generatelist.py} tries to determine the name of the package by
 splitting the file name on the right on a \texttt{-} (dash)
 character. This is not always done correctly because a package uses multiple
@@ -1743,7 +1744,7 @@ configuration of BAT tries to be sensible, with a trade off between performance
 and completeness. In some cases there is quite a bit of performance to be
 gained by tweaking the configuration.
 
-\subsection{Using \texttt{outputlite}}
+\subsection{Use \texttt{outputlite}}
 
 Using the default configuration the original unpacked data is included into
 the result archive. This is done to make it easier to do a post mortem after a
@@ -1763,5 +1764,7 @@ outputlite = yes
 \end{verbatim}
 
 \subsection{Do not output results in XML}
+
+\subsection{Use \texttt{AGGREGATE\_CLEAN} when scanning Java JAR files}
 
 \end{document}
