@@ -591,7 +591,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		tmpdir = dirsetup(tempdir, filename, "exe", counter)
 		res = unpack7z(filename, 0, tmpdir)
 		if res != None:
-			diroffsets.append((res, 0, os.stat(filename).st_siz))
+			diroffsets.append((res, 0, os.stat(filename).st_size))
 			blacklist.append((0, os.stat(filename).st_size))
 			return (diroffsets, blacklist, [])
 		else:
@@ -606,7 +606,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		res = unpackRar(filename, 0, tmpdir)
 		if res != None:
 			(endofarchive, rardir) = res
-			diroffsets.append((rardir, 0, os.stat(filename).st_siz))
+			diroffsets.append((rardir, 0, os.stat(filename).st_size))
 			## add the whole binary to the blacklist
 			blacklist.append((0, os.stat(filename).st_size))
 			counter = counter + 1
