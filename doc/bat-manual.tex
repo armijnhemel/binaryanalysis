@@ -24,10 +24,10 @@ in consumer electronics.
 BAT consists of several programs written in Python. The most important program
 is the scanner for binary objects to detect the presence of Open Source
 software inside binaries. There are also other programs to help with specific
-tasks, such as verifying if configurations for a given BusyBox binary match
-with the configuration in source code. Also included is a very experimental
-program to help scan Linux kernel images and a script to derive a possible
-configuration from a Linux kernel image.
+compliance tasks, such as verifying if configurations for a given BusyBox
+binary match with the configuration in source code. Also included is a very
+experimental program to help scan Linux kernel images and a script to derive a
+possible configuration from a Linux kernel image.
 
 \section{Installing the Binary Analysis Tool}
 
@@ -42,7 +42,7 @@ benefit from this.
 \subsection{Software requirements}
 
 To run BAT a recent Linux distribution is needed. Development is (currently)
-done on Fedora 16 and 17 and Ubuntu 12.04, so those platforms are likely to
+done on Fedora 17 and 18 and Ubuntu 12.04, so those platforms are likely to
 work best. Other platforms (like Debian 7) are tested with, but only to
 build binary releases.
 
@@ -112,21 +112,23 @@ possibly carving it out of a larger file first.
 
 The first action performed is scanning a file for known identifiers of
 compressed files, file systems and media files. The identifers are important
-in determining which other methods are run (using the \texttt{magic}
-attribute) and are used frequently in the code for verification and unpacking.
+for a few things: first, they are used to determine which checks are run. They
+are also used frequently throughout the code for verification and speeding up
+unpacking. If a scan depends on a specific identifier being present it can be
+set using the \texttt{magic} attribute in the configuration.
 
 The marker search cannot be enabled or disabled via the configuration file.
 
 \subsubsection{Pre-run checks}
 
 Before files are unpacked they are briefly inspected and if possible tagged.
-Tags are used to pass hints to methods that are run later to reduce execution
-time and the amount of false positives.
+Tags are used to pass hints to methods that are run later avoid unnecessarily
+scanning a file and to reduce the amount of false positives.
 
 For example, files that only contain text are tagged as \texttt{text}, all other
 files are tagged as \texttt{binary} (this depends on the implementation of
 Python. Python 2 only considers (by default) ASCII to be valid text). Methods
-that only work on binaries can then ignore anything that has been tagged with
+that only work on binaries can then ignore anything that has been tagged as
 \texttt{text}.
 
 Other checks that are available are for valid XML, various Android formats,
@@ -154,7 +156,8 @@ unpacked or extracted:
 
 \begin{itemize}
 \item file systems: cramfs, ext2/ext3/ext4, ISO9660, JFFS2, Minix (specific
-variant of v1), SquashFS (several variants), romfs, YAFFS2 (specific variants)
+variant of v1 often found on older embedded Linux systems), SquashFS (several
+variants), romfs, YAFFS2 (specific variants)
 \item compressed files and executable formats: 7z, ar, ARJ, BASE64, BZIP2,
 compressed Flash, CAB, compress, CPIO, EXE (specific compression methods only),
 GZIP, InstallShield (old versions), LRZIP, LZIP, LZMA, LZO, RAR, RPM, serialized
@@ -318,7 +321,7 @@ output = prettyprintresxml
 These two settings should always be used together.
 
 The other global section is \texttt{viewer}. This section is specific for the
-graphical frontend and is currently not used.
+graphical frontend and is not used in any other parts of BAT.
 
 \subsubsection{Enabling and disabling scans}
 
@@ -450,7 +453,7 @@ A typical invocation looks like this:
 /path/to/outputfile}
 
 XML output, if enabled in the configuration file, will be written to standard
-output.
+output. Debugging messages will appear on standard error.
 
 \subsection{\texttt{batgui}}
 
@@ -1742,7 +1745,7 @@ This section describes a few methods to increase performance of the Binary
 Analysis Tool, plus describe drawbacks of methods named. The standard
 configuration of BAT tries to be sensible, with a trade off between performance
 and completeness. In some cases there is quite a bit of performance to be
-gained by tweaking the configuration.
+gained by simply tweaking the configuration.
 
 \subsection{Use \texttt{outputlite}}
 
@@ -1765,6 +1768,31 @@ outputlite = yes
 
 \subsection{Do not output results in XML}
 
+By default BAT will output the results of a scan in XML. The information in
+here more or less matches the information that is packed in the report. If the
+XML file is not used for analysing resuts disabling pretty printing of the
+results as XML can save time, especially if there are many scanned files with
+many results.
+
+Disabling the XML pretty printing can be disabled my outcommenting two
+directives: \texttt{module} and \texttt{output}. In the default configuration
+they have the following values:
+
+\begin{verbatim}
+module = bat.simpleprettyprint
+output = prettyprintresxml
+\end{verbatim}
+
 \subsection{Use \texttt{AGGREGATE\_CLEAN} when scanning Java JAR files}
+
+If Java JAR files are scanned then pictures and reports will be generated for
+each of the individual \texttt{.class} files. If only the results of the JAR
+file are needed, then setting \texttt{AGGREGATE\_CLEAN} to \texttt{1} will
+prevent pictures and reports to be generated for the individual \texttt{.class}
+files, which can save quite some time and declutter the interface.
+
+Of course, not generating the pictures for individual \texttt{.class} files
+means that some detail might be lost, especially if there are \texttt{.class}
+files that contain some unexpected results.
 
 \end{document}
