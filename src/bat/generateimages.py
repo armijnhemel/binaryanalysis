@@ -81,6 +81,10 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 		except Exception, e:
 			return
 
+	symlinks = False
+	if scanenv.get('AGGREGATE_IMAGE_SYMLINK', 0) == '1':
+		symlinks = True
+
 	rankingfiles = []
 
 	## filter out the files which don't have ranking results
@@ -216,11 +220,17 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 			if versionpickletopackage.has_key(filehash):
 				for e in versionpickletopackage[filehash]:
 					extension = "version.png"
-					shutil.copy(os.path.join(imagedir, r), os.path.join(imagedir, "%s-%s-%s" % (f, e, extension)))
+					if symlinks:
+						shutil.copy(os.path.join(imagedir, r), os.path.join(imagedir, "%s-%s-%s" % (f, e, extension)))
+					else:
+						shutil.copy(os.path.join(imagedir, r), os.path.join(imagedir, "%s-%s-%s" % (f, e, extension)))
 			if funcpickletopackage.has_key(filehash):
 				for e in funcpickletopackage[filehash]:
 					extension = "funcversion.png"
-					shutil.copy(os.path.join(imagedir, r), os.path.join(imagedir, "%s-%s-%s" % (f, e, extension)))
+					if symlinks:
+						shutil.copy(os.path.join(imagedir, r), os.path.join(imagedir, "%s-%s-%s" % (f, e, extension)))
+					else:
+						shutil.copy(os.path.join(imagedir, r), os.path.join(imagedir, "%s-%s-%s" % (f, e, extension)))
 		os.unlink(os.path.join(imagedir, r))
 
 	## cleanup

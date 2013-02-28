@@ -64,6 +64,7 @@ misc:
 * replay script to unpack firmware based on only the pickle with unpacking data
 * expand "debug"
 * add support for ignoring some file types/extensions completely
+* store duplicate pictures as symlinks instead of making a copy. If the results are to be viewed on Windows this might not be a good idea but if it is only viewed on Linux it could be a big save.
 
 BOTTLENECKS:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
