@@ -73,15 +73,18 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, envvars=None):
 						jarfiles.append(i)
 						sha256seen.append(filehash)
 						alljarfiles.append(i)
-	pool = multiprocessing.Pool()
 	jartasks = []
 
 	for i in jarfiles:
 		classfiles = filter(lambda x: x.endswith('.class'), unpackreports[i]['scans'][0]['scanreports'])
 		classreports = map(lambda x: unpackreports[x], classfiles)
 		jartasks.append((i, unpackreports[i], classreports, topleveldir))
-	res = pool.map(aggregate, jartasks, 1)
-	pool.terminate()
+
+	## check whether or not a pool needs to be created
+	if jartasks != []:
+		pool = multiprocessing.Pool()
+		res = pool.map(aggregate, jartasks, 1)
+		pool.terminate()
 
 	## TODO: only for files for which there actually is a result, plus
 	## all the clones of these files
