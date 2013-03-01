@@ -4,7 +4,7 @@
 ## Copyright 2013 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
-import os, os.path, sys, subprocess, copy, cPickle, tempfile, hashlib, shutil, multiprocessing
+import os, os.path, sys, subprocess, copy, cPickle, tempfile, hashlib, shutil, multiprocessing, piecharts
 
 '''
 This plugin is used to generate pictures. It is run as an aggregate scan for
@@ -101,9 +101,11 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 		rankingfiles.append(i)
 
 	pickles = []
+	piepickles = []
 	processed = []
 	funcpicklespackages = []
 	versionpicklespackages = []
+	piepicklespackages = []
 	picklehashes = {}
 	pickletofile = {}
 	for r in rankingfiles:
@@ -121,7 +123,51 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 			if res == None and dynamicRes == {}:
 				continue
 
-			## extract pickles with version information for strings
+			## extract information for generating pie charts
+			piedata = []
+			pielabels = []
+			totals = 0.0
+			others = 0.0
+			for j in res['reports']:
+				## less than half a percent, that's not significant anymore
+				if j[3] < 0.5:
+					totals += j[3]
+					others += j[3]
+					if totals <= 99.0:
+						continue
+				if totals >= 99.0:
+					pielabels.append("others")
+					piedata.append(others + 100.0 - totals)
+					break
+				else:   
+					pielabels.append(j[1])
+					piedata.append(j[3])
+					totals += j[3]
+
+			## now dump the data to a pickle
+			if pielabels != [] and piedata != []:
+				tmppickle = tempfile.mkstemp()
+				cPickle.dump((piedata, pielabels), os.fdopen(tmppickle[0], 'w'))
+				picklehash = gethash(tmppickle[1])
+				if picklehash in piepickles:
+					if pickletofile.has_key(picklehash):
+						pickletofile[picklehash].append(filehash)
+					else:
+						pickletofile[picklehash] = [filehash]
+					piepicklespackages.append((picklehash, filehash))
+					os.unlink(tmppickle[1])
+				else:
+					shutil.move(tmppickle[1], pickledir)
+					piepickles.append(picklehash)
+					piepicklespackages.append((picklehash, filehash))
+					picklehashes[picklehash] = os.path.basename(tmppickle[1])
+					if pickletofile.has_key(picklehash):
+						pickletofile[picklehash].append(filehash)
+					else:
+						pickletofile[picklehash] = [filehash]
+
+			## extract pickles with version information for strings for
+			## generating version charts
 			for j in res['reports']:
 				if j[4] != {}:
 					package = j[1]
@@ -186,24 +232,45 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 						else:
 							pickletofile[picklehash] = [filehash]
 			processed.append(filehash)
+	## create a pool and generate the images
+	pool = multiprocessing.Pool()
+	pietasks = []
+
+	if piepicklespackages != []:
+		pietasks = list(set(map(lambda x: (picklehashes[x[0]], pickledir, x[0], imagedir), piepicklespackages)))
+		results = pool.map(piecharts.generateImages, pietasks, 1)
+		for p in piepicklespackages:
+			oldfilename = "%s-%s" % (p[0], "piechart.png")
+			filename = "%s-%s" % (p[1], "piechart.png")
+			if os.path.exists(os.path.join(imagedir, oldfilename)):
+				shutil.copy(os.path.join(imagedir, oldfilename), os.path.join(imagedir, filename))
+		for p in piepicklespackages:
+			try:
+				filename = "%s-%s" % (p[0], "piechart.png")
+				os.unlink(os.path.join(imagedir, filename))
+			except Exception, e:
+				#print >>sys.stderr, "ERR", e
+				pass
 
 	funcpicklespackages = list(set(funcpicklespackages))
 	versionpicklespackages = list(set(versionpicklespackages))
-	pool = multiprocessing.Pool()
+
 	generatetasks = map(lambda x: (picklehashes[x[0]], x[0], imagedir, pickledir), funcpicklespackages) + map(lambda x: (picklehashes[x[0]], x[0], imagedir, pickledir), versionpicklespackages)
+
 	results = pool.map(generateversionchart, list(set(generatetasks)), 1)
 	pool.terminate()
+
 	results = filter(lambda x: x != None, results)
 
 	funcpickletopackage = {}
-	for r in list(set(funcpicklespackages)):
+	for r in funcpicklespackages:
 		if funcpickletopackage.has_key(r[0]):
 			funcpickletopackage[r[0]].append(r[1])
 		else:
 			funcpickletopackage[r[0]] = [r[1]]
 	
 	versionpickletopackage = {}
-	for r in list(set(versionpicklespackages)):
+	for r in versionpicklespackages:
 		if versionpickletopackage.has_key(r[0]):
 			versionpickletopackage[r[0]].append(r[1])
 		else:
@@ -213,6 +280,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 	for r in list(set(results)):
 		filehash = r.split('.', 1)[0]
 		## remove .png and either -funcversion or -version
+		unlinkpickle = True
 		for f in pickletofile[filehash]:
 			if not funcpickletopackage.has_key(filehash) and not versionpickletopackage.has_key(filehash):
 				## this should not happen
@@ -220,18 +288,29 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 			if versionpickletopackage.has_key(filehash):
 				for e in versionpickletopackage[filehash]:
 					extension = "version.png"
-					if symlinks:
-						shutil.copy(os.path.join(imagedir, r), os.path.join(imagedir, "%s-%s-%s" % (f, e, extension)))
+					filename = "%s-%s-%s" % (f, e, extension)
+					if symlinks and len(versionpickletopackage[filehash]) != 1:
+						oldcwd = os.getcwd()
+                                		os.chdir(imagedir)
+                                		os.symlink(r, filename)
+                                		os.chdir(oldcwd)
+						unlinkpickle = False
 					else:
-						shutil.copy(os.path.join(imagedir, r), os.path.join(imagedir, "%s-%s-%s" % (f, e, extension)))
+						shutil.copy(os.path.join(imagedir, r), os.path.join(imagedir, filename))
 			if funcpickletopackage.has_key(filehash):
 				for e in funcpickletopackage[filehash]:
 					extension = "funcversion.png"
-					if symlinks:
-						shutil.copy(os.path.join(imagedir, r), os.path.join(imagedir, "%s-%s-%s" % (f, e, extension)))
+					filename = "%s-%s-%s" % (f, e, extension)
+					if symlinks and len(funcpickletopackage[filehash]) != 1:
+						oldcwd = os.getcwd()
+                                		os.chdir(imagedir)
+                                		os.symlink(r, filename)
+                                		os.chdir(oldcwd)
+						unlinkpickle = False
 					else:
-						shutil.copy(os.path.join(imagedir, r), os.path.join(imagedir, "%s-%s-%s" % (f, e, extension)))
-		os.unlink(os.path.join(imagedir, r))
+						shutil.copy(os.path.join(imagedir, r), os.path.join(imagedir, filename))
+		if unlinkpickle:
+			os.unlink(os.path.join(imagedir, r))
 
 	## cleanup
 	for i in list(set(map(lambda x: x[0], funcpicklespackages + versionpicklespackages))):
