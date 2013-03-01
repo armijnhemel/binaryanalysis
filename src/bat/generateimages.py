@@ -41,6 +41,46 @@ def generateversionchart((versionpickle, picklehash, imagedir, pickledir)):
 	else:
 		return '%s.png' % (picklehash, )
 
+def extractpiepickles((filehash, pickledir, topleveldir)):
+	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+	leafreports = cPickle.load(leaf_file)
+	leaf_file.close()
+
+	if leafreports.has_key('ranking'):
+		## the ranking result is (res, dynamicRes, variablepvs)
+		(res, dynamicRes, variablepvs) = leafreports['ranking']
+		if res == None and dynamicRes == {}:
+			return
+
+		## extract information for generating pie charts
+		piedata = []
+		pielabels = []
+		totals = 0.0
+		others = 0.0
+		for j in res['reports']:
+			## less than half a percent, that's not significant anymore
+			if j[3] < 0.5:
+				totals += j[3]
+				others += j[3]
+				if totals <= 99.0:
+					continue
+			if totals >= 99.0:
+				pielabels.append("others")
+				piedata.append(others + 100.0 - totals)
+				break
+			else:   
+				pielabels.append(j[1])
+				piedata.append(j[3])
+				totals += j[3]
+
+		## now dump the data to a pickle
+		if pielabels != [] and piedata != []:
+			tmppickle = tempfile.mkstemp()
+			cPickle.dump((piedata, pielabels), os.fdopen(tmppickle[0], 'w'))
+			picklehash = gethash(tmppickle[1])
+			return (filehash, picklehash, tmppickle[1])
+
+
 ## compute a SHA256 hash. This is done in chunks to prevent a big file from
 ## being read in its entirety at once, slowing down a machine.
 def gethash(path):
@@ -111,6 +151,32 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 	piepicklespackages = []
 	picklehashes = {}
 	pickletofile = {}
+
+	filehashes = list(set(map(lambda x: unpackreports[x]['sha256'], rankingfiles)))
+	extracttasks = map(lambda x: (x, pickledir, topleveldir), filehashes)
+	pool = multiprocessing.Pool()
+	res = filter(lambda x: x != None, pool.map(extractpiepickles, extracttasks))
+	pool.terminate()
+
+	for r in res:
+		(filehash, picklehash, tmppickle) = r
+		if picklehash in piepickles:
+			if pickletofile.has_key(picklehash):
+				pickletofile[picklehash].append(filehash)
+			else:
+				pickletofile[picklehash] = [filehash]
+			piepicklespackages.append((picklehash, filehash))
+			os.unlink(tmppickle)
+		else:
+			shutil.move(tmppickle, pickledir)
+			piepickles.append(picklehash)
+			piepicklespackages.append((picklehash, filehash))
+			picklehashes[picklehash] = os.path.basename(tmppickle)
+			if pickletofile.has_key(picklehash):
+				pickletofile[picklehash].append(filehash)
+			else:
+				pickletofile[picklehash] = [filehash]
+
 	for r in rankingfiles:
 		filehash = unpackreports[r]['sha256']
 		if filehash in processed:
@@ -125,49 +191,6 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 			(res, dynamicRes, variablepvs) = leafreports['ranking']
 			if res == None and dynamicRes == {}:
 				continue
-
-			## extract information for generating pie charts
-			piedata = []
-			pielabels = []
-			totals = 0.0
-			others = 0.0
-			for j in res['reports']:
-				## less than half a percent, that's not significant anymore
-				if j[3] < 0.5:
-					totals += j[3]
-					others += j[3]
-					if totals <= 99.0:
-						continue
-				if totals >= 99.0:
-					pielabels.append("others")
-					piedata.append(others + 100.0 - totals)
-					break
-				else:   
-					pielabels.append(j[1])
-					piedata.append(j[3])
-					totals += j[3]
-
-			## now dump the data to a pickle
-			if pielabels != [] and piedata != []:
-				tmppickle = tempfile.mkstemp()
-				cPickle.dump((piedata, pielabels), os.fdopen(tmppickle[0], 'w'))
-				picklehash = gethash(tmppickle[1])
-				if picklehash in piepickles:
-					if pickletofile.has_key(picklehash):
-						pickletofile[picklehash].append(filehash)
-					else:
-						pickletofile[picklehash] = [filehash]
-					piepicklespackages.append((picklehash, filehash))
-					os.unlink(tmppickle[1])
-				else:
-					shutil.move(tmppickle[1], pickledir)
-					piepickles.append(picklehash)
-					piepicklespackages.append((picklehash, filehash))
-					picklehashes[picklehash] = os.path.basename(tmppickle[1])
-					if pickletofile.has_key(picklehash):
-						pickletofile[picklehash].append(filehash)
-					else:
-						pickletofile[picklehash] = [filehash]
 
 			## extract pickles with version information for strings for
 			## generating version charts
