@@ -1844,6 +1844,7 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 			counter = counter + 1
 			if offset == 0 and (offset+gzipsize == os.stat(filename).st_size):
 				newtags.append('compressed')
+				newtags.append('gzip')
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
