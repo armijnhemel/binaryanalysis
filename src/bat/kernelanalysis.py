@@ -140,3 +140,7 @@ def analyseModuleLicense(path, blacklist=[], envvars=[]):
 		return None
         else:
                 return (['modulelicense'], stanout.strip())
+
+##
+def analyseELF(path, blacklist=[], envvars=[]):
+	pass
