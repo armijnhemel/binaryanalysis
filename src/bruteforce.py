@@ -25,11 +25,8 @@ def main(argv):
 	(options, args) = parser.parse_args()
 	if options.fw == None:
         	parser.error("Path to binary file needed")
-	try:
-        	scan_binary = options.fw
-	except:
-        	print "No file to scan found"
-        	sys.exit(1)
+	if not os.path.exists(options.fw):
+        	parser.error("No file to scan found")
 
 	if options.cfg != None:
 		try:
