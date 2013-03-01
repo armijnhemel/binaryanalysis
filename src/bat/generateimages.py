@@ -29,6 +29,9 @@ the pickle is removed and it is recorded which file it originally belonged to.
 4. The pictures are copied and renamed.
 '''
 
+def generatepiecharts((picklefile, pickledir, filehash, imagedir)):
+	piecharts.generateImages(picklefile, pickledir, filehash, imagedir)
+
 def generateversionchart((versionpickle, picklehash, imagedir, pickledir)):
 	p = subprocess.Popen(['bat-generate-version-chart.py', '-i', os.path.join(pickledir, versionpickle), '-o', '%s/%s.png' % (imagedir, picklehash)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
@@ -238,7 +241,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 
 	if piepicklespackages != []:
 		pietasks = list(set(map(lambda x: (picklehashes[x[0]], pickledir, x[0], imagedir), piepicklespackages)))
-		results = pool.map(piecharts.generateImages, pietasks, 1)
+		results = pool.map(generatepiecharts, pietasks, 1)
 		for p in piepicklespackages:
 			oldfilename = "%s-%s" % (p[0], "piechart.png")
 			filename = "%s-%s" % (p[1], "piechart.png")
@@ -279,7 +282,6 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 	## TODO: right now too many results are being copied.
 	for r in list(set(results)):
 		filehash = r.split('.', 1)[0]
-		## remove .png and either -funcversion or -version
 		unlinkpickle = True
 		for f in pickletofile[filehash]:
 			if not funcpickletopackage.has_key(filehash) and not versionpickletopackage.has_key(filehash):
