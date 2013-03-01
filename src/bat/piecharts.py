@@ -16,14 +16,12 @@ Parameters for configuration file:
 '''
 
 import os, os.path, sys, cPickle
-from PIL import Image
 import matplotlib
 matplotlib.use('cairo')
 import pylab
 
-def generateImages((picklefile, pickledir, filehash, imagedir)):
+def generateImages(picklefile, pickledir, filehash, imagedir):
 
-	print >>sys.stderr, "generating for", filehash
 	leaf_file = open(os.path.join(pickledir, picklefile), 'rb')
 	(piedata, pielabels) = cPickle.load(leaf_file)
 	leaf_file.close()
