@@ -761,6 +761,7 @@ class BatFrame(wx.Frame):
 				linktext = j
 			else:
 				linktext = j[parentlen:]
+			'''
 			if self.leafreports.has_key(j):
 				for r in self.leafreports[j]:
 					if r == 'ranking':
@@ -769,18 +770,18 @@ class BatFrame(wx.Frame):
 								## give a visual clue to people to tell them that strings could be matched
 								#linktext = u"%s  \u24e7" % linktext
 								linktext = u"%s  \u272a" % linktext
-					if r == 'tags':
-						tagsentities = {'text': u'\u24c9', 'graphics': u'\u24bc', 'compressed': u'\u24b8', 'resource': u'\u24c7', 'static': u'\u24c8', 'dalvik': u'\u24b6'}
-						if list(set(self.leafreports[j]['tags']).intersection(set(self.filters))) != []:
-							ignore = True
-							continue
-						tagappend = u""
-						for t in self.leafreports[j]['tags']:
-							if tagsentities.has_key(t):
-								tagappend += tagsentities[t]
-						if tagappend != u"":
-							linktext = linktext + u"  %s" % tagappend
-			elif "symbolic link" in self.unpackreports[j]['magic']:
+			'''
+			tagsentities = {'text': u'\u24c9', 'graphics': u'\u24bc', 'compressed': u'\u24b8', 'resource': u'\u24c7', 'static': u'\u24c8', 'dalvik': u'\u24b6'}
+			#if list(set(self.leafreports[j]['tags']).intersection(set(self.filters))) != []:
+			#	ignore = True
+			#	continue
+			tagappend = u""
+			for t in self.unpackreports[j]['tags']:
+				if tagsentities.has_key(t):
+					tagappend += tagsentities[t]
+				if tagappend != u"":
+					linktext = linktext + u"  %s" % tagappend
+			if "symbolic link" in self.unpackreports[j]['magic']:
 				if "symlink" in self.filters:
 					ignore = True
 					continue
@@ -1015,7 +1016,7 @@ class BatFrame(wx.Frame):
 			self.imagesdir = os.path.join(self.tmpdir, "images")
 			self.reportsdir = os.path.join(self.tmpdir, "reports")
 			picklefile = open(os.path.join(self.tmpdir, "scandata.pickle") , 'rb')
-			(self.unpackreports, self.leafreports, scans) = cPickle.load(picklefile)
+			self.unpackreports = cPickle.load(picklefile)
 			picklefile.close()
 			self.selectedfile = None
 			self.initTree(self.tree, self.datadir)
