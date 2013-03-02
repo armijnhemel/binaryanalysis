@@ -41,7 +41,7 @@ def generateversionchart((versionpickle, picklehash, imagedir, pickledir)):
 	else:
 		return '%s.png' % (picklehash, )
 
-def extractpiepickles((filehash, pickledir, topleveldir)):
+def extractpickles((filehash, pickledir, topleveldir)):
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 	leafreports = cPickle.load(leaf_file)
 	leaf_file.close()
@@ -78,7 +78,7 @@ def extractpiepickles((filehash, pickledir, topleveldir)):
 			tmppickle = tempfile.mkstemp()
 			cPickle.dump((piedata, pielabels), os.fdopen(tmppickle[0], 'w'))
 			picklehash = gethash(tmppickle[1])
-			return (filehash, picklehash, tmppickle[1])
+			return (filehash, [(picklehash, tmppickle[1])], [], [])
 
 
 ## compute a SHA256 hash. This is done in chunks to prevent a big file from
@@ -144,40 +144,44 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 		rankingfiles.append(i)
 
 	pickles = []
-	piepickles = []
 	processed = []
 	funcpicklespackages = []
 	versionpicklespackages = []
-	piepicklespackages = []
 	picklehashes = {}
 	pickletofile = {}
 	funcfilehashpackage = {}
 	verfilehashpackage = {}
 
 	filehashes = list(set(map(lambda x: unpackreports[x]['sha256'], rankingfiles)))
-	extracttasks = map(lambda x: (x, pickledir, topleveldir), filehashes)
+
+	## extract pickles for generating pie charts
+	piepickles = []
+	piepicklespackages = []
+	pieextracttasks = map(lambda x: (x, pickledir, topleveldir), filehashes)
 	pool = multiprocessing.Pool()
-	res = filter(lambda x: x != None, pool.map(extractpiepickles, extracttasks))
+	res = filter(lambda x: x != None, pool.map(extractpickles, pieextracttasks))
 	pool.terminate()
 
 	for r in res:
-		(filehash, picklehash, tmppickle) = r
-		if picklehash in piepickles:
-			if pickletofile.has_key(picklehash):
-				pickletofile[picklehash].append(filehash)
+		(filehash, pieresults, versionresults, funcresults) = r
+		for p in pieresults:
+			(picklehash, tmppickle) = p
+			if picklehash in piepickles:
+				if pickletofile.has_key(picklehash):
+					pickletofile[picklehash].append(filehash)
+				else:
+					pickletofile[picklehash] = [filehash]
+				piepicklespackages.append((picklehash, filehash))
+				os.unlink(tmppickle)
 			else:
-				pickletofile[picklehash] = [filehash]
-			piepicklespackages.append((picklehash, filehash))
-			os.unlink(tmppickle)
-		else:
-			shutil.move(tmppickle, pickledir)
-			piepickles.append(picklehash)
-			piepicklespackages.append((picklehash, filehash))
-			picklehashes[picklehash] = os.path.basename(tmppickle)
-			if pickletofile.has_key(picklehash):
-				pickletofile[picklehash].append(filehash)
-			else:
-				pickletofile[picklehash] = [filehash]
+				shutil.move(tmppickle, pickledir)
+				piepickles.append(picklehash)
+				piepicklespackages.append((picklehash, filehash))
+				picklehashes[picklehash] = os.path.basename(tmppickle)
+				if pickletofile.has_key(picklehash):
+					pickletofile[picklehash].append(filehash)
+				else:
+					pickletofile[picklehash] = [filehash]
 
 	for r in rankingfiles:
 		filehash = unpackreports[r]['sha256']
