@@ -2125,13 +2125,50 @@ def unpackZip(filename, offset, tempdir=None):
 				return (None, None)
 			os.unlink(tmpfile2[1])
 		else:
-			p = subprocess.Popen(['unzip', '-o', tmpfile[1], '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			## first check whether or not we can unpack the file. There are situations
+			## where ZIP files are packed in a weird format that unzip does not like:
+			## https://bugzilla.redhat.com/show_bug.cgi?id=907442
+			p = subprocess.Popen(['zipinfo', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 			(stanout, stanerr) = p.communicate()
-			if p.returncode != 0 and p.returncode != 1:
+			if p.returncode != 0:
 				os.unlink(tmpfile[1])
 				if tempdir == None:
 					os.rmdir(tmpdir)
 				return (None, None)
+
+			stanoutlines = stanout.strip().split('\n')
+			zipentries = []
+			zipdirs = []
+			weirdzip = False
+			for s in stanoutlines[2:]:
+				zipname = s.strip().rsplit()[-1]
+				if s.strip().startswith('d'):
+					if not s.strip().endswith('/'):
+						weirdzip = True
+					zipdirs.append(zipname)
+				else:
+					zipentries.append(zipname)
+
+			if not weirdzip:
+				p = subprocess.Popen(['unzip', '-o', tmpfile[1], '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+				(stanout, stanerr) = p.communicate()
+				if p.returncode != 0 and p.returncode != 1:
+					os.unlink(tmpfile[1])
+					if tempdir == None:
+						os.rmdir(tmpdir)
+					return (None, None)
+			else:
+				## first create the ZIP directories
+				for z in zipdirs:
+					try:
+						os.makedirs(os.path.join(tmpdir, z))
+					except:
+						pass
+				## then unpack each individual file
+				for z in zipentries:
+					p = subprocess.Popen(['unzip', '-o', tmpfile[1], '-d', tmpdir, z], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+					(stanout, stanerr) = p.communicate()
+					## TODO: check for errors
 	os.unlink(tmpfile[1])
 	return (endofcentraldir, tmpdir)
 
