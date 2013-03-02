@@ -151,7 +151,8 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 	piepicklespackages = []
 	picklehashes = {}
 	pickletofile = {}
-	filehashpackage = {}
+	funcfilehashpackage = {}
+	verfilehashpackage = {}
 
 	filehashes = list(set(map(lambda x: unpackreports[x]['sha256'], rankingfiles)))
 	extracttasks = map(lambda x: (x, pickledir, topleveldir), filehashes)
@@ -209,6 +210,10 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 							pickledata.append(v2)
 					cPickle.dump(pickledata, os.fdopen(tmppickle[0], 'w'))
 					picklehash = gethash(tmppickle[1])
+					if verfilehashpackage.has_key(filehash):
+						verfilehashpackage[filehash].append(package)
+					else:
+						verfilehashpackage[filehash] = [package]
 					if picklehash in pickles:
 						if pickletofile.has_key(picklehash):
 							pickletofile[picklehash].append(filehash)
@@ -242,10 +247,10 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 							pickledata.append(v2)
 					cPickle.dump(pickledata, os.fdopen(tmppickle[0], 'w'))
 					picklehash = gethash(tmppickle[1])
-					if filehashpackage.has_key(filehash):
-						filehashpackage[filehash].append(package)
+					if funcfilehashpackage.has_key(filehash):
+						funcfilehashpackage[filehash].append(package)
 					else:
-						filehashpackage[filehash] = [package]
+						funcfilehashpackage[filehash] = [package]
 					if picklehash in pickles:
 						if pickletofile.has_key(picklehash):
 							pickletofile[picklehash].append(filehash)
@@ -307,7 +312,6 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 		else:
 			versionpickletopackage[r[0]] = [r[1]]
 
-	## TODO: right now too many results are being copied.
 	for r in list(set(results)):
 		picklefilehash = r.split('.', 1)[0]
 		unlinkpickle = True
@@ -317,6 +321,10 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 				continue
 			if versionpickletopackage.has_key(picklefilehash):
 				for e in versionpickletopackage[picklefilehash]:
+					if not verfilehashpackage.has_key(f):
+						continue
+					if not e in verfilehashpackage[f]:
+						continue
 					extension = "version.png"
 					filename = "%s-%s-%s" % (f, e, extension)
 					if symlinks and len(versionpickletopackage[picklefilehash]) != 1:
@@ -329,9 +337,9 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 						shutil.copy(os.path.join(imagedir, r), os.path.join(imagedir, filename))
 			if funcpickletopackage.has_key(picklefilehash):
 				for e in funcpickletopackage[picklefilehash]:
-					if not filehashpackage.has_key(f):
+					if not funcfilehashpackage.has_key(f):
 						continue
-					if not e in filehashpackage[f]:
+					if not e in funcfilehashpackage[f]:
 						continue
 					extension = "funcversion.png"
 					filename = "%s-%s-%s" % (f, e, extension)
