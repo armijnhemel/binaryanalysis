@@ -64,11 +64,10 @@ misc:
 * replay script to unpack firmware based on only the pickle with unpacking data
 * expand "debug"
 * add support for ignoring some file types/extensions completely
-* store duplicate pictures as symlinks instead of making a copy. If the results are to be viewed on Windows this might not be a good idea but if it is only viewed on Linux it could be a big save.
+* copy reportdir and friends to aggregatescans
 
 BOTTLENECKS:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
-2. There can be a lot of duplication in generating the pictures, especially the version charts. In one of my test cases there are several thousands of duplicates. To avoid this an aggregate scan should first write the individual pickles and store what they belong to (possibly in parallel, but then there might be race conditions). Then the aggregatescan should generate the pictures in parallel (using a Pool of its own).
-3. After 2. it makes sense to let ranking (or the aggregate scan of 2) write data that rankimages.py can use to generate piecharts. This way rankimages.py would not have to read pickles, or only would have to read significantly smaller pickles.
-4. preread (in parallel) leafreports of Java .class files which are shared between several JAR files for aggregate jars. This saves opening and reading the same files.
-5. make findlibs.py partially parallel
+2. preread (in parallel) leafreports of Java .class files which are shared between several JAR files for aggregate jars. This saves opening and reading the same files.
+3. make findlibs.py partially parallel
+4. extract pickles for generating reports in parallel, generate HTML in parallel as well

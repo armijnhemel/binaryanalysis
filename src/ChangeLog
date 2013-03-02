@@ -1,3 +1,6 @@
+2013-03-02
+* extract pickles for generating images in parallel
+
 2013-03-01
 * check whether or not file to be scanned actually exists
 * add tags for gzip compressed files
