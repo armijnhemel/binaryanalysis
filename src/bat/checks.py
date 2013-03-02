@@ -322,14 +322,13 @@ def pdfPrettyPrint(res, root, envvars=None):
 		tmpnode.appendChild(tmpnode2)
 	return tmpnode
 
-## scan for mentions of:
-## * GPL
-## * Apache
+## scan for mentions of licenses
 ######################################
 ## !!! WARNING WARNING WARNING !!! ###
 ######################################
 ## This should only be used as an indicator for further investigation,
 ## never as proof that a binary is actually licensed under a license!
+## TODO: rewrite so file is not read for every scan
 def scanLicenses(path, blacklist=[], envvars=None):
 	results = {}
 	if genericSearch(path, ["General Public License", "http://www.gnu.org/licenses/", "http://gnu.org/licenses/", "http://www.gnu.org/gethelp/", "http://www.gnu.org/software/"], blacklist):
@@ -355,6 +354,18 @@ def scanLicenses(path, blacklist=[], envvars=None):
 		results['BitTorrent'] = True
 	if genericSearch(path, ["http://www.tizenopensource.org/license"], blacklist):
 		results['Tizen'] = True
+	if genericSearch(path, ["http://www.openssl.org/source/license.html"], blacklist):
+		results['OpenSSL'] = True
+	if genericSearch(path, ["http://www.boost.org/LICENSE_1_0.txt", "http://pocoproject.org/license.html"], blacklist):
+		results['Boost'] = True
+	if genericSearch(path, ["http://www.zlib.net/zlib_license.html"], blacklist):
+		results['zlib'] = True
+	if genericSearch(path, ["http://jquery.org/license"], blacklist):
+		results['jQuery'] = True
+	if genericSearch(path, ["http://xmlsoft.org/FAQ.html#License"], blacklist):
+		results['libxml'] = True
+	if genericSearch(path, ["http://source.icu-project.org/repos/icu/icu/trunk/license.html"], blacklist):
+		results['ICU'] = True
 	if results != {}:
 		return (['licenses'], results)
 	else:
