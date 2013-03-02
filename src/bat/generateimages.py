@@ -327,6 +327,8 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 						continue
 					extension = "version.png"
 					filename = "%s-%s-%s" % (f, e, extension)
+					if os.path.exists(os.path.join(imagedir, filename)):
+						os.unlink(os.path.join(imagedir, filename))
 					if symlinks and len(versionpickletopackage[picklefilehash]) != 1:
 						oldcwd = os.getcwd()
                                 		os.chdir(imagedir)
@@ -343,6 +345,8 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 						continue
 					extension = "funcversion.png"
 					filename = "%s-%s-%s" % (f, e, extension)
+					if os.path.exists(os.path.join(imagedir, filename)):
+						os.unlink(os.path.join(imagedir, filename))
 					if symlinks and len(funcpickletopackage[picklefilehash]) != 1:
 						oldcwd = os.getcwd()
                                 		os.chdir(imagedir)
