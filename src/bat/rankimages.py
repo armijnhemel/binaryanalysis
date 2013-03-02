@@ -15,83 +15,9 @@ Parameters for configuration file:
 * BAT_IMAGEDIR :: location to where images should be written
 '''
 
-import os, os.path, sys, subprocess, array, cPickle, tempfile, copy
-from PIL import Image
-import matplotlib
-matplotlib.use('cairo')
-import pylab
-
 def generateImages(filename, unpackreport, scantempdir, topleveldir, envvars={}):
-	if not unpackreport.has_key('sha256'):
-		return
-
-	if not unpackreport.has_key('tags'):
-		return
-	else:   
-		if not 'ranking' in unpackreport['tags']:
-			return
-
-	scanenv = os.environ.copy()
-	if envvars != None:
-		for en in envvars.split(':'):
-			try:
-				(envname, envvalue) = en.split('=')
-				scanenv[envname] = envvalue
-			except Exception, e:
-				pass
-
-	imagedir = scanenv.get('BAT_IMAGEDIR', "%s/%s" % (topleveldir, "images"))
-	try:
-		os.stat(imagedir)
-	except:
-		## BAT_IMAGEDIR does not exist
-		try:
-			os.makedirs(imagedir)
-		except Exception, e:
-			return
-
-	filehash = unpackreport['sha256']
-
-	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
-	leafreports = cPickle.load(leaf_file)
-	leaf_file.close()
-
-	## generate piechart and version information
-	if leafreports.has_key('ranking'):
-		## the ranking result is (res, dynamicRes, variablepvs)
-		(res, dynamicRes, variablepvs) = leafreports['ranking']
-		if res == None and dynamicRes == {}:
-			return
-		if res['reports'] != []:
-			piedata = []
-			pielabels = []
-			totals = 0.0
-			others = 0.0
-			for j in res['reports']:
-				## less than half a percent, that's not significant anymore
-				if j[3] < 0.5:
-					totals += j[3]
-					others += j[3]
-					if totals <= 99.0:
-						continue
-				if totals >= 99.0:
-					pielabels.append("others")
-					piedata.append(others + 100.0 - totals)
-					break
-				else:
-					pielabels.append(j[1])
-					piedata.append(j[3])
-					totals += j[3]
-			pylab.figure(1, figsize=(6.5,6.5))
-			ax = pylab.axes([0.2, 0.15, 0.6, 0.6])
-
-			pylab.pie(piedata, labels=pielabels)
-
-			pylab.savefig('%s/%s-piechart.png' % (imagedir, unpackreport['sha256']))
-			pylab.gcf().clear()
-			for j in res['reports']:
-				if j[4] != {}:
-					'''
+	return
+	'''
 					j_sorted = sorted(j[4], key=lambda x: j[4][x])
 					max_y = j[4][j_sorted[-1]]
 					xvalues = []
@@ -118,41 +44,4 @@ def generateImages(filename, unpackreport, scantempdir, topleveldir, envvars={})
 
 					pylab.savefig('%s/%s-%s-version.png' % (imagedir, unpackreport['sha256'], j[1]))
 					pylab.gcf().clear()
-					'''
-					tmppickle = tempfile.mkstemp()
-					pickledata = []
-					vals = list(set(j[4].values()))
-					vals.sort()
-					for v in vals:
-						j_sorted = filter(lambda x: x[1] == v, j[4].items())
-						j_sorted.sort()
-						for v2 in j_sorted:
-							pickledata.append(v2)
-					cPickle.dump(pickledata, os.fdopen(tmppickle[0], 'w'))
-					p = subprocess.Popen(['bat-generate-version-chart.py', '-i', tmppickle[1], '-o', '%s/%s-%s-version.png' % (imagedir, unpackreport['sha256'], j[1])], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-					(stanout, stanerr) = p.communicate()
-					if p.returncode != 0:
-						print >>sys.stderr, stanerr
-					os.unlink(tmppickle[1])
-
-		## generate version information
-		## the ranking result is (res, dynamicRes, variablepvs)
-		if dynamicRes.has_key('packages'):
-			for package in dynamicRes['packages']:
-				packagedata = copy.copy(dynamicRes['packages'][package])
-				tmppickle = tempfile.mkstemp()
-				pickledata = []
-				p_sorted = sorted(packagedata, key=lambda x: x[1])
-				vals = list(set(map(lambda x: x[1], p_sorted)))
-				vals.sort()
-				for v in vals:
-					j_sorted = filter(lambda x: x[1] == v, p_sorted)
-					j_sorted.sort()
-					for v2 in j_sorted:
-						pickledata.append(v2)
-				cPickle.dump(pickledata, os.fdopen(tmppickle[0], 'w'))
-				p = subprocess.Popen(['bat-generate-version-chart.py', '-i', tmppickle[1], '-o', '%s/%s-%s-funcversion.png' % (imagedir, unpackreport['sha256'], package)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-				(stanout, stanerr) = p.communicate()
-				if p.returncode != 0:
-					print >>sys.stderr, stanerr
-				os.unlink(tmppickle[1])
+	'''
