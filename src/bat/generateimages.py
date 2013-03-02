@@ -52,6 +52,10 @@ def extractpickles((filehash, pickledir, topleveldir)):
 		if res == None and dynamicRes == {}:
 			return
 
+		pieresult = None
+		versionresults = []
+		funcresults = []
+
 		## extract information for generating pie charts
 		piedata = []
 		pielabels = []
@@ -78,8 +82,43 @@ def extractpickles((filehash, pickledir, topleveldir)):
 			tmppickle = tempfile.mkstemp()
 			cPickle.dump((piedata, pielabels), os.fdopen(tmppickle[0], 'w'))
 			picklehash = gethash(tmppickle[1])
-			return (filehash, [(picklehash, tmppickle[1])], [], [])
+			pieresult = (picklehash, tmppickle[1])
 
+		for j in res['reports']:
+			if j[4] != {}:
+				package = j[1]
+				tmppickle = tempfile.mkstemp()
+				pickledata = []
+				vals = list(set(j[4].values()))
+				vals.sort()
+				for v in vals:
+					j_sorted = filter(lambda x: x[1] == v, j[4].items())
+					j_sorted.sort()
+					for v2 in j_sorted:
+						pickledata.append(v2)
+				cPickle.dump(pickledata, os.fdopen(tmppickle[0], 'w'))
+				picklehash = gethash(tmppickle[1])
+				versionresults.append((picklehash, tmppickle[1], package))
+
+		## extract pickles with version information for functions
+		if dynamicRes.has_key('packages'):
+			for package in dynamicRes['packages']:
+				packagedata = copy.copy(dynamicRes['packages'][package])
+				tmppickle = tempfile.mkstemp()
+				pickledata = []
+				p_sorted = sorted(packagedata, key=lambda x: x[1])
+				vals = list(set(map(lambda x: x[1], p_sorted)))
+				vals.sort()
+				for v in vals:
+					j_sorted = filter(lambda x: x[1] == v, p_sorted)
+					j_sorted.sort()
+					for v2 in j_sorted:
+						pickledata.append(v2)
+				cPickle.dump(pickledata, os.fdopen(tmppickle[0], 'w'))
+				picklehash = gethash(tmppickle[1])
+				funcresults.append((picklehash, tmppickle[1], package))
+
+		return (filehash, pieresult, versionresults, funcresults)
 
 ## compute a SHA256 hash. This is done in chunks to prevent a big file from
 ## being read in its entirety at once, slowing down a machine.
@@ -144,7 +183,8 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 		rankingfiles.append(i)
 
 	pickles = []
-	processed = []
+	piepickles = []
+	piepicklespackages = []
 	funcpicklespackages = []
 	versionpicklespackages = []
 	picklehashes = {}
@@ -154,18 +194,16 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 
 	filehashes = list(set(map(lambda x: unpackreports[x]['sha256'], rankingfiles)))
 
-	## extract pickles for generating pie charts
-	piepickles = []
-	piepicklespackages = []
-	pieextracttasks = map(lambda x: (x, pickledir, topleveldir), filehashes)
+	## extract pickles
+	extracttasks = map(lambda x: (x, pickledir, topleveldir), filehashes)
 	pool = multiprocessing.Pool()
-	res = filter(lambda x: x != None, pool.map(extractpickles, pieextracttasks))
+	res = filter(lambda x: x != None, pool.map(extractpickles, extracttasks))
 	pool.terminate()
 
 	for r in res:
-		(filehash, pieresults, versionresults, funcresults) = r
-		for p in pieresults:
-			(picklehash, tmppickle) = p
+		(filehash, pieresult, versionresults, funcresults) = r
+		if pieresult != None:
+			(picklehash, tmppickle) = pieresult
 			if picklehash in piepickles:
 				if pickletofile.has_key(picklehash):
 					pickletofile[picklehash].append(filehash)
@@ -182,96 +220,52 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 					pickletofile[picklehash].append(filehash)
 				else:
 					pickletofile[picklehash] = [filehash]
+		for v in versionresults:
+			(picklehash, tmppickle, package) = v
+			if verfilehashpackage.has_key(filehash):
+				verfilehashpackage[filehash].append(package)
+			else:
+				verfilehashpackage[filehash] = [package]
+			if picklehash in pickles:
+				if pickletofile.has_key(picklehash):
+					pickletofile[picklehash].append(filehash)
+				else:
+					pickletofile[picklehash] = [filehash]
+				versionpicklespackages.append((picklehash, package))
+				os.unlink(tmppickle)
+			else:
+				shutil.move(tmppickle, pickledir)
+				pickles.append(picklehash)
+				versionpicklespackages.append((picklehash, package))
+				picklehashes[picklehash] = os.path.basename(tmppickle)
+				if pickletofile.has_key(picklehash):
+					pickletofile[picklehash].append(filehash)
+				else:
+					pickletofile[picklehash] = [filehash]
 
-	for r in rankingfiles:
-		filehash = unpackreports[r]['sha256']
-		if filehash in processed:
-			continue
+		for f in funcresults:
+			(picklehash, tmppickle, package) = f
+			if funcfilehashpackage.has_key(filehash):
+				funcfilehashpackage[filehash].append(package)
+			else:
+				funcfilehashpackage[filehash] = [package]
+			if picklehash in pickles:
+				if pickletofile.has_key(picklehash):
+					pickletofile[picklehash].append(filehash)
+				else:
+					pickletofile[picklehash] = [filehash]
+				funcpicklespackages.append((picklehash, package))
+				os.unlink(tmppickle)
+			else:
+				shutil.move(tmppickle, pickledir)
+				pickles.append(picklehash)
+				funcpicklespackages.append((picklehash, package))
+				picklehashes[picklehash] = os.path.basename(tmppickle)
+				if pickletofile.has_key(picklehash):
+					pickletofile[picklehash].append(filehash)
+				else:
+					pickletofile[picklehash] = [filehash]
 
-		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
-		leafreports = cPickle.load(leaf_file)
-		leaf_file.close()
-
-		if leafreports.has_key('ranking'):
-			## the ranking result is (res, dynamicRes, variablepvs)
-			(res, dynamicRes, variablepvs) = leafreports['ranking']
-			if res == None and dynamicRes == {}:
-				continue
-
-			## extract pickles with version information for strings for
-			## generating version charts
-			for j in res['reports']:
-				if j[4] != {}:
-					package = j[1]
-					tmppickle = tempfile.mkstemp()
-					pickledata = []
-					vals = list(set(j[4].values()))
-					vals.sort()
-					for v in vals:
-						j_sorted = filter(lambda x: x[1] == v, j[4].items())
-						j_sorted.sort()
-						for v2 in j_sorted:
-							pickledata.append(v2)
-					cPickle.dump(pickledata, os.fdopen(tmppickle[0], 'w'))
-					picklehash = gethash(tmppickle[1])
-					if verfilehashpackage.has_key(filehash):
-						verfilehashpackage[filehash].append(package)
-					else:
-						verfilehashpackage[filehash] = [package]
-					if picklehash in pickles:
-						if pickletofile.has_key(picklehash):
-							pickletofile[picklehash].append(filehash)
-						else:
-							pickletofile[picklehash] = [filehash]
-						versionpicklespackages.append((picklehash, package))
-						os.unlink(tmppickle[1])
-					else:
-						shutil.move(tmppickle[1], pickledir)
-						pickles.append(picklehash)
-						versionpicklespackages.append((picklehash, package))
-						picklehashes[picklehash] = os.path.basename(tmppickle[1])
-						if pickletofile.has_key(picklehash):
-							pickletofile[picklehash].append(filehash)
-						else:
-							pickletofile[picklehash] = [filehash]
-
-			## extract pickles with version information for functions
-			if dynamicRes.has_key('packages'):
-				for package in dynamicRes['packages']:
-					packagedata = copy.copy(dynamicRes['packages'][package])
-					tmppickle = tempfile.mkstemp()
-					pickledata = []
-					p_sorted = sorted(packagedata, key=lambda x: x[1])
-					vals = list(set(map(lambda x: x[1], p_sorted)))
-					vals.sort()
-					for v in vals:
-						j_sorted = filter(lambda x: x[1] == v, p_sorted)
-						j_sorted.sort()
-						for v2 in j_sorted:
-							pickledata.append(v2)
-					cPickle.dump(pickledata, os.fdopen(tmppickle[0], 'w'))
-					picklehash = gethash(tmppickle[1])
-					if funcfilehashpackage.has_key(filehash):
-						funcfilehashpackage[filehash].append(package)
-					else:
-						funcfilehashpackage[filehash] = [package]
-					if picklehash in pickles:
-						if pickletofile.has_key(picklehash):
-							pickletofile[picklehash].append(filehash)
-						else:
-							pickletofile[picklehash] = [filehash]
-						funcpicklespackages.append((picklehash, package))
-						os.unlink(tmppickle[1])
-					else:
-						shutil.move(tmppickle[1], pickledir)
-						pickles.append(picklehash)
-						funcpicklespackages.append((picklehash, package))
-						picklehashes[picklehash] = os.path.basename(tmppickle[1])
-						if pickletofile.has_key(picklehash):
-							pickletofile[picklehash].append(filehash)
-						else:
-							pickletofile[picklehash] = [filehash]
-			processed.append(filehash)
 	## create a pool and generate the images
 	pool = multiprocessing.Pool()
 	pietasks = []
