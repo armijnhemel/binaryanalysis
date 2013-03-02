@@ -368,6 +368,7 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, debug):
 		exec "from %s import %s as bat_%s" % (module, method, method)
 
 		eval("bat_%s(unpackreports, scantempdir, topleveldir, envvars=envvars)" % (method))
+		## TODO: if there is any return value assign it to the top level element
 
 def postrunscan((filetoscan, unpackreports, scans, scantempdir, topleveldir, debug)):
 	for scan in scans:
