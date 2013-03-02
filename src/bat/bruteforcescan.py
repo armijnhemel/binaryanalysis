@@ -480,7 +480,7 @@ def readconfig(config):
 				pass
 
 			## some things only make sense in a particular context
-			if config.get(section, 'type') == 'postrun':
+			if config.get(section, 'type') == 'postrun' or config.get(section, 'type') == 'aggregate':
 				try:
 					## all three parameters should be there together
 					conf['storedir'] = config.get(section, 'storedir')
@@ -542,7 +542,7 @@ def dumpData(unpackreports, scans, tempdir):
 	sha256spack = list(set(sha256spack))
 	oldstoredir = None
 	oldlistdir = []
-	for i in scans['postrunscans']:
+	for i in (scans['postrunscans'] + scans['aggregatescans']):
 		## use parameters from configuration file. This assumes that the names of the
 		## all output files of a particular scan start with the checksum of the scanned
 		## file and have a common suffix.
