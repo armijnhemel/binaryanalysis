@@ -1,5 +1,7 @@
 2013-03-02
 * extract pickles for generating images in parallel
+* add storedir and other configuration directives to aggregate scans
+* remove rankimages.py from configuration
 
 2013-03-01
 * check whether or not file to be scanned actually exists
