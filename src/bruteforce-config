@@ -5,7 +5,6 @@
 [batconfig]
 multiprocessing = yes
 module = bat.simpleprettyprint
-#module = bat.ppknowledgebase
 output = prettyprintresxml
 outputlite = no
 
@@ -86,6 +85,15 @@ priority    = 1
 description = Check if complete file is a valid JAR file
 enabled     = no
 
+[verifyjava]
+type        = prerun
+module      = bat.prerun
+method      = verifyJavaClass
+magic       = java
+priority    = 1
+description = Check if complete file is a valid Java class file
+enabled     = yes
+
 [verifymessagecatalog]
 type        = prerun
 module      = bat.prerun
@@ -154,7 +162,7 @@ module      = bat.fwunpack
 method      = searchUnpack7z
 priority    = 1
 magic       = 7z
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video:java
 description = Unpack 7z compressed files
 enabled     = yes
 
@@ -164,7 +172,7 @@ module      = bat.fwunpack
 method      = searchUnpackAr
 priority    = 2
 magic       = ar
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video:java
 description = Unpack ar archives
 enabled     = yes
 
@@ -174,7 +182,7 @@ module      = bat.fwunpack
 method      = searchUnpackARJ
 priority    = 1
 magic       = arj
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video:java
 description = Unpack ARJ compressed files
 enabled     = no
 
@@ -183,7 +191,7 @@ type        = unpack
 module      = bat.fwunpack
 method      = searchUnpackBase64
 priority    = 0
-noscan      = xml:graphics:binary:pdf:compressed:audio:video
+noscan      = xml:graphics:binary:pdf:compressed:audio:video:java
 description = Decode base64 encoded files
 enabled     = yes
 
@@ -192,7 +200,7 @@ type        = unpack
 module      = bat.fwunpack
 method      = searchUnpackByteSwap
 priority    = 100
-noscan      = xml:graphics:pdf:compressed:audio:video
+noscan      = xml:graphics:pdf:compressed:audio:video:java
 description = Byteswap files for 16 bit flash
 enabled     = yes
 
@@ -202,7 +210,7 @@ module      = bat.fwunpack
 method      = searchUnpackBzip2
 priority    = 1
 magic       = bz2
-noscan      = text:xml:graphics:pdf:gzip:lrzip:audio:video
+noscan      = text:xml:graphics:pdf:gzip:lrzip:audio:video:java
 description = Unpack bzip2 compressed files
 enabled     = yes
 
@@ -212,7 +220,7 @@ module      = bat.fwunpack
 method      = searchUnpackCab
 priority    = 1
 magic       = cab
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Unpack MS Windows Cabinet archives
 enabled     = yes
 
@@ -222,7 +230,7 @@ module      = bat.fwunpack
 method      = searchUnpackCompress
 priority    = 1
 magic       = compress
-noscan      = text:xml:graphics:pdf:audio:video:elf
+noscan      = text:xml:gzip:graphics:pdf:audio:video:elf:java
 description = Unpack files compressed with compress
 enabled     = yes
 
@@ -232,7 +240,7 @@ module      = bat.fwunpack
 method      = searchUnpackCpio
 priority    = 2
 magic       = cpio1:cpio2:cpio3:cpiotrailer
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Unpack CPIO archives
 enabled     = yes
 
@@ -242,7 +250,7 @@ module      = bat.fwunpack
 method      = searchUnpackCramfs
 priority    = 3
 magic       = cramfs
-noscan      = text:xml:graphics:pdf:compressed:audio:video:elf
+noscan      = text:xml:graphics:pdf:compressed:audio:video:elf:java
 description = Unpack cramfs file systems
 enabled     = yes
 
@@ -251,7 +259,7 @@ type        = unpack
 module      = bat.fwunpack
 method      = searchUnpackExe
 priority    = 2
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Unpack Microsoft Windows Executable files
 enabled     = yes
 
@@ -261,7 +269,7 @@ module      = bat.fwunpack
 method      = searchUnpackExt2fs
 priority    = 3
 magic       = ext2
-noscan      = text:xml:graphics:pdf:compressed:audio:video:elf
+noscan      = text:xml:graphics:pdf:compressed:audio:video:elf:java
 description = Unpack EXT2/3/4 file systems
 enabled     = yes
 
@@ -271,7 +279,7 @@ module      = bat.fwunpack
 method      = searchUnpackGIF
 priority    = 0
 magic       = gif87:gif89
-noscan      = text:xml:graphics:pdf:compressed:resource:audio
+noscan      = text:xml:graphics:pdf:compressed:resource:audio:java
 description = Carve GIF files from a file
 enabled     = yes
 
@@ -281,7 +289,7 @@ module      = bat.fwunpack
 method      = searchUnpackGzip
 priority    = 1
 magic       = gzip
-noscan      = text:xml:graphics:pdf:bz2:lrzip:audio:video
+noscan      = text:xml:graphics:pdf:bz2:lrzip:audio:video:java
 description = Unpack gzip compressed files
 enabled     = yes
 
@@ -291,7 +299,7 @@ module      = bat.fwunpack
 method      = searchUnpackIco
 priority    = 0
 magic       = ico
-noscan      = text:xml:pdf:compressed:graphics:resource:audio:video
+noscan      = text:xml:pdf:compressed:graphics:resource:audio:video:java
 description = Carve ICO files from a file
 enabled     = no
 
@@ -301,7 +309,7 @@ module      = bat.fwunpack
 method      = searchUnpackInstallShield
 priority    = 1
 magic       = installshield
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video:java
 description = Unpack InstallShield compressed files
 enabled     = yes
 
@@ -311,7 +319,7 @@ module      = bat.fwunpack
 method      = searchUnpackISO9660
 priority    = 4
 magic       = iso9660
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Unpack ISO9660 (CD-ROM) file systems
 enabled     = yes
 
@@ -321,7 +329,7 @@ module      = bat.fwunpack
 method      = searchUnpackJavaSerialized
 priority    = 2
 magic       = java_serialized
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video:java
 description = Unpack Java serialized files
 enabled     = yes
 
@@ -331,7 +339,7 @@ module      = bat.fwunpack
 method      = searchUnpackJffs2
 priority    = 1
 magic       = jffs2_le
-noscan      = text:xml:graphics:pdf:compressed:audio:video:elf
+noscan      = text:xml:graphics:pdf:compressed:audio:video:elf:java
 description = Unpack JFFS2 file systems
 enabled     = yes
 
@@ -341,7 +349,7 @@ module      = bat.fwunpack
 method      = searchUnpackLRZIP
 priority    = 1
 magic       = lrzip
-noscan      = text:xml:graphics:pdf:bz2:gzip:lzip:audio:video
+noscan      = text:xml:graphics:pdf:bz2:gzip:lzip:audio:video:java
 description = Unpack LRZIP compressed files
 enabled     = yes
 
@@ -351,7 +359,7 @@ module      = bat.fwunpack
 method      = searchUnpackLzip
 priority    = 1
 magic       = lzip
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video:java
 description = Unpack LZIP compressed files
 enabled     = yes
 
@@ -361,7 +369,7 @@ module      = bat.fwunpack
 method      = searchUnpackLZMA
 priority    = 0
 magic       = lzma_alone:lzma_alone_alt
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:resource:dalvik:audio:video:elf
+noscan      = text:xml:graphics:pdf:bz2:zip:gzip:lrzip:resource:dalvik:audio:video:elf:java
 description = Unpack LZMA compressed files
 envvars     = LZMA_MINIMUM_SIZE=10
 enabled     = yes
@@ -372,7 +380,7 @@ module      = bat.fwunpack
 method      = searchUnpackLzo
 priority    = 1
 magic       = lzo
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video:java
 description = Unpack LZO compressed files
 enabled     = yes
 
@@ -382,7 +390,7 @@ module      = bat.fwunpack
 method      = searchUnpackMinix
 priority    = 1
 magic       = minix
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video:java
 description = Unpack Minix file systems
 enabled     = yes
 
@@ -392,7 +400,7 @@ module      = bat.fwunpack
 method      = searchUnpackPDF
 priority    = 5
 magic       = pdf:pdftrailer
-noscan      = text:xml:graphics:compressed:audio:video
+noscan      = text:xml:graphics:compressed:audio:video:java
 description = Carve PDF files from a file
 enabled     = yes
 
@@ -402,7 +410,7 @@ module      = bat.fwunpack
 method      = searchUnpackPNG
 priority    = 0
 magic       = png:pngtrailer
-noscan      = text:xml:pdf:compressed:graphics:resource:audio
+noscan      = text:xml:pdf:compressed:graphics:resource:audio:java
 description = Carve PNG files from a file
 enabled     = yes
 
@@ -412,7 +420,7 @@ module      = bat.fwunpack
 method      = searchUnpackRar
 priority    = 1
 magic       = rar
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video:java
 description = Unpack RAR archives
 enabled     = yes
 
@@ -422,7 +430,7 @@ module      = bat.fwunpack
 method      = searchUnpackRomfs
 priority    = 2
 magic       = romfs
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video:java
 description = Unpack romfs file systems
 enabled     = yes
 
@@ -432,7 +440,7 @@ module      = bat.unpackrpm
 method      = searchUnpackRPM
 priority    = 2
 magic       = rpm:gzip:xz:xztrailer
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Unpack RPM files
 enabled     = yes
 
@@ -442,7 +450,7 @@ module      = bat.fwunpack
 method      = searchUnpackSquashfs
 priority    = 1
 magic       = squashfs1:squashfs2:squashfs3:squashfs4:squashfs5:squashfs6:squashfs7
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Unpack squashfs file systems
 enabled     = yes
 
@@ -452,7 +460,7 @@ module      = bat.fwunpack
 method      = searchUnpackSwf
 priority    = 0
 magic       = swf
-noscan      = text:xml:pdf:compressed:graphics:resource:audio:video
+noscan      = text:xml:pdf:compressed:graphics:resource:audio:video:java
 description = Unpack compressed Shockwave Flash files
 enabled     = yes
 
@@ -462,7 +470,7 @@ module      = bat.fwunpack
 method      = searchUnpackTar
 priority    = 6
 magic       = tar1:tar2
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video:java
 description = Unpack tar archives
 enabled     = yes
 
@@ -482,8 +490,8 @@ type        = unpack
 module      = bat.fwunpack
 method      = searchUnpackUPX
 priority    = 3
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 magic       = upx
-noscan      = text:xml:graphics:pdf:compressed:audio:video
 description = Unpack UPX compressed executables
 enabled     = yes
 
@@ -503,7 +511,7 @@ module      = bat.fwunpack
 method      = searchUnpackXZ
 priority    = 1
 magic       = xz:xztrailer
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video:java
 description = Unpack XZ compressed files
 enabled     = yes
 
@@ -512,7 +520,7 @@ type        = unpack
 module      = bat.fwunpack
 method      = searchUnpackYaffs2
 priority    = 2
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Unpack YAFFS2 file systems
 enabled     = yes
 
@@ -522,7 +530,7 @@ module      = bat.fwunpack
 method      = searchUnpackZip
 priority    = 1
 magic       = zip
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video:java
 description = Unpack ZIP compressed files
 enabled     = yes
 
@@ -534,7 +542,7 @@ enabled     = yes
 type        = program
 module      = bat.checks
 method      = scanArchitecture
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Scan executable file architecture
 enabled     = yes
 
@@ -542,7 +550,7 @@ enabled     = yes
 type        = program
 module      = bat.busyboxversion
 method      = busybox_version
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Extract BusyBox version number
 enabled     = yes
 
@@ -550,7 +558,7 @@ enabled     = yes
 type        = program
 module      = bat.checks
 method      = searchDproxy
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Determine presence of dproxy
 enabled     = yes
 
@@ -558,7 +566,7 @@ enabled     = yes
 type        = program
 module      = bat.checks
 method      = searchEzIpupdate
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Determine presence of ez-update
 enabled     = yes
 
@@ -584,7 +592,7 @@ enabled     = yes
 type        = program
 module      = bat.checks
 method      = searchIproute
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Determine presence of iproute
 enabled     = yes
 
@@ -592,7 +600,7 @@ enabled     = yes
 type        = program
 module      = bat.checks
 method      = searchIptables
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Determine presence of iptables
 enabled     = yes
 
@@ -601,7 +609,7 @@ type        = program
 module      = bat.kernelanalysis
 method      = kernelChecks
 xmloutput   = xmlprettyprint
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Detect version number and some subsystems in Linux kernel
 enabled     = yes
 
@@ -609,7 +617,7 @@ enabled     = yes
 type        = program
 module      = bat.kernelanalysis
 method      = analyseModuleLicense
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Determine declared Linux kernel module license
 enabled     = yes
 
@@ -618,7 +626,7 @@ type        = program
 module      = bat.checks
 method      = searchDynamicLibs
 xmloutput   = dynamicLibsPrettyPrint
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Determine dynamically linked libraries
 enabled     = yes
 
@@ -626,7 +634,7 @@ enabled     = yes
 type        = program
 module      = bat.checks
 method      = searchLibusb
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Determine presence of libusb
 enabled     = yes
 
@@ -643,7 +651,7 @@ enabled     = yes
 type        = program
 module      = bat.checks
 method      = searchLoadLin
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Determine presence of libusb
 enabled     = yes
 
@@ -652,7 +660,7 @@ type        = program
 module      = bat.checks
 method      = scanPDF
 xmloutput   = pdfPrettyPrint
-noscan      = text:xml:graphics:compressed:audio:video
+noscan      = text:xml:graphics:compressed:audio:video:java
 description = Determine characteristics of PDF files
 enabled     = yes
 
@@ -671,7 +679,7 @@ parallel    = no
 type        = program
 module      = bat.checks
 method      = searchRedBoot
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Determine presence of RedBoot
 enabled     = yes
 
@@ -679,7 +687,7 @@ enabled     = yes
 type        = program
 module      = bat.checks
 method      = searchUBoot
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Determine presence of U-Boot
 enabled     = yes
 
@@ -687,7 +695,7 @@ enabled     = yes
 type        = program
 module      = bat.checks
 method      = searchVsftpd
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Determine presence of vsftpd
 enabled     = yes
 
@@ -695,7 +703,7 @@ enabled     = yes
 type        = program
 module      = bat.checks
 method      = searchWirelessTools
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Determine presence of wireless-tools
 enabled     = yes
 
@@ -703,7 +711,7 @@ enabled     = yes
 type        = program
 module      = bat.checks
 method      = searchWpaSupplicant
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Determine presence of wpa-supplicant
 enabled     = yes
 
@@ -717,13 +725,36 @@ module      = bat.findlibs
 method      = findlibs
 noscan      = text:xml:graphics:pdf:audio:video
 enabled     = no
+priority    = 2
+
+[generateimages]
+type        = aggregate
+module      = bat.generateimages
+method      = generateimages
+noscan      = text:xml:graphics:pdf:audio:video
+enabled     = no
+envvars     = BAT_IMAGEDIR=/tmp/images
+description = Generate images of results of ranking
+priority    = 1
+
+[generatereports]
+type        = aggregate
+module      = bat.generatereports
+method      = generatereports
+noscan      = text:xml:graphics:pdf:audio:video
+enabled     = no
+envvars     = BAT_REPORTDIR=/tmp/images
+description = Generate reports of results of ranking
+priority    = 1
 
 [jars]
 type        = aggregate
 module      = bat.aggregatejars
 method      = aggregatejars
 noscan      = text:xml:graphics:pdf:audio:video
+#envvars     = AGGREGATE_CLEAN=1
 enabled     = yes
+priority    = 2
 
 #####################
 ### postrun scans ###
@@ -772,7 +803,7 @@ module      = bat.generateuniquehtml
 method      = generateHTML
 noscan      = text:xml:graphics:pdf:audio:video
 envvars     = BAT_REPORTDIR=/tmp/images
-description = Generate HTML files with links to pretty printed source code for matched and unmatched strings
+description = Generate HTML files with links to pretty printed source code for unique matches
 enabled     = no
 storetarget = reports
 storedir    = /tmp/images
