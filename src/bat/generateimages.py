@@ -22,11 +22,12 @@ pictures.
 
 The method works as follows:
 
-1. All data from pickles that is needed to generate pictures is extracted.
+1. All data from pickles that is needed to generate pictures is extracted in
+parallel.
 2. The checksum of the pickle is computed and recorded. If there is a duplicate
 the pickle is removed and it is recorded which file it originally belonged to.
 3. Pictures are generated in parallel for the remaining pickle files.
-4. The pictures are copied and renamed.
+4. The pictures are copied and renamed, or symlinked.
 '''
 
 def generatepiecharts((picklefile, pickledir, filehash, imagedir)):
