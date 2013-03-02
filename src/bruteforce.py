@@ -57,13 +57,13 @@ def main(argv):
 	## create temporary directory for storing results
 	tempdir=tempfile.mkdtemp()
 
-	unpackreports = bat.bruteforcescan.runscan(tempdir, scans, scan_binary)
+	unpackreports = bat.bruteforcescan.runscan(tempdir, scans, options.fw)
 
 	if not scans['batconfig'].has_key('output'):
 		## no printing?
 		pass
 	else:
-		output = bat.bruteforcescan.prettyprint(scans['batconfig'], unpackreports, scandate, scans, os.path.basename(scan_binary), tempdir)
+		output = bat.bruteforcescan.prettyprint(scans['batconfig'], unpackreports, scandate, scans, os.path.basename(options.fw), tempdir)
 		print output
 
 	bat.bruteforcescan.writeDumpfile(unpackreports, scans, options.outputfile, os.path.realpath(options.cfg), tempdir, scans['batconfig']['outputlite'])
