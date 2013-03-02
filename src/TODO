@@ -19,7 +19,7 @@ queueing system:
 
 aggregate scanning:
 * cleanup if we used one of the squashfs + lzma variants where we can't determine the size.
-* add scan for reporting duplicate files
+* assign possible return values to top level scan
 * report possible whole chain of dependencies for a program
 
 GUI:
