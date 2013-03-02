@@ -5,6 +5,7 @@
 * create workaround for weird ZIP files
 * add aggregate scan for finding duplicate files. Reporting still needs to be
 added.
+* add more license markers
 
 2013-03-01
 * check whether or not file to be scanned actually exists

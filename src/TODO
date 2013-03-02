@@ -43,7 +43,6 @@ database creation:
 ranking:
 * use version information to report most likely licenses
 * report correlation between packages (strings, variable names, function names) to detect cloning in the database
-* store info about unique strings more efficiently since often they don't change in between versions. This is to reduce memory usage.
 * deal with inner classes properly
 * use clonedb information for variable names, field names, and so on
 * use information from special ELF sections from Linux kernels that are distributed as ELF files, such as Fedora's kernels, or Linux kernel modules: __ksymtab + friends and .symtab
@@ -69,3 +68,5 @@ BOTTLENECKS:
 2. preread (in parallel) leafreports of Java .class files which are shared between several JAR files for aggregate jars. This saves opening and reading the same files.
 3. make findlibs.py partially parallel
 4. extract pickles for generating reports in parallel, generate HTML in parallel as well
+5. rewrite genericSearch in checks.py to avoid reading files multiple times in forges and licenses scan
+6. store info about unique strings more efficiently since often they don't change in between versions. This is to reduce memory usage.
