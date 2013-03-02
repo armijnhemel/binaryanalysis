@@ -151,6 +151,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 	piepicklespackages = []
 	picklehashes = {}
 	pickletofile = {}
+	filehashpackage = {}
 
 	filehashes = list(set(map(lambda x: unpackreports[x]['sha256'], rankingfiles)))
 	extracttasks = map(lambda x: (x, pickledir, topleveldir), filehashes)
@@ -241,6 +242,10 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 							pickledata.append(v2)
 					cPickle.dump(pickledata, os.fdopen(tmppickle[0], 'w'))
 					picklehash = gethash(tmppickle[1])
+					if filehashpackage.has_key(filehash):
+						filehashpackage[filehash].append(package)
+					else:
+						filehashpackage[filehash] = [package]
 					if picklehash in pickles:
 						if pickletofile.has_key(picklehash):
 							pickletofile[picklehash].append(filehash)
@@ -304,17 +309,17 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 
 	## TODO: right now too many results are being copied.
 	for r in list(set(results)):
-		filehash = r.split('.', 1)[0]
+		picklefilehash = r.split('.', 1)[0]
 		unlinkpickle = True
-		for f in pickletofile[filehash]:
-			if not funcpickletopackage.has_key(filehash) and not versionpickletopackage.has_key(filehash):
+		for f in pickletofile[picklefilehash]:
+			if not funcpickletopackage.has_key(picklefilehash) and not versionpickletopackage.has_key(picklefilehash):
 				## this should not happen
 				continue
-			if versionpickletopackage.has_key(filehash):
-				for e in versionpickletopackage[filehash]:
+			if versionpickletopackage.has_key(picklefilehash):
+				for e in versionpickletopackage[picklefilehash]:
 					extension = "version.png"
 					filename = "%s-%s-%s" % (f, e, extension)
-					if symlinks and len(versionpickletopackage[filehash]) != 1:
+					if symlinks and len(versionpickletopackage[picklefilehash]) != 1:
 						oldcwd = os.getcwd()
                                 		os.chdir(imagedir)
                                 		os.symlink(r, filename)
@@ -322,11 +327,15 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 						unlinkpickle = False
 					else:
 						shutil.copy(os.path.join(imagedir, r), os.path.join(imagedir, filename))
-			if funcpickletopackage.has_key(filehash):
-				for e in funcpickletopackage[filehash]:
+			if funcpickletopackage.has_key(picklefilehash):
+				for e in funcpickletopackage[picklefilehash]:
+					if not filehashpackage.has_key(f):
+						continue
+					if not e in filehashpackage[f]:
+						continue
 					extension = "funcversion.png"
 					filename = "%s-%s-%s" % (f, e, extension)
-					if symlinks and len(funcpickletopackage[filehash]) != 1:
+					if symlinks and len(funcpickletopackage[picklefilehash]) != 1:
 						oldcwd = os.getcwd()
                                 		os.chdir(imagedir)
                                 		os.symlink(r, filename)
