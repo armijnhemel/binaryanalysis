@@ -483,7 +483,7 @@ representation of a file, where every bit in the binary has been assigned a
 grayscale value, plus a textual representation of a file generated with
 \texttt{hexdump}. Advanced mode is disabled by default, since loading the
 additional pictures and data is quite resource intensive and it will only be
-useful in very specific case and might be removed in future versions of BAT.
+useful in very specific cases and might be removed in future versions of BAT.
 
 \subsubsection{Scanning with \texttt{batgui}}
 
@@ -637,6 +637,10 @@ file systems.
 throughout the code.
 \item \texttt{file2package.py} has code to match names of files to names of
 packages from popular distributions in a database.
+\item \texttt{findduplicates.py} is used to find duplicate files in the scanned
+archive.
+\item \texttt{findlibs.py} is for researching dynamically linked ELF files in
+the archive.
 \item \texttt{fsmagic.py} contains identifiers of various file systems and
 compressed files, like magic headers and offsets for which might need to be
 corrected.
@@ -644,7 +648,7 @@ corrected.
 compressed files and file systems.
 \item \texttt{generatehexdump.py} and \texttt{images.py} generate textual and
 graphical representations of the input files.
-\item \texttt{generateuniquehtml.py} and \texttt{rankimages.py} generate
+\item \texttt{generateuniquehtml.py} and \texttt{generateimages.py} generate
 textual and graphical representations of results of the analysis.
 \item \texttt{jffs2.py} has code specific to handling JFFS2 file systems.
 \item \texttt{kernelanalysis.py} includes code to extract information from
