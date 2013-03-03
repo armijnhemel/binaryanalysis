@@ -719,6 +719,13 @@ enabled     = yes
 ### aggregate scans ###
 #######################
 
+[findduplicates]
+type        = aggregate
+module      = bat.findduplicates
+method      = findduplicates
+enabled     = no
+priority    = 10
+
 [findlibs]
 type        = aggregate
 module      = bat.findlibs
@@ -749,6 +756,10 @@ noscan      = text:xml:graphics:pdf:audio:video
 enabled     = no
 envvars     = BAT_REPORTDIR=/tmp/images
 description = Generate reports of results of ranking
+storetarget = reports
+storedir    = /tmp/images
+storetype   = -unmatched.html.gz
+cleanup     = yes
 priority    = 1
 
 [jars]
@@ -756,7 +767,7 @@ type        = aggregate
 module      = bat.aggregatejars
 method      = aggregatejars
 noscan      = text:xml:graphics:pdf:audio:video
-#envvars     = AGGREGATE_CLEAN=1
+envvars     = AGGREGATE_CLEAN=0
 enabled     = yes
 priority    = 2
 
@@ -798,5 +809,5 @@ description = Generate HTML files with links to pretty printed source code for u
 enabled     = no
 storetarget = reports
 storedir    = /tmp/images
-storetype   = -unique.html.gz:-unmatched.html.gz:-names.html.gz:-functionnames.html.gz
+storetype   = -unique.html.gz:-names.html.gz:-functionnames.html.gz
 cleanup     = yes
