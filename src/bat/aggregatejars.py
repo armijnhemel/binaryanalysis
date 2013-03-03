@@ -285,7 +285,7 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 	dynamicresfinal['totalnames'] = namesmatched
 	dynamicresfinal['packages'] = packagesmatched
 
-	rankres['unmatched'] = unmatched
+	rankres['unmatched'] = list(set(unmatched))
 	rankres['matchedlines'] = matchedlines
 	rankres['extractedlines'] = extractedlines
 	rankres['nonUniqueAssignments'] = nonUniqueAssignments
