@@ -739,7 +739,7 @@ type        = aggregate
 module      = bat.generateimages
 method      = generateimages
 noscan      = text:xml:graphics:pdf:audio:video
-enabled     = yes
+enabled     = no
 envvars     = BAT_IMAGEDIR=/tmp/images:AGGREGATE_IMAGE_SYMLINK=0
 description = Generate images of results of ranking
 storetarget = images
@@ -758,7 +758,7 @@ envvars     = BAT_REPORTDIR=/tmp/images
 description = Generate reports of results of ranking
 storetarget = reports
 storedir    = /tmp/images
-storetype   = -unmatched.html.gz
+storetype   = -unmatched.html.gz:-unique.html.gz
 cleanup     = yes
 priority    = 1
 
@@ -809,5 +809,5 @@ description = Generate HTML files with links to pretty printed source code for u
 enabled     = no
 storetarget = reports
 storedir    = /tmp/images
-storetype   = -unique.html.gz:-names.html.gz:-functionnames.html.gz
+storetype   = -names.html.gz:-functionnames.html.gz
 cleanup     = yes
