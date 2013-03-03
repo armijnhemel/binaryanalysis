@@ -22,7 +22,7 @@ the pickle is removed and it is recorded which file it originally belonged to.
 4. The reports are copied and renamed, or assembled from partial reports
 '''
 
-import os, os.path, sys, subprocess, copy, cPickle, tempfile, hashlib, shutil, multiprocessing, cgi, gzip
+import os, os.path, sys, copy, cPickle, tempfile, hashlib, shutil, multiprocessing, cgi, gzip
 
 ## compute a SHA256 hash. This is done in chunks to prevent a big file from
 ## being read in its entirety at once, slowing down a machine.
@@ -37,8 +37,100 @@ def gethash(path):
 	scanfile.close()
 	return h.hexdigest()
 
-#def generatehtmlsnippet((picklefile, pickledir, filehash, reportdir)):
-	#pass
+## helper function to condense version numbers and squash numbers.
+def squash_versions(versions):
+	if len(versions) <= 3:
+		versionline = reduce(lambda x, y: x + ", " + y, versions)
+		return versionline
+	# check if we have versions without '.'
+	if len(filter(lambda x: '.' not in x, versions)) != 0:
+		versionline = reduce(lambda x, y: x + ", " + y, versions)
+		return versionline
+	versionparts = []
+	# get the major version number first
+	majorv = list(set(map(lambda x: x.split('.')[0], versions)))
+	for m in majorv:
+		maxconsolidationlevel = 0
+		## determine how many subcomponents we have at max
+		filterversions = filter(lambda x: x.startswith(m + "."), versions)
+		if len(filterversions) == 1:
+			versionparts.append(reduce(lambda x, y: x + ", " + y, filterversions))
+			continue
+		minversionsplits = min(list(set(map(lambda x: len(x.split('.')), filterversions)))) - 1
+		## split with a maximum of minversionsplits splits
+		splits = map(lambda x: x.split('.', minversionsplits), filterversions)
+		for c in range(0, minversionsplits):
+			if len(list(set(map(lambda x: x[c], splits)))) == 1:
+				maxconsolidationlevel = maxconsolidationlevel + 1
+			else: break
+		if minversionsplits != maxconsolidationlevel:
+			splits = map(lambda x: x.split('.', maxconsolidationlevel), filterversions)
+		versionpart = reduce(lambda x, y: x + "." + y, splits[0][:maxconsolidationlevel]) + ".{" + reduce(lambda x, y: x + ", " + y, map(lambda x: x[-1], splits)) + "}"
+		versionparts.append(versionpart)
+	versionline = reduce(lambda x, y: x + ", " + y, versionparts)
+	return versionline
+
+def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
+	html_pickle = open(os.path.join(pickledir, picklefile), 'rb')
+	(packagename, uniquematches) = cPickle.load(html_pickle)
+        html_pickle.close()
+
+	uniquehtml = "<hr><h2><a name=\"%s\" href=\"#%s\">Matches for: %s (%d)</a></h2>" % (packagename, packagename, packagename, len(uniquematches))
+	for k in uniquematches:
+		(programstring, results) = k
+		## we have a list of tuples, per unique string we have a list of sha256sums and meta info
+		## This is really hairy
+		if len(results) > 0:
+			uniquehtml = uniquehtml + "<h5>%s</h5><p><table><tr><td><b>Filename</b></td><td><b>Version(s)</b></td><td><b>Line number</b></td><td><b>SHA256</b></td></tr>" % cgi.escape(programstring)
+			uniqtablerows = []
+			sh = {}
+			for s in results:
+				(checksum, version, linenumber, sourcefile) = s
+				## if possible, remove the package name, plus version number, from the path
+				## that is displayed. This is to prevent that a line is printed for every
+				## version, even when the code has not changed. Usually it will be clear
+				## which file is meant.
+				(pv, fp) = sourcefile.split('/', 1)
+				## clean up some names first, especially when they have been changed by Debian
+				for e in ["+dfsg", "~dfsg", ".orig", ".dfsg1", ".dfsg2"]:
+					if pv.endswith(e):
+						pv = pv[:-len(e)]
+						break
+				if pv == "%s-%s" % (packagename, version) or pv == "%s_%s" % (packagename, version):
+					if sh.has_key(checksum):
+						sh[checksum].append((fp, version, linenumber))
+					else:
+						sh[checksum] = [(fp, version, linenumber)]
+				else:
+					if sh.has_key(checksum):
+						sh[checksum].append((sourcefile, version, linenumber))
+					else:
+						sh[checksum] = [(sourcefile, version, linenumber)]
+
+			for checksum in sh:
+				## per checksum we have a list of (filename, version)
+				## Now we need to check if we only have one filename, or if there are multiple.
+				## If there is just one it is easy:
+				if len(set(map(lambda x: x[0], sh[checksum]))) == 1:
+					lines = sorted(set(map(lambda x: (x[2]), sh[checksum])))
+					versions = sorted(set(map(lambda x: (x[1]), sh[checksum])))
+					versionline = squash_versions(versions)
+					numlines = reduce(lambda x, y: x + ", " + y, map(lambda x: "<a href=\"unique:/%s#%d\">%d</a>" % (checksum, x, x), lines))
+					uniqtablerows.append("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (sh[checksum][0][0], versionline, numlines, checksum))
+				else:   
+					for d in list(set(map(lambda x: x[0], sh[checksum]))):
+						filterd = filter(lambda x: x[0] == d, sh[checksum])
+						lines = sorted(set(map(lambda x: (x[2]), filterd)))
+						versions = sorted(set(map(lambda x: (x[1]), filterd)))
+						versionline = squash_versions(versions)
+						numlines = reduce(lambda x, y: x + ", " + y, map(lambda x: "<a href=\"unique:/%s#%d\">%d</a>" % (checksum, x, x), lines))
+						uniqtablerows.append("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (d, versionline, numlines, checksum))
+			uniquehtml = uniquehtml + reduce(lambda x, y: x + y, uniqtablerows, "") + "</table></p>\n"
+		else:
+			uniquehtml = uniquehtml + "<h5>%s</h5>" % cgi.escape(programstring)
+		uniquehtmlfile = open("%s/%s-unique.snippet" % (reportdir, picklehash), 'wb')
+		uniquehtmlfile.write(uniquehtml)
+		uniquehtmlfile.close()
 
 def extractpickles((filehash, pickledir, topleveldir)):
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
@@ -69,8 +161,7 @@ def extractpickles((filehash, pickledir, topleveldir)):
 				tmppickle = tempfile.mkstemp()
 				cPickle.dump((packagename, uniquematches), os.fdopen(tmppickle[0], 'w'))
 				picklehash = gethash(tmppickle[1])
-				reportresults.append((picklehash, tmppickle[1]))
-				## TODO: find out what to do with rank and percentage
+				reportresults.append((rank, percentage, picklehash, tmppickle[1]))
 
 	return (filehash, reportresults, unmatchedresult)
 
@@ -151,6 +242,9 @@ def generatereports(unpackreports, scantempdir, topleveldir, envvars=None):
 	res = filter(lambda x: x != None, pool.map(extractpickles, extracttasks))
 	pool.terminate()
 
+	## {filehash: [(rank, percentage, picklehash)]}
+	resultranks = {}
+
 	for r in res:
 		(filehash, resultreports, unmatchedresult) = r
 		if r == None:
@@ -175,7 +269,11 @@ def generatereports(unpackreports, scantempdir, topleveldir, envvars=None):
 					pickletofile[picklehash] = [filehash]
 		if resultreports != []:
 			for report in resultreports:
-				(picklehash, tmppickle) = report
+				(rank, percentage, picklehash, tmppickle) = report
+				if resultranks.has_key(filehash):
+					resultranks[filehash].append((rank, percentage, picklehash))
+				else:
+					resultranks[filehash] = [(rank, percentage, picklehash)]
 				if picklehash in reportpickles:
 					if pickletofile.has_key(picklehash):
 						pickletofile[picklehash].append(filehash)
@@ -211,4 +309,9 @@ def generatereports(unpackreports, scantempdir, topleveldir, envvars=None):
 			except Exception, e:
 				#print >>sys.stderr, "ERR", e
 				pass
+	if reportpickles != []:
+		reporttasks = list(set(map(lambda x: (picklehashes[x[0]], pickledir, x[0], reportdir), picklespackages)))
+		results = pool.map(generatehtmlsnippet, reporttasks, 1)
+		
+		pass
 	pool.terminate()
