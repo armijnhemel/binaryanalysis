@@ -140,6 +140,8 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 	dynamicresfinal = {}
 	pv = {}
 
+	upp = {}
+
 	for c in unpackreports:
 		## sanity checks
 		if not c.has_key('tags'):
@@ -206,7 +208,14 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 				(rank, package, unique, percentage, packageversions, packagelicenses) = r
 				## ignore rank and percentage
 				if uniqueMatchesperpkg.has_key(package):
-					uniqueMatchesperpkg[package] = uniqueMatchesperpkg[package] + r[2]
+					tmpres = []
+					for p in r[2]:
+						if upp.has_key(p[0]):
+							continue
+						else:
+							tmpres.append(p)
+							upp[p[0]] = 1
+					uniqueMatchesperpkg[package] = uniqueMatchesperpkg[package] + tmpres
 				else:
 					uniqueMatchesperpkg[package] = r[2]
 				if packageversions != {}:
