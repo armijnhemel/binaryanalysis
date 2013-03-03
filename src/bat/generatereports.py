@@ -74,6 +74,8 @@ def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
 	html_pickle = open(os.path.join(pickledir, picklefile), 'rb')
 	(packagename, uniquematches) = cPickle.load(html_pickle)
         html_pickle.close()
+	if len(uniquematches) == 0:
+		return
 
 	uniquehtml = "<hr><h2><a name=\"%s\" href=\"#%s\">Matches for: %s (%d)</a></h2>" % (packagename, packagename, packagename, len(uniquematches))
 	for k in uniquematches:
@@ -128,9 +130,9 @@ def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
 			uniquehtml = uniquehtml + reduce(lambda x, y: x + y, uniqtablerows, "") + "</table></p>\n"
 		else:
 			uniquehtml = uniquehtml + "<h5>%s</h5>" % cgi.escape(programstring)
-		uniquehtmlfile = open("%s/%s-unique.snippet" % (reportdir, picklehash), 'wb')
-		uniquehtmlfile.write(uniquehtml)
-		uniquehtmlfile.close()
+	uniquehtmlfile = open("%s/%s-unique.snippet" % (reportdir, picklehash), 'wb')
+	uniquehtmlfile.write(uniquehtml)
+	uniquehtmlfile.close()
 
 def extractpickles((filehash, pickledir, topleveldir)):
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
@@ -158,10 +160,12 @@ def extractpickles((filehash, pickledir, topleveldir)):
 		if res['reports'] != []:
 			for j in res['reports']:
 				(rank, packagename, uniquematches, percentage, packageversions, licenses) = j
+				if len(uniquematches) == 0:
+					continue
 				tmppickle = tempfile.mkstemp()
 				cPickle.dump((packagename, uniquematches), os.fdopen(tmppickle[0], 'w'))
 				picklehash = gethash(tmppickle[1])
-				reportresults.append((rank, percentage, picklehash, tmppickle[1]))
+				reportresults.append((rank, picklehash, tmppickle[1], len(uniquematches), packagename))
 
 	return (filehash, reportresults, unmatchedresult)
 
@@ -242,9 +246,10 @@ def generatereports(unpackreports, scantempdir, topleveldir, envvars=None):
 	res = filter(lambda x: x != None, pool.map(extractpickles, extracttasks))
 	pool.terminate()
 
-	## {filehash: [(rank, percentage, picklehash)]}
+	## {filehash: [(rank, picklehash)]}
 	resultranks = {}
 
+	bla = 0
 	for r in res:
 		(filehash, resultreports, unmatchedresult) = r
 		if r == None:
@@ -268,12 +273,13 @@ def generatereports(unpackreports, scantempdir, topleveldir, envvars=None):
 				else:
 					pickletofile[picklehash] = [filehash]
 		if resultreports != []:
+			bla += 1
 			for report in resultreports:
-				(rank, percentage, picklehash, tmppickle) = report
+				(rank, picklehash, tmppickle, uniquematcheslen, packagename) = report
 				if resultranks.has_key(filehash):
-					resultranks[filehash].append((rank, percentage, picklehash))
+					resultranks[filehash].append((rank, picklehash, uniquematcheslen, packagename))
 				else:
-					resultranks[filehash] = [(rank, percentage, picklehash)]
+					resultranks[filehash] = [(rank, picklehash, uniquematcheslen, packagename)]
 				if picklehash in reportpickles:
 					if pickletofile.has_key(picklehash):
 						pickletofile[picklehash].append(filehash)
@@ -311,7 +317,30 @@ def generatereports(unpackreports, scantempdir, topleveldir, envvars=None):
 				pass
 	if reportpickles != []:
 		reporttasks = list(set(map(lambda x: (picklehashes[x[0]], pickledir, x[0], reportdir), picklespackages)))
-		results = pool.map(generatehtmlsnippet, reporttasks, 1)
-		
-		pass
+		pool.map(generatehtmlsnippet, reporttasks, 1)
+		## now recombine the results into HTML files
+		pickleremoves = []
+		for filehash in resultranks.keys():
+			uniquehtml = "<html><body><h1>Unique matches per package</h1><p><ul>"
+			headers = ""
+			filehtml = ""
+			for r in resultranks[filehash]:
+				(rank, picklehash, uniquematcheslen, packagename) = r
+				headers = headers + "<li><a href=\"#%s\">%s (%d)</a>" % (packagename, packagename, uniquematcheslen)
+				picklehtmlfile = open(os.path.join(reportdir, "%s-unique.snippet" % picklehash))
+				picklehtml = picklehtmlfile.read()
+				picklehtmlfile.close()
+				filehtml = filehtml + picklehtml
+				pickleremoves.append(picklehash)
+				
+			uniquehtml = uniquehtml + headers + "</ul></p>" + filehtml + "</body></html>"
+			uniquehtmlfile = gzip.open("%s/%s-unique.html.gz" % (reportdir, filehash), 'wb')
+			uniquehtmlfile.write(uniquehtml)
+			uniquehtmlfile.close()
+		for i in list(set(pickleremoves)):
+			try:
+				os.unlink(os.path.join(reportdir, "%s-unique.snippet" % i))
+			except Exception, e:
+				## print >>sys.stderr, e
+				pass
 	pool.terminate()
