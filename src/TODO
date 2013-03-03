@@ -60,7 +60,7 @@ HTML generation:
 
 misc:
 * replay script to unpack firmware based on only the pickle with unpacking data
-* expand "debug"
+* expand "debug", add per phase debug
 * add support for ignoring some file types/extensions completely
 
 BOTTLENECKS:
@@ -69,4 +69,5 @@ BOTTLENECKS:
 3. make findlibs.py partially parallel
 4. extract pickles for generating reports in parallel, generate HTML in parallel as well
 5. rewrite genericSearch in checks.py to avoid reading files multiple times in forges and licenses scan
-6. store info about unique strings more efficiently since often they don't change in between versions. This is to reduce memory usage.
+6. store info about unique strings more efficiently since there is a lot of duplication. This is to reduce memory usage.
+7. (optionally) merge generateimages.py and generatereports.py to prevent pickles from being read from disk twice.
