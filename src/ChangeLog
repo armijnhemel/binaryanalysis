@@ -1,3 +1,7 @@
+2013-03-03
+* deduplicate data for unique matches stored in results for JAR files. In some
+cases this is a HUGE save (96% in size in some of my test cases).
+
 2013-03-02
 * extract pickles for generating images in parallel
 * add storedir and other configuration directives to aggregate scans
