@@ -69,4 +69,3 @@ BOTTLENECKS:
 3. make findlibs.py partially parallel
 4. extract pickles for generating reports in parallel, generate HTML in parallel as well
 5. rewrite genericSearch in checks.py to avoid reading files multiple times in forges and licenses scan
-6. (optionally) merge generateimages.py and generatereports.py to prevent pickles from being read from disk twice.
