@@ -8,8 +8,8 @@
 This is a plugin for the Binary Analysis Tool. It generates HTML files for the
 following:
 
-* unique strings that were matched, with links to pretty printed source code,
-which can be displayed in the BAT GUI.
+* variable names
+* function names
 
 This should be run as a postrun scan
 '''
