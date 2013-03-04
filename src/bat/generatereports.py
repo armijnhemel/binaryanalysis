@@ -133,6 +133,7 @@ def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
 	uniquehtmlfile = open("%s/%s-unique.snippet" % (reportdir, picklehash), 'wb')
 	uniquehtmlfile.write(uniquehtml)
 	uniquehtmlfile.close()
+	os.unlink(os.path.join(pickledir, picklefile))
 
 ## a bit of a misnomer, since this method also generates a few things
 def extractpickles((filehash, pickledir, topleveldir, reportdir)):
