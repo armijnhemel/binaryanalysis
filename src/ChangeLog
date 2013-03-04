@@ -1,3 +1,8 @@
+2013-03-04
+* assign results of aggregate scans (if any) to the top level element.
+* merge remaining part of generateuniquehtml.py into generatereports.py,
+remove generateuniquehtml.py
+
 2013-03-03
 * deduplicate data for unique matches stored in results for JAR files. In some
 cases this is a HUGE save (96% in size in some of my test cases).

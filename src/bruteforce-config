@@ -758,7 +758,7 @@ envvars     = BAT_REPORTDIR=/tmp/images
 description = Generate reports of results of ranking
 storetarget = reports
 storedir    = /tmp/images
-storetype   = -unmatched.html.gz:-unique.html.gz
+storetype   = -unmatched.html.gz:-unique.html.gz:-names.html.gz:-functionnames.html.gz
 cleanup     = yes
 priority    = 1
 
@@ -798,16 +798,3 @@ enabled     = no
 storetarget = images
 storedir    = /tmp/images
 storetype   = .png
-
-[uniquehtml]
-type        = postrun
-module      = bat.generateuniquehtml
-method      = generateHTML
-noscan      = text:xml:graphics:pdf:audio:video
-envvars     = BAT_REPORTDIR=/tmp/images
-description = Generate HTML files with links to pretty printed source code for unique matches
-enabled     = no
-storetarget = reports
-storedir    = /tmp/images
-storetype   = -names.html.gz:-functionnames.html.gz
-cleanup     = yes

@@ -19,7 +19,6 @@ queueing system:
 
 aggregate scanning:
 * cleanup if we used one of the squashfs + lzma variants where we can't determine the size.
-* assign possible return values to top level scan
 * report possible whole chain of dependencies for a program
 
 GUI:
@@ -67,6 +66,5 @@ BOTTLENECKS:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
 2. preread (in parallel) leafreports of Java .class files which are shared between several JAR files for aggregate jars. This saves opening and reading the same files.
 3. make findlibs.py partially parallel
-4. extract pickles for generating reports in parallel, generate HTML in parallel as well
-5. rewrite genericSearch in checks.py to avoid reading files multiple times in forges and licenses scan
-6. use unpigz for gzip unpacking if possible.
+4. rewrite genericSearch in checks.py to avoid reading files multiple times in forges and licenses scan
+5. use unpigz for gzip unpacking if possible.
