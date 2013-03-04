@@ -650,7 +650,7 @@ def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=Fa
 	except Exception,e:	print >>sys.stderr, e
 
 	dumpadds = []
-	for i in scans['postrunscans']:
+	for i in (scans['postrunscans'] + scans['aggregatescans']):
 		if i['storedir'] != None and i['storetarget'] != None and i['storetype'] != None:
 			try:
 				os.stat(i['storetarget'])
