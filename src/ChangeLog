@@ -2,6 +2,8 @@
 * assign results of aggregate scans (if any) to the top level element.
 * merge remaining part of generateuniquehtml.py into generatereports.py,
 remove generateuniquehtml.py
+* add support for pack200, not enabled by default, since I first need to
+figure out how to easily add a dependency on openjdk without version names.
 
 2013-03-03
 * deduplicate data for unique matches stored in results for JAR files. In some
