@@ -11,6 +11,7 @@ compression:
 * rzip
 * E00
 * 7z only works if a whole file is compressed with 7z. Rework and test with D-Link firmware DSL-524T_FW_V3.00B01T02.UK-A.20060621.zip
+* if a JAR file is repacked with pack200 --repack an extra identifier "PACK200" is appended to the ZIP file. Find out whether or not this would be trailing data according to the ZIP specification, or if it would still be allowed as part of the ZIP file and fix tagging accordingly.
 
 queueing system:
 * let top level script also read from a queue
