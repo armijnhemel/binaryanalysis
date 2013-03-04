@@ -388,7 +388,7 @@ def verifyOgg(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 ## extremely simple verifier for MP4 to reduce false positives
 def verifyMP4(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
-	if not filename.endswith('.mp4'):
+	if not filename.lower().endswith('.mp4'):
 		return newtags
 	if not 'binary' in tags:
 		return newtags
