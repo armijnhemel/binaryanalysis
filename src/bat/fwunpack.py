@@ -2231,12 +2231,12 @@ def searchUnpackPack200(filename, tempdir=None, blacklist=[], offsets={}, envvar
 def unpackPack200(filename, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 
-	tmpfile = tempfile.mkstemp(dir=tempdir)
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
 	unpackFile(filename, 0, tmpfile[1], tmpdir)
 
-	packtmpfile = tempfile.mkstemp(dir=tempdir, suffix=".jar")
+	packtmpfile = tempfile.mkstemp(dir=tmpdir, suffix=".jar")
 	os.fdopen(packtmpfile[0]).close()
 
 	p = subprocess.Popen(['unpack200', tmpfile[1], packtmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
