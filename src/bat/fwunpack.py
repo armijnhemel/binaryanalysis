@@ -2205,6 +2205,51 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 				tags.append('compressed')
 	return (diroffsets, blacklist, tags)
 
+def searchUnpackPack200(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('pack200'):
+		return ([], blacklist, [])
+	tags = []
+	diroffsets = []
+	if offsets['pack200'] == []:
+		return ([], blacklist, tags)
+	if len(offsets['pack200']) != 1:
+		return ([], blacklist, tags)
+	if offsets['pack200'][0] != 0:
+		return ([], blacklist, tags)
+	if blacklist != []:
+		return ([], blacklist, tags)
+	tmpdir = dirsetup(tempdir, filename, "pack200", 1)
+	res = unpackPack200(filename, tmpdir)
+	if res != None:
+		diroffsets.append((res, 0, os.stat(filename).st_size))
+		blacklist.append((0, os.stat(filename).st_size))
+	else:
+		## cleanup
+		os.rmdir(tmpdir)
+	return (diroffsets, blacklist, [])
+
+def unpackPack200(filename, tempdir=None):
+	tmpdir = unpacksetup(tempdir)
+
+	tmpfile = tempfile.mkstemp(dir=tempdir)
+	os.fdopen(tmpfile[0]).close()
+
+	unpackFile(filename, 0, tmpfile[1], tmpdir)
+
+	packtmpfile = tempfile.mkstemp(dir=tempdir, suffix=".jar")
+	os.fdopen(packtmpfile[0]).close()
+
+	p = subprocess.Popen(['unpack200', tmpfile[1], packtmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		os.unlink(tmpfile[1])
+		os.unlink(packtmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	os.unlink(tmpfile[1])
+	return tmpdir
+
 def searchUnpackRar(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	if not offsets.has_key('rar'):
 		return ([], blacklist, [])

@@ -394,6 +394,16 @@ noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video:java
 description = Unpack Minix file systems
 enabled     = yes
 
+[pack200]
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackPack200
+priority    = 1
+magic       = pack200
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video:java
+description = Unpack Pack200 archives
+enabled     = no
+
 [pdf_unpack]
 type        = unpack
 module      = bat.fwunpack
@@ -739,7 +749,7 @@ type        = aggregate
 module      = bat.generateimages
 method      = generateimages
 noscan      = text:xml:graphics:pdf:audio:video
-enabled     = no
+enabled     = yes
 envvars     = BAT_IMAGEDIR=/tmp/images:AGGREGATE_IMAGE_SYMLINK=0
 description = Generate images of results of ranking
 storetarget = images
@@ -753,7 +763,7 @@ type        = aggregate
 module      = bat.generatereports
 method      = generatereports
 noscan      = text:xml:graphics:pdf:audio:video
-enabled     = no
+enabled     = yes
 envvars     = BAT_REPORTDIR=/tmp/images
 description = Generate reports of results of ranking
 storetarget = reports
