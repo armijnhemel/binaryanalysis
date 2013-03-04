@@ -269,7 +269,7 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 		## result is either empty, or contains offsets and tags
 		if len(scanres) == 3:
 			(diroffsets, blacklist, scantags) = scanres
-			tags = tags + scantags
+			tags = list(set(tags + scantags))
 		if len(diroffsets) == 0:
 			continue
 		blacklist = mergeBlacklist(blacklist)
@@ -347,7 +347,7 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, 
 		picklefile.close()
 	return (filehash, list(set(newtags)))
 
-def aggregatescan(unpackreports, scans, scantempdir, topleveldir, debug):
+def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, debug):
 	## aggregate scans look at the entire result and possibly modify it.
 	## The best example is JAR files: individual .class files will not be
 	## very significant (or even insignificant), but combined results are.
@@ -367,8 +367,21 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, debug):
 			envvars = None
 		exec "from %s import %s as bat_%s" % (module, method, method)
 
-		eval("bat_%s(unpackreports, scantempdir, topleveldir, envvars=envvars)" % (method))
-		## TODO: if there is any return value assign it to the top level element
+		res = eval("bat_%s(unpackreports, scantempdir, topleveldir, envvars=envvars)" % (method))
+		if res != None:
+			reskey = res.keys()[0]
+			filehash = unpackreports[scan_binary]['sha256']
+
+			leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+			leafreports = cPickle.load(leaf_file)
+			leaf_file.close()
+
+			leafreports[reskey] = res[reskey]
+
+			leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
+			leafreports = cPickle.dump(leafreports, leaf_file)
+			leaf_file.close()
+			unpackreports[scan_binary]['tags'].append(reskey)
 
 def postrunscan((filetoscan, unpackreports, scans, scantempdir, topleveldir, debug)):
 	for scan in scans:
@@ -770,7 +783,7 @@ def runscan(topleveldir, scans, scan_binary):
 				unpackreports[i]['tags'] = list(set(unpackreports[i]['tags'] + tagdict[unpacksha256]))
 
 	if scans['aggregatescans'] != []:
-		aggregatescan(unpackreports, scans, scantempdir, topleveldir, debug)
+		aggregatescan(unpackreports, scans, scantempdir, topleveldir, os.path.basename(scan_binary), debug)
 
 	## run postrunscans here, again in parallel, if needed/wanted
 	## These scans typically only have a few side effects, but don't change
