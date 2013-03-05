@@ -154,6 +154,8 @@ def prettyprintscan(unpackreports, root, scannode, scans, topleveldir):
 
 			## then recurse for every file that was found
 			for r in s['scanreports']:
+				if not unpackreports.has_key(r):
+					continue
 				filenode = root.createElement("file")
 				for i in ["name", "path", "realpath", "magic", "sha256", "size"]:
 					if unpackreports[r].has_key(i):
