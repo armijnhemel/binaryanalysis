@@ -1,3 +1,6 @@
+2013-03-05
+* determine whether or not a ZIP file has a comment field.
+
 2013-03-04
 * assign results of aggregate scans (if any) to the top level element.
 * merge remaining part of generateuniquehtml.py into generatereports.py,

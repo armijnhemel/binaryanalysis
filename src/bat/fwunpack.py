@@ -2108,9 +2108,15 @@ def unpackZip(filename, offset, tempdir=None):
 			os.unlink(multitmpfile[1])
 			multicounter = multicounter + 1
 	else:
+		## find out the size of the comment field
+		centralfile = open(tmpfile[1])
+		centralfile.seek(endofcentraldir + 20)
+		centraldata = centralfile.read(2)
+		centralfile.close()
+		commentsize = struct.unpack('<H', centraldata)[0]
 		## We have a single zip file, but there is trailing data, which unzip does not like
 		## Cut the trailing data, unpack the resulting file.
-		if endofcentraldir + 22 != os.stat(tmpfile[1]).st_size:
+		if endofcentraldir + 22 + commentsize != os.stat(tmpfile[1]).st_size:
 			tmpfile2 = tempfile.mkstemp(dir=tempdir)
 			os.fdopen(tmpfile2[0]).close()
 
