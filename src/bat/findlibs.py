@@ -364,5 +364,3 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 			leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
 			leafreports = cPickle.dump(leafreports, leaf_file)
 			leaf_file.close()
-
-	return aggregatereturn
