@@ -369,19 +369,20 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, d
 
 		res = eval("bat_%s(unpackreports, scantempdir, topleveldir, envvars=envvars)" % (method))
 		if res != None:
-			reskey = res.keys()[0]
-			filehash = unpackreports[scan_binary]['sha256']
+			if res.keys() != []:
+				reskey = res.keys()[0]
+				filehash = unpackreports[scan_binary]['sha256']
 
-			leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
-			leafreports = cPickle.load(leaf_file)
-			leaf_file.close()
+				leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+				leafreports = cPickle.load(leaf_file)
+				leaf_file.close()
 
-			leafreports[reskey] = res[reskey]
+				leafreports[reskey] = res[reskey]
 
-			leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
-			leafreports = cPickle.dump(leafreports, leaf_file)
-			leaf_file.close()
-			unpackreports[scan_binary]['tags'].append(reskey)
+				leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
+				leafreports = cPickle.dump(leafreports, leaf_file)
+				leaf_file.close()
+				unpackreports[scan_binary]['tags'].append(reskey)
 
 def postrunscan((filetoscan, unpackreports, scans, scantempdir, topleveldir, debug)):
 	for scan in scans:
