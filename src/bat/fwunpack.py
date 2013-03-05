@@ -2175,6 +2175,7 @@ def unpackZip(filename, offset, tempdir=None):
 					p = subprocess.Popen(['unzip', '-o', tmpfile[1], '-d', tmpdir, z], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 					(stanout, stanerr) = p.communicate()
 					## TODO: check for errors
+			endofcentraldir = endofcentraldir + commentsize
 	os.unlink(tmpfile[1])
 	return (endofcentraldir, tmpdir)
 
@@ -2204,8 +2205,7 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 		if endofcentraldir != None:
 			endofcentraldir_offset = endofcentraldir
 			blacklist.append((offset, offset + endofcentraldir))
-			## this check is apparently not valid for files packed with PACK200
-			## TODO: fix this
+			## TODO: fix properly for ZIP files with comments
 			if offset == 0 and res != None and offset + endofcentraldir +22 == os.stat(filename).st_size:
 				tags.append('zip')
 				tags.append('compressed')
