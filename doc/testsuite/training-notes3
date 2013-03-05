@@ -93,8 +93,8 @@ mandatory options: type of the scan, the module where the method that
 implements the scan can be found, the method name of the scan and if it is
 enabled or disabled.
 
-Slide 13: There are also a few optional configuration parameters that can be
-set by individual scans. Depending on the type it might, or might not, make
+Slide 13 + 14: There are also a few optional configuration parameters that can
+be set by individual scans. Depending on the type it might, or might not, make
 sense in the context. The description option can be set for all scans since it
 has no influence. The envvars option can also be set for all scans, but it
 depends on the scan whether or not it is supported.
@@ -121,10 +121,18 @@ avoid false positives: file systems that do not mangle or compress contents
 should be scanned first.
 
 The storetarget, storetype and storedir parameters need to be set together if a
-postrun scan creates output (like a report or a picture) that needs to be
-stored in the final output.
+postrun scan or aggregate scan creates output (like a report or a picture) that
+needs to be stored in the final output. If the results of of a scan should be
+cleaned up (for example because it needs to be regenerated next time) then the
+cleanup parameter can be set.
 
-Slide 14: ...
+The parameter parallel can be used to indicate whether or not files should be
+scanned in parallel or not by a scan. Sometimes it makes more sense to scan
+files sequentially, for example if there is a side effect in one of the scans
+that could effect other scans, like updating a database. If 'parallel' is set
+to 'no' then all scans for the category will be scanned in sequence, so for
+example setting it to 'no' for gzip unpacking would run all unpack scans
+sequentially. The default value for parallel is 'yes'.
 
 Slide 15: no comments
 
@@ -136,11 +144,9 @@ Slide 17: This scan uses an environment variable, namely the location of a
 database with extra information. It is passed to the scan using the envvars
 configuration parameter.
 
-Slide 18: ...
-
-Slide 19: Similarly, this scan uses a few environment variables (please note
-that in the configuration these should be on one line), and ignores quite a few
-file types.
+Slide 18 + 19: Similarly, these scans uses a few environment variables (please
+note that in the configuration these should be on one line), and ignores quite
+a few file types.
 
 Slide 20: After all scans are done BAT writes its output to a tar file. This
 file will contain everything: the original file, the unpacked files, the scan
