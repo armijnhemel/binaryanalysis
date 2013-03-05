@@ -76,7 +76,7 @@ For each file a few attributes will be shown by default:
 \item relative file path if it is nested and parent is an unpacked compressed file or file system
 \item size
 \item SHA256 checksum
-\item tags (as determined by pre run scans)
+\item tags
 \end{itemize}
 
 In addition results of file specific scans might be shown (architecture, shared libraries, etcetera)
@@ -118,7 +118,7 @@ An even distribution of scores, combined with few matched unique strings and non
 }
 
 \frame{
-\frametitle{Interpreting results: version numbers}
+\frametitle{Interpreting results: version numbers for unique strings}
 Based on unique strings BAT tries to determine version numbers of matched packages.
 
 Because version number guessing is tied to unique strings version number guessing is likely to be unreliable if there are just a few unique strings.
@@ -149,17 +149,6 @@ When during scanning the scans \texttt{hexdump} and \texttt{images} (available i
 These two representations are correlated: clicking on the picture will display the corresponding section in the \texttt{hexdump} output.
 
 This is not enabled by default since it is quite resource intensive.
-}
-
-\frame{
-\frametitle{Scanning via the BAT result viewer}
-It is possible to launch scans via the BAT result viewer, although this is not recommended due to possibly long processing time during which the GUI will be unresponsive.
-
-Before scans can be done first a configuration file has to be loaded, via Configuration $\rightarrow$ Open Configuration File.
-
-Scans can be selected via Configuration $\rightarrow$ Configure Scans
-
-This will not work on non-Linux systems.
 }
 
 \frame{
