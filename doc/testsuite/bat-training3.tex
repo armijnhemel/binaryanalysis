@@ -30,7 +30,9 @@ In this course you will learn:
 \item prerun scans are run to tag files to filter out specific file types later
 \item unpacking scans are run to unpack any compressed files or file systems and scans 1 - 3 are run recursively
 \item file specific scans are run on all unpacked files
+\item aggregate scans are run that act on files in the complete context 
 \item post run scans are run for each individual file
+\item result files are packed into a result archive
 \end{enumerate}
 }
 
@@ -85,6 +87,19 @@ Java, TAR, UPX, XZ, ZIP
 \item Linux kernel version check
 \item BusyBox version check
 \item advanced string matching scan using information from a large database extracted from source code
+\item \dots
+\end{itemize}
+}
+
+\frame{
+\frametitle{Aggregate scans}
+
+\begin{itemize}
+\item finding duplicate files the entire scanned archive
+\item aggregating results of Java class files and assign to a JAR file
+\item checking correctness of declared dependencies in dynamically linked ELF files
+\item generating reports of the results
+\item generating pictures of the results
 \end{itemize}
 }
 
@@ -93,8 +108,9 @@ Java, TAR, UPX, XZ, ZIP
 Postrun scans are scans that don't modify the files (unpacking, or scanning files), but merely act on results of scans, for example:
 
 \begin{itemize}
-\item generating reports of the results
-\item generating pictures of the results
+\item generating histograms of byte values inside a file
+\item generating graphical representations of a file
+\item generating hexdump representations of a file
 \end{itemize}
 }
 
@@ -110,6 +126,7 @@ The configuration file is in Windows INI format and contains several parts:
 \item configuration directives for ``prerun'' scans
 \item configuration directives for ``unpack'' scans
 \item configuration directives for per file scans
+\item configuration directives for ``aggregate'' scans
 \item configuration directives for ``postrun'' scans
 \end{itemize}
 
@@ -121,16 +138,21 @@ The general configuration is mandatory, the other directives are optional.
 
 \begin{verbatim}
 [batconfig]
-multiprocessing = no
+multiprocessing = yes
 module = bat.simpleprettyprint
 output = prettyprintresxml
 \end{verbatim}
 
-The \texttt{multiprocessing} option is to enable the use of multiple processors. Usually this is safe, unless one of the scans is not safe (for example because it writes to a database).
+\texttt{multiprocessing} is for using multiple threads. If a scan is not safe (example: it writes to a database) it should be set to \texttt{no}.
 
-The \texttt{output} and \texttt{module} options are used together to specify where an (optional) method that prints results in XML can be found.
+\texttt{output} and \texttt{module} are used together to specify an (optional) method that prints results in XML.
 
-There is an optional configuration \texttt{outputlite} that, if set, tells BAT to omit a full copy of the data from the output archive.
+There are two optional configuration settings:
+
+\begin{itemize}
+\item \texttt{outputlite}: do not include full copy of the data in the output archive.
+\item \texttt{debug}: disable multiprocessing and output debugging information on standard error
+\end{itemize}
 
 \end{frame}
 
@@ -147,7 +169,7 @@ The configuration for each type of scan has a few mandatory options:
 }
 
 \frame{
-\frametitle{Optional scan configuration options}
+\frametitle{Optional scan configuration options (1)}
 
 \begin{itemize}
 \item \texttt{priority} - scan priority: a higher priority means it is run before scans with a lower priority.
@@ -155,9 +177,18 @@ The configuration for each type of scan has a few mandatory options:
 \item \texttt{scanonly} - list of tags. Only files that are tagged with any of these tags will be scanned. If \texttt{noscan} is also set the intersection of the two will be scanned.
 \item \texttt{envvars} - colon separated list of environment variables that will be set in the scan
 \item \texttt{magic} - list of specific identifiers this scan is meant for
+\end{itemize}
+}
+
+\frame{
+\frametitle{Optional scan configuration options (2)}
+
+\begin{itemize}
 \item \texttt{description} - a human readable description of the scan
 \item \texttt{xmloutput} - custom output method for XML output of BAT. The code should be in the same file as the actual scan code.
-\item \texttt{storetype}, \texttt{storetarget} and \texttt{storedir} - used for postrun scans to describe which files to store in the output, where to store them and where to get them
+\item \texttt{storetype}, \texttt{storetarget} and \texttt{storedir} - used for postrun scans and aggregate scans to describe which files to store in the output, where to store them and where to get them
+\item \texttt{cleanup} - used in postrun scans and aggregate scans to tell BAT to clean up any generated file. Used in combination with \texttt{storetype}, \texttt{storetarget} and \texttt{storedir}.
+\item \texttt{parallel} - used to indicate whether files should be scanned in parallel. Defaults to \texttt{yes}. If set to \texttt{no} no files will be scanned in parallel for scans of this type.
 \end{itemize}
 }
 
@@ -216,6 +247,20 @@ Note: \texttt{description} has been split for readability but is actually one li
 \end{frame}
 
 \begin{frame}[fragile]
+\frametitle{Aggregate scans configuration directive example}
+\begin{verbatim}
+[jars]
+type        = aggregate
+module      = bat.aggregatejars
+method      = aggregatejars
+noscan      = text:xml:graphics:pdf:audio:video
+envvars     = AGGREGATE_CLEAN=0
+enabled     = yes
+priority    = 2
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]
 \frametitle{Postrun scans configuration directive example}
 \begin{verbatim}
 [hexdump]
@@ -240,9 +285,9 @@ Note: \texttt{envvars} has been split for readability but is actually one line i
 The raw output of the Binary Analysis Tool is written as a tar archive. The tar archive consists of:
 
 \begin{itemize}
-\item full directory tree of unpacked files (if any)
-\item Python pickles with the results of the scan
-\item (optional) pictures with results of the scan
+\item full directory tree of unpacked files (if any), unless \texttt{outputlite} was specified
+\item gzip compressed Python pickles with the results of the scan
+\item (optional) pictures and reports with results of the scan
 \end{itemize}
 
 The results can be viewed using the Binary Analysis Tool result viewer.

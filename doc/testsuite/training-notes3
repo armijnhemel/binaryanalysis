@@ -21,7 +21,14 @@ the file will be unpacked. After that the first three steps will be repeated
 for all the unpacked files.
 
 After the files can no not be unpacked any further each file is scanned by file
-specific scans and postrun scans.
+specific scans. After scanning the files are optionally processed by aggregate
+scans. These are scans where it is important that the file is looked at in
+context, for example checking if dependencies for dynamically linked ELF files
+can be satisfied inside a firmware, or combining scan results from Java class
+files that were unpacked from a Java JAR file.
+
+Finally postrun scans are run for each file, and the results are packed into a
+result archive.
 
 Slide 4: The identifiers that are searched for are hardcoded in a list in the
 source code. The identifiers tell where a file starts or ends. The list can
@@ -51,11 +58,15 @@ Slide 7: There are quite a few file specific scans, ranging from simple
 identifier checks, dynamically linked libraries to more advanced matching
 scans.
 
-Slide 8: Postrun scans are scans that simply take the results of previous scans
+Slide 8: Aggregate scans look at the files in context and possibly change the
+results a bit. More examples apart from the ones mentioned earlier are finding
+duplicate files in an archive.
+
+Slide 9: Postrun scans are scans that simply take the results of previous scans
 and process them, but don't change the results, but merely have side effects,
 such as generating pictures of the results, or making reports.
 
-Slide 9: The Binary Analysis Tool is extremely configurable: each scan, aprt
+Slide 10: The Binary Analysis Tool is extremely configurable: each scan, aprt
 from the identifier search, can be enabled or disabled by simply editing a
 configuration file. This configuration file is in a very simple Windows INI
 format.
@@ -65,7 +76,7 @@ The configuration for scanning is conceptually divided in four main parts
 a main part, plus a configuration part per category. Only the general
 configuration part is mandatory.
 
-Slide 10: The main configuration defines two things: whether or not BAT should
+Slide 11: The main configuration defines two things: whether or not BAT should
 write the results of a scan in a simple XML format (default: yes) and if BAT
 should be run using parallel processing (default: no).
 
@@ -76,13 +87,13 @@ Multiprocessing can safely be turned on if there are no scans that have side
 effects, such as modifying a database. In the default configuration it is safe
 to turn this on.
 
-Slide 11: The configurations for scans are all slightly similar. Depending on
+Slide 12: The configurations for scans are all slightly similar. Depending on
 the type of scan there might be a few differences, but each one has a few
 mandatory options: type of the scan, the module where the method that
 implements the scan can be found, the method name of the scan and if it is
 enabled or disabled.
 
-Slide 12: There are also a few optional configuration parameters that can be
+Slide 13: There are also a few optional configuration parameters that can be
 set by individual scans. Depending on the type it might, or might not, make
 sense in the context. The description option can be set for all scans since it
 has no influence. The envvars option can also be set for all scans, but it
@@ -113,21 +124,25 @@ The storetarget, storetype and storedir parameters need to be set together if a
 postrun scan creates output (like a report or a picture) that needs to be
 stored in the final output.
 
-Slide 13: no comments
+Slide 14: ...
 
-Slide 14: This scan has a low priority, is only run for files where the
+Slide 15: no comments
+
+Slide 16: This scan has a low priority, is only run for files where the
 identifier for 7z can be found in and ignores files which have already been
 classified as something that is not 7z.
 
-Slide 15: This scan uses an environment variable, namely the location of a
+Slide 17: This scan uses an environment variable, namely the location of a
 database with extra information. It is passed to the scan using the envvars
 configuration parameter.
 
-Slide 16: Similarly, this scan uses a few environment variables (please note
+Slide 18: ...
+
+Slide 19: Similarly, this scan uses a few environment variables (please note
 that in the configuration these should be on one line), and ignores quite a few
 file types.
 
-Slide 17: After all scans are done BAT writes its output to a tar file. This
+Slide 20: After all scans are done BAT writes its output to a tar file. This
 file will contain everything: the original file, the unpacked files, the scan
 results as Python pickle files, possibly more output files like pictures and
 reports.
@@ -135,4 +150,4 @@ reports.
 If enabled it will also output a simplified XML representation of the scan
 results.
 
-Slide 18: no comments
+Slide 21: no comments
