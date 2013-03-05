@@ -498,10 +498,8 @@ def extractJavaNamesClass(scanfile):
 			res = re.match("Method name:\"([\w$]+)\"", i)
 			if res != None:
 				method = res.groups()[0]
+				## ignore synthetic methods that are inserted by the Java compiler
 				if not method.startswith('access$'):
-					## ignore synthetic methods that are inserted by the Java compiler
-					pass
-				else:
 					methods.append(method)
 	return {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile}
 
