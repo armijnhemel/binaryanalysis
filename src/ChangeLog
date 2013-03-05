@@ -1,5 +1,11 @@
 2013-03-05
 * determine whether or not a ZIP file has a comment field.
+* fixes for pretty printer: ingore unpackreports that have been removed, like
+class files in the Java aggregator
+* fix return type for findlibs.py
+* crude fix for ZIP comment fields. Needs proper fix later, but hey, seems to
+work so far
+* ignore synthetic methods in Java class files
 
 2013-03-04
 * assign results of aggregate scans (if any) to the top level element.
