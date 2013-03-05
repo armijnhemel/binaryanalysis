@@ -497,7 +497,12 @@ def extractJavaNamesClass(scanfile):
 		if i.startswith("Method name:\""):
 			res = re.match("Method name:\"([\w$]+)\"", i)
 			if res != None:
-				methods.append(res.groups()[0])
+				method = res.groups()[0]
+				if not method.startswith('access$'):
+					## ignore synthetic methods that are inserted by the Java compiler
+					pass
+				else:
+					methods.append(method)
 	return {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile}
 
 def extractJavaNames(javameta, scanenv, clones, rankingfull):
