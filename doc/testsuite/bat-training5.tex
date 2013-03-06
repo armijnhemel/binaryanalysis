@@ -22,6 +22,7 @@ In this course you will learn:
 \item writing a new unpack scan
 \item writing a new file specific scan
 \item writing a pretty printer for file specific scans
+\item writing a new aggregate scan
 \item writing a new postrun scan
 \end{itemize}
 }
@@ -175,7 +176,6 @@ A postrun scan takes a few parameters:
 \begin{itemize}
 \item \texttt{filename} - the full filename of the file during scanning
 \item \texttt{unpackreport} - results from unpack scans
-\item \texttt{leafscans} - results from file specific scans
 \item \texttt{scantempdir} - relative directory in the scan tree of where the original file can be found
 \item \texttt{toplevelscandir} - top level directory of the scan
 \item \texttt{envvars} (default \texttt{None}) - optional environment variables
@@ -195,6 +195,7 @@ In this course you have learned about:
 \item writing a new prerun scan
 \item writing a new unpack scan
 \item writing a new file specific scan
+\item writing a new aggregate scan
 \item writing a new postrun scan
 \end{itemize}
 
