@@ -313,7 +313,7 @@ def verifyAndroidXML(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 ## The main reason for this check is to bring down false positives for lzma unpacking
 def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	newtags = []
-	if not os.path.basename(filename) == 'classes.dex':
+	if not os.path.basename(filename) == 'classes.dex' and not os.path.basename(filename).endswith('.odex'):
 		return newtags
 	if not 'binary' in tags:
 		return newtags
@@ -333,6 +333,8 @@ def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 		dexsize = os.stat(filename).st_size
 		if dexarray.pop() == dexsize:
 			newtags.append('dalvik')
+	#if androidbytes[:4] == 'dey\n':
+		#print >>sys.stderr, "ODEX"
 	return newtags
 
 ## verify if this is a GNU message catalog. We check if the name of the
