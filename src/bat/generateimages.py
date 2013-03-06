@@ -88,10 +88,12 @@ def extractpickles((filehash, pickledir, topleveldir)):
 		for j in res['reports']:
 			if j[4] != {}:
 				package = j[1]
-				tmppickle = tempfile.mkstemp()
 				pickledata = []
 				vals = list(set(j[4].values()))
+				if vals == []:
+					continue
 				vals.sort()
+				tmppickle = tempfile.mkstemp()
 				for v in vals:
 					j_sorted = filter(lambda x: x[1] == v, j[4].items())
 					j_sorted.sort()
@@ -105,11 +107,13 @@ def extractpickles((filehash, pickledir, topleveldir)):
 		if dynamicRes.has_key('packages'):
 			for package in dynamicRes['packages']:
 				packagedata = copy.copy(dynamicRes['packages'][package])
-				tmppickle = tempfile.mkstemp()
 				pickledata = []
 				p_sorted = sorted(packagedata, key=lambda x: x[1])
 				vals = list(set(map(lambda x: x[1], p_sorted)))
+				if vals == []:
+					continue
 				vals.sort()
+				tmppickle = tempfile.mkstemp()
 				for v in vals:
 					j_sorted = filter(lambda x: x[1] == v, p_sorted)
 					j_sorted.sort()
@@ -197,7 +201,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 
 	## extract pickles
 	extracttasks = map(lambda x: (x, pickledir, topleveldir), filehashes)
-	pool = multiprocessing.Pool()
+	pool = multiprocessing.Pool(processes=1)
 	res = filter(lambda x: x != None, pool.map(extractpickles, extracttasks))
 	pool.terminate()
 
