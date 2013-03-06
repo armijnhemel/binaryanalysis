@@ -1,5 +1,6 @@
 2013-03-06
 * check whether or not input for generating version charts is an empty list.
+* update dedexer to 1.25 to have better support for ODEX
 
 2013-03-05
 * determine whether or not a ZIP file has a comment field.
