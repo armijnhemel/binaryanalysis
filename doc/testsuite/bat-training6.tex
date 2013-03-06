@@ -96,7 +96,7 @@ The ranking scan uses several caching databases:
 
 \begin{itemize}
 \item strings for each programming language
-\item average amount of string sper package for each programming language
+\item average amount of strings per package for each programming language
 \item function names
 \end{itemize}
 
@@ -114,10 +114,10 @@ The parameters for the databases are passed via the environment:
 \begin{verbatim}
 [ranking]
 ...
-envvars = BAT_SQLITE_AVG_C=/path/to/avg/db/for/c
- :BAT_SQLITE_STRINGSCACHE_C=/path/to/caching/db/for/c
- :BAT_SQLITE_DB=/path/to/main/db
- :BAT_SQLITE_FUNCTIONNAME_CACHE=/path/to/funcname/cache
+envvars = BAT_AVG_C=/path/to/avg/db/for/c
+ :BAT_STRINGSCACHE_C=/path/to/caching/db/for/c
+ :BAT_DB=/path/to/main/db
+ :BAT_FUNCTIONNAME_CACHE=/path/to/funcname/cache
  :BAT_RANKING_FULLCACHE=0
 ...
 \end{verbatim}
