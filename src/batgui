@@ -17,14 +17,6 @@ import ConfigParser
 import wx, wx.html, wx.lib, wx.lib.statbmp, wx.aui, wx.lib.agw.flatnotebook
 import sqlite3, cgi
 
-if sys.platform.startswith('linux'):
-	try:
-		import bat.bruteforcescan
-		scanning = True
-	except ImportError:
-		scanning = False
-		
-
 helphtml = '''<html>
 <head><title>Binary Analysis Tool result viewer</title></head>
 <body>
@@ -113,21 +105,6 @@ By default no filters have been applied. The filters can be accessed via Configu
 <p>
 Advanced mode can be entered via Configuration &rarr; General Configuration. The box Advanced mode should be checked to enter advanced mode. As soon as advanced mode is entered extra data from the results file (if available) will be unpacked and an extra tab will appear. It is not advised to run advanced mode: it can be a big strain on resources.
 </p>
-<h2>Scanning mode</h2>
-<p>
-The scanning mode can only be used on Linux systems. On other systems it will be automatically disabled. Right now scanning mode is automatically enabled on Linux systems. This will change in the near futur and scanning mode will have to be explicitely enabled.
-</p>
-<p>
-Before scans can be run a configuration file needs to be loaded. There are two ways this can be done:
-
-<ol>
-<li>supply it on the commandline as a parameter: <code>-c /path/to/configuration/file</code>
-<li>load it via the menu Configuration &rarr; Open Configuration File
-</ol>
-</p>
-<p>
-Individual scans can be enabled and disabled via the check boxes under Configuration &rarr; Configure Scans
-</p>
 </body>
 </html>
 '''
@@ -178,13 +155,7 @@ class BatFrame(wx.Frame):
 		## we start in "simple" mode
 		self.advanced = False
 		self.advancedunpacked = False
-		if sys.platform.startswith('linux'):
-			if scanning:
-				self.batconfig = ["Advanced mode", "Scanning mode"]
-			else:
-				self.batconfig = ["Advanced mode"]
-		else:
-			self.batconfig = ["Advanced mode"]
+		self.batconfig = ["Advanced mode"]
 		self.batconfigstate = []
 
 		## initial values of filters
@@ -207,14 +178,6 @@ class BatFrame(wx.Frame):
 		filemenu = wx.Menu()
 		menuOpen = filemenu.Append(wx.ID_OPEN,"&Open"," Open a scan archive")
 
-		## Since scans are just on Linux there is no need to enable this option for anything else
-		## right now.
-		if sys.platform.startswith('linux'):
-			if scanning:
-				self.menuSaveAs = filemenu.Append(wx.ID_SAVEAS,"Save &As..."," Save results from a scan")
-				if self.tarfile == None:
-					self.menuSaveAs.Enable(False)
-
 		filemenu.AppendSeparator()
 		menuExit = filemenu.Append(wx.ID_EXIT,"E&xit"," Terminate the program")
 		menuBar.Append(filemenu,"&File")
@@ -225,15 +188,7 @@ class BatFrame(wx.Frame):
 		configmenu.AppendSeparator()
 		menuBar.Append(configmenu,"&Configuration")
 
-		if sys.platform.startswith('linux'):
-			self.batscanfile = ""
-			menuScanOpenConfiguration = configmenu.Append(wx.ID_ANY,"Open &Configuration File"," Open a BAT configuration file")
-
-			if scanning:
-				menuConfigScans = configmenu.Append(wx.ID_ANY, "Configure &Scans"," Configure scans")
-				scanmenu = wx.Menu()
-				menuScanOpen = scanmenu.Append(wx.ID_ANY,"&Open file"," Open a file to scan")
-				menuBar.Append(scanmenu,"&Scan")
+		menuScanOpenConfiguration = configmenu.Append(wx.ID_ANY,"Open &Configuration File"," Open a BAT configuration file")
 
 		helpmenu = wx.Menu()
 		#menuHelp = helpmenu.Append(wx.ID_HELP_CONTENTS, "&Contents"," Help")
@@ -247,11 +202,7 @@ class BatFrame(wx.Frame):
 		#self.Bind(wx.EVT_MENU, self.onHelp, menuHelp)
 		self.Bind(wx.EVT_MENU, self.onConfig, menuConfigGeneral)
 		self.Bind(wx.EVT_MENU, self.onFilterConfig, menuConfigFilter)
-		if sys.platform.startswith('linux') and scanning:
-			self.Bind(wx.EVT_MENU, self.onSave, self.menuSaveAs)
-			self.Bind(wx.EVT_MENU, self.onScanConfig, menuConfigScans)
-			self.Bind(wx.EVT_MENU, self.onLaunchScan, menuScanOpen)
-			self.Bind(wx.EVT_MENU, self.onScanOpenConfigFile, menuScanOpenConfiguration)
+		self.Bind(wx.EVT_MENU, self.onScanOpenConfigFile, menuScanOpenConfiguration)
 
 		## next we should have a toolbar
 		battoolbar = self.CreateToolBar()
@@ -1020,9 +971,6 @@ class BatFrame(wx.Frame):
 			picklefile.close()
 			self.selectedfile = None
 			self.initTree(self.tree, self.datadir)
-			if sys.platform.startswith('linux') and scanning:
-				self.menuSaveAs.Enable(False)
-
 
 def main(argv):
 	config = ConfigParser.ConfigParser()
