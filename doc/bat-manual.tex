@@ -649,7 +649,7 @@ corrected.
 compressed files and file systems.
 \item \texttt{generatehexdump.py} and \texttt{images.py} generate textual and
 graphical representations of the input files.
-\item \texttt{generateuniquehtml.py}, \texttt{generateimages.py} and
+\item \texttt{generatereports.py}, \texttt{generateimages.py} and
 \texttt{piecharts.py} generate textual and graphical representations of results
 of the analysis.
 \item \texttt{jffs2.py} has code specific to handling JFFS2 file systems.
@@ -694,7 +694,7 @@ Example:
 
 \begin{verbatim}
 def prerunMethod(filename, tempdir=None, tags=[],
-          offsets={}, envvars=None):
+                 offsets={}, envvars=None):
         newtags = []
         newtags.append('helloworld')
         return newtags
@@ -710,11 +710,12 @@ can't be unpacked any further.
 The unpackers have a strict interface:
 
 \begin{verbatim}
-def unpackScan(filename, tempdir=None, blacklist=[], offsets={}):
+def unpackScan(filename, tempdir=None, blacklist=[], offsets={},
+               envvars=None):
         ## code goes here
 \end{verbatim}
 
-The last three parameters are optional, but in practice they are always passed
+The last four parameters are optional, but in practice they are always passed
 by the top level script.
 
 \begin{itemize}
@@ -728,6 +729,8 @@ list after finishing a scan.
 to a list of offsets in the file where these identifiers can be found. This
 list is filled by the scan \texttt{genericMarker} which always runs before
 anything else.
+\item \texttt{envvars} is an optionally empty set of environment variables that
+can be used to pass extra information to the pre-run method.
 \end{itemize}
 
 Return values are:
@@ -868,7 +871,7 @@ Pretty printing for unpackers is standardized but for leaf scans there is
 more flexibility. This is needed because in some cases the result as returned
 by the leaf scan needs post processing.
 
-A pretty printer can be defined in the configuration through the directive
+A pretty printer can be defined in the configuration by setting
 \texttt{xmloutput}. The pretty printer should be in the same module as the
 scanning method defined in the same section. The pretty printer has two
 parameters: a Python datastructure as returned by the scanner (this differs
@@ -904,6 +907,9 @@ scan
 The aggregators should read any results of the leaf scans from the pickles
 on disk.
 
+If there is any result it should be returned as a dictionary with one key. It
+will be assigned to the results of the top level element.
+
 \subsection{Post-run methods}
 
 Post-run methods don't change the result of the whole scanning process, but
@@ -916,20 +922,25 @@ method.
 Post-run methods have a strict interface:
 
 \begin{verbatim}
-def postrunHelloWorld(filename, unpackreports, envvars={}):
+def postrunHelloWorld(filename, unpackreport, scantempdir, topleveldir, envvars={}):
         print "Hello World"
 \end{verbatim}
 
 \begin{itemize}
 \item \texttt{filename} is the absolute path of the scanned file, after
 unpacking.
-\item \texttt{unpackreports} are the reports of the unpackers for the file
+\item \texttt{unpackreport} is the reports of the unpackers for the file
+\item \texttt{scantempdir} is the directory that contains the data of the
+unpacked scan
+\item \texttt{topleveldir} is the top level directory containing the data
+directory and the directory with the per file result pickles.
 \item \texttt{envvars} is an optional dictionary of environment variables
 \end{itemize}
 
 The post-run methods should read any results of the leaf scans from the pickles
 on disk. Since the post-run methods don't change the result in any way, but
-just have side effects there is no need to return anything.
+just have side effects there is no need to return anything. Any return value
+will be ignored.
 
 \section{Building binary packages of the Binary Analysis Tool}
 
@@ -1155,8 +1166,7 @@ type        = program
 module      = bat.ranking
 method      = searchGeneric
 xmloutput   = xmlprettyprint
-envvars     = BAT_AVG_C=/home/armijn/master/avg:
-              BAT_STRINGSCACHE_C=/home/armijn/master/stringscache_c:
+envvars     = BAT_STRINGSCACHE_C=/home/armijn/master/stringscache_c:
               BAT_DB=/home/armijn/master/master:
               BAT_LICENSE_DB=/home/armijn/master/licenses:
               BAT_FUNCTIONNAMECACHE_C=/home/armijn/master/funccache_c:
@@ -1168,12 +1178,12 @@ description = Classify packages using advanced ranking mechanism
 enabled     = no
 \end{verbatim}
 
-In the database the strings are split per language family (C, Java, C\#, and so
-on). The reason for this is that strings that are very significant in one
-programming language family could be very generic in another programming
-language family and vice versa. During scanning a guess will be made to see
-which language the program was written in and the proper database will be
-queried.
+In the database the strings, averages, function names, variable names, etcetera
+are split per language family (C, Java, C\#, and so on). The reason for this is
+that strings/function names that are very significant in one programming
+language family could be very generic in another programming language family
+and vice versa. During scanning a guess will be made to see which language the
+program was written in and the proper database will be queried.
 
 Since there are relatively few binaries (at least on Linux) that combine
 code from both languages the caching databases are split. This makes the
@@ -1182,11 +1192,10 @@ of course programs with language embeddeding and better support for these will
 be added in the future.
 
 The names of the caching databases start with
-\texttt{BAT\_STRINGSCACHE}, \texttt{BAT\_AVG} and
-\texttt{BAT\_FUNCTIONNAMECACHE} and are postfixed with an underscore and the
-name of the programming language family.  The strings cache database for Java
-for example is configured using the environment variable
-\texttt{BAT\_STRINGSCACHE\_JAVA}.
+\texttt{BAT\_STRINGSCACHE} and \texttt{BAT\_FUNCTIONNAMECACHE} and are
+postfixed with an underscore and the name of the programming language family.
+The strings cache database for Java for example is configured using the
+environment variable \texttt{BAT\_STRINGSCACHE\_JAVA}.
 
 The entire database with all other information except license information is
 \texttt{BAT\_DB}. This option is mandatory. If it is not supplied scanning with
