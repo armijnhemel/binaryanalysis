@@ -69,3 +69,4 @@ BOTTLENECKS:
 3. make findlibs.py partially parallel
 4. rewrite genericSearch in checks.py to avoid reading files multiple times in forges and licenses scan
 5. use unpigz for gzip unpacking if possible.
+6. check odex files and tag them as dalvik (wait for update of dedexer first that can correctly handle some odex files)
