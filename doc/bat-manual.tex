@@ -252,6 +252,7 @@ the same JAR file.
 \item checking dynamically linked ELF files
 \item finding duplicate files
 \item generating pictures of results of a scan
+\item generating reports of results of a scan
 \end{itemize}
 
 \subsubsection{Post-run methods}
@@ -294,20 +295,20 @@ The main configuration directive is \texttt{batconfig}. In this
 section various global settings are defined, such as \texttt{multiprocessing}
 which sets whether or not multiple CPUs (or cores) should be used during
 scanning. The default configuration as shipped in the official BAT distribution
-is to use a single CPU:
+is to use multiple threads:
 
 \begin{verbatim}
 [batconfig]
-multiprocessing = no
+multiprocessing = yes
 \end{verbatim}
 
-By setting this setting to \texttt{yes} the program will start an extra process
-per CPU that is available. In most cases it is completely safe to use
-multiprocessing, but there is one important exception: if the ranking method
-(described later) is used, without pregenerating the proper caching database
-(or purchasing one) it is unsafe to use multiprocessing. If ranking is used and
-there is a fully generated database it is completely safe and even strongly
-advised to use multiprocessing, since it vastly speeds up running the program.
+If set to \texttt{yes} the program will start an extra process per CPU that is
+available. In most cases it is completely safe to use multiprocessing, but
+there is one important exception: if the ranking method (described later) is
+used, without pregenerating the proper caching database (or purchasing one) it
+is unsafe to use multiprocessing. If ranking is used and there is a fully
+generated caching database it is completely safe and even strongly advised to
+use multiprocessing, since it vastly speeds up running the program.
 
 Another setting in this section is \texttt{outputlite}:
 
@@ -318,7 +319,8 @@ outputlite = no
 It defaults to \texttt{no}. If set to \texttt{yes} the output archive will omit
 a full copy of the unpacked data, significantly decreasing the size of the
 output archive, but making it harder to do a ``post mortem'' on the unpacked
-data (a new analysis should be run to get it again).
+data (a new analysis should be run to get it again). Future versions of BAT
+might change this setting to \texttt{yes}.
 
 There are two settings that determine where the code of the optional XML pretty
 printer can be found:
@@ -331,7 +333,8 @@ output = prettyprintresxml
 These two settings should always be used together.
 
 The other global section is \texttt{viewer}. This section is specific for the
-graphical frontend and is not used in any other parts of BAT.
+graphical frontend and is not used in any other parts of BAT and might be moved
+to a separate configuration file in a future version of BAT.
 
 \subsubsection{Enabling and disabling scans}
 
@@ -369,6 +372,9 @@ environment of the scan:
 \begin{verbatim}
 envvars     = BAT_REPORTDIR=/tmp/images:BAT_IMAGE_MAXFILESIZE=100000000
 \end{verbatim}
+
+It is up to the scans to parse the environment variables and to store them in
+the environment.
 
 \subsubsection{Storing results}
 
@@ -494,21 +500,6 @@ grayscale value, plus a textual representation of a file generated with
 \texttt{hexdump}. Advanced mode is disabled by default, since loading the
 additional pictures and data is quite resource intensive and it will only be
 useful in very specific cases and might be removed in future versions of BAT.
-
-\subsubsection{Scanning with \texttt{batgui}}
-
-Scanning binaries is only supported on Linux systems. If \texttt{batgui} is run
-on another system than Linux scanning capabilities will automatically be
-disabled. Scanning via \texttt{batgui} is not recommended, since scanning might
-take a very long time. It is likely that this functionality will be removed
-from BAT in the near future.
-
-To scan a binary first a configuration needs to be loaded. This can be done in
-two ways: the configuration file can be supplied on the commandline when
-starting \texttt{batgui}, or it can be loaded (and reloaded) via the menu.
-Scans can be individually enabled and disabled via the menu.
-
-After the scan has completed the result can be saved as a TAR file.
 
 \section{Additional programs in the Binary Analysis Tool}
 
