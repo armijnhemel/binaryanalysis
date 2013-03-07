@@ -97,7 +97,7 @@ def splitSpecialChars(s):
 ## unpack the directories to be scanned. For speed improvements it might be
 ## wise to use a ramdisk or tmpfs for this, although when using Ninka and
 ## FOSSology it is definitely not I/O bound...
-def unpack(directory, filename):
+def unpack(directory, filename, unpackdir):
 	try:
 		os.stat("%s/%s" % (directory, filename))
 	except:
@@ -108,7 +108,10 @@ def unpack(directory, filename):
 
         ## Assume if we have bz2 or gzip compressed file we are dealing with compressed tar files
         if 'bzip2 compressed data' in filemagic:
-       		tmpdir = tempfile.mkdtemp()
+		if unpackdir != None:
+       			tmpdir = tempfile.mkdtemp(dir=unpackdir)
+		else:
+       			tmpdir = tempfile.mkdtemp()
 		## for some reason the tar.bz2 unpacking from python doesn't always work, like
 		## aeneas-1.0.tar.bz2 from GNU, so use a subprocess instead of using the
 		## Python tar functionality.
@@ -116,18 +119,27 @@ def unpack(directory, filename):
 		(stanout, stanerr) = p.communicate()
 		return tmpdir
         elif 'XZ compressed data' in filemagic:
-       		tmpdir = tempfile.mkdtemp()
+		if unpackdir != None:
+       			tmpdir = tempfile.mkdtemp(dir=unpackdir)
+		else:
+       			tmpdir = tempfile.mkdtemp()
  		p = subprocess.Popen(['tar', 'Jxf', "%s/%s" % (directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		return tmpdir
         elif 'gzip compressed data' in filemagic:
-       		tmpdir = tempfile.mkdtemp()
+		if unpackdir != None:
+       			tmpdir = tempfile.mkdtemp(dir=unpackdir)
+		else:
+       			tmpdir = tempfile.mkdtemp()
  		p = subprocess.Popen(['tar', 'zxf', "%s/%s" % (directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		return tmpdir
 	elif 'Zip archive data' in filemagic:
 		try:
-       			tmpdir = tempfile.mkdtemp()
+			if unpackdir != None:
+       				tmpdir = tempfile.mkdtemp(dir=unpackdir)
+			else:
+       				tmpdir = tempfile.mkdtemp()
 			p = subprocess.Popen(['unzip', "-B", "%s/%s" % (directory, filename), '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 			(stanout, stanerr) = p.communicate()
 			if p.returncode != 0 and p.returncode != 1:
@@ -158,7 +170,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 	c = conn.cursor()
 	c.execute('PRAGMA synchronous=off')
 	## unpack the archive. If we fail, cleanup and return.
-	temporarydir = unpack(filedir, filename)
+	temporarydir = unpack(filedir, filename, '/gpl/tmp')
 	if temporarydir == None:
 		c.close()
 		conn.close()
@@ -237,7 +249,8 @@ def computehash((path, filename)):
 def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256):
 	srcdirlen = len(srcdir)+1
 	osgen = os.walk(srcdir)
-	ninkaversion = "bf83428"
+	#ninkaversion = "bf83428"
+	ninkaversion = "b84eee21cb"
 
 	try:
 		filestoscan = []
@@ -382,6 +395,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			for ff in f:
 				(filehash, fres) = ff
 				for license in fres:
+
 					#licensecursor.execute('''delete from licenses where sha256 = ? and license = ? and scanner = ? and version = ?''', (filehash, license, "fossology", fossology_version))
 					licensecursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "fossology", fossology_version))
 		licenseconn.commit()
@@ -442,8 +456,8 @@ def extractcomments((package, version, i, p, language, filehash, ninkaversion)):
 	## don't need to rescan everything.
 	## For gtk+ 2.20.1 scanning time dropped with about 25%.
 	ninkaenv = os.environ.copy()
-	ninkabasepath = '/tmp/dmgerman-ninka-%s' % ninkaversion
-	ninkaenv['PATH'] = ninkaenv['PATH'] + ":%s/comments/comments" % ninkabasepath
+	ninkabasepath = '/gpl/ninka/ninka-%s' % ninkaversion
+	ninkaenv['PATH'] = ninkaenv['PATH'] + ":%s/comments" % ninkabasepath
 
 	p1 = subprocess.Popen(["%s/ninka.pl" % ninkabasepath, "-c", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
 	(stanout, stanerr) = p1.communicate()
@@ -456,8 +470,8 @@ def extractcomments((package, version, i, p, language, filehash, ninkaversion)):
 
 def runfullninka((i, p, filehash, ninkaversion)):
 	ninkaenv = os.environ.copy()
-	ninkabasepath = '/tmp/dmgerman-ninka-%s' % ninkaversion
-	ninkaenv['PATH'] = ninkaenv['PATH'] + ":%s/comments/comments" % ninkabasepath
+	ninkabasepath = '/gpl/ninka/ninka-%s' % ninkaversion
+	ninkaenv['PATH'] = ninkaenv['PATH'] + ":%s/comments" % ninkabasepath
 
 	ninkares = []
 
