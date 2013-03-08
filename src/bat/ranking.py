@@ -788,10 +788,19 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 	return variablepvs
 
 ## From dynamically linked ELF files it is possible to extract the dynamic
-## symbol table. This table lists the functions which are needed from
-## external libraries, but also lists local functions.
-## By searching a database that contain which function names can be found in
-## which packages.
+## symbol table. This table lists the functions and variables which are needed
+## from external libraries, but also lists local functions and variables.
+## By searching a database that contains which function names and variable names
+## can be found in which packages it is possible to identify which package was
+## used.
+## Linux kernels that are stored as statically linked ELF files could have
+## a section __ksymtab_strings. This section contains variables that are
+## exported by the kernel using the EXPORT_SYMBOL* macros.
+## TODO: rewrite to scan not just dynamically linked files, but also to
+## scan statically linked ELF files, and to see if there is a section
+## __ksymtab_strings.
+## Any other packages should ignore variable names that come from the
+## kernel.
 def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 	dynamicRes = {}
 	variablepvs = {}

@@ -16,8 +16,9 @@ The method works as follows:
 
 1. All data from pickles that is needed to generate reports is extracted in
 parallel.
-2. The checksum of the pickle is computed and recorded. If there is a duplicate
-the pickle is removed and it is recorded which file it originally belonged to.
+2. The checksums of the pickles are computed and recorded. If there is a
+duplicate the duplicate pickle is removed and it is recorded which file it
+originally belonged to.
 3. Reports are (partially) generated in parallel for the remaining pickle files.
 4. The reports are copied and renamed, or assembled from partial reports
 '''

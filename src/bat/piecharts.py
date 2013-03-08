@@ -8,11 +8,7 @@
 This is a plugin for the Binary Analysis Tool. It generates images of results
 of the ranking scan, like piecharts and version charts.
 
-This should be run as a postrun scan
-
-Parameters for configuration file:
-
-* BAT_IMAGEDIR :: location to where images should be written
+It is used by generateimages.py
 '''
 
 import os, os.path, sys, cPickle
