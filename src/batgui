@@ -452,8 +452,9 @@ class BatFrame(wx.Frame):
 			tablerowtemplate = "<tr><td><b>%s</b></td><td>%s</td></tr>\n"
 			if sha256sum != '':
 				tablerows = tablerows + tablerowtemplate % ("SHA256", sha256sum)
-			if self.leafreports.has_key(self.selectedfile):
 				applications = []
+			'''
+			if self.leafreports.has_key(self.selectedfile):
 				i = self.leafreports[self.selectedfile]
 				if i.has_key('busybox-version'):
 					tablerows = tablerows + tablerowtemplate % ("BusyBox version", i['busybox-version'])
@@ -491,18 +492,20 @@ class BatFrame(wx.Frame):
 					for j in i['kernelchecks']:
 						if j == 'version':
 							tablerows = tablerows + tablerowtemplate % ("Linux kernel", i['kernelchecks']['version'])
-				if i.has_key('tags'):
-					if i['tags'] != []:
-						tablerows = tablerows + tablerowtemplate % ("Tags", reduce(lambda x, y: x + ", " + y, i['tags']))
-					if 'graphics' in i['tags']:
-						if self.advanced:
-							self.notebookpanel.EnableTab(2,False)
-						tag = 'graphics'
-					if 'text' in i['tags']:
-						if self.advanced:
-							self.notebookpanel.EnableTab(2,False)
-						tag = 'text'
-				if i.has_key('ranking'):
+			'''
+			if self.unpackreports[self.selectedfile].has_key('tags'):
+				if self.unpackreports[self.selectedfile]['tags'] != []:
+					tablerows = tablerows + tablerowtemplate % ("Tags", reduce(lambda x, y: x + ", " + y, self.unpackreports[self.selectedfile]['tags']))
+				if 'graphics' in self.unpackreports[self.selectedfile]['tags']:
+					if self.advanced:
+						self.notebookpanel.EnableTab(2,False)
+					tag = 'graphics'
+				if 'text' in self.unpackreports[self.selectedfile]['tags']:
+					if self.advanced:
+						self.notebookpanel.EnableTab(2,False)
+					tag = 'text'
+				if self.unpackreports[self.selectedfile].has_key('ranking'):
+					return
 					(stringsres, dynamicres, variablepvs) = i['ranking']
 					if dynamicres.has_key('packages'):
 						functionmatches = '''<h2>Function match statistics</h2>
