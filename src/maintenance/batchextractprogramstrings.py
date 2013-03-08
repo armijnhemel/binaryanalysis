@@ -175,6 +175,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 		c.close()
 		conn.close()
 		return None
+	## first check if we already have this version in the database
 	## Check if we already have any strings from program + version. If so,
 	## first remove them before we add them to avoid unnecessary duplication.
 	c.execute('''select sha256 from processed_file where package=? and version=? LIMIT 1''', (package, version))
@@ -724,12 +725,17 @@ def checkalreadyscanned((filedir, package, version, filename, origin, dbpath)):
 	filehash = h.hexdigest()
 
 	## Check if we've already processed this file. If so, we can easily skip it and return.
+	c.execute('''select * from processed where sha256=?''', (filehash,))
+	if len(c.fetchall()) != 0:
+		res = None
+		c.close()
+		conn.close()
+		return res
+
 	## TODO: we should take the origin into account, because sometimes there are differences
 	## in packages with the same name from different sources (binutils-2.1[567] from GNU for
 	## example got a license change in mid-2011, without package names being updated)
 
-	## TODO: we actually should check if we know the *checksum* first, because a package could
-	## have been renamed.
         conn = sqlite3.connect(dbpath, check_same_thread = False)
 	c = conn.cursor()
 	#c.execute('PRAGMA synchronous=off')
@@ -753,6 +759,7 @@ def main(argv):
 	parser.add_option("-n", "--ninkacomments", action="store", dest="ninkacomments", help="path to ninkacomments database", metavar="FILE")
 	parser.add_option("-r", "--licensedb", action="store", dest="licensedb", help="path to licenses/copyrights database", metavar="FILE")
 	parser.add_option("-v", "--verify", action="store_true", dest="verify", help="verify files, don't process (default: false)")
+	#parser.add_option("-x", "--renamelist", action="store", dest="renamelist", help="renamelist", metavars="FILE")
 	parser.add_option("-w", "--wipe", action="store_true", dest="wipe", help="wipe database instead of update (default: false)")
 	parser.add_option("-z", "--cleanup", action="store_true", dest="cleanup", help="cleanup after unpacking? (default: false)")
 	(options, args) = parser.parse_args()
