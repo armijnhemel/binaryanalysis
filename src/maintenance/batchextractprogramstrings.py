@@ -584,23 +584,25 @@ def licensefossology((packages)):
 ## TODO: process more files at once to reduce overhead of calling ctags
 def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 	sqlres = extractsourcestrings(p, i, language)
-	## extract function names using ctags, except code from
+	## extract function names using ctags, except functions from
 	## the Linux kernel, since it will never be dynamically linked
+	## but variable names are sometimes stored in a special ELF
+	## section called __ksymtab__strings
 	# (name, linenumber, type)
 	cresults = []
 
 	## this is specifically for Java
 	# (name, type, linenumber)
 	javaresults = []
-	if (language == 'C' or language == 'Java') and package != 'linux':
+	if (language == 'C' or language == 'Java'):
 		source = open(os.path.join(i, p)).read()
 
 		p2 = subprocess.Popen(["ctags", "-f", "-", "-x", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 		(stanout2, stanerr2) = p2.communicate()
 		if p2.returncode != 0:
-			funcresults = []
+			pass
 		elif stanout2.strip() == "":
-			funcresults = []
+			pass
 		else:
 			stansplit = stanout2.strip().split("\n")
 			for res in stansplit:
@@ -608,7 +610,13 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 				if filter(lambda x: x not in string.printable, csplit[0]) != "":
 					continue
 				if language == 'C':
-					for i in ['function', 'variable']:
+					if package == 'linux':
+						## for the Linux kernel the variable names are sometimes
+						## stored in a special ELF section __ksymtab_strings
+						typestostore = ['variable']
+					else:
+						typestostore = ['function', 'variable']
+					for i in typestostore:
 						if csplit[1] == i:
 							cresults.append((csplit[0], int(csplit[2]), i))
 				if language == 'Java':
