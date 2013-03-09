@@ -223,6 +223,11 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 	if blacklist == []:
 		scanfile = path
 	else:
+		## The blacklist is not empty. This could be a problem if
+		## the Linux kernel is an ELF file and contains for example
+		## an initrd.
+		## TODO: first check if the file is an ELF image and if it is
+		## a Linux kernel. If so, clear the blacklist.
 		filesize = filesize = os.stat(path).st_size
 		## whole file is blacklisted, so no need to scan
 		if extractor.inblacklist(0, blacklist) == filesize:
