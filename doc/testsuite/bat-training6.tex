@@ -45,7 +45,7 @@ The parameter \texttt{-o} allows you to set an origin of where the source was do
 
 \frame{
 \frametitle{Generating the database}
-The script to generate the database is called \texttt{batchextractprogramstrings.py}. It can be found in the source repository of BAT in the directory \texttt{maintenance}. It can extract a lot more than kust string constants:
+The script to generate the database is called \texttt{batchextractprogramstrings.py}. It can be found in the source repository of BAT in the directory \texttt{maintenance}. It can extract a lot more than just string constants:
 
 \begin{itemize}
 \item string constants (\texttt{xgettext}) and function names (\texttt{ctags})
@@ -57,7 +57,7 @@ It can be invoked as follows:
 
 \texttt{python batchextractprogramstrings.py -z -d /path/to/database -f /path/to/dir/with/files}
 
-For license information Ninka and FOSSology should be installed. The \texttt{-l} flag should be added to invocation.
+For license information Ninka and FOSSology should be installed. The \texttt{-l} flag should be added to invocation, plus \texttt{-n} to specify the position for a caching database for Ninka.
 
 For copyright information and FOSSology should be installed. The \texttt{-c} flag should be added to invocation.
 }
@@ -117,7 +117,7 @@ The parameters for the databases are passed via the environment:
 envvars = BAT_AVG_C=/path/to/avg/db/for/c
  :BAT_STRINGSCACHE_C=/path/to/caching/db/for/c
  :BAT_DB=/path/to/main/db
- :BAT_FUNCTIONNAME_CACHE=/path/to/funcname/cache
+ :BAT_FUNCTIONNAMECACHE_C=/path/to/funcname/cache
  :BAT_RANKING_FULLCACHE=0
 ...
 \end{verbatim}
@@ -129,13 +129,14 @@ If caches are fully generated \texttt{BAT\_RANKING\_FULLCACHE} should be set to 
 
 \begin{frame}[fragile]
 \frametitle{Further ranking configuration}
-To enable license scanning and reporting the parameter \texttt{BAT\_RANKING\_LICENSE} should be set to \texttt{1}:
+To enable license scanning and reporting the parameter \texttt{BAT\_RANKING\_LICENSE} should be set to \texttt{1} and the location of the license database should be set:
 
 \begin{verbatim}
 [ranking]
 ...
 envvars = ...
  :BAT_RANKING_LICENSE=1
+ :BAT_LICENSE_DB=/path/to/licensedb
 ...
 \end{verbatim}
 \end{frame}
