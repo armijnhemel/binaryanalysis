@@ -2,6 +2,8 @@
 * extract values of EXPORT_SYMBOL* from Linux kernel source and store them.
 These can later be used by ranking.py if there is a kernel image packed as an
 ELF executable.
+* start on extra sanity checks for batchextractprogramstrings.py to better
+deal with duplicate versions which might or might not actually be duplicates.
 
 2013-03-06
 * check whether or not input for generating version charts is an empty list.
