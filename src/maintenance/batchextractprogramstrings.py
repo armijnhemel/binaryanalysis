@@ -613,12 +613,13 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 					if package == 'linux':
 						## for the Linux kernel the variable names are sometimes
 						## stored in a special ELF section __ksymtab_strings
-						typestostore = ['variable']
+						if csplit[1] == 'variable':
+							if "EXPORT_SYMBOL" in csplit[4]:
+								cresults.append((csplit[0], int(csplit[2]), i))
 					else:
-						typestostore = ['function', 'variable']
-					for i in typestostore:
-						if csplit[1] == i:
-							cresults.append((csplit[0], int(csplit[2]), i))
+						for i in ['function', 'variable']:
+							if csplit[1] == i:
+								cresults.append((csplit[0], int(csplit[2]), i))
 				if language == 'Java':
 					for i in ['method', 'class', 'field']:
 						if csplit[1] == i:
