@@ -974,11 +974,11 @@ is unfortunately a bit more elaborate.
 \item make a fresh export of the Subversion repository
 \item change the names of \texttt{bat-extratools} and the
 \texttt{bat-extratools-java} directories to contain the version name of the
-release (for example \texttt{bat-extratools-8.0}). Make a \texttt{tar.gz}
+release (for example \texttt{bat-extratools-13.0}). Make a \texttt{tar.gz}
 archive of the directory:
-\texttt{tar zcf bat-extratools-8.0.tar.gz bat-extratools-8.0}
+\texttt{tar zcf bat-extratools-13.0.tar.gz bat-extratools-13.0}
 \item run \texttt{rpmbuild} to create binary packages:
-\texttt{rpmbuild -ta bat-extratools-8.0.tar.gz}
+\texttt{rpmbuild -ta bat-extratools-12.0.tar.gz}
 \end{enumerate}
 
 \subsection{Building packages for DEB based systems}
@@ -1063,7 +1063,7 @@ There is a helper script (\texttt{generatelist.py}) to help generate the file.
 It can be invoked as follows:
 
 \begin{verbatim}
-python generatelist.py -f /path/to/directory/with/sources
+python generatelist.py -f /path/to/directory/with/sources -o origin
 \end{verbatim}
 
 The output is printed on standard output, so you want to redirect it to a file
@@ -1071,8 +1071,8 @@ called \texttt{LIST} (as expected by the string extraction script) and
 optionally sorting it first:
 
 \begin{verbatim}
-python generatelist.py -f /path/to/directory/with/sources | sort >
-   /path/to/directory/with/sources/LIST
+python generatelist.py -f /path/to/directory/with/sources
+    -o origin | sort > /path/to/directory/with/sources/LIST
 \end{verbatim}
 
 \texttt{generatelist.py} tries to determine the name of the package by
@@ -1264,12 +1264,13 @@ in a different, more uniform, way.
 
 \subsection{Database design}
 
-The main database currently has 4 tables:
+The main database currently has 5 tables:
 
 \begin{itemize}
 \item \texttt{processed}
 \item \texttt{processed\_file}
 \item \texttt{extracted\_file}
+\item \texttt{extracted\_function}
 \item \texttt{extracted\_name}
 \end{itemize}
 
@@ -1279,6 +1280,10 @@ The licenses database has 2 tables:
 \item \texttt{extracted\_copyright}
 \item \texttt{licenses}
 \end{itemize}
+
+During creation an additional table \texttt{ninkacomments} is used, but this
+is only used to cache licensing information determined by the Ninka license
+scanner. It is not used ottherwise.
 
 \subsubsection{\texttt{processed} table}
 
@@ -1321,6 +1326,17 @@ It has the following fields:
 \item line number where the extracted string can be found in the source code
 file, or $0$ if unknown. This information is determined using
 \texttt{xgettext}.
+\end{itemize}
+
+\subsubsection{\texttt{extracted\_function} table}
+
+In this table information about C functions and Java methods is stored.
+
+\begin{itemize}
+\item sha256 checksum of the file
+\item function name or method name that was extracted
+\item programming language the source is written in
+\item line number where the extracted information can be found
 \end{itemize}
 
 \subsubsection{\texttt{extracted\_name} table}
