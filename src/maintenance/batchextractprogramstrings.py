@@ -732,6 +732,8 @@ def checkalreadyscanned((filedir, package, version, filename, origin, dbpath)):
 	scanfile.close()
 	filehash = h.hexdigest()
 
+	conn = sqlite3.connect(dbpath, check_same_thread = False)
+	c = conn.cursor()
 	## Check if we've already processed this file. If so, we can easily skip it and return.
 	c.execute('''select * from processed where sha256=?''', (filehash,))
 	if len(c.fetchall()) != 0:
@@ -744,8 +746,6 @@ def checkalreadyscanned((filedir, package, version, filename, origin, dbpath)):
 	## in packages with the same name from different sources (binutils-2.1[567] from GNU for
 	## example got a license change in mid-2011, without package names being updated)
 
-        conn = sqlite3.connect(dbpath, check_same_thread = False)
-	c = conn.cursor()
 	#c.execute('PRAGMA synchronous=off')
 	#c.execute('''select * from processed where package=? and version=? and origin=?''', (package, version, origin))
 	c.execute('''select * from processed where package=? and version=? LIMIT 1''', (package, version))
