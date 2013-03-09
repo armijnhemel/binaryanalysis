@@ -447,6 +447,16 @@ def readconfig(config):
 					batconf['outputlite'] = False
 			except:
 				batconf['outputlite'] = False
+			try:
+				unpacktempdir = config.get(section, 'tempdir')
+				if not os.path.isdir(unpacktempdir):
+					batconf['tempdir'] = None
+				else:
+					batconf['tempdir'] = unpacktempdir
+					## TODO: try to create a temporary directory
+					## to see if the directory is writable
+			except:
+				batconf['tempdir'] = None
 			continue
 		
 		elif config.has_option(section, 'type'):
