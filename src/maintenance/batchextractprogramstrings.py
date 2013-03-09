@@ -31,7 +31,8 @@ ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
 ## list of extensions, plus what language they should be mapped to
-## This is not necessarily correct, but right now it is the best we have.
+## This is not necessarily correct, but right now it suffices. Ideally a parser
+## would be run on each file to see what kind of file it is.
 extensions = {'.c'      : 'C',
               '.cc'     : 'C',
               '.cpp'    : 'C',
@@ -69,9 +70,9 @@ def splitSpecialChars(s):
 	if splitchars != []:
 		for i in splitchars:
 			splits = filter(lambda x: x != '', reduce(lambda x, y: x + y, map(lambda x: x.split(i), splits), []))
-	## Now we need to make sure we get rid of leading control characters.
-	## The reason we remove them only at the beginning and end
-	## (for now) is because it is a lot easier. In the future we should also
+	## Now make sure to get rid of leading control characters.
+	## The reason to remove them only at the beginning and end
+	## (for now) is because it is a lot easier. In the future try to
 	## split on them mid-string.
 	remove_chars = ["\\a", "\\b", "\\v", "\\f", "\\n", "\\r", "\\e", "\\0"]
 	for i in splits:
@@ -106,7 +107,7 @@ def unpack(directory, filename, unpackdir):
 
         filemagic = ms.file(os.path.realpath("%s/%s" % (directory, filename)))
 
-        ## Assume if we have bz2 or gzip compressed file we are dealing with compressed tar files
+        ## Assume if the files are bz2 or gzip compressed they are compressed tar files
         if 'bzip2 compressed data' in filemagic:
 		if unpackdir != None:
        			tmpdir = tempfile.mkdtemp(dir=unpackdir)
@@ -162,22 +163,26 @@ def unpack_verify(filedir, filename):
 def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256):
 	print >>sys.stdout, filename
 
-	## Check if we've already processed this file. If so, we can easily skip it and return.
-	## TODO: we should take the origin into account, because sometimes there are differences
+	## Check if we've already processed this file. If so, skip it and return.
+	## TODO: take the origin into account, because sometimes there are differences
 	## in packages with the same name from different sources (binutils-2.1[567] from GNU for
 	## example got a license change in mid-2011, without package names being updated)
         conn = sqlite3.connect(dbpath, check_same_thread = False)
 	c = conn.cursor()
 	c.execute('PRAGMA synchronous=off')
-	## unpack the archive. If we fail, cleanup and return.
+	## unpack the archive. If it fails, cleanup and return.
 	temporarydir = unpack(filedir, filename, '/gpl/tmp')
 	if temporarydir == None:
 		c.close()
 		conn.close()
 		return None
-	## first check if we already have this version in the database
-	## Check if we already have any strings from program + version. If so,
-	## first remove them before we add them to avoid unnecessary duplication.
+	## First check if version exists in the database.
+	## If the version is not in 'processed' check if there are already any strings
+	## from program + version. If so, first remove the results before adding to
+	## avoid unnecessary duplication.
+	## If the version is in 'processed' then it should be checked if every file is in processed_file
+	## If they are, then the versions are equivalent.
+	## If not, one of the versions should be renamed.
 	c.execute('''select sha256 from processed_file where package=? and version=? LIMIT 1''', (package, version))
 	if len(c.fetchall()) != 0:
 		c.execute('''delete from processed_file where package=? and version=?''', (package, version))
@@ -195,7 +200,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 			osgen = os.walk(temporarydir)
 			while True:
 				i = osgen.next()
-				## make sure we can access all directories
+				## make sure all directories can be accessed
 				for d in i[1]:
 					if not os.path.islink("%s/%s" % (i[0], d)):
 						os.chmod("%s/%s" % (i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
@@ -211,7 +216,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 		try:
 			shutil.rmtree(temporarydir)
 		except:
-			## nothing we can do right now, so just give up
+			## nothing that can be done right now, so just give up
 			pass
 	return sqlres
 
@@ -224,7 +229,7 @@ def computehash((path, filename)):
 	## skip links
 	if os.path.islink("%s/%s" % (path, filename)):
         	return None
-	## we can't determine anything about an empty file, so skip
+	## nothing to determine about an empty file, so skip
 	if os.stat("%s/%s" % (path, filename)).st_size == 0:
 		return None
 	## some filenames might have uppercase extensions, so lowercase them first
@@ -260,7 +265,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		scanfiles = []
 		while True:
 			i = osgen.next()
-			## make sure we can access all directories
+			## make sure all directories can be accessed
 			for d in i[1]:
 				if not os.path.islink("%s/%s" % (i[0], d)):
 					os.chmod("%s/%s" % (i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
@@ -288,9 +293,10 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		(path, filename, filehash, extension) = s
 		insertfiles.append(("%s/%s" % (path[srcdirlen:],filename), filehash))
 
-		## if we process many versions of a single package there is likely going to be
-		## overlap. We can avoid hitting the disk by remembering the SHA256 from a previous
-		## run.
+		## if many versions of a single package are processed there is likely going to be
+		## overlap. Avoid hitting the disk by remembering the SHA256 from a previous run.
+		## This only really helps if the files are scanned in release order to decrease
+		## the deltas.
 		if package == oldpackage:
 			if s[2] in oldsha256:
 				continue
@@ -350,11 +356,11 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			ninkacursor.execute('''select license, version from ninkacomments where sha256=?''', (c,))
 			res = ninkacursor.fetchall()
 			if len(res) > 0:
-				## store all the licenses we already know for this comment
+				## store all the licenses that are already known for this comment
 				for r in res:
 					(filelicense, scannerversion) = r
 					for f in commentshash2[c]:
-						## only use this if we actually have duplications
+						## only use this if there actually are duplicates
 						#licensecursor.execute('''delete from licenses where sha256 = ? and license = ? and scanner = ? and version = ?''', (f, filelicense, "ninka", scannerversion))
 						licensecursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (f, filelicense, "ninka", scannerversion))
 			else:
@@ -423,7 +429,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		licensecursor.close()
 		licenseconn.close()
 
-	## process the files we want to scan in parallel, then process the results
+	## process the files to scan in parallel, then process the results
 	extracted_results = pool.map(extractstrings, filestoscan, 1)
 
 	for extractres in extracted_results:
@@ -452,9 +458,9 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 
 ## extract comments in parallel
 def extractcomments((package, version, i, p, language, filehash, ninkaversion)):
-	## first we generate just a .comments file and see if we've already seen it
-	## before. This is because often license headers are very similar, so we
-	## don't need to rescan everything.
+	## first generate a .comments file with Ninka and see if it is already
+	## known. This is because often license headers are identical, and
+	## there is no need to rescan the files if the headers are identical.
 	## For gtk+ 2.20.1 scanning time dropped with about 25%.
 	ninkaenv = os.environ.copy()
 	ninkabasepath = '/gpl/ninka/ninka-%s' % ninkaversion
@@ -479,7 +485,7 @@ def runfullninka((i, p, filehash, ninkaversion)):
 	p2 = subprocess.Popen(["%s/ninka.pl" % ninkabasepath, "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
 	(stanout, stanerr) = p2.communicate()
 	ninkasplit = stanout.strip().split(';')[1:]
-	## filter out the licenses we can't determine.
+	## filter out the licenses that can't be determined.
 	if ninkasplit[0] == '':
 		ninkares = ['UNKNOWN']
 	else:
@@ -701,7 +707,7 @@ def extractsourcestrings(filename, filedir, language):
 				for splitline in splits:
 					for line in splitline.split("\\r\\n"):
 						for sline in line.split("\\n"):
-							## do we really need this?
+							## is this really needed?
 							sline = sline.replace("\\\n", "")
 
 							## unescape a few values
@@ -709,7 +715,7 @@ def extractsourcestrings(filename, filedir, language):
 							sline = sline.replace("\\t", "\t")
 							sline = sline.replace("\\\\", "\\")
 	
-							## we don't want to store empty strings, they won't show up in binaries
+							## don't store empty strings, they won't show up in binaries
 							## but they do make the database a lot larger
 							if sline == '':
 								continue
@@ -743,7 +749,7 @@ def checkalreadyscanned((filedir, package, version, filename, origin, dbpath)):
 		conn.close()
 		return res
 
-	## TODO: we should take the origin into account, because sometimes there are differences
+	## TODO: take the origin of the file into account, because sometimes there are differences
 	## in packages with the same name from different sources (binutils-2.1[567] from GNU for
 	## example got a license change in mid-2011, without package names being updated)
 
