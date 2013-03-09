@@ -176,17 +176,22 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 		c.close()
 		conn.close()
 		return None
+
 	## First check if version exists in the database.
-	## If the version is not in 'processed' check if there are already any strings
-	## from program + version. If so, first remove the results before adding to
-	## avoid unnecessary duplication.
-	## If the version is in 'processed' then it should be checked if every file is in processed_file
-	## If they are, then the versions are equivalent.
-	## If not, one of the versions should be renamed.
-	c.execute('''select sha256 from processed_file where package=? and version=? LIMIT 1''', (package, version))
-	if len(c.fetchall()) != 0:
-		c.execute('''delete from processed_file where package=? and version=?''', (package, version))
-		conn.commit()
+	c.execute('''select sha256 from processed where package=? and version=? LIMIT 1''', (package, version))
+	if len(c.fetchall()) == 0:
+		## If the version is not in 'processed' check if there are already any strings
+		## from program + version. If so, first remove the results before adding to
+		## avoid unnecessary duplication.
+		c.execute('''select sha256 from processed_file where package=? and version=? LIMIT 1''', (package, version))
+		if len(c.fetchall()) != 0:
+			c.execute('''delete from processed_file where package=? and version=?''', (package, version))
+			conn.commit()
+	else:
+		## If the version is in 'processed' then it should be checked if every file is in processed_file
+		## If they are, then the versions are equivalent and no processing is needed.
+		## If not, one of the versions should be renamed.
+		pass
 
 	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256)
 	## Add the file to the database: name of archive, sha256, packagename and version
@@ -745,23 +750,11 @@ def checkalreadyscanned((filedir, package, version, filename, origin, dbpath)):
 	c.execute('''select * from processed where sha256=?''', (filehash,))
 	if len(c.fetchall()) != 0:
 		res = None
-		c.close()
-		conn.close()
-		return res
-
-	## TODO: take the origin of the file into account, because sometimes there are differences
-	## in packages with the same name from different sources (binutils-2.1[567] from GNU for
-	## example got a license change in mid-2011, without package names being updated)
-
-	#c.execute('PRAGMA synchronous=off')
-	#c.execute('''select * from processed where package=? and version=? and origin=?''', (package, version, origin))
-	c.execute('''select * from processed where package=? and version=? LIMIT 1''', (package, version))
-	if len(c.fetchall()) != 0:
-		res = None
 	else:
 		res = (package, version, filename, origin, filehash)
 	c.close()
 	conn.close()
+
 	return res
 
 def main(argv):
