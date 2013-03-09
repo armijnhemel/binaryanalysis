@@ -9,6 +9,8 @@ from optparse import OptionParser
 import sqlite3
 from bat import extractor
 
+## TODO: replace by generic code from ranking.py
+
 ## some strings we are interested in can't be extracted using xgettext.
 ## We use a few regular expressions for them to extract them. Since there
 ## macros being introduced (and removed) from the kernel sources regularly
@@ -33,12 +35,15 @@ exprs.append(re.compile("add_hotplug_env_var\((?:[\w&]+,\s*){6}\"([\w\s\.:;<>\-+
 bugtrapexpr = re.compile("BUG_TRAP\s*\(([\w\s\.:<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\);", re.MULTILINE)
 
 ## we extract function names as well, since they frequently appear in the kernel image
+## TODO: extract with CTAGS
 funexprs = []
 funexprs.append(re.compile("(?:static|extern) (?:\w+\s)+\*?\s*(\w+)\(", re.MULTILINE))
 
-symbolexprs = []
-symbolexprs.append(re.compile("EXPORT_SYMBOL\s*\(([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\\\]+)", re.MULTILINE))
-symbolexprs.append(re.compile("EXPORT_SYMBOL_GPL\s*\(([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\\\]+)", re.MULTILINE))
+## These can be extracted with ctags and are already stored in the database because they are extracted
+## with batchextractprogramstrings.py
+#symbolexprs = []
+#symbolexprs.append(re.compile("EXPORT_SYMBOL\s*\(([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\\\]+)", re.MULTILINE))
+#symbolexprs.append(re.compile("EXPORT_SYMBOL_GPL\s*\(([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\\\]+)", re.MULTILINE))
 
 def extractkernelstrings(kerneldir, sqldb):
 	kerneldirlen = len(kerneldir)+1
@@ -140,12 +145,6 @@ def extractkernelstrings(kerneldir, sqldb):
 	
 					## store the names of the symbols separately. Should we actually do this?
 					results = []
-					for symex in symbolexprs:
-						results = results + symex.findall(source)
-	
-					for res in results:
-						storestring = res.strip()
-						sqldb.execute('''insert into symbol (symbolstring, filename) values (?, ?)''', (storestring, u"%s/%s" % (i[0][kerneldirlen:], p)))
 	
 					results = []
 					for funex in funexprs:
