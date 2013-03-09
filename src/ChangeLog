@@ -1,3 +1,8 @@
+2013-03-09
+* extract values of EXPORT_SYMBOL* from Linux kernel source and store them.
+These can later be used by ranking.py if there is a kernel image packed as an
+ELF executable.
+
 2013-03-06
 * check whether or not input for generating version charts is an empty list.
 * update dedexer to 1.25 to have better support for ODEX
