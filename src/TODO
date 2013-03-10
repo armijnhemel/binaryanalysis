@@ -1,7 +1,9 @@
 TODO:
 
 file systems:
-* FAT
+* FAT16 (use python-construct)
+* FAT32
+* MBR (use python-construct)
 * NTFS
 * ubifs (unubi was removed from mtd-utils)
 * more generic YAFFS2 support
