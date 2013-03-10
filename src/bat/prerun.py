@@ -585,6 +585,7 @@ def verifyJAR(filename, tempdir=None, tags=[], offsets={}, envvars=None):
 	if offsets['zip'][0] != 0:
 		return newtags
 	## Unpack the directory to a temporary directory
+	## TODO: add support for temporary dir
 	jardir = tempfile.mkdtemp()
 	p = subprocess.Popen(['unzip', '-o', filename, '-d', jardir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()

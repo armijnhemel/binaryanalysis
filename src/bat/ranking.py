@@ -370,6 +370,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 				sourcefiles = []
 				methods = []
 				fields = []
+				## TODO: add support for setting tempdir
 				dalvikdir = tempfile.mkdtemp()
 				p = subprocess.Popen(['java', '-jar', '/usr/share/java/bat-ddx.jar', '-d', dalvikdir, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
