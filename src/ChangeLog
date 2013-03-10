@@ -1,3 +1,6 @@
+2013-03-10
+* move topleveldir creation to bat/bruteforcescan.py
+
 2013-03-09
 * extract values of EXPORT_SYMBOL* from Linux kernel source and store them.
 These can later be used by ranking.py if there is a kernel image packed as an

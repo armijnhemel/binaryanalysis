@@ -671,7 +671,8 @@ def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=Fa
 		dumpfile.add(i)
 	dumpfile.close()
 
-def runscan(topleveldir, scans, scan_binary):
+def runscan(scans, scan_binary):
+	topleveldir = tempfile.mkdtemp()
 	os.makedirs("%s/data" % (topleveldir,))
 	scantempdir = "%s/data" % (topleveldir,)
 	shutil.copy(scan_binary, scantempdir)
@@ -824,4 +825,4 @@ def runscan(topleveldir, scans, scan_binary):
 		postrunresults = pool.map(postrunscan, postrunscans, 1)
 		pool.terminate()
 
-	return unpackreports
+	return (topleveldir, unpackreports)

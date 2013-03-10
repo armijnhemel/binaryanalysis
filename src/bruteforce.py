@@ -54,10 +54,7 @@ def main(argv):
 
 	scandate = datetime.datetime.utcnow()
 
-	## create temporary directory for storing results
-	tempdir=tempfile.mkdtemp()
-
-	unpackreports = bat.bruteforcescan.runscan(tempdir, scans, options.fw)
+	(tempdir, unpackreports) = bat.bruteforcescan.runscan(scans, options.fw)
 
 	if not scans['batconfig'].has_key('output'):
 		## no printing?
