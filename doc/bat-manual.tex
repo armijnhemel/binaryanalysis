@@ -332,6 +332,17 @@ output = prettyprintresxml
 
 These two settings should always be used together.
 
+There is one setting to set the prefix for creating temporary files or
+directories, namely \texttt{tempdir}. By default the directory for creating
+temporary files and directories is \texttt{/tmp}. There might be situations
+where the temporary directory might need to be changed, for example for
+unpacking on a faster medium (ramdisk, SSD) than a normal harddisk. It can be
+used as follows:
+
+\begin{verbatim}
+tempdir = /ssd/tmp
+\end{verbatim}
+
 The other global section is \texttt{viewer}. This section is specific for the
 graphical frontend and is not used in any other parts of BAT and might be moved
 to a separate configuration file in a future version of BAT.
