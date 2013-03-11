@@ -25,7 +25,7 @@ Parameters for configuration file:
 * BAT_IMAGEDIR :: location to where images should be written
 '''
 
-import os, os.path, sys, subprocess, array, cPickle, tempfile
+import os, os.path, sys, subprocess
 from PIL import Image
 
 def generateImages(filename, unpackreport, scantempdir, topleveldir, envvars={}):
