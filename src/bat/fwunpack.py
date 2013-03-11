@@ -362,7 +362,7 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, envvar
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [])
 
-def unpackISO9660(filename, offset, tempdir=None):
+def unpackISO9660(filename, offset, tempdir=None, unpacktempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
@@ -375,7 +375,10 @@ def unpackISO9660(filename, offset, tempdir=None):
 		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
 
 	## create a mountpoint
-	mountdir = tempfile.mkdtemp()
+	if unpacktempdir != None:
+		mountdir = tempfile.mkdtemp(dir=unpacktempdir)
+	else:
+		mountdir = tempfile.mkdtemp()
 	p = subprocess.Popen(['fuseiso', tmpfile[1], mountdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
@@ -385,7 +388,10 @@ def unpackISO9660(filename, offset, tempdir=None):
 			os.rmdir(tmpdir)
 		return None
 	## first we create *another* temporary directory, because of the behaviour of shutil.copytree()
-	tmpdir2 = tempfile.mkdtemp()
+	if unpacktempdir != None:
+		tmpdir2 = tempfile.mkdtemp(dir=unpacktempdir)
+	else:
+		tmpdir2 = tempfile.mkdtemp()
 	## then copy the contents to a subdir
 	shutil.copytree(mountdir, tmpdir2 + "/bla")
 	## then change all the permissions
@@ -1107,7 +1113,7 @@ def searchUnpackRomfs(filename, tempdir=None, blacklist=[], offsets={}, envvars=
 			os.rmdir(tmpdir)
         return (diroffsets, blacklist, [])
 
-def unpackRomfs(filename, offset, tempdir=None):
+def unpackRomfs(filename, offset, tempdir=None, unpacktempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
@@ -1130,7 +1136,10 @@ def unpackRomfs(filename, offset, tempdir=None):
 		return None
 
 	## temporary dir to unpack stuff in
-	tmpdir2 = tempfile.mkdtemp()
+	if unpacktempdir != None:
+		tmpdir2 = tempfile.mkdtemp(dir=unpacktempdir)
+	else:
+		tmpdir2 = tempfile.mkdtemp()
 
 	p = subprocess.Popen(['bat-romfsck', '-x', tmpdir2, tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
@@ -1186,7 +1195,7 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, envvars
 
 ## tries to unpack stuff using fsck.cramfs. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
-def unpackCramfs(filename, offset, tempdir=None):
+def unpackCramfs(filename, offset, tempdir=None, unpacktempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
@@ -1194,7 +1203,10 @@ def unpackCramfs(filename, offset, tempdir=None):
 	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
 	## directory to avoid name clashes
-        tmpdir2 = tempfile.mkdtemp()
+	if unpacktempdir != None:
+        	tmpdir2 = tempfile.mkdtemp(dir=unpacktempdir)
+	else:
+        	tmpdir2 = tempfile.mkdtemp()
 
 	## right now this is a path to a specially adapted fsck.cramfs that ignores special inodes
 	## We actually need to create a new subdirectory inside tmpdir, otherwise the tool will complain
@@ -1228,7 +1240,7 @@ def unpackCramfs(filename, offset, tempdir=None):
 ## some extra tools (squashfs variants) installed.
 ## Use the output of 'file' to determine the size of squashfs and use it for the
 ## blacklist.
-def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, envvars=None, unpacktempdir=None):
 	squashoffsets = []
 	for marker in fsmagic.squashtypes:
 		if offsets.has_key(marker):
@@ -1283,7 +1295,10 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, envva
 				tmpfile = tempfile.mkstemp(dir=sqshtmpdir)
 				os.fdopen(tmpfile[0]).close()
 
-				sqshtmpfile = tempfile.mkstemp()
+				if unpacktempdir != None:
+					sqshtmpfile = tempfile.mkstemp(dir=unpacktempdir)
+				else:
+					sqshtmpfile = tempfile.mkstemp()
 				os.fdopen(sqshtmpfile[0]).close()
 
 				## suck in the bytes up until the offset
@@ -1417,10 +1432,13 @@ def unpackSquashfs(filename, offset, tmpdir):
 		return (tmpdir, squashsize)
 
 ## squashfs variant from DD-WRT, with LZMA
-def unpackSquashfsDDWRTLZMA(filename, offset, tmpdir):
+def unpackSquashfsDDWRTLZMA(filename, offset, tmpdir, unpacktempdir=None):
 	## squashfs 1.0 with lzma from DDWRT can't unpack to an existing directory
 	## so we use a workaround using an extra temporary directory
-	tmpdir2 = tempfile.mkdtemp()
+	if unpacktempdir != None:
+		tmpdir2 = tempfile.mkdtemp(dir=unpacktempdir)
+	else:
+		tmpdir2 = tempfile.mkdtemp()
 
 	p = subprocess.Popen(['bat-unsquashfs-ddwrt', '-dest', tmpdir2 + "/squashfs-root", '-f', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
@@ -1448,10 +1466,13 @@ def unpackSquashfsDDWRTLZMA(filename, offset, tmpdir):
 		return (tmpdir, squashsize)
 
 ## squashfs variant from OpenWrt, with LZMA
-def unpackSquashfsOpenWrtLZMA(filename, offset, tmpdir):
+def unpackSquashfsOpenWrtLZMA(filename, offset, tmpdir, unpacktempdir=None):
 	## squashfs 1.0 with lzma from OpenWrt can't unpack to an existing directory
 	## so we use a workaround using an extra temporary directory
-	tmpdir2 = tempfile.mkdtemp()
+	if unpacktempdir != None:
+		tmpdir2 = tempfile.mkdtemp(dir=unpacktempdir)
+	else:
+		tmpdir2 = tempfile.mkdtemp()
 
 	p = subprocess.Popen(['bat-unsquashfs-openwrt', '-dest', tmpdir2 + "/squashfs-root", '-f', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
@@ -1626,7 +1647,7 @@ def searchUnpackMinix(filename, tempdir=None, blacklist=[], offsets={}, envvars=
 	return (diroffsets, blacklist, [])
 
 ## Unpack an minix v1 file system using bat-minix. Needs hints for size of minix file system
-def unpackMinix(filename, offset, tempdir=None, unpackenv={}):
+def unpackMinix(filename, offset, tempdir=None, unpackenv={}, unpacktempdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
 	tmpdir = unpacksetup(tempdir)
@@ -1636,7 +1657,10 @@ def unpackMinix(filename, offset, tempdir=None, unpackenv={}):
 	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
 	## create an extra temporary directory
-	tmpdir2 = tempfile.mkdtemp()
+	if unpacktempdir != None:
+		tmpdir2 = tempfile.mkdtemp(dir=unpacktempdir)
+	else:
+		tmpdir2 = tempfile.mkdtemp()
 
 	p = subprocess.Popen(['bat-minix', '-i', tmpfile[1], '-o', tmpdir2], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()

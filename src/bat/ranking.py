@@ -131,7 +131,7 @@ def squashlicenses(licenses):
 ## funky statistics as described in our paper.
 ## Original code (in Perl) was written by Eelco Dolstra.
 ## Reimplementation in Python done by Armijn Hemel.
-def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
+def searchGeneric(path, blacklist=[], offsets={}, envvars=None, unpacktempdir=None):
 	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):
@@ -258,7 +258,10 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 		datafile.close()
 		if len(databytes) == 0:
 			return None
-		tmpfile = tempfile.mkstemp()
+		if unpacktempdir != None:
+			tmpfile = tempfile.mkstemp(dir=unpacktempdir)
+		else:
+			tmpfile = tempfile.mkstemp()
 		os.write(tmpfile[0], databytes)
 		os.fdopen(tmpfile[0]).close()
 		scanfile = tmpfile[1]
@@ -304,7 +307,10 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 								if section == "." + elfsplits[0]:
 									elfoffset = int(elfsplits[3], 16)
 									elfsize = int(elfsplits[4], 16)
-									elftmp = tempfile.mkstemp(suffix=section)
+									if unpacktempdir != None:
+										elftmp = tempfile.mkstemp(dir=unpacktempdir,suffix=section)
+									else:
+										elftmp = tempfile.mkstemp(suffix=section)
 									datafile.seek(elfoffset)
 									data = datafile.read(elfsize)
 									os.write(elftmp[0], data)
@@ -371,7 +377,10 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None):
 				methods = []
 				fields = []
 				## TODO: add support for setting tempdir
-				dalvikdir = tempfile.mkdtemp()
+				if unpacktempdir != None:
+					dalvikdir = tempfile.mkdtemp(dir=unpacktempdir)
+				else:
+					dalvikdir = tempfile.mkdtemp()
 				p = subprocess.Popen(['java', '-jar', '/usr/share/java/bat-ddx.jar', '-d', dalvikdir, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				if p.returncode == 0:

@@ -42,7 +42,7 @@ def generateversionchart((versionpickle, picklehash, imagedir, pickledir)):
 	else:
 		return '%s.png' % (picklehash, )
 
-def extractpickles((filehash, pickledir, topleveldir)):
+def extractpickles((filehash, pickledir, topleveldir, unpacktempdir)):
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 	leafreports = cPickle.load(leaf_file)
 	leaf_file.close()
@@ -80,7 +80,10 @@ def extractpickles((filehash, pickledir, topleveldir)):
 
 		## now dump the data to a pickle
 		if pielabels != [] and piedata != []:
-			tmppickle = tempfile.mkstemp()
+			if unpacktempdir != None:
+				tmppickle = tempfile.mkstemp(dir=unpacktempdir)
+			else:
+				tmppickle = tempfile.mkstemp()
 			cPickle.dump((piedata, pielabels), os.fdopen(tmppickle[0], 'w'))
 			picklehash = gethash(tmppickle[1])
 			pieresult = (picklehash, tmppickle[1])
@@ -93,7 +96,10 @@ def extractpickles((filehash, pickledir, topleveldir)):
 				if vals == []:
 					continue
 				vals.sort()
-				tmppickle = tempfile.mkstemp()
+				if unpacktempdir != None:
+					tmppickle = tempfile.mkstemp(dir=unpacktempdir)
+				else:
+					tmppickle = tempfile.mkstemp()
 				for v in vals:
 					j_sorted = filter(lambda x: x[1] == v, j[4].items())
 					j_sorted.sort()
@@ -113,7 +119,10 @@ def extractpickles((filehash, pickledir, topleveldir)):
 				if vals == []:
 					continue
 				vals.sort()
-				tmppickle = tempfile.mkstemp()
+				if unpacktempdir != None:
+					tmppickle = tempfile.mkstemp(dir=unpacktempdir)
+				else:
+					tmppickle = tempfile.mkstemp()
 				for v in vals:
 					j_sorted = filter(lambda x: x[1] == v, p_sorted)
 					j_sorted.sort()
@@ -200,7 +209,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
 	filehashes = list(set(map(lambda x: unpackreports[x]['sha256'], rankingfiles)))
 
 	## extract pickles
-	extracttasks = map(lambda x: (x, pickledir, topleveldir), filehashes)
+	extracttasks = map(lambda x: (x, pickledir, topleveldir), filehashes, None)
 	pool = multiprocessing.Pool(processes=1)
 	res = filter(lambda x: x != None, pool.map(extractpickles, extracttasks))
 	pool.terminate()

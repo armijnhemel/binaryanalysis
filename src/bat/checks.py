@@ -16,7 +16,7 @@ import extractor
 import xml.dom.minidom
 
 ## generic searcher for certain marker strings
-def genericSearch(path, markerStrings, blacklist=[]):
+def genericSearch(path, markerStrings, blacklist=[], unpacktempdir=None):
         try:
 		## first see if the entire file has been blacklisted
 		filesize = os.stat(path).st_size
@@ -48,7 +48,10 @@ def genericSearch(path, markerStrings, blacklist=[]):
 			datafile.close()
 			if len(databytes) == 0:
 				return None
-			tmpfile = tempfile.mkstemp()
+			if unpacktempdir != None:
+				tmpfile = tempfile.mkstemp(dir=unpacktempdir)
+			else:
+				tmpfile = tempfile.mkstemp()
 			os.write(tmpfile[0], databytes)
 			os.fdopen(tmpfile[0]).close()
 			scanfile = tmpfile[1]
