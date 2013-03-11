@@ -48,10 +48,7 @@ def genericSearch(path, markerStrings, blacklist=[], unpacktempdir=None):
 			datafile.close()
 			if len(databytes) == 0:
 				return None
-			if unpacktempdir != None:
-				tmpfile = tempfile.mkstemp(dir=unpacktempdir)
-			else:
-				tmpfile = tempfile.mkstemp()
+			tmpfile = tempfile.mkstemp(dir=unpacktempdir)
 			os.write(tmpfile[0], databytes)
 			os.fdopen(tmpfile[0]).close()
 			scanfile = tmpfile[1]

@@ -258,10 +258,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None, unpacktempdir=No
 		datafile.close()
 		if len(databytes) == 0:
 			return None
-		if unpacktempdir != None:
-			tmpfile = tempfile.mkstemp(dir=unpacktempdir)
-		else:
-			tmpfile = tempfile.mkstemp()
+		tmpfile = tempfile.mkstemp(dir=unpacktempdir)
 		os.write(tmpfile[0], databytes)
 		os.fdopen(tmpfile[0]).close()
 		scanfile = tmpfile[1]
@@ -307,10 +304,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None, unpacktempdir=No
 								if section == "." + elfsplits[0]:
 									elfoffset = int(elfsplits[3], 16)
 									elfsize = int(elfsplits[4], 16)
-									if unpacktempdir != None:
-										elftmp = tempfile.mkstemp(dir=unpacktempdir,suffix=section)
-									else:
-										elftmp = tempfile.mkstemp(suffix=section)
+									elftmp = tempfile.mkstemp(dir=unpacktempdir,suffix=section)
 									datafile.seek(elfoffset)
 									data = datafile.read(elfsize)
 									os.write(elftmp[0], data)
@@ -376,11 +370,7 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None, unpacktempdir=No
 				sourcefiles = []
 				methods = []
 				fields = []
-				## TODO: add support for setting tempdir
-				if unpacktempdir != None:
-					dalvikdir = tempfile.mkdtemp(dir=unpacktempdir)
-				else:
-					dalvikdir = tempfile.mkdtemp()
+				dalvikdir = tempfile.mkdtemp(dir=unpacktempdir)
 				p = subprocess.Popen(['java', '-jar', '/usr/share/java/bat-ddx.jar', '-d', dalvikdir, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				if p.returncode == 0:

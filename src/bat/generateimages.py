@@ -80,10 +80,7 @@ def extractpickles((filehash, pickledir, topleveldir, unpacktempdir)):
 
 		## now dump the data to a pickle
 		if pielabels != [] and piedata != []:
-			if unpacktempdir != None:
-				tmppickle = tempfile.mkstemp(dir=unpacktempdir)
-			else:
-				tmppickle = tempfile.mkstemp()
+			tmppickle = tempfile.mkstemp(dir=unpacktempdir)
 			cPickle.dump((piedata, pielabels), os.fdopen(tmppickle[0], 'w'))
 			picklehash = gethash(tmppickle[1])
 			pieresult = (picklehash, tmppickle[1])
@@ -96,10 +93,7 @@ def extractpickles((filehash, pickledir, topleveldir, unpacktempdir)):
 				if vals == []:
 					continue
 				vals.sort()
-				if unpacktempdir != None:
-					tmppickle = tempfile.mkstemp(dir=unpacktempdir)
-				else:
-					tmppickle = tempfile.mkstemp()
+				tmppickle = tempfile.mkstemp(dir=unpacktempdir)
 				for v in vals:
 					j_sorted = filter(lambda x: x[1] == v, j[4].items())
 					j_sorted.sort()
@@ -119,10 +113,7 @@ def extractpickles((filehash, pickledir, topleveldir, unpacktempdir)):
 				if vals == []:
 					continue
 				vals.sort()
-				if unpacktempdir != None:
-					tmppickle = tempfile.mkstemp(dir=unpacktempdir)
-				else:
-					tmppickle = tempfile.mkstemp()
+				tmppickle = tempfile.mkstemp(dir=unpacktempdir)
 				for v in vals:
 					j_sorted = filter(lambda x: x[1] == v, p_sorted)
 					j_sorted.sort()
