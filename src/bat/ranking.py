@@ -218,6 +218,10 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 		## Else we will just consider it as 'C'.
 		language='C'
 
+	## special var to indicate whether or not the file is a Linux kernel
+	## image. If so extra checks can be done.
+	linuxkernel = False
+
 	## If part of the file is blacklisted the blacklisted byte ranges
 	## should be ignored. Examples are firmwares, where there is a
 	## bootloader, followed by a file system. The bootloader should be
@@ -229,42 +233,54 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 		## The blacklist is not empty. This could be a problem if
 		## the Linux kernel is an ELF file and contains for example
 		## an initrd.
-		## TODO: first check if the file is an ELF image and if it is
-		## a Linux kernel. If so, clear the blacklist.
 		filesize = filesize = os.stat(path).st_size
 		## whole file is blacklisted, so no need to scan
 		if extractor.inblacklist(0, blacklist) == filesize:
 			return None
-		## we have already scanned parts of the file
-		## we need to carve the right parts from the file first
-		datafile = open(path, 'rb')
-		lastindex = 0
-		databytes = ""
-		datafile.seek(lastindex)
-		## make a copy and add a bogus value for the last
-		## byte to a temporary blacklist to make the loop work
-		## well.
-		blacklist_tmp = copy.deepcopy(blacklist)
-		blacklist_tmp.append((filesize,filesize))
-		for i in blacklist_tmp:
-			if i[0] == lastindex:
-				lastindex = i[1] - 1
-				datafile.seek(lastindex)
-				continue
-			if i[0] > lastindex:
-				## just concatenate the bytes
-				data = datafile.read(i[0] - lastindex)
-				databytes = databytes + data
-				## set lastindex to the next
-				lastindex = i[1] - 1
-				datafile.seek(lastindex)
-		datafile.close()
-		if len(databytes) == 0:
-			return None
-		tmpfile = tempfile.mkstemp(dir=unpacktempdir)
-		os.write(tmpfile[0], databytes)
-		os.fdopen(tmpfile[0]).close()
-		scanfile = tmpfile[1]
+		if "elf" in tags and "static" in tags:
+        		p = subprocess.Popen(['readelf', '-SW', path], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+        		(stanout, stanerr) = p.communicate()
+			if "There are no sections in this file." in stanout:
+				pass
+			else:
+				st = stanout.strip().split("\n")
+				for s in st[3:]:
+					if "__ksymtab_strings" in s:
+						## the file is a Linux kernel image. Ignore the black list.
+						## Any CPIO contents should be ignored later on though.
+						scanfile = path
+						linuxkernel = True
+		else:
+			## we have already scanned parts of the file
+			## we need to carve the right parts from the file first
+			datafile = open(path, 'rb')
+			lastindex = 0
+			databytes = ""
+			datafile.seek(lastindex)
+			## make a copy and add a bogus value for the last
+			## byte to a temporary blacklist to make the loop work
+			## well.
+			blacklist_tmp = copy.deepcopy(blacklist)
+			blacklist_tmp.append((filesize,filesize))
+			for i in blacklist_tmp:
+				if i[0] == lastindex:
+					lastindex = i[1] - 1
+					datafile.seek(lastindex)
+					continue
+				if i[0] > lastindex:
+					## just concatenate the bytes
+					data = datafile.read(i[0] - lastindex)
+					databytes = databytes + data
+					## set lastindex to the next
+					lastindex = i[1] - 1
+					datafile.seek(lastindex)
+			datafile.close()
+			if len(databytes) == 0:
+				return None
+			tmpfile = tempfile.mkstemp(dir=unpacktempdir)
+			os.write(tmpfile[0], databytes)
+			os.fdopen(tmpfile[0]).close()
+			scanfile = tmpfile[1]
         try:
 		lines = []
 		dynamicRes = {}
