@@ -1,6 +1,15 @@
 2013-03-11
 * better handle archives with the same version number but different contents in
 batchextractprogramstrings.py
+* don't (re)write JAR files if nothing has been aggregated
+* pass tags to programscans
+* fix busyboxversion.py, standalone invocation was broken
+* simplify setting temporary dir option
+* check if a statically linked ELF file happens to be a Linux kernel. If so,
+ignore the blacklist and tag it as a Linux kernel.
+* rewrite scanned strings for Linux kernels: chop off generated code like <c>,
+<d> and <\d+> for debug messages that appear through the code in the kernel.
+This increases fidelity for the Linux kernel a lot.
 
 2013-03-10
 * move topleveldir creation to bat/bruteforcescan.py
