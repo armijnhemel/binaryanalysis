@@ -142,6 +142,8 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 
 	upp = {}
 
+	aggregated = False
+
 	for c in unpackreports:
 		## sanity checks
 		if not c.has_key('tags'):
@@ -168,69 +170,73 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 				## we only need one copy
 				if not fieldmatches.has_key(f):
 					fieldmatches[f] = varfunmatches['fields'][f]
+					aggregated = True
 		if varfunmatches.has_key('classes'):
 			for c in varfunmatches['classes']:
 				## we only need one copy
 				if not classmatches.has_key(c):
 					classmatches[c] = varfunmatches['classes'][c]
+					aggregated = True
 		if varfunmatches.has_key('sources'):
 			for c in varfunmatches['sources']:
 				## we only need one copy
 				if not sourcematches.has_key(c):
 					sourcematches[c] = varfunmatches['sources'][c]
-		if stringmatches == None:
-			continue
-		matchedlines = matchedlines + stringmatches['matchedlines']
-		extractedlines = extractedlines + stringmatches['extractedlines']
-		if stringmatches['unmatched'] != []:
-			unmatched = unmatched + stringmatches['unmatched']
-		if stringmatches['nonUniqueAssignments'] != {}:
-			for n in stringmatches['nonUniqueAssignments'].keys():
-				if nonUniqueAssignments.has_key(n):
-					nonUniqueAssignments[n] = nonUniqueAssignments[n] + stringmatches['nonUniqueAssignments'][n]
-				else:
-					nonUniqueAssignments[n] = stringmatches['nonUniqueAssignments'][n]
-		if stringmatches['nonUniqueMatches'] != {}:
-			for n in stringmatches['nonUniqueMatches'].keys():
-				if nonUniqueMatches.has_key(n):
-					nonUniqueMatches[n] = list(set(nonUniqueMatches[n] + stringmatches['nonUniqueMatches'][n]))
-				else:
-					nonUniqueMatches[n] = stringmatches['nonUniqueMatches'][n]
-		if stringmatches['scores'] != {}:
-			for s in stringmatches['scores']:
-				totalscore = totalscore + stringmatches['scores'][s]
-				if scoresperpkg.has_key(s):
-					scoresperpkg[s] = scoresperpkg[s] + stringmatches['scores'][s]
-				else:
-					scoresperpkg[s] = stringmatches['scores'][s]
-		if stringmatches['reports'] != []:
-			for r in stringmatches['reports']:
-				(rank, package, unique, percentage, packageversions, packagelicenses) = r
-				## ignore rank and percentage
-				if uniqueMatchesperpkg.has_key(package):
-					tmpres = []
-					for p in r[2]:
-						if upp.has_key(p[0]):
-							continue
-						else:
-							tmpres.append(p)
-							upp[p[0]] = 1
-					uniqueMatchesperpkg[package] = uniqueMatchesperpkg[package] + tmpres
-				else:
-					uniqueMatchesperpkg[package] = r[2]
-				if packageversions != {}:
-					if not packageversionsperpkg.has_key(package):
-						packageversionsperpkg[package] = {}
-					for k in packageversions:
-						if packageversionsperpkg[package].has_key(k):
-							packageversionsperpkg[package][k] = packageversionsperpkg[package][k] + packageversions[k]
-						else:
-							packageversionsperpkg[package][k] = packageversions[k]
-				if packagelicensesperpkg.has_key(package):
-					packagelicensesperpkg[package] = packagelicensesperpkg[package] + r[5]
-				else:
-					packagelicensesperpkg[package] = r[5]
+					aggregated = True
+		if stringmatches != None:
+			aggregated = True
+			matchedlines = matchedlines + stringmatches['matchedlines']
+			extractedlines = extractedlines + stringmatches['extractedlines']
+			if stringmatches['unmatched'] != []:
+				unmatched = unmatched + stringmatches['unmatched']
+			if stringmatches['nonUniqueAssignments'] != {}:
+				for n in stringmatches['nonUniqueAssignments'].keys():
+					if nonUniqueAssignments.has_key(n):
+						nonUniqueAssignments[n] = nonUniqueAssignments[n] + stringmatches['nonUniqueAssignments'][n]
+					else:
+						nonUniqueAssignments[n] = stringmatches['nonUniqueAssignments'][n]
+			if stringmatches['nonUniqueMatches'] != {}:
+				for n in stringmatches['nonUniqueMatches'].keys():
+					if nonUniqueMatches.has_key(n):
+						nonUniqueMatches[n] = list(set(nonUniqueMatches[n] + stringmatches['nonUniqueMatches'][n]))
+					else:
+						nonUniqueMatches[n] = stringmatches['nonUniqueMatches'][n]
+			if stringmatches['scores'] != {}:
+				for s in stringmatches['scores']:
+					totalscore = totalscore + stringmatches['scores'][s]
+					if scoresperpkg.has_key(s):
+						scoresperpkg[s] = scoresperpkg[s] + stringmatches['scores'][s]
+					else:
+						scoresperpkg[s] = stringmatches['scores'][s]
+			if stringmatches['reports'] != []:
+				for r in stringmatches['reports']:
+					(rank, package, unique, percentage, packageversions, packagelicenses) = r
+					## ignore rank and percentage
+					if uniqueMatchesperpkg.has_key(package):
+						tmpres = []
+						for p in r[2]:
+							if upp.has_key(p[0]):
+								continue
+							else:
+								tmpres.append(p)
+								upp[p[0]] = 1
+						uniqueMatchesperpkg[package] = uniqueMatchesperpkg[package] + tmpres
+					else:
+						uniqueMatchesperpkg[package] = r[2]
+					if packageversions != {}:
+						if not packageversionsperpkg.has_key(package):
+							packageversionsperpkg[package] = {}
+						for k in packageversions:
+							if packageversionsperpkg[package].has_key(k):
+								packageversionsperpkg[package][k] = packageversionsperpkg[package][k] + packageversions[k]
+							else:
+								packageversionsperpkg[package][k] = packageversions[k]
+					if packagelicensesperpkg.has_key(package):
+						packagelicensesperpkg[package] = packagelicensesperpkg[package] + r[5]
+					else:
+						packagelicensesperpkg[package] = r[5]
 		if dynamicres != {}:
+			aggregated = True
 			if dynamicres.has_key('uniquepackages'):
 				if dynamicres['uniquepackages'] != {}:
 					if not dynamicresfinal.has_key('uniquepackages'):
@@ -263,6 +269,9 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 					else:
 						packagesmatched[p] = dynamicres['packages'][p]
 		'''
+
+	if not aggregated:
+		return (jarfile, aggregated)
 
 	scores_sorted = sorted(scoresperpkg, key = lambda x: scoresperpkg.__getitem__(x), reverse=True)
 
@@ -304,3 +313,4 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
 	leafreports = cPickle.dump(leafreports, leaf_file)
 	leaf_file.close()
+	return (jarfile, aggregated)
