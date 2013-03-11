@@ -1,5 +1,10 @@
+2013-03-11
+* better handle archives with the same version number but different contents in
+batchextractprogramstrings.py
+
 2013-03-10
 * move topleveldir creation to bat/bruteforcescan.py
+* add new option tmpdir to set path of temporary file creation
 
 2013-03-09
 * extract values of EXPORT_SYMBOL* from Linux kernel source and store them.
