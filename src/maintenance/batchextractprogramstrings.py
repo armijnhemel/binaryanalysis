@@ -258,15 +258,9 @@ def computehash((path, filename)):
 	return (path, filename, filehash, extension)
 
 def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256):
-	srcdirlen = len(srcdir)+1
 	osgen = os.walk(srcdir)
-	#ninkaversion = "bf83428"
-	ninkaversion = "b84eee21cb"
 
 	try:
-		filestoscan = []
-		filehashes = {}
-		tmpsha256s = []
 		scanfiles = []
 		while True:
 			i = osgen.next()
@@ -285,7 +279,13 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	## compute the hashes in parallel
 	scanfile_result = filter(lambda x: x != None, pool.map(computehash, scanfiles, 1))
 
+	#ninkaversion = "bf83428"
+	ninkaversion = "b84eee21cb"
 	insertfiles = []
+	tmpsha256s = []
+	filehashes = {}
+	filestoscan = []
+	srcdirlen = len(srcdir)+1
 
 	## loop through the files to see which files should be scanned.
 	## A few assumptions are made:
