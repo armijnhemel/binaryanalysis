@@ -191,7 +191,37 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 		## If the version is in 'processed' then it should be checked if every file is in processed_file
 		## If they are, then the versions are equivalent and no processing is needed.
 		## If not, one of the versions should be renamed.
-		pass
+		osgen = os.walk(temporarydir)
+
+		try:
+			scanfiles = []
+			while True:
+				i = osgen.next()
+				## make sure all directories can be accessed
+				for d in i[1]:
+					if not os.path.islink("%s/%s" % (i[0], d)):
+						os.chmod("%s/%s" % (i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+				for p in i[2]:
+					scanfiles.append((i[0], p))
+		except Exception, e:
+			if str(e) != "":
+				print >>sys.stderr, package, version, e
+
+		## compute the hashes in parallel
+		scanfile_result = filter(lambda x: x != None, pool.map(computehash, scanfiles, 1))
+		identical = True
+		for i in scanfile_result:
+			c.execute('''select sha256 from processed_file where package=? and version=? and sha256=?''', (package, version, i[2]))
+			if len(c.fetchall()) == 0:
+				identical = False
+				break
+
+		if not identical:
+			pass
+		else:
+			if cleanup:
+				cleanupdir(temporarydir)
+			return
 
 	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256)
 	## Add the file to the database: name of archive, sha256, packagename and version
@@ -201,29 +231,32 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 	c.close()
 	conn.close()
 	if cleanup:
-		try:
-			osgen = os.walk(temporarydir)
-			while True:
-				i = osgen.next()
-				## make sure all directories can be accessed
-				for d in i[1]:
-					if not os.path.islink("%s/%s" % (i[0], d)):
-						os.chmod("%s/%s" % (i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-				for p in i[2]:
-					try:
-						if not os.path.islink("%s/%s" % (i[0], p)):
-							os.chmod("%s/%s" % (i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-					except Exception, e:
-						#print e
-						pass
-		except StopIteration:
-			pass
-		try:
-			shutil.rmtree(temporarydir)
-		except:
-			## nothing that can be done right now, so just give up
-			pass
+		cleanupdir(temporarydir)
 	return sqlres
+
+def cleanupdir(temporarydir):
+	osgen = os.walk(temporarydir)
+	try:
+		while True:
+			i = osgen.next()
+			## make sure all directories can be accessed
+			for d in i[1]:
+				if not os.path.islink("%s/%s" % (i[0], d)):
+					os.chmod("%s/%s" % (i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+			for p in i[2]:
+				try:
+					if not os.path.islink("%s/%s" % (i[0], p)):
+						os.chmod("%s/%s" % (i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+				except Exception, e:
+					#print e
+					pass
+	except StopIteration:
+		pass
+	try:
+		shutil.rmtree(temporarydir)
+	except:
+		## nothing that can be done right now, so just give up
+		pass
 
 def computehash((path, filename)):
 	try:
@@ -986,9 +1019,10 @@ def main(argv):
 				unpack_verify(options.filedir, filename)
 			if package != oldpackage:
 				oldres = []
-			res = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, options.db, cleanup, license, copyrights, pool, options.ninkacomments, options.licensedb, oldpackage, oldres)
-			oldres = map(lambda x: x[2], res)
-			oldpackage = package
+			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, options.db, cleanup, license, copyrights, pool, options.ninkacomments, options.licensedb, oldpackage, oldres)
+			if unpackres != None:
+				oldres = map(lambda x: x[2], unpackres)
+				oldpackage = package
 		except Exception, e:
 				# oops, something went wrong
 				print >>sys.stderr, e
