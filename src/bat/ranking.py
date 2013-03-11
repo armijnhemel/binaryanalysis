@@ -318,6 +318,9 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 					datafile.seek(0)
 					for s in st[3:]:
 						for section in [".data", ".rodata"]:
+							## TODO: if linuxkernel is set and blacklist != []
+							## see if there is an overlap with the blacklist (like CPIO
+							## initrd). If so, remove that from the section.
 							if section in s:
 								elfsplits = s[8:].split()
 								if section == "." + elfsplits[0]:
@@ -465,7 +468,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 		else:
 			lines = []
 
-		res = extractGeneric(lines, path, scanenv, rankingfull, clones, language)
+		res = extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, stringcutoff, language)
 		if res != None:
 			if blacklist != [] and not linuxkernel:
 				## we made a tempfile because of blacklisting, so cleanup
@@ -478,7 +481,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 
 	except Exception, e:
 		print >>sys.stderr, "string scan failed for:", path, e, type(e)
-		if blacklist != []:
+		if blacklist != [] and not linuxkernel:
 			## cleanup the tempfile
 			os.unlink(tmpfile[1])
 		return None
@@ -1095,7 +1098,7 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 	return (dynamicRes, variablepvs)
 
 ## Look up strings in the database and determine which packages/versions/licenses were used
-def extractGeneric(lines, path, scanenv, rankingfull, clones, language='C'):
+def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, stringcutoff, language='C'):
 	lenStringsFound = 0
 	uniqueMatches = {}
 	allMatches = {}
@@ -1237,6 +1240,28 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, language='C'):
 
 		## first see if we have anything in the cache at all
 		res = conn.execute("select package, filename FROM stringscache.stringscache WHERE programstring=?", (line,)).fetchall()
+
+		if len(res) == 0 and linuxkernel:
+			## first try a few
+			matchres = re.match("<[\d+cd]>", line)
+			if matchres != None:
+				scanline = line.split('>', 1)[1]
+				if len(scanline) < stringcutoff:
+					continue
+				res = conn.execute("select package, filename FROM stringscache.stringscache WHERE programstring=?", (scanline,)).fetchall()
+				if len(res) == 0:
+					scanline = scanline.split(':', 1)
+					if len(scanline) > 1:
+						scanline = scanline[1]
+						if scanline.startswith(" "):
+							scanline = scanline[1:]
+						if len(scanline) < stringcutoff:
+							continue
+						res = conn.execute("select package, filename FROM stringscache.stringscache WHERE programstring=?", (scanline,)).fetchall()
+						if len(scanline) != 0:
+							line = scanline
+				else:
+					line = scanline
 
 		## nothing in the cache
 		if len(res) == 0:
