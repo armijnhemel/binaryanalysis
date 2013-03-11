@@ -147,11 +147,12 @@ output = prettyprintresxml
 
 \texttt{output} and \texttt{module} are used together to specify an (optional) method that prints results in XML.
 
-There are two optional configuration settings:
+There are three optional configuration settings:
 
 \begin{itemize}
 \item \texttt{outputlite}: do not include full copy of the data in the output archive.
 \item \texttt{debug}: disable multiprocessing and output debugging information on standard error
+\item \texttt{tempdir}: set prefix where temporary files should be created (default: \texttt{/tmp})
 \end{itemize}
 
 \end{frame}
