@@ -15,7 +15,7 @@ This scan should be run as a leaf scan.
 import os, os.path, sqlite3, sys, subprocess
 import xml.dom.minidom
 
-def filename2package(path, blacklist=[], envvars=None):
+def filename2package(path, tags, blacklist=[], envvars=None):
 	scanenv = os.environ.copy()
 	## open the database containing the mapping of filenames to package
 	conn = sqlite3.connect(scanenv.get('BAT_PACKAGE_DB', '/tmp/filepackages'))

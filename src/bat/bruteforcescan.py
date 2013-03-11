@@ -332,7 +332,7 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, 
 		else:
 			envvars = None
 		exec "from %s import %s as bat_%s" % (module, method, method)
-		res = eval("bat_%s(filetoscan, blacklist, envvars=envvars)" % (method))
+		res = eval("bat_%s(filetoscan, tags, blacklist, envvars=envvars)" % (method))
 		if res != None:
 			(nt, leafres) = res
 			reports[scan['name']] = leafres

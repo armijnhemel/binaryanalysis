@@ -23,7 +23,7 @@ def xmlprettyprint(res, root, envvars=None):
 		topnode.appendChild(tmpnode)
 	return topnode
 
-def kernelChecks(path, blacklist=[], envvars=None):
+def kernelChecks(path, tags, blacklist=[], envvars=None):
 	results = {}
         try:
                 kernelbinary = open(path, 'rb')
@@ -129,7 +129,7 @@ def findRedBoot(lines):
 	return lines.find("No RedBoot partition table detected in %s")
 
 ## analyse a kernel module. Requires that the modinfo program from module-init-tools has been installed
-def analyseModuleLicense(path, blacklist=[], envvars=[]):
+def analyseModuleLicense(path, tags, blacklist=[], envvars=[]):
 	if not "relocatable" in ms.file(path):
 		return None
 	p = subprocess.Popen(['/sbin/modinfo', "-F", "license", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -142,5 +142,5 @@ def analyseModuleLicense(path, blacklist=[], envvars=[]):
                 return (['modulelicense'], stanout.strip())
 
 ##
-def analyseELF(path, blacklist=[], envvars=[]):
+def analyseELF(path, tags, blacklist=[], envvars=[]):
 	pass

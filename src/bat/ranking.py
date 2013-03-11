@@ -131,7 +131,7 @@ def squashlicenses(licenses):
 ## funky statistics as described in our paper.
 ## Original code (in Perl) was written by Eelco Dolstra.
 ## Reimplementation in Python done by Armijn Hemel.
-def searchGeneric(path, blacklist=[], offsets={}, envvars=None, unpacktempdir=None):
+def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktempdir=None):
 	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):
@@ -200,7 +200,10 @@ def searchGeneric(path, blacklist=[], offsets={}, envvars=None, unpacktempdir=No
 	## * Mono/.NET files
 	## * Flash/ActionScript
 	## Focus is on ELF
-        mstype = ms.file(path)
+	if 'elf' in tags:
+		mstype = "ELF"
+	else:
+        	mstype = ms.file(path)
         if "ELF" in mstype:
 		language = 'C'
 	elif "bFLT" in mstype:
