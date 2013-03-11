@@ -163,10 +163,6 @@ def unpack_verify(filedir, filename):
 def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256):
 	print >>sys.stdout, filename
 
-	## Check if we've already processed this file. If so, skip it and return.
-	## TODO: take the origin into account, because sometimes there are differences
-	## in packages with the same name from different sources (binutils-2.1[567] from GNU for
-	## example got a license change in mid-2011, without package names being updated)
         conn = sqlite3.connect(dbpath, check_same_thread = False)
 	c = conn.cursor()
 	c.execute('PRAGMA synchronous=off')
@@ -212,12 +208,14 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 		identical = True
 		for i in scanfile_result:
 			c.execute('''select sha256 from processed_file where package=? and version=? and sha256=?''', (package, version, i[2]))
-			if len(c.fetchall()) == 0:
+			cres = c.fetchall()
+			if len(cres) == 0:
 				identical = False
 				break
 
 		if not identical:
-			pass
+			## rewrite the version number and process further
+			version = "%s-%s-%s" % (version, origin, filehash)
 		else:
 			if cleanup:
 				cleanupdir(temporarydir)
