@@ -307,7 +307,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 					p = subprocess.Popen(['strings', '-n', str(stringcutoff), scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 					(stanout, stanerr) = p.communicate()
 					if p.returncode != 0:
-						if blacklist != []:
+						if blacklist != [] and not linuxkernel:
 							## cleanup the tempfile
 							os.unlink(tmpfile[1])
 						return None
@@ -352,7 +352,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 				p = subprocess.Popen(['strings', '-n', str(stringcutoff), scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				if p.returncode != 0:
-					if blacklist != []:
+					if blacklist != [] and not linuxkernel:
 						## cleanup the tempfile
 						os.unlink(tmpfile[1])
 					return None
@@ -467,11 +467,11 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 
 		res = extractGeneric(lines, path, scanenv, rankingfull, clones, language)
 		if res != None:
-			if blacklist != []:
+			if blacklist != [] and not linuxkernel:
 				## we made a tempfile because of blacklisting, so cleanup
 				os.unlink(tmpfile[1])
 		else:
-			if blacklist != []:
+			if blacklist != [] and not linuxkernel:
 				## we made a tempfile because of blacklisting, so cleanup
 				os.unlink(tmpfile[1])
 		return (['ranking'], (res, dynamicRes, variablepvs))
