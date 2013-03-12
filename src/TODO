@@ -40,6 +40,7 @@ database creation:
 * import licensing information from SPDX files
 * rewrite ctags and xgettext invocations to scan multiple files at once to reduce overhead of calling ctags and xgettext
 * create index for sha256 for processed
+* update to FOSSology 2.1.1
 
 ranking:
 * use version information to report most likely licenses
@@ -71,6 +72,6 @@ BOTTLENECKS:
 2. preread (in parallel) leafreports of Java .class files which are shared between several JAR files for aggregate jars. This saves opening and reading the same files.
 3. make findlibs.py partially parallel
 4. rewrite genericSearch in checks.py to avoid reading files multiple times in forges and licenses scan
-5. use unpigz for gzip unpacking if possible.
-6. check odex files and tag them as dalvik (wait for update of dedexer first that can correctly handle some odex files)
-7. check whether or not LZMA checking can be made more efficient: sometimes LZMA checking eats more than 50%(!) of total scanning time
+5. check odex files and tag them as dalvik (wait for update of dedexer first that can correctly handle some odex files)
+6. check whether or not LZMA checking can be made more efficient: sometimes LZMA checking eats more than 50%(!) of total scanning time
+7. remove version information for unlikely versions from result pickles, given a few preconditions. The result pickles can grow very large, for example when scanning a Linux kernel image.
