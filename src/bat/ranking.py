@@ -222,35 +222,37 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 	## image. If so extra checks can be done.
 	linuxkernel = False
 
-	## If part of the file is blacklisted the blacklisted byte ranges
-	## should be ignored. Examples are firmwares, where there is a
-	## bootloader, followed by a file system. The bootloader should be
-	## analyzed, the file system should have been unpacked and been
-	## blacklisted.
-	if blacklist == []:
-		scanfile = path
-	else:
-		## The blacklist is not empty. This could be a problem if
-		## the Linux kernel is an ELF file and contains for example
-		## an initrd.
-		filesize = filesize = os.stat(path).st_size
-		## whole file is blacklisted, so no need to scan
-		if extractor.inblacklist(0, blacklist) == filesize:
-			return None
-		if "elf" in tags and "static" in tags:
-        		p = subprocess.Popen(['readelf', '-SW', path], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-        		(stanout, stanerr) = p.communicate()
-			if "There are no sections in this file." in stanout:
-				pass
-			else:
-				st = stanout.strip().split("\n")
-				for s in st[3:]:
-					if "__ksymtab_strings" in s:
-						## the file is a Linux kernel image. Ignore the black list.
-						## Any CPIO contents should be ignored later on though.
-						scanfile = path
-						linuxkernel = True
+	if "elf" in tags:
+        	p = subprocess.Popen(['readelf', '-SW', path], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+        	(stanout, stanerr) = p.communicate()
+		if "There are no sections in this file." in stanout:
+			pass
 		else:
+			st = stanout.strip().split("\n")
+			for s in st[3:]:
+				if "__ksymtab_strings" in s:
+					## the file is a Linux kernel image. Ignore the black list.
+					## Any CPIO contents should be ignored later on though.
+					linuxkernel = True
+					break
+		scanfile = path
+
+	else:
+		## If part of the file is blacklisted the blacklisted byte ranges
+		## should be ignored. Examples are firmwares, where there is a
+		## bootloader, followed by a file system. The bootloader should be
+		## analyzed, the file system should have been unpacked and been
+		## blacklisted.
+		if blacklist == []:
+			scanfile = path
+		else:
+			## The blacklist is not empty. This could be a problem if
+			## the Linux kernel is an ELF file and contains for example
+			## an initrd.
+			filesize = filesize = os.stat(path).st_size
+			## whole file is blacklisted, so no need to scan
+			if extractor.inblacklist(0, blacklist) == filesize:
+				return None
 			## we have already scanned parts of the file
 			## we need to carve the right parts from the file first
 			datafile = open(path, 'rb')
