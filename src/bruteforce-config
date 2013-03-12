@@ -808,3 +808,15 @@ enabled     = no
 storetarget = images
 storedir    = /tmp/images
 storetype   = .png
+
+[guireport]
+type        = postrun
+module      = bat.guireport
+method      = guireport
+noscan      = text:xml:graphics:compressed:pdf:audio:video:resources
+envvars     = BAT_REPORTDIR=/tmp/images
+description = Generate graphical representation of files
+enabled     = yes
+storetarget = reports
+storedir    = /tmp/images
+storetype   = -guireport.html.gz
