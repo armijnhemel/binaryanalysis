@@ -324,8 +324,8 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 							## see if there is an overlap with the blacklist (like CPIO
 							## initrd). If so, remove that from the section.
 							if section in s:
-								elfsplits = s[8:].split()
-								if section == "." + elfsplits[0]:
+								elfsplits = s[7:].split()
+								if elfsplits[0].startswith(section):
 									elfoffset = int(elfsplits[3], 16)
 									elfsize = int(elfsplits[4], 16)
 									elftmp = tempfile.mkstemp(dir=unpacktempdir,suffix=section)
