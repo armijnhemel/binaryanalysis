@@ -414,88 +414,10 @@ class BatFrame(wx.Frame):
 
 		if self.unpackreports.has_key(self.selectedfile):
 			sha256sum = ''
+			tag = ''
 			if self.unpackreports[self.selectedfile].has_key('sha256'):
 				sha256sum = self.unpackreports[self.selectedfile]['sha256']
-			## now we have to change all the tabs. First the overview
-			name = self.unpackreports[self.selectedfile]['name']
-			path = self.unpackreports[self.selectedfile]['path']
-			realpath = self.unpackreports[self.selectedfile]['realpath']
-			magic = self.unpackreports[self.selectedfile]['magic']
-			if not "symbolic link" in magic:
-				if self.unpackreports[self.selectedfile].has_key('size'):
-					size = self.unpackreports[self.selectedfile]['size']
-				else:
-					size = 0
-			else:
-				size = 0
-			## very simplistic HTML table we show for individual elements
-			## All in 1990s HTML!
-			overviewstring = '''
-<html>
-<body>
-<h2>Overview</h2>
-<table>
-<tr><td><b>Name</b></td><td>%s</td></tr>
-<tr><td><b>Path</b></td><td>%s</td></tr>
-<tr><td><b>Absolute path</b></td><td>%s</td></tr>
-<tr><td><b>Size</b></td><td>%s bytes</td></tr>
-<tr><td><b>File type</b></td><td>%s</td></tr>
-			'''
-			footer = '''
-</body>
-</html>
-			'''
-			tag = ""
-			tablerows = ''
-			matchesrows = ''
-			functionmatches = ''
-			tablerowtemplate = "<tr><td><b>%s</b></td><td>%s</td></tr>\n"
-			if sha256sum != '':
-				tablerows = tablerows + tablerowtemplate % ("SHA256", sha256sum)
-				applications = []
-			'''
-			if self.leafreports.has_key(self.selectedfile):
-				i = self.leafreports[self.selectedfile]
-				if i.has_key('busybox-version'):
-					tablerows = tablerows + tablerowtemplate % ("BusyBox version", i['busybox-version'])
-				if i.has_key('architecture'):
-					tablerows = tablerows + tablerowtemplate % ("Architecture", i['architecture'])
-				if i.has_key('kernelmodulelicense'):
-					tablerows = tablerows + tablerowtemplate % ("Kernel module license", i['kernelmodulelicense'])
-				if i.has_key('libs'):
-					tablerows = tablerows + tablerowtemplate % ("Declared shared libraries", reduce(lambda x, y: "%s, %s" % (x,y), i['libs']))
-				if i.has_key('elfused'):
-					if i['elfused'] != []:
-						tablerows = tablerows + tablerowtemplate % ("Used shared libraries", reduce(lambda x, y: "%s, %s" % (x,y), i['elfused']))
-				if i.has_key('elfunused'):
-					if i['elfunused'] != []:
-						tablerows = tablerows + tablerowtemplate % ("Unused (but declared) shared libraries", reduce(lambda x, y: "%s, %s" % (x,y), i['elfunused']))
-				if i.has_key('notfoundfuncs'):
-					if i['notfoundfuncs'] != []:
-						tablerows = tablerows + tablerowtemplate % ("Unresolved function symbols", reduce(lambda x, y: "%s, %s" % (x,y), i['notfoundfuncs']))
-				if i.has_key('notfoundvars'):
-					if i['notfoundvars'] != []:
-						tablerows = tablerows + tablerowtemplate % ("Unresolved variable symbols", reduce(lambda x, y: "%s, %s" % (x,y), i['notfoundvars']))
-				if i.has_key('elfusedby'):
-					if i['elfusedby'] != []:
-						tablerows = tablerows + tablerowtemplate % ("Used by", reduce(lambda x, y: x + ", " + y, i['elfusedby']))
-				if i.has_key('licenses'):
-					tablerows = tablerows + tablerowtemplate % ("Licenses/license families", reduce(lambda x, y: "%s, %s" % (x,y), i['licenses'].keys()))
-				if i.has_key('forges'):
-					tablerows = tablerows + tablerowtemplate % ("Forges", reduce(lambda x, y: "%s, %s" % (x,y), i['forges'].keys()))
-				if i.has_key('redboot'):
-					tablerows = tablerows + tablerowtemplate % ("Bootloader", "RedBoot")
-				for j in ['dproxy', 'ez-ipupdate', 'iproute', 'iptables', 'libusb', 'loadlin', 'vsftpd', 'wireless-tools', 'wpa-supplicant']:
-					if i.has_key(j):
-						applications.append(j)
-				if i.has_key('kernelchecks'):
-					for j in i['kernelchecks']:
-						if j == 'version':
-							tablerows = tablerows + tablerowtemplate % ("Linux kernel", i['kernelchecks']['version'])
-			'''
 			if self.unpackreports[self.selectedfile].has_key('tags'):
-				if self.unpackreports[self.selectedfile]['tags'] != []:
-					tablerows = tablerows + tablerowtemplate % ("Tags", reduce(lambda x, y: x + ", " + y, self.unpackreports[self.selectedfile]['tags']))
 				if 'graphics' in self.unpackreports[self.selectedfile]['tags']:
 					if self.advanced:
 						self.notebookpanel.EnableTab(2,False)
@@ -504,124 +426,33 @@ class BatFrame(wx.Frame):
 					if self.advanced:
 						self.notebookpanel.EnableTab(2,False)
 					tag = 'text'
-				if self.unpackreports[self.selectedfile].has_key('ranking'):
-					return
-					(stringsres, dynamicres, variablepvs) = i['ranking']
-					if dynamicres.has_key('packages'):
-						functionmatches = '''<h2>Function match statistics</h2>
-<table>
-<tr><td><b>Extracted function names</b></td><td>%d</td></tr>
-<tr><td><b>Matched function names</b></td><td>%d</td></tr>
-</table>
-'''
-						functionmatches = functionmatches % (dynamicres['totalnames'], (dynamicres['namesmatched']))
-						functionmatches = functionmatches + '''<h3>Matched packages (function names method)</h3>
-<table><tr><td>
-  <table>
-    <tr><td><b>Name</b></td><td><b>Unique matches (maximum for single version)</b></td></tr>\n'''
-						versionhtml = ""
-						for j in dynamicres['packages']:
-								## for now: just take the version with the most matches, only report the amount of matches
-								functionmatches = functionmatches + "    <tr><td>%s</td><td>%d</td></tr>\n" % (j, max(map(lambda x: x[1], dynamicres['packages'][j])))
-								versionhtml = versionhtml + "<h5>%s</h5><p><img src=\"%s\"/></p>\n" % (j, "%s/%s-%s-funcversion.png" % (self.imagesdir, sha256sum, j))
-						functionmatches = functionmatches + "</table>"
-						if versionhtml != "":
-							functionmatches = functionmatches + "<h2>Versions per package</h2>" + versionhtml
+			if os.path.exists(os.path.join(self.reportsdir, "%s-unmatched.html.gz" % sha256sum)):
+				unmatchedhtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-unmatched.html.gz" % sha256sum), 'r')
+				unmatchedhtml = unmatchedhtmlfile.read()
+				unmatchedhtmlfile.close()
+				self.unmatchedwindow.SetPage(unmatchedhtml)
+			if os.path.exists(os.path.join(self.reportsdir, "%s-names.html.gz" % sha256sum)):
+				nameshtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-names.html.gz" % sha256sum), 'r')
+				nameshtml = nameshtmlfile.read()
+				nameshtmlfile.close()
+				self.nameswindow.SetPage(nameshtml)
+			if os.path.exists(os.path.join(self.reportsdir, "%s-functionnames.html.gz" % sha256sum)):
+				functionnameshtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-functionnames.html.gz" % sha256sum), 'r')
+				functionnameshtml = functionnameshtmlfile.read()
+				functionnameshtmlfile.close()
+				self.functionnameswindow.SetPage(functionnameshtml)
 
-					if not stringsres == None:
-						if not (stringsres['extractedlines']) == 0 and not (stringsres['matchedlines']) == 0:
-							matchesrows = '''
-<h2>String match statistics</h2>
-<table>
-<tr><td><b>Extracted lines</b></td><td>%d</td></tr>
-<tr><td><b>Matched lines</b></td><td>%d</td></tr>
-<tr><td><b>Match percentage</b></td><td>%f%%</td></tr>
-</table>
-						'''
-							matchesrows = matchesrows % (stringsres['extractedlines'], stringsres['matchedlines'], (float(stringsres['matchedlines'])/stringsres['extractedlines']*100))
-							if len(stringsres['reports']) != 0:
-								htmllinks = []
-								versionhtml = ""
-								## nested table, urgghhhh
-								matchesrows = matchesrows + '''<h3>Matched packages (strings method)</h3>
-<table>
-  <tr><td>
-    <table>
-      <tr>
-        <td><b>Rank</b></td>
-        <td><b>Name</b></td>
-        <td><b>Percentage</b></td>
-        <td><b>Unique matches</b></td>
-        <td><b>Non unique matches assigned</b></td>
-        <td><b>Licenses (Ninka)</b></td>
-        <td><b>Licenses (FOSSology)</b></td>
-        <td><b>Determined licenses (Ninka &amp; FOSSology report the same)</b></td>
-      </tr>\n'''
+			if os.path.exists(os.path.join(self.reportsdir, "%s-unique.html.gz" % sha256sum)):
+				uniquehtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-unique.html.gz" % sha256sum), 'r')
+				uniquehtml = uniquehtmlfile.read()
+				uniquehtmlfile.close()
+				self.matcheswindow.SetPage(uniquehtml)
 
-								for j in stringsres['reports']:
-									determinedlicenses = map(lambda x: x[0], filter(lambda x: x[1] == 'squashed', j[5]))
-									ninkalicenses = map(lambda x: x[0], filter(lambda x: x[1] == 'ninka', j[5]))
-									fossologylicenses = map(lambda x: x[0], filter(lambda x: x[1] == 'fossology', j[5]))
-									determinedlicenses.sort()
-									ninkalicenses.sort()
-									fossologylicenses.sort()
-									if len(ninkalicenses) > 0:
-										if len(ninkalicenses) > 1:
-											ninkalicensestring = ninkalicenses[0] + reduce(lambda x, y: x + " " + y, ninkalicenses[1:], "")
-										else:
-											ninkalicensestring = ninkalicenses[0]
-									else:
-										ninkalicensestring = ""
-									if len(fossologylicenses) > 0:
-										if len(fossologylicenses) > 1:
-											fossologylicensestring = fossologylicenses[0] + reduce(lambda x, y: x + " " + y, fossologylicenses[1:], "")
-										else:
-											fossologylicensestring = fossologylicenses[0]
-									else:
-										fossologylicensestring = ""
-									if len(determinedlicenses) > 0:
-										if len(determinedlicenses) > 1:
-											determinedlicensestring = determinedlicenses[0] + reduce(lambda x, y: x + " " + y, determinedlicenses[1:], "")
-										else:
-											determinedlicensestring = determinedlicenses[0]
-									else:
-										determinedlicensestring = ""
-									matchesrows = matchesrows + "    <tr><td>%d</td><td>%s</td><td>%f%%</td><td>%d</td><td>%d</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (j[0], j[1], j[3], j[2], stringsres['nonUniqueAssignments'].get(j[1], 0), ninkalicensestring, fossologylicensestring, determinedlicensestring)
-									if j[2] != 0:
-										## don't replace %s/% with os.path.join here, since this is valid in HTML
-										versionhtml = versionhtml + "<h5>%s</h5><p><img src=\"%s\"/></p>\n" % (j[1], "%s/%s-%s-version.png" % (self.imagesdir, sha256sum, j[1]))
-										## here we should either do a database lookup to get the checksum,
-										## or check if they are already in the report
-										htmllinks.append((j[1], j[2]))
-								## don't replace %s/% with os.path.join here, since this is valid in HTML
-								matchesrows = matchesrows + "</table><td><img src=\"%s\"/></td></tr></table>" % ("%s/%s-piechart.png" % (self.imagesdir, sha256sum))
-								if versionhtml != "":
-									matchesrows = matchesrows + "<h2>Versions per package</h2>" + versionhtml
-								if os.path.exists(os.path.join(self.reportsdir, "%s-unique.html.gz" % sha256sum)):
-									uniquehtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-unique.html.gz" % sha256sum), 'r')
-									uniquehtml = uniquehtmlfile.read()
-									uniquehtmlfile.close()
-									self.matcheswindow.SetPage(uniquehtml)
-				if os.path.exists(os.path.join(self.reportsdir, "%s-unmatched.html.gz" % sha256sum)):
-					unmatchedhtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-unmatched.html.gz" % sha256sum), 'r')
-					unmatchedhtml = unmatchedhtmlfile.read()
-					unmatchedhtmlfile.close()
-					self.unmatchedwindow.SetPage(unmatchedhtml)
-				if os.path.exists(os.path.join(self.reportsdir, "%s-names.html.gz" % sha256sum)):
-					nameshtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-names.html.gz" % sha256sum), 'r')
-					nameshtml = nameshtmlfile.read()
-					nameshtmlfile.close()
-					self.nameswindow.SetPage(nameshtml)
-				if os.path.exists(os.path.join(self.reportsdir, "%s-functionnames.html.gz" % sha256sum)):
-					functionnameshtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-functionnames.html.gz" % sha256sum), 'r')
-					functionnameshtml = functionnameshtmlfile.read()
-					functionnameshtmlfile.close()
-					self.functionnameswindow.SetPage(functionnameshtml)
-				if applications != []:
-					tablerows = tablerows + "<tr><td><b>Applications</b></td><td>%s</td></tr>\n" % reduce(lambda x, y: "%s, %s" % (x,y), applications)
-			overviewstring = overviewstring % (name, path, realpath, size, magic)
-			overviewstring = overviewstring + tablerows + "</table>" + functionmatches + matchesrows + footer
-			self.overviewwindow.SetPage(overviewstring)
+			if os.path.exists(os.path.join(self.reportsdir, "%s-guireport.html.gz" % sha256sum)):
+				overviewhtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-guireport.html.gz" % sha256sum), 'r')
+				overviewhtml = overviewhtmlfile.read()
+				overviewhtmlfile.close()
+				self.overviewwindow.SetPage(overviewhtml)
 
 			if sha256sum != '' and tag not in ['graphics', 'text', 'compressed', 'audio', 'video', 'resource']:
 				if self.advanced:
@@ -929,12 +760,6 @@ class BatFrame(wx.Frame):
 		print e.GetString()
 		return
 
-	def onSave(self,e):
-		dlg = wx.FileDialog(self, 'Save BAT results', style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT)
-		if dlg.ShowModal() == wx.ID_OK:
-			self.tarfile = dlg.GetPath()
-			bat.bruteforcescan.writeDumpfile(self.unpackreports, self.leafreports, self.scans, self.tarfile, self.tmpdir)
-
 	def onOpen(self,e):
 		dlg = wx.FileDialog(self, 'Open BAT results', style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST)
 		if dlg.ShowModal() == wx.ID_OK:
@@ -955,6 +780,7 @@ class BatFrame(wx.Frame):
 				if not self.advanced:
 					members = members + filter(lambda x: x.name.startswith('reports') and x.name.endswith('unique.html.gz'), self.tarmembers)
 					members = members + filter(lambda x: x.name.startswith('reports') and x.name.endswith('unmatched.html.gz'), self.tarmembers)
+					members = members + filter(lambda x: x.name.startswith('reports') and x.name.endswith('guireport.html.gz'), self.tarmembers)
 					members = members + filter(lambda x: x.name.startswith('reports') and x.name.endswith('names.html.gz'), self.tarmembers)
 					members = members + filter(lambda x: x.name.startswith('images') and len(os.path.basename(x.name)) != 68, self.tarmembers)
 				else:
