@@ -548,20 +548,8 @@ class BatFrame(wx.Frame):
 				linktext = j
 			else:
 				linktext = j[parentlen:]
-			'''
-			if self.leafreports.has_key(j):
-				for r in self.leafreports[j]:
-					if r == 'ranking':
-						if self.leafreports[j]['ranking'][0] != None:
-							if self.leafreports[j]['ranking'][0]['matchedlines'] != 0:
-								## give a visual clue to people to tell them that strings could be matched
-								#linktext = u"%s  \u24e7" % linktext
-								linktext = u"%s  \u272a" % linktext
-			'''
 			tagsentities = {'text': u'\u24c9', 'graphics': u'\u24bc', 'compressed': u'\u24b8', 'resource': u'\u24c7', 'static': u'\u24c8', 'dalvik': u'\u24b6', 'ranking': u'\u272a'}
-			#if list(set(self.leafreports[j]['tags']).intersection(set(self.filters))) != []:
-			#	ignore = True
-			#	continue
+
 			if self.unpackreports[j].has_key('tags'):
 				for t in self.unpackreports[j]['tags']:
 					tagappend = u""
