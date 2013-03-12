@@ -417,6 +417,14 @@ class BatFrame(wx.Frame):
 			tag = ''
 			if self.unpackreports[self.selectedfile].has_key('sha256'):
 				sha256sum = self.unpackreports[self.selectedfile]['sha256']
+
+			if os.path.exists(os.path.join(self.reportsdir, "%s-guireport.html.gz" % sha256sum)):
+				overviewhtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-guireport.html.gz" % sha256sum), 'r')
+				overviewhtml = overviewhtmlfile.read()
+				overviewhtmlfile.close()
+				overviewhtml = overviewhtml.replace('REPLACEME', self.imagesdir)
+				self.overviewwindow.SetPage(overviewhtml)
+
 			if self.unpackreports[self.selectedfile].has_key('tags'):
 				if 'graphics' in self.unpackreports[self.selectedfile]['tags']:
 					if self.advanced:
@@ -447,12 +455,6 @@ class BatFrame(wx.Frame):
 				uniquehtml = uniquehtmlfile.read()
 				uniquehtmlfile.close()
 				self.matcheswindow.SetPage(uniquehtml)
-
-			if os.path.exists(os.path.join(self.reportsdir, "%s-guireport.html.gz" % sha256sum)):
-				overviewhtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-guireport.html.gz" % sha256sum), 'r')
-				overviewhtml = overviewhtmlfile.read()
-				overviewhtmlfile.close()
-				self.overviewwindow.SetPage(overviewhtml)
 
 			if sha256sum != '' and tag not in ['graphics', 'text', 'compressed', 'audio', 'video', 'resource']:
 				if self.advanced:
