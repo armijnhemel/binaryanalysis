@@ -1,3 +1,8 @@
+2013-03-12
+* kernel modules might store strings in different sections than .rodata, like
+.rodata.str1.8 and .rodata.str1.1. Also read these sections
+* generate reports for display in the GUI. Adapt GUI to read these files.
+
 2013-03-11
 * better handle archives with the same version number but different contents in
 batchextractprogramstrings.py
