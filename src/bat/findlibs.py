@@ -4,7 +4,7 @@
 ## Copyright 2012-2013 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
-import os, os.path, sys, subprocess, copy, cPickle
+import os, os.path, sys, subprocess, copy, cPickle, multiprocessing
 
 '''
 This program can be used to check whether the dependencies of a dynamically
@@ -29,6 +29,19 @@ used in the binary, but the name of a symlink was used.
 properly.
 
 Something similar is done for remote and local variables.
+'''
+
+'''
+## extract variable names, function names and the soname from an ELF file
+def extractfromelf((path, filename)):
+	remotefuncs = []
+	localfuncs = []
+	remotevars = []
+	localvars = []
+	p = subprocess.Popen(['readelf', '-W', '--dyn-syms', os.path.join(path, filename)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		continue
 '''
 
 def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
