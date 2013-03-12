@@ -720,40 +720,6 @@ class BatFrame(wx.Frame):
 				errordiag.ShowModal()
 		dlg.Destroy()
 
-	def onLaunchScan(self,e):
-		dlg = wx.FileDialog(self, 'Open BAT results', style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST)
-		if dlg.ShowModal() == wx.ID_OK:
-			## create a new temporary directory
-			if self.scanconfig != []:
-				self.tmpdir = tempfile.mkdtemp()
-				config = ConfigParser.ConfigParser()
-				enabled_configs = []
-				for i in self.scanconfigstate:
-					enabled_configs.append(self.scanconfig[i][0])
-				enabled_configs.append('batconfig')
-				enabled_configs.append('viewer')
-
-				for c in self.origconfig.sections():
-					if c in enabled_configs:
-						config.add_section(c)
-						for i in self.origconfig.items(c):
-							config.set(c, i[0], i[1])
-				self.scans = bat.bruteforcescan.readconfig(config)
-				(self.unpackreports, self.leafreports) = bat.bruteforcescan.runscan(self.tmpdir, self.scans, dlg.GetPath())
-				bat.bruteforcescan.dumpData(self.unpackreports, self.leafreports, self.scans, self.tmpdir)
-
-				## After running the scan we dump the results, repopulate the tree and
-				## work from there.
-				self.datadir = os.path.join(self.tmpdir, "data")
-				self.imagesdir = os.path.join(self.tmpdir, "images")
-				self.reportsdir = os.path.join(self.tmpdir, "reports")
-				self.initTree(self.tree, self.datadir)
-				self.menuSaveAs.Enable(True)
-			else:
-				errordiag = wx.MessageDialog(None, 'No configuration defined', 'Error', wx.OK | wx.ICON_ERROR)
-				errordiag.ShowModal()
-		dlg.Destroy()
-
 	def onExit(self,e):
 		self.Close(True)
 
