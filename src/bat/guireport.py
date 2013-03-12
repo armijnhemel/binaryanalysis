@@ -108,6 +108,7 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, envvars={}):
 		for j in leafreports['kernelchecks']:
 			if j == 'version':
 				tablerows = tablerows + tablerowtemplate % ("Linux kernel", leafreports['kernelchecks']['version'])
+	## TODO: add tags to tablerows
 
 	if leafreports.has_key('ranking'):
 		(stringsres, dynamicres, variablepvs) = leafreports['ranking']
