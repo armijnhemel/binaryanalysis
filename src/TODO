@@ -65,14 +65,11 @@ misc:
 * expand "debug", add per phase debug
 * add support for ignoring some file types/extensions completely
 * add configuration option to set temporary directory prefix for all scans
-* add reporting of tags to guireport.py script
-* display *some* information about symlinks and empty files in the GUI
 
 BOTTLENECKS:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
 2. preread (in parallel) leafreports of Java .class files which are shared between several JAR files for aggregate jars. This saves opening and reading the same files.
-3. make findlibs.py partially parallel
-4. rewrite genericSearch in checks.py to avoid reading files multiple times in forges and licenses scan
-5. check odex files and tag them as dalvik (wait for update of dedexer first that can correctly handle some odex files)
-6. check whether or not LZMA checking can be made more efficient: sometimes LZMA checking eats more than 50%(!) of total scanning time
-7. remove version information for unlikely versions from result pickles, given a few preconditions. The result pickles can grow very large, for example when scanning a Linux kernel image.
+3. rewrite genericSearch in checks.py to avoid reading files multiple times in forges and licenses scan
+4. check odex files and tag them as dalvik (wait for update of dedexer first that can correctly handle some odex files)
+5. check whether or not LZMA checking can be made more efficient: sometimes LZMA checking eats more than 50%(!) of total scanning time
+6. remove version information for unlikely versions from result pickles, given a few preconditions. The result pickles can grow very large, for example when scanning a Linux kernel image.

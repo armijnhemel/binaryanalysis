@@ -1,3 +1,9 @@
+2013-03-13
+* fix reports
+* partially parallelise findlibs.py
+* generate pictures in findlibs.py
+* fix GUI so at least some information about empty files/symlinks/etc. is shown
+
 2013-03-12
 * kernel modules might store strings in different sections than .rodata, like
 .rodata.str1.8 and .rodata.str1.1. Also read these sections

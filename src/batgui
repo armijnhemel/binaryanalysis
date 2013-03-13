@@ -417,6 +417,30 @@ class BatFrame(wx.Frame):
 			tag = ''
 			if self.unpackreports[self.selectedfile].has_key('sha256'):
 				sha256sum = self.unpackreports[self.selectedfile]['sha256']
+			else:
+				name = self.unpackreports[self.selectedfile]['name']
+				path = self.unpackreports[self.selectedfile]['path']
+				realpath = self.unpackreports[self.selectedfile]['realpath']
+				magic = self.unpackreports[self.selectedfile]['magic']
+				if "symbolic link" in magic:
+                                        size = 0
+				overviewhtml='''
+
+<html>
+<body>
+<h2>Overview</h2>
+<table>
+<tr><td><b>Name</b></td><td>%s</td></tr>
+<tr><td><b>Path</b></td><td>%s</td></tr>
+<tr><td><b>Absolute path</b></td><td>%s</td></tr>
+<tr><td><b>Size</b></td><td>%s bytes</td></tr>
+<tr><td><b>File type</b></td><td>%s</td></tr>
+</table>
+</body>
+</html>
+'''
+                                size = 0
+				self.overviewwindow.SetPage(overviewhtml % (name, path, realpath, size, magic))
 
 			if os.path.exists(os.path.join(self.reportsdir, "%s-guireport.html.gz" % sha256sum)):
 				overviewhtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-guireport.html.gz" % sha256sum), 'r')
