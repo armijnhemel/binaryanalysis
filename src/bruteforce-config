@@ -740,8 +740,13 @@ priority    = 10
 type        = aggregate
 module      = bat.findlibs
 method      = findlibs
+envvars     = BAT_IMAGEDIR=/tmp/images
 noscan      = text:xml:graphics:pdf:audio:video
-enabled     = no
+enabled     = yes
+storetarget = images
+storedir    = /tmp/images
+storetype   = -graph.png
+cleanup     = yes
 priority    = 2
 
 [generateimages]
@@ -820,3 +825,4 @@ enabled     = yes
 storetarget = reports
 storedir    = /tmp/images
 storetype   = -guireport.html.gz
+cleanup     = yes
