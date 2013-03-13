@@ -31,18 +31,61 @@ properly.
 Something similar is done for remote and local variables.
 '''
 
-'''
 ## extract variable names, function names and the soname from an ELF file
 def extractfromelf((path, filename)):
 	remotefuncs = []
 	localfuncs = []
 	remotevars = []
 	localvars = []
+	sonames = []
+
 	p = subprocess.Popen(['readelf', '-W', '--dyn-syms', os.path.join(path, filename)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		continue
-'''
+		return
+
+	## a list of variable names to ignore.
+	varignores = ['__dl_ldso__']
+
+	for s in stanout.split("\n")[3:]:
+		functionstrings = s.split()
+		if len(functionstrings) <= 7:
+			continue
+		## only store functions and objects
+		if functionstrings[3] != 'FUNC' and functionstrings[3] != 'IFUNC' and functionstrings[3] != 'OBJECT':
+			continue
+		## store local functions
+		elif functionstrings[6] != 'UND':
+			if functionstrings[3] == 'FUNC' or functionstrings[3] == 'IFUNC':
+				funcname = functionstrings[7].split('@')[0]
+				localfuncs.append(funcname)
+			elif functionstrings[3] == 'OBJECT' and functionstrings[6] != 'ABS':
+				if functionstrings[7].split('@')[0] not in varignores:
+					localvars.append(functionstrings[7].split('@')[0])
+			continue
+		## See http://gcc.gnu.org/ml/gcc/2002-06/msg00112.html
+		if functionstrings[7].split('@')[0] == '_Jv_RegisterClasses':
+			continue
+		## some things are annotated with '@' which could come in handy in the future
+		if functionstrings[3] == 'FUNC' or functionstrings[3] == 'IFUNC':
+			remotefuncs.append(functionstrings[7].split('@')[0])
+		elif functionstrings[3] == 'OBJECT' and functionstrings[6] != 'ABS':
+			if functionstrings[7].split('@')[0] not in varignores:
+				remotevars.append(functionstrings[7].split('@')[0])
+
+	p = subprocess.Popen(['readelf', '-d', "%s" % os.path.join(path, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		return
+
+	## determine if a library might have a soname
+	for line in stanout.split('\n'):
+		if "(SONAME)" in line:
+			soname = line.split(': ')[1][1:-1]
+			sonames.append(soname)
+	sonames = list(set(sonames))
+
+	return (filename, localfuncs, remotefuncs, localvars, remotevars, sonames)
 
 def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 	## store names of all ELF files present in scan archive
@@ -107,65 +150,29 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 
 	## Store all local and remote function names for each dynamic ELF executable
 	## or library on the system.
-	## TODO: make parallel
-	for i in elffiles:
-		remotefuncs = []
-		localfuncs = []
-		remotevars = []
-		localvars = []
-		p = subprocess.Popen(['readelf', '-W', '--dyn-syms', os.path.join(scantempdir, i)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-		if p.returncode != 0:
-			continue
-		for s in stanout.split("\n")[3:]:
-			functionstrings = s.split()
-			if len(functionstrings) <= 7:
-				continue
-			## only store functions and objects
-			if functionstrings[3] != 'FUNC' and functionstrings[3] != 'IFUNC' and functionstrings[3] != 'OBJECT':
-				continue
-			## store local functions
-			elif functionstrings[6] != 'UND':
-				if functionstrings[3] == 'FUNC' or functionstrings[3] == 'IFUNC':
-					funcname = functionstrings[7].split('@')[0]
-					localfuncs.append(funcname)
-					if funcstolibs.has_key(funcname):
-						funcstolibs[funcname].append(i)
-					else:
-						funcstolibs[funcname] = [i]
-				elif functionstrings[3] == 'OBJECT' and functionstrings[6] != 'ABS':
-					if functionstrings[7].split('@')[0] not in varignores:
-						localvars.append(functionstrings[7].split('@')[0])
-				continue
-			## See http://gcc.gnu.org/ml/gcc/2002-06/msg00112.html
-			if functionstrings[7].split('@')[0] == '_Jv_RegisterClasses':
-				continue
-			## some things are annotated with '@' which could come in handy in the future
-			if functionstrings[3] == 'FUNC' or functionstrings[3] == 'IFUNC':
-				remotefuncs.append(functionstrings[7].split('@')[0])
-			elif functionstrings[3] == 'OBJECT' and functionstrings[6] != 'ABS':
-				if functionstrings[7].split('@')[0] not in varignores:
-					remotevars.append(functionstrings[7].split('@')[0])
 
-		localfunctionnames[i] = localfuncs
-		remotefunctionnames[i] = remotefuncs
-		localvariablenames[i] = localvars
-		remotevariablenames[i] = remotevars
+	pool = multiprocessing.Pool()
+	elftasks = map(lambda x: (scantempdir, x), elffiles)
+	elfres = pool.map(extractfromelf, elftasks)
+	pool.terminate()
 
-		p = subprocess.Popen(['readelf', '-d', "%s" % os.path.join(scantempdir, i)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-		if p.returncode != 0:
-			return
+	for i in elfres:
+		(filename, localfuncs, remotefuncs, localvars, remotevars, elfsonames) = i
+		for soname in elfsonames:
+			if sonames.has_key(soname):
+				sonames[soname].append(filename)
+			else:
+				sonames[soname] = [filename]
+		for funcname in localfuncs:
+			if funcstolibs.has_key(funcname):
+				funcstolibs[funcname].append(filename)
+			else:
+				funcstolibs[funcname] = [filename]
 
-		for line in stanout.split('\n'):
-			if "Library soname:" in line:
-				soname = line.split(': ')[1][1:-1]
-				if sonames.has_key(soname):
-					sonames[soname].append(i)
-				else:
-					sonames[soname] = [i]
-				break
-
+		localfunctionnames[filename] = localfuncs
+		remotefunctionnames[filename] = remotefuncs
+		localvariablenames[filename] = localvars
+		remotevariablenames[filename] = remotevars
 
 	## TODO: look if RPATH is used, since that will give use more information
 	## by default
