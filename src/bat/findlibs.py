@@ -411,12 +411,19 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 			squashedgraph[i] = []
 		for d in libdeps:
 			if not squashedelffiles.has_key(d):
-				continue
-			if len(squashedelffiles[d]) != 1:
-				#print >>sys.stderr, "WHAAAA", d, squashedelffiles[d]
-				pass
+				if sonames.has_key(d):
+					if len(sonames[d]) != 1:
+						continue
+					else:
+						squashedgraph[i].append(sonames[d][0])
+				else:
+					continue
 			else:
-				squashedgraph[i].append(squashedelffiles[d][0])
+				if len(squashedelffiles[d]) != 1:
+					#print >>sys.stderr, "WHAAAA", d, squashedelffiles[d]
+					pass
+				else:
+					squashedgraph[i].append(squashedelffiles[d][0])
 
 	for i in elffiles:
 		if not squashedgraph.has_key(i):
