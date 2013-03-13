@@ -339,10 +339,10 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 				pass
 				#print >>sys.stderr, "POSSIBLY USED", i, possiblyused
 				#print >>sys.stderr
-			if not usedlibsperfile.has_key(i):
-				usedlibs = list(set(usedlibs))
-				usedlibs.sort()
-				usedlibsperfile[i] = usedlibs
+		if not usedlibsperfile.has_key(i):
+			usedlibs = list(set(usedlibs))
+			usedlibs.sort()
+			usedlibsperfile[i] = usedlibs
 	#print >>sys.stderr,"DUPES",  dupes
 
 	## return a dictionary, with for each ELF file for which there are results
