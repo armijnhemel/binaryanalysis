@@ -197,9 +197,12 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir)):
 			nameshtmlfile.close()
 
 	if variablepvs != {}:
-		header = "<html><body>"
-		html = ""
 		language = variablepvs['language']
+		if language == 'Java':
+			header = "<html><body><h1>Unique matches of class names, field names and source file names</h1>"
+		elif language == 'C':
+			header = "<html><body><h1>Unique matches of variable names</h1>"
+		html = ""
 
 		if language == 'Java':
 			fieldspackages = {}
