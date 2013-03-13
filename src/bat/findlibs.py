@@ -4,7 +4,7 @@
 ## Copyright 2012-2013 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
-import os, os.path, sys, subprocess, copy, cPickle, multiprocessing
+import os, os.path, sys, subprocess, copy, cPickle, multiprocessing, pydot
 
 '''
 This program can be used to check whether the dependencies of a dynamically
@@ -201,7 +201,6 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 		leaf_file.close()
 
 		if leafreports.has_key('libs'):
-
 			## keep copies of the original data
 			remotefuncswc = copy.copy(remotefunctionnames[i])
 			remotevarswc = copy.copy(remotevariablenames[i])
@@ -343,7 +342,6 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 			usedlibs = list(set(usedlibs))
 			usedlibs.sort()
 			usedlibsperfile[i] = usedlibs
-	#print >>sys.stderr,"DUPES",  dupes
 
 	## return a dictionary, with for each ELF file for which there are results
 	## a separate dictionary with the results. These will be added to 'scans' in
@@ -384,3 +382,67 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 			leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
 			leafreports = cPickle.dump(leafreports, leaf_file)
 			leaf_file.close()
+
+	squashedgraph = {}
+	for i in elffiles:
+		libdeps = usedlibsperfile[i]
+		if libdeps == []:
+			continue
+		if not squashedgraph.has_key(i):
+			squashedgraph[i] = []
+		for d in libdeps:
+			if len(squashedelffiles[d]) != 1:
+				print >>sys.stderr, "WHAAAA", d, squashedelffiles[d]
+			else:
+				squashedgraph[i].append(squashedelffiles[d][0])
+
+	for i in elffiles:
+		if not squashedgraph.has_key(i):
+			continue
+		if squashedgraph[i] == []:
+			continue
+		else:
+			ppname = os.path.join(unpackreports[i]['path'], unpackreports[i]['name'])
+			seen = []
+			elfgraph = pydot.Dot(graph_type='digraph')
+			rootnode = pydot.Node(ppname)
+			elfgraph.add_node(rootnode)
+			processnodes = map(lambda x: (rootnode, x, True), squashedgraph[i])
+			if unusedlibsperfile.has_key(i):
+				for j in unusedlibsperfile[i]:
+					if not squashedelffiles.has_key(j):
+						continue
+					if len(squashedelffiles[j]) != 1:
+						continue
+					processnodes.append((rootnode, squashedelffiles[j][0], False))
+			seen = map(lambda x: (i, x), squashedgraph[i])
+
+			while True:
+				newprocessnodes = []
+				for j in processnodes:
+					(parentnode, nodetext, used) = j
+					ppname = os.path.join(unpackreports[nodetext]['path'], unpackreports[nodetext]['name'])
+					tmpnode = pydot.Node(ppname)
+					elfgraph.add_node(tmpnode)
+					if not used:
+						elfgraph.add_edge(pydot.Edge(parentnode, tmpnode, color='red'))
+					else:
+						elfgraph.add_edge(pydot.Edge(parentnode, tmpnode))
+					if squashedgraph.has_key(nodetext):
+						for n in squashedgraph[nodetext]:
+							if not (nodetext, n) in seen:
+								newprocessnodes.append((tmpnode, n, True))
+								seen.append((nodetext, n))
+					if unusedlibsperfile.has_key(nodetext):
+						for u in unusedlibsperfile[nodetext]:
+							if not (nodetext, u) in seen:
+								if not squashedelffiles.has_key(u):
+									continue
+								if len(squashedelffiles[u]) != 1:
+									continue
+								processnodes.append((tmpnode, squashedelffiles[u][0], False))
+								seen.append((nodetext, u))
+				processnodes = newprocessnodes
+				if processnodes == []:
+					break
+			elfgraph.write_png('/tmp/dot-%s.png' % os.path.basename(i))
