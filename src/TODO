@@ -65,6 +65,7 @@ misc:
 * expand "debug", add per phase debug
 * add support for ignoring some file types/extensions completely
 * add configuration option to set temporary directory prefix for all scans
+* add tab to interface with more information about dynamically linked files
 
 BOTTLENECKS:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
