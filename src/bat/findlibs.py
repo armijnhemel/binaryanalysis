@@ -88,6 +88,25 @@ def extractfromelf((path, filename)):
 	return (filename, localfuncs, remotefuncs, localvars, remotevars, sonames)
 
 def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
+	scanenv = os.environ.copy()
+	if envvars != None:
+		for en in envvars.split(':'):
+			try:
+				(envname, envvalue) = en.split('=')
+				scanenv[envname] = envvalue
+			except Exception, e:
+				pass
+
+	imagedir = scanenv.get('BAT_IMAGEDIR', "%s/%s" % (topleveldir, "images"))
+	try:
+		os.stat(imagedir)
+	except:
+		## BAT_IMAGEDIR does not exist
+		try:
+			os.makedirs(imagedir)
+		except Exception, e:
+			return
+
 	## store names of all ELF files present in scan archive
 	elffiles = []
 
@@ -402,6 +421,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 		if squashedgraph[i] == []:
 			continue
 		else:
+			filehash = unpackreports[i]['sha256']
 			ppname = os.path.join(unpackreports[i]['path'], unpackreports[i]['name'])
 			seen = []
 			elfgraph = pydot.Dot(graph_type='digraph')
@@ -445,4 +465,5 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 				processnodes = newprocessnodes
 				if processnodes == []:
 					break
-			elfgraph.write_png('/tmp/dot-%s.png' % os.path.basename(i))
+			print >>sys.stderr, "IMAGEDIR", imagedir
+			elfgraph.write_png(os.path.join(imagedir, '%s-graph.png' % filehash))
