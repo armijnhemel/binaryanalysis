@@ -66,6 +66,7 @@ misc:
 * add support for ignoring some file types/extensions completely
 * add configuration option to set temporary directory prefix for all scans
 * add reporting of tags to guireport.py script
+* display *some* information about symlinks and empty files in the GUI
 
 BOTTLENECKS:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
