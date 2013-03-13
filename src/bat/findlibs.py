@@ -410,8 +410,11 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 		if not squashedgraph.has_key(i):
 			squashedgraph[i] = []
 		for d in libdeps:
+			if not squashedelffiles.has_key(d):
+				continue
 			if len(squashedelffiles[d]) != 1:
-				print >>sys.stderr, "WHAAAA", d, squashedelffiles[d]
+				#print >>sys.stderr, "WHAAAA", d, squashedelffiles[d]
+				pass
 			else:
 				squashedgraph[i].append(squashedelffiles[d][0])
 
@@ -465,5 +468,5 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 				processnodes = newprocessnodes
 				if processnodes == []:
 					break
-			print >>sys.stderr, "IMAGEDIR", imagedir
+
 			elfgraph.write_png(os.path.join(imagedir, '%s-graph.png' % filehash))
