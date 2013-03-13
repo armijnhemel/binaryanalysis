@@ -824,12 +824,13 @@ other files were carved, will be scanned again by the program, or leaf, scans.
 
 \subsubsection{Writing a leaf scan}
 
-The program/leaf scans have a simple interface. There are two parameters
-passed down, namely the absolute path of the file, plus an optional blacklist
-with byte ranges that should not be scanned. For example:
+The program/leaf scans have a simple interface. There are four parameters
+passed to the scan, namely the absolute path of the file, the tags of the file,
+an optional blacklist with byte ranges that should not be scanned and an
+optional list of environment variables. For example:
 
 \begin{verbatim}
-def programScan(path, blacklist=[], envvars=None):
+def programScan(path, tags, blacklist=[], envvars=None):
         ## code goes here
 \end{verbatim}
 
