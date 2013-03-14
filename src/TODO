@@ -20,8 +20,7 @@ queueing system:
 * add script to add files to and remove files from scanning queue
 
 aggregate scanning:
-* cleanup if we used one of the squashfs + lzma variants where we can't determine the size.
-* report possible whole chain of dependencies for a program
+* cleanup if we used one of the squashfs + lzma variants where we can't determine the size (is this still necessary?)
 
 GUI:
 * rewrite to PyQt or PySide to take advantage of better rendering engine (webkit)
@@ -65,7 +64,6 @@ misc:
 * expand "debug", add per phase debug
 * add support for ignoring some file types/extensions completely
 * add configuration option to set temporary directory prefix for all scans
-* add tab to interface with more information about dynamically linked files
 
 BOTTLENECKS:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
