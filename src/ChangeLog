@@ -5,6 +5,11 @@ file systems from Broadcom seem to be unpacked successfully by normal
 unsquashfs versions and other versions of squashfs, but where unpacking
 actually fails with gzip errors. By treating these as errors the script will
 fall through to the broadcom unpacker which (hopefully) will be successful.
+* generate separate ELF report (needs actually to be moved to findlibs.py) and
+display in the GUI
+* add squashfs variant for Atheros. This variant is not yet enabled, but needs
+more testing first to determine the right order where to place it (before the
+other Atheros unsquashfs for sure)
 
 2013-03-13
 * fix reports
@@ -47,7 +52,7 @@ deal with duplicate versions which might or might not actually be duplicates.
 
 2013-03-05
 * determine whether or not a ZIP file has a comment field.
-* fixes for pretty printer: ingore unpackreports that have been removed, like
+* fixes for pretty printer: ignore unpackreports that have been removed, like
 class files in the Java aggregator
 * fix return type for findlibs.py
 * crude fix for ZIP comment fields. Needs proper fix later, but hey, seems to
