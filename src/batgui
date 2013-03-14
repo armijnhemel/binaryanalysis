@@ -262,6 +262,10 @@ class BatFrame(wx.Frame):
 		self.notebookpanel.AddPage(self.functionnameswindow, "Matched function names")
 		self.functionnameswindow.SetPage("<html></html>")
 
+		self.elfwindow = wx.html.HtmlWindow(self.notebookpanel)
+		self.notebookpanel.AddPage(self.elfwindow, "ELF analysis")
+		self.elfwindow.SetPage("<html></html>")
+
 		## We have a tab for visual information and hexdumps about a file, only in advanced mode
 		if self.advanced:
 			self.initAlternateViewtab()
@@ -473,6 +477,11 @@ class BatFrame(wx.Frame):
 				functionnameshtml = functionnameshtmlfile.read()
 				functionnameshtmlfile.close()
 				self.functionnameswindow.SetPage(functionnameshtml)
+			if os.path.exists(os.path.join(self.reportsdir, "%s-elfreport.html.gz" % sha256sum)):
+				elfhtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-elfreport.html.gz" % sha256sum), 'r')
+				elfhtml = elfhtmlfile.read()
+				elfhtmlfile.close()
+				self.elfwindow.SetPage(elfhtml)
 
 			if os.path.exists(os.path.join(self.reportsdir, "%s-unique.html.gz" % sha256sum)):
 				uniquehtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-unique.html.gz" % sha256sum), 'r')
@@ -657,6 +666,7 @@ class BatFrame(wx.Frame):
 		self.unmatchedwindow.SetPage("<html></html>")
 		self.nameswindow.SetPage("<html></html>")
 		self.functionnameswindow.SetPage("<html></html>")
+		self.elfwindow.SetPage("<html></html>")
 
 	## based on configuration we enable/disable certain features
 	def redrawGUI(self):
@@ -762,6 +772,7 @@ class BatFrame(wx.Frame):
 					members = members + filter(lambda x: x.name.startswith('reports') and x.name.endswith('unique.html.gz'), self.tarmembers)
 					members = members + filter(lambda x: x.name.startswith('reports') and x.name.endswith('unmatched.html.gz'), self.tarmembers)
 					members = members + filter(lambda x: x.name.startswith('reports') and x.name.endswith('guireport.html.gz'), self.tarmembers)
+					members = members + filter(lambda x: x.name.startswith('reports') and x.name.endswith('elfreport.html.gz'), self.tarmembers)
 					members = members + filter(lambda x: x.name.startswith('reports') and x.name.endswith('names.html.gz'), self.tarmembers)
 					members = members + filter(lambda x: x.name.startswith('images') and len(os.path.basename(x.name)) != 68, self.tarmembers)
 				else:
