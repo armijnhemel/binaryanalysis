@@ -2120,7 +2120,7 @@ def unpackZip(filename, offset, tempdir=None):
 			tmpfile2 = tempfile.mkstemp(dir=tempdir)
 			os.fdopen(tmpfile2[0]).close()
 
-			unpackFile(tmpfile[1], offset, tmpfile2[1], tmpdir, endofcentraldir + 22)
+			unpackFile(tmpfile[1], 0, tmpfile2[1], tmpdir, endofcentraldir + 22 + commentsize)
 			p = subprocess.Popen(['unzip', '-o', tmpfile2[1], '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 			(stanout, stanerr) = p.communicate()
 			if p.returncode != 0 and p.returncode != 1:
