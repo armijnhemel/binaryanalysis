@@ -1,5 +1,10 @@
 2013-03-14
 * fix ZIP unpacking error
+* better handle unsquashfs errors. There are some squashfs file systems where
+file systems from Broadcom seem to be unpacked successfully by normal
+unsquashfs versions and other versions of squashfs, but where unpacking
+actually fails with gzip errors. By treating these as errors the script will
+fall through to the broadcom unpacker which (hopefully) will be successful.
 
 2013-03-13
 * fix reports

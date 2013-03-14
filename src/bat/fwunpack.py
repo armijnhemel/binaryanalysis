@@ -1407,6 +1407,8 @@ def unpackSquashfs(filename, offset, tmpdir):
 	if p.returncode != 0:
 		return None
 	else:
+		if "gzip uncompress failed with error code " in stanerr:
+			return None
 		squashsize = 0
 		p = subprocess.Popen(['file', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
@@ -1455,6 +1457,8 @@ def unpackSquashfsOpenWrtLZMA(filename, offset, tmpdir, unpacktempdir=None):
 
 	p = subprocess.Popen(['bat-unsquashfs-openwrt', '-dest', tmpdir2 + "/squashfs-root", '-f', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
+	if "gzip uncompress failed with error code " in stanerr:
+		return None
 	## Return code is not reliable enough, since even after successful unpacking the return code could be 16 (related to creating inodes as non-root)
 	## we need to filter out messages about creating inodes. Right now we do that by counting how many
 	## error lines we have for creating inodes and comparing them with the total number of lines in stderr
@@ -1491,6 +1495,8 @@ def unpackSquashfs42(filename, offset, tmpdir):
 	if p.returncode != 0:
 		return None
 	else:
+		if "gzip uncompress failed with error code " in stanerr:
+			return None
 		## unlike with 'normal' squashfs we can't always use 'file' to determine the size
 		squashsize = 1
 		return (tmpdir, squashsize)
@@ -1558,6 +1564,8 @@ def unpackSquashfsRealtekLZMA(filename, offset, tmpdir):
 	if p.returncode != 0:
 		return None
 	else:
+		if "gzip uncompress failed with error code " in stanerr:
+			return None
 		## unlike with 'normal' squashfs we can't always use 'file' to determine the size
 		squashsize = 1
 		return (tmpdir, squashsize)
