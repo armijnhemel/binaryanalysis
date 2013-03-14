@@ -824,5 +824,5 @@ description = Generate graphical representation of files
 enabled     = yes
 storetarget = reports
 storedir    = /tmp/images
-storetype   = -guireport.html.gz
+storetype   = -guireport.html.gz:-elfreport.html.gz
 cleanup     = yes
