@@ -85,16 +85,10 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, envvars={}):
 	if leafreports.has_key('elfunused'):
 		if leafreports['elfunused'] != []:
 			tablerows = tablerows + tablerowtemplate % ("Unused (but declared) shared libraries", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['elfunused']))
-	if leafreports.has_key('notfoundfuncs'):
-		if leafreports['notfoundfuncs'] != []:
-			tablerows = tablerows + tablerowtemplate % ("Unresolved function symbols", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['notfoundfuncs']))
-	if leafreports.has_key('notfoundvars'):
-		if leafreports['notfoundvars'] != []:
-			tablerows = tablerows + tablerowtemplate % ("Unresolved variable symbols", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['notfoundvars']))
+
 	if leafreports.has_key('elfusedby'):
 		if leafreports['elfusedby'] != []:
 			tablerows = tablerows + tablerowtemplate % ("Used by", reduce(lambda x, y: x + ", " + y, leafreports['elfusedby']))
-
 	if leafreports.has_key('licenses'):
 		tablerows = tablerows + tablerowtemplate % ("Licenses/license families", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['licenses'].keys()))
 	if leafreports.has_key('forges'):
@@ -221,3 +215,28 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, envvars={}):
 	guireportfile = gzip.open("%s/%s-guireport.html.gz" % (reportdir, filehash), 'wb')
 	guireportfile.write(overviewstring)
 	guireportfile.close()
+
+	## ideally this should move to findlibs.py, where pictures are generated
+	elfheader = "<html><body><h1>Detailed ELF analysis</h1><table>"
+	elffooter = "</table></body></html>"
+	tablerows = ""
+	if leafreports.has_key('elfused'):
+		if leafreports['elfused'] != []:
+			tablerows = tablerows + tablerowtemplate % ("Used shared libraries", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['elfused']))
+	if leafreports.has_key('elfunused'):
+		if leafreports['elfunused'] != []:
+			tablerows = tablerows + tablerowtemplate % ("Unused (but declared) shared libraries", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['elfunused']))
+	if leafreports.has_key('elfusedby'):
+		if leafreports['elfusedby'] != []:
+			tablerows = tablerows + tablerowtemplate % ("Used by", reduce(lambda x, y: x + ", " + y, leafreports['elfusedby']))
+	if leafreports.has_key('notfoundfuncs'):
+		if leafreports['notfoundfuncs'] != []:
+			tablerows = tablerows + tablerowtemplate % ("Unresolved function symbols", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['notfoundfuncs']))
+	if leafreports.has_key('notfoundvars'):
+		if leafreports['notfoundvars'] != []:
+			tablerows = tablerows + tablerowtemplate % ("Unresolved variable symbols", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['notfoundvars']))
+	if tablerows != "":
+		elfstring = elfheader + tablerows + elffooter
+		elfreportfile = gzip.open("%s/%s-elfreport.html.gz" % (reportdir, filehash), 'wb')
+		elfreportfile.write(elfstring)
+		elfreportfile.close()
