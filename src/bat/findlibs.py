@@ -201,6 +201,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 	usedby = {}
 	usedlibsperfile = {}
 	unusedlibsperfile = {}
+	possiblyusedlibsperfile = {}
 
 	notfoundfuncsperfile = {}
 	notfoundvarssperfile = {}
@@ -332,27 +333,29 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 						pass
 			if remotevarswc != []:
 				notfoundvarssperfile[i] = remotevarswc
+
 			if remotefuncswc != []:
+				## The scan has ended, but there are still symbols left.
 				notfoundfuncsperfile[i] = remotefuncswc
 				#print >>sys.stderr, "NOT FULLFILLED", i, remotefuncswc, remotevarswc
-				possiblymissinglibs = list(set(leafreports['libs']).difference(set(usedlibs)))
-				if possiblymissinglibs != []:
-					pass
-					#print >>sys.stderr, "POSSIBLY MISSING AND/OR UNUSED", possiblymissinglibs
+				unusedlibs = list(set(leafreports['libs']).difference(set(usedlibs)))
+				unusedlibs.sort()
+				unusedlibsperfile[i] = unusedlibs
+
 				possiblesolutions = []
 				for r in remotefuncswc:
 					if funcstolibs.has_key(r):
 						possiblesolutions = possiblesolutions + funcstolibs[r]
 				if possiblesolutions != []:
-					pass
-					#print >>sys.stderr, "POSSIBLE LIBS TO SATISFY CONDITIONS", list(set(possiblesolutions))
-				#print >>sys.stderr
-			if list(set(leafreports['libs']).difference(set(usedlibs))) != [] and remotefuncswc == []:
-				unusedlibs = list(set(leafreports['libs']).difference(set(usedlibs)))
-				unusedlibs.sort()
-				unusedlibsperfile[i] = unusedlibs
-				#print >>sys.stderr, "UNUSED LIBS", i, list(set(leafreports[i]['libs']).difference(set(usedlibs)))
-				#print >>sys.stderr
+					#print >>sys.stderr, "POSSIBLE LIBS TO SATISFY CONDITIONS", i, list(set(possiblesolutions))
+					possiblyusedlibsperfile[i] = list(set(possiblesolutions))
+			else:
+				if list(set(leafreports['libs']).difference(set(usedlibs))) != []:
+					unusedlibs = list(set(leafreports['libs']).difference(set(usedlibs)))
+					unusedlibs.sort()
+					unusedlibsperfile[i] = unusedlibs
+					#print >>sys.stderr, "UNUSED LIBS", i, list(set(leafreports[i]['libs']).difference(set(usedlibs)))
+					#print >>sys.stderr
 			if possiblyused != []:
 				pass
 				#print >>sys.stderr, "POSSIBLY USED", i, possiblyused
@@ -386,6 +389,9 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 			writeback = True
 		if notfoundvarssperfile.has_key(i):
 			aggregatereturn[i]['notfoundvars'] = notfoundvarssperfile[i]
+			writeback = True
+		if possiblyusedlibsperfile.has_key(i):
+			aggregatereturn[i]['elfpossiblyused'] = possiblyusedlibsperfile[i]
 			writeback = True
 
 		## only write the new leafreport if there actually is something to write back

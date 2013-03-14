@@ -220,6 +220,8 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, envvars={}):
 	elfheader = "<html><body><h1>Detailed ELF analysis</h1><table>"
 	elffooter = "</table></body></html>"
 	tablerows = ""
+	if leafreports.has_key('libs'):
+		tablerows = tablerows + tablerowtemplate % ("Declared shared libraries", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['libs']))
 	if leafreports.has_key('elfused'):
 		if leafreports['elfused'] != []:
 			tablerows = tablerows + tablerowtemplate % ("Used shared libraries", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['elfused']))
@@ -235,6 +237,9 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, envvars={}):
 	if leafreports.has_key('notfoundvars'):
 		if leafreports['notfoundvars'] != []:
 			tablerows = tablerows + tablerowtemplate % ("Unresolved variable symbols", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['notfoundvars']))
+	if leafreports.has_key('elfpossiblyused'):
+		if leafreports['elfpossiblyused'] != []:
+			tablerows = tablerows + tablerowtemplate % ("Possibly used (but undeclared) libraries", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['elfpossiblyused']))
 	if tablerows != "":
 		elfstring = elfheader + tablerows + elffooter
 		elfreportfile = gzip.open("%s/%s-elfreport.html.gz" % (reportdir, filehash), 'wb')
