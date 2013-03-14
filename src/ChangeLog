@@ -1,3 +1,6 @@
+2013-03-14
+* fix ZIP unpacking error
+
 2013-03-13
 * fix reports
 * partially parallelise findlibs.py
