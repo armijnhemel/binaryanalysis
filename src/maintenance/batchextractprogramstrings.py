@@ -657,7 +657,7 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 						## stored in a special ELF section __ksymtab_strings
 						if csplit[1] == 'variable':
 							if "EXPORT_SYMBOL" in csplit[4]:
-								cresults.append((csplit[0], int(csplit[2]), i))
+								cresults.append((csplit[0], int(csplit[2]), 'variable'))
 					else:
 						for i in ['function', 'variable']:
 							if csplit[1] == i:
