@@ -38,6 +38,7 @@ def extractfromelf((path, filename)):
 	remotevars = []
 	localvars = []
 	sonames = []
+	elftype = ""
 
 	p = subprocess.Popen(['readelf', '-W', '--dyn-syms', os.path.join(path, filename)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
@@ -85,7 +86,20 @@ def extractfromelf((path, filename)):
 			sonames.append(soname)
 	sonames = list(set(sonames))
 
-	return (filename, localfuncs, remotefuncs, localvars, remotevars, sonames)
+	p = subprocess.Popen(['readelf', '-h', "%s" % os.path.join(path, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		return
+	for line in stanout.split('\n'):
+		if "Type:" in line:
+			if "DYN" in line:
+				elftype = "lib"
+			if "EXE" in line:
+				elftype = "exe"
+			if "REL" in line:
+				elftype = "kernelmod"
+
+	return (filename, localfuncs, remotefuncs, localvars, remotevars, sonames, elftype)
 
 def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 	scanenv = os.environ.copy()
@@ -175,8 +189,10 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 	elfres = pool.map(extractfromelf, elftasks)
 	pool.terminate()
 
+	elftypes = {}
+
 	for i in elfres:
-		(filename, localfuncs, remotefuncs, localvars, remotevars, elfsonames) = i
+		(filename, localfuncs, remotefuncs, localvars, remotevars, elfsonames, elftype) = i
 		for soname in elfsonames:
 			if sonames.has_key(soname):
 				sonames[soname].append(filename)
@@ -192,6 +208,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 		remotefunctionnames[filename] = remotefuncs
 		localvariablenames[filename] = localvars
 		remotevariablenames[filename] = remotevars
+		elftypes[filename] = elftype
 
 	## TODO: look if RPATH is used, since that will give use more information
 	## by default
@@ -345,7 +362,26 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 				possiblesolutions = []
 				for r in remotefuncswc:
 					if funcstolibs.has_key(r):
-						possiblesolutions = possiblesolutions + funcstolibs[r]
+						if len(funcstolibs[r]) == 1:
+							possiblesolutions = possiblesolutions + funcstolibs[r]
+							continue
+						else:
+							found = False
+							for l in funcstolibs[r]:
+								if l in possiblesolutions:
+									## prefer a dependency that is already used
+									found = True
+									break
+							if not found:
+								#print >>sys.stderr, "CONFLICT", r, l, possiblesolutions
+								pass
+								## TODO: there are multiple files that can satisfy this
+								## dependency
+								## 1. check if the files are identical (checksum)
+								## 2. if identical, check for soname and choose the one
+								## of which the name matches
+								## 3. check if the files that implement the same thing are
+								## libs or executables. Prefer libs.
 				if possiblesolutions != []:
 					#print >>sys.stderr, "POSSIBLE LIBS TO SATISFY CONDITIONS", i, list(set(possiblesolutions))
 					possiblyusedlibsperfile[i] = list(set(possiblesolutions))
@@ -408,6 +444,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 			leafreports = cPickle.dump(leafreports, leaf_file)
 			leaf_file.close()
 
+
 	squashedgraph = {}
 	for i in elffiles:
 		libdeps = usedlibsperfile[i]
@@ -443,32 +480,45 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 			elfgraph = pydot.Dot(graph_type='digraph')
 			rootnode = pydot.Node(ppname)
 			elfgraph.add_node(rootnode)
-			processnodes = map(lambda x: (rootnode, x, True), squashedgraph[i])
+			processnodes = map(lambda x: (rootnode, x, True, True), squashedgraph[i])
 			if unusedlibsperfile.has_key(i):
 				for j in unusedlibsperfile[i]:
 					if not squashedelffiles.has_key(j):
 						continue
 					if len(squashedelffiles[j]) != 1:
 						continue
-					processnodes.append((rootnode, squashedelffiles[j][0], False))
-			seen = map(lambda x: (i, x), squashedgraph[i])
+					processnodes.append((rootnode, squashedelffiles[j][0], False, False))
+			if possiblyusedlibsperfile.has_key(i):
+				for j in possiblyusedlibsperfile[i]:
+					processnodes.append((rootnode, j, True, False))
+					seen.append((i,j))
+			seen = seen + map(lambda x: (i, x), squashedgraph[i])
 
 			while True:
 				newprocessnodes = []
 				for j in processnodes:
-					(parentnode, nodetext, used) = j
+					(parentnode, nodetext, used, declared) = j
 					ppname = os.path.join(unpackreports[nodetext]['path'], unpackreports[nodetext]['name'])
 					tmpnode = pydot.Node(ppname)
 					elfgraph.add_node(tmpnode)
 					if not used:
-						elfgraph.add_edge(pydot.Edge(parentnode, tmpnode, color='red'))
+						elfgraph.add_edge(pydot.Edge(parentnode, tmpnode, style='dashed', color='blue'))
 					else:
-						elfgraph.add_edge(pydot.Edge(parentnode, tmpnode))
+						if not declared:
+							elfgraph.add_edge(pydot.Edge(parentnode, tmpnode, color='red'))
+						else:
+							elfgraph.add_edge(pydot.Edge(parentnode, tmpnode))
+
 					if squashedgraph.has_key(nodetext):
 						for n in squashedgraph[nodetext]:
 							if not (nodetext, n) in seen:
-								newprocessnodes.append((tmpnode, n, True))
+								newprocessnodes.append((tmpnode, n, True, True))
 								seen.append((nodetext, n))
+					if possiblyusedlibsperfile.has_key(nodetext):
+						for u in possiblyusedlibsperfile[nodetext]:
+							if not (nodetext, u) in seen:
+								newprocessnodes.append((tmpnode, u, True, False))
+								seen.append((nodetext, u))
 					if unusedlibsperfile.has_key(nodetext):
 						for u in unusedlibsperfile[nodetext]:
 							if not (nodetext, u) in seen:
@@ -476,7 +526,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 									continue
 								if len(squashedelffiles[u]) != 1:
 									continue
-								processnodes.append((tmpnode, squashedelffiles[u][0], False))
+								newprocessnodes.append((tmpnode, squashedelffiles[u][0], False, False))
 								seen.append((nodetext, u))
 				processnodes = newprocessnodes
 				if processnodes == []:
