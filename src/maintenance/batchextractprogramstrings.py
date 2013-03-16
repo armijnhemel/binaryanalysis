@@ -62,8 +62,8 @@ splitcharacters = map(lambda x: chr(x), range(0,9) + range(14,32) + [127])
 ## * package name
 ## * version
 ## * filename
-## * sha256
 ## * origin
+## * sha256
 ## * new package name
 ## * new version name
 def readrewritelist(rewritelist):
@@ -79,7 +79,7 @@ def readrewritelist(rewritelist):
 			if len(rs) != 7:
 				return {}
 			else:
-				(package, version, filename, sha256, origin, newp, newv) = rs
+				(package, version, filename, origin, sha256, newp, newv) = rs
 				## dupe, skip
 				if rewrite.has_key(sha256):
 					continue
@@ -192,8 +192,8 @@ def unpack_verify(filedir, filename):
 
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
-def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256):
-	print >>sys.stdout, filename
+def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, rewrites):
+	print >>sys.stdout, "processing", filename
 
         conn = sqlite3.connect(dbpath, check_same_thread = False)
 	c = conn.cursor()
@@ -205,7 +205,16 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 		conn.close()
 		return None
 
-	## First check if version exists in the database.
+	## First see if this exact version is in the rewrite list. If so, rewrite.
+	if rewrites.has_key(filehash):
+		if origin == rewrites[filehash]['origin']:
+			if filename == rewrites[filehash]['filename']:
+				if package == rewrites[filehash]['package']:
+					if version == rewrites[filehash]['version']:
+						package = rewrites[filehash]['newpackage']
+						version = rewrites[filehash]['newversion']
+
+	## Then check if version exists in the database.
 	c.execute('''select sha256 from processed where package=? and version=? LIMIT 1''', (package, version))
 	if len(c.fetchall()) == 0:
 		## If the version is not in 'processed' check if there are already any strings
@@ -911,7 +920,9 @@ def main(argv):
 			parser.error("rewrite list specified, but does not exist")
 		if not (os.path.isfile(options.rewritelist) or os.path.islink(options.rewritelist)):
 			parser.error("rewrite list specified, but is not a file")
-		rewrite = readrewritelist(options.rewritelist)
+		rewrites = readrewritelist(options.rewritelist)
+	else:
+		rewrites = {}
 
 	if options.licenses != None and options.copyrights != None and options.licensedb == None:
 		parser.error("Specify path to licenses/copyrights database")
@@ -1061,7 +1072,7 @@ def main(argv):
 				unpack_verify(options.filedir, filename)
 			if package != oldpackage:
 				oldres = []
-			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, options.db, cleanup, license, copyrights, pool, options.ninkacomments, options.licensedb, oldpackage, oldres)
+			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, options.db, cleanup, license, copyrights, pool, options.ninkacomments, options.licensedb, oldpackage, oldres, rewrites)
 			if unpackres != None:
 				oldres = map(lambda x: x[2], unpackres)
 				oldpackage = package
