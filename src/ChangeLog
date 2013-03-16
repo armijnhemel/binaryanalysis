@@ -2,6 +2,10 @@
 * store kernel symbols (exported with EXPORT_SYMBOL*) as 'kernelsymbol'
 instead of 'variable'
 * update dedexer to 1.26 since it can handle ODEX files better
+* add support for supplying list of rewrites to batchextractprogramstrings.py
+* enable new Atheros version of unsquashfs
+* prevent infinite looping in unpacking squashfs file systems for Atheros 2
+variant and OpenWrt variant. Other variants need fixes as well.
 
 2013-03-15
 * fix error in batchextractprogramstrings.py: wrong type was stored for
