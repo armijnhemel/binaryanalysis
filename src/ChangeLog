@@ -1,3 +1,8 @@
+2013-03-16
+* store kernel symbols (exported with EXPORT_SYMBOL*) as 'kernelsymbol'
+instead of 'variable'
+* update dedexer to 1.26 since it can handle ODEX files better
+
 2013-03-15
 * fix error in batchextractprogramstrings.py: wrong type was stored for
 variables extracted from the Linux kernel
