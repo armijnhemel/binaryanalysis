@@ -1351,6 +1351,12 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 		os.unlink(tmpfile[1])
 		return retval
 
+	### Atheros2 variant
+	retval = unpackSquashfsAtheros2LZMA(tmpfile[1],offset,tmpdir)
+	if retval != None:
+		os.unlink(tmpfile[1])
+		return retval
+
 	## OpenWrt variant
 	retval = unpackSquashfsOpenWrtLZMA(tmpfile[1],offset,tmpdir)
 	if retval != None:
@@ -1448,6 +1454,47 @@ def unpackSquashfsDDWRTLZMA(filename, offset, tmpdir, unpacktempdir=None):
 		## unlike with 'normal' squashfs we can use 'file' to determine the size
 		squashsize = 1
 		return (tmpdir, squashsize)
+
+## squashfs variant from Atheros, with LZMA, looks a lot like OpenWrt variant
+## TODO: merge with OpenWrt variant
+def unpackSquashfsAtheros2LZMA(filename, offset, tmpdir, unpacktempdir=None):
+	## squashfs 1.0 with lzma from OpenWrt can't unpack to an existing directory
+	## so we use a workaround using an extra temporary directory
+	tmpdir2 = tempfile.mkdtemp(dir=unpacktempdir)
+
+	p = subprocess.Popen(['bat-unsquashfs-atheros2', '-dest', tmpdir2 + "/squashfs-root", '-f', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if "gzip uncompress failed with error code " in stanerr:
+		return None
+	## Return code is not reliable enough, since even after successful unpacking the return code could be 16 (related to creating inodes as non-root)
+	## we need to filter out messages about creating inodes. Right now we do that by counting how many
+	## error lines we have for creating inodes and comparing them with the total number of lines in stderr
+	## If they match we know all errors are for creating inodes, so we can safely ignore them.
+	if p.returncode != 0:
+		stanerrlines = stanerr.strip().split("\n")
+		inode_error = 0
+		for stline in stanerrlines:
+			if "create_inode: could not create" in stline:
+				inode_error = inode_error + 1
+		if stanerr != "" and len(stanerrlines) != inode_error:
+			shutil.rmtree(tmpdir2)
+			return None
+	## move all the contents using shutil.move()
+	mvfiles = os.listdir(tmpdir2 + "/squashfs-root")
+	for f in mvfiles:
+		shutil.move(tmpdir2 + "/squashfs-root/" + f, tmpdir)
+	## then we cleanup the temporary dir
+	shutil.rmtree(tmpdir2)
+	## like with 'normal' squashfs we can use 'file' to determine the size
+	squashsize = 0
+	p = subprocess.Popen(['file', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	(stanout, stanerr) = p.communicate()
+
+	if p.returncode != 0:
+		return None
+	else:
+		squashsize = int(re.search(", (\d+) bytes", stanout).groups()[0])
+	return (tmpdir, squashsize)
 
 ## squashfs variant from OpenWrt, with LZMA
 def unpackSquashfsOpenWrtLZMA(filename, offset, tmpdir, unpacktempdir=None):
