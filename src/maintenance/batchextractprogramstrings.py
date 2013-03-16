@@ -64,10 +64,30 @@ splitcharacters = map(lambda x: chr(x), range(0,9) + range(14,32) + [127])
 ## * filename
 ## * sha256
 ## * origin
-## * target package name
-## * target version name
+## * new package name
+## * new version name
 def readrewritelist(rewritelist):
-	return {}
+	## rewrite is a hash. Key is sha256 of the file.
+	rewrite = {}
+	try:
+		rewritefile = open(rewritelist, 'r')
+		rewritelines = rewritefile.readlines()
+		rewritefile.close()
+		for r in rewritelines:
+			rs = r.strip().split()
+			## format error, bail out
+			if len(rs) != 7:
+				return {}
+			else:
+				(package, version, filename, sha256, origin, newp, newv) = rs
+				## dupe, skip
+				if rewrite.has_key(sha256):
+					continue
+				else:
+					rewrite[sha256] = {'package': package, 'version': version, 'filename': filename, 'origin': origin, 'newpackage': newp, 'newversion': newv}
+	except:
+		return {}
+	return rewrite
 
 ## split on the special characters, plus remove special control characters that are
 ## at the beginning and end of the string in escaped form.
@@ -891,7 +911,7 @@ def main(argv):
 			parser.error("rewrite list specified, but does not exist")
 		if not (os.path.isfile(options.rewritelist) or os.path.islink(options.rewritelist)):
 			parser.error("rewrite list specified, but is not a file")
-		rewritelist = readrewritelist(options.rewritelist)
+		rewrite = readrewritelist(options.rewritelist)
 
 	if options.licenses != None and options.copyrights != None and options.licensedb == None:
 		parser.error("Specify path to licenses/copyrights database")
