@@ -57,6 +57,18 @@ extensions = {'.c'      : 'C',
 ## a list of characters that 'strings' will split on when processing a binary file
 splitcharacters = map(lambda x: chr(x), range(0,9) + range(14,32) + [127])
 
+## process the contents of list with rewrites
+## The file has per line the following fields, separated by spaces or tabs:
+## * package name
+## * version
+## * filename
+## * sha256
+## * origin
+## * target package name
+## * target version name
+def readrewritelist(rewritelist):
+	return {}
+
 ## split on the special characters, plus remove special control characters that are
 ## at the beginning and end of the string in escaped form.
 ## Return a list of strings.
@@ -801,8 +813,8 @@ def main(argv):
 	parser.add_option("-l", "--licenses", action="store_true", dest="licenses", help="extract licenses (default: false)")
 	parser.add_option("-n", "--ninkacomments", action="store", dest="ninkacomments", help="path to ninkacomments database", metavar="FILE")
 	parser.add_option("-r", "--licensedb", action="store", dest="licensedb", help="path to licenses/copyrights database", metavar="FILE")
+	parser.add_option("-t", "--rewritelist", action="store", dest="rewritelist", help="path to rewrite list", metavar="FILE")
 	parser.add_option("-v", "--verify", action="store_true", dest="verify", help="verify files, don't process (default: false)")
-	#parser.add_option("-x", "--renamelist", action="store", dest="renamelist", help="renamelist", metavars="FILE")
 	parser.add_option("-w", "--wipe", action="store_true", dest="wipe", help="wipe database instead of update (default: false)")
 	parser.add_option("-z", "--cleanup", action="store_true", dest="cleanup", help="cleanup after unpacking? (default: false)")
 	(options, args) = parser.parse_args()
@@ -872,6 +884,14 @@ def main(argv):
 			sys.exit(1)
 	else:
 		copyrights = False
+
+	## optionally rewrite files
+	if options.rewritelist != None:
+		if not os.path.exists(options.rewritelist):
+			parser.error("rewrite list specified, but does not exist")
+		if not (os.path.isfile(options.rewritelist) or os.path.islink(options.rewritelist)):
+			parser.error("rewrite list specified, but is not a file")
+		rewritelist = readrewritelist(options.rewritelist)
 
 	if options.licenses != None and options.copyrights != None and options.licensedb == None:
 		parser.error("Specify path to licenses/copyrights database")
