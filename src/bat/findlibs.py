@@ -468,6 +468,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 				else:
 					squashedgraph[i].append(squashedelffiles[d][0])
 
+	## TODO: make parallel
 	for i in elffiles:
 		if not squashedgraph.has_key(i):
 			continue
