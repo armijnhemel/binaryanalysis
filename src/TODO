@@ -36,7 +36,7 @@ database creation:
 * rename batchextractprogramstrings.py
 * replace excessive parameter list of batchextractprogramstrings.py with a configuration file
 * handle embedded archives (ZIP files, tarballs, etc.)
-* handle patches
+* handle patches (both normal and unified)
 * import licensing information from SPDX files
 * rewrite ctags and xgettext invocations to scan multiple files at once to reduce overhead of calling ctags and xgettext
 * create index for sha256 for processed
@@ -62,7 +62,7 @@ misc:
 * add support for ignoring some file types/extensions completely
 * add configuration option to set temporary directory prefix for all scans
 * check whether or not squashfs 4.2 support is necessary. Fedora seems to have bumped to 4.2 and uses all available compressions. If it is needed add patches for CVE-2012-4024 for unsquashfs42.
-* add piecharts/reports per directory that summarise what is inside a directory (recursively)
+* add piecharts/reports per directory that summarise what is inside a directory (recursively, perhaps only if something was unpacked)
 * add reporting for duplicate files that uses results from findduplicates.py
 
 BOTTLENECKS:
