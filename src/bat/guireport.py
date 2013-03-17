@@ -90,9 +90,9 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, envvars={}):
 		if leafreports['elfusedby'] != []:
 			tablerows = tablerows + tablerowtemplate % ("Used by", reduce(lambda x, y: x + ", " + y, leafreports['elfusedby']))
 	if leafreports.has_key('licenses'):
-		tablerows = tablerows + tablerowtemplate % ("Licenses/license families", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['licenses'].keys()))
+		tablerows = tablerows + tablerowtemplate % ("Licenses/license families", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['licenses']))
 	if leafreports.has_key('forges'):
-		tablerows = tablerows + tablerowtemplate % ("Forges", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['forges'].keys()))
+		tablerows = tablerows + tablerowtemplate % ("Forges", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['forges']))
 	if leafreports.has_key('redboot'):
 		tablerows = tablerows + tablerowtemplate % ("Bootloader", "RedBoot")
 	for j in ['dproxy', 'ez-ipupdate', 'iproute', 'iptables', 'libusb', 'loadlin', 'vsftpd', 'wireless-tools', 'wpa-supplicant']:

@@ -4,6 +4,8 @@ into account
 * prevent infinite looping in Broadcom variant of unsquashfs
 * change default parameters for bat-romfsck
 * fix error in gzip unpacking: too much stuff was blacklisted if offset != 0
+* rewrite genericSearch so it only searches a file once for license and forge
+scanning
 
 2013-03-16
 * store kernel symbols (exported with EXPORT_SYMBOL*) as 'kernelsymbol'

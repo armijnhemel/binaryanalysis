@@ -16,7 +16,8 @@ import extractor
 import xml.dom.minidom
 
 ## generic searcher for certain marker strings
-def genericSearch(path, markerStrings, blacklist=[], unpacktempdir=None):
+def genericSearch(path, markerDict, blacklist=[], unpacktempdir=None):
+	results = []
         try:
 		## first see if the entire file has been blacklisted
 		filesize = os.stat(path).st_size
@@ -61,12 +62,11 @@ def genericSearch(path, markerStrings, blacklist=[], unpacktempdir=None):
 		datafile.seek(offset)
 		databuffer = datafile.read(100000)
 		while databuffer != '':
-			for marker in markerStrings:
-				markeroffset = databuffer.find(marker)
-				if markeroffset != -1:
-					if carved:
-						os.unlink(path)
-					return True
+			for marker in markerDict.keys():
+				for markerstring in markerDict[marker]:
+					markeroffset = databuffer.find(markerstring)
+					if markeroffset != -1:
+						results.append(marker)
 			## move the offset 100000
 			datafile.seek(offset + 100000)
 			databuffer = datafile.read(100000)
@@ -75,7 +75,10 @@ def genericSearch(path, markerStrings, blacklist=[], unpacktempdir=None):
 		if carved:
 			os.unlink(path)
         except Exception, e:
+		print >>sys.stderr, e
                 return None
+	if results != []:
+		return list(set(results))
 	return None
 
 ## The result of this method is a list of library names that the file dynamically links
@@ -131,114 +134,114 @@ def scanArchitecture(path, tags, blacklist=[], envvars=None):
 				return (['architecture'], line.split(':')[1].strip())
 
 def searchLoadLin(path, tags, blacklist=[], envvars=None):
-	markerStrings = [ 'Ooops..., size of "setup.S" has become too long for LOADLIN,'
+	markerStrings = {'loadlin': [ 'Ooops..., size of "setup.S" has become too long for LOADLIN,'
 			, 'LOADLIN started from $'
-			]
+			]}
 	res = genericSearch(path, markerStrings, blacklist)
 	if res != None:
-		return (['loadlin'], res)
+		return (['loadlin'], True)
 
 def searchIptables(path, tags, blacklist=[], envvars=None):
-	markerStrings = [ 'iptables who? (do you need to insmod?)'
+	markerStrings = {'iptables':[ 'iptables who? (do you need to insmod?)'
 			, 'Will be implemented real soon.  I promise ;)'
 			, 'can\'t initialize iptables table `%s\': %s'
-			]
+			]}
 	res = genericSearch(path, markerStrings, blacklist)
 	if res != None:
-		return (['iptables'], res)
+		return (['iptables'], True)
 
 def searchDproxy(path, tags, blacklist=[], envvars=None):
-	markerStrings = [ '# dproxy monitors this file to determine when the machine is'
+	markerStrings = {'dproxy': [ '# dproxy monitors this file to determine when the machine is'
 			, '# If you want dproxy to log debug info specify a file here.'
-			]
+			]}
 	res = genericSearch(path, markerStrings, blacklist)
 	if res != None:
-		return (['dproxy'], res)
+		return (['dproxy'], True)
 
 def searchEzIpupdate(path, tags, blacklist=[], envvars=None):
-	markerStrings = [ 'ez-ipupdate Version %s, Copyright (C) 1998-'
+	markerStrings = {'ez-ipupdate': [ 'ez-ipupdate Version %s, Copyright (C) 1998-'
 			, '%s says that your IP address has not changed since the last update'
 			, 'you must provide either an interface or an address'
-			]
+			]}
 	res = genericSearch(path, markerStrings, blacklist)
 	if res != None:
-		return (['ez-ipupdate'], res)
+		return (['ez-ipupdate'], True)
 
 def searchLibusb(path, tags, blacklist=[], envvars=None):
-	markerStrings = [ 'Check that you have permissions to write to %s/%s and, if you don\'t, that you set up hotplug (http://linux-hotplug.sourceforge.net/) correctly.'
+	markerStrings = {'libusb': [ 'Check that you have permissions to write to %s/%s and, if you don\'t, that you set up hotplug (http://linux-hotplug.sourceforge.net/) correctly.'
 			, 'usb_os_find_busses: Skipping non bus directory %s'
 			, 'usb_os_init: couldn\'t find USB VFS in USB_DEVFS_PATH'
-			]
+			]}
 	res = genericSearch(path, markerStrings, blacklist)
 	if res != None:
-		return (['libusb'], res)
+		return (['libusb'], True)
 
 def searchVsftpd(path, tags, blacklist=[], envvars=None):
-	markerStrings = [ 'vsftpd: version'
+	markerStrings = {'vsftpd': [ 'vsftpd: version'
 			, '(vsFTPd '
 			, 'VSFTPD_LOAD_CONF'
 			, 'run two copies of vsftpd for IPv4 and IPv6'
-			]
+			]}
 
 	res = genericSearch(path, markerStrings, blacklist)
 	if res != None:
-		return (['vsftpd'], res)
+		return (['vsftpd'], True)
 
 def searchHostapd(path, tags, blacklist=[], envvars=None):
-	markerStrings = [ 'hostapd v'
-			]
+	markerStrings = {'hostapd': [ 'hostapd v'
+			]}
 
 	res = genericSearch(path, markerStrings, blacklist)
 	if res != None:
-		return (['hostapd'], res)
+		return (['hostapd'], True)
 
 def searchWpaSupplicant(path, tags, blacklist=[], envvars=None):
-	markerStrings = [ 'wpa_supplicant v'
-			]
+	markerStrings = {'wpasupplicant': [ 'wpa_supplicant v'
+			]}
 
 	res = genericSearch(path, markerStrings, blacklist)
 	if res != None:
-		return (['wpasupplicant'], res)
+		return (['wpasupplicant'], True)
 
 def searchIproute(path, tags, blacklist=[], envvars=None):
-	markerStrings = [ 'Usage: tc [ OPTIONS ] OBJECT { COMMAND | help }'
+	markerStrings = {'iproute2':[ 'Usage: tc [ OPTIONS ] OBJECT { COMMAND | help }'
 			, 'tc utility, iproute2-ss%s'
 			, 'Option "%s" is unknown, try "tc -help".'
-			]
+			]}
 
 	res = genericSearch(path, markerStrings, blacklist)
 	if res != None:
-		return (['iproute2'], res)
+		return (['iproute2'], True)
 
 def searchWirelessTools(path, tags, blacklist=[], envvars=None):
-	markerStrings = [ "Driver has no Wireless Extension version information."
+	markerStrings = {'wireless-tools': [ "Driver has no Wireless Extension version information."
 			, "Wireless Extension version too old."
 			, "Wireless-Tools version"
 			, "Wireless Extension, while we are using version %d."
 			, "Currently compiled with Wireless Extension v%d."
-       	                ]
+       	                ]}
 
 	res = genericSearch(path, markerStrings, blacklist)
 	if res != None:
-		return (['wireless-tools'], res)
+		return (['wireless-tools'], True)
 
 def searchRedBoot(path, tags, blacklist=[], envvars=None):
-	markerStrings = ["Display RedBoot version information"]
+	markerStrings = {'redboot': ["Display RedBoot version information"]}
 
 	res = genericSearch(path, markerStrings, blacklist)
 	if res != None:
-		return (['redboot'], res)
+		return (['redboot'], True)
 
 def searchUBoot(path, tags, blacklist=[], envvars=None):
-        markerStrings = [ "run script starting at addr"
+        markerStrings = {'uboot': [ "run script starting at addr"
 			, "Hit any key to stop autoboot: %2d"
 			, "## Binary (kermit) download aborted"
 			, "## Ready for binary (ymodem) download "
-			]
+			]}
 
 	res = genericSearch(path, markerStrings, blacklist)
 	if res != None:
-		return (['uboot'], res)
+		return (['uboot'], True)
 
 ## What actually do these dependencies mean?
 ## Are they dependencies of the installer itself, or of the programs that are
@@ -328,46 +331,66 @@ def pdfPrettyPrint(res, root, envvars=None):
 ######################################
 ## This should only be used as an indicator for further investigation,
 ## never as proof that a binary is actually licensed under a license!
-## TODO: rewrite so file is not read for every scan
 def scanLicenses(path, tags, blacklist=[], envvars=None):
-	results = {}
-	if genericSearch(path, ["General Public License", "http://www.gnu.org/licenses/", "http://gnu.org/licenses/", "http://www.gnu.org/gethelp/", "http://www.gnu.org/software/"], blacklist):
-		results['GNU'] = True
-	if genericSearch(path, ["http://gnu.org/licenses/gpl.html", "http://www.gnu.org/licenses/gpl.html",
-                                "http://www.opensource.org/licenses/gpl-license.php", "http://www.gnu.org/copyleft/gpl.html"], blacklist):
-		results['GPL'] = True
-	if genericSearch(path, ["http://gnu.org/licenses/gpl-2.0.html", "http://www.gnu.org/licenses/old-licenses/gpl-2.0.html"], blacklist):
-		results['GPLv2'] = True
-	if genericSearch(path, ["http://gnu.org/licenses/old-licenses/lgpl-2.1.html"], blacklist):
-		results['LGPLv2.1'] = True
-	if genericSearch(path, ["http://www.apache.org/licenses/LICENSE-2.0", "http://opensource.org/licenses/apache2.0.php"], blacklist):
-		results['Apache2.0'] = True
-	if genericSearch(path, ["http://www.mozilla.org/MPL/"], blacklist):
-		results['MPL'] = True
-	if genericSearch(path, ["http://www.opensource.org/licenses/mit-license.php"], blacklist):
-		results['MIT'] = True
-	if genericSearch(path, ["http://www.opensource.org/licenses/bsd-license.php"], blacklist):
-		results['BSD'] = True
-	if genericSearch(path, ["http://www.openoffice.org/license.html"], blacklist):
-		results['OpenOffice'] = True
-	if genericSearch(path, ["http://www.bittorrent.com/license/"], blacklist):
-		results['BitTorrent'] = True
-	if genericSearch(path, ["http://www.tizenopensource.org/license"], blacklist):
-		results['Tizen'] = True
-	if genericSearch(path, ["http://www.openssl.org/source/license.html"], blacklist):
-		results['OpenSSL'] = True
-	if genericSearch(path, ["http://www.boost.org/LICENSE_1_0.txt", "http://pocoproject.org/license.html"], blacklist):
-		results['Boost'] = True
-	if genericSearch(path, ["http://www.zlib.net/zlib_license.html"], blacklist):
-		results['zlib'] = True
-	if genericSearch(path, ["http://jquery.org/license"], blacklist):
-		results['jQuery'] = True
-	if genericSearch(path, ["http://xmlsoft.org/FAQ.html#License"], blacklist):
-		results['libxml'] = True
-	if genericSearch(path, ["http://source.icu-project.org/repos/icu/icu/trunk/license.html"], blacklist):
-		results['ICU'] = True
-	if results != {}:
-		return (['licenses'], results)
+	licenseidentifiers = {}
+
+	## identifiers for any GNU license (could apply to multiple licenses)
+	licenseidentifiers['GNU'] = ["General Public License", "http://www.gnu.org/licenses/", "http://gnu.org/licenses/", "http://www.gnu.org/gethelp/", "http://www.gnu.org/software/"]
+
+	## identifiers for a version of GNU GPL
+	licenseidentifiers['GPL'] = ["http://gnu.org/licenses/gpl.html", "http://www.gnu.org/licenses/gpl.html",
+                                "http://www.gnu.org/licenses/gpl.txt", "http://www.opensource.org/licenses/gpl-license.php",
+                                "http://www.gnu.org/copyleft/gpl.html"]
+
+	## identifiers specifically for GPLv2
+	licenseidentifiers['GPLv2'] = ["http://gnu.org/licenses/gpl-2.0.html", "http://www.gnu.org/licenses/old-licenses/gpl-2.0.html"]
+
+	## identifiers specifically for LGPLv2.1
+	licenseidentifiers['LGPLv2.1'] = ["http://gnu.org/licenses/old-licenses/lgpl-2.1.html"]
+
+	## identifiers specifically for Apache 2.0
+	licenseidentifiers['Apache2.0'] = ["http://www.apache.org/licenses/LICENSE-2.0", "http://opensource.org/licenses/apache2.0.php"]
+
+	## identifiers for MPL license
+	licenseidentifiers['MPL'] = ["http://www.mozilla.org/MPL/"]
+
+	## identifiers for MIT license
+	licenseidentifiers['MIT'] = ["http://www.opensource.org/licenses/mit-license.php"]
+
+	## identifiers for BSD license
+	licenseidentifiers['BSD'] = ["http://www.opensource.org/licenses/bsd-license.php"]
+
+	## identifiers specifically for OpenOffice
+	licenseidentifiers['OpenOffice'] = ["http://www.openoffice.org/license.html"]
+
+	## identifiers specifically for BitTorrent
+	licenseidentifiers['BitTorrent'] = ["http://www.bittorrent.com/license/"]
+
+	## identifiers specifically for Tizen
+	licenseidentifiers['Tizen'] = ["http://www.tizenopensource.org/license"]
+
+	## identifiers specifically for OpenSSL
+	licenseidentifiers['OpenSSL'] = ["http://www.openssl.org/source/license.html"]
+
+	## identifiers specifically for Boost
+	licenseidentifiers['Boost'] = ["http://www.boost.org/LICENSE_1_0.txt", "http://pocoproject.org/license.html"]
+
+	## identifiers specifically for zlib
+	licenseidentifiers['zlib'] = ["http://www.zlib.net/zlib_license.html"]
+
+	## identifiers specifically for jQuery
+	licenseidentifiers['jQuery'] = ["http://jquery.org/license"]
+
+	## identifiers specifically for libxml
+	licenseidentifiers['libxml'] = ["http://xmlsoft.org/FAQ.html#License"]
+
+	## identifiers specifically for ICU
+	licenseidentifiers['ICU'] = ["http://source.icu-project.org/repos/icu/icu/trunk/license.html"]
+
+	licenseresults = genericSearch(path, licenseidentifiers, blacklist)
+
+	if licenseresults != None:
+		return (['licenses'], licenseresults)
 	else:
 		return None
 
@@ -382,28 +405,32 @@ def licensesPrettyPrint(res, root, envvars=None):
 ## Some of the URLs of the forges no longer work or are redirected, but they
 ## might still pop up in binaries.
 def scanForges(path, tags, blacklist=[], envvars=None):
-	results = {}
-	if genericSearch(path, ["sourceforge.net"], blacklist):
-		results['sourceforge.net'] = True
-	if genericSearch(path, ["http://cvs.freedesktop.org/", "http://cgit.freedesktop.org/"], blacklist):
-		results['freedesktop.org'] = True
-	if genericSearch(path, ["code.google.com", "googlecode.com"], blacklist):
-		results['code.google.com'] = True
-	if genericSearch(path, ["savannah.gnu.org/"], blacklist):
-		results['savannah.gnu.org'] = True
-	if genericSearch(path, ["github.com"], blacklist):
-		results['github.com'] = True
-	if genericSearch(path, ["bitbucket.org"], blacklist):
-		results['bitbucket.org'] = True
-	if genericSearch(path, ["tigris.org"], blacklist):
-		results['tigris.org'] = True
-	if genericSearch(path, ["http://svn.apache.org/"], blacklist):
-		results['svn.apache.org'] = True
+	forgeidentifiers = {}
+
+	forgeidentifiers['sourceforge.net'] = ["sourceforge.net"]
+
+	forgeidentifiers['freedesktop.org'] = ["http://cvs.freedesktop.org/", "http://cgit.freedesktop.org/"]
+
+	forgeidentifiers['code.google.com'] = ["code.google.com", "googlecode.com"]
+
+	forgeidentifiers['savannah.gnu.org'] = ["savannah.gnu.org/"]
+
+	forgeidentifiers['github.com'] = ["github.com"]
+
+	forgeidentifiers['bitbucket.org'] = ["bitbucket.org"]
+
+	forgeidentifiers['tigris.org'] = ["tigris.org"]
+
+	forgeidentifiers['svn.apache.org'] = ["http://svn.apache.org/"]
+
 	## various gits:
 	## http://git.fedoraproject.org/git/
 	## https://fedorahosted.org/
-	if results != {}:
-		return (['forges'], results)
+
+	forgeresults = genericSearch(path, forgeidentifiers, blacklist)
+
+	if forgeresults != {}:
+		return (['forges'], forgeresults)
 	else:
 		return None
 
