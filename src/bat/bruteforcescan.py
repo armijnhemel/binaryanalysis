@@ -440,6 +440,11 @@ def readconfig(config):
 			except:
 				batconf['debug'] = False
 			try:
+				debugphases = config.get(section, 'debugphases')
+				batconf['debugphases'] = debugphases.split(':')
+			except:
+				batconf['debugphases'] = []
+			try:
 				outputlite = config.get(section, 'outputlite')
 				if outputlite == 'yes':
 					batconf['outputlite'] = True
@@ -680,6 +685,7 @@ def runscan(scans, scan_binary):
 	scantempdir = "%s/data" % (topleveldir,)
 	shutil.copy(scan_binary, scantempdir)
 	debug = scans['batconfig']['debug']
+	debugphases = scans['batconfig']['debugphases']
 
 	magicscans = []
 	for k in ["prerunscans", "unpackscans", "programscans", "postrunscans"]:
@@ -698,7 +704,14 @@ def runscan(scans, scan_binary):
 	unpackreports_tmp = []
 	unpackreports = {}
 
-	scantasks = [(scantempdir, os.path.basename(scan_binary), scans['unpackscans'], scans['prerunscans'], magicscans, len(scantempdir), scantempdir, debug)]
+	if debug:
+		tmpdebug = True
+		if debugphases != []:
+			if not ('prerun' in debugphases or 'unpack' in debugphases):
+				tmpdebug = False
+		scantasks = [(scantempdir, os.path.basename(scan_binary), scans['unpackscans'], scans['prerunscans'], magicscans, len(scantempdir), scantempdir, tmpdebug)]
+	else:
+		scantasks = [(scantempdir, os.path.basename(scan_binary), scans['unpackscans'], scans['prerunscans'], magicscans, len(scantempdir), scantempdir, debug)]
 
 	## Use multithreading to speed up scanning. Sometimes we hit http://bugs.python.org/issue9207
 	## Threading can be configured in the configuration file, but
@@ -711,11 +724,19 @@ def runscan(scans, scan_binary):
 	## not be run in parallel (which will be for the whole category of scans) it is
 	## possible to have partial parallel scanning.
 
-	if scans['batconfig']['multiprocessing'] and not debug:
+	parallel = True
+	if scans['batconfig']['multiprocessing']:
 		if False in map(lambda x: x['parallel'], scans['unpackscans'] + scans['prerunscans']):
-			pool = multiprocessing.Pool(processes=1)
+			parallel = False
+	if debug:
+		if debugphases == []:
+			parallel = False
 		else:
-			pool = multiprocessing.Pool()
+			if 'unpack' in debugphases or 'prerun' in debugphases:
+				parallel = False
+
+	if parallel:
+		pool = multiprocessing.Pool()
 	else:
 		pool = multiprocessing.Pool(processes=1)
 
@@ -798,7 +819,14 @@ def runscan(scans, scan_binary):
 				unpackreports[i]['tags'] = list(set(unpackreports[i]['tags'] + tagdict[unpacksha256]))
 
 	if scans['aggregatescans'] != []:
-		aggregatescan(unpackreports, scans, scantempdir, topleveldir, os.path.basename(scan_binary), debug)
+		if debug:
+			tmpdebug = True
+			if debugphases != []:
+				if not 'aggregate' in debugphases:
+					tmpdebug = False
+			aggregatescan(unpackreports, scans, scantempdir, topleveldir, os.path.basename(scan_binary), tmpdebug)
+		else:
+			aggregatescan(unpackreports, scans, scantempdir, topleveldir, os.path.basename(scan_binary), debug)
 
 	## run postrunscans here, again in parallel, if needed/wanted
 	## These scans typically only have a few side effects, but don't change
