@@ -1132,7 +1132,7 @@ def unpackRomfs(filename, offset, tempdir=None, unpacktempdir=None):
 	## temporary dir to unpack stuff in
 	tmpdir2 = tempfile.mkdtemp(dir=unpacktempdir)
 
-	p = subprocess.Popen(['bat-romfsck', '-x', tmpdir2, tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['bat-romfsck', '-d', tmpdir2, '-b', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.unlink(tmpfile[1])
