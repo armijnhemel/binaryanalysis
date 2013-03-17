@@ -48,9 +48,6 @@ ranking:
 * use clonedb information for variable names, field names, and so on
 * use information from special ELF sections from Linux kernels that are distributed as ELF files, such as Fedora's kernels, or Linux kernel modules: __ksymtab + friends and .symtab
 
-bat-extratools:
-* add patches for CVE-2012-4024 for unsquashfs42
-
 busybox scanning:
 * clean up finding ranges of applets in extract_configuration. It should be possible to do this less kludgy.
 
@@ -64,9 +61,7 @@ misc:
 * expand "debug", add per phase debug
 * add support for ignoring some file types/extensions completely
 * add configuration option to set temporary directory prefix for all scans
-* check whether or not squashfs 4.2 support is necessary. Fedora seems to have bumped to 4.2 and uses all available compressions.
-* prevent infinite looping in variants of unsquashfs
-* change invocation of bat-romfsck
+* check whether or not squashfs 4.2 support is necessary. Fedora seems to have bumped to 4.2 and uses all available compressions. If it is needed add patches for CVE-2012-4024 for unsquashfs42.
 
 BOTTLENECKS:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.

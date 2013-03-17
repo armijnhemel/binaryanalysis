@@ -1,3 +1,9 @@
+2013-03-17
+* expand picture generation in findlibs.py, does not yet take WEAK symbols
+into account
+* prevent infinite looping in Broadcom variant of unsquashfs
+* change default parameters for bat-romfsck
+
 2013-03-16
 * store kernel symbols (exported with EXPORT_SYMBOL*) as 'kernelsymbol'
 instead of 'variable'
