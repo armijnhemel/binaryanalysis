@@ -1869,7 +1869,8 @@ def unpackGzip(filename, offset, tempdir=None):
 		os.unlink(tmpfile[1])
 		return (tmpdir, 2)
 	os.unlink(tmpfile[1])
-	return (tmpdir, filesizeoffset + 4)
+	## to calculate the size, subtract the offset
+	return (tmpdir, filesizeoffset + 4 - offset)
 
 def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	if not offsets.has_key('gzip'):
@@ -1891,7 +1892,7 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 			diroffsets.append((gzipres, offset, gzipsize))
 			blacklist.append((offset, offset + gzipsize))
 			counter = counter + 1
-			if offset == 0 and (offset+gzipsize == os.stat(filename).st_size):
+			if offset == 0 and (gzipsize == os.stat(filename).st_size):
 				newtags.append('compressed')
 				newtags.append('gzip')
 		else:
