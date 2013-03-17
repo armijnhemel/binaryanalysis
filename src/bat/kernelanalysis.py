@@ -128,6 +128,28 @@ def findSysfs(lines):
 def findRedBoot(lines):
 	return lines.find("No RedBoot partition table detected in %s")
 
+## extract the kernel version from the module
+## TODO: merge with module license extraction
+def analyseModuleVersion(path, tags, blacklist=[], envvars=[]):
+	## TODO: refactor
+	if not "relocatable" in ms.file(path):
+		return None
+	## 2.6 and later Linux kernel
+	p = subprocess.Popen(['/sbin/modinfo', "-F", "vermagic", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		return None
+	if stanout == "":
+		## 2.4 kernel
+		p = subprocess.Popen(['/sbin/modinfo', "-F", "kernel_version", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			return None
+		if stanout == "":
+			return (['modulekernelversion'], stanout.split()[0])
+	else:
+		return (['modulekernelversion'], stanout.split()[0])
+
 ## analyse a kernel module. Requires that the modinfo program from module-init-tools has been installed
 def analyseModuleLicense(path, tags, blacklist=[], envvars=[]):
 	if not "relocatable" in ms.file(path):
