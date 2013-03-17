@@ -441,7 +441,10 @@ def readconfig(config):
 				batconf['debug'] = False
 			try:
 				debugphases = config.get(section, 'debugphases')
-				batconf['debugphases'] = debugphases.split(':')
+				if debugphases.strip() == "":
+					batconf['debugphases'] = []
+				else:
+					batconf['debugphases'] = debugphases.split(':')
 			except:
 				batconf['debugphases'] = []
 			try:
@@ -704,14 +707,13 @@ def runscan(scans, scan_binary):
 	unpackreports_tmp = []
 	unpackreports = {}
 
+	tmpdebug = False
 	if debug:
 		tmpdebug = True
 		if debugphases != []:
 			if not ('prerun' in debugphases or 'unpack' in debugphases):
 				tmpdebug = False
-		scantasks = [(scantempdir, os.path.basename(scan_binary), scans['unpackscans'], scans['prerunscans'], magicscans, len(scantempdir), scantempdir, tmpdebug)]
-	else:
-		scantasks = [(scantempdir, os.path.basename(scan_binary), scans['unpackscans'], scans['prerunscans'], magicscans, len(scantempdir), scantempdir, debug)]
+	scantasks = [(scantempdir, os.path.basename(scan_binary), scans['unpackscans'], scans['prerunscans'], magicscans, len(scantempdir), scantempdir, tmpdebug)]
 
 	## Use multithreading to speed up scanning. Sometimes we hit http://bugs.python.org/issue9207
 	## Threading can be configured in the configuration file, but
@@ -734,7 +736,6 @@ def runscan(scans, scan_binary):
 		else:
 			if 'unpack' in debugphases or 'prerun' in debugphases:
 				parallel = False
-
 	if parallel:
 		pool = multiprocessing.Pool()
 	else:
@@ -783,13 +784,26 @@ def runscan(scans, scan_binary):
 
 		## reverse sort on size: scan largest files first
 		leaftasks_tmp.sort(key=lambda x: x[-1], reverse=True)
-		leaftasks_tmp = map(lambda x: x[:2] + (filterScans(scans['programscans'], x[2]),) + x[2:-1] + (topleveldir, debug), leaftasks_tmp)
+		tmpdebug=False
+		if debug:
+			tmpdebug = True
+			if debugphases != []:
+				if not 'program' in debugphases:
+					tmpdebug = False
+		leaftasks_tmp = map(lambda x: x[:2] + (filterScans(scans['programscans'], x[2]),) + x[2:-1] + (topleveldir, tmpdebug), leaftasks_tmp)
 
-		if scans['batconfig']['multiprocessing'] and not debug:
+		parallel = True
+		if scans['batconfig']['multiprocessing']:
 			if False in map(lambda x: x['parallel'], scans['programscans']):
-				pool = multiprocessing.Pool(processes=1)
+				parallel = False
+		if debug:
+			if debugphases == []:
+				parallel = False
 			else:
-				pool = multiprocessing.Pool()
+				if 'program' in debugphases:
+					parallel = False
+		if parallel:
+			pool = multiprocessing.Pool()
 		else:
 			pool = multiprocessing.Pool(processes=1)
 
@@ -819,14 +833,13 @@ def runscan(scans, scan_binary):
 				unpackreports[i]['tags'] = list(set(unpackreports[i]['tags'] + tagdict[unpacksha256]))
 
 	if scans['aggregatescans'] != []:
+		tmpdebug=False
 		if debug:
 			tmpdebug = True
 			if debugphases != []:
 				if not 'aggregate' in debugphases:
 					tmpdebug = False
-			aggregatescan(unpackreports, scans, scantempdir, topleveldir, os.path.basename(scan_binary), tmpdebug)
-		else:
-			aggregatescan(unpackreports, scans, scantempdir, topleveldir, os.path.basename(scan_binary), debug)
+		aggregatescan(unpackreports, scans, scantempdir, topleveldir, os.path.basename(scan_binary), tmpdebug)
 
 	## run postrunscans here, again in parallel, if needed/wanted
 	## These scans typically only have a few side effects, but don't change
@@ -843,13 +856,26 @@ def runscan(scans, scan_binary):
 		for i in map(lambda x: x[len(scantempdir)+1:], sha256_tmp.values()):
 			## results might have been changed by aggregate scans, so check if it still exists
 			if unpackreports.has_key(i):
-				postrunscans.append((i, unpackreports[i], scans['postrunscans'], scantempdir, topleveldir, debug))
+				tmpdebug = False
+				if debug:
+					tmpdebug = True
+					if debugphases != []:
+						if not 'postrun' in debugphases:
+							tmpdebug = False
+				postrunscans.append((i, unpackreports[i], scans['postrunscans'], scantempdir, topleveldir, tmpdebug))
 
-		if scans['batconfig']['multiprocessing'] and not debug:
+		parallel = True
+		if scans['batconfig']['multiprocessing']:
 			if False in map(lambda x: x['parallel'], scans['postrunscans']):
-				pool = multiprocessing.Pool(processes=1)
+				parallel = False
+		if debug:
+			if debugphases == []:
+				parallel = False
 			else:
-				pool = multiprocessing.Pool()
+				if 'postrun' in debugphases:
+					parallel = False
+		if parallel:
+			pool = multiprocessing.Pool()
 		else:
 			pool = multiprocessing.Pool(processes=1)
 

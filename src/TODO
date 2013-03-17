@@ -58,7 +58,6 @@ HTML generation:
 
 misc:
 * replay script to unpack firmware based on only the pickle with unpacking data. After this set the default of outputlite to 'yes'
-* expand "debug", add per phase debug
 * add support for ignoring some file types/extensions completely
 * add configuration option to set temporary directory prefix for all scans
 * check whether or not squashfs 4.2 support is necessary. Fedora seems to have bumped to 4.2 and uses all available compressions. If it is needed add patches for CVE-2012-4024 for unsquashfs42.

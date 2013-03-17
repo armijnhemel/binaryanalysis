@@ -6,6 +6,7 @@ into account
 * fix error in gzip unpacking: too much stuff was blacklisted if offset != 0
 * rewrite genericSearch so it only searches a file once for license and forge
 scanning
+* add per scanning phase debugging, still needs documentation
 
 2013-03-16
 * store kernel symbols (exported with EXPORT_SYMBOL*) as 'kernelsymbol'
