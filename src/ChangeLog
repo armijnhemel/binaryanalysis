@@ -3,6 +3,7 @@
 into account
 * prevent infinite looping in Broadcom variant of unsquashfs
 * change default parameters for bat-romfsck
+* fix error in gzip unpacking: too much stuff was blacklisted if offset != 0
 
 2013-03-16
 * store kernel symbols (exported with EXPORT_SYMBOL*) as 'kernelsymbol'

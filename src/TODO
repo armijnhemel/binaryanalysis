@@ -21,6 +21,7 @@ queueing system:
 
 aggregate scanning:
 * cleanup if we used one of the squashfs + lzma variants where we can't determine the size (is this still necessary?)
+* check if Linux kernel modules and version of Linux kernel(s) (if any) in a firmware match
 
 GUI:
 * rewrite to PyQt or PySide to take advantage of better rendering engine (webkit)
@@ -43,7 +44,6 @@ database creation:
 
 ranking:
 * use version information to report most likely licenses
-* report correlation between packages (strings, variable names, function names) to detect cloning in the database
 * deal with inner classes properly
 * use clonedb information for variable names, field names, and so on
 * use information from special ELF sections from Linux kernels that are distributed as ELF files, such as Fedora's kernels, or Linux kernel modules: __ksymtab + friends and .symtab
@@ -62,6 +62,8 @@ misc:
 * add support for ignoring some file types/extensions completely
 * add configuration option to set temporary directory prefix for all scans
 * check whether or not squashfs 4.2 support is necessary. Fedora seems to have bumped to 4.2 and uses all available compressions. If it is needed add patches for CVE-2012-4024 for unsquashfs42.
+* add piecharts/reports per directory that summarise what is inside a directory (recursively)
+* add reporting for duplicate files that uses results from findduplicates.py
 
 BOTTLENECKS:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
