@@ -55,7 +55,8 @@ def extractfromelf((path, filename)):
 		## only store functions and objects
 		if functionstrings[3] != 'FUNC' and functionstrings[3] != 'IFUNC' and functionstrings[3] != 'OBJECT':
 			continue
-		## store local functions
+		## store local functions and variables
+		## TODO: store WEAK symbols separately
 		elif functionstrings[6] != 'UND':
 			if functionstrings[3] == 'FUNC' or functionstrings[3] == 'IFUNC':
 				funcname = functionstrings[7].split('@')[0]
@@ -373,15 +374,22 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 									found = True
 									break
 							if not found:
-								#print >>sys.stderr, "CONFLICT", r, l, possiblesolutions
-								pass
-								## TODO: there are multiple files that can satisfy this
-								## dependency
+								## there are multiple files that can satisfy this dependency
 								## 1. check if the files are identical (checksum)
 								## 2. if identical, check for soname and choose the one
 								## of which the name matches
 								## 3. check if the files that implement the same thing are
 								## libs or executables. Prefer libs.
+								if len(list(set(map(lambda x: unpackreports[x]['sha256'], funcstolibs[r])))) == 1:
+									for l in funcstolibs[r]:
+										if sonames.has_key(os.path.basename(l)):
+											found = True
+											possiblesolutions.append(l)
+											break
+									if not found:
+										pass
+								else:
+									pass
 				if possiblesolutions != []:
 					#print >>sys.stderr, "POSSIBLE LIBS TO SATISFY CONDITIONS", i, list(set(possiblesolutions))
 					possiblyusedlibsperfile[i] = list(set(possiblesolutions))
