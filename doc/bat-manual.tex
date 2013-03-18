@@ -343,6 +343,21 @@ used as follows:
 tempdir = /ssd/tmp
 \end{verbatim}
 
+To assist in debugging and finding errors in scans of BAT there are two
+settings: \texttt{debug} and \texttt{debugphases}. The setting \texttt{debug}
+can be used to enable and disable debugging. If set multiprocessing will be
+disabled and information about which file is scanned and which method is run
+will be printed on standard error. If specified without \texttt{debugphases}
+this will apply to all scan phases. The \texttt{debugphases} parameter can be
+used to limit this behaviour to just one or a few phases. The other phases will
+behave normally. For example, this will enable debugging, but just for the
+program scans and aggregate scans:
+
+\begin{verbatim}
+debug = yes
+debugphases = program:aggregate
+\end{verbatim}
+
 The other global section is \texttt{viewer}. This section is specific for the
 graphical frontend and is not used in any other parts of BAT and might be moved
 to a separate configuration file in a future version of BAT.
@@ -660,9 +675,9 @@ corrected.
 compressed files and file systems.
 \item \texttt{generatehexdump.py} and \texttt{images.py} generate textual and
 graphical representations of the input files.
-\item \texttt{generatereports.py}, \texttt{generateimages.py} and
-\texttt{piecharts.py} generate textual and graphical representations of results
-of the analysis.
+\item \texttt{generatereports.py}, \texttt{generateimages.py},
+\texttt{guireport.py} and \texttt{piecharts.py} generate textual and graphical
+representations of results of the analysis.
 \item \texttt{jffs2.py} has code specific to handling JFFS2 file systems.
 \item \texttt{kernelanalysis.py} includes code to extract information from
 Linux kernel images and Linux kernel modules.
