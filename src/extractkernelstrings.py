@@ -39,12 +39,6 @@ bugtrapexpr = re.compile("BUG_TRAP\s*\(([\w\s\.:<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\
 funexprs = []
 funexprs.append(re.compile("(?:static|extern) (?:\w+\s)+\*?\s*(\w+)\(", re.MULTILINE))
 
-## These can be extracted with ctags and are already stored in the database because they are extracted
-## with batchextractprogramstrings.py
-#symbolexprs = []
-#symbolexprs.append(re.compile("EXPORT_SYMBOL\s*\(([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\\\]+)", re.MULTILINE))
-#symbolexprs.append(re.compile("EXPORT_SYMBOL_GPL\s*\(([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\\\]+)", re.MULTILINE))
-
 def extractkernelstrings(kerneldir, sqldb):
 	kerneldirlen = len(kerneldir)+1
 	osgen = os.walk(kerneldir)
@@ -79,7 +73,7 @@ def extractkernelstrings(kerneldir, sqldb):
 				elif 'COPYING' in p:
 					continue
 				## right now we are just interested in C/C++/assembler files
-                                if (p_nocase.endswith('.c') or p_nocase.endswith('.h') or p_nocase.endswith('.cpp') or p_nocase.endswith('.cc') or p_nocase.endswith('.hh') or p_nocase.endswith('.cxx') or p_nocase.endswith('.c++') or p_nocase.endswith('.hpp') or p_nocase.endswith('.hxx') or p_nocase.endswith('.S')):
+                                if (p_nocase.endswith('.c') or p_nocase.endswith('.h') or p_nocase.endswith('.cpp') or p_nocase.endswith('.cc') or p_nocase.endswith('.hh') or p_nocase.endswith('.cxx') or p_nocase.endswith('.c++') or p_nocase.endswith('.hpp') or p_nocase.endswith('.hxx') or p_nocase.endswith('.s')):
 					source = open("%s/%s" % (i[0], p)).read()
 					searchresults = []
 
