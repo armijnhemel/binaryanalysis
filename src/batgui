@@ -8,7 +8,6 @@
 
 '''
 This is a program for viewing results of the Binary Analysis Tool.
-In the future it will also allow for a more interactive way if scanning.
 '''
 
 import sys, os, string, gzip, cPickle, bz2, tarfile, tempfile, copy
