@@ -64,6 +64,8 @@ misc:
 * add piecharts/reports per directory that summarise what is inside a directory (recursively, perhaps only if something was unpacked)
 * add reporting for duplicate files that uses results from findduplicates.py
 * add per scan debug to allow better custom debugging
+* test on latest OpenSUSE
+* test on latest Ubuntu, make sure configurations/dependencies work
 
 BOTTLENECKS:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
