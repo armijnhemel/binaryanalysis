@@ -33,6 +33,10 @@ def main(argv):
 		except Exception, e:
 			# oops, something went wrong
 			print >>sys.stderr, e
+		## see if dfsg is in the package name, since Debian tends to do this
+		if 'dfsg' in unpacks[0]:
+			print >>sys.stderr, "DFSG ERROR", unpackfile.strip()
+			sys.stderr.flush()
 		if prev_split == None:
 			prev_split = unpacks
 			continue
