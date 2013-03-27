@@ -290,7 +290,10 @@ def scanPDF(path, tags, blacklist=[], envvars=None):
 			pdfinfo = {}
 			pdflines = stanout.rstrip().split("\n")
 			for pdfline in pdflines:
-				(tag, value) = pdfline.split(":", 1)
+				pdfsplit = pdfline.split(":", 1)
+				if len(pdfsplit) != 2:
+					continue
+				(tag, value) = pdfsplit
 				if tag == "Title":
 					pdfinfo['title'] = value.strip()
 				if tag == "Author":
