@@ -1856,4 +1856,23 @@ Of course, not generating the pictures for individual \texttt{.class} files
 means that some detail might be lost, especially if there are \texttt{.class}
 files that contain some unexpected results.
 
+\subsection{Disable \texttt{tmp} on tmpfs}
+
+Some Linux distributions (most notably Fedora 18) have standardized on storing
+the \texttt{/tmp} file system on tmpfs. This means that part of the system
+memory is used for the \texttt{/tmp} file system. This could influence BAT in
+two ways:
+
+\begin{enumerate}
+\item less memory available for processing
+\item BAT unpacks to \texttt{/tmp} by default, unless configured differently
+\end{enumerate}
+
+There are various solutions, apart from adding more memory to the machine:
+
+\begin{itemize}
+\item configura BAT to use another path for unpacking than \texttt{/tmp}
+\item disable \texttt{tmp} on tmpfs
+\end{itemize}
+
 \end{document}
