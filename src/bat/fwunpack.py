@@ -729,8 +729,12 @@ def unpackCab(filename, offset, tempdir=None):
 		## remove them
 		rmfiles = os.listdir(tmpdir)
 		if rmfiles != []:
+			## TODO: This does not yet correctly process symlinks links
 			for rmfile in rmfiles:
-				os.unlink("%s/%s" % (tmpdir, rmfile))
+				try:
+					shutil.rmtree(os.path.join(tmpdir, rmfile))
+				except:
+					os.remove(os.path.join(tmpdir, rmfile))
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
