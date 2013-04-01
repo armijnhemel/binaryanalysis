@@ -701,10 +701,13 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 								cresults.append((csplit[0], int(csplit[2]), 'kernelsymbol'))
 					else:
 						if csplit[1] == 'variable':
-							if "EXPORT_SYMBOL" in csplit[4]:
-								cresults.append((csplit[0], int(csplit[2]), 'kernelsymbol'))
-							else:
+							if len(csplit) < 5:
 								cresults.append((csplit[0], int(csplit[2]), 'variable'))
+							else:
+								if "EXPORT_SYMBOL" in csplit[4]:
+									cresults.append((csplit[0], int(csplit[2]), 'kernelsymbol'))
+								else:
+									cresults.append((csplit[0], int(csplit[2]), 'variable'))
 						elif csplit[1] == 'function':
 							cresults.append((csplit[0], int(csplit[2]), 'function'))
 				if language == 'Java':
