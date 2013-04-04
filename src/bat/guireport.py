@@ -77,7 +77,8 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, envvars={}):
 	if leafreports.has_key('kernelmodulelicense'):
 		tablerows = tablerows + tablerowtemplate % ("Kernel module license", leafreports['kernelmodulelicense'])
 	if leafreports.has_key('libs'):
-		tablerows = tablerows + tablerowtemplate % ("Declared shared libraries", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['libs']))
+		if leafreports['libs'] != []:
+			tablerows = tablerows + tablerowtemplate % ("Declared shared libraries", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['libs']))
 
 	if leafreports.has_key('elfused'):
 		if leafreports['elfused'] != []:
@@ -90,9 +91,12 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, envvars={}):
 		if leafreports['elfusedby'] != []:
 			tablerows = tablerows + tablerowtemplate % ("Used by", reduce(lambda x, y: x + ", " + y, leafreports['elfusedby']))
 	if leafreports.has_key('licenses'):
-		tablerows = tablerows + tablerowtemplate % ("Licenses/license families", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['licenses']))
+		if leafreports['licenses'] != []:
+			tablerows = tablerows + tablerowtemplate % ("Licenses/license families", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['licenses']))
 	if leafreports.has_key('forges'):
-		tablerows = tablerows + tablerowtemplate % ("Forges", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['forges']))
+		## TODO better check for validity
+		if leafreports['forges'] != None:
+			tablerows = tablerows + tablerowtemplate % ("Forges", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['forges']))
 	if leafreports.has_key('redboot'):
 		tablerows = tablerows + tablerowtemplate % ("Bootloader", "RedBoot")
 	for j in ['dproxy', 'ez-ipupdate', 'iproute', 'iptables', 'libusb', 'loadlin', 'vsftpd', 'wireless-tools', 'wpa-supplicant']:
@@ -221,7 +225,8 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, envvars={}):
 	elffooter = "</table></body></html>"
 	tablerows = ""
 	if leafreports.has_key('libs'):
-		tablerows = tablerows + tablerowtemplate % ("Declared shared libraries", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['libs']))
+		if leafreports['libs'] != []:
+			tablerows = tablerows + tablerowtemplate % ("Declared shared libraries", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['libs']))
 	if leafreports.has_key('elfused'):
 		if leafreports['elfused'] != []:
 			tablerows = tablerows + tablerowtemplate % ("Used shared libraries", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['elfused']))
