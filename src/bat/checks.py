@@ -432,7 +432,7 @@ def scanForges(path, tags, blacklist=[], envvars=None):
 
 	forgeresults = genericSearch(path, forgeidentifiers, blacklist)
 
-	if forgeresults != {}:
+	if forgeresults != None:
 		return (['forges'], forgeresults)
 	else:
 		return None
