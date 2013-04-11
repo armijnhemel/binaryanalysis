@@ -1,3 +1,9 @@
+2013-04-10
+* fix return value for forges
+
+2013-04-02
+* create index for origin in processed
+
 2013-04-01
 * fix error in batchextractprogramstrings in variable name extraction.
 * remove temporary directories that might have already been extracted by

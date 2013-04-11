@@ -94,8 +94,7 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, envvars={}):
 		if leafreports['licenses'] != []:
 			tablerows = tablerows + tablerowtemplate % ("Licenses/license families", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['licenses']))
 	if leafreports.has_key('forges'):
-		## TODO better check for validity
-		if leafreports['forges'] != None:
+		if leafreports['forges'] != []:
 			tablerows = tablerows + tablerowtemplate % ("Forges", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['forges']))
 	if leafreports.has_key('redboot'):
 		tablerows = tablerows + tablerowtemplate % ("Bootloader", "RedBoot")
