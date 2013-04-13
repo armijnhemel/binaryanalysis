@@ -37,6 +37,8 @@ def extractfromelf((path, filename)):
 	localfuncs = []
 	remotevars = []
 	localvars = []
+	weakvars = []
+	weakfuncs = []
 	sonames = []
 	elftype = ""
 
@@ -228,7 +230,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 	dupes = {}
 	for i in elffiles:
 		## per ELF file keep lists of used libraries and possibly used libraries.
-		## The later is kept if which libraries were used needs to be guessed.
+		## The later is searched if it needs to be guessed which libraries were used.
 		usedlibs = []
 		possiblyused = []
 
@@ -254,7 +256,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 					filtersquash = []
 
 					if not squashedelffiles.has_key(l):
-						## No library (or libraries ) with the name that has been declared
+						## No library (or libraries) with the name that has been declared
 						## in the ELF file can be found. It could be because the
 						## declared name is actually a symbolic link that could, or could
 						## not be present on the system.
@@ -471,7 +473,6 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 					continue
 			else:
 				if len(squashedelffiles[d]) != 1:
-					#print >>sys.stderr, "WHAAAA", d, squashedelffiles[d]
 					pass
 				else:
 					squashedgraph[i].append(squashedelffiles[d][0])
