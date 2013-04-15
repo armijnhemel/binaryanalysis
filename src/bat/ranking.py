@@ -192,7 +192,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 
 	## Only consider strings that are len(stringcutoff) or larger
 	stringcutoff = 5
-	## we want to use extra information for a few file types
+	## use extra information for a few file types
 	## * ELF files
 	## * bFLT files
 	## * Java class files + Dalvik VM files
@@ -213,9 +213,8 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 	elif "Dalvik dex file" in mstype:
 		language = 'Java'
 	else:
-		## first check the filename extension. If it is .js we will treat it as
-		## JavaScript.
-		## Else we will just consider it as 'C'.
+		## first check the filename extension. If it is .js treat it as
+		## JavaScript, else just consider it as 'C'.
 		language='C'
 
 	## special var to indicate whether or not the file is a Linux kernel
@@ -288,23 +287,23 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 		dynamicRes = {}
 		variablepvs = {}
 		if language == 'C':
-			## For ELF binaries we can concentrate on just a few sections of the
+			## For ELF binaries concentrate on just a few sections of the
 			## binary, namely the .rodata and .data sections.
-			## The .rodata section might also contain other data, so we can expect
-			## false positives until we have found a way to get only the string
+			## The .rodata section might also contain other data, so expect
+			## false positives until there is a better way to get only the string
 			## constants :-(
-
-        		if "ELF" in mstype and blacklist == []:
+        		if "ELF" in mstype:
 				dynres = extractDynamic(path, scanenv, rankingfull, clones)
 				if dynres != None:
 					(dynamicRes,variablepvs) = dynres
 					variablepvs['language'] = 'C'
 				elfscanfiles = []
-				## first we need to determine the size and offset of .data and .rodata and carve it from the file
+				## first determine the size and offset of .data and .rodata and carve it from the file
         			p = subprocess.Popen(['readelf', '-SW', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         			(stanout, stanerr) = p.communicate()
-				## check if we actually get sections. On some systems the
+				## check if there actually are sections. On some systems the
 				## binary is somewhat corrupted and does not have section headers
+				## TODO: localisation fixes
 				if "There are no sections in this file." in stanout:
 					p = subprocess.Popen(['strings', '-n', str(stringcutoff), scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 					(stanout, stanerr) = p.communicate()
@@ -329,16 +328,23 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 									elfoffset = int(elfsplits[3], 16)
 									elfsize = int(elfsplits[4], 16)
 									elftmp = tempfile.mkstemp(dir=unpacktempdir,suffix=section)
-									datafile.seek(elfoffset)
-									data = datafile.read(elfsize)
-									os.write(elftmp[0], data)
-									os.fdopen(elftmp[0]).close()
-									elfscanfiles.append(elftmp[1])
+									unpackelf = True
+									if blacklist != []:
+										if extractor.inblacklist(elfoffset, blacklist) != None:
+											unpackelf = False
+										if extractor.inblacklist(elfoffset+elfoffset, blacklist) != None:
+											unpackelf = False
+									if unpackelf:
+										datafile.seek(elfoffset)
+										data = datafile.read(elfsize)
+										os.write(elftmp[0], data)
+										os.fdopen(elftmp[0]).close()
+										elfscanfiles.append(elftmp[1])
 					datafile.close()
 
 					for i in elfscanfiles:
 						## run strings to get rid of weird characters that we don't even want to scan
-						## TODO: check if we need -Tbinary or not
+						## TODO: check if -Tbinary is needed or not
         					p = subprocess.Popen(['strings', '-n', str(stringcutoff), i], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         					(stanout, stanerr) = p.communicate()
 
@@ -363,7 +369,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 					return None
 				lines = stanout.split("\n")
 		elif language == 'Java':
-			## TODO: check here if we have caches already or not. If there are none it makes
+			## TODO: check here if there are caches already or not. If there are none it makes
 			## no sense to continue.
 			lines = []
 			## we really should think about whether or not we want to do this per class file,
@@ -377,7 +383,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 					if blacklist != []:
 						## cleanup the tempfile
 						os.unlink(tmpfile[1])
-				## we process each line of stanout, looking for lines that look like this:
+				## process each line of stanout, looking for lines that look like this:
 				## #13: String 45="/"
 				for l in stanout.split("\n"):
 					if re.match("#\d+: String \d+=\"", l) != None:
@@ -385,8 +391,8 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
         					if len(printstring) >= stringcutoff:
 							lines.append(printstring)
 			elif "Dalvik dex" in mstype and blacklist == []:
-				## Using dedexer http://dedexer.sourceforge.net/ we can extract information from Dalvik
-				## files then process each file in $tmpdir and search file for lines containing
+				## Using dedexer http://dedexer.sourceforge.net/ extract information from Dalvik
+				## files, then process each file in $tmpdir and search file for lines containing
 				## "const-string" and other things as well.
 				## alternatively, use code from here http://code.google.com/p/smali/
 				javameta = {'classes': [], 'methods': [], 'fields': [], 'sourcefiles': []}
@@ -473,11 +479,11 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 		res = extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, stringcutoff, language)
 		if res != None:
 			if blacklist != [] and not linuxkernel:
-				## we made a tempfile because of blacklisting, so cleanup
+				## a tempfile was made because of blacklisting, so cleanup
 				os.unlink(tmpfile[1])
 		else:
 			if blacklist != [] and not linuxkernel:
-				## we made a tempfile because of blacklisting, so cleanup
+				## a tempfile was made because of blacklisting, so cleanup
 				os.unlink(tmpfile[1])
 		return (['ranking'], (res, dynamicRes, variablepvs))
 
