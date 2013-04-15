@@ -1,3 +1,9 @@
+2013-04-15
+* handle blacklists in ELF files differently. This is for Linux kernels that
+are distributed as ELF files and have parts of the file blacklisted (initrd).
+By extracting sections and checking if only the sections are blacklisted the
+check can be more fine grained.
+
 2013-04-10
 * fix return value for forges
 
