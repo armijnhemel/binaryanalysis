@@ -584,6 +584,9 @@ class BatFrame(wx.Frame):
 
 			if self.unpackreports[j].has_key('tags'):
 				for t in self.unpackreports[j]['tags']:
+					if list(set(self.unpackreports[j]['tags']).intersection(set(self.filters))) != []:
+						ignore = True
+						continue
 					tagappend = u""
 					if tagsentities.has_key(t):
 						tagappend = tagsentities[t]
