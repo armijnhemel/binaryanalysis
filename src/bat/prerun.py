@@ -205,7 +205,11 @@ def verifyPNG(filename, tempdir=None, tags=[], offsets={}, envvars=None, unpackt
 	newtags = []
 	if not offsets.has_key('png'):
 		return newtags
+	if offsets['png'] == []:
+		return newtags
 	if not offsets.has_key('pngtrailer'):
+		return newtags
+	if offsets['pngtrailer'] == []:
 		return newtags
 	if not 0 in offsets['png']:
 		return newtags
