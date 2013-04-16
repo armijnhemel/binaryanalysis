@@ -1,3 +1,6 @@
+2013-04-16
+* make sure PNG check does not barf on broken PNG files
+
 2013-04-15
 * handle blacklists in ELF files differently. This is for Linux kernels that
 are distributed as ELF files and have parts of the file blacklisted (initrd).
