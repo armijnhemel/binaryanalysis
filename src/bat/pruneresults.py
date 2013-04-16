@@ -72,3 +72,19 @@ def pruneresults(unpackreports, scantempdir, topleveldir, envvars=None):
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue
 		rankingfiles.append(i)
+
+	for i in rankingfiles:
+		filehash = unpackreports[i]['sha256']
+		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+		leafreports = cPickle.load(leaf_file)
+		leaf_file.close()
+		if not leafreports.has_key('ranking'):
+			continue
+
+		(res, dynamicRes, variablepvs) = leafreports['ranking']
+
+		if res['reports'] != []:
+			for j in res['reports']:
+				(rank, packagename, uniquematches, percentage, packageversions, licenses) = j
+				if len(uniquematches) == 0:
+					continue
