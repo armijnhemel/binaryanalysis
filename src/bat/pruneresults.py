@@ -114,7 +114,12 @@ def pruneresults(unpackreports, scantempdir, topleveldir, envvars=None):
 					#print >>sys.stderr
 					#print >>sys.stderr, u[0], uniqueversions, filehash
 					#print >>sys.stderr
-				#print >>sys.stderr
 				if keeppackageversions != []:
 					print >>sys.stderr, "UNIQUE", packagename, keeppackageversions, candidates
-				#print >>sys.stderr
+				## Having a match for a single string is significant. If the version is also
+				## the only one that is left over in 'candidates' it is extremely likely that it
+				## is the right version (barring errors in the database).
+				## If there is more than one unique version, or it is not in 'candidates'
+				## then there is either a database error, a string extraction error (for ELF files
+				## sometimes bogus data is extracted, or the binary was made from modified source
+				## code (forward porting of patches, backporting of patches, etc.)
