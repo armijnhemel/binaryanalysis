@@ -1,3 +1,7 @@
+2013-04-18
+* update Ubuntu + Debian configuration
+* tagging 13.0
+
 2013-04-16
 * make sure PNG check does not barf on broken PNG files
 * fix unpacking of romfs
