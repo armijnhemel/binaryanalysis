@@ -50,11 +50,11 @@ def pruneresults(unpackreports, scantempdir, topleveldir, envvars=None):
 		## keep all versions
 		return
 	else:
-		keepversions = int(scanenv.get('BAT_KEEP_MAXIMUM_PERCENTAGE', 0))
-		if keepversions == 0:
+		keeppercentage = int(scanenv.get('BAT_KEEP_MAXIMUM_PERCENTAGE', 0))
+		if keeppercentage == 0:
 			## keep all versions
 			return
-		if keepversions >= 100:
+		if keeppercentage >= 100:
 			## keep all versions
 			return
 
@@ -85,6 +85,36 @@ def pruneresults(unpackreports, scantempdir, topleveldir, envvars=None):
 
 		if res['reports'] != []:
 			for j in res['reports']:
+				keeppackageversions = []
+				pruneversions = []
+				pvs = {}
 				(rank, packagename, uniquematches, percentage, packageversions, licenses) = j
 				if len(uniquematches) == 0:
 					continue
+				## the amount of versions is lower than the maximum amount that should be
+				## reported, so continue
+				if len(packageversions) < keepversions:
+					continue
+				candidates = set(packageversions)
+				#print >>sys.stderr, "CANDIDATES", packagename, candidates, filehash
+
+				for u in uniquematches:
+					## string = u[0]
+					## list of results = u[1]
+					## walk through each of the unique matches.
+					## Store which versions are used. If a certain match is only for
+					## a single version store it in 'keeppackageversions'
+					## u[1] : (checksum, version, line number, path)
+					## only 
+					uniqueversions = list(set(map(lambda x: x[1], u[1])))
+					if len(uniqueversions) == 1:
+						#print >>sys.stderr, "UNIQUE HIT", u[0], u[1]
+						keeppackageversions = list(set((keeppackageversions + uniqueversions)))
+					candidates = candidates.intersection(set(uniqueversions))
+					#print >>sys.stderr
+					#print >>sys.stderr, u[0], uniqueversions, filehash
+					#print >>sys.stderr
+				#print >>sys.stderr
+				if keeppackageversions != []:
+					print >>sys.stderr, "UNIQUE", packagename, keeppackageversions, candidates
+				#print >>sys.stderr
