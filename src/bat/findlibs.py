@@ -511,12 +511,15 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 					ppname = os.path.join(unpackreports[nodetext]['path'], unpackreports[nodetext]['name'])
 					tmpnode = pydot.Node(ppname)
 					elfgraph.add_node(tmpnode)
+					## declared but unused dependencies are represented by dashed blue lines
 					if not used:
 						elfgraph.add_edge(pydot.Edge(parentnode, tmpnode, style='dashed', color='blue'))
 					else:
 						if not declared:
+							## undeclared but used dependencies get a red solid line
 							elfgraph.add_edge(pydot.Edge(parentnode, tmpnode, color='red'))
 						else:
+							## other dependencies: solid black line
 							elfgraph.add_edge(pydot.Edge(parentnode, tmpnode))
 
 					if squashedgraph.has_key(nodetext):
