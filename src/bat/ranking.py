@@ -309,9 +309,6 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 					datafile.seek(0)
 					for s in st[3:]:
 						for section in [".data", ".rodata"]:
-							## TODO: if linuxkernel is set and blacklist != []
-							## see if there is an overlap with the blacklist (like CPIO
-							## initrd). If so, remove that from the section.
 							if section in s:
 								elfsplits = s[7:].split()
 								if elfsplits[0].startswith(section):
@@ -1755,3 +1752,7 @@ def xmlprettyprint(leafreports, root, envvars=None):
 					packagenode.appendChild(versionnode)
 		tmpnode.appendChild(functionnode)
 	return tmpnode
+
+## stub for method that makes sure that everything is set up properly
+def rankingsetup(envvars):
+	pass
