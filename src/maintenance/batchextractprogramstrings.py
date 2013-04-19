@@ -1012,7 +1012,7 @@ def main(argv):
 		c.execute('''create table if not exists extracted_name (sha256 text, name text, type text, language text, linenumber int)''')
 		c.execute('''create index if not exists name_checksum_index on extracted_name(sha256);''')
 		c.execute('''create index if not exists name_name_index on extracted_name(name)''')
-		c.execute('''create index if not exists name_name_index on extracted_name(type)''')
+		c.execute('''create index if not exists name_type_index on extracted_name(type)''')
 		c.execute('''create index if not exists name_language_index on extracted_name(language);''')
 		conn.commit()
 
