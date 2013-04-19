@@ -222,18 +222,8 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 	linuxkernel = False
 
 	if "elf" in tags:
-        	p = subprocess.Popen(['readelf', '-SW', path], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-        	(stanout, stanerr) = p.communicate()
-		if "There are no sections in this file." in stanout:
-			pass
-		else:
-			st = stanout.strip().split("\n")
-			for s in st[3:]:
-				if "__ksymtab_strings" in s:
-					## the file is a Linux kernel image. Ignore the black list.
-					## Any CPIO contents should be ignored later on though.
-					linuxkernel = True
-					break
+		if 'linuxkernel' in tags:
+			linuxkernel = True
 		scanfile = path
 
 	else:
@@ -293,7 +283,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 			## false positives until there is a better way to get only the string
 			## constants :-(
         		if "ELF" in mstype:
-				dynres = extractDynamic(path, scanenv, rankingfull, clones)
+				dynres = extractDynamic(path, scanenv, rankingfull, clones, linuxkernel)
 				if dynres != None:
 					(dynamicRes,variablepvs) = dynres
 					variablepvs['language'] = 'C'
@@ -836,7 +826,7 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 ## __ksymtab_strings.
 ## Any other packages should ignore variable names that come from the
 ## kernel.
-def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
+def extractDynamic(scanfile, scanenv, rankingfull, clones, linuxkernel, olddb=False):
 	dynamicRes = {}
 	variablepvs = {}
 
