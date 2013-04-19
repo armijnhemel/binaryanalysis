@@ -35,6 +35,9 @@ Java binaries based on function or method names takes an additional parameter:
 BAT_FUNCTIONNAMECACHE_$LANGUAGE :: location of database containing cached
                                    function names per package to reduce
                                    lookups
+
+BAT_KERNEL_CACHE :: location of database contain cached kernel symbols per
+                    package to reduce lookups
 '''
 
 import string, re, os, os.path, magic, sys, tempfile, shutil, copy
@@ -282,15 +285,19 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 			## The .rodata section might also contain other data, so expect
 			## false positives until there is a better way to get only the string
 			## constants :-(
-        		if "ELF" in mstype:
-				dynres = extractDynamic(path, scanenv, rankingfull, clones, linuxkernel)
-				if dynres != None:
-					(dynamicRes,variablepvs) = dynres
-					variablepvs['language'] = 'C'
+			if "ELF" in mstype:
+				if linuxkernel:
+					dynamicRes = {}
+					variablepvs = scankernelsymbols(scanfile, scanenv, rankingfull, unpacktempdir)
+				else:
+					dynres = extractDynamic(path, scanenv, rankingfull, clones)
+					if dynres != None:
+						(dynamicRes,variablepvs) = dynres
+				variablepvs['language'] = 'C'
 				elfscanfiles = []
 				## first determine the size and offset of .data and .rodata and carve it from the file
-        			p = subprocess.Popen(['readelf', '-SW', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-        			(stanout, stanerr) = p.communicate()
+				p = subprocess.Popen(['readelf', '-SW', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+				(stanout, stanerr) = p.communicate()
 				## check if there actually are sections. On some systems the
 				## binary is somewhat corrupted and does not have section headers
 				## TODO: localisation fixes
@@ -809,21 +816,131 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 	conn.close()
 	return variablepvs
 
+## Linux kernels that are stored as statically linked ELF files and Linux kernel
+## modules often have a section __ksymtab_strings. This section contains variables
+## that are exported by the kernel using the EXPORT_SYMBOL* macros in the Linux
+## kernel source tree.
+def scankernelsymbols(scanfile, scanenv, rankingfull, unpacktempdir):
+	p = subprocess.Popen(['readelf', '-SW', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	st = stanout.strip().split("\n")
+
+	elftmp = tempfile.mkstemp(dir=unpacktempdir, suffix=".ksymtab")
+	datafile = open(scanfile, 'rb')
+	datafile.seek(0)
+	for s in st[3:]:
+		if "__ksymtab_strings" in s:
+			elfsplits = s[7:].split()
+			if elfsplits[0].startswith("__ksymtab_strings"):
+				elfoffset = int(elfsplits[3], 16)
+				elfsize = int(elfsplits[4], 16)
+				datafile.seek(elfoffset)
+				data = datafile.read(elfsize)
+				os.write(elftmp[0], data)
+				os.fdopen(elftmp[0]).close()
+				break
+	datafile.close()
+	if os.stat(elftmp[1]).st_size == 0:
+		os.unlink(elftmp[1])
+		return {}
+
+	return {}
+
+	## TODO this needs a lot of work
+	masterdb = scanenv.get('BAT_DB')
+
+	## open the database containing function names that were extracted
+	## from source code.
+	conn = sqlite3.connect(masterdb)
+	## we have byte strings in our database, not utf-8 characters...I hope
+	conn.text_factory = str
+	c = conn.cursor()
+
+	variable_scan = True
+	if scanenv.has_key('BAT_KERNEL_CACHE'):
+		kernelcache = scanenv.get('BAT_KERNEL_CACHE')
+		## sanity checks to see if the database exists. If not, and rankingfull
+		## is set to True, there should be no result.
+		if rankingfull:
+			## If rankingfull is set the cache should exist. If it doesn't exist
+			## then something is horribly wrong.
+			if not os.path.exists(kernelcache):
+				variable_scan = False
+		else:
+			## The cache may, or may not, exist, but at least we're not
+			## counting on it to exist and it may be generated on the fly.
+			kernelcache = scanenv.get('BAT_KERNEL_CACHE')
+	else:
+		if rankingfull:
+			variable_scan = False
+
+	## first attach the functionname cache again. If there is no table for variables, but
+	## ranking_full is set, then don't scan variable names.
+	variable_scan = False
+	c.execute("attach ? as kernelcache", (kernelcache,))
+	res = c.execute("select * from kernelcache.sqlite_master where type='table' and name='kernelcache'").fetchall()
+	if res == []:
+		if not rankingfull:
+			## nothing in the cache and rankingfull is not set, so check if we have results.
+			res2 = c.execute("select * from sqlite_master where type='table' and name='extracted_name'").fetchall()
+			if res2 != []:
+				variable_scan = True
+				c.execute("create table if not exists kernelcache.kernelcache (varname text, package text)")
+				c.execute("create index if not exists kernelcache.kernelcache_index on kernelcache(varname)")
+				conn.commit()
+	else:
+		variable_scan = True
+	c.execute("detach kernelcache")
+
+	if variable_scan:
+		c.execute("attach ? as kernelcache", (funccache,))
+		vvs = {}
+		for v in variables:
+			res = c.execute("select distinct package from kernelcache where varname=?", (v,)).fetchall()
+			if res == []:
+				if rankingfull:
+					continue
+				else:
+					res = c.execute("select sha256,type,language from extracted_name where name=?", (v,)).fetchall()
+					if res != []:
+						for r in res:
+							if r[2] != 'C':
+								continue
+							if r[1] != 'kernelsymbol':
+								continue
+							pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
+							pvs = list(set(pvs + pv))
+			else:
+				pvs = map(lambda x: (x[0],0), res)
+
+			pvs_tmp = []
+			for r in pvs:
+				if clones.has_key(r[0]):
+					pvs_tmp.append((clones[r[0]],r[1]))
+				else:
+					pvs_tmp.append(r)
+			vvs[v] = pvs_tmp
+
+		vvs_rewrite = {}
+		for v in vvs.keys():
+			vvs_rewrite[v] = {}
+			for vs in vvs[v]:
+				(program, version) = vs
+				if not vvs_rewrite[v].has_key(program):
+					vvs_rewrite[v][program] = [version]
+				else:
+					vvs_rewrite[v][program] = list(set(vvs_rewrite[v][program] + [version]))
+		variablepvs['kernelvariables'] = vvs_rewrite
+		c.execute("detach kernelcache")
+	return {}
+
 ## From dynamically linked ELF files it is possible to extract the dynamic
 ## symbol table. This table lists the functions and variables which are needed
 ## from external libraries, but also lists local functions and variables.
 ## By searching a database that contains which function names and variable names
 ## can be found in which packages it is possible to identify which package was
 ## used.
-## Linux kernels that are stored as statically linked ELF files could have
-## a section __ksymtab_strings. This section contains variables that are
-## exported by the kernel using the EXPORT_SYMBOL* macros.
-## TODO: rewrite to scan not just dynamically linked files, but also to
-## scan statically linked ELF files, and to see if there is a section
-## __ksymtab_strings.
-## Any other packages should ignore variable names that come from the
-## kernel.
-def extractDynamic(scanfile, scanenv, rankingfull, clones, linuxkernel, olddb=False):
+def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 	dynamicRes = {}
 	variablepvs = {}
 
@@ -1753,6 +1870,7 @@ def xmlprettyprint(leafreports, root, envvars=None):
 		tmpnode.appendChild(functionnode)
 	return tmpnode
 
-## stub for method that makes sure that everything is set up properly
+## stub for method that makes sure that everything is set up properly and modifies
+## the environment
 def rankingsetup(envvars):
 	pass
