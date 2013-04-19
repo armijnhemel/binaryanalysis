@@ -547,6 +547,18 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, envvars=None, unpackt
 		newtags.append("dynamic")
 	if not "elf" in newtags:
 		newtags.append("elf")
+
+	## check whether or not it might be a Linux kernel file or module
+	p = subprocess.Popen(['readelf', '-SW', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if "There are no sections in this file." in stanout:
+		pass
+	else:
+		st = stanout.strip().split("\n")
+		for s in st[3:]:
+			if "__ksymtab_strings" in s:
+				newtags.append('linuxkernel')
+				break
 	return newtags
 
 ## simple helper method to verify if a file is a valid Java class file
