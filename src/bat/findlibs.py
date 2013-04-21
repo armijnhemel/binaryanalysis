@@ -37,8 +37,10 @@ def extractfromelf((path, filename)):
 	localfuncs = []
 	remotevars = []
 	localvars = []
-	weakvars = []
-	weakfuncs = []
+	weakremotevars = []
+	weakremotefuncs = []
+	weaklocalvars = []
+	weaklocalfuncs = []
 	sonames = []
 	elftype = ""
 
@@ -57,22 +59,33 @@ def extractfromelf((path, filename)):
 		## only store functions and objects
 		if functionstrings[3] != 'FUNC' and functionstrings[3] != 'IFUNC' and functionstrings[3] != 'OBJECT':
 			continue
-		## store local functions and variables
-		## TODO: store WEAK symbols separately
+		## store local functions and variables (normal and weak)
 		elif functionstrings[6] != 'UND':
 			if functionstrings[3] == 'FUNC' or functionstrings[3] == 'IFUNC':
 				funcname = functionstrings[7].split('@')[0]
-				localfuncs.append(funcname)
+				if functionstrings[4] == 'WEAK':
+					weaklocalfuncs.append(funcname)
+				else:
+					localfuncs.append(funcname)
 			elif functionstrings[3] == 'OBJECT' and functionstrings[6] != 'ABS':
-				if functionstrings[7].split('@')[0] not in varignores:
-					localvars.append(functionstrings[7].split('@')[0])
+				varname = functionstrings[7].split('@')[0]
+				if varname not in varignores:
+					varname = functionstrings[7].split('@')[0]
+					if functionstrings[4] == 'WEAK':
+						weaklocalvars.append(varname)
+					else:
+						localvars.append(varname)
 			continue
 		## See http://gcc.gnu.org/ml/gcc/2002-06/msg00112.html
 		if functionstrings[7].split('@')[0] == '_Jv_RegisterClasses':
 			continue
 		## some things are annotated with '@' which could come in handy in the future
 		if functionstrings[3] == 'FUNC' or functionstrings[3] == 'IFUNC':
-			remotefuncs.append(functionstrings[7].split('@')[0])
+			funcname = functionstrings[7].split('@')[0]
+			if functionstrings[4] == 'WEAK':
+				weakremotefuncs.append(funcname)
+			else:
+				remotefuncs.append(funcname)
 		elif functionstrings[3] == 'OBJECT' and functionstrings[6] != 'ABS':
 			if functionstrings[7].split('@')[0] not in varignores:
 				remotevars.append(functionstrings[7].split('@')[0])
@@ -102,7 +115,7 @@ def extractfromelf((path, filename)):
 			if "REL" in line:
 				elftype = "kernelmod"
 
-	return (filename, localfuncs, remotefuncs, localvars, remotevars, sonames, elftype)
+	return (filename, localfuncs, remotefuncs, localvars, remotevars, weaklocalfuncs, weakremotefuncs, weaklocalvars, weakremotevars, sonames, elftype)
 
 def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 	scanenv = os.environ.copy()
@@ -195,7 +208,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 	elftypes = {}
 
 	for i in elfres:
-		(filename, localfuncs, remotefuncs, localvars, remotevars, elfsonames, elftype) = i
+		(filename, localfuncs, remotefuncs, localvars, remotevars, weaklocalfuncs, weakremotefuncs, weaklocalvars, weakremotevars, elfsonames, elftype) = i
 		for soname in elfsonames:
 			if sonames.has_key(soname):
 				sonames[soname].append(filename)
@@ -213,7 +226,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 		remotevariablenames[filename] = remotevars
 		elftypes[filename] = elftype
 
-	## TODO: look if RPATH is used, since that will give use more information
+	## TODO: look if RPATH is used, since that will give more information
 	## by default
 
 	## For each file keep a list of other files that use this file. This is mostly
@@ -511,8 +524,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 					ppname = os.path.join(unpackreports[nodetext]['path'], unpackreports[nodetext]['name'])
 					tmpnode = pydot.Node(ppname)
 					elfgraph.add_node(tmpnode)
-					## declared but unused dependencies are represented by dashed blue lines
 					if not used:
+						## declared but unused dependencies are represented by dashed blue lines
 						elfgraph.add_edge(pydot.Edge(parentnode, tmpnode, style='dashed', color='blue'))
 					else:
 						if not declared:
