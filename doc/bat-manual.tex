@@ -77,13 +77,11 @@ version of \texttt{wxPython}.
 
 BAT consists of several programs and a few helper scripts (not meant to be
 used directly). The main purpose of the Binary Analysis tool is to analyse
-arbitrary binaries and review results. There are two ways to do this: via the
-commandline, or via a graphical user interface.
+arbitrary binaries and review results. Analysis of the binary is done via
+a commandline tool, while the results can be viewed using a special viewer.
 
 The commandline interface functionality can be found in \texttt{bruteforce.py}.
-The graphical user interface is provided by \texttt{batgui} (although the
-graphical user interface can do more than just scanning). Both programs are a
-front end for the same functionality.
+The graphical user interface is provided by \texttt{batgui}.
 
 \subsection{Inner workings of the analysis process}
 
@@ -486,7 +484,8 @@ three parameters:
 \item \texttt{-c} : path to a configuration file
 \item \texttt{-b} : path to the binary to be scanned
 \item \texttt{-o} : path to an output file, where unpacked files, reports,
-plus the final program state be written to
+plus the final program state be written to. This file can later be used with
+the viewer.
 \end{enumerate}
 
 A typical invocation looks like this:
@@ -500,7 +499,7 @@ output. Debugging messages will appear on standard error.
 \subsection{\texttt{batgui}}
 
 The \texttt{batgui} program is a graphical viewer for the results of
-\texttt{bruteforce.py} as well as a front end for invoking the scanner itself.
+\texttt{bruteforce.py}.
 
 \subsubsection{Viewing results with \texttt{batgui}}
 
