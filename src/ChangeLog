@@ -1,3 +1,11 @@
+2013-04-23
+* add reimplementation for unyaffs which should not segfault, like the current
+one sometimes does.
+
+2013-04-19
+* add tag 'linuxkernel' if an ELF file has a certain section only used for the
+Linux kernel
+
 2013-04-18
 * update Ubuntu + Debian configuration
 * tagging 13.0
