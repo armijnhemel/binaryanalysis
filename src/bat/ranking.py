@@ -892,7 +892,10 @@ def scankernelsymbols(scanfile, scanenv, rankingfull, unpacktempdir):
 		variable_scan = True
 	c.execute("detach kernelcache")
 
-	if variable_scan:
+	if not variable_scan:
+		os.unlink(elftmp[1])
+		return {}
+	else:
 		c.execute("attach ? as kernelcache", (funccache,))
 		vvs = {}
 		for v in variables:
@@ -932,6 +935,7 @@ def scankernelsymbols(scanfile, scanenv, rankingfull, unpacktempdir):
 					vvs_rewrite[v][program] = list(set(vvs_rewrite[v][program] + [version]))
 		variablepvs['kernelvariables'] = vvs_rewrite
 		c.execute("detach kernelcache")
+		os.unlink(elftmp[1])
 	return {}
 
 ## From dynamically linked ELF files it is possible to extract the dynamic
