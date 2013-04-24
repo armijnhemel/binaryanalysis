@@ -273,37 +273,42 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir)):
 				html = html + "</table>\n"
 
 		if language == 'C':
-			if variablepvs.has_key('variables'):
-				packages = {}
-				packagecount = {}
-				## for each variable name determine in how many packages it can be found.
-				## Only the unique packages are reported.
-				for c in variablepvs['variables']:
-					lenres = len(variablepvs['variables'][c])
-					if lenres == 1:
-						pvs = variablepvs['variables'][c]
-						package = variablepvs['variables'][c].keys()[0]
-						if packagecount.has_key(package):
-							packagecount[package] = packagecount[package] + 1
-						else:
-							packagecount[package] = 1
+			for k in ['variables', 'kernelvariables']:
+				if variablepvs.has_key(k):
+					packages = {}
+					packagecount = {}
+					## for each variable name determine in how many packages it can be found.
+					## Only the unique packages are reported.
+					for c in variablepvs[k]:
+						lenres = len(variablepvs[k][c])
+						if lenres == 1:
+							pvs = variablepvs[k][c]
+							package = variablepvs[k][c].keys()[0]
+							if packagecount.has_key(package):
+								packagecount[package] = packagecount[package] + 1
+							else:
+								packagecount[package] = 1
 							
-					'''
-					## for later use
-					for p in pvs:
-						(package,version) = p
-						if packages.has_key(package):
-							packages[package].append(version)
-						else:
-							packages[package] = [version]
-					'''
+						'''
+						## for later use
+						for p in pvs:
+							(package,version) = p
+							if packages.has_key(package):
+								packages[package].append(version)
+							else:
+								packages[package] = [version]
+						'''
 
-				if packagecount != {}:
-					html = html + "<h3>Unique matches of variables</h3>\n<table>\n"
-					html = html + "<tr><td><b>Name</b></td><td><b>Unique matches</b></td></tr>"
-					for i in packagecount:
-						html = html + "<tr><td>%s</td><td>%d</td></tr>\n" % (i, packagecount[i])
-					html = html + "</table>\n"
+					if packagecount != {}:
+						if k == 'variables':
+							html = html + "<h3>Unique matches of variables</h3>\n<table>\n"
+						elif k == 'kernelvariables':
+							html = html + "<h3>Unique matches of kernel variables</h3>\n<table>\n"
+						html = html + "<tr><td><b>Name</b></td><td><b>Unique matches</b></td></tr>"
+						for i in packagecount:
+							html = html + "<tr><td>%s</td><td>%d</td></tr>\n" % (i, packagecount[i])
+						html = html + "</table>\n"
+
 
 		footer = "</body></html>"
 		if html != "":
@@ -387,7 +392,7 @@ def generatereports(unpackreports, scantempdir, topleveldir, envvars=None):
 
 	## extract pickles
 	extracttasks = map(lambda x: (x, pickledir, topleveldir, reportdir), filehashes)
-	pool = multiprocessing.Pool()
+	pool = multiprocessing.Pool(processes=1)
 	res = filter(lambda x: x != None, pool.map(extractpickles, extracttasks))
 	pool.terminate()
 

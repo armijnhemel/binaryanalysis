@@ -288,7 +288,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 			if "ELF" in mstype:
 				if linuxkernel:
 					dynamicRes = {}
-					variablepvs = scankernelsymbols(scanfile, scanenv, rankingfull, unpacktempdir)
+					variablepvs = scankernelsymbols(scanfile, scanenv, rankingfull, unpacktempdir, stringcutoff, clones)
 				else:
 					dynres = extractDynamic(path, scanenv, rankingfull, clones)
 					if dynres != None:
@@ -820,7 +820,7 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 ## modules often have a section __ksymtab_strings. This section contains variables
 ## that are exported by the kernel using the EXPORT_SYMBOL* macros in the Linux
 ## kernel source tree.
-def scankernelsymbols(scanfile, scanenv, rankingfull, unpacktempdir):
+def scankernelsymbols(scanfile, scanenv, rankingfull, unpacktempdir, stringcutoff, clones):
 	p = subprocess.Popen(['readelf', '-SW', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	st = stanout.strip().split("\n")
@@ -843,8 +843,6 @@ def scankernelsymbols(scanfile, scanenv, rankingfull, unpacktempdir):
 	if os.stat(elftmp[1]).st_size == 0:
 		os.unlink(elftmp[1])
 		return {}
-
-	return {}
 
 	## TODO this needs a lot of work
 	masterdb = scanenv.get('BAT_DB')
@@ -869,34 +867,42 @@ def scankernelsymbols(scanfile, scanenv, rankingfull, unpacktempdir):
 		else:
 			## The cache may, or may not, exist, but at least we're not
 			## counting on it to exist and it may be generated on the fly.
-			kernelcache = scanenv.get('BAT_KERNEL_CACHE')
+			## check the table structure and create it if it doesn't exist
+			c.execute("attach ? as kernelcache", (kernelcache,))
+			res = c.execute("select * from kernelcache.sqlite_master where type='table' and name='kernelcache'").fetchall()
+			if res == []:
+				## nothing in the cache and rankingfull is not set, so check if we have results.
+				res2 = c.execute("select * from sqlite_master where type='table' and name='extracted_name'").fetchall()
+				if res2 != []:
+					variable_scan = True
+					c.execute("create table if not exists kernelcache.kernelcache (varname text, package text)")
+					c.execute("create index if not exists kernelcache.kernelcache_index on kernelcache(varname)")
+					conn.commit()
+				else:
+					## table extracted_name does not exist, so the kernel cache can't be filled
+					## with results, so no need to continue
+					variable_scan = False
+			c.execute("detach kernelcache")
 	else:
 		if rankingfull:
 			variable_scan = False
-
-	## first attach the functionname cache again. If there is no table for variables, but
-	## ranking_full is set, then don't scan variable names.
-	variable_scan = False
-	c.execute("attach ? as kernelcache", (kernelcache,))
-	res = c.execute("select * from kernelcache.sqlite_master where type='table' and name='kernelcache'").fetchall()
-	if res == []:
-		if not rankingfull:
-			## nothing in the cache and rankingfull is not set, so check if we have results.
-			res2 = c.execute("select * from sqlite_master where type='table' and name='extracted_name'").fetchall()
-			if res2 != []:
-				variable_scan = True
-				c.execute("create table if not exists kernelcache.kernelcache (varname text, package text)")
-				c.execute("create index if not exists kernelcache.kernelcache_index on kernelcache(varname)")
-				conn.commit()
-	else:
-		variable_scan = True
-	c.execute("detach kernelcache")
 
 	if not variable_scan:
 		os.unlink(elftmp[1])
 		return {}
 	else:
-		c.execute("attach ? as kernelcache", (funccache,))
+		variablepvs = {}
+		variables = []
+        	p = subprocess.Popen(['strings', '-n', str(stringcutoff), elftmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+        	(stanout, stanerr) = p.communicate()
+		st = stanout.split("\n")
+		for s in st:
+			printstring = s
+			if len(printstring) >= stringcutoff:
+				variables.append(printstring)
+		os.unlink(elftmp[1])
+
+		c.execute("attach ? as kernelcache", (kernelcache,))
 		vvs = {}
 		for v in variables:
 			res = c.execute("select distinct package from kernelcache where varname=?", (v,)).fetchall()
@@ -914,6 +920,7 @@ def scankernelsymbols(scanfile, scanenv, rankingfull, unpacktempdir):
 							pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
 							pvs = list(set(pvs + pv))
 			else:
+				## set version to 0 for now
 				pvs = map(lambda x: (x[0],0), res)
 
 			pvs_tmp = []
@@ -923,6 +930,7 @@ def scankernelsymbols(scanfile, scanenv, rankingfull, unpacktempdir):
 				else:
 					pvs_tmp.append(r)
 			vvs[v] = pvs_tmp
+		c.execute("detach kernelcache")
 
 		vvs_rewrite = {}
 		for v in vvs.keys():
@@ -933,10 +941,9 @@ def scankernelsymbols(scanfile, scanenv, rankingfull, unpacktempdir):
 					vvs_rewrite[v][program] = [version]
 				else:
 					vvs_rewrite[v][program] = list(set(vvs_rewrite[v][program] + [version]))
-		variablepvs['kernelvariables'] = vvs_rewrite
-		c.execute("detach kernelcache")
-		os.unlink(elftmp[1])
-	return {}
+		if vvs_rewrite != {}:
+			variablepvs['kernelvariables'] = vvs_rewrite
+	return variablepvs
 
 ## From dynamically linked ELF files it is possible to extract the dynamic
 ## symbol table. This table lists the functions and variables which are needed
