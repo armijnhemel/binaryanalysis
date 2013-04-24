@@ -145,6 +145,8 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 	unpackreports[relfiletoscan]['realpath'] = path
 
 	if os.path.islink("%s/%s" % (path, filename)):
+		tags.append('symlink')
+		unpackreports[relfiletoscan]['tags'] = tags
 		return (scantasks, leaftasks, unpackreports)
 	## no use checking pipes, sockets, device files, etcetera
 	if not os.path.isfile("%s/%s" % (path, filename)) and not os.path.isdir("%s/%s" % (path, filename)):

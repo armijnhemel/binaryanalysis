@@ -1,3 +1,7 @@
+2013-04-24
+* tag symbolic links, so there is no need to rely on the 'magic' attribute
+anymore.
+
 2013-04-23
 * add reimplementation for unyaffs which should not segfault, like the current
 one sometimes does.
