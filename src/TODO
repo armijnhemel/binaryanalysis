@@ -39,7 +39,7 @@ database creation:
 * handle patches (both normal and unified)
 * import licensing information from SPDX files
 * rewrite ctags and xgettext invocations to scan multiple files at once to reduce overhead of calling ctags and xgettext
-* update to FOSSology 2.1.1
+* update to FOSSology 2.2.0 (when released)
 
 ranking:
 * use version information to report most likely licenses
