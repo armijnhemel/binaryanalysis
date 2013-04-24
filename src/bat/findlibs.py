@@ -161,15 +161,14 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 			continue
 		filehash = unpackreports[i]['sha256']
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
-			## possibly we're dealing with a symlink
-			## OK, so this does not work with localized systems.
-			## TODO: work around possible localization issues
-			if 'symbolic link' in unpackreports[i]['magic']:
-				target = unpackreports[i]['magic'].split('`')[-1][:-1]
-				if symlinks.has_key(os.path.basename(i)):
-					symlinks[os.path.basename(i)].append({'original': i, 'target': target})
-				else:
-					symlinks[os.path.basename(i)] = [{'original': i, 'target': target}]
+			## possibly there are symlinks
+			if unpackreports[i].has_key('tags'):
+				if 'symlink' in unpackreports[i][tags]:
+					target = unpackreports[i]['magic'].split('`')[-1][:-1]
+					if symlinks.has_key(os.path.basename(i)):
+						symlinks[os.path.basename(i)].append({'original': i, 'target': target})
+					else:
+						symlinks[os.path.basename(i)] = [{'original': i, 'target': target}]
 			continue
 
 		if not 'elf' in unpackreports[i]['tags']:
