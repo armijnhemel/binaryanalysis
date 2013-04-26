@@ -277,6 +277,7 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir)):
 				if variablepvs.has_key(k):
 					packages = {}
 					packagecount = {}
+					uniquepackagecount = {}
 					## for each variable name determine in how many packages it can be found.
 					## Only the unique packages are reported.
 					for c in variablepvs[k]:
@@ -284,10 +285,20 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir)):
 						if lenres == 1:
 							pvs = variablepvs[k][c]
 							package = variablepvs[k][c].keys()[0]
-							if packagecount.has_key(package):
-								packagecount[package] = packagecount[package] + 1
+							if uniquepackagecount.has_key(package):
+								uniquepackagecount[package] = uniquepackagecount[package] + 1
 							else:
-								packagecount[package] = 1
+								uniquepackagecount[package] = 1
+						else:
+							## cut off if it is too generic. This value is arbitrary
+							if lenres > 40:
+								continue
+							pvs = variablepvs[k][c]
+							for package in pvs.keys():
+								if packagecount.has_key(package):
+									packagecount[package] = packagecount[package] + 1
+								else:
+									packagecount[package] = 1
 							
 						'''
 						## for later use
@@ -299,12 +310,22 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir)):
 								packages[package] = [version]
 						'''
 
-					if packagecount != {}:
+					if uniquepackagecount != {}:
 						if k == 'variables':
 							html = html + "<h3>Unique matches of variables</h3>\n<table>\n"
 						elif k == 'kernelvariables':
 							html = html + "<h3>Unique matches of kernel variables</h3>\n<table>\n"
 						html = html + "<tr><td><b>Name</b></td><td><b>Unique matches</b></td></tr>"
+						for i in uniquepackagecount:
+							html = html + "<tr><td>%s</td><td>%d</td></tr>\n" % (i, uniquepackagecount[i])
+						html = html + "</table>\n"
+
+					if packagecount != {}:
+						if k == 'variables':
+							html = html + "<h3>Non-unique matches of variables</h3>\n<table>\n"
+						elif k == 'kernelvariables':
+							html = html + "<h3>Non-unique matches of kernel variables</h3>\n<table>\n"
+						html = html + "<tr><td><b>Name</b></td><td><b>Non-unique matches</b></td></tr>"
 						for i in packagecount:
 							html = html + "<tr><td>%s</td><td>%d</td></tr>\n" % (i, packagecount[i])
 						html = html + "</table>\n"
@@ -471,7 +492,7 @@ def generatereports(unpackreports, scantempdir, topleveldir, envvars=None):
 		## now recombine the results into HTML files
 		pickleremoves = []
 		for filehash in resultranks.keys():
-			uniquehtml = "<html><body><h1>Unique matches per package</h1><p><ul>"
+			uniquehtml = "<html><body><h1>Matches per package</h1><p><ul>"
 			headers = ""
 			filehtml = ""
 			for r in resultranks[filehash]:
