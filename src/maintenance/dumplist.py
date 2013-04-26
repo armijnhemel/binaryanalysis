@@ -21,6 +21,7 @@ def main(argv):
 	parser = OptionParser()
 	parser.add_option("-d", "--database", action="store", dest="master", help="path to database", metavar="FILE")
 	parser.add_option("-l", "--listfile", action="store", dest="listfile", help="path to LIST file (output)", metavar="FILE")
+	parser.add_option("-o", "--origin", action="store", dest="origin", help="optional origin filter")
 
 	(options, args) = parser.parse_args()
 	if options.listfile == None:
@@ -34,7 +35,11 @@ def main(argv):
 		sys.exit(1)
 	cursor = conn.cursor()
 
-	cursor.execute("select package, version, filename, origin from processed")
+	## TODO: add some sanity checks to 'origin' first
+	if options.origin != None:
+		cursor.execute("select package, version, filename, origin from processed where origin=?", (options.origin,))
+	else:
+		cursor.execute("select package, version, filename, origin from processed")
 	res = cursor.fetchall()
 	cursor.close()
 
