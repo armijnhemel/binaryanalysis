@@ -201,7 +201,7 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir)):
 		if language == 'Java':
 			header = "<html><body><h1>Unique matches of class names, field names and source file names</h1>"
 		elif language == 'C':
-			header = "<html><body><h1>Unique matches of variable names</h1>"
+			header = "<html><body><h1>Matches of variable names</h1>"
 		html = ""
 
 		if language == 'Java':
@@ -273,13 +273,14 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir)):
 				html = html + "</table>\n"
 
 		if language == 'C':
+			totalvars = 0
 			for k in ['variables', 'kernelvariables']:
 				if variablepvs.has_key(k):
+					totalvars += len(variablepvs[k])
 					packages = {}
 					packagecount = {}
 					uniquepackagecount = {}
 					## for each variable name determine in how many packages it can be found.
-					## Only the unique packages are reported.
 					for c in variablepvs[k]:
 						lenres = len(variablepvs[k][c])
 						if lenres == 1:
@@ -316,7 +317,8 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir)):
 						elif k == 'kernelvariables':
 							html = html + "<h3>Unique matches of kernel variables</h3>\n<table>\n"
 						html = html + "<tr><td><b>Name</b></td><td><b>Unique matches</b></td></tr>"
-						for i in uniquepackagecount:
+						uniquevalues = sorted(uniquepackagecount, key = lambda x: uniquepackagecount.__getitem__(x), reverse=True)
+						for i in uniquevalues:
 							html = html + "<tr><td>%s</td><td>%d</td></tr>\n" % (i, uniquepackagecount[i])
 						html = html + "</table>\n"
 
@@ -326,17 +328,18 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir)):
 						elif k == 'kernelvariables':
 							html = html + "<h3>Non-unique matches of kernel variables</h3>\n<table>\n"
 						html = html + "<tr><td><b>Name</b></td><td><b>Non-unique matches</b></td></tr>"
-						for i in packagecount:
+						packagevalues = sorted(packagecount, key = lambda x: packagecount.__getitem__(x), reverse=True)
+						for i in packagevalues:
 							html = html + "<tr><td>%s</td><td>%d</td></tr>\n" % (i, packagecount[i])
 						html = html + "</table>\n"
 
-
 		footer = "</body></html>"
 		if html != "":
-			html = header + html + footer
-			nameshtmlfile = gzip.open("%s/%s-names.html.gz" % (reportdir, filehash), 'wb')
-			nameshtmlfile.write(html)
-			nameshtmlfile.close()
+			if totalvars != 0:
+				html = header + "<p>Total matched variables: %d</p>" % (totalvars,) + html + footer
+				nameshtmlfile = gzip.open("%s/%s-names.html.gz" % (reportdir, filehash), 'wb')
+				nameshtmlfile.write(html)
+				nameshtmlfile.close()
 
 	return (filehash, reportresults, unmatchedresult)
 
@@ -492,7 +495,7 @@ def generatereports(unpackreports, scantempdir, topleveldir, envvars=None):
 		## now recombine the results into HTML files
 		pickleremoves = []
 		for filehash in resultranks.keys():
-			uniquehtml = "<html><body><h1>Matches per package</h1><p><ul>"
+			uniquehtml = "<html><body><h1>Unique matches per package</h1><p><ul>"
 			headers = ""
 			filehtml = ""
 			for r in resultranks[filehash]:
