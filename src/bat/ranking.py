@@ -1177,7 +1177,7 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 		for v in variables:
 			## These variable names are very generic and would not be useful, so skip.
 			## This is based on research of millions of C files.
-			if v in ['options', 'debug', 'options', 'verbose']:
+			if v in ['options', 'debug', 'options', 'verbose', 'optarg', 'optopt', 'optfind', 'optind', 'opterr']:
 				continue
 			pvs = []
 			res = c.execute("select distinct package from varnamecache where varname=?", (v,)).fetchall()
