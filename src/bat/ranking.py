@@ -33,8 +33,8 @@ An additional classification method for dynamically linked executables or
 Java binaries based on function or method names takes an additional parameter:
 
 BAT_FUNCTIONNAMECACHE_$LANGUAGE :: location of database containing cached
-                                   function names per package to reduce
-                                   lookups
+                                   function names and variable names per package
+                                   to reduce lookups
 
 BAT_KERNEL_CACHE :: location of database contain cached kernel symbols per
                     package to reduce lookups
