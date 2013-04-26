@@ -92,7 +92,7 @@ def extractpickles((filehash, pickledir, topleveldir, unpacktempdir)):
 				vals = list(set(j[4].values()))
 				if vals == []:
 					continue
-				vals.sort()
+				vals.sort(reverse=True)
 				tmppickle = tempfile.mkstemp(dir=unpacktempdir)
 				for v in vals:
 					j_sorted = filter(lambda x: x[1] == v, j[4].items())
@@ -112,7 +112,7 @@ def extractpickles((filehash, pickledir, topleveldir, unpacktempdir)):
 				vals = list(set(map(lambda x: x[1], p_sorted)))
 				if vals == []:
 					continue
-				vals.sort()
+				vals.sort(reverse=True)
 				tmppickle = tempfile.mkstemp(dir=unpacktempdir)
 				for v in vals:
 					j_sorted = filter(lambda x: x[1] == v, p_sorted)
