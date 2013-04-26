@@ -497,7 +497,7 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, envvars
 	if blacklist != []:
 		return (diroffsets, blacklist, [])
 	tmpdir = dirsetup(tempdir, filename, "yaffs2", 1)
-	p = subprocess.Popen(['bat-unyaffs', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	p = subprocess.Popen(['bat-unyaffs', '-b', filename, '-d', tmpdir], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.rmdir(tmpdir)
