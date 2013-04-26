@@ -34,7 +34,7 @@ def generatepiecharts((picklefile, pickledir, filehash, imagedir)):
 	piecharts.generateImages(picklefile, pickledir, filehash, imagedir)
 
 def generateversionchart((versionpickle, picklehash, imagedir, pickledir)):
-	p = subprocess.Popen(['bat-generate-version-chart.py', '-i', os.path.join(pickledir, versionpickle), '-o', '%s/%s.png' % (imagedir, picklehash)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['bat-generate-chart.py', '-i', os.path.join(pickledir, versionpickle), '-o', '%s/%s.png' % (imagedir, picklehash), '-t', 'Versions'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		print >>sys.stderr, stanerr
