@@ -2,6 +2,7 @@
 * rename generate-version-chart.py, add extra parameter
 * add more information to variable names report. This should actually have a
 graphical representation
+* replace bat-unyaffs with Python reimplementation
 
 2013-04-24
 * tag symbolic links, so there is no need to rely on the 'magic' attribute
