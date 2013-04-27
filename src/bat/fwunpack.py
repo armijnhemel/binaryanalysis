@@ -1385,6 +1385,13 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 		os.unlink(tmpfile[1])
 		return retval
 
+	## another Atheros variant
+	## TODO: determine size
+	retval = unpackSquashfsAtheros40LZMA(tmpfile[1],offset,tmpdir)
+	if retval != None:
+		os.unlink(tmpfile[1])
+		return retval
+
 	## Ralink variant
 	retval = unpackSquashfsRalinkLZMA(tmpfile[1],offset,tmpdir)
 	if retval != None:
@@ -1583,6 +1590,10 @@ def unpackSquashfsAtherosLZMA(filename, offset, tmpdir):
 ## squashfs variant from Ralink, with LZMA
 def unpackSquashfsRalinkLZMA(filename, offset, tmpdir):
 	return unpackSquashfsWithLZMA(filename, offset, "bat-unsquashfs-ralink", tmpdir)
+
+## squashfs variant from Atheros, with LZMA
+def unpackSquashfsAtheros40LZMA(filename, offset, tmpdir):
+	return unpackSquashfsWithLZMA(filename, offset, "bat-unsquashfs-atheros40", tmpdir)
 
 ## squashfs variant from Broadcom, with LZMA
 def unpackSquashfsBroadcomLZMA(filename, offset, tmpdir):
