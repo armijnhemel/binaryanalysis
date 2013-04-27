@@ -11,8 +11,8 @@ functions is a list of tuples, which contain the name of a temporary directory
 with the unpacked contents of the archive, and the offset of the archive or
 file system in the parent file.
 
-Optionally, we return a range of bytes that should be excluded in same cases
-where we want to prevent other scans from (re)scanning (part of) the data.
+Optionally return a range of bytes that should be excluded in same cases
+to prevent other scans from (re)scanning (part of) the data.
 '''
 
 import sys, os, subprocess, os.path, shutil, stat, array, struct, binascii
@@ -62,7 +62,7 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False):
 			else:
 				p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile,), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
-		## TODO: fix if we want to get rid of trailing data and offset != 0
+		## TODO: fix to get rid of trailing data and offset != 0
 		else:
 			if offset == 0:
 				p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile,), 'bs=%s' % (length,), 'count=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -72,7 +72,7 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False):
 ## bytes NOR flash instead of 8 bytes SPI flash. This is an ugly hack to first
 ## rearrange the data. This is mostly for Realtek RTL8196C based routers.
 def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
-	## we can't byteswap if there is not an even amount of bytes in the file
+	## can't byteswap if there is not an even amount of bytes in the file
 	if os.stat(filename).st_size % 2 != 0:
 		return ([], blacklist, [])
 	datafile = open(filename, 'rb')
@@ -166,7 +166,7 @@ def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={},
 	counter = 1
 	diroffsets = []
 	for offset in offsets['java_serialized']:
-		## check if the offset we find is in a blacklist
+		## check if the offset found is in a blacklist
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
@@ -253,7 +253,7 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, envvars=
 	counter = 1
 	diroffsets = []
 	for offset in offsets['jffs2_le']:
-		## check if the offset we find is in a blacklist
+		## check if the offset found is in a blacklist
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
@@ -289,7 +289,7 @@ def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, envvars=Non
 	counter = 1
 	diroffsets = []
 	for offset in offsets['ar']:
-		## check if the offset we find is in a blacklist
+		## check if the offset found is in a blacklist
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
@@ -347,7 +347,7 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, envvar
 		## according to /usr/share/magic the magic header starts at 0x438
 		if offset < 32769:
 			continue
-		## check if the offset we find is in a blacklist
+		## check if the offset found is in a blacklist
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
@@ -384,7 +384,7 @@ def unpackISO9660(filename, offset, tempdir=None, unpacktempdir=None):
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
-	## first we create *another* temporary directory, because of the behaviour of shutil.copytree()
+	## first create *another* temporary directory, because of the behaviour of shutil.copytree()
 	tmpdir2 = tempfile.mkdtemp(dir=unpacktempdir)
 	## then copy the contents to a subdir
 	shutil.copytree(mountdir, tmpdir2 + "/bla")
@@ -398,11 +398,11 @@ def unpackISO9660(filename, offset, tempdir=None, unpacktempdir=None):
 				os.chmod("%s/%s" % (i[0], p), stat.S_IRWXU)
 	except Exception, e:
 		pass
-	## then we move all the contents using shutil.move()
+	## then move all the contents using shutil.move()
 	mvfiles = os.listdir(tmpdir2 + "/bla")
 	for f in mvfiles:
 		shutil.move(tmpdir2 + "/bla/" + f, tmpdir)
-	## then we cleanup the temporary dir
+	## then cleanup the temporary dir
 	shutil.rmtree(tmpdir2)
 	
 	## determine size
@@ -506,7 +506,7 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, envvars
 	if len(stanerr) != 0:
 		os.rmdir(tmpdir)
 		return (diroffsets, blacklist, [])
-	## we need to check if there was actually any data unpacked.
+	## check if there was actually any data unpacked.
 	if os.listdir(tmpdir) == []:
 		os.rmdir(tmpdir)
 		return (diroffsets, blacklist, [])
@@ -1386,7 +1386,6 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 		return retval
 
 	## another Atheros variant
-	## TODO: determine size
 	retval = unpackSquashfsAtheros40LZMA(tmpfile[1],offset,tmpdir)
 	if retval != None:
 		os.unlink(tmpfile[1])
@@ -1432,7 +1431,7 @@ def unpackSquashfs(filename, offset, tmpdir):
 ## squashfs variant from DD-WRT, with LZMA
 def unpackSquashfsDDWRTLZMA(filename, offset, tmpdir, unpacktempdir=None):
 	## squashfs 1.0 with lzma from DDWRT can't unpack to an existing directory
-	## so we use a workaround using an extra temporary directory
+	## so use a workaround using an extra temporary directory
 	tmpdir2 = tempfile.mkdtemp(dir=unpacktempdir)
 
 	p = subprocess.Popen(['bat-unsquashfs-ddwrt', '-dest', tmpdir2 + "/squashfs-root", '-f', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -1454,9 +1453,9 @@ def unpackSquashfsDDWRTLZMA(filename, offset, tmpdir, unpacktempdir=None):
 		mvfiles = os.listdir(tmpdir2 + "/squashfs-root")
 		for f in mvfiles:
 			shutil.move(tmpdir2 + "/squashfs-root/" + f, tmpdir)
-		## then we cleanup the temporary dir
+		## then cleanup the temporary dir
 		shutil.rmtree(tmpdir2)
-		## unlike with 'normal' squashfs we can use 'file' to determine the size
+		## unlike with 'normal' squashfs 'file' cannot be used to determine the size
 		squashsize = 1
 		return (tmpdir, squashsize)
 
@@ -1593,7 +1592,20 @@ def unpackSquashfsRalinkLZMA(filename, offset, tmpdir):
 
 ## squashfs variant from Atheros, with LZMA
 def unpackSquashfsAtheros40LZMA(filename, offset, tmpdir):
-	return unpackSquashfsWithLZMA(filename, offset, "bat-unsquashfs-atheros40", tmpdir)
+	p = subprocess.Popen(['bat-unsquashfs-atheros40', '-d', tmpdir, '-f', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		return None
+	## like with 'normal' squashfs we can use 'file' to determine the size
+	squashsize = 0
+	p = subprocess.Popen(['file', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	(stanout, stanerr) = p.communicate()
+
+	if p.returncode != 0:
+		return None
+	else:
+		squashsize = int(re.search(", (\d+) bytes", stanout).groups()[0])
+	return (tmpdir, squashsize)
 
 ## squashfs variant from Broadcom, with LZMA
 def unpackSquashfsBroadcomLZMA(filename, offset, tmpdir):
