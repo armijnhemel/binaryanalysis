@@ -1,3 +1,7 @@
+2013-04-28
+* add yet another variant of squashfs+lzma (for newer Broadcom devices) to
+bat-extratools
+
 2013-04-27
 * add another variant of squashfs+lzma to bat-extratools
 
