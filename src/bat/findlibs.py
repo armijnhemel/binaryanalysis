@@ -29,6 +29,13 @@ used in the binary, but the name of a symlink was used.
 properly.
 
 Something similar is done for remote and local variables.
+
+This method does not always work. Some vendors run sstrip on the binaries.
+Some versions of this tool created files with section header that confuses
+standard readelf:
+
+https://dev.openwrt.org/ticket/6847
+https://bugs.busybox.net/show_bug.cgi?id=729
 '''
 
 ## extract variable names, function names and the soname from an ELF file
