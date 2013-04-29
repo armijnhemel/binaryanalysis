@@ -1341,6 +1341,19 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 			os.unlink(tmpfile[1])
 			return retval
 
+	## first read the first 80 bytes from the file system to see if
+	## the string '7zip' can be found. If so, then the inodes have been
+	## compressed with a variant of squashfs that uses 7zip compression
+	## and might cause crashes in some of the variants below.
+	sqshfile = open(filename)
+	sqshfile.seek(offset)
+	sqshbuffer = sqshfile.read(80)
+	sqshfile.close()
+
+	sevenzipcompression = False
+	if "7zip" in sqshbuffer:
+		sevenzipcompression = True
+
 	## try normal Squashfs unpacking
 	if squashtype == 'squashfs1' or squashtype == 'squashfs2':
 		retval = unpackSquashfs(tmpfile[1], offset, tmpdir)
@@ -1380,10 +1393,11 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 		return retval
 
 	## Atheros variant
-	retval = unpackSquashfsAtherosLZMA(tmpfile[1],offset,tmpdir)
-	if retval != None:
-		os.unlink(tmpfile[1])
-		return retval
+	if not sevenzipcompression:
+		retval = unpackSquashfsAtherosLZMA(tmpfile[1],offset,tmpdir)
+		if retval != None:
+			os.unlink(tmpfile[1])
+			return retval
 
 	## another Atheros variant
 	retval = unpackSquashfsAtheros40LZMA(tmpfile[1],offset,tmpdir)
@@ -1392,10 +1406,11 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 		return retval
 
 	## Ralink variant
-	retval = unpackSquashfsRalinkLZMA(tmpfile[1],offset,tmpdir)
-	if retval != None:
-		os.unlink(tmpfile[1])
-		return retval
+	if not sevenzipcompression:
+		retval = unpackSquashfsRalinkLZMA(tmpfile[1],offset,tmpdir)
+		if retval != None:
+			os.unlink(tmpfile[1])
+			return retval
 
 	os.unlink(tmpfile[1])
 	if tempdir == None:
@@ -1596,6 +1611,20 @@ def unpackSquashfsAtheros40LZMA(filename, offset, tmpdir):
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		return None
+	if "uncompress failed, unknown error -3" in stanerr:
+		## files might have been written, but possibly not correct, so
+		## remove them
+		rmfiles = os.listdir(tmpdir)
+		if rmfiles != []:
+			## TODO: This does not yet correctly process symlinks links
+			for rmfile in rmfiles:
+				if os.path.join(tmpdir, rmfile) == filename:	
+					continue
+				try:
+					shutil.rmtree(os.path.join(tmpdir, rmfile))
+				except:
+					os.remove(os.path.join(tmpdir, rmfile))
+		return None
 	## like with 'normal' squashfs we can use 'file' to determine the size
 	squashsize = 0
 	p = subprocess.Popen(['file', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
@@ -1618,6 +1647,8 @@ def unpackSquashfsBroadcomLZMA(filename, offset, tmpdir):
 		## This could lead to duplicate scanning with LZMA, so we might need to implement
 		## a top level "pruning" script :-(
 		if "LzmaUncompress: error" in stanerr:
+			return None
+		if "zlib::uncompress failed, unknown error -3" in stanerr:
 			return None
 		## unlike with 'normal' squashfs we can't use 'file' to determine the size
 		squashsize = 1
