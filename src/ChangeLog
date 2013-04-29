@@ -1,3 +1,7 @@
+2013-04-29
+* work around squashfs unpacking crashes in some variants if 7zip compression
+is used instead of lzma or zlib
+
 2013-04-28
 * add yet another variant of squashfs+lzma (for newer Broadcom devices) to
 bat-extratools
