@@ -5,7 +5,7 @@
 '''This file contains information about several APIs and standards
 such as POSIX'''
 
-## data extracted from the POSIX standard
+## data extracted from various POSIX standards
 ## http://pubs.opengroup.org/onlinepubs/9699919799/idx/functions.html
 posix = ["FD_CLR",
          "FD_ISSET",
@@ -1198,4 +1198,7 @@ posix = ["FD_CLR",
          "y0",
          "y1",
          "yn",
+         "usleep", ## removed in POSIX.1-2008
+         "gethostbyname",
+         "gethostbyaddr"
          ]
