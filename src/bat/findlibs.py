@@ -353,7 +353,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 										usedby[filtersquash[0]].append(i)
 									else:
 										usedby[filtersquash[0]] = [i]
-									usedlibs.append(l)
+									usedlibs.append((l,len(localfuncsfound)))
 								funcsfound = funcsfound + localfuncsfound
 								remotefuncswc = list(set(remotefuncswc).difference(set(funcsfound)))
 						if remotevarswc != []:
@@ -364,7 +364,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 										usedby[filtersquash[0]].append(i)
 									else:
 										usedby[filtersquash[0]] = [i]
-									usedlibs.append(l)
+									usedlibs.append((l,len(localvarsfound)))
 								varsfound = varsfound + localvarsfound
 								remotevarswc = list(set(remotevarswc).difference(set(varsfound)))
 					else:
@@ -377,7 +377,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 				## The scan has ended, but there are still symbols left.
 				notfoundfuncsperfile[i] = remotefuncswc
 				#print >>sys.stderr, "NOT FULLFILLED", i, remotefuncswc, remotevarswc
-				unusedlibs = list(set(leafreports['libs']).difference(set(usedlibs)))
+				unusedlibs = list(set(leafreports['libs']).difference(set(map(lambda x: x[0], usedlibs))))
 				unusedlibs.sort()
 				unusedlibsperfile[i] = unusedlibs
 
@@ -415,8 +415,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 					#print >>sys.stderr, "POSSIBLE LIBS TO SATISFY CONDITIONS", i, list(set(possiblesolutions))
 					possiblyusedlibsperfile[i] = list(set(possiblesolutions))
 			else:
-				if list(set(leafreports['libs']).difference(set(usedlibs))) != []:
-					unusedlibs = list(set(leafreports['libs']).difference(set(usedlibs)))
+				if list(set(leafreports['libs']).difference(set(map(lambda x: x[0], usedlibs)))) != []:
+					unusedlibs = list(set(leafreports['libs']).difference(set(map(lambda x: x[0], usedlibs))))
 					unusedlibs.sort()
 					unusedlibsperfile[i] = unusedlibs
 					#print >>sys.stderr, "UNUSED LIBS", i, list(set(leafreports[i]['libs']).difference(set(usedlibs)))
@@ -426,9 +426,9 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 				#print >>sys.stderr, "POSSIBLY USED", i, possiblyused
 				#print >>sys.stderr
 		if not usedlibsperfile.has_key(i):
-			usedlibs = list(set(usedlibs))
-			usedlibs.sort()
-			usedlibsperfile[i] = usedlibs
+			usedlibsp = list(set(map(lambda x: x[0], usedlibs)))
+			usedlibsp.sort()
+			usedlibsperfile[i] = usedlibsp
 
 	## return a dictionary, with for each ELF file for which there are results
 	## a separate dictionary with the results. These will be added to 'scans' in
