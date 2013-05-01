@@ -166,11 +166,15 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 	## libraryname -> [list of libraries]
 	squashedelffiles = {}
 
-	## cache the names of local and remote functions and variables
+	## cache the names of local and remote functions and variables, both normal and weak
 	localfunctionnames = {}
 	remotefunctionnames = {}
 	localvariablenames = {}
 	remotevariablenames = {}
+	weaklocalfunctionnames = {}
+	weakremotefunctionnames = {}
+	weaklocalvariablenames = {}
+	weakremotevariablenames = {}
 
 	## a list of unresolvable files: they don't exist on the system
 	unresolvable = []
@@ -240,10 +244,17 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 			else:
 				funcstolibs[funcname] = [filename]
 
+		## store normal functions and variables ...
 		localfunctionnames[filename] = localfuncs
 		remotefunctionnames[filename] = remotefuncs
 		localvariablenames[filename] = localvars
 		remotevariablenames[filename] = remotevars
+
+		## ... as well as the weak ones
+		weaklocalfunctionnames[filename] = weaklocalfuncs
+		weakremotefunctionnames[filename] = weakremotefuncs
+		weaklocalvariablenames[filename] = weaklocalvars
+		weakremotevariablenames[filename] = weakremotevars
 		elftypes[filename] = elftype
 
 	## TODO: look if RPATH is used, since that will give more information
@@ -275,118 +286,121 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 		leaf_file.close()
 
 		if leafreports.has_key('libs'):
+			if remotefunctionnames[i] == [] and remotevariablenames[i] == [] and weakremotefunctionnames == [] and weakremotevariablenames == []:
+				## nothing to resolve, so continue
+				continue
 			## keep copies of the original data
 			remotefuncswc = copy.copy(remotefunctionnames[i])
 			remotevarswc = copy.copy(remotevariablenames[i])
 
-			## only process if there actually is anything to process
-			if remotefunctionnames[i] != [] or remotevariablenames[i] != []:
-				funcsfound = []
-				varsfound = []
-				for l in leafreports['libs']:
+			funcsfound = []
+			varsfound = []
+			for l in leafreports['libs']:
 
-					## temporary storage to hold the names of the libraries
-					## searched for. This list will be manipulated later on.
-					filtersquash = []
+				## temporary storage to hold the names of the libraries
+				## searched for. This list will be manipulated later on.
+				filtersquash = []
 
-					if not squashedelffiles.has_key(l):
-						## No library (or libraries) with the name that has been declared
-						## in the ELF file can be found. It could be because the
-						## declared name is actually a symbolic link that could, or could
-						## not be present on the system.
-						if not symlinks.has_key(l):
-							## There are no symlinks that point to a library that's needed.
-							## There could be various reasons for this, such as a missing
-							## symlink that was not created during unpacking.
-							if not sonames.has_key(l):
+				if not squashedelffiles.has_key(l):
+					## No library (or libraries) with the name that has been declared
+					## in the ELF file can be found. It could be because the
+					## declared name is actually a symbolic link that could, or could
+					## not be present on the system.
+					if not symlinks.has_key(l):
+						## There are no symlinks that point to a library that's needed.
+						## There could be various reasons for this, such as a missing
+						## symlink that was not created during unpacking.
+						if not sonames.has_key(l):
+							unresolvable.append(l)
+							continue
+						else:
+							if len(sonames[l]) == 1:
+								possiblyused.append(sonames[l][0])
+								filtersquash = filtersquash + squashedelffiles[os.path.basename(sonames[l][0])]
+							else:
+								## TODO: more libraries could possibly
+								## fullfill the dependency.
 								unresolvable.append(l)
 								continue
+					else:
+						## there are one or possibly more symlinks that can fullfill
+						## this requirement
+						for sl in symlinks[l]:
+							## absolute link, figure out how to deal with that
+							if sl['target'].startswith('/'):
+								pass
 							else:
-								if len(sonames[l]) == 1:
-									possiblyused.append(sonames[l][0])
-									filtersquash = filtersquash + squashedelffiles[os.path.basename(sonames[l][0])]
-								else:
-									## TODO: more libraries could possibly
-									## fullfill the dependency.
-									unresolvable.append(l)
-									continue
-						else:
-							## there are one or possibly more symlinks that can fullfill
-							## this requirement
-							for sl in symlinks[l]:
-								## absolute link, figure out how to deal with that
-								if sl['target'].startswith('/'):
+								target = os.path.normpath(os.path.join(os.path.dirname(sl['original']), sl['target']))
+								## TODO: verify if any of the links are symlinks
+								## themselves. Add a safety mechanism for cyclical
+								## symlinks.
+								if os.path.islink(target):
 									pass
-								else:
-									target = os.path.normpath(os.path.join(os.path.dirname(sl['original']), sl['target']))
-									## TODO: verify if any of the links are symlinks
-									## themselves. Add a safety mechanism for cyclical
-									## symlinks.
-									if os.path.islink(target):
-										pass
-									## add all resolved symlinks to the list of
-									## libraries to consider
-									filtersquash.append(target)
+								## add all resolved symlinks to the list of
+								## libraries to consider
+								filtersquash.append(target)
+				else:
+					filtersquash = filter(lambda x: leafreports['architecture'] == leafreports['architecture'], squashedelffiles[l])
+				## now walk through the possible files that can resolve this dependency.
+				## First verify how many possible files are in 'filtersquash' have.
+				## In the common case this will be just one and then everything is easy.
+				## Since there might be multiple files that satisfy a dependency (because
+				## they have the same name) a few verification steps have to be taken.
+				## Quite often the copies will be the same as well, which is easy to check using:
+				## * SHA256 checksums
+				## * equivalent local and remote function names (and in the future localvars and remotevars)
+				if len(filtersquash) > 1:
+					if len(list(set(map(lambda x: unpackreports[x]['sha256'], filtersquash)))) == 1:
+						filtersquash = [filtersquash[0]]
+						## store duplicates for later reporting of alternatives
+						dupes[filtersquash[0]] = filtersquash
 					else:
-						filtersquash = filter(lambda x: leafreports['architecture'] == leafreports['architecture'], squashedelffiles[l])
-					## now walk through the possible files that can resolve this dependency.
-					## First verify how many possible files are in 'filtersquash' have.
-					## In the common case this will be just one and then everything is easy.
-					## Since there might be multiple files that satisfy a dependency (because
-					## they have the same name) a few verification steps have to be taken.
-					## Quite often the copies will be the same as well, which is easy to check using:
-					## * SHA256 checksums
-					## * equivalent local and remote function names (and in the future localvars and remotevars)
-					if len(filtersquash) > 1:
-						if len(list(set(map(lambda x: unpackreports[x]['sha256'], filtersquash)))) == 1:
-							filtersquash = [filtersquash[0]]
-							## store duplicates for later reporting of alternatives
-							dupes[filtersquash[0]] = filtersquash
-						else:
-							difference = False
-							## compare the local and remote funcs and vars. If they
-							## are equivalent they can be treated as if they were identical
-							for f1 in filtersquash:
-								if difference == True:
+						difference = False
+						## compare the local and remote funcs and vars. If they
+						## are equivalent they can be treated as if they were identical
+						for f1 in filtersquash:
+							if difference == True:
+								break
+							for f2 in filtersquash:
+								if len(set(localfunctionnames[f1]).intersection(set(localfunctionnames[f2]))) == len(localfunctionnames[f1]):
+									difference = True
 									break
-								for f2 in filtersquash:
-									if len(set(localfunctionnames[f1]).intersection(set(localfunctionnames[f2]))) == len(localfunctionnames[f1]):
-										difference = True
-										break
-									if len(set(remotefunctionnames[f1]).intersection(set(remotefunctionnames[f2]))) != len(remotefunctionnames[f1]):
-										difference = True
-										break
-							if not difference:
-								dupes[filtersquash[0]] = filtersquash
-					if len(filtersquash) == 1:
-						if remotefuncswc != []:
-							if localfunctionnames.has_key(filtersquash[0]):
-								## easy case
-								localfuncsfound = list(set(remotefuncswc).intersection(set(localfunctionnames[filtersquash[0]])))
-								if localfuncsfound != []:
-									#print >>sys.stderr, "POSIX FUNCS", inPosix(localfuncsfound, 'functions'), i, l
-									if usedby.has_key(filtersquash[0]):
-										usedby[filtersquash[0]].append(i)
-									else:
-										usedby[filtersquash[0]] = [i]
-									usedlibs.append((l,len(localfuncsfound)))
-								funcsfound = funcsfound + localfuncsfound
-								remotefuncswc = list(set(remotefuncswc).difference(set(funcsfound)))
-						if remotevarswc != []:
-							if localvariablenames.has_key(filtersquash[0]):
-								localvarsfound = list(set(remotevarswc).intersection(set(localvariablenames[filtersquash[0]])))
-								if localvarsfound != []:
-									#print >>sys.stderr, "POSIX VARS", inPosix(localvarsfound, 'variables'), i, l
-									if usedby.has_key(filtersquash[0]):
-										usedby[filtersquash[0]].append(i)
-									else:
-										usedby[filtersquash[0]] = [i]
-									usedlibs.append((l,len(localvarsfound)))
-								varsfound = varsfound + localvarsfound
-								remotevarswc = list(set(remotevarswc).difference(set(varsfound)))
-					else:
-						## TODO
-						pass
+								if len(set(remotefunctionnames[f1]).intersection(set(remotefunctionnames[f2]))) != len(remotefunctionnames[f1]):
+									difference = True
+									break
+						if not difference:
+							dupes[filtersquash[0]] = filtersquash
+				if len(filtersquash) == 1:
+					if remotefuncswc != []:
+						if localfunctionnames.has_key(filtersquash[0]):
+							## easy case
+							localfuncsfound = list(set(remotefuncswc).intersection(set(localfunctionnames[filtersquash[0]])))
+							if localfuncsfound != []:
+								#print >>sys.stderr, "POSIX FUNCS", inPosix(localfuncsfound, 'functions'), i, l
+								if usedby.has_key(filtersquash[0]):
+									usedby[filtersquash[0]].append(i)
+								else:
+									usedby[filtersquash[0]] = [i]
+								usedlibs.append((l,len(localfuncsfound)))
+							funcsfound = funcsfound + localfuncsfound
+							remotefuncswc = list(set(remotefuncswc).difference(set(funcsfound)))
+					if remotevarswc != []:
+						if localvariablenames.has_key(filtersquash[0]):
+							localvarsfound = list(set(remotevarswc).intersection(set(localvariablenames[filtersquash[0]])))
+							if localvarsfound != []:
+								#print >>sys.stderr, "POSIX VARS", inPosix(localvarsfound, 'variables'), i, l
+								if usedby.has_key(filtersquash[0]):
+									usedby[filtersquash[0]].append(i)
+								else:
+									usedby[filtersquash[0]] = [i]
+								usedlibs.append((l,len(localvarsfound)))
+							varsfound = varsfound + localvarsfound
+							remotevarswc = list(set(remotevarswc).difference(set(varsfound)))
+				else:
+					## TODO
+					pass
+			## normal resolution has ended, now resolve WEAK symbols
+			## TODO: WEAK symbols
 			if remotevarswc != []:
 				notfoundvarssperfile[i] = remotevarswc
 
