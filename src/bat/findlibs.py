@@ -5,6 +5,7 @@
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 import os, os.path, sys, subprocess, copy, cPickle, multiprocessing, pydot
+import bat.interfaces
 
 '''
 This program can be used to check whether the dependencies of a dynamically
@@ -37,6 +38,19 @@ standard readelf:
 https://dev.openwrt.org/ticket/6847
 https://bugs.busybox.net/show_bug.cgi?id=729
 '''
+
+def inPosix(names, ptype):
+	if ptype == 'functions':
+		for i in names:
+			if i == '__uClibc_main':
+				continue
+			if i not in bat.interfaces.posixfunctions:
+				return False
+	elif ptype == 'variables':
+		for i in names:
+			if i not in bat.interfaces.posixvars:
+				return False
+	return True
 
 ## extract variable names, function names and the soname from an ELF file
 def extractfromelf((path, filename)):
@@ -239,6 +253,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 	## for reporting.
 	usedby = {}
 	usedlibsperfile = {}
+	usedlibsandcountperfile = {}
 	unusedlibsperfile = {}
 	possiblyusedlibsperfile = {}
 
@@ -349,6 +364,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 								## easy case
 								localfuncsfound = list(set(remotefuncswc).intersection(set(localfunctionnames[filtersquash[0]])))
 								if localfuncsfound != []:
+									#print >>sys.stderr, "POSIX FUNCS", inPosix(localfuncsfound, 'functions'), i, l
 									if usedby.has_key(filtersquash[0]):
 										usedby[filtersquash[0]].append(i)
 									else:
@@ -360,6 +376,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 							if localvariablenames.has_key(filtersquash[0]):
 								localvarsfound = list(set(remotevarswc).intersection(set(localvariablenames[filtersquash[0]])))
 								if localvarsfound != []:
+									#print >>sys.stderr, "POSIX VARS", inPosix(localvarsfound, 'variables'), i, l
 									if usedby.has_key(filtersquash[0]):
 										usedby[filtersquash[0]].append(i)
 									else:
@@ -425,10 +442,18 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 				pass
 				#print >>sys.stderr, "POSSIBLY USED", i, possiblyused
 				#print >>sys.stderr
+		usedlibs_tmp = {}
+		for l in usedlibs:
+			if usedlibs_tmp.has_key(l[0]):
+				usedlibs_tmp[l[0]] = usedlibs_tmp[l[0]] + l[1]
+			else:
+				usedlibs_tmp[l[0]] = l[1]
 		if not usedlibsperfile.has_key(i):
 			usedlibsp = list(set(map(lambda x: x[0], usedlibs)))
 			usedlibsp.sort()
 			usedlibsperfile[i] = usedlibsp
+		if not usedlibsandcountperfile.has_key(i):
+			usedlibsandcountperfile[i] = usedlibs_tmp.items()
 
 	## return a dictionary, with for each ELF file for which there are results
 	## a separate dictionary with the results. These will be added to 'scans' in
@@ -476,25 +501,25 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 
 	squashedgraph = {}
 	for i in elffiles:
-		libdeps = usedlibsperfile[i]
+		libdeps = usedlibsandcountperfile[i]
 		if libdeps == []:
 			continue
 		if not squashedgraph.has_key(i):
 			squashedgraph[i] = []
 		for d in libdeps:
-			if not squashedelffiles.has_key(d):
-				if sonames.has_key(d):
-					if len(sonames[d]) != 1:
+			if not squashedelffiles.has_key(d[0]):
+				if sonames.has_key(d[0]):
+					if len(sonames[d[0]]) != 1:
 						continue
 					else:
-						squashedgraph[i].append(sonames[d][0])
+						squashedgraph[i].append((sonames[d[0]][0], d[1]))
 				else:
 					continue
 			else:
-				if len(squashedelffiles[d]) != 1:
+				if len(squashedelffiles[d[0]]) != 1:
 					pass
 				else:
-					squashedgraph[i].append(squashedelffiles[d][0])
+					squashedgraph[i].append((squashedelffiles[d[0]][0], d[1]))
 
 	## TODO: make parallel
 	for i in elffiles:
@@ -509,24 +534,24 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 			elfgraph = pydot.Dot(graph_type='digraph')
 			rootnode = pydot.Node(ppname)
 			elfgraph.add_node(rootnode)
-			processnodes = map(lambda x: (rootnode, x, True, True), squashedgraph[i])
+			processnodes = map(lambda x: (rootnode,) + x + (True, True), squashedgraph[i])
 			if unusedlibsperfile.has_key(i):
 				for j in unusedlibsperfile[i]:
 					if not squashedelffiles.has_key(j):
 						continue
 					if len(squashedelffiles[j]) != 1:
 						continue
-					processnodes.append((rootnode, squashedelffiles[j][0], False, False))
+					processnodes.append((rootnode, squashedelffiles[j][0], 0, False, False))
 			if possiblyusedlibsperfile.has_key(i):
 				for j in possiblyusedlibsperfile[i]:
-					processnodes.append((rootnode, j, True, False))
+					processnodes.append((rootnode, j, 0, True, False))
 					seen.append((i,j))
 			seen = seen + map(lambda x: (i, x), squashedgraph[i])
 
 			while True:
 				newprocessnodes = []
 				for j in processnodes:
-					(parentnode, nodetext, used, declared) = j
+					(parentnode, nodetext, count, used, declared) = j
 					ppname = os.path.join(unpackreports[nodetext]['path'], unpackreports[nodetext]['name'])
 					tmpnode = pydot.Node(ppname)
 					elfgraph.add_node(tmpnode)
@@ -539,17 +564,17 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 							elfgraph.add_edge(pydot.Edge(parentnode, tmpnode, color='red'))
 						else:
 							## other dependencies: solid black line
-							elfgraph.add_edge(pydot.Edge(parentnode, tmpnode))
+							elfgraph.add_edge(pydot.Edge(parentnode, tmpnode, label="%d" % count, labeldistance=1.5, labelfontsize=20.0))
 
 					if squashedgraph.has_key(nodetext):
 						for n in squashedgraph[nodetext]:
-							if not (nodetext, n) in seen:
-								newprocessnodes.append((tmpnode, n, True, True))
-								seen.append((nodetext, n))
+							if not (nodetext, n[0]) in seen:
+								newprocessnodes.append((tmpnode,) +  n + (True, True))
+								seen.append((nodetext, n[0]))
 					if possiblyusedlibsperfile.has_key(nodetext):
 						for u in possiblyusedlibsperfile[nodetext]:
 							if not (nodetext, u) in seen:
-								newprocessnodes.append((tmpnode, u, True, False))
+								newprocessnodes.append((tmpnode, u, 0, True, False))
 								seen.append((nodetext, u))
 					if unusedlibsperfile.has_key(nodetext):
 						for u in unusedlibsperfile[nodetext]:
@@ -558,7 +583,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 									continue
 								if len(squashedelffiles[u]) != 1:
 									continue
-								newprocessnodes.append((tmpnode, squashedelffiles[u][0], False, False))
+								newprocessnodes.append((tmpnode, squashedelffiles[u][0], 0, False, False))
 								seen.append((nodetext, u))
 				processnodes = newprocessnodes
 				if processnodes == []:
