@@ -213,6 +213,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 	## map functions to libraries. For each function name a list of libraries
 	## that define the function is kept.
 	funcstolibs = {}
+	weakfuncstolibs = {}
 
 	## Map sonames to libraries For each soname a list of files that define the
 	## soname is kept.
@@ -243,6 +244,11 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 				funcstolibs[funcname].append(filename)
 			else:
 				funcstolibs[funcname] = [filename]
+		for funcname in weaklocalfuncs:
+			if weakfuncstolibs.has_key(funcname):
+				weakfuncstolibs[funcname].append(filename)
+			else:
+				weakfuncstolibs[funcname] = [filename]
 
 		## store normal functions and variables ...
 		localfunctionnames[filename] = localfuncs
@@ -295,6 +301,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 
 			funcsfound = []
 			varsfound = []
+			filteredlibs = []
 			for l in leafreports['libs']:
 
 				## temporary storage to hold the names of the libraries
@@ -370,7 +377,9 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 									break
 						if not difference:
 							dupes[filtersquash[0]] = filtersquash
+							filtersquash = [filtersquash[0]]
 				if len(filtersquash) == 1:
+					filteredlibs += filtersquash
 					if remotefuncswc != []:
 						if localfunctionnames.has_key(filtersquash[0]):
 							## easy case
@@ -400,21 +409,69 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 					## TODO
 					pass
 			## normal resolution has ended, now resolve WEAK symbols
-			## TODO: WEAK symbols
+			## TODO: WEAK local symbols
+			for f in filteredlibs:
+				weakremotefuncswc = copy.copy(weakremotefunctionnames[i])
+				weakremotevarswc = copy.copy(weakremotevariablenames[i])
+				if weakremotefuncswc != []:
+					if localfunctionnames.has_key(filtersquash[0]):
+						## easy case
+						localfuncsfound = list(set(weakremotefuncswc).intersection(set(localfunctionnames[filtersquash[0]])))
+						if localfuncsfound != []:
+							#print >>sys.stderr, "POSIX FUNCS", inPosix(localfuncsfound, 'functions'), i, l
+							if usedby.has_key(filtersquash[0]):
+								usedby[filtersquash[0]].append(i)
+							else:
+								usedby[filtersquash[0]] = [i]
+							usedlibs.append((l,len(localfuncsfound)))
+							funcsfound = funcsfound + localfuncsfound
+							weakremotefuncswc = list(set(weakremotefuncswc).difference(set(funcsfound)))
+				if weakremotevarswc != []:
+					if localvariablenames.has_key(filtersquash[0]):
+						localvarsfound = list(set(weakremotevarswc).intersection(set(localvariablenames[filtersquash[0]])))
+						if localvarsfound != []:
+							#print >>sys.stderr, "POSIX VARS", inPosix(localvarsfound, 'variables'), i, l
+							if usedby.has_key(filtersquash[0]):
+								usedby[filtersquash[0]].append(i)
+							else:
+								usedby[filtersquash[0]] = [i]
+							usedlibs.append((l,len(localvarsfound)))
+							varsfound = varsfound + localvarsfound
+							weakremotevarswc = list(set(weakremotevarswc).difference(set(varsfound)))
+			
 			if remotevarswc != []:
 				notfoundvarssperfile[i] = remotevarswc
 
 			if remotefuncswc != []:
 				## The scan has ended, but there are still symbols left.
+				## TODO: this is incorrect, only set after resolving WEAK symbols
 				notfoundfuncsperfile[i] = remotefuncswc
-				#print >>sys.stderr, "NOT FULLFILLED", i, remotefuncswc, remotevarswc
 				unusedlibs = list(set(leafreports['libs']).difference(set(map(lambda x: x[0], usedlibs))))
 				unusedlibs.sort()
 				unusedlibsperfile[i] = unusedlibs
 
 				possiblesolutions = []
+
+				## try to find solutions for the currently unresolved symbols.
+				## 1. check if one of the existing used libraries already defines it as
+				##    a WEAK symbol
+				## 2. check other libraries
+				##
+				## This could possibly be incorrect if an existing used library defines
+				## the symbol as WEAK, but another "hidden" dependency has it as GLOBAL.
+				## First for remote functions...
 				for r in remotefuncswc:
-					if funcstolibs.has_key(r):
+					if weakfuncstolibs.has_key(r):
+						existing = False
+						for w in weakfuncstolibs[r]:
+							## TODO: update count if match was found
+							if w in filteredlibs:
+								existing = True
+								break
+						if not existing:
+							possiblesolutions = possiblesolutions + weakfuncstolibs[r]
+							#print >>sys.stderr, "NOT FOUND WEAK", r, weakfuncstolibs[r], filteredlibs
+					elif funcstolibs.has_key(r):
 						if len(funcstolibs[r]) == 1:
 							possiblesolutions = possiblesolutions + funcstolibs[r]
 							continue
@@ -426,6 +483,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 									found = True
 									break
 							if not found:
+								print >>sys.stderr, "NOT FOUND", r
 								## there are multiple files that can satisfy this dependency
 								## 1. check if the files are identical (checksum)
 								## 2. if identical, check for soname and choose the one
@@ -442,6 +500,10 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 										pass
 								else:
 									pass
+				## ... then for remote variables ...
+				for r in remotevarswc:
+					pass
+				#print >>sys.stderr, "NOT FULLFILLED", i, remotefuncswc, remotevarswc, usedlibs
 				if possiblesolutions != []:
 					#print >>sys.stderr, "POSSIBLE LIBS TO SATISFY CONDITIONS", i, list(set(possiblesolutions))
 					possiblyusedlibsperfile[i] = list(set(possiblesolutions))
@@ -556,11 +618,12 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 					if len(squashedelffiles[j]) != 1:
 						continue
 					processnodes.append((rootnode, squashedelffiles[j][0], 0, False, False))
+					seen.append((i,j))
 			if possiblyusedlibsperfile.has_key(i):
 				for j in possiblyusedlibsperfile[i]:
 					processnodes.append((rootnode, j, 0, True, False))
 					seen.append((i,j))
-			seen = seen + map(lambda x: (i, x), squashedgraph[i])
+			seen = seen + map(lambda x: (i, x[0]), squashedgraph[i])
 
 			while True:
 				newprocessnodes = []
