@@ -293,6 +293,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 	dupes = {}
 
 	for i in elffiles:
+		if elftypes[i] == 'kernelmod':
+			continue
 		## per ELF file keep lists of used libraries and possibly used libraries.
 		## The later is searched if it needs to be guessed which libraries were used.
 		usedlibs = []
@@ -591,6 +593,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 	## leafreports by the top level script.
 	aggregatereturn = {}
 	for i in elffiles:
+		if elftypes[i] == 'kernelmod':
+			continue
 		writeback = False
 		filehash = unpackreports[i]['sha256']
 
@@ -632,6 +636,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 
 	squashedgraph = {}
 	for i in elffiles:
+		if elftypes[i] == 'kernelmod':
+			continue
 		libdeps = usedlibsandcountperfile[i]
 		if libdeps == []:
 			continue
@@ -654,6 +660,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 
 	## TODO: make parallel
 	for i in elffiles:
+		if elftypes[i] == 'kernelmod':
+			continue
 		if not squashedgraph.has_key(i):
 			continue
 		if squashedgraph[i] == []:
