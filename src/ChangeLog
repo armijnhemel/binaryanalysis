@@ -1,3 +1,8 @@
+2013-05-02
+* correctly resolve WEAK symbols in findlibs.py, add numbers to edges
+indicating number of used symbols, make some edges dotted if all used symbols
+are part of POSIX
+
 2013-04-29
 * work around squashfs unpacking crashes in some variants if 7zip compression
 is used instead of lzma or zlib
