@@ -31,6 +31,18 @@ properly.
 
 Something similar is done for remote and local variables.
 
+Then symbols need to be resolved in a few steps (both for functions and
+variables):
+
+1. for each undefined symbol in a file see if it is defined in one of the
+declared dependencies as GLOBAL.
+2. for each weak undefined symbol in a file see if it is defined in one of the
+declared dependencies as GLOBAL.
+3. for each undefined symbol in a file that has not been resolved yet see if it
+is defined in one of the declared dependencies as WEAK.
+4. for each defined weak symbol in a file see if one of the declared
+dependencies defines the same symbols as GLOBAL.
+
 This method does not always work. Some vendors run sstrip on the binaries.
 Some versions of this tool created files with section header that confuses
 standard readelf:
@@ -279,6 +291,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 
 	## Keep a list of files that are identical, for example copies of libraries
 	dupes = {}
+
 	for i in elffiles:
 		## per ELF file keep lists of used libraries and possibly used libraries.
 		## The later is searched if it needs to be guessed which libraries were used.
@@ -302,6 +315,9 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 			funcsfound = []
 			varsfound = []
 			filteredlibs = []
+
+			## reverse mapping
+			filteredlookup = {}
 			for l in leafreports['libs']:
 
 				## temporary storage to hold the names of the libraries
@@ -380,6 +396,10 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 							filtersquash = [filtersquash[0]]
 				if len(filtersquash) == 1:
 					filteredlibs += filtersquash
+					if filteredlookup.has_key(filtersquash[0]):
+						filteredlookup[filtersquash[0]].append(l)
+					else:
+						filteredlookup[filtersquash[0]] = [l]
 					if remotefuncswc != []:
 						if localfunctionnames.has_key(filtersquash[0]):
 							## easy case
@@ -408,37 +428,71 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 				else:
 					## TODO
 					pass
-			## normal resolution has ended, now resolve WEAK symbols
-			## TODO: WEAK local symbols
+			## normal resolution has ended, now resolve WEAK undefined symbols, first against
+			## normal symbols.
 			for f in filteredlibs:
 				weakremotefuncswc = copy.copy(weakremotefunctionnames[i])
 				weakremotevarswc = copy.copy(weakremotevariablenames[i])
 				if weakremotefuncswc != []:
-					if localfunctionnames.has_key(filtersquash[0]):
+					if localfunctionnames.has_key(f):
 						## easy case
-						localfuncsfound = list(set(weakremotefuncswc).intersection(set(localfunctionnames[filtersquash[0]])))
+						localfuncsfound = list(set(weakremotefuncswc).intersection(set(localfunctionnames[f])))
 						if localfuncsfound != []:
 							#print >>sys.stderr, "POSIX FUNCS", inPosix(localfuncsfound, 'functions'), i, l
-							if usedby.has_key(filtersquash[0]):
-								usedby[filtersquash[0]].append(i)
+							if usedby.has_key(f):
+								usedby[f].append(i)
 							else:
-								usedby[filtersquash[0]] = [i]
-							usedlibs.append((l,len(localfuncsfound)))
+								usedby[f] = [i]
+							if len(filteredlookup[f]) == 1:
+								usedlibs.append((filteredlookup[f][0],len(localfuncsfound)))
+							else:
+								## this should never happen
+								pass
 							funcsfound = funcsfound + localfuncsfound
 							weakremotefuncswc = list(set(weakremotefuncswc).difference(set(funcsfound)))
 				if weakremotevarswc != []:
-					if localvariablenames.has_key(filtersquash[0]):
+					if localvariablenames.has_key(f):
 						localvarsfound = list(set(weakremotevarswc).intersection(set(localvariablenames[filtersquash[0]])))
 						if localvarsfound != []:
-							#print >>sys.stderr, "POSIX VARS", inPosix(localvarsfound, 'variables'), i, l
-							if usedby.has_key(filtersquash[0]):
-								usedby[filtersquash[0]].append(i)
+							if usedby.has_key(f):
+								usedby[f].append(i)
 							else:
-								usedby[filtersquash[0]] = [i]
-							usedlibs.append((l,len(localvarsfound)))
+								usedby[f] = [i]
+							if len(filteredlookup[f]) == 1:
+								usedlibs.append((filteredlookup[f][0],len(localvarsfound)))
+							else:
+								## this should never happen
+								pass
 							varsfound = varsfound + localvarsfound
 							weakremotevarswc = list(set(weakremotevarswc).difference(set(varsfound)))
-			
+			for f in filteredlibs:
+				if remotefuncswc != []:
+					if weaklocalfunctionnames.has_key(f):
+						## easy case
+						localfuncsfound = list(set(remotefuncswc).intersection(set(weaklocalfunctionnames[f])))
+						if localfuncsfound != []:
+							#print >>sys.stderr, "POSIX FUNCS", inPosix(localfuncsfound, 'functions'), i, l
+							if usedby.has_key(f):
+								usedby[f].append(i)
+							else:
+								usedby[f] = [i]
+							## TODO: this is incorrect, fix
+							usedlibs.append((l,len(localfuncsfound)))
+						funcsfound = funcsfound + localfuncsfound
+					remotefuncswc = list(set(remotefuncswc).difference(set(funcsfound)))
+				if remotevarswc != []:
+					if weaklocalvariablenames.has_key(f):
+						localvarsfound = list(set(remotevarswc).intersection(set(weaklocalvariablenames[f])))
+						if localvarsfound != []:
+							#print >>sys.stderr, "POSIX VARS", inPosix(localvarsfound, 'variables'), i, l
+							if usedby.has_key(f):
+								usedby[f].append(i)
+							else:
+								usedby[f] = [i]
+							usedlibs.append((l,len(localvarsfound)))
+						varsfound = varsfound + localvarsfound
+						remotevarswc = list(set(remotevarswc).difference(set(varsfound)))
+
 			if remotevarswc != []:
 				notfoundvarssperfile[i] = remotevarswc
 
@@ -454,8 +508,9 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 
 				## try to find solutions for the currently unresolved symbols.
 				## 1. check if one of the existing used libraries already defines it as
-				##    a WEAK symbol
-				## 2. check other libraries
+				##    a WEAK symbol. If so, continue.
+				## 2. check other libraries. If there is a match, store it as a possible
+				##    solution.
 				##
 				## This could possibly be incorrect if an existing used library defines
 				## the symbol as WEAK, but another "hidden" dependency has it as GLOBAL.
