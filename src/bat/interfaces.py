@@ -1200,6 +1200,8 @@ gnuextensionsfunctions = ["gethostent_r",
                           "mempcpy",
                           "wmempcpy",
                           "strchrnul",
+                          "asprintf",
+                          "vasprintf"
                           ]
 
 bsdfunctions = ["daemon",
@@ -1231,6 +1233,9 @@ linuxfunctions = ["sysinfo",
                   "klogctl",
                   "statfs",
                   "fstatfs",
+                  "mount",
+                  "umount",
+                  "umount2",
                  ]
 
 susfunctions = ["getpagesize"]
@@ -1265,6 +1270,7 @@ miscfunctions = ["inet_aton",
                  "herror",
                  "hstrerror",
                  "clearenv"
+                 "bindresvport"
                 ]
 
 allfunctions = posixfunctions + gnuextensionsfunctions + bsdfunctions + linuxfunctions + sysvfunctions + glibcfunctions + gccfunctions + lsbfunctions + susfunctions + xdrfunctions + miscfunctions
