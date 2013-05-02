@@ -1201,7 +1201,7 @@ gnuextensionsfunctions = ["gethostent_r",
                           "wmempcpy",
                           "strchrnul",
                           "asprintf",
-                          "vasprintf"
+                          "vasprintf",
                           ]
 
 bsdfunctions = ["daemon",
@@ -1269,8 +1269,9 @@ miscfunctions = ["inet_aton",
                  "setdomainname",
                  "herror",
                  "hstrerror",
-                 "clearenv"
-                 "bindresvport"
+                 "clearenv",
+                 "bindresvport",
+                 "__uClibc_main",
                 ]
 
 allfunctions = posixfunctions + gnuextensionsfunctions + bsdfunctions + linuxfunctions + sysvfunctions + glibcfunctions + gccfunctions + lsbfunctions + susfunctions + xdrfunctions + miscfunctions
