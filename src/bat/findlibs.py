@@ -430,11 +430,11 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 				else:
 					## TODO
 					pass
-			## normal resolution has ended, now resolve WEAK undefined symbols, first against
-			## normal symbols.
+			## normal resolving has finished, now resolve WEAK undefined symbols, first against
+			## normal symbols ...
+			weakremotefuncswc = copy.copy(weakremotefunctionnames[i])
+			weakremotevarswc = copy.copy(weakremotevariablenames[i])
 			for f in filteredlibs:
-				weakremotefuncswc = copy.copy(weakremotefunctionnames[i])
-				weakremotevarswc = copy.copy(weakremotevariablenames[i])
 				if weakremotefuncswc != []:
 					if localfunctionnames.has_key(f):
 						## easy case
@@ -467,6 +467,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 								pass
 							varsfound = varsfound + localvarsfound
 							weakremotevarswc = list(set(weakremotevarswc).difference(set(varsfound)))
+
+			## then resolve normal unresolved symbols against weak symbols
 			for f in filteredlibs:
 				if remotefuncswc != []:
 					if weaklocalfunctionnames.has_key(f):
@@ -478,10 +480,13 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 								usedby[f].append(i)
 							else:
 								usedby[f] = [i]
-							## TODO: this is incorrect, fix
-							usedlibs.append((l,len(localfuncsfound)))
-						funcsfound = funcsfound + localfuncsfound
-					remotefuncswc = list(set(remotefuncswc).difference(set(funcsfound)))
+							if len(filteredlookup[f]) == 1:
+								usedlibs.append((filteredlookup[f][0],len(localfuncsfound)))
+							else:
+								## this should never happen
+								pass
+							funcsfound = funcsfound + localfuncsfound
+							remotefuncswc = list(set(remotefuncswc).difference(set(funcsfound)))
 				if remotevarswc != []:
 					if weaklocalvariablenames.has_key(f):
 						localvarsfound = list(set(remotevarswc).intersection(set(weaklocalvariablenames[f])))
@@ -491,9 +496,52 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 								usedby[f].append(i)
 							else:
 								usedby[f] = [i]
-							usedlibs.append((l,len(localvarsfound)))
-						varsfound = varsfound + localvarsfound
-						remotevarswc = list(set(remotevarswc).difference(set(varsfound)))
+							if len(filteredlookup[f]) == 1:
+								usedlibs.append((filteredlookup[f][0],len(localvarsfound)))
+							else:
+								## this should never happen
+								pass
+							varsfound = varsfound + localvarsfound
+							remotevarswc = list(set(remotevarswc).difference(set(varsfound)))
+
+			## finally check the weak local symbols and see if they have been defined somewhere
+			## else as a global symbol. In that case the global symbol has preference.
+			weaklocalfuncswc = copy.copy(weaklocalfunctionnames[i])
+			weaklocalvarswc = copy.copy(weaklocalvariablenames[i])
+
+			for f in filteredlibs:
+				if weaklocalfuncswc != []:
+					if localfunctionnames.has_key(f):
+						localfuncsfound = list(set(weaklocalfuncswc).intersection(set(localfunctionnames[f])))
+						if localfuncsfound != []:
+							if usedby.has_key(f):
+								usedby[f].append(i)
+							else:
+								usedby[f] = [i]
+							if len(filteredlookup[f]) == 1:
+								usedlibs.append((filteredlookup[f][0],len(localfuncsfound)))
+							else:
+								## this should never happen
+								pass
+							funcsfound = funcsfound + localfuncsfound
+
+							weaklocalfuncswc = list(set(weaklocalfuncswc).difference(set(funcsfound)))
+				if weaklocalvarswc != []:
+					if localvariablenames.has_key(f):
+						localvarsfound = list(set(weaklocalvarswc).intersection(set(localvariablenames[f])))
+						if localvarsfound != []:
+							if usedby.has_key(f):
+								usedby[f].append(i)
+							else:
+								usedby[f] = [i]
+							if len(filteredlookup[f]) == 1:
+								usedlibs.append((filteredlookup[f][0],len(localvarsfound)))
+							else:
+								## this should never happen
+								pass
+							varsfound = varsfound + localvarsfound
+							weaklocalvarswc = list(set(weaklocalvarswc).difference(set(varsfound)))
+						pass
 
 			if remotevarswc != []:
 				notfoundvarssperfile[i] = remotevarswc
