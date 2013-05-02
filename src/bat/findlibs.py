@@ -54,13 +54,11 @@ https://bugs.busybox.net/show_bug.cgi?id=729
 def inPosix(names, ptype):
 	if ptype == 'functions':
 		for i in names:
-			if i == '__uClibc_main':
-				continue
-			if i not in bat.interfaces.posixfunctions:
+			if i not in bat.interfaces.allfunctions:
 				return False
 	elif ptype == 'variables':
 		for i in names:
-			if i not in bat.interfaces.posixvars:
+			if i not in bat.interfaces.allvars:
 				return False
 	return True
 
