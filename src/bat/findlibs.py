@@ -44,8 +44,8 @@ is defined in one of the declared dependencies as WEAK.
 dependencies defines the same symbols as GLOBAL.
 
 This method does not always work. Some vendors run sstrip on the binaries.
-Some versions of this tool created files with section header that confuses
-standard readelf:
+Some versions of the sstrip tool are buggy and create files with a section
+header that confuses standard readelf:
 
 https://dev.openwrt.org/ticket/6847
 https://bugs.busybox.net/show_bug.cgi?id=729
@@ -407,24 +407,28 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 							## easy case
 							localfuncsfound = list(set(remotefuncswc).intersection(set(localfunctionnames[filtersquash[0]])))
 							if localfuncsfound != []:
-								#print >>sys.stderr, "POSIX FUNCS", inPosix(localfuncsfound, 'functions'), i, l
 								if usedby.has_key(filtersquash[0]):
 									usedby[filtersquash[0]].append(i)
 								else:
 									usedby[filtersquash[0]] = [i]
-								usedlibs.append((l,len(localfuncsfound)))
+								if inPosix(localfuncsfound, 'functions'):
+									usedlibs.append((l,len(localfuncsfound), True))
+								else:
+									usedlibs.append((l,len(localfuncsfound), False))
 							funcsfound = funcsfound + localfuncsfound
 							remotefuncswc = list(set(remotefuncswc).difference(set(funcsfound)))
 					if remotevarswc != []:
 						if localvariablenames.has_key(filtersquash[0]):
 							localvarsfound = list(set(remotevarswc).intersection(set(localvariablenames[filtersquash[0]])))
 							if localvarsfound != []:
-								#print >>sys.stderr, "POSIX VARS", inPosix(localvarsfound, 'variables'), i, l
 								if usedby.has_key(filtersquash[0]):
 									usedby[filtersquash[0]].append(i)
 								else:
 									usedby[filtersquash[0]] = [i]
-								usedlibs.append((l,len(localvarsfound)))
+								if inPosix(localvarsfound, 'variables'):
+									usedlibs.append((l,len(localvarsfound), True))
+								else:
+									usedlibs.append((l,len(localvarsfound), False))
 							varsfound = varsfound + localvarsfound
 							remotevarswc = list(set(remotevarswc).difference(set(varsfound)))
 				else:
@@ -446,7 +450,10 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 							else:
 								usedby[f] = [i]
 							if len(filteredlookup[f]) == 1:
-								usedlibs.append((filteredlookup[f][0],len(localfuncsfound)))
+								if inPosix(localfuncsfound, 'functions'):
+									usedlibs.append((filteredlookup[f][0],len(localfuncsfound), True))
+								else:
+									usedlibs.append((filteredlookup[f][0],len(localfuncsfound), False))
 							else:
 								## this should never happen
 								pass
@@ -461,7 +468,10 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 							else:
 								usedby[f] = [i]
 							if len(filteredlookup[f]) == 1:
-								usedlibs.append((filteredlookup[f][0],len(localvarsfound)))
+								if inPosix(localvarsfound, 'variables'):
+									usedlibs.append((filteredlookup[f][0],len(localvarsfound), True))
+								else:
+									usedlibs.append((filteredlookup[f][0],len(localvarsfound), False))
 							else:
 								## this should never happen
 								pass
@@ -481,7 +491,10 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 							else:
 								usedby[f] = [i]
 							if len(filteredlookup[f]) == 1:
-								usedlibs.append((filteredlookup[f][0],len(localfuncsfound)))
+								if inPosix(localfuncsfound, 'functions'):
+									usedlibs.append((filteredlookup[f][0],len(localfuncsfound), True))
+								else:
+									usedlibs.append((filteredlookup[f][0],len(localfuncsfound), False))
 							else:
 								## this should never happen
 								pass
@@ -497,7 +510,10 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 							else:
 								usedby[f] = [i]
 							if len(filteredlookup[f]) == 1:
-								usedlibs.append((filteredlookup[f][0],len(localvarsfound)))
+								if inPosix(localvarsfound, 'variables'):
+									usedlibs.append((filteredlookup[f][0],len(localvarsfound), True))
+								else:
+									usedlibs.append((filteredlookup[f][0],len(localvarsfound), False))
 							else:
 								## this should never happen
 								pass
@@ -519,7 +535,10 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 							else:
 								usedby[f] = [i]
 							if len(filteredlookup[f]) == 1:
-								usedlibs.append((filteredlookup[f][0],len(localfuncsfound)))
+								if inPosix(localfuncsfound, 'functions'):
+									usedlibs.append((filteredlookup[f][0],len(localfuncsfound), True))
+								else:
+									usedlibs.append((filteredlookup[f][0],len(localfuncsfound), False))
 							else:
 								## this should never happen
 								pass
@@ -535,20 +554,21 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 							else:
 								usedby[f] = [i]
 							if len(filteredlookup[f]) == 1:
-								usedlibs.append((filteredlookup[f][0],len(localvarsfound)))
+								if inPosix(localvarsfound, 'variables'):
+									usedlibs.append((filteredlookup[f][0],len(localvarsfound), True))
+								else:
+									usedlibs.append((filteredlookup[f][0],len(localvarsfound), False))
 							else:
 								## this should never happen
 								pass
 							varsfound = varsfound + localvarsfound
 							weaklocalvarswc = list(set(weaklocalvarswc).difference(set(varsfound)))
-						pass
-
 			if remotevarswc != []:
+				## TODO: find possible solutions for unresolved vars
 				notfoundvarssperfile[i] = remotevarswc
 
 			if remotefuncswc != []:
 				## The scan has ended, but there are still symbols left.
-				## TODO: this is incorrect, only set after resolving WEAK symbols
 				notfoundfuncsperfile[i] = remotefuncswc
 				unusedlibs = list(set(leafreports['libs']).difference(set(map(lambda x: x[0], usedlibs))))
 				unusedlibs.sort()
@@ -626,15 +646,16 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 		usedlibs_tmp = {}
 		for l in usedlibs:
 			if usedlibs_tmp.has_key(l[0]):
-				usedlibs_tmp[l[0]] = usedlibs_tmp[l[0]] + l[1]
+				inposix = usedlibs_tmp[l[0]][1] and l[2]
+				usedlibs_tmp[l[0]] = (usedlibs_tmp[l[0]][0] + l[1], inposix)
 			else:
-				usedlibs_tmp[l[0]] = l[1]
+				usedlibs_tmp[l[0]] = (l[1], l[2])
 		if not usedlibsperfile.has_key(i):
 			usedlibsp = list(set(map(lambda x: x[0], usedlibs)))
 			usedlibsp.sort()
 			usedlibsperfile[i] = usedlibsp
 		if not usedlibsandcountperfile.has_key(i):
-			usedlibsandcountperfile[i] = usedlibs_tmp.items()
+			usedlibsandcountperfile[i] = map(lambda x: (x[0],) + x[1], usedlibs_tmp.items())
 
 	## return a dictionary, with for each ELF file for which there are results
 	## a separate dictionary with the results. These will be added to 'scans' in
@@ -697,14 +718,14 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 					if len(sonames[d[0]]) != 1:
 						continue
 					else:
-						squashedgraph[i].append((sonames[d[0]][0], d[1]))
+						squashedgraph[i].append((sonames[d[0]][0], d[1], d[2]))
 				else:
 					continue
 			else:
 				if len(squashedelffiles[d[0]]) != 1:
 					pass
 				else:
-					squashedgraph[i].append((squashedelffiles[d[0]][0], d[1]))
+					squashedgraph[i].append((squashedelffiles[d[0]][0], d[1], d[2]))
 
 	## TODO: make parallel
 	for i in elffiles:
@@ -728,18 +749,18 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 						continue
 					if len(squashedelffiles[j]) != 1:
 						continue
-					processnodes.append((rootnode, squashedelffiles[j][0], 0, False, False))
+					processnodes.append((rootnode, squashedelffiles[j][0], 0, False, False, False))
 					seen.append((i,j))
 			if possiblyusedlibsperfile.has_key(i):
 				for j in possiblyusedlibsperfile[i]:
-					processnodes.append((rootnode, j, 0, True, False))
+					processnodes.append((rootnode, j, 0, False, True, False))
 					seen.append((i,j))
 			seen = seen + map(lambda x: (i, x[0]), squashedgraph[i])
 
 			while True:
 				newprocessnodes = []
 				for j in processnodes:
-					(parentnode, nodetext, count, used, declared) = j
+					(parentnode, nodetext, count, posix, used, declared) = j
 					ppname = os.path.join(unpackreports[nodetext]['path'], unpackreports[nodetext]['name'])
 					tmpnode = pydot.Node(ppname)
 					elfgraph.add_node(tmpnode)
@@ -752,7 +773,10 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 							elfgraph.add_edge(pydot.Edge(parentnode, tmpnode, color='red'))
 						else:
 							## other dependencies: solid black line
-							elfgraph.add_edge(pydot.Edge(parentnode, tmpnode, label="%d" % count, labeldistance=1.5, labelfontsize=20.0))
+							if posix:
+								elfgraph.add_edge(pydot.Edge(parentnode, tmpnode, style='dotted', label="%d" % count, labeldistance=1.5, labelfontsize=20.0))
+							else:
+								elfgraph.add_edge(pydot.Edge(parentnode, tmpnode, label="%d" % count, labeldistance=1.5, labelfontsize=20.0))
 
 					if squashedgraph.has_key(nodetext):
 						for n in squashedgraph[nodetext]:
@@ -762,7 +786,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 					if possiblyusedlibsperfile.has_key(nodetext):
 						for u in possiblyusedlibsperfile[nodetext]:
 							if not (nodetext, u) in seen:
-								newprocessnodes.append((tmpnode, u, 0, True, False))
+								newprocessnodes.append((tmpnode, u, 0, False, True, False))
 								seen.append((nodetext, u))
 					if unusedlibsperfile.has_key(nodetext):
 						for u in unusedlibsperfile[nodetext]:
@@ -771,7 +795,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 									continue
 								if len(squashedelffiles[u]) != 1:
 									continue
-								newprocessnodes.append((tmpnode, squashedelffiles[u][0], 0, False, False))
+								newprocessnodes.append((tmpnode, squashedelffiles[u][0], 0, False, False, False))
 								seen.append((nodetext, u))
 				processnodes = newprocessnodes
 				if processnodes == []:
