@@ -1189,6 +1189,86 @@ posixfunctions = ["FD_CLR",
          "gethostbyaddr"
          ]
 
+gnuextensionsfunctions = ["gethostent_r",
+                          "gethostbyaddr_r",
+                          "gethostbyname_r",
+                          "gethostbyname2_r",
+                          "gethostbyname2",
+                          "getmntent_r",
+                          "getopt_long",
+                          "getopt_long_only",
+                          "mempcpy",
+                          "wmempcpy",
+                          "strchrnul",
+                          ]
+
+bsdfunctions = ["daemon",
+                "initgroups",
+                "chroot",
+                "setgroups",
+                "on_exit",
+                "getmntent",
+                "setmntent",
+                "addmntent",
+                "endmntent",
+                "hasmntopt",
+                "ether_aton",
+                "sethostname",
+                "vfork",
+                "strsep",
+                "settimeofday",
+                "wait3",
+                "wait4",
+                "syscall",
+               ]
+
+linuxfunctions = ["sysinfo",
+                  "ptsname_r",
+                  "clone",
+                  "adjtimex",
+                  "reboot",
+                  "syslog",
+                  "klogctl",
+                  "statfs",
+                  "fstatfs",
+                 ]
+
+susfunctions = ["getpagesize"]
+
+glibcfunctions = ["getpt"]
+
+## inserted by GCC
+gccfunctions = ["__deregister_frame_info",
+                "__register_frame_info",
+               ]
+
+#http://refspecs.linuxfoundation.org/LSB_3.2.0/LSB-Core-generic/LSB-Core-generic/libcman.html
+lsbfunctions = ["__cxa_finalize",
+                "__cxa_atexit",
+                "__errno_location",
+                "__h_errno_location",
+                "__sigsetjmp",
+               ]
+
+sysvfunctions = ["getutent", "getutid", "getutline", "pututline", "setutent", "endutent", "utmpname", "stime"]
+
+#XDR: External Data Representation Standard, RFC 1014
+xdrfunctions = []
+
+miscfunctions = ["inet_aton",
+                 "vsyslog",
+                 "setbuffer",
+                 "setlinebuf",
+                 "updwtmp",
+                 "getdomainname",
+                 "setdomainname",
+                 "herror",
+                 "hstrerror",
+                 "clearenv"
+                ]
+
+allfunctions = posixfunctions + gnuextensionsfunctions + bsdfunctions + linuxfunctions + sysvfunctions + glibcfunctions + gccfunctions + lsbfunctions + susfunctions + xdrfunctions + miscfunctions
+
 posixvars = ["daylight",
     "environ",
     "errno",
@@ -1203,3 +1283,7 @@ posixvars = ["daylight",
     "stdout",
     "timezone",
     "tzname"]
+
+lsbvars = ["__environ"]
+
+allvars = posixvars + lsbvars
