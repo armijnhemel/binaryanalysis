@@ -1185,6 +1185,7 @@ posixfunctions = ["FD_CLR",
          "y1",
          "yn",
          "usleep", ## removed in POSIX.1-2008
+         "ftime", ## removed in POSIX.1-2008
          "gethostbyname",
          "gethostbyaddr"
          ]
@@ -1202,6 +1203,14 @@ gnuextensionsfunctions = ["gethostent_r",
                           "strchrnul",
                           "asprintf",
                           "vasprintf",
+                          "ether_aton_r",
+                          "ether_ntoa_r",
+                          "memrchr",
+                          "rawmemchr",
+                          "getspent_r",
+                          "getspnam_r",
+                          "fgetspent_r",
+                          "sgetspent_r",
                           ]
 
 bsdfunctions = ["daemon",
@@ -1215,6 +1224,10 @@ bsdfunctions = ["daemon",
                 "endmntent",
                 "hasmntopt",
                 "ether_aton",
+                "ether_ntoa",
+                "ether_ntohost",
+                "ether_hostton",
+                "ether_line",
                 "sethostname",
                 "vfork",
                 "strsep",
@@ -1222,6 +1235,12 @@ bsdfunctions = ["daemon",
                 "wait3",
                 "wait4",
                 "syscall",
+                "ptrace",
+                "index",
+                "rindex",
+                "bcmp",
+                "bcopy",
+                "flock",
                ]
 
 linuxfunctions = ["sysinfo",
@@ -1236,6 +1255,8 @@ linuxfunctions = ["sysinfo",
                   "mount",
                   "umount",
                   "umount2",
+                  "delete_module",
+                  "init_module",
                  ]
 
 susfunctions = ["getpagesize"]
@@ -1385,6 +1406,7 @@ xdrfunctions = ["xdr_array",
                 "registerrpc",
                ]
 
+## basically stuff where I don't know where it should go for now
 miscfunctions = ["inet_aton",
                  "vsyslog",
                  "setbuffer",
@@ -1397,6 +1419,20 @@ miscfunctions = ["inet_aton",
                  "clearenv",
                  "bindresvport",
                  "__uClibc_main",
+                 "stat64",
+                 "fopen64",
+                 "fcntl64",
+                 "lseek64",
+                 "__cmsg_nxthdr",
+                 "getspnam",
+                 "getspent",
+                 "setspent",
+                 "endspent",
+                 "fgetspent",
+                 "sgetspent",
+                 "putspent",
+                 "lckpwdf",
+                 "ulckpwdf",
                 ]
 
 allfunctions = posixfunctions + gnuextensionsfunctions + bsdfunctions + linuxfunctions + sysvfunctions + libcfunctions + gccfunctions + lsbfunctions + susfunctions + xdrfunctions + miscfunctions
