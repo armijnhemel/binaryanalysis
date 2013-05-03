@@ -62,6 +62,10 @@ def knownInterface(names, ptype):
 				return False
 	return True
 
+def writeGraph((elfgraph, filehash, imagedir)):
+	elfgraph_tmp = pydot.graph_from_dot_data(elfgraph)
+	elfgraph_tmp.write_png(os.path.join(imagedir, '%s-graph.png' % filehash))
+
 ## extract variable names, function names and the soname from an ELF file
 def extractfromelf((path, filename)):
 	remotefuncs = []
@@ -722,7 +726,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 				else:
 					squashedgraph[i].append((squashedelffiles[d[0]][0], d[1], d[2]))
 
-	## TODO: make parallel
+	## TODO: make more parallel
+	elfgraphs = []
 	for i in elffiles:
 		if elftypes[i] == 'kernelmod':
 			continue
@@ -796,4 +801,9 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 				if processnodes == []:
 					break
 
-			elfgraph.write_png(os.path.join(imagedir, '%s-graph.png' % filehash))
+			elfgraph_data = elfgraph.to_string()
+			elfgraphs.append((elfgraph_data, filehash, imagedir))
+
+	pool = multiprocessing.Pool()
+	elfres = pool.map(writeGraph, elfgraphs)
+	pool.terminate()
