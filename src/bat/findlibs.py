@@ -669,7 +669,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 		if not aggregatereturn.has_key(i):
 			aggregatereturn[i] = {}
 		if usedby.has_key(i):
-			aggregatereturn[i]['elfusedby'] = usedby[i]
+			aggregatereturn[i]['elfusedby'] = set(list(usedby[i]))
 			writeback = True
 		if usedlibsperfile.has_key(i):
 			aggregatereturn[i]['elfused'] = usedlibsperfile[i]
