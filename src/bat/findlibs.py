@@ -51,7 +51,7 @@ https://dev.openwrt.org/ticket/6847
 https://bugs.busybox.net/show_bug.cgi?id=729
 '''
 
-def inPosix(names, ptype):
+def knownInterface(names, ptype):
 	if ptype == 'functions':
 		for i in names:
 			if i not in bat.interfaces.allfunctions:
@@ -409,7 +409,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 									usedby[filtersquash[0]].append(i)
 								else:
 									usedby[filtersquash[0]] = [i]
-								if inPosix(localfuncsfound, 'functions'):
+								if knownInterface(localfuncsfound, 'functions'):
 									usedlibs.append((l,len(localfuncsfound), True))
 								else:
 									usedlibs.append((l,len(localfuncsfound), False))
@@ -423,7 +423,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 									usedby[filtersquash[0]].append(i)
 								else:
 									usedby[filtersquash[0]] = [i]
-								if inPosix(localvarsfound, 'variables'):
+								if knownInterface(localvarsfound, 'variables'):
 									usedlibs.append((l,len(localvarsfound), True))
 								else:
 									usedlibs.append((l,len(localvarsfound), False))
@@ -442,13 +442,12 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 						## easy case
 						localfuncsfound = list(set(weakremotefuncswc).intersection(set(localfunctionnames[f])))
 						if localfuncsfound != []:
-							#print >>sys.stderr, "POSIX FUNCS", inPosix(localfuncsfound, 'functions'), i, l
 							if usedby.has_key(f):
 								usedby[f].append(i)
 							else:
 								usedby[f] = [i]
 							if len(filteredlookup[f]) == 1:
-								if inPosix(localfuncsfound, 'functions'):
+								if knownInterface(localfuncsfound, 'functions'):
 									usedlibs.append((filteredlookup[f][0],len(localfuncsfound), True))
 								else:
 									usedlibs.append((filteredlookup[f][0],len(localfuncsfound), False))
@@ -466,7 +465,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 							else:
 								usedby[f] = [i]
 							if len(filteredlookup[f]) == 1:
-								if inPosix(localvarsfound, 'variables'):
+								if knownInterface(localvarsfound, 'variables'):
 									usedlibs.append((filteredlookup[f][0],len(localvarsfound), True))
 								else:
 									usedlibs.append((filteredlookup[f][0],len(localvarsfound), False))
@@ -483,13 +482,12 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 						## easy case
 						localfuncsfound = list(set(remotefuncswc).intersection(set(weaklocalfunctionnames[f])))
 						if localfuncsfound != []:
-							#print >>sys.stderr, "POSIX FUNCS", inPosix(localfuncsfound, 'functions'), i, l
 							if usedby.has_key(f):
 								usedby[f].append(i)
 							else:
 								usedby[f] = [i]
 							if len(filteredlookup[f]) == 1:
-								if inPosix(localfuncsfound, 'functions'):
+								if knownInterface(localfuncsfound, 'functions'):
 									usedlibs.append((filteredlookup[f][0],len(localfuncsfound), True))
 								else:
 									usedlibs.append((filteredlookup[f][0],len(localfuncsfound), False))
@@ -502,13 +500,12 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 					if weaklocalvariablenames.has_key(f):
 						localvarsfound = list(set(remotevarswc).intersection(set(weaklocalvariablenames[f])))
 						if localvarsfound != []:
-							#print >>sys.stderr, "POSIX VARS", inPosix(localvarsfound, 'variables'), i, l
 							if usedby.has_key(f):
 								usedby[f].append(i)
 							else:
 								usedby[f] = [i]
 							if len(filteredlookup[f]) == 1:
-								if inPosix(localvarsfound, 'variables'):
+								if knownInterface(localvarsfound, 'variables'):
 									usedlibs.append((filteredlookup[f][0],len(localvarsfound), True))
 								else:
 									usedlibs.append((filteredlookup[f][0],len(localvarsfound), False))
@@ -533,7 +530,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 							else:
 								usedby[f] = [i]
 							if len(filteredlookup[f]) == 1:
-								if inPosix(localfuncsfound, 'functions'):
+								if knownInterface(localfuncsfound, 'functions'):
 									usedlibs.append((filteredlookup[f][0],len(localfuncsfound), True))
 								else:
 									usedlibs.append((filteredlookup[f][0],len(localfuncsfound), False))
@@ -552,7 +549,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 							else:
 								usedby[f] = [i]
 							if len(filteredlookup[f]) == 1:
-								if inPosix(localvarsfound, 'variables'):
+								if knownInterface(localvarsfound, 'variables'):
 									usedlibs.append((filteredlookup[f][0],len(localvarsfound), True))
 								else:
 									usedlibs.append((filteredlookup[f][0],len(localvarsfound), False))
