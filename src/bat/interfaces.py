@@ -1211,6 +1211,8 @@ gnuextensionsfunctions = ["gethostent_r",
                           "getspnam_r",
                           "fgetspent_r",
                           "sgetspent_r",
+                          "pvalloc",
+                          "strcasestr",
                           ]
 
 bsdfunctions = ["daemon",
@@ -1241,6 +1243,7 @@ bsdfunctions = ["daemon",
                 "bcmp",
                 "bcopy",
                 "flock",
+                "valloc",
                ]
 
 linuxfunctions = ["sysinfo",
@@ -1257,6 +1260,9 @@ linuxfunctions = ["sysinfo",
                   "umount2",
                   "delete_module",
                   "init_module",
+                  "pivot_root",
+                  "swapon",
+                  "swapoff",
                  ]
 
 susfunctions = ["getpagesize"]
@@ -1313,6 +1319,9 @@ lsbfunctions = ["__cxa_finalize",
                 "__errno_location",
                 "__h_errno_location",
                 "__sigsetjmp",
+                "__xpg_basename",
+                "__getpagesize",
+                "__sysv_signal",
                ]
 
 sysvfunctions = ["getutent", "getutid", "getutline", "pututline", "setutent", "endutent", "utmpname", "stime"]
@@ -1433,9 +1442,12 @@ miscfunctions = ["inet_aton",
                  "putspent",
                  "lckpwdf",
                  "ulckpwdf",
+                 "valloc",
                 ]
 
-allfunctions = posixfunctions + gnuextensionsfunctions + bsdfunctions + linuxfunctions + sysvfunctions + libcfunctions + gccfunctions + lsbfunctions + susfunctions + xdrfunctions + miscfunctions
+c11functions = ["aligned_alloc"]
+
+allfunctions = posixfunctions + gnuextensionsfunctions + bsdfunctions + linuxfunctions + sysvfunctions + libcfunctions + gccfunctions + lsbfunctions + susfunctions + xdrfunctions + miscfunctions + c11functions
 
 posixvars = ["daylight",
     "environ",
