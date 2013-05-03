@@ -1414,13 +1414,19 @@ posixvars = ["daylight",
     "stdin",
     "stdout",
     "timezone",
-    "tzname"]
+    "tzname",
+    "h_errno",
+   ]
 
 lsbvars = ["__environ"]
 
 libcvars = ["__ctype_b", 
             "__ctype_tolower",
             "__ctype_toupper",
+            "__stdout",
+            "__stdin",
+            "_h_errno",
+            "_errno",
            ]
 
 allvars = posixvars + lsbvars + libcvars
