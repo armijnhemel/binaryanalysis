@@ -1,7 +1,11 @@
+2013-05-05
+* fix unpacking inefficiency in generatelistrpm.py
+
 2013-05-03
 * add tons of more functions and variables that are part of various standards,
 like LSB, or which are common system calls, or for some reason are in glibc or
 uClibc (not complete yet)
+* generate linking pictures in parallel
 
 2013-05-02
 * correctly resolve WEAK symbols in findlibs.py, add numbers to edges
