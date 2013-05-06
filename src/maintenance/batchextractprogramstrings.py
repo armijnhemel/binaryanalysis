@@ -271,10 +271,11 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 			return
 
 	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256)
-	## Add the file to the database: name of archive, sha256, packagename and version
-	## This is to be able to just update the database instead of recreating it.
-	c.execute('''insert into processed (package, version, filename, origin, sha256) values (?,?,?,?,?)''', (package, version, filename, origin, filehash))
-	conn.commit()
+	if sqlres != []:
+		## Add the file to the database: name of archive, sha256, packagename and version
+		## This is to be able to just update the database instead of recreating it.
+		c.execute('''insert into processed (package, version, filename, origin, sha256) values (?,?,?,?,?)''', (package, version, filename, origin, filehash))
+		conn.commit()
 	c.close()
 	conn.close()
 	if cleanup:
