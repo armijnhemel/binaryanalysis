@@ -66,9 +66,7 @@ misc:
 * add per scan debug to allow better custom debugging
 * test on latest OpenSUSE
 * test on latest Ubuntu, make sure configurations/dependencies work
-* merge BAT_KERNEL_CACHE in BAT_FUNCTIONNAME_CACHE
-* rename BAT_FUNCTIONNAME_CACHE, since it does a lot more than function names now
-* check whether or not binaries with .gnu_debugdata sections (XZ compressed data) are correctly recognized, possibly do something with this section.
+* test on latest Debian, make sure configurations/dependencies work
 
 BOTTLENECKS:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
