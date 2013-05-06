@@ -1076,10 +1076,15 @@ def main(argv):
 
 	oldpackage = ""
 	oldres = []
+	processed_hashes = []
 	for i in res:
 		try:
 			(package, version, filename, origin, filehash) = i
 			if filehash in blacklistsha256sums:
+				continue
+			## no need to process some files twice, even if they
+			## are under a different name.
+			if filehash in processed_hashes:
 				continue
 			if options.verify:
 				unpack_verify(options.filedir, filename)
@@ -1089,6 +1094,7 @@ def main(argv):
 			if unpackres != None:
 				oldres = map(lambda x: x[2], unpackres)
 				oldpackage = package
+			processed_hashes.append(filehash)
 		except Exception, e:
 				# oops, something went wrong
 				print >>sys.stderr, e
