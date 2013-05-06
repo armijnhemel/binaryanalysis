@@ -32,12 +32,9 @@ BAT_STRINGSCACHE_$LANGUAGE :: location of database with cached strings
 An additional classification method for dynamically linked executables or
 Java binaries based on function or method names takes an additional parameter:
 
-BAT_FUNCTIONNAMECACHE_$LANGUAGE :: location of database containing cached
-                                   function names and variable names per package
-                                   to reduce lookups
-
-BAT_KERNEL_CACHE :: location of database contain cached kernel symbols per
-                    package to reduce lookups
+BAT_NAMECACHE_$LANGUAGE :: location of database containing cached
+                           function names and variable names per package
+                           to reduce lookups
 '''
 
 import string, re, os, os.path, magic, sys, tempfile, shutil, copy
@@ -50,8 +47,8 @@ ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
 ## mapping of names for databases per language
-functionnameperlanguage = { 'C':       'BAT_FUNCTIONNAMECACHE_C'
-                          , 'Java':    'BAT_FUNCTIONNAMECACHE_JAVA'
+namecacheperlanguage = { 'C':       'BAT_NAMECACHE_C'
+                          , 'Java':    'BAT_NAMECACHE_JAVA'
                           }
 
 stringsdbperlanguage = { 'C':              'BAT_STRINGSCACHE_C'
@@ -555,8 +552,8 @@ def extractJavaNames(javameta, scanenv, clones, rankingfull):
 	conn.text_factory = str
 	c = conn.cursor()
 
-	if scanenv.has_key(functionnameperlanguage['Java']):
-		funccache = scanenv.get(functionnameperlanguage['Java'])
+	if scanenv.has_key(namecacheperlanguage['Java']):
+		funccache = scanenv.get(namecacheperlanguage['Java'])
 		## sanity checks to see if the database exists. If not, and rankingfull
 		## is set to True, there should be no result.
 		if rankingfull:
@@ -567,7 +564,7 @@ def extractJavaNames(javameta, scanenv, clones, rankingfull):
 		else:
 			## The cache may, or may not, exist, but at least we're not
 			## counting on it to exist and it may be generated on the fly.
-			funccache = scanenv.get(functionnameperlanguage['Java'])
+			funccache = scanenv.get(namecacheperlanguage['Java'])
 	else:
 		if rankingfull:
 			return dynamicRes
@@ -658,8 +655,8 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 	conn.text_factory = str
 	c = conn.cursor()
 
-	if scanenv.has_key(functionnameperlanguage['Java']):
-		funccache = scanenv.get(functionnameperlanguage['Java'])
+	if scanenv.has_key(namecacheperlanguage['Java']):
+		funccache = scanenv.get(namecacheperlanguage['Java'])
 		## sanity checks to see if the database exists. If not, and rankingfull
 		## is set to True, there should be no result.
 		if rankingfull:
@@ -670,7 +667,7 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 		else:
 			## The cache may, or may not, exist, but at least we're not
 			## counting on it to exist and it may be generated on the fly.
-			funccache = scanenv.get(functionnameperlanguage['Java'])
+			funccache = scanenv.get(namecacheperlanguage['Java'])
 	else:
 		if rankingfull:
 			return variablepvs
@@ -855,8 +852,8 @@ def scankernelsymbols(scanfile, scanenv, rankingfull, unpacktempdir, stringcutof
 	c = conn.cursor()
 
 	variable_scan = True
-	if scanenv.has_key('BAT_KERNEL_CACHE'):
-		kernelcache = scanenv.get('BAT_KERNEL_CACHE')
+	if scanenv.has_key(namecacheperlanguage['C']):
+		kernelcache = scanenv.get(namecacheperlanguage['C'])
 		## sanity checks to see if the database exists. If not, and rankingfull
 		## is set to True, there should be no result.
 		if rankingfull:
@@ -975,8 +972,8 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 	c = conn.cursor()
 
 	dynamicscanning = True
-	if scanenv.has_key(functionnameperlanguage['C']):
-		funccache = scanenv.get(functionnameperlanguage['C'])
+	if scanenv.has_key(namecacheperlanguage['C']):
+		funccache = scanenv.get(namecacheperlanguage['C'])
 		## sanity checks to see if the database exists. If not, and rankingfull
 		## is set to True, there should be no result.
 		if rankingfull:
@@ -987,7 +984,7 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 		else:
 			## The cache may, or may not, exist, but at least we're not
 			## counting on it to exist and it may be generated on the fly.
-			funccache = scanenv.get(functionnameperlanguage['C'])
+			funccache = scanenv.get(namecacheperlanguage['C'])
 	else:
 		if rankingfull:
 			dynamicscanning = False
