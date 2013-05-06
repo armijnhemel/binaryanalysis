@@ -5,9 +5,10 @@ import fnmatch
 import sqlite3
 import ConfigParser
 from optparse import OptionParser
+from multiprocessing import Pool
 
 ## Binary Analysis Tool
-## Copyright 2012 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2012-2013 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -25,47 +26,59 @@ def main(argv):
 
 	(options, args) = parser.parse_args()
 	if options.master == None:
-		print >>sys.stderr, "Need path to database"
-		sys.exit(1)
+		parser.error("Need path to database")
+	if not os.path.exists(options.master):
+		parser.error("Need path to database")
 	try:
 		conn = sqlite3.connect(options.master)
 	except:
 		print "Can't open database"
 		sys.exit(1)
+
 	cursor = conn.cursor()
 
-	## first get all the unique checksums in processed_file. This could already eat quite some memory.
-	cursor.execute("select distinct(sha256) from processed_file")
+	cursor.execute("select distinct sha256 from processed")
 	res = cursor.fetchall()
+	for r in res:
+		cursor.execute('select sha256 from processed where sha256=?', r)
+		processed_results = cursor.fetchall()
+		if len(processed_results) != 1:
+			cursor.execute('select * from processed where sha256=?', r)
+			processed_results = cursor.fetchall()
+			print processed_results
+	sys.exit(1)
+
+	cursor.execute("select package,version from processed_file")
+	res = cursor.fetchmany(40000)
+	ncursor = conn.cursor()
+	totals = 0
+	while res != []:
+		totals += len(res)
+		print "processing", totals
+		for r in res:
+			(package,version) = r
+			ncursor.execute('select sha256 from processed where package=? and version=? LIMIT 1', r)
+			pres = ncursor.fetchall()
+			if pres == []:
+				print "database not in sync", r
+		res = cursor.fetchmany(40000)
 	cursor.close()
 
-	## change the results from tuples to single values, put it in a set,
-	## for determining differences and intersections.
-	if res != []:
-		processed_file_sha256 = set(map(lambda x: x[0], res))
-	else:
-		processed_file_sha256 = set([])
-	print "processed files: %d" % len(processed_file_sha256)
-
-	for i in ["extracted_file", "licenses", "extracted_function"]:
+	for i in ["extracted_file", "extracted_function"]:
 		cursor = conn.cursor()
-		print "processing %s" % i
 		cursor.execute("select distinct(sha256) from %s" % i)
-		res = cursor.fetchall()
-		cursor.close()
-		if res != []:
-			sha256s = set(map(lambda x: x[0], res))
-			res = []
-		else:
-			sha256s = set([])
-
-		intersect = processed_file_sha256.intersection(sha256s)
-		if not len(intersect) == len(sha256s):
-			## something is wrong: there are values in table i that should not be in there
-			print "database %s not in sync" % i
-			for j in list(sha256s.difference(intersect)):
-				print j
-			sys.exit(1)
+		res = cursor.fetchmany(40000)
+		ncursor = conn.cursor()
+		totals = 0
+		while res != []:
+			totals += len(res)
+			print "processing %s" % i, totals
+			for r in res:
+				ncursor.execute('select sha256 from processed_file where sha256=? LIMIT 1', r)
+				pres = ncursor.fetchall()
+				if pres == []:
+					print "database %s not in sync" % i, r[0]
+			res = cursor.fetchmany(40000)
 
 if __name__ == "__main__":
 	main(sys.argv)
