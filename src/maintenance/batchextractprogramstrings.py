@@ -216,7 +216,8 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 
 	## Then check if version exists in the database.
 	c.execute('''select sha256 from processed where package=? and version=? LIMIT 1''', (package, version))
-	if len(c.fetchall()) == 0:
+	checkres = c.fetchall()
+	if len(checkres) == 0:
 		## If the version is not in 'processed' check if there are already any strings
 		## from program + version. If so, first remove the results before adding to
 		## avoid unnecessary duplication.
@@ -257,6 +258,13 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 		if not identical:
 			## rewrite the version number and process further
 			version = "%s-%s-%s" % (version, origin, filehash)
+			## If the version is not in 'processed' check if there are already any strings
+			## from program + version. If so, first remove the results before adding to
+			## avoid unnecessary duplication.
+			c.execute('''select sha256 from processed_file where package=? and version=? LIMIT 1''', (package, version))
+			if len(c.fetchall()) != 0:
+				c.execute('''delete from processed_file where package=? and version=?''', (package, version))
+				conn.commit()
 		else:
 			if cleanup:
 				cleanupdir(temporarydir)
