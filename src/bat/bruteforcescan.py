@@ -77,6 +77,21 @@ def mergeBlacklist(blacklist):
 		blacklist = res
 	return blacklist
 
+def runSetup(scan, debug=False):
+	module = scan['module']
+	method = scan['setup']
+	if debug:
+		print >>sys.stderr, module, method
+		sys.stderr.flush()
+	if scan.has_key('envvars'):
+		envvars = scan['envvars']
+	else:
+		envvars = None
+
+	exec "from %s import %s as bat_%s" % (module, method, method)
+	scanres = eval("bat_%s(envvars)" % (method))
+	return scanres
+
 ## method to filter scans, based on the tags that were found for a
 ## file, plus a list of tags that the scan should skip.
 ## This is done to avoid scans running unnecessarily.
@@ -513,6 +528,10 @@ def readconfig(config):
 				conf['xmloutput'] = config.get(section, 'xmloutput')
 			except:
 				pass
+			try:
+				conf['setup'] = config.get(section, 'setup')
+			except:
+				pass
 
 			## some things only make sense in a particular context
 			if config.get(section, 'type') == 'postrun' or config.get(section, 'type') == 'aggregate':
@@ -758,9 +777,9 @@ def runscan(scans, scan_binary):
 	poolresult = []
 	tagdict = {}
 	if scans['programscans'] != []:
-		## Sometimes there are duplicate files inside a blob. We
-		## only want to scan them once to minimize time spent on
-		## scanning. Since the results are independent anyway (the
+		## Sometimes there are duplicate files inside a blob.
+		## To minimize time spent on scanning these should only be
+		## scanned once. Since the results are independent anyway (the
 		## unpacking phase is where unique paths are determined) we
 		## can scan once for each sha256 and if there are more files
 		## with the same sha256 we can simply copy the result.
@@ -783,6 +802,20 @@ def runscan(scans, scan_binary):
 		for i in leaftasks:
 			if sha256_tmp[i[-2]] == i[0]:
 				leaftasks_tmp.append(i)
+
+		## First run the 'setup' hooks for the scans and pass
+		## results via the environment. This should keep the
+		## code cleaner.
+		setup_scans = reduce(lambda x, y: x + y, map(lambda x: filterScans(scans['programscans'], x[3]), leaftasks_tmp))
+		setups = filter(lambda x: x.has_key('setup'), setup_scans)
+		setup_scans = list(set(map(lambda x: x['name'], setups)))
+
+		for s in setup_scans:
+			sscans = filter(lambda x: x['name'] == s, scans['programscans'])
+			## this should always be just one scan. If not, something is wrong
+			for sscan in sscans:
+				setupres = runSetup(sscan, debug)
+				## TODO: assign result to envvars
 
 		## reverse sort on size: scan largest files first
 		leaftasks_tmp.sort(key=lambda x: x[-1], reverse=True)

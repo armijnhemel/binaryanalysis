@@ -1,3 +1,6 @@
+2013-05-07
+* add hook to run setup code for programscans. Still needs work.
+
 2013-05-05
 * fix unpacking inefficiency in generatelistrpm.py
 
