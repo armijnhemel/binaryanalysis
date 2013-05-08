@@ -221,6 +221,9 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 	## image. If so extra checks can be done.
 	linuxkernel = False
 
+	## ELF files are always scanned as a whole. Sometimes there are sections that
+	## contain compressed data, like .gnu_debugdata which should no trigger the
+	## black list.
 	if "elf" in tags:
 		if 'linuxkernel' in tags:
 			linuxkernel = True
@@ -988,6 +991,9 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 	else:
 		if rankingfull:
 			dynamicscanning = False
+		else:
+			## provide a value for a function name cache
+			funccache = tempfile.mkstemp()
 
 	## Walk through the output of readelf, and split results accordingly
 	## in function names and variables.
@@ -1149,24 +1155,23 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 	## Scan variables. Ideally these should be in a table in functionname_cache.
 	## If this cache does not exist, but only if we have a table "extracted_names"
 	variable_scan = False
-
-	## first attach the functionname cache again. If there is no table for variables, but
-	## ranking_full is set, then don't scan variable names.
-	## If 
-	c.execute("attach ? as functionnamecache", (funccache,))
-	res = c.execute("select * from functionnamecache.sqlite_master where type='table' and name='varnamecache'").fetchall()
-	if res == []:
-		if not rankingfull:
-			## nothing in the cache and rankingfull is not set, so check if we have the results.
-			res2 = c.execute("select * from sqlite_master where type='table' and name='extracted_name'").fetchall()
-			if res2 != []:
-				variable_scan = True
-				c.execute("create table if not exists functionnamecache.varnamecache (varname text, package text)")
-				c.execute("create index if not exists functionnamecache.varnamecache_index on varnamecache(varname)")
-				conn.commit()
-	else:
-		variable_scan = True
-	c.execute("detach functionnamecache")
+	if dynamicscanning:
+		## first attach the functionname cache again. If there is no table for variables, but
+		## ranking_full is set, then don't scan variable names.
+		c.execute("attach ? as functionnamecache", (funccache,))
+		res = c.execute("select * from functionnamecache.sqlite_master where type='table' and name='varnamecache'").fetchall()
+		if res == []:
+			if not rankingfull:
+				## nothing in the cache and rankingfull is not set, so check if we have the results.
+				res2 = c.execute("select * from sqlite_master where type='table' and name='extracted_name'").fetchall()
+				if res2 != []:
+					variable_scan = True
+					c.execute("create table if not exists functionnamecache.varnamecache (varname text, package text)")
+					c.execute("create index if not exists functionnamecache.varnamecache_index on varnamecache(varname)")
+					conn.commit()
+		else:
+			variable_scan = True
+		c.execute("detach functionnamecache")
 
 	if variable_scan:
 		c.execute("attach ? as functionnamecache", (funccache,))
