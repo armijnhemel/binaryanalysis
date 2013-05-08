@@ -205,6 +205,7 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir)):
 		html = ""
 
 		if language == 'Java':
+			totalvars = 0
 			fieldspackages = {}
 			sourcespackages = {}
 			classespackages = {}
@@ -214,6 +215,7 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir)):
 			for i in ['classes', 'sources', 'fields']:
 				if not variablepvs.has_key(i):
 					continue
+				totalvars += len(variablepvs[i])
 				packages = {}
 				packagecount = {}
 				if variablepvs[i] != []:
