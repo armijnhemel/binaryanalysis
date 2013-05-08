@@ -37,6 +37,7 @@ def main(argv):
 
 	cursor = conn.cursor()
 
+	print "checking processed"
 	cursor.execute("select distinct sha256 from processed")
 	res = cursor.fetchall()
 	for r in res:
@@ -45,16 +46,16 @@ def main(argv):
 		if len(processed_results) != 1:
 			cursor.execute('select * from processed where sha256=?', r)
 			processed_results = cursor.fetchall()
-			print processed_results
-	sys.exit(1)
+			print "identical:", map(lambda x: "%s %s" % (x[0], x[1]), processed_results)
 
 	cursor.execute("select package,version from processed_file")
 	res = cursor.fetchmany(40000)
 	ncursor = conn.cursor()
 	totals = 0
+	print "checking processed_file"
 	while res != []:
 		totals += len(res)
-		print "processing", totals
+		#print "processing", totals
 		for r in res:
 			(package,version) = r
 			ncursor.execute('select sha256 from processed where package=? and version=? LIMIT 1', r)
