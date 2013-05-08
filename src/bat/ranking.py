@@ -48,8 +48,8 @@ ms.load()
 
 ## mapping of names for databases per language
 namecacheperlanguage = { 'C':       'BAT_NAMECACHE_C'
-                          , 'Java':    'BAT_NAMECACHE_JAVA'
-                          }
+                       , 'Java':    'BAT_NAMECACHE_JAVA'
+                       }
 
 stringsdbperlanguage = { 'C':              'BAT_STRINGSCACHE_C'
                        , 'Java':           'BAT_STRINGSCACHE_JAVA'
@@ -571,6 +571,11 @@ def extractJavaNames(javameta, scanenv, clones, rankingfull):
 	else:
 		if rankingfull:
 			return dynamicRes
+		else:
+			return dynamicRes
+			tmpcache = tempfile.mkstemp()
+			funccache = tmpcache[1]
+			os.fdopen(tmpcache[0]).close()
 
 	## extra sanity check. Previous versions only had function names from C in the database.
 	## When scripts were adapted to also allow Java methods a field 'language' was introduced.
@@ -674,6 +679,11 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 	else:
 		if rankingfull:
 			return variablepvs
+		else:
+			return variablepvs
+			tmpcache = tempfile.mkstemp()
+			funccache = tmpcache[1]
+			os.fdopen(tmpcache[0]).close()
 
 	class_scan = False
 	c.execute("attach ? as functionnamecache", (funccache,))
@@ -769,8 +779,8 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 			res2 = c.execute("select * from sqlite_master where type='table' and name='extracted_name'").fetchall()
 			if res2 != []:
 				field_scan = True
-				c.execute("create table if not exists functionnamecache.fieldcache (classname text, package text)")
-				c.execute("create index if not exists functionnamecache.fieldname_cache on fieldcache(classname)")
+				c.execute("create table if not exists functionnamecache.fieldcache (fieldname text, package text)")
+				c.execute("create index if not exists functionnamecache.fieldname_cache on fieldcache(fieldname)")
 				conn.commit()
 	else:
 		field_scan = True
@@ -886,6 +896,11 @@ def scankernelsymbols(scanfile, scanenv, rankingfull, unpacktempdir, stringcutof
 	else:
 		if rankingfull:
 			variable_scan = False
+		else:
+			variable_scan = False
+			tmpcache = tempfile.mkstemp()
+			kernelcache = tmpcache[1]
+			os.fdopen(tmpcache[0]).close()
 
 	if not variable_scan:
 		os.unlink(elftmp[1])
@@ -992,8 +1007,11 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 		if rankingfull:
 			dynamicscanning = False
 		else:
+			dynamicscanning = False
 			## provide a value for a function name cache
-			funccache = tempfile.mkstemp()
+			tmpcache = tempfile.mkstemp()
+			funccache = tmpcache[1]
+			os.fdopen(tmpcache[0]).close()
 
 	## Walk through the output of readelf, and split results accordingly
 	## in function names and variables.
