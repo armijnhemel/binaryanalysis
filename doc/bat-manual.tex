@@ -7,7 +7,7 @@
 \setlength{\parskip}{4pt}
 
 \author{Armijn Hemel -- Tjaldur Software Governance Solutions}
-\title{Binary Analysis Tool User and Developer Manual - describing version 13}
+\title{Binary Analysis Tool User and Developer Manual - describing version 14}
 
 \begin{document}
 
@@ -149,7 +149,7 @@ description = Unpack JFFS2 file systems
 enabled     = yes
 \end{verbatim}
 
-In BAT 13.0 the following file systems, compressed files and media files can be
+In BAT 14.0 the following file systems, compressed files and media files can be
 unpacked or extracted:
 
 \begin{itemize}
@@ -429,6 +429,24 @@ cleanup     = yes
 
 The \texttt{cleanup} setting should be set to \texttt{yes} unless the results
 do not change in between subsequent runs of BAT.
+
+\subsubsection{Running setup code}
+
+For some scans it is necessary to run some setup code to ensure that certain
+conditions are met, for example that databases exist, or that locations are
+readable/writeable. If this would be done during running of the scan (default
+in BAT 13 and earlier) the checks would be run each time the scan would be run.
+In reality the checks only need to run once.
+
+Since BAT 14 there is a special hook for leaf scans to run setup code for the
+scan:
+
+\begin{verbatim}
+setup     = nameOfSetupMethod
+\end{verbatim}
+
+In the standard distribution of BAT file \texttt{bat/ranking.py} contains a very
+extensive example.
 
 \subsection{Interpreting the results}
 
@@ -1000,11 +1018,11 @@ is unfortunately a bit more elaborate.
 \item make a fresh export of the Subversion repository
 \item change the names of \texttt{bat-extratools} and the
 \texttt{bat-extratools-java} directories to contain the version name of the
-release (for example \texttt{bat-extratools-13.0}). Make a \texttt{tar.gz}
+release (for example \texttt{bat-extratools-14.0}). Make a \texttt{tar.gz}
 archive of the directory:
-\texttt{tar zcf bat-extratools-13.0.tar.gz bat-extratools-13.0}
+\texttt{tar zcf bat-extratools-14.0.tar.gz bat-extratools-14.0}
 \item run \texttt{rpmbuild} to create binary packages:
-\texttt{rpmbuild -ta bat-extratools-12.0.tar.gz}
+\texttt{rpmbuild -ta bat-extratools-14.0.tar.gz}
 \end{enumerate}
 
 \subsection{Building packages for DEB based systems}
@@ -1195,13 +1213,14 @@ xmloutput   = xmlprettyprint
 envvars     = BAT_STRINGSCACHE_C=/home/armijn/master/stringscache_c:
               BAT_DB=/home/armijn/master/master:
               BAT_LICENSE_DB=/home/armijn/master/licenses:
-              BAT_FUNCTIONNAMECACHE_C=/home/armijn/master/funccache_c:
+              BAT_NAMECACHE_C=/home/armijn/master/funccache_c:
               BAT_CLONE_DB=/home/armijn/master/clones:
               BAT_RANKING_FULLCACHE=1:
               BAT_RANKING_LICENSE=1
 noscan      = text:xml:graphics:pdf:compressed:resource:audio:video
 description = Classify packages using advanced ranking mechanism
 enabled     = no
+setup       = rankingsetup
 \end{verbatim}
 
 In the database the strings, averages, function names, variable names, etcetera
@@ -1218,7 +1237,7 @@ of course programs with language embeddeding and better support for these will
 be added in the future.
 
 The names of the caching databases start with
-\texttt{BAT\_STRINGSCACHE} and \texttt{BAT\_FUNCTIONNAMECACHE} and are
+\texttt{BAT\_STRINGSCACHE} and \texttt{BAT\_NAMECACHE} and are
 postfixed with an underscore and the name of the programming language family.
 The strings cache database for Java for example is configured using the
 environment variable \texttt{BAT\_STRINGSCACHE\_JAVA}.
