@@ -148,23 +148,18 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 		rankingfull = True
 
 	## Some methods use a database to lookup renamed packages.
-	## Only use this if it is defined, exists and has the right
-	## schema.
 	clonedb = scanenv.get('BAT_CLONE_DB')
 	clones = {}
 	if clonedb != None:
-		if os.path.exists(clonedb):
-			conn = sqlite3.connect(clonedb)
-			c = conn.cursor()
-			c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='renames';")
-			if c.fetchall() != []:
-				clonestmp = c.execute("SELECT originalname,newname from renames").fetchall()
-				for cl in clonestmp:
-					(originalname,newname) = cl
-					if not clones.has_key(originalname):
-						clones[originalname] = newname
-			c.close()
-			conn.close()
+		conn = sqlite3.connect(clonedb)
+		c = conn.cursor()
+		clonestmp = c.execute("SELECT originalname,newname from renames").fetchall()
+		for cl in clonestmp:
+			(originalname,newname) = cl
+			if not clones.has_key(originalname):
+				clones[originalname] = newname
+		c.close()
+		conn.close()
 
 	## Only consider strings that are len(stringcutoff) or larger
 	stringcutoff = 5
@@ -1949,4 +1944,20 @@ def rankingsetup(envvars):
 	c.close()
 	conn.close()
 
+	## check the cloning database. If it does not exist, or does not have
+	## the right schema remove it from the configuration
+	if scanenv.has_key('BAT_CLONE_DB'):
+		clonedb = scanenv.get('BAT_CLONE_DB')
+		if os.path.exists(clonedb):
+			conn = sqlite3.connect(clonedb)
+			c = conn.cursor()
+			c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='renames';")
+			if c.fetchall() == []:
+				if newenv.has_key('BAT_CLONE_DB'):
+					del newenv['BAT_CLONE_DB']
+			c.close()
+			conn.close()
+		else:
+			if newenv.has_key('BAT_CLONE_DB'):
+				del newenv['BAT_CLONE_DB']
 	return (True, newenv)
