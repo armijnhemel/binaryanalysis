@@ -868,6 +868,7 @@ def scankernelsymbols(scanfile, scanenv, rankingfull, unpacktempdir, stringcutof
 							continue
 						pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
 						pvs = list(set(pvs + pv))
+						## TODO: add to kernel cache
 		else:
 			## set version to 0 for now
 			pvs = map(lambda x: (x[0],0), res)
@@ -1109,9 +1110,8 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 	## Scan variables. Ideally these should be in a table in functionname_cache.
 	## If this cache does not exist, but only if we have a table "extracted_names"
 	variable_scan = False
-	if dynamicscanning:
-		if scanenv.get('BAT_VARNAME_SCAN'):
-			variable_scan = True
+	if scanenv.get('BAT_VARNAME_SCAN'):
+		variable_scan = True
 
 	if variable_scan:
 		c.execute("attach ? as functionnamecache", (funccache,))
