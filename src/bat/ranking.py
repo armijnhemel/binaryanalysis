@@ -825,7 +825,6 @@ def scankernelsymbols(scanfile, scanenv, rankingfull, unpacktempdir, stringcutof
 		os.unlink(elftmp[1])
 		return {}
 
-	## TODO this needs a lot of work
 	masterdb = scanenv.get('BAT_DB')
 
 	## open the database containing function names that were extracted
@@ -1252,19 +1251,9 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 
 	determinelicense = False
 	if scanenv.get('BAT_RANKING_LICENSE', 0) == '1':
-		if scanenv.get('BAT_LICENSE_DB') != None:
-			try:
-				licenseconn = sqlite3.connect(scanenv.get('BAT_LICENSE_DB'))
-				licensecursor = licenseconn.cursor()
-				licensecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='licenses';")
-				if licensecursor.fetchall() != []:
-					determinelicense = True
-				else:
-					determinelicense = False
-					licensecursor.close()
-					licenseconn.close()
-			except:
-				pass
+		determinelicense = True
+		licenseconn = sqlite3.connect(scanenv.get('BAT_LICENSE_DB'))
+		licensecursor = licenseconn.cursor()
 
 	## keep a list of versions per package we found
 	packageversions = {}
@@ -1550,6 +1539,10 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 		pass
 		#print >>sys.stderr, "matchedlines: %d for %s" % (matchedlines, path)
 		#print >>sys.stderr, matchedlines/(lenlines * 1.0)
+
+	if determinelicense:
+		licensecursor.close()
+		licenseconn.close()
 
 	del lines
 
@@ -1960,4 +1953,25 @@ def rankingsetup(envvars):
 		else:
 			if newenv.has_key('BAT_CLONE_DB'):
 				del newenv['BAT_CLONE_DB']
+
+	## check the license database. If it does not exist, or does not have
+	## the right schema remove it from the configuration
+	if scanenv.get('BAT_RANKING_LICENSE', 0) == '1':
+		if scanenv.get('BAT_LICENSE_DB') != None:
+			try:
+				licenseconn = sqlite3.connect(scanenv.get('BAT_LICENSE_DB'))
+				licensecursor = licenseconn.cursor()
+				licensecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='licenses';")
+				if licensecursor.fetchall() == []:
+					if newenv.has_key('BAT_LICENSE_DB'):
+						del newenv['BAT_LICENSE_DB']
+					if newenv.has_key('BAT_RANKING_LICENSE'):
+						del newenv['BAT_RANKING_LICENSE']
+				licensecursor.close()
+				licenseconn.close()
+			except:
+				if newenv.has_key('BAT_LICENSE_DB'):
+					del newenv['BAT_LICENSE_DB']
+				if newenv.has_key('BAT_RANKING_LICENSE'):
+					del newenv['BAT_RANKING_LICENSE']
 	return (True, newenv)
