@@ -802,6 +802,9 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 ## that are exported by the kernel using the EXPORT_SYMBOL* macros in the Linux
 ## kernel source tree.
 def scankernelsymbols(scanfile, scanenv, rankingfull, unpacktempdir, stringcutoff, clones):
+	if not scanenv.has_key('BAT_KERNEL_SCAN'):
+		return {}
+
 	p = subprocess.Popen(['readelf', '-SW', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	st = stanout.strip().split("\n")
@@ -825,6 +828,7 @@ def scankernelsymbols(scanfile, scanenv, rankingfull, unpacktempdir, stringcutof
 		os.unlink(elftmp[1])
 		return {}
 
+	## use in case rankingfull is not set
 	masterdb = scanenv.get('BAT_DB')
 
 	## open the database containing function names that were extracted
@@ -834,100 +838,62 @@ def scankernelsymbols(scanfile, scanenv, rankingfull, unpacktempdir, stringcutof
 	conn.text_factory = str
 	c = conn.cursor()
 
-	variable_scan = True
-	if scanenv.has_key(namecacheperlanguage['C']):
-		kernelcache = scanenv.get(namecacheperlanguage['C'])
-		## sanity checks to see if the database exists. If not, and rankingfull
-		## is set to True, there should be no result.
-		if rankingfull:
-			## If rankingfull is set the cache should exist. If it doesn't exist
-			## then something is horribly wrong.
-			if not os.path.exists(kernelcache):
-				variable_scan = False
-		else:
-			## The cache may, or may not, exist, but at least we're not
-			## counting on it to exist and it may be generated on the fly.
-			## check the table structure and create it if it doesn't exist
-			c.execute("attach ? as kernelcache", (kernelcache,))
-			res = c.execute("select * from kernelcache.sqlite_master where type='table' and name='kernelcache'").fetchall()
-			if res == []:
-				## nothing in the cache and rankingfull is not set, so check if we have results.
-				res2 = c.execute("select * from sqlite_master where type='table' and name='extracted_name'").fetchall()
-				if res2 != []:
-					variable_scan = True
-					c.execute("create table if not exists kernelcache.kernelcache (varname text, package text)")
-					c.execute("create index if not exists kernelcache.kernelcache_index on kernelcache(varname)")
-					conn.commit()
-				else:
-					## table extracted_name does not exist, so the kernel cache can't be filled
-					## with results, so no need to continue
-					variable_scan = False
-			c.execute("detach kernelcache")
-	else:
-		if rankingfull:
-			variable_scan = False
-		else:
-			variable_scan = False
-			tmpcache = tempfile.mkstemp()
-			kernelcache = tmpcache[1]
-			os.fdopen(tmpcache[0]).close()
+	variablepvs = {}
+	variables = []
+        p = subprocess.Popen(['strings', '-n', str(stringcutoff), elftmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+        (stanout, stanerr) = p.communicate()
+	st = stanout.split("\n")
+	for s in st:
+		printstring = s
+		if len(printstring) >= stringcutoff:
+			variables.append(printstring)
+	os.unlink(elftmp[1])
 
-	if not variable_scan:
-		os.unlink(elftmp[1])
-		return {}
-	else:
-		variablepvs = {}
-		variables = []
-        	p = subprocess.Popen(['strings', '-n', str(stringcutoff), elftmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-        	(stanout, stanerr) = p.communicate()
-		st = stanout.split("\n")
-		for s in st:
-			printstring = s
-			if len(printstring) >= stringcutoff:
-				variables.append(printstring)
-		os.unlink(elftmp[1])
-
-		c.execute("attach ? as kernelcache", (kernelcache,))
-		vvs = {}
-		for v in variables:
-			res = c.execute("select distinct package from kernelcache where varname=?", (v,)).fetchall()
-			if res == []:
-				if rankingfull:
-					continue
-				else:
-					res = c.execute("select sha256,type,language from extracted_name where name=?", (v,)).fetchall()
-					if res != []:
-						for r in res:
-							if r[2] != 'C':
-								continue
-							if r[1] != 'kernelsymbol':
-								continue
-							pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
-							pvs = list(set(pvs + pv))
+	kernelcache = scanenv.get(namecacheperlanguage['C'])
+	c.execute("attach ? as kernelcache", (kernelcache,))
+	vvs = {}
+	for v in variables:
+		pvs = []
+		res = c.execute("select distinct package from kernelcache where varname=?", (v,)).fetchall()
+		if res == []:
+			if rankingfull:
+				continue
 			else:
-				## set version to 0 for now
-				pvs = map(lambda x: (x[0],0), res)
+				res = c.execute("select sha256,type,language from extracted_name where name=?", (v,)).fetchall()
+				if res != []:
+					for r in res:
+						if r[2] != 'C':
+							continue
+						if r[1] != 'kernelsymbol':
+							continue
+						pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
+						pvs = list(set(pvs + pv))
+		else:
+			## set version to 0 for now
+			pvs = map(lambda x: (x[0],0), res)
 
-			pvs_tmp = []
-			for r in pvs:
-				if clones.has_key(r[0]):
-					pvs_tmp.append((clones[r[0]],r[1]))
-				else:
-					pvs_tmp.append(r)
-			vvs[v] = pvs_tmp
-		c.execute("detach kernelcache")
+		pvs_tmp = []
+		for r in pvs:
+			if clones.has_key(r[0]):
+				pvs_tmp.append((clones[r[0]],r[1]))
+			else:
+				pvs_tmp.append(r)
+		vvs[v] = pvs_tmp
+	c.execute("detach kernelcache")
 
-		vvs_rewrite = {}
-		for v in vvs.keys():
-			vvs_rewrite[v] = {}
-			for vs in vvs[v]:
-				(program, version) = vs
-				if not vvs_rewrite[v].has_key(program):
-					vvs_rewrite[v][program] = [version]
-				else:
-					vvs_rewrite[v][program] = list(set(vvs_rewrite[v][program] + [version]))
-		if vvs_rewrite != {}:
-			variablepvs['kernelvariables'] = vvs_rewrite
+	vvs_rewrite = {}
+	for v in vvs.keys():
+		vvs_rewrite[v] = {}
+		for vs in vvs[v]:
+			(program, version) = vs
+			if not vvs_rewrite[v].has_key(program):
+				vvs_rewrite[v][program] = [version]
+			else:
+				vvs_rewrite[v][program] = list(set(vvs_rewrite[v][program] + [version]))
+	if vvs_rewrite != {}:
+		variablepvs['kernelvariables'] = vvs_rewrite
+	c.close()
+	conn.close()
 	return variablepvs
 
 ## From dynamically linked ELF files it is possible to extract the dynamic
@@ -979,9 +945,6 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 		else:
 			dynamicscanning = False
 			## provide a value for a function name cache
-			tmpcache = tempfile.mkstemp()
-			funccache = tmpcache[1]
-			os.fdopen(tmpcache[0]).close()
 
 	## Walk through the output of readelf, and split results accordingly
 	## in function names and variables.
@@ -1079,7 +1042,10 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 					if sha256_packages.has_key(r[0]):
 						pkgs = list(set(pkgs + copy.copy(sha256_packages[r[0]])))
 					else:
-						c.execute("select package from processed_file where sha256=?", r)
+						if oldschema:
+							c.execute("select package from processed_file where sha256=?", r)
+						else:
+							c.execute("select package from processed_file where sha256=?", (r[0],))
 						s = c.fetchall()
 						if s != []:
 							pkgs = list(set(pkgs + map(lambda x: x[0], s)))
@@ -1144,22 +1110,8 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 	## If this cache does not exist, but only if we have a table "extracted_names"
 	variable_scan = False
 	if dynamicscanning:
-		## first attach the functionname cache again. If there is no table for variables, but
-		## ranking_full is set, then don't scan variable names.
-		c.execute("attach ? as functionnamecache", (funccache,))
-		res = c.execute("select * from functionnamecache.sqlite_master where type='table' and name='varnamecache'").fetchall()
-		if res == []:
-			if not rankingfull:
-				## nothing in the cache and rankingfull is not set, so check if we have the results.
-				res2 = c.execute("select * from sqlite_master where type='table' and name='extracted_name'").fetchall()
-				if res2 != []:
-					variable_scan = True
-					c.execute("create table if not exists functionnamecache.varnamecache (varname text, package text)")
-					c.execute("create index if not exists functionnamecache.varnamecache_index on varnamecache(varname)")
-					conn.commit()
-		else:
+		if scanenv.get('BAT_VARNAME_SCAN'):
 			variable_scan = True
-		c.execute("detach functionnamecache")
 
 	if variable_scan:
 		c.execute("attach ? as functionnamecache", (funccache,))
@@ -1877,6 +1829,7 @@ def rankingsetup(envvars):
 		return (False, envvars)
 
 	## Does the master database have the right tables?
+	## processed_file is always needed
 	conn = sqlite3.connect(masterdb)
 	c = conn.cursor()
 	res = c.execute("select * from sqlite_master where type='table' and name='processed_file'").fetchall()
@@ -1885,11 +1838,26 @@ def rankingsetup(envvars):
 		conn.close()
 		return (False, envvars)
 
+	## extracted_file is needed for string matches
 	res = c.execute("select * from sqlite_master where type='table' and name='extracted_file'").fetchall()
 	if res == []:
-		c.close()
-		conn.close()
-		return (False, envvars)
+		stringmatches = False
+	else:
+		stringmatches = True
+
+	## extracted_file is needed for function and method name matches
+	res = c.execute("select * from sqlite_master where type='table' and name='extracted_function'").fetchall()
+	if res == []:
+		functionmatches = False
+	else:
+		functionmatches = True
+
+	## extracted_file is needed for variable matches
+	res = c.execute("select * from sqlite_master where type='table' and name='extracted_name'").fetchall()
+	if res == []:
+		variablematches = False
+	else:
+		variablematches = True
 
 	rankingfull = False
 	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
@@ -1917,14 +1885,15 @@ def rankingsetup(envvars):
 					del newenv[stringsdbperlanguage[language]]
 
 			else:
-				## There is no strings cache defined, but the configuration also does not
-				## assume it is there, so just create one.
-				tmpcache = tempfile.mkstemp(suffix='.sqlite3')
-				stringscache = tmpcache[1]
-				os.fdopen(tmpcache[0]).close()
-				newenv[stringsdbperlanguage[language]] = stringscache
+				if stringmatches:
+					## There is no strings cache defined, but the configuration also does not
+					## assume it is there, so just create one.
+					tmpcache = tempfile.mkstemp(suffix='.sqlite3')
+					stringscache = tmpcache[1]
+					os.fdopen(tmpcache[0]).close()
+					newenv[stringsdbperlanguage[language]] = stringscache
 
-		if not rankingfull:
+		if not rankingfull and stringmatches:
 			c.execute("attach ? as stringscache", (stringscache,))
 			c.execute("create table if not exists stringscache.avgstringscache (package text, avgstrings real, primary key (package))")
 			c.execute("create table if not exists stringscache.stringscache (programstring text, package text, filename text, versions text)")
@@ -1974,4 +1943,55 @@ def rankingsetup(envvars):
 					del newenv['BAT_LICENSE_DB']
 				if newenv.has_key('BAT_RANKING_LICENSE'):
 					del newenv['BAT_RANKING_LICENSE']
+
+	## check the various caching databases, first for C
+	if scanenv.has_key(namecacheperlanguage['C']):
+		namecache = scanenv.get(namecacheperlanguage['C'])
+		if rankingfull:
+			## If rankingfull is set the cache should exist. If it doesn't exist
+			## then something is horribly wrong.
+			if not os.path.exists(namecache):
+				if newenv.has_key('BAT_KERNEL_SCAN'):
+					del newenv['BAT_KERNEL_SCAN']
+				if newenv.has_key('BAT_VARNAME_SCAN'):
+					del newenv['BAT_VARNAME_SCAN']
+			else:
+				if not newenv.has_key('BAT_KERNEL_SCAN'):
+					newenv['BAT_KERNEL_SCAN'] = 1
+				if not newenv.has_key('BAT_VARNAME_SCAN'):
+					newenv['BAT_VARNAME_SCAN'] = 1
+	else:
+		## undefined, but rankingfull is set, so disable everything
+		if rankingfull:
+			if newenv.has_key('BAT_KERNEL_SCAN'):
+				del newenv['BAT_KERNEL_SCAN']
+			if newenv.has_key('BAT_VARNAME_SCAN'):
+				del newenv['BAT_VARNAME_SCAN']
+		else:
+			if variablematches:
+				## There is no strings cache defined, but the configuration also does not
+				## assume it is there, so just create one.
+				tmpcache = tempfile.mkstemp(suffix='.sqlite3')
+				namecache = tmpcache[1]
+				os.fdopen(tmpcache[0]).close()
+				newenv[namecacheperlanguage['C']] = namecache
+
+	if not rankingfull and variablematches:
+		conn = sqlite3.connect(namecache)
+		c = conn.cursor()
+
+		c.execute("create table if not exists kernelcache (varname text, package text)")
+		c.execute("create index if not exists kernelcache_index on kernelcache(varname)")
+		c.execute("create table if not exists varnamecache (varname text, package text)")
+		c.execute("create index if not exists varnamecache_index on varnamecache(varname)")
+		conn.commit()
+		c.close()
+		conn.close()
+
+		if variablematches:
+			if not newenv.has_key('BAT_KERNEL_SCAN'):
+				newenv['BAT_KERNEL_SCAN'] = 1
+			if not newenv.has_key('BAT_VARNAME_SCAN'):
+				newenv['BAT_VARNAME_SCAN'] = 1
+
 	return (True, newenv)
