@@ -4,9 +4,9 @@
 
 [batconfig]
 multiprocessing = yes
-module = bat.simpleprettyprint
-output = prettyprintresxml
-outputlite = no
+#module = bat.simpleprettyprint
+#output = prettyprintresxml
+outputlite = yes
 
 ############################
 ### viewer configuration ###
@@ -684,6 +684,7 @@ noscan      = text:xml:graphics:pdf:compressed:resource:audio:video:vimswap
 description = Classify packages using advanced ranking mechanism
 enabled     = no
 parallel    = no
+setup       = rankingsetup
 
 [redboot]
 type        = program
