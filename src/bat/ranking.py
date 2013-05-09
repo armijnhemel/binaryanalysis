@@ -141,31 +141,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 			except Exception, e:
 				pass
 
-	## sanity checks for the database:
-	## * is the master database defined
-	## * does the master database exist
-	## * does it have the right schema
-	if not scanenv.has_key('BAT_DB'):
-		return None
-
 	masterdb = scanenv.get('BAT_DB')
-
-	if not os.path.exists(masterdb):
-		return None
-
-	conn = sqlite3.connect(masterdb)
-	c = conn.cursor()
-	res = c.execute("select * from sqlite_master where type='table' and name='processed_file'").fetchall()
-	if res == []:
-		c.close()
-		conn.close()
-		return None
-
-	res = c.execute("select * from sqlite_master where type='table' and name='extracted_file'").fetchall()
-	if res == []:
-		c.close()
-		conn.close()
-		return None
 
 	rankingfull = False
 	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
@@ -1267,30 +1243,13 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 	conn.text_factory = str
 	c = conn.cursor()
 
-	## create extra tables and attach them to the current database connection
-	## These databases should be wiped and/or recreated when the database with
-	## strings has been changed!!
-	if scanenv.has_key(stringsdbperlanguage[language]):
-		## sanity checks to see if the database exists. If not, and rankingfull
-		## is set to True, there should be no result.
-		stringscache = scanenv.get(stringsdbperlanguage[language])
-		if rankingfull:
-			## TODO: check if database schema is actually correct
-			if not os.path.exists(stringscache):
-				return None
-	else:
-		if rankingfull:
-			return None
-		stringscache = stringsdbperlanguage[language]
+	## setup code guarantees that this database exists and that sanity
+	## checks were done.
+	if not scanenv.has_key(stringsdbperlanguage[language]):
+		return None
+
+	stringscache = scanenv.get(stringsdbperlanguage[language])
 	c.execute("attach ? as stringscache", (stringscache,))
-	if not rankingfull:
-		c.execute("create table if not exists stringscache.avgstringscache (package text, avgstrings real, primary key (package))")
-		c.execute("create table if not exists stringscache.stringscache (programstring text, package text, filename text, versions text)")
-		c.execute("create index if not exists stringscache.programstring_index on stringscache(programstring)")
-		c.execute("create table if not exists stringscache.scores (programstring text, packages int, score real)")
-		c.execute("create index if not exists stringscache.scoresindex on scores(programstring)")
-		c.execute("create index if not exists stringscache.package_index on avgstringscache(package)")
-		conn.commit()
 
 	determineversion = False
 	if scanenv.get('BAT_RANKING_VERSION', 0) == '1':
@@ -1902,6 +1861,92 @@ def xmlprettyprint(leafreports, root, envvars=None):
 	return tmpnode
 
 ## stub for method that makes sure that everything is set up properly and modifies
-## the environment
+## the environment, as well as determines whether the scan should be run at
+## all.
+## Returns tuple (run, envvars)
+## * run: boolean indicating whether or not the scan should run
+## * envvars: (possibly) modified
 def rankingsetup(envvars):
-	pass
+	newenv = {}
+	scanenv = os.environ.copy()
+	if envvars != None:
+		for en in envvars.split(':'):
+			try:
+				(envname, envvalue) = en.split('=')
+				scanenv[envname] = envvalue
+				newenv[envname] = envvalue
+			except Exception, e:
+				pass
+
+	## Is the master database defined?
+	if not scanenv.has_key('BAT_DB'):
+		return (False, envvars)
+
+	masterdb = scanenv.get('BAT_DB')
+
+	## Does the master database exist?
+	if not os.path.exists(masterdb):
+		return (False, envvars)
+
+	## Does the master database have the right tables?
+	conn = sqlite3.connect(masterdb)
+	c = conn.cursor()
+	res = c.execute("select * from sqlite_master where type='table' and name='processed_file'").fetchall()
+	if res == []:
+		c.close()
+		conn.close()
+		return (False, envvars)
+
+	res = c.execute("select * from sqlite_master where type='table' and name='extracted_file'").fetchall()
+	if res == []:
+		c.close()
+		conn.close()
+		return (False, envvars)
+
+	rankingfull = False
+	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
+		rankingfull = True
+
+	if not rankingfull:
+		newenv['parallel'] = False
+
+	for language in stringsdbperlanguage.keys():
+		if scanenv.has_key(stringsdbperlanguage[language]):
+			## sanity checks to see if the database exists. If not, and rankingfull
+			## is set to True, there should be no result.
+			stringscache = scanenv.get(stringsdbperlanguage[language])
+			if rankingfull:
+				## TODO: check if database schema is actually correct
+				if not os.path.exists(stringscache):
+					## remove from the configuration
+					if newenv.has_key(stringsdbperlanguage[language]):
+						del newenv[stringsdbperlanguage[language]]
+		else:
+			if rankingfull:
+				## strings cache is not defined, but it should be there according to
+				## the configuration so remove from the configuration
+				if newenv.has_key(stringsdbperlanguage[language]):
+					del newenv[stringsdbperlanguage[language]]
+
+			else:
+				## There is no strings cache defined, but the configuration also does not
+				## assume it is there, so just create one.
+				tmpcache = tempfile.mkstemp(suffix='.sqlite3')
+				stringscache = tmpcache[1]
+				os.fdopen(tmpcache[0]).close()
+				newenv[stringsdbperlanguage[language]] = stringscache
+
+		if not rankingfull:
+			c.execute("attach ? as stringscache", (stringscache,))
+			c.execute("create table if not exists stringscache.avgstringscache (package text, avgstrings real, primary key (package))")
+			c.execute("create table if not exists stringscache.stringscache (programstring text, package text, filename text, versions text)")
+			c.execute("create table if not exists stringscache.scores (programstring text, packages int, score real)")
+			c.execute("create index if not exists stringscache.programstring_index on stringscache(programstring)")
+			c.execute("create index if not exists stringscache.scoresindex on scores(programstring)")
+			c.execute("create index if not exists stringscache.package_index on avgstringscache(package)")
+			conn.commit()
+			c.execute("detach stringscache")
+	c.close()
+	conn.close()
+
+	return (True, newenv)

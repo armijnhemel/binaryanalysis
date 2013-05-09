@@ -778,19 +778,26 @@ def runscan(scans, scan_binary):
 	tagdict = {}
 	finalscans = []
 	if scans['programscans'] != []:
+		parallel = True
+
 		## First run the 'setup' hooks for the scans and pass
 		## results via the environment. This should keep the
 		## code cleaner.
-
 		for sscan in scans['programscans']:
 			if not sscan.has_key('setup'):
 				finalscans.append(sscan)
 				continue
 			setupres = runSetup(sscan, debug)
-			(setuprun, envvars) = setupres
+			(setuprun, newenv) = setupres
 			if not setuprun:
 				continue
-			sscan['envvars'] = envvars
+			if newenv.has_key('parallel'):
+				if newenv['parallel'] == False:
+					parallel = False
+			newenvvars = ""
+			for n in newenv.keys():
+				newenvvars = newenvvars + ":%s=%s" % (n, newenv[n])
+			sscan['envvars'] = newenvvars[1:]
 			finalscans.append(sscan)
 
 		## Sometimes there are duplicate files inside a blob.
@@ -829,7 +836,6 @@ def runscan(scans, scan_binary):
 					tmpdebug = False
 		leaftasks_tmp = map(lambda x: x[:2] + (filterScans(finalscans, x[2]),) + x[2:-1] + (topleveldir, tmpdebug), leaftasks_tmp)
 
-		parallel = True
 		if scans['batconfig']['multiprocessing']:
 			if False in map(lambda x: x['parallel'], finalscans):
 				parallel = False
