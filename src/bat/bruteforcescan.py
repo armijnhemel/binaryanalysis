@@ -776,7 +776,23 @@ def runscan(scans, scan_binary):
 
 	poolresult = []
 	tagdict = {}
+	finalscans = []
 	if scans['programscans'] != []:
+		## First run the 'setup' hooks for the scans and pass
+		## results via the environment. This should keep the
+		## code cleaner.
+
+		for sscan in scans['programscans']:
+			if not sscan.has_key('setup'):
+				finalscans.append(sscan)
+				continue
+			setupres = runSetup(sscan, debug)
+			(setuprun, envvars) = setupres
+			if not setuprun:
+				continue
+			sscan['envvars'] = envvars
+			finalscans.append(sscan)
+
 		## Sometimes there are duplicate files inside a blob.
 		## To minimize time spent on scanning these should only be
 		## scanned once. Since the results are independent anyway (the
@@ -803,20 +819,6 @@ def runscan(scans, scan_binary):
 			if sha256_tmp[i[-2]] == i[0]:
 				leaftasks_tmp.append(i)
 
-		## First run the 'setup' hooks for the scans and pass
-		## results via the environment. This should keep the
-		## code cleaner.
-		setup_scans = reduce(lambda x, y: x + y, map(lambda x: filterScans(scans['programscans'], x[3]), leaftasks_tmp))
-		setups = filter(lambda x: x.has_key('setup'), setup_scans)
-		setup_scans = list(set(map(lambda x: x['name'], setups)))
-
-		for s in setup_scans:
-			sscans = filter(lambda x: x['name'] == s, scans['programscans'])
-			## this should always be just one scan. If not, something is wrong
-			for sscan in sscans:
-				setupres = runSetup(sscan, debug)
-				## TODO: assign result to envvars
-
 		## reverse sort on size: scan largest files first
 		leaftasks_tmp.sort(key=lambda x: x[-1], reverse=True)
 		tmpdebug=False
@@ -825,11 +827,11 @@ def runscan(scans, scan_binary):
 			if debugphases != []:
 				if not 'program' in debugphases:
 					tmpdebug = False
-		leaftasks_tmp = map(lambda x: x[:2] + (filterScans(scans['programscans'], x[2]),) + x[2:-1] + (topleveldir, tmpdebug), leaftasks_tmp)
+		leaftasks_tmp = map(lambda x: x[:2] + (filterScans(finalscans, x[2]),) + x[2:-1] + (topleveldir, tmpdebug), leaftasks_tmp)
 
 		parallel = True
 		if scans['batconfig']['multiprocessing']:
-			if False in map(lambda x: x['parallel'], scans['programscans']):
+			if False in map(lambda x: x['parallel'], finalscans):
 				parallel = False
 		if debug:
 			if debugphases == []:
