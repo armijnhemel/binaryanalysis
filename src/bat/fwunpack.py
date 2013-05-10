@@ -1195,7 +1195,17 @@ def unpackCramfs(filename, offset, tempdir=None, unpacktempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	unpackFile(filename, offset, tmpfile[1], tmpdir)
+	sizetmpfile = open(filename)
+	sizetmpfile.seek(offset+4)
+	tmpbytes = sizetmpfile.read(4)
+	sizetmpfile.close()
+
+	cramfslen = struct.unpack('<I', tmpbytes)[0]
+
+	if offset == 0:
+		unpackFile(filename, offset, tmpfile[1], tmpdir, length=cramfslen)
+	else:
+		unpackFile(filename, offset, tmpfile[1], tmpdir)
 
 	## directory to avoid name clashes
         tmpdir2 = tempfile.mkdtemp(dir=unpacktempdir)
