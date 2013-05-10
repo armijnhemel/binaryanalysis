@@ -125,10 +125,13 @@ def squashlicenses(licenses):
 					licenses = [(licenses[0][0], 'squashed')]
 	return licenses
 
-## extract the strings using 'strings' and only consider strings >= 5,
+## Main part of the scan
+##
+## 1. extract the strings using 'strings' and only consider strings >= 5,
 ## although this should be configurable
-## Then run it through extractGeneric, that queries the database and does
+## 2. Then run it through extractGeneric, that queries the database and does
 ## funky statistics as described in our paper.
+##
 ## Original code (in Perl) was written by Eelco Dolstra.
 ## Reimplementation in Python done by Armijn Hemel.
 def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktempdir=None):
@@ -193,7 +196,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 	linuxkernel = False
 
 	## ELF files are always scanned as a whole. Sometimes there are sections that
-	## contain compressed data, like .gnu_debugdata which should no trigger the
+	## contain compressed data, like .gnu_debugdata which should not trigger the
 	## black list.
 	if "elf" in tags:
 		if 'linuxkernel' in tags:
@@ -1021,8 +1024,7 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 				dynamicRes['packages'][i].append((v, versions.count(v)))
 		c.execute("detach functionnamecache")
 
-	## Scan variables. Ideally these should be in a table in functionname_cache.
-	## If this cache does not exist, but only if we have a table "extracted_names"
+	## Scan C variables extracted from dynamically linked files.
 	if scanenv.get('BAT_VARNAME_SCAN'):
 		c.execute("attach ? as functionnamecache", (funccache,))
 		vvs = {}
