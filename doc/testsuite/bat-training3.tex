@@ -191,6 +191,7 @@ The configuration for each type of scan has a few mandatory options:
 \item \texttt{storetype}, \texttt{storetarget} and \texttt{storedir} - used for postrun scans and aggregate scans to describe which files to store in the output, where to store them and where to get them
 \item \texttt{cleanup} - used in postrun scans and aggregate scans to tell BAT to clean up any generated file. Used in combination with \texttt{storetype}, \texttt{storetarget} and \texttt{storedir}.
 \item \texttt{parallel} - used to indicate whether files should be scanned in parallel. Defaults to \texttt{yes}. If set to \texttt{no} no files will be scanned in parallel for scans of this type.
+\item \texttt{setup} - method for running setup code (checking directories, databases, and so on).
 \end{itemize}
 }
 
