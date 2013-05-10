@@ -504,6 +504,9 @@ def extractJavaNamesClass(scanfile):
 	return {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile}
 
 def extractJavaNames(javameta, scanenv, clones, rankingfull):
+	if not scanenv.has_key(namecacheperlanguage['Java']):
+		return {}
+
 	dynamicRes = {}  # {'namesmatched': 0, 'totalnames': int, 'uniquematches': int, 'packages': {} }
 	namesmatched = 0
 	uniquematches = 0
@@ -526,27 +529,7 @@ def extractJavaNames(javameta, scanenv, clones, rankingfull):
 	conn.text_factory = str
 	c = conn.cursor()
 
-	if scanenv.has_key(namecacheperlanguage['Java']):
-		funccache = scanenv.get(namecacheperlanguage['Java'])
-		## sanity checks to see if the database exists. If not, and rankingfull
-		## is set to True, there should be no result.
-		if rankingfull:
-			## If rankingfull is set the cache should exist. If it doesn't exist
-			## then something is horribly wrong.
-			if not os.path.exists(funccache):
-				return dynamicRes
-		else:
-			## The cache may, or may not, exist, but at least we're not
-			## counting on it to exist and it may be generated on the fly.
-			funccache = scanenv.get(namecacheperlanguage['Java'])
-	else:
-		if rankingfull:
-			return dynamicRes
-		else:
-			return dynamicRes
-			tmpcache = tempfile.mkstemp()
-			funccache = tmpcache[1]
-			os.fdopen(tmpcache[0]).close()
+	funccache = scanenv.get(namecacheperlanguage['Java'])
 
 	## extra sanity check. Previous versions only had function names from C in the database.
 	## When scripts were adapted to also allow Java methods a field 'language' was introduced.
@@ -558,9 +541,7 @@ def extractJavaNames(javameta, scanenv, clones, rankingfull):
 		return dynamicRes
 
 	c.execute("attach ? as functionnamecache", (funccache,))
-	c.execute("create table if not exists functionnamecache.functionnamecache (functionname text, package text)")
-	c.execute("create index if not exists functionnamecache.functionname_index on functionnamecache(functionname)")
-	conn.commit()
+
 	for meth in methods:
 		if meth == 'main':
 			continue
@@ -612,6 +593,9 @@ def extractJavaNames(javameta, scanenv, clones, rankingfull):
 	return dynamicRes
 
 def extractVariablesJava(javameta, scanenv, clones, rankingfull):
+	if not scanenv.has_key(namecacheperlanguage['Java']):
+		return {}
+
 	variablepvs = {}
 	if javameta.has_key('fields'):
 		fields = javameta['fields']
@@ -634,43 +618,8 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 	conn.text_factory = str
 	c = conn.cursor()
 
-	if scanenv.has_key(namecacheperlanguage['Java']):
-		funccache = scanenv.get(namecacheperlanguage['Java'])
-		## sanity checks to see if the database exists. If not, and rankingfull
-		## is set to True, there should be no result.
-		if rankingfull:
-			## If rankingfull is set the cache should exist. If it doesn't exist
-			## then something is horribly wrong.
-			if not os.path.exists(funccache):
-				return variablepvs
-		else:
-			## The cache may, or may not, exist, but at least we're not
-			## counting on it to exist and it may be generated on the fly.
-			funccache = scanenv.get(namecacheperlanguage['Java'])
-	else:
-		if rankingfull:
-			return variablepvs
-		else:
-			return variablepvs
-			tmpcache = tempfile.mkstemp()
-			funccache = tmpcache[1]
-			os.fdopen(tmpcache[0]).close()
+	funccache = scanenv.get(namecacheperlanguage['Java'])
 
-	class_scan = False
-	c.execute("attach ? as functionnamecache", (funccache,))
-	res = c.execute("select * from functionnamecache.sqlite_master where type='table' and name='classcache'").fetchall()
-	if res == []:
-		if not rankingfull:
-			## nothing in the cache and rankingfull is not set, so check if we have the results.
-			res2 = c.execute("select * from sqlite_master where type='table' and name='extracted_name'").fetchall()
-			if res2 != []:
-				class_scan = True
-				c.execute("create table if not exists functionnamecache.classcache (classname text, package text)")
-				c.execute("create index if not exists functionnamecache.classname_cache on classcache(classname)")
-				conn.commit()
-	else:
-		class_scan = True
-	c.execute("detach functionnamecache")
 	classpvs = {}
 	sourcepvs = {}
 	fieldspvs = {}
@@ -679,7 +628,7 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 	## Of course, it could be that the source file is different from the
 	## class file (apart from the extension of course) but this is very
 	## uncommon. TODO: merge class name and source file name searching
-	if class_scan:
+	if scanenv.has_key('BAT_CLASSNAME_SCAN'):
 		c.execute("attach ? as functionnamecache", (funccache,))
 		classes = list(set(map(lambda x: x.split('$')[0], classes)))
 		for i in classes:
@@ -741,23 +690,9 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 	## likely only coming from a few packages we don't need to hit the database
 	## that often.
 	## This can be really slow, so we should perhaps use some caching database.
-	field_scan = False
-	c.execute("attach ? as functionnamecache", (funccache,))
-	res = c.execute("select * from functionnamecache.sqlite_master where type='table' and name='fieldcache'").fetchall()
-	if res == []:
-		if not rankingfull:
-			## nothing in the cache and rankingfull is not set, so check if we have the results.
-			res2 = c.execute("select * from sqlite_master where type='table' and name='extracted_name'").fetchall()
-			if res2 != []:
-				field_scan = True
-				c.execute("create table if not exists functionnamecache.fieldcache (fieldname text, package text)")
-				c.execute("create index if not exists functionnamecache.fieldname_cache on fieldcache(fieldname)")
-				conn.commit()
-	else:
-		field_scan = True
-	c.execute("detach functionnamecache")
+
 	sha256cache = {}
-	if field_scan:
+	if scanenv.has_key('BAT_FIELDNAME_SCAN'):
 		c.execute("attach ? as functionnamecache", (funccache,))
 		for f in fields:
 			## a few fields are so common that they will be completely useless
@@ -1955,6 +1890,8 @@ def rankingsetup(envvars):
 					del newenv['BAT_KERNEL_SCAN']
 				if newenv.has_key('BAT_VARNAME_SCAN'):
 					del newenv['BAT_VARNAME_SCAN']
+				if newenv.has_key(namecache):
+					del newenv[namecache]
 			else:
 				if not newenv.has_key('BAT_KERNEL_SCAN'):
 					newenv['BAT_KERNEL_SCAN'] = 1
@@ -1976,6 +1913,7 @@ def rankingsetup(envvars):
 				os.fdopen(tmpcache[0]).close()
 				newenv[namecacheperlanguage['C']] = namecache
 
+	## populate the name cache for C
 	if not rankingfull and variablematches:
 		conn = sqlite3.connect(namecache)
 		c = conn.cursor()
@@ -1993,5 +1931,58 @@ def rankingsetup(envvars):
 				newenv['BAT_KERNEL_SCAN'] = 1
 			if not newenv.has_key('BAT_VARNAME_SCAN'):
 				newenv['BAT_VARNAME_SCAN'] = 1
+
+	## then check for Java
+	if scanenv.has_key(namecacheperlanguage['Java']):
+		namecache = scanenv.get(namecacheperlanguage['Java'])
+		if rankingfull:
+			## If rankingfull is set the cache should exist. If it doesn't exist
+			## then something is horribly wrong.
+			if not os.path.exists(namecache):
+				if newenv.has_key('BAT_CLASSNAME_SCAN'):
+					del newenv['BAT_CLASSNAME_SCAN']
+				if newenv.has_key('BAT_FIELDNAME_SCAN'):
+					del newenv['BAT_FIELDNAME_SCAN']
+				if newenv.has_key(namecache):
+					del newenv[namecache]
+			else:
+				if not newenv.has_key('BAT_CLASSNAME_SCAN'):
+					newenv['BAT_CLASSNAME_SCAN'] = 1
+				if not newenv.has_key('BAT_FIELDNAME_SCAN'):
+					newenv['BAT_FIELDNAME_SCAN'] = 1
+	else:
+		## undefined, but rankingfull is set, so disable everything
+		if rankingfull:
+			if newenv.has_key('BAT_CLASSNAME_SCAN'):
+				del newenv['BAT_CLASSNAME_SCAN']
+			if newenv.has_key('BAT_FIELDNAME_SCAN'):
+				del newenv['BAT_FIELDNAME_SCAN']
+		else:
+			if variablematches:
+				## There is no strings cache defined, but the configuration also does not
+				## assume it is there, so just create one.
+				tmpcache = tempfile.mkstemp(suffix='.sqlite3')
+				namecache = tmpcache[1]
+				os.fdopen(tmpcache[0]).close()
+				newenv[namecacheperlanguage['Java']] = namecache
+
+	## populate the name cache for Java
+	if not rankingfull and variablematches:
+		conn = sqlite3.connect(namecache)
+		c = conn.cursor()
+		c.execute("create table if not exists classcache (classname text, package text)")
+		c.execute("create index if not exists classname_cache on classcache(classname)")
+		c.execute("create table if not exists fieldcache (fieldname text, package text)")
+		c.execute("create index if not exists fieldname_cache on fieldcache(fieldname)")
+
+		conn.commit()
+		c.close()
+		conn.close()
+
+		if variablematches:
+			if not newenv.has_key('BAT_CLASSNAME_SCAN'):
+				newenv['BAT_CLASSNAME_SCAN'] = 1
+			if not newenv.has_key('BAT_FIELDNAME_SCAN'):
+				newenv['BAT_FIELDNAME_SCAN'] = 1
 
 	return (True, newenv)
