@@ -40,7 +40,7 @@ def unpacksetup(tempdir):
 		tmpdir = tempdir
 	return tmpdir
 
-def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False):
+def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpacktempdir=None):
 	if offset == 0 and length == 0:
 		## use copy if we intend to *modify* tmpfile, or we end up
 		## modifying the orginal
@@ -62,11 +62,19 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False):
 			else:
 				p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile,), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
-		## TODO: fix to get rid of trailing data and offset != 0
 		else:
 			if offset == 0:
 				p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile,), 'bs=%s' % (length,), 'count=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
+			else:
+				## use a two way pass
+				tmptmpfile = tempfile.mkstemp(dir=unpacktempdir)
+				os.fdopen(tmptmpfile[0]).close()
+				p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmptmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+				(stanout, stanerr) = p.communicate()
+				p = subprocess.Popen(['dd', 'if=%s' % (tmptmpfile[1],), 'of=%s' % (tmpfile,), 'bs=%s' % (length,), 'count=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+				(stanout, stanerr) = p.communicate()
+				os.unlink(tmptmpfile[1])
 
 ## There are certain routers that have all bytes swapped, because they use 16
 ## bytes NOR flash instead of 8 bytes SPI flash. This is an ugly hack to first
@@ -1201,11 +1209,10 @@ def unpackCramfs(filename, offset, tempdir=None, unpacktempdir=None):
 	sizetmpfile.close()
 
 	cramfslen = struct.unpack('<I', tmpbytes)[0]
+	if cramfslen > os.stat(filename).st_size:
+		return
 
-	if offset == 0:
-		unpackFile(filename, offset, tmpfile[1], tmpdir, length=cramfslen)
-	else:
-		unpackFile(filename, offset, tmpfile[1], tmpdir)
+	unpackFile(filename, offset, tmpfile[1], tmpdir, length=cramfslen, unpacktempdir=unpacktempdir)
 
 	## directory to avoid name clashes
         tmpdir2 = tempfile.mkdtemp(dir=unpacktempdir)
