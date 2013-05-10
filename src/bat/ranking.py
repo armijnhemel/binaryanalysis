@@ -842,6 +842,9 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 	dynamicRes = {}
 	variablepvs = {}
 
+	if not scanenv.has_key(namecacheperlanguage['C']):
+		return (dynamicRes, variablepvs)
+
  	p = subprocess.Popen(['readelf', '-W', '--dyn-syms', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
@@ -860,27 +863,7 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
-
-	dynamicscanning = True
-	if scanenv.has_key(namecacheperlanguage['C']):
-		funccache = scanenv.get(namecacheperlanguage['C'])
-		## sanity checks to see if the database exists. If not, and rankingfull
-		## is set to True, there should be no result.
-		if rankingfull:
-			## If rankingfull is set the cache should exist. If it doesn't exist
-			## then something is horribly wrong.
-			if not os.path.exists(funccache):
-				dynamicscanning = False
-		else:
-			## The cache may, or may not, exist, but at least we're not
-			## counting on it to exist and it may be generated on the fly.
-			funccache = scanenv.get(namecacheperlanguage['C'])
-	else:
-		if rankingfull:
-			dynamicscanning = False
-		else:
-			dynamicscanning = False
-			## provide a value for a function name cache
+	funccache = scanenv.get(namecacheperlanguage['C'])
 
 	## Walk through the output of readelf, and split results accordingly
 	## in function names and variables.
@@ -916,13 +899,8 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 			funcname = dynstr[7]
 			scanstr.append(funcname)
 
-	if dynamicscanning:
+	if scanenv.has_key('BAT_FUNCTION_SCAN'):
 		c.execute("attach ? as functionnamecache", (funccache,))
-		if not rankingfull:
-			c.execute("create table if not exists functionnamecache.functionnamecache (functionname text, package text)")
-			c.execute("create index if not exists functionnamecache.functionname_index on functionnamecache(functionname)")
-			conn.commit()
-
 		## run c++filt in batched mode to avoid launching many processes
 		## C++ demangling is tricky: the types declared in the function in the source code
 		## are not necessarily what demangling will return.
@@ -1044,11 +1022,7 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 
 	## Scan variables. Ideally these should be in a table in functionname_cache.
 	## If this cache does not exist, but only if we have a table "extracted_names"
-	variable_scan = False
 	if scanenv.get('BAT_VARNAME_SCAN'):
-		variable_scan = True
-
-	if variable_scan:
 		c.execute("attach ? as functionnamecache", (funccache,))
 		vvs = {}
 		for v in variables:
@@ -1171,8 +1145,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 	oldline = None
 	matched = False
 
-	res = c.execute("select * from stringscache.sqlite_master where type='table' and name='scores'").fetchall()
-	if res != []:
+	if scanenv.has_key('BAT_SCORE_CACHE'):
 		precomputescore = True
 	else:
 		precomputescore = False
@@ -1780,14 +1753,14 @@ def rankingsetup(envvars):
 	else:
 		stringmatches = True
 
-	## extracted_file is needed for function and method name matches
+	## extracted_function is needed for function and method name matches
 	res = c.execute("select * from sqlite_master where type='table' and name='extracted_function'").fetchall()
 	if res == []:
 		functionmatches = False
 	else:
 		functionmatches = True
 
-	## extracted_file is needed for variable matches
+	## extracted_name is needed for variable matches
 	res = c.execute("select * from sqlite_master where type='table' and name='extracted_name'").fetchall()
 	if res == []:
 		variablematches = False
@@ -1838,6 +1811,19 @@ def rankingsetup(envvars):
 			c.execute("create index if not exists stringscache.package_index on avgstringscache(package)")
 			conn.commit()
 			c.execute("detach stringscache")
+
+	## check if there is a precomputed scores table and if it has any content.
+	c.execute("attach ? as stringscache", (stringscache,))
+	res = c.execute("select * from stringscache.sqlite_master where type='table' and name='scores'").fetchall()
+	if res != []:
+		if not newenv.has_key('BAT_SCORE_CACHE'):
+			newenv['BAT_SCORE_CACHE'] = 1
+	res = c.execute("select * from stringscache.scores LIMIT 1")
+	if res == []:
+		## if there are no precomputed scores remove it again to save queries later
+		if newenv.has_key('BAT_SCORE_CACHE'):
+			del newenv['BAT_SCORE_CACHE']
+	c.execute("detach stringscache")
 	c.close()
 	conn.close()
 
@@ -1890,13 +1876,19 @@ def rankingsetup(envvars):
 					del newenv['BAT_KERNEL_SCAN']
 				if newenv.has_key('BAT_VARNAME_SCAN'):
 					del newenv['BAT_VARNAME_SCAN']
-				if newenv.has_key(namecache):
-					del newenv[namecache]
+				if newenv.has_key('BAT_FUNCTION_SCAN'):
+					del newenv['BAT_FUNCTION_SCAN']
+				if newenv.has_key(namecacheperlanguage['C']):
+					del newenv[namecacheperlanguage['C']]
 			else:
-				if not newenv.has_key('BAT_KERNEL_SCAN'):
-					newenv['BAT_KERNEL_SCAN'] = 1
-				if not newenv.has_key('BAT_VARNAME_SCAN'):
-					newenv['BAT_VARNAME_SCAN'] = 1
+				if variablematches:
+					if not newenv.has_key('BAT_KERNEL_SCAN'):
+						newenv['BAT_KERNEL_SCAN'] = 1
+					if not newenv.has_key('BAT_VARNAME_SCAN'):
+						newenv['BAT_VARNAME_SCAN'] = 1
+				if functionmatches:
+					if not newenv.has_key('BAT_FUNCTION_SCAN'):
+						newenv['BAT_FUNCTION_SCAN'] = 1
 	else:
 		## undefined, but rankingfull is set, so disable everything
 		if rankingfull:
@@ -1904,9 +1896,11 @@ def rankingsetup(envvars):
 				del newenv['BAT_KERNEL_SCAN']
 			if newenv.has_key('BAT_VARNAME_SCAN'):
 				del newenv['BAT_VARNAME_SCAN']
+			if newenv.has_key('BAT_FUNCTION_SCAN'):
+				del newenv['BAT_FUNCTION_SCAN']
 		else:
-			if variablematches:
-				## There is no strings cache defined, but the configuration also does not
+			if variablematches or functionmatches:
+				## There is no names cache defined, but the configuration also does not
 				## assume it is there, so just create one.
 				tmpcache = tempfile.mkstemp(suffix='.sqlite3')
 				namecache = tmpcache[1]
@@ -1914,14 +1908,19 @@ def rankingsetup(envvars):
 				newenv[namecacheperlanguage['C']] = namecache
 
 	## populate the name cache for C
-	if not rankingfull and variablematches:
+	if not rankingfull and (variablematches or functionmatches):
 		conn = sqlite3.connect(namecache)
 		c = conn.cursor()
 
-		c.execute("create table if not exists kernelcache (varname text, package text)")
-		c.execute("create index if not exists kernelcache_index on kernelcache(varname)")
-		c.execute("create table if not exists varnamecache (varname text, package text)")
-		c.execute("create index if not exists varnamecache_index on varnamecache(varname)")
+		if variablematches:
+			c.execute("create table if not exists kernelcache (varname text, package text)")
+			c.execute("create index if not exists kernelcache_index on kernelcache(varname)")
+			c.execute("create table if not exists varnamecache (varname text, package text)")
+			c.execute("create index if not exists varnamecache_index on varnamecache(varname)")
+		if functionmatches:
+			c.execute("create table if not exists functionnamecache (functionname text, package text)")
+			c.execute("create index if not exists functionname_index on functionnamecache(functionname)")
+
 		conn.commit()
 		c.close()
 		conn.close()
@@ -1931,6 +1930,9 @@ def rankingsetup(envvars):
 				newenv['BAT_KERNEL_SCAN'] = 1
 			if not newenv.has_key('BAT_VARNAME_SCAN'):
 				newenv['BAT_VARNAME_SCAN'] = 1
+		if functionmatches:
+			if not newenv.has_key('BAT_FUNCTION_SCAN'):
+				newenv['BAT_FUNCTION_SCAN'] = 1
 
 	## then check for Java
 	if scanenv.has_key(namecacheperlanguage['Java']):
@@ -1943,8 +1945,8 @@ def rankingsetup(envvars):
 					del newenv['BAT_CLASSNAME_SCAN']
 				if newenv.has_key('BAT_FIELDNAME_SCAN'):
 					del newenv['BAT_FIELDNAME_SCAN']
-				if newenv.has_key(namecache):
-					del newenv[namecache]
+				if newenv.has_key(namecacheperlanguage['Java']):
+					del newenv[namecacheperlanguage['Java']]
 			else:
 				if not newenv.has_key('BAT_CLASSNAME_SCAN'):
 					newenv['BAT_CLASSNAME_SCAN'] = 1
