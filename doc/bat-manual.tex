@@ -110,7 +110,7 @@ possibly carving it out of a larger file first.
 
 The first action performed is scanning a file for known identifiers of
 compressed files, file systems and media files. The identifers are important
-for a few things: first, they are used to determine which checks are run. They
+for a few things: first, they are used to determine which checks will run. They
 are also used frequently throughout the code for verification and speeding up
 unpacking. If a scan depends on a specific identifier being present it can be
 set using the \texttt{magic} attribute in the configuration.
@@ -120,7 +120,7 @@ The marker search cannot be enabled or disabled via the configuration file.
 \subsubsection{Pre-run checks}
 
 Before files are unpacked they are briefly inspected and if possible tagged.
-Tags are used to pass hints to methods that are run later avoid unnecessarily
+Tags are used to pass hints to methods that are run later to avoid unnecessarily
 scanning a file and to reduce the amount of false positives.
 
 For example, files that only contain text are tagged as \texttt{text}, all other
@@ -131,6 +131,19 @@ that only work on binaries can then ignore anything that has been tagged as
 
 Other checks that are available are for valid XML, various Android formats,
 ELF executables and libraries, graphics files, audio files, and so on.
+
+The prerun checks can easily be identified in the configuration, since it has
+its type set to \texttt{prerun}:
+
+\begin{verbatim}
+[verifytext]
+type        = prerun
+module      = bat.prerun
+method      = verifyText
+priority    = 3
+description = Check if file contains just ASCII text
+enabled     = yes
+\end{verbatim}
 
 \subsubsection{Unpackers}
 
