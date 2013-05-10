@@ -14,8 +14,8 @@ The script has a few separate scanning phases:
 media formats), if available. This information is later used to filter scans and to
 carve files.
 
-2. prerun phase for tagging files. This is a first big rough sweep for low hanging fruit,
-so we only have to spend little or no time on useless scanning in the following phases.
+2. prerun phase for tagging files. This is a first big rough sweep of determining what
+files are to prevent spending too much time on useless scanning in the following phases.
 Some things that are tagged here are text files, XML files, various graphics formats and
 some other files.
 
@@ -137,7 +137,7 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 	if relfiletoscan.startswith('/'):
 		relfiletoscan = relfiletoscan[1:]
 
-	## we reset the reports, blacklist, offsets and tags for each new scan
+	## reset the reports, blacklist, offsets and tags for each new scan
 	leaftasks = []
 	scantasks = []
 	unpackreports = {}
@@ -151,9 +151,9 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 	unpackreports[relfiletoscan]['magic'] = magic
 
 	## Add both the path to indicate the position inside the file sytem
-        ## or file we have unpacked, as well as the position of the files as unpacked
+        ## or file that was unpacked, as well as the position of the files as unpacked
 	## by BAT, convenient for later analysis of binaries.
-	## In case of squashfs we remove the "squashfs-root" part of the temporary
+	## In case of squashfs remove the "squashfs-root" part of the temporary
 	## directory too, if it is present (not always).
 	storepath = path[lenscandir:].replace("/squashfs-root", "")
 	unpackreports[relfiletoscan]['path'] = storepath
@@ -189,8 +189,8 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 		if debug:
 			print >>sys.stderr, module, method, filename
 			sys.stderr.flush()
-		## if there is extra information we need to pass, like locations of databases
-		## we can use the environment for it
+		## if there is extra information that needs to be pass, like locations
+		## of databases the environment can be used for it
 		if prerunscan.has_key('envvars'):
 			envvars = prerunscan['envvars']
 		else:
@@ -214,10 +214,9 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 			if offsets[magictype][0] - fsmagic.correction.get(magictype, 0) == 0:
 				zerooffsets.append(magictype)
 
-	## Based on information about offsets we should reorder the scans,
-	## or at least if one scan has a match for offset 0 (after correction
-	## of the offset, like for tar, gzip, iso9660, etc.) make sure it is
-	## run first.
+	## Reorder the scans based on information about offsets. If one scan has a
+	## match for offset 0 (after correction of the offset, like for tar, gzip,
+	## iso9660, etc.) make sure it is run first.
 	unpackscans = []
 	scanfirst = []
 
@@ -304,7 +303,7 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 			try:
        				while True:
                 			i = osgen.next()
-					## make sure we can access all directories
+					## make sure all directories can be accessed
 					for d in i[1]:
 						if not os.path.islink("%s/%s" % (i[0], d)):
 							os.chmod("%s/%s" % (i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
@@ -583,7 +582,7 @@ def prettyprint(batconf, res, scandate, scans, toplevelfile, topleveldir):
 	return output
 
 def dumpData(unpackreports, scans, tempdir):
-	## if we make a dump of all the result we should have:
+	## a dump of all the result contains:
 	## * a copy of all the unpacked data
 	## * whatever results from postrunscans that should be stored (defined in the config file)
 	## * a pickle of all data, it saves parsing the XML report (or any other format for that matter),
@@ -791,6 +790,9 @@ def runscan(scans, scan_binary):
 			(setuprun, newenv) = setupres
 			if not setuprun:
 				continue
+			## 'parallel' can be used to modify whether or not the
+			## scans should be run in parallel. This is right now
+			## the only 'special' keyword.
 			if newenv.has_key('parallel'):
 				if newenv['parallel'] == False:
 					parallel = False
@@ -800,12 +802,12 @@ def runscan(scans, scan_binary):
 			sscan['envvars'] = newenvvars[1:]
 			finalscans.append(sscan)
 
-		## Sometimes there are duplicate files inside a blob.
+		## Sometimes there are identical files inside a blob.
 		## To minimize time spent on scanning these should only be
 		## scanned once. Since the results are independent anyway (the
-		## unpacking phase is where unique paths are determined) we
-		## can scan once for each sha256 and if there are more files
-		## with the same sha256 we can simply copy the result.
+		## unpacking phase is where unique paths are determined after all)
+		## each sha256 can be scanned only once. If there are more files
+		## with the same sha256 the result can simply be copied.
 		##
 		## * keep a list of which sha256 have duplicates.
 		## * filter out the checksums
@@ -857,7 +859,7 @@ def runscan(scans, scan_binary):
 		pool.terminate()
 
 		## filter the results for the leafscans. These are the ones that
-		## returned tags. These need to be merged into unpackreports.
+		## returned tags so need to be merged into unpackreports.
 		mergetags = filter(lambda x: x[1] != [], poolresult)
 		for m in mergetags:
 			tagdict[m[0]] = m[1]
