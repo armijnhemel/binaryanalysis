@@ -542,21 +542,22 @@ def extractJavaNames(javameta, scanenv, clones, rankingfull):
 
 	c.execute("attach ? as functionnamecache", (funccache,))
 
-	for meth in methods:
-		if meth == 'main':
-			continue
-		res = c.execute("select distinct package from functionnamecache.functionnamecache where functionname=?", (meth,)).fetchall()
-		if res != []:
-			## TODO: use information from cloning database
-			matches.append(meth)
-			namesmatched += 1
-			## unique match
-			if len(res) == 1:
-				uniquematches += 1
-				if uniquepackages.has_key(res[0][0]):
-					uniquepackages[res[0][0]] += [meth]
-				else:
-					uniquepackages[res[0][0]] = [meth]
+	if scanenv.has_key('BAT_METHOD_SCAN'):
+		for meth in methods:
+			if meth == 'main':
+				continue
+			res = c.execute("select distinct package from functionnamecache.functionnamecache where functionname=?", (meth,)).fetchall()
+			if res != []:
+				## TODO: use information from cloning database
+				matches.append(meth)
+				namesmatched += 1
+				## unique match
+				if len(res) == 1:
+					uniquematches += 1
+					if uniquepackages.has_key(res[0][0]):
+						uniquepackages[res[0][0]] += [meth]
+					else:
+						uniquepackages[res[0][0]] = [meth]
 	dynamicRes['namesmatched'] = namesmatched
 	dynamicRes['totalnames'] = len(list(set(methods)))
 	dynamicRes['uniquepackages'] = uniquepackages
@@ -1945,6 +1946,8 @@ def rankingsetup(envvars):
 					del newenv['BAT_CLASSNAME_SCAN']
 				if newenv.has_key('BAT_FIELDNAME_SCAN'):
 					del newenv['BAT_FIELDNAME_SCAN']
+				if newenv.has_key('BAT_METHOD_SCAN'):
+					del newenv['BAT_METHOD_SCAN']
 				if newenv.has_key(namecacheperlanguage['Java']):
 					del newenv[namecacheperlanguage['Java']]
 			else:
@@ -1952,6 +1955,8 @@ def rankingsetup(envvars):
 					newenv['BAT_CLASSNAME_SCAN'] = 1
 				if not newenv.has_key('BAT_FIELDNAME_SCAN'):
 					newenv['BAT_FIELDNAME_SCAN'] = 1
+				if not newenv.has_key('BAT_METHOD_SCAN'):
+					newenv['BAT_METHOD_SCAN'] = 1
 	else:
 		## undefined, but rankingfull is set, so disable everything
 		if rankingfull:
@@ -1959,6 +1964,8 @@ def rankingsetup(envvars):
 				del newenv['BAT_CLASSNAME_SCAN']
 			if newenv.has_key('BAT_FIELDNAME_SCAN'):
 				del newenv['BAT_FIELDNAME_SCAN']
+			if newenv.has_key('BAT_METHOD_SCAN'):
+				del newenv['BAT_METHOD_SCAN']
 		else:
 			if variablematches:
 				## There is no strings cache defined, but the configuration also does not
@@ -1969,14 +1976,17 @@ def rankingsetup(envvars):
 				newenv[namecacheperlanguage['Java']] = namecache
 
 	## populate the name cache for Java
-	if not rankingfull and variablematches:
+	if not rankingfull and (variablematches or functionmatches):
 		conn = sqlite3.connect(namecache)
 		c = conn.cursor()
-		c.execute("create table if not exists classcache (classname text, package text)")
-		c.execute("create index if not exists classname_cache on classcache(classname)")
-		c.execute("create table if not exists fieldcache (fieldname text, package text)")
-		c.execute("create index if not exists fieldname_cache on fieldcache(fieldname)")
-
+		if variablematches:
+			c.execute("create table if not exists classcache (classname text, package text)")
+			c.execute("create index if not exists classname_cache on classcache(classname)")
+			c.execute("create table if not exists fieldcache (fieldname text, package text)")
+			c.execute("create index if not exists fieldname_cache on fieldcache(fieldname)")
+		if functionmatches:
+			c.execute("create table if not exists functionnamecache (functionname text, package text)")
+			c.execute("create index if not exists functionname_index on functionnamecache(functionname)")
 		conn.commit()
 		c.close()
 		conn.close()
@@ -1986,5 +1996,8 @@ def rankingsetup(envvars):
 				newenv['BAT_CLASSNAME_SCAN'] = 1
 			if not newenv.has_key('BAT_FIELDNAME_SCAN'):
 				newenv['BAT_FIELDNAME_SCAN'] = 1
+		if functionmatches:
+			if not newenv.has_key('BAT_METHOD_SCAN'):
+				newenv['BAT_METHOD_SCAN'] = 1
 
 	return (True, newenv)
