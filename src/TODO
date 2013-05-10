@@ -74,4 +74,3 @@ BOTTLENECKS:
 3. check odex files and tag them as dalvik
 4. check whether or not LZMA checking can be made more efficient: sometimes LZMA checking eats more than 50%(!) of total scanning time
 5. remove version information for unlikely versions from result pickles, given a few preconditions. The result pickles can grow very large, for example when scanning a Linux kernel image.
-6. remove setup code from ranking.py and do all checking just once, before any programscans are run, to declutter the code. This will likely mean another category of scans, or creating a hook for set up code.
