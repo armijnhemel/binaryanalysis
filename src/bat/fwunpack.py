@@ -2157,7 +2157,7 @@ def unpackZip(filename, offset, tempdir=None):
 	p = subprocess.Popen(['zipinfo', '-v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 
-	## check if the file is encrypted, if so, we need to bail out
+	## check if the file is encrypted, if so bail out
 	res = re.search("file security status:\s+(\w*)\sencrypted", stanout)
 	if res == None:
 		os.unlink(tmpfile[1])
@@ -2171,7 +2171,7 @@ def unpackZip(filename, offset, tempdir=None):
 			os.rmdir(tmpdir)
 		return (None, None)
 
-	## we have a non-encrypted file, so we can continue processing it
+	## non-encrypted file, so continue processing it
 	res = re.search("Actual[\w\s]*end-(?:of-)?cent(?:ral)?-dir record[\w\s]*:\s*(\d+) \(", stanout)
 	if res != None:
 		endofcentraldir = int(res.groups(0)[0])
@@ -2256,7 +2256,7 @@ def unpackZip(filename, offset, tempdir=None):
 				return (None, None)
 			os.unlink(tmpfile2[1])
 		else:
-			## first check whether or not we can unpack the file. There are situations
+			## first check whether or not the file can be unpacked. There are situations
 			## where ZIP files are packed in a weird format that unzip does not like:
 			## https://bugzilla.redhat.com/show_bug.cgi?id=907442
 			p = subprocess.Popen(['zipinfo', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
