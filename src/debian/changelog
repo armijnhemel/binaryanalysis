@@ -1,3 +1,13 @@
+bat (14.0) unstable; urgency=low
+
+  * fix cramfs unpacking
+  * expand dynamic ELF picture generation
+  * add kernel symbol scanning
+  * workarounds for crashes in squashfs unpacking
+  * add 'setup' hook for program scans, where setup code can be moved into
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Sat, 11 May 2013 17:33:03 +0200
+
 bat (13.0) unstable; urgency=low
 
   * rework inner format to save massive amounts of memory
