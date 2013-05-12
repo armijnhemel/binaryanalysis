@@ -4,7 +4,7 @@
 ## Copyright 2009-2013 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
-import os, sys, string, re, subprocess
+import os, sys, string, re, subprocess, cPickle
 import extractor
 import magic
 import xml.dom.minidom
@@ -163,6 +163,81 @@ def analyseModuleLicense(path, tags, blacklist=[], envvars=[]):
         else:
                 return (['modulelicense'], stanout.strip())
 
-##
-def analyseELF(path, tags, blacklist=[], envvars=[]):
-	pass
+## match versions of kernel modules and linux kernels inside a firmware
+## This is not a fool proof method. There are situations possible where the kernel
+## and modules are not the same on purpose, for example if the kernel is used for
+## upgrading a flash partition that contains modules meant for another, different
+## kernel residing on another flash partition which is not upgraded.
+def matchversions(unpackreports, scantempdir, topleveldir, envvars=None):
+	kernelversions = []
+	moduleversions = {}
+	for i in unpackreports:
+		## sanity checks
+		if not unpackreports[i].has_key('tags'):
+			continue
+		if not unpackreports[i].has_key('sha256'):
+			continue
+
+		filehash = unpackreports[i]['sha256']
+
+		if not ('linuxkernel' in unpackreports[i]['tags'] or 'kernelchecks' in unpackreports[i]['tags']):
+			continue
+		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
+			continue
+
+		## read pickle file
+		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+		leafreports = cPickle.load(leaf_file)
+		leaf_file.close()
+
+		## record versions of Linux kernel images and modules
+		if leafreports.has_key('kernelmoduleversion'):
+			moduleversions[filehash] = leafreports['kernelmoduleversion']
+		elif leafreports.has_key('kernelchecks'):
+			if leafreports['kernelchecks'].has_key('version'):
+				kernelversions.append(leafreports['kernelchecks']['version'])
+
+	kernelversions = list(set(kernelversions))
+
+	## check for each module if its version can be found in any
+	## of the found the Linux kernel versions.
+	if kernelversions != []:
+		for m in moduleversions.keys():
+			if not moduleversions[m] in kernelversions:
+				pass
+
+	## TODO: report results
+	#print >>sys.stderr, "KERNELVERSIONS", kernelversions
+	#print >>sys.stderr, "MODULEVERSIONS", moduleversions
+
+## match the architectures of the modules
+def matcharchitectures(unpackreports, scantempdir, topleveldir, envvars=None):
+	modulearchitectures = {}
+	for i in unpackreports:
+		## sanity checks
+		if not unpackreports[i].has_key('tags'):
+			continue
+		if not unpackreports[i].has_key('sha256'):
+			continue
+
+		filehash = unpackreports[i]['sha256']
+
+		if not 'linuxkernel' in unpackreports[i]['tags']:
+			continue
+		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
+			continue
+
+		## read pickle file
+		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+		leafreports = cPickle.load(leaf_file)
+		leaf_file.close()
+
+		if leafreports.has_key('architecture'):
+			modulearchitectures[filehash] = leafreports['architecture']
+
+	architectures = list(set(modulearchitectures.values()))
+
+	if len(architectures) > 1:
+		pass
+
+	## TODO: Report results
