@@ -631,6 +631,14 @@ noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Determine declared Linux kernel module license
 enabled     = yes
 
+[kernelmoduleversion]
+type        = program
+module      = bat.kernelanalysis
+method      = analyseModuleVersion
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java
+description = Determine declared Linux kernel module license
+enabled     = yes
+
 [libs]
 type        = program
 module      = bat.checks
@@ -786,6 +794,13 @@ noscan      = text:xml:graphics:pdf:audio:video
 envvars     = AGGREGATE_CLEAN=0
 enabled     = yes
 priority    = 2
+
+#[kernelversions]
+#type        = aggregate
+#module      = bat.kernelanalysis
+#method      = matchversions
+#description = Match versions of Linux kernel images and modules
+#enabled     = yes
 
 #[prune]
 #type        = aggregate
