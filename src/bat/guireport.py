@@ -70,6 +70,12 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, envvars={}):
 		         '''
 	tablerows = ""
 
+	if leafreports.has_key('duplicates'):
+		dups = "<ul>"
+		for d in leafreports['duplicates']:
+			dups = dups + "<li>" + reduce(lambda x, y: "%s, %s" % (x, y), d) + "</li>"
+		dups = dups + "</ul>"
+		tablerows = tablerows + tablerowtemplate % ("Duplicate files", dups)
 	if leafreports.has_key('busybox-version'):
 		tablerows = tablerows + tablerowtemplate % ("BusyBox version", leafreports['busybox-version'])
 	if leafreports.has_key('architecture'):

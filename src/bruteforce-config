@@ -742,7 +742,7 @@ enabled     = yes
 type        = aggregate
 module      = bat.findduplicates
 method      = findduplicates
-enabled     = no
+enabled     = yes
 priority    = 10
 
 [findlibs]
