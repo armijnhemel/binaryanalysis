@@ -26,6 +26,8 @@ aggregate scanning:
 
 GUI:
 * rewrite to PyQt or PySide to take advantage of better rendering engine (webkit)
+* add reports to GUI for distribution checks
+* move detailed function name reports from overview to function name report
 
 error handling:
 * better handle errors to give users a better indication if something went wrong
@@ -62,7 +64,6 @@ misc:
 * add configuration option to set temporary directory prefix for all scans
 * add patches for CVE-2012-4024 for unsquashfs42
 * add piecharts/reports per directory that summarise what is inside a directory (recursively, perhaps only if something was unpacked)
-* add reporting for duplicate files that uses results from findduplicates.py
 * add per scan debug to allow better custom debugging
 * test on latest OpenSUSE
 * test on latest Ubuntu, make sure configurations/dependencies work
