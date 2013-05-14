@@ -1,3 +1,9 @@
+2013-05-14
+* report duplicate files for top level file
+
+2013-05-11
+* tag and release BAT 14
+
 2013-05-10
 * move almost all setup code in ranking.py to separate method
 * fix cramfs unpacking so it is correctly carved out from files.
