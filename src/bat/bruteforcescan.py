@@ -172,6 +172,8 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 
 	## empty file, not interested in further scanning
 	if filesize == 0:
+		tags.append('empty')
+		unpackreports[relfiletoscan]['tags'] = tags
 		return (scantasks, leaftasks, unpackreports)
 
 	## Store the hash of the file for identification and for possibly
