@@ -16,7 +16,7 @@ import matplotlib
 matplotlib.use('cairo')
 import pylab
 
-def generateImages(picklefile, pickledir, filehash, imagedir):
+def generateImages(picklefile, pickledir, filehash, imagedir, pietype):
 
 	leaf_file = open(os.path.join(pickledir, picklefile), 'rb')
 	(piedata, pielabels) = cPickle.load(leaf_file)
@@ -27,7 +27,7 @@ def generateImages(picklefile, pickledir, filehash, imagedir):
 
 	pylab.pie(piedata, labels=pielabels)
 
-	pylab.savefig('%s/%s-piechart.png' % (imagedir, filehash))
+	pylab.savefig('%s/%s-%s.png' % (imagedir, filehash, pietype))
 	pylab.gcf().clear()
 	os.unlink(os.path.join(pickledir, picklefile))
 
