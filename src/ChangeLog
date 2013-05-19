@@ -1,3 +1,10 @@
+2013-05-19
+* add script to walk source tree and compare all source files to database.
+This is for my talk @ LinuxCon Japan 2013
+
+2013-05-16
+* add 'empty' tag for empty files
+
 2013-05-14
 * report duplicate files for top level file
 
