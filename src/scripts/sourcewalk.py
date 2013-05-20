@@ -8,6 +8,13 @@
 This program can quickly determine whether or not a file is in known upstream sources. It uses a pregenerated database containing names and checksums of files (for example the Linux kernel) and reports whether or not it can be found in the database.
 
 The purpose of this script is to find files that differ from upstream files and reduce the search space.
+
+This script will *NOT* catch:
+
+* binary files
+* patch/diff files
+* anything that does not have an extension from the list
+* configuration files
 '''
 
 import os, os.path, sys, sqlite3, hashlib
