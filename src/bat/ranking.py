@@ -1376,7 +1376,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 							packageversions[package][v] = 1
 					uniqueMatches[package] = uniqueMatches.get(package, []) + [(line, line_sha256_version)]
 					if determinelicense:
-						pv = []
+						licensepv = []
 						for s in versionsha256s:
 							if not sha256_licenses.has_key(s):
 								licensecursor.execute("select distinct license, scanner from licenses where sha256=?", (s[0],))
@@ -1384,16 +1384,16 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 								if not len(licenses) == 0:
 									licenses = squashlicenses(licenses)
 									sha256_licenses[s] = map(lambda x: x[0], licenses)
-									pv = pv + licenses
+									licensepv = licensepv + licenses
 									#for v in map(lambda x: x[0], licenses):
-									#	pv.append(v)
+									#	licensepv.append(v)
 						if packagelicenses.has_key(package):
-							packagelicenses[package] = list(set(packagelicenses[package] + pv))
+							packagelicenses[package] = list(set(packagelicenses[package] + licensepv))
 						else:
-							packagelicenses[package] = list(set(pv))
+							packagelicenses[package] = list(set(licensepv))
 				else:
 					## store the uniqueMatches without any information about checksums
-					uniqueMatches[package] = uniqueMatches.get(package, []) + [(line, )]
+					uniqueMatches[package] = uniqueMatches.get(package, []) + [(line, [])]
 			if newmatch:
 				conn.commit()
 			newmatch = False
@@ -1821,11 +1821,11 @@ def rankingsetup(envvars):
 	if res != []:
 		if not newenv.has_key('BAT_SCORE_CACHE'):
 			newenv['BAT_SCORE_CACHE'] = 1
-	res = c.execute("select * from stringscache.scores LIMIT 1")
-	if res == []:
-		## if there are no precomputed scores remove it again to save queries later
-		if newenv.has_key('BAT_SCORE_CACHE'):
-			del newenv['BAT_SCORE_CACHE']
+		res = c.execute("select * from stringscache.scores LIMIT 1")
+		if res == []:
+			## if there are no precomputed scores remove it again to save queries later
+			if newenv.has_key('BAT_SCORE_CACHE'):
+				del newenv['BAT_SCORE_CACHE']
 	c.execute("detach stringscache")
 	c.close()
 	conn.close()
