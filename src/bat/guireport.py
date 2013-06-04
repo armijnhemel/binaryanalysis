@@ -70,6 +70,7 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, envvars={}):
 		         '''
 	tablerows = ""
 
+	tablerows = tablerows + tablerowtemplate % ("SHA256", filehash)
 	if leafreports.has_key('duplicates'):
 		dups = "<ul>"
 		for d in leafreports['duplicates']:
