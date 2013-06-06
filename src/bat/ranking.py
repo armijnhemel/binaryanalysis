@@ -523,14 +523,9 @@ def extractJavaNames(javameta, scanenv, clones, rankingfull):
 
 	## open the database containing function names that were extracted
 	## from source code.
-	## TODO: add sanity checks of the schema of both BAT_DB and the function name cache
-	## If the function name cache does not contain the field 'language' it is the old
-	## format of the database that only has C names in it.
 	conn = sqlite3.connect(masterdb)
 	conn.text_factory = str
 	c = conn.cursor()
-
-	funccache = scanenv.get(namecacheperlanguage['Java'])
 
 	## extra sanity check. Previous versions only had function names from C in the database.
 	## When scripts were adapted to also allow Java methods a field 'language' was introduced.
@@ -540,6 +535,8 @@ def extractJavaNames(javameta, scanenv, clones, rankingfull):
 	res = c.execute("select sql from sqlite_master where type='table' and name='extracted_function'").fetchall()
 	if not 'language' in res[0][0]:
 		return dynamicRes
+
+	funccache = scanenv.get(namecacheperlanguage['Java'])
 
 	c.execute("attach ? as functionnamecache", (funccache,))
 
@@ -669,32 +666,49 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 						classres_tmp.append(class_tmp)
 					else:   
 						classres_tmp.append(r[0])
-                                classres_tmp = list(set(classres_tmp))
+				classres_tmp = list(set(classres_tmp))
 				classres = map(lambda x: (x, 0), classres_tmp)
 				classpvs[classname] = classres
-		c.execute("detach functionnamecache")
 
-	for i in javameta['sourcefiles']:
-		pvs = []
-		## first try the name as found in the binary. If it can't
-		## be found and has dots in it split it on '.' and
-		## use the last component only.
-		if i.endswith('.java'):
-			classname = i[0:-5]
-		else:
-			classname = i
-		res = c.execute("select sha256,type,language from extracted_name where name=?", (classname,)).fetchall()
-		## TODO: use information from cloning database
-		if res != []:
-			for r in list(set(res)):
-				if r[2] != 'Java':
-					continue
-				if r[1] != 'class':
-					continue
-				pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
-				pvs = pvs + pv
-		pvs = map(lambda x: (x[0], 0), pvs)
-		sourcepvs[classname] = list(set(pvs))
+		for i in javameta['sourcefiles']:
+			pvs = []
+			## first try the name as found in the binary. If it can't
+			## be found and has dots in it split it on '.' and
+			## use the last component only.
+			if i.endswith('.java'):
+				classname = i[0:-5]
+			else:
+				classname = i
+
+			## first try the name as found in the binary. If it can't
+			## be found and has dots in it split it on '.' and
+			## use the last component only.
+			classres = c.execute("select package from functionnamecache.classcache where classname=?", (classname,)).fetchall()
+			## check the cloning database
+			if classres != []:
+				classres_tmp = []
+				for r in classres:
+					if clones.has_key(r[0]):
+						class_tmp = clones[r[0]]
+						classres_tmp.append(class_tmp)
+					else:   
+						classres_tmp.append(r[0])
+				classres_tmp = list(set(classres_tmp))
+				classres = map(lambda x: (x, 0), classres_tmp)
+				sourcepvs[classname] = classres
+			else:
+				if not rankingfull:
+					res = c.execute("select sha256,type,language from extracted_name where name=?", (classname,)).fetchall()
+					if res != []:
+						for r in list(set(res)):
+							if r[2] != 'Java':
+								continue
+							if r[1] != 'class':
+								continue
+							pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
+							pvs = pvs + pv
+					sourcepvs[classname] = list(set(pvs))
+		c.execute("detach functionnamecache")
 
 	## Keep a list of which sha256s were already seen. Since the files are
 	## likely only coming from a few packages we don't need to hit the database
@@ -720,7 +734,7 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 						fieldres_tmp.append(field_tmp)
 					else:   
 						fieldres_tmp.append(r[0])
-                                fieldres_tmp = list(set(fieldres_tmp))
+				fieldres_tmp = list(set(fieldres_tmp))
 				fieldres = map(lambda x: (x, 0), fieldres_tmp)
 				fieldspvs[f] = fieldres
 			else:
