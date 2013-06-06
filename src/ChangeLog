@@ -1,3 +1,9 @@
+2013-06-04
+* add missing file checksum back to report
+
+2013-05-31
+* fix database sanity check
+
 2013-05-19
 * add script to walk source tree and compare all source files to database.
 This is for my talk @ LinuxCon Japan 2013
