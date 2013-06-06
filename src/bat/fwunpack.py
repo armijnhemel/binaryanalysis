@@ -2067,6 +2067,37 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, envvars=
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [])
 
+def searchUnpackRZIP(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+	if not offsets.has_key('rzip'):
+		return ([], blacklist, [])
+	if offsets['rzip'] == []:
+		return ([], blacklist, [])
+	if offsets['rzip'][0] != 0:
+		return ([], blacklist, [])
+	diroffsets = []
+	tags = []
+
+	blacklistoffset = extractor.inblacklist(0, blacklist)
+	if blacklistoffset != None:
+		return (diroffsets, blacklist, tags)
+
+	tmpdir = dirsetup(tempdir, filename, "rzip", 1)
+	res = unpackRZIP(filename, 0, tmpdir)
+	if res != None:
+		(rzipdir, rzipsize) = res
+		diroffsets.append((rzipdir, offset, rzipsize))
+		blacklist.append((offset, offset + rzipsize))
+		tags.append("compressed")
+		tags.append("rzip")
+	else:
+		## cleanup
+		os.rmdir(tmpdir)
+
+	return (diroffsets, blacklist, tags)
+
+def unpackRZIP(filename, offset, tempdir=None):
+	return None
+
 def searchUnpackLRZIP(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	if not offsets.has_key('lrzip'):
 		return ([], blacklist, [])

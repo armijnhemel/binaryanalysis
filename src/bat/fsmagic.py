@@ -25,6 +25,7 @@ fsmagic = {
             'rar':              'Rar!',
             'zip':              '\x50\x4b\x03\04',
             'lrzip':            'LRZI',
+            'rzip':             'RZIP',
             'squashfs1':        '\x68\x73\x71\x73', # hsqs
             'squashfs2':        '\x73\x71\x73\x68', # sqsh
             'squashfs3':        '\x71\x73\x68\x73', # qshs
