@@ -546,16 +546,24 @@ def extractJavaNames(javameta, scanenv, clones, rankingfull):
 				continue
 			res = c.execute("select distinct package from functionnamecache.functionnamecache where functionname=?", (meth,)).fetchall()
 			if res != []:
-				## TODO: use information from cloning database
 				matches.append(meth)
 				namesmatched += 1
-				## unique match
-				if len(res) == 1:
-					uniquematches += 1
-					if uniquepackages.has_key(res[0][0]):
-						uniquepackages[res[0][0]] += [meth]
+				packages_tmp = []
+				for r in res:
+					if clones.has_key(r[0]):
+						package_tmp = clones[r[0]]
+						packages_tmp.append(package_tmp)
 					else:
-						uniquepackages[res[0][0]] = [meth]
+						packages_tmp.append(r[0])
+				packages_tmp = list(set(packages_tmp))
+
+				## unique match
+				if len(packages_tmp) == 1:
+					uniquematches += 1
+					if uniquepackages.has_key(packages_tmp[0]):
+						uniquepackages[packages_tmp[0]] += [meth]
+					else:
+						uniquepackages[packages_tmp[0]] = [meth]
 	dynamicRes['namesmatched'] = namesmatched
 	dynamicRes['totalnames'] = len(list(set(methods)))
 	dynamicRes['uniquepackages'] = uniquepackages
