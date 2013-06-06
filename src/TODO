@@ -47,7 +47,6 @@ database creation:
 ranking:
 * use version information to report most likely licenses
 * deal with inner classes properly
-* use clonedb information for variable names, field names, and so on
 * use macholib to analyse Mach-O binaries (MacOS X)
 
 busybox scanning:
