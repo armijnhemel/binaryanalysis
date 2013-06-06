@@ -219,8 +219,8 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 			## whole file is blacklisted, so no need to scan
 			if extractor.inblacklist(0, blacklist) == filesize:
 				return None
-			## we have already scanned parts of the file
-			## we need to carve the right parts from the file first
+			## parts of the file were already scan, so
+			## carve the right parts from the file first
 			datafile = open(path, 'rb')
 			lastindex = 0
 			databytes = ""
@@ -340,8 +340,6 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 			## TODO: check here if there are caches already or not. If there are none it makes
 			## no sense to continue.
 			lines = []
-			## we really should think about whether or not we want to do this per class file,
-			## or per JAR file.
         		if "compiled Java" in mstype and blacklist == []:
 				## TODO: integrate extractJavaNamesClass in here
 				javameta = extractJavaNamesClass(path)
@@ -566,7 +564,7 @@ def extractJavaNames(javameta, scanenv, clones, rankingfull):
 	dynamicRes['uniquepackages'] = uniquepackages
 	dynamicRes['uniquematches'] = uniquematches
 
-	## unique matches we found. 
+	## unique matches found. 
 	if uniquematches != 0:
 		dynamicRes['packages'] = {}
 	## these are the unique function names only
@@ -587,7 +585,7 @@ def extractJavaNames(javameta, scanenv, clones, rankingfull):
 						continue
 					pversions.append(pv[1])
 			## functions with different signatures might be present in different files.
-			## Since we are ignoring signatures we need to deduplicate here too.
+			## Since signatures are ignored data here needs to be deduplicated too.
 			versions = versions + list(set(pversions))
 		dynamicRes['packages'][i] = []
 		for v in list(set(versions)):
@@ -638,7 +636,7 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 		for i in classes:
 			pvs = []
 			## first try the name as found in the binary. If it can't
-			## be found and has dots in it we should split it on '.' and
+			## be found and has dots in it split it on '.' and
 			## use the last component only.
 			classname = i
 			classres = c.execute("select package from functionnamecache.classcache where classname=?", (classname,)).fetchall()
@@ -672,7 +670,7 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 	for i in javameta['sourcefiles']:
 		pvs = []
 		## first try the name as found in the binary. If it can't
-		## be found and has dots in it we should split it on '.' and
+		## be found and has dots in it split it on '.' and
 		## use the last component only.
 		if i.endswith('.java'):
 			classname = i[0:-5]
@@ -690,11 +688,10 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 				pvs = pvs + pv
 		pvs = map(lambda x: (x[0], 0), pvs)
 		sourcepvs[classname] = list(set(pvs))
-	## Keep a list of which sha256s we've already seen. Since the files are
+
+	## Keep a list of which sha256s were already seen. Since the files are
 	## likely only coming from a few packages we don't need to hit the database
 	## that often.
-	## This can be really slow, so we should perhaps use some caching database.
-
 	sha256cache = {}
 	if scanenv.has_key('BAT_FIELDNAME_SCAN'):
 		c.execute("attach ? as functionnamecache", (funccache,))
@@ -934,6 +931,7 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 
 		## sanity check whether or not we have the new schema that has 'language' or the old one without
 		## when the scripts only had support for C.
+		## This will be removed in BAT 16
 		res = c.execute("select sql from sqlite_master where type='table' and name='extracted_function'").fetchall()
 		oldschema = False
 		if not 'language' in res[0][0]:
@@ -946,7 +944,7 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 			res = c.fetchall()
 			pkgs = []
 			if res == [] and not rankingfull:
-				## we don't have a cache, so we need to create it. This is expensive.
+				## there is no cache, so it needs to be created. This is expensive.
 				if oldschema:
 					c.execute("select sha256 from extracted_function where functionname=?", (funcname,))
 				else:
@@ -995,7 +993,7 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 		dynamicRes['uniquepackages'] = uniquepackages
 		dynamicRes['totalnames'] = len(list(set(scanstr)))
 
-		## unique matches we found. 
+		## unique matches found. 
 		dynamicRes['uniquematches'] = uniquematches
 		if uniquematches != 0:
 			dynamicRes['packages'] = {}
@@ -1119,10 +1117,10 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 		licenseconn = sqlite3.connect(scanenv.get('BAT_LICENSE_DB'))
 		licensecursor = licenseconn.cursor()
 
-	## keep a list of versions per package we found
+	## keep a list of versions per package found
 	packageversions = {}
 
-	## keep a list of licenses per package we found
+	## keep a list of licenses per package found
 	## WARNING WARNING WARNING
 	## Just because a license is reported, it does not necessarily
 	## mean that the package is under that license!
@@ -1136,7 +1134,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 	## keep a list of versions per sha256, since source files often contain more than one line
 	sha256_licenses = {}
 
-	## sort the lines first, so we can easily skip duplicates
+	## sort the lines first, so it is easy to skip duplicates
 	lines.sort()
 
 	lenlines = len(lines)
@@ -1187,11 +1185,11 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 				nonUniqueMatchLines.append(line)
 				continue
 
-		## first see if we have anything in the cache at all
+		## first see if there is anything in the cache at all
 		res = conn.execute("select package, filename FROM stringscache.stringscache WHERE programstring=?", (line,)).fetchall()
 
 		if len(res) == 0 and linuxkernel:
-			## first try a few
+			## try a few variants that could occur in the Linux kernel
 			matchres = re.match("<[\d+cd]>", line)
 			if matchres != None:
 				scanline = line.split('>', 1)[1]
@@ -1248,7 +1246,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 			lenStringsFound = lenStringsFound + len(line)
 			matched = True
 
-			## for statistics it's nice to see how many lines we matched
+			## for statistics it's nice to see how many lines were matched
 			matchedlines = matchedlines + 1
 
 			print >>sys.stderr, "\n%d matches found for <(|%s|)> in %s" % (len(res), line, path)
@@ -1257,13 +1255,14 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 	
 			filenames = {}
 
-			## For each string we determine in how many packages (without version) the string
+			## For each string determine in how many packages (without version) the string
 			## is found.
 			## If the string is only found in one package the string is unique to the package
-			## and we record it as such and add its length to a score.
+			## so record it as such and add its length to a score.
 			for result in res:
 				(package, filename) = result
-				## in case we don't know this match yet record it in the database
+				## in case this match is not yet known record it in the database unless
+				## rankingfull is set
 				if newmatch and not rankingfull:
 					c.execute("insert into stringscache.stringscache values (?, ?, ?, ?)", (line, package, filename, ""))
 					## TODO: also add the score to the cache
@@ -1280,7 +1279,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 
 			if len(pkgs) != 1:
 				nonUniqueMatchLines.append(line)
-				## The string we found is not unique to a package, but is it 
+				## The string found is not unique to a package, but is it 
 				## unique to a filename?
 				## This method does assume that files that are named the same
 				## also contain the same or similar content.
@@ -1290,7 +1289,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 				except Exception, e:
 					## pow(alpha, (len(filenames) - 1)) is overflowing here
 					## so the score would be very close to 0. The largest value
-					## we have is sys.maxint, so use that one. The score will be
+					## is sys.maxint, so use that one. The score will be
 					## small enough...
 					score = len(line) / sys.maxint
 
@@ -1302,8 +1301,8 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 							nonUniqueMatches[packagename].append(line)
 				else:
 					continue
-				## After having computed a score we determine if the files
-				## we have found the string in are all called the same.
+				## After having computed a score determine if the files
+				## the string was found in in are all called the same.
 				## filenames {name of file: { name of package: 1} }
 				for fn in filenames:
 					if len(filenames[fn]) == 1:
@@ -1322,7 +1321,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 						## assigned to a single package in the loop below.
 						## Some strings will not signficantly contribute to the score, so they
 						## could be ignored and not added to the list.
-						## For now we exclude them, but in the future we could include them for
+						## For now exclude them, but in the future they could be included for
 						## completeness.
 						#if score > 1.0e-200:
 						if score > scorecutoff:
@@ -1409,8 +1408,8 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 
 	del lines
 
-	## If the string is not unique, we have to do a little bit more work to determine which
-	## file is the most likely, so we also record the filename.
+	## If the string is not unique, do a little bit more work to determine which
+	## file is the most likely, so also record the filename.
 	##
 	## 1. determine whether the string is unique to a package
 	## 2. if not, determine which filenames the string is in
@@ -1454,14 +1453,12 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 		## gain_sorted contains the sort order, gain contains the actual data
 		gain_sorted = sorted(gain, key = lambda x: gain.__getitem__(x), reverse=True)
 
-		## so far we think that this value is the best, but that might
-		## change
+		## so far value is the best, but that might change
 
 		best = gain_sorted[0]
 
-		## if we have multiple packages that have a big enough gain, we
-		## add them to 'close' and battle it out to see which package is
-		## the most likely hit.
+		## if multiple packages have a big enough gain, add them to 'close'
+		## and 'fight' to see which package is the most likely hit.
 		close = filter(lambda x: gain[x] > (gain[best] * 0.9), gain_sorted)
 
        		## Let's hope "sort" terminates on a comparison function that
@@ -1482,7 +1479,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 			else:
 				best = close_sorted[0][0]
 		best_score = 0
-		## for each string in the package with the best gain we add the score
+		## for each string in the package with the best gain add the score
 		## to the package and move on to the next package.
 		for xy in stringsPerPkg[best]:
 			best_score += 1
@@ -1601,7 +1598,7 @@ def xmlprettyprint(leafreports, root, envvars=None):
 				matchnode = root.createElement('unique')
 				tmpnodetext = xml.dom.minidom.Text()
 				## TODO: not every character is legal in XML,
-				## so we actually need to have a translation step
+				## so a translation step is needed
 				## here that rewrites illegal characters!
 				tmpnodetext.data = match[0]
 				matchnode.appendChild(tmpnodetext)
