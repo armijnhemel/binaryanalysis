@@ -200,7 +200,7 @@ def matchversions(unpackreports, scantempdir, topleveldir, envvars=None):
 	kernelversions = list(set(kernelversions))
 
 	## check for each module if its version can be found in any
-	## of the found the Linux kernel versions.
+	## of the found Linux kernel versions.
 	if kernelversions != []:
 		for m in moduleversions.keys():
 			if not moduleversions[m] in kernelversions:
@@ -239,5 +239,3 @@ def matcharchitectures(unpackreports, scantempdir, topleveldir, envvars=None):
 
 	if len(architectures) > 1:
 		pass
-
-	## TODO: Report results
