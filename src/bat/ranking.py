@@ -705,11 +705,19 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 			pvs = []
 
 			fieldres = c.execute("select package from functionnamecache.fieldcache where fieldname=?", (f,)).fetchall()
-			## TODO: use information from cloning database
 			if fieldres != []:
-				fieldres = map(lambda x: (x[0], 0), fieldres)
+				fieldres_tmp = []
+				for r in fieldres:
+					if clones.has_key(r[0]):
+						field_tmp = clones[r[0]]
+						fieldres_tmp.append(field_tmp)
+					else:   
+						fieldres_tmp.append(r[0])
+                                fieldres_tmp = list(set(fieldres_tmp))
+				fieldres = map(lambda x: (x, 0), fieldres_tmp)
 				fieldspvs[f] = fieldres
 			else:
+				## TODO: use information from cloning database
 				if not rankingfull:
 					res = c.execute("select sha256,type,language from extracted_name where name=?", (f,)).fetchall()
 					for r in list(set(res)):
