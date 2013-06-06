@@ -1404,7 +1404,7 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 		return retval
 
 	## Broadcom variant
-	retval = unpackSquashfsBroadcomLZMA(tmpfile[1],offset,tmpdir)
+	retval = unpackSquashfsBroadcom(tmpfile[1],offset,tmpdir)
 	if retval != None:
 		os.unlink(tmpfile[1])
 		return retval
@@ -1653,21 +1653,21 @@ def unpackSquashfsAtheros40LZMA(filename, offset, tmpdir):
 		squashsize = int(re.search(", (\d+) bytes", stanout).groups()[0])
 	return (tmpdir, squashsize)
 
-## squashfs variant from Broadcom, with LZMA
-def unpackSquashfsBroadcomLZMA(filename, offset, tmpdir):
+## squashfs variant from Broadcom, with zlib and LZMA
+def unpackSquashfsBroadcom(filename, offset, tmpdir):
 	p = subprocess.Popen(['bat-unsquashfs-broadcom', '-d', tmpdir, '-f', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		return None
 	else:
 		## we first need to check the contents of stderr to see if uncompression actually worked
-		## This could lead to duplicate scanning with LZMA, so we might need to implement
+		## This could lead to duplicate scanning with gzip or LZMA, so we might need to implement
 		## a top level "pruning" script :-(
 		if "LzmaUncompress: error" in stanerr:
 			return None
 		if "zlib::uncompress failed, unknown error -3" in stanerr:
 			return None
-		## unlike with 'normal' squashfs we can't use 'file' to determine the size
+		## unlike with 'normal' squashfs 'file' can't be used to determine the size
 		squashsize = 1
 		return (tmpdir, squashsize)
 
