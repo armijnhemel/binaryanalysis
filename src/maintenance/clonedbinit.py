@@ -55,6 +55,7 @@ def main(argv):
 	c.execute('''insert into renames values ('kdebase-runtime', 'kde-runtime')''')
 	c.execute('''insert into renames values ('kdebase-workspace', 'kde-workspace')''')
 	c.execute('''insert into renames values ('eglibc', 'glibc')''')
+	c.execute('''insert into renames values ('org.apache.servicemix.bundles.ant', 'apache-ant')''')
 	
 	conn.commit()
 	c.close()
