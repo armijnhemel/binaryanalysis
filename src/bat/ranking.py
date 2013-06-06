@@ -640,12 +640,12 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 			## use the last component only.
 			classname = i
 			classres = c.execute("select package from functionnamecache.classcache where classname=?", (classname,)).fetchall()
-			## TODO: use information from cloning database
-			if classres != []:
-				classres = map(lambda x: (x[0], 0), classres)
-				classpvs[classname] = classres
-			else:
-				if not rankingfull:
+			if classres == []:
+				## check just the last component
+				classname = classname.split('.')[-1]
+				classres = c.execute("select package from functionnamecache.classcache where classname=?", (classname,)).fetchall()
+				## if the result is still empty, but rankingfull is not set check the normal database
+				if classres == [] and not rankingfull:
 					res = c.execute("select sha256,type,language from extracted_name where name=?", (classname,)).fetchall()
 					if res == []:
 						classname = classname.split('.')[-1]
@@ -659,12 +659,19 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 							pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
 							pvs = pvs + pv
 					classpvs[classname] = list(set(pvs))
-				else:
-					classname = classname.split('.')[-1]
-					classres = c.execute("select package from functionnamecache.classcache where classname=?", (classname,)).fetchall()
-					if classres != []:
-						classres = map(lambda x: (x[0], 0), classres)
-						classpvs[classname] = classres
+
+			## check the cloning database
+			if classres != []:
+				classres_tmp = []
+				for r in classres:
+					if clones.has_key(r[0]):
+						class_tmp = clones[r[0]]
+						classres_tmp.append(class_tmp)
+					else:   
+						classres_tmp.append(r[0])
+                                classres_tmp = list(set(classres_tmp))
+				classres = map(lambda x: (x, 0), classres_tmp)
+				classpvs[classname] = classres
 		c.execute("detach functionnamecache")
 
 	for i in javameta['sourcefiles']:
