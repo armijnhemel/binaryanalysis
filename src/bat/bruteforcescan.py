@@ -290,7 +290,7 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 			tags = list(set(tags + scantags))
 		if len(diroffsets) == 0:
 			continue
-		blacklist = mergeBlacklist(blacklist)
+		#blacklist = mergeBlacklist(blacklist)
 		## each diroffset is a (path, offset) tuple
 		for diroffset in diroffsets:
 			report = {}
