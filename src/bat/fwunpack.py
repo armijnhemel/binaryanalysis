@@ -1667,8 +1667,31 @@ def unpackSquashfsBroadcom(filename, offset, tmpdir):
 			return None
 		if "zlib::uncompress failed, unknown error -3" in stanerr:
 			return None
-		## unlike with 'normal' squashfs 'file' can't be used to determine the size
-		squashsize = 1
+		## unlike with 'normal' squashfs 'file' can't be used to determine the size, so the header has
+		## to be looked at for information about the size of the archive which is stored in the squashfs
+		## superblock. A definition of the fields can be found in the headers of the squashfs sources.
+		## First, extract the major version. If it is not 3, then set squashsize to 1 and return (at
+		## least for now).
+		squashfile = open(filename, 'r')
+		squashfile.seek(28)
+		squashdata = squashfile.read(2)
+		major = struct.unpack('<H', squashdata)[0]
+		if major != 3:
+			squashfile.close()
+			squashsize = 1
+			return (tmpdir, squashsize)
+
+		## extract the "bytes used" field from the header
+		squashfile.seek(63)
+		squashdata = squashfile.read(8)
+		squashfile.close()
+
+		squashbytes = struct.unpack('<Q', squashdata)[0]
+		if squashbytes > os.stat(filename).st_size:
+			squashsize = 1
+			return (tmpdir, squashsize)
+		else:
+			squashsize = squashbytes
 		return (tmpdir, squashsize)
 
 ## squashfs variant from Realtek, with LZMA
@@ -2385,11 +2408,11 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, envvars=No
 			os.rmdir(tmpdir)
 		if endofcentraldir != None:
 			endofcentraldir_offset = endofcentraldir
-			blacklist.append((offset, offset + endofcentraldir))
 			## TODO: fix properly for ZIP files with comments
 			if offset == 0 and res != None and offset + endofcentraldir +22 == os.stat(filename).st_size:
 				tags.append('zip')
 				tags.append('compressed')
+			blacklist.append((offset, offset + endofcentraldir + 22))
 	return (diroffsets, blacklist, tags)
 
 def searchUnpackPack200(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
