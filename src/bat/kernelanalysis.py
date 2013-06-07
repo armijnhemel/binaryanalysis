@@ -50,7 +50,7 @@ def kernelChecks(path, tags, blacklist=[], envvars=None):
 		results['sysfs'] = True
 	if findSquashfs(kernel_lines) != -1:
 		results['squashfs'] = True
-	return (['kernelchecks'], results)
+	return (['kernelchecks', 'linuxkernel'], results)
 
 ## Helper method that extracts the kernel version using a regular
 ## expression. It needs printable characters for this.
