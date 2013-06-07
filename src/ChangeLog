@@ -3,6 +3,18 @@
 files (valid header, but files incomplete, for example after broken squashfs
 unpacking) would make ELF scanning fail.
 * finish RZIP unpacking
+* add extra sanity check for broadcom variant of squashfs to properly
+determine blacklist (or at least more reliably)
+* reorder priorities so squashfs unpacking is run before gzip unpacking
+(preventing gzip of unpacking gziped files inside inodes, which sometimes can
+happen with the broadcom variant of squashfs, like for example used in the
+ASUS RT-N66U)
+* fix ZIP blacklisting
+* disable mergeBlacklist for now since it is not reliable
+* fix extraction of BusyBox version number
+* check whether tags returned by unpack scans are in 'noscans' of subsequent
+unpack scans. If so, continue on to the next scan.
+* add patches for CVE-2012-4024 and CVE-2012-4025 for squashfs4.2
 
 2013-06-06
 * use cloning database for Java method names, field names and class names

@@ -15,12 +15,15 @@ compression/executables:
 * better support for ZIP file comments http://www.pkware.com/documents/casestudies/APPNOTE.TXT
 * use python-pefile for PE analysis
 
+dynamic ELF scanning
+* take RPATH into account
+* add more functions from LSB and other standards
+
 queueing system:
 * let top level script also read from a queue
 * add script to add files to and remove files from scanning queue
 
 aggregate scanning:
-* cleanup if we used one of the squashfs + lzma variants where we can't determine the size (is this still necessary?)
 * check if Linux kernel modules and version of Linux kernel(s) (if any) in a firmware match
 
 GUI:
@@ -60,7 +63,6 @@ misc:
 * replay script to unpack firmware based on only the pickle with unpacking data. After this set the default of outputlite to 'yes'
 * add support for ignoring some file types/extensions completely
 * add configuration option to set temporary directory prefix for all scans
-* add patches for CVE-2012-4024 for unsquashfs42
 * add piecharts/reports per directory that summarise what is inside a directory (recursively, perhaps only if something was unpacked)
 * add per scan debug to allow better custom debugging
 * test on latest OpenSUSE
