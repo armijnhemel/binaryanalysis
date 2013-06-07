@@ -84,6 +84,9 @@ def extractfromelf((path, filename)):
 	if p.returncode != 0:
 		return
 
+	if len(stanout) < 4:
+		return
+
 	## a list of variable names to ignore.
 	varignores = ['__dl_ldso__']
 
@@ -247,6 +250,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, envvars=None):
 	elftypes = {}
 
 	for i in elfres:
+		if i == None:
+			continue
 		(filename, localfuncs, remotefuncs, localvars, remotevars, weaklocalfuncs, weakremotefuncs, weaklocalvars, weakremotevars, elfsonames, elftype) = i
 		for soname in elfsonames:
 			if sonames.has_key(soname):
