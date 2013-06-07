@@ -267,6 +267,11 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 		## continue with the program scans.
 		if extractor.inblacklist(0, blacklist) == filesize:
 			break
+
+		if unpackscan['noscan'] != None:
+			noscans = unpackscan['noscan'].split(':')
+			if list(set(tags).intersection(set(noscans))) != []:
+				continue
 		
 		module = unpackscan['module']
 		method = unpackscan['method']
