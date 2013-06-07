@@ -10,7 +10,6 @@ file systems:
 * squashfs as described at http://www.devttys0.com/2011/08/extracting-non-standard-squashfs-images/
 
 compression/executables:
-* rzip
 * E00
 * 7z only works if a whole file is compressed with 7z. Rework and test with D-Link firmware DSL-524T_FW_V3.00B01T02.UK-A.20060621.zip
 * better support for ZIP file comments http://www.pkware.com/documents/casestudies/APPNOTE.TXT

@@ -2,6 +2,7 @@
 * fixes for ELF scanning: I have bumped into situations where corrupt ELF
 files (valid header, but files incomplete, for example after broken squashfs
 unpacking) would make ELF scanning fail.
+* finish RZIP unpacking
 
 2013-06-06
 * use cloning database for Java method names, field names and class names

@@ -2076,13 +2076,14 @@ def searchUnpackRZIP(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 		return ([], blacklist, [])
 	diroffsets = []
 	tags = []
+	offset = 0
 
-	blacklistoffset = extractor.inblacklist(0, blacklist)
+	blacklistoffset = extractor.inblacklist(offset, blacklist)
 	if blacklistoffset != None:
 		return (diroffsets, blacklist, tags)
 
 	tmpdir = dirsetup(tempdir, filename, "rzip", 1)
-	res = unpackRZIP(filename, 0, tmpdir)
+	res = unpackRZIP(filename, offset, tmpdir)
 	if res != None:
 		(rzipdir, rzipsize) = res
 		diroffsets.append((rzipdir, offset, rzipsize))
@@ -2096,7 +2097,31 @@ def searchUnpackRZIP(filename, tempdir=None, blacklist=[], offsets={}, envvars=N
 	return (diroffsets, blacklist, tags)
 
 def unpackRZIP(filename, offset, tempdir=None):
-	return None
+	## sanity check
+	rzipfile = open(filename, 'rb')
+	rzipfile.seek(0)
+	rzipdata = rzipfile.read(10)
+	rzipfile.close()
+	rzipsize = struct.unpack('>L', rzipdata[6:10])[0]
+
+	tmpdir = unpacksetup(tempdir)
+
+	tmpfile = tempfile.mkstemp(dir=tempdir, suffix='.rz')
+	os.fdopen(tmpfile[0]).close()
+
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
+
+	p = subprocess.Popen(['rzip', '-d', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		os.unlink(tmpfile[1])
+		return None
+	if os.stat(tmpfile[1][:-3]).st_size == rzipsize:
+		return (tmpdir, os.stat(filename).st_size)
+	else:
+		os.unlink(tmpfile[1][:-3])
+		return None
+	
 
 def searchUnpackLRZIP(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
 	if not offsets.has_key('lrzip'):

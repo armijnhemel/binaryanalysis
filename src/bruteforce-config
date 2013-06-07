@@ -454,6 +454,15 @@ noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Unpack RPM files
 enabled     = yes
 
+[rzip]
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackRZIP
+priority    = 1
+magic       = rzip
+noscan      = text:xml:graphics:pdf:bz2:gzip:lzip:audio:video:java
+description = Unpack RZIP compressed files
+enabled     = yes
 [squashfs]
 type        = unpack
 module      = bat.fwunpack
@@ -688,6 +697,7 @@ module      = bat.ranking
 method      = searchGeneric
 xmloutput   = xmlprettyprint
 envvars     = BAT_STRINGSCACHE_C=/gpl/master/stringscache_c:BAT_STRINGSCACHE_JAVA=/gpl/master/stringscache_java:BAT_DB=/gpl/master/master.sqlite3:BAT_NAMECACHE_C=/gpl/master/functioncache_c:BAT_NAMECACHE_JAVA=/gpl/master/functioncache_java:BAT_RANKING_FULLCACHE=1:BAT_RANKING_LICENSE=1:BAT_RANKING_VERSION=1:BAT_CLONE_DB=/tmp/clonedb:BAT_LICENSE_DB=/gpl/master/licenses.sqlite3
+#envvars     = BAT_STRINGSCACHE_C=/gpl/master/stringscache_c:BAT_STRINGSCACHE_JAVA=/gpl/master/stringscache_java:BAT_DB=/gpl/master/master.sqlite3:BAT_NAMECACHE_B=/gpl/master/functioncache_c:BAT_NAMECACHE_JAVA=/gpl/master/functioncache_java:BAT_RANKING_LICENSE=1:BAT_RANKING_VERSION=1:BAT_CLONE_DB=/tmp/clonedb:BAT_LICENSE_DB=/gpl/master/licenses.sqlite3
 noscan      = text:xml:graphics:pdf:compressed:resource:audio:video:vimswap
 description = Classify packages using advanced ranking mechanism
 enabled     = no
