@@ -235,12 +235,13 @@ def extract_version(filename):
 	datafile = open(filename)
 	datafile.seek(offset)
 	databuffer = datafile.read(100000)
+	bboffsets = []
 	while databuffer != '':
 		## quick check to see if this is BusyBox. If not, we can return immediately
 		markeroffset = databuffer.find("BusyBox v")
 		if markeroffset != -1:
 			bboffset = offset + markeroffset
-			break
+			bboffsets.append(bboffset)
 		## move the offset 99950, allowing some overlap
 		datafile.seek(offset + 99950)
 		databuffer = datafile.read(100000)
@@ -253,12 +254,13 @@ def extract_version(filename):
 	lines = busybox.read()
 	busybox.close()
 
-	bracket_offset = lines.find("(", bboffset)
-	res = re.search("BusyBox v([\d\.\d\w-]+) \(", lines[bboffset:bracket_offset+1])
-	if res != None:
-		return res.groups(0)[0]
-	else:
-		return
+	for bboffset in bboffsets:
+
+		bracket_offset = lines.find("(", bboffset)
+		res = re.search("BusyBox v([\d\.\d\w-]+) \(", lines[bboffset:bracket_offset+1])
+		if res != None:
+			return res.groups(0)[0]
+	return
 
 def main(argv):
 	parser = OptionParser()
