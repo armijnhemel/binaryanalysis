@@ -195,15 +195,60 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 	## image. If so extra checks can be done.
 	linuxkernel = False
 
+	if 'linuxkernel' in tags:
+		linuxkernel = True
+		kernelsymbols = []
+
 	## ELF files are always scanned as a whole. Sometimes there are sections that
 	## contain compressed data, like .gnu_debugdata which should not trigger the
 	## black list.
 	if "elf" in tags:
-		if 'linuxkernel' in tags:
-			linuxkernel = True
 		scanfile = path
-
 	else:
+		## The file contains a Linux kernel image and it is not an ELF file.
+		## Kernel symbols recorded in the image could lead to false positives,
+		## so they first have to be found and be blacklisted.
+		if 'linuxkernel' in tags:
+			kernelfile = open(path, 'r')
+			## TODO: this is inefficient
+			kerneldata = kernelfile.read()
+			kernelfile.close()
+			jiffy_pos = -1
+			## first find a known symbol, such as loops_per_jiffy
+			if kerneldata.count('loops_per_jiffy') == 1:
+				jiffy_pos = kerneldata.find('loops_per_jiffy')
+			if jiffy_pos != -1:
+				if not extractor.check_null(kerneldata, jiffy_pos, 'loops_per_jiffy'):
+					pass
+				else:
+					## then work forwards until a symbol that is
+					## found that is either not a printable character
+					## or a NULL character.
+					offset = jiffy_pos + len('loops_per_jiffy')
+					lastnull = offset + 1
+					while True:
+						if not kerneldata[offset] in string.printable:
+							if not kerneldata[offset] == chr(0x00):
+								break
+							else:
+								lastnull = offset
+						offset += 1
+
+					## and backwards
+					offset = jiffy_pos
+					firstnull = jiffy_pos - 1
+
+					while True:
+						if not kerneldata[offset] in string.printable:
+							if not kerneldata[offset] == chr(0x00):
+								break
+							else:
+								firstnull = offset
+						offset -= 1
+					kernelsymdata = kerneldata[firstnull:lastnull]
+					kernelsymbols = filter(lambda x: x != '', kernelsymdata.split('\x00'))
+			blacklist.append((firstnull,lastnull))
+
 		## If part of the file is blacklisted the blacklisted byte ranges
 		## should be ignored. Examples are firmwares, where there is a
 		## bootloader, followed by a file system. The bootloader should be
@@ -229,6 +274,10 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 			## byte to a temporary blacklist to make the loop work
 			## well.
 			blacklist_tmp = copy.deepcopy(blacklist)
+			## oh, this is an ugly hack. The blacklisting code really
+			## should be fixed.
+			blacklist_tmp.sort()
+
 			blacklist_tmp.append((filesize,filesize))
 			for i in blacklist_tmp:
 				if i[0] == lastindex:
@@ -279,7 +328,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 					p = subprocess.Popen(['strings', '-n', str(stringcutoff), scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 					(stanout, stanerr) = p.communicate()
 					if p.returncode != 0:
-						if blacklist != [] and not linuxkernel:
+						if blacklist != []:
 							## cleanup the tempfile
 							os.unlink(tmpfile[1])
 						return None
@@ -324,6 +373,10 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
                         					lines.append(printstring)
 						os.unlink(i)
 			else:
+				## TODO: rewrite scankernelsymbols to process 'kernelsymbols'
+				#if linuxkernel:
+				#	variablepvs['kernelvariables'] = map(lambda x: (x, 0), kernelsymbols)
+				#	variablepvs['language'] = 'C'
 				## extract all strings from the binary. Only look at strings
 				## that are a certain amount of characters or longer. This is
 				## configurable through "stringcutoff" although the gain will be relatively
@@ -331,7 +384,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 				p = subprocess.Popen(['strings', '-n', str(stringcutoff), scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				if p.returncode != 0:
-					if blacklist != [] and not linuxkernel:
+					if blacklist != []:
 						## cleanup the tempfile
 						os.unlink(tmpfile[1])
 					return None
@@ -444,11 +497,11 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 
 		res = extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, stringcutoff, language)
 		if res != None:
-			if blacklist != [] and not linuxkernel:
+			if blacklist != []:
 				## a tempfile was made because of blacklisting, so cleanup
 				os.unlink(tmpfile[1])
 		else:
-			if blacklist != [] and not linuxkernel:
+			if blacklist != []:
 				## a tempfile was made because of blacklisting, so cleanup
 				os.unlink(tmpfile[1])
 		return (['ranking'], (res, dynamicRes, variablepvs))
