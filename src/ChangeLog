@@ -15,6 +15,10 @@ ASUS RT-N66U)
 * check whether tags returned by unpack scans are in 'noscans' of subsequent
 unpack scans. If so, continue on to the next scan.
 * add patches for CVE-2012-4024 and CVE-2012-4025 for squashfs4.2
+* pass tags around better for leaf scans
+* increase fidelity for Linux kernel scanning by locating kernel symbols in
+the kernel image (if not ELF) and don't treat them as normal strings to reduce
+false positives.
 
 2013-06-06
 * use cloning database for Java method names, field names and class names
