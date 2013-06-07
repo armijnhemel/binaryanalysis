@@ -340,7 +340,6 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, 
 	reports = {}
 	newtags = []
 
-	reports['tags'] = tags
 	for scan in scans:
 		report = {}
 		module = scan['module']
@@ -360,6 +359,8 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, 
 			(nt, leafres) = res
 			reports[scan['name']] = leafres
 			newtags = newtags + nt
+			tags += list(set(newtags))
+	reports['tags'] = list(set(tags))
 
 	## write pickles with information to disk here to reduce memory usage
 	try:
