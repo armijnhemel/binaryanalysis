@@ -84,13 +84,11 @@ def extractfromelf((path, filename)):
 	if p.returncode != 0:
 		return
 
-	if len(stanout) < 4:
-		return
-
 	## a list of variable names to ignore.
 	varignores = ['__dl_ldso__']
 
-	for s in stanout.split("\n")[3:]:
+	stansplit = stanout.split("\n")
+	for s in stansplit[3:]:
 		functionstrings = s.split()
 		if len(functionstrings) <= 7:
 			continue
@@ -128,6 +126,7 @@ def extractfromelf((path, filename)):
 			if functionstrings[7].split('@')[0] not in varignores:
 				remotevars.append(functionstrings[7].split('@')[0])
 
+	## extract dynamic section
 	p = subprocess.Popen(['readelf', '-d', "%s" % os.path.join(path, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
@@ -136,6 +135,9 @@ def extractfromelf((path, filename)):
 	## determine if a library might have a soname
 	for line in stanout.split('\n'):
 		if "(SONAME)" in line:
+			soname_split = line.split(': ')
+			if len(soname_split) < 2:
+				continue
 			soname = line.split(': ')[1][1:-1]
 			sonames.append(soname)
 	sonames = list(set(sonames))
