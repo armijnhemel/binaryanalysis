@@ -314,7 +314,8 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 			if "ELF" in mstype:
 				if linuxkernel:
 					dynamicRes = {}
-					variablepvs = scankernelsymbols(scanfile, scanenv, rankingfull, unpacktempdir, stringcutoff, clones)
+					kernelvars = extractkernelsymbols(scanfile, scanenv, unpacktempdir)
+					variablepvs = scankernelsymbols(kernelvars, scanenv, rankingfull, clones)
 				else:
 					dynres = extractDynamic(path, scanenv, rankingfull, clones)
 					if dynres != None:
@@ -830,7 +831,7 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 ## modules often have a section __ksymtab_strings. This section contains variables
 ## that are exported by the kernel using the EXPORT_SYMBOL* macros in the Linux
 ## kernel source tree.
-def scankernelsymbols(scanfile, scanenv, rankingfull, unpacktempdir, stringcutoff, clones):
+def extractkernelsymbols(scanfile, scanenv, unpacktempdir):
 	if not scanenv.has_key('BAT_KERNEL_SCAN'):
 		return {}
 
@@ -857,6 +858,19 @@ def scankernelsymbols(scanfile, scanenv, rankingfull, unpacktempdir, stringcutof
 		os.unlink(elftmp[1])
 		return {}
 
+	variables = []
+        #p = subprocess.Popen(['strings', '-n', str(stringcutoff), elftmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+        p = subprocess.Popen(['strings', elftmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+        (stanout, stanerr) = p.communicate()
+	st = stanout.split("\n")
+	for s in st:
+		printstring = s
+		if len(printstring) > 0:
+			variables.append(printstring)
+	os.unlink(elftmp[1])
+	return variables
+
+def scankernelsymbols(variables, scanenv, rankingfull, clones):
 	## use in case rankingfull is not set
 	masterdb = scanenv.get('BAT_DB')
 
@@ -867,20 +881,10 @@ def scankernelsymbols(scanfile, scanenv, rankingfull, unpacktempdir, stringcutof
 	conn.text_factory = str
 	c = conn.cursor()
 
-	variablepvs = {}
-	variables = []
-        p = subprocess.Popen(['strings', '-n', str(stringcutoff), elftmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-        (stanout, stanerr) = p.communicate()
-	st = stanout.split("\n")
-	for s in st:
-		printstring = s
-		if len(printstring) >= stringcutoff:
-			variables.append(printstring)
-	os.unlink(elftmp[1])
-
 	kernelcache = scanenv.get(namecacheperlanguage['C'])
 	c.execute("attach ? as kernelcache", (kernelcache,))
 	vvs = {}
+	variablepvs = {}
 	for v in variables:
 		pvs = []
 		res = c.execute("select distinct package from kernelcache where varname=?", (v,)).fetchall()
