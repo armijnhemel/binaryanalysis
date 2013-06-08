@@ -314,8 +314,9 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 			if "ELF" in mstype:
 				if linuxkernel:
 					dynamicRes = {}
-					kernelvars = extractkernelsymbols(scanfile, scanenv, unpacktempdir)
-					variablepvs = scankernelsymbols(kernelvars, scanenv, rankingfull, clones)
+					if scanenv.has_key('BAT_KERNEL_SCAN'):
+						kernelvars = extractkernelsymbols(scanfile, scanenv, unpacktempdir)
+						variablepvs = scankernelsymbols(kernelvars, scanenv, rankingfull, clones)
 				else:
 					dynres = extractDynamic(path, scanenv, rankingfull, clones)
 					if dynres != None:
@@ -378,7 +379,8 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 						os.unlink(i)
 			else:
 				if linuxkernel:
-					variablepvs = scankernelsymbols(kernelsymbols, scanenv, rankingfull, clones)
+					if scanenv.has_key('BAT_KERNEL_SCAN'):
+						variablepvs = scankernelsymbols(kernelsymbols, scanenv, rankingfull, clones)
 					variablepvs['language'] = 'C'
 				## extract all strings from the binary. Only look at strings
 				## that are a certain amount of characters or longer. This is
@@ -831,9 +833,6 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 ## that are exported by the kernel using the EXPORT_SYMBOL* macros in the Linux
 ## kernel source tree.
 def extractkernelsymbols(scanfile, scanenv, unpacktempdir):
-	if not scanenv.has_key('BAT_KERNEL_SCAN'):
-		return {}
-
 	p = subprocess.Popen(['readelf', '-SW', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	st = stanout.strip().split("\n")
