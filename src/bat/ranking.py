@@ -377,10 +377,9 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
                         					lines.append(printstring)
 						os.unlink(i)
 			else:
-				## TODO: rewrite scankernelsymbols to process 'kernelsymbols'
-				#if linuxkernel:
-				#	variablepvs['kernelvariables'] = map(lambda x: (x, 0), kernelsymbols)
-				#	variablepvs['language'] = 'C'
+				if linuxkernel:
+					variablepvs = scankernelsymbols(kernelsymbols, scanenv, rankingfull, clones)
+					variablepvs['language'] = 'C'
 				## extract all strings from the binary. Only look at strings
 				## that are a certain amount of characters or longer. This is
 				## configurable through "stringcutoff" although the gain will be relatively
