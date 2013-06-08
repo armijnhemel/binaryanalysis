@@ -1906,4 +1906,47 @@ There are various solutions, apart from adding more memory to the machine:
 \item disable \texttt{tmp} on tmpfs
 \end{itemize}
 
+\section{Parameter description for default scans}
+
+This section describes the default parameters for several of the scans as
+shipped in BAT, if not described earlier in this document. These parameters are
+passed to the scans as part of the environment and are defined in the
+\texttt{envvars} setting in the configuration file.
+
+\subsection{\texttt{lzma}}
+
+The \texttt{lzma} scan has one parameter \texttt{LZMA\_MINIMUM\_SIZE}. This
+parameter is used to tell the scan to ignore output files that are of
+\texttt{LZMA\_MINIMUM\_SIZE} bytes in size or less. This parameter was
+introduced because false positives in LZMA unpacking are very common, often
+leading to small sized files that contain no useful data.
+
+By default \texttt{LZMA\_MINIMUM\_SIZE} is set to 10 bytes, but this is a very
+conservative setting.
+
+\subsection{\texttt{file2package}}
+
+The \texttt{file2package} scan has one parameter: \texttt{BAT\_PACKAGE\_DB}.
+This parameter is used to specify the location of the database used by this
+scan. The database can be generated using the scripts
+\texttt{createfiledatabasedebian.py} and \texttt{createfiledatabasefedora.py}
+in the subdirectory \texttt{maintenance} in the BAT source tree.
+
+\subsection{\texttt{jars}}
+
+The \texttt{jars} scan has one parameter: \texttt{AGGREGATE\_CLEAN}. This
+parameter instructs the scan to remove results for individual Java class
+files from the result set after aggregating results at the JAR level. Java
+class files that are not unpacked from a JAR file are not removed from the
+result set. By default this parameter is set to 0 which means that results for
+Java class files are kept in the result set.
+
+\subsection{\texttt{hexdump} and \texttt{images}}
+
+The \texttt{hexdump} and \texttt{images} scans (disabled by default) have two
+parameters. The \texttt{BAT\_IMAGE\_MAXFILESIZE} parameter is set to specify
+the maximum size of a file for which a result is generated. Since output from
+this scan can be extremely large, and the results are not very interesting for
+large files it is strongly advised to cap this value.
+
 \end{document}
