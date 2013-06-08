@@ -1,3 +1,7 @@
+2013-06-08
+* split lookup of kernel symbols, lookup symbols for kernels that are not in
+ELF format
+
 2013-06-07
 * fixes for ELF scanning: I have bumped into situations where corrupt ELF
 files (valid header, but files incomplete, for example after broken squashfs
