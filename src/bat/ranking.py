@@ -202,6 +202,8 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 	## ELF files are always scanned as a whole. Sometimes there are sections that
 	## contain compressed data, like .gnu_debugdata which should not trigger the
 	## black list.
+
+	createdtempfile = False
 	if "elf" in tags:
 		scanfile = path
 	else:
@@ -298,6 +300,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 			os.write(tmpfile[0], databytes)
 			os.fdopen(tmpfile[0]).close()
 			scanfile = tmpfile[1]
+			createdtempfile = True
         try:
 		lines = []
 		dynamicRes = {}
@@ -328,7 +331,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 					p = subprocess.Popen(['strings', '-n', str(stringcutoff), scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 					(stanout, stanerr) = p.communicate()
 					if p.returncode != 0:
-						if blacklist != []:
+						if createdtempfile:
 							## cleanup the tempfile
 							os.unlink(tmpfile[1])
 						return None
@@ -384,7 +387,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 				p = subprocess.Popen(['strings', '-n', str(stringcutoff), scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				if p.returncode != 0:
-					if blacklist != []:
+					if createdtempfile:
 						## cleanup the tempfile
 						os.unlink(tmpfile[1])
 					return None
@@ -399,7 +402,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 				p = subprocess.Popen(['jcf-dump', '--print-constants', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				if p.returncode != 0:
-					if blacklist != []:
+					if createdtempfile:
 						## cleanup the tempfile
 						os.unlink(tmpfile[1])
 				## process each line of stanout, looking for lines that look like this:
@@ -497,11 +500,11 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 
 		res = extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, stringcutoff, language)
 		if res != None:
-			if blacklist != []:
+			if createdtempfile:
 				## a tempfile was made because of blacklisting, so cleanup
 				os.unlink(tmpfile[1])
 		else:
-			if blacklist != []:
+			if createdtempfile:
 				## a tempfile was made because of blacklisting, so cleanup
 				os.unlink(tmpfile[1])
 		return (['ranking'], (res, dynamicRes, variablepvs))
