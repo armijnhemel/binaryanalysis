@@ -45,11 +45,13 @@ database creation:
 * import licensing information from SPDX files
 * rewrite ctags and xgettext invocations to scan multiple files at once to reduce overhead of calling ctags and xgettext
 * update to FOSSology 2.2.0 (when released)
+* extract more information from Linux kernel, including values from __ATTR and friends, as far as possible
 
 ranking:
 * use version information to report most likely licenses
 * deal with inner classes properly
 * use macholib to analyse Mach-O binaries (MacOS X)
+* use more information extracted from Linux kernel
 
 busybox scanning:
 * clean up finding ranges of applets in extract_configuration. It should be possible to do this less kludgy.

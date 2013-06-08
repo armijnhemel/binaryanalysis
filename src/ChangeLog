@@ -1,6 +1,7 @@
 2013-06-08
 * split lookup of kernel symbols, lookup symbols for kernels that are not in
 ELF format
+* store function names from the Linux kernel as 'kernelfunction'
 
 2013-06-07
 * fixes for ELF scanning: I have bumped into situations where corrupt ELF
