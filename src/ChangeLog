@@ -1,3 +1,8 @@
+2013-06-10
+* extract functions from the Linux kernel, and also extract more strings that
+can be found in __ATTR and friends: xgettext won't catch them, so some regular
+expression magic is needed.
+
 2013-06-08
 * split lookup of kernel symbols, lookup symbols for kernels that are not in
 ELF format
