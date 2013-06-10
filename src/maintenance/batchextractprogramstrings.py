@@ -38,8 +38,19 @@ kernelexprs.append(re.compile("__ATTR_RO\s*\((\w+)", re.MULTILINE))
 kernelexprs.append(re.compile("__ATTR_RW\s*\((\w+)", re.MULTILINE))
 kernelexprs.append(re.compile("__ATTR_IGNORE_LOCKDEP\s*\((\w+)", re.MULTILINE))
 kernelexprs.append(re.compile("DEVICE_ATTR\s*\((\w+)", re.MULTILINE))
+kernelexprs.append(re.compile("KSM_ATTR_RO\s*\((\w+)", re.MULTILINE))
+kernelexprs.append(re.compile("EXT4_INFO_ATTR\s*\((\w+)", re.MULTILINE))
+kernelexprs.append(re.compile("EXT4_RO_ATTR\s*\((\w+)", re.MULTILINE))
+kernelexprs.append(re.compile("EXT4_RW_ATTR\s*\((\w+)", re.MULTILINE))
+kernelexprs.append(re.compile("EXT4_RW_ATTR_SBI_UI\s*\((\w+)", re.MULTILINE))
+kernelexprs.append(re.compile("EXT4_ATTR\s*\((\w+)", re.MULTILINE))
+kernelexprs.append(re.compile("scsi_msgbyte_name\s*\((\w+)", re.MULTILINE))
+kernelexprs.append(re.compile("VMCOREINFO_LENGTH\s*\((\w+)", re.MULTILINE))
+kernelexprs.append(re.compile("VMCOREINFO_NUMBER\s*\((\w+)", re.MULTILINE))
 kernelexprs.append(re.compile("POWER_SUPPLY_ATTR\s*\((\w+)", re.MULTILINE))
 kernelexprs.append(re.compile("DEFINE_EVENT\s*\(\w+,\s*(\w+)", re.MULTILINE))
+#SYSCALL_DEFINE + friends go here
+#COMPAT_SYSCALL_DEFINE
 
 ## list of extensions, plus what language they should be mapped to
 ## This is not necessarily correct, but right now it suffices. Ideally a parser
