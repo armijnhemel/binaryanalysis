@@ -30,6 +30,17 @@ tarmagic = ['POSIX tar archive (GNU)'
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
+kernelexprs = []
+
+## lots of things with _ATTR, like DEVICE_ATTR and friends. This list should be expanded.
+kernelexprs.append(re.compile("__ATTR\s*\((\w+)", re.MULTILINE))
+kernelexprs.append(re.compile("__ATTR_RO\s*\((\w+)", re.MULTILINE))
+kernelexprs.append(re.compile("__ATTR_RW\s*\((\w+)", re.MULTILINE))
+kernelexprs.append(re.compile("__ATTR_IGNORE_LOCKDEP\s*\((\w+)", re.MULTILINE))
+kernelexprs.append(re.compile("DEVICE_ATTR\s*\((\w+)", re.MULTILINE))
+kernelexprs.append(re.compile("POWER_SUPPLY_ATTR\s*\((\w+)", re.MULTILINE))
+kernelexprs.append(re.compile("DEFINE_EVENT\s*\(\w+,\s*(\w+)", re.MULTILINE))
+
 ## list of extensions, plus what language they should be mapped to
 ## This is not necessarily correct, but right now it suffices. Ideally a parser
 ## would be run on each file to see what kind of file it is.
@@ -529,6 +540,8 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			(cname, linenumber, nametype) = res
 			if nametype == 'function':
 				cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'C', linenumber))
+			elif nametype == 'kernelfunction':
+				cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'linuxkernel', linenumber))
 			else:
 				cursor.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, 'C', linenumber))
 		for res in list(set(javaresults)):
@@ -677,7 +690,7 @@ def licensefossology((packages)):
 ## TODO: get rid of ninkaversion before we call this method
 ## TODO: process more files at once to reduce overhead of calling ctags
 def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
-	sqlres = extractsourcestrings(p, i, language)
+	sqlres = extractsourcestrings(p, i, language, package)
 	## extract function names using ctags, except functions from
 	## the Linux kernel, since it will never be dynamically linked
 	## but variable names are sometimes stored in a special ELF
@@ -686,10 +699,9 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 	cresults = []
 
 	## this is specifically for Java
-	# (name, type, linenumber)
+	# (name, linenumber, type)
 	javaresults = []
 	if (language == 'C' or language == 'Java'):
-		source = open(os.path.join(i, p)).read()
 
 		p2 = subprocess.Popen(["ctags", "-f", "-", "-x", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 		(stanout2, stanerr2) = p2.communicate()
@@ -738,7 +750,7 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 ## The results might not be perfect, but they are acceptable.
 ## TODO: use version from bat/extractor.py
 ## TODO: process more files at once to reduce overhead of calling xgettext
-def extractsourcestrings(filename, filedir, language):
+def extractsourcestrings(filename, filedir, language, package):
 	remove_chars = ["\\a", "\\b", "\\v", "\\f", "\\e", "\\0"]
 	sqlres = []
 	## for files that we think are in the 'C' family we first check for unprintable
@@ -749,9 +761,27 @@ def extractsourcestrings(filename, filedir, language):
 	## TODO: fix for octal values, like \010
 	if language == 'C':
 		changed = False
-		scanfile = open("%s/%s" % (filedir, filename))
+		scanfile = open(os.path.join(filedir, filename))
 		filecontents = scanfile.read()
 		scanfile.close()
+
+		## suck in the file and look for __ATTR and friends, since the
+		## first parameter is given to stringify(). __ATTR was gradually
+		## introduced in kernel 2.6.8.
+		if package == 'linux':
+			regresults = []
+			for ex in kernelexprs:
+				regexres = ex.findall(filecontents)
+				if regexres != []:
+					regresults = regresults + regexres
+			if regresults != []:
+				## first filter 'name' and '_name' since those are frequently
+				## used in the #define statements for __ATTR etc.
+				## The linenumber is set to 0 since using regular expressions
+				## it is not easy to find that out unless an extra step is performed.
+				## This is something for a future TODO.
+				sqlres += map(lambda x: (x, 0), filter(lambda x: x != '_name' and x != 'name', list(set(regresults))))
+
 		for r in remove_chars:
 			if r in filecontents:
 				changed = True
@@ -760,6 +790,7 @@ def extractsourcestrings(filename, filedir, language):
 			scanfile = open("%s/%s" % (filedir, filename), 'w')
 			scanfile.write(filecontents)
 			scanfile.close()
+
 	p1 = subprocess.Popen(['xgettext', '-a', "--omit-header", "--no-wrap", "%s/%s" % (filedir, filename), '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p1.communicate()
 	if p1.returncode != 0:
