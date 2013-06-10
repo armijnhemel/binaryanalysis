@@ -1212,6 +1212,9 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 		licenseconn = sqlite3.connect(scanenv.get('BAT_LICENSE_DB'))
 		licensecursor = licenseconn.cursor()
 
+	if linuxkernel:
+		pass
+
 	## keep a list of versions per package found
 	packageversions = {}
 
@@ -1302,6 +1305,10 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 						res = conn.execute("select package, filename FROM stringscache.stringscache WHERE programstring=?", (scanline,)).fetchall()
 						if len(scanline) != 0:
 							line = scanline
+					else:
+						## This is where things get very ugly. The strings in a Linux
+						## kernel image could also be function names, not string constants.
+						pass
 				else:
 					line = scanline
 
