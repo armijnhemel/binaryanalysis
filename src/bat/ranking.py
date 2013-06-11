@@ -1991,8 +1991,11 @@ def rankingsetup(envvars):
 					if not newenv.has_key('BAT_VARNAME_SCAN'):
 						newenv['BAT_VARNAME_SCAN'] = 1
 				if functionmatches:
+					## TODO: check whether or not the table for kernelfunction exists
 					if not newenv.has_key('BAT_FUNCTION_SCAN'):
 						newenv['BAT_FUNCTION_SCAN'] = 1
+					if not newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
+						newenv['BAT_KERNELFUNCTION_SCAN'] = 1
 	else:
 		## undefined, but rankingfull is set, so disable everything
 		if rankingfull:
@@ -2026,6 +2029,8 @@ def rankingsetup(envvars):
 		if functionmatches:
 			c.execute("create table if not exists functionnamecache (functionname text, package text)")
 			c.execute("create index if not exists functionname_index on functionnamecache(functionname)")
+			c.execute("create table if not exists kernelfunctionnamecache (functionname text, package text)")
+			c.execute("create index if not exists kernelfunctionname_index on functionnamecache(functionname)")
 
 		conn.commit()
 		c.close()
@@ -2039,6 +2044,28 @@ def rankingsetup(envvars):
 		if functionmatches:
 			if not newenv.has_key('BAT_FUNCTION_SCAN'):
 				newenv['BAT_FUNCTION_SCAN'] = 1
+			if not newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
+				newenv['BAT_KERNELFUNCTION_SCAN'] = 1
+
+	## then check for Java
+	if scanenv.has_key(namecacheperlanguage['Java']):
+		namecache = scanenv.get(namecacheperlanguage['Java'])
+		if rankingfull:
+			## If rankingfull is set the cache should exist. If it doesn't exist
+			## then something is horribly wrong.
+			if not os.path.exists(namecache):
+				if newenv.has_key('BAT_CLASSNAME_SCAN'):
+					del newenv['BAT_CLASSNAME_SCAN']
+				if newenv.has_key('BAT_FIELDNAME_SCAN'):
+					del newenv['BAT_FIELDNAME_SCAN']
+				if newenv.has_key('BAT_METHOD_SCAN'):
+					del newenv['BAT_METHOD_SCAN']
+				if newenv.has_key(namecacheperlanguage['Java']):
+					del newenv[namecacheperlanguage['Java']]
+			else:
+				if not newenv.has_key('BAT_CLASSNAME_SCAN'):
+					newenv['BAT_CLASSNAME_SCAN'] = 1
+				if not newenv.has_key('BAT_FIELDNAME_SCAN'):
 
 	## then check for Java
 	if scanenv.has_key(namecacheperlanguage['Java']):
