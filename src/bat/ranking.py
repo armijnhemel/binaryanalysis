@@ -2030,7 +2030,7 @@ def rankingsetup(envvars):
 			c.execute("create table if not exists functionnamecache (functionname text, package text)")
 			c.execute("create index if not exists functionname_index on functionnamecache(functionname)")
 			c.execute("create table if not exists kernelfunctionnamecache (functionname text, package text)")
-			c.execute("create index if not exists kernelfunctionname_index on functionnamecache(functionname)")
+			c.execute("create index if not exists kernelfunctionname_index on kernelfunctionnamecache(functionname)")
 
 		conn.commit()
 		c.close()
