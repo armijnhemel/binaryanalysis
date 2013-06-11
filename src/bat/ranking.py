@@ -314,7 +314,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 			if "ELF" in mstype:
 				if linuxkernel:
 					dynamicRes = {}
-					if scanenv.has_key('BAT_KERNEL_SCAN'):
+					if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
 						kernelvars = extractkernelsymbols(scanfile, scanenv, unpacktempdir)
 						variablepvs = scankernelsymbols(kernelvars, scanenv, rankingfull, clones)
 				else:
@@ -379,7 +379,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktemp
 						os.unlink(i)
 			else:
 				if linuxkernel:
-					if scanenv.has_key('BAT_KERNEL_SCAN'):
+					if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
 						variablepvs = scankernelsymbols(kernelsymbols, scanenv, rankingfull, clones)
 					variablepvs['language'] = 'C'
 				## extract all strings from the binary. Only look at strings
@@ -1974,8 +1974,10 @@ def rankingsetup(envvars):
 			## If rankingfull is set the cache should exist. If it doesn't exist
 			## then something is horribly wrong.
 			if not os.path.exists(namecache):
-				if newenv.has_key('BAT_KERNEL_SCAN'):
-					del newenv['BAT_KERNEL_SCAN']
+				if newenv.has_key('BAT_KERNELSYMBOL_SCAN'):
+					del newenv['BAT_KERNELSYMBOL_SCAN']
+				if newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
+					del newenv['BAT_KERNELFUNCTION_SCAN']
 				if newenv.has_key('BAT_VARNAME_SCAN'):
 					del newenv['BAT_VARNAME_SCAN']
 				if newenv.has_key('BAT_FUNCTION_SCAN'):
@@ -1984,8 +1986,8 @@ def rankingsetup(envvars):
 					del newenv[namecacheperlanguage['C']]
 			else:
 				if variablematches:
-					if not newenv.has_key('BAT_KERNEL_SCAN'):
-						newenv['BAT_KERNEL_SCAN'] = 1
+					if not newenv.has_key('BAT_KERNELSYMBOL_SCAN'):
+						newenv['BAT_KERNELSYMBOL_SCAN'] = 1
 					if not newenv.has_key('BAT_VARNAME_SCAN'):
 						newenv['BAT_VARNAME_SCAN'] = 1
 				if functionmatches:
@@ -1994,8 +1996,10 @@ def rankingsetup(envvars):
 	else:
 		## undefined, but rankingfull is set, so disable everything
 		if rankingfull:
-			if newenv.has_key('BAT_KERNEL_SCAN'):
-				del newenv['BAT_KERNEL_SCAN']
+			if newenv.has_key('BAT_KERNELSYMBOL_SCAN'):
+				del newenv['BAT_KERNELSYMBOL_SCAN']
+			if newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
+				del newenv['BAT_KERNELFUNCTION_SCAN']
 			if newenv.has_key('BAT_VARNAME_SCAN'):
 				del newenv['BAT_VARNAME_SCAN']
 			if newenv.has_key('BAT_FUNCTION_SCAN'):
@@ -2028,8 +2032,8 @@ def rankingsetup(envvars):
 		conn.close()
 
 		if variablematches:
-			if not newenv.has_key('BAT_KERNEL_SCAN'):
-				newenv['BAT_KERNEL_SCAN'] = 1
+			if not newenv.has_key('BAT_KERNELSYMBOL_SCAN'):
+				newenv['BAT_KERNELSYMBOL_SCAN'] = 1
 			if not newenv.has_key('BAT_VARNAME_SCAN'):
 				newenv['BAT_VARNAME_SCAN'] = 1
 		if functionmatches:
