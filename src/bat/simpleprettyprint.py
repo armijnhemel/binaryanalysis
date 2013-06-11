@@ -62,10 +62,13 @@ def prettyprintxmlsnippet(root, leafreports, scanconfigs):
 		if config == None:
 			continue
 
-		if config.has_key('xmloutput'):
+		if config.has_key('ppoutput'):
 			try:
-				module = config['module']
-				method = config['xmloutput']
+				if config.has_key('ppmodule'):
+					module = config['ppmodule']
+				else:
+					module = config['module']
+				method = config['ppoutput']
 				if config.has_key('envvars'):
 					envvars = config['envvars']
 				else:

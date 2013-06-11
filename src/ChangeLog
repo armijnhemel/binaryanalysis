@@ -1,3 +1,9 @@
+2013-06-11
+* rename xmloutput to ppoutput. Allow for separate modules for storing per
+scans pretty printers, so people wanting to have custom pretty printers do not
+have to overwrite the existing modules, but can use a parallel set of pretty
+printers instead.
+
 2013-06-10
 * extract functions from the Linux kernel, and also extract more strings that
 can be found in __ATTR and friends: xgettext won't catch them, so some regular

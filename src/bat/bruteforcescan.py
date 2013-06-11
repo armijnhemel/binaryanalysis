@@ -429,9 +429,9 @@ def postrunscan((filetoscan, unpackreports, scans, scantempdir, topleveldir, deb
 			pass
 
 ## arrays for storing data for the scans we have.
-## unpackscans: {name, module, method, xmloutput, priority}
+## unpackscans: {name, module, method, ppoutput, priority}
 ## These are sorted by priority
-## programscans: {name, module, method, xmloutput}
+## programscans: {name, module, method, ppoutput}
 def readconfig(config):
 	unpackscans = []
 	programscans = []
@@ -532,7 +532,11 @@ def readconfig(config):
 			except:
 				conf['priority'] = 0
 			try:
-				conf['xmloutput'] = config.get(section, 'xmloutput')
+				conf['ppoutput'] = config.get(section, 'ppoutput')
+			except:
+				pass
+			try:
+				conf['ppmodule'] = config.get(section, 'ppmodule')
 			except:
 				pass
 			try:
