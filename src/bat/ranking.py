@@ -1212,8 +1212,14 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 		licenseconn = sqlite3.connect(scanenv.get('BAT_LICENSE_DB'))
 		licensecursor = licenseconn.cursor()
 
+	scankernelfunctions = False
+	kernelfuncres = []
 	if linuxkernel:
-		pass
+		if scanenv.get('BAT_KERNELFUNCTION_SCAN') == '1':
+			scankernelfunctions = True
+			funccache = scanenv.get(namecacheperlanguage['C'])
+			kernelconn = sqlite3.connect(funccache)
+			kernelcursor = kernelconn.cursor()
 
 	## keep a list of versions per package found
 	packageversions = {}
@@ -1262,8 +1268,9 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 		matched = False
 		oldline = line
 		newmatch = False
+		kernelfunctionmatched = False
 		## skip empty lines
-                if line == "": continue
+		if line == "": continue
 
 		## An extra check for lines that score extremely low. This
 		## helps reduce load on databases stored on slower disks
@@ -1287,14 +1294,21 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 		res = conn.execute("select package, filename FROM stringscache.stringscache WHERE programstring=?", (line,)).fetchall()
 
 		if len(res) == 0 and linuxkernel:
+			origline = line
 			## try a few variants that could occur in the Linux kernel
+			## The values of KERN_ERR and friends have changed in the years.
+			## In 2.6 it used to be for example <3> (defined in include/linux/kernel.h
+			## or include/linux/printk.h )
+			## In later kernels this was changed.
 			matchres = re.match("<[\d+cd]>", line)
 			if matchres != None:
 				scanline = line.split('>', 1)[1]
 				if len(scanline) < stringcutoff:
 					continue
 				res = conn.execute("select package, filename FROM stringscache.stringscache WHERE programstring=?", (scanline,)).fetchall()
-				if len(res) == 0:
+				if len(res) != 0:
+					line = scanline
+				else:
 					scanline = scanline.split(':', 1)
 					if len(scanline) > 1:
 						scanline = scanline[1]
@@ -1303,17 +1317,46 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 						if len(scanline) < stringcutoff:
 							continue
 						res = conn.execute("select package, filename FROM stringscache.stringscache WHERE programstring=?", (scanline,)).fetchall()
+						if len(res) != 0:
+							if len(scanline) != 0:
+								line = scanline
+			else:
+				scanline = line.split(':', 1)
+				if len(scanline) > 1:
+					scanline = scanline[1]
+					if scanline.startswith(" "):
+						scanline = scanline[1:]
+					if len(scanline) < stringcutoff:
+						continue
+					res = conn.execute("select package, filename FROM stringscache.stringscache WHERE programstring=?", (scanline,)).fetchall()
+					if len(res) != 0:
 						if len(scanline) != 0:
 							line = scanline
-					else:
-						## This is where things get very ugly. The strings in a Linux
-						## kernel image could also be function names, not string constants.
-						pass
-				else:
-					line = scanline
+
+				## In include/linux/kern_levels.h since kernel 3.6 a different format is
+				## used. TODO: actually check in the binary whether or not a match (if any)
+				## is preceded by 0x01
+				if len(res) == 0:
+					matchres = re.match("\d+", line)
+					if matchres != None:
+						scanline = line[1:]
+						if len(scanline) < stringcutoff:
+							continue
+						res = conn.execute("select package, filename FROM stringscache.stringscache WHERE programstring=?", (scanline,)).fetchall()
+						if len(res) != 0:
+							if len(scanline) != 0:
+								line = scanline
+
+				## This is where things get very ugly. The strings in a Linux
+				## kernel image could also be function names, not string constants.
+				if scankernelfunctions and len(res) == 0:
+					kernelres = kernelconn.execute("select package FROM kernelfunctionnamecache WHERE functionname=?", (line,)).fetchall()
+					if len(kernelres) != 0:
+						kernelfuncres.append(line)
+						kernelfunctionmatched = True
 
 		## nothing in the cache
-		if len(res) == 0:
+		if len(res) == 0 and not kernelfunctionmatched:
 			if not rankingfull:
 				## do we actually have a result?
 				checkres = conn.execute("select sha256, language from extracted_file WHERE programstring=? LIMIT 1", (line,)).fetchall()
