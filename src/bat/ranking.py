@@ -2066,6 +2066,7 @@ def rankingsetup(envvars):
 				if not newenv.has_key('BAT_CLASSNAME_SCAN'):
 					newenv['BAT_CLASSNAME_SCAN'] = 1
 				if not newenv.has_key('BAT_FIELDNAME_SCAN'):
+					newenv['BAT_FIELDNAME_SCAN'] = 1
 
 	## then check for Java
 	if scanenv.has_key(namecacheperlanguage['Java']):
