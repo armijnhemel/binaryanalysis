@@ -1,3 +1,8 @@
+2013-06-13
+* filter out new format (Linux kernel 3.6 and later) for KERN_ERR and friends
+in ranking.py.
+* filter function names from the kernel (not reported yet)
+
 2013-06-11
 * rename xmloutput to ppoutput. Allow for separate modules for storing per
 scans pretty printers, so people wanting to have custom pretty printers do not
