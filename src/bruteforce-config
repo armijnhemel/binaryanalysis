@@ -329,7 +329,7 @@ module      = bat.fwunpack
 method      = searchUnpackJavaSerialized
 priority    = 3
 magic       = java_serialized
-noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video:java
+noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video:java:elf
 description = Unpack Java serialized files
 enabled     = yes
 
