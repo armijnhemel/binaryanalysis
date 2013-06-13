@@ -2034,11 +2034,22 @@ def rankingsetup(envvars):
 					if not newenv.has_key('BAT_VARNAME_SCAN'):
 						newenv['BAT_VARNAME_SCAN'] = 1
 				if functionmatches:
-					## TODO: check whether or not the table for kernelfunction exists
 					if not newenv.has_key('BAT_FUNCTION_SCAN'):
 						newenv['BAT_FUNCTION_SCAN'] = 1
-					if not newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
-						newenv['BAT_KERNELFUNCTION_SCAN'] = 1
+
+					cacheconn = sqlite3.connect(namecache)
+					cachecursor = cacheconn.cursor()
+					cachecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='kernelfunctionnamecache';")
+
+					blaat = cachecursor.fetchall()
+					if blaat == []:
+						if newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
+							del newenv['BAT_KERNELFUNCTION_SCAN']
+					else:
+						if not newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
+							newenv['BAT_KERNELFUNCTION_SCAN'] = 1
+					cachecursor.close()
+					cacheconn.close()
 	else:
 		## undefined, but rankingfull is set, so disable everything
 		if rankingfull:
