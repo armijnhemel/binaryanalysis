@@ -929,8 +929,9 @@ more flexibility. This is needed because in some cases the result as returned
 by the leaf scan needs post processing.
 
 A pretty printer can be defined in the configuration by setting
-\texttt{xmloutput}. The pretty printer should be in the same module as the
-scanning method defined in the same section. The pretty printer has two
+\texttt{ppoutput}. The pretty printer can be in the same module as the scanning
+method defined in the same section, but does not need to be. If it resides in
+another module it can be set using \texttt{ppmodule}. The pretty printer has two
 parameters: a Python datastructure as returned by the scanner (this differs
 per scan) and a XML root element, needed to create new XML nodes. The method is
 expected to return a XML node in case of success, or \texttt{None} in case of
@@ -1222,7 +1223,8 @@ be set in the configuration file:
 type        = program
 module      = bat.ranking
 method      = searchGeneric
-xmloutput   = xmlprettyprint
+ppmodule    = bat.ranking
+ppoutput    = xmlprettyprint
 envvars     = BAT_STRINGSCACHE_C=/home/armijn/master/stringscache_c:
               BAT_DB=/home/armijn/master/master:
               BAT_LICENSE_DB=/home/armijn/master/licenses:
