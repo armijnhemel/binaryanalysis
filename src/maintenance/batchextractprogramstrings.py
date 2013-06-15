@@ -156,12 +156,12 @@ def splitSpecialChars(s):
 ## FOSSology it is definitely not I/O bound...
 def unpack(directory, filename, unpackdir):
 	try:
-		os.stat("%s/%s" % (directory, filename))
+		os.stat(os.path.join(directory, filename))
 	except:
 		print >>sys.stderr, "Can't find %s" % filename
 		return None
 
-        filemagic = ms.file(os.path.realpath("%s/%s" % (directory, filename)))
+        filemagic = ms.file(os.path.realpath(os.path.join(directory, filename)))
 
         ## Assume if the files are bz2 or gzip compressed they are compressed tar files
         if 'bzip2 compressed data' in filemagic:
@@ -172,7 +172,7 @@ def unpack(directory, filename, unpackdir):
 		## for some reason the tar.bz2 unpacking from python doesn't always work, like
 		## aeneas-1.0.tar.bz2 from GNU, so use a subprocess instead of using the
 		## Python tar functionality.
- 		p = subprocess.Popen(['tar', 'jxf', "%s/%s" % (directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+ 		p = subprocess.Popen(['tar', 'jxf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		return tmpdir
         elif 'XZ compressed data' in filemagic:
@@ -180,7 +180,7 @@ def unpack(directory, filename, unpackdir):
        			tmpdir = tempfile.mkdtemp(dir=unpackdir)
 		else:
        			tmpdir = tempfile.mkdtemp()
- 		p = subprocess.Popen(['tar', 'Jxf', "%s/%s" % (directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+ 		p = subprocess.Popen(['tar', 'Jxf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		return tmpdir
         elif 'gzip compressed data' in filemagic:
@@ -188,7 +188,7 @@ def unpack(directory, filename, unpackdir):
        			tmpdir = tempfile.mkdtemp(dir=unpackdir)
 		else:
        			tmpdir = tempfile.mkdtemp()
- 		p = subprocess.Popen(['tar', 'zxf', "%s/%s" % (directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+ 		p = subprocess.Popen(['tar', 'zxf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		return tmpdir
 	elif 'Zip archive data' in filemagic:
@@ -197,7 +197,7 @@ def unpack(directory, filename, unpackdir):
        				tmpdir = tempfile.mkdtemp(dir=unpackdir)
 			else:
        				tmpdir = tempfile.mkdtemp()
-			p = subprocess.Popen(['unzip', "-B", "%s/%s" % (directory, filename), '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			p = subprocess.Popen(['unzip', "-B", os.path.join(directory, filename), '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 			(stanout, stanerr) = p.communicate()
 			if p.returncode != 0 and p.returncode != 1:
 				print >>sys.stderr, "unpacking ZIP failed for", filename, stanerr
@@ -210,7 +210,7 @@ def unpack(directory, filename, unpackdir):
 
 def unpack_verify(filedir, filename):
 	try:
-		os.stat("%s/%s" % (filedir, filename))
+		os.stat(os.path.join(filedir, filename))
 	except:
 		print >>sys.stderr, "Can't find %s" % filename
 
@@ -261,8 +261,8 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 				i = osgen.next()
 				## make sure all directories can be accessed
 				for d in i[1]:
-					if not os.path.islink("%s/%s" % (i[0], d)):
-						os.chmod("%s/%s" % (i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+					if not os.path.islink(os.path.join(i[0], d)):
+						os.chmod(os.path.join(i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 				for p in i[2]:
 					scanfiles.append((i[0], p))
 		except Exception, e:
@@ -313,12 +313,12 @@ def cleanupdir(temporarydir):
 			i = osgen.next()
 			## make sure all directories can be accessed
 			for d in i[1]:
-				if not os.path.islink("%s/%s" % (i[0], d)):
-					os.chmod("%s/%s" % (i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+				if not os.path.islink(os.path.join(i[0], d)):
+					os.chmod(os.path.join(i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 			for p in i[2]:
 				try:
-					if not os.path.islink("%s/%s" % (i[0], p)):
-						os.chmod("%s/%s" % (i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+					if not os.path.islink(os.path.join(i[0], p)):
+						os.chmod(os.path.join(i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 				except Exception, e:
 					#print e
 					pass
@@ -331,16 +331,17 @@ def cleanupdir(temporarydir):
 		pass
 
 def computehash((path, filename)):
+	resolved_path = os.path.join(path, filename)
 	try:
-		if not os.path.islink("%s/%s" % (path, filename)):
-			os.chmod("%s/%s" % (path, filename), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+		if not os.path.islink(resolved_path):
+			os.chmod(resolved_path, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 	except Exception, e:
 		pass
 	## skip links
-	if os.path.islink("%s/%s" % (path, filename)):
+	if os.path.islink(resolved_path)):
         	return None
 	## nothing to determine about an empty file, so skip
-	if os.stat("%s/%s" % (path, filename)).st_size == 0:
+	if os.stat(resolved_path).st_size == 0:
 		return None
 	## some filenames might have uppercase extensions, so lowercase them first
 	p_nocase = filename.lower()
@@ -352,10 +353,10 @@ def computehash((path, filename)):
 
 	if not process:
 		return None
-	filemagic = ms.file(os.path.realpath("%s/%s" % (path, filename)))
+	filemagic = ms.file(os.path.realpath(resolved_path))
 	if filemagic == "AppleDouble encoded Macintosh file":
 		return None
-	scanfile = open("%s/%s" % (path, filename), 'r')
+	scanfile = open(resolved_path, 'r')
 	h = hashlib.new('sha256')
 	h.update(scanfile.read())
 	scanfile.close()
@@ -371,8 +372,8 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			i = osgen.next()
 			## make sure all directories can be accessed
 			for d in i[1]:
-				if not os.path.islink("%s/%s" % (i[0], d)):
-					os.chmod("%s/%s" % (i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+				if not os.path.islink(os.path.join(i[0], d)):
+					os.chmod(os.path.join(i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 			for p in i[2]:
 				scanfiles.append((i[0], p))
 	except Exception, e:
@@ -401,7 +402,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	## regenerated.
 	for s in scanfile_result:
 		(path, filename, filehash, extension) = s
-		insertfiles.append(("%s/%s" % (path[srcdirlen:],filename), filehash))
+		insertfiles.append((os.path.join(path[srcdirlen:],filename), filehash))
 
 		## if many versions of a single package are processed there is likely going to be
 		## overlap. Avoid hitting the disk by remembering the SHA256 from a previous run.
@@ -578,7 +579,7 @@ def extractcomments((package, version, i, p, language, filehash, ninkaversion)):
 	ninkabasepath = '/gpl/ninka/ninka-%s' % ninkaversion
 	ninkaenv['PATH'] = ninkaenv['PATH'] + ":%s/comments" % ninkabasepath
 
-	p1 = subprocess.Popen(["%s/ninka.pl" % ninkabasepath, "-c", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
+	p1 = subprocess.Popen(["%s/ninka.pl" % ninkabasepath, "-c", os.path.join(i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
 	(stanout, stanerr) = p1.communicate()
 	scanfile = open("%s/%s.comments" % (i, p), 'r')
 	ch = hashlib.new('sha256')
@@ -594,7 +595,7 @@ def runfullninka((i, p, filehash, ninkaversion)):
 
 	ninkares = []
 
-	p2 = subprocess.Popen(["%s/ninka.pl" % ninkabasepath, "%s/%s" % (i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
+	p2 = subprocess.Popen(["%s/ninka.pl" % ninkabasepath, os.path.join(i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
 	(stanout, stanerr) = p2.communicate()
 	ninkasplit = stanout.strip().split(';')[1:]
 	## filter out the licenses that can't be determined.
@@ -607,7 +608,7 @@ def runfullninka((i, p, filehash, ninkaversion)):
 
 def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)):
 	copyrightsres = []
-	p2 = subprocess.Popen(["/usr/share/fossology/copyright/agent/copyright", "-C", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+	p2 = subprocess.Popen(["/usr/share/fossology/copyright/agent/copyright", "-C", os.path.join(i, p)], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 	(stanout, stanerr) = p2.communicate()
 	if "FATAL" in stanout:
 		## TODO: better error handling
@@ -673,7 +674,7 @@ def licensefossology((packages)):
 	## Also run FOSSology. This requires that the user has enough privileges to actually connect to the
 	## FOSSology database, for example by being in the correct group.
 	fossologyres = []
-	fossscanfiles = map(lambda x: "%s/%s" % (x[2], x[3]), packages)
+	fossscanfiles = map(lambda x: os.path.join(x[2], x[3]), packages)
 	scanargs = ["/usr/share/fossology/nomos/agent/nomos"] + fossscanfiles
 	p2 = subprocess.Popen(scanargs, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 	(stanout, stanerr) = p2.communicate()
@@ -687,7 +688,7 @@ def licensefossology((packages)):
 			licenses = fossysplit[-1].split(',')
 			fossologyres.append((packages[j][5], list(set(licenses))))
 	return fossologyres
-	p2 = subprocess.Popen(["/usr/share/fossology/nomos/agent/nomos", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+	p2 = subprocess.Popen(["/usr/share/fossology/nomos/agent/nomos", os.path.join(i, p)], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 	(stanout, stanerr) = p2.communicate()
 	if "FATAL" in stanout:
 		## TODO: better error handling
@@ -714,7 +715,7 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 	javaresults = []
 	if (language == 'C' or language == 'Java'):
 
-		p2 = subprocess.Popen(["ctags", "-f", "-", "-x", "%s/%s" % (i, p)], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+		p2 = subprocess.Popen(["ctags", "-f", "-", "-x", os.path.join(i, p)], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 		(stanout2, stanerr2) = p2.communicate()
 		if p2.returncode != 0:
 			pass
@@ -798,17 +799,17 @@ def extractsourcestrings(filename, filedir, language, package):
 				changed = True
 				filecontents = filecontents.replace(r, '\\n')
 		if changed:
-			scanfile = open("%s/%s" % (filedir, filename), 'w')
+			scanfile = open(os.path.join(filedir, filename), 'w')
 			scanfile.write(filecontents)
 			scanfile.close()
 
-	p1 = subprocess.Popen(['xgettext', '-a', "--omit-header", "--no-wrap", "%s/%s" % (filedir, filename), '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p1 = subprocess.Popen(['xgettext', '-a', "--omit-header", "--no-wrap", os.path.join(filedir, filename), '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p1.communicate()
 	if p1.returncode != 0:
 		## analyze stderr first
 		if "Non-ASCII" in stanerr:
 			## rerun xgettext with a different encoding
-			p2 = subprocess.Popen(['xgettext', '-a', "--omit-header", "--no-wrap", "--from-code=utf-8", "%s/%s" % (filedir, filename), '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			p2 = subprocess.Popen(['xgettext', '-a', "--omit-header", "--no-wrap", "--from-code=utf-8", os.path.join(filedir, filename), '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 			## overwrite stanout
 			(stanout, pstanerr) = p2.communicate()
 			if p2.returncode != 0:
@@ -867,12 +868,13 @@ def extractsourcestrings(filename, filedir, language, package):
 	return sqlres
 
 def checkalreadyscanned((filedir, package, version, filename, origin, dbpath)):
+	resolved_path = os.path.join(filedir, filename)
 	try:
-		os.stat("%s/%s" % (filedir, filename))
+		os.stat(resolved_path)
 	except:
 		print >>sys.stderr, "Can't find %s" % filename
 		return None
-	scanfile = open("%s/%s" % (filedir, filename), 'r')
+	scanfile = open(resolved_path, 'r')
 	h = hashlib.new('sha256')
 	h.update(scanfile.read())
 	scanfile.close()
