@@ -1,3 +1,9 @@
+2013-06-17
+* actually commit script to compare two unpacked binaries/firmwares for
+differences
+* add program to compare a source code archive based on results generated with
+BAT
+
 2013-06-13
 * filter out new format (Linux kernel 3.6 and later) for KERN_ERR and friends
 in ranking.py.
