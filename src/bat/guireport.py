@@ -262,7 +262,12 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, envvars={}):
 			tablerows = tablerows + tablerowtemplate % ("Possibly used (but undeclared) libraries", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['elfpossiblyused']))
 	if tmpimagedir != None:
 		if os.path.exists(os.path.join(tmpimagedir, "%s-graph.png" % filehash)):
-			imagehtml = "<p><img src=\"%s/%s-graph.png\"/></p>" % (imagesdir, filehash)
+			imagehtml = "<h2>Dynamic linking graph</h2><p><img src=\"%s/%s-graph.png\"/></p>" % (imagesdir, filehash)
+			imagehtml += "<p><ul><li>black solid line: defined and used dependency</li>"
+			imagehtml += "<li>blue dashed line: defined but unused dependency</li>"
+			imagehtml += "<li>red solid line: undefined but used dependency</li>"
+			imagehtml += "<li>black dotted line: defined and used dependency, part of standard API</li>"
+			imagehtml += "</ul></p>"
 	if tablerows != "":
 		elfstring = elfheader + tablerows + elftablefooter + imagehtml + elffooter
 		elfreportfile = gzip.open("%s/%s-elfreport.html.gz" % (reportdir, filehash), 'wb')
