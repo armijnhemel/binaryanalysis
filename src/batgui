@@ -479,6 +479,7 @@ class BatFrame(wx.Frame):
 				elfhtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-elfreport.html.gz" % sha256sum), 'r')
 				elfhtml = elfhtmlfile.read()
 				elfhtmlfile.close()
+				elfhtml = elfhtml.replace('REPLACEME', self.imagesdir)
 				self.elfwindow.SetPage(elfhtml)
 
 			if os.path.exists(os.path.join(self.reportsdir, "%s-unique.html.gz" % sha256sum)):
