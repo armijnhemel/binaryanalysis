@@ -862,7 +862,7 @@ type        = postrun
 module      = bat.guireport
 method      = guireport
 noscan      = text:xml:graphics:compressed:pdf:audio:video:resources
-envvars     = BAT_REPORTDIR=/tmp/images
+envvars     = BAT_REPORTDIR=/tmp/images:BAT_IMAGEDIR=/tmp/images
 description = Generate graphical representation of files
 enabled     = yes
 storetarget = reports

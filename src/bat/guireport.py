@@ -36,6 +36,13 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, envvars={}):
 		except Exception, e:
 			return
 
+        tmpimagedir = scanenv.get('BAT_IMAGEDIR')
+	try:
+		os.stat(tmpimagedir)
+	except:
+		## BAT_IMAGEDIR does not exist
+		tmpimagedir = None
+
 	filehash = unpackreport['sha256']
 	if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 		return
@@ -228,8 +235,10 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, envvars={}):
 
 	## ideally this should move to findlibs.py, where pictures are generated
 	elfheader = "<html><body><h1>Detailed ELF analysis</h1><table>"
-	elffooter = "</table></body></html>"
+	elftablefooter = "</table></body>"
+	elffooter = "</html>"
 	tablerows = ""
+	imagehtml = ""
 	if leafreports.has_key('libs'):
 		if leafreports['libs'] != []:
 			tablerows = tablerows + tablerowtemplate % ("Declared shared libraries", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['libs']))
@@ -251,8 +260,11 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, envvars={}):
 	if leafreports.has_key('elfpossiblyused'):
 		if leafreports['elfpossiblyused'] != []:
 			tablerows = tablerows + tablerowtemplate % ("Possibly used (but undeclared) libraries", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['elfpossiblyused']))
+	if tmpimagedir != None:
+		if os.path.exists(os.path.join(tmpimagedir, "%s-graph.png" % filehash)):
+			imagehtml = "<p><img src=\"%s/%s-graph.png\"/></p>" % (imagesdir, filehash)
 	if tablerows != "":
-		elfstring = elfheader + tablerows + elffooter
+		elfstring = elfheader + tablerows + elftablefooter + imagehtml + elffooter
 		elfreportfile = gzip.open("%s/%s-elfreport.html.gz" % (reportdir, filehash), 'wb')
 		elfreportfile.write(elfstring)
 		elfreportfile.close()
