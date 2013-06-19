@@ -30,6 +30,7 @@ On the left you will find a tree that can be browsed. Results can be shown by cl
 <li>&#x24b8; : the file is a compressed file</li>
 <li>&#x24b9; : the file is a directory (possibly empty)</li>
 <li>&#x24bc; : the file is a graphics file</li>
+<li>&#x24c1; : the file contains a Linux kernel or Linux kernel module </li>
 <li>&#x24c7; : the file is a resources file</li>
 <li>&#x24c8; : the file is statically linked</li>
 <li>&#x24c9; : the file only contains text</li>
@@ -580,7 +581,7 @@ class BatFrame(wx.Frame):
 				linktext = j
 			else:
 				linktext = j[parentlen:]
-			tagsentities = {'text': u'\u24c9', 'graphics': u'\u24bc', 'compressed': u'\u24b8', 'resource': u'\u24c7', 'static': u'\u24c8', 'dalvik': u'\u24b6', 'ranking': u'\u272a'}
+			tagsentities = {'text': u'\u24c9', 'graphics': u'\u24bc', 'compressed': u'\u24b8', 'resource': u'\u24c7', 'static': u'\u24c8', 'dalvik': u'\u24b6', 'ranking': u'\u272a', 'linuxkernel': u'\u24c1'}
 
 			if self.unpackreports[j].has_key('tags'):
 				for t in self.unpackreports[j]['tags']:
