@@ -1,3 +1,6 @@
+2013-06-19
+* display dynamic ELF pictures in GUI
+
 2013-06-17
 * actually commit script to compare two unpacked binaries/firmwares for
 differences
