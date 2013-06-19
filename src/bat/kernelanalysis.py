@@ -146,9 +146,9 @@ def analyseModuleVersion(path, tags, blacklist=[], envvars=[]):
 		if p.returncode != 0:
 			return None
 		if stanout == "":
-			return (['modulekernelversion'], stanout.split()[0])
+			return (['linuxkernel', 'modulekernelversion'], stanout.split()[0])
 	else:
-		return (['modulekernelversion'], stanout.split()[0])
+		return (['linuxkernel', 'modulekernelversion'], stanout.split()[0])
 
 ## analyse a kernel module. Requires that the modinfo program from module-init-tools has been installed
 def analyseModuleLicense(path, tags, blacklist=[], envvars=[]):
