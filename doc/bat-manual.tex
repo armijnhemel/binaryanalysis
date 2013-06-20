@@ -641,9 +641,8 @@ engineering.
 
 A few assumptions are made:
 
-\begin{enumerate}}
+\begin{enumerate}
 \item both firmwares were unpacked using the Binary Analysis Tool
-\item only ELF files are interesting (for now)
 \item files that are in the original firmware, but not in the new firmware, are
 not reported (example: removed binaries). This will change in a future version.
 \item files that are in the new firmware but not not in the original firmware are
@@ -651,7 +650,7 @@ reported, since this would mean additions to the firmware which need to be
 checked.
 \item files that appear in both firmwares but which are not identical are
 checked using \texttt{bsdiff} to determine the size of the difference.
-\end{enumerate}}
+\end{enumerate}
 
 With checksums it is easy to find the files that are different. Using
 \texttt{bsdiff} it becomes easier to prioritise based on the size of the
@@ -671,6 +670,9 @@ Bigger differences are of course much more interesting.
 \subsection{\texttt{sourcewalk.py}}
 
 \subsection{\texttt{verifysourcearchive.py}}
+
+The \texttt{verifysourcearchive.py} program is to verify a source code archive
+using the result of a scan done with BAT.
 
 \section{Binary Analysis Tool extratools collection}
 
