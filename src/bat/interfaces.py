@@ -1189,7 +1189,9 @@ posixfunctions = ["FD_CLR",
          "bzero", ## removed in POSIX.1-2008
          "getpass", ## removed in POSIX.1-2001
          "gethostbyname",
-         "gethostbyaddr"
+         "gethostbyaddr",
+         "madvise",
+         "posix_memalign",
          ]
 
 gnuextensionsfunctions = ["gethostent_r",
@@ -1226,6 +1228,8 @@ gnuextensionsfunctions = ["gethostent_r",
                           "error_message_count",
                           "error_one_per_line",
                           "error_print_progname",
+                          "fopencookie",
+                          "pvalloc",
                           ]
 
 bsdfunctions = ["daemon",
@@ -1272,6 +1276,17 @@ bsdfunctions = ["daemon",
                 "inet_makeaddr",
                 "inet_lnaof",
                 "inet_netof",
+                "res_init",
+                "res_query",
+                "res_search",
+                "res_querydomain",
+                "res_mkquery",
+                "res_send",
+                "dn_comp",
+                "dn_expand",
+                "getdtablesize",
+                "getgrouplist",
+                 "valloc",
                ]
 
 linuxfunctions = ["sysinfo",
@@ -1373,7 +1388,7 @@ lsbfunctions = ["__cxa_finalize",
                 "glob64", ## deprecated
                ]
 
-sysvfunctions = ["getutent", "getutid", "getutline", "pututline", "setutent", "endutent", "utmpname", "stime"]
+sysvfunctions = ["getutent", "getutid", "getutline", "pututline", "setutent", "endutent", "utmpname", "stime", "mallopt"]
 
 #XDR: External Data Representation Standard, RFC 1014, plus other RPC things
 xdrfunctions = ["xdr_array",
@@ -1491,7 +1506,7 @@ miscfunctions = ["inet_aton",
                  "putspent",
                  "lckpwdf",
                  "ulckpwdf",
-                 "valloc",
+                 "memalign",
                 ]
 
 c11functions = ["aligned_alloc"]
