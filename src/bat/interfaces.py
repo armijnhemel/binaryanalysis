@@ -1200,6 +1200,9 @@ gnuextensionsfunctions = ["gethostent_r",
                           "getmntent_r",
                           "getopt_long",
                           "getopt_long_only",
+                          "hcreate_r",
+                          "hsearch_r",
+                          "hdestroy_r",
                           "mempcpy",
                           "wmempcpy",
                           "strchrnul",
@@ -1267,7 +1270,7 @@ linuxfunctions = ["sysinfo",
                   "swapoff",
                  ]
 
-susfunctions = ["getpagesize"]
+susfunctions = ["getpagesize", "inet_network"]
 
 ## found in glibc and uClibc
 libcfunctions = ["getpt",
