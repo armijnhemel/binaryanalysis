@@ -1186,6 +1186,8 @@ posixfunctions = ["FD_CLR",
          "yn",
          "usleep", ## removed in POSIX.1-2008
          "ftime", ## removed in POSIX.1-2008
+         "bzero", ## removed in POSIX.1-2008
+         "getpass", ## removed in POSIX.1-2001
          "gethostbyname",
          "gethostbyaddr"
          ]
