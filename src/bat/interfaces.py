@@ -1216,8 +1216,16 @@ gnuextensionsfunctions = ["gethostent_r",
                           "getspnam_r",
                           "fgetspent_r",
                           "sgetspent_r",
+                          "getservent_r",
+                          "getservbyname_r",
+                          "getservbyport_r",
                           "pvalloc",
                           "strcasestr",
+                          "error",
+                          "error_at_line",
+                          "error_message_count",
+                          "error_one_per_line",
+                          "error_print_progname",
                           ]
 
 bsdfunctions = ["daemon",
@@ -1249,11 +1257,33 @@ bsdfunctions = ["daemon",
                 "bcopy",
                 "flock",
                 "valloc",
+                "cfmakeraw",
+                "cfsetspeed",
+                "err",
+                "verr",
+                "errx",
+                "verrx",
+                "warn",
+                "vwarn",
+                "warnx",
+                "vwarnx",
+                "getifaddrs",
+                "freeifaddrs",
+                "inet_makeaddr",
+                "inet_lnaof",
+                "inet_netof",
                ]
 
 linuxfunctions = ["sysinfo",
                   "ptsname_r",
+                  "capget",
+                  "capset",
                   "clone",
+                  "epoll_ctl",
+                  "epoll_create",
+                  "epoll_create1",
+                  "epoll_pwait",
+                  "epoll_wait",
                   "adjtimex",
                   "reboot",
                   "syslog",
@@ -1268,9 +1298,16 @@ linuxfunctions = ["sysinfo",
                   "pivot_root",
                   "swapon",
                   "swapoff",
+                  "inotify_add_watch",
+                  "inotify_init",
+                  "inotify_init1",
+                  "inotify_rm_watch",
+                  "getxattr", 
+                  "lgetxattr",
+                  "fgetxattr",
                  ]
 
-susfunctions = ["getpagesize", "inet_network"]
+susfunctions = ["getpagesize", "inet_network", "cuserid"]
 
 ## found in glibc and uClibc
 libcfunctions = ["getpt",
@@ -1311,6 +1348,7 @@ libcfunctions = ["getpt",
                  "__assert",
                  "__fgetc_unlocked",
                  "__fputc_unlocked",
+                 "__glibc_strerror_r",
                 ]
 
 ## inserted by GCC
@@ -1319,6 +1357,7 @@ gccfunctions = ["__deregister_frame_info",
                ]
 
 #http://refspecs.linuxfoundation.org/LSB_3.2.0/LSB-Core-generic/LSB-Core-generic/libcman.html
+#http://refspecs.linuxfoundation.org/LSB_1.3.0/gLSB/gLSB/libcman.html
 lsbfunctions = ["__cxa_finalize",
                 "__cxa_atexit",
                 "__errno_location",
@@ -1327,6 +1366,11 @@ lsbfunctions = ["__cxa_finalize",
                 "__xpg_basename",
                 "__getpagesize",
                 "__sysv_signal",
+                "alphasort64", ## deprecated
+                "fstatfs64", ## deprecated
+                "statfs64", ## deprecated
+                "globfree64", ## deprecated
+                "glob64", ## deprecated
                ]
 
 sysvfunctions = ["getutent", "getutid", "getutline", "pututline", "setutent", "endutent", "utmpname", "stime"]
