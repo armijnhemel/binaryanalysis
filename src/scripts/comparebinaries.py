@@ -103,12 +103,14 @@ def main(argv):
 		while True:
 			i = osgen.next()
 			for p in i[2]:
-				## Right now I am only interested in ELF files
-				if 'ELF' in ms.file("%s/%s" % (i[0], p)):
-					if not checkfiles.has_key(p):
-						checkfiles[p] = [os.path.join(i[0], p)]
-					else:
-						checkfiles[p].append(os.path.join(i[0],p))
+				if os.path.islink(os.path.join(i[0], p)):
+					continue
+				if not os.path.isfile(os.path.join(i[0], p)):
+					continue
+				if not checkfiles.has_key(p):
+					checkfiles[p] = [os.path.join(i[0], p)]
+				else:
+					checkfiles[p].append(os.path.join(i[0],p))
 	except StopIteration:
 		pass
 	notfoundnewdir = []
@@ -119,18 +121,21 @@ def main(argv):
 		while True:
 			i = osgen.next()
 			for p in i[2]:
-				if 'ELF' in ms.file(os.path.join(i[0], p)):
-					## name of the binary can't be found in old firmware, so report
-					if not checkfiles.has_key(p):
-						notfoundnewdir.append(p)
-					else:
-						for j in checkfiles[p]:
-							diff = comparebinaries(j, os.path.join(i[0], p))
-							## bsdiff between two identical files is 143 bytes
-							if diff <= 143 :
-								continue
-							else:
-								print "* %s and %s differ %d bytes according to bsdiff" % ("%s/%s" % (i[0], p), j, diff)
+				if os.path.islink(os.path.join(i[0], p)):
+					continue
+				if not os.path.isfile(os.path.join(i[0], p)):
+					continue
+				## name of the binary can't be found in old firmware, so report
+				if not checkfiles.has_key(p):
+					notfoundnewdir.append(p)
+				else:
+					for j in checkfiles[p]:
+						diff = comparebinaries(j, os.path.join(i[0], p))
+						## bsdiff between two identical files is 143 bytes
+						if diff <= 143 :
+							continue
+						else:
+							print "* %s and %s differ %d bytes according to bsdiff" % ("%s/%s" % (i[0], p), j, diff)
 	except StopIteration:
 		pass
 
