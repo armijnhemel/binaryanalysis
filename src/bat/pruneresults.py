@@ -91,13 +91,23 @@ def pruneresults(unpackreports, scantempdir, topleveldir, envvars=None):
 				(rank, packagename, uniquematches, percentage, packageversions, licenses) = j
 				if len(uniquematches) == 0:
 					continue
+
+				topcandidate = None
+
+				## check if the version was extracted for the Linux kernel.
+				if packagename == 'linux':
+					if leafreports.has_key('kernelchecks'):
+						if leafreports['kernelchecks'].has_key('version'):
+							kernelversion = leafreports['kernelchecks']['version']
+							if kernelversion in packageversions:
+								topcandidate = kernelversion
 				## the amount of versions is lower than the maximum amount that should be
 				## reported, so continue
 				if len(packageversions) < keepversions:
+					#print >>sys.stderr, "keeping all", packagename, packageversions, keepversions
 					continue
-				candidates = set(packageversions)
-				#print >>sys.stderr, "CANDIDATES", packagename, candidates, filehash
 
+				versioncount = {}
 				for u in uniquematches:
 					## string = u[0]
 					## list of results = u[1]
@@ -107,19 +117,44 @@ def pruneresults(unpackreports, scantempdir, topleveldir, envvars=None):
 					## u[1] : (checksum, version, line number, path)
 					## only 
 					uniqueversions = list(set(map(lambda x: x[1], u[1])))
+
 					if len(uniqueversions) == 1:
-						#print >>sys.stderr, "UNIQUE HIT", u[0], u[1]
 						keeppackageversions = list(set((keeppackageversions + uniqueversions)))
-					candidates = candidates.intersection(set(uniqueversions))
-					#print >>sys.stderr
-					#print >>sys.stderr, u[0], uniqueversions, filehash
-					#print >>sys.stderr
+
+					for un in uniqueversions:
+						if versioncount.has_key(un):
+							versioncount[un] += 1
+						else:
+							versioncount[un] = 1
 				if keeppackageversions != []:
-					print >>sys.stderr, "UNIQUE", packagename, keeppackageversions, candidates
-				## Having a match for a single string is significant. If the version is also
-				## the only one that is left over in 'candidates' it is extremely likely that it
-				## is the right version (barring errors in the database).
-				## If there is more than one unique version, or it is not in 'candidates'
-				## then there is either a database error, a string extraction error (for ELF files
-				## sometimes bogus data is extracted, or the binary was made from modified source
-				## code (forward porting of patches, backporting of patches, etc.)
+					print >>sys.stderr, "UNIQUE", packagename, keeppackageversions
+				## If there is more than one unique version, then there is either a database
+				## error, a string extraction error (for ELF files sometimes bogus data is
+				## extracted, or the binary was made from modified source code (forward porting
+				## of patches, backporting of patches, etc.)
+				filterversions = []
+				filtercount = keepversions
+
+				if len(uniquematches) > max(versioncount.values()):
+					## none of the versions match all the strings
+					## This could indicate backporting or forward porting
+					if topcandidate != None:
+						if max(versioncount.values()) == versioncount[topcandidate]:
+							## the top candidate indeed is the top candidate
+							pass
+						else:
+							pass
+				else:
+					if topcandidate != None:
+						if max(versioncount.values()) == versioncount[topcandidate]:
+							## the top candidate indeed is the top candidate
+							pass
+						else:
+							pass
+
+				if keeppackageversions != []:
+					filterversions = keeppackageversions
+				
+				if topcandidate != None:
+					filterversions.append(topcandidate)
+					keepversions = keepversions - 1
