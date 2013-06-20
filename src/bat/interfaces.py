@@ -1187,7 +1187,10 @@ posixfunctions = ["FD_CLR",
          "usleep", ## removed in POSIX.1-2008
          "ftime", ## removed in POSIX.1-2008
          "bzero", ## removed in POSIX.1-2008
+         "mktemp", ## removed in POSIX.1-2008
          "getpass", ## removed in POSIX.1-2001
+         "brk", ## removed in POSIX.1-2001
+         "sbrk", ## removed in POSIX.1-2001
          "gethostbyname",
          "gethostbyaddr",
          "madvise",
@@ -1230,6 +1233,8 @@ gnuextensionsfunctions = ["gethostent_r",
                           "error_print_progname",
                           "fopencookie",
                           "pvalloc",
+                          "timegm",
+                          "timelocal",
                           ]
 
 bsdfunctions = ["daemon",
@@ -1320,6 +1325,8 @@ linuxfunctions = ["sysinfo",
                   "getxattr", 
                   "lgetxattr",
                   "fgetxattr",
+                  "prctl",
+                  "splice",
                  ]
 
 susfunctions = ["getpagesize", "inet_network", "cuserid"]
