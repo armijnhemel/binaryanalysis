@@ -83,6 +83,7 @@ def pruneresults(unpackreports, scantempdir, topleveldir, envvars=None):
 
 		(res, dynamicRes, variablepvs) = leafreports['ranking']
 
+		## first determine for strings
 		if res['reports'] != []:
 			for j in res['reports']:
 				keeppackageversions = []
@@ -94,7 +95,9 @@ def pruneresults(unpackreports, scantempdir, topleveldir, envvars=None):
 
 				topcandidate = None
 
-				## check if the version was extracted for the Linux kernel.
+				## check if the version was extracted for the Linux kernel, since the
+				## version can fairly easily be extracted. TODO: make this more generic
+				## so it can also be used for for example the BusyBox results.
 				if packagename == 'linux':
 					if leafreports.has_key('kernelchecks'):
 						if leafreports['kernelchecks'].has_key('version'):
@@ -115,7 +118,6 @@ def pruneresults(unpackreports, scantempdir, topleveldir, envvars=None):
 					## Store which versions are used. If a certain match is only for
 					## a single version store it in 'keeppackageversions'
 					## u[1] : (checksum, version, line number, path)
-					## only 
 					uniqueversions = list(set(map(lambda x: x[1], u[1])))
 
 					if len(uniqueversions) == 1:
@@ -128,33 +130,40 @@ def pruneresults(unpackreports, scantempdir, topleveldir, envvars=None):
 							versioncount[un] = 1
 				if keeppackageversions != []:
 					print >>sys.stderr, "UNIQUE", packagename, keeppackageversions
-				## If there is more than one unique version, then there is either a database
-				## error, a string extraction error (for ELF files sometimes bogus data is
-				## extracted, or the binary was made from modified source code (forward porting
+
+				## there are no differences between the different values: for each
+				## version the same amount of hits was found.
+				if min(versioncount.values()) == max(versioncount.values()):
+					continue
+
+				## If there is more than one version in keeppackageversions, then there is either
+				## a database error, a string extraction error (for ELF files sometimes bogus data
+				## is extracted, or the binary was made from modified source code (forward porting
 				## of patches, backporting of patches, etc.)
 				filterversions = []
 				filtercount = keepversions
 
 				if len(uniquematches) > max(versioncount.values()):
 					## none of the versions match all the strings
-					## This could indicate backporting or forward porting
+					## This could indicate backporting or forward porting of code
 					if topcandidate != None:
 						if max(versioncount.values()) == versioncount[topcandidate]:
 							## the top candidate indeed is the top candidate
-							pass
+							filterversions.append(topcandidate)
+							keepversions = keepversions - 1
 						else:
 							pass
 				else:
 					if topcandidate != None:
 						if max(versioncount.values()) == versioncount[topcandidate]:
 							## the top candidate indeed is the top candidate
-							pass
+							filterversions.append(topcandidate)
+							keepversions = keepversions - 1
 						else:
+							## set the top candidate to the version with the most hits
+							## Possibly store the old top candidate as well, for use with
+							## for example functions.
 							pass
 
 				if keeppackageversions != []:
 					filterversions = keeppackageversions
-				
-				if topcandidate != None:
-					filterversions.append(topcandidate)
-					keepversions = keepversions - 1
