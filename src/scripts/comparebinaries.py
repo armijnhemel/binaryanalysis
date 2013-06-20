@@ -21,13 +21,12 @@ engineering
 A few assumptions are made:
 
 1. both firmwares were unpacked using the Binary Analysis Tool
-2. only ELF files are interesting (for now)
-3. files that are in the original firmware, but not in the new firmware, are
+2. files that are in the original firmware, but not in the new firmware, are
 not reported (example: removed binaries). This will change in a future version.
-4. files that are in the new firmware but not not in the original firmware are
+3. files that are in the new firmware but not not in the original firmware are
 reported, since this would mean additions to the firmware, possibly with
 license conditions.
-5. files that appear in both firmwares but which are not identical are checked
+4. files that appear in both firmwares but which are not identical are checked
 using bsdiff.
 
 With just checksums it is easy to find the files that are different. Using BSDIFF
