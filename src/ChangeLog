@@ -1,5 +1,9 @@
+2013-06-20
+* add more function names to the list of standard interfaces
+
 2013-06-19
 * display dynamic ELF pictures in GUI
+* tag Linux kernel and (some) kernel modules in the GUI
 
 2013-06-17
 * actually commit script to compare two unpacked binaries/firmwares for
