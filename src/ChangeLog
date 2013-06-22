@@ -1,6 +1,9 @@
 2013-06-22
 * add check for matching consistency of architecture and versions of Linux
 kernel modules
+* make main report in GUI easier to navigate, plus reorder results a bit
+(string matches first, then function matches)
+* start reworking file2package
 
 2013-06-20
 * add more function names to the list of standard interfaces
