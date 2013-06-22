@@ -130,7 +130,7 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, envvars={}):
 	if leafreports.has_key('ranking'):
 		(stringsres, dynamicres, variablepvs) = leafreports['ranking']
 		if dynamicres.has_key('packages'):
-			functionmatches = '''<h2>Function match statistics</h2>
+			functionmatches = '''<h2><a name="functionmatches" href="#functionnames">Function match statistics</a></h2>
 <table>
 <tr><td><b>Extracted function names</b></td><td>%d</td></tr>
 <tr><td><b>Matched function names</b></td><td>%d</td></tr>
@@ -153,7 +153,7 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, envvars={}):
 		if not stringsres == None:
 			if not (stringsres['extractedlines']) == 0 and not (stringsres['matchedlines']) == 0:
 				matchesrows = '''
-<h2>String match statistics</h2>
+<h2><a name="stringmatches" href="#stringmatches">String match statistics</a></h2>
 <table>
 <tr><td><b>Extracted lines</b></td><td>%d</td></tr>
 <tr><td><b>Matched lines</b></td><td>%d</td></tr>
@@ -231,7 +231,17 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, envvars={}):
 	else:
 		size = 0
 	overviewstring = overviewstring % (name, path, realpath, size, magic)
-	overviewstring = overviewstring + tablerows + "</table>" + matchesrows + functionmatches + footer
+	hreflist = ''
+	if matchesrows != '' or functionmatches != '':
+		hreflist = '<hr><ul>'
+		if matchesrows != '':
+			matchesrows = '<hr>' + matchesrows
+			hreflist += '<li><a href="#stringmatches">string matches</a></li>'
+		if functionmatches != '':
+			functionmatches = '<hr>' + functionmatches
+			hreflist += '<li><a href="#functionmatches">function name matches</a></li>'
+		hreflist += '</ul>'
+	overviewstring = overviewstring + tablerows + "</table>" + hreflist + matchesrows + functionmatches + footer
 
 	guireportfile = gzip.open("%s/%s-guireport.html.gz" % (reportdir, filehash), 'wb')
 	guireportfile.write(overviewstring)
