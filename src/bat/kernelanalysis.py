@@ -168,9 +168,13 @@ def analyseModuleLicense(path, tags, blacklist=[], envvars=[]):
 ## and modules are not the same on purpose, for example if the kernel is used for
 ## upgrading a flash partition that contains modules meant for another, different
 ## kernel residing on another flash partition which is not upgraded.
-def matchversions(unpackreports, scantempdir, topleveldir, envvars=None):
+## Also match the architectures of the modules: they should be for the same architecture
+## but sometimes modules for an entirely different architecture pop up, which is a
+## sign that something is wrong.
+def kernelmodulecheck(unpackreports, scantempdir, topleveldir, envvars=None):
 	kernelversions = []
 	moduleversions = {}
+	modulearchitectures = {}
 	for i in unpackreports:
 		## sanity checks
 		if not unpackreports[i].has_key('tags'):
@@ -197,45 +201,29 @@ def matchversions(unpackreports, scantempdir, topleveldir, envvars=None):
 			if leafreports['kernelchecks'].has_key('version'):
 				kernelversions.append(leafreports['kernelchecks']['version'])
 
-	kernelversions = list(set(kernelversions))
-
-	## check for each module if its version can be found in any
-	## of the found Linux kernel versions.
-	if kernelversions != []:
-		for m in moduleversions.keys():
-			if not moduleversions[m] in kernelversions:
-				pass
-
-	## TODO: report results
-	#print >>sys.stderr, "KERNELVERSIONS", kernelversions
-	#print >>sys.stderr, "MODULEVERSIONS", moduleversions
-
-## match the architectures of the modules
-def matcharchitectures(unpackreports, scantempdir, topleveldir, envvars=None):
-	modulearchitectures = {}
-	for i in unpackreports:
-		## sanity checks
-		if not unpackreports[i].has_key('tags'):
-			continue
-		if not unpackreports[i].has_key('sha256'):
-			continue
-
-		filehash = unpackreports[i]['sha256']
-
-		if not 'linuxkernel' in unpackreports[i]['tags']:
-			continue
-		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
-			continue
-
-		## read pickle file
-		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
-		leafreports = cPickle.load(leaf_file)
-		leaf_file.close()
-
 		if leafreports.has_key('architecture'):
 			modulearchitectures[filehash] = leafreports['architecture']
 
+	kernelversions = list(set(kernelversions))
+
 	architectures = list(set(modulearchitectures.values()))
 
+	res = {}
+
+	## if there is more than one architecture then there is probably
+	## something fishy going on, like leftover modules from an earlier device
+	## with a different architecture.
 	if len(architectures) > 1:
-		pass
+		res['kernelmodulearchitecturemismatch'] = True
+
+	## check for each module if its version can be found in any
+	## of the found Linux kernel versions.
+	## If there are no kernel versions in the firmware, then assume a kernel
+	## (or multiple kernels) are already on the device and nothing should be
+	## assumed.
+	if kernelversions != []:
+		for m in moduleversions.keys():
+			if not moduleversions[m] in kernelversions:
+				res['kernelmoduleversionmismatch'] = True
+				return res
+	return res
