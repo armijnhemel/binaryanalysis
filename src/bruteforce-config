@@ -597,7 +597,8 @@ method      = filename2package
 ppmodule    = bat.file2package
 ppoutput    = xmlprettyprint
 envvars     = BAT_PACKAGE_DB=/tmp/filepackages
-description = Look up name of file name in popular distributions
+description = Look up name of file in popular distributions
+setup       = file2packagesetup
 enabled     = no
 
 [forges]

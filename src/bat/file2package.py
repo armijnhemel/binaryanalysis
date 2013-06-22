@@ -17,8 +17,10 @@ import xml.dom.minidom
 
 def filename2package(path, tags, blacklist=[], envvars=None):
 	scanenv = os.environ.copy()
+	if not scanenv.has_key('BAT_PACKAGE_DB'):
+		return
 	## open the database containing the mapping of filenames to package
-	conn = sqlite3.connect(scanenv.get('BAT_PACKAGE_DB', '/tmp/filepackages'))
+	conn = sqlite3.connect(scanenv.get('BAT_PACKAGE_DB'))
 	c = conn.cursor()
 	## select the packages that are available. It would be better to also have the directory
 	## name available, so we should get rid of 'path' and use something else that is better
@@ -44,3 +46,37 @@ def xmlprettyprint(res, root, envvars=None):
 			tmpnode.appendChild(tagnode)
 		topnode.appendChild(tmpnode)
 	return topnode
+
+def file2packagesetup(envvars):
+	newenv = {}
+	scanenv = os.environ.copy()
+	if envvars != None:
+		for en in envvars.split(':'):
+			try:
+				(envname, envvalue) = en.split('=')
+				scanenv[envname] = envvalue
+				newenv[envname] = envvalue
+			except Exception, e:
+				pass
+
+	## Is the package database defined?
+	if not scanenv.has_key('BAT_PACKAGE_DB'):
+		return (False, envvars)
+
+	packagedb = scanenv.get('BAT_PACKAGE_DB')
+
+	## Does the package database exist?
+	if not os.path.exists(packagedb):
+		return (False, envvars)
+
+	## Does the package database have the right table?
+	conn = sqlite3.connect(packagedb)
+	c = conn.cursor()
+	res = c.execute("select * from sqlite_master where type='table' and name='file'").fetchall()
+	if res == []:
+		c.close()
+		conn.close()
+		return (False, envvars)
+
+	## TODO: more sanity checks
+	return (True, newenv)
