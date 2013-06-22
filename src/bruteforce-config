@@ -813,12 +813,12 @@ envvars     = AGGREGATE_CLEAN=0
 enabled     = yes
 priority    = 2
 
-#[kernelversions]
-#type        = aggregate
-#module      = bat.kernelanalysis
-#method      = matchversions
-#description = Match versions of Linux kernel images and modules
-#enabled     = yes
+[kernelversions]
+type        = aggregate
+module      = bat.kernelanalysis
+method      = kernelmodulecheck
+description = Match versions and architectures of Linux kernel images and modules
+enabled     = yes
 
 #[prune]
 #type        = aggregate

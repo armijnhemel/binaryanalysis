@@ -1,3 +1,7 @@
+2013-06-22
+* add check for matching consistency of architecture and versions of Linux
+kernel modules
+
 2013-06-20
 * add more function names to the list of standard interfaces
 

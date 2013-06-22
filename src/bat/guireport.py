@@ -84,6 +84,10 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, envvars={}):
 			dups = dups + "<li>" + reduce(lambda x, y: "%s, %s" % (x, y), d) + "</li>"
 		dups = dups + "</ul>"
 		tablerows = tablerows + tablerowtemplate % ("Duplicate files", dups)
+	if leafreports.has_key('kernelmoduleversionmismatch'):
+		tablerows = tablerows + tablerowtemplate % ("Kernel module version mismatch", 'yes')
+	if leafreports.has_key('kernelmodulearchitecturemismatch'):
+		tablerows = tablerows + tablerowtemplate % ("Kernel module architecture mismatch", 'yes')
 	if leafreports.has_key('busybox-version'):
 		tablerows = tablerows + tablerowtemplate % ("BusyBox version", leafreports['busybox-version'])
 	if leafreports.has_key('architecture'):

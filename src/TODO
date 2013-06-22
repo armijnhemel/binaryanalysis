@@ -23,9 +23,6 @@ queueing system:
 * let top level script also read from a queue
 * add script to add files to and remove files from scanning queue
 
-aggregate scanning:
-* check if Linux kernel modules and version of Linux kernel(s) (if any) in a firmware match
-
 GUI:
 * rewrite to PyQt or PySide to take advantage of better rendering engine (webkit)
 * add reports to GUI for distribution checks
