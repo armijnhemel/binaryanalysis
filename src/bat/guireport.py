@@ -231,7 +231,7 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, envvars={}):
 	else:
 		size = 0
 	overviewstring = overviewstring % (name, path, realpath, size, magic)
-	overviewstring = overviewstring + tablerows + "</table>" + functionmatches + matchesrows + footer
+	overviewstring = overviewstring + tablerows + "</table>" + matchesrows + functionmatches + footer
 
 	guireportfile = gzip.open("%s/%s-guireport.html.gz" % (reportdir, filehash), 'wb')
 	guireportfile.write(overviewstring)
