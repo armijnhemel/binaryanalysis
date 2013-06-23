@@ -23,7 +23,7 @@ def xmlprettyprint(res, root, envvars=None):
 		topnode.appendChild(tmpnode)
 	return topnode
 
-def kernelChecks(path, tags, blacklist=[], envvars=None):
+def kernelChecks(path, tags, blacklist=[], debug=False, envvars=None):
 	results = {}
         try:
                 kernelbinary = open(path, 'rb')
@@ -130,7 +130,7 @@ def findRedBoot(lines):
 
 ## extract the kernel version from the module
 ## TODO: merge with module license extraction
-def analyseModuleVersion(path, tags, blacklist=[], envvars=[]):
+def analyseModuleVersion(path, tags, blacklist=[], debug=False, envvars=[]):
 	## TODO: refactor
 	if not "relocatable" in ms.file(path):
 		return None
@@ -151,7 +151,7 @@ def analyseModuleVersion(path, tags, blacklist=[], envvars=[]):
 		return (['linuxkernel', 'modulekernelversion'], stanout.split()[0])
 
 ## analyse a kernel module. Requires that the modinfo program from module-init-tools has been installed
-def analyseModuleLicense(path, tags, blacklist=[], envvars=[]):
+def analyseModuleLicense(path, tags, blacklist=[], debug=False, envvars=[]):
 	if not "relocatable" in ms.file(path):
 		return None
 	p = subprocess.Popen(['/sbin/modinfo', "-F", "license", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -171,7 +171,7 @@ def analyseModuleLicense(path, tags, blacklist=[], envvars=[]):
 ## Also match the architectures of the modules: they should be for the same architecture
 ## but sometimes modules for an entirely different architecture pop up, which is a
 ## sign that something is wrong.
-def kernelmodulecheck(unpackreports, scantempdir, topleveldir, envvars=None):
+def kernelmodulecheck(unpackreports, scantempdir, topleveldir, debug=False, envvars=None):
 	kernelversions = []
 	moduleversions = {}
 	modulearchitectures = {}

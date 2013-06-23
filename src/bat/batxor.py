@@ -49,7 +49,7 @@ def unpackXOR(filename, sig, tempdir=None):
 	f2.close()
 	return tmpdir
 
-def searchUnpackXOR(filename, tempdir=None, blacklist=[], offsets={}, envvars=None):
+def searchUnpackXOR(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
 	diroffsets = []
 	scanenv = os.environ.copy()
 

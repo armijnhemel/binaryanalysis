@@ -360,7 +360,7 @@ def generateunmatched((picklefile, pickledir, filehash, reportdir)):
 	unmatchedhtmlfile.close()
 	os.unlink(os.path.join(pickledir, picklefile))
 
-def generatereports(unpackreports, scantempdir, topleveldir, envvars=None):
+def generatereports(unpackreports, scantempdir, topleveldir, debug=False, envvars=None):
 	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):

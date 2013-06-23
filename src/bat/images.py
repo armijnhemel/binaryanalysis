@@ -28,7 +28,7 @@ Parameters for configuration file:
 import os, os.path, sys, subprocess
 from PIL import Image
 
-def generateImages(filename, unpackreport, scantempdir, topleveldir, envvars={}):
+def generateImages(filename, unpackreport, scantempdir, topleveldir, debug=False, envvars={}):
 	if not unpackreport.has_key('sha256'):
 		return
 	scanenv = os.environ.copy()

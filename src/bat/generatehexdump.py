@@ -19,7 +19,7 @@ This should be run as a postrun scan
 
 import os, os.path, sys, subprocess, gzip
 
-def generateHexdump(filename, unpackreport, scantempdir, topleveldir, envvars={}):
+def generateHexdump(filename, unpackreport, scantempdir, topleveldir, debug=False, envvars={}):
 	if not unpackreport.has_key('sha256'):
 		return
 	scanenv = os.environ.copy()

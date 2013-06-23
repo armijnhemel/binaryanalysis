@@ -11,7 +11,7 @@ This aggregate scan traverses the unpackreports and reports all duplicate
 files.
 '''
 
-def findduplicates(unpackreports, scantempdir, topleveldir, envvars=None):
+def findduplicates(unpackreports, scantempdir, topleveldir, debug=False, envvars=None):
 	filehashes = {}
 	for r in unpackreports.keys():
 		if unpackreports[r].has_key('sha256'):

@@ -27,7 +27,7 @@ smaller than the amount in the most promising version (expressed as a maximum
 percentage)
 '''
 
-def pruneresults(unpackreports, scantempdir, topleveldir, envvars=None):
+def pruneresults(unpackreports, scantempdir, topleveldir, debug=False, envvars=None):
 	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):

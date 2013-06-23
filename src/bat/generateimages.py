@@ -138,7 +138,7 @@ def gethash(path):
 	scanfile.close()
 	return h.hexdigest()
 
-def generateimages(unpackreports, scantempdir, topleveldir, envvars=None):
+def generateimages(unpackreports, scantempdir, topleveldir, debug=False, envvars=None):
 	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):

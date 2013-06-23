@@ -134,7 +134,7 @@ def squashlicenses(licenses):
 ##
 ## Original code (in Perl) was written by Eelco Dolstra.
 ## Reimplementation in Python done by Armijn Hemel.
-def searchGeneric(path, tags, blacklist=[], offsets={}, envvars=None, unpacktempdir=None):
+def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
 	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):
@@ -1859,7 +1859,7 @@ def xmlprettyprint(leafreports, root, envvars=None):
 ## Returns tuple (run, envvars)
 ## * run: boolean indicating whether or not the scan should run
 ## * envvars: (possibly) modified
-def rankingsetup(envvars):
+def rankingsetup(envvars, debug=False):
 	newenv = {}
 	scanenv = os.environ.copy()
 	if envvars != None:

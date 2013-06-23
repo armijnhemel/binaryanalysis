@@ -15,7 +15,7 @@ This scan should be run as a leaf scan.
 import os, os.path, sqlite3, sys, subprocess
 import xml.dom.minidom
 
-def filename2package(path, tags, blacklist=[], envvars=None):
+def filename2package(path, tags, blacklist=[], debug=False, envvars=None):
 	scanenv = os.environ.copy()
 	if not scanenv.has_key('BAT_PACKAGE_DB'):
 		return
@@ -47,7 +47,7 @@ def xmlprettyprint(res, root, envvars=None):
 		topnode.appendChild(tmpnode)
 	return topnode
 
-def file2packagesetup(envvars):
+def file2packagesetup(envvars, debug=False):
 	newenv = {}
 	scanenv = os.environ.copy()
 	if envvars != None:

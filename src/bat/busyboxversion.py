@@ -11,7 +11,7 @@ import sys, os, tempfile, copy
 from optparse import OptionParser
 import busybox, extractor
 
-def busybox_version(filename, tags, blacklist=[], envvars=None):
+def busybox_version(filename, tags, blacklist=[], debug=False, envvars=None):
 	try:
                 filesize = os.stat(filename).st_size
 		## if the whole file is blacklisted, we don't have to scan

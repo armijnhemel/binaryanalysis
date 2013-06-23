@@ -89,7 +89,7 @@ def runSetup(scan, debug=False):
 		envvars = None
 
 	exec "from %s import %s as bat_%s" % (module, method, method)
-	scanres = eval("bat_%s(envvars)" % (method))
+	scanres = eval("bat_%s(envvars, debug=debug)" % (method))
 	return scanres
 
 ## method to filter scans, based on the tags that were found for a
@@ -198,7 +198,7 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 		else:
 			envvars = None
 		exec "from %s import %s as bat_%s" % (module, method, method)
-		scantags = eval("bat_%s(filetoscan, tempdir, tags, offsets, envvars)" % (method))
+		scantags = eval("bat_%s(filetoscan, tempdir, tags, offsets, debug=debug, envvars=envvars)" % (method))
 		## append the tag results. These will be used later to be able to specifically filter
 		## out files
 		if scantags != []:
@@ -288,7 +288,7 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 		## plus a blacklist containing blacklisted ranges for the *original*
 		## file and a hash with offsets for each marker.
 		exec "from %s import %s as bat_%s" % (module, method, method)
-		scanres = eval("bat_%s(filetoscan, tempdir, blacklist, offsets, envvars)" % (method))
+		scanres = eval("bat_%s(filetoscan, tempdir, blacklist, offsets, debug=debug, envvars=envvars)" % (method))
 		## result is either empty, or contains offsets and tags
 		if len(scanres) == 3:
 			(diroffsets, blacklist, scantags) = scanres
@@ -354,7 +354,7 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, 
 		else:
 			envvars = None
 		exec "from %s import %s as bat_%s" % (module, method, method)
-		res = eval("bat_%s(filetoscan, tags, blacklist, envvars=envvars)" % (method))
+		res = eval("bat_%s(filetoscan, tags, blacklist, debug=debug, envvars=envvars)" % (method))
 		if res != None:
 			(nt, leafres) = res
 			reports[scan['name']] = leafres
@@ -391,7 +391,7 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, d
 			envvars = None
 		exec "from %s import %s as bat_%s" % (module, method, method)
 
-		res = eval("bat_%s(unpackreports, scantempdir, topleveldir, envvars=envvars)" % (method))
+		res = eval("bat_%s(unpackreports, scantempdir, topleveldir, debug=debug, envvars=envvars)" % (method))
 		if res != None:
 			if res.keys() != []:
 				filehash = unpackreports[scan_binary]['sha256']
@@ -423,7 +423,7 @@ def postrunscan((filetoscan, unpackreports, scans, scantempdir, topleveldir, deb
 			envvars = None
 		exec "from %s import %s as bat_%s" % (module, method, method)
 
-		res = eval("bat_%s(filetoscan, unpackreports, scantempdir, topleveldir, envvars=envvars)" % (method))
+		res = eval("bat_%s(filetoscan, unpackreports, scantempdir, topleveldir, debug=debug, envvars=envvars)" % (method))
 		## TODO: find out what we want to do with this
 		if res != None:
 			pass
