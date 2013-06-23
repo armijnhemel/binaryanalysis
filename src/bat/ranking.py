@@ -1097,10 +1097,12 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 			versions = []
 			for p in uniquepackages[i]:
 				pversions = []
-				c.execute("select distinct sha256 from extracted_function where functionname=?", (p,))
+				c.execute("select distinct sha256, linenumber, language from extracted_function where functionname=?", (p,))
 				res = c.fetchall()
 				for s in res:
-					c.execute("select distinct package, version from processed_file where sha256=?", s)
+					if s[2] != 'C':
+						continue
+					c.execute("select distinct package, version from processed_file where sha256=?", (s[0],))
 					packageversions = c.fetchall()
 					for pv in packageversions:
 						if clones.has_key(pv[0]):
