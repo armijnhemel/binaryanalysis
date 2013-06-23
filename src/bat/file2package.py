@@ -17,6 +17,14 @@ import xml.dom.minidom
 
 def filename2package(path, tags, blacklist=[], debug=False, envvars=None):
 	scanenv = os.environ.copy()
+	if envvars != None:
+		for en in envvars.split(':'):
+			try:
+				(envname, envvalue) = en.split('=')
+				scanenv[envname] = envvalue
+			except Exception, e:
+				pass
+
 	if not scanenv.has_key('BAT_PACKAGE_DB'):
 		return
 	## open the database containing the mapping of filenames to package
@@ -48,8 +56,8 @@ def xmlprettyprint(res, root, envvars=None):
 	return topnode
 
 def file2packagesetup(envvars, debug=False):
-	newenv = {}
 	scanenv = os.environ.copy()
+	newenv = {}
 	if envvars != None:
 		for en in envvars.split(':'):
 			try:
@@ -61,13 +69,13 @@ def file2packagesetup(envvars, debug=False):
 
 	## Is the package database defined?
 	if not scanenv.has_key('BAT_PACKAGE_DB'):
-		return (False, envvars)
+		return (False, None)
 
 	packagedb = scanenv.get('BAT_PACKAGE_DB')
 
 	## Does the package database exist?
 	if not os.path.exists(packagedb):
-		return (False, envvars)
+		return (False, None)
 
 	## Does the package database have the right table?
 	conn = sqlite3.connect(packagedb)
@@ -76,7 +84,7 @@ def file2packagesetup(envvars, debug=False):
 	if res == []:
 		c.close()
 		conn.close()
-		return (False, envvars)
+		return (False, None)
 
 	## TODO: more sanity checks
 	return (True, newenv)
