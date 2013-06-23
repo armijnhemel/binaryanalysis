@@ -1860,24 +1860,26 @@ def xmlprettyprint(leafreports, root, envvars=None):
 ## * run: boolean indicating whether or not the scan should run
 ## * envvars: (possibly) modified
 def rankingsetup(envvars, debug=False):
-	newenv = os.environ.copy()
+	scanenv = os.environ.copy()
+	newenv = {}
 	if envvars != None:
 		for en in envvars.split(':'):
 			try:
 				(envname, envvalue) = en.split('=')
+				scanenv[envname] = envvalue
 				newenv[envname] = envvalue
 			except Exception, e:
 				pass
 
 	## Is the master database defined?
-	if not newenv.has_key('BAT_DB'):
-		return (False, envvars)
+	if not scanenv.has_key('BAT_DB'):
+		return (False, None)
 
-	masterdb = newenv.get('BAT_DB')
+	masterdb = scanenv.get('BAT_DB')
 
 	## Does the master database exist?
 	if not os.path.exists(masterdb):
-		return (False, envvars)
+		return (False, None)
 
 	## Does the master database have the right tables?
 	## processed_file is always needed
@@ -1887,7 +1889,7 @@ def rankingsetup(envvars, debug=False):
 	if res == []:
 		c.close()
 		conn.close()
-		return (False, envvars)
+		return (False, None)
 
 	## extracted_file is needed for string matches
 	res = c.execute("select * from sqlite_master where type='table' and name='extracted_file'").fetchall()
@@ -1911,17 +1913,17 @@ def rankingsetup(envvars, debug=False):
 		variablematches = True
 
 	rankingfull = False
-	if newenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
+	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
 		rankingfull = True
 
 	if not rankingfull:
 		newenv['parallel'] = False
 
 	for language in stringsdbperlanguage.keys():
-		if newenv.has_key(stringsdbperlanguage[language]):
+		if scanenv.has_key(stringsdbperlanguage[language]):
 			## sanity checks to see if the database exists. If not, and rankingfull
 			## is set to True, there should be no result.
-			stringscache = newenv.get(stringsdbperlanguage[language])
+			stringscache = scanenv.get(stringsdbperlanguage[language])
 			if rankingfull:
 				## TODO: check if database schema is actually correct
 				if not os.path.exists(stringscache):
@@ -1972,8 +1974,8 @@ def rankingsetup(envvars, debug=False):
 
 	## check the cloning database. If it does not exist, or does not have
 	## the right schema remove it from the configuration
-	if newenv.has_key('BAT_CLONE_DB'):
-		clonedb = newenv.get('BAT_CLONE_DB')
+	if scanenv.has_key('BAT_CLONE_DB'):
+		clonedb = scanenv.get('BAT_CLONE_DB')
 		if os.path.exists(clonedb):
 			conn = sqlite3.connect(clonedb)
 			c = conn.cursor()
@@ -1989,10 +1991,10 @@ def rankingsetup(envvars, debug=False):
 
 	## check the license database. If it does not exist, or does not have
 	## the right schema remove it from the configuration
-	if newenv.get('BAT_RANKING_LICENSE', 0) == '1':
-		if newenv.get('BAT_LICENSE_DB') != None:
+	if scanenv.get('BAT_RANKING_LICENSE', 0) == '1':
+		if scanenv.get('BAT_LICENSE_DB') != None:
 			try:
-				licenseconn = sqlite3.connect(newenv.get('BAT_LICENSE_DB'))
+				licenseconn = sqlite3.connect(scanenv.get('BAT_LICENSE_DB'))
 				licensecursor = licenseconn.cursor()
 				licensecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='licenses';")
 				if licensecursor.fetchall() == []:
@@ -2009,8 +2011,8 @@ def rankingsetup(envvars, debug=False):
 					del newenv['BAT_RANKING_LICENSE']
 
 	## check the various caching databases, first for C
-	if newenv.has_key(namecacheperlanguage['C']):
-		namecache = newenv.get(namecacheperlanguage['C'])
+	if scanenv.has_key(namecacheperlanguage['C']):
+		namecache = scanenv.get(namecacheperlanguage['C'])
 		if rankingfull:
 			## If rankingfull is set the cache should exist. If it doesn't exist
 			## then something is horribly wrong.
@@ -2100,8 +2102,8 @@ def rankingsetup(envvars, debug=False):
 				newenv['BAT_KERNELFUNCTION_SCAN'] = 1
 
 	## then check for Java
-	if newenv.has_key(namecacheperlanguage['Java']):
-		namecache = newenv.get(namecacheperlanguage['Java'])
+	if scanenv.has_key(namecacheperlanguage['Java']):
+		namecache = scanenv.get(namecacheperlanguage['Java'])
 		if rankingfull:
 			## If rankingfull is set the cache should exist. If it doesn't exist
 			## then something is horribly wrong.
@@ -2121,8 +2123,8 @@ def rankingsetup(envvars, debug=False):
 					newenv['BAT_FIELDNAME_SCAN'] = 1
 
 	## then check for Java
-	if newenv.has_key(namecacheperlanguage['Java']):
-		namecache = newenv.get(namecacheperlanguage['Java'])
+	if scanenv.has_key(namecacheperlanguage['Java']):
+		namecache = scanenv.get(namecacheperlanguage['Java'])
 		if rankingfull:
 			## If rankingfull is set the cache should exist. If it doesn't exist
 			## then something is horribly wrong.
