@@ -351,7 +351,7 @@ def generateunmatched((picklefile, pickledir, filehash, reportdir)):
 	unmatches = cPickle.load(unmatched_pickle)
         unmatched_pickle.close()
 
-	unmatchedhtml = "<html><body><h1>Unmatched strings</h1><p><ul>"
+	unmatchedhtml = "<html><body><h1>Unmatched strings (%d strings)</h1><p><ul>" % (len(unmatches),)
 	for i in unmatches:
 		unmatchedhtml = unmatchedhtml + "%s<br>\n" % cgi.escape(i)
 	unmatchedhtml = unmatchedhtml + "</body></html>"
