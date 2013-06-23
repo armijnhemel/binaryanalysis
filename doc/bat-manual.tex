@@ -785,6 +785,9 @@ file is. This is currently unused and might be removed in the future.
 \item \texttt{tags} is the set of tags that have already been defined for the
 file.
 \item \texttt{offsets} is the set of offsets that have been found for the file
+\item \texttt{debug} is an environment variable that can be used to optionally
+set the scan in debugging mode so it can print more information on standard
+error. By default it is set to \texttt{False}.
 \item \texttt{envvars} is an optionally empty set of environment variables that
 can be used to pass extra information to the pre-run method.
 \end{itemize}
@@ -799,7 +802,7 @@ Example:
 
 \begin{verbatim}
 def prerunMethod(filename, tempdir=None, tags=[],
-                 offsets={}, envvars=None):
+                 offsets={}, debug=False, envvars=None):
         newtags = []
         newtags.append('helloworld')
         return newtags
@@ -816,7 +819,7 @@ The unpackers have a strict interface:
 
 \begin{verbatim}
 def unpackScan(filename, tempdir=None, blacklist=[], offsets={},
-               envvars=None):
+               debug=False, envvars=None):
         ## code goes here
 \end{verbatim}
 
@@ -834,6 +837,9 @@ list after finishing a scan.
 to a list of offsets in the file where these identifiers can be found. This
 list is filled by the scan \texttt{genericMarker} which always runs before
 anything else.
+\item \texttt{debug} is an environment variable that can be used to optionally
+set the scan in debugging mode so it can print more information on standard
+error. By default it is set to \texttt{False}.
 \item \texttt{envvars} is an optionally empty set of environment variables that
 can be used to pass extra information to the pre-run method.
 \end{itemize}
@@ -924,7 +930,7 @@ an optional blacklist with byte ranges that should not be scanned and an
 optional list of environment variables. For example:
 
 \begin{verbatim}
-def programScan(path, tags, blacklist=[], envvars=None):
+def programScan(path, tags, blacklist=[], debug=False, envvars=None):
         ## code goes here
 \end{verbatim}
 
@@ -999,7 +1005,8 @@ modify results.
 Aggregators have a strict interface:
 
 \begin{verbatim}
-def aggregateexample(unpackreports, scantempdir, topleveldir, envvars=None)
+def aggregateexample(unpackreports, scantempdir, topleveldir, debug=False,
+                     envvars=None)
 \end{verbatim}
 
 \begin{itemize}
@@ -1008,6 +1015,9 @@ def aggregateexample(unpackreports, scantempdir, topleveldir, envvars=None)
 the scan
 \item \texttt{topleveldir} is the location of the top level directory of the
 scan
+\item \texttt{debug} is an environment variable that can be used to optionally
+set the scan in debugging mode so it can print more information on standard
+error. By default it is set to \texttt{False}.
 \item \texttt{envvars} is an optional dictionary of environment variables
 \end{itemize}
 
@@ -1029,7 +1039,8 @@ method.
 Post-run methods have a strict interface:
 
 \begin{verbatim}
-def postrunHelloWorld(filename, unpackreport, scantempdir, topleveldir, envvars={}):
+def postrunHelloWorld(filename, unpackreport, scantempdir, topleveldir,
+                      debug=False, envvars={}):
         print "Hello World"
 \end{verbatim}
 
@@ -1041,6 +1052,9 @@ unpacking.
 unpacked scan
 \item \texttt{topleveldir} is the top level directory containing the data
 directory and the directory with the per file result pickles.
+\item \texttt{debug} is an environment variable that can be used to optionally
+set the scan in debugging mode so it can print more information on standard
+error. By default it is set to \texttt{False}.
 \item \texttt{envvars} is an optional dictionary of environment variables
 \end{itemize}
 
