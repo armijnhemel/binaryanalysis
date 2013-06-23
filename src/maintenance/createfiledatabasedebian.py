@@ -25,10 +25,11 @@ def processPackages(destinationcursor, destinationconn, contentsfile):
 				continue
 			else:
 				continue
+		packageversion=''
 		(filepath, categorypackage) = i.strip().rsplit(' ', 1)
 		package = categorypackage.rsplit('/')[1].strip()
 		
-		destinationcursor.execute("insert into file values (?,?,?,?, 'debian', ?)", (os.path.basename(filepath.strip()), os.path.dirname(filepath.strip()), package, ''))
+		destinationcursor.execute("insert into file values (?,?,?,?, 'debian', ?)", (os.path.basename(filepath.strip()), os.path.dirname(filepath.strip()), package, packageversion, ''))
 		#destinationconn.commit()
 	return
 
