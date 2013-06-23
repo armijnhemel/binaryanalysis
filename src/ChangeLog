@@ -1,5 +1,7 @@
 2013-06-23
 * pass 'debug' to individual scans (except for pretty printers)
+* add reports with distribution checks to reports. This still needs some more
+work to make it look good.
 
 2013-06-22
 * add check for matching consistency of architecture and versions of Linux
