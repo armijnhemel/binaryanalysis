@@ -216,6 +216,13 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, debug=False, env
 					if versionhtml != "":
 						matchesrows = matchesrows + "<h2>Versions per package</h2>" + versionhtml
 
+	distrohtml = ''
+	if leafreports.has_key('file2package'):
+		distrohtml = "<hr><a name=\"distro\" href=\"#distro\"><h2>Distribution matches</h2></a><ul>"
+		for d in leafreports['file2package']:
+			distrohtml = distrohtml + "<li>%s, %s in %s</li>" % d
+		distrohtml = distrohtml + "</ul>"
+
 	if applications != []:
 		tablerows = tablerows + "<tr><td><b>Applications</b></td><td>%s</td></tr>\n" % reduce(lambda x, y: "%s, %s" % (x,y), applications)
 
@@ -240,8 +247,10 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, debug=False, env
 		if functionmatches != '':
 			functionmatches = '<hr>' + functionmatches
 			hreflist += '<li><a href="#functionmatches">function name matches</a></li>'
+		if distrohtml != '':
+			hreflist += '<li><a href="#distro">distribution file name matches</a></li>'
 		hreflist += '</ul>'
-	overviewstring = overviewstring + tablerows + "</table>" + hreflist + matchesrows + functionmatches + footer
+	overviewstring = overviewstring + tablerows + "</table>" + hreflist + matchesrows + functionmatches + distrohtml + footer
 
 	guireportfile = gzip.open("%s/%s-guireport.html.gz" % (reportdir, filehash), 'wb')
 	guireportfile.write(overviewstring)
