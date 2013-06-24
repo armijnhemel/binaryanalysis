@@ -1,3 +1,8 @@
+2013-06-24
+* start on making reports for function names that are more useful than just a
+list of function names. This still needs a lot of work, similar to the unique
+matches for string matches.
+
 2013-06-23
 * pass 'debug' to individual scans (except for pretty printers)
 * add reports with distribution checks to reports. This still needs some more
