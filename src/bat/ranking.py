@@ -1110,7 +1110,7 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 					packageversions = c.fetchall()
 					for pv in packageversions:
 						if clones.has_key(pv[0]):
-							pv = (clones[pv[0]], pv[1])
+							pv = (clones[pv[0]], pv[1], pv[2])
 						## shouldn't happen!
 						if pv[0] != package:
 							continue
