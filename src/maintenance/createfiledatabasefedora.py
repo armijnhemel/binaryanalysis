@@ -56,7 +56,7 @@ def processPackages(destinationcursor, filelistcursor, packagecursor, fedoravers
 					continue
 				if filetypes[i] == 'd':
 					continue
-				destinationcursor.execute("insert into file values (?,?,?,?, 'fedora', ?)", (files[i], dirname, pkgnameversion[pkg]['name'], pkgnameversion[pkg]['version'], fedoraversion))
+				destinationcursor.execute("insert into file values (?,?,?,?, 'Fedora', ?)", (files[i], dirname, pkgnameversion[pkg]['name'], pkgnameversion[pkg]['version'], fedoraversion))
 				#print dirname, files[i], pkgnameversion[pkg]
 	return
 
