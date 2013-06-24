@@ -1234,10 +1234,10 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 	## the information is for informative purposes only!
 	packagelicenses = {}
 
-	## keep a list of versions per sha256, since source files often contain more than one line
+	## keep a list of versions per sha256, since source files often are in more than one version
 	sha256_versions = {}
 
-	## keep a list of versions per sha256, since source files often contain more than one line
+	## keep a list of versions per sha256, since source files could contain more than one license
 	sha256_licenses = {}
 
 	## sort the lines first, so it is easy to skip duplicates
