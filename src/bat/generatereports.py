@@ -174,13 +174,31 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir)):
 	if dynamicRes != {}:
 		header = "<html><body>"
 		html = ""
-		if dynamicRes.has_key('uniquepackages'):
+		if dynamicRes.has_key('versionresults'):
+			if dynamicRes['versionresults'] != {}:
+				html += "<h1>Unique function name matches per package</h1><p><ul>\n"
+				ukeys = map(lambda x: (x[0], len(x[1])), dynamicRes['versionresults'].items())
+				ukeys.sort(key=lambda x: x[1], reverse=True)
+				for i in ukeys:
+					html += "<li><a href=\"#%s\">%s (%d)</a></li>" % (i[0], i[0], i[1])
+				html += "</ul></p>\n"
+				for i in ukeys:
+					html += "<hr><h2><a name=\"%s\" href=\"#%s\">Matches for %s (%d)</a></h2>\n" % (i[0], i[0], i[0], i[1])
+					upkgs = dynamicRes['versionresults'][i[0]]
+					for up in upkgs:
+						(funcname, results) = up
+						html += "<h5>%s</h5><p><table><tr><td><b>Filename</b></td><td><b>Version(s)</b></td><td><b>Line number</b></td><td><b>SHA256</b></td></tr>" % cgi.escape(funcname)
+						for r in results:
+							(checksum, version, linenumber, filename) = r 
+							html += "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (filename, version, str(linenumber), checksum)
+						html += "</table></p>\n"
+		elif dynamicRes.has_key('uniquepackages'):
 			if dynamicRes['uniquepackages'] != {}:
 				html += "<h1>Unique function name matches per package</h1><p><ul>\n"
 				ukeys = map(lambda x: (x[0], len(x[1])), dynamicRes['uniquepackages'].items())
 				ukeys.sort(key=lambda x: x[1], reverse=True)
 				for i in ukeys:
-					html += "<li><a href=\"#%s\">%s (%d)</a>" % (i[0], i[0], i[1])
+					html += "<li><a href=\"#%s\">%s (%d)</a></li>" % (i[0], i[0], i[1])
 				html += "</ul></p>"
 				for i in ukeys:
 					html += "<hr><h2><a name=\"%s\" href=\"#%s\">Matches for %s (%d)</a></h2><p>\n" % (i[0], i[0], i[0], i[1])
@@ -425,7 +443,7 @@ def generatereports(unpackreports, scantempdir, topleveldir, debug=False, envvar
 	## {filehash: [(rank, picklehash)]}
 	resultranks = {}
 
-	bla = 0
+	counter = 0
 	for r in res:
 		(filehash, resultreports, unmatchedresult) = r
 		if r == None:
@@ -449,7 +467,7 @@ def generatereports(unpackreports, scantempdir, topleveldir, debug=False, envvar
 				else:
 					pickletofile[picklehash] = [filehash]
 		if resultreports != []:
-			bla += 1
+			counter += 1
 			for report in resultreports:
 				(rank, picklehash, tmppickle, uniquematcheslen, packagename) = report
 				if resultranks.has_key(filehash):
@@ -502,7 +520,7 @@ def generatereports(unpackreports, scantempdir, topleveldir, debug=False, envvar
 			filehtml = ""
 			for r in resultranks[filehash]:
 				(rank, picklehash, uniquematcheslen, packagename) = r
-				headers = headers + "<li><a href=\"#%s\">%s (%d)</a>" % (packagename, packagename, uniquematcheslen)
+				headers = headers + "<li><a href=\"#%s\">%s (%d)</a></li>" % (packagename, packagename, uniquematcheslen)
 				picklehtmlfile = open(os.path.join(reportdir, "%s-unique.snippet" % picklehash))
 				picklehtml = picklehtmlfile.read()
 				picklehtmlfile.close()
