@@ -1096,6 +1096,7 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 		## these are the unique function names only
 		for package in uniquepackages:
 			versions = []
+			dynamicRes['versionresults'][package] = []
 
 			for p in uniquepackages[package]:
 				pversions = []
@@ -1115,13 +1116,13 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 							continue
 						pversions.append(pv[1])
 						line_sha256_version.append((s[0], pv[1], s[1], pv[2]))
+				dynamicRes['versionresults'][package].append((p, line_sha256_version))
 				## functions with different signatures might be present in different files.
 				## Since we are ignoring signatures we need to deduplicate here too.
 				versions = versions + list(set(pversions))
 			dynamicRes['packages'][package] = []
 			for v in list(set(versions)):
 				dynamicRes['packages'][package].append((v, versions.count(v)))
-			dynamicRes['versionresults'][package] = line_sha256_version
 		c.execute("detach functionnamecache")
 
 	## Scan C variables extracted from dynamically linked files.
