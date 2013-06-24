@@ -2049,8 +2049,8 @@ def rankingsetup(envvars, debug=False):
 					cachecursor = cacheconn.cursor()
 					cachecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='kernelfunctionnamecache';")
 
-					blaat = cachecursor.fetchall()
-					if blaat == []:
+					kernelfuncs = cachecursor.fetchall()
+					if kernelfuncs == []:
 						if newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
 							del newenv['BAT_KERNELFUNCTION_SCAN']
 					else:
