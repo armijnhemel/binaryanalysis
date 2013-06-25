@@ -40,6 +40,7 @@ database creation:
 * rewrite ctags and xgettext invocations to scan multiple files at once to reduce overhead of calling ctags and xgettext
 * update to FOSSology 2.2.0 (when released)
 * extract more information from Linux kernel, including values from __ATTR and friends, as far as possible
+* extract name, type and description from kernel for module descriptions (module_param and friends) and store for further kernel module analysis, plus also for kernel image detection (sometimes parameters are recorded in the form 'module.param')
 
 ranking:
 * use version information to report most likely licenses
