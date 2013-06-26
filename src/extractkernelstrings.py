@@ -25,19 +25,10 @@ exprs.append(re.compile("NETSTAT_ENTRY\s*\((\w+)", re.MULTILINE))
 ## scsi_msgbyte_name, scsi_statusbyte_name
 exprs.append(re.compile("scsi_\w+_name\((\w+)", re.MULTILINE))
 
-## lots of things with _ATTR, like DEVICE_ATTR and SYSDEV_ATTR)
-exprs.append(re.compile("\w+_ATTR\w*\s*\((\w+)", re.MULTILINE))
-
 ## TODO: check if these can be replaced by a call to xgettext
 exprs.append(re.compile("E\((?:\w+,\s*)\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
-exprs.append(re.compile("add_hotplug_env_var\((?:[\w&]+,\s*){6}\"([\w\s\.:;<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\"", re.MULTILINE))
 
 bugtrapexpr = re.compile("BUG_TRAP\s*\(([\w\s\.:<>\-+=~!@#$^%&*\[\]{}+?|/,'\(\)\\\]+)\);", re.MULTILINE)
-
-## we extract function names as well, since they frequently appear in the kernel image
-## TODO: extract with CTAGS
-funexprs = []
-funexprs.append(re.compile("(?:static|extern) (?:\w+\s)+\*?\s*(\w+)\(", re.MULTILINE))
 
 def extractkernelstrings(kerneldir, sqldb):
 	kerneldirlen = len(kerneldir)+1
@@ -141,9 +132,7 @@ def extractkernelstrings(kerneldir, sqldb):
 					results = []
 	
 					results = []
-					for funex in funexprs:
-						results = results + funex.findall(source)
-	
+
 					for res in results:
 						if "#define" in res:
 							continue
