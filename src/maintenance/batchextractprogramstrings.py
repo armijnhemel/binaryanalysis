@@ -801,10 +801,14 @@ def extractsourcestrings(filename, filedir, language, package):
 				## This is something for a future TODO.
 				sqlres += map(lambda x: (x, 0), filter(lambda x: x != '_name' and x != 'name', list(set(regresults))))
 			allowedvals= ["bool", "byte", "charp", "int", "uint", "string", "short", "ushort", "long", "ulong"]
-			paramresults = []
 			regexres = re.findall("module_param\s*\(([\w\d]+),\s*(\w+)", filecontents, re.MULTILINE)
 			if regexres != []:
-				regexres
+				parres = filter(lambda x: x[1] in allowedvals, regexres)
+				for p in parres:
+					moduleres.append(p)
+
+			regexres = re.findall("module_param_named\s*\(([\w\d]+),\s*[\w\d]+,\s*(\w+)", filecontents, re.MULTILINE)
+			if regexres != []:
 				parres = filter(lambda x: x[1] in allowedvals, regexres)
 				for p in parres:
 					moduleres.append(p)
