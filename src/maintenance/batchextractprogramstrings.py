@@ -780,6 +780,7 @@ def extractsourcestrings(filename, filedir, language, package):
 		## suck in the file and look for __ATTR and friends, since the
 		## first parameter is given to stringify(). __ATTR was gradually
 		## introduced in kernel 2.6.8.
+		## TODO: Also extract parameters for Linux kernel modules
 		if package == 'linux':
 			regresults = []
 			for ex in kernelexprs:
@@ -1071,6 +1072,10 @@ def main(argv):
 		c.execute('''create index if not exists name_name_index on extracted_name(name)''')
 		c.execute('''create index if not exists name_type_index on extracted_name(type)''')
 		c.execute('''create index if not exists name_language_index on extracted_name(language);''')
+
+		## Store information about Linux kernel module parameters
+		c.execute('''create table if not exists kernelmodule_parameter(sha256 text, modulename text, paramname text, type text)''')
+		c.execute('''create index if not exists kernelmodule_name on kernelmodule_parameter(paramname)''')
 		conn.commit()
 
 		if options.licenses or options.copyrights:
