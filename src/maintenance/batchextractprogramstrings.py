@@ -544,10 +544,13 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	extracted_results = pool.map(extractstrings, filestoscan, 1)
 
 	for extractres in extracted_results:
-		(filehash, language, sqlres, cresults, javaresults) = extractres
+		(filehash, language, sqlres, moduleres, cresults, javaresults) = extractres
 		for res in sqlres:
 			(pstring, linenumber) = res
 			cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (pstring, filehash, language, linenumber))
+		for res in moduleres:
+			(pstring, ptype) = res
+			cursor.execute('''insert into kernelmodule_parameter (sha256, modulename, paramname, paramtype) values (?,?,?,?)''', (filehash, pstring, None, ptype))
 		for res in list(set(cresults)):
 			(cname, linenumber, nametype) = res
 			if nametype == 'function':
@@ -702,7 +705,7 @@ def licensefossology((packages)):
 ## TODO: get rid of ninkaversion before we call this method
 ## TODO: process more files at once to reduce overhead of calling ctags
 def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
-	sqlres = extractsourcestrings(p, i, language, package)
+	(sqlres, moduleres) = extractsourcestrings(p, i, language, package)
 	## extract function names using ctags, except functions from
 	## the Linux kernel, since it will never be dynamically linked
 	## but variable names are sometimes stored in a special ELF
@@ -752,7 +755,7 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 						if csplit[1] == i:
 							javaresults.append((csplit[0], int(csplit[2]), i))
 
-	return (filehash, language, sqlres, cresults, javaresults)
+	return (filehash, language, sqlres, moduleres, cresults, javaresults)
 
 ## Extract strings using xgettext. Apparently this does not always work correctly. For example for busybox 1.6.1:
 ## $ xgettext -a -o - fdisk.c
@@ -765,6 +768,9 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 def extractsourcestrings(filename, filedir, language, package):
 	remove_chars = ["\\a", "\\b", "\\v", "\\f", "\\e", "\\0"]
 	sqlres = []
+
+	## moduleres
+	moduleres = []
 	## for files that we think are in the 'C' family we first check for unprintable
 	## characters like \0. xgettext doesn't like these and will stop as soon as it
 	## encounters one of these characters, possibly missing out on some very significant
@@ -794,6 +800,14 @@ def extractsourcestrings(filename, filedir, language, package):
 				## it is not easy to find that out unless an extra step is performed.
 				## This is something for a future TODO.
 				sqlres += map(lambda x: (x, 0), filter(lambda x: x != '_name' and x != 'name', list(set(regresults))))
+			allowedvals= ["bool", "byte", "charp", "int", "uint", "string", "short", "ushort", "long", "ulong"]
+			paramresults = []
+			regexres = re.findall("module_param\(([\w\d]+),\s*(\w+)", filecontents, re.MULTILINE)
+			if regexres != []:
+				regexres
+				parres = filter(lambda x: x[1] in allowedvals, regexres)
+				for p in parres:
+					moduleres.append(p)
 
 		for r in remove_chars:
 			if r in filecontents:
@@ -814,7 +828,7 @@ def extractsourcestrings(filename, filedir, language, package):
 			## overwrite stanout
 			(stanout, pstanerr) = p2.communicate()
 			if p2.returncode != 0:
-				return sqlres
+				return (sqlres, moduleres)
 	source = stanout 
 	lines = []
 	linenumbers = []
@@ -866,7 +880,7 @@ def extractsourcestrings(filename, filedir, language, package):
 		## the other strings are added to the list of strings we need to process
 		else:
 			lines.append(l[1:-1])
-	return sqlres
+	return (sqlres, moduleres)
 
 def checkalreadyscanned((filedir, package, version, filename, origin, dbpath)):
 	resolved_path = os.path.join(filedir, filename)
@@ -1074,7 +1088,7 @@ def main(argv):
 		c.execute('''create index if not exists name_language_index on extracted_name(language);''')
 
 		## Store information about Linux kernel module parameters
-		c.execute('''create table if not exists kernelmodule_parameter(sha256 text, modulename text, paramname text, type text)''')
+		c.execute('''create table if not exists kernelmodule_parameter(sha256 text, modulename text, paramname text, paramtype text)''')
 		c.execute('''create index if not exists kernelmodule_name on kernelmodule_parameter(paramname)''')
 		conn.commit()
 
