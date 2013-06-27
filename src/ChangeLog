@@ -1,5 +1,7 @@
 2013-06-27
 * extract information from module_param and module_param_named
+* allow maximum number of processors that can be used to be set. Needs some
+more sanity checks.
 
 2013-06-24
 * start on making reports for function names that are more useful than just a

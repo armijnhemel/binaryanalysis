@@ -456,6 +456,10 @@ def readconfig(config):
 			except:
 				pass
 			try:
+				batconf['processors'] = int(config.get(section, 'processors'))
+			except:
+				pass
+			try:
 				debug = config.get(section, 'debug')
 				if debug == 'yes':
 					batconf['debug'] = True
@@ -693,7 +697,10 @@ def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=Fa
 		os.stat('filereports')
 		## compress pickle files in parallel
 		filereports = os.listdir('filereports')
-		pool = multiprocessing.Pool()
+		if scans['batconfig'].has_key('processors'):
+			pool = multiprocessing.Pool(processes=scans['batconfig']['processors'])
+		else:
+			pool = multiprocessing.Pool()
 		fnames = map(lambda x: os.path.join(tempdir, "filereports", x), filereports)
 		pool.map(compressPickle, fnames)
 		pool.terminate()
@@ -768,8 +775,12 @@ def runscan(scans, scan_binary):
 		else:
 			if 'unpack' in debugphases or 'prerun' in debugphases:
 				parallel = False
+
 	if parallel:
-		pool = multiprocessing.Pool()
+		if scans['batconfig'].has_key('processors'):
+			pool = multiprocessing.Pool(scans['batconfig']['processors'])
+		else:
+			pool = multiprocessing.Pool()
 	else:
 		pool = multiprocessing.Pool(processes=1)
 
@@ -859,8 +870,12 @@ def runscan(scans, scan_binary):
 			else:
 				if 'program' in debugphases:
 					parallel = False
+
 		if parallel:
-			pool = multiprocessing.Pool()
+			if scans['batconfig'].has_key('processors'):
+				pool = multiprocessing.Pool(scans['batconfig']['processors'])
+			else:
+				pool = multiprocessing.Pool()
 		else:
 			pool = multiprocessing.Pool(processes=1)
 
@@ -932,7 +947,10 @@ def runscan(scans, scan_binary):
 				if 'postrun' in debugphases:
 					parallel = False
 		if parallel:
-			pool = multiprocessing.Pool()
+			if scans['batconfig'].has_key('processors'):
+				pool = multiprocessing.Pool(scans['batconfig']['processors'])
+			else:
+				pool = multiprocessing.Pool()
 		else:
 			pool = multiprocessing.Pool(processes=1)
 
