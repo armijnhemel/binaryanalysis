@@ -338,7 +338,7 @@ def computehash((path, filename)):
 	except Exception, e:
 		pass
 	## skip links
-	if os.path.islink(resolved_path)):
+	if os.path.islink(resolved_path):
         	return None
 	## nothing to determine about an empty file, so skip
 	if os.stat(resolved_path).st_size == 0:
