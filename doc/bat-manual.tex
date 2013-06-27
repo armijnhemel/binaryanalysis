@@ -321,6 +321,15 @@ is unsafe to use multiprocessing. If ranking is used and there is a fully
 generated caching database it is completely safe and even strongly advised to
 use multiprocessing, since it vastly speeds up running the program.
 
+It might be desirable to not use all processors on a machine, for example if
+there are multiple scans of BAT running at the same time, or if other tasks
+need to run on the machine. It is possible to set the maximum amount of
+processors to use using the \texttt{processors} option:
+
+\begin{verbatim}
+processors = 2
+\end{verbatim}
+
 Another setting in this section is \texttt{outputlite}:
 
 \begin{verbatim}
