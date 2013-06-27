@@ -786,7 +786,6 @@ def extractsourcestrings(filename, filedir, language, package):
 		## suck in the file and look for __ATTR and friends, since the
 		## first parameter is given to stringify(). __ATTR was gradually
 		## introduced in kernel 2.6.8.
-		## TODO: Also extract parameters for Linux kernel modules
 		if package == 'linux':
 			regresults = []
 			for ex in kernelexprs:
@@ -800,6 +799,8 @@ def extractsourcestrings(filename, filedir, language, package):
 				## it is not easy to find that out unless an extra step is performed.
 				## This is something for a future TODO.
 				sqlres += map(lambda x: (x, 0), filter(lambda x: x != '_name' and x != 'name', list(set(regresults))))
+			## TODO: extract values for old style MODULE_PARM as well
+			## Both formats were in use at the same time
 			allowedvals= ["bool", "byte", "charp", "int", "uint", "string", "short", "ushort", "long", "ulong"]
 			regexres = re.findall("module_param\s*\(([\w\d]+),\s*(\w+)", filecontents, re.MULTILINE)
 			if regexres != []:
@@ -812,6 +813,10 @@ def extractsourcestrings(filename, filedir, language, package):
 				parres = filter(lambda x: x[1] in allowedvals, regexres)
 				for p in parres:
 					moduleres.append(p)
+			## TODO: extract values for module_param_array as well
+			## TODO: extract and store: module license, module description (various types), module author, module alias, version, firmware
+			## Although these are already stored as generic strings it makes sense to also store them
+			## separately with more module information
 
 		for r in remove_chars:
 			if r in filecontents:
