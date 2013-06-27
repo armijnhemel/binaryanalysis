@@ -550,7 +550,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (pstring, filehash, language, linenumber))
 		for res in moduleres:
 			(pstring, ptype) = res
-			cursor.execute('''insert into kernelmodule_parameter (sha256, modulename, paramname, paramtype) values (?,?,?,?)''', (filehash, pstring, None, ptype))
+			cursor.execute('''insert into kernelmodule_parameter (sha256, modulename, paramname, paramtype) values (?,?,?,?)''', (filehash, None, pstring, ptype))
 		for res in list(set(cresults)):
 			(cname, linenumber, nametype) = res
 			if nametype == 'function':
@@ -802,7 +802,7 @@ def extractsourcestrings(filename, filedir, language, package):
 				sqlres += map(lambda x: (x, 0), filter(lambda x: x != '_name' and x != 'name', list(set(regresults))))
 			allowedvals= ["bool", "byte", "charp", "int", "uint", "string", "short", "ushort", "long", "ulong"]
 			paramresults = []
-			regexres = re.findall("module_param\(([\w\d]+),\s*(\w+)", filecontents, re.MULTILINE)
+			regexres = re.findall("module_param\s*\(([\w\d]+),\s*(\w+)", filecontents, re.MULTILINE)
 			if regexres != []:
 				regexres
 				parres = filter(lambda x: x[1] in allowedvals, regexres)
