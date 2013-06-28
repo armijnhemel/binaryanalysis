@@ -552,6 +552,18 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			for res in moduleres['parameters']:
 				(pstring, ptype) = res
 				cursor.execute('''insert into kernelmodule_parameter (sha256, modulename, paramname, paramtype) values (?,?,?,?)''', (filehash, None, pstring, ptype))
+		if moduleres.has_key('alias'):
+			for res in moduleres['alias']:
+				cursor.execute('''insert into kernelmodule_alias (sha256, modulename, alias) values (?,?,?)''', (filehash, None, res))
+		if moduleres.has_key('author'):
+			for res in moduleres['author']:
+				cursor.execute('''insert into kernelmodule_author (sha256, modulename, author) values (?,?,?)''', (filehash, None, res))
+		if moduleres.has_key('firmware'):
+			for res in moduleres['firmware']:
+				cursor.execute('''insert into kernelmodule_firmware (sha256, modulename, firmware) values (?,?,?)''', (filehash, None, res))
+		if moduleres.has_key('license'):
+			for res in moduleres['license']:
+				cursor.execute('''insert into kernelmodule_license (sha256, modulename, license) values (?,?,?)''', (filehash, None, res))
 		if moduleres.has_key('versions'):
 			for res in moduleres['versions']:
 				cursor.execute('''insert into kernelmodule_version (sha256, modulename, version) values (?,?,?)''', (filehash, None, res))
@@ -853,7 +865,6 @@ def extractsourcestrings(filename, filedir, language, package):
 			## TODO: extract values for module_param_array as well
 
 			## extract information from the MODULE_PARAM_DESC field
-			## TODO: this does not work well with accents and characters from various languages
 
 			## extract information from the MODULE_ALIAS field
 			if "MODULE_ALIAS" in filecontents:
