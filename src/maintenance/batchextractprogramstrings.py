@@ -793,6 +793,7 @@ def extractsourcestrings(filename, filedir, language, package):
 		if package == 'linux':
 			paramres = []
 			licenseres = []
+			aliasres = []
 			authorres = []
 			regresults = []
 			firmwareres = []
@@ -808,8 +809,13 @@ def extractsourcestrings(filename, filedir, language, package):
 				## it is not easy to find that out unless an extra step is performed.
 				## This is something for a future TODO.
 				sqlres += map(lambda x: (x, 0), filter(lambda x: x != '_name' and x != 'name', list(set(regresults))))
-			## TODO: extract values for old style MODULE_PARM as well
-			## Both formats were in use at the same time
+			## Extract a whole bunch of information relating to modules. Using regular expressions is
+			## actually not the right way to do it since some of the information is hidden in macros
+			## and #defines and what not, so actually the source tree needs to be properly preprocessed
+			## first. However, this will do for now.
+			## TODO: partially replace with call to xgettext and grep -n for weird accents
+
+			## Both module_param and MODULE_PARM formats were in use at the same time
 			allowedvals= ["bool", "byte", "charp", "int", "uint", "string", "short", "ushort", "long", "ulong"]
 			oldallowedvals= ["b", "c", "h", "i", "l", "s"]
 			if "module_param" in filecontents:
@@ -846,6 +852,17 @@ def extractsourcestrings(filename, filedir, language, package):
 			moduleres['parameters'] = paramres
 			## TODO: extract values for module_param_array as well
 
+			## extract information from the MODULE_PARAM_DESC field
+			## TODO: this does not work well with accents and characters from various languages
+
+			## extract information from the MODULE_ALIAS field
+			if "MODULE_ALIAS" in filecontents:
+				regexres = re.findall("MODULE_ALIAS\s*\(\s*\"([\w\d:,\-\_\s/\[\]\*]+)\"\s*\)\s*;", filecontents, re.MULTILINE)
+				if regexres != []:
+					for p in regexres:
+						aliasres.append(p)
+			moduleres['alias'] = aliasres
+
 			## extract information from the MODULE_AUTHOR field
 			## TODO: this does not work well with accents and characters from various languages
 			if "MODULE_AUTHOR" in filecontents:
@@ -854,6 +871,7 @@ def extractsourcestrings(filename, filedir, language, package):
 					for p in regexres:
 						authorres.append(p)
 			moduleres['author'] = authorres
+
 			## extract information from the MODULE_FIRMWARE field
 			if "MODULE_FIRMWARE" in filecontents:
 				regexres = re.findall("MODULE_FIRMWARE\s*\(\s*\"([\w\d/_\-\.]+)\"\s*\)\s*;", filecontents, re.MULTILINE)
@@ -878,7 +896,7 @@ def extractsourcestrings(filename, filedir, language, package):
 						versionres.append(p)
 			moduleres['versions'] = versionres
 
-			## TODO: extract and store: module description (various types), module alias
+			## TODO: extract and store: module description (various types)
 			## Although these are already stored as generic strings it makes sense to also store them
 			## separately with more module information
 
