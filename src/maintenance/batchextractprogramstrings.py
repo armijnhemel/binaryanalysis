@@ -1096,9 +1096,22 @@ def main(argv):
 		c.execute('''create index if not exists name_type_index on extracted_name(type)''')
 		c.execute('''create index if not exists name_language_index on extracted_name(language);''')
 
-		## Store information about Linux kernel module parameters
+		## Store information about Linux kernel modules
+		c.execute('''create table if not exists kernelmodule_alias(sha256 text, modulename text, alias text)''')
+		c.execute('''create table if not exists kernelmodule_author(sha256 text, modulename text, author text)''')
+		c.execute('''create table if not exists kernelmodule_description(sha256 text, modulename text, description text)''')
+		c.execute('''create table if not exists kernelmodule_firmware(sha256 text, modulename text, firmware text)''')
+		c.execute('''create table if not exists kernelmodule_license(sha256 text, modulename text, license text)''')
 		c.execute('''create table if not exists kernelmodule_parameter(sha256 text, modulename text, paramname text, paramtype text)''')
-		c.execute('''create index if not exists kernelmodule_name on kernelmodule_parameter(paramname)''')
+		c.execute('''create table if not exists kernelmodule_version(sha256 text, modulename text, version text)''')
+
+		c.execute('''create index if not exists kernelmodule_alias_index on kernelmodule_alias(alias)''')
+		c.execute('''create index if not exists kernelmodule_author_index on kernelmodule_author(author)''')
+		c.execute('''create index if not exists kernelmodule_description_index on kernelmodule_description(description)''')
+		c.execute('''create index if not exists kernelmodule_firmware_index on kernelmodule_firmware(firmware)''')
+		c.execute('''create index if not exists kernelmodule_license_index on kernelmodule_license(license)''')
+		c.execute('''create index if not exists kernelmodule_parameter_index on kernelmodule_parameter(paramname)''')
+		c.execute('''create index if not exists kernelmodule_version_index on kernelmodule_version(version)''')
 		conn.commit()
 
 		if options.licenses or options.copyrights:
