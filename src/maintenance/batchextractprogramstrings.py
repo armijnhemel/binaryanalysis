@@ -508,7 +508,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		for i in range(0,len(filestoscan),fossology_chunksize):
 			fossology_filestoscan.append((filestoscan[i:i+fossology_chunksize]))
 		fossology_res = filter(lambda x: x != None, pool.map(licensefossology, fossology_filestoscan, 1))
-		fossology_version = "2.1.0"
+		fossology_version = "2.2.0"
 		for f in fossology_res:
 			for ff in f:
 				(filehash, fres) = ff
