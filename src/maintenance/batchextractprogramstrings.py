@@ -548,9 +548,13 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		for res in sqlres:
 			(pstring, linenumber) = res
 			cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (pstring, filehash, language, linenumber))
-		for res in moduleres:
-			(pstring, ptype) = res
-			cursor.execute('''insert into kernelmodule_parameter (sha256, modulename, paramname, paramtype) values (?,?,?,?)''', (filehash, None, pstring, ptype))
+		if moduleres.has_key('parameters'):
+			for res in moduleres['parameters']:
+				(pstring, ptype) = res
+				cursor.execute('''insert into kernelmodule_parameter (sha256, modulename, paramname, paramtype) values (?,?,?,?)''', (filehash, None, pstring, ptype))
+		if moduleres.has_key('versions'):
+			for res in moduleres['versions']:
+				cursor.execute('''insert into kernelmodule_version (sha256, modulename, version) values (?,?,?)''', (filehash, None, res))
 		for res in list(set(cresults)):
 			(cname, linenumber, nametype) = res
 			if nametype == 'function':
@@ -769,8 +773,8 @@ def extractsourcestrings(filename, filedir, language, package):
 	remove_chars = ["\\a", "\\b", "\\v", "\\f", "\\e", "\\0"]
 	sqlres = []
 
-	## moduleres
-	moduleres = []
+	## moduleres is only used for storing information about Linux kernel module
+	moduleres = {}
 	## for files that we think are in the 'C' family we first check for unprintable
 	## characters like \0. xgettext doesn't like these and will stop as soon as it
 	## encounters one of these characters, possibly missing out on some very significant
@@ -787,7 +791,12 @@ def extractsourcestrings(filename, filedir, language, package):
 		## first parameter is given to stringify(). __ATTR was gradually
 		## introduced in kernel 2.6.8.
 		if package == 'linux':
+			paramres = []
+			licenseres = []
+			authorres = []
 			regresults = []
+			firmwareres = []
+			versionres = []
 			for ex in kernelexprs:
 				regexres = ex.findall(filecontents)
 				if regexres != []:
@@ -803,37 +812,73 @@ def extractsourcestrings(filename, filedir, language, package):
 			## Both formats were in use at the same time
 			allowedvals= ["bool", "byte", "charp", "int", "uint", "string", "short", "ushort", "long", "ulong"]
 			oldallowedvals= ["b", "c", "h", "i", "l", "s"]
-			regexres = re.findall("module_param\s*\(([\w\d]+),\s*(\w+)", filecontents, re.MULTILINE)
-			if regexres != []:
-				parres = filter(lambda x: x[1] in allowedvals, regexres)
-				for p in parres:
-					moduleres.append(p)
+			if "module_param" in filecontents:
+				regexres = re.findall("module_param\s*\(([\w\d]+),\s*(\w+)", filecontents, re.MULTILINE)
+				if regexres != []:
+					parres = filter(lambda x: x[1] in allowedvals, regexres)
+					for p in parres:
+						paramres.append(p)
 
-			regexres = re.findall("module_param_named\s*\(([\w\d]+),\s*[\w\d]+,\s*(\w+)", filecontents, re.MULTILINE)
-			if regexres != []:
-				parres = filter(lambda x: x[1] in allowedvals, regexres)
-				for p in parres:
-					moduleres.append(p)
+				regexres = re.findall("module_param_named\s*\(([\w\d]+),\s*[\w\d]+,\s*(\w+)", filecontents, re.MULTILINE)
+				if regexres != []:
+					parres = filter(lambda x: x[1] in allowedvals, regexres)
+					for p in parres:
+						paramres.append(p)
 
-			regexres = re.findall("MODULE_PARM\s*\(([\w\d]+),\s*\"([\w\d\-]+)\"\s*\);", filecontents, re.MULTILINE)
-			if regexres != []:
-				parres = filter(lambda x: x[1] in oldallowedvals, regexres)
-				parres2 = filter(lambda x: x[1] not in oldallowedvals, regexres)
-				for p in parres:
-					moduleres.append(p)
-				for p in parres2:
-					for v in oldallowedvals:
-						if re.search("\d+%s" % v, p[1]) != None:
-							moduleres.append(p)
-							break
-						if re.search("\d+\-\d+%s+" % v, p[1]) != None:
-							moduleres.append(p)
-							break
-					## and special case for characters
-					if re.search("c\d+", p[1]) != None:
-						moduleres.append(p)
+			if "MODULE_PARM" in filecontents:
+				regexres = re.findall("MODULE_PARM\s*\(([\w\d]+),\s*\"([\w\d\-]+)\"\s*\)\s*;", filecontents, re.MULTILINE)
+				if regexres != []:
+					parres = filter(lambda x: x[1] in oldallowedvals, regexres)
+					parres2 = filter(lambda x: x[1] not in oldallowedvals, regexres)
+					for p in parres:
+						paramres.append(p)
+					for p in parres2:
+						for v in oldallowedvals:
+							if re.search("\d+%s" % v, p[1]) != None:
+								paramres.append(p)
+								break
+							if re.search("\d+\-\d+%s+" % v, p[1]) != None:
+								paramres.append(p)
+								break
+						## and special case for characters
+						if re.search("c\d+", p[1]) != None:
+							paramres.append(p)
+			moduleres['parameters'] = paramres
 			## TODO: extract values for module_param_array as well
-			## TODO: extract and store: module license, module description (various types), module author, module alias, version, firmware
+
+			## extract information from the MODULE_AUTHOR field
+			## TODO: this does not work well with accents and characters from various languages
+			if "MODULE_AUTHOR" in filecontents:
+				regexres = re.findall("MODULE_AUTHOR\s*\(\s*\"([\w\d/\s,\.\-:<>@\(\)[\]\+&;'~\\\\]+)\"\s*\)\s*;", filecontents, re.MULTILINE)
+				if regexres != []:
+					for p in regexres:
+						authorres.append(p)
+			moduleres['author'] = authorres
+			## extract information from the MODULE_FIRMWARE field
+			if "MODULE_FIRMWARE" in filecontents:
+				regexres = re.findall("MODULE_FIRMWARE\s*\(\s*\"([\w\d/_\-\.]+)\"\s*\)\s*;", filecontents, re.MULTILINE)
+				if regexres != []:
+					for p in regexres:
+						firmwareres.append(p)
+			moduleres['firmware'] = firmwareres
+
+			## extract information from the MODULE_LICENSE field
+			if "MODULE_LICENSE" in filecontents:
+				regexres = re.findall("MODULE_LICENSE\s*\(\s*\"([\w\d/\s]+)\"\s*\)\s*;", filecontents, re.MULTILINE)
+				if regexres != []:
+					for p in regexres:
+						licenseres.append(p)
+			moduleres['license'] = licenseres
+
+			## extract information from the MODULE_VERSION field
+			if "MODULE_VERSION" in filecontents:
+				regexres = re.findall("MODULE_VERSION\s*\(\s*\"([\w\d/_\-\.\s]+)\"\s*\)\s*;", filecontents, re.MULTILINE)
+				if regexres != []:
+					for p in regexres:
+						versionres.append(p)
+			moduleres['versions'] = versionres
+
+			## TODO: extract and store: module description (various types), module alias
 			## Although these are already stored as generic strings it makes sense to also store them
 			## separately with more module information
 
