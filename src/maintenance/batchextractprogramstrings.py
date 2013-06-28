@@ -802,6 +802,7 @@ def extractsourcestrings(filename, filedir, language, package):
 			## TODO: extract values for old style MODULE_PARM as well
 			## Both formats were in use at the same time
 			allowedvals= ["bool", "byte", "charp", "int", "uint", "string", "short", "ushort", "long", "ulong"]
+			oldallowedvals= ["b", "c", "h", "i", "l", "s"]
 			regexres = re.findall("module_param\s*\(([\w\d]+),\s*(\w+)", filecontents, re.MULTILINE)
 			if regexres != []:
 				parres = filter(lambda x: x[1] in allowedvals, regexres)
@@ -813,6 +814,24 @@ def extractsourcestrings(filename, filedir, language, package):
 				parres = filter(lambda x: x[1] in allowedvals, regexres)
 				for p in parres:
 					moduleres.append(p)
+
+			regexres = re.findall("MODULE_PARM\s*\(([\w\d]+),\s*\"([\w\d\-]+)\"\s*\);", filecontents, re.MULTILINE)
+			if regexres != []:
+				parres = filter(lambda x: x[1] in oldallowedvals, regexres)
+				parres2 = filter(lambda x: x[1] not in oldallowedvals, regexres)
+				for p in parres:
+					moduleres.append(p)
+				for p in parres2:
+					for v in oldallowedvals:
+						if re.search("\d+%s" % v, p[1]) != None:
+							moduleres.append(p)
+							break
+						if re.search("\d+\-\d+%s+" % v, p[1]) != None:
+							moduleres.append(p)
+							break
+					## and special case for characters
+					if re.search("c\d+", p[1]) != None:
+						moduleres.append(p)
 			## TODO: extract values for module_param_array as well
 			## TODO: extract and store: module license, module description (various types), module author, module alias, version, firmware
 			## Although these are already stored as generic strings it makes sense to also store them
