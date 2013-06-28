@@ -1,3 +1,6 @@
+2013-06-28
+* extract and store more information from Linux kernel modules
+
 2013-06-27
 * extract information from module_param and module_param_named
 * allow maximum number of processors that can be used to be set. Needs some
