@@ -1534,7 +1534,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 								licensecursor.execute("select distinct license, scanner from licenses where sha256=?", (s[0],))
 								licenses = licensecursor.fetchall()
 								if not len(licenses) == 0:
-									licenses = squashlicenses(licenses)
+									#licenses = squashlicenses(licenses)
 									sha256_licenses[s] = map(lambda x: x[0], licenses)
 									licensepv = licensepv + licenses
 									#for v in map(lambda x: x[0], licenses):
