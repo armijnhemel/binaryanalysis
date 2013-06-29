@@ -622,12 +622,8 @@ python busybox-compare-configs.py -e /path/to/saved/config
 The three programs \texttt{extractkernelstrings.py},
 \texttt{extractkernelconfig.py} and \texttt{findkernelstrings.py} are very
 experimental tools to derive a configuration from a Linux kernel image. They
-are far from mature and are not yet ready for production use.
-
-Once they are ready for production use a description for the scripts will be
-included in this manual. A description of the technical uses that need to be
-solved, plus a motivation on why and how to solve them can be found in the
-appendix.
+are far from mature and are not yet ready for production use. They will likely
+be merged into \texttt{batchextractprogramstrings.py} in the near future.
 
 %\subsubsection{\texttt{extractkernelstrings.py}}
 %\subsubsection{\texttt{extractkernelconfig.py}}
@@ -1231,6 +1227,11 @@ different versions of the same package will be recorded in the database as
 different packages, which will confuse the rating algorithm and cause it to
 give suboptimal results.
 
+Other helper scripts are \texttt{dumplist.py} which recreates a package list
+file from a database, and \texttt{rewritelist.py} which takes two package list
+files and outputs a new file with package names and versions rewritten for
+filenames that occur in both files. These two scripts are useful if a database
+needs to be regenerated, possibly with new packages.
 
 \subsection{Running the extraction program}
 
