@@ -259,6 +259,7 @@ type        = unpack
 module      = bat.fwunpack
 method      = searchUnpackExe
 priority    = 2
+optmagic    = pkbac:winrar
 noscan      = text:xml:graphics:pdf:compressed:audio:video:java
 description = Unpack Microsoft Windows Executable files
 enabled     = yes
@@ -368,7 +369,7 @@ type        = unpack
 module      = bat.fwunpack
 method      = searchUnpackLZMA
 priority    = 0
-magic       = lzma_alone:lzma_alone_alt
+magic       = lzma_alone:lzma_alone_alt:lzma_alone_alt2
 noscan      = text:xml:graphics:pdf:bz2:zip:gzip:lrzip:resource:dalvik:audio:video:elf:java
 description = Unpack LZMA compressed files
 envvars     = LZMA_MINIMUM_SIZE=10

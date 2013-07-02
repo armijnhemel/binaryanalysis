@@ -35,6 +35,7 @@ fsmagic = {
             'squashfs7':        '\x73\x71\x6c\x7a', # sqlz
             'lzma_alone':       '\x5d\x00\x00',
             'lzma_alone_alt':   '\x6d\x00\x00',     # used in OpenWrt
+            'lzma_alone_alt2':  '\x6c\x00\x00',     # seen in some routers, like ZyXEL NBG5615
             '7z':               '7z\xbc\xaf\x27\x1c',
             'xz':               '\xfd\x37\x7a\x58\x5a\x00',
             'xztrailer':        '\x59\x5a',
@@ -44,6 +45,7 @@ fsmagic = {
             'romfs':            '-rom1fs-',
             #'lzma_alone':       '\x5d\x00\x00\x80',
             'jffs2_le':         '\x85\x19',
+            'jffs2_be':         '\x19\x85',
             'ubifs':            '\x55\x42\x49\x23',
             'rpm':              '\xed\xab\xee\xdb',
             'ext2':             '\x53\xef',        # little endian
@@ -97,7 +99,7 @@ correction = {
 
 ## collection of markers that should be scanned together
 squashtypes = ['squashfs1', 'squashfs2', 'squashfs3', 'squashfs4', 'squashfs5', 'squashfs6']
-lzmatypes   = ['lzma_alone', 'lzma_alone_alt']
+lzmatypes   = ['lzma_alone', 'lzma_alone_alt', 'lzma_alone_alt2']
 cpio        = ['cpio1', 'cpio2', 'cpio3']
 gif         = ['gif87', 'gif89']
 tar         = ['tar1', 'tar2']

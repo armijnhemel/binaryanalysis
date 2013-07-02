@@ -126,7 +126,7 @@ def gethash(path, filename):
 	return h.hexdigest()
 
 ## scan a single file, possibly unpack and recurse
-def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, debug)):
+def scan((path, filename, scans, prerunscans, magicscans, optmagicscans, lenscandir, tempdir, debug)):
 	lentempdir = len(tempdir)
 
 	## absolute path of the file in the file system (so including temporary dir)
@@ -182,7 +182,7 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 	unpackreports[relfiletoscan]['sha256'] = filehash
 
 	## scan for markers
-	(offsets, order) =  prerun.genericMarkerSearch(filetoscan, magicscans)
+	(offsets, order) =  prerun.genericMarkerSearch(filetoscan, magicscans, optmagicscans)
 
 	## prerun scans should be run before any of the other scans
 	for prerunscan in prerunscans:
@@ -318,7 +318,7 @@ def scan((path, filename, scans, prerunscans, magicscans, lenscandir, tempdir, d
 						try:
 							if not os.path.islink("%s/%s" % (i[0], p)):
 								os.chmod("%s/%s" % (i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-							scantasks.append((i[0], p, scans, prerunscans, magicscans, len(scandir), tempdir, debug))
+							scantasks.append((i[0], p, scans, prerunscans, magicscans, optmagicscans, len(scandir), tempdir, debug))
 							relscanpath = "%s/%s" % (i[0][lentempdir:], p)
 							if relscanpath.startswith('/'):
 								relscanpath = relscanpath[1:]
@@ -515,6 +515,10 @@ def readconfig(config):
 				conf['magic'] = config.get(section, 'magic')
 			except:
 				conf['magic'] = None
+			try:
+				conf['optmagic'] = config.get(section, 'optmagic')
+			except:
+				conf['optmagic'] = None
 			try:
 				conf['noscan'] = config.get(section, 'noscan')
 			except:
@@ -730,11 +734,15 @@ def runscan(scans, scan_binary):
 	debugphases = scans['batconfig']['debugphases']
 
 	magicscans = []
+	optmagicscans = []
 	for k in ["prerunscans", "unpackscans", "programscans", "postrunscans"]:
 		for s in scans[k]:
 			if s['magic'] != None:
 				magicscans = magicscans + s['magic'].split(':')
+			if s['optmagic'] != None:
+				optmagicscans = optmagicscans + s['optmagic'].split(':')
 	magicscans = list(set(magicscans))
+	optmagicscans = list(set(optmagicscans))
 
 	## Per binary scanned we get a list with results.
 	## Each file system or compressed file we can unpack gives a list with
@@ -752,7 +760,7 @@ def runscan(scans, scan_binary):
 		if debugphases != []:
 			if not ('prerun' in debugphases or 'unpack' in debugphases):
 				tmpdebug = False
-	scantasks = [(scantempdir, os.path.basename(scan_binary), scans['unpackscans'], scans['prerunscans'], magicscans, len(scantempdir), scantempdir, tmpdebug)]
+	scantasks = [(scantempdir, os.path.basename(scan_binary), scans['unpackscans'], scans['prerunscans'], magicscans, optmagicscans, len(scantempdir), scantempdir, tmpdebug)]
 
 	## Use multithreading to speed up scanning. Sometimes we hit http://bugs.python.org/issue9207
 	## Threading can be configured in the configuration file, but

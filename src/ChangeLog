@@ -1,3 +1,9 @@
+2013-07-02
+* add another lzma marker
+* add optmagic
+* add jffs2 big endian marker
+* start reworking EXE scanning
+
 2013-06-28
 * extract and store more information from Linux kernel modules
 

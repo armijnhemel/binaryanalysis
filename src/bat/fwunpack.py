@@ -547,9 +547,6 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 	## apparently we have a MS Windows executable, so continue
 	diroffsets = []
 	counter = 1
-	datafile = open(filename, 'rb')
-	data = datafile.read()
-	datafile.close()
 	assembly = extractor.searchAssemblyAttrs(filename)
 	## if we were able to extract the assembly XML file we could get some useful
 	## information from it. Although there are some vanity entries that we can
@@ -593,36 +590,38 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 	## * PKBAC (seems to give the best results)
 	## * WinZip Self-Extractor
 	## 7zip gives better results than unzip
-	## TODO: fix, we want to get rid of 'data'
-	offset = data.find("PKBAC")
-	if offset != -1:
-		tmpdir = dirsetup(tempdir, filename, "exe", counter)
-		res = unpack7z(filename, 0, tmpdir)
-		if res != None:
-			diroffsets.append((res, 0, os.stat(filename).st_size))
-			blacklist.append((0, os.stat(filename).st_size))
-			newtags.append('exe')
-			return (diroffsets, blacklist, newtags)
-		else:
-			os.rmdir(tmpdir)
-	## then search for RAR by searching for:
-	## WinRAR
-	## and unpack with unrar
-	## TODO: fix, we want to get rid of 'data'
-	offset = data.find("WinRAR")
-	if offset != -1:
-		tmpdir = dirsetup(tempdir, filename, "exe", counter)
-		res = unpackRar(filename, 0, tmpdir)
-		if res != None:
-			(endofarchive, rardir) = res
-			diroffsets.append((rardir, 0, os.stat(filename).st_size))
-			## add the whole binary to the blacklist
-			blacklist.append((0, os.stat(filename).st_size))
-			counter = counter + 1
-			newtags.append('exe')
-			return (diroffsets, blacklist, newtags)
-		else:
-			os.rmdir(tmpdir)
+	if offsets.has_key('pkbac'):
+		if offsets['pkbac'] != []:
+			## assume only one entry now. TODO: fix if multiple exe files
+			## were concatenated.
+			offset = offsets['pkbac'][0]
+			tmpdir = dirsetup(tempdir, filename, "exe", counter)
+			res = unpack7z(filename, 0, tmpdir)
+			if res != None:
+				diroffsets.append((res, 0, os.stat(filename).st_size))
+				blacklist.append((0, os.stat(filename).st_size))
+				newtags.append('exe')
+				return (diroffsets, blacklist, newtags)
+			else:
+				os.rmdir(tmpdir)
+	## then search for WinRAR and extract with unrar
+	if offsets.has_key('winrar'):
+		if offsets['winrar'] != []:
+			## assume only one entry now. TODO: fix if multiple exe files
+			## were concatenated.
+			offset = offsets['winrar'][0]
+			tmpdir = dirsetup(tempdir, filename, "exe", counter)
+			res = unpackRar(filename, 0, tmpdir)
+			if res != None:
+				(endofarchive, rardir) = res
+				diroffsets.append((rardir, 0, os.stat(filename).st_size))
+				## add the whole binary to the blacklist
+				blacklist.append((0, os.stat(filename).st_size))
+				counter = counter + 1
+				newtags.append('exe')
+				return (diroffsets, blacklist, newtags)
+			else:
+				os.rmdir(tmpdir)
 	## else try other methods
 	## 7zip gives better results than cabextract
 	## Ideally we should also do something with innounp
