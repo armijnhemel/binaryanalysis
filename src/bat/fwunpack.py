@@ -16,7 +16,7 @@ to prevent other scans from (re)scanning (part of) the data.
 '''
 
 import sys, os, subprocess, os.path, shutil, stat, array, struct, binascii
-import tempfile, bz2, re, magic, tarfile, zlib
+import tempfile, bz2, re, magic, tarfile, zlib, copy
 import fsmagic, extractor, ext2, jffs2
 from xml.dom import minidom
 
@@ -254,19 +254,26 @@ def unpackSwf(data, tempdir=None):
 	return tmpdir
 
 def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
-	if not offsets.has_key('jffs2_le'):
+	if not offsets.has_key('jffs2_le') and not offsets.has_key('jffs2_be'):
 		return ([], blacklist, [])
-	if offsets['jffs2_le'] == []:
+	if offsets['jffs2_le'] == [] and offsets['jffs2_be'] == []:
 		return ([], blacklist, [])
 	counter = 1
+	jffs2offsets = copy.deepcopy(offsets['jffs2_le']) + copy.deepcopy(offsets['jffs2_be'])
 	diroffsets = []
-	for offset in offsets['jffs2_le']:
+	jffs2offsets.sort()
+
+	## TODO: add sanity checks to make sure jffs2_le and jffs2_be actually exist
+	for offset in jffs2offsets:
+		bigendian = False
+		if offset in offsets['jffs2_be']:
+			bigendian = True
 		## check if the offset found is in a blacklist
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "jffs2", counter)
-		res = unpackJffs2(filename, offset, tmpdir)
+		res = unpackJffs2(filename, offset, tmpdir, bigendian)
 		if res != None:
 			(jffs2dir, jffs2size) = res
 			diroffsets.append((jffs2dir, offset, jffs2size))
@@ -276,14 +283,14 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, debug=Fa
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [])
 
-def unpackJffs2(filename, offset, tempdir=None):
+def unpackJffs2(filename, offset, tempdir=None, bigendian=False):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
 	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
-	res = jffs2.unpackJFFS2(tmpfile[1], tmpdir)
+	res = jffs2.unpackJFFS2(tmpfile[1], tmpdir, bigendian)
 	os.unlink(tmpfile[1])
 	if tempdir == None:
 		os.rmdir(tmpdir)

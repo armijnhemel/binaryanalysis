@@ -5,12 +5,15 @@ import os, sys, subprocess, re, zlib, tempfile
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 ## method to process output of jffs2dump and read all the inodes from a JFFS2 file system.
-def readJFFS2Inodes(path):
+def readJFFS2Inodes(path, bigendian):
 	## quick hack for systems that don't have /usr/sbin in $PATH (such as Debian and Ubuntu)
 	unpackenv = os.environ.copy()
 	unpackenv['PATH'] = unpackenv['PATH'] + ":/usr/sbin"
 
-	p = subprocess.Popen(['jffs2dump', '-cv', path], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, env=unpackenv)
+	if bigendian:
+		p = subprocess.Popen(['jffs2dump', '-bcv', path], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, env=unpackenv)
+	else:
+		p = subprocess.Popen(['jffs2dump', '-cv', path], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, env=unpackenv)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		return ([], [])
@@ -66,12 +69,13 @@ def readJFFS2Inodes(path):
 				maxoffset = offset
 	return (direntries, nodeentries, maxoffset)
 
-def unpackJFFS2(path, tempdir=None):
+def unpackJFFS2(path, tempdir=None, bigendian=False):
 	if tempdir == None:
 		tmpdir = tempfile.mkdtemp()
 	else:
 		tmpdir = tempdir
-	res = readJFFS2Inodes(path)
+
+	res = readJFFS2Inodes(path, bigendian)
 	if res == ({}, [], 0):
 		## cleanup
 		if tempdir == None:
