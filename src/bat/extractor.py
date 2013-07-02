@@ -70,7 +70,10 @@ def inblacklist(offset, blacklist):
 ## * hash with name, version, architecture, platform
 ## * list of dependencies
 
-def searchAssembly(data):
+def searchAssembly(filename):
+	exefile = open(filename)
+	data = exefile.read()
+	exefile.close()
 	xmloffset = data.find('<?xml')
 	if xmloffset == -1:
 		return None
@@ -107,16 +110,16 @@ def searchAssembly(data):
 	return None
 
 ## used in unpack scans
-def searchAssemblyAttrs(data):
-	res = searchAssembly(data)
+def searchAssemblyAttrs(filename):
+	res = searchAssembly(filename)
 	if res != None:
 		return res[0]
 	return {}
 
 
 ## used in leaf scans
-def searchAssemblyDeps(data):
-	res = searchAssembly(data)
+def searchAssemblyDeps(filename):
+	res = searchAssembly(filename)
 	if res != None:
 		return res[1]
 	return {}

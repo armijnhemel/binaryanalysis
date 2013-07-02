@@ -254,10 +254,7 @@ def searchWindowsDependencies(path, tags, blacklist=[], debug=False, envvars=Non
 	ms.close()
 	if not 'PE32 executable for MS Windows' in mstype and not "PE32+ executable for MS Windows" in mstype:
                 return None
-        binary = open(path, 'rb')
-        lines = binary.read()
-	binary.close()
-	deps = extractor.searchAssemblyDeps(lines)
+	deps = extractor.searchAssemblyDeps(path)
 	if deps == None:
 		return None
 	if deps == []:

@@ -550,8 +550,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
-	# TODO: fix, since we want to get rid of 'data'
-	assembly = extractor.searchAssemblyAttrs(data)
+	assembly = extractor.searchAssemblyAttrs(filename)
 	## if we were able to extract the assembly XML file we could get some useful
 	## information from it. Although there are some vanity entries that we can
 	## easily skip (and just bruteforce) there are a few that we really need to
