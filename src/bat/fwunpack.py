@@ -539,9 +539,10 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 	ms.load()
 	mstype = ms.file(filename)
 	ms.close()
+	newtags = []
 
 	if not 'PE32 executable for MS Windows' in mstype and not "PE32+ executable for MS Windows" in mstype and not "PE32 executable (GUI) Intel 80386, for MS Windows" in mstype:
-		return ([], blacklist, [])
+		return ([], blacklist, newtags)
 
 	## apparently we have a MS Windows executable, so continue
 	diroffsets = []
@@ -601,7 +602,8 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 		if res != None:
 			diroffsets.append((res, 0, os.stat(filename).st_size))
 			blacklist.append((0, os.stat(filename).st_size))
-			return (diroffsets, blacklist, [])
+			newtags.append('exe')
+			return (diroffsets, blacklist, newtags)
 		else:
 			os.rmdir(tmpdir)
 	## then search for RAR by searching for:
@@ -618,7 +620,8 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 			## add the whole binary to the blacklist
 			blacklist.append((0, os.stat(filename).st_size))
 			counter = counter + 1
-			return (diroffsets, blacklist, [])
+			newtags.append('exe')
+			return (diroffsets, blacklist, newtags)
 		else:
 			os.rmdir(tmpdir)
 	## else try other methods
@@ -630,10 +633,11 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 	if res != None:
 		diroffsets.append((res, 0, os.stat(filename).st_size))
 		blacklist.append((0, os.stat(filename).st_size))
-		return (diroffsets, blacklist, [])
+		newtags.append('exe')
+		return (diroffsets, blacklist, newtags)
 	else:
 		os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, newtags)
 
 ## unpacker for Microsoft InstallShield
 ## We're using unshield for this. Unfortunately the released version of
