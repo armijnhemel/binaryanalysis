@@ -3,6 +3,7 @@
 * add optmagic
 * add jffs2 big endian marker
 * start reworking EXE scanning
+* add unpacking support for big endian jffs2
 
 2013-06-28
 * extract and store more information from Linux kernel modules
