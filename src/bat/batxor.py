@@ -50,6 +50,7 @@ def unpackXOR(filename, sig, tempdir=None):
 	return tmpdir
 
 def searchUnpackXOR(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	diroffsets = []
 	scanenv = os.environ.copy()
 
@@ -64,16 +65,16 @@ def searchUnpackXOR(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 	## If something else already unpacked (parts) of the file we're not
 	## going to continue.
 	if scanenv['BAT_UNPACKED'] == 'True':
-		return (diroffsets, blacklist, [])
+		return (diroffsets, blacklist, [], hints)
 
 	## only continue if no other scan has succeeded
 	if blacklist != []:
-		return (diroffsets, blacklist, [])
+		return (diroffsets, blacklist, [], hints)
 	counter = 1
 
 	## only continue if we actually have signatures
 	if signatures == {}:
-		return (diroffsets, blacklist, [])
+		return (diroffsets, blacklist, [], hints)
 
 	## open the file, so we can search for signatures
 	## TODO: use the identifier search we have elsewhere.
@@ -94,5 +95,5 @@ def searchUnpackXOR(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 				blacklist.append((0, os.stat(filename).st_size))
 	if res == None:
 		os.rmdir(tmpdir)
-		return (diroffsets, blacklist, [])
-	return (diroffsets, blacklist, ['temporary'])
+		return (diroffsets, blacklist, [], hints)
+	return (diroffsets, blacklist, ['temporary'], hints)

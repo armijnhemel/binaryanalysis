@@ -80,9 +80,10 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 ## bytes NOR flash instead of 8 bytes SPI flash. This is an ugly hack to first
 ## rearrange the data. This is mostly for Realtek RTL8196C based routers.
 def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	## can't byteswap if there is not an even amount of bytes in the file
 	if os.stat(filename).st_size % 2 != 0:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	datafile = open(filename, 'rb')
 	offset = 0
 	datafile.seek(offset)
@@ -115,11 +116,12 @@ def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, debug
 		blacklist.append((0, os.stat(filename).st_size))
 		datafile.close()
 		os.fdopen(tmpfile[0]).close()
-		return ([(tmpdir, 0, os.stat(filename).st_size)], blacklist, [])
-	return ([], blacklist, [])
+		return ([(tmpdir, 0, os.stat(filename).st_size)], blacklist, [], hints)
+	return ([], blacklist, [], hints)
 
 ## unpack base64 files
 def searchUnpackBase64(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	counter = 1
 	diroffsets = []
 	tmpdir = dirsetup(tempdir, filename, "base64", counter)
@@ -127,7 +129,7 @@ def searchUnpackBase64(filename, tempdir=None, blacklist=[], offsets={}, debug=F
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.rmdir(tmpdir)
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	else:
 		tmpfile = tempfile.mkstemp(dir=tmpdir)
 		os.write(tmpfile[0], stanout)
@@ -135,18 +137,19 @@ def searchUnpackBase64(filename, tempdir=None, blacklist=[], offsets={}, debug=F
 		## the whole file is blacklisted
 		blacklist.append((0, os.stat(filename).st_size))
 		diroffsets.append((tmpdir, 0, os.stat(filename).st_size))
-		return (diroffsets, blacklist, [])
+		return (diroffsets, blacklist, [], hints)
 
 ## decompress executables that have been compressed with UPX.
 def searchUnpackUPX(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('upx'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['upx'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	p = subprocess.Popen(['upx', '-t', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	tags = []
 	counter = 1
 	diroffsets = []
@@ -155,21 +158,22 @@ def searchUnpackUPX(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.rmdir(tmpdir)
-		return ([], blacklist, tags)
+		return ([], blacklist, tags, hints)
 	else:
 		## the whole file is blacklisted
 		blacklist.append((0, os.stat(filename).st_size))
 		tags.append("compressed")
 		tags.append("upx")
 		diroffsets.append((tmpdir, 0, os.stat(filename).st_size))
-	return (diroffsets, blacklist, tags)
+	return (diroffsets, blacklist, tags, hints)
 
 ## unpack Java serialized data
 def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('java_serialized'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['java_serialized'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	tags = []
 	counter = 1
 	diroffsets = []
@@ -187,7 +191,7 @@ def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={},
 			counter = counter + 1
 		else:
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, tags)
+	return (diroffsets, blacklist, tags, hints)
 
 def unpackJavaSerialized(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
@@ -219,14 +223,15 @@ def unpackJavaSerialized(filename, offset, tempdir=None):
 ## so we can search more effectively.
 ## We are assuming that the whole file is an SWF file.
 def searchUnpackSwf(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('swf'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['swf'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	## right now we are dealing only with entire files. This might change in
 	## the future.
 	if offsets['swf'][0] != 0:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	counter = 1
 	diroffsets = []
 	data = open(filename).read()
@@ -237,7 +242,7 @@ def searchUnpackSwf(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 		blacklist.append((0, os.stat(filename).st_size))
 	else:
 		os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 def unpackSwf(data, tempdir=None):
 	## skip first 8 bytes, then decompress with zlib
@@ -254,10 +259,11 @@ def unpackSwf(data, tempdir=None):
 	return tmpdir
 
 def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('jffs2_le') and not offsets.has_key('jffs2_be'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['jffs2_le'] == [] and offsets['jffs2_be'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	counter = 1
 	jffs2offsets = copy.deepcopy(offsets['jffs2_le']) + copy.deepcopy(offsets['jffs2_be'])
 	diroffsets = []
@@ -281,7 +287,7 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, debug=Fa
 			counter = counter + 1
 		else:
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 def unpackJffs2(filename, offset, tempdir=None, bigendian=False):
 	tmpdir = unpacksetup(tempdir)
@@ -297,10 +303,11 @@ def unpackJffs2(filename, offset, tempdir=None, bigendian=False):
 	return res
 
 def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('ar'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['ar'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	counter = 1
 	diroffsets = []
 	for offset in offsets['ar']:
@@ -317,7 +324,7 @@ def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, debug=False
 			counter = counter + 1
 		else:
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 def unpackAr(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
@@ -352,10 +359,11 @@ def unpackAr(filename, offset, tempdir=None):
 ## 4. make sure all permissions are correct (so use chmod)
 ## 5. unmount file system
 def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('iso9660'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['iso9660'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	diroffsets = []
 	counter = 1
 	for offset in offsets['iso9660']:
@@ -375,7 +383,7 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, debug=
 			counter = counter + 1
 		else:
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 def unpackISO9660(filename, offset, tempdir=None, unpacktempdir=None):
 	tmpdir = unpacksetup(tempdir)
@@ -440,11 +448,12 @@ def unpackISO9660(filename, offset, tempdir=None, unpacktempdir=None):
 
 ## unpacking POSIX or GNU tar archives. This does not work yet for the V7 tar format
 def searchUnpackTar(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	taroffsets = []
 	for marker in fsmagic.tar:
 		taroffsets = taroffsets + offsets[marker]
 	if taroffsets == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	taroffsets.sort()
 
 	diroffsets = []
@@ -466,7 +475,7 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 
 def unpackTar(filename, offset, tempdir=None):
@@ -508,26 +517,27 @@ def unpackTar(filename, offset, tempdir=None):
 ## For this you will need the unyaffs program from
 ## http://code.google.com/p/unyaffs/
 def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	diroffsets = []
 	if blacklist != []:
-		return (diroffsets, blacklist, [])
+		return (diroffsets, blacklist, [], hints)
 	tmpdir = dirsetup(tempdir, filename, "yaffs2", 1)
 	p = subprocess.Popen(['bat-unyaffs', '-b', filename, '-d', tmpdir], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.rmdir(tmpdir)
-		return (diroffsets, blacklist, [])
+		return (diroffsets, blacklist, [], hints)
 	## unfortunately unyaffs also returns 0 when it fails
 	if len(stanerr) != 0:
 		os.rmdir(tmpdir)
-		return (diroffsets, blacklist, [])
+		return (diroffsets, blacklist, [], hints)
 	## check if there was actually any data unpacked.
 	if os.listdir(tmpdir) == []:
 		os.rmdir(tmpdir)
-		return (diroffsets, blacklist, [])
+		return (diroffsets, blacklist, [], hints)
 	blacklist.append((0, os.stat(filename).st_size))
 	diroffsets.append((tmpdir, 0, os.stat(filename).st_size))
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 ## Windows executables can be unpacked in many ways.
 ## We should try various methods:
@@ -540,6 +550,7 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, debug=F
 ## We should probably blacklist the whole file after one method has been successful.
 ## Some Windows executables can only be unpacked interactively using Wine :-(
 def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	## first determine if we are dealing with a MS Windows executable
 	## TODO: replace this with a better check for PE checking and use tags
 	ms = magic.open(magic.MAGIC_NONE)
@@ -549,7 +560,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 	newtags = []
 
 	if not 'PE32 executable for MS Windows' in mstype and not "PE32+ executable for MS Windows" in mstype and not "PE32 executable (GUI) Intel 80386, for MS Windows" in mstype:
-		return ([], blacklist, newtags)
+		return ([], blacklist, newtags, hints)
 
 	## apparently we have a MS Windows executable, so continue
 	diroffsets = []
@@ -562,7 +573,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 	if assembly != {}:
 		## we are pretty much out of luck with this one.
 		if assembly['name'] == "NOSMicrosystems.iNOSSO":
-			return ([], blacklist, [])
+			return ([], blacklist, [], hints)
 		## if we see this we can probably directly go to unrar
 		elif assembly['name'] == "WinRAR SFX":
 			pass
@@ -608,7 +619,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 				diroffsets.append((res, 0, os.stat(filename).st_size))
 				blacklist.append((0, os.stat(filename).st_size))
 				newtags.append('exe')
-				return (diroffsets, blacklist, newtags)
+				return (diroffsets, blacklist, newtags, hints)
 			else:
 				os.rmdir(tmpdir)
 	## then search for WinRAR and extract with unrar
@@ -626,7 +637,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 				blacklist.append((0, os.stat(filename).st_size))
 				counter = counter + 1
 				newtags.append('exe')
-				return (diroffsets, blacklist, newtags)
+				return (diroffsets, blacklist, newtags, hints)
 			else:
 				os.rmdir(tmpdir)
 	## else try other methods
@@ -639,10 +650,10 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 		diroffsets.append((res, 0, os.stat(filename).st_size))
 		blacklist.append((0, os.stat(filename).st_size))
 		newtags.append('exe')
-		return (diroffsets, blacklist, newtags)
+		return (diroffsets, blacklist, newtags, hints)
 	else:
 		os.rmdir(tmpdir)
-	return (diroffsets, blacklist, newtags)
+	return (diroffsets, blacklist, newtags, hints)
 
 ## unpacker for Microsoft InstallShield
 ## We're using unshield for this. Unfortunately the released version of
@@ -653,8 +664,9 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 ## http://sourceforge.net/tracker/?func=detail&aid=3163039&group_id=30550&atid=399603
 ## but unfortunately there has not been a new release yet.
 def searchUnpackInstallShield(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if offsets['installshield'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	diroffsets = []
 	counter = 1
 	## To successfully unpack we need:
@@ -665,18 +677,18 @@ def searchUnpackInstallShield(filename, tempdir=None, blacklist=[], offsets={}, 
 	## To successfully unpack the filenames need to be formatted as <filename>1.<extension>
 	## so we will only consider files that end in "1.cab"
 	if offsets['installshield'][0] != 0:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	## Check the filenames first, if we don't have <filename>1.cab, or <filename>1.hdr we return
 	## This should prevent that data2.cab is scanned.
 	if not filename.endswith("1.cab"):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	try:
 		os.stat(filename[:-4] + ".hdr")
 	except Exception, e:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	blacklistoffset = extractor.inblacklist(0, blacklist)
 	if blacklistoffset != None:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	tmpdir = dirsetup(tempdir, filename, "installshield", counter)
 
 	p = subprocess.Popen(['unshield', 'x', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
@@ -687,15 +699,16 @@ def searchUnpackInstallShield(filename, tempdir=None, blacklist=[], offsets={}, 
 		## Ideally we add data1.cab, data1.hdr and (if present) data2.cab to the blacklist.
 		## For this we need to be able to supply more information to the parent process
 		diroffsets.append((tmpdir, 0, 0))
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 ## unpacker for Microsoft Cabinet Archive files.
 def searchUnpackCab(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('cab'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	newtags = []
 	if offsets['cab'] == []:
-		return ([], blacklist, newtags)
+		return ([], blacklist, newtags, hints)
 	diroffsets = []
 	counter = 1
 	for offset in offsets['cab']:
@@ -712,7 +725,7 @@ def searchUnpackCab(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, newtags)
+	return (diroffsets, blacklist, newtags, hints)
 
 ## This method will not work when the CAB is embedded in a bigger file, such as
 ## a MINIX file system. We need to use more data from the metadata and perhaps
@@ -764,14 +777,15 @@ def unpackCab(filename, offset, tempdir=None):
 		return (tmpdir, int(cabsize.groups()[0]))
 
 def searchUnpack7z(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('7z'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['7z'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 
 	## for now only try to unpack if 7z starts at offset 0
 	if offsets['7z'][0] != 0:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 
 	counter = 1
 	diroffsets = []
@@ -788,7 +802,7 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[], offsets={}, debug=False
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 
 def unpack7z(filename, offset, tempdir=None):
@@ -824,10 +838,11 @@ def unpack7z(filename, offset, tempdir=None):
 ## unpack lzip archives.
 ## This method returns a blacklist.
 def searchUnpackLzip(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('lzip'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['lzip'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	diroffsets = []
 	tags = []
 	counter = 1
@@ -847,7 +862,7 @@ def searchUnpackLzip(filename, tempdir=None, blacklist=[], offsets={}, debug=Fal
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, tags)
+	return (diroffsets, blacklist, tags, hints)
 
 def unpackLzip(filename, offset, tempdir=None):
 	## first unpack things, write things to a file and return
@@ -887,10 +902,11 @@ def unpackLzip(filename, offset, tempdir=None):
 
 ## unpack lzo archives.
 def searchUnpackLzo(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('lzo'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['lzo'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	diroffsets = []
 	tags = []
 	counter = 1
@@ -910,7 +926,7 @@ def searchUnpackLzo(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, tags)
+	return (diroffsets, blacklist, tags, hints)
 
 def unpackLzo(filename, offset, tempdir=None):
 	## first unpack things, write things to a file and return
@@ -947,14 +963,15 @@ def unpackLzo(filename, offset, tempdir=None):
 ## so it is likely that we need to search for the trailer a lot more than
 ## for the header.
 def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('xz'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if not offsets.has_key('xztrailer'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['xz'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['xztrailer'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	diroffsets = []
 	counter = 1
 	datafile = open(filename, 'rb')
@@ -993,7 +1010,7 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, debug=False
 				else:
 					## cleanup
 					os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 def unpackXZ(data, offset, trailer, tempdir=None):
 	## first unpack the data, write things to a file and return
@@ -1030,15 +1047,16 @@ def unpackXZ(data, offset, trailer, tempdir=None):
 ## Not sure how cpio works if we have a cpio archive within a cpio archive
 ## especially with regards to locating the proper cpio trailer.
 def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('cpiotrailer'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	cpiooffsets = []
 	for marker in fsmagic.cpio:
 		cpiooffsets = cpiooffsets + offsets[marker]
 	if cpiooffsets == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['cpiotrailer'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 
 	cpiooffsets.sort()
 
@@ -1073,7 +1091,7 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}, debug=Fal
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 ## tries to unpack stuff using cpio. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
@@ -1107,10 +1125,11 @@ def unpackCpio(data, offset, tempdir=None):
 	return tmpdir
 
 def searchUnpackRomfs(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('romfs'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['romfs'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	diroffsets = []
 	counter = 1
 	for offset in offsets['romfs']:
@@ -1126,7 +1145,7 @@ def searchUnpackRomfs(filename, tempdir=None, blacklist=[], offsets={}, debug=Fa
 			counter = counter + 1
 		else:
 			os.rmdir(tmpdir)
-        return (diroffsets, blacklist, [])
+        return (diroffsets, blacklist, [], hints)
 
 def unpackRomfs(filename, offset, tempdir=None, unpacktempdir=None):
 	tmpdir = unpacksetup(tempdir)
@@ -1181,10 +1200,11 @@ def unpackRomfs(filename, offset, tempdir=None, unpacktempdir=None):
 ## devices most notably from Sigma Designs, since they seem to have tweaked
 ## the file system.
 def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('cramfs'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['cramfs'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 
 	diroffsets = []
 	counter = 1
@@ -1203,7 +1223,7 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, debug=F
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 ## tries to unpack stuff using fsck.cramfs. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
@@ -1259,6 +1279,7 @@ def unpackCramfs(filename, offset, tempdir=None, unpacktempdir=None):
 ## Use the output of 'file' to determine the size of squashfs and use it for the
 ## blacklist.
 def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+	hints = []
 	squashoffsets = []
 	for marker in fsmagic.squashtypes:
 		if offsets.has_key(marker):
@@ -1266,9 +1287,9 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, debug
 	if squashoffsets == []:
 		if offsets.has_key('squashfs7'):
 			if offsets['squashfs7'] == []:
-				return ([], blacklist, [])
+				return ([], blacklist, [], hints)
 		else:
-			return ([], blacklist, [])
+			return ([], blacklist, [], hints)
 
 	squashoffsets.sort()
 
@@ -1348,7 +1369,7 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, debug
 					counter = counter + 1
 				else:
 					os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 ## wrapper around all the different squashfs types
 def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
@@ -1720,11 +1741,12 @@ def unpackSquashfsRealtekLZMA(filename, offset, tmpdir):
 
 '''
 def searchUnpackFAT(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if offsets['fat12'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	## right now just allow file systems that are only FAT12
 	if not 54 in offsets['fat12']:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	diroffsets = []
 	counter = 1
 	for offset in offsets['fat12']:
@@ -1745,20 +1767,21 @@ def searchUnpackFAT(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 			counter = counter + 1
 		else:
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 def unpackFAT(filename, offset, tempdir=None, unpackenv={}):
 	return None
 '''
 
 def searchUnpackMinix(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('minix'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['minix'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	## right now just allow file systems that are only Minix
 	if not 0x410 in offsets['minix']:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	diroffsets = []
 	counter = 1
 	for offset in offsets['minix']:
@@ -1779,7 +1802,7 @@ def searchUnpackMinix(filename, tempdir=None, blacklist=[], offsets={}, debug=Fa
 			counter = counter + 1
 		else:
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 ## Unpack an minix v1 file system using bat-minix. Needs hints for size of minix file system
 def unpackMinix(filename, offset, tempdir=None, unpackenv={}, unpacktempdir=None):
@@ -1816,10 +1839,11 @@ def unpackMinix(filename, offset, tempdir=None, unpackenv={}, unpacktempdir=None
 ## We use tune2fs to get the size of the file system so we know what to
 ## blacklist.
 def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('ext2'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['ext2'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	datafile = open(filename, 'rb')
 	diroffsets = []
 	counter = 1
@@ -1852,7 +1876,7 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, debug=F
 		else:
 			os.rmdir(tmpdir)
 	datafile.close()
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 def checkExt2fs(data, offset, tempdir=None):
 	## set path for Debian
@@ -1980,10 +2004,11 @@ def unpackGzip(filename, offset, tempdir=None):
 	return (tmpdir, filesizeoffset + 4 - offset)
 
 def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('gzip'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['gzip'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 
 	newtags = []
 	counter = 1
@@ -2005,13 +2030,14 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, debug=Fal
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, newtags)
+	return (diroffsets, blacklist, newtags, hints)
 
 def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('compress'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['compress'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 
 	counter = 1
 	diroffsets = []
@@ -2027,7 +2053,7 @@ def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, debug
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 def unpackCompress(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
@@ -2078,10 +2104,11 @@ def unpackBzip2(filename, offset, tempdir=None):
 	return tmpdir
 
 def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('bz2'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['bz2'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 
 	diroffsets = []
 	counter = 1
@@ -2097,22 +2124,23 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, debug=Fa
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 def searchUnpackRZIP(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('rzip'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['rzip'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['rzip'][0] != 0:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	diroffsets = []
 	tags = []
 	offset = 0
 
 	blacklistoffset = extractor.inblacklist(offset, blacklist)
 	if blacklistoffset != None:
-		return (diroffsets, blacklist, tags)
+		return (diroffsets, blacklist, tags, hints)
 
 	tmpdir = dirsetup(tempdir, filename, "rzip", 1)
 	res = unpackRZIP(filename, offset, tmpdir)
@@ -2126,7 +2154,7 @@ def searchUnpackRZIP(filename, tempdir=None, blacklist=[], offsets={}, debug=Fal
 		## cleanup
 		os.rmdir(tmpdir)
 
-	return (diroffsets, blacklist, tags)
+	return (diroffsets, blacklist, tags, hints)
 
 def unpackRZIP(filename, offset, tempdir=None):
 	## sanity check
@@ -2156,10 +2184,11 @@ def unpackRZIP(filename, offset, tempdir=None):
 	
 
 def searchUnpackLRZIP(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('lrzip'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['lrzip'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 
 	diroffsets = []
 	counter = 1
@@ -2181,7 +2210,7 @@ def searchUnpackLRZIP(filename, tempdir=None, blacklist=[], offsets={}, debug=Fa
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, tags)
+	return (diroffsets, blacklist, tags, hints)
 
 def unpackLRZIP(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
@@ -2393,11 +2422,12 @@ def unpackZip(filename, offset, tempdir=None):
 	return (endofcentraldir, tmpdir)
 
 def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('zip'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	tags = []
 	if offsets['zip'] == []:
-		return ([], blacklist, tags)
+		return ([], blacklist, tags, hints)
 	diroffsets = []
 	counter = 1
 	endofcentraldir_offset = 0
@@ -2422,21 +2452,22 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 				tags.append('zip')
 				tags.append('compressed')
 			blacklist.append((offset, offset + endofcentraldir + 22))
-	return (diroffsets, blacklist, tags)
+	return (diroffsets, blacklist, tags, hints)
 
 def searchUnpackPack200(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('pack200'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	tags = []
 	diroffsets = []
 	if offsets['pack200'] == []:
-		return ([], blacklist, tags)
+		return ([], blacklist, tags, hints)
 	if len(offsets['pack200']) != 1:
-		return ([], blacklist, tags)
+		return ([], blacklist, tags, hints)
 	if offsets['pack200'][0] != 0:
-		return ([], blacklist, tags)
+		return ([], blacklist, tags, hints)
 	if blacklist != []:
-		return ([], blacklist, tags)
+		return ([], blacklist, tags, hints)
 	tmpdir = dirsetup(tempdir, filename, "pack200", 1)
 	res = unpackPack200(filename, tmpdir)
 	if res != None:
@@ -2445,7 +2476,7 @@ def searchUnpackPack200(filename, tempdir=None, blacklist=[], offsets={}, debug=
 	else:
 		## cleanup
 		os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 def unpackPack200(filename, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
@@ -2470,10 +2501,11 @@ def unpackPack200(filename, tempdir=None):
 	return tmpdir
 
 def searchUnpackRar(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('rar'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['rar'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	diroffsets = []
 	counter = 1
 	for offset in offsets['rar']:
@@ -2490,7 +2522,7 @@ def searchUnpackRar(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 def unpackRar(filename, offset, tempdir=None):
 	## Assumes (for now) that unrar is in the path
@@ -2526,11 +2558,12 @@ def unpackRar(filename, offset, tempdir=None):
 	return (endofarchive, tmpdir)
 
 def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	lzmaoffsets = []
 	for marker in fsmagic.lzmatypes:
 		lzmaoffsets = lzmaoffsets + offsets[marker]
 	if lzmaoffsets == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	lzmaoffsets.sort()
 	diroffsets = []
 	counter = 1
@@ -2557,7 +2590,7 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, debug=Fal
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 ## tries to unpack stuff using lzma -cd. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
@@ -2592,10 +2625,11 @@ def unpackLZMA(filename, offset, tempdir=None, minbytesize=1):
 ## TODO: replace with a different implementation since a unubi that can unpack
 ## has been removed from Fedora and was never present in Debian or Ubuntu.
 def searchUnpackUbifs(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('ubifs'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['ubifs'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	datafile = open(filename, 'rb')
 	## We can use the values of offset and ubisize where offset != -1
 	## to determine the ranges for the blacklist.
@@ -2618,7 +2652,7 @@ def searchUnpackUbifs(filename, tempdir=None, blacklist=[], offsets={}, debug=Fa
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 def unpackUbifs(data, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
@@ -2666,10 +2700,11 @@ def unpackUbifs(data, offset, tempdir=None):
 ## systems it is advised to not enable it when scanning binaries intended for
 ## these systems.
 def searchUnpackARJ(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('arj'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['arj'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	diroffsets = []
 	counter = 1
 	for offset in offsets['arj']:
@@ -2686,7 +2721,7 @@ def searchUnpackARJ(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 def unpackARJ(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
@@ -2727,10 +2762,11 @@ def unpackARJ(filename, offset, tempdir=None):
 ## with relatively little gain. In the default distribution of BAT this scan
 ## is therefore disabled.
 def searchUnpackIco(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('ico'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['ico'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	diroffsets = []
 	counter = 1
 	for offset in offsets['ico']:
@@ -2746,7 +2782,7 @@ def searchUnpackIco(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 def unpackIco(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
@@ -2775,14 +2811,15 @@ def unpackIco(filename, offset, tempdir=None):
 
 ## PDFs end with %%EOF, sometimes followed by one or two extra characters
 def searchUnpackPDF(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('pdf'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if not offsets.has_key('pdftrailer'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['pdf'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['pdftrailer'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	diroffsets = []
 	counter = 1
 	filesize = os.stat(filename).st_size
@@ -2804,7 +2841,7 @@ def searchUnpackPDF(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 				if offset == 0 and (filesize - 2) <= size <= filesize:
 					## the PDF is the whole file, so why bother?
 					shutil.rmtree(tmpdir)
-					return (diroffsets, blacklist, ['pdf'])
+					return (diroffsets, blacklist, ['pdf'], hints)
 				else:
 					diroffsets.append((pdfdir, offset, size))
 					blacklist.append((offset, offset + size))
@@ -2816,7 +2853,7 @@ def searchUnpackPDF(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 			break
 		offsets['pdftrailer'].remove(trailer)
 
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 def unpackPDF(filename, offset, trailer, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
@@ -2864,11 +2901,12 @@ def unpackPDF(filename, offset, trailer, tempdir=None):
 ## 2. search for a GIF trailer
 ## 3. check the data with gifinfo
 def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	gifoffsets = []
 	for marker in fsmagic.gif:
 		gifoffsets = gifoffsets + offsets[marker]
 	if gifoffsets == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 
 	gifoffsets.sort()
 
@@ -2885,7 +2923,7 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 		traileroffsets.append(trailer)
 		trailer = data.find(';',trailer+1)
 	if traileroffsets == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 
 	diroffsets = []
 	counter = 1
@@ -2930,25 +2968,26 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 					os.unlink(tmpfile[1])
 					os.rmdir(tmpdir)
 					blacklist.append((0, os.stat(filename).st_size))
-					return (diroffsets, blacklist, ['graphics', 'gif'])
+					return (diroffsets, blacklist, ['graphics', 'gif'], hints)
 				else:
 					diroffsets.append((tmpdir, offset, 0))
 					counter = counter + 1
 					## go to the next header
 					break
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 ## PNG extraction is similar to GIF extraction, except there is a way better
 ## defined trailer.
 def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('png'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if not offsets.has_key('pngtrailer'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['png'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['pngtrailer'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	diroffsets = []
 	headeroffsets = offsets['png']
 	traileroffsets = offsets['pngtrailer']
@@ -2991,25 +3030,28 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 					os.unlink(tmpfile[1])
 					os.rmdir(tmpdir)
 					blacklist.append((0,len(data)))
-					return (diroffsets, blacklist, ['graphics', 'png'])
+					return (diroffsets, blacklist, ['graphics', 'png'], hints)
 				else:
 					diroffsets.append((tmpdir, offset, 0))
 					counter = counter + 1
 					break
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
 
 ## EXIF is (often) prepended to the actual image data
 ## Having access to EXIF data can also (perhaps) get us useful data
 def searchUnpackEXIF(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
-	return ([],blacklist, [])
+	hints = []
+	return ([],blacklist, [], hints)
 
 ## sometimes Ogg audio files are embedded into binary blobs
 def searchUnpackOgg(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
-	return ([], blacklist, [])
+	return ([], blacklist, [], hints)
 
 ## sometimes MP3 audio files are embedded into binary blobs
 def searchUnpackMP3(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
-	return ([], blacklist, [])
+	hints = []
+	return ([], blacklist, [], hints)

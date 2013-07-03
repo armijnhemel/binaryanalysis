@@ -289,9 +289,9 @@ def scan((path, filename, scans, prerunscans, magicscans, optmagicscans, lenscan
 		## file and a hash with offsets for each marker.
 		exec "from %s import %s as bat_%s" % (module, method, method)
 		scanres = eval("bat_%s(filetoscan, tempdir, blacklist, offsets, debug=debug, envvars=envvars)" % (method))
-		## result is either empty, or contains offsets and tags
-		if len(scanres) == 3:
-			(diroffsets, blacklist, scantags) = scanres
+		## result is either empty, or contains offsets, tags and hints
+		if len(scanres) == 4:
+			(diroffsets, blacklist, scantags, hints) = scanres
 			tags = list(set(tags + scantags))
 		if len(diroffsets) == 0:
 			continue

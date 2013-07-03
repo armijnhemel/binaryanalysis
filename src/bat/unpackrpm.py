@@ -42,10 +42,11 @@ def unpackRPM(filename, offset, tempdir=None):
 ## upperbound to the start of compression + 1. This is ugly and should actually
 ## be fixed.
 def searchUnpackRPM(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
 	if not offsets.has_key('rpm'):
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	if offsets['rpm'] == []:
-		return ([], blacklist, [])
+		return ([], blacklist, [], hints)
 	diroffsets = []
 	rpmcounter = 1
 	for offset in offsets['rpm']:
@@ -113,4 +114,4 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [])
+	return (diroffsets, blacklist, [], hints)
