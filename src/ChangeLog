@@ -1,3 +1,10 @@
+2013-07-03
+* let unpack return an array 'hints'. This will contain a list of which scans
+to try next. The use case is that certain firmwares and binary formats, such
+as uImage, FIT and HDR, will in practice only contain certain file systems and
+compression formats. By giving hints scans can be reordered and reprioritised
+on the fly.
+
 2013-07-02
 * add another lzma marker
 * add optmagic
