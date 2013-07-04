@@ -57,6 +57,7 @@ def main(argv):
 	c.execute('''insert into renames values ('eglibc', 'glibc')''')
 	c.execute('''insert into renames values ('org.apache.servicemix.bundles.ant', 'apache-ant')''')
 	c.execute('''insert into renames values ('wengophone', 'qutecom')''')
+	c.execute('''insert into renames values ('gaim-plugin_pack', 'purple-plugin_pack')''')
 	
 	conn.commit()
 	c.close()
