@@ -1,3 +1,8 @@
+2013-07-04
+* display result of distribution check in table format, not a list
+* don't store variable names with function names. This reduces the amount of
+false positives.
+
 2013-07-03
 * let unpack return an array 'hints'. This will contain a list of which scans
 to try next. The use case is that certain firmwares and binary formats, such
