@@ -39,11 +39,15 @@ On the left you will find a tree that can be browsed. Results can be shown by cl
 </p>
 
 <p>
-On the right there are views of the file. There are three main views of the file:
+On the right there are views of the file. There are seven main views of the file:
 
 <ol>
 <li>Overview</li>
 <li>String matches view</li>
+<li>Unmatched strings</li>
+<li>Matched names</li>
+<li>Matched function names</li>
+<li>ELF analysis</li>
 <li>Alternate view (advanced mode only)</li>
 </ol>
 </p>
