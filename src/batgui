@@ -258,9 +258,22 @@ class BatFrame(wx.Frame):
 		self.notebookpanel.AddPage(self.nameswindow, "Matched names")
 		self.nameswindow.SetPage("<html></html>")
 
-		self.functionnameswindow = wx.html.HtmlWindow(self.notebookpanel)
-		self.notebookpanel.AddPage(self.functionnameswindow, "Matched function names")
-		self.functionnameswindow.SetPage("<html></html>")
+		## A tab for detailed information about function name matches
+		functionmatchestab = wx.SplitterWindow(self.notebookpanel)
+		self.notebookpanel.AddPage(functionmatchestab, "Matched function names")
+		## One window to display corresponding source code, initially empty
+		self.functionmatchesbrowser = wx.html.HtmlWindow(functionmatchestab)
+		self.functionmatchesbrowser.SetPage("<html></html")
+
+		## One window to display the matches, initially empty
+		self.functionmatcheswindow = BATHtmlWindow(functionmatchestab, self.functionmatchesbrowser, self.htmldir)
+		self.functionmatcheswindow.SetPage("<html></html>")
+		functionmatchestab.SplitVertically(self.functionmatcheswindow, self.functionmatchesbrowser)
+		functionmatchestab.SetSashGravity(0.5)
+
+		#self.functionnameswindow = wx.html.HtmlWindow(self.notebookpanel)
+		#self.functionmatches = BATHtmlWindow(matchestab, self.matchesbrowser, self.htmldir)
+		#self.functionnameswindow.SetPage("<html></html>")
 
 		self.elfwindow = wx.html.HtmlWindow(self.notebookpanel)
 		self.notebookpanel.AddPage(self.elfwindow, "ELF analysis")
@@ -475,7 +488,8 @@ class BatFrame(wx.Frame):
 				functionnameshtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-functionnames.html.gz" % sha256sum), 'r')
 				functionnameshtml = functionnameshtmlfile.read()
 				functionnameshtmlfile.close()
-				self.functionnameswindow.SetPage(functionnameshtml)
+				#self.functionnameswindow.SetPage(functionnameshtml)
+				self.functionmatcheswindow.SetPage(functionnameshtml)
 			if os.path.exists(os.path.join(self.reportsdir, "%s-elfreport.html.gz" % sha256sum)):
 				elfhtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-elfreport.html.gz" % sha256sum), 'r')
 				elfhtml = elfhtmlfile.read()
@@ -668,7 +682,8 @@ class BatFrame(wx.Frame):
 		self.matchesbrowser.SetPage("<html></html>")
 		self.unmatchedwindow.SetPage("<html></html>")
 		self.nameswindow.SetPage("<html></html>")
-		self.functionnameswindow.SetPage("<html></html>")
+		#self.functionnameswindow.SetPage("<html></html>")
+		self.functionmatcheswindow.SetPage('<html></html>')
 		self.elfwindow.SetPage("<html></html>")
 
 	## based on configuration we enable/disable certain features
