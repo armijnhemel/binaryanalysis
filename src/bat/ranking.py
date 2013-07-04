@@ -1455,11 +1455,12 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 							nonUniqueMatches[packagename].append(line)
 				else:
 					continue
+
 				## After having computed a score determine if the files
 				## the string was found in in are all called the same.
 				## filenames {name of file: { name of package: 1} }
-				for fn in filenames:
-					if len(filenames[fn]) == 1:
+				if filter(lambda x: len(filenames[x]) != 1, filenames.keys()) == []:
+					for fn in filenames:
 						## The filename fn containing the matched string can only
 						## be found in one package.
 						## For example: string 'foobar' is present in 'foo.c' in package 'foo'
@@ -1467,7 +1468,8 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 						## or 'bar.c' in foo (if any).
 						fnkey = filenames[fn][0]
 						nonUniqueScore[fnkey] = nonUniqueScore.get(fnkey,0) + score
-					else:
+				else:
+					for fn in filenames:
 						## There are multiple packages in which the same
 						## filename contains this string, for example 'foo.c'
 						## in packages 'foo' and 'bar. This is likely to be
@@ -1593,6 +1595,10 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 
 	roundNr = 0
 	strleft = len(stringsLeft)
+
+	## keep track of which strings were already found. This is because each string
+	## is only considered once anyway.
+	assigned = []
 	while strleft > 0:
 		roundNr = roundNr + 1
 		#print >>sys.stderr, "round %d: %d strings left" % (roundNr, strleft)
@@ -1600,6 +1606,8 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 		stringsPerPkg = {}
 		## Determine to which packages the remaining strings belong.
 		for stri in stringsLeft:
+			if stri.split('\t', 1)[0] in assigned:
+				continue
 			for p2 in pkgsScorePerString[stri]:
 				gain[p2] = gain.get(p2, 0) + stringsLeft[stri]['score']
 				stringsPerPkg[p2] = stringsPerPkg.get(p2, []) + [stri]
@@ -1645,6 +1653,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 			allMatches[best][x['string']] = allMatches[best].get(x['string'],0) + x['score']
 			sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
 			#print >>sys.stderr, "GAIN", gain[best], best
+			assigned.append(xy.split('\t', 1)[0])
 			del stringsLeft[xy]
 		nonUniqueAssignments[best] = best_score
 		if gain[best] < gaincutoff:
