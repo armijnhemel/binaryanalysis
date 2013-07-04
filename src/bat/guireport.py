@@ -219,9 +219,10 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, debug=False, env
 	distrohtml = ''
 	if leafreports.has_key('file2package'):
 		distrohtml = "<hr><a name=\"distro\" href=\"#distro\"><h2>Distribution matches</h2></a><ul>"
+		distrohtml += "<table><tr><th><b>Package</b></th><th><b>Version</b></th><th><b>Distribution</b></th></tr>"
 		for d in leafreports['file2package']:
-			distrohtml = distrohtml + "<li>%s, %s in %s</li>" % d
-		distrohtml = distrohtml + "</ul>"
+			distrohtml = distrohtml + "<tr><td>%s</td><td>%s</td><td>%s</td></tr>" % d
+		distrohtml = distrohtml + "</table>"
 
 	if applications != []:
 		tablerows = tablerows + "<tr><td><b>Applications</b></td><td>%s</td></tr>\n" % reduce(lambda x, y: "%s, %s" % (x,y), applications)
