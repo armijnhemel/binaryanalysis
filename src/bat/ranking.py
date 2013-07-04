@@ -1606,7 +1606,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 		stringsPerPkg = {}
 		## Determine to which packages the remaining strings belong.
 		for stri in stringsLeft:
-			if stri.split('\t', 1)[0] in assigned:
+			if stri.rsplit('\t', 1)[0] in assigned:
 				continue
 			for p2 in pkgsScorePerString[stri]:
 				gain[p2] = gain.get(p2, 0) + stringsLeft[stri]['score']
@@ -1614,6 +1614,8 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 
 		## gain_sorted contains the sort order, gain contains the actual data
 		gain_sorted = sorted(gain, key = lambda x: gain.__getitem__(x), reverse=True)
+		if gain_sorted == []:
+			break
 
 		## so far value is the best, but that might change
 
@@ -1653,7 +1655,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 			allMatches[best][x['string']] = allMatches[best].get(x['string'],0) + x['score']
 			sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
 			#print >>sys.stderr, "GAIN", gain[best], best
-			assigned.append(xy.split('\t', 1)[0])
+			assigned.append(xy.rsplit('\t', 1)[0])
 			del stringsLeft[xy]
 		nonUniqueAssignments[best] = best_score
 		if gain[best] < gaincutoff:
