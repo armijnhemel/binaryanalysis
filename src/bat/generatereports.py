@@ -136,18 +136,20 @@ def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
 	uniquehtmlfile.close()
 	os.unlink(os.path.join(pickledir, picklefile))
 
-## a bit of a misnomer, since this method also generates a few things
+## make individual pickle files from the results and process these individually and later
+## combine the results.
 def extractpickles((filehash, pickledir, topleveldir, reportdir)):
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 	leafreports = cPickle.load(leaf_file)
 	leaf_file.close()
 	## return type: (filehash, reportresults, unmatchedresult)
 	reportresults = []
+	functionresults = []
 
 	## (picklehash, picklename)
 	unmatchedresult = None
 	if not leafreports.has_key('ranking'):
-		return (filehash, reportresults, unmatchedresult)
+		return (filehash, reportresults, functionresults, unmatchedresult)
 	## the ranking result is (res, dynamicRes, variablepvs)
 	(res, dynamicRes, variablepvs) = leafreports['ranking']
 
@@ -170,10 +172,25 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir)):
 			cPickle.dump((packagename, uniquematches), os.fdopen(tmppickle[0], 'w'))
 			picklehash = gethash(tmppickle[1])
 			reportresults.append((rank, picklehash, tmppickle[1], len(uniquematches), packagename))
+	return (filehash, reportresults, functionresults, unmatchedresult)
+
+## generate several output files
+## TODO: move function name pickle extraction to extractpickles
+def generatemisc((filehash, pickledir, topleveldir, reportdir)):
+	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+	leafreports = cPickle.load(leaf_file)
+	leaf_file.close()
+
+	if not leafreports.has_key('ranking'):
+		return
+
+	## the ranking result is (res, dynamicRes, variablepvs)
+	(res, dynamicRes, variablepvs) = leafreports['ranking']
 
 	if dynamicRes != {}:
 		header = "<html><body>"
 		html = ""
+		## if the results are stored in the pickle generate nice reports.
 		if dynamicRes.has_key('versionresults'):
 			if dynamicRes['versionresults'] != {}:
 				html += "<h1>Unique function name matches per package</h1><p><ul>\n"
@@ -190,7 +207,7 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir)):
 						html += "<h5>%s</h5><p><table><tr><td><b>Filename</b></td><td><b>Version(s)</b></td><td><b>Line number</b></td><td><b>SHA256</b></td></tr>" % cgi.escape(funcname)
 						for r in results:
 							(checksum, version, linenumber, filename) = r 
-							html += "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (filename, version, str(linenumber), checksum)
+							html += "<tr><td>%s</td><td>%s</td><td><a href=\"unique:/%s#%d\">%d</a></td><td>%s</td></tr>\n" % (filename, version, checksum, linenumber, linenumber, checksum)
 						html += "</table></p>\n"
 		elif dynamicRes.has_key('uniquepackages'):
 			if dynamicRes['uniquepackages'] != {}:
@@ -361,7 +378,7 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir)):
 				nameshtmlfile.write(html)
 				nameshtmlfile.close()
 
-	return (filehash, reportresults, unmatchedresult)
+	return
 
 def generateunmatched((picklefile, pickledir, filehash, reportdir)):
 
@@ -438,6 +455,7 @@ def generatereports(unpackreports, scantempdir, topleveldir, debug=False, envvar
 	extracttasks = map(lambda x: (x, pickledir, topleveldir, reportdir), filehashes)
 	pool = multiprocessing.Pool(processes=1)
 	res = filter(lambda x: x != None, pool.map(extractpickles, extracttasks))
+	res2 = filter(lambda x: x != None, pool.map(generatemisc, extracttasks))
 	pool.terminate()
 
 	## {filehash: [(rank, picklehash)]}
@@ -445,7 +463,7 @@ def generatereports(unpackreports, scantempdir, topleveldir, debug=False, envvar
 
 	counter = 0
 	for r in res:
-		(filehash, resultreports, unmatchedresult) = r
+		(filehash, resultreports, functionresults, unmatchedresult) = r
 		if r == None:
 			continue
 		if unmatchedresult != None:
