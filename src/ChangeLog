@@ -1,7 +1,9 @@
 2013-07-04
 * display result of distribution check in table format, not a list
+* add links to pretty printed source code for function name reports
 * don't store variable names with function names. This reduces the amount of
 false positives.
+* remove false positives from ranking
 
 2013-07-03
 * let unpack return an array 'hints'. This will contain a list of which scans
