@@ -979,6 +979,7 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 				if dynstr[4] == 'WEAK':
 					continue
 				variables.append(dynstr[7])
+				continue
 		## every program has 'main', so skip
 		if dynstr[7] == 'main':
 			continue
