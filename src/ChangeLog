@@ -1,3 +1,6 @@
+2013-07-05
+* fix GUI help text
+
 2013-07-04
 * display result of distribution check in table format, not a list
 * add links to pretty printed source code for function name reports
