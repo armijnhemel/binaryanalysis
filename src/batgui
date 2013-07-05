@@ -43,10 +43,10 @@ On the right there are views of the file. There are seven main views of the file
 
 <ol>
 <li>Overview</li>
-<li>String matches view</li>
+<li>Matched strings</li>
 <li>Unmatched strings</li>
-<li>Matched variable names</li>
-<li>Matched function names</li>
+<li>Variable names</li>
+<li>Function names</li>
 <li>ELF analysis</li>
 <li>Alternate view (advanced mode only)</li>
 </ol>
@@ -58,7 +58,7 @@ The overview displays various types of information about the file, such as name,
 <p>
 If licensing information was available during scanning it is also displayed here. Licensing information is currently only based on unique matches. Non-unique matches are not taken into account. The licensing information is not per se correct!
 </p>
-<h2>String matches view</h2>
+<h2>Matched strings</h2>
 <p>
 In this window you will see a list of unique matches per package. For each unique match you will see:
 <ul>
@@ -78,11 +78,11 @@ If the characters { and } are in the version number it means that the version nu
 <p>
 In this tab you can find the strings that were not matched. These strings can contain useful hints about which packages are included, but not detected.
 </p>
-<h2>Matched variable names</h2>
+<h2>Variable names</h2>
 <p>
 This tab contains information about any variables (C), or fields (Java) were matched.
 </p>
-<h2>Matched function names</h2>
+<h2>Function names</h2>
 <p>
 This tab contains information about any functions (C), or methods (Java) were matched.
 </p>
@@ -275,12 +275,12 @@ class BatFrame(wx.Frame):
 		self.unmatchedwindow.SetPage("<html></html>")
 
 		self.nameswindow = wx.html.HtmlWindow(self.notebookpanel)
-		self.notebookpanel.AddPage(self.nameswindow, "Matched variable names")
+		self.notebookpanel.AddPage(self.nameswindow, "Variable names")
 		self.nameswindow.SetPage("<html></html>")
 
 		## A tab for detailed information about function name matches
 		functionmatchestab = wx.SplitterWindow(self.notebookpanel)
-		self.notebookpanel.AddPage(functionmatchestab, "Matched function names")
+		self.notebookpanel.AddPage(functionmatchestab, "Function names")
 		## One window to display corresponding source code, initially empty
 		self.functionmatchesbrowser = wx.html.HtmlWindow(functionmatchestab)
 		self.functionmatchesbrowser.SetPage("<html></html")
@@ -290,10 +290,6 @@ class BatFrame(wx.Frame):
 		self.functionmatcheswindow.SetPage("<html></html>")
 		functionmatchestab.SplitVertically(self.functionmatcheswindow, self.functionmatchesbrowser)
 		functionmatchestab.SetSashGravity(0.5)
-
-		#self.functionnameswindow = wx.html.HtmlWindow(self.notebookpanel)
-		#self.functionmatches = BATHtmlWindow(matchestab, self.matchesbrowser, self.htmldir)
-		#self.functionnameswindow.SetPage("<html></html>")
 
 		self.elfwindow = wx.html.HtmlWindow(self.notebookpanel)
 		self.notebookpanel.AddPage(self.elfwindow, "ELF analysis")
@@ -508,7 +504,6 @@ class BatFrame(wx.Frame):
 				functionnameshtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-functionnames.html.gz" % sha256sum), 'r')
 				functionnameshtml = functionnameshtmlfile.read()
 				functionnameshtmlfile.close()
-				#self.functionnameswindow.SetPage(functionnameshtml)
 				self.functionmatcheswindow.SetPage(functionnameshtml)
 			if os.path.exists(os.path.join(self.reportsdir, "%s-elfreport.html.gz" % sha256sum)):
 				elfhtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-elfreport.html.gz" % sha256sum), 'r')
@@ -702,7 +697,6 @@ class BatFrame(wx.Frame):
 		self.matchesbrowser.SetPage("<html></html>")
 		self.unmatchedwindow.SetPage("<html></html>")
 		self.nameswindow.SetPage("<html></html>")
-		#self.functionnameswindow.SetPage("<html></html>")
 		self.functionmatcheswindow.SetPage('<html></html>')
 		self.elfwindow.SetPage("<html></html>")
 
