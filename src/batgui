@@ -45,7 +45,7 @@ On the right there are views of the file. There are seven main views of the file
 <li>Overview</li>
 <li>String matches view</li>
 <li>Unmatched strings</li>
-<li>Matched names</li>
+<li>Matched variable names</li>
 <li>Matched function names</li>
 <li>ELF analysis</li>
 <li>Alternate view (advanced mode only)</li>
@@ -73,6 +73,22 @@ Each line number is clickable. If there is an archive of pregenerated HTML sourc
 </p>
 <p>
 If the characters { and } are in the version number it means that the version numbers have been collapsed for space reasons. The full version number can be reconstructed by taking the part before the { and a version number in between { and }. Example: "2.6.{0, 1, 2}" expands to "2.6.0, 2.6.1, 2.6.2".
+</p>
+<h2>Unmatched strings</h2>
+<p>
+In this tab you can find the strings that were not matched. These strings can contain useful hints about which packages are included, but not detected.
+</p>
+<h2>Matched variable names</h2>
+<p>
+This tab contains information about any variables (C), or fields (Java) were matched.
+</p>
+<h2>Matched function names</h2>
+<p>
+This tab contains information about any functions (C), or methods (Java) were matched.
+</p>
+<h2>ELF analysis</h2>
+<p>
+In this tab you will find information about ELF files, like which libraries were included and if symbols can be resolved with the files contained in the top level file. If possible a picture with the dynamic linking graph is included.
 </p>
 <h2>Alternate view (advanced mode only)</h2>
 <p>
@@ -259,7 +275,7 @@ class BatFrame(wx.Frame):
 		self.unmatchedwindow.SetPage("<html></html>")
 
 		self.nameswindow = wx.html.HtmlWindow(self.notebookpanel)
-		self.notebookpanel.AddPage(self.nameswindow, "Matched names")
+		self.notebookpanel.AddPage(self.nameswindow, "Matched variable names")
 		self.nameswindow.SetPage("<html></html>")
 
 		## A tab for detailed information about function name matches
