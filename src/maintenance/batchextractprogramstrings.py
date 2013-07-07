@@ -386,7 +386,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	scanfile_result = filter(lambda x: x != None, pool.map(computehash, scanfiles, 1))
 
 	#ninkaversion = "b84eee21cb"
-	ninkaversion = "1.1-rc2"
+	ninkaversion = "1.1"
 	insertfiles = []
 	tmpsha256s = []
 	filehashes = {}
