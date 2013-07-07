@@ -385,8 +385,8 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	## compute the hashes in parallel
 	scanfile_result = filter(lambda x: x != None, pool.map(computehash, scanfiles, 1))
 
-	#ninkaversion = "bf83428"
-	ninkaversion = "b84eee21cb"
+	#ninkaversion = "b84eee21cb"
+	ninkaversion = "1.1-rc2"
 	insertfiles = []
 	tmpsha256s = []
 	filehashes = {}
