@@ -660,7 +660,6 @@ def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)
 				## e-mail addresses are never on multiple lines
 				if res.groups()[1] == 'email':
 					copyrightsres.append(('email', res.groups()[2], offset))
-					offset
 				## urls should are never on multiple lines
 				elif res.groups()[1] == 'url':
 					copyrightsres.append(('url', res.groups()[2], offset))
