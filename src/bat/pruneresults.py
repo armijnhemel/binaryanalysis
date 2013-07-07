@@ -12,7 +12,9 @@ results of scans can get very large, for example a scan of a Linux kernel image
 could have thousands of string matches, which can each be found in a few
 hundred kernel source code archives.
 
-By pruning results the amount of noise can be much reduced.
+By pruning results the amount of noise can be much reduce, reports can be made
+smaller and source code checks using the results of BAT can be made more
+efficient.
 
 To remove a version A from the set of versions the following conditions have
 to hold:
@@ -167,3 +169,6 @@ def pruneresults(unpackreports, scantempdir, topleveldir, debug=False, envvars=N
 
 				if keeppackageversions != []:
 					filterversions = keeppackageversions
+
+		## then determine the top candidates for function names, if any
+		## then variable names, if any
