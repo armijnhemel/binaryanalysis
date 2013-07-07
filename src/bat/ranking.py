@@ -1247,6 +1247,9 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 	## keep a list of versions per sha256, since source files could contain more than one license
 	sha256_licenses = {}
 
+	## keep a copy of the original lines, in the original order
+	#origlines = copy.deepcopy(lines)
+
 	## sort the lines first, so it is easy to skip duplicates
 	lines.sort()
 
