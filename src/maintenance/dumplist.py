@@ -28,6 +28,8 @@ def main(argv):
 		parser.error("Need path to LIST file")
 	if options.master == None:
 		parser.error("Need path to database")
+	if not os.path.exists(options.master):
+		parser.error("Need path to database")
 	try:
 		conn = sqlite3.connect(options.master)
 	except:
