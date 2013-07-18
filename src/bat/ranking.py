@@ -249,7 +249,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 						offset -= 1
 					kernelsymdata = kerneldata[firstnull:lastnull]
 					kernelsymbols = filter(lambda x: x != '', kernelsymdata.split('\x00'))
-			blacklist.append((firstnull,lastnull))
+				blacklist.append((firstnull,lastnull))
 
 		## If part of the file is blacklisted the blacklisted byte ranges
 		## should be ignored. Examples are firmwares, where there is a
