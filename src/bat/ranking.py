@@ -135,6 +135,11 @@ def squashlicenses(licenses):
 ## Original code (in Perl) was written by Eelco Dolstra.
 ## Reimplementation in Python done by Armijn Hemel.
 def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+	filesize = filesize = os.stat(path).st_size
+	## whole file is blacklisted, so no need to scan
+	if extractor.inblacklist(0, blacklist) == filesize:
+		return None
+
 	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):
@@ -262,11 +267,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 			## The blacklist is not empty. This could be a problem if
 			## the Linux kernel is an ELF file and contains for example
 			## an initrd.
-			filesize = filesize = os.stat(path).st_size
-			## whole file is blacklisted, so no need to scan
-			if extractor.inblacklist(0, blacklist) == filesize:
-				return None
-			## parts of the file were already scan, so
+			## Parts of the file were already scanned, so
 			## carve the right parts from the file first
 			datafile = open(path, 'rb')
 			lastindex = 0
