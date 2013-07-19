@@ -312,6 +312,8 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 			## The .rodata section might also contain other data, so expect
 			## false positives until there is a better way to get only the string
 			## constants :-(
+			## Also, in case of certain compiler flags string constants might be in
+			## different sections.
 			if "ELF" in mstype:
 				if linuxkernel:
 					dynamicRes = {}
@@ -492,8 +494,8 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 			variablepvs['language'] = 'Java'
 			dynamicRes = extractJavaNames(javameta, scanenv, clones, rankingfull)
 		elif language == 'JavaScipt':
-			## JavaScript can be minified, but using xgettext we
-			## can still extract the strings from it
+			## JavaScript can be minified, but using xgettext it is still
+			## possible to extract the strings from it
 			## results = extractor.extractStrings(os.path.dirname(path), os.path.basename(path))
 			## for r in results:
 			##	lines.append(r[0])
@@ -778,7 +780,7 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 		c.execute("detach functionnamecache")
 
 	## Keep a list of which sha256s were already seen. Since the files are
-	## likely only coming from a few packages we don't need to hit the database
+	## likely only coming from a few packages there is no need to hit the database
 	## that often.
 	sha256cache = {}
 	if scanenv.has_key('BAT_FIELDNAME_SCAN'):
@@ -876,7 +878,7 @@ def scankernelsymbols(variables, scanenv, rankingfull, clones):
 	## open the database containing function names that were extracted
 	## from source code.
 	conn = sqlite3.connect(masterdb)
-	## we have byte strings in our database, not utf-8 characters...I hope
+	## there are only byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
 
@@ -1034,7 +1036,7 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 		if not 'language' in res[0][0]:
 			oldschema = True
 		## the database made from ctags output only has function names, not the types. Since
-		## C++ functions could be in an executable several times with different times we
+		## C++ functions could be in an executable several times with different types we
 		## deduplicate first
 		for funcname in list(set(scanstr)):
 			c.execute("select package from functionnamecache.functionnamecache where functionname=?", (funcname,))
@@ -1371,7 +1373,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 		## nothing in the cache
 		if len(res) == 0 and not kernelfunctionmatched:
 			if not rankingfull:
-				## do we actually have a result?
+				## is there a result?
 				checkres = conn.execute("select sha256, language from extracted_file WHERE programstring=? LIMIT 1", (line,)).fetchall()
 				res = []
 				if len(checkres) == 0:
@@ -1441,7 +1443,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 				## unique to a filename?
 				## This method does assume that files that are named the same
 				## also contain the same or similar content.
-				## now we can determine the score for the string
+				## now determine the score for the string
 				try:
 					score = len(line) / pow(alpha, (len(filenames) - 1))
 				except Exception, e:
