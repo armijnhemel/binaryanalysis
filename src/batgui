@@ -340,6 +340,7 @@ class BatFrame(wx.Frame):
 				if config.has_option(s, 'htmldir'):
 					self.htmldir = config.get(s, 'htmldir')
 					self.matcheswindow.setHtmlDir(self.htmldir)
+					self.functionmatcheswindow.setHtmlDir(self.htmldir)
 			else:
 				try:
 					## process each section. We need: section name, description, enabled
