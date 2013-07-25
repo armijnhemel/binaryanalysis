@@ -1224,6 +1224,12 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 		licenseconn = sqlite3.connect(scanenv.get('BAT_LICENSE_DB'))
 		licensecursor = licenseconn.cursor()
 
+	determinecopyright = False
+	if scanenv.get('BAT_RANKING_COPYRIGHT', 0) == '1':
+		determinecopyright = True
+		copyrightconn = sqlite3.connect(scanenv.get('BAT_LICENSE_DB'))
+		copyrightcursor = copyrightconn.cursor()
+
 	scankernelfunctions = False
 	kernelfuncres = []
 	if linuxkernel:
@@ -1243,6 +1249,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 	## There are very likely false positives and false negatives and
 	## the information is for informative purposes only!
 	packagelicenses = {}
+	packagecopyrights = {}
 
 	## keep a list of versions per sha256, since source files often are in more than one version
 	sha256_versions = {}
@@ -1505,7 +1512,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 				## relicensed when there is a new release (example: Samba 3.2 relicensed
 				## to GPLv3+) so the version number can be very significant.
 				## determinelicense should *always* imply determineversion
-				if determineversion or determinelicense:
+				if determineversion or determinelicense or determinecopyright:
 					c.execute("select distinct sha256, linenumber, language from extracted_file where programstring=?", (line,))
 					versionsha256s = filter(lambda x: x[2] == language, c.fetchall())
 
@@ -1552,6 +1559,20 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 							packagelicenses[package] = list(set(packagelicenses[package] + licensepv))
 						else:
 							packagelicenses[package] = list(set(licensepv))
+					## extract copyrights. 'statements' are not very accurate so ignore those for now in favour of URL
+					## and e-mail
+					if determinecopyright:
+						copyrightpv = []
+						copyrightcursor.execute("select distinct * from extracted_copyright where sha256=?", (s[0],))
+						copyrights = copyrightcursor.fetchall()
+						copyrights = filter(lambda x: x[2] != 'statement', copyrights)
+						if copyrights != []:
+							copyrights = list(set(map(lambda x: (x[1], x[2]), copyrights)))
+							copyrightpv = copyrightpv + copyrights
+							if packagecopyrights.has_key(package):
+								packagecopyrights[package] = list(set(packagecopyrights[package] + copyrightpv))
+							else:
+								packagecopyrights[package] = list(set(copyrightpv))
 				else:
 					## store the uniqueMatches without any information about checksums
 					uniqueMatches[package] = uniqueMatches.get(package, []) + [(line, [])]
@@ -1567,6 +1588,10 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 	if determinelicense:
 		licensecursor.close()
 		licenseconn.close()
+
+	if determinecopyright:
+		copyrightcursor.close()
+		copyrightconn.close()
 
 	del lines
 
@@ -2017,7 +2042,7 @@ def rankingsetup(envvars, debug=False):
 
 	## check the license database. If it does not exist, or does not have
 	## the right schema remove it from the configuration
-	if scanenv.get('BAT_RANKING_LICENSE', 0) == '1':
+	if scanenv.get('BAT_RANKING_LICENSE', 0) == '1' or scanenv.get('BAT_RANKING_COPYRIGHT', 0) == 1:
 		if scanenv.get('BAT_LICENSE_DB') != None:
 			try:
 				licenseconn = sqlite3.connect(scanenv.get('BAT_LICENSE_DB'))
@@ -2028,6 +2053,11 @@ def rankingsetup(envvars, debug=False):
 						del newenv['BAT_LICENSE_DB']
 					if newenv.has_key('BAT_RANKING_LICENSE'):
 						del newenv['BAT_RANKING_LICENSE']
+				## also check if copyright information exists
+				licensecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='extracted_copyright';")
+				if licensecursor.fetchall() == []:
+					if newenv.has_key('BAT_RANKING_COPYRIGHT'):
+						del newenv['BAT_RANKING_COPYRIGHT']
 				licensecursor.close()
 				licenseconn.close()
 			except:
@@ -2035,6 +2065,8 @@ def rankingsetup(envvars, debug=False):
 					del newenv['BAT_LICENSE_DB']
 				if newenv.has_key('BAT_RANKING_LICENSE'):
 					del newenv['BAT_RANKING_LICENSE']
+				if newenv.has_key('BAT_RANKING_COPYRIGHT'):
+					del newenv['BAT_RANKING_COPYRIGHT']
 
 	## check the various caching databases, first for C
 	if scanenv.has_key(namecacheperlanguage['C']):
