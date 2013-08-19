@@ -7,13 +7,17 @@ import ConfigParser
 from optparse import OptionParser
 
 ## Binary Analysis Tool
-## Copyright 2012 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2012-2013 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
-This script is to regenerate a LIST file from the contents of a database. This
+This script can be used to regenerate a LIST file from a database. This
 can be useful in situations like a diskcrash (and only the 'processed' table
-could be recovered), or in case of errors in the extraction scripts.
+could be recovered), or in case of errors in the extraction scripts where parts
+of the database have to be regenerated.
+
+By default the script writes data for files from all origins, unless 'origin'
+is specified.
 '''
 
 def main(argv):
@@ -33,11 +37,11 @@ def main(argv):
 	try:
 		conn = sqlite3.connect(options.master)
 	except:
-		print "Can't open database"
+		print >>sys.stderr, "Can't open database"
 		sys.exit(1)
 	cursor = conn.cursor()
 
-	## TODO: add some sanity checks to 'origin' first
+	## TODO: add some sanity checks for 'origin' first
 	if options.origin != None:
 		cursor.execute("select package, version, filename, origin from processed where origin=?", (options.origin,))
 	else:
