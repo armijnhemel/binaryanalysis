@@ -183,12 +183,6 @@ def extractkernelstrings(kerneldir):
 								if f.endswith('.o'):
 									tmpconfigs[f[:-2]] = currentconfig
 					else:
-						if line.strip().endswith("\\"):
-							continued = True
-							#files = line.strip()[:-1].split()
-						else:
-							continued = False
-
 						res = re.match("([\w\.\-]+)\-objs\s*[:+]=\s*([\w\-\.\s/]*)", line.strip())
 						if res != None:
 							tmpkey = res.groups()[0]
