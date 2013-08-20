@@ -81,15 +81,34 @@ def extractkernelstrings(kerneldir):
 				inif = False
 				iniflevel = 0
 				currentconfig = ""
+				makefile = []
+				storeline = ""
 				for line in source:
-					if line.strip().startswith('#'):
+					if not continued:
+						if line.strip().startswith('#'):
+							continue
+						if line.strip().startswith('echo'):
+							continue
+						if line.strip().startswith('@'):
+							continue
+						if line.strip() == "":
+							continue
+					if line.strip().endswith("\\"):
+						storeline = storeline + line.strip()[:-1]
+						continued = True
 						continue
-					if line.strip().startswith('echo'):
-						continue
-					if line.strip().startswith('@'):
-						continue
-					if line.strip() == "":
-						continue
+					else:
+						storeline = storeline + line.strip()
+						continued = False
+
+					if not continued:
+						if storeline == "":
+							makefile.append(line.strip())
+						else:
+							makefile.append(storeline)
+							storeline = ""
+
+				for line in makefile:
 					# if statements can be nested, so keep track of levels
 					if line.strip() == "endif":
 						inif = False
