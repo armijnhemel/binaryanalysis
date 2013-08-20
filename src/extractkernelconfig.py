@@ -23,6 +23,11 @@ def matchconfig(filename, dirname, config, kerneldirlen):
 			os.stat("%s/%s" % (dirname, filename[:-2] + ".c"))
 			return ("%s/%s" % (dirname[kerneldirlen:], filename[:-2] + ".c"), config)
 		except:
+			pass
+		try:
+			os.stat("%s/%s" % (dirname, filename[:-2] + ".S"))
+			return ("%s/%s" % (dirname[kerneldirlen:], filename[:-2] + ".S"), config)
+		except:
 			return None
 	else:
 		if "arch" in filename:
@@ -59,7 +64,7 @@ def extractkernelstrings(kerneldir):
 				i[1].remove('usr')
 			if "samples" in i[1] and i[0][kerneldirlen:] == "":
 				i[1].remove('samples')
-                	for p in i[2]:
+			for p in i[2]:
 				## we only want Makefiles
 				if p != 'Makefile':
 					continue
@@ -67,6 +72,10 @@ def extractkernelstrings(kerneldir):
 				if i[0][kerneldirlen:] == "":
 					continue
 				source = open("%s/%s" % (i[0], p)).readlines()
+
+				## temporary store
+				tmpobjs = {}
+				tmpconfigs = {}
 
 				continued = False
 				inif = False
@@ -151,6 +160,26 @@ def extractkernelstrings(kerneldir):
 							match = matchconfig(f, i[0], currentconfig, kerneldirlen)
 							if match != None:
 								searchresults.append(match)
+							else:
+								if f.endswith('.o'):
+									tmpconfigs[f[:-2]] = currentconfig
+					else:
+						if line.strip().endswith("\\"):
+							continued = True
+							#files = line.strip()[:-1].split()
+						else:
+							continued = False
+
+						res = re.match("([\w\.\-]+)\-objs\s*[:+]=\s*([\w\-\.\s/]*)", line.strip())
+						if res != None:
+							tmpkey = res.groups()[0]
+							tmpvals = res.groups()[1].split()
+							tmpobjs[tmpkey] = tmpvals
+							if tmpconfigs.has_key(tmpkey):
+								for f in tmpobjs[tmpkey]:
+									match = matchconfig(f, i[0], tmpconfigs[tmpkey], kerneldirlen)
+									if match != None:
+										searchresults.append(match)
 				continue
 	except StopIteration:
 		return searchresults
@@ -168,39 +197,37 @@ def storematch(results, dbcursor):
 		dbcursor.execute('''insert into config (configstring, filename) values (?, ?)''', (configstring, pathstring))
 
 def main(argv):
-        parser = OptionParser()
-        parser.add_option("-d", "--directory", dest="kd", help="path to Linux kernel directory", metavar="DIR")
-        parser.add_option("-i", "--index", dest="id", help="path to database", metavar="DIR")
-        (options, args) = parser.parse_args()
-        if options.kd == None:
-                parser.error("Path to Linux kernel directory needed")
-        if options.id == None:
-                parser.error("Path to database needed")
-        #try:
-        	## open the Linux kernel directory and do some sanity checks
-                #kernel_path = open(options.kd, 'rb')
-        #except:
-                #print "No valid Linux kernel directory"
-                #sys.exit(1)
+	parser = OptionParser()
+	parser.add_option("-d", "--directory", dest="kd", help="path to Linux kernel directory", metavar="DIR")
+	parser.add_option("-i", "--index", dest="id", help="path to database", metavar="DIR")
+	(options, args) = parser.parse_args()
+	if options.kd == None:
+		parser.error("Path to Linux kernel directory needed")
+	if options.id == None:
+		parser.error("Path to database needed")
+	#try:
+		## open the Linux kernel directory and do some sanity checks
+		#kernel_path = open(options.kd, 'rb')
+	#except:
+		#print "No valid Linux kernel directory"
+		#sys.exit(1)
 	# strip trailing slash, will not work this way if there are tons of slashes
 	if options.kd.endswith('/'):
 		kerneldir = options.kd[:-1]
 	else:
 		kerneldir = options.kd
 
-        conn = sqlite3.connect(options.id)
-        c = conn.cursor()
+	conn = sqlite3.connect(options.id)
+	c = conn.cursor()
 
-        try:
-                c.execute('''create table config (configstring text, filename text)''')
-        except:
-                pass
+	c.execute('''create table if not exists config (configstring text, filename text)''')
 
-        results = extractkernelstrings(kerneldir)
-        storematch(results, c)
+	results = extractkernelstrings(kerneldir)
+	storematch(results, c)
 
-        conn.commit()
-        c.close()
+	conn.commit()
+	c.close()
+	conn.close()
 
 if __name__ == "__main__":
         main(sys.argv)
