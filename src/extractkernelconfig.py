@@ -30,21 +30,18 @@ def matchconfig(filename, dirname, config, kerneldirlen):
 		except:
 			return None
 	else:
-		if "arch" in filename:
-			if dirname.split("/")[-2:] == filename.split("/")[:2]:
-				try:
-					newpath = dirname.split("/") + filename.split("/")[2:]
-					os.stat(reduce(lambda x, y: x + "/" + y, newpath))
-					return ("%s/%s" % (dirname[kerneldirlen:], filename), config)
-				except:
-					return None
-			else:
-				return None
-		else:
+		## first see if the directory is relative to the current directory
+		try:
+			os.stat(os.path.join(dirname, filename))
+			return (os.path.join(dirname[kerneldirlen:], filename), config)
+		except:
+			## then see if it is relative to the top level directory
 			try:
-				os.stat("%s/%s" % (dirname, filename))
-				return ("%s/%s" % (dirname[kerneldirlen:], filename), config)
+				os.stat(os.path.join(dirname[:kerneldirlen], filename))
+				return (os.path.join(dirname[:kerneldirlen], filename), config)
 			except:
+				return None
+			else:
 				return None
 
 def extractkernelstrings(kerneldir):
@@ -135,7 +132,7 @@ def extractkernelstrings(kerneldir):
 						inif = True
 						iniflevel = iniflevel +1
 
-					res = re.match("([\w\.]+)\-\$\(CONFIG_(\w+)\)\s*[:+]=\s*([\w\-\.\s/]*)", line.strip())
+					res = re.match("([\w\.]+)\-\$\(CONFIG_(\w+)\)\s*[:+]=\s*([\w\-\.\s/=]*)", line.strip())
 					if res != None:
 						## current issues: ARCH (SH, Xtensa, h8300) is giving some issues
 						if "flags" in res.groups()[0]:
@@ -170,6 +167,8 @@ def extractkernelstrings(kerneldir):
 							continue
 						if res.groups()[0] == "LINK":
 							continue
+						if "=" in res.groups()[2]:
+							continue
 						config = "CONFIG_" + res.groups()[1]
 						files = res.groups()[2].split()
 						for f in files:
@@ -199,7 +198,7 @@ def extractkernelstrings(kerneldir):
 								if match != None:
 									searchresults.append(match)
 					else:
-						res = re.match("([\w\.\-]+)\-y\s*[:+]=\s*([\w\-\.\s/]*)", line.strip())
+						res = re.match("([\w\.\-]+)\-y\s*[:+]=\s*([\w\-\.\s/=]*)", line.strip())
 						if res != None:
 							tmpkey = res.groups()[0]
 							tmpvals = res.groups()[1].split()
