@@ -91,7 +91,8 @@ def extractkernelstrings(kerneldir):
 						if line.strip() == "":
 							continue
 					if line.strip().endswith("\\"):
-						storeline = storeline + line.strip()[:-1]
+						## replace \ with a space, then concatenate lines
+						storeline = storeline + line.strip()[:-1] + " "
 						continued = True
 						continue
 					else:
