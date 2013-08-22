@@ -1,3 +1,10 @@
+2013-08-22
+* continue reworking extractkernelconfig.py
+
+2013-08-21
+* start reworking extractkernelconfig.py to extract more kernel configuration
+directives
+
 2013-07-07
 * bump Ninka version
 
