@@ -65,7 +65,7 @@ def extractkernelstrings(kerneldir):
 			if "samples" in i[1] and i[0][kerneldirlen:] == "":
 				i[1].remove('samples')
 			for p in i[2]:
-				## we only want Makefiles
+				## only process Makefiles
 				if p != 'Makefile':
 					continue
 				## not interested in the top level Makefile
@@ -78,9 +78,9 @@ def extractkernelstrings(kerneldir):
 				tmpconfigs = {}
 
 				continued = False
-				inif = False
-				iniflevel = 0
-				currentconfig = ""
+
+				## first clean up the Makefile, filter out uninteresting
+				## lines and process line continuations
 				makefile = []
 				storeline = ""
 				for line in source:
@@ -108,6 +108,10 @@ def extractkernelstrings(kerneldir):
 							makefile.append(storeline)
 							storeline = ""
 
+				inif = False
+				iniflevel = 0
+				currentconfig = ""
+
 				for line in makefile:
 					# if statements can be nested, so keep track of levels
 					if line.strip() == "endif":
@@ -118,28 +122,6 @@ def extractkernelstrings(kerneldir):
 					if re.match("ifn?\w+", line.strip()):
 						inif = True
 						iniflevel = iniflevel +1
-					if not continued and line.strip().endswith("\\") and "=" in line.strip():
-						## weed out more stuff
-						## we are interested in three cases:
-						## +=
-						## :=
-						## =  but only if there are object files or dirs defined in the right hand part
-						continued = True
-						currentconfig = ""
-					elif continued and currentconfig != "":
-						if line.strip().endswith("\\"):
-							continued = True
-							files = line.strip()[:-1].split()
-						else:
-							continued = False
-							files = line.strip().split()
-						for f in files:
-							match = matchconfig(f, i[0], currentconfig, kerneldirlen)
-							if match != None:
-								searchresults.append(match)
-					else:
-						continued = False
-						currentconfig = ""
 
 					res = re.match("([\w\.]+)\-\$\(CONFIG_(\w+)\)\s*[:+]=\s*([\w\-\.\s/]*)", line.strip())
 					if res != None:
