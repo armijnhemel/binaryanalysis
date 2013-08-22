@@ -121,6 +121,8 @@ def extractkernelstrings(kerneldir):
 						continue
 					if line.strip().startswith('clean:'):
 						continue
+					if line.strip().startswith('clean-files'):
+						continue
 					# if statements can be nested, so keep track of levels
 					if line.strip() == "endif":
 						inif = False
@@ -183,6 +185,17 @@ def extractkernelstrings(kerneldir):
 									match = matchconfig(f, i[0], tmpconfigs[tmpkey], kerneldirlen)
 									if match != None:
 										searchresults.append(match)
+						else:
+							res = re.match("([\w\.\-]+)\-y\s*[:+]=\s*([\w\-\.\s/]*)", line.strip())
+							if res != None:
+								tmpkey = res.groups()[0]
+								tmpvals = res.groups()[1].split()
+								tmpobjs[tmpkey] = tmpvals
+								if tmpconfigs.has_key(tmpkey):
+									for f in tmpobjs[tmpkey]:
+										match = matchconfig(f, i[0], tmpconfigs[tmpkey], kerneldirlen)
+										if match != None:
+											searchresults.append(match)
 				continue
 	except StopIteration:
 		return searchresults
