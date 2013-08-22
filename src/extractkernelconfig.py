@@ -53,7 +53,7 @@ def extractkernelstrings(kerneldir):
 	searchresults = []
 
 	try:
-		configstodirs = {}
+		dirstoconfigs = {}
 		while True:
                 	i = osgen.next()
 			## some top level dirs are not interesting
@@ -176,10 +176,10 @@ def extractkernelstrings(kerneldir):
 							match = matchconfig(f, i[0], config, kerneldirlen)
 							if match != None:
 								if not f.endswith('.o'):
-									if configstodirs.has_key(config):
-										configstodirs[config].append(os.path.join(i[0][kerneldirlen:], f))
+									if dirstoconfigs.has_key(os.path.join(i[0][kerneldirlen:], f)):
+										dirstoconfigs[os.path.join(i[0][kerneldirlen:], f)].append(config)
 									else:
-										configstodirs[config] = [os.path.join(i[0][kerneldirlen:], f)]
+										dirstoconfigs[os.path.join(i[0][kerneldirlen:], f)] = [config]
 								searchresults.append(match)
 							else:
 								if f.endswith('.o'):
