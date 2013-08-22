@@ -113,6 +113,14 @@ def extractkernelstrings(kerneldir):
 				currentconfig = ""
 
 				for line in makefile:
+					if line.strip().startswith('.PHONY:'):
+						continue
+					if line.strip().startswith('doc:'):
+						continue
+					if line.strip().startswith('cleandoc:'):
+						continue
+					if line.strip().startswith('clean:'):
+						continue
 					# if statements can be nested, so keep track of levels
 					if line.strip() == "endif":
 						inif = False
