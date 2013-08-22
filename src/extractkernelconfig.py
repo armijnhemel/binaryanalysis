@@ -53,6 +53,7 @@ def extractkernelstrings(kerneldir):
 	searchresults = []
 
 	try:
+		configstodirs = {}
 		while True:
                 	i = osgen.next()
 			## some top level dirs are not interesting
@@ -110,7 +111,8 @@ def extractkernelstrings(kerneldir):
 
 				inif = False
 				iniflevel = 0
-				currentconfig = ""
+
+				nomatches = []
 
 				for line in makefile:
 					if line.strip().startswith('.PHONY:'):
@@ -160,22 +162,44 @@ def extractkernelstrings(kerneldir):
 							continue
 						if res.groups()[0] == "dataoffset":
 							continue
+						if res.groups()[0] == "entrypoint":
+							continue
+						if res.groups()[0] == "textaddr":
+							continue
 						if res.groups()[0] == "CPP_MODE":
 							continue
 						if res.groups()[0] == "LINK":
 							continue
 						config = "CONFIG_" + res.groups()[1]
 						files = res.groups()[2].split()
-						currentconfig = config
 						for f in files:
-							match = matchconfig(f, i[0], currentconfig, kerneldirlen)
+							match = matchconfig(f, i[0], config, kerneldirlen)
 							if match != None:
+								if not f.endswith('.o'):
+									if configstodirs.has_key(config):
+										configstodirs[config].append(os.path.join(i[0][kerneldirlen:], f))
+									else:
+										configstodirs[config] = [os.path.join(i[0][kerneldirlen:], f)]
 								searchresults.append(match)
 							else:
 								if f.endswith('.o'):
-									tmpconfigs[f[:-2]] = currentconfig
+									tmpconfigs[f[:-2]] = config
 					else:
-						res = re.match("([\w\.\-]+)\-objs\s*[:+]=\s*([\w\-\.\s/]*)", line.strip())
+						nomatches.append(line.strip())
+
+				for line in nomatches:
+					res = re.match("([\w\.\-]+)\-objs\s*[:+]=\s*([\w\-\.\s/]*)", line.strip())
+					if res != None:
+						tmpkey = res.groups()[0]
+						tmpvals = res.groups()[1].split()
+						tmpobjs[tmpkey] = tmpvals
+						if tmpconfigs.has_key(tmpkey):
+							for f in tmpobjs[tmpkey]:
+								match = matchconfig(f, i[0], tmpconfigs[tmpkey], kerneldirlen)
+								if match != None:
+									searchresults.append(match)
+					else:
+						res = re.match("([\w\.\-]+)\-y\s*[:+]=\s*([\w\-\.\s/]*)", line.strip())
 						if res != None:
 							tmpkey = res.groups()[0]
 							tmpvals = res.groups()[1].split()
@@ -185,18 +209,6 @@ def extractkernelstrings(kerneldir):
 									match = matchconfig(f, i[0], tmpconfigs[tmpkey], kerneldirlen)
 									if match != None:
 										searchresults.append(match)
-						else:
-							res = re.match("([\w\.\-]+)\-y\s*[:+]=\s*([\w\-\.\s/]*)", line.strip())
-							if res != None:
-								tmpkey = res.groups()[0]
-								tmpvals = res.groups()[1].split()
-								tmpobjs[tmpkey] = tmpvals
-								if tmpconfigs.has_key(tmpkey):
-									for f in tmpobjs[tmpkey]:
-										match = matchconfig(f, i[0], tmpconfigs[tmpkey], kerneldirlen)
-										if match != None:
-											searchresults.append(match)
-				continue
 	except StopIteration:
 		return searchresults
 
