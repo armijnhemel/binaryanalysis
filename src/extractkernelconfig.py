@@ -4,7 +4,7 @@
 ## Copyright 2010-2013 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
-import sys, os, string, re
+import sys, os, os.path, string, re
 from optparse import OptionParser
 import sqlite3
 
@@ -72,7 +72,6 @@ def extractkernelstrings(kerneldir):
 				source = open("%s/%s" % (i[0], p)).readlines()
 
 				## temporary store
-				tmpobjs = {}
 				tmpconfigs = {}
 
 				continued = False
@@ -175,10 +174,11 @@ def extractkernelstrings(kerneldir):
 							match = matchconfig(f, i[0], config, kerneldirlen)
 							if match != None:
 								if not f.endswith('.o'):
-									if dirstoconfigs.has_key(os.path.join(i[0][kerneldirlen:], f)):
-										dirstoconfigs[os.path.join(i[0][kerneldirlen:], f)].append(config)
+									dirpath = os.path.normpath(os.path.join(i[0][kerneldirlen:], f))
+									if dirstoconfigs.has_key(dirpath):
+										dirstoconfigs[dirpath].append(config)
 									else:
-										dirstoconfigs[os.path.join(i[0][kerneldirlen:], f)] = [config]
+										dirstoconfigs[dirpath] = [config]
 								searchresults.append(match)
 							else:
 								if f.endswith('.o'):
@@ -191,20 +191,25 @@ def extractkernelstrings(kerneldir):
 					if res != None:
 						tmpkey = res.groups()[0]
 						tmpvals = res.groups()[1].split()
-						tmpobjs[tmpkey] = tmpvals
 						if tmpconfigs.has_key(tmpkey):
-							for f in tmpobjs[tmpkey]:
+							for f in tmpvals:
 								match = matchconfig(f, i[0], tmpconfigs[tmpkey], kerneldirlen)
 								if match != None:
 									searchresults.append(match)
+						else:
+							if dirstoconfigs.has_key(os.path.normpath(i[0][kerneldirlen:])):
+								for f in tmpvals:
+									for m in dirstoconfigs[os.path.normpath(i[0][kerneldirlen:])]:
+										match = matchconfig(f, i[0], m, kerneldirlen)
+										if match != None:
+											searchresults.append(match)
 					else:
 						res = re.match("([\w\.\-]+)\-y\s*[:+]=\s*([\w\-\.\s/=]*)", line.strip())
 						if res != None:
 							tmpkey = res.groups()[0]
 							tmpvals = res.groups()[1].split()
-							tmpobjs[tmpkey] = tmpvals
 							if tmpconfigs.has_key(tmpkey):
-								for f in tmpobjs[tmpkey]:
+								for f in tmpvals:
 									match = matchconfig(f, i[0], tmpconfigs[tmpkey], kerneldirlen)
 									if match != None:
 										searchresults.append(match)
