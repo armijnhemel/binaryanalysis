@@ -244,11 +244,8 @@ def main(argv):
 	#except:
 		#print "No valid Linux kernel directory"
 		#sys.exit(1)
-	# strip trailing slash, will not work this way if there are tons of slashes
-	if options.kd.endswith('/'):
-		kerneldir = options.kd[:-1]
-	else:
-		kerneldir = options.kd
+
+	kerneldir = os.path.normpath(options.kd)
 
 	conn = sqlite3.connect(options.id)
 	c = conn.cursor()
