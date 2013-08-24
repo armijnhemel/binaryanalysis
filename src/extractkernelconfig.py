@@ -20,13 +20,13 @@ binary kernel image to a configuration.
 def matchconfig(filename, dirname, config, kerneldirlen):
 	if filename.endswith(".o"):
 		try:
-			os.stat("%s/%s" % (dirname, filename[:-2] + ".c"))
-			return ("%s/%s" % (dirname[kerneldirlen:], filename[:-2] + ".c"), config)
+			os.stat(os.path.join(dirname, filename[:-2] + ".c"))
+			return (os.path.join(dirname[kerneldirlen:], filename[:-2] + ".c"), config)
 		except:
 			pass
 		try:
-			os.stat("%s/%s" % (dirname, filename[:-2] + ".S"))
-			return ("%s/%s" % (dirname[kerneldirlen:], filename[:-2] + ".S"), config)
+			os.stat(os.path.join(dirname, filename[:-2] + ".S"))
+			return (os.path.join(dirname[kerneldirlen:], filename[:-2] + ".S"), config)
 		except:
 			return None
 	else:
@@ -48,6 +48,7 @@ def extractkernelstrings(kerneldir):
 	kerneldirlen = len(kerneldir)+1
 	osgen = os.walk(kerneldir)
 	searchresults = []
+	version = ""
 
 	try:
 		dirstoconfigs = {}
@@ -66,10 +67,26 @@ def extractkernelstrings(kerneldir):
 				## only process Makefiles
 				if p != 'Makefile':
 					continue
-				## not interested in the top level Makefile
+				## only interested in the top level Makefile for determining the versions
 				if i[0][kerneldirlen:] == "":
-					continue
-				source = open("%s/%s" % (i[0], p)).readlines()
+					source = open(os.path.join(i[0], p)).readlines()
+					for l in source:
+						if l.startswith("VERSION"):
+							version = version + l.split('=')[-1].strip()
+						elif l.startswith("PATCHLEVEL"):
+							patchlevel = l.split('=')[-1].strip()
+							version = version + "." + patchlevel
+						elif l.startswith("SUBLEVEL"):
+							sublevel = l.split('=')[-1].strip()
+							if sublevel != "":
+								version = version + "." + sublevel
+						elif l.startswith("EXTRAVERSION"):
+							extraversion = l.split('=')[-1].strip()
+							if extraversion != "":
+								version = version + "." + extraversion
+						else:
+							continue
+				source = open(os.path.join(i[0], p)).readlines()
 
 				## temporary store
 				tmpconfigs = {}
@@ -215,19 +232,19 @@ def extractkernelstrings(kerneldir):
 									if match != None:
 										searchresults.append(match)
 	except StopIteration:
-		return searchresults
+		return (searchresults, version)
 
-def storematch(results, dbcursor):
+def storematch(results, dbcursor, version):
 	## store two things:
-	## 1. if we have a path/subdir, we store subdir + configuration
+	## 1. if it is a path/subdir, store subdir + configuration
 	##    making it searchable by subdir
-	## 2. if we have an objectfile, we store name of source(!) file+ configuration
+	## 2. if it is an objectfile, store name of source(!) file + configuration
 	##    making it searchable by source file
-	## these can and will overlap
+	## These can and will overlap
 	for res in results:
 		pathstring = res[0]
 		configstring = res[1]
-		dbcursor.execute('''insert into config (configstring, filename) values (?, ?)''', (configstring, pathstring))
+		dbcursor.execute('''insert into config (configstring, filename, version) values (?, ?, ?)''', (configstring, pathstring, version))
 
 def main(argv):
 	parser = OptionParser()
@@ -250,10 +267,12 @@ def main(argv):
 	conn = sqlite3.connect(options.id)
 	c = conn.cursor()
 
-	c.execute('''create table if not exists config (configstring text, filename text)''')
+	## TODO: add whether or not a configuration - filename mapping is 1:1
+	c.execute('''create table if not exists config (configstring text, filename text, version text)''')
+	## TODO: process Kconfig files too
 
-	results = extractkernelstrings(kerneldir)
-	storematch(results, c)
+	(results, version) = extractkernelstrings(kerneldir)
+	storematch(results, c, version)
 
 	conn.commit()
 	c.close()
