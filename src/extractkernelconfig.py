@@ -9,10 +9,10 @@ from optparse import OptionParser
 import sqlite3
 
 '''
-This tool extracts configurations from Makefiles in kernels and tries to
-determine which files are included by a certain configuration directive.
-This information is useful to try and determine a reverse mapping from a
-binary kernel image to a configuration.
+This tool extracts configurations from Makefiles and Kconfig files in kernels
+and tries to determine which files are included by a configuration directives.
+This information is useful to try and determine a mapping from a binary kernel
+image and modules back to a configuration.
 '''
 
 ## helper method for processing stuff
@@ -64,165 +64,150 @@ def extractkernelstrings(kerneldir):
 			if "samples" in i[1] and i[0][kerneldirlen:] == "":
 				i[1].remove('samples')
 			for p in i[2]:
-				## only process Makefiles
-				if p != 'Makefile':
+				## only process Makefiles and Kconfig
+				if p != 'Makefile' and p != 'Kconfig':
 					continue
-				## only interested in the top level Makefile for determining the versions
-				if i[0][kerneldirlen:] == "":
-					source = open(os.path.join(i[0], p)).readlines()
-					for l in source:
-						if l.startswith("VERSION"):
-							version = version + l.split('=')[-1].strip()
-						elif l.startswith("PATCHLEVEL"):
-							patchlevel = l.split('=')[-1].strip()
-							version = version + "." + patchlevel
-						elif l.startswith("SUBLEVEL"):
-							sublevel = l.split('=')[-1].strip()
-							if sublevel != "":
-								version = version + "." + sublevel
-						elif l.startswith("EXTRAVERSION"):
-							extraversion = l.split('=')[-1].strip()
-							if extraversion != "":
-								version = version + "." + extraversion
-						else:
-							continue
+
 				source = open(os.path.join(i[0], p)).readlines()
 
-				## temporary store
-				tmpconfigs = {}
-
-				continued = False
-
-				## first clean up the Makefile, filter out uninteresting
-				## lines and process line continuations
-				makefile = []
-				storeline = ""
-				for line in source:
-					if not continued:
-						if line.strip().startswith('#'):
-							continue
-						if line.strip().startswith('echo'):
-							continue
-						if line.strip().startswith('@'):
-							continue
-						if line.strip() == "":
-							continue
-					if line.strip().endswith("\\"):
-						## replace \ with a space, then concatenate lines
-						storeline = storeline + line.strip()[:-1] + " "
-						continued = True
-						continue
-					else:
-						storeline = storeline + line.strip()
-						continued = False
-
-					if not continued:
-						if storeline == "":
-							makefile.append(line.strip())
-						else:
-							makefile.append(storeline)
-							storeline = ""
-
-				inif = False
-				iniflevel = 0
-
-				nomatches = []
-
-				for line in makefile:
-					if line.strip().startswith('.PHONY:'):
-						continue
-					if line.strip().startswith('doc:'):
-						continue
-					if line.strip().startswith('cleandoc:'):
-						continue
-					if line.strip().startswith('clean:'):
-						continue
-					if line.strip().startswith('clean-files'):
-						continue
-					# if statements can be nested, so keep track of levels
-					if line.strip() == "endif":
-						inif = False
-						iniflevel = iniflevel -1
-						continue
-					# if statements can be nested, so keep track of levels
-					if re.match("ifn?\w+", line.strip()):
-						inif = True
-						iniflevel = iniflevel +1
-
-					res = re.match("([\w\.]+)\-\$\(CONFIG_(\w+)\)\s*[:+]=\s*([\w\-\.\s/=]*)", line.strip())
-					if res != None:
-						## current issues: ARCH (SH, Xtensa, h8300) is giving some issues
-						if "flags" in res.groups()[0]:
-							continue
-						if "FLAGS" in res.groups()[0]:
-							continue
-						if "zimage" in res.groups()[0]:
-							continue
-						if res.groups()[0] == "defaultimage":
-							continue
-						if res.groups()[0] == "cacheflag":
-							continue
-						if res.groups()[0] == "cpuincdir":
-							continue
-						if res.groups()[0] == "cpuclass":
-							continue
-						if res.groups()[0] == "cpu":
-							continue
-						if res.groups()[0] == "machine":
-							continue
-						if res.groups()[0] == "model":
-							continue
-						if res.groups()[0] == "load":
-							continue
-						if res.groups()[0] == "dataoffset":
-							continue
-						if res.groups()[0] == "entrypoint":
-							continue
-						if res.groups()[0] == "textaddr":
-							continue
-						if res.groups()[0] == "CPP_MODE":
-							continue
-						if res.groups()[0] == "LINK":
-							continue
-						if "=" in res.groups()[2]:
-							continue
-						config = "CONFIG_" + res.groups()[1]
-						files = res.groups()[2].split()
-						for f in files:
-							match = matchconfig(f, i[0], config, kerneldirlen)
-							if match != None:
-								if not f.endswith('.o'):
-									dirpath = os.path.normpath(os.path.join(i[0][kerneldirlen:], f))
-									if dirstoconfigs.has_key(dirpath):
-										dirstoconfigs[dirpath].append(config)
-									else:
-										dirstoconfigs[dirpath] = [config]
-								searchresults.append(match)
+				if p == 'Makefile':
+					if i[0][kerneldirlen:] == "":
+						## only interested in the top level Makefile for determining the versions
+						for l in source:
+							if l.startswith("VERSION"):
+								version = version + l.split('=')[-1].strip()
+							elif l.startswith("PATCHLEVEL"):
+								patchlevel = l.split('=')[-1].strip()
+								version = version + "." + patchlevel
+							elif l.startswith("SUBLEVEL"):
+								sublevel = l.split('=')[-1].strip()
+								if sublevel != "":
+									version = version + "." + sublevel
+							elif l.startswith("EXTRAVERSION"):
+								extraversion = l.split('=')[-1].strip()
+								if extraversion != "":
+									version = version + "." + extraversion
 							else:
-								if f.endswith('.o'):
-									tmpconfigs[f[:-2]] = config
-					else:
-						nomatches.append(line.strip())
+								continue
 
-				for line in nomatches:
-					res = re.match("([\w\.\-]+)\-objs\s*[:+]=\s*([\w\-\.\s/]*)", line.strip())
-					if res != None:
-						tmpkey = res.groups()[0]
-						tmpvals = res.groups()[1].split()
-						if tmpconfigs.has_key(tmpkey):
-							for f in tmpvals:
-								match = matchconfig(f, i[0], tmpconfigs[tmpkey], kerneldirlen)
-								if match != None:
-									searchresults.append(match)
+					## temporary store
+					tmpconfigs = {}
+
+					continued = False
+
+					## first clean up the Makefile, filter out uninteresting
+					## lines and process line continuations
+					makefile = []
+					storeline = ""
+					for line in source:
+						if not continued:
+							if line.strip().startswith('#'):
+								continue
+							if line.strip().startswith('echo'):
+								continue
+							if line.strip().startswith('@'):
+								continue
+							if line.strip() == "":
+								continue
+						if line.strip().endswith("\\"):
+							## replace \ with a space, then concatenate lines
+							storeline = storeline + line.strip()[:-1] + " "
+							continued = True
+							continue
 						else:
-							if dirstoconfigs.has_key(os.path.normpath(i[0][kerneldirlen:])):
-								for f in tmpvals:
-									for m in dirstoconfigs[os.path.normpath(i[0][kerneldirlen:])]:
-										match = matchconfig(f, i[0], m, kerneldirlen)
-										if match != None:
-											searchresults.append(match)
-					else:
-						res = re.match("([\w\.\-]+)\-y\s*[:+]=\s*([\w\-\.\s/=]*)", line.strip())
+							storeline = storeline + line.strip()
+							continued = False
+
+						if not continued:
+							if storeline == "":
+								makefile.append(line.strip())
+							else:
+								makefile.append(storeline)
+								storeline = ""
+
+					inif = False
+					iniflevel = 0
+
+					nomatches = []
+
+					for line in makefile:
+						if line.strip().startswith('.PHONY:'):
+							continue
+						if line.strip().startswith('doc:'):
+							continue
+						if line.strip().startswith('cleandoc:'):
+							continue
+						if line.strip().startswith('clean:'):
+							continue
+						if line.strip().startswith('clean-files'):
+							continue
+						# if statements can be nested, so keep track of levels
+						if line.strip() == "endif":
+							inif = False
+							iniflevel = iniflevel -1
+							continue
+						# if statements can be nested, so keep track of levels
+						if re.match("ifn?\w+", line.strip()):
+							inif = True
+							iniflevel = iniflevel +1
+
+						res = re.match("([\w\.]+)\-\$\(CONFIG_(\w+)\)\s*[:+]=\s*([\w\-\.\s/=]*)", line.strip())
+						if res != None:
+							## current issues: ARCH (SH, Xtensa, h8300) is giving some issues
+							if "flags" in res.groups()[0]:
+								continue
+							if "FLAGS" in res.groups()[0]:
+								continue
+							if "zimage" in res.groups()[0]:
+								continue
+							if res.groups()[0] == "defaultimage":
+								continue
+							if res.groups()[0] == "cacheflag":
+								continue
+							if res.groups()[0] == "cpuincdir":
+								continue
+							if res.groups()[0] == "cpuclass":
+								continue
+							if res.groups()[0] == "cpu":
+								continue
+							if res.groups()[0] == "machine":
+								continue
+							if res.groups()[0] == "model":
+								continue
+							if res.groups()[0] == "load":
+								continue
+							if res.groups()[0] == "dataoffset":
+								continue
+							if res.groups()[0] == "entrypoint":
+								continue
+							if res.groups()[0] == "textaddr":
+								continue
+							if res.groups()[0] == "CPP_MODE":
+								continue
+							if res.groups()[0] == "LINK":
+								continue
+							if "=" in res.groups()[2]:
+								continue
+							config = "CONFIG_" + res.groups()[1]
+							files = res.groups()[2].split()
+							for f in files:
+								match = matchconfig(f, i[0], config, kerneldirlen)
+								if match != None:
+									if not f.endswith('.o'):
+										dirpath = os.path.normpath(os.path.join(i[0][kerneldirlen:], f))
+										if dirstoconfigs.has_key(dirpath):
+											dirstoconfigs[dirpath].append(config)
+										else:
+											dirstoconfigs[dirpath] = [config]
+									searchresults.append(match)
+								else:
+									if f.endswith('.o'):
+										tmpconfigs[f[:-2]] = config
+						else:
+							nomatches.append(line.strip())
+
+					for line in nomatches:
+						res = re.match("([\w\.\-]+)\-objs\s*[:+]=\s*([\w\-\.\s/]*)", line.strip())
 						if res != None:
 							tmpkey = res.groups()[0]
 							tmpvals = res.groups()[1].split()
@@ -231,6 +216,34 @@ def extractkernelstrings(kerneldir):
 									match = matchconfig(f, i[0], tmpconfigs[tmpkey], kerneldirlen)
 									if match != None:
 										searchresults.append(match)
+							else:
+								if dirstoconfigs.has_key(os.path.normpath(i[0][kerneldirlen:])):
+									for f in tmpvals:
+										for m in dirstoconfigs[os.path.normpath(i[0][kerneldirlen:])]:
+											match = matchconfig(f, i[0], m, kerneldirlen)
+											if match != None:
+												searchresults.append(match)
+						else:
+							res = re.match("([\w\.\-]+)\-y\s*[:+]=\s*([\w\-\.\s/=]*)", line.strip())
+							if res != None:
+								tmpkey = res.groups()[0]
+								tmpvals = res.groups()[1].split()
+								if tmpconfigs.has_key(tmpkey):
+									for f in tmpvals:
+										match = matchconfig(f, i[0], tmpconfigs[tmpkey], kerneldirlen)
+										if match != None:
+											searchresults.append(match)
+				else:
+					for line in source:
+						## ignore includes
+						if line.strip().startswith('source'):
+							continue
+						## ignore comments
+						if line.strip().startswith('#'):
+							continue
+						## ignore empty lines
+						if line.strip() == "":
+							continue
 	except StopIteration:
 		return (searchresults, version)
 
