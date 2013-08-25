@@ -47,7 +47,8 @@ def matchconfig(filename, dirname, config, kerneldirlen):
 def extractkernelstrings(kerneldir):
 	kerneldirlen = len(kerneldir)+1
 	osgen = os.walk(kerneldir)
-	searchresults = []
+	makefileresults = []
+	kconfigresults = []
 	version = ""
 
 	try:
@@ -65,7 +66,7 @@ def extractkernelstrings(kerneldir):
 				i[1].remove('samples')
 			for p in i[2]:
 				## only process Makefiles and Kconfig
-				if p != 'Makefile' and p != 'Kconfig':
+				if p != 'Makefile' and not 'Kconfig' in p:
 					continue
 
 				source = open(os.path.join(i[0], p)).readlines()
@@ -199,7 +200,7 @@ def extractkernelstrings(kerneldir):
 											dirstoconfigs[dirpath].append(config)
 										else:
 											dirstoconfigs[dirpath] = [config]
-									searchresults.append(match)
+									makefileresults.append(match)
 								else:
 									if f.endswith('.o'):
 										tmpconfigs[f[:-2]] = config
@@ -215,14 +216,14 @@ def extractkernelstrings(kerneldir):
 								for f in tmpvals:
 									match = matchconfig(f, i[0], tmpconfigs[tmpkey], kerneldirlen)
 									if match != None:
-										searchresults.append(match)
+										makefileresults.append(match)
 							else:
 								if dirstoconfigs.has_key(os.path.normpath(i[0][kerneldirlen:])):
 									for f in tmpvals:
 										for m in dirstoconfigs[os.path.normpath(i[0][kerneldirlen:])]:
 											match = matchconfig(f, i[0], m, kerneldirlen)
 											if match != None:
-												searchresults.append(match)
+												makefileresults.append(match)
 						else:
 							res = re.match("([\w\.\-]+)\-y\s*[:+]=\s*([\w\-\.\s/=]*)", line.strip())
 							if res != None:
@@ -232,32 +233,37 @@ def extractkernelstrings(kerneldir):
 									for f in tmpvals:
 										match = matchconfig(f, i[0], tmpconfigs[tmpkey], kerneldirlen)
 										if match != None:
-											searchresults.append(match)
+											makefileresults.append(match)
 				else:
+					configs = []
+					inhelp = False
+					inconfig = False
+					currentconfig = ""
 					for line in source:
-						## ignore includes
-						if line.strip().startswith('source'):
-							continue
 						## ignore comments
 						if line.strip().startswith('#'):
 							continue
 						## ignore empty lines
 						if line.strip() == "":
 							continue
+						## new config starts here
+						if line.strip().startswith('config '):
+							inhelp = False
+							pass
 	except StopIteration:
-		return (searchresults, version)
+		return (makefileresults, kconfigresults, version)
 
-def storematch(results, dbcursor, version):
+def storematch(makefileresults, kconfigresults, dbcursor, version):
 	## store two things:
 	## 1. if it is a path/subdir, store subdir + configuration
 	##    making it searchable by subdir
 	## 2. if it is an objectfile, store name of source(!) file + configuration
 	##    making it searchable by source file
 	## These can and will overlap
-	for res in results:
+	for res in makefileresults:
 		pathstring = res[0]
 		configstring = res[1]
-		dbcursor.execute('''insert into config (configstring, filename, version) values (?, ?, ?)''', (configstring, pathstring, version))
+		dbcursor.execute('''insert into makefile (configstring, filename, version) values (?, ?, ?)''', (configstring, pathstring, version))
 
 def main(argv):
 	parser = OptionParser()
@@ -281,11 +287,12 @@ def main(argv):
 	c = conn.cursor()
 
 	## TODO: add whether or not a configuration - filename mapping is 1:1
-	c.execute('''create table if not exists config (configstring text, filename text, version text)''')
+	c.execute('''create table if not exists makefile (configstring text, filename text, version text)''')
 	## TODO: process Kconfig files too
+	c.execute('''create table if not exists kconfig (configstring text, type text)''')
 
-	(results, version) = extractkernelstrings(kerneldir)
-	storematch(results, c, version)
+	(makefileresults, kconfigresults, version) = extractkernelstrings(kerneldir)
+	storematch(makefileresults, kconfigresults, c, version)
 
 	conn.commit()
 	c.close()
