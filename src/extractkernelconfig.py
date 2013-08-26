@@ -281,7 +281,6 @@ def extractkernelstrings(kerneldir):
 							ifcfgs.append([])
 							continue
 						if line.strip().startswith('endif'):
-							print line.strip(), i[0]
 							ifcfgs.pop()
 							continue
 						if line.strip().startswith('menu '):
@@ -302,10 +301,15 @@ def extractkernelstrings(kerneldir):
 						if line.strip().startswith('bool'):
 							configtype = 'bool'
 							continue
+						if line.strip().startswith('hex'):
+							configtype = 'hex'
+							continue
 						if line.strip().startswith('int'):
 							configtype = 'int'
 							continue
-			print
+						if line.strip().startswith('string'):
+							configtype = 'string'
+							continue
 	except StopIteration:
 		return (makefileresults, kconfigresults, version)
 
