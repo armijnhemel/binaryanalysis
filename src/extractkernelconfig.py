@@ -239,6 +239,18 @@ def extractkernelstrings(kerneldir):
 					inhelp = False
 					inconfig = False
 					currentconfig = ""
+					configtype = ""
+
+					## menus can be stacked. Inside menus there can be definitions that
+					## apply to all configurations inside the menu.
+					## Files might also have global definitions that apply to every
+					## configuration in the file.
+					menus = []
+					menuconfigs = []
+					globalcfgs = []
+
+					ifcfgs = []
+
 					for line in source:
 						## ignore comments
 						if line.strip().startswith('#'):
@@ -246,10 +258,54 @@ def extractkernelstrings(kerneldir):
 						## ignore empty lines
 						if line.strip() == "":
 							continue
-						## new config starts here
-						if line.strip().startswith('config '):
+						if not (line.startswith(" ") or line.startswith("\t")):
 							inhelp = False
+							inconfig = False
+						## new config starts here. Store the old configuration, with all
+						## its definitions and dependencies.
+						if line.strip().startswith('config '):
+							## sanity check, config line always has just 2
+							## elements, separated by whitespace.
+							if len(line.strip().split()) != 2:
+								continue
+							inconfig = True
+							configdirective = "CONFIG_%s" % line.strip().split()[-1]
+							currentconfig = configdirective
+							continue
+						if line.strip() == '---help---' or line.strip() == 'help':
+							inhelp = True
+							continue
+						if inhelp:
+							continue
+						if line.strip().startswith('if '):
+							ifcfgs.append([])
+							continue
+						if line.strip().startswith('endif'):
+							print line.strip(), i[0]
+							ifcfgs.pop()
+							continue
+						if line.strip().startswith('menu '):
+							currentconfig = ""
+							continue
+						if line.strip().startswith('select'):
 							pass
+						## add depends and constraints
+						## These can be configuration specific, menu specific or file wide
+						if line.strip().startswith('depends '):
+							depends = line.strip()
+							if depends[0] == 'on':
+								depends = depends[1:]
+							#print currentconfig, depends
+						if line.strip().startswith('tristate'):
+							configtype = 'tristate'
+							continue
+						if line.strip().startswith('bool'):
+							configtype = 'bool'
+							continue
+						if line.strip().startswith('int'):
+							configtype = 'int'
+							continue
+			print
 	except StopIteration:
 		return (makefileresults, kconfigresults, version)
 
