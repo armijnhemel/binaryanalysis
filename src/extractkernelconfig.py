@@ -252,18 +252,20 @@ def extractkernelstrings(kerneldir):
 					ifcfgs = []
 
 					for line in source:
+						if not (line.startswith(" ") or line.startswith("\t")):
+							inhelp = False
+							inconfig = False
+						if inhelp:
+							continue
 						## ignore comments
 						if line.strip().startswith('#'):
 							continue
 						## ignore empty lines
 						if line.strip() == "":
 							continue
-						if not (line.startswith(" ") or line.startswith("\t")):
-							inhelp = False
-							inconfig = False
 						## new config starts here. Store the old configuration, with all
 						## its definitions and dependencies.
-						if line.strip().startswith('config '):
+						if line.startswith('config '):
 							## sanity check, config line always has just 2
 							## elements, separated by whitespace.
 							if len(line.strip().split()) != 2:
@@ -274,8 +276,6 @@ def extractkernelstrings(kerneldir):
 							continue
 						if line.strip() == '---help---' or line.strip() == 'help':
 							inhelp = True
-							continue
-						if inhelp:
 							continue
 						if line.strip().startswith('if '):
 							ifcfgs.append([])
