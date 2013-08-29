@@ -1239,6 +1239,7 @@ def unpackCramfs(filename, offset, tempdir=None, unpacktempdir=None):
 
 	cramfslen = struct.unpack('<I', tmpbytes)[0]
 	if cramfslen > os.stat(filename).st_size:
+		os.unlink(tmpfile[1])
 		return
 
 	unpackFile(filename, offset, tmpfile[1], tmpdir, length=cramfslen, unpacktempdir=unpacktempdir)
