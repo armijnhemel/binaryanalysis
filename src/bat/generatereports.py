@@ -159,25 +159,26 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir)):
 	## the ranking result is (res, dynamicRes, variablepvs)
 	(res, dynamicRes, variablepvs) = leafreports['ranking']
 
-	if res['unmatched'] != []:
-		unmatches = list(set(res['unmatched']))
-		unmatches.sort()
+	if res != None:
+		if res['unmatched'] != []:
+			unmatches = list(set(res['unmatched']))
+			unmatches.sort()
 
-		tmppickle = tempfile.mkstemp()
-
-		cPickle.dump(unmatches, os.fdopen(tmppickle[0], 'w'))
-		picklehash = gethash(tmppickle[1])
-		unmatchedresult = (picklehash, tmppickle[1])
-
-	if res['reports'] != []:
-		for j in res['reports']:
-			(rank, packagename, uniquematches, percentage, packageversions, licenses) = j
-			if len(uniquematches) == 0:
-				continue
 			tmppickle = tempfile.mkstemp()
-			cPickle.dump((packagename, uniquematches), os.fdopen(tmppickle[0], 'w'))
+
+			cPickle.dump(unmatches, os.fdopen(tmppickle[0], 'w'))
 			picklehash = gethash(tmppickle[1])
-			reportresults.append((rank, picklehash, tmppickle[1], len(uniquematches), packagename))
+			unmatchedresult = (picklehash, tmppickle[1])
+
+		if res['reports'] != []:
+			for j in res['reports']:
+				(rank, packagename, uniquematches, percentage, packageversions, licenses) = j
+				if len(uniquematches) == 0:
+					continue
+				tmppickle = tempfile.mkstemp()
+				cPickle.dump((packagename, uniquematches), os.fdopen(tmppickle[0], 'w'))
+				picklehash = gethash(tmppickle[1])
+				reportresults.append((rank, picklehash, tmppickle[1], len(uniquematches), packagename))
 	return (filehash, reportresults, functionresults, unmatchedresult)
 
 ## generate several output files
