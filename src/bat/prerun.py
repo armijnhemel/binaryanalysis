@@ -225,8 +225,8 @@ def verifyPNG(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 	return newtags
 
 ## Check to verify if a file is a gzip compressed file. This requires
-## launching an external process, possibly for big files, so we first run a
-## few checks to make sure we only do that in promising cases.
+## launching an external process, possibly for a big file, so first run a
+## few checks to make sure to only do that in promising cases.
 def verifyGzip(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
 	newtags = []
 	if "text" in tags or "graphics" in tags or "compressed" in tags or "audio" in tags:
@@ -234,9 +234,9 @@ def verifyGzip(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars
 	if not offsets.has_key('gzip'):
 		return newtags
 	## if gzip identifier 0x1f 0x8b 0x08 happens to be in there multiple times
-	## it might be that we have several gzip files that are concatenated, without
-	## padding or extra data and we can't easily see that without full unpacking,
-	## so we move on for now.
+	## it might be that there are several gzip files that are concatenated, without
+	## padding or extra data and it can't easily be seen without full unpacking,
+	## so move on for now.
 	if len(offsets['gzip']) != 1:
 		return newtags
 	if offsets['gzip'][0] != 0:
@@ -292,7 +292,7 @@ def verifyBZ2(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 
 ## Verify if this is an Android "binary XML" file. We check if the name of the
 ## file ends in '.xml', plus check the first four bytes of the file
-## If it is an Android XML file, we mark it as a 'resource' file
+## If it is an Android XML file, mark it as a 'resource' file
 ## TODO: have a better check here to increase fidelity
 def verifyAndroidXML(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
 	newtags = []
@@ -302,7 +302,7 @@ def verifyAndroidXML(filename, tempdir=None, tags=[], offsets={}, debug=False, e
 		return newtags
 	if not filename.endswith('.xml'):
 		return newtags
-	## now we read the first four bytes
+	## now read the first four bytes
 	androidfile = open(filename, 'rb')
 	androidbytes = androidfile.read(4)
 	androidfile.close()
@@ -323,14 +323,14 @@ def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, debug=False, e
 		return newtags
 	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags:
 		return newtags
-	## now we read the first 36 bytes
+	## now read the first 36 bytes
 	androidfile = open(filename, 'rb')
 	androidbytes = androidfile.read(36)
 	androidfile.close()
 	if len(androidbytes) != 36:
 		return newtags
 	if androidbytes[:4] == 'dex\n':
-		## good chance we have an Android Dex file, so verify more by
+		## good chance it is an Android Dex file, so verify more by
 		## checking the size header in the header
 		dexarray = array.array('I')
 		dexarray.fromstring(androidbytes[-4:])
@@ -343,7 +343,7 @@ def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, debug=False, e
 
 ## verify if this is a GNU message catalog. We check if the name of the
 ## file ends in '.po', plus check the first few bytes of the file
-## If it is a GNU message catalog, we mark it as a 'resource' file
+## If it is a GNU message catalog, mark it as a 'resource' file
 def verifyMessageCatalog(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
 	newtags = []
 	if not 'binary' in tags:
@@ -352,7 +352,7 @@ def verifyMessageCatalog(filename, tempdir=None, tags=[], offsets={}, debug=Fals
 		return newtags
 	if not filename.endswith('.mo'):
 		return newtags
-	## now we read the first four bytes
+	## now read the first four bytes
 	catalogfile = open(filename, 'rb')
 	catbytes = catalogfile.read(4)
 	catalogfile.close()
@@ -362,7 +362,7 @@ def verifyMessageCatalog(filename, tempdir=None, tags=[], offsets={}, debug=Fals
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
 			return newtags
-		## we now know for sure this is a valid GNU message catalog, so tag it as such
+		## this is a valid GNU message catalog, so tag it as such
 		newtags.append('messagecatalog')
 		newtags.append('resource')
 	return newtags
@@ -435,7 +435,7 @@ def verifyTTF(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 	ttffile.close()
 	if ttfbytes != '\x00\x01\x00\x00\x00':
 		return newtags
-	## we are getting close. Now run mkeot to verify.
+	## run mkeot to verify it is a TTF font
 	p = subprocess.Popen(['mkeot', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
@@ -609,14 +609,14 @@ def verifyJAR(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 		return newtags
 
 	bytecodefound = False
-	## Now traverse the directory and check if we can find at least one Java bytecode file
+	## Now traverse the directory and check if there is at least one Java bytecode file
 	osgen = os.walk(jardir)
 	try:
 		while not bytecodefound:
 			i = osgen.next()
 			for p in i[2]:
 				scanfile = "%s/%s" % (i[0], p)
-				if scanfile.lower().endswith('class'):
+				if scanfile.lower().endswith('.class'):
 					res = verifyJavaClass(scanfile)
 					if res:
 						bytecodefound = True
@@ -624,7 +624,7 @@ def verifyJAR(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 	except StopIteration:
 		pass
 
-	## if we don't have any Java bytecode, we might as well stop
+	## if there is no Java bytecode file stop
 	if not bytecodefound:
 		shutil.rmtree(jardir)
 		return newtags
@@ -663,7 +663,7 @@ def verifyPE(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=N
 	if not 'PE\0\0' in databuffer:
 		return newtags
 	## this is a dead giveaway
-	## TODO: we should verify if the entire file is a PE executable
+	## TODO: verify if the entire file is a PE executable
 	## or if it is part of a larger blob
 	if "This program cannot be run in DOS mode." in databuffer:
 		pass
