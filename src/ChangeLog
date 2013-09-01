@@ -1,5 +1,7 @@
 2013-09-01
 * fix in report generation in case filename does not have a path component
+* don't report and display false ranking results
+* start on fixing symlinks for JFFS2 (if possible)
 
 2013-08-29
 * correctly clean up for false cramfs match
