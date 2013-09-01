@@ -104,6 +104,7 @@ def unpackJFFS2(path, tempdir=None, bigendian=False):
 			if not direntries[n]['parent'] in direntries.keys() and direntries[n]['parent'] != 1:
 				return None
 
+	entrynames = map(lambda x: direntries[x]['name'], direntries.keys())
 	for n in direntries.keys():
 		## recreate directory structure
 		if n in directories:
@@ -126,9 +127,14 @@ def unpackJFFS2(path, tempdir=None, bigendian=False):
 					try:
 						unzfiledata = unzfiledata + zlib.decompress(filedata)
 					except Exception, e:
-						## TODO: handle symlinks
-						## a symlink is written as an ASCII file with the target of the symlink as the content of the file
 						unzfiledata = unzfiledata + filedata
+			if len(unzfiledata) <= 254 and len(unzfiledata) > 0:
+				## a symlink is written as an ASCII file with the target of the symlink as the content of the file
+				## TODO: handle properly
+				unzsplit = unzfiledata.split('/')
+				if unzsplit[-1] in entrynames:
+					#continue
+					pass
 			datafile = open('%s/%s/%s' % (tmpdir, pathinodes[direntries[n]['parent']], direntries[n]['name']), 'w')
 			datafile.write(unzfiledata)
 			datafile.close()
