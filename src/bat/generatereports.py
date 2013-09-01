@@ -93,17 +93,23 @@ def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
 				## that is displayed. This is to prevent that a line is printed for every
 				## version, even when the code has not changed. Usually it will be clear
 				## which file is meant.
-				(pv, fp) = sourcefile.split('/', 1)
-				## clean up some names first, especially when they have been changed by Debian
-				for e in ["+dfsg", "~dfsg", ".orig", ".dfsg1", ".dfsg2"]:
-					if pv.endswith(e):
-						pv = pv[:-len(e)]
-						break
-				if pv == "%s-%s" % (packagename, version) or pv == "%s_%s" % (packagename, version):
-					if sh.has_key(checksum):
-						sh[checksum].append((fp, version, linenumber))
+				if len(sourcefile.split('/', 1)) > 1:
+					(pv, fp) = sourcefile.split('/', 1)
+					## clean up some names first, especially when they have been changed by Debian
+					for e in ["+dfsg", "~dfsg", ".orig", ".dfsg1", ".dfsg2"]:
+						if pv.endswith(e):
+							pv = pv[:-len(e)]
+							break
+					if pv == "%s-%s" % (packagename, version) or pv == "%s_%s" % (packagename, version):
+						if sh.has_key(checksum):
+							sh[checksum].append((fp, version, linenumber))
+						else:
+							sh[checksum] = [(fp, version, linenumber)]
 					else:
-						sh[checksum] = [(fp, version, linenumber)]
+						if sh.has_key(checksum):
+							sh[checksum].append((sourcefile, version, linenumber))
+						else:
+							sh[checksum] = [(sourcefile, version, linenumber)]
 				else:
 					if sh.has_key(checksum):
 						sh[checksum].append((sourcefile, version, linenumber))
@@ -453,7 +459,7 @@ def generatereports(unpackreports, scantempdir, topleveldir, debug=False, envvar
 
 	## extract pickles
 	extracttasks = map(lambda x: (x, pickledir, topleveldir, reportdir), filehashes)
-	pool = multiprocessing.Pool(processes=1)
+	pool = multiprocessing.Pool()
 	res = filter(lambda x: x != None, pool.map(extractpickles, extracttasks))
 	res2 = filter(lambda x: x != None, pool.map(generatemisc, extracttasks))
 	pool.terminate()
