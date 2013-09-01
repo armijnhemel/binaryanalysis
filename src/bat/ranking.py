@@ -512,6 +512,8 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 			if createdtempfile:
 				## a tempfile was made because of blacklisting, so cleanup
 				os.unlink(tmpfile[1])
+		if res == None and dynamicRes == {} and variablepvs == {}:
+			return None
 		return (['ranking'], (res, dynamicRes, variablepvs))
 
 	except Exception, e:
@@ -1738,6 +1740,8 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 		for c in corr_sorted:
 			print >>sys.stderr, s, c, correlation_sort[c]
 	'''
+	if matchedlines == 0 and unmatched == []:
+		return
 	return {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched, 'scores': scores}
 
 
