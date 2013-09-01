@@ -86,89 +86,90 @@ def pruneresults(unpackreports, scantempdir, topleveldir, debug=False, envvars=N
 		(res, dynamicRes, variablepvs) = leafreports['ranking']
 
 		## first determine for strings
-		if res['reports'] != []:
-			for j in res['reports']:
-				keeppackageversions = []
-				pruneversions = []
-				pvs = {}
-				(rank, packagename, uniquematches, percentage, packageversions, licenses) = j
-				if len(uniquematches) == 0:
-					continue
+		if res != None:
+			if res['reports'] != []:
+				for j in res['reports']:
+					keeppackageversions = []
+					pruneversions = []
+					pvs = {}
+					(rank, packagename, uniquematches, percentage, packageversions, licenses) = j
+					if len(uniquematches) == 0:
+						continue
 
-				topcandidate = None
+					topcandidate = None
 
-				## check if the version was extracted for the Linux kernel, since the
-				## version can fairly easily be extracted. TODO: make this more generic
-				## so it can also be used for for example the BusyBox results.
-				if packagename == 'linux':
-					if leafreports.has_key('kernelchecks'):
-						if leafreports['kernelchecks'].has_key('version'):
-							kernelversion = leafreports['kernelchecks']['version']
-							if kernelversion in packageversions:
-								topcandidate = kernelversion
-				## the amount of versions is lower than the maximum amount that should be
-				## reported, so continue
-				if len(packageversions) < keepversions:
-					#print >>sys.stderr, "keeping all", packagename, packageversions, keepversions
-					continue
+					## check if the version was extracted for the Linux kernel, since the
+					## version can fairly easily be extracted. TODO: make this more generic
+					## so it can also be used for for example the BusyBox results.
+					if packagename == 'linux':
+						if leafreports.has_key('kernelchecks'):
+							if leafreports['kernelchecks'].has_key('version'):
+								kernelversion = leafreports['kernelchecks']['version']
+								if kernelversion in packageversions:
+									topcandidate = kernelversion
+					## the amount of versions is lower than the maximum amount that should be
+					## reported, so continue
+					if len(packageversions) < keepversions:
+						#print >>sys.stderr, "keeping all", packagename, packageversions, keepversions
+						continue
 
-				versioncount = {}
-				for u in uniquematches:
-					## string = u[0]
-					## list of results = u[1]
-					## walk through each of the unique matches.
-					## Store which versions are used. If a certain match is only for
-					## a single version store it in 'keeppackageversions'
-					## u[1] : (checksum, version, line number, path)
-					uniqueversions = list(set(map(lambda x: x[1], u[1])))
+					versioncount = {}
+					for u in uniquematches:
+						## string = u[0]
+						## list of results = u[1]
+						## walk through each of the unique matches.
+						## Store which versions are used. If a certain match is only for
+						## a single version store it in 'keeppackageversions'
+						## u[1] : (checksum, version, line number, path)
+						uniqueversions = list(set(map(lambda x: x[1], u[1])))
 
-					if len(uniqueversions) == 1:
-						keeppackageversions = list(set((keeppackageversions + uniqueversions)))
+						if len(uniqueversions) == 1:
+							keeppackageversions = list(set((keeppackageversions + uniqueversions)))
 
-					for un in uniqueversions:
-						if versioncount.has_key(un):
-							versioncount[un] += 1
-						else:
-							versioncount[un] = 1
-				if keeppackageversions != []:
-					print >>sys.stderr, "UNIQUE", packagename, keeppackageversions
+						for un in uniqueversions:
+							if versioncount.has_key(un):
+								versioncount[un] += 1
+							else:
+								versioncount[un] = 1
+					if keeppackageversions != []:
+						print >>sys.stderr, "UNIQUE", packagename, keeppackageversions
 
-				## there are no differences between the different values: for each
-				## version the same amount of hits was found.
-				if min(versioncount.values()) == max(versioncount.values()):
-					continue
+					## there are no differences between the different values: for each
+					## version the same amount of hits was found.
+					if min(versioncount.values()) == max(versioncount.values()):
+						continue
 
-				## If there is more than one version in keeppackageversions, then there is either
-				## a database error, a string extraction error (for ELF files sometimes bogus data
-				## is extracted, or the binary was made from modified source code (forward porting
-				## of patches, backporting of patches, etc.)
-				filterversions = []
-				filtercount = keepversions
+					## If there is more than one version in keeppackageversions, then there is either
+					## a database error, a string extraction error (for ELF files sometimes bogus data
+					## is extracted, or the binary was made from modified source code (forward porting
+					## of patches, backporting of patches, etc.)
+					filterversions = []
+					filtercount = keepversions
 
-				if len(uniquematches) > max(versioncount.values()):
-					## none of the versions match all the strings
-					## This could indicate backporting or forward porting of code
-					if topcandidate != None:
-						if max(versioncount.values()) == versioncount[topcandidate]:
-							## the top candidate indeed is the top candidate
-							filterversions.append(topcandidate)
-							keepversions = keepversions - 1
-						else:
-							pass
-				else:
-					if topcandidate != None:
-						if max(versioncount.values()) == versioncount[topcandidate]:
-							## the top candidate indeed is the top candidate
-							filterversions.append(topcandidate)
-							keepversions = keepversions - 1
-						else:
-							## set the top candidate to the version with the most hits
-							## Possibly store the old top candidate as well, for use with
-							## for example functions.
-							pass
+					if len(uniquematches) > max(versioncount.values()):
+						## none of the versions match all the strings
+						## This could indicate backporting or forward porting of code
+						if topcandidate != None:
+							if max(versioncount.values()) == versioncount[topcandidate]:
+								## the top candidate indeed is the top candidate
+								filterversions.append(topcandidate)
+								keepversions = keepversions - 1
+							else:
+								pass
+					else:
+						if topcandidate != None:
+							if max(versioncount.values()) == versioncount[topcandidate]:
+								## the top candidate indeed is the top candidate
+								filterversions.append(topcandidate)
+								keepversions = keepversions - 1
+							else:
+								## set the top candidate to the version with the most hits
+								## Possibly store the old top candidate as well, for use with
+								## for example functions.
+								pass
 
-				if keeppackageversions != []:
-					filterversions = keeppackageversions
+					if keeppackageversions != []:
+						filterversions = keeppackageversions
 
 		## then determine the top candidates for function names, if any
 		## then variable names, if any
