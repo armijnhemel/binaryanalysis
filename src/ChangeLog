@@ -2,6 +2,8 @@
 * fix JFFS2 symlinks (as far as possible and reasonable)
 * detect timezone files (not extensive) and ignore them in ranking scan
 * detect and tag WOFF font files
+* add optional parameter to packagerename.py for helping regenerate caches
+without having to regenerate the entire cache
 
 2013-09-01
 * fix in report generation in case filename does not have a path component
