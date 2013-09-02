@@ -134,8 +134,7 @@ def main(argv):
 	parser.add_option("-t", "--target-directory", action="store", dest="target", help="target directory where files are stored (default: generated temporary directory)", metavar="DIR")
 	(options, args) = parser.parse_args()
 	if options.filedir == None:
-		print >>sys.stderr, "Specify dir with files"
-		sys.exit(1)
+		parser.error("Specify dir with files")
 	if options.origin == None:
 		origin = "unknown"
 	else:
