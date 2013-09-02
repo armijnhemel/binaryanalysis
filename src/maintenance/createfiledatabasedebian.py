@@ -40,8 +40,7 @@ def main(argv):
 
 	(options, args) = parser.parse_args()
 	if options.destination == None or options.contentsfile == None:
-		print >>sys.stderr, "Provide all databases"
-		sys.exit(1)
+		parser.error("Provide all databases")
 
 	## first build the new database in memory, since it's faster
 	#destinationconn = sqlite3.connect(options.destination)
