@@ -678,3 +678,16 @@ def verifyVimSwap(filename, tempdir=None, tags=[], offsets={}, debug=False, envv
 		if databuffer == 'b0VIM\x20':
 			newtags.append('vimswap')
 	return newtags
+
+def verifyTZ(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+	newtags = []
+	datafile = open(filename, 'rb')
+	databuffer = datafile.read(4)
+	datafile.close()
+	if databuffer == 'TZif':
+		## simplistic check for timezone data. This should be enough for
+		## most Linux based machines to filter the majority of the
+		## timezone files without any extra checks.
+		if "timezone" in filename:
+			newtags.append('timezone')
+	return newtags
