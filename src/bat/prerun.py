@@ -688,6 +688,6 @@ def verifyTZ(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=N
 		## simplistic check for timezone data. This should be enough for
 		## most Linux based machines to filter the majority of the
 		## timezone files without any extra checks.
-		if "timezone" in filename:
+		if "zoneinfo" in filename:
 			newtags.append('timezone')
 	return newtags
