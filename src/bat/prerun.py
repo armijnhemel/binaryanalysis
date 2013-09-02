@@ -23,7 +23,7 @@ files will be scanned and tagged properly later on, but more time might be
 spent, plus there might be false positives (mostly LZMA).
 '''
 
-import sys, os, subprocess, os.path, shutil, stat, array
+import sys, os, subprocess, os.path, shutil, stat, array, struct
 import tempfile, re, magic
 import fsmagic, extractor
 
@@ -416,6 +416,28 @@ def verifyMP4(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 		return newtags
 	newtags.append('mp4')
 	newtags.append('video')
+	return newtags
+
+## very simplistic verifier for some Web Open Font Format
+## http://people.mozilla.com/~jkew/woff/
+def verifyWOFF(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+	newtags = []
+	if not 'binary' in tags:
+		return newtags
+	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags:
+		return newtags
+	## a WOFF file starts with 'wOFF'
+	ttffile = open(filename, 'rb')
+	ttfbytes = ttffile.read(4)
+	if ttfbytes != 'wOFF':
+		ttffile.close()
+		return newtags
+	ttfbytes = ttffile.read(8)
+	ttffile.close()
+	if struct.unpack('>L', ttfbytes[4:8])[0] == os.stat(filename).st_size:
+		newtags.append('woff')
+		newtags.append('font')
+		newtags.append('resource')
 	return newtags
 
 ## very simplistic verifier for some TrueType fonts
