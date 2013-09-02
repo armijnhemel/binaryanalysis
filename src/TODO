@@ -8,6 +8,7 @@ file systems:
 * ubifs (unubi was removed from mtd-utils)
 * more generic YAFFS2 support
 * squashfs as described at http://www.devttys0.com/2011/08/extracting-non-standard-squashfs-images/
+* ext4 using extents
 
 compression/executables:
 * E00
