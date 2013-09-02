@@ -152,6 +152,14 @@ priority    = 1
 description = Check if file contains a timezone file
 enabled     = yes
 
+[verifywoff]
+type        = prerun
+module      = bat.prerun
+method      = verifyWOFF
+priority    = 1
+description = Check if file contains a WOFF font
+enabled     = yes
+
 [vimswap]
 type        = prerun
 module      = bat.prerun
