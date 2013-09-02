@@ -105,6 +105,7 @@ def unpackJFFS2(path, tempdir=None, bigendian=False):
 				return None
 
 	entrynames = map(lambda x: direntries[x]['name'], direntries.keys())
+	possiblesymlinks = []
 	for n in direntries.keys():
 		## recreate directory structure
 		if n in directories:
@@ -140,11 +141,32 @@ def unpackJFFS2(path, tempdir=None, bigendian=False):
 						os.chdir(oldcwd)
 						continue
 					else:
-						## TODO: store for later, then possibly recreate symlinks
-						pass
+						## store for later, then possibly recreate symlinks
+						possiblesymlinks.append((n, unzfiledata))
 				else:
 						pass
 			datafile = open('%s/%s/%s' % (tmpdir, pathinodes[direntries[n]['parent']], direntries[n]['name']), 'w')
 			datafile.write(unzfiledata)
 			datafile.close()
+
+	## process possible symbolic links. Likely not all links will be processed, but this
+	## is good enough for now.
+	for nu in possiblesymlinks:
+		oldunzfiledata = None
+		(n, unzfiledata) = nu
+		if unzfiledata.startswith('/'):
+			## ugly hack to satisfy os.path.join() if the symlink is an absolute path
+			oldunzfiledata = unzfiledata
+			unzfiledata = '.' + unzfiledata
+		if os.path.exists(os.path.normpath(os.path.join(tmpdir, pathinodes[direntries[n]['parent']], unzfiledata))):
+			if os.path.exists(os.path.normpath(os.path.join(tmpdir, pathinodes[direntries[n]['parent']], direntries[n]['name']))):
+				## remove the old temporary file and replace with a symlink
+				os.unlink(os.path.normpath(os.path.join(tmpdir, pathinodes[direntries[n]['parent']], direntries[n]['name'])))
+				oldcwd = os.getcwd()
+				os.chdir(os.path.join(tmpdir, pathinodes[direntries[n]['parent']]))
+				if oldunzfiledata != None:
+					os.symlink(oldunzfiledata, direntries[n]['name'])
+				else:
+					os.symlink(unzfiledata, direntries[n]['name'])
+				os.chdir(oldcwd)
 	return (tmpdir, jffs2size)
