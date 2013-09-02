@@ -22,12 +22,10 @@ def main(argv):
 	(options, args) = parser.parse_args()
 
 	if options.db == None:
-		print >>sys.stderr, "No database found"
-		sys.exit(1)
+		parser.error("No database found")
 
 	if options.removal == None:
-		print >>sys.stderr, "No rename file found"
-		sys.exit(1)
+		parser.error("No rename file found")
 
 	rename = open(options.removal).readlines()
 	renamefiles = []
