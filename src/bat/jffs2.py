@@ -133,8 +133,17 @@ def unpackJFFS2(path, tempdir=None, bigendian=False):
 				## TODO: handle properly
 				unzsplit = unzfiledata.split('/')
 				if unzsplit[-1] in entrynames:
-					#continue
-					pass
+					if os.path.exists(os.path.normpath(os.path.join(tmpdir, pathinodes[direntries[n]['parent']], unzfiledata))):
+						oldcwd = os.getcwd()
+						os.chdir(os.path.join(tmpdir, pathinodes[direntries[n]['parent']]))
+						os.symlink(unzfiledata, direntries[n]['name'])
+						os.chdir(oldcwd)
+						continue
+					else:
+						## TODO: store for later, then possibly recreate symlinks
+						pass
+				else:
+						pass
 			datafile = open('%s/%s/%s' % (tmpdir, pathinodes[direntries[n]['parent']], direntries[n]['name']), 'w')
 			datafile.write(unzfiledata)
 			datafile.close()
