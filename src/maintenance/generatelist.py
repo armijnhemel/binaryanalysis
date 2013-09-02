@@ -65,8 +65,7 @@ def main(argv):
 	parser.add_option("-o", "--origin", action="store", dest="origin", help="origin of packages (default: unknown)", metavar="ORIGIN")
 	(options, args) = parser.parse_args()
 	if options.filedir == None:
-		print >>sys.stderr, "Specify dir with files"
-		sys.exit(1)
+		parser.error("Specify dir with files")
 	if options.origin == None:
 		origin = "unknown"
 	else:
