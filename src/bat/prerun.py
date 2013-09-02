@@ -690,4 +690,5 @@ def verifyTZ(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=N
 		## timezone files without any extra checks.
 		if "zoneinfo" in filename:
 			newtags.append('timezone')
+			newtags.append('resource')
 	return newtags
