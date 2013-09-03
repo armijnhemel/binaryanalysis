@@ -1329,10 +1329,26 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 				nonUniqueMatchLines.append(line)
 				continue
 
-		## first see if there is anything in the cache at all
-		res = conn.execute("select package, filename FROM stringscache.stringscache WHERE programstring=?", (line,)).fetchall()
+		## if the image is a Linux kernel image first try the Linux kernel specific matching
+		## like function names, then continue as normal.
 
-		if len(res) == 0 and linuxkernel:
+		if linuxkernel:
+			## This is where things get a bit ugly. The strings in a Linux
+			## kernel image could also be function names, not string constants.
+			## There could be false positives here...
+			if scankernelfunctions:
+				kernelres = kernelconn.execute("select package FROM kernelfunctionnamecache WHERE functionname=?", (line,)).fetchall()
+				if len(kernelres) != 0:
+					kernelfuncres.append(line)
+					kernelfunctionmatched = True
+
+		## then see if there is anything in the cache at all
+		if not kernelfunctionmatched:
+			res = conn.execute("select package, filename FROM stringscache.stringscache WHERE programstring=?", (line,)).fetchall()
+		else:
+			res = []
+
+		if len(res) == 0 and linuxkernel and not kernelfunctionmatched:
 			origline = line
 			## try a few variants that could occur in the Linux kernel
 			## The values of KERN_ERR and friends have changed in the years.
@@ -1385,14 +1401,6 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 						if len(res) != 0:
 							if len(scanline) != 0:
 								line = scanline
-
-				## This is where things get very ugly. The strings in a Linux
-				## kernel image could also be function names, not string constants.
-				if scankernelfunctions and len(res) == 0:
-					kernelres = kernelconn.execute("select package FROM kernelfunctionnamecache WHERE functionname=?", (line,)).fetchall()
-					if len(kernelres) != 0:
-						kernelfuncres.append(line)
-						kernelfunctionmatched = True
 
 		## nothing in the cache
 		if len(res) == 0 and not kernelfunctionmatched:
