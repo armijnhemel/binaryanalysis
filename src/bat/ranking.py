@@ -221,9 +221,24 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 			kerneldata = kernelfile.read()
 			kernelfile.close()
 			jiffy_pos = -1
+			jiffies = []
+			jiffycount = kerneldata.count('loops_per_jiffy')
 			## first find a known symbol, such as loops_per_jiffy
-			if kerneldata.count('loops_per_jiffy') == 1:
-				jiffy_pos = kerneldata.find('loops_per_jiffy')
+			if jiffycount == 1:
+				jiffies = [kerneldata.find('loops_per_jiffy')]
+			else:
+				jiffyoffset = 0
+				for i in range(0, jiffycount):
+					jiffy = kerneldata.find('loops_per_jiffy', jiffyoffset)
+					if jiffy != -1:
+						jiffies.append(jiffy)
+						jiffyoffset = jiffy + 1
+
+			## check all jiffies, grab the first one that is surrounded by NULL characters
+			for jiff in jiffies:
+				if extractor.check_null(kerneldata, jiff, 'loops_per_jiffy'):
+					jiffy_pos = jiff
+					break
 			if jiffy_pos != -1:
 				if not extractor.check_null(kerneldata, jiffy_pos, 'loops_per_jiffy'):
 					pass
