@@ -5,6 +5,7 @@ would still not run correctly in a few cases, but better than it was.
 any package. This lead to false positives if a string extracted from a kernel
 image (representing a function) was also present as a string constant in
 another package except the kernel.
+* extract more kernel symbols from Linux kernel sources.
 
 2013-09-02
 * fix JFFS2 symlinks (as far as possible and reasonable)
