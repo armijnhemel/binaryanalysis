@@ -1,3 +1,12 @@
+2013-09-04
+* remove version checking code from ranking.py and move it to a separate
+aggregate function. The reason is that with the version information the
+pickles can get really large (example: Linux kernel). The pickles are read by
+some aggregate scans, but they only need a bit of information. By moving the
+version determination to a later point reading a large pickle from disk (even
+when the information is not needed) can be avoided. Pruning of results will be
+integrated in version checking as to further reduce the size of pickles.
+
 2013-09-03
 * fix kernel symbols extraction from binaries for more cases. Possibly it
 would still not run correctly in a few cases, but better than it was.

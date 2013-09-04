@@ -47,7 +47,6 @@ ranking:
 * use version information to report most likely licenses
 * use macholib to analyse Mach-O binaries (MacOS X)
 * split extractGeneric into two methods: one to extract all the info (including kernel module names and kernel function names), one for computing the end result
-* move license checks to a different scan to be run much later and combine it with pruning of versions. This is to prevent memory hogging and reading + writing big results files (which can be huge in the case of the Linux kernel), plus also should make the ranking code easier to read.
 
 busybox scanning:
 * clean up finding ranges of applets in extract_configuration. It should be possible to do this less kludgy.
