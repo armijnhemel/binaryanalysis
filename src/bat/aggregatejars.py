@@ -210,7 +210,7 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 						scoresperpkg[s] = stringmatches['scores'][s]
 			if stringmatches['reports'] != []:
 				for r in stringmatches['reports']:
-					(rank, package, unique, percentage, packageversions, packagelicenses) = r
+					(rank, package, unique, percentage, packageversions, packagelicenses, language) = r
 					## ignore rank and percentage
 					if uniqueMatchesperpkg.has_key(package):
 						tmpres = []
@@ -282,7 +282,7 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 			percentage = (scoresperpkg[s]/totalscore)*100.0
 		except:
 			percentage = 0.0
-		reports.append((rank, s, uniqueMatchesperpkg.get(s,[]), percentage, packageversionsperpkg.get(s, {}), list(set(packagelicensesperpkg.get(s, [])))))
+		reports.append((rank, s, uniqueMatchesperpkg.get(s,[]), percentage, packageversionsperpkg.get(s, {}), list(set(packagelicensesperpkg.get(s, [])), 'Java')))
 		rank = rank+1
 
 	if dynamicresfinal.has_key('uniquepackages'):

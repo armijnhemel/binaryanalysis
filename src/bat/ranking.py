@@ -1620,6 +1620,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 
 	del lines
 
+	## def computeScores(stringsLeft, uniqueScore, uniqueMatches, allMatches, sameFileScore, nonUniqueAssignments):
 	## If the string is not unique, do a little bit more work to determine which
 	## file is the most likely, so also record the filename.
 	##
@@ -1746,7 +1747,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 		except:
 			percentage = 0.0
 		#reports.append((rank, s, udicts, percentage, packageversions.get(s, {}), packagelicenses.get(s, [])))
-		reports.append((rank, s, uniqueMatches.get(s,[]), percentage, packageversions.get(s, {}), packagelicenses.get(s, [])))
+		reports.append((rank, s, uniqueMatches.get(s,[]), percentage, packageversions.get(s, {}), packagelicenses.get(s, []), language))
 		rank = rank+1
 	'''
 	for s in scores_sorted:
@@ -1804,7 +1805,7 @@ def xmlprettyprint(leafreports, root, envvars=None):
 	stringsnode.appendChild(extractedlines)
 
 	for k in res['reports']:
-		(rank, name, uniqueMatches, percentage, packageversions, packagelicenses) = k
+		(rank, name, uniqueMatches, percentage, packageversions, packagelicenses, language) = k
 
 		## add package name
 		packagenode = root.createElement('package')

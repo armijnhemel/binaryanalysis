@@ -172,7 +172,7 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir)):
 
 		if res['reports'] != []:
 			for j in res['reports']:
-				(rank, packagename, uniquematches, percentage, packageversions, licenses) = j
+				(rank, packagename, uniquematches, percentage, packageversions, licenses, language) = j
 				if len(uniquematches) == 0:
 					continue
 				tmppickle = tempfile.mkstemp()
