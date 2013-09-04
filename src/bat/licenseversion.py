@@ -276,8 +276,8 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 			## We should store the version number with the license.
 			## There are good reasons for this: files are sometimes collectively
 			## relicensed when there is a new release (example: Samba 3.2 relicensed
-			## to GPLv3+) so the version number can be very significant.
-			## determinelicense should *always* imply determineversion
+			## to GPLv3+) so the version number can be very significant for licensing.
+			## determinelicense and determinecopyright *always* imply determineversion
 			if determineversion or determinelicense or determinecopyright:
 				c.execute("select distinct sha256, linenumber, language from extracted_file where programstring=?", (line,))
 				versionsha256s = filter(lambda x: x[2] == language, c.fetchall())
@@ -305,6 +305,9 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 					else:   
 						newpackageversions[v] = 1
 				newuniques.append((line, line_sha256_version))
+
+				## TODO: determine versions of functions and variables here as well, then prune
+
 				if determinelicense:
 					licensepv = []
 					for s in versionsha256s:
