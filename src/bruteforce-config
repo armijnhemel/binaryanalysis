@@ -722,7 +722,7 @@ module      = bat.ranking
 method      = searchGeneric
 ppmodule    = bat.ranking
 ppoutput    = xmlprettyprint
-envvars     = BAT_STRINGSCACHE_C=/gpl/master/stringscache_c:BAT_STRINGSCACHE_JAVA=/gpl/master/stringscache_java:BAT_DB=/gpl/master/master.sqlite3:BAT_NAMECACHE_C=/gpl/master/functioncache_c:BAT_NAMECACHE_JAVA=/gpl/master/functioncache_java:BAT_RANKING_FULLCACHE=1:BAT_RANKING_LICENSE=1:BAT_RANKING_VERSION=1:BAT_CLONE_DB=/tmp/clonedb:BAT_LICENSE_DB=/gpl/master/licenses.sqlite3
+envvars     = BAT_STRINGSCACHE_C=/gpl/master/stringscache_c:BAT_STRINGSCACHE_JAVA=/gpl/master/stringscache_java:BAT_DB=/gpl/master/master.sqlite3:BAT_NAMECACHE_C=/gpl/master/functioncache_c:BAT_NAMECACHE_JAVA=/gpl/master/functioncache_java:BAT_RANKING_FULLCACHE=1:BAT_CLONE_DB=/tmp/clonedb
 #envvars     = BAT_STRINGSCACHE_C=/gpl/master/stringscache_c:BAT_STRINGSCACHE_JAVA=/gpl/master/stringscache_java:BAT_DB=/gpl/master/master.sqlite3:BAT_NAMECACHE_B=/gpl/master/functioncache_c:BAT_NAMECACHE_JAVA=/gpl/master/functioncache_java:BAT_RANKING_LICENSE=1:BAT_RANKING_VERSION=1:BAT_CLONE_DB=/tmp/clonedb:BAT_LICENSE_DB=/gpl/master/licenses.sqlite3
 noscan      = text:xml:graphics:pdf:compressed:resource:audio:video:vimswap:timezone
 description = Classify packages using advanced ranking mechanism
@@ -792,7 +792,7 @@ storetarget = images
 storedir    = /tmp/images
 storetype   = -graph.png
 cleanup     = yes
-priority    = 2
+priority    = 5
 
 [generateimages]
 type        = aggregate
@@ -837,15 +837,17 @@ module      = bat.kernelanalysis
 method      = kernelmodulecheck
 description = Match versions and architectures of Linux kernel images and modules
 enabled     = yes
+priority    = 4
 
-#[prune]
-#type        = aggregate
-#module      = bat.pruneresults
-#method      = pruneresults
-#noscan      = text:xml:graphics:pdf:audio:video
-#envvars     = BAT_KEEP_VERSIONS=10:BAT_KEEP_MAXIMUM_PERCENTAGE=50
-#enabled     = no
-#priority    = 2
+[versionlicensecopyright]
+type        = aggregate
+module      = bat.licenseversion
+method      = determinelicense_version_copyright
+noscan      = text:xml:graphics:pdf:audio:video
+##envvars     = BAT_KEEP_VERSIONS=10:BAT_KEEP_MAXIMUM_PERCENTAGE=50
+envvars     = BAT_DB=/gpl/master/master.sqlite3:BAT_RANKING_LICENSE=1:BAT_RANKING_VERSION=1:BAT_LICENSE_DB=/gpl/master/licenses.sqlite3
+enabled     = yes
+priority    = 3
 
 #####################
 ### postrun scans ###
