@@ -1,3 +1,10 @@
+2013-09-05
+* prevent reading result pickles twice in generatereports
+* prune versions in results, after determining all possible versions. In most
+cases this will not save any space or computing time, but in cases where there
+are a ton of hits, plus many versions in the database (like the Linux kernel)
+it can have a big impact on the size of the result pickles, plus reporting.
+
 2013-09-04
 * remove version checking code from ranking.py and move it to a separate
 aggregate function. The reason is that with the version information the
