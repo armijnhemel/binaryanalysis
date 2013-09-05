@@ -29,150 +29,87 @@ smaller than the amount in the most promising version (expressed as a maximum
 percentage)
 '''
 
-def pruneresults(unpackreports, scantempdir, topleveldir, debug=False, envvars=None):
-	scanenv = os.environ.copy()
-	if envvars != None:
-		for en in envvars.split(':'):
-			try:
-				(envname, envvalue) = en.split('=')
-				scanenv[envname] = envvalue
-			except Exception, e:
-				pass
-
+def prune(scanenv, uniques, package):
 	if not scanenv.has_key('BAT_KEEP_VERSIONS'):
 		## keep all versions
-		return
+		return uniques
 	else:
 		keepversions = int(scanenv.get('BAT_KEEP_VERSIONS', 0))
 		if keepversions <= 0:
 			## keep all versions
-			return
+			return uniques
 
-	if not scanenv.has_key('BAT_KEEP_MAXIMUM_PERCENTAGE'):
+
+	## there need to be a minimum of unique hits (like strings), otherwise
+	## it's silly
+	if not scanenv.has_key('BAT_MINIMUM_UNIQUE'):
 		## keep all versions
-		return
+		return uniques
 	else:
-		keeppercentage = int(scanenv.get('BAT_KEEP_MAXIMUM_PERCENTAGE', 0))
-		if keeppercentage == 0:
+		minimumunique = int(scanenv.get('BAT_MINIMUM_UNIQUE', 0))
+		if minimumunique <= 0:
 			## keep all versions
-			return
-		if keeppercentage >= 100:
-			## keep all versions
-			return
+			return uniques
 
-	rankingfiles = []
+	if len(uniques) < minimumunique:
+		return uniques
 
-	## ignore files which don't have ranking results
-	for i in unpackreports:
-		if not unpackreports[i].has_key('sha256'):
+	uniqueversions = {}
+
+	linesperversion = {}
+
+	for u in uniques:
+		(line, res) = u
+		seenversions = []
+		for r in res:
+			(sha256, version, linenumber, filename) = r
+			if version in seenversions:
+				continue
+			if linesperversion.has_key(version):
+				linesperversion[version].append(line)
+			else:
+				linesperversion[version] = [line]
+			seenversions.append(version)
+			if uniqueversions.has_key(version):
+				uniqueversions[version] += 1
+			else:
+				uniqueversions[version] = 1
+	if len(uniqueversions.keys()) == 1:
+		return uniques
+
+	pruneme = []
+
+	unique_sorted_rev = sorted(uniqueversions, key = lambda x: uniqueversions.__getitem__(x), reverse=True)
+	unique_sorted = sorted(uniqueversions, key = lambda x: uniqueversions.__getitem__(x))
+
+	for l in unique_sorted_rev:
+		if l in pruneme:
 			continue
-		if not unpackreports[i].has_key('tags'):
-			continue
-		if not 'ranking' in unpackreports[i]['tags']:
-			continue
-		filehash = unpackreports[i]['sha256']
-		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
-			continue
-		rankingfiles.append(i)
+		for k in unique_sorted:
+			if uniqueversions[k] == uniqueversions[l]:
+				continue
+			if uniqueversions[k] > uniqueversions[l]:
+				break
+			if k in pruneme:
+				continue
+			if l == k:
+				continue
+			inter = set(linesperversion[l]).intersection(set(linesperversion[k]))
+			if list(set(linesperversion[k]).difference(inter)) == []:
+				pruneme.append(k)
 
-	for i in rankingfiles:
-		filehash = unpackreports[i]['sha256']
-		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
-		leafreports = cPickle.load(leaf_file)
-		leaf_file.close()
-		if not leafreports.has_key('ranking'):
-			continue
-
-		(res, dynamicRes, variablepvs) = leafreports['ranking']
-
-		## first determine for strings
-		if res != None:
-			if res['reports'] != []:
-				for j in res['reports']:
-					keeppackageversions = []
-					pruneversions = []
-					pvs = {}
-					(rank, packagename, uniquematches, percentage, packageversions, licenses, language) = j
-					if len(uniquematches) == 0:
-						continue
-
-					topcandidate = None
-
-					## check if the version was extracted for the Linux kernel, since the
-					## version can fairly easily be extracted. TODO: make this more generic
-					## so it can also be used for for example the BusyBox results.
-					if packagename == 'linux':
-						if leafreports.has_key('kernelchecks'):
-							if leafreports['kernelchecks'].has_key('version'):
-								kernelversion = leafreports['kernelchecks']['version']
-								if kernelversion in packageversions:
-									topcandidate = kernelversion
-					## the amount of versions is lower than the maximum amount that should be
-					## reported, so continue
-					if len(packageversions) < keepversions:
-						#print >>sys.stderr, "keeping all", packagename, packageversions, keepversions
-						continue
-
-					versioncount = {}
-					for u in uniquematches:
-						## string = u[0]
-						## list of results = u[1]
-						## walk through each of the unique matches.
-						## Store which versions are used. If a certain match is only for
-						## a single version store it in 'keeppackageversions'
-						## u[1] : (checksum, version, line number, path)
-						uniqueversions = list(set(map(lambda x: x[1], u[1])))
-
-						if len(uniqueversions) == 1:
-							keeppackageversions = list(set((keeppackageversions + uniqueversions)))
-
-						for un in uniqueversions:
-							if versioncount.has_key(un):
-								versioncount[un] += 1
-							else:
-								versioncount[un] = 1
-					if keeppackageversions != []:
-						print >>sys.stderr, "UNIQUE", packagename, keeppackageversions
-
-					## there are no differences between the different values: for each
-					## version the same amount of hits was found.
-					if min(versioncount.values()) == max(versioncount.values()):
-						continue
-
-					## If there is more than one version in keeppackageversions, then there is either
-					## a database error, a string extraction error (for ELF files sometimes bogus data
-					## is extracted, or the binary was made from modified source code (forward porting
-					## of patches, backporting of patches, etc.)
-					filterversions = []
-					filtercount = keepversions
-
-					if len(uniquematches) > max(versioncount.values()):
-						## none of the versions match all the strings
-						## This could indicate backporting or forward porting of code
-						if topcandidate != None:
-							if max(versioncount.values()) == versioncount[topcandidate]:
-								## the top candidate indeed is the top candidate
-								filterversions.append(topcandidate)
-								keepversions = keepversions - 1
-							else:
-								pass
-					else:
-						if topcandidate != None:
-							if max(versioncount.values()) == versioncount[topcandidate]:
-								## the top candidate indeed is the top candidate
-								filterversions.append(topcandidate)
-								keepversions = keepversions - 1
-							else:
-								## set the top candidate to the version with the most hits
-								## Possibly store the old top candidate as well, for use with
-								## for example functions.
-								pass
-
-					if keeppackageversions != []:
-						filterversions = keeppackageversions
-
-		## then determine the top candidates for function names, if any
-		## then variable names, if any
+	notpruned = list(set(uniqueversions.keys()).difference(set(pruneme)))
+	newuniques = []
+	for u in uniques:
+		(line, res) = u
+		newres = []
+		for r in res:
+			(sha256, version, linenumber, filename) = r
+			if version in notpruned:
+				newres.append(r)
+		if newres != []:
+			newuniques.append((line, newres))
+	return newuniques
 
 def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, debug=False, envvars=None):
 	scanenv = os.environ.copy()
@@ -271,6 +208,7 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 		newuniques = []
 		newpackageversions = {}
 		packagecopyrights = []
+		countsha256 = []
 		for u in unique:
 			line = u[0]
 			## We should store the version number with the license.
@@ -278,61 +216,68 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 			## relicensed when there is a new release (example: Samba 3.2 relicensed
 			## to GPLv3+) so the version number can be very significant for licensing.
 			## determinelicense and determinecopyright *always* imply determineversion
-			if determineversion or determinelicense or determinecopyright:
-				c.execute("select distinct sha256, linenumber, language from extracted_file where programstring=?", (line,))
-				versionsha256s = filter(lambda x: x[2] == language, c.fetchall())
+			c.execute("select distinct sha256, linenumber, language from extracted_file where programstring=?", (line,))
+			versionsha256s = filter(lambda x: x[2] == language, c.fetchall())
+			countsha256 = list(set(countsha256 + versionsha256s))
 
-				pv = {}
-				line_sha256_version = []
+			pv = {}
+			line_sha256_version = []
+			for s in versionsha256s:
+				if not sha256_versions.has_key(s[0]):
+					c.execute("select distinct version, package, filename from processed_file where sha256=?", (s[0],))
+					versions = c.fetchall()
+					versions = filter(lambda x: x[1] == package, versions)
+					sha256_versions[s[0]] = map(lambda x: (x[0], x[2]), versions)
+					for v in versions:
+						if not pv.has_key(v[0]):
+							pv[v[0]] = 1
+						line_sha256_version.append((s[0], v[0], s[1], v[2]))
+				else:
+					for v in sha256_versions[s[0]]:
+						if not pv.has_key(v[0]):
+							pv[v[0]] = 1
+						line_sha256_version.append((s[0], v[0], s[1], v[1]))
+			for v in pv:
+				if newpackageversions.has_key(v):
+					newpackageversions[v] = newpackageversions[v] + 1
+				else:   
+					newpackageversions[v] = 1
+			newuniques.append((line, line_sha256_version))
+
+		#print >>sys.stderr, "PACKAGE VERSIONS", newpackageversions
+
+		## TODO: recompute newpackageversions after pruning
+		## TODO: determine versions of functions and variables here as well
+
+		newuniques = prune(scanenv, newuniques, package)
+
+		if determinelicense:
+			for u in newuniques:
+				versionsha256s = u[1]
+				licensepv = []
 				for s in versionsha256s:
-					if not sha256_versions.has_key(s[0]):
-						c.execute("select distinct version, package, filename from processed_file where sha256=?", (s[0],))
-						versions = c.fetchall()
-						versions = filter(lambda x: x[1] == package, versions)
-						sha256_versions[s[0]] = map(lambda x: (x[0], x[2]), versions)
-						for v in versions:
-							if not pv.has_key(v[0]):
-								pv[v[0]] = 1
-							line_sha256_version.append((s[0], v[0], s[1], v[2]))
-					else:
-						for v in sha256_versions[s[0]]:
-							if not pv.has_key(v[0]):
-								pv[v[0]] = 1
-							line_sha256_version.append((s[0], v[0], s[1], v[1]))
-				for v in pv:
-					if newpackageversions.has_key(v):
-						newpackageversions[v] = newpackageversions[v] + 1
-					else:   
-						newpackageversions[v] = 1
-				newuniques.append((line, line_sha256_version))
-
-				## TODO: determine versions of functions and variables here as well, then prune
-
-				if determinelicense:
-					licensepv = []
-					for s in versionsha256s:
-						if not s[0] in seensha256:
-							licensecursor.execute("select distinct license, scanner from licenses where sha256=?", (s[0],))
-							licenses = licensecursor.fetchall()
-							if not len(licenses) == 0:
-								#licenses = squashlicenses(licenses)
-								licensepv = licensepv + licenses
-								#for v in map(lambda x: x[0], licenses):
-								#       licensepv.append(v)
-							seensha256.append(s[0])
+					if not s[0] in seensha256:
+						licensecursor.execute("select distinct license, scanner from licenses where sha256=?", (s[0],))
+						licenses = licensecursor.fetchall()
+						if not len(licenses) == 0:
+							#licenses = squashlicenses(licenses)
+							licensepv = licensepv + licenses
+							#for v in map(lambda x: x[0], licenses):
+							#       licensepv.append(v)
+						seensha256.append(s[0])
 					packagelicenses = list(set(packagelicenses + licensepv))
 
-				## extract copyrights. 'statements' are not very accurate so ignore those for now in favour of URL
-				## and e-mail
-				if determinecopyright:
-					copyrightpv = []
-					copyrightcursor.execute("select distinct * from extracted_copyright where sha256=?", (s[0],))
-					copyrights = copyrightcursor.fetchall()
-					copyrights = filter(lambda x: x[2] != 'statement', copyrights)
-					if copyrights != []:
-						copyrights = list(set(map(lambda x: (x[1], x[2]), copyrights)))
-						copyrightpv = copyrightpv + copyrights
-						packagecopyrights = list(set(packagecopyrights + copyrightpv))
+		## extract copyrights. 'statements' are not very accurate so ignore those for now in favour of URL
+		## and e-mail
+		if determinecopyright:
+			copyrightpv = []
+			copyrightcursor.execute("select distinct * from extracted_copyright where sha256=?", (s[0],))
+			copyrights = copyrightcursor.fetchall()
+			copyrights = filter(lambda x: x[2] != 'statement', copyrights)
+			if copyrights != []:
+				copyrights = list(set(map(lambda x: (x[1], x[2]), copyrights)))
+				copyrightpv = copyrightpv + copyrights
+				packagecopyrights = list(set(packagecopyrights + copyrightpv))
 
 		newreports.append((rank, package, newuniques, percentage, newpackageversions, packagelicenses, language))
 	res['reports'] = newreports
