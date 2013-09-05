@@ -142,12 +142,13 @@ def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
 	uniquehtmlfile.close()
 	os.unlink(os.path.join(pickledir, picklefile))
 
-## make individual pickle files from the results and process these individually and later
-## combine the results.
+## generate several output files and extract pickles
+## TODO: change name
 def extractpickles((filehash, pickledir, topleveldir, reportdir)):
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 	leafreports = cPickle.load(leaf_file)
 	leaf_file.close()
+
 	## return type: (filehash, reportresults, unmatchedresult)
 	reportresults = []
 	functionresults = []
@@ -156,41 +157,6 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir)):
 	unmatchedresult = None
 	if not leafreports.has_key('ranking'):
 		return (filehash, reportresults, functionresults, unmatchedresult)
-	## the ranking result is (res, dynamicRes, variablepvs)
-	(res, dynamicRes, variablepvs) = leafreports['ranking']
-
-	if res != None:
-		if res['unmatched'] != []:
-			unmatches = list(set(res['unmatched']))
-			unmatches.sort()
-
-			tmppickle = tempfile.mkstemp()
-
-			cPickle.dump(unmatches, os.fdopen(tmppickle[0], 'w'))
-			picklehash = gethash(tmppickle[1])
-			unmatchedresult = (picklehash, tmppickle[1])
-
-		if res['reports'] != []:
-			for j in res['reports']:
-				(rank, packagename, uniquematches, percentage, packageversions, licenses, language) = j
-				if len(uniquematches) == 0:
-					continue
-				tmppickle = tempfile.mkstemp()
-				cPickle.dump((packagename, uniquematches), os.fdopen(tmppickle[0], 'w'))
-				picklehash = gethash(tmppickle[1])
-				reportresults.append((rank, picklehash, tmppickle[1], len(uniquematches), packagename))
-	return (filehash, reportresults, functionresults, unmatchedresult)
-
-## generate several output files
-## TODO: move function name pickle extraction to extractpickles
-def generatemisc((filehash, pickledir, topleveldir, reportdir)):
-	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
-	leafreports = cPickle.load(leaf_file)
-	leaf_file.close()
-
-	if not leafreports.has_key('ranking'):
-		return
-
 	## the ranking result is (res, dynamicRes, variablepvs)
 	(res, dynamicRes, variablepvs) = leafreports['ranking']
 
@@ -385,7 +351,27 @@ def generatemisc((filehash, pickledir, topleveldir, reportdir)):
 				nameshtmlfile.write(html)
 				nameshtmlfile.close()
 
-	return
+	if res != None:
+		if res['unmatched'] != []:
+			unmatches = list(set(res['unmatched']))
+			unmatches.sort()
+
+			tmppickle = tempfile.mkstemp()
+
+			cPickle.dump(unmatches, os.fdopen(tmppickle[0], 'w'))
+			picklehash = gethash(tmppickle[1])
+			unmatchedresult = (picklehash, tmppickle[1])
+
+		if res['reports'] != []:
+			for j in res['reports']:
+				(rank, packagename, uniquematches, percentage, packageversions, licenses, language) = j
+				if len(uniquematches) == 0:
+					continue
+				tmppickle = tempfile.mkstemp()
+				cPickle.dump((packagename, uniquematches), os.fdopen(tmppickle[0], 'w'))
+				picklehash = gethash(tmppickle[1])
+				reportresults.append((rank, picklehash, tmppickle[1], len(uniquematches), packagename))
+	return (filehash, reportresults, functionresults, unmatchedresult)
 
 def generateunmatched((picklefile, pickledir, filehash, reportdir)):
 
@@ -433,6 +419,7 @@ def generatereports(unpackreports, scantempdir, topleveldir, debug=False, envvar
 			return
 
 	rankingfiles = []
+	filehashes = []
 
 	## filter out the files which don't have ranking results
 	for i in unpackreports:
@@ -443,9 +430,11 @@ def generatereports(unpackreports, scantempdir, topleveldir, debug=False, envvar
 		if not 'ranking' in unpackreports[i]['tags']:
 			continue
 		filehash = unpackreports[i]['sha256']
+		if filehash in filehashes:
+			continue
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue
-		rankingfiles.append(i)
+		filehashes.append(filehash)
 
 	pickles = []
 	processed = []
@@ -456,13 +445,10 @@ def generatereports(unpackreports, scantempdir, topleveldir, debug=False, envvar
 	unmatchedpickles = []
 	reportpickles = []
 
-	filehashes = list(set(map(lambda x: unpackreports[x]['sha256'], rankingfiles)))
-
-	## extract pickles
+	## extract pickles and generate some files
 	extracttasks = map(lambda x: (x, pickledir, topleveldir, reportdir), filehashes)
 	pool = multiprocessing.Pool()
 	res = filter(lambda x: x != None, pool.map(extractpickles, extracttasks))
-	res2 = filter(lambda x: x != None, pool.map(generatemisc, extracttasks))
 	pool.terminate()
 
 	## {filehash: [(rank, picklehash)]}
