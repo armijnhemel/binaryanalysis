@@ -197,6 +197,8 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 		return
 
 	(res, dynamicRes, variablepvs) = leafreports['ranking']
+
+	## TODO: fix for if res == None, but dynamicRes is not
 	if res == None:
 		return
 	for r in res['reports']:
