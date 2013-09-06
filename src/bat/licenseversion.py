@@ -220,7 +220,6 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 			versionsha256s = filter(lambda x: x[2] == language, c.fetchall())
 			countsha256 = list(set(countsha256 + versionsha256s))
 
-			pv = {}
 			line_sha256_version = []
 			for s in versionsha256s:
 				if not sha256_versions.has_key(s[0]):
@@ -229,24 +228,12 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 					versions = filter(lambda x: x[1] == package, versions)
 					sha256_versions[s[0]] = map(lambda x: (x[0], x[2]), versions)
 					for v in versions:
-						if not pv.has_key(v[0]):
-							pv[v[0]] = 1
 						line_sha256_version.append((s[0], v[0], s[1], v[2]))
 				else:
 					for v in sha256_versions[s[0]]:
-						if not pv.has_key(v[0]):
-							pv[v[0]] = 1
 						line_sha256_version.append((s[0], v[0], s[1], v[1]))
-			for v in pv:
-				if newpackageversions.has_key(v):
-					newpackageversions[v] = newpackageversions[v] + 1
-				else:   
-					newpackageversions[v] = 1
 			newuniques.append((line, line_sha256_version))
 
-		#print >>sys.stderr, "PACKAGE VERSIONS", newpackageversions
-
-		## TODO: recompute newpackageversions after pruning
 		## TODO: determine versions of functions and variables here as well
 
 		newuniques = prune(scanenv, newuniques, package)
@@ -256,6 +243,11 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 				versionsha256s = u[1]
 				licensepv = []
 				for s in versionsha256s:
+					v = s[1]
+					if newpackageversions.has_key(v):
+						newpackageversions[v] = newpackageversions[v] + 1
+					else:   
+						newpackageversions[v] = 1
 					if not s[0] in seensha256:
 						licensecursor.execute("select distinct license, scanner from licenses where sha256=?", (s[0],))
 						licenses = licensecursor.fetchall()
