@@ -233,8 +233,6 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 						line_sha256_version.append((s[0], v[0], s[1], v[1]))
 			newuniques.append((line, line_sha256_version))
 
-		## TODO: determine versions of functions and variables here as well
-
 		newuniques = prune(scanenv, newuniques, package)
 
 		for u in newuniques:
@@ -271,8 +269,18 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 				packagecopyrights = list(set(packagecopyrights + copyrightpv))
 
 		newreports.append((rank, package, newuniques, percentage, newpackageversions, packagelicenses, language))
+
+	## TODO: determine versions of functions and variables here as well
+
+	if dynamicRes.has_key('versionresults'):
+		newresults = {}
+		for package in dynamicRes['versionresults'].keys():
+			uniques = dynamicRes['versionresults'][package]
+			newuniques = prune(scanenv, uniques, package)
+			newresults[package] = newuniques
+		dynamicRes['versionresults'] = newresults
+
 	res['reports'] = newreports
-	leafreports['ranking'] = (res, dynamicRes, variablepvs)
 
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
 	leafreports = cPickle.dump(leafreports, leaf_file)
