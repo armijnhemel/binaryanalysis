@@ -39,7 +39,6 @@ def prune(scanenv, uniques, package):
 			## keep all versions
 			return uniques
 
-
 	## there need to be a minimum of unique hits (like strings), otherwise
 	## it's silly
 	if not scanenv.has_key('BAT_MINIMUM_UNIQUE'):
@@ -162,11 +161,11 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		filehashseen.append(filehash)
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue
-		rankingfiles.append((scanenv, unpackreports[i], topleveldir, determinelicense, determineversion, determinecopyright))
+		rankingfiles.append((scanenv, unpackreports[i], topleveldir, determinelicense, determinecopyright))
 	pool = multiprocessing.Pool()
 	pool.map(compute_version, rankingfiles)
 
-def compute_version((scanenv, unpackreport, topleveldir, determinelicense, determineversion, determinecopyright)):
+def compute_version((scanenv, unpackreport, topleveldir, determinelicense, determinecopyright)):
 	masterdb = scanenv.get('BAT_DB')
 
 	## open the database containing all the strings that were extracted
@@ -238,16 +237,16 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 
 		newuniques = prune(scanenv, newuniques, package)
 
-		if determinelicense:
-			for u in newuniques:
-				versionsha256s = u[1]
-				licensepv = []
-				for s in versionsha256s:
-					v = s[1]
-					if newpackageversions.has_key(v):
-						newpackageversions[v] = newpackageversions[v] + 1
-					else:   
-						newpackageversions[v] = 1
+		for u in newuniques:
+			versionsha256s = u[1]
+			licensepv = []
+			for s in versionsha256s:
+				v = s[1]
+				if newpackageversions.has_key(v):
+					newpackageversions[v] = newpackageversions[v] + 1
+				else:   
+					newpackageversions[v] = 1
+				if determinelicense:
 					if not s[0] in seensha256:
 						licensecursor.execute("select distinct license, scanner from licenses where sha256=?", (s[0],))
 						licenses = licensecursor.fetchall()
