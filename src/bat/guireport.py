@@ -143,9 +143,10 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, debug=False, env
     <tr><td><b>Name</b></td><td><b>Unique matches (maximum for single version)</b></td></tr>\n'''
 			versionhtml = ""
 			for j in dynamicres['packages']:
-				## for now: just take the version with the most matches, only report the amount of matches
-				functionmatches = functionmatches + "    <tr><td>%s</td><td>%d</td></tr>\n" % (j, max(map(lambda x: x[1], dynamicres['packages'][j])))
-				versionhtml = versionhtml + "<h5>%s</h5><p><img src=\"%s\"/></p>\n" % (j, "%s/%s-%s-funcversion.png" % (imagesdir, filehash, j))
+				if dynamicres['packages'][j] != []:
+					## for now: just take the version with the most matches, only report the amount of matches
+					functionmatches = functionmatches + "    <tr><td>%s</td><td>%d</td></tr>\n" % (j, max(map(lambda x: x[1], dynamicres['packages'][j])))
+					versionhtml = versionhtml + "<h5>%s</h5><p><img src=\"%s\"/></p>\n" % (j, "%s/%s-%s-funcversion.png" % (imagesdir, filehash, j))
 			functionmatches = functionmatches + "</table>"
 			if versionhtml != "":
 				functionmatches = functionmatches + "<h2>Versions per package</h2>" + versionhtml
