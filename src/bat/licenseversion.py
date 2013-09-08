@@ -188,7 +188,6 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 
 	## keep a list of versions per sha256, since source files often are in more than one version
 	sha256_versions = {}
-	newreports = []
 	filehash = unpackreport['sha256']
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 	leafreports = cPickle.load(leaf_file)
@@ -198,79 +197,82 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 
 	(res, dynamicRes, variablepvs) = leafreports['ranking']
 
-	## TODO: fix for if res == None, but dynamicRes is not
-	if res == None:
+	if res == None and dynamicRes == {}:
 		return
-	for r in res['reports']:
-		(rank, package, unique, percentage, packageversions, packagelicenses, language) = r
-		if unique == []:
-			newreports.append(r)
-			continue
-		newuniques = []
-		newpackageversions = {}
-		packagecopyrights = []
-		countsha256 = []
-		for u in unique:
-			line = u[0]
-			## We should store the version number with the license.
-			## There are good reasons for this: files are sometimes collectively
-			## relicensed when there is a new release (example: Samba 3.2 relicensed
-			## to GPLv3+) so the version number can be very significant for licensing.
-			## determinelicense and determinecopyright *always* imply determineversion
-			c.execute("select distinct sha256, linenumber, language from extracted_file where programstring=?", (line,))
-			versionsha256s = filter(lambda x: x[2] == language, c.fetchall())
-			countsha256 = list(set(countsha256 + versionsha256s))
 
-			line_sha256_version = []
-			for s in versionsha256s:
-				if not sha256_versions.has_key(s[0]):
-					c.execute("select distinct version, package, filename from processed_file where sha256=?", (s[0],))
-					versions = c.fetchall()
-					versions = filter(lambda x: x[1] == package, versions)
-					sha256_versions[s[0]] = map(lambda x: (x[0], x[2]), versions)
-					for v in versions:
-						line_sha256_version.append((s[0], v[0], s[1], v[2]))
-				else:
-					for v in sha256_versions[s[0]]:
-						line_sha256_version.append((s[0], v[0], s[1], v[1]))
-			newuniques.append((line, line_sha256_version))
+	if res != None:
+		newreports = []
+		for r in res['reports']:
+			(rank, package, unique, percentage, packageversions, packagelicenses, language) = r
+			if unique == []:
+				newreports.append(r)
+				continue
+			newuniques = []
+			newpackageversions = {}
+			packagecopyrights = []
+			countsha256 = []
+			for u in unique:
+				line = u[0]
+				## We should store the version number with the license.
+				## There are good reasons for this: files are sometimes collectively
+				## relicensed when there is a new release (example: Samba 3.2 relicensed
+				## to GPLv3+) so the version number can be very significant for licensing.
+				## determinelicense and determinecopyright *always* imply determineversion
+				c.execute("select distinct sha256, linenumber, language from extracted_file where programstring=?", (line,))
+				versionsha256s = filter(lambda x: x[2] == language, c.fetchall())
+				countsha256 = list(set(countsha256 + versionsha256s))
 
-		newuniques = prune(scanenv, newuniques, package)
+				line_sha256_version = []
+				for s in versionsha256s:
+					if not sha256_versions.has_key(s[0]):
+						c.execute("select distinct version, package, filename from processed_file where sha256=?", (s[0],))
+						versions = c.fetchall()
+						versions = filter(lambda x: x[1] == package, versions)
+						sha256_versions[s[0]] = map(lambda x: (x[0], x[2]), versions)
+						for v in versions:
+							line_sha256_version.append((s[0], v[0], s[1], v[2]))
+					else:
+						for v in sha256_versions[s[0]]:
+							line_sha256_version.append((s[0], v[0], s[1], v[1]))
+				newuniques.append((line, line_sha256_version))
 
-		for u in newuniques:
-			versionsha256s = u[1]
-			licensepv = []
-			for s in versionsha256s:
-				v = s[1]
-				if newpackageversions.has_key(v):
-					newpackageversions[v] = newpackageversions[v] + 1
-				else:   
-					newpackageversions[v] = 1
-				if determinelicense:
-					if not s[0] in seensha256:
-						licensecursor.execute("select distinct license, scanner from licenses where sha256=?", (s[0],))
-						licenses = licensecursor.fetchall()
-						if not len(licenses) == 0:
-							#licenses = squashlicenses(licenses)
-							licensepv = licensepv + licenses
-							#for v in map(lambda x: x[0], licenses):
-							#       licensepv.append(v)
-						seensha256.append(s[0])
-					packagelicenses = list(set(packagelicenses + licensepv))
+			newuniques = prune(scanenv, newuniques, package)
 
-		## extract copyrights. 'statements' are not very accurate so ignore those for now in favour of URL
-		## and e-mail
-		if determinecopyright:
-			copyrightpv = []
-			copyrightcursor.execute("select distinct * from extracted_copyright where sha256=?", (s[0],))
-			copyrights = copyrightcursor.fetchall()
-			copyrights = filter(lambda x: x[2] != 'statement', copyrights)
-			if copyrights != []:
-				copyrights = list(set(map(lambda x: (x[1], x[2]), copyrights)))
-				copyrightpv = copyrightpv + copyrights
-				packagecopyrights = list(set(packagecopyrights + copyrightpv))
+			for u in newuniques:
+				versionsha256s = u[1]
+				licensepv = []
+				for s in versionsha256s:
+					v = s[1]
+					if newpackageversions.has_key(v):
+						newpackageversions[v] = newpackageversions[v] + 1
+					else:   
+						newpackageversions[v] = 1
+					if determinelicense:
+						if not s[0] in seensha256:
+							licensecursor.execute("select distinct license, scanner from licenses where sha256=?", (s[0],))
+							licenses = licensecursor.fetchall()
+							if not len(licenses) == 0:
+								#licenses = squashlicenses(licenses)
+								licensepv = licensepv + licenses
+								#for v in map(lambda x: x[0], licenses):
+								#       licensepv.append(v)
+							seensha256.append(s[0])
+						packagelicenses = list(set(packagelicenses + licensepv))
 
-		newreports.append((rank, package, newuniques, percentage, newpackageversions, packagelicenses, language))
+			## extract copyrights. 'statements' are not very accurate so ignore those for now in favour of URL
+			## and e-mail
+			if determinecopyright:
+				copyrightpv = []
+				copyrightcursor.execute("select distinct * from extracted_copyright where sha256=?", (s[0],))
+				copyrights = copyrightcursor.fetchall()
+				copyrights = filter(lambda x: x[2] != 'statement', copyrights)
+				if copyrights != []:
+					copyrights = list(set(map(lambda x: (x[1], x[2]), copyrights)))
+					copyrightpv = copyrightpv + copyrights
+					packagecopyrights = list(set(packagecopyrights + copyrightpv))
+
+			newreports.append((rank, package, newuniques, percentage, newpackageversions, packagelicenses, language))
+		res['reports'] = newreports
 
 	## TODO: determine versions of functions and variables here as well
 
@@ -282,7 +284,6 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 			newresults[package] = newuniques
 		dynamicRes['versionresults'] = newresults
 
-	res['reports'] = newreports
 
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
 	leafreports = cPickle.dump(leafreports, leaf_file)
