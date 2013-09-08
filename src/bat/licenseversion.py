@@ -128,20 +128,28 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	determinelicense = False
 	if scanenv.get('BAT_RANKING_LICENSE', 0) == '1':
 		determinelicense = True
-		#licenseconn = sqlite3.connect(scanenv.get('BAT_LICENSE_DB'))
-		#licensecursor = licenseconn.cursor()
 
 	determinecopyright = False
 	if scanenv.get('BAT_RANKING_COPYRIGHT', 0) == '1':
 		determinecopyright = True
-		#copyrightconn = sqlite3.connect(scanenv.get('BAT_LICENSE_DB'))
-		#copyrightcursor = copyrightconn.cursor()
 
 	## only continue if there actually is a need
 	if not determinelicense and not determineversion and not determinecopyright:
-		#c.close()
-		#conn.close()
 		return None
+
+	## Some methods use a database to lookup renamed packages.
+	clonedb = scanenv.get('BAT_CLONE_DB')
+	clones = {}
+	if clonedb != None:
+		conn = sqlite3.connect(clonedb)
+		c = conn.cursor()
+		clonestmp = c.execute("SELECT originalname,newname from renames").fetchall()
+		for cl in clonestmp:
+			(originalname,newname) = cl
+			if not clones.has_key(originalname):
+				clones[originalname] = newname
+		c.close() 
+		conn.close()
 
 	## now read the pickles
 	rankingfiles = []
@@ -164,6 +172,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		rankingfiles.append((scanenv, unpackreports[i], topleveldir, determinelicense, determinecopyright))
 	pool = multiprocessing.Pool()
 	pool.map(compute_version, rankingfiles)
+	pool.terminate()
 
 def compute_version((scanenv, unpackreport, topleveldir, determinelicense, determinecopyright)):
 	masterdb = scanenv.get('BAT_DB')
@@ -277,6 +286,38 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 	## TODO: determine versions of functions and variables here as well
 
 	if dynamicRes.has_key('versionresults'):
+		for package in dynamicRes['versionresults'].keys():
+			if not dynamicRes.has_key('uniquepackages'):
+				continue
+			if not dynamicRes['uniquepackages'].has_key(package):
+				continue
+			versions = []
+			for p in dynamicRes['uniquepackages'][package]:
+				pversions = []
+				pv2 = {}
+				line_sha256_version = []
+				c.execute("select distinct sha256, linenumber, language from extracted_function where functionname=?", (p,))
+				res = filter(lambda x: x[2] == 'C', c.fetchall())
+		
+				for s in res:
+					c.execute("select distinct package, version, filename from processed_file where sha256=?", (s[0],))
+					packageversions = c.fetchall()
+					for pv in packageversions:
+						#if clones.has_key(pv[0]):
+							#pv = (clones[pv[0]], pv[1], pv[2])
+						## shouldn't happen!
+						if pv[0] != package:
+							continue
+						pversions.append(pv[1])
+						line_sha256_version.append((s[0], pv[1], s[1], pv[2]))
+				dynamicRes['versionresults'][package].append((p, line_sha256_version))
+				## functions with different signatures might be present in different files.
+				## Since we are ignoring signatures we need to deduplicate here too.
+				versions = versions + list(set(pversions))
+			dynamicRes['packages'][package] = []
+			for v in list(set(versions)):
+				dynamicRes['packages'][package].append((v, versions.count(v)))
+
 		newresults = {}
 		for package in dynamicRes['versionresults'].keys():
 			uniques = dynamicRes['versionresults'][package]
@@ -379,4 +420,21 @@ def licensesetup(envvars, debug=False):
 	## cleanup
 	c.close()
 	conn.close()
+
+	## check the cloning database. If it does not exist, or does not have
+	## the right schema remove it from the configuration
+	if scanenv.has_key('BAT_CLONE_DB'):
+		clonedb = scanenv.get('BAT_CLONE_DB')
+		if os.path.exists(clonedb):
+			conn = sqlite3.connect(clonedb)
+			c = conn.cursor()
+			c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='renames';")
+			if c.fetchall() == []:
+				if newenv.has_key('BAT_CLONE_DB'):
+					del newenv['BAT_CLONE_DB']
+			c.close()
+			conn.close()
+		else:   
+			if newenv.has_key('BAT_CLONE_DB'):
+				del newenv['BAT_CLONE_DB']
 	return (True, newenv)
