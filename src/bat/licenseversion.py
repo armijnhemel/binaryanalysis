@@ -314,15 +314,19 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 				## functions with different signatures might be present in different files.
 				## Since we are ignoring signatures we need to deduplicate here too.
 				versions = versions + list(set(pversions))
-			dynamicRes['packages'][package] = []
-			for v in list(set(versions)):
-				dynamicRes['packages'][package].append((v, versions.count(v)))
 
 		newresults = {}
 		for package in dynamicRes['versionresults'].keys():
 			uniques = dynamicRes['versionresults'][package]
 			newuniques = prune(scanenv, uniques, package)
 			newresults[package] = newuniques
+			uniqueversions = {}
+			dynamicRes['packages'][package] = []
+			vs = []
+			for r in newuniques:
+				vs = vs + list(set(map(lambda x: x[1], r[1])))
+			for v in list(set(vs)):
+				dynamicRes['packages'][package].append((v, vs.count(v)))
 		dynamicRes['versionresults'] = newresults
 
 
