@@ -247,7 +247,6 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 
 			for u in newuniques:
 				versionsha256s = u[1]
-				licensepv = []
 				for s in versionsha256s:
 					v = s[1]
 					if newpackageversions.has_key(v):
@@ -255,6 +254,7 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 					else:   
 						newpackageversions[v] = 1
 					if determinelicense:
+						licensepv = []
 						if not s[0] in seensha256:
 							licensecursor.execute("select distinct license, scanner from licenses where sha256=?", (s[0],))
 							licenses = licensecursor.fetchall()
