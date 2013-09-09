@@ -219,7 +219,6 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 			newuniques = []
 			newpackageversions = {}
 			packagecopyrights = []
-			countsha256 = []
 			for u in unique:
 				line = u[0]
 				## We should store the version number with the license.
@@ -229,7 +228,6 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 				## determinelicense and determinecopyright *always* imply determineversion
 				c.execute("select distinct sha256, linenumber, language from extracted_file where programstring=?", (line,))
 				versionsha256s = filter(lambda x: x[2] == language, c.fetchall())
-				countsha256 = list(set(countsha256 + versionsha256s))
 
 				line_sha256_version = []
 				for s in versionsha256s:
