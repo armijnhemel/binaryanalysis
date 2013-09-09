@@ -648,29 +648,10 @@ def extractJavaNames(javameta, scanenv, clones, rankingfull):
 	## unique matches found. 
 	if uniquematches != 0:
 		dynamicRes['packages'] = {}
-	## these are the unique function names only
+	## these are the unique function names only, just add some stubs here
 	for i in uniquepackages:
 		versions = []
-		for p in uniquepackages[i]:
-			pversions = []
-			c.execute("select distinct sha256, language from extracted_function where functionname=?", (p,))
-			res = c.fetchall()
-			for s in res:
-				if s[1] != 'Java':
-					continue
-				c.execute("select distinct package, version from processed_file where sha256=?", (s[0],))
-				packageversions = c.fetchall()
-				for pv in packageversions:
-					## shouldn't happen!
-					if pv[0] != i:
-						continue
-					pversions.append(pv[1])
-			## functions with different signatures might be present in different files.
-			## Since signatures are ignored data here needs to be deduplicated too.
-			versions = versions + list(set(pversions))
 		dynamicRes['packages'][i] = []
-		for v in list(set(versions)):
-			dynamicRes['packages'][i].append((v, versions.count(v)))
 	c.close()
 	conn.close()
 	return dynamicRes
