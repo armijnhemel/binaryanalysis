@@ -176,10 +176,11 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 	## * Windows executables and libraries
 	## * Mono/.NET files
 	## * Flash/ActionScript
-	## Focus is on ELF
+
 	if 'elf' in tags:
 		mstype = "ELF"
 	else:
+		## TODO: use more information already present in tags, like Dalvik or Java.
         	mstype = ms.file(path)
         if "ELF" in mstype:
 		language = 'C'
@@ -327,6 +328,8 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 			## constants :-(
 			## Also, in case of certain compiler flags string constants might be in
 			## different sections.
+			## TODO: find out which compilation settings influence this and how it
+			## can be detected that strings were moved to different sections.
 			if "ELF" in mstype:
 				if linuxkernel:
 					dynamicRes = {}
@@ -339,7 +342,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 						(dynamicRes,variablepvs) = dynres
 				variablepvs['language'] = 'C'
 				elfscanfiles = []
-				## first determine the size and offset of .data and .rodata and carve it from the file
+				## first determine the size and offset of .data and .rodata and carve them from the file
 				p = subprocess.Popen(['readelf', '-SW', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				## check if there actually are sections. On some systems the
