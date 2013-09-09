@@ -29,6 +29,74 @@ smaller than the amount in the most promising version (expressed as a maximum
 percentage)
 '''
 
+fossology_to_ninka = { 'No_license_found': 'NONE'
+                     , 'GPL_v1': 'GPLv1'
+                     , 'GPL_v1+': 'GPLv1+'
+                     , 'GPL_v2': 'GPLv2'
+                     , 'GPL_v2+': 'GPLv2+'
+                     , 'GPL_v3': 'GPLv3'
+                     , 'GPL_v3+': 'GPLv3+'
+                     , 'LGPL_v2': 'LibraryGPLv2'
+                     , 'LGPL_v2+': 'LibraryGPLv2+'
+                     , 'LGPL_v2.1': 'LesserGPLv2.1'
+                     , 'LGPL_v2.1+': 'LesserGPLv2.1+'
+                     , 'LGPL_v3': 'LesserGPLv3'
+                     , 'LGPL_v3+': 'LesserGPLv3+'
+                     , 'GPLv2+KDEupgradeClause': 'GPLVer2or3KDE+'
+                     , 'Apache_v1.1': 'Apachev1.1'
+                     , 'Apache_v2.0': 'Apachev2'
+                     , 'MPL_v1.0': 'MPLv1_0'
+                     , 'MPL_v1.1': 'MPLv1_1'
+                     , 'QPL_v1.0': 'QTv1'
+                     , 'Eclipse_v1.0': 'EPLv1'
+                     , 'Boost_v1.0': 'boostV1'
+                     , 'See-file(LICENSE)': 'SeeFile'
+                     , 'See-doc(OTHER)': 'SeeFile'
+                     , 'See-file(README)': 'SeeFile'
+                     , 'See-file(COPYING)': 'SeeFile'
+                     , 'Freetype': 'FreeType'
+                     , 'Zend_v2.0': 'zendv2'
+                     , 'PHP_v3.01': 'phpLicV3.01'
+                     , 'CDDL': 'CDDLic'
+                     , 'CDDL_v1.0': 'CDDL_v1.0'
+                     , 'W3C-IP': 'W3CLic'
+                     , 'Public-domain': 'publicDomain'
+                     , 'IBM-PL': 'IBMv1'
+                     , 'Sun': 'sunRPC'
+                     , 'NPL_v1.0': 'NPLv1_0'
+                     , 'NPL_v1.1': 'NPLv1_1'
+                     , 'Artifex': 'artifex'
+                     , 'CPL_v1.0': 'CPLv1'
+                     , 'Beerware': 'BeerWareVer42'
+                     , 'Public-domain-ref': 'publicDomain'
+                     , 'Intel': 'InterACPILic'
+                     , 'Artistic': 'ArtisticLicensev1'
+                     }
+
+## The scanners that are used in BAT are Ninka and FOSSology. These scanners
+## don't always agree on results, but when they do, it is very reliable.
+def squashlicenses(licenses):
+	## licenses: [(license, scanner)]
+	if len(licenses) != 2:
+		return licenses
+	if licenses[0][1] == 'ninka':
+		if fossology_to_ninka.has_key(licenses[1][0]):
+			if fossology_to_ninka[licenses[1][0]] == licenses[0][0]:
+				if licenses[0][0] == 'InterACPILic':
+					licenses = [('IntelACPILic', 'squashed')]
+				else:   
+					licenses = [(licenses[0][0], 'squashed')]
+		else:   
+			status = "difference"
+	elif licenses[1][1] == 'ninka':
+		if fossology_to_ninka.has_key(licenses[0][0]):
+			if fossology_to_ninka[licenses[0][0]] == licenses[1][0]:
+				if licenses[0][0] == 'InterACPILic':
+					licenses = [('IntelACPILic', 'squashed')]
+				else:
+					licenses = [(licenses[0][0], 'squashed')]
+	return licenses
+
 def prune(scanenv, uniques, package):
 	if not scanenv.has_key('BAT_KEEP_VERSIONS'):
 		## keep all versions
