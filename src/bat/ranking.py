@@ -1445,6 +1445,12 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 	roundNr = 0
 	strleft = len(stringsLeft)
 
+	if rankingfull:
+		avgscores = {}
+		res = conn.execute("select package, avgstrings from stringscache.avgstringscache").fetchall()
+		for r in res:
+			avgscores[r[0]] = r[1]
+
 	## keep track of which strings were already found. This is because each string
 	## is only considered once anyway.
 	assigned = []
@@ -1469,6 +1475,9 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 		## so far value is the best, but that might change
 
 		best = gain_sorted[0]
+		## Possible optimisation: skip the last step if the gain is not high enough
+		#if filter(lambda x: x[1] > gaincutoff, gain.items()) == []:
+		#	break
 
 		## if multiple packages have a big enough gain, add them to 'close'
 		## and 'fight' to see which package is the most likely hit.
@@ -1479,7 +1488,12 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 		if len(close) > 1:
 			# print >>sys.stderr, "  doing battle royale between [close]"
 			## reverse sort close, then best = close_sorted[0][0]
-			close_sorted = map(lambda x: (x, averageStringsPerPkgVersion(x, conn)), close)
+			if rankingfull:
+				close_sorted = []
+				for r in close:
+					close_sorted.append((r, avgscores[r]))
+			else:
+				close_sorted = map(lambda x: (x, averageStringsPerPkgVersion(x, conn)), close)
 			close_sorted = sorted(close_sorted, key = lambda x: x[1], reverse=True)
 			## If we don't have a unique score *at all* it is likely that everything
 			## is cloned. There could be a few reasons:
