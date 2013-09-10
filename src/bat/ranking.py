@@ -1120,6 +1120,8 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 	## setup code guarantees that this database exists and that sanity
 	## checks were done.
 	if not scanenv.has_key(stringsdbperlanguage[language]):
+		conn.close()
+		c.close()
 		return None
 
 	stringscache = scanenv.get(stringsdbperlanguage[language])
@@ -1290,7 +1292,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 			else:
 				unmatched.append(line)
 		if len(res) != 0:
-			## We are assuming:
+			## Assume:
 			## * database has no duplicates
 			## * filenames in the database have been processed using os.path.basename()
 			## If not, uncomment the following few lines:
@@ -1337,8 +1339,9 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 				nonUniqueMatchLines.append(line)
 				## The string found is not unique to a package, but is it 
 				## unique to a filename?
-				## This method does assume that files that are named the same
-				## also contain the same or similar content.
+				## This method assumes that files that are named the same
+				## also contain the same or similar content. This could lead
+				## to incorrect results.
 				## now determine the score for the string
 				try:
 					score = len(line) / pow(alpha, (len(filenames) - 1))
@@ -1507,6 +1510,11 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 		if gain[best] < gaincutoff:
 			break
 		strleft = len(stringsLeft)
+
+	c.execute("detach stringscache")
+
+	c.close()
+	conn.close()
 
 	scores = {}
 	for k in uniqueScore.keys() + sameFileScore.keys():
