@@ -300,9 +300,8 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 				line_sha256_version = []
 				for s in versionsha256s:
 					if not sha256_versions.has_key(s[0]):
-						c.execute("select distinct version, package, filename from processed_file where sha256=?", (s[0],))
+						c.execute("select version, package, filename from processed_file where sha256=?", (s[0],))
 						versions = c.fetchall()
-						versions = filter(lambda x: x[1] == package, versions)
 						sha256_versions[s[0]] = map(lambda x: (x[0], x[2]), versions)
 						for v in versions:
 							line_sha256_version.append((s[0], v[0], s[1], v[2]))
