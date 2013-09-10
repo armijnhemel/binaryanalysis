@@ -1,3 +1,14 @@
+2013-09-10
+* remove unnecessary database lookups in ranking.py but only if rankingfull
+is set
+
+2013-09-09
+* move all license code from ranking.py to licenseversion.py
+
+2013-09-08
+* move checking of versions of function names (C only right now) to
+licenseversion.py
+
 2013-09-06
 * prune results of function names as well.
 
