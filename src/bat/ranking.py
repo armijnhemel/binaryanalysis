@@ -1494,17 +1494,18 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 				stringsPerPkg[p2] = stringsPerPkg.get(p2, []) + [stri]
 
 		for p2 in gain.keys():
-			### check if packages could ever contribute usefully.
+			## check if packages could ever contribute usefully.
 			if gain[p2] < gaincutoff:
 				useless_packages.append(p2)
+
 		## gain_sorted contains the sort order, gain contains the actual data
 		gain_sorted = sorted(gain, key = lambda x: gain.__getitem__(x), reverse=True)
 		if gain_sorted == []:
 			break
 
 		## so far value is the best, but that might change
-
 		best = gain_sorted[0]
+
 		## Possible optimisation: skip the last step if the gain is not high enough
 		if filter(lambda x: x[1] > gaincutoff, gain.items()) == []:
 			break
