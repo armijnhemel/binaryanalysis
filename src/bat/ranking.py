@@ -1442,14 +1442,38 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 				pkgs2.append(pkgSort)
 		pkgsScorePerString[stri] = pkgs2
 
-	roundNr = 0
-	strleft = len(stringsLeft)
-
 	if rankingfull:
 		avgscores = {}
 		res = conn.execute("select package, avgstrings from stringscache.avgstringscache").fetchall()
 		for r in res:
 			avgscores[r[0]] = r[1]
+
+	newstringsPerPkg = {}
+	newgain = {}
+	for stri in stringsLeft:
+		for p2 in pkgsScorePerString[stri]:
+			newgain[p2] = newgain.get(p2, 0) + stringsLeft[stri]['score']
+			newstringsPerPkg[p2] = newstringsPerPkg.get(p2, []) + [stri]
+
+	useless_packages = []
+	for p in newgain.keys():
+		## check if packages could ever contribute usefully.
+		if newgain[p] < gaincutoff:
+			useless_packages.append(p)
+
+	## walk through the data again, filter out useless stuff
+	new_stringsleft = {}
+
+	for stri in stringsLeft:
+		## filter out the strings that only occur in packages that will contribute
+		## to the score. Ignore the rest.
+		if filter(lambda x: x not in useless_packages, pkgsScorePerString[stri]) != []:
+			new_stringsleft[stri] = stringsLeft[stri]
+
+	stringsLeft = new_stringsleft
+
+	roundNr = 0
+	strleft = len(stringsLeft)
 
 	## keep track of which strings were already found. This is because each string
 	## is only considered once anyway.
@@ -1476,8 +1500,8 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 
 		best = gain_sorted[0]
 		## Possible optimisation: skip the last step if the gain is not high enough
-		#if filter(lambda x: x[1] > gaincutoff, gain.items()) == []:
-		#	break
+		if filter(lambda x: x[1] > gaincutoff, gain.items()) == []:
+			break
 
 		## if multiple packages have a big enough gain, add them to 'close'
 		## and 'fight' to see which package is the most likely hit.
