@@ -1442,6 +1442,8 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 				pkgs2.append(pkgSort)
 		pkgsScorePerString[stri] = pkgs2
 
+	## suck the average string scores database into memory if rankingfull is set. Even with a few
+	## million packages this will not cost much memory and it prevents many database lookups.
 	if rankingfull:
 		avgscores = {}
 		res = conn.execute("select package, avgstrings from stringscache.avgstringscache").fetchall()
@@ -1464,11 +1466,18 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 	## walk through the data again, filter out useless stuff
 	new_stringsleft = {}
 
+	string_split = {}
+
 	for stri in stringsLeft:
 		## filter out the strings that only occur in packages that will contribute
 		## to the score. Ignore the rest.
 		if filter(lambda x: x not in useless_packages, pkgsScorePerString[stri]) != []:
 			new_stringsleft[stri] = stringsLeft[stri]
+			strsplit = stri.rsplit('\t', 1)[0]
+			if string_split.has_key(strsplit):
+				string_split[strsplit].append(stri)
+			else:
+				string_split[strsplit] = [stri]
 
 	stringsLeft = new_stringsleft
 
@@ -1477,7 +1486,6 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 
 	## keep track of which strings were already found. This is because each string
 	## is only considered once anyway.
-	assigned = []
 	while strleft > 0:
 		roundNr = roundNr + 1
 		#print >>sys.stderr, "round %d: %d strings left" % (roundNr, strleft)
@@ -1485,8 +1493,6 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 		stringsPerPkg = {}
 		## Determine to which packages the remaining strings belong.
 		for stri in stringsLeft:
-			if stri.rsplit('\t', 1)[0] in assigned:
-				continue
 			for p2 in pkgsScorePerString[stri]:
 				if p2 in useless_packages:
 					continue
@@ -1539,6 +1545,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 		best_score = 0
 		## for each string in the package with the best gain add the score
 		## to the package and move on to the next package.
+		todelete = []
 		for xy in stringsPerPkg[best]:
 			best_score += 1
 
@@ -1548,9 +1555,12 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 
 			allMatches[best][x['string']] = allMatches[best].get(x['string'],0) + x['score']
 			sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
-			#print >>sys.stderr, "GAIN", gain[best], best
-			assigned.append(xy.rsplit('\t', 1)[0])
-			del stringsLeft[xy]
+			strsplit = xy.rsplit('\t', 1)[0]
+			todelete.append(strsplit)
+		todelete = list(set(todelete))
+		for a in todelete:
+			for st in string_split[a]:
+				del stringsLeft[st]
 		nonUniqueAssignments[best] = best_score
 		if gain[best] < gaincutoff:
 			break
