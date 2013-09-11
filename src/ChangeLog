@@ -1,3 +1,9 @@
+2013-09-11
+* remove packages that can never contribute to a score (and that will never be
+selected anyway) from the input in ranking.py
+* clean up data that will never be selected. This speeds up string assignment
+a lot.
+
 2013-09-10
 * remove unnecessary database lookups in ranking.py but only if rankingfull
 is set
