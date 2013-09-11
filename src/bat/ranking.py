@@ -1488,9 +1488,15 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 			if stri.rsplit('\t', 1)[0] in assigned:
 				continue
 			for p2 in pkgsScorePerString[stri]:
+				if p2 in useless_packages:
+					continue
 				gain[p2] = gain.get(p2, 0) + stringsLeft[stri]['score']
 				stringsPerPkg[p2] = stringsPerPkg.get(p2, []) + [stri]
 
+		for p2 in gain.keys():
+			### check if packages could ever contribute usefully.
+			if gain[p2] < gaincutoff:
+				useless_packages.append(p2)
 		## gain_sorted contains the sort order, gain contains the actual data
 		gain_sorted = sorted(gain, key = lambda x: gain.__getitem__(x), reverse=True)
 		if gain_sorted == []:
