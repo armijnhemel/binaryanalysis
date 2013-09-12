@@ -27,7 +27,8 @@ software inside binaries. There are also other programs to help with specific
 compliance tasks, such as verifying if configurations for a given BusyBox
 binary match with the configuration in source code. Also included is a very
 experimental program to help scan Linux kernel images and a script to derive a
-possible configuration from a Linux kernel image.
+possible configuration from a Linux kernel image, as well as programs to verify
+results from a binary scan with a source code archive.
 
 \section{Installing the Binary Analysis Tool}
 
@@ -42,7 +43,7 @@ benefit from this.
 \subsection{Software requirements}
 
 To run BAT a recent Linux distribution is needed. Development is (currently)
-done on Fedora 17 and 18 and Ubuntu 12.04, so those platforms are likely to
+done on Fedora 18 and 19 and Ubuntu 12.04, so those platforms are likely to
 work best. Other platforms (like Debian 7) are tested with, but only to
 build binary releases.
 
@@ -95,15 +96,15 @@ During scanning of a file the following steps are taken:
 
 \begin{enumerate}
 \item identifier search, using a list of known identifiers
-\item verifying file type of a file and, if successful, tagging it for later
-use.
+\item verifying file type of a file and, if successful, tagging it. Tags can
+be used later on to give more information to the scanner.
 \item unpacking file systems, compressed files and media files from the file,
 possibly carving it out of a larger file first.
 \item repeat steps 1 - 3 for each file that was unpacked in step 3
 \item run individual scans on each file if no further unpacking is possible
 \item optionally aggregate scan results
 \item process results from scans in step 5 and 6
-\item pack results
+\item pack results into an archive that can be used by the viewer application
 \end{enumerate}
 
 \subsubsection{Identifier search}
@@ -173,7 +174,7 @@ variants), romfs, YAFFS2 (specific variants)
 compressed Flash, CAB, compress, CPIO, EXE (specific compression methods only),
 GZIP, InstallShield (old versions), LRZIP, LZIP, LZMA, LZO, RAR, RPM, RZIP,
 serialized Java, TAR, UPX, XZ, ZIP
-\item media files: GIF, ICO, PDF, PNG
+\item media files: GIF, ICO, PDF, PNG, WOFF
 \end{itemize}
 
 Unpacking differs per file type. Most files use one or more identifiers that
@@ -262,6 +263,8 @@ Currently the following aggregators are available:
 the same JAR file.
 \item checking dynamically linked ELF files
 \item finding duplicate files
+\item finding licenses and versions of strings and function names that were
+found and optionally pruning the result set to remove unlikely results.
 \item generating pictures of results of a scan
 \item generating reports of results of a scan
 \end{itemize}
@@ -467,8 +470,8 @@ scan:
 setup     = nameOfSetupMethod
 \end{verbatim}
 
-In the standard distribution of BAT file \texttt{bat/ranking.py} contains a very
-extensive example.
+In the standard distribution of BAT the file \texttt{bat/ranking.py} contains a
+very extensive example.
 
 \subsection{Interpreting the results}
 
@@ -1300,11 +1303,9 @@ ppmodule    = bat.ranking
 ppoutput    = xmlprettyprint
 envvars     = BAT_STRINGSCACHE_C=/home/armijn/master/stringscache_c:
               BAT_DB=/home/armijn/master/master:
-              BAT_LICENSE_DB=/home/armijn/master/licenses:
               BAT_NAMECACHE_C=/home/armijn/master/funccache_c:
               BAT_CLONE_DB=/home/armijn/master/clones:
-              BAT_RANKING_FULLCACHE=1:
-              BAT_RANKING_LICENSE=1
+              BAT_RANKING_FULLCACHE=1
 noscan      = text:xml:graphics:pdf:compressed:resource:audio:video
 description = Classify packages using advanced ranking mechanism
 enabled     = no
@@ -1334,9 +1335,6 @@ The entire database with all other information except license information is
 \texttt{BAT\_DB}. This option is mandatory. If it is not supplied scanning with
 the ranking method will fail.
 
-The license database can be set with \texttt{BAT\_LICENSE\_DB}. If it is not
-supplied licensing information will not be used during the scan.
-
 An optional database to deal with copied and renamed packages can be set with
 \texttt{BAT\_CLONE\_DB}. If set and populated the ranking scan will use
 information from this database to rewrite package names. This is useful if a
@@ -1351,7 +1349,25 @@ shipped with BAT it is disabled by default. It can be enabled by giving the
 option \texttt{enabled} the value \texttt{yes} in the configuration file or
 in the graphical user interface.
 
+\subsubsection{Getting license and version information}
+
+Since BAT 15 the licensing information has been moved to an aggregate scan
+found in \texttt{licenseversion.py} that combines determining versions and
+licenses with removing unlikely versions from the result set.
+
+The license database can be set with \texttt{BAT\_LICENSE\_DB}. If it is not
+supplied licensing information will not be used during the scan.
+
+\begin{verbatim}
+envvars     = BAT_DB=/gpl/master/master.sqlite3:BAT_RANKING_LICENSE=1:
+              BAT_RANKING_VERSION=1:BAT_LICENSE_DB=/gpl/master/licenses.sqlite3
+\end{verbatim}
+
 \subsubsection{Interpreting the results}
+
+There are two ways to interpret the results. The recommended way is to load the
+result file into the graphical user interface. The other way is to have BAT
+pretty print the result in XML and further process the XML file.
 
 The results of the scan can be found in the element \texttt{<ranking>}. This
 element contains:
@@ -1397,7 +1413,7 @@ in a different, more uniform, way.
 
 \subsection{Database design}
 
-The main database currently has 5 tables:
+The main database currently has 12 tables, 7 of which are Linux kernel specific:
 
 \begin{itemize}
 \item \texttt{processed}
@@ -1405,6 +1421,13 @@ The main database currently has 5 tables:
 \item \texttt{extracted\_file}
 \item \texttt{extracted\_function}
 \item \texttt{extracted\_name}
+\item \texttt{kernelmodule\_alias}
+\item \texttt{kernelmodule\_author}
+\item \texttt{kernelmodule\_description}
+\item \texttt{kernelmodule\_firmware}
+\item \texttt{kernelmodule\_license}
+\item \texttt{kernelmodule\_parameter}
+\item \texttt{kernelmodule\_version}
 \end{itemize}
 
 The licenses database has 2 tables:
@@ -1416,7 +1439,7 @@ The licenses database has 2 tables:
 
 During creation an additional table \texttt{ninkacomments} is used, but this
 is only used to cache licensing information determined by the Ninka license
-scanner. It is not used ottherwise.
+scanner. It is not used otherwise.
 
 \subsubsection{\texttt{processed} table}
 
