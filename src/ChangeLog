@@ -1,3 +1,6 @@
+2013-09-12
+* propagate setting of 'processors' to aggregate scans.
+
 2013-09-11
 * remove packages that can never contribute to a score (and that will never be
 selected anyway) from the input in ranking.py
