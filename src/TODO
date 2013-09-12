@@ -65,7 +65,6 @@ misc:
 * test on latest OpenSUSE
 * test on latest Ubuntu, make sure configurations/dependencies work
 * test on latest Debian, make sure configurations/dependencies work
-* propagate maximum processors in the environment so aggregate scans can also use it when creating a new pool
 
 BOTTLENECKS:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.

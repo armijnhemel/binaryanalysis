@@ -139,7 +139,7 @@ def gethash(path):
 	scanfile.close()
 	return h.hexdigest()
 
-def generateimages(unpackreports, scantempdir, topleveldir, debug=False, envvars=None):
+def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=False, envvars=None):
 	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):
@@ -273,7 +273,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, debug=False, envvars
 					pickletofile[picklehash] = [filehash]
 
 	## create a pool and generate the images
-	pool = multiprocessing.Pool()
+	pool = multiprocessing.Pool(processes=processors)
 	pietasks = []
 
 	if piepicklespackages != []:

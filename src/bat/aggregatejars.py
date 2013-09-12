@@ -13,7 +13,7 @@ contain enough information. By aggregating the results of these classes
 it is possible to get a better view of what is inside a JAR.
 '''
 
-def aggregatejars(unpackreports, scantempdir, topleveldir, debug=False, envvars=None):
+def aggregatejars(unpackreports, scantempdir, topleveldir, processors, debug=False, envvars=None):
 	cleanclasses = False
 
 	scanenv = os.environ.copy()
@@ -82,7 +82,7 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, debug=False, envvars=
 
 	## check whether or not a pool needs to be created
 	if jartasks != []:
-		pool = multiprocessing.Pool()
+		pool = multiprocessing.Pool(processes=processors)
 		res = pool.map(aggregate, jartasks, 1)
 		pool.terminate()
 

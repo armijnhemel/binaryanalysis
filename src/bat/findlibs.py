@@ -157,7 +157,7 @@ def extractfromelf((path, filename)):
 
 	return (filename, localfuncs, remotefuncs, localvars, remotevars, weaklocalfuncs, weakremotefuncs, weaklocalvars, weakremotevars, sonames, elftype)
 
-def findlibs(unpackreports, scantempdir, topleveldir, debug=False, envvars=None):
+def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, envvars=None):
 	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):
@@ -244,7 +244,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, debug=False, envvars=None)
 	## Store all local and remote function names for each dynamic ELF executable
 	## or library on the system.
 
-	pool = multiprocessing.Pool()
+	pool = multiprocessing.Pool(processes=processors)
 	elftasks = map(lambda x: (scantempdir, x), elffiles)
 	elfres = pool.map(extractfromelf, elftasks)
 	pool.terminate()
@@ -811,6 +811,6 @@ def findlibs(unpackreports, scantempdir, topleveldir, debug=False, envvars=None)
 			elfgraph_data = elfgraph.to_string()
 			elfgraphs.append((elfgraph_data, filehash, imagedir))
 
-	pool = multiprocessing.Pool()
+	pool = multiprocessing.Pool(processes=processors)
 	elfres = pool.map(writeGraph, elfgraphs)
 	pool.terminate()

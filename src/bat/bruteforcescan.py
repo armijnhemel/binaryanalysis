@@ -377,6 +377,10 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, d
 	## very significant (or even insignificant), but combined results are.
 	## Because aggregate scans have to look at everything as a whole, these
 	## cannot be run in parallel.
+	if scans['batconfig'].has_key('processors'):
+		processors = scans['batconfig']['processors']
+	else:
+		processors = None
 	for scan in scans['aggregatescans']:
 		module = scan['module']
 		method = scan['method']
@@ -391,7 +395,7 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, d
 			envvars = None
 		exec "from %s import %s as bat_%s" % (module, method, method)
 
-		res = eval("bat_%s(unpackreports, scantempdir, topleveldir, debug=debug, envvars=envvars)" % (method))
+		res = eval("bat_%s(unpackreports, scantempdir, topleveldir, processors, debug=debug, envvars=envvars)" % (method))
 		if res != None:
 			if res.keys() != []:
 				filehash = unpackreports[scan_binary]['sha256']

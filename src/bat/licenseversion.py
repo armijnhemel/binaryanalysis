@@ -178,7 +178,7 @@ def prune(scanenv, uniques, package):
 			newuniques.append((line, newres))
 	return newuniques
 
-def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, debug=False, envvars=None):
+def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, processors, debug=False, envvars=None):
 	scanenv = os.environ.copy()
 	envvars = licensesetup(envvars, debug)
 	if envvars != []:
@@ -238,7 +238,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue
 		rankingfiles.append((scanenv, unpackreports[i], topleveldir, determinelicense, determinecopyright))
-	pool = multiprocessing.Pool()
+	pool = multiprocessing.Pool(processes=processors)
 	pool.map(compute_version, rankingfiles)
 	pool.terminate()
 

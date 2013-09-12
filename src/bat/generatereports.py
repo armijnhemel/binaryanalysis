@@ -388,7 +388,7 @@ def generateunmatched((picklefile, pickledir, filehash, reportdir)):
 	unmatchedhtmlfile.close()
 	os.unlink(os.path.join(pickledir, picklefile))
 
-def generatereports(unpackreports, scantempdir, topleveldir, debug=False, envvars=None):
+def generatereports(unpackreports, scantempdir, topleveldir, processors, debug=False, envvars=None):
 	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):
@@ -447,7 +447,7 @@ def generatereports(unpackreports, scantempdir, topleveldir, debug=False, envvar
 
 	## extract pickles and generate some files
 	extracttasks = map(lambda x: (x, pickledir, topleveldir, reportdir), filehashes)
-	pool = multiprocessing.Pool()
+	pool = multiprocessing.Pool(processes=processors)
 	res = filter(lambda x: x != None, pool.map(extractpickles, extracttasks))
 	pool.terminate()
 
@@ -502,7 +502,7 @@ def generatereports(unpackreports, scantempdir, topleveldir, debug=False, envvar
 					else:
 						pickletofile[picklehash] = [filehash]
 
-	pool = multiprocessing.Pool()
+	pool = multiprocessing.Pool(processes=processors)
 
 	## generate files for unmatched strings
 	if unmatchedpickles != []:
