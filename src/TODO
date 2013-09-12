@@ -65,10 +65,10 @@ misc:
 * test on latest OpenSUSE
 * test on latest Ubuntu, make sure configurations/dependencies work
 * test on latest Debian, make sure configurations/dependencies work
+* propagate maximum processors in the environment so aggregate scans can also use it when creating a new pool
 
 BOTTLENECKS:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
 2. preread (in parallel) leafreports of Java .class files which are shared between several JAR files for aggregate jars. This saves opening and reading the same files.
 3. check odex files and tag them as dalvik
 4. check whether or not LZMA checking can be made more efficient: sometimes LZMA checking eats more than 50%(!) of total scanning time
-5. remove version information for unlikely versions from result pickles, given a few preconditions. The result pickles can grow very large, for example when scanning a Linux kernel image.
