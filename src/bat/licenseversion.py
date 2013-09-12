@@ -181,7 +181,7 @@ def prune(scanenv, uniques, package):
 def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, processors, debug=False, envvars=None):
 	scanenv = os.environ.copy()
 	envvars = licensesetup(envvars, debug)
-	if envvars != []:
+	if envvars[0]:
 		for en in envvars[1].items():
 			try:
 				(envname, envvalue) = en
