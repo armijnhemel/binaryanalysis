@@ -592,9 +592,16 @@ def verifyJavaClass(filename, tempdir=None, tags=[], offsets={}, debug=False, en
 		return newtags
 	if offsets['java'][0] != 0:
 		return newtags
-	if len(offsets['java']) != 1:
-		return newtags
 	if not filename.lower().endswith('.class'):
+		return newtags
+	## there could be multiple class files included. jcf-dump (used later) will not
+	## be able to tell them apart. However, there are situations where there are multiple
+	## Java class headers in a file and the file *is* valid. These are files from Java
+	## compilers that need to read or write Java class files.
+	## TODO: check by cutting at each offset > 0 and see if jcf-dump barfs. If jcf-dump barfs
+	## then the offset is part of the class file. If not, then there are multiple class files
+	## in the file.
+	if len(offsets['java']) != 1:
 		return newtags
 	## The following will only work if the file has either one or multiple valid class
 	## files, starting with a valid class file and ending with a valid class file, or
