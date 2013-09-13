@@ -781,6 +781,8 @@ def runscan(scans, scan_binary):
 	if scans['batconfig']['multiprocessing']:
 		if False in map(lambda x: x['parallel'], scans['unpackscans'] + scans['prerunscans']):
 			parallel = False
+	else:
+		parallel = False
 	if debug:
 		if debugphases == []:
 			parallel = False
