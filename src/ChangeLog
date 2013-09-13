@@ -1,3 +1,7 @@
+2013-09-13
+* only use jcf-dump once instead of twice. This saves launching an extra Java
+process per .class file.
+
 2013-09-12
 * propagate setting of 'processors' to aggregate scans.
 
