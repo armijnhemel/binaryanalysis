@@ -814,7 +814,10 @@ def runscan(scans, scan_binary):
 	tagdict = {}
 	finalscans = []
 	if scans['programscans'] != []:
-		parallel = True
+		if scans['batconfig']['multiprocessing']:
+			parallel = True
+		else:
+			parallel = False
 
 		## First run the 'setup' hooks for the scans and pass
 		## results via the environment. This should keep the
@@ -878,6 +881,8 @@ def runscan(scans, scan_binary):
 		if scans['batconfig']['multiprocessing']:
 			if False in map(lambda x: x['parallel'], finalscans):
 				parallel = False
+		else:
+			parallel = False
 		if debug:
 			if debugphases == []:
 				parallel = False
@@ -954,6 +959,8 @@ def runscan(scans, scan_binary):
 		if scans['batconfig']['multiprocessing']:
 			if False in map(lambda x: x['parallel'], scans['postrunscans']):
 				parallel = False
+		else:
+			parallel = False
 		if debug:
 			if debugphases == []:
 				parallel = False
