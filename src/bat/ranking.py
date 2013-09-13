@@ -350,21 +350,56 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 			## no sense to continue.
 			lines = []
         		if "compiled Java" in mstype and blacklist == []:
-				## TODO: integrate extractJavaNamesClass in here
-				javameta = extractJavaNamesClass(path)
+				classname = []
+				sourcefile = []
+				fields = []
+				methods = []
+				lines = []
+
 				p = subprocess.Popen(['jcf-dump', '--print-constants', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				if p.returncode != 0:
 					if createdtempfile:
 						## cleanup the tempfile
 						os.unlink(tmpfile[1])
-				## process each line of stanout, looking for lines that look like this:
-				## #13: String 45="/"
-				for l in stanout.split("\n"):
-					if re.match("#\d+: String \d+=\"", l) != None:
-						printstring = l.split("=", 1)[1][1:-1]
+					return None
+				javalines = stanout.splitlines()
+				for i in javalines:
+					## extract the classname
+					## TODO: deal with inner classes properly
+					if i.startswith("This class: "):
+						res = re.match("This class: \d+=([\w\.$]+), super", i)
+						if res != None:
+							classname = [res.groups()[0]]
+					## extract the SourceFile attribute, if available
+					if i.startswith("Attribute \"SourceFile\","):
+						res = re.match("Attribute \"SourceFile\", length:\d+, #\d+=\"([\w\.]+)\"", i)
+						if res != None:
+							sourcefile = [res.groups()[0]]
+					## extract fields
+					if i.startswith("Field name:\""):
+						res = re.match("Field name:\"([\w$]+)\"", i)
+						if res != None:
+							fieldname = res.groups()[0]
+							if '$' in fieldname:
+								continue
+							if fieldname != 'serialVersionUID':
+								fields.append(fieldname)
+					## extract methods
+					if i.startswith("Method name:\""):
+						res = re.match("Method name:\"([\w$]+)\"", i)
+						if res != None:
+							method = res.groups()[0]
+							## ignore synthetic methods that are inserted by the Java compiler
+							if not method.startswith('access$'):
+								methods.append(method)
+					## process each line of stanout, looking for lines that look like this:
+					## #13: String 45="/"
+					if re.match("#\d+: String \d+=\"", i) != None:
+						printstring = i.split("=", 1)[1][1:-1]
         					if len(printstring) >= stringcutoff:
 							lines.append(printstring)
+				javameta = {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile}
 			elif "Dalvik dex" in mstype and blacklist == []:
 				## Using dedexer http://dedexer.sourceforge.net/ extract information from Dalvik
 				## files, then process each file in $tmpdir and search file for lines containing
@@ -470,50 +505,6 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 			## cleanup the tempfile
 			os.unlink(tmpfile[1])
 		return None
-
-
-## Extract the Java class name, variables and method names from the binary
-def extractJavaNamesClass(scanfile):
-	classname = []
-	sourcefile = []
-	fields = []
-	methods = []
-
- 	p = subprocess.Popen(['jcf-dump', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		return {'classes': classname, 'methods': methods, 'fields': fields, 'sourcefiles': []}
-	javalines = stanout.splitlines()
-	for i in javalines:
-		## extract the classname
-		## TODO: deal with inner classes properly
-		if i.startswith("This class: "):
-			res = re.match("This class: ([\w\.$]+), super", i)
-			if res != None:
-				classname = [res.groups()[0]]
-		## extract the SourceFile attribute, if available
-		if i.startswith("Attribute \"SourceFile\","):
-			res = re.match("Attribute \"SourceFile\", length:\d+, #\d+=\"([\w\.]+)\"", i)
-			if res != None:
-				sourcefile = [res.groups()[0]]
-		## extract fields
-		if i.startswith("Field name:\""):
-			res = re.match("Field name:\"([\w$]+)\"", i)
-			if res != None:
-				fieldname = res.groups()[0]
-				if '$' in fieldname:
-					continue
-				if fieldname != 'serialVersionUID':
-					fields.append(fieldname)
-		## extract methods
-		if i.startswith("Method name:\""):
-			res = re.match("Method name:\"([\w$]+)\"", i)
-			if res != None:
-				method = res.groups()[0]
-				## ignore synthetic methods that are inserted by the Java compiler
-				if not method.startswith('access$'):
-					methods.append(method)
-	return {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile}
 
 def extractJavaNames(javameta, scanenv, clones, rankingfull):
 	if not scanenv.has_key(namecacheperlanguage['Java']):
