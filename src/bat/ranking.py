@@ -563,9 +563,12 @@ def extractJavaNames(javameta, scanenv, clones, rankingfull):
 				if len(packages_tmp) == 1:
 					uniquematches += 1
 					if uniquepackages.has_key(packages_tmp[0]):
-						uniquepackages[packages_tmp[0]] += [meth]
+						uniquepackages[packages_tmp[0]].append(meth)
 					else:
 						uniquepackages[packages_tmp[0]] = [meth]
+	c.close()
+	conn.close()
+
 	dynamicRes['namesmatched'] = namesmatched
 	dynamicRes['totalnames'] = len(list(set(methods)))
 	dynamicRes['uniquepackages'] = uniquepackages
@@ -578,8 +581,6 @@ def extractJavaNames(javameta, scanenv, clones, rankingfull):
 	for i in uniquepackages:
 		versions = []
 		dynamicRes['packages'][i] = []
-	c.close()
-	conn.close()
 	return dynamicRes
 
 def extractVariablesJava(javameta, scanenv, clones, rankingfull):
@@ -666,7 +667,7 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 			## first try the name as found in the binary. If it can't
 			## be found and has dots in it split it on '.' and
 			## use the last component only.
-			if i.endswith('.java'):
+			if i.lower().endswith('.java'):
 				classname = i[0:-5]
 			else:
 				classname = i
