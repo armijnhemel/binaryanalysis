@@ -44,6 +44,7 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 	if offset == 0 and length == 0:
 		## use copy if we intend to *modify* tmpfile, or we end up
 		## modifying the orginal
+		## TODO: get rid of this 'templink' hack
 		if not modify:
 			os.link(filename, "%s/%s" % (tmpdir, "templink"))
 		else:
