@@ -601,19 +601,25 @@ def verifyJavaClass(filename, tempdir=None, tags=[], offsets={}, debug=False, en
 	## TODO: check by cutting at each offset > 0 and see if jcf-dump barfs. If jcf-dump barfs
 	## then the offset is part of the class file. If not, then there are multiple class files
 	## in the file.
-	if len(offsets['java']) != 1:
-		return newtags
-	## The following will only work if the file has either one or multiple valid class
-	## files, starting with a valid class file and ending with a valid class file, or
-	## class files followed by random garbage, but no partial class file.
-	## The only case that might slip through here is if there is a class file with random
-	## garbage following the class file
-	p = subprocess.Popen(['jcf-dump', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		return newtags
-	## TODO: add more checks
-	return ['java']
+	if len(offsets['java']) > 1:
+		tmpfile = tempfile.mkstemp()
+		os.fdopen(tmpfile[0]).close()
+		shutil.copy(filename, tmpfile[1])
+		for i in offsets['java']:
+			pass
+	else:
+		## The following will only work if the file has either one or multiple valid class
+		## files, starting with a valid class file and ending with a valid class file, or
+		## class files followed by random garbage, but no partial class file.
+		## The only case that might slip through here is if there is a class file with random
+		## garbage following the class file
+		p = subprocess.Popen(['jcf-dump', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			return newtags
+		## TODO: add more checks
+		newtags.append('java')
+	return newtags
 
 ## Method to verify if a ZIP file is actually a JAR and tag it as such.
 def verifyJAR(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
