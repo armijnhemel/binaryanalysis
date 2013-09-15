@@ -81,10 +81,6 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 
 	masterdb = scanenv.get('BAT_DB')
 
-	rankingfull = False
-	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
-		rankingfull = True
-
 	## Some methods use a database to lookup renamed packages.
 	clonedb = scanenv.get('BAT_CLONE_DB')
 	clones = {}
@@ -267,9 +263,9 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 					dynamicRes = {}
 					if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
 						kernelvars = extractkernelsymbols(scanfile, scanenv, unpacktempdir)
-						variablepvs = scankernelsymbols(kernelvars, scanenv, rankingfull, clones)
+						variablepvs = scankernelsymbols(kernelvars, scanenv, clones)
 				else:
-					dynres = extractDynamic(path, scanenv, rankingfull, clones)
+					dynres = extractDynamic(path, scanenv, clones)
 					if dynres != None:
 						(dynamicRes,variablepvs) = dynres
 				variablepvs['language'] = 'C'
@@ -331,7 +327,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 			else:
 				if linuxkernel:
 					if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
-						variablepvs = scankernelsymbols(kernelsymbols, scanenv, rankingfull, clones)
+						variablepvs = scankernelsymbols(kernelsymbols, scanenv, clones)
 					variablepvs['language'] = 'C'
 				## extract all strings from the binary. Only look at strings
 				## that are a certain amount of characters or longer. This is
@@ -473,9 +469,9 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 
 				## cleanup
 				shutil.rmtree(dalvikdir)
-			variablepvs = extractVariablesJava(javameta, scanenv, clones, rankingfull)
+			variablepvs = extractVariablesJava(javameta, scanenv, clones)
 			variablepvs['language'] = 'Java'
-			dynamicRes = extractJavaNames(javameta, scanenv, clones, rankingfull)
+			dynamicRes = extractJavaNames(javameta, scanenv, clones)
 		elif language == 'JavaScipt':
 			## JavaScript can be minified, but using xgettext it is still
 			## possible to extract the strings from it
@@ -486,7 +482,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 		else:
 			lines = []
 
-		res = extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, stringcutoff, language)
+		res = extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, language)
 		if res != None:
 			if createdtempfile:
 				## a tempfile was made because of blacklisting, so cleanup
@@ -506,7 +502,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 			os.unlink(tmpfile[1])
 		return None
 
-def extractJavaNames(javameta, scanenv, clones, rankingfull):
+def extractJavaNames(javameta, scanenv, clones):
 	if not scanenv.has_key(namecacheperlanguage['Java']):
 		return {}
 
@@ -583,7 +579,7 @@ def extractJavaNames(javameta, scanenv, clones, rankingfull):
 		dynamicRes['packages'][i] = []
 	return dynamicRes
 
-def extractVariablesJava(javameta, scanenv, clones, rankingfull):
+def extractVariablesJava(javameta, scanenv, clones):
 	if not scanenv.has_key(namecacheperlanguage['Java']):
 		return {}
 
@@ -633,22 +629,6 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 				## check just the last component
 				classname = classname.split('.')[-1]
 				classres = c.execute("select package from functionnamecache.classcache where classname=?", (classname,)).fetchall()
-				## if the result is still empty, but rankingfull is not set check the normal database
-				if classres == [] and not rankingfull:
-					res = c.execute("select sha256,type,language from extracted_name where name=?", (classname,)).fetchall()
-					if res == []:
-						classname = classname.split('.')[-1]
-						res = c.execute("select sha256,type,language from extracted_name where name=?", (classname,)).fetchall()
-					if res != []:
-						for r in list(set(res)):
-							if r[2] != 'Java':
-								continue
-							if r[1] != 'class':
-								continue
-							pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
-							pvs = pvs + pv
-					classpvs[classname] = list(set(pvs))
-
 			## check the cloning database
 			if classres != []:
 				classres_tmp = []
@@ -688,18 +668,6 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 				classres_tmp = list(set(classres_tmp))
 				classres = map(lambda x: (x, 0), classres_tmp)
 				sourcepvs[classname] = classres
-			else:
-				if not rankingfull:
-					res = c.execute("select sha256,type,language from extracted_name where name=?", (classname,)).fetchall()
-					if res != []:
-						for r in list(set(res)):
-							if r[2] != 'Java':
-								continue
-							if r[1] != 'class':
-								continue
-							pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
-							pvs = pvs + pv
-					sourcepvs[classname] = list(set(pvs))
 		c.execute("detach functionnamecache")
 
 	## Keep a list of which sha256s were already seen. Since the files are
@@ -729,22 +697,6 @@ def extractVariablesJava(javameta, scanenv, clones, rankingfull):
 				fieldres_tmp = list(set(fieldres_tmp))
 				fieldres = map(lambda x: (x, 0), fieldres_tmp)
 				fieldspvs[f] = fieldres
-			else:
-				## TODO: use information from cloning database
-				if not rankingfull:
-					res = c.execute("select sha256,type,language from extracted_name where name=?", (f,)).fetchall()
-					for r in list(set(res)):
-						if r[2] != 'Java':
-							continue
-						if r[1] != 'field':
-							continue
-						if sha256cache.has_key(r[0]):
-							pv = sha256cache[r[0]]
-						else:
-							pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
-							sha256cache[r[0]] = pv
-						pvs = list(set(pvs + pv))
-					fieldspvs[f] = list(set(pvs))
 		c.execute("detach functionnamecache")
 
 	variablepvs['fields'] = fieldspvs
@@ -794,8 +746,7 @@ def extractkernelsymbols(scanfile, scanenv, unpacktempdir):
 	os.unlink(elftmp[1])
 	return variables
 
-def scankernelsymbols(variables, scanenv, rankingfull, clones):
-	## use in case rankingfull is not set
+def scankernelsymbols(variables, scanenv, clones):
 	masterdb = scanenv.get('BAT_DB')
 
 	## open the database containing function names that were extracted
@@ -812,21 +763,7 @@ def scankernelsymbols(variables, scanenv, rankingfull, clones):
 	for v in variables:
 		pvs = []
 		res = c.execute("select distinct package from kernelcache where varname=?", (v,)).fetchall()
-		if res == []:
-			if rankingfull:
-				continue
-			else:
-				res = c.execute("select sha256,type,language from extracted_name where name=?", (v,)).fetchall()
-				if res != []:
-					for r in res:
-						if r[2] != 'C':
-							continue
-						if r[1] != 'kernelsymbol':
-							continue
-						pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
-						pvs = list(set(pvs + pv))
-						## TODO: add to kernel cache
-		else:
+		if res != []:
 			## set version to 0 for now
 			pvs = map(lambda x: (x[0],0), res)
 
@@ -860,7 +797,7 @@ def scankernelsymbols(variables, scanenv, rankingfull, clones):
 ## By searching a database that contains which function names and variable names
 ## can be found in which packages it is possible to identify which package was
 ## used.
-def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
+def extractDynamic(scanfile, scanenv, clones, olddb=False):
 	dynamicRes = {}
 	variablepvs = {}
 
@@ -965,34 +902,6 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 			c.execute("select package from functionnamecache.functionnamecache where functionname=?", (funcname,))
 			res = c.fetchall()
 			pkgs = []
-			if res == [] and not rankingfull:
-				## there is no cache, so it needs to be created. This is expensive.
-				if oldschema:
-					c.execute("select sha256 from extracted_function where functionname=?", (funcname,))
-				else:
-					c.execute("select sha256, language from extracted_function where functionname=?", (funcname,))
-				res2 = c.fetchall()
-				pkgs = []
-				for r in res2:
-					if not oldschema:
-						if r[1] != 'C':
-							continue
-					if sha256_packages.has_key(r[0]):
-						pkgs = list(set(pkgs + copy.copy(sha256_packages[r[0]])))
-					else:
-						if oldschema:
-							c.execute("select package from processed_file where sha256=?", r)
-						else:
-							c.execute("select package from processed_file where sha256=?", (r[0],))
-						s = c.fetchall()
-						if s != []:
-							pkgs = list(set(pkgs + map(lambda x: x[0], s)))
-							sha256_packages[r[0]] = map(lambda x: x[0], s)
-				for p in pkgs:
-					c.execute("insert into functionnamecache (functionname, package) values (?,?)", (funcname, p))
-				conn.commit()
-				c.execute("select package from functionnamecache.functionnamecache where functionname=?", (funcname,))
-				res = c.fetchall()
 			if res != []:
 				packages_tmp = []
 				for r in res:
@@ -1043,20 +952,7 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 				continue
 			pvs = []
 			res = c.execute("select distinct package from varnamecache where varname=?", (v,)).fetchall()
-			if res == []:
-				if rankingfull:
-					continue
-				else:
-					res = c.execute("select sha256,type,language from extracted_name where name=?", (v,)).fetchall()
-					if res != []:
-						for r in res:
-							if r[2] != 'C':
-								continue
-							if r[1] != 'variable':
-								continue
-							pv = c.execute("select package,version from processed_file where sha256=?", (r[0],)).fetchall()
-							pvs = list(set(pvs + pv))
-			else:
+			if res != []:
 				pvs = map(lambda x: (x[0],0), res)
 
 			pvs_tmp = []
@@ -1083,7 +979,7 @@ def extractDynamic(scanfile, scanenv, rankingfull, clones, olddb=False):
 	return (dynamicRes, variablepvs)
 
 ## Look up strings in the database
-def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, stringcutoff, language='C'):
+def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, language='C'):
 	lenStringsFound = 0
 	uniqueMatches = {}
 	allMatches = {}
@@ -1147,6 +1043,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 	oldline = None
 	matched = False
 
+	## TODO: this should be done per language
 	if scanenv.has_key('BAT_SCORE_CACHE'):
 		precomputescore = True
 	else:
@@ -1262,27 +1159,7 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 
 		## nothing in the cache
 		if len(res) == 0 and not kernelfunctionmatched:
-			if not rankingfull:
-				## is there a result?
-				checkres = conn.execute("select sha256, language from extracted_file WHERE programstring=? LIMIT 1", (line,)).fetchall()
-				res = []
-				if len(checkres) == 0:
-					print >>sys.stderr, "no matches found for <(|%s|)> in %s" % (line, path)
-					unmatched.append(line)
-					continue
-				else:
-					## now fetch *all* sha256 checksums
-					checkres = conn.execute("select sha256, language from extracted_file WHERE programstring=?", (line,)).fetchall()
-					checkres = list(set(checkres))
-					for (checksha, checklan) in checkres:
-						if checklan != language:
-							continue
-						else:
-							## overwrite 'res' here
-							res = conn.execute("select package, filename FROM processed_file p WHERE sha256=?", (checksha,)).fetchall()
-				newmatch = True
-			else:
-				unmatched.append(line)
+			unmatched.append(line)
 		if len(res) != 0:
 			## Assume:
 			## * database has no duplicates
@@ -1311,11 +1188,6 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 			## so record it as such and add its length to a score.
 			for result in res:
 				(package, filename) = result
-				## in case this match is not yet known record it in the database unless
-				## rankingfull is set
-				if newmatch and not rankingfull:
-					c.execute("insert into stringscache.stringscache values (?, ?, ?, ?)", (line, package, filename, ""))
-					## TODO: also add the score to the cache
 				if clones.has_key(package):
 					package = clones[package]
 				if not pkgs.has_key(package):
@@ -1434,13 +1306,12 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 				pkgs2.append(pkgSort)
 		pkgsScorePerString[stri] = pkgs2
 
-	## suck the average string scores database into memory if rankingfull is set. Even with a few
-	## million packages this will not cost much memory and it prevents many database lookups.
-	if rankingfull:
-		avgscores = {}
-		res = conn.execute("select package, avgstrings from stringscache.avgstringscache").fetchall()
-		for r in res:
-			avgscores[r[0]] = r[1]
+	## suck the average string scores database into memory. Even with a few million packages
+	## this will not cost much memory and it prevents many database lookups.
+	avgscores = {}
+	res = conn.execute("select package, avgstrings from stringscache.avgstringscache").fetchall()
+	for r in res:
+		avgscores[r[0]] = r[1]
 
 	newstringsPerPkg = {}
 	newgain = {}
@@ -1517,12 +1388,9 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 		if len(close) > 1:
 			# print >>sys.stderr, "  doing battle royale between [close]"
 			## reverse sort close, then best = close_sorted[0][0]
-			if rankingfull:
-				close_sorted = []
-				for r in close:
-					close_sorted.append((r, avgscores[r]))
-			else:
-				close_sorted = map(lambda x: (x, averageStringsPerPkgVersion(x, conn)), close)
+			close_sorted = []
+			for r in close:
+				close_sorted.append((r, avgscores[r]))
 			close_sorted = sorted(close_sorted, key = lambda x: x[1], reverse=True)
 			## If we don't have a unique score *at all* it is likely that everything
 			## is cloned. There could be a few reasons:
@@ -1611,20 +1479,6 @@ def extractGeneric(lines, path, scanenv, rankingfull, clones, linuxkernel, strin
 	if matchedlines == 0 and unmatched == []:
 		return
 	return {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched, 'scores': scores}
-
-
-def averageStringsPerPkgVersion(pkg, conn):
-	## Cache the average number of strings per package in the DB.
-	## Danger: this table should be invalidated whenever the
-	## "extracted_file" and "processed_file" tables change!
-	res = conn.execute("select avgstrings from stringscache.avgstringscache where package = ?", (pkg,)).fetchall()
-	if len(res) == 0:
-            	count = conn.execute("select count(*) * 1.0 / (select count(distinct version) from processed_file where package = ?) from (select distinct e.programstring, p.version from extracted_file e JOIN processed_file p on e.sha256 = p.sha256 WHERE package = ?)", (pkg,pkg)).fetchone()[0]
-        	conn.execute("insert or ignore into stringscache.avgstringscache(package, avgstrings) values (?, ?)", (pkg, count))
-		conn.commit()
-	else:
-		count = res[0][0]
-	return count
 
 
 def xmlprettyprint(leafreports, root, envvars=None):
@@ -1814,6 +1668,13 @@ def rankingsetup(envvars, debug=False):
 		conn.close()
 		return (False, None)
 
+	## caches are needed
+	rankingfull = False
+	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
+		rankingfull = True
+	if not rankingfull:
+		return (False, None)
+
 	## extracted_file is needed for string matches
 	res = c.execute("select * from sqlite_master where type='table' and name='extracted_file'").fetchall()
 	if res == []:
@@ -1835,50 +1696,20 @@ def rankingsetup(envvars, debug=False):
 	else:
 		variablematches = True
 
-	rankingfull = False
-	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
-		rankingfull = True
-
-	if not rankingfull:
-		newenv['parallel'] = False
-
 	for language in stringsdbperlanguage.keys():
 		if scanenv.has_key(stringsdbperlanguage[language]):
-			## sanity checks to see if the database exists. If not, and rankingfull
-			## is set to True, there should be no result.
+			## sanity checks to see if the database exists.
 			stringscache = scanenv.get(stringsdbperlanguage[language])
-			if rankingfull:
-				## TODO: check if database schema is actually correct
-				if not os.path.exists(stringscache):
-					## remove from the configuration
-					if newenv.has_key(stringsdbperlanguage[language]):
-						del newenv[stringsdbperlanguage[language]]
-		else:
-			if rankingfull:
-				## strings cache is not defined, but it should be there according to
-				## the configuration so remove from the configuration
+			if not os.path.exists(stringscache):
+				## remove from the configuration
 				if newenv.has_key(stringsdbperlanguage[language]):
 					del newenv[stringsdbperlanguage[language]]
+		else:
+			## strings cache is not defined, but it should be there according to
+			## the configuration so remove from the configuration
+			if newenv.has_key(stringsdbperlanguage[language]):
+				del newenv[stringsdbperlanguage[language]]
 
-			else:
-				if stringmatches:
-					## There is no strings cache defined, but the configuration also does not
-					## assume it is there, so just create one.
-					tmpcache = tempfile.mkstemp(suffix='.sqlite3')
-					stringscache = tmpcache[1]
-					os.fdopen(tmpcache[0]).close()
-					newenv[stringsdbperlanguage[language]] = stringscache
-
-		if not rankingfull and stringmatches:
-			c.execute("attach ? as stringscache", (stringscache,))
-			c.execute("create table if not exists stringscache.avgstringscache (package text, avgstrings real, primary key (package))")
-			c.execute("create table if not exists stringscache.stringscache (programstring text, package text, filename text, versions text)")
-			c.execute("create table if not exists stringscache.scores (programstring text, packages int, score real)")
-			c.execute("create index if not exists stringscache.programstring_index on stringscache(programstring)")
-			c.execute("create index if not exists stringscache.scoresindex on scores(programstring)")
-			c.execute("create index if not exists stringscache.package_index on avgstringscache(package)")
-			conn.commit()
-			c.execute("detach stringscache")
 
 	## check if there is a precomputed scores table and if it has any content.
 	c.execute("attach ? as stringscache", (stringscache,))
@@ -1915,46 +1746,8 @@ def rankingsetup(envvars, debug=False):
 	## check the various caching databases, first for C
 	if scanenv.has_key(namecacheperlanguage['C']):
 		namecache = scanenv.get(namecacheperlanguage['C'])
-		if rankingfull:
-			## If rankingfull is set the cache should exist. If it doesn't exist
-			## then something is horribly wrong.
-			if not os.path.exists(namecache):
-				if newenv.has_key('BAT_KERNELSYMBOL_SCAN'):
-					del newenv['BAT_KERNELSYMBOL_SCAN']
-				if newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
-					del newenv['BAT_KERNELFUNCTION_SCAN']
-				if newenv.has_key('BAT_VARNAME_SCAN'):
-					del newenv['BAT_VARNAME_SCAN']
-				if newenv.has_key('BAT_FUNCTION_SCAN'):
-					del newenv['BAT_FUNCTION_SCAN']
-				if newenv.has_key(namecacheperlanguage['C']):
-					del newenv[namecacheperlanguage['C']]
-			else:
-				if variablematches:
-					if not newenv.has_key('BAT_KERNELSYMBOL_SCAN'):
-						newenv['BAT_KERNELSYMBOL_SCAN'] = 1
-					if not newenv.has_key('BAT_VARNAME_SCAN'):
-						newenv['BAT_VARNAME_SCAN'] = 1
-				if functionmatches:
-					if not newenv.has_key('BAT_FUNCTION_SCAN'):
-						newenv['BAT_FUNCTION_SCAN'] = 1
-
-					cacheconn = sqlite3.connect(namecache)
-					cachecursor = cacheconn.cursor()
-					cachecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='kernelfunctionnamecache';")
-
-					kernelfuncs = cachecursor.fetchall()
-					if kernelfuncs == []:
-						if newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
-							del newenv['BAT_KERNELFUNCTION_SCAN']
-					else:
-						if not newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
-							newenv['BAT_KERNELFUNCTION_SCAN'] = 1
-					cachecursor.close()
-					cacheconn.close()
-	else:
-		## undefined, but rankingfull is set, so disable everything
-		if rankingfull:
+		## the cache should exist. If it doesn't exist then something is horribly wrong.
+		if not os.path.exists(namecache):
 			if newenv.has_key('BAT_KERNELSYMBOL_SCAN'):
 				del newenv['BAT_KERNELSYMBOL_SCAN']
 			if newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
@@ -1963,130 +1756,68 @@ def rankingsetup(envvars, debug=False):
 				del newenv['BAT_VARNAME_SCAN']
 			if newenv.has_key('BAT_FUNCTION_SCAN'):
 				del newenv['BAT_FUNCTION_SCAN']
+			if newenv.has_key(namecacheperlanguage['C']):
+				del newenv[namecacheperlanguage['C']]
 		else:
-			if variablematches or functionmatches:
-				## There is no names cache defined, but the configuration also does not
-				## assume it is there, so just create one.
-				tmpcache = tempfile.mkstemp(suffix='.sqlite3')
-				namecache = tmpcache[1]
-				os.fdopen(tmpcache[0]).close()
-				newenv[namecacheperlanguage['C']] = namecache
+			if variablematches:
+				if not newenv.has_key('BAT_KERNELSYMBOL_SCAN'):
+					newenv['BAT_KERNELSYMBOL_SCAN'] = 1
+				if not newenv.has_key('BAT_VARNAME_SCAN'):
+					newenv['BAT_VARNAME_SCAN'] = 1
+			if functionmatches:
+				if not newenv.has_key('BAT_FUNCTION_SCAN'):
+					newenv['BAT_FUNCTION_SCAN'] = 1
 
-	## populate the name cache for C
-	if not rankingfull and (variablematches or functionmatches):
-		conn = sqlite3.connect(namecache)
-		c = conn.cursor()
+				cacheconn = sqlite3.connect(namecache)
+				cachecursor = cacheconn.cursor()
+				cachecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='kernelfunctionnamecache';")
 
-		if variablematches:
-			c.execute("create table if not exists kernelcache (varname text, package text)")
-			c.execute("create index if not exists kernelcache_index on kernelcache(varname)")
-			c.execute("create table if not exists varnamecache (varname text, package text)")
-			c.execute("create index if not exists varnamecache_index on varnamecache(varname)")
-		if functionmatches:
-			c.execute("create table if not exists functionnamecache (functionname text, package text)")
-			c.execute("create index if not exists functionname_index on functionnamecache(functionname)")
-			c.execute("create table if not exists kernelfunctionnamecache (functionname text, package text)")
-			c.execute("create index if not exists kernelfunctionname_index on kernelfunctionnamecache(functionname)")
-
-		conn.commit()
-		c.close()
-		conn.close()
-
-		if variablematches:
-			if not newenv.has_key('BAT_KERNELSYMBOL_SCAN'):
-				newenv['BAT_KERNELSYMBOL_SCAN'] = 1
-			if not newenv.has_key('BAT_VARNAME_SCAN'):
-				newenv['BAT_VARNAME_SCAN'] = 1
-		if functionmatches:
-			if not newenv.has_key('BAT_FUNCTION_SCAN'):
-				newenv['BAT_FUNCTION_SCAN'] = 1
-			if not newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
-				newenv['BAT_KERNELFUNCTION_SCAN'] = 1
-
-	## then check for Java
-	if scanenv.has_key(namecacheperlanguage['Java']):
-		namecache = scanenv.get(namecacheperlanguage['Java'])
-		if rankingfull:
-			## If rankingfull is set the cache should exist. If it doesn't exist
-			## then something is horribly wrong.
-			if not os.path.exists(namecache):
-				if newenv.has_key('BAT_CLASSNAME_SCAN'):
-					del newenv['BAT_CLASSNAME_SCAN']
-				if newenv.has_key('BAT_FIELDNAME_SCAN'):
-					del newenv['BAT_FIELDNAME_SCAN']
-				if newenv.has_key('BAT_METHOD_SCAN'):
-					del newenv['BAT_METHOD_SCAN']
-				if newenv.has_key(namecacheperlanguage['Java']):
-					del newenv[namecacheperlanguage['Java']]
-			else:
-				if not newenv.has_key('BAT_CLASSNAME_SCAN'):
-					newenv['BAT_CLASSNAME_SCAN'] = 1
-				if not newenv.has_key('BAT_FIELDNAME_SCAN'):
-					newenv['BAT_FIELDNAME_SCAN'] = 1
-
-	## then check for Java
-	if scanenv.has_key(namecacheperlanguage['Java']):
-		namecache = scanenv.get(namecacheperlanguage['Java'])
-		if rankingfull:
-			## If rankingfull is set the cache should exist. If it doesn't exist
-			## then something is horribly wrong.
-			if not os.path.exists(namecache):
-				if newenv.has_key('BAT_CLASSNAME_SCAN'):
-					del newenv['BAT_CLASSNAME_SCAN']
-				if newenv.has_key('BAT_FIELDNAME_SCAN'):
-					del newenv['BAT_FIELDNAME_SCAN']
-				if newenv.has_key('BAT_METHOD_SCAN'):
-					del newenv['BAT_METHOD_SCAN']
-				if newenv.has_key(namecacheperlanguage['Java']):
-					del newenv[namecacheperlanguage['Java']]
-			else:
-				if not newenv.has_key('BAT_CLASSNAME_SCAN'):
-					newenv['BAT_CLASSNAME_SCAN'] = 1
-				if not newenv.has_key('BAT_FIELDNAME_SCAN'):
-					newenv['BAT_FIELDNAME_SCAN'] = 1
-				if not newenv.has_key('BAT_METHOD_SCAN'):
-					newenv['BAT_METHOD_SCAN'] = 1
+				kernelfuncs = cachecursor.fetchall()
+				if kernelfuncs == []:
+					if newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
+						del newenv['BAT_KERNELFUNCTION_SCAN']
+				else:
+					if not newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
+						newenv['BAT_KERNELFUNCTION_SCAN'] = 1
+				cachecursor.close()
+				cacheconn.close()
 	else:
-		## undefined, but rankingfull is set, so disable everything
-		if rankingfull:
+		## undefined, so disable kernel scanning, variable/function name scanning
+		if newenv.has_key('BAT_KERNELSYMBOL_SCAN'):
+			del newenv['BAT_KERNELSYMBOL_SCAN']
+		if newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
+			del newenv['BAT_KERNELFUNCTION_SCAN']
+		if newenv.has_key('BAT_VARNAME_SCAN'):
+			del newenv['BAT_VARNAME_SCAN']
+		if newenv.has_key('BAT_FUNCTION_SCAN'):
+			del newenv['BAT_FUNCTION_SCAN']
+
+	## then check for Java
+	if scanenv.has_key(namecacheperlanguage['Java']):
+		namecache = scanenv.get(namecacheperlanguage['Java'])
+		## check if the cache exists. If not, something is wrong.
+		if not os.path.exists(namecache):
 			if newenv.has_key('BAT_CLASSNAME_SCAN'):
 				del newenv['BAT_CLASSNAME_SCAN']
 			if newenv.has_key('BAT_FIELDNAME_SCAN'):
 				del newenv['BAT_FIELDNAME_SCAN']
 			if newenv.has_key('BAT_METHOD_SCAN'):
 				del newenv['BAT_METHOD_SCAN']
+			if newenv.has_key(namecacheperlanguage['Java']):
+				del newenv[namecacheperlanguage['Java']]
 		else:
-			if variablematches:
-				## There is no strings cache defined, but the configuration also does not
-				## assume it is there, so just create one.
-				tmpcache = tempfile.mkstemp(suffix='.sqlite3')
-				namecache = tmpcache[1]
-				os.fdopen(tmpcache[0]).close()
-				newenv[namecacheperlanguage['Java']] = namecache
-
-	## populate the name cache for Java
-	if not rankingfull and (variablematches or functionmatches):
-		conn = sqlite3.connect(namecache)
-		c = conn.cursor()
-		if variablematches:
-			c.execute("create table if not exists classcache (classname text, package text)")
-			c.execute("create index if not exists classname_cache on classcache(classname)")
-			c.execute("create table if not exists fieldcache (fieldname text, package text)")
-			c.execute("create index if not exists fieldname_cache on fieldcache(fieldname)")
-		if functionmatches:
-			c.execute("create table if not exists functionnamecache (functionname text, package text)")
-			c.execute("create index if not exists functionname_index on functionnamecache(functionname)")
-		conn.commit()
-		c.close()
-		conn.close()
-
-		if variablematches:
 			if not newenv.has_key('BAT_CLASSNAME_SCAN'):
 				newenv['BAT_CLASSNAME_SCAN'] = 1
 			if not newenv.has_key('BAT_FIELDNAME_SCAN'):
 				newenv['BAT_FIELDNAME_SCAN'] = 1
-		if functionmatches:
-			if not newenv.has_key('BAT_METHOD_SCAN'):
-				newenv['BAT_METHOD_SCAN'] = 1
+	else:
+		## undefined, so disable classname/fieldname/method name scan
+		if newenv.has_key('BAT_CLASSNAME_SCAN'):
+			del newenv['BAT_CLASSNAME_SCAN']
+		if newenv.has_key('BAT_FIELDNAME_SCAN'):
+			del newenv['BAT_FIELDNAME_SCAN']
+		if newenv.has_key('BAT_METHOD_SCAN'):
+			del newenv['BAT_METHOD_SCAN']
+
 
 	return (True, newenv)
