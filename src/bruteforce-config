@@ -827,9 +827,9 @@ type        = aggregate
 module      = bat.aggregatejars
 method      = aggregatejars
 noscan      = text:xml:graphics:pdf:audio:video
-envvars     = AGGREGATE_CLEAN=0
+envvars     = AGGREGATE_CLEAN=1
 enabled     = yes
-priority    = 2
+priority    = 4
 
 [kernelversions]
 type        = aggregate
@@ -844,8 +844,7 @@ type        = aggregate
 module      = bat.licenseversion
 method      = determinelicense_version_copyright
 noscan      = text:xml:graphics:pdf:audio:video
-##envvars     = BAT_KEEP_VERSIONS=10:BAT_KEEP_MAXIMUM_PERCENTAGE=50
-envvars     = BAT_DB=/gpl/master/master.sqlite3:BAT_RANKING_LICENSE=1:BAT_RANKING_VERSION=1:BAT_LICENSE_DB=/gpl/master/licenses.sqlite3
+envvars     = BAT_DB=/gpl/master/master.sqlite3:BAT_RANKING_LICENSE=1:BAT_RANKING_VERSION=1:BAT_LICENSE_DB=/gpl/master/licenses.sqlite3:BAT_KEEP_VERSIONS=10:BAT_KEEP_MAXIMUM_PERCENTAGE=50:BAT_MINIMUM_UNIQUE=10:BAT_CLONE_DB=/tmp/clonedb
 enabled     = yes
 priority    = 3
 
