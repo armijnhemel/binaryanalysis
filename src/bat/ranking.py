@@ -78,8 +78,6 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 			except Exception, e:
 				pass
 
-	masterdb = scanenv.get('BAT_DB')
-
 	## Some methods use a database to lookup renamed packages.
 	clonedb = scanenv.get('BAT_CLONE_DB')
 	clones = {}
@@ -516,32 +514,17 @@ def extractJavaNames(javameta, scanenv, clones):
 	fields = javameta['fields']
 	sourcefile = javameta['sourcefiles']
 
-	masterdb = scanenv.get('BAT_DB')
-
-	## open the database containing function names that were extracted
-	## from source code.
-	conn = sqlite3.connect(masterdb)
-	conn.text_factory = str
-	c = conn.cursor()
-
-	## extra sanity check. Previous versions only had function names from C in the database.
-	## When scripts were adapted to also allow Java methods a field 'language' was introduced.
-	## There are no official databases where there is no field 'language' and that contains
-	## method names from Java code, so there is no need to scan Java if there is no field
-	## 'language' in the database.
-	res = c.execute("select sql from sqlite_master where type='table' and name='extracted_function'").fetchall()
-	if not 'language' in res[0][0]:
-		return dynamicRes
-
 	funccache = scanenv.get(namecacheperlanguage['Java'])
 
-	c.execute("attach ? as functionnamecache", (funccache,))
+	conn = sqlite3.connect(funccache)
+	conn.text_factory = str
+	c = conn.cursor()
 
 	if scanenv.has_key('BAT_METHOD_SCAN'):
 		for meth in methods:
 			if meth == 'main':
 				continue
-			res = c.execute("select distinct package from functionnamecache.functionnamecache where functionname=?", (meth,)).fetchall()
+			res = c.execute("select distinct package from functionnamecache where functionname=?", (meth,)).fetchall()
 			if res != []:
 				matches.append(meth)
 				namesmatched += 1
@@ -598,13 +581,12 @@ def extractVariablesJava(javameta, scanenv, clones):
 
 	## open the database containing function names that were extracted
 	## from source code.
-	masterdb = scanenv.get('BAT_DB')
-
-	conn = sqlite3.connect(masterdb)
-	conn.text_factory = str
-	c = conn.cursor()
 
 	funccache = scanenv.get(namecacheperlanguage['Java'])
+
+	conn = sqlite3.connect(funccache)
+	conn.text_factory = str
+	c = conn.cursor()
 
 	classpvs = {}
 	sourcepvs = {}
@@ -615,7 +597,6 @@ def extractVariablesJava(javameta, scanenv, clones):
 	## class file (apart from the extension of course) but this is very
 	## uncommon. TODO: merge class name and source file name searching
 	if scanenv.has_key('BAT_CLASSNAME_SCAN'):
-		c.execute("attach ? as functionnamecache", (funccache,))
 		classes = list(set(map(lambda x: x.split('$')[0], classes)))
 		for i in classes:
 			pvs = []
@@ -623,11 +604,11 @@ def extractVariablesJava(javameta, scanenv, clones):
 			## be found and has dots in it split it on '.' and
 			## use the last component only.
 			classname = i
-			classres = c.execute("select package from functionnamecache.classcache where classname=?", (classname,)).fetchall()
+			classres = c.execute("select package from classcache where classname=?", (classname,)).fetchall()
 			if classres == []:
 				## check just the last component
 				classname = classname.split('.')[-1]
-				classres = c.execute("select package from functionnamecache.classcache where classname=?", (classname,)).fetchall()
+				classres = c.execute("select package from classcache where classname=?", (classname,)).fetchall()
 			## check the cloning database
 			if classres != []:
 				classres_tmp = []
@@ -654,7 +635,7 @@ def extractVariablesJava(javameta, scanenv, clones):
 			## first try the name as found in the binary. If it can't
 			## be found and has dots in it split it on '.' and
 			## use the last component only.
-			classres = c.execute("select package from functionnamecache.classcache where classname=?", (classname,)).fetchall()
+			classres = c.execute("select package from classcache where classname=?", (classname,)).fetchall()
 			## check the cloning database
 			if classres != []:
 				classres_tmp = []
@@ -667,14 +648,12 @@ def extractVariablesJava(javameta, scanenv, clones):
 				classres_tmp = list(set(classres_tmp))
 				classres = map(lambda x: (x, 0), classres_tmp)
 				sourcepvs[classname] = classres
-		c.execute("detach functionnamecache")
 
 	## Keep a list of which sha256s were already seen. Since the files are
 	## likely only coming from a few packages there is no need to hit the database
 	## that often.
 	sha256cache = {}
 	if scanenv.has_key('BAT_FIELDNAME_SCAN'):
-		c.execute("attach ? as functionnamecache", (funccache,))
 		for f in fields:
 			## a few fields are so common that they will be completely useless
 			## for reporting, but processing them will take a *lot* of time, so
@@ -684,7 +663,7 @@ def extractVariablesJava(javameta, scanenv, clones):
 				continue
 			pvs = []
 
-			fieldres = c.execute("select package from functionnamecache.fieldcache where fieldname=?", (f,)).fetchall()
+			fieldres = c.execute("select package from fieldcache where fieldname=?", (f,)).fetchall()
 			if fieldres != []:
 				fieldres_tmp = []
 				for r in fieldres:
@@ -696,7 +675,6 @@ def extractVariablesJava(javameta, scanenv, clones):
 				fieldres_tmp = list(set(fieldres_tmp))
 				fieldres = map(lambda x: (x, 0), fieldres_tmp)
 				fieldspvs[f] = fieldres
-		c.execute("detach functionnamecache")
 
 	variablepvs['fields'] = fieldspvs
 	variablepvs['sources'] = sourcepvs
@@ -746,17 +724,11 @@ def extractkernelsymbols(scanfile, scanenv, unpacktempdir):
 	return variables
 
 def scankernelsymbols(variables, scanenv, clones):
-	masterdb = scanenv.get('BAT_DB')
-
-	## open the database containing function names that were extracted
-	## from source code.
-	conn = sqlite3.connect(masterdb)
+	kernelcache = scanenv.get(namecacheperlanguage['C'])
+	conn = sqlite3.connect(kernelcache)
 	## there are only byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
-
-	kernelcache = scanenv.get(namecacheperlanguage['C'])
-	c.execute("attach ? as kernelcache", (kernelcache,))
 	vvs = {}
 	variablepvs = {}
 	for v in variables:
@@ -773,7 +745,8 @@ def scankernelsymbols(variables, scanenv, clones):
 			else:
 				pvs_tmp.append(r)
 		vvs[v] = pvs_tmp
-	c.execute("detach kernelcache")
+	c.close()
+	conn.close()
 
 	vvs_rewrite = {}
 	for v in vvs.keys():
@@ -786,8 +759,6 @@ def scankernelsymbols(variables, scanenv, clones):
 				vvs_rewrite[v][program] = list(set(vvs_rewrite[v][program] + [version]))
 	if vvs_rewrite != {}:
 		variablepvs['kernelvariables'] = vvs_rewrite
-	c.close()
-	conn.close()
 	return variablepvs
 
 ## From dynamically linked ELF files it is possible to extract the dynamic
@@ -813,15 +784,13 @@ def extractDynamic(scanfile, scanenv, clones, olddb=False):
 	if st == ['']:
 		return (dynamicRes, variablepvs)
 
-	masterdb = scanenv.get('BAT_DB')
-
 	## open the database containing function names that were extracted
 	## from source code.
-	conn = sqlite3.connect(masterdb)
+	funccache = scanenv.get(namecacheperlanguage['C'])
+	conn = sqlite3.connect(funccache)
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
-	funccache = scanenv.get(namecacheperlanguage['C'])
 
 	## Walk through the output of readelf, and split results accordingly
 	## in function names and variables.
@@ -859,7 +828,6 @@ def extractDynamic(scanfile, scanenv, clones, olddb=False):
 			scanstr.append(funcname)
 
 	if scanenv.has_key('BAT_FUNCTION_SCAN'):
-		c.execute("attach ? as functionnamecache", (funccache,))
 		## run c++filt in batched mode to avoid launching many processes
 		## C++ demangling is tricky: the types declared in the function in the source code
 		## are not necessarily what demangling will return.
@@ -887,18 +855,11 @@ def extractDynamic(scanfile, scanenv, clones, olddb=False):
 		## caching datastructure, only needed in case there is no full cache
 		sha256_packages = {}
 
-		## sanity check whether or not we have the new schema that has 'language' or the old one without
-		## when the scripts only had support for C.
-		## This will be removed in BAT 16
-		res = c.execute("select sql from sqlite_master where type='table' and name='extracted_function'").fetchall()
-		oldschema = False
-		if not 'language' in res[0][0]:
-			oldschema = True
 		## the database made from ctags output only has function names, not the types. Since
 		## C++ functions could be in an executable several times with different types we
 		## deduplicate first
 		for funcname in list(set(scanstr)):
-			c.execute("select package from functionnamecache.functionnamecache where functionname=?", (funcname,))
+			c.execute("select package from functionnamecache where functionname=?", (funcname,))
 			res = c.fetchall()
 			pkgs = []
 			if res != []:
@@ -938,11 +899,8 @@ def extractDynamic(scanfile, scanenv, clones, olddb=False):
 			for v in list(set(versions)):
 				dynamicRes['packages'][package].append((v, versions.count(v)))
 
-		c.execute("detach functionnamecache")
-
 	## Scan C variables extracted from dynamically linked files.
 	if scanenv.get('BAT_VARNAME_SCAN'):
-		c.execute("attach ? as functionnamecache", (funccache,))
 		vvs = {}
 		for v in variables:
 			## These variable names are very generic and would not be useful, so skip.
@@ -972,7 +930,6 @@ def extractDynamic(scanfile, scanenv, clones, olddb=False):
 				else:
 					vvs_rewrite[v][program] = list(set(vvs_rewrite[v][program] + [version]))
 		variablepvs['variables'] = vvs_rewrite
-		c.execute("detach functionnamecache")
 	c.close()
 	conn.close()
 	return (dynamicRes, variablepvs)
@@ -995,24 +952,18 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 	nonUniqueAssignments = {}
 	unmatched = []
 
-	masterdb = scanenv.get('BAT_DB')
-
-	## open the database containing all the strings that were extracted
-	## from source code.
-	conn = sqlite3.connect(masterdb)
-	## we have byte strings in our database, not utf-8 characters...I hope
-	conn.text_factory = str
-	c = conn.cursor()
-
 	## setup code guarantees that this database exists and that sanity
 	## checks were done.
 	if not scanenv.has_key(stringsdbperlanguage[language]):
-		conn.close()
-		c.close()
 		return None
 
 	stringscache = scanenv.get(stringsdbperlanguage[language])
-	c.execute("attach ? as stringscache", (stringscache,))
+	## open the database containing all the strings that were extracted
+	## from source code.
+	conn = sqlite3.connect(stringscache)
+	## we have byte strings in our database, not utf-8 characters...I hope
+	conn.text_factory = str
+	c = conn.cursor()
 
 	scankernelfunctions = False
 	kernelfuncres = []
@@ -1068,7 +1019,7 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 		## An extra check for lines that score extremely low. This
 		## helps reduce load on databases stored on slower disks
 		if precomputescore:
-			scoreres = conn.execute("select packages, score from stringscache.scores where programstring=? LIMIT 1", (line,)).fetchone()
+			scoreres = conn.execute("select packages, score from scores where programstring=? LIMIT 1", (line,)).fetchone()
 		else:
 			scoreres = None
 		if scoreres != None:
@@ -1098,7 +1049,7 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 
 		## then see if there is anything in the cache at all
 		if not kernelfunctionmatched:
-			res = conn.execute("select package, filename FROM stringscache.stringscache WHERE programstring=?", (line,)).fetchall()
+			res = conn.execute("select package, filename FROM stringscache WHERE programstring=?", (line,)).fetchall()
 		else:
 			res = []
 
@@ -1114,7 +1065,7 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 				scanline = line.split('>', 1)[1]
 				if len(scanline) < stringcutoff:
 					continue
-				res = conn.execute("select package, filename FROM stringscache.stringscache WHERE programstring=?", (scanline,)).fetchall()
+				res = conn.execute("select package, filename FROM stringscache WHERE programstring=?", (scanline,)).fetchall()
 				if len(res) != 0:
 					line = scanline
 				else:
@@ -1125,7 +1076,7 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 							scanline = scanline[1:]
 						if len(scanline) < stringcutoff:
 							continue
-						res = conn.execute("select package, filename FROM stringscache.stringscache WHERE programstring=?", (scanline,)).fetchall()
+						res = conn.execute("select package, filename FROM stringscache WHERE programstring=?", (scanline,)).fetchall()
 						if len(res) != 0:
 							if len(scanline) != 0:
 								line = scanline
@@ -1137,7 +1088,7 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 						scanline = scanline[1:]
 					if len(scanline) < stringcutoff:
 						continue
-					res = conn.execute("select package, filename FROM stringscache.stringscache WHERE programstring=?", (scanline,)).fetchall()
+					res = conn.execute("select package, filename FROM stringscache WHERE programstring=?", (scanline,)).fetchall()
 					if len(res) != 0:
 						if len(scanline) != 0:
 							line = scanline
@@ -1151,7 +1102,7 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 						scanline = line[1:]
 						if len(scanline) < stringcutoff:
 							continue
-						res = conn.execute("select package, filename FROM stringscache.stringscache WHERE programstring=?", (scanline,)).fetchall()
+						res = conn.execute("select package, filename FROM stringscache WHERE programstring=?", (scanline,)).fetchall()
 						if len(res) != 0:
 							if len(scanline) != 0:
 								line = scanline
@@ -1264,8 +1215,6 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 
 				## store the uniqueMatches without any information about checksums
 				uniqueMatches[package] = uniqueMatches.get(package, []) + [(line, [])]
-			if newmatch:
-				conn.commit()
 			newmatch = False
 
 	if lenlines != 0:
@@ -1308,7 +1257,7 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 	## suck the average string scores database into memory. Even with a few million packages
 	## this will not cost much memory and it prevents many database lookups.
 	avgscores = {}
-	res = conn.execute("select package, avgstrings from stringscache.avgstringscache").fetchall()
+	res = conn.execute("select package, avgstrings from avgstringscache").fetchall()
 	for r in res:
 		avgscores[r[0]] = r[1]
 
@@ -1424,8 +1373,6 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 		if gain[best] < gaincutoff:
 			break
 		strleft = len(stringsLeft)
-
-	c.execute("detach stringscache")
 
 	c.close()
 	conn.close()
