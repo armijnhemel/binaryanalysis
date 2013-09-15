@@ -1,3 +1,8 @@
+2013-09-15
+* remove on the fly caching code from ranking.py. It was not well maintained,
+made other code a lot harder to read, was very time intensive to test and also
+made the code a bit slower.
+
 2013-09-13
 * only use jcf-dump once instead of twice. This saves launching an extra Java
 process per .class file.
