@@ -13,8 +13,6 @@ presented at the Mining Software Repositories 2011 conference.
 
 Configuration parameters for databases are:
 
-BAT_DB                :: location of database containing extracted strings
-
 BAT_RANKING_FULLCACHE :: indication whether or not a full cached database is
                          used, reducing the need to generate it "just in time"
 
@@ -938,7 +936,6 @@ def extractDynamic(scanfile, scanenv, clones, olddb=False):
 def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, language='C'):
 	lenStringsFound = 0
 	uniqueMatches = {}
-	allMatches = {}
 	uniqueScore = {}
 	nonUniqueScore = {}
 	nrUniqueMatches = 0
@@ -1011,7 +1008,6 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 			continue
 		matched = False
 		oldline = line
-		newmatch = False
 		kernelfunctionmatched = False
 		## skip empty lines
 		if line == "": continue
@@ -1034,7 +1030,9 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 				nonUniqueMatchLines.append(line)
 				continue
 
-		## if the image is a Linux kernel image first try the Linux kernel specific matching
+		## if scoreres is None it could still be something else like a kernel function, or a
+		## kernel string in a different format, so keep searching.
+		## If the image is a Linux kernel image first try the Linux kernel specific matching
 		## like function names, then continue as normal.
 
 		if linuxkernel:
@@ -1198,24 +1196,16 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 						## could be ignored and not added to the list.
 						## For now exclude them, but in the future they could be included for
 						## completeness.
-						#if score > 1.0e-200:
-						if score > scorecutoff:
-							stringsLeft['%s\t%s' % (line, fn)] = {'string': line, 'score': score, 'filename': fn, 'pkgs' : filenames[fn]}
+						stringsLeft['%s\t%s' % (line, fn)] = {'string': line, 'score': score, 'filename': fn, 'pkgs' : filenames[fn]}
 
 			else:
 				## the string is unique to this package and this package only
 				uniqueScore[package] = uniqueScore.get(package, 0) + len(line)
 
-				if not allMatches.has_key(package):
-					allMatches[package] = {}
-
-				allMatches[package][line] = allMatches[package].get(line,0) + len(line)
-
 				nrUniqueMatches = nrUniqueMatches + 1
 
 				## store the uniqueMatches without any information about checksums
 				uniqueMatches[package] = uniqueMatches.get(package, []) + [(line, [])]
-			newmatch = False
 
 	if lenlines != 0:
 		pass
@@ -1224,7 +1214,7 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 
 	del lines
 
-	## def computeScores(stringsLeft, uniqueScore, uniqueMatches, allMatches, sameFileScore, nonUniqueAssignments):
+	## def computeScores(stringsLeft, uniqueScore, uniqueMatches, sameFileScore, nonUniqueAssignments):
 	## If the string is not unique, do a little bit more work to determine which
 	## file is the most likely, so also record the filename.
 	##
@@ -1259,7 +1249,8 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 	avgscores = {}
 	res = conn.execute("select package, avgstrings from avgstringscache").fetchall()
 	for r in res:
-		avgscores[r[0]] = r[1]
+		if r[1] != 0:
+			avgscores[r[0]] = r[1]
 
 	newstringsPerPkg = {}
 	newgain = {}
@@ -1336,9 +1327,7 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 		if len(close) > 1:
 			# print >>sys.stderr, "  doing battle royale between [close]"
 			## reverse sort close, then best = close_sorted[0][0]
-			close_sorted = []
-			for r in close:
-				close_sorted.append((r, avgscores[r]))
+			close_sorted = map(lambda x: (x, avgscores[x]), close)
 			close_sorted = sorted(close_sorted, key = lambda x: x[1], reverse=True)
 			## If we don't have a unique score *at all* it is likely that everything
 			## is cloned. There could be a few reasons:
@@ -1358,10 +1347,6 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 			best_score += 1
 
 			x = stringsLeft[xy]
-			if not allMatches.has_key(best):
-				allMatches[best] = {}
-
-			allMatches[best][x['string']] = allMatches[best].get(x['string'],0) + x['score']
 			sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
 			strsplit = xy.rsplit('\t', 1)[0]
 			todelete.append(strsplit)
@@ -1369,6 +1354,7 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 		for a in todelete:
 			for st in string_split[a]:
 				del stringsLeft[st]
+		## store how many non unique strings were assigned per package
 		nonUniqueAssignments[best] = best_score
 		if gain[best] < gaincutoff:
 			break
@@ -1390,21 +1376,10 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 		totalscore = float(reduce(lambda x, y: x + y, scores.values()))
 
 	for s in scores_sorted:
-		udicts = []
-		if uniqueMatches.get(s,[]) != []:
-			for j in uniqueMatches.get(s,[]):
-				udict = {}
-				for k in j[1]:
-					if udict.has_key((k[0], k[2])):
-						udict[(k[0], k[2])].append((k[1], k[3]))
-					else:
-						udict[(k[0], k[2])] = [(k[1], k[3])]
-				udicts.append((j[0],udict))
 		try:
 			percentage = (scores[s]/totalscore)*100.0
 		except:
 			percentage = 0.0
-		#reports.append((rank, s, udicts, percentage, packageversions.get(s, {}), packagelicenses.get(s, [])))
 		reports.append((rank, s, uniqueMatches.get(s,[]), percentage, packageversions.get(s, {}), packagelicenses.get(s, []), language))
 		rank = rank+1
 	'''
@@ -1765,6 +1740,5 @@ def rankingsetup(envvars, debug=False):
 			del newenv['BAT_FIELDNAME_SCAN']
 		if newenv.has_key('BAT_METHOD_SCAN'):
 			del newenv['BAT_METHOD_SCAN']
-
 
 	return (True, newenv)
