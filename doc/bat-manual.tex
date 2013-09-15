@@ -317,12 +317,8 @@ multiprocessing = yes
 \end{verbatim}
 
 If set to \texttt{yes} the program will start an extra process per CPU that is
-available. In most cases it is completely safe to use multiprocessing, but
-there is one important exception: if the ranking method (described later) is
-used, without pregenerating the proper caching database (or purchasing one) it
-is unsafe to use multiprocessing. If ranking is used and there is a fully
-generated caching database it is completely safe and even strongly advised to
-use multiprocessing, since it vastly speeds up running the program.
+available for parts of the program that can be run in parallel. In most cases
+it is completely safe to use multiprocessing.
 
 It might be desirable to not use all processors on a machine, for example if
 there are multiple scans of BAT running at the same time, or if other tasks
@@ -1979,7 +1975,8 @@ If Java JAR files are scanned then pictures and reports will be generated for
 each of the individual \texttt{.class} files. If only the results of the JAR
 file are needed, then setting \texttt{AGGREGATE\_CLEAN} to \texttt{1} will
 prevent pictures and reports to be generated for the individual \texttt{.class}
-files, which can save quite some time and declutter the interface.
+files, which can save quite some processing time and help declutter the
+interface as well.
 
 Of course, not generating the pictures for individual \texttt{.class} files
 means that some detail might be lost, especially if there are \texttt{.class}
