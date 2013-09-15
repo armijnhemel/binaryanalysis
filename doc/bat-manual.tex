@@ -2036,8 +2036,8 @@ The \texttt{jars} scan has one parameter: \texttt{AGGREGATE\_CLEAN}. This
 parameter instructs the scan to remove results for individual Java class
 files from the result set after aggregating results at the JAR level. Java
 class files that are not unpacked from a JAR file are not removed from the
-result set. By default this parameter is set to 0 which means that results for
-Java class files are kept in the result set.
+result set. By default this parameter is set to 1 which means that results for
+Java class files are removed from the result set.
 
 \subsection{\texttt{hexdump} and \texttt{images}}
 
