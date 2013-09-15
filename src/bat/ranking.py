@@ -18,7 +18,6 @@ BAT_DB                :: location of database containing extracted strings
 BAT_RANKING_FULLCACHE :: indication whether or not a full cached database is
                          used, reducing the need to generate it "just in time"
 
-
 BAT_CLONE_DB :: location of database containing information about which packages
                 should be treated as equivalent from a scanning point of view,
                 like renamed packages.
@@ -1712,6 +1711,7 @@ def rankingsetup(envvars, debug=False):
 
 
 	## check if there is a precomputed scores table and if it has any content.
+	## TODO: this really has to be done per language
 	c.execute("attach ? as stringscache", (stringscache,))
 	res = c.execute("select * from stringscache.sqlite_master where type='table' and name='scores'").fetchall()
 	if res != []:
