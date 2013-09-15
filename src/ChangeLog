@@ -2,6 +2,8 @@
 * remove on the fly caching code from ranking.py. It was not well maintained,
 made other code a lot harder to read, was very time intensive to test and also
 made the code a bit slower.
+* rewrite ranking.py so only caching databases should be needed, still needs a
+few cleanups and new checks.
 
 2013-09-13
 * only use jcf-dump once instead of twice. This saves launching an extra Java
