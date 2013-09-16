@@ -1,3 +1,7 @@
+2013-09-16
+* clean up more code of ranking.py, remove all traces of using main database
+from it.
+
 2013-09-15
 * remove on the fly caching code from ranking.py. It was not well maintained,
 made other code a lot harder to read, was very time intensive to test and also
