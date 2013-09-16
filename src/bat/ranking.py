@@ -1162,6 +1162,7 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 					## is sys.maxint, so use that one. The score will be
 					## small enough...
 					score = len(line) / sys.maxint
+					continue
 
 				if score > scorecutoff:
 					for packagename in pkgs:
