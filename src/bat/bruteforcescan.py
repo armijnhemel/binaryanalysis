@@ -273,6 +273,15 @@ def scan((path, filename, scans, prerunscans, magicscans, optmagicscans, lenscan
 			if list(set(tags).intersection(set(noscans))) != []:
 				continue
 		
+		ignore = False
+		if unpackscan.has_key('extensionsignore'):
+			extensionsignore = unpackscan['extensionsignore'].split(':')
+			for e in extensionsignore:
+				if filetoscan.endswith(e):
+					ignore = True
+					break
+		if ignore:
+			continue
 		module = unpackscan['module']
 		method = unpackscan['method']
 		if debug:
@@ -340,24 +349,33 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, 
 	reports = {}
 	newtags = []
 
-	for scan in scans:
+	for leafscan in scans:
 		report = {}
-		module = scan['module']
-		method = scan['method']
+		module = leafscan['module']
+		method = leafscan['method']
 		if debug:
 			print >>sys.stderr, method, filetoscan
 			sys.stderr.flush()
+		ignore = False
+		if leafscan.has_key('extensionsignore'):
+			extensionsignore = leafscan['extensionsignore'].split(':')
+			for e in extensionsignore:
+				if filetoscan.endswith(e):
+					ignore = True
+					break
+		if ignore:
+			continue
 		## if there is extra information we need to pass, like locations of databases
 		## we can use the environment for it
-		if scan.has_key('envvars'):
-			envvars = scan['envvars']
+		if leafscan.has_key('envvars'):
+			envvars = leafscan['envvars']
 		else:
 			envvars = None
 		exec "from %s import %s as bat_%s" % (module, method, method)
 		res = eval("bat_%s(filetoscan, tags, blacklist, debug=debug, envvars=envvars)" % (method))
 		if res != None:
 			(nt, leafres) = res
-			reports[scan['name']] = leafres
+			reports[leafscan['name']] = leafres
 			newtags = newtags + nt
 			tags += list(set(newtags))
 	reports['tags'] = list(set(tags))
@@ -531,6 +549,10 @@ def readconfig(config):
 				conf['scanonly'] = config.get(section, 'scanonly')
 			except:
 				conf['scanonly'] = None
+			try:
+				conf['extensionsignore'] = config.get(section, 'extensionsignore')
+			except:
+				pass
 			try:
 				parallel = config.get(section, 'parallel')
 				if parallel == 'yes':
