@@ -72,6 +72,7 @@ def extractfromelf((path, filename)):
 	localfuncs = []
 	remotevars = []
 	localvars = []
+	rpaths = []
 	weakremotevars = []
 	weakremotefuncs = []
 	weaklocalvars = []
@@ -127,7 +128,7 @@ def extractfromelf((path, filename)):
 				remotevars.append(functionstrings[7].split('@')[0])
 
 	## extract dynamic section
-	p = subprocess.Popen(['readelf', '-d', "%s" % os.path.join(path, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['readelf', '-Wd', "%s" % os.path.join(path, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		return
@@ -140,6 +141,9 @@ def extractfromelf((path, filename)):
 				continue
 			soname = line.split(': ')[1][1:-1]
 			sonames.append(soname)
+		if "(RPATH)" in line:
+			rpath_split = line.split('[')[1]
+			rpaths = rpath_split[:-1].split(':')
 	sonames = list(set(sonames))
 
 	p = subprocess.Popen(['readelf', '-h', "%s" % os.path.join(path, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -155,7 +159,7 @@ def extractfromelf((path, filename)):
 			if "REL" in line:
 				elftype = "kernelmod"
 
-	return (filename, localfuncs, remotefuncs, localvars, remotevars, weaklocalfuncs, weakremotefuncs, weaklocalvars, weakremotevars, sonames, elftype)
+	return (filename, localfuncs, remotefuncs, localvars, remotevars, weaklocalfuncs, weakremotefuncs, weaklocalvars, weakremotevars, sonames, elftype, rpaths)
 
 def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, envvars=None):
 	scanenv = os.environ.copy()
@@ -250,11 +254,14 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 	pool.terminate()
 
 	elftypes = {}
+	rpaths = {}
 
 	for i in elfres:
 		if i == None:
 			continue
-		(filename, localfuncs, remotefuncs, localvars, remotevars, weaklocalfuncs, weakremotefuncs, weaklocalvars, weakremotevars, elfsonames, elftype) = i
+		(filename, localfuncs, remotefuncs, localvars, remotevars, weaklocalfuncs, weakremotefuncs, weaklocalvars, weakremotevars, elfsonames, elftype, elfrpaths) = i
+		if elfrpaths != []:
+			rpaths[filename] = elfrpaths
 		for soname in elfsonames:
 			if sonames.has_key(soname):
 				sonames[soname].append(filename)
@@ -284,9 +291,6 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 		weakremotevariablenames[filename] = weakremotevars
 		elftypes[filename] = elftype
 
-	## TODO: look if RPATH is used, since that will give more information
-	## by default
-
 	## For each file keep a list of other files that use this file. This is mostly
 	## for reporting.
 	usedby = {}
@@ -294,6 +298,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 	usedlibsandcountperfile = {}
 	unusedlibsperfile = {}
 	possiblyusedlibsperfile = {}
+	plugins = {}
 
 	notfoundfuncsperfile = {}
 	notfoundvarssperfile = {}
@@ -308,6 +313,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 		## The later is searched if it needs to be guessed which libraries were used.
 		usedlibs = []
 		possiblyused = []
+		plugsinto = []
 
 		filehash = unpackreports[i]['sha256']
 
@@ -592,6 +598,9 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 				## the symbol as WEAK, but another "hidden" dependency has it as GLOBAL.
 				## First for remote functions...
 				for r in remotefuncswc:
+					## Is this correct???
+					if r in ["__ashldi3", "__ashrdi3", "__cmpdi2", "__divdi3", "__fixdfdi", "__fixsfdi", "__fixunsdfdi", "__fixunssfdi", "__floatdidf", "__floatdisf", "__floatundidf", "__lshrdi3", "__moddi3", "__ucmpdi2", "__udivdi3", "__umoddi3", "main"]:
+						continue
 					if weakfuncstolibs.has_key(r):
 						existing = False
 						for w in weakfuncstolibs[r]:
@@ -614,7 +623,13 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 									found = True
 									break
 							if not found:
-								print >>sys.stderr, "NOT FOUND", r
+								## there are a few scenarions:
+								## 1. the file is a plugin that is loaded into executables
+								##    at run time.
+								## 2. false positives.
+								if elftypes[i] == 'lib':
+									if list(set(map(lambda x: elftypes[x], funcstolibs[r]))) == ['exe']:
+										plugsinto += funcstolibs[r]
 								## there are multiple files that can satisfy this dependency
 								## 1. check if the files are identical (checksum)
 								## 2. if identical, check for soname and choose the one
@@ -662,6 +677,14 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 			usedlibsperfile[i] = usedlibsp
 		if not usedlibsandcountperfile.has_key(i):
 			usedlibsandcountperfile[i] = map(lambda x: (x[0],) + x[1], usedlibs_tmp.items())
+		if plugsinto != []:
+			pcount = {}
+			for p in plugsinto:
+				if pcount.has_key(p):
+					pcount[p] += 1
+				else:
+					pcount[p] = 1
+			plugins[i] = pcount
 
 	## return a dictionary, with for each ELF file for which there are results
 	## a separate dictionary with the results. These will be added to 'scans' in
