@@ -1569,53 +1569,12 @@ def rankingsetup(envvars, debug=False):
 			except Exception, e:
 				pass
 
-	## Is the master database defined?
-	if not scanenv.has_key('BAT_DB'):
-		return (False, None)
-
-	masterdb = scanenv.get('BAT_DB')
-
-	## Does the master database exist?
-	if not os.path.exists(masterdb):
-		return (False, None)
-
-	## Does the master database have the right tables?
-	## processed_file is always needed
-	conn = sqlite3.connect(masterdb)
-	c = conn.cursor()
-	res = c.execute("select * from sqlite_master where type='table' and name='processed_file'").fetchall()
-	if res == []:
-		c.close()
-		conn.close()
-		return (False, None)
-
 	## caches are needed
 	rankingfull = False
 	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
 		rankingfull = True
 	if not rankingfull:
 		return (False, None)
-
-	## extracted_file is needed for string matches
-	res = c.execute("select * from sqlite_master where type='table' and name='extracted_file'").fetchall()
-	if res == []:
-		stringmatches = False
-	else:
-		stringmatches = True
-
-	## extracted_function is needed for function and method name matches
-	res = c.execute("select * from sqlite_master where type='table' and name='extracted_function'").fetchall()
-	if res == []:
-		functionmatches = False
-	else:
-		functionmatches = True
-
-	## extracted_name is needed for variable matches
-	res = c.execute("select * from sqlite_master where type='table' and name='extracted_name'").fetchall()
-	if res == []:
-		variablematches = False
-	else:
-		variablematches = True
 
 	for language in stringsdbperlanguage.keys():
 		if scanenv.has_key(stringsdbperlanguage[language]):
@@ -1625,28 +1584,33 @@ def rankingsetup(envvars, debug=False):
 				## remove from the configuration
 				if newenv.has_key(stringsdbperlanguage[language]):
 					del newenv[stringsdbperlanguage[language]]
+				continue
+
+			stringscache = scanenv.get(stringsdbperlanguage[language])
+			conn = sqlite3.connect(stringscache)
+			conn.text_factory = str
+			c = conn.cursor()
+
+			## TODO: check if the format of the cache database is sane
+
+			## check if there is a precomputed scores table and if it has any content.
+			## TODO: this really has to be done per language
+			res = c.execute("select * from sqlite_master where type='table' and name='scores'").fetchall()
+			if res != []:
+				if not newenv.has_key('BAT_SCORE_CACHE'):
+					newenv['BAT_SCORE_CACHE'] = 1
+				res = c.execute("select * from scores LIMIT 1")
+				if res == []:
+					## if there are no precomputed scores remove it again to save queries later
+					if newenv.has_key('BAT_SCORE_CACHE'):
+						del newenv['BAT_SCORE_CACHE']
+			c.close()
+			conn.close()
 		else:
 			## strings cache is not defined, but it should be there according to
 			## the configuration so remove from the configuration
 			if newenv.has_key(stringsdbperlanguage[language]):
 				del newenv[stringsdbperlanguage[language]]
-
-
-	## check if there is a precomputed scores table and if it has any content.
-	## TODO: this really has to be done per language
-	c.execute("attach ? as stringscache", (stringscache,))
-	res = c.execute("select * from stringscache.sqlite_master where type='table' and name='scores'").fetchall()
-	if res != []:
-		if not newenv.has_key('BAT_SCORE_CACHE'):
-			newenv['BAT_SCORE_CACHE'] = 1
-		res = c.execute("select * from stringscache.scores LIMIT 1")
-		if res == []:
-			## if there are no precomputed scores remove it again to save queries later
-			if newenv.has_key('BAT_SCORE_CACHE'):
-				del newenv['BAT_SCORE_CACHE']
-	c.execute("detach stringscache")
-	c.close()
-	conn.close()
 
 	## check the cloning database. If it does not exist, or does not have
 	## the right schema remove it from the configuration
@@ -1681,28 +1645,28 @@ def rankingsetup(envvars, debug=False):
 			if newenv.has_key(namecacheperlanguage['C']):
 				del newenv[namecacheperlanguage['C']]
 		else:
-			if variablematches:
-				if not newenv.has_key('BAT_KERNELSYMBOL_SCAN'):
-					newenv['BAT_KERNELSYMBOL_SCAN'] = 1
-				if not newenv.has_key('BAT_VARNAME_SCAN'):
-					newenv['BAT_VARNAME_SCAN'] = 1
-			if functionmatches:
-				if not newenv.has_key('BAT_FUNCTION_SCAN'):
-					newenv['BAT_FUNCTION_SCAN'] = 1
+			## TODO: add checks for each individual table
+			if not newenv.has_key('BAT_KERNELSYMBOL_SCAN'):
+				newenv['BAT_KERNELSYMBOL_SCAN'] = 1
+			if not newenv.has_key('BAT_VARNAME_SCAN'):
+				newenv['BAT_VARNAME_SCAN'] = 1
+			if not newenv.has_key('BAT_FUNCTION_SCAN'):
+				newenv['BAT_FUNCTION_SCAN'] = 1
 
-				cacheconn = sqlite3.connect(namecache)
-				cachecursor = cacheconn.cursor()
-				cachecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='kernelfunctionnamecache';")
+			## Sanity check for kernel function names
+			cacheconn = sqlite3.connect(namecache)
+			cachecursor = cacheconn.cursor()
+			cachecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='kernelfunctionnamecache';")
 
-				kernelfuncs = cachecursor.fetchall()
-				if kernelfuncs == []:
-					if newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
-						del newenv['BAT_KERNELFUNCTION_SCAN']
-				else:
-					if not newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
-						newenv['BAT_KERNELFUNCTION_SCAN'] = 1
-				cachecursor.close()
-				cacheconn.close()
+			kernelfuncs = cachecursor.fetchall()
+			if kernelfuncs == []:
+				if newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
+					del newenv['BAT_KERNELFUNCTION_SCAN']
+			else:
+				if not newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
+					newenv['BAT_KERNELFUNCTION_SCAN'] = 1
+			cachecursor.close()
+			cacheconn.close()
 	else:
 		## undefined, so disable kernel scanning, variable/function name scanning
 		if newenv.has_key('BAT_KERNELSYMBOL_SCAN'):
@@ -1728,10 +1692,13 @@ def rankingsetup(envvars, debug=False):
 			if newenv.has_key(namecacheperlanguage['Java']):
 				del newenv[namecacheperlanguage['Java']]
 		else:
+			## TODO: add checks for each individual table
 			if not newenv.has_key('BAT_CLASSNAME_SCAN'):
 				newenv['BAT_CLASSNAME_SCAN'] = 1
 			if not newenv.has_key('BAT_FIELDNAME_SCAN'):
 				newenv['BAT_FIELDNAME_SCAN'] = 1
+			if not newenv.has_key('BAT_METHOD_SCAN'):
+				newenv['BAT_METHOD_SCAN'] = 1
 	else:
 		## undefined, so disable classname/fieldname/method name scan
 		if newenv.has_key('BAT_CLASSNAME_SCAN'):
