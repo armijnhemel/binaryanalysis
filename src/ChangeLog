@@ -1,6 +1,9 @@
 2013-09-16
 * clean up more code of ranking.py, remove all traces of using main database
 from it.
+* add new 'extensionsignore' option for unpack scans and leaf scans for
+ignoring files with a certain extension. This is useful for for example
+application specific files that trigger many LZMA unpacking false positives.
 
 2013-09-15
 * remove on the fly caching code from ranking.py. It was not well maintained,
