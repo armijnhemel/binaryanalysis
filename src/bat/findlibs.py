@@ -772,6 +772,16 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 			elfgraph = pydot.Dot(graph_type='digraph')
 			rootnode = pydot.Node(ppname)
 			elfgraph.add_node(rootnode)
+
+			## processnodes is a tuple with 6 values:
+			## (parent node, node text, count, posix, used, declared)
+			## 1. parent node: pointer to the parent node in the graph
+			## 2. node text: text displayed in the node
+			## 3. count: amount of links
+			## 4. posix: are all used symbols in a known standard (misnomer)
+			## 5. used: is the dependency actually used
+			## 6. declared: is the dependency declared
+			## TODO: rework to make plugins easier to display
 			processnodes = map(lambda x: (rootnode,) + x + (True, True), squashedgraph[i])
 			if unusedlibsperfile.has_key(i):
 				for j in unusedlibsperfile[i]:
