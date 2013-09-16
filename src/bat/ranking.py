@@ -102,12 +102,11 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 
 	if 'elf' in tags:
 		mstype = "ELF"
+		language = 'C'
 	else:
 		## TODO: use more information already present in tags, like Dalvik or Java.
-        	mstype = ms.file(path)
-        if "ELF" in mstype:
-		language = 'C'
-	elif "bFLT" in mstype:
+		mstype = ms.file(path)
+	if "bFLT" in mstype:
 		language = 'C'
 	elif "compiled Java" in mstype:
 		language = 'Java'
