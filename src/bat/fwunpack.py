@@ -2580,6 +2580,7 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, debug=Fal
 			except Exception, e:
 				pass
 
+	lzmalimit = int(scanenv.get('LZMA_MINIMUM_SIZE', 1))
 	lzma_file = open(filename, 'rb')
 	for offset in lzmaoffsets:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
@@ -2599,7 +2600,7 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, debug=Fal
 			if lzmacheckbyte not in ['\x00', '\x01', '\x04', '\x08', '\x10', '\x20', '\x40', '\x80']:
 				continue
 		tmpdir = dirsetup(tempdir, filename, "lzma", counter)
-		res = unpackLZMA(filename, offset, tmpdir, int(scanenv.get('LZMA_MINIMUM_SIZE', 1)))
+		res = unpackLZMA(filename, offset, tmpdir, lzmalimit)
 		if res != None:
 			diroffsets.append((res, offset, 0))
 			counter = counter + 1
