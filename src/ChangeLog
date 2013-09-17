@@ -1,3 +1,6 @@
+2013-09-17
+* easier notation for marking node types in findlibs.py.
+
 2013-09-16
 * clean up more code of ranking.py, remove all traces of using main database
 from it.
