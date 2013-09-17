@@ -2580,10 +2580,24 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, debug=Fal
 			except Exception, e:
 				pass
 
+	lzma_file = open(filename, 'rb')
 	for offset in lzmaoffsets:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
+		## extra check for offset that is \x5d\x00\x00
+		## Just a limited set of bytes can follow, or lzma won't be
+		## able to unpack it.
+		## Compressing with lzma on Fedora 17 the following values were
+		## seen for the fourth byte:
+		## \x00 \x04 \x10 \x20 \x40 \x80
+		## In firmares \x01 was also seen (and successfully unpacked)
+		## https://github.com/cscott/lzma-purejs/blob/master/FORMAT.md indicates there are probably more
+		if offset in offsets['lzma_alone']:
+			lzma_file.seek(offset + 3)
+			lzmacheckbyte = lzma_file.read(1)
+			if lzmacheckbyte not in ['\x00', '\x01', '\x04', '\x08', '\x10', '\x20', '\x40', '\x80']:
+				continue
 		tmpdir = dirsetup(tempdir, filename, "lzma", counter)
 		res = unpackLZMA(filename, offset, tmpdir, int(scanenv.get('LZMA_MINIMUM_SIZE', 1)))
 		if res != None:
@@ -2592,6 +2606,7 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, debug=Fal
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
+	lzma_file.close()
 	return (diroffsets, blacklist, [], hints)
 
 ## tries to unpack stuff using lzma -cd. If it is successful, it will
