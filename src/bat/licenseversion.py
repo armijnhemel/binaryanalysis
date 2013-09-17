@@ -289,22 +289,17 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 			packagecopyrights = []
 			for u in unique:
 				line = u[0]
-				## We should store the version number with the license.
-				## There are good reasons for this: files are sometimes collectively
-				## relicensed when there is a new release (example: Samba 3.2 relicensed
-				## to GPLv3+) so the version number can be very significant for licensing.
-				## determinelicense and determinecopyright *always* imply determineversion
 				c.execute("select distinct sha256, linenumber, language from extracted_file where programstring=?", (line,))
 				versionsha256s = filter(lambda x: x[2] == language, c.fetchall())
 
 				line_sha256_version = []
 				for s in versionsha256s:
 					if not sha256_versions.has_key(s[0]):
-						c.execute("select version, package, filename from processed_file where sha256=?", (s[0],))
+						c.execute("select version, filename from processed_file where sha256=?", (s[0],))
 						versions = c.fetchall()
-						sha256_versions[s[0]] = map(lambda x: (x[0], x[2]), versions)
+						sha256_versions[s[0]] = map(lambda x: (x[0], x[1]), versions)
 						for v in versions:
-							line_sha256_version.append((s[0], v[0], s[1], v[2]))
+							line_sha256_version.append((s[0], v[0], s[1], v[1]))
 					else:
 						for v in sha256_versions[s[0]]:
 							line_sha256_version.append((s[0], v[0], s[1], v[1]))
@@ -321,6 +316,12 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 					else:   
 						newpackageversions[v] = 1
 					if determinelicense:
+						## We should store the version number with the license.
+						## There are good reasons for this: files are sometimes collectively
+						## relicensed when there is a new release (example: Samba 3.2 relicensed
+						## to GPLv3+) so the version number can be very significant for licensing.
+						## determinelicense and determinecopyright *always* imply determineversion
+						## TODO: store license with version number.
 						licensepv = []
 						if not s[0] in seensha256:
 							licensecursor.execute("select distinct license, scanner from licenses where sha256=?", (s[0],))
