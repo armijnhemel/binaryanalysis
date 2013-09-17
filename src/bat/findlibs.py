@@ -773,60 +773,70 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 			rootnode = pydot.Node(ppname)
 			elfgraph.add_node(rootnode)
 
-			## processnodes is a tuple with 6 values:
-			## (parent node, node text, count, posix, used, declared)
+			## processnodes is a tuple with 4 values:
+			## (parent node, node text, count, nodetype)
 			## 1. parent node: pointer to the parent node in the graph
 			## 2. node text: text displayed in the node
 			## 3. count: amount of links
-			## 4. posix: are all used symbols in a known standard (misnomer)
-			## 5. used: is the dependency actually used
-			## 6. declared: is the dependency declared
-			## TODO: rework to make plugins easier to display
+			## 4. nodetype
+			## Five types: normal knowninterface unused undeclared plugin
+			## 1. used: the dependency is a normal dependency
+			## 2. knowninterface: all used symbols are in a known standard
+			## 3. unused: the dependency is not used
+			## 4. undeclared: the dependency is used but undeclared
+			## 5. plugin: the dependency is used as a plugin
 			processnodes = map(lambda x: (rootnode,) + x + (True, True), squashedgraph[i])
+			newprocessNodes = []
+			for pr in processnodes:
+				if pr[3] == True:
+					newprocessNodes.append(pr[0:3] + ("knowninterface",))
+				else:
+					newprocessNodes.append(pr[0:3] + ("used",))
+			processnodes = newprocessNodes
 			if unusedlibsperfile.has_key(i):
 				for j in unusedlibsperfile[i]:
 					if not squashedelffiles.has_key(j):
 						continue
 					if len(squashedelffiles[j]) != 1:
 						continue
-					processnodes.append((rootnode, squashedelffiles[j][0], 0, False, False, False))
+					processnodes.append((rootnode, squashedelffiles[j][0], 0, "unused"))
 					seen.append((i,j))
 			if possiblyusedlibsperfile.has_key(i):
 				for j in possiblyusedlibsperfile[i]:
-					processnodes.append((rootnode, j, 0, False, True, False))
+					processnodes.append((rootnode, j, 0, "undeclared"))
 					seen.append((i,j))
 			seen = seen + map(lambda x: (i, x[0]), squashedgraph[i])
 
 			while True:
 				newprocessnodes = []
 				for j in processnodes:
-					(parentnode, nodetext, count, posix, used, declared) = j
+					(parentnode, nodetext, count, nodetype) = j
 					ppname = os.path.join(unpackreports[nodetext]['path'], unpackreports[nodetext]['name'])
 					tmpnode = pydot.Node(ppname)
 					elfgraph.add_node(tmpnode)
-					if not used:
+					if nodetype == "unused":
 						## declared but unused dependencies are represented by dashed blue lines
 						elfgraph.add_edge(pydot.Edge(parentnode, tmpnode, style='dashed', color='blue'))
-					else:
-						if not declared:
-							## undeclared but used dependencies get a red solid line
-							elfgraph.add_edge(pydot.Edge(parentnode, tmpnode, color='red'))
-						else:
-							## other dependencies: solid black line
-							if posix:
-								elfgraph.add_edge(pydot.Edge(parentnode, tmpnode, style='dotted', label="%d" % count, labeldistance=1.5, labelfontsize=20.0))
-							else:
-								elfgraph.add_edge(pydot.Edge(parentnode, tmpnode, label="%d" % count, labeldistance=1.5, labelfontsize=20.0))
+					elif nodetype == "undeclared":
+						## undeclared but used dependencies get a red solid line
+						elfgraph.add_edge(pydot.Edge(parentnode, tmpnode, color='red'))
+					elif nodetype == "knowninterface":
+						elfgraph.add_edge(pydot.Edge(parentnode, tmpnode, style='dotted', label="%d" % count, labeldistance=1.5, labelfontsize=20.0))
+					elif nodetype == "used":
+						elfgraph.add_edge(pydot.Edge(parentnode, tmpnode, label="%d" % count, labeldistance=1.5, labelfontsize=20.0))
 
 					if squashedgraph.has_key(nodetext):
 						for n in squashedgraph[nodetext]:
 							if not (nodetext, n[0]) in seen:
-								newprocessnodes.append((tmpnode,) +  n + (True, True))
+								if n[-1] == True:
+									newprocessnodes.append((tmpnode,) +  n[0:-1] + ("knowninterface",))
+								else:
+									newprocessnodes.append((tmpnode,) +  n[0:-1] + ("used",))
 								seen.append((nodetext, n[0]))
 					if possiblyusedlibsperfile.has_key(nodetext):
 						for u in possiblyusedlibsperfile[nodetext]:
 							if not (nodetext, u) in seen:
-								newprocessnodes.append((tmpnode, u, 0, False, True, False))
+								newprocessnodes.append((tmpnode, u, 0, "undeclared"))
 								seen.append((nodetext, u))
 					if unusedlibsperfile.has_key(nodetext):
 						for u in unusedlibsperfile[nodetext]:
@@ -835,7 +845,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 									continue
 								if len(squashedelffiles[u]) != 1:
 									continue
-								newprocessnodes.append((tmpnode, squashedelffiles[u][0], 0, False, False, False))
+								newprocessnodes.append((tmpnode, squashedelffiles[u][0], 0, "unused"))
 								seen.append((nodetext, u))
 				processnodes = newprocessnodes
 				if processnodes == []:
