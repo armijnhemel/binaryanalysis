@@ -2,7 +2,7 @@
 * easier notation for marking node types in findlibs.py.
 * add some sanity checks for LZMA: after the magic header not all bytes are
 allowed, so filter out the ones that are not used in practice. For some files
-(like in the ASUS AC66U firmware) this means a big reduction in time spent
+(like in the ASUS Padfone 2 firmware) this means a big reduction in time spent
 scanning.
 
 2013-09-16
