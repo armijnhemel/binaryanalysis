@@ -77,14 +77,14 @@ def mergeBlacklist(blacklist):
 		blacklist = res
 	return blacklist
 
-def runSetup(scan, debug=False):
-	module = scan['module']
-	method = scan['setup']
+def runSetup(setupscan, debug=False):
+	module = setupscan['module']
+	method = setupscan['setup']
 	if debug:
 		print >>sys.stderr, module, method
 		sys.stderr.flush()
-	if scan.has_key('envvars'):
-		envvars = scan['envvars']
+	if setupscan.has_key('envvars'):
+		envvars = setupscan['envvars']
 	else:
 		envvars = None
 
@@ -186,6 +186,15 @@ def scan((path, filename, scans, prerunscans, magicscans, optmagicscans, lenscan
 
 	## prerun scans should be run before any of the other scans
 	for prerunscan in prerunscans:
+		ignore = False
+		if prerunscan.has_key('extensionsignore'):
+			extensionsignore = prerunscan['extensionsignore'].split(':')
+			for e in extensionsignore:
+				if filetoscan.endswith(e):
+					ignore = True
+					break
+		if ignore:
+			continue
 		module = prerunscan['module']
 		method = prerunscan['method']
 		if debug:
@@ -350,12 +359,6 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, 
 	newtags = []
 
 	for leafscan in scans:
-		report = {}
-		module = leafscan['module']
-		method = leafscan['method']
-		if debug:
-			print >>sys.stderr, method, filetoscan
-			sys.stderr.flush()
 		ignore = False
 		if leafscan.has_key('extensionsignore'):
 			extensionsignore = leafscan['extensionsignore'].split(':')
@@ -365,6 +368,12 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, 
 					break
 		if ignore:
 			continue
+		report = {}
+		module = leafscan['module']
+		method = leafscan['method']
+		if debug:
+			print >>sys.stderr, method, filetoscan
+			sys.stderr.flush()
 		## if there is extra information we need to pass, like locations of databases
 		## we can use the environment for it
 		if leafscan.has_key('envvars'):
@@ -400,16 +409,16 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, d
 	else:
 		processors = None
 	unpacktempdir = scans['batconfig']['tempdir']
-	for scan in scans['aggregatescans']:
-		module = scan['module']
-		method = scan['method']
+	for aggregatescan in scans['aggregatescans']:
+		module = aggregatescan['module']
+		method = aggregatescan['method']
 		if debug:
 			print >>sys.stderr, module, method
 			sys.stderr.flush()
 		## if there is extra information we need to pass, like locations of databases
 		## we can use the environment for it
-		if scan.has_key('envvars'):
-			envvars = scan['envvars']
+		if aggregatescan.has_key('envvars'):
+			envvars = aggregatescan['envvars']
 		else:
 			envvars = None
 		exec "from %s import %s as bat_%s" % (module, method, method)
@@ -432,16 +441,25 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, d
 				leaf_file.close()
 
 def postrunscan((filetoscan, unpackreports, scans, scantempdir, topleveldir, debug)):
-	for scan in scans:
-		module = scan['module']
-		method = scan['method']
+	for postrunscan in scans:
+		ignore = False
+		if postrunscan.has_key('extensionsignore'):
+			extensionsignore = postrunscan['extensionsignore'].split(':')
+			for e in extensionsignore:
+				if filetoscan.endswith(e):
+					ignore = True
+					break
+		if ignore:
+			continue
+		module = postrunscan['module']
+		method = postrunscan['method']
 		if debug:
 			print >>sys.stderr, module, method, filetoscan
 			sys.stderr.flush()
 		## if there is extra information we need to pass, like locations of databases
 		## we can use the environment for it
-		if scan.has_key('envvars'):
-			envvars = scan['envvars']
+		if postrunscan.has_key('envvars'):
+			envvars = postrunscan['envvars']
 		else:
 			envvars = None
 		exec "from %s import %s as bat_%s" % (module, method, method)
