@@ -178,7 +178,7 @@ def prune(scanenv, uniques, package):
 			newuniques.append((line, newres))
 	return newuniques
 
-def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, processors, debug=False, envvars=None):
+def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, processors, debug=False, envvars=None, unpacktempdir=None):
 	scanenv = os.environ.copy()
 	envvars = licensesetup(envvars, debug)
 	if envvars[0]:

@@ -399,6 +399,7 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, d
 		processors = scans['batconfig']['processors']
 	else:
 		processors = None
+	unpacktempdir = scans['batconfig']['tempdir']
 	for scan in scans['aggregatescans']:
 		module = scan['module']
 		method = scan['method']
@@ -413,7 +414,7 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, d
 			envvars = None
 		exec "from %s import %s as bat_%s" % (module, method, method)
 
-		res = eval("bat_%s(unpackreports, scantempdir, topleveldir, processors, debug=debug, envvars=envvars)" % (method))
+		res = eval("bat_%s(unpackreports, scantempdir, topleveldir, processors, debug=debug, envvars=envvars, unpacktempdir=unpacktempdir)" % (method))
 		if res != None:
 			if res.keys() != []:
 				filehash = unpackreports[scan_binary]['sha256']

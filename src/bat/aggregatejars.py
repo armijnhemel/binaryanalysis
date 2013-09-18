@@ -13,7 +13,7 @@ contain enough information. By aggregating the results of these classes
 it is possible to get a better view of what is inside a JAR.
 '''
 
-def aggregatejars(unpackreports, scantempdir, topleveldir, processors, debug=False, envvars=None):
+def aggregatejars(unpackreports, scantempdir, topleveldir, processors, debug=False, envvars=None, unpacktempdir=None):
 	cleanclasses = False
 
 	scanenv = os.environ.copy()

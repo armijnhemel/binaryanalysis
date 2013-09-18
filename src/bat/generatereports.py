@@ -144,7 +144,7 @@ def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
 
 ## generate several output files and extract pickles
 ## TODO: change name
-def extractpickles((filehash, pickledir, topleveldir, reportdir)):
+def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir)):
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 	leafreports = cPickle.load(leaf_file)
 	leaf_file.close()
@@ -356,7 +356,7 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir)):
 			unmatches = list(set(res['unmatched']))
 			unmatches.sort()
 
-			tmppickle = tempfile.mkstemp()
+			tmppickle = tempfile.mkstemp(dir=unpacktempdir)
 
 			cPickle.dump(unmatches, os.fdopen(tmppickle[0], 'w'))
 			picklehash = gethash(tmppickle[1])
@@ -367,7 +367,7 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir)):
 				(rank, packagename, uniquematches, percentage, packageversions, licenses, language) = j
 				if len(uniquematches) == 0:
 					continue
-				tmppickle = tempfile.mkstemp()
+				tmppickle = tempfile.mkstemp(dir=unpacktempdir)
 				cPickle.dump((packagename, uniquematches), os.fdopen(tmppickle[0], 'w'))
 				picklehash = gethash(tmppickle[1])
 				reportresults.append((rank, picklehash, tmppickle[1], len(uniquematches), packagename))
@@ -388,7 +388,7 @@ def generateunmatched((picklefile, pickledir, filehash, reportdir)):
 	unmatchedhtmlfile.close()
 	os.unlink(os.path.join(pickledir, picklefile))
 
-def generatereports(unpackreports, scantempdir, topleveldir, processors, debug=False, envvars=None):
+def generatereports(unpackreports, scantempdir, topleveldir, processors, debug=False, envvars=None, unpacktempdir=None):
 	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):
@@ -446,7 +446,7 @@ def generatereports(unpackreports, scantempdir, topleveldir, processors, debug=F
 	reportpickles = []
 
 	## extract pickles and generate some files
-	extracttasks = map(lambda x: (x, pickledir, topleveldir, reportdir), filehashes)
+	extracttasks = map(lambda x: (x, pickledir, topleveldir, reportdir, unpacktempdir), filehashes)
 	pool = multiprocessing.Pool(processes=processors)
 	res = filter(lambda x: x != None, pool.map(extractpickles, extracttasks))
 	pool.terminate()
