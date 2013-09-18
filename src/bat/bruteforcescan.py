@@ -821,6 +821,13 @@ def runscan(scans, scan_binary):
 		pool = multiprocessing.Pool(processes=1)
 
 	while True:
+		## it could be that 'scantasks' < processors
+		## In that case there are processes idling.
+		## It also could happen that one big task blocks returning results
+		## because it is still running. This could lead to (temporary)
+		## starvation.
+		## TODO: use something else than a simple Pool() with pool.map
+		## like a queue and a set of workers.
 		scansplusleafs = pool.map(scan, scantasks, 1)
 		scantasks = []
 		for i in scansplusleafs:
