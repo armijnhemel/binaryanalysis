@@ -201,7 +201,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 	filehashes = list(set(map(lambda x: unpackreports[x]['sha256'], rankingfiles)))
 
 	## extract pickles
-	extracttasks = map(lambda x: (x, pickledir, topleveldir, None), filehashes)
+	extracttasks = map(lambda x: (x, pickledir, topleveldir, unpacktempdir), filehashes)
 	pool = multiprocessing.Pool(processes=1)
 	res = filter(lambda x: x != None, pool.map(extractpickles, extracttasks))
 	pool.terminate()
