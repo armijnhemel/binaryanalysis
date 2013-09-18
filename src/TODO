@@ -58,7 +58,6 @@ HTML generation:
 
 misc:
 * replay script to unpack firmware based on only the pickle with unpacking data. After this set the default of outputlite to 'yes'
-* add support for ignoring some file types/extensions completely
 * add configuration option to set temporary directory prefix for all scans
 * add piecharts/reports per directory that summarise what is inside a directory (recursively, perhaps only if something was unpacked)
 * add per scan debug to allow better custom debugging
