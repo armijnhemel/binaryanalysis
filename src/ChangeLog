@@ -1,3 +1,7 @@
+2013-09-18
+* pass unpacktempdir to aggregate scans so temporary files are packed in the
+right location
+
 2013-09-17
 * easier notation for marking node types in findlibs.py.
 * add some sanity checks for LZMA: after the magic header not all bytes are
