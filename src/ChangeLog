@@ -1,3 +1,7 @@
+2013-09-19
+* replace Pool.map() with a few queues for unpacking to have better
+interleaving of scans for unpacking.
+
 2013-09-18
 * pass unpacktempdir to aggregate scans so temporary files are packed in the
 right location
