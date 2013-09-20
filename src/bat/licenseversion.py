@@ -151,6 +151,7 @@ def prune(scanenv, uniques, package):
 		if l in pruneme:
 			continue
 		interset = set(linesperversion[l])
+		pruneremove = []
 		for k in unique_sorted:
 			if k in pruneme:
 				continue
@@ -163,17 +164,16 @@ def prune(scanenv, uniques, package):
 			inter = interset.intersection(set(linesperversion[k]))
 			if list(set(linesperversion[k]).difference(inter)) == []:
 				pruneme.append(k)
-				unique_sorted.remove(k)
+				pruneremove.append(k)
+		## make the inner loop a bit shorter
+		for k in pruneremove:
+			unique_sorted.remove(k)
 
 	notpruned = list(set(uniqueversions.keys()).difference(set(pruneme)))
 	newuniques = []
 	for u in uniques:
 		(line, res) = u
-		newres = []
-		for r in res:
-			(sha256, version, linenumber, filename) = r
-			if version in notpruned:
-				newres.append(r)
+		newres = filter(lambda x: x[1] in notpruned, res)
 		if newres != []:
 			newuniques.append((line, newres))
 	return newuniques
@@ -219,8 +219,9 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		c.close() 
 		conn.close()
 
-	#pool = multiprocessing.Pool(processes=processors)
+	pool = multiprocessing.Pool(processes=processors)
 	## ignore files which don't have ranking results
+	rankingfiles = []
 	filehashseen = []
 	for i in unpackreports:
 		if not unpackreports[i].has_key('sha256'):
@@ -235,8 +236,8 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		filehashseen.append(filehash)
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue
-		compute_version(processors, scanenv, unpackreports[i], topleveldir, determinelicense, determinecopyright)
-	#pool.terminate()
+		compute_version(pool, scanenv, unpackreports[i], topleveldir, determinelicense, determinecopyright)
+	pool.terminate()
 
 def grab_sha256_filename((scanenv, sha256sum)):
 	masterdb = scanenv.get('BAT_DB')
@@ -290,7 +291,7 @@ def grab_sha256_parallel((scanenv, line, language, querytype)):
 	return (line, res)
 
 
-def compute_version(processors, scanenv, unpackreport, topleveldir, determinelicense, determinecopyright):
+def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, determinecopyright):
 	## read the pickle
 	filehash = unpackreport['sha256']
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
@@ -304,7 +305,6 @@ def compute_version(processors, scanenv, unpackreport, topleveldir, determinelic
 	if res == None and dynamicRes == {}:
 		return
 
-	pool = multiprocessing.Pool(processes=processors)
 	## keep a list of versions per sha256, since source files often are in more than one version
 	sha256_versions = {}
 	## indidcate whether or not the pickle should be written back to disk.
@@ -414,6 +414,7 @@ def compute_version(processors, scanenv, unpackreport, topleveldir, determinelic
 			changed = True
 			versions = []
 			functionnames = dynamicRes['uniquepackages'][package]
+			## right now only C is supported. TODO: fix this for other languages such as Java.
 			vsha256s = pool.map(grab_sha256_parallel, map(lambda x: (scanenv, x, 'C', 'function'), functionnames))
 			vsha256s = filter(lambda x: x != [], vsha256s)
 
@@ -457,8 +458,6 @@ def compute_version(processors, scanenv, unpackreport, topleveldir, determinelic
 			for v in list(set(vs)):
 				dynamicRes['packages'][package].append((v, vs.count(v)))
 		dynamicRes['versionresults'] = newresults
-
-	pool.terminate()
 
 	if changed:
 		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
