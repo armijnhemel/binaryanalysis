@@ -346,6 +346,11 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 						tmplines[line] = []
 					for v in versres:
 						tmplines[line].append((checksum, v[0], linenumber, v[1]))
+				for v in versres:
+					if sha256_versions.has_key(checksum):
+						sha256_versions[checksum].append((v[0], v[1]))
+					else:
+						sha256_versions[checksum] = [(v[0], v[1])]
 			for l in tmplines.keys():
 				newuniques.append((l, tmplines[l]))
 
