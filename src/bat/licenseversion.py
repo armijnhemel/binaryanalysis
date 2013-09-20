@@ -128,8 +128,11 @@ def prune(scanenv, uniques, package):
 	for u in uniques:
 		(line, res) = u
 		seenversions = []
-		for r in res:
-			(sha256, version, linenumber, filename) = r
+		versions = map(lambda x: x[1], res)
+		for version in list(set(versions)):
+			#(sha256, version, linenumber, filename) = r
+			## in case the same identifier is in the same version
+			## just skip it.
 			if version in seenversions:
 				continue
 			if linesperversion.has_key(version):
@@ -141,6 +144,7 @@ def prune(scanenv, uniques, package):
 				uniqueversions[version] += 1
 			else:
 				uniqueversions[version] = 1
+	## there is only one version, so skip
 	if len(uniqueversions.keys()) == 1:
 		return uniques
 
@@ -153,14 +157,14 @@ def prune(scanenv, uniques, package):
 		if l in pruneme:
 			continue
 		for k in unique_sorted:
-			if uniqueversions[k] == uniqueversions[l]:
-				continue
-			if uniqueversions[k] > uniqueversions[l]:
-				break
 			if k in pruneme:
 				continue
 			if l == k:
 				continue
+			if uniqueversions[k] == uniqueversions[l]:
+				continue
+			if uniqueversions[k] > uniqueversions[l]:
+				break
 			inter = set(linesperversion[l]).intersection(set(linesperversion[k]))
 			if list(set(linesperversion[k]).difference(inter)) == []:
 				pruneme.append(k)
@@ -219,7 +223,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		c.close() 
 		conn.close()
 
-	pool = multiprocessing.Pool(processes=processors)
+	#pool = multiprocessing.Pool(processes=processors)
 	## ignore files which don't have ranking results
 	filehashseen = []
 	for i in unpackreports:
@@ -235,8 +239,8 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		filehashseen.append(filehash)
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue
-		compute_version(pool, scanenv, unpackreports[i], topleveldir, determinelicense, determinecopyright)
-	pool.terminate()
+		compute_version(processors, scanenv, unpackreports[i], topleveldir, determinelicense, determinecopyright)
+	#pool.terminate()
 
 def grab_sha256_filename((scanenv, sha256sum)):
 	masterdb = scanenv.get('BAT_DB')
@@ -290,7 +294,7 @@ def grab_sha256_parallel((scanenv, line, language, querytype)):
 	return (line, res)
 
 
-def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, determinecopyright):
+def compute_version(processors, scanenv, unpackreport, topleveldir, determinelicense, determinecopyright):
 	## read the pickle
 	filehash = unpackreport['sha256']
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
@@ -304,6 +308,7 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 	if res == None and dynamicRes == {}:
 		return
 
+	pool = multiprocessing.Pool(processes=processors)
 	## keep a list of versions per sha256, since source files often are in more than one version
 	sha256_versions = {}
 	## indidcate whether or not the pickle should be written back to disk.
@@ -312,6 +317,7 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 
 	if res != None:
 		newreports = []
+
 		for r in res['reports']:
 			(rank, package, unique, percentage, packageversions, packagelicenses, language) = r
 			if unique == []:
@@ -335,9 +341,6 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 							sha256_scan_versions[checksum].append((line, linenumber))
 						else:
 							sha256_scan_versions[checksum] = [(line, linenumber)]
-					else:
-						for v in sha256_versions[checksum]:
-							line_sha256_version.append((checksum, v[0], linenumber, v[1]))
 
 			fileres = pool.map(grab_sha256_filename, map(lambda x: (scanenv, x), sha256_scan_versions.keys()))
 			tmplines = {}
@@ -398,16 +401,15 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 
 	## TODO: determine versions of functions and variables here as well
 
-	masterdb = scanenv.get('BAT_DB')
-
-	## open the database containing all the strings that were extracted
-	## from source code.
-	conn = sqlite3.connect(masterdb)
-	## we have byte strings in our database, not utf-8 characters...I hope
-	conn.text_factory = str
-	c = conn.cursor()
-
 	if dynamicRes.has_key('versionresults'):
+		masterdb = scanenv.get('BAT_DB')
+
+		## open the database containing all the strings that were extracted
+		## from source code.
+		conn = sqlite3.connect(masterdb)
+		## we have byte strings in our database, not utf-8 characters...I hope
+		conn.text_factory = str
+		c = conn.cursor()
 		for package in dynamicRes['versionresults'].keys():
 			if not dynamicRes.has_key('uniquepackages'):
 				continue
@@ -444,6 +446,8 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 				## Since we are ignoring signatures we need to deduplicate here too.
 				versions = versions + list(set(pversions))
 
+		c.close()
+		conn.close()
 		newresults = {}
 		for package in dynamicRes['versionresults'].keys():
 			uniques = dynamicRes['versionresults'][package]
@@ -458,6 +462,7 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 				dynamicRes['packages'][package].append((v, vs.count(v)))
 		dynamicRes['versionresults'] = newresults
 
+	pool.terminate()
 
 	if changed:
 		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
