@@ -309,6 +309,10 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 	if res == None and dynamicRes == {}:
 		return
 
+	## indidcate whether or not the pickle should be written back to disk.
+	## If uniquematches is empty and if dynamicRes is also empty, then nothing needs to be done.
+	changed = False
+
 	if res != None:
 		newreports = []
 		for r in res['reports']:
@@ -316,6 +320,7 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 			if unique == []:
 				newreports.append(r)
 				continue
+			changed = True
 			newuniques = []
 			newpackageversions = {}
 			packagecopyrights = []
@@ -406,6 +411,7 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 				continue
 			if not dynamicRes['uniquepackages'].has_key(package):
 				continue
+			changed = True
 			versions = []
 			for p in dynamicRes['uniquepackages'][package]:
 				pversions = []
@@ -444,9 +450,10 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 		dynamicRes['versionresults'] = newresults
 
 
-	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
-	leafreports = cPickle.dump(leafreports, leaf_file)
-	leaf_file.close()
+	if changed:
+		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
+		leafreports = cPickle.dump(leafreports, leaf_file)
+		leaf_file.close()
 
 ## method that makes sure that everything is set up properly and modifies
 ## the environment, as well as determines whether the scan should be run at
