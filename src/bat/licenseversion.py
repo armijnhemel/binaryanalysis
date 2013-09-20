@@ -127,24 +127,18 @@ def prune(scanenv, uniques, package):
 
 	for u in uniques:
 		(line, res) = u
-		seenversions = []
 		versions = map(lambda x: x[1], res)
 		for version in list(set(versions)):
-			#(sha256, version, linenumber, filename) = r
-			## in case the same identifier is in the same version
-			## just skip it.
-			if version in seenversions:
-				continue
 			if linesperversion.has_key(version):
 				linesperversion[version].append(line)
 			else:
 				linesperversion[version] = [line]
-			seenversions.append(version)
 			if uniqueversions.has_key(version):
 				uniqueversions[version] += 1
 			else:
 				uniqueversions[version] = 1
-	## there is only one version, so skip
+
+	## there is only one version, so no need to continue
 	if len(uniqueversions.keys()) == 1:
 		return uniques
 
@@ -156,6 +150,7 @@ def prune(scanenv, uniques, package):
 	for l in unique_sorted_rev:
 		if l in pruneme:
 			continue
+		interset = set(linesperversion[l])
 		for k in unique_sorted:
 			if k in pruneme:
 				continue
@@ -165,9 +160,10 @@ def prune(scanenv, uniques, package):
 				continue
 			if uniqueversions[k] > uniqueversions[l]:
 				break
-			inter = set(linesperversion[l]).intersection(set(linesperversion[k]))
+			inter = interset.intersection(set(linesperversion[k]))
 			if list(set(linesperversion[k]).difference(inter)) == []:
 				pruneme.append(k)
+				unique_sorted.remove(k)
 
 	notpruned = list(set(uniqueversions.keys()).difference(set(pruneme)))
 	newuniques = []
