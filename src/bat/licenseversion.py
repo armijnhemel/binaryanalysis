@@ -219,9 +219,6 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		c.close() 
 		conn.close()
 
-	## now read the pickles
-	rankingfiles = []
-
 	pool = multiprocessing.Pool(processes=processors)
 	## ignore files which don't have ranking results
 	filehashseen = []
@@ -238,7 +235,6 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		filehashseen.append(filehash)
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue
-		rankingfiles.append((scanenv, unpackreports[i], topleveldir, determinelicense, determinecopyright))
 		compute_version(pool, scanenv, unpackreports[i], topleveldir, determinelicense, determinecopyright)
 	pool.terminate()
 
@@ -292,11 +288,7 @@ def grab_sha256_parallel((scanenv, line, language)):
 
 
 def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, determinecopyright):
-	## keep a list of versions per sha256, since source files could contain more than one license
-	seensha256 = []
-
-	## keep a list of versions per sha256, since source files often are in more than one version
-	sha256_versions = {}
+	## read the pickle
 	filehash = unpackreport['sha256']
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 	leafreports = cPickle.load(leaf_file)
@@ -309,6 +301,8 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 	if res == None and dynamicRes == {}:
 		return
 
+	## keep a list of versions per sha256, since source files often are in more than one version
+	sha256_versions = {}
 	## indidcate whether or not the pickle should be written back to disk.
 	## If uniquematches is empty and if dynamicRes is also empty, then nothing needs to be done.
 	changed = False
@@ -427,6 +421,10 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 						for pv in packageversions:
 							pversions.append(pv[0])
 							line_sha256_version.append((s[0], pv[0], s[1], pv[1]))
+							if sha256_versions.has_key(s[0]):
+								sha256_versions[s[0]].append((pv[0], pv[1]))
+							else:
+								sha256_versions[s[0]] = [(pv[0], pv[1])]
 					else:
 						for v in sha256_versions[s[0]]:
 							line_sha256_version.append((s[0], v[0], s[1], v[1]))
