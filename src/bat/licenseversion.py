@@ -268,7 +268,7 @@ def grab_sha256_license((scanenv, sha256sum)):
 	conn.close()
 	return licenses
 
-def grab_sha256_parallel((scanenv, line, language)):
+def grab_sha256_parallel((scanenv, line, language, querytype)):
 	masterdb = scanenv.get('BAT_DB')
 
 	## open the database containing all the strings that were extracted
@@ -277,7 +277,10 @@ def grab_sha256_parallel((scanenv, line, language)):
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
-	c.execute("select distinct sha256, linenumber, language from extracted_file where programstring=?", (line,))
+	if querytype == "string":
+		c.execute("select distinct sha256, linenumber, language from extracted_file where programstring=?", (line,))
+	elif querytype == 'function':
+		c.execute("select distinct sha256, linenumber, language from extracted_function where functionname=?", (line,))
 	res = c.fetchall()
 	if res != None:
 		res = filter(lambda x: x[2] == language, res)
@@ -318,7 +321,7 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 			newuniques = []
 			newpackageversions = {}
 			packagecopyrights = []
-			vsha256s = pool.map(grab_sha256_parallel, map(lambda x: (scanenv, x[0],language), unique))
+			vsha256s = pool.map(grab_sha256_parallel, map(lambda x: (scanenv, x[0],language, 'string'), unique))
 			vsha256s = filter(lambda x: x != [], vsha256s)
 
 			sha256_scan_versions = {}
@@ -412,12 +415,15 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 				continue
 			changed = True
 			versions = []
-			for p in dynamicRes['uniquepackages'][package]:
+			functionnames = dynamicRes['uniquepackages'][package]
+			vsha256s = pool.map(grab_sha256_parallel, map(lambda x: (scanenv, x, 'C', 'function'), functionnames))
+			vsha256s = filter(lambda x: x != [], vsha256s)
+
+			for p in vsha256s:
 				pversions = []
 				pv2 = {}
 				line_sha256_version = []
-				c.execute("select distinct sha256, linenumber, language from extracted_function where functionname=?", (p,))
-				res = filter(lambda x: x[2] == 'C', c.fetchall())
+				(functionname, res) = p
 		
 				for s in res:
 					if not sha256_versions.has_key(s[0]):
@@ -433,7 +439,7 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 					else:
 						for v in sha256_versions[s[0]]:
 							line_sha256_version.append((s[0], v[0], s[1], v[1]))
-				dynamicRes['versionresults'][package].append((p, line_sha256_version))
+				dynamicRes['versionresults'][package].append((functionname, line_sha256_version))
 				## functions with different signatures might be present in different files.
 				## Since we are ignoring signatures we need to deduplicate here too.
 				versions = versions + list(set(pversions))
