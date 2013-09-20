@@ -222,6 +222,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	## now read the pickles
 	rankingfiles = []
 
+	pool = multiprocessing.Pool(processes=processors)
 	## ignore files which don't have ranking results
 	filehashseen = []
 	for i in unpackreports:
@@ -238,11 +239,10 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue
 		rankingfiles.append((scanenv, unpackreports[i], topleveldir, determinelicense, determinecopyright))
-	pool = multiprocessing.Pool(processes=processors)
-	pool.map(compute_version, rankingfiles)
+		compute_version(pool, scanenv, unpackreports[i], topleveldir, determinelicense, determinecopyright)
 	pool.terminate()
 
-def compute_version((scanenv, unpackreport, topleveldir, determinelicense, determinecopyright)):
+def grab_sha256_filename((scanenv, sha256sum)):
 	masterdb = scanenv.get('BAT_DB')
 
 	## open the database containing all the strings that were extracted
@@ -251,15 +251,47 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
+	c.execute("select version, filename from processed_file where sha256=?", (sha256sum,))
+	res = c.fetchall()
+	c.close()
+	conn.close()
+	return (sha256sum, res)
 
-	if determinelicense:
-		licenseconn = sqlite3.connect(scanenv.get('BAT_LICENSE_DB'))
-		licensecursor = licenseconn.cursor()
+def grab_sha256_license((scanenv, sha256sum)):
+	licensedb = scanenv.get('BAT_LICENSE_DB')
 
-	if determinecopyright:
-		copyrightconn = sqlite3.connect(scanenv.get('BAT_LICENSE_DB'))
-		copyrightcursor = copyrightconn.cursor()
+	## open the database containing all the strings that were extracted
+	## from source code.
+	conn = sqlite3.connect(licensedb)
+	## we have byte strings in our database, not utf-8 characters...I hope
+	conn.text_factory = str
+	c = conn.cursor()
+	c.execute("select distinct license, scanner from licenses where sha256=?", (sha256sum,))
+	licenses = c.fetchall()
+	c.close()
+	conn.close()
+	return licenses
 
+def grab_sha256_parallel((scanenv, line, language)):
+	masterdb = scanenv.get('BAT_DB')
+
+	## open the database containing all the strings that were extracted
+	## from source code.
+	conn = sqlite3.connect(masterdb)
+	## we have byte strings in our database, not utf-8 characters...I hope
+	conn.text_factory = str
+	c = conn.cursor()
+	c.execute("select distinct sha256, linenumber, language from extracted_file where programstring=?", (line,))
+	res = c.fetchall()
+	if res != None:
+		res = filter(lambda x: x[2] == language, res)
+		res = map(lambda x: (x[0], x[1]), res)
+	c.close()
+	conn.close()
+	return (line, res)
+
+
+def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, determinecopyright):
 	## keep a list of versions per sha256, since source files could contain more than one license
 	seensha256 = []
 
@@ -287,26 +319,40 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 			newuniques = []
 			newpackageversions = {}
 			packagecopyrights = []
-			for u in unique:
-				line = u[0]
-				c.execute("select distinct sha256, linenumber, language from extracted_file where programstring=?", (line,))
-				versionsha256s = filter(lambda x: x[2] == language, c.fetchall())
+			vsha256s = pool.map(grab_sha256_parallel, map(lambda x: (scanenv, x[0],language), unique))
+			vsha256s = filter(lambda x: x != [], vsha256s)
 
+			sha256_scan_versions = {}
+			for l in vsha256s:
 				line_sha256_version = []
+				(line, versionsha256s) = l
 				for s in versionsha256s:
-					if not sha256_versions.has_key(s[0]):
-						c.execute("select version, filename from processed_file where sha256=?", (s[0],))
-						versions = c.fetchall()
-						sha256_versions[s[0]] = map(lambda x: (x[0], x[1]), versions)
-						for v in versions:
-							line_sha256_version.append((s[0], v[0], s[1], v[1]))
+					(checksum, linenumber) = s
+					if not sha256_versions.has_key(checksum):
+						if sha256_scan_versions.has_key(checksum):
+							sha256_scan_versions[checksum].append((line, linenumber))
+						else:
+							sha256_scan_versions[checksum] = [(line, linenumber)]
 					else:
-						for v in sha256_versions[s[0]]:
-							line_sha256_version.append((s[0], v[0], s[1], v[1]))
-				newuniques.append((line, line_sha256_version))
+						for v in sha256_versions[checksum]:
+							line_sha256_version.append((checksum, v[0], linenumber, v[1]))
+
+			fileres = pool.map(grab_sha256_filename, map(lambda x: (scanenv, x), sha256_scan_versions.keys()))
+			tmplines = {}
+			for f in fileres:
+				(checksum, versres) = f
+				for l in sha256_scan_versions[checksum]:
+					(line, linenumber) = l
+					if not tmplines.has_key(line):
+						tmplines[line] = []
+					for v in versres:
+						tmplines[line].append((checksum, v[0], linenumber, v[1]))
+			for l in tmplines.keys():
+				newuniques.append((l, tmplines[l]))
 
 			newuniques = prune(scanenv, newuniques, package)
 
+			licensesha256s = []
 			for u in newuniques:
 				versionsha256s = u[1]
 				for s in versionsha256s:
@@ -316,23 +362,17 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 					else:   
 						newpackageversions[v] = 1
 					if determinelicense:
-						## We should store the version number with the license.
-						## There are good reasons for this: files are sometimes collectively
-						## relicensed when there is a new release (example: Samba 3.2 relicensed
-						## to GPLv3+) so the version number can be very significant for licensing.
-						## determinelicense and determinecopyright *always* imply determineversion
-						## TODO: store license with version number.
-						licensepv = []
-						if not s[0] in seensha256:
-							licensecursor.execute("select distinct license, scanner from licenses where sha256=?", (s[0],))
-							licenses = licensecursor.fetchall()
-							if not len(licenses) == 0:
-								#licenses = squashlicenses(licenses)
-								licensepv = licensepv + licenses
-								#for v in map(lambda x: x[0], licenses):
-								#       licensepv.append(v)
-							seensha256.append(s[0])
-						packagelicenses = list(set(packagelicenses + licensepv))
+						licensesha256s.append(s[0])
+						continue
+
+			## Ideally the version number should be stored with the license.
+			## There are good reasons for this: files are sometimes collectively
+			## relicensed when there is a new release (example: Samba 3.2 relicensed
+			## to GPLv3+) so the version number can be very significant for licensing.
+			## determinelicense and determinecopyright *always* imply determineversion
+			## TODO: store license with version number.
+			licensesha256s = map(lambda x: (scanenv, x), list(set(licensesha256s)))
+			packagelicenses = pool.map(grab_sha256_license, licensesha256s)
 
 			## extract copyrights. 'statements' are not very accurate so ignore those for now in favour of URL
 			## and e-mail
@@ -351,6 +391,15 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 
 	## TODO: determine versions of functions and variables here as well
 
+	masterdb = scanenv.get('BAT_DB')
+
+	## open the database containing all the strings that were extracted
+	## from source code.
+	conn = sqlite3.connect(masterdb)
+	## we have byte strings in our database, not utf-8 characters...I hope
+	conn.text_factory = str
+	c = conn.cursor()
+
 	if dynamicRes.has_key('versionresults'):
 		for package in dynamicRes['versionresults'].keys():
 			if not dynamicRes.has_key('uniquepackages'):
@@ -366,16 +415,15 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 				res = filter(lambda x: x[2] == 'C', c.fetchall())
 		
 				for s in res:
-					c.execute("select distinct package, version, filename from processed_file where sha256=?", (s[0],))
-					packageversions = c.fetchall()
-					for pv in packageversions:
-						#if clones.has_key(pv[0]):
-							#pv = (clones[pv[0]], pv[1], pv[2])
-						## shouldn't happen!
-						if pv[0] != package:
-							continue
-						pversions.append(pv[1])
-						line_sha256_version.append((s[0], pv[1], s[1], pv[2]))
+					if not sha256_versions.has_key(s[0]):
+						c.execute("select distinct version, filename from processed_file where sha256=?", (s[0],))
+						packageversions = c.fetchall()
+						for pv in packageversions:
+							pversions.append(pv[0])
+							line_sha256_version.append((s[0], pv[0], s[1], pv[1]))
+					else:
+						for v in sha256_versions[s[0]]:
+							line_sha256_version.append((s[0], v[0], s[1], v[1]))
 				dynamicRes['versionresults'][package].append((p, line_sha256_version))
 				## functions with different signatures might be present in different files.
 				## Since we are ignoring signatures we need to deduplicate here too.
@@ -399,18 +447,6 @@ def compute_version((scanenv, unpackreport, topleveldir, determinelicense, deter
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
 	leafreports = cPickle.dump(leafreports, leaf_file)
 	leaf_file.close()
-
-	## cleanup
-	if determinelicense:
-		licensecursor.close()
-		licenseconn.close()
-
-	if determinecopyright:
-		copyrightcursor.close()
-		copyrightconn.close()
-
-	c.close()
-	conn.close()
 
 ## method that makes sure that everything is set up properly and modifies
 ## the environment, as well as determines whether the scan should be run at
