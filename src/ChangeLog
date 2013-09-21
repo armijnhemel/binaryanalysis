@@ -1,3 +1,17 @@
+2013-09-21
+* licenseversion.py: skip equivalent versions (same identifiers) in pruning
+* licenseversion.py: shorter loops in pruning by removing unneeded data earlier
+* generatereports.py: write results of unique result snippets to disk directly
+without keeping them in memory
+
+2013-09-20
+* licenseversion.py: replace processing files in parallel with processing
+results per file in parallel. In case of one or a few large result files (like
+the Linux kernel) this is much more efficient.
+* don't write results back to disk that don't need to be written back to disk
+because they have not been changed.
+* licenseversion.py: rework pruning (select fewer values)
+
 2013-09-19
 * replace Pool.map() with a few queues for unpacking to have better
 interleaving of scans for unpacking.
