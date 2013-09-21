@@ -326,10 +326,17 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 			newuniques = []
 			newpackageversions = {}
 			packagecopyrights = []
+
+			## first grab all possible checksums, plus associated line numbers for this string. Since
+			## these are unique strings they will be present in the package (or clones of the package).
 			vsha256s = pool.map(grab_sha256_parallel, map(lambda x: (scanenv, x[0],language, 'string'), unique))
 			vsha256s = filter(lambda x: x != [], vsha256s)
 
+			## for each combination (line,sha256,linenumber) store per checksum
+			## the line and linenumber. The checksums are used to look up version
+			## and filename information.
 			sha256_scan_versions = {}
+
 			for l in vsha256s:
 				line_sha256_version = []
 				(line, versionsha256s) = l
@@ -341,8 +348,10 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 						else:
 							sha256_scan_versions[checksum] = [(line, linenumber)]
 
+			## grab version and file information
 			fileres = pool.map(grab_sha256_filename, map(lambda x: (scanenv, x), sha256_scan_versions.keys()))
 			tmplines = {}
+			## construct the full information needed by other scans
 			for f in fileres:
 				(checksum, versres) = f
 				for l in sha256_scan_versions[checksum]:
@@ -359,6 +368,7 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 			for l in tmplines.keys():
 				newuniques.append((l, tmplines[l]))
 
+			## optionally prune the information
 			newuniques = prune(scanenv, newuniques, package)
 
 			licensesha256s = []
