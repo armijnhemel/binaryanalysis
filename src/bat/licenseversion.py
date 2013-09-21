@@ -158,7 +158,8 @@ def prune(scanenv, uniques, package):
 		pruneremove = []
 		for k in unique_sorted:
 			if uniqueversions[k] == uniqueversions[l]:
-				# check whether or not the versions are the same
+				# check whether or not the versions are the same. If so, add to
+				## 'equivalents' and skip all equivalents.
 				if list(set(linesperversion[k]).difference(set(linesperversion[l]))) == []:
 					equivalents.append(k)
 				continue
