@@ -452,7 +452,8 @@ def generatereports(unpackreports, scantempdir, topleveldir, processors, debug=F
 	res = filter(lambda x: x != None, pool.map(extractpickles, extracttasks))
 	pool.terminate()
 
-	## {filehash: [(rank, picklehash)]}
+	## {filehash: [(picklehash, uniquematcheslen, packagename)]
+	## misnomer since 'rank' is no longer used
 	resultranks = {}
 
 	counter = 0
@@ -483,9 +484,9 @@ def generatereports(unpackreports, scantempdir, topleveldir, processors, debug=F
 			for report in resultreports:
 				(rank, picklehash, tmppickle, uniquematcheslen, packagename) = report
 				if resultranks.has_key(filehash):
-					resultranks[filehash].append((rank, picklehash, uniquematcheslen, packagename))
+					resultranks[filehash].append((picklehash, uniquematcheslen, packagename))
 				else:
-					resultranks[filehash] = [(rank, picklehash, uniquematcheslen, packagename)]
+					resultranks[filehash] = [(picklehash, uniquematcheslen, packagename)]
 				if picklehash in reportpickles:
 					if pickletofile.has_key(picklehash):
 						pickletofile[picklehash].append(filehash)
@@ -531,7 +532,7 @@ def generatereports(unpackreports, scantempdir, topleveldir, processors, debug=F
 			headers = ""
 			filehtml = ""
 			for r in resultranks[filehash]:
-				(rank, picklehash, uniquematcheslen, packagename) = r
+				(picklehash, uniquematcheslen, packagename) = r
 				headers = headers + "<li><a href=\"#%s\">%s (%d)</a></li>" % (packagename, packagename, uniquematcheslen)
 				picklehtmlfile = open(os.path.join(reportdir, "%s-unique.snippet" % picklehash))
 				picklehtml = picklehtmlfile.read()
