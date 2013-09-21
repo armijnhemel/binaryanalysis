@@ -158,9 +158,9 @@ def prune(scanenv, uniques, package):
 		pruneremove = []
 		for k in unique_sorted:
 			if uniqueversions[k] == uniqueversions[l]:
-				# check whether or not the versions are the same. If so, add to
+				## check whether or not the versions are the same. If so, add to
 				## 'equivalents' and skip all equivalents.
-				if list(set(linesperversion[k]).difference(set(linesperversion[l]))) == []:
+				if set(linesperversion[k]) == set(linesperversion[l]):
 					equivalents.append(k)
 				continue
 			if uniqueversions[k] > uniqueversions[l]:
@@ -178,8 +178,7 @@ def prune(scanenv, uniques, package):
 	for u in uniques:
 		(line, res) = u
 		newres = filter(lambda x: x[1] in notpruned, res)
-		if newres != []:
-			newuniques.append((line, newres))
+		newuniques.append((line, newres))
 	return newuniques
 
 def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, processors, debug=False, envvars=None, unpacktempdir=None):
