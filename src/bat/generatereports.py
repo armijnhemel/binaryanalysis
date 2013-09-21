@@ -126,7 +126,7 @@ def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
 					versions = sorted(set(map(lambda x: (x[1]), sh[checksum])))
 					versionline = squash_versions(versions)
 					numlines = reduce(lambda x, y: x + ", " + y, map(lambda x: "<a href=\"unique:/%s#%d\">%d</a>" % (checksum, x, x), lines))
-					uniqtablerows.append("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (sh[checksum][0][0], versionline, numlines, checksum))
+					uniquehtmlfile.write("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (sh[checksum][0][0], versionline, numlines, checksum))
 				else:   
 					for d in list(set(map(lambda x: x[0], sh[checksum]))):
 						filterd = filter(lambda x: x[0] == d, sh[checksum])
@@ -134,8 +134,8 @@ def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
 						versions = sorted(set(map(lambda x: (x[1]), filterd)))
 						versionline = squash_versions(versions)
 						numlines = reduce(lambda x, y: x + ", " + y, map(lambda x: "<a href=\"unique:/%s#%d\">%d</a>" % (checksum, x, x), lines))
-						uniqtablerows.append("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (d, versionline, numlines, checksum))
-			uniquehtmlfile.write(reduce(lambda x, y: x + y, uniqtablerows, "") + "</table></p>\n")
+						uniquehtmlfile.write("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (d, versionline, numlines, checksum))
+			uniquehtmlfile.write("</table></p>\n")
 		else:
 			uniquehtmlfile.write("<h5>%s</h5>" % cgi.escape(programstring))
 	uniquehtmlfile.close()
