@@ -74,7 +74,8 @@ def squash_versions(versions):
 def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
 	html_pickle = open(os.path.join(pickledir, picklefile), 'rb')
 	(packagename, uniquematches) = cPickle.load(html_pickle)
-        html_pickle.close()
+	html_pickle.close()
+	os.unlink(os.path.join(pickledir, picklefile))
 	if len(uniquematches) == 0:
 		return
 
@@ -140,7 +141,6 @@ def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
 		else:
 			uniquehtmlfile.write("<h5>%s</h5>" % cgi.escape(programstring))
 	uniquehtmlfile.close()
-	os.unlink(os.path.join(pickledir, picklefile))
 
 ## generate several output files and extract pickles
 ## TODO: change name
