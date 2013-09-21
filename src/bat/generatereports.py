@@ -78,13 +78,14 @@ def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
 	if len(uniquematches) == 0:
 		return
 
-	uniquehtml = "<hr><h2><a name=\"%s\" href=\"#%s\">Matches for: %s (%d)</a></h2>" % (packagename, packagename, packagename, len(uniquematches))
+	uniquehtmlfile = open("%s/%s-unique.snippet" % (reportdir, picklehash), 'wb')
+	uniquehtmlfile.write("<hr><h2><a name=\"%s\" href=\"#%s\">Matches for: %s (%d)</a></h2>" % (packagename, packagename, packagename, len(uniquematches)))
 	for k in uniquematches:
 		(programstring, results) = k
 		## we have a list of tuples, per unique string we have a list of sha256sums and meta info
 		## This is really hairy
 		if len(results) > 0:
-			uniquehtml = uniquehtml + "<h5>%s</h5><p><table><tr><td><b>Filename</b></td><td><b>Version(s)</b></td><td><b>Line number</b></td><td><b>SHA256</b></td></tr>" % cgi.escape(programstring)
+			uniquehtmlfile.write("<h5>%s</h5><p><table><tr><td><b>Filename</b></td><td><b>Version(s)</b></td><td><b>Line number</b></td><td><b>SHA256</b></td></tr>" % cgi.escape(programstring))
 			uniqtablerows = []
 			sh = {}
 			for s in results:
@@ -134,11 +135,9 @@ def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
 						versionline = squash_versions(versions)
 						numlines = reduce(lambda x, y: x + ", " + y, map(lambda x: "<a href=\"unique:/%s#%d\">%d</a>" % (checksum, x, x), lines))
 						uniqtablerows.append("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (d, versionline, numlines, checksum))
-			uniquehtml = uniquehtml + reduce(lambda x, y: x + y, uniqtablerows, "") + "</table></p>\n"
+			uniquehtmlfile.write(reduce(lambda x, y: x + y, uniqtablerows, "") + "</table></p>\n")
 		else:
-			uniquehtml = uniquehtml + "<h5>%s</h5>" % cgi.escape(programstring)
-	uniquehtmlfile = open("%s/%s-unique.snippet" % (reportdir, picklehash), 'wb')
-	uniquehtmlfile.write(uniquehtml)
+			uniquehtmlfile.write("<h5>%s</h5>" % cgi.escape(programstring))
 	uniquehtmlfile.close()
 	os.unlink(os.path.join(pickledir, picklefile))
 
