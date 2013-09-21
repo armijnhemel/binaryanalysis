@@ -80,6 +80,7 @@ def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
 
 	uniquehtmlfile = open("%s/%s-unique.snippet" % (reportdir, picklehash), 'wb')
 	uniquehtmlfile.write("<hr><h2><a name=\"%s\" href=\"#%s\">Matches for: %s (%d)</a></h2>" % (packagename, packagename, packagename, len(uniquematches)))
+	uniquematches.sort()
 	for k in uniquematches:
 		(programstring, results) = k
 		## we have a list of tuples, per unique string we have a list of sha256sums and meta info
@@ -174,6 +175,7 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 				for i in ukeys:
 					html += "<hr><h2><a name=\"%s\" href=\"#%s\">Matches for %s (%d)</a></h2>\n" % (i[0], i[0], i[0], i[1])
 					upkgs = dynamicRes['versionresults'][i[0]]
+					upkgs.sort()
 					for up in upkgs:
 						(funcname, results) = up
 						html += "<h5>%s</h5><p><table><tr><td><b>Filename</b></td><td><b>Version(s)</b></td><td><b>Line number</b></td><td><b>SHA256</b></td></tr>" % cgi.escape(funcname)
