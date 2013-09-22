@@ -305,8 +305,8 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 
 	## keep a list of versions per sha256, since source files often are in more than one version
 	sha256_versions = {}
-	## indidcate whether or not the pickle should be written back to disk.
-	## If uniquematches is empty and if dynamicRes is also empty, then nothing needs to be done.
+	## indicate whether or not the pickle should be written back to disk.
+	## If uniquematches is empty and if dynamicRes is also empty, then nothing needs to be written back.
 	changed = False
 
 	if res != None:
@@ -326,7 +326,7 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 			packagecopyrights = []
 
 			## first grab all possible checksums, plus associated line numbers for this string. Since
-			## these are unique strings they will be present in the package (or clones of the package).
+			## these are unique strings they will only be present in the package (or clones of the package).
 			vsha256s = pool.map(grab_sha256_parallel, map(lambda x: (masterdb, x[0],language, 'string'), unique))
 			vsha256s = filter(lambda x: x != [], vsha256s)
 
