@@ -452,6 +452,9 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, d
 			envvars = aggregatescan['envvars']
 		else:
 			envvars = None
+		if aggregatescan['cleanup']:
+			## this is an ugly hack *cringe*
+			envvars += ":overridedir=1"
 		exec "from %s import %s as bat_%s" % (module, method, method)
 
 		res = eval("bat_%s(unpackreports, scantempdir, topleveldir, processors, debug=debug, envvars=envvars, unpacktempdir=unpacktempdir)" % (method))
@@ -493,6 +496,9 @@ def postrunscan((filetoscan, unpackreports, scans, scantempdir, topleveldir, deb
 			envvars = postrunscan['envvars']
 		else:
 			envvars = None
+		if postrunscan['cleanup']:
+			## this is an ugly hack *cringe*
+			envvars += ":overridedir=1"
 		exec "from %s import %s as bat_%s" % (module, method, method)
 
 		res = eval("bat_%s(filetoscan, unpackreports, scantempdir, topleveldir, debug=debug, envvars=envvars)" % (method))

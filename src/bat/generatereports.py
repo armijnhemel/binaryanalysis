@@ -399,17 +399,27 @@ def generatereports(unpackreports, scantempdir, topleveldir, processors, debug=F
 			except Exception, e:
 				pass
 
-	reportdir = scanenv.get('BAT_REPORTDIR', "%s/%s" % (topleveldir, "reports"))
+	if scanenv.has_key('overridedir'):
+		try:
+			del scanenv['BAT_REPORTDIR']
+		except:
+			pass
+		try:
+			del scanenv['BAT_PICKLEDIR']
+		except:
+			pass
+
+	reportdir = scanenv.get('BAT_REPORTDIR', os.path.join(topleveldir, "reports"))
 	try:
 		os.stat(reportdir)
 	except:
-		## BAT_IMAGEDIR does not exist
+		## BAT_REPORTDIR does not exist
 		try:
 			os.makedirs(reportdir)
 		except Exception, e:
 			return
 
-	pickledir = scanenv.get('BAT_PICKLEDIR', "%s/%s" % (topleveldir, "pickles"))
+	pickledir = scanenv.get('BAT_PICKLEDIR', os.path.join(topleveldir, "pickles"))
 	try:
 		os.stat(pickledir)
 	except:

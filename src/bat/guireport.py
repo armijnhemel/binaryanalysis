@@ -26,7 +26,13 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, debug=False, env
 			except Exception, e:
 				pass
 
-        reportdir = scanenv.get('BAT_REPORTDIR', '.')
+	if scanenv.has_key('overridedir'):
+		try:
+			del scanenv['BAT_REPORTDIR']
+		except: 
+			pass
+
+        reportdir = scanenv.get('BAT_REPORTDIR', os.path.join(topleveldir, 'reports'))
 	try:
 		os.stat(reportdir)
 	except:
@@ -36,12 +42,18 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, debug=False, env
 		except Exception, e:
 			return
 
+	## the location of the images. These could be in either BAT_IMAGEDIR or in toplevel/images
         tmpimagedir = scanenv.get('BAT_IMAGEDIR')
 	try:
 		os.stat(tmpimagedir)
 	except:
-		## BAT_IMAGEDIR does not exist
-		tmpimagedir = None
+		try:
+			os.stat(os.path.join(topleveldir, 'images'))
+			tmpimagedir = os.path.join(topleveldir, 'images')
+
+		except:
+			## BAT_IMAGEDIR does not exist
+			tmpimagedir = None
 
 	filehash = unpackreport['sha256']
 	if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
@@ -286,7 +298,8 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, debug=False, env
 		if leafreports['elfpossiblyused'] != []:
 			tablerows = tablerows + tablerowtemplate % ("Possibly used (but undeclared) libraries", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['elfpossiblyused']))
 	if tmpimagedir != None:
-		if os.path.exists(os.path.join(tmpimagedir, "%s-graph.png" % filehash)):
+		## Images could be in either BAT_IMAGEDIR or in toplevel/images so check in both
+		if os.path.exists(os.path.join(tmpimagedir, "%s-graph.png" % filehash)) or os.path.exists(os.path.join(topleveldir, "images", "%s-graph.png" % filehash)):
 			imagehtml = "<h2>Dynamic linking graph</h2><p><img src=\"%s/%s-graph.png\"/></p>" % (imagesdir, filehash)
 			imagehtml += "<p><ul><li>black solid line: defined and used dependency</li>"
 			imagehtml += "<li>blue dashed line: defined but unused dependency</li>"

@@ -149,7 +149,17 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 			except Exception, e:
 				pass
 
-	imagedir = scanenv.get('BAT_IMAGEDIR', "%s/%s" % (topleveldir, "images"))
+	if scanenv.has_key('overridedir'):
+		try:
+			del scanenv['BAT_IMAGEDIR']
+		except:
+			pass
+		try:
+			del scanenv['BAT_PICKLEDIR']
+		except:
+			pass
+
+	imagedir = scanenv.get('BAT_IMAGEDIR', os.path.join(topleveldir, "images"))
 	try:
 		os.stat(imagedir)
 	except:
@@ -159,7 +169,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 		except Exception, e:
 			return
 
-	pickledir = scanenv.get('BAT_PICKLEDIR', "%s/%s" % (topleveldir, "pickles"))
+	pickledir = scanenv.get('BAT_PICKLEDIR', os.path.join(topleveldir, "pickles"))
 	try:
 		os.stat(pickledir)
 	except:
