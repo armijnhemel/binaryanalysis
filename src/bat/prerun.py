@@ -317,7 +317,9 @@ def verifyAndroidXML(filename, tempdir=None, tags=[], offsets={}, debug=False, e
 ## The main reason for this check is to bring down false positives for lzma unpacking
 def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
 	newtags = []
-	if not os.path.basename(filename) == 'classes.dex' and not os.path.basename(filename).endswith('.odex'):
+	if not offsets.has_key('dex'):
+		return newtags
+	if not os.path.basename(filename) == 'classes.dex':
 		return newtags
 	if not 'binary' in tags:
 		return newtags
@@ -329,16 +331,77 @@ def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, debug=False, e
 	androidfile.close()
 	if len(androidbytes) != 36:
 		return newtags
-	if androidbytes[:4] == 'dex\n':
-		## good chance it is an Android Dex file, so verify more by
-		## checking the size header in the header
+	dexarray = array.array('I')
+	dexarray.fromstring(androidbytes[-4:])
+	dexsize = os.stat(filename).st_size
+	if dexarray.pop() == dexsize:
+		newtags.append('dalvik')
+	return newtags
+
+## Verify if this is an optimised Android/Dalvik file. Check if the name of
+## the file ends in '.odex', plus verify a length checksum in the header.
+## The main reason for this check is to bring down false positives for lzma unpacking
+## The specification of the header can be found at:
+## https://android.googlesource.com/platform/dalvik.git/+/master/libdex/DexFile.h
+def verifyAndroidOdex(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+	newtags = []
+	if not 'binary' in tags:
+		return newtags
+	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags:
+		return newtags
+	if not offsets.has_key('odex'):
+		return newtags
+	if not offsets.has_key('dex'):
+		return newtags
+	if len(offsets['dex']) == 0 or len(offsets['odex']) == 0:
+		return newtags
+	if not offsets['odex'][0] == 0:
+		return newtags
+	if not os.path.basename(filename).endswith('.odex'):
+		return newtags
+
+	seekoffset = 8
+	## check the Odex files. First check the header.
+	androidfile = open(filename, 'rb')
+	androidfile.seek(seekoffset)
+	androidbytes = androidfile.read(4)
+
+	## the dex identifier should be at this location
+	dexarray = array.array('I')
+	dexarray.fromstring(androidbytes)
+	dexoffset = dexarray.pop()
+	if dexoffset != offsets['dex'][0]:
+		androidfile.close()
+		return newtags
+
+	seekoffset += 4
+	## 1. length of Dex header
+	## 2. offset of optimised DEX dependency table
+	## 3. length of optimised DEX dependency table
+	## 4. offset of optimised data table
+	## 5. length of optimised data table
+	androidfile.seek(seekoffset)
+	headerres = []
+	for i in range(0,5):
+		androidbytes = androidfile.read(4)
 		dexarray = array.array('I')
-		dexarray.fromstring(androidbytes[-4:])
-		dexsize = os.stat(filename).st_size
-		if dexarray.pop() == dexsize:
-			newtags.append('dalvik')
-	#if androidbytes[:4] == 'dey\n':
-		#print >>sys.stderr, "ODEX"
+		dexarray.fromstring(androidbytes)
+		headerres.append(dexarray.pop())
+	androidfile.close()
+
+	## sanity checks for the ODEX header
+	## 1. header offset + length of Dex should be < offset of dependency table
+	if (dexoffset + headerres[0]) > headerres[1]:
+		return newtags
+
+	## 2. offset of dependency table + size of dependency table should be < offset of optimised data table
+	if (headerres[1] + headerres[2]) > headerres[3]:
+		return newtags
+	## 3. offset of data table + length of data table == length of ODEX file
+	if not (headerres[3] + headerres[4]) == os.stat(filename).st_size:
+		return newtags
+	newtags.append('dalvik')
+	newtags.append('odex')
 	return newtags
 
 ## verify if this is a GNU message catalog. We check if the name of the
