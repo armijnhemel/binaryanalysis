@@ -33,7 +33,17 @@ type        = prerun
 module      = bat.prerun
 method      = verifyAndroidDex
 priority    = 1
-description = Check if file is an Android binary XML file
+magic       = dex
+description = Check if file is an Android DEX file
+enabled     = yes
+
+[verifyandroidodex]
+type        = prerun
+module      = bat.prerun
+method      = verifyAndroidOdex
+priority    = 1
+magic       = dex:odex
+description = Check if file is an Android ODEX file
 enabled     = yes
 
 [verifyandroidxml]
