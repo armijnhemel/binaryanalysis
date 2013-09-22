@@ -47,6 +47,8 @@ ranking:
 * use version information to report most likely licenses
 * use macholib to analyse Mach-O binaries (MacOS X)
 * split extractGeneric into two methods: one to extract all the info (including kernel module names and kernel function names), one for computing the end result
+* store language per file, not just in the variable results (current situation), since that's ugly.
+* if there are more results for file for a line (different line numbers), combine the two results and put the line numbers in a list (first do research to see if this makes sense)
 
 busybox scanning:
 * clean up finding ranges of applets in extract_configuration. It should be possible to do this less kludgy.
@@ -55,6 +57,9 @@ HTML generation:
 * finish function name reporting
 * clean up/rewrite/make it easier to use
 * add license information if available
+
+image generation:
+* make cut-off values for pie chart generation configurable (but default to current values if not defined)
 
 misc:
 * replay script to unpack firmware based on only the pickle with unpacking data. After this set the default of outputlite to 'yes'
@@ -71,3 +76,4 @@ BOTTLENECKS:
 2. preread (in parallel) leafreports of Java .class files which are shared between several JAR files for aggregate jars. This saves opening and reading the same files.
 3. check odex files and tag them as dalvik
 4. replace own counters with collections.Counter(), also for code clarity
+5. write files (reports, images) for which 'cleanup' is set to 'yes' directly to the final destination. This potentially saves copying many files from the temporary location to the final one.
