@@ -390,7 +390,7 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 			## TODO: store license with version number.
 			if determinelicense:
 				licensesha256s = map(lambda x: (licensedb, x), list(set(licensesha256s)))
-				packagelicenses = pool.map(grab_sha256_license, licensesha256s)
+				packagelicenses = list(set(reduce(lambda x, y: x + y, pool.map(grab_sha256_license, licensesha256s))))
 			else:
 				packagelicenses = []
 
