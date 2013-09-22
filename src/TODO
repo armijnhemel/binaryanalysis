@@ -54,7 +54,8 @@ busybox scanning:
 * clean up finding ranges of applets in extract_configuration. It should be possible to do this less kludgy.
 
 HTML generation:
-* finish function name reporting
+* finish function name reporting (Java, Linux kernel)
+* rework variable name reporting
 * clean up/rewrite/make it easier to use
 * add license information if available
 
@@ -76,3 +77,6 @@ BOTTLENECKS:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
 2. preread (in parallel) leafreports of Java .class files which are shared between several JAR files for aggregate jars. This saves opening and reading the same files.
 3. replace own counters with collections.Counter(), also for code clarity
+4. recognise, verfiy and tag OpenType font data (.otf)
+5. add option to ignore certain types of files, not based on extension, but on tag (so after pre-run and/or unpacking). For example, PNG files that have been verified are of no use in some cases.
+6. only pass database name to grab* methods in licenseversion.py instead of a complete environment. It's always the same anyway.
