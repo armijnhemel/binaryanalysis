@@ -243,9 +243,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		compute_version(pool, scanenv, unpackreports[i], topleveldir, determinelicense, determinecopyright)
 	pool.terminate()
 
-def grab_sha256_filename((scanenv, sha256sum)):
-	masterdb = scanenv.get('BAT_DB')
-
+def grab_sha256_filename((masterdb, sha256sum)):
 	## open the database containing all the strings that were extracted
 	## from source code.
 	conn = sqlite3.connect(masterdb)
@@ -258,9 +256,7 @@ def grab_sha256_filename((scanenv, sha256sum)):
 	conn.close()
 	return (sha256sum, res)
 
-def grab_sha256_license((scanenv, sha256sum)):
-	licensedb = scanenv.get('BAT_LICENSE_DB')
-
+def grab_sha256_license((licensedb, sha256sum)):
 	## open the database containing all the strings that were extracted
 	## from source code.
 	conn = sqlite3.connect(licensedb)
@@ -273,9 +269,7 @@ def grab_sha256_license((scanenv, sha256sum)):
 	conn.close()
 	return licenses
 
-def grab_sha256_parallel((scanenv, line, language, querytype)):
-	masterdb = scanenv.get('BAT_DB')
-
+def grab_sha256_parallel((masterdb, line, language, querytype)):
 	## open the database containing all the strings that were extracted
 	## from source code.
 	conn = sqlite3.connect(masterdb)
@@ -316,6 +310,9 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 	changed = False
 
 	if res != None:
+		masterdb = scanenv.get('BAT_DB')
+		if determinelicense:
+			licensedb = scanenv.get('BAT_LICENSE_DB')
 		newreports = []
 
 		for r in res['reports']:
@@ -330,7 +327,7 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 
 			## first grab all possible checksums, plus associated line numbers for this string. Since
 			## these are unique strings they will be present in the package (or clones of the package).
-			vsha256s = pool.map(grab_sha256_parallel, map(lambda x: (scanenv, x[0],language, 'string'), unique))
+			vsha256s = pool.map(grab_sha256_parallel, map(lambda x: (masterdb, x[0],language, 'string'), unique))
 			vsha256s = filter(lambda x: x != [], vsha256s)
 
 			## for each combination (line,sha256,linenumber) store per checksum
@@ -350,7 +347,7 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 							sha256_scan_versions[checksum] = [(line, linenumber)]
 
 			## grab version and file information
-			fileres = pool.map(grab_sha256_filename, map(lambda x: (scanenv, x), sha256_scan_versions.keys()))
+			fileres = pool.map(grab_sha256_filename, map(lambda x: (masterdb, x), sha256_scan_versions.keys()))
 			tmplines = {}
 			## construct the full information needed by other scans
 			for f in fileres:
@@ -370,20 +367,20 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 				newuniques.append((l, tmplines[l]))
 
 			## optionally prune the information
+			## TODO: already do some sanity checks here to avoid calling "prune"
 			newuniques = prune(scanenv, newuniques, package)
 
 			licensesha256s = []
 			for u in newuniques:
 				versionsha256s = u[1]
+				if determinelicense:
+					licensesha256s += map(lambda x: x[0], versionsha256s)
 				for s in versionsha256s:
 					v = s[1]
 					if newpackageversions.has_key(v):
 						newpackageversions[v] = newpackageversions[v] + 1
 					else:   
 						newpackageversions[v] = 1
-					if determinelicense:
-						licensesha256s.append(s[0])
-						continue
 
 			## Ideally the version number should be stored with the license.
 			## There are good reasons for this: files are sometimes collectively
@@ -391,8 +388,11 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 			## to GPLv3+) so the version number can be very significant for licensing.
 			## determinelicense and determinecopyright *always* imply determineversion
 			## TODO: store license with version number.
-			licensesha256s = map(lambda x: (scanenv, x), list(set(licensesha256s)))
-			packagelicenses = pool.map(grab_sha256_license, licensesha256s)
+			if determinelicense:
+				licensesha256s = map(lambda x: (licensedb, x), list(set(licensesha256s)))
+				packagelicenses = pool.map(grab_sha256_license, licensesha256s)
+			else:
+				packagelicenses = []
 
 			## extract copyrights. 'statements' are not very accurate so ignore those for now in favour of URL
 			## and e-mail
@@ -429,7 +429,7 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 			versions = []
 			functionnames = dynamicRes['uniquepackages'][package]
 			## right now only C is supported. TODO: fix this for other languages such as Java.
-			vsha256s = pool.map(grab_sha256_parallel, map(lambda x: (scanenv, x, 'C', 'function'), functionnames))
+			vsha256s = pool.map(grab_sha256_parallel, map(lambda x: (masterdb, x, 'C', 'function'), functionnames))
 			vsha256s = filter(lambda x: x != [], vsha256s)
 
 			for p in vsha256s:

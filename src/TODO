@@ -79,4 +79,3 @@ BOTTLENECKS:
 3. replace own counters with collections.Counter(), also for code clarity
 4. recognise, verfiy and tag OpenType font data (.otf)
 5. add option to ignore certain types of files, not based on extension, but on tag (so after pre-run and/or unpacking). For example, PNG files that have been verified are of no use in some cases.
-6. only pass database name to grab* methods in licenseversion.py instead of a complete environment. It's always the same anyway.
