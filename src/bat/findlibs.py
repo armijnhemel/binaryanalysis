@@ -171,7 +171,13 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 			except Exception, e:
 				pass
 
-	imagedir = scanenv.get('BAT_IMAGEDIR', "%s/%s" % (topleveldir, "images"))
+	if scanenv.has_key('overridedir'):
+		try:
+			del scanenv['BAT_IMAGEDIR']
+		except: 
+			pass
+
+	imagedir = scanenv.get('BAT_IMAGEDIR', os.path.join(topleveldir, "images"))
 	try:
 		os.stat(imagedir)
 	except:
