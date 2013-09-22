@@ -1,3 +1,8 @@
+2013-09-22
+* don't copy reports and images to a temporary location if 'cleanup' is set
+but directly write them to the final destination.
+* verify and tag ODEX files
+
 2013-09-21
 * licenseversion.py: skip equivalent versions (same identifiers) in pruning
 * licenseversion.py: shorter loops in pruning by removing unneeded data earlier
