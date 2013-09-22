@@ -83,6 +83,8 @@ fsmagic = {
             'upx':  		'UPX',
             'java': 		'\xca\xfe\xba\xbe',
             'pack200':		'\xca\xfe\xd0\x0d',
+            'dex':		'dex\n',
+            'odex':		'dey\n',
           }
 
 ## some offsets can be found after a certain number of bytes, but
