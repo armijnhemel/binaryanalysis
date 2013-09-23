@@ -98,29 +98,6 @@ def squashlicenses(licenses):
 	return licenses
 
 def prune(scanenv, uniques, package):
-	if not scanenv.has_key('BAT_KEEP_VERSIONS'):
-		## keep all versions
-		return uniques
-	else:
-		keepversions = int(scanenv.get('BAT_KEEP_VERSIONS', 0))
-		if keepversions <= 0:
-			## keep all versions
-			return uniques
-
-	## there need to be a minimum of unique hits (like strings), otherwise
-	## it's silly
-	if not scanenv.has_key('BAT_MINIMUM_UNIQUE'):
-		## keep all versions
-		return uniques
-	else:
-		minimumunique = int(scanenv.get('BAT_MINIMUM_UNIQUE', 0))
-		if minimumunique <= 0:
-			## keep all versions
-			return uniques
-
-	if len(uniques) < minimumunique:
-		return uniques
-
 	uniqueversions = {}
 
 	linesperversion = {}
@@ -366,9 +343,17 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 			for l in tmplines.keys():
 				newuniques.append((l, tmplines[l]))
 
-			## optionally prune the information
-			## TODO: already do some sanity checks here to avoid calling "prune"
-			newuniques = prune(scanenv, newuniques, package)
+			## optionally prune version information
+			if scanenv.has_key('BAT_KEEP_VERSIONS'):
+				keepversions = int(scanenv.get('BAT_KEEP_VERSIONS', 0))
+				if keepversions > 0:
+					## there need to be a minimum of unique hits (like strings), otherwise
+					## it's silly
+					if scanenv.has_key('BAT_MINIMUM_UNIQUE'):
+						minimumunique = int(scanenv.get('BAT_MINIMUM_UNIQUE', 0))
+						if minimumunique > 0:
+							if len(newuniques) > minimumunique:
+								newuniques = prune(scanenv, newuniques, package)
 
 			licensesha256s = []
 			for u in newuniques:
@@ -462,7 +447,18 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 		newresults = {}
 		for package in dynamicRes['versionresults'].keys():
 			uniques = dynamicRes['versionresults'][package]
-			newuniques = prune(scanenv, uniques, package)
+			## optionally prune version information
+			if scanenv.has_key('BAT_KEEP_VERSIONS'):
+				keepversions = int(scanenv.get('BAT_KEEP_VERSIONS', 0))
+				if keepversions > 0:
+					## there need to be a minimum of unique hits (like strings), otherwise
+					## it's silly
+					if scanenv.has_key('BAT_MINIMUM_UNIQUE'):
+						minimumunique = int(scanenv.get('BAT_MINIMUM_UNIQUE', 0))
+						if minimumunique > 0:
+							if len(uniques) > minimumunique:
+								newuniques = prune(scanenv, uniques, package)
+			#newuniques = prune(scanenv, uniques, package)
 			newresults[package] = newuniques
 			uniqueversions = {}
 			dynamicRes['packages'][package] = []
