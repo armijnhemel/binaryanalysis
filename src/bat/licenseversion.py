@@ -119,7 +119,7 @@ def prune(scanenv, uniques, package):
 	if len(uniqueversions.keys()) == 1:
 		return uniques
 
-	pruneme = []
+	pruneme = set([])
 
 	unique_sorted_rev = sorted(uniqueversions, key = lambda x: uniqueversions.__getitem__(x), reverse=True)
 	unique_sorted = sorted(uniqueversions, key = lambda x: uniqueversions.__getitem__(x))
@@ -145,13 +145,13 @@ def prune(scanenv, uniques, package):
 			if uniqueversions[k] > uniqueversions[l]:
 				break
 			if set(linesperversion[k]).issubset(linesperversion_l):
-				pruneme.append(k)
+				pruneme.add(k)
 				pruneremove.append(k)
 		## make the inner loop a bit shorter
 		for k in pruneremove:
 			unique_sorted.remove(k)
 
-	notpruned = set(uniqueversions.keys()).difference(set(pruneme))
+	notpruned = set(uniqueversions.keys()).difference(pruneme)
 	newuniques = []
 	for u in uniques:
 		(line, res) = u
