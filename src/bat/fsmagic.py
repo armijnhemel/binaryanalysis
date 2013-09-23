@@ -85,6 +85,7 @@ fsmagic = {
             'pack200':		'\xca\xfe\xd0\x0d',
             'dex':		'dex\n',
             'odex':		'dey\n',
+            'otf':		'OTTO',
           }
 
 ## some offsets can be found after a certain number of bytes, but
