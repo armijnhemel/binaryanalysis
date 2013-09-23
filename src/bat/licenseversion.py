@@ -446,7 +446,7 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 		conn.close()
 		newresults = {}
 		for package in dynamicRes['versionresults'].keys():
-			uniques = dynamicRes['versionresults'][package]
+			newuniques = dynamicRes['versionresults'][package]
 			## optionally prune version information
 			if scanenv.has_key('BAT_KEEP_VERSIONS'):
 				keepversions = int(scanenv.get('BAT_KEEP_VERSIONS', 0))
@@ -456,9 +456,8 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 					if scanenv.has_key('BAT_MINIMUM_UNIQUE'):
 						minimumunique = int(scanenv.get('BAT_MINIMUM_UNIQUE', 0))
 						if minimumunique > 0:
-							if len(uniques) > minimumunique:
-								newuniques = prune(scanenv, uniques, package)
-			#newuniques = prune(scanenv, uniques, package)
+							if len(newuniques) > minimumunique:
+								newuniques = prune(scanenv, newuniques, package)
 			newresults[package] = newuniques
 			uniqueversions = {}
 			dynamicRes['packages'][package] = []
