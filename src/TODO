@@ -82,3 +82,4 @@ BOTTLENECKS:
 4. add option to ignore certain types of files, not based on extension, but on tag (so after pre-run and/or unpacking). For example, PNG files that have been verified are of no use in some cases.
 5. don't pass parameter 'scans' around in the queues in bruteforcescan.py since these have to be pickled and unpickled
 6. tag Android DEX files (possibly reuse code from ODEX check)
+7. generate pie charts before determining version information to prevent huge pickles to be read into memory.
