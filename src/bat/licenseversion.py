@@ -104,8 +104,9 @@ def prune(scanenv, uniques, package):
 
 	for u in uniques:
 		(line, res) = u
-		versions = map(lambda x: x[1], res)
-		for version in set(versions):
+		versions = set([])
+		map(lambda x: versions.add(x[1]), res)
+		for version in versions:
 			if linesperversion.has_key(version):
 				linesperversion[version].append(line)
 			else:
@@ -301,10 +302,11 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 			newuniques = []
 			newpackageversions = {}
 			packagecopyrights = []
+			uniques = set(map(lambda x: x[0], unique))
 
 			## first grab all possible checksums, plus associated line numbers for this string. Since
 			## these are unique strings they will only be present in the package (or clones of the package).
-			vsha256s = pool.map(grab_sha256_parallel, map(lambda x: (masterdb, x[0],language, 'string'), unique))
+			vsha256s = pool.map(grab_sha256_parallel, map(lambda x: (masterdb, x,language, 'string'), uniques))
 			vsha256s = filter(lambda x: x != [], vsha256s)
 
 			## for each combination (line,sha256,linenumber) store per checksum
@@ -441,9 +443,9 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 				## functions with different signatures might be present in different files.
 				## Since we are ignoring signatures we need to deduplicate here too.
 				versions = versions + list(set(pversions))
-
 		c.close()
 		conn.close()
+
 		newresults = {}
 		for package in dynamicRes['versionresults'].keys():
 			newuniques = dynamicRes['versionresults'][package]
