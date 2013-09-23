@@ -504,6 +504,44 @@ def verifyWOFF(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars
 	return newtags
 
 ## very simplistic verifier for some TrueType fonts
+def verifyOTF(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+	newtags = []
+	if not 'binary' in tags:
+		return newtags
+	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags:
+		return newtags
+	if not offsets.has_key('otf'):
+		return newtags
+	if not 0 in offsets['otf']:
+		return newtags
+	## first create a temporary directory where ttx can write its temporary files
+	fontdir = tempfile.mkdtemp(dir=unpacktempdir)
+	## now check if it is a valid file by running ogginfo
+	p = subprocess.Popen(['ttx', '-d', fontdir, '-i', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		## cleanup
+		## TODO: sanity checks
+		rmfiles = os.listdir(fontdir)
+		for r in rmfiles:
+			os.unlink(os.path.join(fontdir, r))
+		os.rmdir(fontdir)
+		return newtags
+	else:
+		## TODO: process output of ttx, since it might return 0 even though the font file is corrupted
+		pass
+	## cleanup
+	## TODO: sanity checks
+	rmfiles = os.listdir(fontdir)
+	for r in rmfiles:
+		os.unlink(os.path.join(fontdir, r))
+	os.rmdir(fontdir)
+	newtags.append('otf')
+	newtags.append('font')
+	newtags.append('resource')
+	return newtags
+
+## very simplistic verifier for some TrueType fonts
 def verifyTTF(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
 	newtags = []
 	if not filename.endswith('.ttf'):

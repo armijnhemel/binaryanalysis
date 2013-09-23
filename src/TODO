@@ -72,12 +72,12 @@ misc:
 * test on latest Debian, make sure configurations/dependencies work
 * replace calls to dd, tail, head and others with truncate() where possible to prevent launching an external process
 * replace hardcoded options in reporting with values of 'storetarget'
+* add fonttools dep to Debian/Ubuntu dependencies
 
 BOTTLENECKS:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
 2. preread (in parallel) leafreports of Java .class files which are shared between several JAR files for aggregate jars. This saves opening and reading the same files.
 3. replace own counters with collections.Counter(), also for code clarity
-4. recognise, verfiy and tag OpenType font data (.otf)
-5. add option to ignore certain types of files, not based on extension, but on tag (so after pre-run and/or unpacking). For example, PNG files that have been verified are of no use in some cases.
-6. don't pass parameter 'scans' around in the queues in bruteforcescan.py since these have to be pickled and unpickled
-7. tag Android DEX files (possibly reuse code from ODEX check)
+4. add option to ignore certain types of files, not based on extension, but on tag (so after pre-run and/or unpacking). For example, PNG files that have been verified are of no use in some cases.
+5. don't pass parameter 'scans' around in the queues in bruteforcescan.py since these have to be pickled and unpickled
+6. tag Android DEX files (possibly reuse code from ODEX check)

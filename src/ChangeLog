@@ -4,6 +4,7 @@
 this in several other files. It can save quite some time as detailed in the
 comments of this post:
 https://plus.google.com/115212051037621986145/posts/HajXHPGN752
+* add verifier for OpenType font data, requires fonttools
 
 2013-09-22
 * don't copy reports and images to a temporary location if 'cleanup' is set

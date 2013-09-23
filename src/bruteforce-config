@@ -129,6 +129,15 @@ magic       = ogg
 description = Check if file is a valid Ogg file
 enabled     = yes
 
+[verifyotf]
+type        = prerun
+module      = bat.prerun
+method      = verifyOTF
+priority    = 1
+magic       = otf
+description = Check if file contains OpenType font data
+enabled     = yes
+
 [verifype]
 type        = prerun
 module      = bat.prerun
