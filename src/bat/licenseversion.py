@@ -105,7 +105,7 @@ def prune(scanenv, uniques, package):
 	for u in uniques:
 		(line, res) = u
 		versions = map(lambda x: x[1], res)
-		for version in list(set(versions)):
+		for version in set(versions):
 			if linesperversion.has_key(version):
 				linesperversion[version].append(line)
 			else:
@@ -151,7 +151,7 @@ def prune(scanenv, uniques, package):
 		for k in pruneremove:
 			unique_sorted.remove(k)
 
-	notpruned = list(set(uniqueversions.keys()).difference(set(pruneme)))
+	notpruned = set(uniqueversions.keys()).difference(set(pruneme))
 	newuniques = []
 	for u in uniques:
 		(line, res) = u
