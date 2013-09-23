@@ -49,7 +49,7 @@ def squash_versions(versions):
 		return versionline
 	versionparts = []
 	# get the major version number first
-	majorv = list(set(map(lambda x: x.split('.')[0], versions)))
+	majorv = set(map(lambda x: x.split('.')[0], versions))
 	for m in majorv:
 		maxconsolidationlevel = 0
 		## determine how many subcomponents we have at max
@@ -61,7 +61,7 @@ def squash_versions(versions):
 		## split with a maximum of minversionsplits splits
 		splits = map(lambda x: x.split('.', minversionsplits), filterversions)
 		for c in range(0, minversionsplits):
-			if len(list(set(map(lambda x: x[c], splits)))) == 1:
+			if len(set(map(lambda x: x[c], splits))) == 1:
 				maxconsolidationlevel = maxconsolidationlevel + 1
 			else: break
 		if minversionsplits != maxconsolidationlevel:
@@ -130,7 +130,7 @@ def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
 					numlines = reduce(lambda x, y: x + ", " + y, map(lambda x: "<a href=\"unique:/%s#%d\">%d</a>" % (checksum, x, x), lines))
 					uniquehtmlfile.write("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (sh[checksum][0][0], versionline, numlines, checksum))
 				else:   
-					for d in list(set(map(lambda x: x[0], sh[checksum]))):
+					for d in set(map(lambda x: x[0], sh[checksum])):
 						filterd = filter(lambda x: x[0] == d, sh[checksum])
 						lines = sorted(set(map(lambda x: (x[2]), filterd)))
 						versions = sorted(set(map(lambda x: (x[1]), filterd)))
@@ -229,7 +229,7 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 				packagecount = {}
 				if variablepvs[i] != []:
 					for c in variablepvs[i]:
-						lenres = len(list(set(map(lambda x: x[0], variablepvs[i][c]))))
+						lenres = len(set(map(lambda x: x[0], variablepvs[i][c])))
 						if lenres == 1:
 							pvs = variablepvs[i][c]
 							(package,version) = variablepvs[i][c][0]
@@ -554,7 +554,7 @@ def generatereports(unpackreports, scantempdir, topleveldir, processors, debug=F
 			uniquehtmlfile = gzip.open("%s/%s-unique.html.gz" % (reportdir, filehash), 'wb')
 			uniquehtmlfile.write(uniquehtml)
 			uniquehtmlfile.close()
-		for i in list(set(pickleremoves)):
+		for i in set(pickleremoves):
 			try:
 				os.unlink(os.path.join(reportdir, "%s-unique.snippet" % i))
 			except Exception, e:

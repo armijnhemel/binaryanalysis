@@ -532,7 +532,7 @@ def extractJavaNames(javameta, scanenv, clones):
 						packages_tmp.append(package_tmp)
 					else:
 						packages_tmp.append(r[0])
-				packages_tmp = list(set(packages_tmp))
+				packages_tmp = set(packages_tmp)
 
 				## unique match
 				if len(packages_tmp) == 1:
@@ -545,7 +545,7 @@ def extractJavaNames(javameta, scanenv, clones):
 	conn.close()
 
 	dynamicRes['namesmatched'] = namesmatched
-	dynamicRes['totalnames'] = len(list(set(methods)))
+	dynamicRes['totalnames'] = len(set(methods))
 	dynamicRes['uniquepackages'] = uniquepackages
 	dynamicRes['uniquematches'] = uniquematches
 
@@ -855,7 +855,7 @@ def extractDynamic(scanfile, scanenv, clones, olddb=False):
 		## the database made from ctags output only has function names, not the types. Since
 		## C++ functions could be in an executable several times with different types we
 		## deduplicate first
-		for funcname in list(set(scanstr)):
+		for funcname in set(scanstr):
 			c.execute("select package from functionnamecache where functionname=?", (funcname,))
 			res = c.fetchall()
 			pkgs = []
@@ -879,7 +879,7 @@ def extractDynamic(scanfile, scanenv, clones, olddb=False):
 						uniquepackages[packages_tmp[0]] = [funcname]
 		dynamicRes['namesmatched'] = namesmatched
 		dynamicRes['uniquepackages'] = uniquepackages
-		dynamicRes['totalnames'] = len(list(set(scanstr)))
+		dynamicRes['totalnames'] = len(set(scanstr))
 
 		## unique matches found. 
 		dynamicRes['uniquematches'] = uniquematches
@@ -893,7 +893,7 @@ def extractDynamic(scanfile, scanenv, clones, olddb=False):
 			dynamicRes['versionresults'][package] = []
 
 			dynamicRes['packages'][package] = []
-			for v in list(set(versions)):
+			for v in set(versions):
 				dynamicRes['packages'][package].append((v, versions.count(v)))
 
 	## Scan C variables extracted from dynamically linked files.
@@ -1350,7 +1350,7 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 			sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
 			strsplit = xy.rsplit('\t', 1)[0]
 			todelete.append(strsplit)
-		todelete = list(set(todelete))
+		todelete = set(todelete)
 		for a in todelete:
 			for st in string_split[a]:
 				del stringsLeft[st]
