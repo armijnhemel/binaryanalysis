@@ -466,7 +466,7 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, d
 				leafreports = cPickle.load(leaf_file)
 				leaf_file.close()
 
-				for reskey in list(set(res.keys())):
+				for reskey in set(res.keys()):
 					leafreports[reskey] = res[reskey]
 					unpackreports[scan_binary]['tags'].append(reskey)
 
@@ -690,11 +690,10 @@ def dumpData(unpackreports, scans, tempdir):
 	## * a pickle of all data, it saves parsing the XML report (or any other format for that matter),
 	##   minus the data from the ranking scan
 	## * separate pickles of the data of the ranking scan
-	sha256spack = []
+	sha256spack = set([])
 	for p in unpackreports:
 		if unpackreports[p].has_key('sha256'):
-			sha256spack.append(unpackreports[p]['sha256'])
-	sha256spack = list(set(sha256spack))
+			sha256spack.add(unpackreports[p]['sha256'])
 	oldstoredir = None
 	oldlistdir = []
 	for i in (scans['postrunscans'] + scans['aggregatescans']):
@@ -720,13 +719,13 @@ def dumpData(unpackreports, scans, tempdir):
 				## apply a few filters to more efficiently grab only the files
 				## that are really needed. This pays off in case there are tons
 				## of files that need to be copied.
-				dirfilter = list(set(map(lambda x: x.split('-')[0], dirlisting)))
-				inter = list(set(sha256spack).intersection(set(dirfilter)))
+				dirfilter = set(map(lambda x: x.split('-')[0], dirlisting))
+				inter = sha256spack.intersection(dirfilter)
 				for s in inter:
 					copyfiles = filter(lambda x: s in x, dirlisting)
 					for c in copyfiles:
 						dirlisting.remove(c)
-					for c in list(set(copyfiles)):
+					for c in set(copyfiles):
 						shutil.copy(os.path.join(i['storedir'], c), target)
 						if i['cleanup']:
 							try:
@@ -748,7 +747,7 @@ def dumpData(unpackreports, scans, tempdir):
 				dirlisting = filter(lambda x: x.endswith(f), listdir)
 				for s in sha256spack:
 					removefiles = removefiles + filter(lambda x: x.startswith(s), dirlisting)
-			for r in list(set(removefiles)):
+			for r in set(removefiles):
 				try:
 					os.unlink(os.path.join(i['storedir'],r))
 				except Exception, e:
