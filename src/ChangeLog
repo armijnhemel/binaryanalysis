@@ -1,3 +1,10 @@
+2013-09-23
+* check beforehand whether or not a result needs to be pruned.
+* licenseversion.py: don't convert sets back to lists in prune(). Also replace
+this in several other files. It can save quite some time as detailed in the
+comments of this post:
+https://plus.google.com/115212051037621986145/posts/HajXHPGN752
+
 2013-09-22
 * don't copy reports and images to a temporary location if 'cleanup' is set
 but directly write them to the final destination.
