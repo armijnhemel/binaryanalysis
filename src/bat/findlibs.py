@@ -396,7 +396,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 				## * SHA256 checksums
 				## * equivalent local and remote function names (and in the future localvars and remotevars)
 				if len(filtersquash) > 1:
-					if len(list(set(map(lambda x: unpackreports[x]['sha256'], filtersquash)))) == 1:
+					if len(set(map(lambda x: unpackreports[x]['sha256'], filtersquash))) == 1:
 						filtersquash = [filtersquash[0]]
 						## store duplicates for later reporting of alternatives
 						dupes[filtersquash[0]] = filtersquash
@@ -642,7 +642,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 								## of which the name matches
 								## 3. check if the files that implement the same thing are
 								## libs or executables. Prefer libs.
-								if len(list(set(map(lambda x: unpackreports[x]['sha256'], funcstolibs[r])))) == 1:
+								if len(set(map(lambda x: unpackreports[x]['sha256'], funcstolibs[r]))) == 1:
 									for l in funcstolibs[r]:
 										if sonames.has_key(os.path.basename(l)):
 											found = True
@@ -705,7 +705,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 		if not aggregatereturn.has_key(i):
 			aggregatereturn[i] = {}
 		if usedby.has_key(i):
-			aggregatereturn[i]['elfusedby'] = set(list(usedby[i]))
+			aggregatereturn[i]['elfusedby'] = list(set(usedby[i]))
 			writeback = True
 		if usedlibsperfile.has_key(i):
 			aggregatereturn[i]['elfused'] = usedlibsperfile[i]
