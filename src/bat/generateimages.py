@@ -326,7 +326,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 		else:
 			versionpickletopackage[r[0]] = [r[1]]
 
-	for r in list(set(results)):
+	for r in set(results):
 		picklefilehash = r.split('.', 1)[0]
 		unlinkpickle = True
 		for f in pickletofile[picklefilehash]:
@@ -373,5 +373,5 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 			os.unlink(os.path.join(imagedir, r))
 
 	## cleanup
-	for i in list(set(map(lambda x: x[0], funcpicklespackages + versionpicklespackages))):
+	for i in set(map(lambda x: x[0], funcpicklespackages + versionpicklespackages)):
 		os.unlink(os.path.join(pickledir, picklehashes[i]))
