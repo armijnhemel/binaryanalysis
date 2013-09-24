@@ -127,16 +127,15 @@ def gethash(path, filename):
 
 ## scan a single file, possibly unpack and recurse
 #def scan((path, filename, scans, prerunscans, magicscans, optmagicscans, lenscandir, tempdir, debug)):
-def scan(scanqueue, reportqueue, leafqueue):
+def scan(scanqueue, reportqueue, leafqueue, scans):
 	while True:
 		## reset the reports, blacklist, offsets and tags for each new scan
 		leaftasks = []
-		#scantasks = []
 		unpackreports = {}
 		blacklist = []
 		offsets = {}
 		tags = []
-		(path, filename, scans, prerunscans, magicscans, optmagicscans, lenscandir, tempdir, debug) = scanqueue.get()
+		(path, filename, prerunscans, magicscans, optmagicscans, lenscandir, tempdir, debug) = scanqueue.get()
 		lentempdir = len(tempdir)
 
 		## absolute path of the file in the file system (so including temporary dir)
@@ -355,8 +354,7 @@ def scan(scanqueue, reportqueue, leafqueue):
 							try:
 								if not os.path.islink("%s/%s" % (i[0], p)):
 									os.chmod("%s/%s" % (i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-								scantasks.append((i[0], p, scans, prerunscans, magicscans, optmagicscans, len(scandir), tempdir, debug))
-								#scanqueue.put((i[0], p, scans, prerunscans, magicscans, optmagicscans, len(scandir), tempdir, debug))
+								scantasks.append((i[0], p, prerunscans, magicscans, optmagicscans, len(scandir), tempdir, debug))
 								relscanpath = "%s/%s" % (i[0][lentempdir:], p)
 								if relscanpath.startswith('/'):
 									relscanpath = relscanpath[1:]
@@ -375,7 +373,6 @@ def scan(scanqueue, reportqueue, leafqueue):
 				leafqueue.put(l)
 			for u in unpackreports:
 				reportqueue.put({u: unpackreports[u]})
-			#return (scantasks, leaftasks, unpackreports)
 		else:
 			leaftasks.append((filetoscan, magic, tags, blacklist, filehash, filesize))
 			for l in leaftasks:
@@ -383,7 +380,6 @@ def scan(scanqueue, reportqueue, leafqueue):
 			for u in unpackreports:
 				reportqueue.put({u: unpackreports[u]})
 		scanqueue.task_done()
-		#return (scantasks, leaftasks, unpackreports)
 
 def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, debug)):
 	reports = {}
@@ -841,7 +837,7 @@ def runscan(scans, scan_binary):
 		if debugphases != []:
 			if not ('prerun' in debugphases or 'unpack' in debugphases):
 				tmpdebug = False
-	scantasks = [(scantempdir, os.path.basename(scan_binary), scans['unpackscans'], scans['prerunscans'], magicscans, optmagicscans, len(scantempdir), scantempdir, tmpdebug)]
+	scantasks = [(scantempdir, os.path.basename(scan_binary), scans['prerunscans'], magicscans, optmagicscans, len(scantempdir), scantempdir, tmpdebug)]
 
 	## Use multithreading to speed up scanning. Sometimes we hit http://bugs.python.org/issue9207
 	## Threading can be configured in the configuration file, but
@@ -867,35 +863,6 @@ def runscan(scans, scan_binary):
 			if 'unpack' in debugphases or 'prerun' in debugphases:
 				parallel = False
 
-	'''
-	if parallel:
-		if scans['batconfig'].has_key('processors'):
-			pool = multiprocessing.Pool(scans['batconfig']['processors'])
-		else:
-			pool = multiprocessing.Pool()
-	else:
-		pool = multiprocessing.Pool(processes=1)
-
-	while True:
-		## it could be that 'scantasks' < processors
-		## In that case there are processes idling.
-		## It also could happen that one big task blocks returning results
-		## because it is still running. This could lead to (temporary)
-		## starvation.
-		## TODO: use something else than a simple Pool() with pool.map
-		## like a queue and a set of workers.
-		#scansplusleafs = pool.map(scan, scantasks, 1)
-		scantasks = []
-		for i in scansplusleafs:
-			if i != None:
-				scantasks = scantasks + i[0]
-				leaftasks = leaftasks + i[1]
-				unpackreports_tmp += [i[2]]
-		if scantasks == []:
-			break
-	#pool.terminate()
-	'''
-
 	if parallel:
 		if scans['batconfig'].has_key('processors'):
 			processamount = min(multiprocessing.cpu_count(),scans['batconfig']['processors'])
@@ -913,7 +880,7 @@ def runscan(scans, scan_binary):
 	processpool = []
 	map(lambda x: scanqueue.put(x), scantasks)
 	for i in range(0,processamount):
-		p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue))
+		p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans']))
 		processpool.append(p)
 		p.start()
 
