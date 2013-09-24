@@ -887,7 +887,7 @@ storetype   = -hexdump.gz
 type        = postrun
 module      = bat.images
 method      = generateImages
-noscan      = text:xml:graphics:compressed:pdf:audio:video:resources
+noscan      = text:xml:graphics:compressed:pdf:audio:video:resource
 envvars     = BAT_IMAGEDIR=/tmp/images:BAT_IMAGE_MAXFILESIZE=100000000
 description = Generate graphical representation of files
 enabled     = no
@@ -899,7 +899,7 @@ storetype   = .png
 type        = postrun
 module      = bat.guireport
 method      = guireport
-noscan      = text:xml:graphics:compressed:pdf:audio:video:resources
+noscan      = text:xml:graphics:compressed:pdf:audio:video:resource
 envvars     = BAT_REPORTDIR=/tmp/images:BAT_IMAGEDIR=/tmp/images
 description = Generate graphical representation of files
 enabled     = yes
