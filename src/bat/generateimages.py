@@ -198,7 +198,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 			continue
 		rankingfiles.append(i)
 
-	pickles = []
+	pickles = set()
 	piepickles = []
 	piepicklespackages = []
 	funcpicklespackages = []
@@ -212,7 +212,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 
 	## extract pickles
 	extracttasks = map(lambda x: (x, pickledir, topleveldir, unpacktempdir), filehashes)
-	pool = multiprocessing.Pool(processes=1)
+	pool = multiprocessing.Pool(processes=processors)
 	res = filter(lambda x: x != None, pool.map(extractpickles, extracttasks))
 	pool.terminate()
 
@@ -251,7 +251,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 				os.unlink(tmppickle)
 			else:
 				shutil.move(tmppickle, pickledir)
-				pickles.append(picklehash)
+				pickles.add(picklehash)
 				versionpicklespackages.append((picklehash, package))
 				picklehashes[picklehash] = os.path.basename(tmppickle)
 				if pickletofile.has_key(picklehash):
@@ -274,7 +274,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 				os.unlink(tmppickle)
 			else:
 				shutil.move(tmppickle, pickledir)
-				pickles.append(picklehash)
+				pickles.add(picklehash)
 				funcpicklespackages.append((picklehash, package))
 				picklehashes[picklehash] = os.path.basename(tmppickle)
 				if pickletofile.has_key(picklehash):
