@@ -375,7 +375,7 @@ module      = bat.fwunpack
 method      = searchUnpackJffs2
 priority    = 2
 magic       = jffs2_le:jffs2_be
-noscan      = text:xml:graphics:pdf:compressed:audio:video:elf:java:resource
+noscan      = text:xml:graphics:pdf:compressed:audio:video:elf:java:resource:dalvik
 description = Unpack JFFS2 file systems
 enabled     = yes
 
@@ -576,7 +576,7 @@ type        = unpack
 module      = bat.fwunpack
 method      = searchUnpackYaffs2
 priority    = 3
-noscan      = text:xml:graphics:pdf:compressed:audio:video:java:elf:resource
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java:elf:resource:dalvik
 description = Unpack YAFFS2 file systems
 enabled     = yes
 
