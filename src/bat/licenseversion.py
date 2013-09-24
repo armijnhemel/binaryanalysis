@@ -266,6 +266,7 @@ def grab_sha256_parallel((masterdb, tasks, language, querytype)):
 		res = c.fetchall()
 		if res != None:
 			res = filter(lambda x: x[2] == language, res)
+			## TODO: make a list of line numbers
 			res = map(lambda x: (x[0], x[1]), res)
 		results.append((line, res))
 	c.close()
@@ -326,7 +327,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 			vsha256s = reduce(lambda x, y: x + y, filter(lambda x: x != [], vsha256s))
 
 			## for each combination (line,sha256,linenumber) store per checksum
-			## the line and linenumber. The checksums are used to look up version
+			## the line and linenumber(s). The checksums are used to look up version
 			## and filename information.
 			sha256_scan_versions = {}
 
@@ -362,6 +363,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 					(line, linenumber) = l
 					if not tmplines.has_key(line):
 						tmplines[line] = []
+					## TODO: store (checksum, linenumber(s), versres)
 					for v in versres:
 						tmplines[line].append((checksum, v[0], linenumber, v[1]))
 				for v in versres:
