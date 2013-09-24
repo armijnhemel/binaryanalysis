@@ -576,7 +576,7 @@ type        = unpack
 module      = bat.fwunpack
 method      = searchUnpackYaffs2
 priority    = 3
-noscan      = text:xml:graphics:pdf:compressed:audio:video:java:elf
+noscan      = text:xml:graphics:pdf:compressed:audio:video:java:elf:resource
 description = Unpack YAFFS2 file systems
 enabled     = yes
 
