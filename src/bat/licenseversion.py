@@ -221,18 +221,21 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		compute_version(pool, processors, scanenv, unpackreports[i], topleveldir, determinelicense, determinecopyright)
 	pool.terminate()
 
-def grab_sha256_filename((masterdb, sha256sum)):
+def grab_sha256_filename((masterdb, tasks)):
+	results = {}
 	## open the database containing all the strings that were extracted
 	## from source code.
 	conn = sqlite3.connect(masterdb)
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
-	c.execute("select version, filename from processed_file where sha256=?", (sha256sum,))
-	res = c.fetchall()
+	for sha256sum in tasks:
+		c.execute("select version, filename from processed_file where sha256=?", (sha256sum,))
+		res = c.fetchall()
+		results[sha256sum] = res
 	c.close()
 	conn.close()
-	return (sha256sum, res)
+	return results
 
 def grab_sha256_license((licensedb, sha256sum)):
 	## open the database containing all the strings that were extracted
@@ -338,12 +341,23 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 						else:
 							sha256_scan_versions[checksum] = [(line, linenumber)]
 
+			vtasks_tmp = []
+			if len(sha256_scan_versions.keys()) < processors:
+				step = 1
+			else:
+				step = len(sha256_scan_versions.keys())/processors
+			for v in range(0, len(sha256_scan_versions.keys()), step):
+				vtasks_tmp.append(sha256_scan_versions.keys()[v:v+step])
+			vtasks = map(lambda x: (masterdb, x), vtasks_tmp)
 			## grab version and file information
-			fileres = pool.map(grab_sha256_filename, map(lambda x: (masterdb, x), sha256_scan_versions.keys()))
+			fileres = pool.map(grab_sha256_filename, vtasks)
+			#fileres = reduce(lambda x, y: x + y, filter(lambda x: x != [], fileres))
+			resdict = {}
+			map(lambda x: resdict.update(x), fileres)
 			tmplines = {}
 			## construct the full information needed by other scans
-			for f in fileres:
-				(checksum, versres) = f
+			for checksum in resdict:
+				versres = resdict[checksum]
 				for l in sha256_scan_versions[checksum]:
 					(line, linenumber) = l
 					if not tmplines.has_key(line):
