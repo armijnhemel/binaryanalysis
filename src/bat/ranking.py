@@ -532,7 +532,7 @@ def extractJavaNames(javameta, scanenv, clones):
 						packages_tmp.append(package_tmp)
 					else:
 						packages_tmp.append(r[0])
-				packages_tmp = set(packages_tmp)
+				packages_tmp = list(set(packages_tmp))
 
 				## unique match
 				if len(packages_tmp) == 1:
@@ -594,7 +594,7 @@ def extractVariablesJava(javameta, scanenv, clones):
 	## class file (apart from the extension of course) but this is very
 	## uncommon. TODO: merge class name and source file name searching
 	if scanenv.has_key('BAT_CLASSNAME_SCAN'):
-		classes = list(set(map(lambda x: x.split('$')[0], classes)))
+		classes = set(map(lambda x: x.split('$')[0], classes))
 		for i in classes:
 			pvs = []
 			## first try the name as found in the binary. If it can't
@@ -642,7 +642,7 @@ def extractVariablesJava(javameta, scanenv, clones):
 						classres_tmp.append(class_tmp)
 					else:   
 						classres_tmp.append(r[0])
-				classres_tmp = list(set(classres_tmp))
+				classres_tmp = set(classres_tmp)
 				classres = map(lambda x: (x, 0), classres_tmp)
 				sourcepvs[classname] = classres
 
@@ -669,7 +669,7 @@ def extractVariablesJava(javameta, scanenv, clones):
 						fieldres_tmp.append(field_tmp)
 					else:   
 						fieldres_tmp.append(r[0])
-				fieldres_tmp = list(set(fieldres_tmp))
+				fieldres_tmp = set(fieldres_tmp)
 				fieldres = map(lambda x: (x, 0), fieldres_tmp)
 				fieldspvs[f] = fieldres
 
@@ -1342,15 +1342,14 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 		best_score = 0
 		## for each string in the package with the best gain add the score
 		## to the package and move on to the next package.
-		todelete = []
+		todelete = set([])
 		for xy in stringsPerPkg[best]:
 			best_score += 1
 
 			x = stringsLeft[xy]
 			sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
 			strsplit = xy.rsplit('\t', 1)[0]
-			todelete.append(strsplit)
-		todelete = set(todelete)
+			todelete.add(strsplit)
 		for a in todelete:
 			for st in string_split[a]:
 				del stringsLeft[st]
