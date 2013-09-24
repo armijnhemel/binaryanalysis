@@ -218,7 +218,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		filehashseen.append(filehash)
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue
-		compute_version(pool, scanenv, unpackreports[i], topleveldir, determinelicense, determinecopyright)
+		compute_version(pool, processors, scanenv, unpackreports[i], topleveldir, determinelicense, determinecopyright)
 	pool.terminate()
 
 def grab_sha256_filename((masterdb, sha256sum)):
@@ -247,27 +247,30 @@ def grab_sha256_license((licensedb, sha256sum)):
 	conn.close()
 	return licenses
 
-def grab_sha256_parallel((masterdb, line, language, querytype)):
+def grab_sha256_parallel((masterdb, tasks, language, querytype)):
+	results = []
 	## open the database containing all the strings that were extracted
 	## from source code.
 	conn = sqlite3.connect(masterdb)
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
-	if querytype == "string":
-		c.execute("select distinct sha256, linenumber, language from extracted_file where programstring=?", (line,))
-	elif querytype == 'function':
-		c.execute("select distinct sha256, linenumber, language from extracted_function where functionname=?", (line,))
-	res = c.fetchall()
-	if res != None:
-		res = filter(lambda x: x[2] == language, res)
-		res = map(lambda x: (x[0], x[1]), res)
+	for line in tasks:
+		if querytype == "string":
+			c.execute("select distinct sha256, linenumber, language from extracted_file where programstring=?", (line,))
+		elif querytype == 'function':
+			c.execute("select distinct sha256, linenumber, language from extracted_function where functionname=?", (line,))
+		res = c.fetchall()
+		if res != None:
+			res = filter(lambda x: x[2] == language, res)
+			res = map(lambda x: (x[0], x[1]), res)
+		results.append((line, res))
 	c.close()
 	conn.close()
-	return (line, res)
+	return results
 
 
-def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, determinecopyright):
+def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determinelicense, determinecopyright):
 	## read the pickle
 	filehash = unpackreport['sha256']
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
@@ -281,6 +284,8 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 	if res == None and dynamicRes == {}:
 		return
 
+	if processors == None:
+		processors = multiprocessing.cpu_count()
 	## keep a list of versions per sha256, since source files often are in more than one version
 	sha256_versions = {}
 	## indicate whether or not the pickle should be written back to disk.
@@ -302,12 +307,20 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 			newuniques = []
 			newpackageversions = {}
 			packagecopyrights = []
-			uniques = set(map(lambda x: x[0], unique))
+			uniques = list(set(map(lambda x: x[0], unique)))
 
 			## first grab all possible checksums, plus associated line numbers for this string. Since
 			## these are unique strings they will only be present in the package (or clones of the package).
-			vsha256s = pool.map(grab_sha256_parallel, map(lambda x: (masterdb, x,language, 'string'), uniques))
-			vsha256s = filter(lambda x: x != [], vsha256s)
+			vtasks_tmp = []
+			if len(uniques) < processors:
+				step = 1
+			else:
+				step = len(uniques)/processors
+			for v in range(0, len(uniques), step):
+				vtasks_tmp.append(uniques[v:v+step])
+			vtasks = map(lambda x: (masterdb, x, language, 'string'), vtasks_tmp)
+			vsha256s = pool.map(grab_sha256_parallel, vtasks)
+			vsha256s = reduce(lambda x, y: x + y, filter(lambda x: x != [], vsha256s))
 
 			## for each combination (line,sha256,linenumber) store per checksum
 			## the line and linenumber. The checksums are used to look up version
@@ -416,8 +429,17 @@ def compute_version(pool, scanenv, unpackreport, topleveldir, determinelicense, 
 			versions = []
 			functionnames = dynamicRes['uniquepackages'][package]
 			## right now only C is supported. TODO: fix this for other languages such as Java.
-			vsha256s = pool.map(grab_sha256_parallel, map(lambda x: (masterdb, x, 'C', 'function'), functionnames))
-			vsha256s = filter(lambda x: x != [], vsha256s)
+			vtasks_tmp = []
+			if len(functionnames) < processors:
+				step = 1
+			else:
+				step = len(functionnames)/processors
+			for v in range(0, len(functionnames), step):
+				vtasks_tmp.append(functionnames[v:v+step])
+			vtasks = map(lambda x: (masterdb, x, 'C', 'function'), vtasks_tmp)
+
+			vsha256s = pool.map(grab_sha256_parallel, vtasks)
+			vsha256s = reduce(lambda x, y: x + y, filter(lambda x: x != [], vsha256s))
 
 			for p in vsha256s:
 				pversions = []
