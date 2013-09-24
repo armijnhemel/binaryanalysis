@@ -187,6 +187,7 @@ def verifyJPEG(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars
 	if not offsets.has_key('jpeg') or not offsets.has_key('jpegtrailer'):
 		return newtags
 	if len(offsets['jpeg']) != 1:
+		## multiple JPEG headers could mean thumbnails, or ICC profiles.
 		return newtags
 	if not 0 in offsets['jpeg']:
 		return newtags
