@@ -83,3 +83,4 @@ BOTTLENECKS:
 5. tag Android DEX files (possibly reuse code from ODEX check)
 6. generate pie charts before determining version information to prevent huge pickles to be read into memory.
 7. verify and tag Android resources.arsc
+8. tag MPEG4 files (like theme_surfing_audio_track.m4a in ASUS PadFone 2 firmware)

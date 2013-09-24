@@ -1,3 +1,9 @@
+2013-09-24
+* fix ignore list of jffs2 and yaffs2 in bruteforce-config
+* don't pass 'scans' around needlessly in bruteforcescan.py: arguments passed
+to subprocesses are pickled first and this data does not change.
+* extract pickles in parallel again in generateimages.py
+
 2013-09-23
 * check beforehand whether or not a result needs to be pruned.
 * licenseversion.py: don't convert sets back to lists in prune(). Also replace
