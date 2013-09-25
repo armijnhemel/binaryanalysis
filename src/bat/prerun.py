@@ -65,6 +65,7 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, debug=False, envvar
 	datafile.close()
 	for key in marker_keys:
 		offsets[key] = list(offsets[key])
+		offsets[key].sort()
 	return offsets
 
 ## Verify a file is an XML file using xmllint.
