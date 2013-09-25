@@ -984,7 +984,6 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 
 	print >>sys.stderr, "total extracted strings for %s: %d" %(path, lenlines)
 
-	res = []
 	matchedlines = 0
 	oldline = None
 	matched = False
@@ -1044,6 +1043,7 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 					kernelfuncres.append(line)
 					kernelfunctionmatched = True
 
+		res = []
 		## then see if there is anything in the cache at all
 		if not kernelfunctionmatched:
 			res = conn.execute("select package, filename FROM stringscache WHERE programstring=?", (line,)).fetchall()
