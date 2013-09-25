@@ -237,18 +237,22 @@ def grab_sha256_filename((masterdb, tasks)):
 	conn.close()
 	return results
 
-def grab_sha256_license((licensedb, sha256sum)):
+def grab_sha256_license((licensedb, tasks)):
+	results = {}
 	## open the database containing all the strings that were extracted
 	## from source code.
 	conn = sqlite3.connect(licensedb)
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
-	c.execute("select distinct license, scanner from licenses where sha256=?", (sha256sum,))
-	licenses = c.fetchall()
+	for sha256sum in tasks:
+		c.execute("select distinct license, scanner from licenses where sha256=?", (sha256sum,))
+		licenses = c.fetchall()
+
+		results[sha256sum] = licenses
 	c.close()
 	conn.close()
-	return licenses
+	return results
 
 def grab_sha256_parallel((masterdb, tasks, language, querytype)):
 	results = []
@@ -295,7 +299,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 	## indicate whether or not the pickle should be written back to disk.
 	## If uniquematches is empty and if dynamicRes is also empty, then nothing needs to be written back.
 	changed = False
-
+	
 	if res != None:
 		masterdb = scanenv.get('BAT_DB')
 		if determinelicense:
@@ -350,11 +354,12 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 			for v in range(0, len(sha256_scan_versions.keys()), step):
 				vtasks_tmp.append(sha256_scan_versions.keys()[v:v+step])
 			vtasks = map(lambda x: (masterdb, x), vtasks_tmp)
+
 			## grab version and file information
 			fileres = pool.map(grab_sha256_filename, vtasks)
-			#fileres = reduce(lambda x, y: x + y, filter(lambda x: x != [], fileres))
 			resdict = {}
 			map(lambda x: resdict.update(x), fileres)
+
 			tmplines = {}
 			## construct the full information needed by other scans
 			for checksum in resdict:
@@ -405,8 +410,22 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 			## determinelicense and determinecopyright *always* imply determineversion
 			## TODO: store license with version number.
 			if determinelicense:
-				licensesha256s = map(lambda x: (licensedb, x), list(set(licensesha256s)))
-				packagelicenses = list(set(reduce(lambda x, y: x + y, pool.map(grab_sha256_license, licensesha256s))))
+				vtasks_tmp = []
+				licensesha256s = list(set(licensesha256s))
+				if len(licensesha256s) < processors:
+					step = 1
+				else:
+					step = len(licensesha256s)/processors
+				for v in range(0, len(licensesha256s), step):
+					vtasks_tmp.append(sha256_scan_versions.keys()[v:v+step])
+				vtasks = map(lambda x: (licensedb, x), filter(lambda x: x!= [], vtasks_tmp))
+
+				packagelicenses = pool.map(grab_sha256_license, vtasks)
+				## result is a list of {sha256sum: list of licenses}
+				packagelicenses_tmp = []
+				for p in packagelicenses:
+					packagelicenses_tmp += reduce(lambda x,y: x + y, p.values())
+				packagelicenses = list(set(packagelicenses_tmp))
 			else:
 				packagelicenses = []
 
