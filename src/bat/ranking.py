@@ -149,7 +149,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 				jiffies = [kerneldata.find('loops_per_jiffy')]
 			else:
 				jiffyoffset = 0
-				for i in range(0, jiffycount):
+				for i in xrange(0, jiffycount):
 					jiffy = kerneldata.find('loops_per_jiffy', jiffyoffset)
 					if jiffy != -1:
 						jiffies.append(jiffy)
@@ -830,7 +830,7 @@ def extractDynamic(scanfile, scanenv, clones, olddb=False):
 		## are not necessarily what demangling will return.
 		step = 100
 		if mangles != []:
-			for i in range(0, len(mangles), step):
+			for i in xrange(0, len(mangles), step):
 				offset = i
 				args = ['c++filt'] + mangles[offset:offset+step]
 				offset = offset + step
