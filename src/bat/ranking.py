@@ -1253,18 +1253,13 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 	c.close()
 	conn.close()
 
-	for r in res:
-		if r[1] != 0:
-			avgscores[r[0]] = r[1]
+	for r in filter(lambda x: x[1] != 0, res):
+		avgscores[r[0]] = r[1]
 
-	newstringsPerPkg = {}
 	newgain = {}
 	for stri in stringsLeft:
 		for p2 in pkgsScorePerString[stri]:
 			newgain[p2] = newgain.get(p2, 0) + stringsLeft[stri]['score']
-			if not newstringsPerPkg.has_key(p2):
-				newstringsPerPkg[p2] = []
-			newstringsPerPkg[p2].append(stri)
 
 	useless_packages = set()
 	for p in newgain.keys():
