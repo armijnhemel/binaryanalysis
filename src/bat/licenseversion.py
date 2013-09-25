@@ -483,19 +483,22 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				(functionname, res) = p
 		
 				for s in res:
-					if not sha256_versions.has_key(s[0]):
-						c.execute("select distinct version, filename from processed_file where sha256=?", (s[0],))
+					(checksum, linenumber) = s
+					if not sha256_versions.has_key(checksum):
+						c.execute("select distinct version, filename from processed_file where sha256=?", (checksum,))
 						packageversions = c.fetchall()
 						for pv in packageversions:
-							pversions.append(pv[0])
-							line_sha256_version.append((s[0], pv[0], s[1], pv[1]))
-							if sha256_versions.has_key(s[0]):
-								sha256_versions[s[0]].append((pv[0], pv[1]))
+							(version, filename) = pv
+							pversions.append(version)
+							line_sha256_version.append((checksum, version, linenumber, filename))
+							if sha256_versions.has_key(checksum):
+								sha256_versions[checksum].append((version, filename))
 							else:
-								sha256_versions[s[0]] = [(pv[0], pv[1])]
+								sha256_versions[checksum] = [(version, filename)]
 					else:
-						for v in sha256_versions[s[0]]:
-							line_sha256_version.append((s[0], v[0], s[1], v[1]))
+						for v in sha256_versions[checksum]:
+							(version, filename) = v
+							line_sha256_version.append((checksum, version, linenumber, filename))
 				dynamicRes['versionresults'][package].append((functionname, line_sha256_version))
 				## functions with different signatures might be present in different files.
 				## Since we are ignoring signatures we need to deduplicate here too.
