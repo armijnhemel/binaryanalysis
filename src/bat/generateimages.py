@@ -47,84 +47,85 @@ def extractpickles((filehash, pickledir, topleveldir, unpacktempdir)):
 	leafreports = cPickle.load(leaf_file)
 	leaf_file.close()
 
-	if leafreports.has_key('ranking'):
-		## the ranking result is (res, dynamicRes, variablepvs)
-		(res, dynamicRes, variablepvs) = leafreports['ranking']
-		if res == None and dynamicRes == {}:
-			return
+	if not leafreports.has_key('ranking'):
+		return
+	## the ranking result is (res, dynamicRes, variablepvs)
+	(res, dynamicRes, variablepvs) = leafreports['ranking']
+	if res == None and dynamicRes == {}:
+		return
 
-		pieresult = None
-		versionresults = []
-		funcresults = []
+	pieresult = None
+	versionresults = []
+	funcresults = []
 
-		if res != None:
-			## extract information for generating pie charts
-			piedata = []
-			pielabels = []
-			totals = 0.0
-			others = 0.0
-			for j in res['reports']:
-				## less than half a percent, that's not significant anymore
-				if j[3] < 0.5:
-					totals += j[3]
-					others += j[3]
-					if totals <= 99.0:
-						continue
-				if totals >= 99.0:
-					pielabels.append("others")
-					piedata.append(others + 100.0 - totals)
-					break
-				else:   
-					pielabels.append(j[1])
-					piedata.append(j[3])
-					totals += j[3]
+	if res != None:
+		## extract information for generating pie charts
+		piedata = []
+		pielabels = []
+		totals = 0.0
+		others = 0.0
+		for j in res['reports']:
+			## less than half a percent, that's not significant anymore
+			if j[3] < 0.5:
+				totals += j[3]
+				others += j[3]
+				if totals <= 99.0:
+					continue
+			if totals >= 99.0:
+				pielabels.append("others")
+				piedata.append(others + 100.0 - totals)
+				break
+			else:   
+				pielabels.append(j[1])
+				piedata.append(j[3])
+				totals += j[3]
 
-			## now dump the data to a pickle
-			if pielabels != [] and piedata != []:
-				tmppickle = tempfile.mkstemp(dir=unpacktempdir)
-				cPickle.dump((piedata, pielabels), os.fdopen(tmppickle[0], 'w'))
-				picklehash = gethash(tmppickle[1])
-				pieresult = (picklehash, tmppickle[1])
+		## now dump the data to a pickle
+		if pielabels != [] and piedata != []:
+			tmppickle = tempfile.mkstemp(dir=unpacktempdir)
+			cPickle.dump((piedata, pielabels), os.fdopen(tmppickle[0], 'w'))
+			picklehash = gethash(tmppickle[1])
+			pieresult = (picklehash, tmppickle[1])
 
-			for j in res['reports']:
-				if j[4] != {}:
-					package = j[1]
-					pickledata = []
-					vals = list(set(j[4].values()))
-					if vals == []:
-						continue
-					vals.sort(reverse=True)
-					tmppickle = tempfile.mkstemp(dir=unpacktempdir)
-					for v in vals:
-						j_sorted = filter(lambda x: x[1] == v, j[4].items())
-						j_sorted.sort()
-						for v2 in j_sorted:
-							pickledata.append(v2)
-					cPickle.dump(pickledata, os.fdopen(tmppickle[0], 'w'))
-					picklehash = gethash(tmppickle[1])
-					versionresults.append((picklehash, tmppickle[1], package))
-
-		## extract pickles with version information for functions
-		if dynamicRes.has_key('packages'):
-			for package in dynamicRes['packages']:
-				packagedata = copy.copy(dynamicRes['packages'][package])
+		for j in res['reports']:
+			if j[4] != {}:
+				package = j[1]
 				pickledata = []
-				p_sorted = sorted(packagedata, key=lambda x: x[1])
-				vals = list(set(map(lambda x: x[1], p_sorted)))
+				vals = list(set(j[4].values()))
 				if vals == []:
 					continue
 				vals.sort(reverse=True)
 				tmppickle = tempfile.mkstemp(dir=unpacktempdir)
 				for v in vals:
-					j_sorted = filter(lambda x: x[1] == v, p_sorted)
+					j_sorted = filter(lambda x: x[1] == v, j[4].items())
 					j_sorted.sort()
 					for v2 in j_sorted:
 						pickledata.append(v2)
 				cPickle.dump(pickledata, os.fdopen(tmppickle[0], 'w'))
 				picklehash = gethash(tmppickle[1])
-				funcresults.append((picklehash, tmppickle[1], package))
+				versionresults.append((picklehash, tmppickle[1], package))
 
-		return (filehash, pieresult, versionresults, funcresults)
+	## extract pickles with version information for functions
+	if dynamicRes.has_key('packages'):
+		for package in dynamicRes['packages']:
+			packagedata = copy.copy(dynamicRes['packages'][package])
+			pickledata = []
+			p_sorted = sorted(packagedata, key=lambda x: x[1])
+			vals = list(set(map(lambda x: x[1], p_sorted)))
+			if vals == []:
+				continue
+			vals.sort(reverse=True)
+			tmppickle = tempfile.mkstemp(dir=unpacktempdir)
+			for v in vals:
+				j_sorted = filter(lambda x: x[1] == v, p_sorted)
+				j_sorted.sort()
+				for v2 in j_sorted:
+					pickledata.append(v2)
+			cPickle.dump(pickledata, os.fdopen(tmppickle[0], 'w'))
+			picklehash = gethash(tmppickle[1])
+			funcresults.append((picklehash, tmppickle[1], package))
+
+	return (filehash, pieresult, versionresults, funcresults)
 
 ## compute a SHA256 hash. This is done in chunks to prevent a big file from
 ## being read in its entirety at once, slowing down a machine.
@@ -284,7 +285,6 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 
 	## create a pool and generate the images
 	pool = multiprocessing.Pool(processes=processors)
-	pietasks = []
 
 	if piepicklespackages != []:
 		pietasks = list(set(map(lambda x: (picklehashes[x[0]], pickledir, x[0], imagedir), piepicklespackages)))
