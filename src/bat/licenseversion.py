@@ -325,7 +325,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				step = 1
 			else:
 				step = len(uniques)/processors
-			for v in range(0, len(uniques), step):
+			for v in xrange(0, len(uniques), step):
 				vtasks_tmp.append(uniques[v:v+step])
 			vtasks = map(lambda x: (masterdb, x, language, 'string'), vtasks_tmp)
 			vsha256s = pool.map(grab_sha256_parallel, vtasks)
@@ -352,7 +352,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				step = 1
 			else:
 				step = len(sha256_scan_versions.keys())/processors
-			for v in range(0, len(sha256_scan_versions.keys()), step):
+			for v in xrange(0, len(sha256_scan_versions.keys()), step):
 				vtasks_tmp.append(sha256_scan_versions.keys()[v:v+step])
 			vtasks = map(lambda x: (masterdb, x), vtasks_tmp)
 
@@ -417,7 +417,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 					step = 1
 				else:
 					step = len(licensesha256s)/processors
-				for v in range(0, len(licensesha256s), step):
+				for v in xrange(0, len(licensesha256s), step):
 					vtasks_tmp.append(sha256_scan_versions.keys()[v:v+step])
 				vtasks = map(lambda x: (licensedb, x), filter(lambda x: x!= [], vtasks_tmp))
 
@@ -463,7 +463,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				step = 1
 			else:
 				step = len(functionnames)/processors
-			for v in range(0, len(functionnames), step):
+			for v in xrange(0, len(functionnames), step):
 				vtasks_tmp.append(functionnames[v:v+step])
 			vtasks = map(lambda x: (masterdb, x, 'C', 'function'), vtasks_tmp)
 
@@ -495,7 +495,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				step = 1
 			else:
 				step = len(sha256_scan_versions.keys())/processors
-			for v in range(0, len(sha256_scan_versions.keys()), step):
+			for v in xrange(0, len(sha256_scan_versions.keys()), step):
 				vtasks_tmp.append(sha256_scan_versions.keys()[v:v+step])
 			vtasks = map(lambda x: (masterdb, x), vtasks_tmp)
 
