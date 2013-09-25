@@ -161,7 +161,6 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 	(res, dynamicRes, variablepvs) = leafreports['ranking']
 
 	if dynamicRes != {}:
-		header = "<html><body>"
 		html = ""
 		## if the results are stored in the pickle generate nice reports.
 		if dynamicRes.has_key('versionresults'):
@@ -198,9 +197,8 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 					for v in upkgs:
 						html += "%s<br>\n" % v
 					html += "</p>\n"
-		footer = "</body></html>"
 		if html != "":
-			html = header + html + footer
+			html = "<html><body>%s</body></html>" % html
 			nameshtmlfile = gzip.open("%s/%s-functionnames.html.gz" % (reportdir, filehash), 'wb')
 			nameshtmlfile.write(html)
 			nameshtmlfile.close()
