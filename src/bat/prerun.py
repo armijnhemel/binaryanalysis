@@ -33,7 +33,6 @@ import fsmagic, extractor
 def genericMarkerSearch(filename, magicscans, optmagicscans, debug=False, envvars=None):
 	datafile = open(filename, 'rb')
 	databuffer = []
-	order = []
 	offsets = {}
 	offset = 0
 	datafile.seek(offset)
@@ -53,8 +52,6 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, debug=False, envvar
 					#offsets[key].append((offset + res, key))
 					offsets[key].append(offset + res)
 					res = databuffer.find(fsmagic.fsmagic[key], res+1)
-					if not key in order:
-						order.append(key)
 		## move the offset 99950
 		datafile.seek(offset + 99950)
 		## read 100000 bytes with a 50 bytes overlap with the previous
@@ -66,7 +63,7 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, debug=False, envvar
 		else:
 			offset = offset + len(databuffer)
 	datafile.close()
-	return (offsets, order)
+	return offsets
 
 ## Verify a file is an XML file using xmllint.
 ## Actually we *could* do this with xml.dom.minidom (although some parser settings should be set
