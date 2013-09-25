@@ -39,6 +39,8 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, debug=False, envvar
 	databuffer = datafile.read(100000)
 	marker_keys = magicscans + optmagicscans
 	for key in marker_keys:
+		## use a set to have automatic deduplication. Each offset
+		## should be in the list only once.
 		offsets[key] = set()
 	while databuffer != '':
 		for key in marker_keys:
@@ -47,16 +49,13 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, debug=False, envvar
 				continue
 			else:
 				while res != -1:
-					## we should return this differently, so we can sort per offset and
-					## do a possibly better scan
-					#offsets[key].append((offset + res, key))
 					offsets[key].add(offset + res)
 					res = databuffer.find(fsmagic.fsmagic[key], res+1)
 		## move the offset 99950
 		datafile.seek(offset + 99950)
 		## read 100000 bytes with a 50 bytes overlap with the previous
 		## read so we don't miss any pattern. This needs to be updated
-		## as soon as we have patterns >= 50
+		## as soon as patterns >= 50 are used.
 		databuffer = datafile.read(100000)
 		if len(databuffer) >= 50:
 			offset = offset + 99950
@@ -65,6 +64,7 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, debug=False, envvar
 	datafile.close()
 	for key in marker_keys:
 		offsets[key] = list(offsets[key])
+		## offsets are expected to be sorted.
 		offsets[key].sort()
 	return offsets
 
