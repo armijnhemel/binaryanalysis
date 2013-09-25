@@ -447,14 +447,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 	## TODO: determine versions of functions and variables here as well
 
 	if dynamicRes.has_key('versionresults'):
-		masterdb = scanenv.get('BAT_DB')
 
-		## open the database containing all the strings that were extracted
-		## from source code.
-		conn = sqlite3.connect(masterdb)
-		## we have byte strings in our database, not utf-8 characters...I hope
-		conn.text_factory = str
-		c = conn.cursor()
 		for package in dynamicRes['versionresults'].keys():
 			if not dynamicRes.has_key('uniquepackages'):
 				continue
@@ -476,35 +469,58 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 			vsha256s = pool.map(grab_sha256_parallel, vtasks)
 			vsha256s = reduce(lambda x, y: x + y, filter(lambda x: x != [], vsha256s))
 
+			sha256_scan_versions = {}
+			tmplines = {}
+
 			for p in vsha256s:
-				pversions = []
-				pv2 = {}
 				line_sha256_version = []
 				(functionname, res) = p
-		
 				for s in res:
 					(checksum, linenumber) = s
 					if not sha256_versions.has_key(checksum):
-						c.execute("select distinct version, filename from processed_file where sha256=?", (checksum,))
-						packageversions = c.fetchall()
-						for pv in packageversions:
-							(version, filename) = pv
-							pversions.append(version)
-							line_sha256_version.append((checksum, version, linenumber, filename))
-							if sha256_versions.has_key(checksum):
-								sha256_versions[checksum].append((version, filename))
-							else:
-								sha256_versions[checksum] = [(version, filename)]
+						if sha256_scan_versions.has_key(checksum):
+							sha256_scan_versions[checksum].append((functionname, linenumber))
+						else:
+							sha256_scan_versions[checksum] = [(functionname, linenumber)]
 					else:
 						for v in sha256_versions[checksum]:
 							(version, filename) = v
-							line_sha256_version.append((checksum, version, linenumber, filename))
-				dynamicRes['versionresults'][package].append((functionname, line_sha256_version))
-				## functions with different signatures might be present in different files.
-				## Since we are ignoring signatures we need to deduplicate here too.
-				versions = versions + list(set(pversions))
-		c.close()
-		conn.close()
+							if not tmplines.has_key(functionname):
+								tmplines[functionname] = []
+							tmplines[functionname].append((checksum, version, linenumber, filename))
+
+			vtasks_tmp = []
+			if len(sha256_scan_versions.keys()) < processors:
+				step = 1
+			else:
+				step = len(sha256_scan_versions.keys())/processors
+			for v in range(0, len(sha256_scan_versions.keys()), step):
+				vtasks_tmp.append(sha256_scan_versions.keys()[v:v+step])
+			vtasks = map(lambda x: (masterdb, x), vtasks_tmp)
+
+			## grab version and file information
+			fileres = pool.map(grab_sha256_filename, vtasks)
+			resdict = {}
+			map(lambda x: resdict.update(x), fileres)
+
+			## construct the full information needed by other scans
+			for checksum in resdict:
+				versres = resdict[checksum]
+				for l in sha256_scan_versions[checksum]:
+					(functionname, linenumber) = l
+					if not tmplines.has_key(functionname):
+						tmplines[functionname] = []
+					## TODO: store (checksum, linenumber(s), versres)
+					for v in versres:
+						(version, filename) = v
+						tmplines[functionname].append((checksum, version, linenumber, filename))
+				for v in versres:
+					if sha256_versions.has_key(checksum):
+						sha256_versions[checksum].append((v[0], v[1]))
+					else:
+						sha256_versions[checksum] = [(v[0], v[1])]
+			for l in tmplines.keys():
+				dynamicRes['versionresults'][package].append((l, tmplines[l]))
 
 		newresults = {}
 		for package in dynamicRes['versionresults'].keys():
