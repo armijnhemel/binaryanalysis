@@ -1,9 +1,12 @@
 2013-09-25
 * licenseversion.py: grab function names in parallel
 * licenseversion.py: grab license information in chunks
-* ignore ELF files in GIF unpacking
+* ignore ELF files in GIF unpacking, yaffs2 unpacking and jffs2 unpacking
 * change data structures in ranking.py: lists -> set, also replace list
 concatenation with append()
+* prevent some string concatenation in generatereports.py
+* remove unused code in ranking.py and prerun.py
+* deduplicate return offsets in prerun.py
 
 2013-09-24
 * fix ignore list of jffs2 and yaffs2 in bruteforce-config
