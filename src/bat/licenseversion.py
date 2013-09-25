@@ -327,7 +327,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				step = len(uniques)/processors
 			for v in xrange(0, len(uniques), step):
 				vtasks_tmp.append(uniques[v:v+step])
-			vtasks = map(lambda x: (masterdb, x, language, 'string'), vtasks_tmp)
+			vtasks = map(lambda x: (masterdb, x, language, 'string'), filter(lambda x: x!= [], vtasks_tmp))
 			vsha256s = pool.map(grab_sha256_parallel, vtasks)
 			vsha256s = reduce(lambda x, y: x + y, filter(lambda x: x != [], vsha256s))
 
@@ -348,13 +348,13 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 							sha256_scan_versions[checksum] = [(line, linenumber)]
 
 			vtasks_tmp = []
-			if len(sha256_scan_versions.keys()) < processors:
+			if len(sha256_scan_versions) < processors:
 				step = 1
 			else:
-				step = len(sha256_scan_versions.keys())/processors
-			for v in xrange(0, len(sha256_scan_versions.keys()), step):
+				step = len(sha256_scan_versions)/processors
+			for v in xrange(0, len(sha256_scan_versions), step):
 				vtasks_tmp.append(sha256_scan_versions.keys()[v:v+step])
-			vtasks = map(lambda x: (masterdb, x), vtasks_tmp)
+			vtasks = map(lambda x: (masterdb, x), filter(lambda x: x!= [], vtasks_tmp))
 
 			## grab version and file information
 			fileres = pool.map(grab_sha256_filename, vtasks)
@@ -418,7 +418,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				else:
 					step = len(licensesha256s)/processors
 				for v in xrange(0, len(licensesha256s), step):
-					vtasks_tmp.append(sha256_scan_versions.keys()[v:v+step])
+					vtasks_tmp.append(licensesha256s[v:v+step])
 				vtasks = map(lambda x: (licensedb, x), filter(lambda x: x!= [], vtasks_tmp))
 
 				packagelicenses = pool.map(grab_sha256_license, vtasks)
@@ -430,6 +430,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 			else:
 				packagelicenses = []
 
+			'''
 			## extract copyrights. 'statements' are not very accurate so ignore those for now in favour of URL
 			## and e-mail
 			if determinecopyright:
@@ -442,6 +443,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 					copyrightpv = copyrightpv + copyrights
 					packagecopyrights = list(set(packagecopyrights + copyrightpv))
 
+			'''
 			newreports.append((rank, package, newuniques, percentage, newpackageversions, packagelicenses, language))
 		res['reports'] = newreports
 
