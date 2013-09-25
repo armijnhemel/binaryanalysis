@@ -39,7 +39,7 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, debug=False, envvar
 	databuffer = datafile.read(100000)
 	marker_keys = magicscans + optmagicscans
 	for key in marker_keys:
-		offsets[key] = []
+		offsets[key] = set()
 	while databuffer != '':
 		for key in marker_keys:
 			res = databuffer.find(fsmagic.fsmagic[key])
@@ -50,7 +50,7 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, debug=False, envvar
 					## we should return this differently, so we can sort per offset and
 					## do a possibly better scan
 					#offsets[key].append((offset + res, key))
-					offsets[key].append(offset + res)
+					offsets[key].add(offset + res)
 					res = databuffer.find(fsmagic.fsmagic[key], res+1)
 		## move the offset 99950
 		datafile.seek(offset + 99950)
@@ -63,6 +63,8 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, debug=False, envvar
 		else:
 			offset = offset + len(databuffer)
 	datafile.close()
+	for key in marker_keys:
+		offsets[key] = list(offsets[key])
 	return offsets
 
 ## Verify a file is an XML file using xmllint.
