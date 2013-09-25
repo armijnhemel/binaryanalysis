@@ -1205,8 +1205,10 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 				nrUniqueMatches = nrUniqueMatches + 1
 
 				## store the uniqueMatches without any information about checksums
-				uniqueMatches[package] = uniqueMatches.get(package, []) + [(line, [])]
-
+				if not uniqueMatches.has_key(package):
+					uniqueMatches[package] = [(line, [])]
+				else:
+					uniqueMatches[package].append((line, []))
 	if lenlines != 0:
 		pass
 		#print >>sys.stderr, "matchedlines: %d for %s" % (matchedlines, path)
@@ -1248,6 +1250,9 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 	## this will not cost much memory and it prevents many database lookups.
 	avgscores = {}
 	res = conn.execute("select package, avgstrings from avgstringscache").fetchall()
+	c.close()
+	conn.close()
+
 	for r in res:
 		if r[1] != 0:
 			avgscores[r[0]] = r[1]
@@ -1257,13 +1262,15 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 	for stri in stringsLeft:
 		for p2 in pkgsScorePerString[stri]:
 			newgain[p2] = newgain.get(p2, 0) + stringsLeft[stri]['score']
-			newstringsPerPkg[p2] = newstringsPerPkg.get(p2, []) + [stri]
+			if not newstringsPerPkg.has_key(p2):
+				newstringsPerPkg[p2] = []
+			newstringsPerPkg[p2].append(stri)
 
-	useless_packages = []
+	useless_packages = set()
 	for p in newgain.keys():
 		## check if packages could ever contribute usefully.
 		if newgain[p] < gaincutoff:
-			useless_packages.append(p)
+			useless_packages.add(p)
 
 	## walk through the data again, filter out useless stuff
 	new_stringsleft = {}
@@ -1299,12 +1306,14 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 				if p2 in useless_packages:
 					continue
 				gain[p2] = gain.get(p2, 0) + stringsLeft[stri]['score']
-				stringsPerPkg[p2] = stringsPerPkg.get(p2, []) + [stri]
+				if not stringsPerPkg.has_key(p2):
+					stringsPerPkg[p2] = []
+				stringsPerPkg[p2].append(stri)
 
 		for p2 in gain.keys():
 			## check if packages could ever contribute usefully.
 			if gain[p2] < gaincutoff:
-				useless_packages.append(p2)
+				useless_packages.add(p2)
 
 		## gain_sorted contains the sort order, gain contains the actual data
 		gain_sorted = sorted(gain, key = lambda x: gain.__getitem__(x), reverse=True)
@@ -1342,7 +1351,7 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 		best_score = 0
 		## for each string in the package with the best gain add the score
 		## to the package and move on to the next package.
-		todelete = set([])
+		todelete = set()
 		for xy in stringsPerPkg[best]:
 			best_score += 1
 
@@ -1358,9 +1367,6 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 		if gain[best] < gaincutoff:
 			break
 		strleft = len(stringsLeft)
-
-	c.close()
-	conn.close()
 
 	scores = {}
 	for k in uniqueScore.keys() + sameFileScore.keys():
