@@ -228,9 +228,11 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 		if not 'elf' in unpackreports[i]['tags']:
 			continue
 
-		## This makes no sense for for example statically linked libraries and the
-		## pickle will have been read needlessly.
+		## This makes no sense for for example statically linked libraries and, Linux kernel
+		## images and Linux kernel modules, so skip.
 		if 'static' in unpackreports[i]['tags']:
+			continue
+		if 'linuxkernel' in unpackreports[i]['tags']:
 			continue
 
 		if not squashedelffiles.has_key(os.path.basename(i)):
