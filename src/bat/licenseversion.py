@@ -292,6 +292,10 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 	if res == None and dynamicRes == {}:
 		return
 
+	masterdb = scanenv.get('BAT_DB')
+	if determinelicense:
+		licensedb = scanenv.get('BAT_LICENSE_DB')
+
 	if processors == None:
 		processors = multiprocessing.cpu_count()
 	## keep a list of versions per sha256, since source files often are in more than one version
@@ -301,9 +305,6 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 	changed = False
 	
 	if res != None:
-		masterdb = scanenv.get('BAT_DB')
-		if determinelicense:
-			licensedb = scanenv.get('BAT_LICENSE_DB')
 		newreports = []
 
 		for r in res['reports']:
