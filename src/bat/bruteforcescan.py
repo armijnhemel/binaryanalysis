@@ -42,7 +42,6 @@ are packed in a tar file.
 import sys, os, os.path, magic, hashlib, subprocess, tempfile, shutil, stat, multiprocessing, cPickle, glob, tarfile, copy, gzip, Queue
 from optparse import OptionParser
 import ConfigParser
-import datetime
 import sqlite3
 import extractor
 import prerun, fsmagic
@@ -199,7 +198,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans):
 		unpackreports[relfiletoscan]['sha256'] = filehash
 
 		## scan for markers
-		(offsets, order) =  prerun.genericMarkerSearch(filetoscan, magicscans, optmagicscans)
+		offsets =  prerun.genericMarkerSearch(filetoscan, magicscans, optmagicscans)
 
 		## prerun scans should be run before any of the other scans
 		for prerunscan in prerunscans:
