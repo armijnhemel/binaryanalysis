@@ -1,3 +1,10 @@
+2013-09-25
+* licenseversion.py: grab function names in parallel
+* licenseversion.py: grab license information in chunks
+* ignore ELF files in GIF unpacking
+* change data structures in ranking.py: lists -> set, also replace list
+concatenation with append()
+
 2013-09-24
 * fix ignore list of jffs2 and yaffs2 in bruteforce-config
 * don't pass 'scans' around needlessly in bruteforcescan.py: arguments passed
