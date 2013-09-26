@@ -316,7 +316,7 @@ module      = bat.fwunpack
 method      = searchUnpackGIF
 priority    = 0
 magic       = gif87:gif89
-noscan      = text:xml:graphics:pdf:compressed:resource:audio:java:elf
+noscan      = text:xml:graphics:pdf:compressed:resource:audio:mp4:java:elf
 description = Carve GIF files from a file
 enabled     = yes
 
