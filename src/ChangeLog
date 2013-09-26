@@ -1,3 +1,7 @@
+2013-09-26
+* better filter for LZMA unpacking, based on some information from various
+implementations, default settings, plus firmwares found in the wild.
+
 2013-09-25
 * licenseversion.py: grab function names in parallel
 * licenseversion.py: grab license information in chunks
