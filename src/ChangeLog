@@ -3,6 +3,7 @@
 implementations, default settings, plus firmwares found in the wild.
 * rework MP4 verifier
 * start work on Android resources verifier
+* fix unlinking in deserialized Java unpacker causing false positives
 
 2013-09-25
 * licenseversion.py: grab function names in parallel
