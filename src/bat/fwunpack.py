@@ -2566,6 +2566,9 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, debug=Fal
 		lzmaoffsets = lzmaoffsets + offsets[marker]
 	if lzmaoffsets == []:
 		return ([], blacklist, [], hints)
+	## LZMA files should at least have a full header
+	if os.stat(filename).st_size < 13:
+		return ([], blacklist, [], hints)
 	lzmaoffsets.sort()
 	diroffsets = []
 	counter = 1
@@ -2582,22 +2585,40 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, debug=Fal
 
 	lzmalimit = int(scanenv.get('LZMA_MINIMUM_SIZE', 1))
 	lzma_file = open(filename, 'rb')
+
+	## see if LZMA_TRY_ALL is set. This option will disable the sanity checks.
+	## This is not recommended.
+	lzma_try = scanenv.get('LZMA_TRY_ALL', None)
+
+	if lzma_try == 'yes':
+		lzma_try_all = True
+	else:
+		lzma_try_all = False
+
 	for offset in lzmaoffsets:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
-		## extra check for offset that is \x5d\x00\x00
-		## Just a limited set of bytes can follow, or lzma won't be
-		## able to unpack it.
-		## Compressing with lzma on Fedora 17 the following values were
-		## seen for the fourth byte:
-		## \x00 \x04 \x10 \x20 \x40 \x80
-		## In firmares \x01 was also seen (and successfully unpacked)
-		## https://github.com/cscott/lzma-purejs/blob/master/FORMAT.md indicates there are probably more
-		if offset in offsets['lzma_alone']:
+		## According to http://svn.python.org/projects/external/xz-5.0.3/doc/lzma-file-format.txt the first
+		## 13 bytes of the LZMA file are the header. It consists of properties (1 byte), dictionary
+		## size (4 bytes), and a field to store the size of the uncompressed data (8 bytes).
+		##
+		## The properties foeld is not fixed, but computed during compression and could be any value
+		## between 0x00 and 0xe0. In practice only a handful of values are really used, 0x5d being the most
+		## common one, because it is the default :-)
+		##
+		## The dictionary size can be any 32 bit integer, but again only a handful of values are widely
+		## used. LZMA utils uses 2^n, with 16 <= n <= 25 (default 23). XZ utils uses 2^n or 2^n+2^(n-1).
+		## For ## XZ utils n seems to be be 12 <= n <= 30 (default 23). Setting these requires tweaking
+		## command line parameters which is unlikely to happen very often.
+		##
+		## The following checks are based on some real life data, plus some theoretical values
+		## but could use refinement.
+		## Values were computed based on dictionary size 2^n or 2^n+2^(n-1), with 16 <= n <= 25
+		if not lzma_try_all:
 			lzma_file.seek(offset + 3)
-			lzmacheckbyte = lzma_file.read(1)
-			if lzmacheckbyte not in ['\x00', '\x01', '\x04', '\x08', '\x10', '\x20', '\x40', '\x80']:
+			lzmacheckbyte = lzma_file.read(2)
+			if lzmacheckbyte not in ['\x01\x00', '\x02\x00', '\x03\x00', '\x04\x00', '\x06\x00', '\x08\x00', '\x10\x00', '\x20\x00', '\x30\x00', '\x40\x00', '\x60\x00', '\x80\x00', '\x80\x01', '\x0c\x00', '\x18\x00', '\x00\x00', '\x00\x01', '\x00\x02', '\x00\x03', '\x00\x04', '\xc0\x00']:
 				continue
 		tmpdir = dirsetup(tempdir, filename, "lzma", counter)
 		res = unpackLZMA(filename, offset, tmpdir, lzmalimit)
