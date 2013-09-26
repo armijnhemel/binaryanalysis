@@ -2,6 +2,7 @@
 * better filter for LZMA unpacking, based on some information from various
 implementations, default settings, plus firmwares found in the wild.
 * rework MP4 verifier
+* start work on Android resources verifier
 
 2013-09-25
 * licenseversion.py: grab function names in parallel

@@ -46,6 +46,14 @@ magic       = dex:odex
 description = Check if file is an Android ODEX file
 enabled     = yes
 
+[verifyandroidresource]
+type        = prerun
+module      = bat.prerun
+method      = verifyAndroidResource
+priority    = 1
+description = Check if file is an Android resource file
+enabled     = yes
+
 [verifyandroidxml]
 type        = prerun
 module      = bat.prerun

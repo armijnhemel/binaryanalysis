@@ -291,6 +291,54 @@ def verifyBZ2(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 	newtags.append("compressed")
 	return newtags
 
+## Verify if this is an Android resources file. These files can be found in
+## Android APK archives and are always called "resources.arsc".
+## There are various valid types of resource files, which are documented here:
+##
+## https://android.googlesource.com/platform/frameworks/base.git/+/d24b8183b93e781080b2c16c487e60d51c12da31/include/utils/ResourceTypes.h
+##
+## At line 155 the definition starts. Currently there are four types:
+## * NULL type
+## * String pool
+## * table
+## * XML
+## 
+## Each of these can be constructed in a different way. Focus is on tables first.
+def verifyAndroidResource(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+	newtags = []
+	if not 'binary' in tags:
+		return newtags
+	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags:
+		return newtags
+	if not os.path.basename(filename) == 'resources.arsc':
+		return newtags
+	## open the file and read the header (8 bytes)
+	androidfile = open(filename, 'rb')
+	androidbytes = androidfile.read(8)
+	androidfile.close()
+	restype = struct.unpack('<H', androidbytes[:2])[0]
+	## NULL type, handle later
+	if restype == 0:
+		return newtags
+	## string pool type, handle later
+	elif restype == 1:
+		return newtags
+	## table type
+	elif restype == 2:
+		## header size, skip for now
+		headersize = struct.unpack('<H', androidbytes[2:4])[0]
+		chunksize = struct.unpack('<I', androidbytes[4:8])[0]
+		filesize = os.stat(filename).st_size
+		## only check if the file consists of a single chunk for now
+		if chunksize == filesize:
+			newtags.append('androidresource')
+			newtags.append('resource')
+			return newtags
+	## XML type, handle later
+	elif restype == 3:
+		return newtags
+	return newtags
+
 ## Verify if this is an Android "binary XML" file. We check if the name of the
 ## file ends in '.xml', plus check the first four bytes of the file
 ## If it is an Android XML file, mark it as a 'resource' file
