@@ -464,6 +464,8 @@ def verifyMP4(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 		return newtags
 	if not offsets.has_key('mp4'):
 		return newtags
+	if len(offsets['mp4') == 0:
+		return newtags
 	if not offsets['mp4'][0] == 4:
 		return newtags
 	## now check if it is a valid file by running mp4dump
