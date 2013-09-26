@@ -458,18 +458,13 @@ def verifyOgg(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 ## extremely simple verifier for MP4 to reduce false positives
 def verifyMP4(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
 	newtags = []
-	if not filename.lower().endswith('.mp4'):
-		return newtags
 	if not 'binary' in tags:
 		return newtags
 	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags or 'audio' in tags:
 		return newtags
-	mp4file = open(filename, 'rb')
-	mp4bytes = mp4file.read(8)
-	mp4file.close()
-	## only check for "ISO Media" at the moment. As soon as I get more
-	## test files more will be added.
-	if not mp4bytes.endswith('ftyp'):
+	if not offsets.has_key('mp4'):
+		return newtags
+	if not offsets['mp4'][0] == 4:
 		return newtags
 	## now check if it is a valid file by running mp4dump
 	p = subprocess.Popen(['mp4dump', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -479,7 +474,6 @@ def verifyMP4(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 	if "invalid atom size" in stanout:
 		return newtags
 	newtags.append('mp4')
-	newtags.append('video')
 	return newtags
 
 ## very simplistic verifier for some Web Open Font Format

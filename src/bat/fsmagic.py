@@ -86,6 +86,7 @@ fsmagic = {
             'dex':		'dex\n',
             'odex':		'dey\n',
             'otf':		'OTTO',
+            'mp4':		'ftyp',
           }
 
 ## some offsets can be found after a certain number of bytes, but
