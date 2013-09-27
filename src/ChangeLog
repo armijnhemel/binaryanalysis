@@ -1,3 +1,8 @@
+2013-09-27
+* rework internal format for storing results. Especially if different versions
+vary very little (like versions of stable Linux kernel) quite a bit of space
+can be saved.
+
 2013-09-26
 * better filter for LZMA unpacking, based on some information from various
 implementations, default settings, plus firmwares found in the wild.
