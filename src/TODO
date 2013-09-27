@@ -84,3 +84,4 @@ BOTTLENECKS:
 6. generate pie charts before determining version information to prevent huge pickles being read into memory. Do the same for unmatched results (HTML report).
 7. verify and tag Android resources.arsc
 8. better JPEG tagging to deal with integrated ICC and other information that also might use a JPEG header
+9. add special tempdir for LZMA so for example tmpfs can be used for unpacking, reducing I/O load and disk wear.
