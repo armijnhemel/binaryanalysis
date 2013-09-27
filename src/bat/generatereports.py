@@ -91,7 +91,7 @@ def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
 			uniqtablerows = []
 			sh = {}
 			for s in results:
-				(checksum, version, linenumber, sourcefile) = s
+				(checksum, linenumber, version, sourcefile) = s
 				## if possible, remove the package name, plus version number, from the path
 				## that is displayed. This is to prevent that a line is printed for every
 				## version, even when the code has not changed. Usually it will be clear
@@ -179,7 +179,7 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 						(funcname, results) = up
 						html += "<h5>%s</h5><p><table><tr><td><b>Filename</b></td><td><b>Version(s)</b></td><td><b>Line number</b></td><td><b>SHA256</b></td></tr>" % cgi.escape(funcname)
 						for r in results:
-							(checksum, version, linenumber, filename) = r 
+							(checksum, linenumber, version, filename) = r 
 							html += "<tr><td>%s</td><td>%s</td><td><a href=\"unique:/%s#%d\">%d</a></td><td>%s</td></tr>\n" % (filename, version, checksum, linenumber, linenumber, checksum)
 						html += "</table></p>\n"
 		elif dynamicRes.has_key('uniquepackages'):

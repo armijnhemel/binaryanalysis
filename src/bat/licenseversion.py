@@ -372,7 +372,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 					## TODO: store (checksum, linenumber(s), versres)
 					for v in versres:
 						(version, filename) = v
-						tmplines[line].append((checksum, version, linenumber, filename))
+						tmplines[line].append((checksum, linenumber, version, filename))
 				for v in versres:
 					(version, filename) = v
 					if sha256_versions.has_key(checksum):
@@ -492,7 +492,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 							(version, filename) = v
 							if not tmplines.has_key(functionname):
 								tmplines[functionname] = []
-							tmplines[functionname].append((checksum, version, linenumber, filename))
+							tmplines[functionname].append((checksum, linenumber, version, filename))
 
 			vtasks_tmp = []
 			if len(sha256_scan_versions.keys()) < processors:
@@ -518,7 +518,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 					## TODO: store (checksum, linenumber(s), versres)
 					for v in versres:
 						(version, filename) = v
-						tmplines[functionname].append((checksum, version, linenumber, filename))
+						tmplines[functionname].append((checksum, linenumber, version, filename))
 				for v in versres:
 					if sha256_versions.has_key(checksum):
 						sha256_versions[checksum].append((v[0], v[1]))
