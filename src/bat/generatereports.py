@@ -91,33 +91,35 @@ def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
 			uniqtablerows = []
 			sh = {}
 			for s in results:
-				(checksum, linenumber, version, sourcefile) = s
-				## if possible, remove the package name, plus version number, from the path
-				## that is displayed. This is to prevent that a line is printed for every
-				## version, even when the code has not changed. Usually it will be clear
-				## which file is meant.
-				if len(sourcefile.split('/', 1)) > 1:
-					(pv, fp) = sourcefile.split('/', 1)
-					## clean up some names first, especially when they have been changed by Debian
-					for e in ["+dfsg", "~dfsg", ".orig", ".dfsg1", ".dfsg2"]:
-						if pv.endswith(e):
-							pv = pv[:-len(e)]
-							break
-					if pv == "%s-%s" % (packagename, version) or pv == "%s_%s" % (packagename, version):
-						if sh.has_key(checksum):
-							sh[checksum].append((fp, version, linenumber))
+				(checksum, linenumber, versionsourcefiles) = s
+				for vs in versionsourcefiles:
+					(version, sourcefile) = vs
+					## if possible, remove the package name, plus version number, from the path
+					## that is displayed. This is to prevent that a line is printed for every
+					## version, even when the code has not changed. Usually it will be clear
+					## which file is meant.
+					if len(sourcefile.split('/', 1)) > 1:
+						(pv, fp) = sourcefile.split('/', 1)
+						## clean up some names first, especially when they have been changed by Debian
+						for e in ["+dfsg", "~dfsg", ".orig", ".dfsg1", ".dfsg2"]:
+							if pv.endswith(e):
+								pv = pv[:-len(e)]
+								break
+						if pv == "%s-%s" % (packagename, version) or pv == "%s_%s" % (packagename, version):
+							if sh.has_key(checksum):
+								sh[checksum].append((fp, version, linenumber))
+							else:
+								sh[checksum] = [(fp, version, linenumber)]
 						else:
-							sh[checksum] = [(fp, version, linenumber)]
+							if sh.has_key(checksum):
+								sh[checksum].append((sourcefile, version, linenumber))
+							else:
+								sh[checksum] = [(sourcefile, version, linenumber)]
 					else:
 						if sh.has_key(checksum):
 							sh[checksum].append((sourcefile, version, linenumber))
 						else:
 							sh[checksum] = [(sourcefile, version, linenumber)]
-				else:
-					if sh.has_key(checksum):
-						sh[checksum].append((sourcefile, version, linenumber))
-					else:
-						sh[checksum] = [(sourcefile, version, linenumber)]
 
 			for checksum in sh:
 				## per checksum we have a list of (filename, version)
@@ -179,8 +181,10 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 						(funcname, results) = up
 						html += "<h5>%s</h5><p><table><tr><td><b>Filename</b></td><td><b>Version(s)</b></td><td><b>Line number</b></td><td><b>SHA256</b></td></tr>" % cgi.escape(funcname)
 						for r in results:
-							(checksum, linenumber, version, filename) = r 
-							html += "<tr><td>%s</td><td>%s</td><td><a href=\"unique:/%s#%d\">%d</a></td><td>%s</td></tr>\n" % (filename, version, checksum, linenumber, linenumber, checksum)
+							(checksum, linenumber, versionfilenames) = r 
+							for vf in versionfilenames:
+								(version, filename) = vf
+								html += "<tr><td>%s</td><td>%s</td><td><a href=\"unique:/%s#%d\">%d</a></td><td>%s</td></tr>\n" % (filename, version, checksum, linenumber, linenumber, checksum)
 						html += "</table></p>\n"
 		elif dynamicRes.has_key('uniquepackages'):
 			if dynamicRes['uniquepackages'] != {}:

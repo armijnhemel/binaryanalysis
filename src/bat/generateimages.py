@@ -88,16 +88,16 @@ def extractpickles((filehash, pickledir, topleveldir, unpacktempdir)):
 			pieresult = (picklehash, tmppickle[1])
 
 		for j in res['reports']:
-			if j[4] != {}:
-				package = j[1]
+			(rank, package, unique, percentage, packageversions, packagelicenses, language) = j
+			if packageversions != {}:
 				pickledata = []
-				vals = list(set(j[4].values()))
+				vals = list(set(packageversions.values()))
 				if vals == []:
 					continue
 				vals.sort(reverse=True)
 				tmppickle = tempfile.mkstemp(dir=unpacktempdir)
 				for v in vals:
-					j_sorted = filter(lambda x: x[1] == v, j[4].items())
+					j_sorted = filter(lambda x: x[1] == v, packageversions.items())
 					j_sorted.sort()
 					for v2 in j_sorted:
 						pickledata.append(v2)

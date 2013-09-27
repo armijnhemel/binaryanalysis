@@ -104,8 +104,10 @@ def prune(scanenv, uniques, package):
 
 	for u in uniques:
 		(line, res) = u
-		versions = set([])
-		map(lambda x: versions.add(x[1]), res)
+		versions = set()
+		for r in res:
+			(checksum, linenumber, versionfilenames) = r
+			map(lambda x: versions.add(x[0]), versionfilenames)
 		for version in versions:
 			if linesperversion.has_key(version):
 				linesperversion[version].append(line)
@@ -120,12 +122,12 @@ def prune(scanenv, uniques, package):
 	if len(uniqueversions.keys()) == 1:
 		return uniques
 
-	pruneme = set([])
+	pruneme = set()
 
 	unique_sorted_rev = sorted(uniqueversions, key = lambda x: uniqueversions.__getitem__(x), reverse=True)
 	unique_sorted = sorted(uniqueversions, key = lambda x: uniqueversions.__getitem__(x))
 
-	equivalents = set([])
+	equivalents = set()
 	for l in unique_sorted_rev:
 		if l in pruneme:
 			continue
@@ -156,7 +158,12 @@ def prune(scanenv, uniques, package):
 	newuniques = []
 	for u in uniques:
 		(line, res) = u
-		newres = filter(lambda x: x[1] in notpruned, res)
+		newres = []
+		for r in res:
+			(checksum, linenumber, versionfilenames) = r
+			filterres = filter(lambda x: x[0] in notpruned, versionfilenames)
+			if filterres != []:
+				newres.append((checksum, linenumber, filterres))
 		newuniques.append((line, newres))
 	return newuniques
 
@@ -370,9 +377,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 					if not tmplines.has_key(line):
 						tmplines[line] = []
 					## TODO: store (checksum, linenumber(s), versres)
-					for v in versres:
-						(version, filename) = v
-						tmplines[line].append((checksum, linenumber, version, filename))
+					tmplines[line].append((checksum, linenumber, versres))
 				for v in versres:
 					(version, filename) = v
 					if sha256_versions.has_key(checksum):
@@ -397,14 +402,20 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 			licensesha256s = []
 			for u in newuniques:
 				versionsha256s = u[1]
+				vseen = set()
 				if determinelicense:
 					licensesha256s += map(lambda x: x[0], versionsha256s)
 				for s in versionsha256s:
-					v = s[1]
-					if newpackageversions.has_key(v):
-						newpackageversions[v] = newpackageversions[v] + 1
-					else:   
-						newpackageversions[v] = 1
+					(checksum, linenumber, versionfilenames) = s
+					for v in versionfilenames:
+						(version, filename) = v
+						if version in vseen:
+							continue
+						if newpackageversions.has_key(version):
+							newpackageversions[version] = newpackageversions[version] + 1
+						else:   
+							newpackageversions[version] = 1
+						vseen.add(version)
 
 			## Ideally the version number should be stored with the license.
 			## There are good reasons for this: files are sometimes collectively
@@ -492,7 +503,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 							(version, filename) = v
 							if not tmplines.has_key(functionname):
 								tmplines[functionname] = []
-							tmplines[functionname].append((checksum, linenumber, version, filename))
+						tmplines[functionname].append((checksum, linenumber, sha256_versions[checksum]))
 
 			vtasks_tmp = []
 			if len(sha256_scan_versions.keys()) < processors:
@@ -516,9 +527,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 					if not tmplines.has_key(functionname):
 						tmplines[functionname] = []
 					## TODO: store (checksum, linenumber(s), versres)
-					for v in versres:
-						(version, filename) = v
-						tmplines[functionname].append((checksum, linenumber, version, filename))
+					tmplines[functionname].append((checksum, linenumber, versres))
 				for v in versres:
 					if sha256_versions.has_key(checksum):
 						sha256_versions[checksum].append((v[0], v[1]))
@@ -545,8 +554,12 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 			uniqueversions = {}
 			dynamicRes['packages'][package] = []
 			vs = []
-			for r in newuniques:
-				vs = vs + list(set(map(lambda x: x[1], r[1])))
+			for u in newuniques:
+				versionsha256s = u[1]
+				for s in versionsha256s:
+					(checksum, linenumber, versionfilenames) = s
+					vs = vs + list(set(map(lambda x: x[0], versionfilenames)))
+
 			for v in list(set(vs)):
 				dynamicRes['packages'][package].append((v, vs.count(v)))
 		dynamicRes['versionresults'] = newresults
