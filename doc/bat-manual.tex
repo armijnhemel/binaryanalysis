@@ -114,7 +114,9 @@ compressed files, file systems and media files. The identifers are important
 for a few things: first, they are used to determine which checks will run. They
 are also used frequently throughout the code for verification and speeding up
 unpacking. If a scan depends on a specific identifier being present it can be
-set using the \texttt{magic} attribute in the configuration.
+set using the \texttt{magic} attribute in the configuration. If an identifier
+is not present in anywhere in the configuration file it will be skipped during
+the identifier search.
 
 The marker search cannot be enabled or disabled via the configuration file.
 
@@ -156,20 +158,20 @@ to \texttt{unpack}, for example:
 type        = unpack
 module      = bat.fwunpack
 method      = searchUnpackJffs2
-priority    = 1
-magic       = jffs2_le
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+priority    = 2
+magic       = jffs2_le:jffs2_be
+noscan      = text:xml:graphics:pdf:compressed:audio:video:mp4:elf:java:resource:dalvik
 description = Unpack JFFS2 file systems
 enabled     = yes
 \end{verbatim}
 
-In BAT 14.0 the following file systems, compressed files and media files can be
+In BAT 15.0 the following file systems, compressed files and media files can be
 unpacked or extracted:
 
 \begin{itemize}
-\item file systems: cramfs, ext2/ext3/ext4, ISO9660, JFFS2, Minix (specific
-variant of v1 often found on older embedded Linux systems), SquashFS (several
-variants), romfs, YAFFS2 (specific variants)
+\item file systems: cramfs, ext2/ext3/ext4 (but not ext4 with extents),
+ISO9660, JFFS2, Minix (specific variant of v1 often found on older embedded
+Linux systems), SquashFS (several variants), romfs, YAFFS2 (specific variants)
 \item compressed files and executable formats: 7z, ar, ARJ, BASE64, BZIP2,
 compressed Flash, CAB, compress, CPIO, EXE (specific compression methods only),
 GZIP, InstallShield (old versions), LRZIP, LZIP, LZMA, LZO, RAR, RPM, RZIP,
@@ -190,6 +192,9 @@ unpack YAFFS2 file systems.
 Other files (such as ARJ and ICO files) have a very generic identifier, so
 there are a lot of false positives. This causes a big increase in runtime.
 These two unpackers are therefore disabled by default.
+
+LZMA is another special case: there are many different valid headers for LZMA
+files, but in practice only a handful are used.
 
 If unpacking is successful a directory with unpacked files that can be
 scanned further is returned, and, if available, some meta information to avoid
@@ -385,12 +390,11 @@ to a separate configuration file in a future version of BAT.
 
 The standard configuration file enables most of the scans and methods
 implemented in BAT by default. Scans can be enabled and disabled by setting the
-option \texttt{enabled} to \texttt{yes} and \texttt{no} respectively. Disabling
-a scan will still allow you to enable it later in the graphical user interface.
+option \texttt{enabled} to \texttt{yes} and \texttt{no} respectively.
 
-To prevent a scan from being enabled in the graphical user interface completely
-outcomment the entry in the configuration file (by starting the line with the
-\texttt{\#} character), or remove the section from the configuration file.
+Another way to not run a scan is to outcomment the entry in the configuration
+file (by starting the line with the \texttt{\#} character), or by removing the
+section from the configuration file.
 
 \subsubsection{Blacklisting and whitelisting scans}
 
@@ -451,6 +455,11 @@ cleanup     = yes
 The \texttt{cleanup} setting should be set to \texttt{yes} unless the results
 do not change in between subsequent runs of BAT.
 
+Currently (BAT 15) if \texttt{cleanup} is set the files are written directly to
+output directories. The values of these directories are hardcoded (and match
+values that the GUI expects) but these will be replaced by the value of
+\texttt{storetarget} in a later release.
+
 \subsubsection{Running setup code}
 
 For some scans it is necessary to run some setup code to ensure that certain
@@ -487,7 +496,9 @@ at this file with a commandline tool such as \texttt{xml\_pp} or a webbrowser
 such as Mozilla Firefox.
 
 This XML file is not meant for human consumption, but for use by for example
-reporting tools.
+reporting tools. A word of warning is needed: the XML format is not very well
+designed and not well maintained. It is recommended to use the Python pickles
+to extract information for reporting instead.
 
 The default XML pretty printer as shipped by BAT outputs a file that starts
 with metadata, such as:
@@ -563,7 +574,8 @@ representation of a file, where every bit in the binary has been assigned a
 grayscale value, plus a textual representation of a file generated with
 \texttt{hexdump}. Advanced mode is disabled by default, since loading the
 additional pictures and data is quite resource intensive and it will only be
-useful in very specific cases and might be removed in future versions of BAT.
+useful in very specific cases. This functionality might be removed from future
+versions of BAT.
 
 \section{Additional programs in the Binary Analysis Tool}
 
@@ -571,7 +583,7 @@ useful in very specific cases and might be removed in future versions of BAT.
 
 Two other tools in BAT are \texttt{busybox-compare-configs.py} and
 \texttt{busybox.py} (in the subdirectory \texttt{bat}). These two tools are
-specifically used to analyze BusyBox binaries. BusyBox is in widespread use on
+specifically used to analyse BusyBox binaries. BusyBox is in widespread use on
 embedded devices and the license on BusyBox is actively enforced in court.
 
 BusyBox binaries on embedded machines often have different configurations,
@@ -764,6 +776,10 @@ representations of results of the analysis.
 \item \texttt{jffs2.py} has code specific to handling JFFS2 file systems.
 \item \texttt{kernelanalysis.py} includes code to extract information from
 Linux kernel images and Linux kernel modules.
+\item \texttt{licenseversion.py} is responsible for getting version and
+license information for uniquely identified strings and function names (and in
+the future variable names too), as well as optionally pruning the result set
+to only include relevant versions.
 \item \texttt{prerun.py} contains scans that are run in the pre-run phase for
 correctly tagging files as early in the process as possible.
 \item \texttt{ranking.py} implements an advanced method for classifying a
@@ -1785,7 +1801,8 @@ as a simple lookup table in Python pickle format.
 Names of applets per version breakdown:
 
 \begin{itemize}
-\item 1.15.x and later: \texttt{include/applets.h} IF syntax
+\item 1.15.x and later: \texttt{include/applets.h} or
+\texttt{include/applets.src.h} IF syntax
 \item 1.1.1-1.14.x: \texttt{include/applets.h} USE syntax
 \item 1.00-1.1.0: \texttt{include/applets.h} (different syntax)
 \item 0.60.5 and earlier: \texttt{applets.h}, like 1.00-1.1.0 but with a
@@ -1933,6 +1950,14 @@ configuration of BAT tries to be sensible, with a trade off between performance
 and completeness. In some cases there is quite a bit of performance to be
 gained by simply tweaking the configuration.
 
+\subsection{Choose the right hardware}
+
+BAT will benefit a lot from fast disk, enough memory and multiple cores. Many
+of the scans in BAT can be run in parallel and will scale very well (until
+of course disk I/O limits are hit). Invest in more cores instead of a faster
+CPU. Enough memory will prevent swapping which just kills performance,
+especially because the ranking scan in BAT can be very I/O intensive.
+
 \subsection{Use \texttt{outputlite}}
 
 Using the default configuration the original unpacked data is included into
@@ -1997,7 +2022,7 @@ two ways:
 There are various solutions, apart from adding more memory to the machine:
 
 \begin{itemize}
-\item configura BAT to use another path for unpacking than \texttt{/tmp}
+\item configure BAT to use another path for unpacking than \texttt{/tmp}
 \item disable \texttt{tmp} on tmpfs
 \end{itemize}
 
