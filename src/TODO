@@ -85,3 +85,4 @@ BOTTLENECKS:
 7. verify and tag Android resources.arsc
 8. better JPEG tagging to deal with integrated ICC and other information that also might use a JPEG header
 9. add special tempdir for LZMA so for example tmpfs can be used for unpacking, reducing I/O load and disk wear.
+10. rework datastructures of ranking information (strings, function names, variables) so they are all the same
