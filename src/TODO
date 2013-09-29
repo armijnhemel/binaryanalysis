@@ -89,3 +89,4 @@ BOTTLENECKS:
 9. rework datastructures of ranking information (strings, function names, variables) so they are all the same
 10. rework ranking as an aggregate scan to be able to do database lookups in parallel for strings per file instead of per file.
 11. rework ELF graphs (allow edges to cross) as the images can get very very big for certain firmwares
+12. make simple prerun scan for ICO files, that does not require the 'magic' header (like in the unpack scans) and that can just filter out the most obvious cases
