@@ -375,9 +375,16 @@ def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, debug=False, e
 	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags:
 		return newtags
 	## now read the first 36 bytes
+	## The last 4 bytes of this header contains the size of the entire
+	## file according to struct DexHeader in:
+	##
+	## https://android.googlesource.com/platform/dalvik.git/+/master/libdex/DexFile.h
+	##
+	## u4  fileSize;           /* length of entire file */
 	androidfile = open(filename, 'rb')
 	androidbytes = androidfile.read(36)
 	androidfile.close()
+
 	if len(androidbytes) != 36:
 		return newtags
 	dexarray = array.array('I')
