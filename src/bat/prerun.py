@@ -479,6 +479,19 @@ def verifyMessageCatalog(filename, tempdir=None, tags=[], offsets={}, debug=Fals
 		newtags.append('resource')
 	return newtags
 
+## Extremely simple verifier for SQLite 3 files
+def verifySqlite3(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+	newtags = []
+	if not 'binary' in tags:
+		return newtags
+	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags:
+		return newtags
+	if not offsets.has_key('sqlite3'):
+		return newtags
+	if not 0 in offsets['sqlite3']:
+		return newtags
+	return newtags
+
 ## Extremely simple verifier for Ogg files.
 ## This will not tag all Ogg files, but it will be good enough
 ## for the common cases
