@@ -156,6 +156,15 @@ magic       = pe
 description = Check if file is a valid PE executable
 enabled     = no
 
+[verifysqlite3]
+type        = prerun
+module      = bat.prerun
+method      = verifySqlite3
+priority    = 2
+magic       = sqlite3
+description = Check if file contains just ASCII text
+enabled     = yes
+
 [verifytext]
 type        = prerun
 module      = bat.prerun
