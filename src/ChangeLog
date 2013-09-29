@@ -1,3 +1,6 @@
+2013-09-29
+* fix permission issue for directories in tar unpacking
+
 2013-09-27
 * rework internal format for storing results. Especially if different versions
 vary very little (like versions of stable Linux kernel) quite a bit of space

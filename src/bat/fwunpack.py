@@ -504,8 +504,11 @@ def unpackTar(filename, offset, tempdir=None):
 		for i in tarmembers:
 			if not i.isdev():
 				tar.extract(i, path=tmpdir)
+			if i.isdir():
+				os.chmod(os.path.join(tmpdir,i.name), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 		tar.close()
 	except Exception, e:
+		## not a tar file, so clean up
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		if tempdir == None:
