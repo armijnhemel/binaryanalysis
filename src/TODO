@@ -87,3 +87,4 @@ BOTTLENECKS:
 9. add special tempdir for LZMA so for example tmpfs can be used for unpacking, reducing I/O load and disk wear.
 10. rework datastructures of ranking information (strings, function names, variables) so they are all the same
 11. rework ranking as an aggregate scan to be able to do database lookups in parallel for strings per file instead of per file.
+12. rework ELF graphs (allow edges to cross) as the images can get very very big for certain firmwares
