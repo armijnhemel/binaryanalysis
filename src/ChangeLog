@@ -1,5 +1,6 @@
 2013-09-29
 * fix permission issue for directories in tar unpacking
+* recognise and tag sqlite3 databases
 
 2013-09-27
 * rework internal format for storing results. Especially if different versions

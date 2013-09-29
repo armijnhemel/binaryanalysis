@@ -16,7 +16,6 @@ compression/executables:
 * better support for ZIP file comments http://www.pkware.com/documents/casestudies/APPNOTE.TXT
 * use python-pefile for PE analysis
 * NBG5615 uImage
-* add extra base64 length checks to remove false positives
 
 dynamic ELF scanning
 * take RPATH into account
