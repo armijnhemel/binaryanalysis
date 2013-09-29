@@ -87,6 +87,7 @@ fsmagic = {
             'odex':		'dey\n',
             'otf':		'OTTO',
             'mp4':		'ftyp',
+            'sqlite3':		'SQLite format 3\x00',
           }
 
 ## some offsets can be found after a certain number of bytes, but

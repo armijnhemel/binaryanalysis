@@ -479,7 +479,8 @@ def verifyMessageCatalog(filename, tempdir=None, tags=[], offsets={}, debug=Fals
 		newtags.append('resource')
 	return newtags
 
-## Extremely simple verifier for SQLite 3 files
+## Simple verifier for SQLite 3 files
+## See http://sqlite.org/fileformat.html
 def verifySqlite3(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
 	newtags = []
 	if not 'binary' in tags:
@@ -490,6 +491,28 @@ def verifySqlite3(filename, tempdir=None, tags=[], offsets={}, debug=False, envv
 		return newtags
 	if not 0 in offsets['sqlite3']:
 		return newtags
+	## check first if the file size is even
+	filesize = os.stat(filename).st_size
+	## header is already 100 bytes
+	if filesize < 100:
+		return newtags
+	if filesize%2 != 0:
+		return newtags
+
+	## get and check the page size, verify if the sizes are correct
+	sqlitefile = open(filename, 'rb')
+	sqlitefile.seek(16)
+	sqlitebytes = sqlitefile.read(2)
+	sqlitefile.seek(28)
+	pagebytes = sqlitefile.read(4)
+	sqlitefile.close()
+	pagesize = struct.unpack('>H', sqlitebytes)[0]
+	if filesize%pagesize != 0:
+		return newtags
+	amountofpages = struct.unpack('>I', pagebytes)[0]
+	if filesize/pagesize != amountofpages:
+		return newtags
+	newtags.append('sqlite3')
 	return newtags
 
 ## Extremely simple verifier for Ogg files.
