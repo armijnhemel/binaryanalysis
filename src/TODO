@@ -29,6 +29,8 @@ GUI:
 * rewrite to PyQt or PySide to take advantage of better rendering engine (webkit)
 * add reports to GUI for distribution checks
 * move detailed function name reports from overview to function name report
+* rework reporting of duplicate files
+* guireports.py: report all names for a certain checksum (for example if there are copies of a file under a different name)
 
 error handling:
 * better handle errors to give users a better indication if something went wrong
