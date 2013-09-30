@@ -2612,6 +2612,14 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, debug=Fal
 	if not os.path.exists(lzma_tmpdir):
 		lzma_tmpdir = None
 
+	## TODO: make sure this check is only done once through a setup scan
+	try:
+		tmpfile = tempfile.mkstemp(dir=lzma_tmpdir)
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+	except OSError, e:
+		lzma_tmpdir=None
+
 	for offset in lzmaoffsets:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
