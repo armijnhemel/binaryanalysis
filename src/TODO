@@ -85,8 +85,7 @@ BOTTLENECKS:
 5. generate pie charts before determining version information to prevent huge pickles being read into memory. Do the same for unmatched results (HTML report).
 6. verify and tag Android resources.arsc
 7. better JPEG tagging to deal with integrated ICC and other information that also might use a JPEG header
-8. add special tempdir for LZMA so for example tmpfs can be used for unpacking, reducing I/O load and disk wear.
-9. rework datastructures of ranking information (strings, function names, variables) so they are all the same
-10. rework ranking as an aggregate scan to be able to do database lookups in parallel for strings per file instead of per file.
-11. rework ELF graphs (allow edges to cross) as the images can get very very big for certain firmwares
-12. make simple prerun scan for ICO files, that does not require the 'magic' header (like in the unpack scans) and that can just filter out the most obvious cases
+8. rework datastructures of ranking information (strings, function names, variables) so they are all the same
+9. rework ranking as an aggregate scan to be able to do database lookups in parallel for strings per file instead of per file.
+10. rework ELF graphs (allow edges to cross) as the images can get very very big for certain firmwares
+11. make simple prerun scan for ICO files, that does not require the 'magic' header (like in the unpack scans) and that can just filter out the most obvious cases
