@@ -5,6 +5,21 @@
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 import os, os.path, sys, subprocess, copy, cPickle, tempfile, hashlib, shutil, multiprocessing, piecharts
+import reportlab.rl_config as rl_config
+
+## Ugly hack to register the right font with the system, because ReportLab really wants to find
+## Times-Roman it seems. TODO: clean this up to make it more portable.
+rl_config.T1SearchPath = ["/usr/share/fonts/liberation/"]
+
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
+pdfmetrics.registerFont(TTFont('Times-Roman', os.path.join('/usr/share/fonts/liberation','LiberationSerif-Regular.ttf')))
+
+from reportlab.graphics.shapes import Drawing
+from reportlab.graphics.charts.barcharts import VerticalBarChart
+from reportlab.lib import colors
+from reportlab.graphics import renderPM
 
 '''
 This plugin is used to generate pictures. It is run as an aggregate scan for
@@ -34,13 +49,54 @@ def generatepiecharts((picklefile, pickledir, filehash, imagedir)):
 	piecharts.generateImages(picklefile, pickledir, filehash, imagedir, "piechart")
 
 def generateversionchart((versionpickle, picklehash, imagedir, pickledir)):
-	p = subprocess.Popen(['bat-generate-chart.py', '-i', os.path.join(pickledir, versionpickle), '-o', '%s/%s.png' % (imagedir, picklehash), '-t', 'Versions'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		print >>sys.stderr, stanerr
-		return None
+	datapickle = open(os.path.join(pickledir, versionpickle), 'rb')
+	data = cPickle.load(datapickle)
+	datapickle.close()
+
+	## calculate the possible widths and heights of chart, bars, labels and so on
+	maxversionstring = max(map(lambda x: x[0], data))
+
+	barwidth = 15
+	chartwidth = len(data) * barwidth + 10 * len(data)
+
+	## TODO: calculate a possible good value for startx so labels are not cut off
+	startx = 30
+	starty = len(maxversionstring) * 10 + 10
+
+	drawheight = 225 + starty
+	drawwidth = chartwidth + startx + 10
+
+	maxvalue = max(map(lambda x: x[1], data))
+
+	## create the drawing
+	drawing = Drawing(drawwidth, drawheight)
+	bc = VerticalBarChart()
+	bc.x = startx
+	bc.y = starty
+	bc.height = 200
+	bc.width = chartwidth
+	bc.data = [tuple(map(lambda x: x[1], data))]
+	bc.strokeColor = colors.white
+	bc.valueAxis.valueMin = 0
+	bc.valueAxis.labels.fontSize = 16
+	bc.valueAxis.valueMax = maxvalue
+	if maxvalue > 10:
+		bc.valueAxis.valueStep = 10
 	else:
-		return '%s.png' % (picklehash, )
+		bc.valueAxis.valueStep = 1
+	bc.categoryAxis.labels.boxAnchor = 'w'
+	bc.categoryAxis.labels.dx = 0
+	bc.categoryAxis.labels.dy = -2
+	bc.categoryAxis.labels.angle = -90
+	bc.categoryAxis.labels.fontSize = 16
+	bc.categoryAxis.categoryNames = map(lambda x: x[0], data)
+	bc.barWidth = barwidth
+
+	drawing.add(bc)
+	outname = os.path.join(imagedir, picklehash)
+
+	renderPM.drawToFile(drawing, outname, fmt='PNG')
+	return picklehash
 
 def extractpickles((filehash, pickledir, topleveldir, unpacktempdir)):
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
