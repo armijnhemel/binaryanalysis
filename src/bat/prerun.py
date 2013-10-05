@@ -186,10 +186,10 @@ def verifyJPEG(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars
 	newtags = []
 	if not offsets.has_key('jpeg') or not offsets.has_key('jpegtrailer'):
 		return newtags
-	if len(offsets['jpeg']) != 1:
-		## multiple JPEG headers could mean thumbnails, or ICC profiles.
-		return newtags
 	if not 0 in offsets['jpeg']:
+		return newtags
+	filesize = os.stat(filename).st_size
+	if offsets['jpegtrailer'][-1] != filesize -2:
 		return newtags
 	p = subprocess.Popen(['jpegtopnm', '-multiple', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
