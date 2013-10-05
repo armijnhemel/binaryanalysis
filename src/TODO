@@ -76,6 +76,7 @@ misc:
 * replace hardcoded options in reporting with values of 'storetarget'
 * add fonttools dep to Debian/Ubuntu dependencies
 * add documentation about rationale of current ordering of scans (especially unpacking scans), plus of default 'noscan' values
+* rename "programscans"/"leafscans" and settle on using one term
 
 BOTTLENECKS:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
@@ -88,4 +89,5 @@ BOTTLENECKS:
 8. rework ranking as an aggregate scan to be able to do database lookups in parallel for strings per file instead of per file.
 9. rework ELF graphs (allow edges to cross) as the images can get very very big for certain firmwares
 10. make simple prerun scan for ICO files, that does not require the 'magic' header (like in the unpack scans) and that can just filter out the most obvious cases
-11. Verify/check unpacktempdir for verifyOTF
+11. Verify/check unpacktempdir for leaf scans
+12. add tempdir for ODEX unpacking similar on ramdisk like for LZMA
