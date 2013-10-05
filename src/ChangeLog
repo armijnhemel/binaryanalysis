@@ -1,5 +1,6 @@
 2013-10-05
 * replace pychart with reportlab for generating version charts.
+* better JPEG tagger
 
 2013-09-30
 * introduce LZMA_TMPDIR that can be set to for example a ramdisk to speed up
