@@ -334,7 +334,10 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 						## cleanup the tempfile
 						os.unlink(tmpfile[1])
 					return None
-				lines = stanout.split("\n")
+				if stanout == '':
+					lines = []
+				else:
+					lines = stanout.split("\n")
 		elif language == 'Java':
 			## TODO: check here if there are caches already or not. If there are none it makes
 			## no sense to continue.
@@ -939,6 +942,8 @@ def extractDynamic(scanfile, scanenv, clones, olddb=False):
 
 ## Look up strings in the database
 def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, language='C'):
+	if len(lines) == 0:
+		return None
 	lenStringsFound = 0
 	uniqueMatches = {}
 	uniqueScore = {}
