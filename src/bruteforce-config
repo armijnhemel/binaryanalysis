@@ -95,6 +95,14 @@ priority    = 1
 description = Check if complete file is a valid gzip file
 enabled     = yes
 
+[verifyico]
+type        = prerun
+module      = bat.prerun
+method      = verifyIco
+priority    = 1
+description = Check if complete file is a valid Windows ICO file
+enabled     = yes
+
 [verifyjar]
 type        = prerun
 module      = bat.prerun
@@ -761,7 +769,7 @@ ppmodule    = bat.ranking
 ppoutput    = xmlprettyprint
 envvars     = BAT_STRINGSCACHE_C=/gpl/master/stringscache_c:BAT_STRINGSCACHE_JAVA=/gpl/master/stringscache_java:BAT_DB=/gpl/master/master.sqlite3:BAT_NAMECACHE_C=/gpl/master/functioncache_c:BAT_NAMECACHE_JAVA=/gpl/master/functioncache_java:BAT_RANKING_FULLCACHE=1:BAT_CLONE_DB=/tmp/clonedb
 #envvars     = BAT_STRINGSCACHE_C=/gpl/master/stringscache_c:BAT_STRINGSCACHE_JAVA=/gpl/master/stringscache_java:BAT_DB=/gpl/master/master.sqlite3:BAT_NAMECACHE_B=/gpl/master/functioncache_c:BAT_NAMECACHE_JAVA=/gpl/master/functioncache_java:BAT_RANKING_LICENSE=1:BAT_RANKING_VERSION=1:BAT_CLONE_DB=/tmp/clonedb:BAT_LICENSE_DB=/gpl/master/licenses.sqlite3
-noscan      = text:xml:graphics:pdf:compressed:resource:audio:video:mp4:vimswap:timezone
+noscan      = text:xml:graphics:pdf:compressed:resource:audio:video:mp4:vimswap:timezone:ico
 description = Classify packages using advanced ranking mechanism
 enabled     = no
 parallel    = no
