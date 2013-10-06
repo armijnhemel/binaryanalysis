@@ -41,11 +41,11 @@ def gethash(path):
 ## helper function to condense version numbers and squash numbers.
 def squash_versions(versions):
 	if len(versions) <= 3:
-		versionline = reduce(lambda x, y: x + ", " + y, versions)
+		versionline = reduce(lambda x, y: "%s, %s" % (x,y), versions)
 		return versionline
 	# check if we have versions without '.'
 	if len(filter(lambda x: '.' not in x, versions)) != 0:
-		versionline = reduce(lambda x, y: x + ", " + y, versions)
+		versionline = reduce(lambda x, y: "%s, %s" % (x,y), versions)
 		return versionline
 	versionparts = []
 	# get the major version number first
@@ -57,10 +57,10 @@ def squash_versions(versions):
 		if len(filterversions) == 1:
 			versionparts.append(reduce(lambda x, y: x + ", " + y, filterversions))
 			continue
-		minversionsplits = min(list(set(map(lambda x: len(x.split('.')), filterversions)))) - 1
+		minversionsplits = min(set(map(lambda x: len(x.split('.')), filterversions))) - 1
 		## split with a maximum of minversionsplits splits
 		splits = map(lambda x: x.split('.', minversionsplits), filterversions)
-		for c in range(0, minversionsplits):
+		for c in xrange(0, minversionsplits):
 			if len(set(map(lambda x: x[c], splits))) == 1:
 				maxconsolidationlevel = maxconsolidationlevel + 1
 			else: break
@@ -88,7 +88,6 @@ def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
 		## This is really hairy
 		if len(results) > 0:
 			uniquehtmlfile.write("<h5>%s</h5><p><table><tr><td><b>Filename</b></td><td><b>Version(s)</b></td><td><b>Line number</b></td><td><b>SHA256</b></td></tr>" % cgi.escape(programstring))
-			uniqtablerows = []
 			sh = {}
 			for s in results:
 				(checksum, linenumber, versionsourcefiles) = s
@@ -107,19 +106,19 @@ def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
 								break
 						if pv == "%s-%s" % (packagename, version) or pv == "%s_%s" % (packagename, version):
 							if sh.has_key(checksum):
-								sh[checksum].append((fp, version, linenumber))
+								sh[checksum].add((fp, version, linenumber))
 							else:
-								sh[checksum] = [(fp, version, linenumber)]
+								sh[checksum] = set([(fp, version, linenumber)])
 						else:
 							if sh.has_key(checksum):
-								sh[checksum].append((sourcefile, version, linenumber))
+								sh[checksum].add((sourcefile, version, linenumber))
 							else:
-								sh[checksum] = [(sourcefile, version, linenumber)]
+								sh[checksum] = set([(sourcefile, version, linenumber)])
 					else:
 						if sh.has_key(checksum):
-							sh[checksum].append((sourcefile, version, linenumber))
+							sh[checksum].add((sourcefile, version, linenumber))
 						else:
-							sh[checksum] = [(sourcefile, version, linenumber)]
+							sh[checksum] = set([(sourcefile, version, linenumber)])
 
 			for checksum in sh:
 				## per checksum we have a list of (filename, version)
@@ -129,15 +128,16 @@ def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
 					lines = sorted(set(map(lambda x: (x[2]), sh[checksum])))
 					versions = sorted(set(map(lambda x: (x[1]), sh[checksum])))
 					versionline = squash_versions(versions)
-					numlines = reduce(lambda x, y: x + ", " + y, map(lambda x: "<a href=\"unique:/%s#%d\">%d</a>" % (checksum, x, x), lines))
-					uniquehtmlfile.write("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (sh[checksum][0][0], versionline, numlines, checksum))
+					ch = sh[checksum].pop()
+					numlines = reduce(lambda x, y: "%s, %s" % (x,y), map(lambda x: "<a href=\"unique:/%s#%d\">%d</a>" % (checksum, x, x), lines))
+					uniquehtmlfile.write("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (ch[0], versionline, numlines, checksum))
 				else:   
 					for d in set(map(lambda x: x[0], sh[checksum])):
 						filterd = filter(lambda x: x[0] == d, sh[checksum])
 						lines = sorted(set(map(lambda x: (x[2]), filterd)))
 						versions = sorted(set(map(lambda x: (x[1]), filterd)))
 						versionline = squash_versions(versions)
-						numlines = reduce(lambda x, y: x + ", " + y, map(lambda x: "<a href=\"unique:/%s#%d\">%d</a>" % (checksum, x, x), lines))
+						numlines = reduce(lambda x, y: "%s, %s" % (x,y), map(lambda x: "<a href=\"unique:/%s#%d\">%d</a>" % (checksum, x, x), lines))
 						uniquehtmlfile.write("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (d, versionline, numlines, checksum))
 			uniquehtmlfile.write("</table></p>\n")
 		else:
@@ -202,9 +202,8 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 						html += "%s<br>\n" % v
 					html += "</p>\n"
 		if html != "":
-			html = "<html><body>%s</body></html>" % html
 			nameshtmlfile = gzip.open("%s/%s-functionnames.html.gz" % (reportdir, filehash), 'wb')
-			nameshtmlfile.write(html)
+			nameshtmlfile.write("<html><body>%s</body></html>" % html)
 			nameshtmlfile.close()
 
 	if variablepvs != {}:
@@ -349,9 +348,11 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 		footer = "</body></html>"
 		if html != "":
 			if totalvars != 0:
-				html = header + "<p>Total matched variables: %d</p>" % (totalvars,) + html + footer
 				nameshtmlfile = gzip.open("%s/%s-names.html.gz" % (reportdir, filehash), 'wb')
+				nameshtmlfile.write(header)
+				nameshtmlfile.write("<p>Total matched variables: %d</p>" % (totalvars,))
 				nameshtmlfile.write(html)
+				nameshtmlfile.write(footer)
 				nameshtmlfile.close()
 
 	if res != None:
@@ -361,7 +362,7 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 
 			tmppickle = tempfile.mkstemp(dir=unpacktempdir)
 
-			cPickle.dump(unmatches, os.fdopen(tmppickle[0], 'w'))
+			cPickle.dump(unmatches, os.fdopen(tmppickle[0], 'wb'))
 			picklehash = gethash(tmppickle[1])
 			unmatchedresult = (picklehash, tmppickle[1])
 
@@ -371,7 +372,7 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 				if len(uniquematches) == 0:
 					continue
 				tmppickle = tempfile.mkstemp(dir=unpacktempdir)
-				cPickle.dump((packagename, uniquematches), os.fdopen(tmppickle[0], 'w'))
+				cPickle.dump((packagename, uniquematches), os.fdopen(tmppickle[0], 'wb'))
 				picklehash = gethash(tmppickle[1])
 				reportresults.append((rank, picklehash, tmppickle[1], len(uniquematches), packagename))
 	return (filehash, reportresults, functionresults, unmatchedresult)
@@ -383,8 +384,8 @@ def generateunmatched((picklefile, pickledir, filehash, reportdir)):
         unmatched_pickle.close()
 
 	unmatchedhtml = "<html><body><h1>Unmatched strings (%d strings)</h1><p><ul>" % (len(unmatches),)
-	for i in unmatches:
-		unmatchedhtml = unmatchedhtml + "%s<br>\n" % cgi.escape(i)
+	unmatchedsnippets = map(lambda x: "%s<br>\n" % cgi.escape(x), unmatches)
+	unmatchedhtml = unmatchedhtml + "".join(unmatchedsnippets)
 	unmatchedhtml = unmatchedhtml + "</body></html>"
 	unmatchedhtmlfile = gzip.open("%s/%s-unmatched.html.gz" % (reportdir, filehash), 'wb')
 	unmatchedhtmlfile.write(unmatchedhtml)
@@ -432,7 +433,7 @@ def generatereports(unpackreports, scantempdir, topleveldir, processors, debug=F
 			return
 
 	rankingfiles = []
-	filehashes = []
+	filehashes = set()
 
 	## filter out the files which don't have ranking results
 	for i in unpackreports:
@@ -447,21 +448,18 @@ def generatereports(unpackreports, scantempdir, topleveldir, processors, debug=F
 			continue
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue
-		filehashes.append(filehash)
+		filehashes.add(filehash)
 
-	pickles = []
-	processed = []
-	unmatchedpicklespackages = []
-	picklespackages = []
+	unmatchedpicklespackages = set()
+	picklespackages = set()
 	picklehashes = {}
-	pickletofile = {}
-	unmatchedpickles = []
-	reportpickles = []
+	unmatchedpickles = set()
+	reportpickles = set()
 
 	## extract pickles and generate some files
 	extracttasks = map(lambda x: (x, pickledir, topleveldir, reportdir, unpacktempdir), filehashes)
 	pool = multiprocessing.Pool(processes=processors)
-	res = filter(lambda x: x != None, pool.map(extractpickles, extracttasks))
+	res = filter(lambda x: x != None, pool.map(extractpickles, extracttasks, 1))
 	pool.terminate()
 
 	## {filehash: [(picklehash, uniquematcheslen, packagename)]
@@ -471,26 +469,16 @@ def generatereports(unpackreports, scantempdir, topleveldir, processors, debug=F
 	counter = 0
 	for r in res:
 		(filehash, resultreports, functionresults, unmatchedresult) = r
-		if r == None:
-			continue
 		if unmatchedresult != None:
 			(picklehash, tmppickle) = unmatchedresult
 			if picklehash in unmatchedpickles:
-				if pickletofile.has_key(picklehash):
-					pickletofile[picklehash].append(filehash)
-				else:
-					pickletofile[picklehash] = [filehash]
-				unmatchedpicklespackages.append((picklehash, filehash))
+				unmatchedpicklespackages.add((picklehash, filehash))
 				os.unlink(tmppickle)
 			else:
 				shutil.move(tmppickle, pickledir)
-				unmatchedpickles.append(picklehash)
-				unmatchedpicklespackages.append((picklehash, filehash))
+				unmatchedpickles.add(picklehash)
+				unmatchedpicklespackages.add((picklehash, filehash))
 				picklehashes[picklehash] = os.path.basename(tmppickle)
-				if pickletofile.has_key(picklehash):
-					pickletofile[picklehash].append(filehash)
-				else:
-					pickletofile[picklehash] = [filehash]
 		if resultreports != []:
 			counter += 1
 			for report in resultreports:
@@ -500,27 +488,19 @@ def generatereports(unpackreports, scantempdir, topleveldir, processors, debug=F
 				else:
 					resultranks[filehash] = [(picklehash, uniquematcheslen, packagename)]
 				if picklehash in reportpickles:
-					if pickletofile.has_key(picklehash):
-						pickletofile[picklehash].append(filehash)
-					else:
-						pickletofile[picklehash] = [filehash]
-					picklespackages.append((picklehash, filehash))
+					picklespackages.add((picklehash, filehash))
 					os.unlink(tmppickle)
 				else:
 					shutil.move(tmppickle, pickledir)
-					reportpickles.append(picklehash)
-					picklespackages.append((picklehash, filehash))
+					reportpickles.add(picklehash)
+					picklespackages.add((picklehash, filehash))
 					picklehashes[picklehash] = os.path.basename(tmppickle)
-					if pickletofile.has_key(picklehash):
-						pickletofile[picklehash].append(filehash)
-					else:
-						pickletofile[picklehash] = [filehash]
 
 	pool = multiprocessing.Pool(processes=processors)
 
 	## generate files for unmatched strings
-	if unmatchedpickles != []:
-		unmatchedtasks = list(set(map(lambda x: (picklehashes[x[0]], pickledir, x[0], reportdir), unmatchedpicklespackages)))
+	if unmatchedpickles != set():
+		unmatchedtasks = set(map(lambda x: (picklehashes[x[0]], pickledir, x[0], reportdir), unmatchedpicklespackages))
 		results = pool.map(generateunmatched, unmatchedtasks, 1)
 		for p in unmatchedpicklespackages:
 			oldfilename = "%s-%s" % (p[0], "unmatched.html.gz")
@@ -534,29 +514,29 @@ def generatereports(unpackreports, scantempdir, topleveldir, processors, debug=F
 			except Exception, e:
 				#print >>sys.stderr, "ERR", e
 				pass
-	if reportpickles != []:
-		reporttasks = list(set(map(lambda x: (picklehashes[x[0]], pickledir, x[0], reportdir), picklespackages)))
+	if reportpickles != set():
+		reporttasks = set(map(lambda x: (picklehashes[x[0]], pickledir, x[0], reportdir), picklespackages))
 		pool.map(generatehtmlsnippet, reporttasks, 1)
-		## now recombine the results into HTML files
-		pickleremoves = []
+		## now recombine the results and write to a HTML file
+		pickleremoves = set()
 		for filehash in resultranks.keys():
-			uniquehtml = "<html><body><h1>Unique matches per package</h1><p><ul>"
-			headers = ""
-			filehtml = ""
+			uniquehtmlfile = gzip.open("%s/%s-unique.html.gz" % (reportdir, filehash), 'wb')
+			uniquehtmlfile.write("<html><body><h1>Unique matches per package</h1><p><ul>")
 			for r in resultranks[filehash]:
 				(picklehash, uniquematcheslen, packagename) = r
-				headers = headers + "<li><a href=\"#%s\">%s (%d)</a></li>" % (packagename, packagename, uniquematcheslen)
+				uniquehtmlfile.write("<li><a href=\"#%s\">%s (%d)</a></li>" % (packagename, packagename, uniquematcheslen))
+			uniquehtmlfile.write("</ul></p>")
+			for r in resultranks[filehash]:
+				(picklehash, uniquematcheslen, packagename) = r
 				picklehtmlfile = open(os.path.join(reportdir, "%s-unique.snippet" % picklehash))
 				picklehtml = picklehtmlfile.read()
 				picklehtmlfile.close()
-				filehtml = filehtml + picklehtml
-				pickleremoves.append(picklehash)
+				uniquehtmlfile.write(picklehtml)
+				pickleremoves.add(picklehash)
 				
-			uniquehtml = uniquehtml + headers + "</ul></p>" + filehtml + "</body></html>"
-			uniquehtmlfile = gzip.open("%s/%s-unique.html.gz" % (reportdir, filehash), 'wb')
-			uniquehtmlfile.write(uniquehtml)
+			uniquehtmlfile.write("</body></html>")
 			uniquehtmlfile.close()
-		for i in set(pickleremoves):
+		for i in pickleremoves:
 			try:
 				os.unlink(os.path.join(reportdir, "%s-unique.snippet" % i))
 			except Exception, e:
