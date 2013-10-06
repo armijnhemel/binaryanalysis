@@ -629,6 +629,27 @@ def verifyOTF(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 	newtags.append('resource')
 	return newtags
 
+## very simplistic verifier for some Windows icon files
+def verifyIco(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+	newtags = []
+	if not filename.endswith('.ico'):
+		return newtags
+	if not 'binary' in tags:
+		return newtags
+	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags:
+		return newtags
+	## actually unpack the ico files
+	icodir = tempfile.mkdtemp(dir=unpacktempdir)
+	p = subprocess.Popen(['icotool', '-x', '-o', icodir, filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+
+	if p.returncode != 0 or "no images matched" in stanerr:
+		pass
+	else:
+		newtags.append('ico')
+	shutil.rmtree(icodir)
+	return newtags
+
 ## very simplistic verifier for some TrueType fonts
 def verifyTTF(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
 	newtags = []
