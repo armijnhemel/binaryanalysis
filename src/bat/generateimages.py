@@ -265,7 +265,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 	funcfilehashpackage = {}
 	verfilehashpackage = {}
 
-	filehashes = list(set(map(lambda x: unpackreports[x]['sha256'], rankingfiles)))
+	filehashes = set(map(lambda x: unpackreports[x]['sha256'], rankingfiles))
 
 	## extract pickles
 	extracttasks = map(lambda x: (x, pickledir, topleveldir, unpacktempdir), filehashes)
@@ -343,7 +343,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 	pool = multiprocessing.Pool(processes=processors)
 
 	if piepicklespackages != []:
-		pietasks = list(set(map(lambda x: (picklehashes[x[0]], pickledir, x[0], imagedir), piepicklespackages)))
+		pietasks = set(map(lambda x: (picklehashes[x[0]], pickledir, x[0], imagedir), piepicklespackages))
 		results = pool.map(generatepiecharts, pietasks, 1)
 		for p in piepicklespackages:
 			oldfilename = "%s-%s" % (p[0], "piechart.png")
