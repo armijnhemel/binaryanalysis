@@ -399,10 +399,10 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 				## "const-string" and other things as well.
 				## alternatively, use code from here http://code.google.com/p/smali/
 				javameta = {'classes': [], 'methods': [], 'fields': [], 'sourcefiles': []}
-				classnames = []
-				sourcefiles = []
-				methods = []
-				fields = []
+				classnames = set()
+				sourcefiles = set()
+				methods = set()
+				fields = set()
 				dex_tmpdir = None
 				if scanenv.has_key('DEX_TMPDIR'):
 					dex_tmpdir = scanenv['DEX_TMPDIR']
@@ -435,17 +435,17 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 										elif method.startswith('access$'):
 											pass
 										else:
-											methods.append(method)
+											methods.add(method)
 									## extract class files, including inner classes
 									elif d.startswith(".class") or d.startswith(".inner"):
 										classname = d.strip().split('/')[-1]
 										if "$" in classname:
 											classname = classname.split("$")[0]
-										classnames.append(classname)
+										classnames.add(classname)
 									## extract source code files
 									elif d.startswith(".source"):
 										sourcefile = d.strip().split(' ')[-1]
-										sourcefiles.append(sourcefile)
+										sourcefiles.add(sourcefile)
 									## extract fields
 									elif d.startswith(".field"):
 										field = d.strip().split(';')[0]
@@ -461,14 +461,14 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 											## often generated, so useless
 											if "serialVersionUID" in f:
 												break
-											fields.append(f)
+											fields.add(f)
 											break
 					except StopIteration:
 						pass
-				javameta['classes'] = list(set(classnames))
-				javameta['sourcefiles'] = list(set(sourcefiles))
-				javameta['methods'] = list(set(methods))
-				javameta['fields'] = list(set(fields))
+				javameta['classes'] = list(classnames)
+				javameta['sourcefiles'] = list(sourcefiles)
+				javameta['methods'] = list(methods)
+				javameta['fields'] = list(fields)
 
 				## cleanup
 				shutil.rmtree(dalvikdir)
