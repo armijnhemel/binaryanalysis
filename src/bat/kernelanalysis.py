@@ -23,7 +23,7 @@ def xmlprettyprint(res, root, envvars=None):
 		topnode.appendChild(tmpnode)
 	return topnode
 
-def kernelChecks(path, tags, blacklist=[], debug=False, envvars=None):
+def kernelChecks(path, tags, blacklist=[], debug=False, envvars=None, unpacktempdir=None):
 	results = {}
         try:
                 kernelbinary = open(path, 'rb')
@@ -130,7 +130,7 @@ def findRedBoot(lines):
 
 ## extract the kernel version from the module
 ## TODO: merge with module license extraction
-def analyseModuleVersion(path, tags, blacklist=[], debug=False, envvars=[]):
+def analyseModuleVersion(path, tags, blacklist=[], debug=False, envvars=[], unpacktempdir=None):
 	## TODO: refactor
 	if not "relocatable" in ms.file(path):
 		return None
@@ -151,7 +151,7 @@ def analyseModuleVersion(path, tags, blacklist=[], debug=False, envvars=[]):
 		return (['linuxkernel', 'modulekernelversion'], stanout.split()[0])
 
 ## analyse a kernel module. Requires that the modinfo program from module-init-tools has been installed
-def analyseModuleLicense(path, tags, blacklist=[], debug=False, envvars=[]):
+def analyseModuleLicense(path, tags, blacklist=[], debug=False, envvars=[], unpacktempdir=None):
 	if not "relocatable" in ms.file(path):
 		return None
 	p = subprocess.Popen(['/sbin/modinfo', "-F", "license", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)

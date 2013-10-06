@@ -380,7 +380,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans):
 				reportqueue.put({u: unpackreports[u]})
 		scanqueue.task_done()
 
-def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, debug)):
+def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, debug,unpacktempdir)):
 	reports = {}
 	newtags = []
 
@@ -407,7 +407,7 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, 
 		else:
 			envvars = None
 		exec "from %s import %s as bat_%s" % (module, method, method)
-		res = eval("bat_%s(filetoscan, tags, blacklist, debug=debug, envvars=envvars)" % (method))
+		res = eval("bat_%s(filetoscan, tags, blacklist, debug=debug, envvars=envvars,unpacktempdir=unpacktempdir)" % (method))
 		if res != None:
 			(nt, leafres) = res
 			reports[leafscan['name']] = leafres
@@ -911,6 +911,8 @@ def runscan(scans, scan_binary):
 	tagdict = {}
 	finalscans = []
 	if scans['programscans'] != []:
+		unpacktempdir = scans['batconfig']['tempdir']
+
 		if scans['batconfig']['multiprocessing']:
 			parallel = True
 		else:
@@ -973,7 +975,7 @@ def runscan(scans, scan_binary):
 			if debugphases != []:
 				if not 'program' in debugphases:
 					tmpdebug = False
-		leaftasks_tmp = map(lambda x: x[:2] + (filterScans(finalscans, x[2]),) + x[2:-1] + (topleveldir, tmpdebug), leaftasks_tmp)
+		leaftasks_tmp = map(lambda x: x[:2] + (filterScans(finalscans, x[2]),) + x[2:-1] + (topleveldir, tmpdebug, unpacktempdir), leaftasks_tmp)
 
 		if scans['batconfig']['multiprocessing']:
 			if False in map(lambda x: x['parallel'], finalscans):
