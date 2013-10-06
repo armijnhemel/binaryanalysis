@@ -1313,8 +1313,8 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 					continue
 				gain[p2] = gain.get(p2, 0) + stringsLeft[stri]['score']
 				if not stringsPerPkg.has_key(p2):
-					stringsPerPkg[p2] = []
-				stringsPerPkg[p2].append(stri)
+					stringsPerPkg[p2] = set()
+				stringsPerPkg[p2].add(stri)
 
 		for p2 in gain.keys():
 			## check if packages could ever contribute usefully.
