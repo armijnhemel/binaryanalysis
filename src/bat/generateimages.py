@@ -345,11 +345,13 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 	if piepicklespackages != []:
 		pietasks = set(map(lambda x: (picklehashes[x[0]], pickledir, x[0], imagedir), piepicklespackages))
 		results = pool.map(generatepiecharts, pietasks, 1)
+		## first copy the file for every package that needs it
 		for p in piepicklespackages:
 			oldfilename = "%s-%s" % (p[0], "piechart.png")
 			filename = "%s-%s" % (p[1], "piechart.png")
 			if os.path.exists(os.path.join(imagedir, oldfilename)):
 				shutil.copy(os.path.join(imagedir, oldfilename), os.path.join(imagedir, filename))
+		## then remove the temporary files
 		for p in piepicklespackages:
 			try:
 				filename = "%s-%s" % (p[0], "piechart.png")
@@ -363,7 +365,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 
 	generatetasks = map(lambda x: (picklehashes[x[0]], x[0], imagedir, pickledir), funcpicklespackages) + map(lambda x: (picklehashes[x[0]], x[0], imagedir, pickledir), versionpicklespackages)
 
-	results = pool.map(generateversionchart, list(set(generatetasks)), 1)
+	results = pool.map(generateversionchart, set(generatetasks), 1)
 	pool.terminate()
 
 	results = filter(lambda x: x != None, results)
