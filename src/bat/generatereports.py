@@ -432,7 +432,6 @@ def generatereports(unpackreports, scantempdir, topleveldir, processors, debug=F
 		except Exception, e:
 			return
 
-	rankingfiles = []
 	filehashes = set()
 
 	## filter out the files which don't have ranking results
