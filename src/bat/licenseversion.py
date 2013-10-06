@@ -134,7 +134,7 @@ def prune(scanenv, uniques, package):
 		if l in equivalents:
 			continue
 		linesperversion_l = set(linesperversion[l])
-		pruneremove = []
+		pruneremove = set()
 		for k in unique_sorted:
 			if uniqueversions[k] == uniqueversions[l]:
 				## Both versions have the same amount of identifiers, so
@@ -149,7 +149,7 @@ def prune(scanenv, uniques, package):
 				break
 			if set(linesperversion[k]).issubset(linesperversion_l):
 				pruneme.add(k)
-				pruneremove.append(k)
+				pruneremove.add(k)
 		## make the inner loop a bit shorter
 		for k in pruneremove:
 			unique_sorted.remove(k)
@@ -306,6 +306,17 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 	if determinelicense:
 		licensedb = scanenv.get('BAT_LICENSE_DB')
 
+	pruning = False
+	if scanenv.has_key('BAT_KEEP_VERSIONS'):
+		keepversions = int(scanenv.get('BAT_KEEP_VERSIONS', 0))
+		if keepversions > 0:
+			## there need to be a minimum of unique hits (like strings), otherwise
+			## it's silly
+			if scanenv.has_key('BAT_MINIMUM_UNIQUE'):
+				minimumunique = int(scanenv.get('BAT_MINIMUM_UNIQUE', 0))
+				if minimumunique > 0:
+					pruning = True
+
 	if processors == None:
 		processors = multiprocessing.cpu_count()
 	## keep a list of versions per sha256, since source files often are in more than one version
@@ -390,16 +401,9 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				newuniques.append((l, tmplines[l]))
 
 			## optionally prune version information
-			if scanenv.has_key('BAT_KEEP_VERSIONS'):
-				keepversions = int(scanenv.get('BAT_KEEP_VERSIONS', 0))
-				if keepversions > 0:
-					## there need to be a minimum of unique hits (like strings), otherwise
-					## it's silly
-					if scanenv.has_key('BAT_MINIMUM_UNIQUE'):
-						minimumunique = int(scanenv.get('BAT_MINIMUM_UNIQUE', 0))
-						if minimumunique > 0:
-							if len(newuniques) > minimumunique:
-								newuniques = prune(scanenv, newuniques, package)
+			if pruning:
+				if len(newuniques) > minimumunique:
+					newuniques = prune(scanenv, newuniques, package)
 
 			licensesha256s = []
 			for u in newuniques:
@@ -472,7 +476,6 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 			if not dynamicRes['uniquepackages'].has_key(package):
 				continue
 			changed = True
-			versions = []
 			functionnames = dynamicRes['uniquepackages'][package]
 			## right now only C is supported. TODO: fix this for other languages such as Java.
 			vtasks_tmp = []
@@ -541,16 +544,10 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 		for package in dynamicRes['versionresults'].keys():
 			newuniques = dynamicRes['versionresults'][package]
 			## optionally prune version information
-			if scanenv.has_key('BAT_KEEP_VERSIONS'):
-				keepversions = int(scanenv.get('BAT_KEEP_VERSIONS', 0))
-				if keepversions > 0:
-					## there need to be a minimum of unique hits (like strings), otherwise
-					## it's silly
-					if scanenv.has_key('BAT_MINIMUM_UNIQUE'):
-						minimumunique = int(scanenv.get('BAT_MINIMUM_UNIQUE', 0))
-						if minimumunique > 0:
-							if len(newuniques) > minimumunique:
-								newuniques = prune(scanenv, newuniques, package)
+			if pruning:
+				if len(newuniques) > minimumunique:
+					newuniques = prune(scanenv, newuniques, package)
+
 			newresults[package] = newuniques
 			uniqueversions = {}
 			dynamicRes['packages'][package] = []
