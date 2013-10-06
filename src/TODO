@@ -88,6 +88,5 @@ BOTTLENECKS:
 7. rework datastructures of ranking information (strings, function names, variables) so they are all the same
 8. rework ranking as an aggregate scan to be able to do database lookups in parallel for strings per file instead of per file.
 9. rework ELF graphs (allow edges to cross) as the images can get very very big for certain firmwares
-10. make simple prerun scan for ICO files, that does not require the 'magic' header (like in the unpack scans) and that can just filter out the most obvious cases
-11. Verify/check unpacktempdir for leaf scans
-12. add tempdir for ODEX unpacking similar on ramdisk like for LZMA
+10. rework ICO unpack scan to just work with ICO files that have been tagged with the verifier
+11. add ramdisk unpacking for compress and jffs2

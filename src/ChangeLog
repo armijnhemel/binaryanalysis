@@ -1,3 +1,10 @@
+2013-10-06
+* pass unpacktempdir to leaf scans
+* add supersimple Windows ICO verifier
+* fix blacklisting for PNG
+* add DEX_TMPDIR for writing temporary files for dedexer to ramdisk
+* various list -> set changes
+
 2013-10-05
 * replace pychart with reportlab for generating version charts.
 * better JPEG tagger
