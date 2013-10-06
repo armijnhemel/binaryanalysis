@@ -400,16 +400,9 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 				sourcefiles = []
 				methods = []
 				fields = []
+				dex_tmpdir = None
 				if scanenv.has_key('DEX_TMPDIR'):
 					dex_tmpdir = scanenv['DEX_TMPDIR']
-					if not os.path.exists(dex_tmpdir):
-						## TODO: make sure this check is only done once through a setup scan
-						try:
-							tmpfile = tempfile.mkstemp(dir=dex_tmpdir)
-							os.fdopen(tmpfile[0]).close()
-							os.unlink(tmpfile[1])
-						except OSError, e:
-							dex_tmpdir = None
 				if dex_tmpdir != None:
 					dalvikdir = tempfile.mkdtemp(dir=dex_tmpdir)
 				else:
@@ -1588,6 +1581,19 @@ def rankingsetup(envvars, debug=False):
 		rankingfull = True
 	if not rankingfull:
 		return (False, None)
+
+	if scanenv.has_key('DEX_TMPDIR'):
+		dex_tmpdir = scanenv['DEX_TMPDIR']
+		if os.path.exists(dex_tmpdir):
+			## TODO: make sure this check is only done once through a setup scan
+			try:
+				tmpfile = tempfile.mkstemp(dir=dex_tmpdir)
+				os.fdopen(tmpfile[0]).close()
+				os.unlink(tmpfile[1])
+			except OSError, e:
+				del newenv['DEX_TMPDIR']
+		else:
+			del newenv['DEX_TMPDIR']
 
 	for language in stringsdbperlanguage.keys():
 		if scanenv.has_key(stringsdbperlanguage[language]):
