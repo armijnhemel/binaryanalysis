@@ -717,7 +717,7 @@ def extractkernelsymbols(scanfile, scanenv, unpacktempdir):
 		os.unlink(elftmp[1])
 		return {}
 
-	variables = []
+	variables = set()
         #p = subprocess.Popen(['strings', '-n', str(stringcutoff), elftmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         p = subprocess.Popen(['strings', elftmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         (stanout, stanerr) = p.communicate()
@@ -725,7 +725,7 @@ def extractkernelsymbols(scanfile, scanenv, unpacktempdir):
 	for s in st:
 		printstring = s
 		if len(printstring) > 0:
-			variables.append(printstring)
+			variables.add(printstring)
 	os.unlink(elftmp[1])
 	return variables
 
