@@ -208,9 +208,8 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		c.close() 
 		conn.close()
 
-	pool = multiprocessing.Pool(processes=processors)
 	## ignore files which don't have ranking results
-	rankingfiles = []
+	rankingfiles = set()
 	filehashseen = set()
 	for i in unpackreports:
 		if not unpackreports[i].has_key('sha256'):
@@ -225,6 +224,10 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		filehashseen.add(filehash)
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue
+		rankingfiles.add(i)
+
+	pool = multiprocessing.Pool(processes=processors)
+	for i in rankingfiles:
 		compute_version(pool, processors, scanenv, unpackreports[i], topleveldir, determinelicense, determinecopyright)
 	pool.terminate()
 
