@@ -256,7 +256,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 		rankingfiles.append(i)
 
 	pickles = set()
-	piepickles = []
+	piepickles = set()
 	piepicklespackages = set()
 	funcpicklespackages = []
 	versionpicklespackages = []
@@ -286,7 +286,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 				os.unlink(tmppickle)
 			else:
 				shutil.move(tmppickle, pickledir)
-				piepickles.append(picklehash)
+				piepickles.add(picklehash)
 				piepicklespackages.add((picklehash, filehash))
 				picklehashes[picklehash] = os.path.basename(tmppickle)
 				if pickletofile.has_key(picklehash):
