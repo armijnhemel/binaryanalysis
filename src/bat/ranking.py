@@ -400,7 +400,20 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 				sourcefiles = []
 				methods = []
 				fields = []
-				dalvikdir = tempfile.mkdtemp(dir=unpacktempdir)
+				if scanenv.has_key('DEX_TMPDIR'):
+					dex_tmpdir = scanenv['DEX_TMPDIR']
+					if not os.path.exists(dex_tmpdir):
+						## TODO: make sure this check is only done once through a setup scan
+						try:
+							tmpfile = tempfile.mkstemp(dir=dex_tmpdir)
+							os.fdopen(tmpfile[0]).close()
+							os.unlink(tmpfile[1])
+						except OSError, e:
+							dex_tmpdir = None
+				if dex_tmpdir != None:
+					dalvikdir = tempfile.mkdtemp(dir=dex_tmpdir)
+				else:
+					dalvikdir = tempfile.mkdtemp(dir=unpacktempdir)
 				p = subprocess.Popen(['java', '-jar', '/usr/share/java/bat-ddx.jar', '-d', dalvikdir, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				if p.returncode == 0:
