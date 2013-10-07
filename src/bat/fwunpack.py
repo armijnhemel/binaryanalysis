@@ -2053,6 +2053,27 @@ def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, debug
 	if offsets['compress'] == []:
 		return ([], blacklist, [], hints)
 
+	scanenv = os.environ.copy()
+
+	if envvars != None:
+		for en in envvars.split(':'):
+			try:
+				(envname, envvalue) = en.split('=')
+				scanenv[envname] = envvalue
+			except Exception, e:
+				pass
+
+	compress_tmpdir = scanenv.get('COMPRESS_TMPDIR', None)
+	if not os.path.exists(compress_tmpdir):
+		compress_tmpdir = None
+
+	## TODO: make sure this check is only done once through a setup scan
+	try:
+		tmpfile = tempfile.mkstemp(dir=compress_tmpdir)
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+	except OSError, e:
+		compress_tmpdir=None
 	counter = 1
 	diroffsets = []
 	for offset in offsets['compress']:
@@ -2060,7 +2081,7 @@ def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, debug
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "compress", counter)
-		res = unpackCompress(filename, offset, tmpdir)
+		res = unpackCompress(filename, offset, tmpdir, compress_tmpdir)
 		if res != None:
 			diroffsets.append((res, offset, 0))
 			counter = counter + 1
@@ -2069,25 +2090,37 @@ def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, debug
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [], hints)
 
-def unpackCompress(filename, offset, tempdir=None):
+def unpackCompress(filename, offset, tempdir=None, compress_tmpdir=None):
 	tmpdir = unpacksetup(tempdir)
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.fdopen(tmpfile[0]).close()
 
-	unpackFile(filename, offset, tmpfile[1], tmpdir)
+	## if COMPRESS_TMPDIR is set to for example a ramdisk use that instead.
+	if compress_tmpdir != None:
+		tmpfile = tempfile.mkstemp(dir=compress_tmpdir)
+		os.fdopen(tmpfile[0]).close()
+		outtmpfile = tempfile.mkstemp(dir=compress_tmpdir)
+		unpackFile(filename, offset, tmpfile[1], compress_tmpdir)
+	else:
+		tmpfile = tempfile.mkstemp(dir=tmpdir)
+		os.fdopen(tmpfile[0]).close()
+		outtmpfile = tempfile.mkstemp(dir=tmpdir)
+		unpackFile(filename, offset, tmpfile[1], tmpdir)
 
-	outtmpfile = tempfile.mkstemp(dir=tmpdir)
 	p = subprocess.Popen(['uncompress', '-c', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
+	os.fdopen(outtmpfile[0]).close()
+	os.unlink(tmpfile[1])
 	if os.stat(outtmpfile[1]).st_size == 0:
-		os.fdopen(outtmpfile[0]).close()
 		os.unlink(outtmpfile[1])
-		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
-	os.fdopen(outtmpfile[0]).close()
-	os.unlink(tmpfile[1])
+	if compress_tmpdir != None:
+		## create the directory and move the LZMA file
+		try:
+			os.makedirs(tmpdir)
+		except OSError, e:
+			pass
+		shutil.move(outtmpfile[1], tmpdir)
 	return tmpdir
 
 ## tries to unpack stuff using bzcat. If it is successful, it will
