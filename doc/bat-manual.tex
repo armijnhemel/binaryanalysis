@@ -821,6 +821,9 @@ set the scan in debugging mode so it can print more information on standard
 error. By default it is set to \texttt{False}.
 \item \texttt{envvars} is an optionally empty set of environment variables that
 can be used to pass extra information to the pre-run method.
+\item \texttt{unpacktempdir} is the location of a directory for writing
+temporary files. This value is optional and by default it is set to
+\texttt{None}.
 \end{itemize}
 
 Return values are:
@@ -832,8 +835,8 @@ Return values are:
 Example:
 
 \begin{verbatim}
-def prerunMethod(filename, tempdir=None, tags=[],
-                 offsets={}, debug=False, envvars=None):
+def prerunMethod(filename, tempdir=None, tags=[], offsets={},
+                 debug=False, envvars=None, unpacktempdir=None):
         newtags = []
         newtags.append('helloworld')
         return newtags
@@ -909,7 +912,7 @@ them.
 
 The most obvious example is the \texttt{ext2} file system: in a normal setup
 (no encryption) it is trivial to see the content of all the individual files
-when an \texttt{ext2} file system image is opened. This is because this file
+if an \texttt{ext2} file system image is opened. This is because this file
 system is mostly a concatenation of the data, with some meta data associated
 with the files in the file system.
 
@@ -934,7 +937,7 @@ prevent other scans from running on the byte range already covered by one of
 these files.
 
 In BAT this is achieved by using blacklists. All unpackers have a parameter
-called \texttt{blacklist} which is consulted everytime a file is unpacked. If
+called \texttt{blacklist} which is consulted every time a file is unpacked. If
 a file system offset is in a blacklist the scan could use the next offset, or
 skip scanning the entire file, depending on the scan.
 
@@ -951,40 +954,44 @@ give a match. It is not a fool proof system, but it seems to work well enough.
 \subsection{Leaf scans}
 
 After everything has been unpacked each file, including the files from which
-other files were carved, will be scanned again by the program, or leaf, scans.
+other files were carved, will be scanned by the leaf scans.
 
 \subsubsection{Writing a leaf scan}
 
-The program/leaf scans have a simple interface. There are four parameters
+The program/leaf scans have a simple interface. There are six parameters
 passed to the scan, namely the absolute path of the file, the tags of the file,
-an optional blacklist with byte ranges that should not be scanned and an
-optional list of environment variables. For example:
+an optional blacklist with byte ranges that should not be scanned, an optional
+list of environment variables and an optional name of a directory for writing
+temporary results. For example:
 
 \begin{verbatim}
-def programScan(path, tags, blacklist=[], debug=False, envvars=None):
+def programScan(path, tags, blacklist=[], debug=False,
+                envvars=None, unpacktempdir=None):
         ## code goes here
 \end{verbatim}
 
 There are no restrictions on the return values of the program/leaf scan, except
-when nothing could be found. The result value is a tuple with a list of tags
-and:
+if nothing could be found (in which case \texttt{None} is usd as return value).
+The result value is a tuple with a list of tags as well as one of the following:
 
 \begin{itemize}
 \item \texttt{None} if nothing can be found
 \item simple values (booleans, strings)
-\item custom data structure, but a custom pretty printer has to be added
+\item custom data structure. Code that processes this data should know about
+its structure.
 \end{itemize}
 
-There is no restriction on the code that is run and basically anything can be
-done. In BAT there are for example checks that invoke other programs to discover
-dynamically linked libraries, find the license of a kernel module using
-\texttt{modinfo} or simple checks for the presence of strings in the binary
-that indicate the use of certain software.
+There is no restriction on the code that is run as part of the leaf scan and
+basically anything can be done. In BAT there are for example checks that invoke
+other external programs to discover dynamically linked libraries using
+\texttt{readelf}, find the license of a kernel module using \texttt{modinfo}
+or simple checks for the presence of strings in the binary that indicate the
+use of certain software.
 
-The simplest methods are the ones that scan for hardcoded strings. These strings
+The simplest scans are the ones that search for hardcoded strings. These strings
 are frequently found just in the package for which the check is written for. For
-example, these strings can often be found in copies of the \texttt{iptables}
-program and the related \texttt{libiptc} library:
+example, the following strings can often be found in copies of the
+\texttt{iptables} program and the related \texttt{libiptc} library:
 
 \begin{verbatim}
 markerStrings =
@@ -994,25 +1001,27 @@ markerStrings =
      ]
 \end{verbatim}
 
-Although this is very fast, this method has some drawbacks:
+Although searching for hardcoded strings is very fast, this method has some
+drawbacks:
 
 \begin{itemize}
 \item a program sometimes does not have these exact strings embedded in the
 binary
 \item this method will only find the strings that are hardcoded and not any
 other significant strings
-\item if another package includes the string, there is a false positive
+\item if another package includes the string, it will be a false positive
 \end{itemize}
 
 The quick checks should therefore only be used as an indication that further
 inspection of the binary is needed. A much better method is the ranking method
-that is also available in BAT, but which is not as fast.
+that is also available in BAT, but which requires a special setup with a
+database.
 
 \subsubsection{Pretty printing for leaf scans}
 
 Pretty printing for unpackers is standardized but for leaf scans there is
 more flexibility. This is needed because in some cases the result as returned
-by the leaf scan needs post processing.
+by the leaf scan needs post processing due to use of custom data structures.
 
 A pretty printer can be defined in the configuration by setting
 \texttt{ppoutput}. The pretty printer can be in the same module as the scanning
@@ -1037,7 +1046,7 @@ Aggregators have a strict interface:
 
 \begin{verbatim}
 def aggregateexample(unpackreports, scantempdir, topleveldir, debug=False,
-                     envvars=None)
+                     envvars=None, unpacktempdir=None)
 \end{verbatim}
 
 \begin{itemize}
@@ -1050,13 +1059,17 @@ scan
 set the scan in debugging mode so it can print more information on standard
 error. By default it is set to \texttt{False}.
 \item \texttt{envvars} is an optional dictionary of environment variables
+\item \texttt{unpacktempdir} is the location of a directory for writing
+temporary files. This value is optional and by default it is set to
+\texttt{None}.
 \end{itemize}
 
 The aggregators should read any results of the leaf scans from the pickles
 on disk.
 
 If there is any result it should be returned as a dictionary with one key. It
-will be assigned to the results of the top level element.
+will be assigned to the results of the top level element. Examples are: the
+names of files which are duplicates in an archive or firmware.
 
 \subsection{Post-run methods}
 
@@ -1657,7 +1670,7 @@ BusyBox source code about which applets map to which configuration option.
 \item extract the configuration from the binary by searching for known applet
 names in the firmware. The end result is the same as a previous step, but
 possibly with less accuracy in some cases but it is the only feasible solution
-when you only have a binary.
+if you only have a binary.
 \end{enumerate}
 
 The BusyBox binary has a string embedded for every applet that is included.
