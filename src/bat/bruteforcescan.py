@@ -125,8 +125,7 @@ def gethash(path, filename):
 	return h.hexdigest()
 
 ## scan a single file, possibly unpack and recurse
-#def scan((path, filename, scans, prerunscans, magicscans, optmagicscans, lenscandir, tempdir, debug)):
-def scan(scanqueue, reportqueue, leafqueue, scans):
+def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optmagicscans):
 	while True:
 		## reset the reports, blacklist, offsets and tags for each new scan
 		leaftasks = []
@@ -134,7 +133,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans):
 		blacklist = []
 		offsets = {}
 		tags = []
-		(path, filename, prerunscans, magicscans, optmagicscans, lenscandir, tempdir, debug) = scanqueue.get()
+		(path, filename, lenscandir, tempdir, debug) = scanqueue.get()
 		lentempdir = len(tempdir)
 
 		## absolute path of the file in the file system (so including temporary dir)
@@ -200,6 +199,18 @@ def scan(scanqueue, reportqueue, leafqueue, scans):
 		## scan for markers
 		offsets =  prerun.genericMarkerSearch(filetoscan, magicscans, optmagicscans)
 
+		## we have all offsets with markers here, so sscans that are not needed
+		## can be filtered out.
+		## Also keep track of the "most promising" scans (offset 0) to try
+		## them first.
+		filterscans = set()
+		zerooffsets = set()
+		for magictype in offsets:
+			if offsets[magictype] != []:
+				filterscans.add(magictype)
+				if offsets[magictype][0] - fsmagic.correction.get(magictype, 0) == 0:
+					zerooffsets.add(magictype)
+
 		## prerun scans should be run before any of the other scans
 		for prerunscan in prerunscans:
 			ignore = False
@@ -229,18 +240,6 @@ def scan(scanqueue, reportqueue, leafqueue, scans):
 			if scantags != []:
 				tags = tags + scantags
 
-		## we have all offsets with markers here, so we can filter out
-		## the scans we won't need.
-		## We also keep track of the "most promising" scans (offset 0) to try
-		## them first.
-		filterscans = []
-		zerooffsets = []
-		for magictype in offsets:
-			if offsets[magictype] != []:
-				filterscans.append(magictype)
-				if offsets[magictype][0] - fsmagic.correction.get(magictype, 0) == 0:
-					zerooffsets.append(magictype)
-
 		## Reorder the scans based on information about offsets. If one scan has a
 		## match for offset 0 (after correction of the offset, like for tar, gzip,
 		## iso9660, etc.) make sure it is run first.
@@ -252,8 +251,8 @@ def scan(scanqueue, reportqueue, leafqueue, scans):
 		for unpackscan in filteredscans:
 			if unpackscan['magic'] != None:
 				scanmagic = unpackscan['magic'].split(':')
-				if list(set(scanmagic).intersection(set(filterscans))) != []:
-					if list(set(scanmagic).intersection(set(zerooffsets))) != []:
+				if set(scanmagic).intersection(filterscans) != set():
+					if set(scanmagic).intersection(zerooffsets) != set():
 						scanfirst.append(unpackscan)
 					else:
 						unpackscans.append(unpackscan)
@@ -353,7 +352,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans):
 							try:
 								if not os.path.islink("%s/%s" % (i[0], p)):
 									os.chmod("%s/%s" % (i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-								scantasks.append((i[0], p, prerunscans, magicscans, optmagicscans, len(scandir), tempdir, debug))
+								scantasks.append((i[0], p, len(scandir), tempdir, debug))
 								relscanpath = "%s/%s" % (i[0][lentempdir:], p)
 								if relscanpath.startswith('/'):
 									relscanpath = relscanpath[1:]
@@ -836,7 +835,7 @@ def runscan(scans, scan_binary):
 		if debugphases != []:
 			if not ('prerun' in debugphases or 'unpack' in debugphases):
 				tmpdebug = False
-	scantasks = [(scantempdir, os.path.basename(scan_binary), scans['prerunscans'], magicscans, optmagicscans, len(scantempdir), scantempdir, tmpdebug)]
+	scantasks = [(scantempdir, os.path.basename(scan_binary), len(scantempdir), scantempdir, tmpdebug)]
 
 	## Use multithreading to speed up scanning. Sometimes we hit http://bugs.python.org/issue9207
 	## Threading can be configured in the configuration file, but
@@ -879,7 +878,7 @@ def runscan(scans, scan_binary):
 	processpool = []
 	map(lambda x: scanqueue.put(x), scantasks)
 	for i in range(0,processamount):
-		p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans']))
+		p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], magicscans, optmagicscans))
 		processpool.append(p)
 		p.start()
 
