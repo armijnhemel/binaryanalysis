@@ -111,12 +111,12 @@ possibly carving it out of a larger file first.
 
 The first action performed is scanning a file for known identifiers of
 compressed files, file systems and media files. The identifers are important
-for a few things: first, they are used to determine which checks will run. They
+for a few reasons: first, they are used to determine which checks will run. They
 are also used frequently throughout the code for verification and speeding up
 unpacking. If a scan depends on a specific identifier being present it can be
 set using the \texttt{magic} attribute in the configuration. If an identifier
-is not present in anywhere in the configuration file it will be skipped during
-the identifier search.
+is not defined anywhere in the configuration file as needed it will be skipped
+during the identifier search to speed up the identifier search.
 
 The marker search cannot be enabled or disabled via the configuration file.
 
@@ -147,6 +147,10 @@ priority    = 3
 description = Check if file contains just ASCII text
 enabled     = yes
 \end{verbatim}
+
+Prerun verifiers can optionally make use of tags that are already present by
+using \texttt{magic} and \texttt{noscan} attributes, which will be explained
+in detail later for the unpackers.
 
 \subsubsection{Unpackers}
 
@@ -187,27 +191,28 @@ a compressed file, media file or file system.
 There is not always an identifier that can be searched for. The YAFFS2 file
 system layout for example is dependent on the hardware specifics of the
 underlying flash chip. Without knowing these specifics it is not possible to
-unpack YAFFS2 file systems.
+specifically search for a valid YAFFS2 file system. This scan therefore tries
+to run on every file, unless explicitely filtered out (using \texttt{noscan}
+and tags).
 
-Other files (such as ARJ and ICO files) have a very generic identifier, so
-there are a lot of false positives. This causes a big increase in runtime.
-These two unpackers are therefore disabled by default.
+Other file types (such as ARJ files) have a very generic identifier, so there
+are a lot of false positives. This causes a big increase in runtime. The ARJ
+unpacker is therefore disabled by default.
 
 LZMA is another special case: there are many different valid headers for LZMA
 files, but in practice only a handful are used.
 
-If unpacking is successful a directory with unpacked files that can be
-scanned further is returned, and, if available, some meta information to avoid
+If unpacking is successful a directory with unpacked files that can be scanned
+further is returned, and, if available, some meta information to avoid
 duplicate scanning (blacklisting information and tags).
 
 \subsubsection{Leaf scans}
 
-Leaf scans, also called program scans, are scans that are run on every single
-file after unpacking, including files that contained files that were found
-and extracted by unpackers.
+Leaf scans are scans that are run on every single file after unpacking,
+including files that contained files that were found and extracted by unpackers.
 
-Leaf/program scans can be recognized in the configuration because their type is
-set to \texttt{program}, for example:
+Leaf scans can be recognized in the configuration because their type is set to
+\texttt{program}, for example:
 
 \begin{verbatim}
 [iptables]
@@ -219,13 +224,17 @@ description = Determine presence of iptables
 enabled     = yes
 \end{verbatim}
 
-The current program scans that are available in BAT are:
+Since \texttt{program} is a misnomer (a leftover from early days of BAT) it
+will very likely be replaced soon by another term.
+
+The current leaf scans that are available in BAT are:
 
 \begin{itemize}
 \item fast string searches: dproxy, ez-ipupdate, iptables, iproute, libusb,
 Linux kernel, loadlin, RedBoot, U-Boot, vsftpd, wireless-tools, wpa-supplicant
 \item advanced search mode using ranking of strings, function names, variable
-names, field names and Java class names using a database
+names, field names and Java class names using a database (for ELF and Java,
+both regular JVM and Dalvik)
 \item BusyBox version number
 \item dynamic library dependencies (ELF files only)
 \item Linux kernel module license (Linux kernel modules only)
@@ -240,7 +249,8 @@ sites (SourceForge, GitHub, etcetera)
 The fast string searches are meant for quick sweep scanning only. They have
 their limits, can report false positives or miss finding a program. They should
 only be used to signal that further inspection is necessary. For a thorough
-investigation the advanced search mode should be used.
+investigation the advanced search mode should be used. These scans are likely
+to be disabled in the future in the default configuration.
 
 \subsubsection{Aggregators}
 
@@ -248,7 +258,7 @@ Sometimes it helps to aggregate results of a number of files, or it could be
 useful to perform other actions after all the individual scans have run. The
 best example is dealing with JAR-files (Java ARchives). Individual Java class
 files often contain too little information to map them reliably to a source
-code file.
+code package.
 
 Typically a class file contains just a few method names, or field names, or
 strings. If inner classes are used it can be even worse and information from a
@@ -257,7 +267,8 @@ single source code file could be scattered across several class files.
 Since Java programs (note: excluding Android) are typically distributed as a
 JAR that is either included at runtime or directly executed, similar to an ELF
 library or ELF executable, it makes perfect sense to treat the JAR file as a
-single file and aggregate results.
+single unit and aggregate results for the individual class files and assign
+them to the JAR file.
 
 Aggregators take all results of the entire scan as input.
 
@@ -375,7 +386,7 @@ will be printed on standard error. If specified without \texttt{debugphases}
 this will apply to all scan phases. The \texttt{debugphases} parameter can be
 used to limit this behaviour to just one or a few phases. The other phases will
 behave normally. For example, this will enable debugging, but just for the
-program scans and aggregate scans:
+leaf scans and aggregate scans:
 
 \begin{verbatim}
 debug = yes
@@ -937,7 +948,7 @@ configuration file. The file systems and concatenated files mentioned above
 have a higher priority and are scanned earlier than other scans that could also
 give a match. It is not a fool proof system, but it seems to work well enough.
 
-\subsection{Program/leaf scans}
+\subsection{Leaf scans}
 
 After everything has been unpacked each file, including the files from which
 other files were carved, will be scanned again by the program, or leaf, scans.
