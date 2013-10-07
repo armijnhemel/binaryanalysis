@@ -1091,9 +1091,8 @@ def postrunHelloWorld(filename, unpackreport, scantempdir, topleveldir,
 \begin{itemize}
 \item \texttt{filename} is the absolute path of the scanned file, after
 unpacking.
-\item \texttt{unpackreport} is the reports of the unpackers for the file
-\item \texttt{scantempdir} is the directory that contains the data of the
-unpacked scan
+\item \texttt{unpackreport} is the report of unpacking the file
+\item \texttt{scantempdir} is the directory that contains the unpacked data
 \item \texttt{topleveldir} is the top level directory containing the data
 directory and the directory with the per file result pickles.
 \item \texttt{debug} is an environment variable that can be used to optionally
@@ -1103,18 +1102,25 @@ error. By default it is set to \texttt{False}.
 \end{itemize}
 
 The post-run methods should read any results of the leaf scans from the pickles
-on disk. Since the post-run methods don't change the result in any way, but
-just have side effects there is no need to return anything. Any return value
+stored on disk. Since the post-run methods don't change the result in any way,
+but just have side effects there is no need to return anything. Any return value
 will be ignored.
 
 \section{Building binary packages of the Binary Analysis Tool}
 
 If you want to install BAT through the package manager of your distribution you
-might first need to generate packages for it if none exist. For BAT there is
-currently support to build packages for RPM-based systems and for DEB-based
-systems.
+might first need to generate packages for your distribution if none exist. For
+BAT there is currently support to build packages for RPM-based systems and for
+DEB-based systems.
 
-\subsection{Building packages for RPM based systems}
+\subsection{Building packages for RPM based systems from releases}
+
+Building RPMs from released versions of BAT is trivial: download the SRPM
+files for \texttt{bat}, \texttt{bat-extratools} and
+\texttt{bat-extratools-java} from the BAT website and rebuild them with
+\texttt{rpmbuild --rebuild}.
+
+\subsection{Building packages for RPM based systems from Subversion}
 
 \subsubsection{Building \texttt{bat}}
 
@@ -1146,7 +1152,11 @@ archive of the directory:
 \texttt{rpmbuild -ta bat-extratools-14.0.tar.gz}
 \end{enumerate}
 
-\subsection{Building packages for DEB based systems}
+\subsection{Building packages for DEB based systems from releases}
+
+Currently no rebuildable packages for DEB based systems are made for releases.
+
+\subsection{Building packages for DEB based systems from Subversion}
 
 \subsubsection{Building \texttt{bat}}
 
@@ -1308,27 +1318,34 @@ by default for a few reasons:
 \end{itemize}
 
 If you want to enable license extraction, you will have to install Ninka first
-and change one hardcoded path in \texttt{batchextractprogramstrings.py} that
-points to the main Ninka script. You will also have to install FOSSology.
+and change one hardcoded path that points to the main Ninka script in
+\texttt{batchextractprogramstrings.py}. You will also have to install FOSSology
+(for which packages are available for most distributions).
 
 License extraction is enabled by passing the \texttt{-l} to the script.
 Copyright extraction can be enabled by supplying \texttt{-c} to the script.
 
-If license extraction or copyright extraction is enabled additional parameters
-need to be supplied:
+If license extraction or copyright extraction is enabled the following additional
+parameters need to be supplied:
 
 \begin{itemize}
 \item \texttt{-r} or \texttt{--licensedb=} followed by the path for the
 licenses and copyright database
 \item \texttt{-n} or \texttt{--ninkacomments=} followed by the path for a
-caching database used by Ninka. This is not needed if only copyright extraction
-is enabled, but license extraction is not.
+caching database to store partial results from a Ninka scan, which can
+significantly speed up license scanning with Ninka. This is not needed if only
+copyright extraction is enabled.
 \end{itemize}
 
 \subsection{Configuring the ranking method}
 
-The location of the strings database and the caching databases can
-be set in the configuration file:
+The ranking method uses only specialised caching databases. These caching
+databases contain a subset of information to vastly speed up scanning. There
+is no script in the standard distribution of BAT to create these caching
+databases.
+
+The location of the caching databases can be set in the configuration file in
+the \texttt{envvars} option:
 
 \begin{verbatim}
 [ranking]
@@ -1338,7 +1355,6 @@ method      = searchGeneric
 ppmodule    = bat.ranking
 ppoutput    = xmlprettyprint
 envvars     = BAT_STRINGSCACHE_C=/home/armijn/master/stringscache_c:
-              BAT_DB=/home/armijn/master/master:
               BAT_NAMECACHE_C=/home/armijn/master/funccache_c:
               BAT_CLONE_DB=/home/armijn/master/clones:
               BAT_RANKING_FULLCACHE=1
@@ -1353,7 +1369,7 @@ are split per language family (C, Java, C\#, and so on). The reason for this is
 that strings/function names that are very significant in one programming
 language family could be very generic in another programming language family
 and vice versa. During scanning a guess will be made to see which language the
-program was written in and the proper database will be queried.
+program was written in and the proper caching database will be queried.
 
 Since there are relatively few binaries (at least on Linux) that combine
 code from both languages the caching databases are split. This makes the
@@ -1367,10 +1383,6 @@ postfixed with an underscore and the name of the programming language family.
 The strings cache database for Java for example is configured using the
 environment variable \texttt{BAT\_STRINGSCACHE\_JAVA}.
 
-The entire database with all other information except license information is
-\texttt{BAT\_DB}. This option is mandatory. If it is not supplied scanning with
-the ranking method will fail.
-
 An optional database to deal with copied and renamed packages can be set with
 \texttt{BAT\_CLONE\_DB}. If set and populated the ranking scan will use
 information from this database to rewrite package names. This is useful if a
@@ -1378,12 +1390,6 @@ package was renamed for a reason and different packages should be treated as if
 they were a single package. Examples are Ethereal that had to be renamed to
 Wireshark, or KOffice that was forked into Calligra, after which development
 on KOffice effectively stopped and everyone moved to Calligra.
-
-The ranking scan is configured in the configuration file or in the
-configuration in the graphical user interface. In the configuration file
-shipped with BAT it is disabled by default. It can be enabled by giving the
-option \texttt{enabled} the value \texttt{yes} in the configuration file or
-in the graphical user interface.
 
 \subsubsection{Getting license and version information}
 
@@ -1395,9 +1401,13 @@ The license database can be set with \texttt{BAT\_LICENSE\_DB}. If it is not
 supplied licensing information will not be used during the scan.
 
 \begin{verbatim}
-envvars     = BAT_DB=/gpl/master/master.sqlite3:BAT_RANKING_LICENSE=1:
-              BAT_RANKING_VERSION=1:BAT_LICENSE_DB=/gpl/master/licenses.sqlite3
+envvars  = BAT_DB=/gpl/master/master.sqlite3:BAT_RANKING_LICENSE=1:
+           BAT_RANKING_VERSION=1:BAT_LICENSE_DB=/gpl/master/licenses.sqlite3
 \end{verbatim}
+
+The entire database with all other information except license information is
+\texttt{BAT\_DB}. This option is mandatory. If it is not supplied scanning with
+the determining versions and licenses will fail.
 
 \subsubsection{Interpreting the results}
 
@@ -2035,12 +2045,14 @@ files that contain some unexpected results.
 
 Some Linux distributions (most notably Fedora 18) have standardized on storing
 the \texttt{/tmp} file system on tmpfs. This means that part of the system
-memory is used for the \texttt{/tmp} file system. This could influence BAT in
-two ways:
+memory is used for the \texttt{/tmp} file system. By default on Fedora it is
+set to 50\% of the system's memory. This could influence BAT in two ways:
 
 \begin{enumerate}
 \item less memory available for processing
-\item BAT unpacks to \texttt{/tmp} by default, unless configured differently
+\item BAT unpacks to \texttt{/tmp} by default, unless configured differently. If
+the unpack results grow big enough (which is fairly easy with big firmwares) it
+could fill up the partition.
 \end{enumerate}
 
 There are various solutions, apart from adding more memory to the machine:
@@ -2049,6 +2061,12 @@ There are various solutions, apart from adding more memory to the machine:
 \item configure BAT to use another path for unpacking than \texttt{/tmp}
 \item disable \texttt{tmp} on tmpfs
 \end{itemize}
+
+\subsection{Use tmpfs for writing temporary results}
+
+A few scans can use tmpfs or a ramdisk to write temporary results. The scans
+that can benefit from this are LZMA unpacking, ranking (temporary results of
+DEX and ODEX unpacking) and compress unpacking.
 
 \section{Parameter description for default scans}
 
@@ -2059,14 +2077,21 @@ passed to the scans as part of the environment and are defined in the
 
 \subsection{\texttt{lzma}}
 
-The \texttt{lzma} scan has one parameter \texttt{LZMA\_MINIMUM\_SIZE}. This
-parameter is used to tell the scan to ignore output files that are of
-\texttt{LZMA\_MINIMUM\_SIZE} bytes in size or less. This parameter was
-introduced because false positives in LZMA unpacking are very common, often
-leading to small sized files that contain no useful data.
+The \texttt{lzma} unpack scan has two parameters: \texttt{LZMA\_MINIMUM\_SIZE}
+and \texttt{LZMA\_TMPDIR}.
+
+The \texttt{LZMA\_MINIMUM\_SIZE} parameter instructs the scan to ignore output
+files that are \texttt{LZMA\_MINIMUM\_SIZE} bytes in size or less. This
+parameter was introduced because false positives in LZMA unpacking are very
+common, often leading to small sized files that contain no useful data.
 
 By default \texttt{LZMA\_MINIMUM\_SIZE} is set to 10 bytes, but this is a very
 conservative setting.
+
+The \texttt{LZMA\_TMPDIR} parameter is used to let the scan use a different
+location for unpacking temporary files than the standard unpacking directory.
+It was introduced to let the scan unpack onto a tmpfs file system to avoid disk
+I/O and speed up scanning.
 
 \subsection{\texttt{file2package}}
 
@@ -2078,8 +2103,8 @@ in the subdirectory \texttt{maintenance} in the BAT source tree.
 
 \subsection{\texttt{jars}}
 
-The \texttt{jars} scan has one parameter: \texttt{AGGREGATE\_CLEAN}. This
-parameter instructs the scan to remove results for individual Java class
+The \texttt{jars} aggregate scan has one parameter: \texttt{AGGREGATE\_CLEAN}.
+This parameter instructs the scan to remove results for individual Java class
 files from the result set after aggregating results at the JAR level. Java
 class files that are not unpacked from a JAR file are not removed from the
 result set. By default this parameter is set to 1 which means that results for
@@ -2099,8 +2124,14 @@ BAT comes with a default configuration file. In this file an order for running
 the scans is specified. In this section the rationale behind this ordering is
 explained.
 
+The order for pre-run scans, unpack scans, leaf scans and aggregate scans are
+determined. Since postrun scans do not change the result files and they are 
+independent there is no order defined for them (although this might change in
+the future).
+
 \subsection{Pre-run scans}
 \subsection{Unpack scans}
+\subsection{Leaf scans}
 \subsection{Aggregate scans}
 
 \end{document}
