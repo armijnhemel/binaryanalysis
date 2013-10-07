@@ -884,6 +884,15 @@ description = Match versions and architectures of Linux kernel images and module
 enabled     = yes
 priority    = 4
 
+[prunefiles]
+type        = aggregate
+module      = bat.prunefiles
+method      = prunefiles
+description = prune files
+envvars     = PRUNE_TAGS=png,gif:PRUNE_FILEREPORT_CLEAN=1
+enabled     = no
+priority    = 20
+
 [versionlicensecopyright]
 type        = aggregate
 module      = bat.licenseversion

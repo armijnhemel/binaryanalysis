@@ -4,6 +4,8 @@ the results of the variables
 * add COMPRESS_TMPDIR for writing temporary files for compress to ramdisk
 * filter prerunscans based on noscan and magic
 * rework Windows icon unpacking
+* add aggregate scan to remove certain types of files from the scan, based on
+tags
 
 2013-10-06
 * pass unpacktempdir to leaf scans

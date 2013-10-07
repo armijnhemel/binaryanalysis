@@ -81,10 +81,10 @@ BOTTLENECKS:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
 2. preread (in parallel) leafreports of Java .class files which are shared between several JAR files for aggregate jars. This saves opening and reading the same files.
 3. replace own counters with collections.Counter(), also for code clarity
-4. add option to ignore certain types of files, not based on extension, but on tag (so after pre-run and/or unpacking). For example, PNG files that have been verified are of no use in some cases.
-5. generate pie charts before determining version information to prevent huge pickles being read into memory. Do the same for unmatched results (HTML report).
-6. verify and tag Android resources.arsc
-7. rework datastructures of ranking information (strings, function names, variables) so they are all the same
-8. rework ranking as an aggregate scan to be able to do database lookups in parallel for strings per file instead of per file.
-9. rework ELF graphs (allow edges to cross) as the images can get very very big for certain firmwares
-10. add ramdisk unpacking for jffs2
+4. generate pie charts before determining version information to prevent huge pickles being read into memory. Do the same for unmatched results (HTML report).
+5. verify and tag Android resources.arsc
+6. rework datastructures of ranking information (strings, function names, variables) so they are all the same
+7. rework ranking as an aggregate scan to be able to do database lookups in parallel for strings per file instead of per file.
+8. rework ELF graphs (allow edges to cross) as the images can get very very big for certain firmwares
+9. add ramdisk unpacking for jffs2
+10. copy/merge configuration from scan machine with default configuration
