@@ -140,7 +140,7 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, debug=False, env
 			tablerows = tablerows + tablerowtemplate % ("Tags", reduce(lambda x, y: x + ", " + y, leafreports['tags']))
 
 	if leafreports.has_key('ranking'):
-		(stringsres, dynamicres, variablepvs) = leafreports['ranking']
+		(stringsres, dynamicres, variablepvs,language) = leafreports['ranking']
 		if dynamicres.has_key('packages'):
 			functionmatches = '''<h2><a name="functionmatches" href="#functionnames">Function match statistics</a></h2>
 <table>
@@ -192,7 +192,7 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, debug=False, env
         <td><b>Determined licenses (Ninka &amp; FOSSology report the same)</b></td>
       </tr>\n'''
 					for j in stringsres['reports']:
-						(rank, packagename, uniquematches, percentage, packageversions, licenses, language) = j
+						(rank, packagename, uniquematches, percentage, packageversions, licenses) = j
 						determinedlicenses = map(lambda x: x[0], filter(lambda x: x[1] == 'squashed', licenses))
 						ninkalicenses = map(lambda x: x[0], filter(lambda x: x[1] == 'ninka', licenses))
 						fossologylicenses = map(lambda x: x[0], filter(lambda x: x[1] == 'fossology', licenses))

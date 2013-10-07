@@ -162,8 +162,8 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 		## and more sanity checks
 		if not 'binary' in leafreports['tags']:
 			continue
-		(stringmatches, dynamicres, varfunmatches) = leafreports['ranking']
-		if varfunmatches['language'] != 'Java':
+		(stringmatches, dynamicres, varfunmatches, language) = leafreports['ranking']
+		if language != 'Java':
 			continue
 		if varfunmatches.has_key('fields'):
 			for f in varfunmatches['fields']:
@@ -210,7 +210,7 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 						scoresperpkg[s] = stringmatches['scores'][s]
 			if stringmatches['reports'] != []:
 				for r in stringmatches['reports']:
-					(rank, package, unique, percentage, packageversions, packagelicenses, language) = r
+					(rank, package, unique, percentage, packageversions, packagelicenses) = r
 					## ignore rank and percentage
 					if uniqueMatchesperpkg.has_key(package):
 						tmpres = []
@@ -282,7 +282,7 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 			percentage = (scoresperpkg[s]/totalscore)*100.0
 		except:
 			percentage = 0.0
-		reports.append((rank, s, uniqueMatchesperpkg.get(s,[]), percentage, packageversionsperpkg.get(s, {}), list(set(packagelicensesperpkg.get(s, []))), 'Java'))
+		reports.append((rank, s, uniqueMatchesperpkg.get(s,[]), percentage, packageversionsperpkg.get(s, {}), list(set(packagelicensesperpkg.get(s, [])))))
 		rank = rank+1
 
 	if dynamicresfinal.has_key('uniquepackages'):
@@ -308,7 +308,7 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 	leafreports = cPickle.load(leaf_file)
 	leaf_file.close()
 
-	leafreports['ranking'] = (rankres, dynamicresfinal, {'language': 'Java', 'classes': classmatches, 'fields': fieldmatches, 'sources': sourcematches})
+	leafreports['ranking'] = (rankres, dynamicresfinal, {'classes': classmatches, 'fields': fieldmatches, 'sources': sourcematches}, 'Java')
 
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
 	leafreports = cPickle.dump(leafreports, leaf_file)

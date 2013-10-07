@@ -262,7 +262,6 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 					dynres = extractDynamic(path, scanenv, clones)
 					if dynres != None:
 						(dynamicRes,variablepvs) = dynres
-				variablepvs['language'] = 'C'
 				elfscanfiles = []
 				## first determine the size and offset of .data and .rodata and carve them from the file
 				p = subprocess.Popen(['readelf', '-SW', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -322,7 +321,6 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 				if linuxkernel:
 					if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
 						variablepvs = scankernelsymbols(kernelsymbols, scanenv, clones)
-					variablepvs['language'] = 'C'
 				## extract all strings from the binary. Only look at strings
 				## that are a certain amount of characters or longer. This is
 				## configurable through "stringcutoff" although the gain will be relatively
@@ -473,7 +471,6 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 				## cleanup
 				shutil.rmtree(dalvikdir)
 			variablepvs = extractVariablesJava(javameta, scanenv, clones)
-			variablepvs['language'] = 'Java'
 			dynamicRes = extractJavaNames(javameta, scanenv, clones)
 		elif language == 'JavaScipt':
 			## JavaScript can be minified, but using xgettext it is still
@@ -496,7 +493,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 				os.unlink(tmpfile[1])
 		if res == None and dynamicRes == {} and variablepvs == {}:
 			return None
-		return (['ranking'], (res, dynamicRes, variablepvs))
+		return (['ranking'], (res, dynamicRes, variablepvs, language))
 
 	except Exception, e:
 		print >>sys.stderr, "string scan failed for:", path, e, type(e)
@@ -1391,7 +1388,7 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 			percentage = (scores[s]/totalscore)*100.0
 		except:
 			percentage = 0.0
-		reports.append((rank, s, uniqueMatches.get(s,[]), percentage, packageversions.get(s, {}), packagelicenses.get(s, []), language))
+		reports.append((rank, s, uniqueMatches.get(s,[]), percentage, packageversions.get(s, {}), packagelicenses.get(s, [])))
 		rank = rank+1
 	'''
 	for s in scores_sorted:
@@ -1414,7 +1411,7 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 
 
 def xmlprettyprint(leafreports, root, envvars=None):
-	(res, dynamicRes, variablepvs) = leafreports
+	(res, dynamicRes, variablepvs, language) = leafreports
 	## TODO: we might have different results available
 	if res['matchedlines'] == 0:
 		return None
@@ -1435,7 +1432,7 @@ def xmlprettyprint(leafreports, root, envvars=None):
 	stringsnode.appendChild(extractedlines)
 
 	for k in res['reports']:
-		(rank, name, uniqueMatches, percentage, packageversions, packagelicenses, language) = k
+		(rank, name, uniqueMatches, percentage, packageversions, packagelicenses) = k
 
 		## add package name
 		packagenode = root.createElement('package')

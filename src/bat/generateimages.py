@@ -106,7 +106,7 @@ def extractpickles((filehash, pickledir, topleveldir, unpacktempdir)):
 	if not leafreports.has_key('ranking'):
 		return
 	## the ranking result is (res, dynamicRes, variablepvs)
-	(res, dynamicRes, variablepvs) = leafreports['ranking']
+	(res, dynamicRes, variablepvs, language) = leafreports['ranking']
 	if res == None and dynamicRes == {}:
 		return
 
@@ -121,10 +121,11 @@ def extractpickles((filehash, pickledir, topleveldir, unpacktempdir)):
 		totals = 0.0
 		others = 0.0
 		for j in res['reports']:
+			(rank, package, unique, percentage, packageversions, packagelicenses) = j
 			## less than half a percent, that's not significant anymore
-			if j[3] < 0.5:
-				totals += j[3]
-				others += j[3]
+			if percentage < 0.5:
+				totals += percentage
+				others += percentage
 				if totals <= 99.0:
 					continue
 			if totals >= 99.0:
@@ -132,9 +133,9 @@ def extractpickles((filehash, pickledir, topleveldir, unpacktempdir)):
 				piedata.append(others + 100.0 - totals)
 				break
 			else:   
-				pielabels.append(j[1])
-				piedata.append(j[3])
-				totals += j[3]
+				pielabels.append(package)
+				piedata.append(percentage)
+				totals += percentage
 
 		## now dump the data to a pickle
 		if pielabels != [] and piedata != []:
@@ -144,7 +145,7 @@ def extractpickles((filehash, pickledir, topleveldir, unpacktempdir)):
 			pieresult = (picklehash, tmppickle[1])
 
 		for j in res['reports']:
-			(rank, package, unique, percentage, packageversions, packagelicenses, language) = j
+			(rank, package, unique, percentage, packageversions, packagelicenses) = j
 			if packageversions != {}:
 				pickledata = []
 				vals = list(set(packageversions.values()))

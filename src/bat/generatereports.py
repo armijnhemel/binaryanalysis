@@ -160,7 +160,7 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 	if not leafreports.has_key('ranking'):
 		return (filehash, reportresults, functionresults, unmatchedresult)
 	## the ranking result is (res, dynamicRes, variablepvs)
-	(res, dynamicRes, variablepvs) = leafreports['ranking']
+	(res, dynamicRes, variablepvs, language) = leafreports['ranking']
 
 	if dynamicRes != {}:
 		html = ""
@@ -207,7 +207,6 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 			nameshtmlfile.close()
 
 	if variablepvs != {}:
-		language = variablepvs['language']
 		if language == 'Java':
 			header = "<html><body><h1>Unique matches of class names, field names and source file names</h1>"
 		elif language == 'C':
@@ -368,7 +367,7 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 
 		if res['reports'] != []:
 			for j in res['reports']:
-				(rank, packagename, uniquematches, percentage, packageversions, licenses, language) = j
+				(rank, packagename, uniquematches, percentage, packageversions, licenses) = j
 				if len(uniquematches) == 0:
 					continue
 				tmppickle = tempfile.mkstemp(dir=unpacktempdir)

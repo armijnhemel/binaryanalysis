@@ -297,7 +297,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 	if not leafreports.has_key('ranking'):
 		return
 
-	(res, dynamicRes, variablepvs) = leafreports['ranking']
+	(res, dynamicRes, variablepvs, language) = leafreports['ranking']
 
 	if res == None and dynamicRes == {}:
 		return
@@ -329,7 +329,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 		newreports = []
 
 		for r in res['reports']:
-			(rank, package, unique, percentage, packageversions, packagelicenses, language) = r
+			(rank, package, unique, percentage, packageversions, packagelicenses) = r
 			if unique == []:
 				newreports.append(r)
 				continue
@@ -463,7 +463,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 					packagecopyrights = list(set(packagecopyrights + copyrightpv))
 
 			'''
-			newreports.append((rank, package, newuniques, percentage, newpackageversions, packagelicenses, language))
+			newreports.append((rank, package, newuniques, percentage, newpackageversions, packagelicenses))
 		res['reports'] = newreports
 
 	## TODO: determine versions of functions and variables here as well
