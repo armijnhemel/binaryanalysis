@@ -127,11 +127,26 @@ def gethash(path, filename):
 ## scan a single file, possibly unpack and recurse
 def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optmagicscans):
 	prerunignore = {}
+	prerunmagic = {}
 	for prerunscan in prerunscans:
 		if prerunscan.has_key('noscan'):
 			if not prerunscan['noscan'] == None:
 				noscans = prerunscan['noscan'].split(':')
 				prerunignore[prerunscan['name']] = noscans
+		if prerunscan.has_key('magic'):
+			if not prerunscan['magic'] == None:
+				magics = prerunscan['magic'].split(':')
+				if not prerunmagic.has_key(prerunscan['name']):
+					prerunmagic[prerunscan['name']] = magics
+				else:
+					prerunmagic[prerunscan['name']] = prerunmagic[prerunscan['name']] + magics
+		if prerunscan.has_key('optmagic'):
+			if not prerunscan['optmagic'] == None:
+				magics = prerunscan['optmagic'].split(':')
+				if not prerunmagic.has_key(prerunscan['name']):
+					prerunmagic[prerunscan['name']] = magics
+				else:
+					prerunmagic[prerunscan['name']] = prerunmagic[prerunscan['name']] + magics
 	while True:
 		## reset the reports, blacklist, offsets and tags for each new scan
 		leaftasks = []
@@ -228,11 +243,14 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 						break
 			if ignore:
 				continue
-			module = prerunscan['module']
-			method = prerunscan['method']
 			if prerunignore.has_key(prerunscan['name']):
 				if set(tags).intersection(set(prerunignore[prerunscan['name']])) != set():
 					continue
+			if prerunmagic.has_key(prerunscan['name']):
+				if set(prerunmagic[prerunscan['name']]).intersection(filterscans) == set():
+					continue
+			module = prerunscan['module']
+			method = prerunscan['method']
 			if debug:
 				print >>sys.stderr, module, method, filename
 				sys.stderr.flush()
