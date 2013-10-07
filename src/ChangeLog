@@ -1,3 +1,10 @@
+2013-10-07
+* store language in top level ranking result instead of hidden somewhere in
+the results of the variables
+* add COMPRESS_TMPDIR for writing temporary files for compress to ramdisk
+* filter prerunscans based on noscan and magic
+* rework Windows icon unpacking
+
 2013-10-06
 * pass unpacktempdir to leaf scans
 * add supersimple Windows ICO verifier

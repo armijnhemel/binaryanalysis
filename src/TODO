@@ -49,7 +49,6 @@ ranking:
 * use version information to report most likely licenses
 * use macholib to analyse Mach-O binaries (MacOS X)
 * split extractGeneric into two methods: one to extract all the info (including kernel module names and kernel function names), one for computing the end result
-* store language per file, not just in the variable results (current situation), since that's ugly.
 * if there are more results for file for a line (different line numbers), combine the two results and put the line numbers in a list (first do research to see if this makes sense)
 
 busybox scanning:
@@ -88,5 +87,4 @@ BOTTLENECKS:
 7. rework datastructures of ranking information (strings, function names, variables) so they are all the same
 8. rework ranking as an aggregate scan to be able to do database lookups in parallel for strings per file instead of per file.
 9. rework ELF graphs (allow edges to cross) as the images can get very very big for certain firmwares
-10. rework ICO unpack scan to just work with ICO files that have been tagged with the verifier
-11. add ramdisk unpacking for compress and jffs2
+10. add ramdisk unpacking for jffs2
