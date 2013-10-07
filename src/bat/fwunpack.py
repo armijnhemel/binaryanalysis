@@ -2869,29 +2869,24 @@ def unpackARJ(filename, offset, tempdir=None):
 
 ## extraction of Windows .ICO files. The identifier for .ICO files is very
 ## common, so on large files this will have a rather big performance impact
-## with relatively little gain. In the default distribution of BAT this scan
-## is therefore disabled.
+## with relatively little gain.
+## This scan should only be enabled if verifyIco is also enabled
 def searchUnpackIco(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
-	hints = []
-	if not offsets.has_key('ico'):
-		return ([], blacklist, [], hints)
-	if offsets['ico'] == []:
-		return ([], blacklist, [], hints)
 	diroffsets = []
+	hints = []
 	counter = 1
-	for offset in offsets['ico']:
-		blacklistoffset = extractor.inblacklist(offset, blacklist)
-		if blacklistoffset != None:
-			continue
-		tmpdir = dirsetup(tempdir, filename, "ico", counter)
-		res = unpackIco(filename, offset, tmpdir)
-		if res != None:
-			icotmpdir = res
-			diroffsets.append((icotmpdir, offset, 0))
-			counter = counter + 1
-		else:
-			## cleanup
-			os.rmdir(tmpdir)
+	offset = 0
+	blacklistoffset = extractor.inblacklist(offset, blacklist)
+	if blacklistoffset != None:
+		return (diroffsets, blacklist, [], hints)
+	tmpdir = dirsetup(tempdir, filename, "ico", counter)
+	res = unpackIco(filename, offset, tmpdir)
+	if res != None:
+		icotmpdir = res
+		diroffsets.append((icotmpdir, offset, 0))
+	else:
+		## cleanup
+		os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [], hints)
 
 def unpackIco(filename, offset, tempdir=None):

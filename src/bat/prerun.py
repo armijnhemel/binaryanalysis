@@ -638,6 +638,12 @@ def verifyIco(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 		return newtags
 	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags:
 		return newtags
+	## check the first four bytes
+	icofile = open(filename, 'rb')
+	icobytes = icofile.read(4)
+	icofile.close()
+	if icobytes != '\x00\x00\x01\x00':
+		return newtags
 	## actually unpack the ico files
 	icodir = tempfile.mkdtemp(dir=unpacktempdir)
 	p = subprocess.Popen(['icotool', '-x', '-o', icodir, filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
