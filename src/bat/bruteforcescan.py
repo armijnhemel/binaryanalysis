@@ -126,6 +126,12 @@ def gethash(path, filename):
 
 ## scan a single file, possibly unpack and recurse
 def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optmagicscans):
+	prerunignore = {}
+	for prerunscan in prerunscans:
+		if prerunscan.has_key('noscan'):
+			if not prerunscan['noscan'] == None:
+				noscans = prerunscan['noscan'].split(':')
+				prerunignore[prerunscan['name']] = noscans
 	while True:
 		## reset the reports, blacklist, offsets and tags for each new scan
 		leaftasks = []
@@ -224,6 +230,9 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 				continue
 			module = prerunscan['module']
 			method = prerunscan['method']
+			if prerunignore.has_key(prerunscan['name']):
+				if set(tags).intersection(set(prerunignore[prerunscan['name']])) != set():
+					continue
 			if debug:
 				print >>sys.stderr, module, method, filename
 				sys.stderr.flush()
