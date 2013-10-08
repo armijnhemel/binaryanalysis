@@ -281,6 +281,8 @@ the same JAR file.
 \item finding duplicate files
 \item finding licenses and versions of strings and function names that were
 found and optionally pruning the result set to remove unlikely results.
+\item pruning files from the scan completely if they are not interesting (such
+as pictures, or text files) using tags.
 \item generating pictures of results of a scan
 \item generating reports of results of a scan
 \end{itemize}
@@ -2109,6 +2111,19 @@ files from the result set after aggregating results at the JAR level. Java
 class files that are not unpacked from a JAR file are not removed from the
 result set. By default this parameter is set to 1 which means that results for
 Java class files are removed from the result set.
+
+\subsection{\texttt{prunefiles}}
+
+The \texttt{prunefiles} aggregate scan has two parameters: \texttt{PRUNE\_TAGS}
+and \texttt{PRUNE\_FILEREPORT\_CLEAN}. The \texttt{PRUNE\_TAGS} parameter
+contains a comma-separated list of tags that should be ignored and removed from
+the scan results. The \texttt{PRUNE\_FILEREPORT\_CLEAN} parameter can be set to
+indicate whether or not the result pickles for the pruned files should also be
+removed from disk. Example:
+
+\begin{verbatim}
+PRUNE_TAGS=png,gif:PRUNE_FILEREPORT_CLEAN=1
+\end{verbatim}
 
 \subsection{\texttt{hexdump} and \texttt{images}}
 
