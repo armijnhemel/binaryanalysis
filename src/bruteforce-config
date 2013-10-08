@@ -772,7 +772,6 @@ envvars     = BAT_STRINGSCACHE_C=/gpl/master/stringscache_c:BAT_STRINGSCACHE_JAV
 noscan      = text:xml:graphics:pdf:compressed:resource:audio:video:mp4:vimswap:timezone:ico
 description = Classify packages using advanced ranking mechanism
 enabled     = yes
-parallel    = yes
 setup       = rankingsetup
 
 [redboot]
