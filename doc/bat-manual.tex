@@ -481,25 +481,24 @@ readable/writeable. If this would be done during running of the scan (default
 in BAT 13 and earlier) the checks would be run each time the scan would be run.
 In reality the checks only need to run once.
 
-Since BAT 14 there is a special hook for leaf scans to run setup code for the
-scan:
+There is a special hook for leaf scans to run setup code for the scan:
 
 \begin{verbatim}
 setup     = nameOfSetupMethod
 \end{verbatim}
 
-In the standard distribution of BAT the file \texttt{bat/ranking.py} contains a
-very extensive example.
+In the standard distribution of BAT the files \texttt{bat/ranking.py} and
+\texttt{bat/licenseversion.py} contain very extensive examples of setup hooks.
 
 \subsection{Interpreting the results}
 
-There are two formats in which \texttt{bruteforce.py} outputs its results:
+There are two formats in which \texttt{bruteforce.py} can output its results:
 
 \begin{enumerate}
 \item dump file containing program state, complete unpacked directory tree
 containing all unpacked data (unless \texttt{outputlite} was set), plus
 possibly some extra generated data, such as pictures and more reporting. These
-dumps are meant to be used by \texttt{batgui}.
+dumps are meant to be used by \texttt{batgui}. This is the preferred format.
 \item XML file (optional/configurable)
 \end{enumerate}
 
@@ -697,6 +696,24 @@ so on).
 Bigger differences are of course much more interesting.
 
 \subsection{\texttt{sourcewalk.py}}
+
+This program can quickly determine whether or not source code files in a
+directory can be found in known upstream sources. It uses a pregenerated
+database containing names and checksums of files (for example the Linux kernel)
+and reports whether or not the source code files can be found in the database
+based on these checksums.
+
+The purpose of this script is to find source code files that cannot be found in
+upstream sources to reduce the search space during a source code audit.
+
+This script will not catch:
+
+\begin{itemize}
+\item binary files
+\item patch/diff files
+\item anything that does not have an extension from the list in the script
+\item configuration files/build scripts
+\end{itemize}
 
 \subsection{\texttt{verifysourcearchive.py}}
 
@@ -1358,11 +1375,10 @@ ppmodule    = bat.ranking
 ppoutput    = xmlprettyprint
 envvars     = BAT_STRINGSCACHE_C=/home/armijn/master/stringscache_c:
               BAT_NAMECACHE_C=/home/armijn/master/funccache_c:
-              BAT_CLONE_DB=/home/armijn/master/clones:
-              BAT_RANKING_FULLCACHE=1
+              BAT_CLONE_DB=/home/armijn/master/clones
 noscan      = text:xml:graphics:pdf:compressed:resource:audio:video
 description = Classify packages using advanced ranking mechanism
-enabled     = no
+enabled     = yes
 setup       = rankingsetup
 \end{verbatim}
 
@@ -1498,10 +1514,11 @@ actively used in the ranking code.
 It has the following fields:
 
 \begin{itemize}
-\item name of the package
-\item version of the package
-\item name of the archive that was processed
-\item sha256 of the archive that was processed
+\item \texttt{package}: name of the package
+\item \texttt{version}: version of the package
+\item \texttt{filename}: name of the archive
+\item \texttt{origin}: site where the archive was downloaded (optional)
+\item \texttt{sha256}: SHA256 checksum of the archive
 \end{itemize}
 
 \subsubsection{\texttt{processed\_file} table}
@@ -1511,10 +1528,12 @@ scanned.
 It has the following fields:
 
 \begin{itemize}
-\item name of the package the file is from
-\item version of the package the file is from
-\item relative path inside the source code archive
-\item sha256 of the file
+\item \texttt{package}: name of the package the file is from (same as in
+\texttt{processed})
+\item \texttt{version}: version of the package the file is from (same as in
+\texttt{processed})
+\item \texttt{filename}: relative path inside the source code archive
+\item \texttt{sha256} SHA256 checksum of the file
 \end{itemize}
 
 \subsubsection{\texttt{extracted\_file} table}
@@ -1524,12 +1543,14 @@ that could possibly end up in binaries.
 It has the following fields:
 
 \begin{itemize}
-\item string that was extracted
-\item sha256 of file the string was extracted from
-\item language of the source code file
-\item line number where the extracted string can be found in the source code
-file, or $0$ if unknown. This information is determined using
-\texttt{xgettext}.
+\item \texttt{programstring}: string constant that was extracted
+\item \texttt{sha256}: SHA256 checksum of file the string constant was
+extracted from
+\item \texttt{language}: language the source code file was written in (mapped
+to a language family, such as C or Java)
+\item \texttt{linenumber}: line number where the string constant can be found
+in the source code file (if determined using using \texttt{xgettext}) or $0$
+(if determined using a regular expression).
 \end{itemize}
 
 \subsubsection{\texttt{extracted\_function} table}
@@ -1537,24 +1558,31 @@ file, or $0$ if unknown. This information is determined using
 In this table information about C functions and Java methods is stored.
 
 \begin{itemize}
-\item sha256 checksum of the file
-\item function name or method name that was extracted
-\item programming language the source is written in
-\item line number where the extracted information can be found
+\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{functionname}: function name or method name that was extracted
+\item \texttt{language}: language the source code file was written in (mapped
+to a language family, such as C or Java)
+\item \texttt{linenumber}: line number where the function/method can be found
+in the source code file (if determined using using \texttt{xgettext}) or $0$
+(if determined using a regular expression).
 \end{itemize}
 
 \subsubsection{\texttt{extracted\_name} table}
 This table stores information of various names extracted from source code.
-Included are variable names (C), field names (Java) and class names (Java).
+Included are variable names (C), field names (Java) and class names (Java) and
+Linux kernel variable names.
 
 It has the following fields:
 
 \begin{itemize}
-\item sha256 checksum of the file
-\item name of the extracted information
-\item type of the extracted information (field, variable, class name, etcetera)
-\item programming language the source is written in
-\item line number where the extracted information can be found
+\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{name}: name of variable, field or class name that was extracted
+\item \texttt{type}: type (field, variable, class name, etcetera)
+\item \texttt{language}: language the source code file was written in (mapped
+to a language family, such as C or Java)
+\item \texttt{linenumber}: line number where the function/method can be found
+in the source code file (if determined using using \texttt{xgettext}) or $0$
+(if determined using a regular expression).
 \end{itemize}
 
 \subsubsection{\texttt{extracted\_copyright} table}
@@ -1564,10 +1592,12 @@ FOSSology.
 It has the following fields:
 
 \begin{itemize}
-\item sha256 of file the string was extracted from
-\item copyright information that was extracted
-\item type of information that was extracted, currently \texttt{url},
-\texttt{email} or \texttt{statement}
+\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{copyright}: copyright information that was extracted
+\item \texttt{type}: type of information that was extracted, currently
+\texttt{url}, \texttt{email} or \texttt{statement}
+\item \texttt{offset}: byte offset in the file where the copyright statement
+can be found
 \end{itemize}
 
 \subsubsection{\texttt{licenses} table}
@@ -1577,12 +1607,105 @@ code scanner, like Ninka or FOSSology. If a file has more than one licenses
 there will be multiple rows for a file. It has these fields:
 
 \begin{itemize}
-\item sha256 checksum of file
-\item license as found by the scanner
-\item scanner name. Currently only Ninka and FOSSology are used. Of course, the
-scanner could also be a person doing a manual review.
-\item version of scanner. This is useful if there is for example a bug in a
-scanner, or to compare results from various versions.
+\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{license}: license as found by the scanner
+\item \texttt{scanner}: scanner name. Currently only Ninka and FOSSology are
+used in BAT, but is not limited to that: the scanner could also be a person
+doing a manual review.
+\item \texttt{version}: version of scanner. This is useful if there is for
+example a bug in a scanner, or to compare results from various versions.
+\end{itemize}
+
+\subsubsection{\texttt{kernelmodule\_alias} table}
+
+This table is used to store information about Linux kernel module aliases. This
+information is declared in the Linux kernel source code using the
+\texttt{MODULE\_ALIAS} macro. The table has the following fields:
+
+\begin{itemize}
+\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{modulename}: name of the source code file
+\item \texttt{alias}: contents of the \texttt{MODULE\_ALIAS} macro
+\end{itemize}
+
+\subsubsection{\texttt{kernelmodule\_author} table}
+
+This table is used to store information about Linux kernel module author(s).
+This information is declared in the Linux kernel source code using the
+\texttt{MODULE\_AUTHOR} macro. The table has the following fields:
+
+\begin{itemize}
+\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{modulename}: name of the source code file
+\item \texttt{author}: contents of the \texttt{MODULE\_AUTHOR} macro
+\end{itemize}
+
+\subsubsection{\texttt{kernelmodule\_description} table}
+
+This table is not yet used.
+
+%This table is used to store information about Linux kernel module aliases. This
+%information is declared in the Linux kernel source code using the
+%\texttt{MODULE\_ALIAS} macro. The table has the following fields:
+%
+%\begin{itemize}
+%\item \texttt{sha256}: SHA256 checksum of the file
+%\item \texttt{modulename}: name of the source code file
+%\item \texttt{description}:
+%\end{itemize}
+                %c.execute('''create table if not exists kernelmodule_description(sha256 text, modulename text, description text)''')
+
+\subsubsection{\texttt{kernelmodule\_firmware} table}
+
+This table is used to store information about Linux kernel module firmware.
+This information is declared in the Linux kernel source code using the
+\texttt{MODULE\_FIRMWARE} macro. The table has the following fields:
+
+\begin{itemize}
+\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{modulename}: name of the source code file
+\item \texttt{firmware}: contents of the \texttt{MODULE\_FIRMWARE} macro
+\end{itemize}
+
+\subsubsection{\texttt{kernelmodule\_license} table}
+
+This table is used to store information about Linux kernel module licenses.
+This information is declared in the Linux kernel source code using the
+\texttt{MODULE\_LICENSE} macro. The table has the following fields:
+
+\begin{itemize}
+\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{modulename}: name of the source code file
+\item \texttt{license}: contents of the \texttt{MODULE\_LICENSE} macro
+\end{itemize}
+
+\subsubsection{\texttt{kernelmodule\_parameter} table}
+
+This table is used to store information about Linux kernel module parameters.
+This information is declared in the Linux kernel source code using the
+\texttt{MODULE\_PARM} and \texttt{module\_param} macros, as well as variations
+of the \texttt{module\_param} macro. These different notations were used for
+different versions of the Linux kernel and both formats have been used in the
+kernel at the same time. The table has the following fields:
+
+\begin{itemize}
+\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{modulename}: name of the source code file
+\item \texttt{paramname}: name of the parameter
+\item \texttt{paramtype}: type of the parameter, as specified in the source
+code (various formats have been used)
+\end{itemize}
+
+\subsubsection{\texttt{kernelmodule\_version} table}
+
+This table is used to store information about Linux kernel module versions.
+This information is declared in the Linux kernel source code using the
+\texttt{MODULE\_VERSION} macro. The table has the following fields:
+
+\begin{itemize}
+\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{modulename}: name of the source code file
+\item \texttt{version}: contents of the \texttt{MODULE\_VERSION} macro
 \end{itemize}
 
 \section{BusyBox script internals}
@@ -2136,17 +2259,106 @@ large files it is strongly advised to cap this value.
 \section{Default ordering of scans in BAT}
 
 BAT comes with a default configuration file. In this file an order for running
-the scans is specified. In this section the rationale behind this ordering is
-explained.
+the scans is specified, using the \texttt{priority} field: the higher the
+priority, the earlier the scan is run in the process. In this section the
+rationale behind this ordering is explained.
 
-The order for pre-run scans, unpack scans, leaf scans and aggregate scans are
-determined. Since postrun scans do not change the result files and they are 
+The order for pre-run scans, unpack scans and aggregate scans is described
+below. The current leaf scans in BAT are all idempotent so there is no explicit
+order. Since postrun scans do not change the result files and they are 
 independent there is no order defined for them (although this might change in
 the future).
 
 \subsection{Pre-run scans}
+
+Most pre-run scans have the same priority, with a few exceptions, the most
+important being \texttt{verifytext} to find out if a file is ASCII only, or if
+there are any non-ASCII characters in the file. Since many of the scans
+(including pre-run scans) only work on non-ASCII files it is important to find
+out soon if a file contains only ASCII characters or not.
+
+The order for pre-run scans is:
+
+\begin{enumerate}
+\item \texttt{checkXML}
+\item \texttt{verifytext}
+\item \texttt{verifyjava}
+\item \texttt{verifyelf}, \texttt{verifygraphics}, \texttt{verifysqlite3}
+\item \texttt{verifyandroiddex}, \texttt{verifyandroidodex},
+\texttt{verifyandroidresource}, \texttt{verifyandroidxml}, \texttt{verifybz2},
+\texttt{verifygzip}, \texttt{verifyico}, \texttt{verifyjar},
+\texttt{verifymessagecatalog}, \texttt{verifymp4}, \texttt{verifyogg},
+\texttt{verifyotf}, \texttt{verifyttf}, \texttt{verifytz}, \texttt{verifywoff},
+\texttt{vimswap}
+\end{enumerate}
+
 \subsection{Unpack scans}
-\subsection{Leaf scans}
+
+As a general rule of thumb: compressed formats are scanned last, while
+simple containers that concatenate contents, or where the original content can
+still be (partially) recognised, are scanned first.
+
+An example of a container is TAR: content is simply concatenated without
+compression. If the TAR archive would contain a file of a certain type (such as
+a gzip compressed file) and the unpacker for that type is run first it will try
+to carve it from the TAR file, blacklist the byte range, and the TAR unpacker
+would not successfully run.
+
+For the compressed files on the other hand the original content isn't visible
+without unpacking so no other scans will pick it up and they can have a low
+priority.
+
+The order that is defined starts with \texttt{byteSwap}, a special unpacker
+that is needed to unpack firmwares of certain devices, where a different kind
+of flash chip is used, needing bytes in a firmware to be swapped first before
+any other scan can be run.
+
+Then the unpack scans for various container formats and file systems are run.
+The order in which they appear is not fool proof: container files could be
+embedded in container files with a lower priority, but BAT comes with
+(hopefully) sane defaults to prevent this.
+
+Second to last unpack scans for compressed files where all data is packed in
+such a way that the original content can't be seen without unpacking are run,
+
+Finally there are some scans that unpack text files (\texttt{base64}) or media
+files. The \texttt{lzma} unpack scan also has the lowest priority because of
+possibly many false positives.
+
+The order of the unpack scans as defined in BAT 15 is:
+
+\begin{enumerate}
+\item \texttt{byteSwap}
+\item \texttt{tar}
+\item \texttt{pdf\_unpack}, \texttt{iso9660}
+\item \texttt{cramfs}, \texttt{ext2fs}
+\item \texttt{ar}, \texttt{cpio}, \texttt{java\_serialized}, \texttt{romfs},
+\texttt{rpm}, \texttt{upx}, \texttt{yaffs}
+\item \texttt{exe}, \texttt{jffs2}, \texttt{squashfs}
+\item \texttt{7z}, \texttt{arj}, \texttt{bzip2}, \texttt{cab},
+\texttt{compress}, \texttt{gzip}, \texttt{installshield}, \texttt{lrzip},
+\texttt{lzip}, \texttt{lzo}, \texttt{pack200}, \texttt{rar}, \texttt{rzip},
+\texttt{xz}, \texttt{zip}
+\item \texttt{base64}, \texttt{gif}, \texttt{ico}, \texttt{png}, \texttt{swf},
+\texttt{lzma}
+\end{enumerate}
+
 \subsection{Aggregate scans}
+
+Aggregate scans have a clear order. Reports and (most) images are generated at
+the very end when all information is known. Other scans are mostly independent
+of eachother, but are run before \texttt{versionlicensecopyright} to prevent
+having to read big report pickles from disk.
+
+The order for pre-run scans is:
+
+\begin{enumerate}
+\item \texttt{prunefiles} (disabled by default)
+\item \texttt{findduplicates}
+\item \texttt{findlibs}
+\item \texttt{jars}, \texttt{kernelversions}
+\item \texttt{versionlicensecopyright}
+\item \texttt{generateimages}, \texttt{generatereports}
+\end{enumerate}
 
 \end{document}
