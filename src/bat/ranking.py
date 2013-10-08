@@ -507,7 +507,6 @@ def extractJavaNames(javameta, scanenv, clones):
 	namesmatched = 0
 	uniquematches = 0
 	uniquepackages = {}
-	matches = []
 
 	classname = javameta['classes']
 	methods = javameta['methods']
@@ -526,7 +525,6 @@ def extractJavaNames(javameta, scanenv, clones):
 				continue
 			res = c.execute("select distinct package from functionnamecache where functionname=?", (meth,)).fetchall()
 			if res != []:
-				matches.append(meth)
 				namesmatched += 1
 				packages_tmp = []
 				for r in res:
@@ -849,7 +847,6 @@ def extractDynamic(scanfile, scanenv, clones, olddb=False):
 
 		uniquepackages = {}
 		namesmatched = 0
-		matches = []
 		uniquematches = 0
 
 		## caching datastructure, only needed in case there is no full cache
@@ -871,7 +868,6 @@ def extractDynamic(scanfile, scanenv, clones, olddb=False):
 					else:
 						packages_tmp.append(r[0])
 				packages_tmp = list(set(packages_tmp))
-				matches.append(funcname)
 				namesmatched += 1
 				## unique match
 				if len(packages_tmp) == 1:
