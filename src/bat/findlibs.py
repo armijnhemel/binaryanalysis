@@ -68,16 +68,16 @@ def writeGraph((elfgraph, filehash, imagedir)):
 
 ## extract variable names, function names and the soname from an ELF file
 def extractfromelf((path, filename)):
-	remotefuncs = []
-	localfuncs = []
-	remotevars = []
-	localvars = []
-	rpaths = []
-	weakremotevars = []
-	weakremotefuncs = []
-	weaklocalvars = []
-	weaklocalfuncs = []
-	sonames = []
+	remotefuncs = set()
+	localfuncs = set()
+	remotevars = set()
+	localvars = set()
+	rpaths = set()
+	weakremotevars = set()
+	weakremotefuncs = set()
+	weaklocalvars = set()
+	weaklocalfuncs = set()
+	sonames = set()
 	elftype = ""
 
 	p = subprocess.Popen(['readelf', '-W', '--dyn-syms', os.path.join(path, filename)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -101,17 +101,17 @@ def extractfromelf((path, filename)):
 			if functionstrings[3] == 'FUNC' or functionstrings[3] == 'IFUNC':
 				funcname = functionstrings[7].split('@')[0]
 				if functionstrings[4] == 'WEAK':
-					weaklocalfuncs.append(funcname)
+					weaklocalfuncs.add(funcname)
 				else:
-					localfuncs.append(funcname)
+					localfuncs.add(funcname)
 			elif functionstrings[3] == 'OBJECT' and functionstrings[6] != 'ABS':
 				varname = functionstrings[7].split('@')[0]
 				if varname not in varignores:
 					varname = functionstrings[7].split('@')[0]
 					if functionstrings[4] == 'WEAK':
-						weaklocalvars.append(varname)
+						weaklocalvars.add(varname)
 					else:
-						localvars.append(varname)
+						localvars.add(varname)
 			continue
 		## See http://gcc.gnu.org/ml/gcc/2002-06/msg00112.html
 		if functionstrings[7].split('@')[0] == '_Jv_RegisterClasses':
@@ -120,12 +120,12 @@ def extractfromelf((path, filename)):
 		if functionstrings[3] == 'FUNC' or functionstrings[3] == 'IFUNC':
 			funcname = functionstrings[7].split('@')[0]
 			if functionstrings[4] == 'WEAK':
-				weakremotefuncs.append(funcname)
+				weakremotefuncs.add(funcname)
 			else:
-				remotefuncs.append(funcname)
+				remotefuncs.add(funcname)
 		elif functionstrings[3] == 'OBJECT' and functionstrings[6] != 'ABS':
 			if functionstrings[7].split('@')[0] not in varignores:
-				remotevars.append(functionstrings[7].split('@')[0])
+				remotevars.add(functionstrings[7].split('@')[0])
 
 	## extract dynamic section
 	p = subprocess.Popen(['readelf', '-Wd', "%s" % os.path.join(path, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -140,11 +140,11 @@ def extractfromelf((path, filename)):
 			if len(soname_split) < 2:
 				continue
 			soname = line.split(': ')[1][1:-1]
-			sonames.append(soname)
+			sonames.add(soname)
 		if "(RPATH)" in line:
 			rpath_split = line.split('[')[1]
 			rpaths = rpath_split[:-1].split(':')
-	sonames = list(set(sonames))
+	sonames = set(sonames)
 
 	p = subprocess.Popen(['readelf', '-h', "%s" % os.path.join(path, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
@@ -159,7 +159,7 @@ def extractfromelf((path, filename)):
 			if "REL" in line:
 				elftype = "kernelmod"
 
-	return (filename, localfuncs, remotefuncs, localvars, remotevars, weaklocalfuncs, weakremotefuncs, weaklocalvars, weakremotevars, sonames, elftype, rpaths)
+	return (filename, list(localfuncs), list(remotefuncs), list(localvars), list(remotevars), list(weaklocalfuncs), list(weakremotefuncs), list(weaklocalvars), list(weakremotevars), sonames, elftype, rpaths)
 
 def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, envvars=None, unpacktempdir=None):
 	scanenv = os.environ.copy()
@@ -314,6 +314,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 	## Keep a list of files that are identical, for example copies of libraries
 	dupes = {}
 
+	## Is this correct???
+	ignorefuncs = set(["__ashldi3", "__ashrdi3", "__cmpdi2", "__divdi3", "__fixdfdi", "__fixsfdi", "__fixunsdfdi", "__fixunssfdi", "__floatdidf", "__floatdisf", "__floatundidf", "__lshrdi3", "__moddi3", "__ucmpdi2", "__udivdi3", "__umoddi3", "main"])
 	for i in elffiles:
 		if elftypes[i] == 'kernelmod':
 			continue
@@ -606,8 +608,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 				## the symbol as WEAK, but another "hidden" dependency has it as GLOBAL.
 				## First for remote functions...
 				for r in remotefuncswc:
-					## Is this correct???
-					if r in ["__ashldi3", "__ashrdi3", "__cmpdi2", "__divdi3", "__fixdfdi", "__fixsfdi", "__fixunsdfdi", "__fixunssfdi", "__floatdidf", "__floatdisf", "__floatundidf", "__lshrdi3", "__moddi3", "__ucmpdi2", "__udivdi3", "__umoddi3", "main"]:
+					if r in ignorefuncs:
 						continue
 					if weakfuncstolibs.has_key(r):
 						existing = False
@@ -662,7 +663,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 					#print >>sys.stderr, "POSSIBLE LIBS TO SATISFY CONDITIONS", i, list(set(possiblesolutions))
 					possiblyusedlibsperfile[i] = list(set(possiblesolutions))
 			else:
-				if list(set(leafreports['libs']).difference(set(map(lambda x: x[0], usedlibs)))) != []:
+				if set(leafreports['libs']).difference(set(map(lambda x: x[0], usedlibs))) != set():
 					unusedlibs = list(set(leafreports['libs']).difference(set(map(lambda x: x[0], usedlibs))))
 					unusedlibs.sort()
 					unusedlibsperfile[i] = unusedlibs
@@ -765,7 +766,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 					squashedgraph[i].append((squashedelffiles[d[0]][0], d[1], d[2]))
 
 	## TODO: make more parallel
-	elfgraphs = []
+	elfgraphs = set()
 	for i in elffiles:
 		if elftypes[i] == 'kernelmod':
 			continue
@@ -860,7 +861,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 					break
 
 			elfgraph_data = elfgraph.to_string()
-			elfgraphs.append((elfgraph_data, filehash, imagedir))
+			elfgraphs.add((elfgraph_data, filehash, imagedir))
 
 	pool = multiprocessing.Pool(processes=processors)
 	elfres = pool.map(writeGraph, elfgraphs,1)
