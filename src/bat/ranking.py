@@ -792,9 +792,9 @@ def extractDynamic(scanfile, scanenv, clones, olddb=False):
 
 	## Walk through the output of readelf, and split results accordingly
 	## in function names and variables.
-	scanstr = []
+	scanstr = set()
 	mangles = []
-	variables = []
+	variables = set()
 	for i in st[3:]:
 		dynstr = i.split()
 		if len(dynstr) < 8:
@@ -807,7 +807,7 @@ def extractDynamic(scanfile, scanenv, clones, olddb=False):
 			if dynstr[3] == 'OBJECT':
 				if dynstr[4] == 'WEAK':
 					continue
-				variables.append(dynstr[7])
+				variables.add(dynstr[7])
 				continue
 		## every program has 'main', so skip
 		if dynstr[7] == 'main':
@@ -822,8 +822,7 @@ def extractDynamic(scanfile, scanenv, clones, olddb=False):
 		if dynstr[7].startswith("_Z"):
 			mangles.append(dynstr[7])
 		else:
-			funcname = dynstr[7]
-			scanstr.append(funcname)
+			scanstr.add(dynstr[7])
 
 	if scanenv.has_key('BAT_FUNCTION_SCAN'):
 		## run c++filt in batched mode to avoid launching many processes
@@ -843,7 +842,7 @@ def extractDynamic(scanfile, scanenv, clones, olddb=False):
 					funcname = f.split('(', 1)[0].rsplit('::', 1)[-1].strip()
 					## TODO more sanity checks here, since demangling
 					## will sometimes not return a single function name
-					scanstr.append(funcname)
+					scanstr.add(funcname)
 
 		uniquepackages = {}
 		namesmatched = 0
@@ -855,7 +854,7 @@ def extractDynamic(scanfile, scanenv, clones, olddb=False):
 		## the database made from ctags output only has function names, not the types. Since
 		## C++ functions could be in an executable several times with different types we
 		## deduplicate first
-		for funcname in set(scanstr):
+		for funcname in scanstr:
 			c.execute("select package from functionnamecache where functionname=?", (funcname,))
 			res = c.fetchall()
 			pkgs = []
@@ -878,7 +877,7 @@ def extractDynamic(scanfile, scanenv, clones, olddb=False):
 						uniquepackages[packages_tmp[0]] = [funcname]
 		dynamicRes['namesmatched'] = namesmatched
 		dynamicRes['uniquepackages'] = uniquepackages
-		dynamicRes['totalnames'] = len(set(scanstr))
+		dynamicRes['totalnames'] = len(scanstr)
 
 		## unique matches found. 
 		dynamicRes['uniquematches'] = uniquematches
