@@ -55,7 +55,7 @@ def squash_versions(versions):
 		## determine how many subcomponents we have at max
 		filterversions = filter(lambda x: x.startswith(m + "."), versions)
 		if len(filterversions) == 1:
-			versionparts.append(reduce(lambda x, y: x + ", " + y, filterversions))
+			versionparts.append(reduce(lambda x, y: "%s, %s" % (x, y), filterversions))
 			continue
 		minversionsplits = min(set(map(lambda x: len(x.split('.')), filterversions))) - 1
 		## split with a maximum of minversionsplits splits
@@ -66,7 +66,7 @@ def squash_versions(versions):
 			else: break
 		if minversionsplits != maxconsolidationlevel:
 			splits = map(lambda x: x.split('.', maxconsolidationlevel), filterversions)
-		versionpart = reduce(lambda x, y: x + "." + y, splits[0][:maxconsolidationlevel]) + ".{" + reduce(lambda x, y: x + ", " + y, map(lambda x: x[-1], splits)) + "}"
+		versionpart = reduce(lambda x, y: "%s.%s" % (x, y), splits[0][:maxconsolidationlevel]) + ".{%s}" % reduce(lambda x, y: x + ", " + y, map(lambda x: x[-1], splits))
 		versionparts.append(versionpart)
 	versionline = reduce(lambda x, y: x + ", " + y, versionparts)
 	return versionline
@@ -76,11 +76,14 @@ def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
 	(packagename, uniquematches) = cPickle.load(html_pickle)
 	html_pickle.close()
 	os.unlink(os.path.join(pickledir, picklefile))
-	if len(uniquematches) == 0:
+	lenuniquematches = len(uniquematches)
+	if lenuniquematches == 0:
 		return
 
+	squashed_versions = {}
+
 	uniquehtmlfile = open("%s/%s-unique.snippet" % (reportdir, picklehash), 'wb')
-	uniquehtmlfile.write("<hr><h2><a name=\"%s\" href=\"#%s\">Matches for: %s (%d)</a></h2>" % (packagename, packagename, packagename, len(uniquematches)))
+	uniquehtmlfile.write("<hr><h2><a name=\"%s\" href=\"#%s\">Matches for: %s (%d)</a></h2>" % (packagename, packagename, packagename, lenuniquematches))
 	uniquematches.sort()
 	for k in uniquematches:
 		(programstring, results) = k
@@ -104,6 +107,7 @@ def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
 							if pv.endswith(e):
 								pv = pv[:-len(e)]
 								break
+						## then check if the file directory name follows a certain pattern
 						if pv == "%s-%s" % (packagename, version) or pv == "%s_%s" % (packagename, version):
 							if sh.has_key(checksum):
 								sh[checksum].add((fp, version, linenumber))
@@ -124,20 +128,25 @@ def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
 				## per checksum we have a list of (filename, version)
 				## Now we need to check if we only have one filename, or if there are multiple.
 				## If there is just one it is easy:
-				if len(set(map(lambda x: x[0], sh[checksum]))) == 1:
-					lines = sorted(set(map(lambda x: (x[2]), sh[checksum])))
+				chs = set(map(lambda x: x[0], sh[checksum]))
+				if len(chs) == 1:
+					linenumbers = sorted(set(map(lambda x: (x[2]), sh[checksum])))
 					versions = sorted(set(map(lambda x: (x[1]), sh[checksum])))
-					versionline = squash_versions(versions)
+					if squashed_versions.has_key(checksum):
+						versionline = squashed_versions[checksum]
+					else:
+						versionline = squash_versions(versions)
+						squashed_versions[checksum] = versionline
 					ch = sh[checksum].pop()
-					numlines = reduce(lambda x, y: "%s, %s" % (x,y), map(lambda x: "<a href=\"unique:/%s#%d\">%d</a>" % (checksum, x, x), lines))
+					numlines = reduce(lambda x, y: "%s, %s" % (x,y), map(lambda x: "<a href=\"unique:/%s#%d\">%d</a>" % (checksum, x, x), linenumbers))
 					uniquehtmlfile.write("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (ch[0], versionline, numlines, checksum))
 				else:   
-					for d in set(map(lambda x: x[0], sh[checksum])):
+					for d in chs:
 						filterd = filter(lambda x: x[0] == d, sh[checksum])
-						lines = sorted(set(map(lambda x: (x[2]), filterd)))
+						linenumbers = sorted(set(map(lambda x: (x[2]), filterd)))
 						versions = sorted(set(map(lambda x: (x[1]), filterd)))
 						versionline = squash_versions(versions)
-						numlines = reduce(lambda x, y: "%s, %s" % (x,y), map(lambda x: "<a href=\"unique:/%s#%d\">%d</a>" % (checksum, x, x), lines))
+						numlines = reduce(lambda x, y: "%s, %s" % (x,y), map(lambda x: "<a href=\"unique:/%s#%d\">%d</a>" % (checksum, x, x), linenumbers))
 						uniquehtmlfile.write("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (d, versionline, numlines, checksum))
 			uniquehtmlfile.write("</table></p>\n")
 		else:
@@ -527,9 +536,8 @@ def generatereports(unpackreports, scantempdir, topleveldir, processors, debug=F
 			for r in resultranks[filehash]:
 				(picklehash, uniquematcheslen, packagename) = r
 				picklehtmlfile = open(os.path.join(reportdir, "%s-unique.snippet" % picklehash))
-				picklehtml = picklehtmlfile.read()
+				uniquehtmlfile.write(picklehtmlfile.read())
 				picklehtmlfile.close()
-				uniquehtmlfile.write(picklehtml)
 				pickleremoves.add(picklehash)
 				
 			uniquehtmlfile.write("</body></html>")
