@@ -87,4 +87,3 @@ BOTTLENECKS:
 7. rework ranking as an aggregate scan to be able to do database lookups in parallel for strings per file instead of per file.
 8. rework ELF graphs (allow edges to cross) as the images can get very very big for certain firmwares
 9. add ramdisk unpacking for jffs2
-10. copy/merge configuration from scan machine with default configuration

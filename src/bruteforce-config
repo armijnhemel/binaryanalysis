@@ -116,7 +116,7 @@ type        = prerun
 module      = bat.prerun
 method      = verifyJavaClass
 magic       = java
-priority    = 1
+priority    = 3
 description = Check if complete file is a valid Java class file
 enabled     = yes
 
@@ -177,7 +177,7 @@ enabled     = yes
 type        = prerun
 module      = bat.prerun
 method      = verifyText
-priority    = 3
+priority    = 4
 description = Check if file contains just ASCII text
 enabled     = yes
 
@@ -261,7 +261,7 @@ type        = unpack
 module      = bat.fwunpack
 method      = searchUnpackByteSwap
 priority    = 100
-noscan      = xml:graphics:pdf:compressed:audio:video:mp4:java
+noscan      = xml:graphics:pdf:compressed:audio:video:mp4:java:elf
 description = Byteswap files for 16 bit flash
 enabled     = yes
 
@@ -360,10 +360,10 @@ type        = unpack
 module      = bat.fwunpack
 method      = searchUnpackIco
 priority    = 0
-magic       = ico
+scanonly    = ico
 noscan      = text:xml:pdf:compressed:graphics:resource:audio:video:mp4:java
 description = Carve ICO files from a file
-enabled     = no
+enabled     = yes
 
 [installshield]
 type        = unpack
@@ -542,7 +542,7 @@ module      = bat.fwunpack
 method      = searchUnpackSwf
 priority    = 0
 magic       = swf
-noscan      = text:xml:pdf:compressed:graphics:resource:audio:video:mp4:java
+noscan      = text:xml:pdf:compressed:graphics:resource:audio:video:mp4:java:elf
 description = Unpack compressed Shockwave Flash files
 enabled     = yes
 
@@ -563,7 +563,7 @@ module      = bat.fwunpack
 method      = searchUnpackUbifs
 priority    = 4
 magic       = ubifs
-noscan      = text:xml:graphics:pdf:compressed:audio:video
+noscan      = text:xml:graphics:pdf:compressed:audio:video:mp4
 description = Unpack UBI file systems
 enabled     = no
 
@@ -669,7 +669,7 @@ module      = bat.checks
 method      = scanForges
 ppmodule    = bat.checks
 ppoutput    = forgesPrettyPrint
-noscan      = graphics:compressed:audio:video
+noscan      = graphics:compressed:audio:video:mp4
 description = Scan for presence of markers of forges/collaborative software development sites
 enabled     = yes
 
@@ -767,12 +767,11 @@ module      = bat.ranking
 method      = searchGeneric
 ppmodule    = bat.ranking
 ppoutput    = xmlprettyprint
-envvars     = BAT_STRINGSCACHE_C=/gpl/master/stringscache_c:BAT_STRINGSCACHE_JAVA=/gpl/master/stringscache_java:BAT_DB=/gpl/master/master.sqlite3:BAT_NAMECACHE_C=/gpl/master/functioncache_c:BAT_NAMECACHE_JAVA=/gpl/master/functioncache_java:BAT_RANKING_FULLCACHE=1:BAT_CLONE_DB=/tmp/clonedb
-#envvars     = BAT_STRINGSCACHE_C=/gpl/master/stringscache_c:BAT_STRINGSCACHE_JAVA=/gpl/master/stringscache_java:BAT_DB=/gpl/master/master.sqlite3:BAT_NAMECACHE_B=/gpl/master/functioncache_c:BAT_NAMECACHE_JAVA=/gpl/master/functioncache_java:BAT_RANKING_LICENSE=1:BAT_RANKING_VERSION=1:BAT_CLONE_DB=/tmp/clonedb:BAT_LICENSE_DB=/gpl/master/licenses.sqlite3
+envvars     = BAT_STRINGSCACHE_C=/gpl/master/stringscache_c:BAT_STRINGSCACHE_JAVA=/gpl/master/stringscache_java:BAT_NAMECACHE_C=/gpl/master/functioncache_c:BAT_NAMECACHE_JAVA=/gpl/master/functioncache_java:BAT_CLONE_DB=/tmp/clonedb
 noscan      = text:xml:graphics:pdf:compressed:resource:audio:video:mp4:vimswap:timezone:ico
 description = Classify packages using advanced ranking mechanism
-enabled     = no
-parallel    = no
+enabled     = yes
+parallel    = yes
 setup       = rankingsetup
 
 [redboot]
@@ -831,7 +830,7 @@ type        = aggregate
 module      = bat.findlibs
 method      = findlibs
 envvars     = BAT_IMAGEDIR=/tmp/images
-noscan      = text:xml:graphics:pdf:audio:video
+noscan      = text:xml:graphics:pdf:audio:video:mp4
 enabled     = yes
 storetarget = images
 storedir    = /tmp/images
@@ -843,7 +842,7 @@ priority    = 5
 type        = aggregate
 module      = bat.generateimages
 method      = generateimages
-noscan      = text:xml:graphics:pdf:audio:video
+noscan      = text:xml:graphics:pdf:audio:video:mp4
 enabled     = yes
 envvars     = BAT_IMAGEDIR=/tmp/images:AGGREGATE_IMAGE_SYMLINK=0
 description = Generate images of results of ranking
@@ -857,7 +856,7 @@ priority    = 1
 type        = aggregate
 module      = bat.generatereports
 method      = generatereports
-noscan      = text:xml:graphics:pdf:audio:video
+noscan      = text:xml:graphics:pdf:audio:video:mp4
 enabled     = yes
 envvars     = BAT_REPORTDIR=/tmp/images
 description = Generate reports of results of ranking
@@ -871,7 +870,7 @@ priority    = 1
 type        = aggregate
 module      = bat.aggregatejars
 method      = aggregatejars
-noscan      = text:xml:graphics:pdf:audio:video
+noscan      = text:xml:graphics:pdf:audio:video:mp4
 envvars     = AGGREGATE_CLEAN=1
 enabled     = yes
 priority    = 4
@@ -897,7 +896,7 @@ priority    = 20
 type        = aggregate
 module      = bat.licenseversion
 method      = determinelicense_version_copyright
-noscan      = text:xml:graphics:pdf:audio:video
+noscan      = text:xml:graphics:pdf:audio:video:mp4
 envvars     = BAT_DB=/gpl/master/master.sqlite3:BAT_RANKING_LICENSE=1:BAT_RANKING_VERSION=1:BAT_LICENSE_DB=/gpl/master/licenses.sqlite3:BAT_KEEP_VERSIONS=10:BAT_KEEP_MAXIMUM_PERCENTAGE=50:BAT_MINIMUM_UNIQUE=10:BAT_CLONE_DB=/tmp/clonedb
 enabled     = yes
 priority    = 3
@@ -910,7 +909,7 @@ priority    = 3
 type        = postrun
 module      = bat.generatehexdump
 method      = generateHexdump
-noscan      = text:xml:graphics:pdf:audio:video
+noscan      = text:xml:graphics:pdf:audio:video:mp4
 envvars     = BAT_REPORTDIR=/tmp/images:BAT_IMAGE_MAXFILESIZE=100000000
 description = Create hexdump output of files
 enabled     = no
