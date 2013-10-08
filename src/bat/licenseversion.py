@@ -241,8 +241,7 @@ def grab_sha256_filename((masterdb, tasks)):
 	c = conn.cursor()
 	for sha256sum in tasks:
 		c.execute("select version, filename from processed_file where sha256=?", (sha256sum,))
-		res = c.fetchall()
-		results[sha256sum] = res
+		results[sha256sum] = c.fetchall()
 	c.close()
 	conn.close()
 	return results
@@ -257,9 +256,7 @@ def grab_sha256_license((licensedb, tasks)):
 	c = conn.cursor()
 	for sha256sum in tasks:
 		c.execute("select distinct license, scanner from licenses where sha256=?", (sha256sum,))
-		licenses = c.fetchall()
-
-		results[sha256sum] = licenses
+		results[sha256sum] = c.fetchall()
 	c.close()
 	conn.close()
 	return results
@@ -363,9 +360,9 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 					(checksum, linenumber) = s
 					if not sha256_versions.has_key(checksum):
 						if sha256_scan_versions.has_key(checksum):
-							sha256_scan_versions[checksum].append((line, linenumber))
+							sha256_scan_versions[checksum].add((line, linenumber))
 						else:
-							sha256_scan_versions[checksum] = [(line, linenumber)]
+							sha256_scan_versions[checksum] = set([(line, linenumber)])
 
 			vtasks_tmp = []
 			if len(sha256_scan_versions) < processors:
@@ -499,9 +496,9 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 					(checksum, linenumber) = s
 					if not sha256_versions.has_key(checksum):
 						if sha256_scan_versions.has_key(checksum):
-							sha256_scan_versions[checksum].append((functionname, linenumber))
+							sha256_scan_versions[checksum].add((functionname, linenumber))
 						else:
-							sha256_scan_versions[checksum] = [(functionname, linenumber)]
+							sha256_scan_versions[checksum] = set([(functionname, linenumber)])
 					else:
 						for v in sha256_versions[checksum]:
 							(version, filename) = v
