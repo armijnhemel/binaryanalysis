@@ -1,3 +1,11 @@
+2013-10-08
+* remove unused code from ranking.py
+* update default configuration with configuration settings from actual scan
+machine
+* update manual for BAT 15
+* generatereports.py: cache squashing of versions where possible
+* several list -> set conversions in various files
+
 2013-10-07
 * store language in top level ranking result instead of hidden somewhere in
 the results of the variables
