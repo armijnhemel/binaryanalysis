@@ -1533,7 +1533,7 @@ It has the following fields:
 \item \texttt{version}: version of the package the file is from (same as in
 \texttt{processed})
 \item \texttt{filename}: relative path inside the source code archive
-\item \texttt{sha256} SHA256 checksum of the file
+\item \texttt{sha256}: SHA256 checksum of the file
 \end{itemize}
 
 \subsubsection{\texttt{extracted\_file} table}
@@ -2220,11 +2220,18 @@ I/O and speed up scanning.
 
 \subsection{\texttt{file2package}}
 
-The \texttt{file2package} scan has one parameter: \texttt{BAT\_PACKAGE\_DB}.
-This parameter is used to specify the location of the database used by this
-scan. The database can be generated using the scripts
+The \texttt{file2package} leaf scan has one parameter:
+\texttt{BAT\_PACKAGE\_DB}.  This parameter is used to specify the location of
+the database used by this scan. The database can be generated using the scripts
 \texttt{createfiledatabasedebian.py} and \texttt{createfiledatabasefedora.py}
 in the subdirectory \texttt{maintenance} in the BAT source tree.
+
+\subsection{\texttt{ranking}}
+
+The \texttt{ranking} leaf scan has several parameters, including
+\texttt{DEX\_TMPDIR}. This parameter can be used to set a location where
+temporary files for DEX and ODEX (Android Dalvik files) unpacking can be
+written. This would typically be tmpfs or a ramdisk.
 
 \subsection{\texttt{jars}}
 
