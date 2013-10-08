@@ -172,7 +172,7 @@ def analyseModuleLicense(path, tags, blacklist=[], debug=False, envvars=[], unpa
 ## but sometimes modules for an entirely different architecture pop up, which is a
 ## sign that something is wrong.
 def kernelmodulecheck(unpackreports, scantempdir, topleveldir, processors, debug=False, envvars=None, unpacktempdir=None):
-	kernelversions = []
+	kernelversions = set()
 	moduleversions = {}
 	modulearchitectures = {}
 	for i in unpackreports:
@@ -182,10 +182,11 @@ def kernelmodulecheck(unpackreports, scantempdir, topleveldir, processors, debug
 		if not unpackreports[i].has_key('sha256'):
 			continue
 
-		filehash = unpackreports[i]['sha256']
-
 		if not ('linuxkernel' in unpackreports[i]['tags'] or 'kernelchecks' in unpackreports[i]['tags']):
 			continue
+
+		filehash = unpackreports[i]['sha256']
+
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue
 
@@ -199,14 +200,12 @@ def kernelmodulecheck(unpackreports, scantempdir, topleveldir, processors, debug
 			moduleversions[filehash] = leafreports['kernelmoduleversion']
 		elif leafreports.has_key('kernelchecks'):
 			if leafreports['kernelchecks'].has_key('version'):
-				kernelversions.append(leafreports['kernelchecks']['version'])
+				kernelversions.add(leafreports['kernelchecks']['version'])
 
 		if leafreports.has_key('architecture'):
 			modulearchitectures[filehash] = leafreports['architecture']
 
-	kernelversions = list(set(kernelversions))
-
-	architectures = list(set(modulearchitectures.values()))
+	architectures = set(modulearchitectures.values())
 
 	res = {}
 
@@ -221,7 +220,7 @@ def kernelmodulecheck(unpackreports, scantempdir, topleveldir, processors, debug
 	## If there are no kernel versions in the firmware, then assume a kernel
 	## (or multiple kernels) are already on the device and nothing should be
 	## assumed.
-	if kernelversions != []:
+	if kernelversions != set():
 		for m in moduleversions.keys():
 			if not moduleversions[m] in kernelversions:
 				res['kernelmoduleversionmismatch'] = True
