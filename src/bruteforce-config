@@ -169,8 +169,9 @@ type        = prerun
 module      = bat.prerun
 method      = verifySqlite3
 priority    = 2
+noscan      = text:elf:graphics:compressed:font:pdf
 magic       = sqlite3
-description = Check if file contains just ASCII text
+description = Check if file contains a valid SQLite 3 database
 enabled     = yes
 
 [verifytext]
