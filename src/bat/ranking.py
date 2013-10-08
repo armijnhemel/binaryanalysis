@@ -1284,9 +1284,9 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 			new_stringsleft[stri] = stringsLeft[stri]
 			strsplit = stri.rsplit('\t', 1)[0]
 			if string_split.has_key(strsplit):
-				string_split[strsplit].append(stri)
+				string_split[strsplit].add(stri)
 			else:
-				string_split[strsplit] = [stri]
+				string_split[strsplit] = set([stri])
 
 	stringsLeft = new_stringsleft
 
