@@ -13,9 +13,6 @@ presented at the Mining Software Repositories 2011 conference.
 
 Configuration parameters for databases are:
 
-BAT_RANKING_FULLCACHE :: indication whether or not a full cached database is
-                         used, reducing the need to generate it "just in time"
-
 BAT_CLONE_DB :: location of database containing information about which packages
                 should be treated as equivalent from a scanning point of view,
                 like renamed packages.
@@ -1576,13 +1573,6 @@ def rankingsetup(envvars, debug=False):
 				newenv[envname] = envvalue
 			except Exception, e:
 				pass
-
-	## caches are needed
-	rankingfull = False
-	if scanenv.get('BAT_RANKING_FULLCACHE', 0) == '1':
-		rankingfull = True
-	if not rankingfull:
-		return (False, None)
 
 	if scanenv.has_key('DEX_TMPDIR'):
 		dex_tmpdir = scanenv['DEX_TMPDIR']
