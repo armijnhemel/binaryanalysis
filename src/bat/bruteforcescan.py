@@ -99,11 +99,11 @@ def filterScans(scans, tags):
 	for scan in scans:
 		if scan['scanonly'] != None:
 			scanonly = scan['scanonly'].split(':')
-			if list(set(tags).intersection(set(scanonly))) == []:
+			if set(tags).intersection(set(scanonly)) == set():
 				continue
 		if scan['noscan'] != None:
 			noscans = scan['noscan'].split(':')
-			if list(set(noscans).intersection(set(tags))) != []:
+			if set(noscans).intersection(set(tags)) != set():
 				continue
 			else:
 				filteredscans.append(scan)
@@ -176,6 +176,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 		## by BAT, convenient for later analysis of binaries.
 		## In case of squashfs remove the "squashfs-root" part of the temporary
 		## directory too, if it is present (not always).
+		## TODO: validate if this is stil needed
 		storepath = path[lenscandir:].replace("/squashfs-root", "")
 		unpackreports[relfiletoscan]['path'] = storepath
 		unpackreports[relfiletoscan]['realpath'] = path
@@ -813,14 +814,14 @@ def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=Fa
 		dumpfile.add('filereports')
 	except Exception,e:	print >>sys.stderr, e
 
-	dumpadds = []
+	dumpadds = set()
 	for i in (scans['postrunscans'] + scans['aggregatescans']):
 		if i['storedir'] != None and i['storetarget'] != None and i['storetype'] != None:
 			try:
 				os.stat(i['storetarget'])
-				dumpadds.append(i['storetarget'])
+				dumpadds.add(i['storetarget'])
 			except:	pass
-	for i in list(set(dumpadds)):
+	for i in dumpadds:
 		dumpfile.add(i)
 	dumpfile.close()
 
