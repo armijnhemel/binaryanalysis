@@ -2646,8 +2646,9 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, debug=Fal
 
 
 	lzma_tmpdir = scanenv.get('LZMA_TMPDIR', None)
-	if not os.path.exists(lzma_tmpdir):
-		lzma_tmpdir = None
+	if lzma_tmpdir != None:
+		if not os.path.exists(lzma_tmpdir):
+			lzma_tmpdir = None
 
 	## TODO: make sure this check is only done once through a setup scan
 	try:
