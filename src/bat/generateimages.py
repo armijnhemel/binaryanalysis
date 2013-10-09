@@ -9,12 +9,21 @@ import reportlab.rl_config as rl_config
 
 ## Ugly hack to register the right font with the system, because ReportLab really wants to find
 ## Times-Roman it seems. TODO: clean this up to make it more portable.
-rl_config.T1SearchPath = ["/usr/share/fonts/liberation/"]
+rl_config.T1SearchPath = ["/usr/share/fonts/liberation/", "/usr/share/fonts/truetype/liberation/"]
 
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-pdfmetrics.registerFont(TTFont('Times-Roman', os.path.join('/usr/share/fonts/liberation','LiberationSerif-Regular.ttf')))
+## Fedora
+fontpath = os.path.join('/usr/share/fonts/liberation','LiberationSerif-Regular.ttf')
+
+if not os.path.exists(fontpath):
+	## Ubuntu
+	fontpath = os.path.join('/usr/share/fonts/truetype/liberation/','LiberationSerif-Regular.ttf')
+
+## TODO: more sanity checks
+
+pdfmetrics.registerFont(TTFont('Times-Roman', fontpath))
 
 from reportlab.graphics.shapes import Drawing
 from reportlab.graphics.charts.barcharts import VerticalBarChart
