@@ -723,6 +723,8 @@ def dumpData(unpackreports, scans, tempdir):
 		## all output files of a particular scan start with the checksum of the scanned
 		## file and have a common suffix.
 		if i['storedir'] != None and i['storetarget'] != None and i['storetype'] != None:
+			if not os.path.exists(i['storedir']):
+				continue
 			if not os.path.exists(os.path.join(tempdir, i['storetarget'])):
 				os.mkdir(os.path.join(tempdir, i['storetarget']))
 			target = os.path.join(tempdir, i['storetarget'])
