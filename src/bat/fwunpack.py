@@ -2067,8 +2067,9 @@ def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, debug
 				pass
 
 	compress_tmpdir = scanenv.get('COMPRESS_TMPDIR', None)
-	if not os.path.exists(compress_tmpdir):
-		compress_tmpdir = None
+	if compress_tmpdir != None:
+		if not os.path.exists(compress_tmpdir):
+			compress_tmpdir = None
 
 	## TODO: make sure this check is only done once through a setup scan
 	try:
