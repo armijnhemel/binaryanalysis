@@ -188,7 +188,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 			return
 
 	## store names of all ELF files present in scan archive
-	elffiles = []
+	elffiles = set()
 
 	## keep track of which libraries map to what.
 	## For example, libm.so.0 could map to lib/libm.so.0 and lib2/libm.so.0
@@ -239,7 +239,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 			squashedelffiles[os.path.basename(i)] = [i]
 		else:
 			squashedelffiles[os.path.basename(i)].append(i)
-		elffiles.append(i)
+		elffiles.add(i)
 
 	## map functions to libraries. For each function name a list of libraries
 	## that define the function is kept.
@@ -746,6 +746,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 		if elftypes[i] == 'kernelmod':
 			continue
 		libdeps = usedlibsandcountperfile[i]
+		## TODO: add nodes that have no dependencies at all to the graph too
 		if libdeps == []:
 			continue
 		if not squashedgraph.has_key(i):
@@ -793,13 +794,13 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 		## 3. unused: the dependency is not used
 		## 4. undeclared: the dependency is used but undeclared
 		## 5. plugin: the dependency is used as a plugin
-		processnodes = map(lambda x: (rootnode,) + x + (True, True), squashedgraph[i])
-		newprocessNodes = []
+		processnodes = set(map(lambda x: (rootnode,) + x + (True, True), squashedgraph[i]))
+		newprocessNodes = set()
 		for pr in processnodes:
 			if pr[3] == True:
-				newprocessNodes.append(pr[0:3] + ("knowninterface",))
+				newprocessNodes.add(pr[0:3] + ("knowninterface",))
 			else:
-				newprocessNodes.append(pr[0:3] + ("used",))
+				newprocessNodes.add(pr[0:3] + ("used",))
 		processnodes = newprocessNodes
 		if unusedlibsperfile.has_key(i):
 			for j in unusedlibsperfile[i]:
@@ -807,16 +808,16 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 					continue
 				if len(squashedelffiles[j]) != 1:
 					continue
-				processnodes.append((rootnode, squashedelffiles[j][0], 0, "unused"))
+				processnodes.add((rootnode, squashedelffiles[j][0], 0, "unused"))
 				seen.append((i,j))
 		if possiblyusedlibsperfile.has_key(i):
 			for j in possiblyusedlibsperfile[i]:
-				processnodes.append((rootnode, j, 0, "undeclared"))
+				processnodes.add((rootnode, j, 0, "undeclared"))
 				seen.append((i,j))
 		seen = seen + map(lambda x: (i, x[0]), squashedgraph[i])
 
 		while True:
-			newprocessnodes = []
+			newprocessnodes = set()
 			for j in processnodes:
 				(parentnode, nodetext, count, nodetype) = j
 				ppname = os.path.join(unpackreports[nodetext]['path'], unpackreports[nodetext]['name'])
@@ -837,14 +838,14 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 					for n in squashedgraph[nodetext]:
 						if not (nodetext, n[0]) in seen:
 							if n[-1] == True:
-								newprocessnodes.append((tmpnode,) +  n[0:-1] + ("knowninterface",))
+								newprocessnodes.add((tmpnode,) +  n[0:-1] + ("knowninterface",))
 							else:
-								newprocessnodes.append((tmpnode,) +  n[0:-1] + ("used",))
+								newprocessnodes.add((tmpnode,) +  n[0:-1] + ("used",))
 							seen.append((nodetext, n[0]))
 				if possiblyusedlibsperfile.has_key(nodetext):
 					for u in possiblyusedlibsperfile[nodetext]:
 						if not (nodetext, u) in seen:
-							newprocessnodes.append((tmpnode, u, 0, "undeclared"))
+							newprocessnodes.add((tmpnode, u, 0, "undeclared"))
 							seen.append((nodetext, u))
 				if unusedlibsperfile.has_key(nodetext):
 					for u in unusedlibsperfile[nodetext]:
@@ -853,10 +854,10 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 								continue
 							if len(squashedelffiles[u]) != 1:
 								continue
-							newprocessnodes.append((tmpnode, squashedelffiles[u][0], 0, "unused"))
+							newprocessnodes.add((tmpnode, squashedelffiles[u][0], 0, "unused"))
 							seen.append((nodetext, u))
 			processnodes = newprocessnodes
-			if processnodes == []:
+			if processnodes == set():
 				break
 
 		elfgraph_data = elfgraph.to_string()
