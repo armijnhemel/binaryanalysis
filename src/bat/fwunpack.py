@@ -44,17 +44,20 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 	if offset == 0 and length == 0:
 		## use copy if we intend to *modify* tmpfile, or we end up
 		## modifying the orginal
-		## TODO: get rid of this 'templink' hack
+		## just use mkstemp() to get the name of a temporary file
+		templink = tempfile.mkstemp(dir=tmpdir)
+		os.fdopen(templink[0]).close()
+		os.unlink(templink[1])
 		if not modify:
 			try:
-				os.link(filename, "%s/%s" % (tmpdir, "templink"))
+				os.link(filename, templink[1])
 			except OSError, e:
 				## if filename and tmpdir are on different devices it is
 				## not possible to use hardlinks
-				shutil.copy(filename, "%s/%s" % (tmpdir, "templink"))
+				shutil.copy(filename, templink[1])
 		else:
-			shutil.copy(filename, "%s/%s" % (tmpdir, "templink"))
-		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile)
+			shutil.copy(filename, templink[1])
+		shutil.move(templink[1], tmpfile)
 	else:
 		filesize = os.stat(filename).st_size
 		if length == 0:
