@@ -16,6 +16,7 @@ compression/executables:
 * better support for ZIP file comments http://www.pkware.com/documents/casestudies/APPNOTE.TXT
 * use python-pefile for PE analysis
 * NBG5615 uImage
+* ncompress on Ubuntu gives false positives: try to filter these out
 
 dynamic ELF scanning
 * take RPATH into account
@@ -89,3 +90,4 @@ BOTTLENECKS:
 9. add ramdisk unpacking for jffs2
 10. research/fix priority for Minix file system
 11. don't recreate ELF graphs (model for every ELF binary), but reuse graphs of dependencies. This would need a topological sort.
+12. get rid of the 'templink' hacks in ISO, TAR and PDF unpacking, because of possible race conditions
