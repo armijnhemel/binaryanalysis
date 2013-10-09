@@ -5,6 +5,7 @@
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 import os, os.path, sys, subprocess, copy, cPickle, tempfile, hashlib, shutil, multiprocessing, piecharts
+import math
 import reportlab.rl_config as rl_config
 
 ## Ugly hack to register the right font with the system, because ReportLab really wants to find
@@ -68,14 +69,16 @@ def generateversionchart((versionpickle, picklehash, imagedir, pickledir)):
 	barwidth = 15
 	chartwidth = len(data) * barwidth + 10 * len(data)
 
-	## TODO: calculate a possible good value for startx so labels are not cut off
-	startx = 30
-	starty = len(maxversionstring) * 10 + 10
+	maxvalue = max(map(lambda x: x[1], data))
+	step = int(math.log(maxvalue,10))
+	valueStep = pow(10,step)
+
+	## calculate a possible good value for startx so labels are not cut off
+	startx = max(10 + step * 10, 30)
+	starty = len(maxversionstring) * 10 + 20
 
 	drawheight = 225 + starty
 	drawwidth = chartwidth + startx + 10
-
-	maxvalue = max(map(lambda x: x[1], data))
 
 	## create the drawing
 	drawing = Drawing(drawwidth, drawheight)
@@ -89,10 +92,7 @@ def generateversionchart((versionpickle, picklehash, imagedir, pickledir)):
 	bc.valueAxis.valueMin = 0
 	bc.valueAxis.labels.fontSize = 16
 	bc.valueAxis.valueMax = maxvalue
-	if maxvalue > 10:
-		bc.valueAxis.valueStep = 10
-	else:
-		bc.valueAxis.valueStep = 1
+	bc.valueAxis.valueStep = valueStep
 	bc.categoryAxis.labels.boxAnchor = 'w'
 	bc.categoryAxis.labels.dx = 0
 	bc.categoryAxis.labels.dy = -2
