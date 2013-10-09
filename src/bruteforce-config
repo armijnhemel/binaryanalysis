@@ -831,7 +831,7 @@ module      = bat.findlibs
 method      = findlibs
 envvars     = BAT_IMAGEDIR=/tmp/images
 noscan      = text:xml:graphics:pdf:audio:video:mp4
-enabled     = yes
+enabled     = no
 storetarget = images
 storedir    = /tmp/images
 storetype   = -graph.png
