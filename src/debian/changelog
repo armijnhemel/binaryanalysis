@@ -1,3 +1,16 @@
+bat (15.0) unstable; urgency=high
+
+  * increased fidelity for Linux kernel scanning
+  * much reduced run time for ranking scan
+  * RZIP unpacking
+  * JFFS2 big endian support
+  * squashfs fidelity and security fixes
+  * LZMA unpacking fidelity fixes
+  * version chart generation with reportlab instead of pychart
+  * much much more (see ChangeLog)
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Thu, 10 Oct 2013 13:02:43 +0200
+
 bat (14.0) unstable; urgency=low
 
   * fix cramfs unpacking
