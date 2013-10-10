@@ -1,3 +1,6 @@
+2013-10-10
+* tagging and releasing 15.0
+
 2013-10-09
 * disable 'findlibs' by default because Debian (and Ubuntu) ship an old broken
 version of pydot
