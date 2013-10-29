@@ -40,7 +40,7 @@ def generateImages(filename, unpackreport, scantempdir, topleveldir, debug=False
 			except Exception, e:
 				pass
 
-	imagedir = scanenv.get('BAT_IMAGEDIR', "%s/%s" % (toplevelscandir, "images"))
+	imagedir = scanenv.get('BAT_IMAGEDIR', "%s/%s" % (topleveldir, "images"))
 	try:
 		os.stat(imagedir)
 	except:
