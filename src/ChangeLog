@@ -2,6 +2,7 @@
 * fix symlinking in findlibs.py, also generate graphs for end points of the
 graph
 * update batchextractprogramstrings.py for FOSSology 2.3.0
+* extract more information from Linux kernel source code files
 
 2013-10-10
 * tagging and releasing 15.0
