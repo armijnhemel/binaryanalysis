@@ -76,7 +76,6 @@ misc:
 * replace hardcoded options in reporting with values of 'storetarget'
 * add fonttools dep to Debian/Ubuntu dependencies
 * add documentation about rationale of current ordering of scans (especially unpacking scans), plus of default 'noscan' values
-* rename "programscans"/"leafscans" and settle on using one term
 
 BOTTLENECKS:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
@@ -91,3 +90,5 @@ BOTTLENECKS:
 10. research/fix priority for Minix file system
 11. don't recreate ELF graphs (model for every ELF binary), but reuse graphs of dependencies. This would need a topological sort.
 12. get rid of the 'templink' hacks in ISO, TAR and PDF unpacking, because of possible race conditions
+13. split kernel module information off into separate database
+14. rename "programscans"/"leafscans" and settle on using one term
