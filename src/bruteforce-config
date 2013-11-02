@@ -935,7 +935,7 @@ module      = bat.guireport
 method      = guireport
 noscan      = text:xml:graphics:compressed:pdf:audio:video:mp4:resource
 envvars     = BAT_REPORTDIR=/tmp/images:BAT_IMAGEDIR=/tmp/images
-description = Generate graphical representation of files
+description = Generate reports for scanned files
 enabled     = yes
 storetarget = reports
 storedir    = /tmp/images
