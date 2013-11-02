@@ -213,6 +213,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 	for i in unpackreports:
 		if not unpackreports[i].has_key('sha256'):
 			## possibly there are symlinks
+			## TODO: rewrite symlinks to absolute paths before storing
 			if unpackreports[i].has_key('tags'):
 				if 'symlink' in unpackreports[i]['tags']:
 					target = unpackreports[i]['magic'].split('`')[-1][:-1]
@@ -746,9 +747,6 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 		if elftypes[i] == 'kernelmod':
 			continue
 		libdeps = usedlibsandcountperfile[i]
-		## TODO: add nodes that have no dependencies at all to the graph too
-		if libdeps == []:
-			continue
 		if not squashedgraph.has_key(i):
 			squashedgraph[i] = []
 		for d in libdeps:
@@ -772,8 +770,6 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 		if elftypes[i] == 'kernelmod':
 			continue
 		if not squashedgraph.has_key(i):
-			continue
-		if squashedgraph[i] == []:
 			continue
 		filehash = unpackreports[i]['sha256']
 		ppname = os.path.join(unpackreports[i]['path'], unpackreports[i]['name'])
