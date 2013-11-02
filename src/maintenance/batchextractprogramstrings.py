@@ -718,16 +718,6 @@ def licensefossology((packages)):
 			licenses = fossysplit[-1].split(',')
 			fossologyres.append((packages[j][5], list(set(licenses))))
 	return fossologyres
-	p2 = subprocess.Popen(["/usr/share/fossology/nomos/agent/nomos", os.path.join(i, p)], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-	(stanout, stanerr) = p2.communicate()
-	if "FATAL" in stanout:
-		## TODO: better error handling
-		return None
-	else:
-		fossysplit = stanout.strip().rsplit(" ", 1)
-		licenses = fossysplit[-1].split(',')
-		fossologyres = list(set(licenses))
-	return (filehash, fossologyres)
 
 ## TODO: get rid of ninkaversion before we call this method
 ## TODO: process more files at once to reduce overhead of calling ctags
