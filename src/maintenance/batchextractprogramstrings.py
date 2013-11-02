@@ -515,7 +515,12 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		for i in range(0,len(filestoscan),fossology_chunksize):
 			fossology_filestoscan.append((filestoscan[i:i+fossology_chunksize]))
 		fossology_res = filter(lambda x: x != None, pool.map(licensefossology, fossology_filestoscan, 1))
-		fossology_version = "2.2.0"
+		## this requires FOSSology 2.3.0 or later
+		p2 = subprocess.Popen(["/usr/share/fossology/nomos/agent/nomos", "-V"], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+		(stanout, stanerr) = p2.communicate()
+		res = re.match("nomos build version: ([\d\.]+) ", stanout)
+		fossology_version = res.groups()[0]
+
 		for f in fossology_res:
 			for ff in f:
 				(filehash, fres) = ff
