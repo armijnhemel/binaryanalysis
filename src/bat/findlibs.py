@@ -212,17 +212,17 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 	symlinks = {}
 	for i in unpackreports:
 		if not unpackreports[i].has_key('sha256'):
-			continue
-		filehash = unpackreports[i]['sha256']
-		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			## possibly there are symlinks
 			if unpackreports[i].has_key('tags'):
-				if 'symlink' in unpackreports[i][tags]:
+				if 'symlink' in unpackreports[i]['tags']:
 					target = unpackreports[i]['magic'].split('`')[-1][:-1]
 					if symlinks.has_key(os.path.basename(i)):
 						symlinks[os.path.basename(i)].append({'original': i, 'target': target})
 					else:
 						symlinks[os.path.basename(i)] = [{'original': i, 'target': target}]
+			continue
+		filehash = unpackreports[i]['sha256']
+		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue
 
 		if not 'elf' in unpackreports[i]['tags']:
