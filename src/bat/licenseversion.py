@@ -246,12 +246,26 @@ def grab_sha256_filename((masterdb, tasks)):
 	conn.close()
 	return results
 
+## grab copyright statements from the license database
+def grab_sha256_copyright((copyrightdb, tasks)):
+	results = {}
+	conn = sqlite3.connect(copyrightdb)
+	conn.text_factory = str
+	c = conn.cursor()
+	for sha256sum in tasks:
+		c.execute("select distinct copyright, type from extracted_copyright where sha256=?", (sha256sum,))
+		res = c.fetchall()
+		## filter out statements for now, possibly include them later
+		res = filter(lambda x: x[1] != 'statement', res)
+		results[sha256sum] = res
+	c.close()
+	conn.close()
+	return results
+
+## grab licenses from the license database
 def grab_sha256_license((licensedb, tasks)):
 	results = {}
-	## open the database containing all the strings that were extracted
-	## from source code.
 	conn = sqlite3.connect(licensedb)
-	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
 	for sha256sum in tasks:
@@ -300,7 +314,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 		return
 
 	masterdb = scanenv.get('BAT_DB')
-	if determinelicense:
+	if determinelicense or determinecopyright:
 		licensedb = scanenv.get('BAT_LICENSE_DB')
 
 	pruning = False
@@ -402,12 +416,17 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				if len(newuniques) > minimumunique:
 					newuniques = prune(scanenv, newuniques, package)
 
+			## optionally fill two lists with sha256 for license schanning and copyright scanning
 			licensesha256s = []
+			copyrightsha256s = []
+
 			for u in newuniques:
 				versionsha256s = u[1]
 				vseen = set()
 				if determinelicense:
 					licensesha256s += map(lambda x: x[0], versionsha256s)
+				if determinecopyright:
+					copyrightsha256s += map(lambda x: x[0], versionsha256s)
 				for s in versionsha256s:
 					(checksum, linenumber, versionfilenames) = s
 					for v in versionfilenames:
@@ -441,25 +460,32 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				## result is a list of {sha256sum: list of licenses}
 				packagelicenses_tmp = []
 				for p in packagelicenses:
-					packagelicenses_tmp += reduce(lambda x,y: x + y, p.values())
+					packagelicenses_tmp += reduce(lambda x,y: x + y, p.values(), [])
 				packagelicenses = list(set(packagelicenses_tmp))
 			else:
 				packagelicenses = []
 
-			'''
 			## extract copyrights. 'statements' are not very accurate so ignore those for now in favour of URL
 			## and e-mail
 			if determinecopyright:
-				copyrightpv = []
-				copyrightcursor.execute("select distinct * from extracted_copyright where sha256=?", (s[0],))
-				copyrights = copyrightcursor.fetchall()
-				copyrights = filter(lambda x: x[2] != 'statement', copyrights)
-				if copyrights != []:
-					copyrights = list(set(map(lambda x: (x[1], x[2]), copyrights)))
-					copyrightpv = copyrightpv + copyrights
-					packagecopyrights = list(set(packagecopyrights + copyrightpv))
+				vtasks_tmp = []
+				copyrightsha256s = list(set(copyrightsha256s))
+				if len(copyrightsha256s) < processors:
+					step = 1
+				else:
+					step = len(copyrightsha256s)/processors
+				for v in xrange(0, len(copyrightsha256s), step):
+					vtasks_tmp.append(copyrightsha256s[v:v+step])
+				vtasks = map(lambda x: (licensedb, x), filter(lambda x: x!= [], vtasks_tmp))
 
-			'''
+				packagecopyrights = pool.map(grab_sha256_copyright, vtasks)
+				## result is a list of {sha256sum: list of copyright statements}
+				packagecopyrights_tmp = []
+				for p in packagecopyrights:
+					packagecopyrights_tmp += reduce(lambda x,y: x + y, p.values(), [])
+				packagecopyrights = list(set(packagecopyrights_tmp))
+			else:
+				packagecopyrights = []
 			newreports.append((rank, package, newuniques, percentage, newpackageversions, packagelicenses))
 		res['reports'] = newreports
 
