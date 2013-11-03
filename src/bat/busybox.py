@@ -98,7 +98,7 @@ def extract_configuration(lines, busybox, bbconfig):
 				pass
 		return tmp2config
 	else:
-		## we don't have a configuration, so we will just have to guess one by inspecting the binary
+		## no configuration was extracted, so guess one by inspecting the binary
 		results = []
 		results2 = []
 
@@ -115,10 +115,10 @@ def extract_configuration(lines, busybox, bbconfig):
 				## nothing found, continue searching for the next applet in the list
 				continue
 			else:
-				## search through the original binary until we have an exact match
+				## search through the original binary until finding an exact match
 				## that is surrounded by NULL characters, which is how the applet
 				## list in BusyBox works.
-				## The risk is that the first hit we find is not in that list, but
+				## The risk is that the first hit is not actualy in that list, but
 				## is somewhere else in the binary.
 				res = extractor.check_null(lines, offset, i)
 				while res == False:
@@ -130,11 +130,9 @@ def extract_configuration(lines, busybox, bbconfig):
 				if offset != -1:
 					results2.append((i, offset))
 
-		## We have a list of applets, plus their offsets. It is expected that
-		## for all applets we found that the offsets we found is in ascending
+		## It is expected that for all applets found the offsets are in ascending
 		## order. Of course, there might be unknown applets that have been
-		## added in between the names that we do know, or the offsets that we
-		## found were actually wrong.
+		## added, or the offsets that found might actually be wrong.
 		low = 0
 		high = len(results2) - 1
 
@@ -146,7 +144,7 @@ def extract_configuration(lines, busybox, bbconfig):
 		# use the distances map to find closely group together programs
 		distances = map(lambda x,y: y[1] - x[1], results2[:-1], results2[1:])
 
-		## loop through the elements and see if we see closely grouped elements
+		## loop through the elements and see if there are closely grouped elements
 		offsetcounter = 0
 		while offsetcounter < len(distances):
 			if distances[offsetcounter] < maxlen and distances[offsetcounter] > 0:
@@ -172,11 +170,11 @@ def extract_configuration(lines, busybox, bbconfig):
 			else:
 				offsetcounter = offsetcounter + 1
 
-		## assuming we have a good value for low and high we can extract the appletnames
+		## assuming a good value for low and high extract the appletnames
 		tmp2config = lines[results2[low][1]:results2[high][1] + len(results2[high][0])].split('\x00')
 		return tmp2config
 
-## If we can get the configuration in this pass, we can be really accurate.
+## Try to get an configuration in this pass, which will be very accurate
 def extract_configuration_pass1(lines, busybox):
 	config = []
 	offset = lines.find("_main")
@@ -223,21 +221,19 @@ def prettyprint_undefined_apps(undefined_apps):
 ## Helper method that extracts the BusyBox version using a regular
 ## expression. If it can't be found, it will return 'None' instead.
 ## This won't always work: if just one applet is compiled in it is
-## likely that the "BusyBox v" string is not even included at all, which
-## also means we can't extract a version number from it.
+## likely that the "BusyBox v" string is not even included at all,
+## which also means no version number can be extracted.
 def extract_version(filename):
 	offset = 0
 	bboffset = 0
 
-	## we use a buffer here to read data, because files we are scanning
-	## might be incredibly big and we don't want to hog memory
 	databuffer = []
 	datafile = open(filename)
 	datafile.seek(offset)
 	databuffer = datafile.read(100000)
 	bboffsets = []
 	while databuffer != '':
-		## quick check to see if this is BusyBox. If not, we can return immediately
+		## quick check to see if this is BusyBox. If not, return immediately
 		markeroffset = databuffer.find("BusyBox v")
 		if markeroffset != -1:
 			bboffset = offset + markeroffset
@@ -283,7 +279,7 @@ def main(argv):
 	## determine the BusyBox binary
 	version = extract_version(options.bb)
 
-	## ... and read in names from all applets we have extracted from the BusyBox source
+	## ... and read in names from all applets extracted from the BusyBox source
 	if version == None:
 		print >>sys.stderr, "File does not appear to contain BusyBox"
 		sys.exit(1)
