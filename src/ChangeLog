@@ -1,3 +1,7 @@
+2013-11-03
+* extract more information from Linux kernel source code files
+* start on extracting copyright information in licenseversion.py
+
 2013-11-02
 * fix symlinking in findlibs.py, also generate graphs for end points of the
 graph
