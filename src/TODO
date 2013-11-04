@@ -89,4 +89,4 @@ BOTTLENECKS:
 12. split kernel module information off into separate database
 13. rename "programscans"/"leafscans" and settle on using one term
 14. squash versions for variable name reports and function name reports
-15. create piecharts to better visualise the amount of strings matched and assigned
+15. fix statistics piecharts to also include matched, but unassigned strings. Also take dupes into account.

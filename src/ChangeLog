@@ -7,6 +7,8 @@ be linked were on different partition.
 unique hits
 * fix edge case tagging for Java class files (multiple valid class file
 headers)
+* create more piecharts for visualizing how many hits were unique, assigned,
+or unmatched
 
 2013-11-03
 * extract more information from Linux kernel source code files
