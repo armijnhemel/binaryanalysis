@@ -120,11 +120,42 @@ def extractpickles((filehash, pickledir, topleveldir, unpacktempdir)):
 		return
 
 	pieresult = None
+	statpieresult = None
 	versionresults = []
 	funcresults = []
 
+	statpies = []
+
 	if res != None:
-		## extract information for generating pie charts
+		statpiedata = []
+		statpielabels = []
+
+		assignedoruniquematches = 0
+		for j in res['nonUniqueAssignments']:
+			statpielabels.append("%s - assigned" % j)
+			statpiedata.append(res['nonUniqueAssignments'][j])
+			assignedoruniquematches += res['nonUniqueAssignments'][j]
+		for j in res['reports']:
+			(rank, package, unique, percentage, packageversions, packagelicenses) = j
+			if len(unique) != 0:
+				statpielabels.append("%s - unique" % package)
+				statpiedata.append(len(unique))
+				assignedoruniquematches += len(unique)
+
+		if len(res['unmatched']) != 0:
+			statpielabels.append("unmatched")
+			## res['unmatched'] has duplicates removed, so not very reliable
+			unmatched = res['extractedlines'] - res['matchedlines']
+			statpiedata.append(unmatched)
+
+		## now dump the data to a pickle
+		if statpielabels != [] and statpiedata != []:
+			tmppickle = tempfile.mkstemp(dir=unpacktempdir)
+			cPickle.dump((statpiedata, statpielabels), os.fdopen(tmppickle[0], 'w'))
+			picklehash = gethash(tmppickle[1])
+			statpieresult = (picklehash, tmppickle[1])
+
+		## now process statistics for score piechart
 		piedata = []
 		pielabels = []
 		totals = 0.0
@@ -153,6 +184,7 @@ def extractpickles((filehash, pickledir, topleveldir, unpacktempdir)):
 			picklehash = gethash(tmppickle[1])
 			pieresult = (picklehash, tmppickle[1])
 
+		## process match data for version information
 		for j in res['reports']:
 			(rank, package, unique, percentage, packageversions, packagelicenses) = j
 			if packageversions != {}:
@@ -191,7 +223,7 @@ def extractpickles((filehash, pickledir, topleveldir, unpacktempdir)):
 			picklehash = gethash(tmppickle[1])
 			funcresults.append((picklehash, tmppickle[1], package))
 
-	return (filehash, pieresult, versionresults, funcresults)
+	return (filehash, pieresult, statpieresult, versionresults, funcresults)
 
 ## compute a SHA256 hash. This is done in chunks to prevent a big file from
 ## being read in its entirety at once, slowing down a machine.
@@ -268,6 +300,8 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 	pickles = set()
 	piepickles = set()
 	piepicklespackages = set()
+	statpiepickles = set()
+	statpiepicklespackages = set()
 	funcpicklespackages = []
 	versionpicklespackages = []
 	picklehashes = {}
@@ -284,7 +318,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 	pool.terminate()
 
 	for r in res:
-		(filehash, pieresult, versionresults, funcresults) = r
+		(filehash, pieresult, statpieresult, versionresults, funcresults) = r
 		if pieresult != None:
 			(picklehash, tmppickle) = pieresult
 			if picklehash in piepickles:
@@ -298,6 +332,24 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 				shutil.move(tmppickle, pickledir)
 				piepickles.add(picklehash)
 				piepicklespackages.add((picklehash, filehash))
+				picklehashes[picklehash] = os.path.basename(tmppickle)
+				if pickletofile.has_key(picklehash):
+					pickletofile[picklehash].append(filehash)
+				else:
+					pickletofile[picklehash] = [filehash]
+		if statpieresult != None:
+			(picklehash, tmppickle) = statpieresult
+			if picklehash in statpiepickles:
+				if pickletofile.has_key(picklehash):
+					pickletofile[picklehash].append(filehash)
+				else:
+					pickletofile[picklehash] = [filehash]
+				statpiepicklespackages.add((picklehash, filehash))
+				os.unlink(tmppickle)
+			else:
+				shutil.move(tmppickle, pickledir)
+				statpiepickles.add(picklehash)
+				statpiepicklespackages.add((picklehash, filehash))
 				picklehashes[picklehash] = os.path.basename(tmppickle)
 				if pickletofile.has_key(picklehash):
 					pickletofile[picklehash].append(filehash)
@@ -363,6 +415,23 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 				shutil.copy(os.path.join(imagedir, oldfilename), os.path.join(imagedir, filename))
 		## then remove the temporary files
 		for p in piepicklespackages:
+			try:
+				filename = "%s-%s" % (p[0], "piechart.png")
+				os.unlink(os.path.join(imagedir, filename))
+			except Exception, e:
+				#print >>sys.stderr, "ERR", e
+				pass
+	if statpiepicklespackages != []:
+		pietasks = set(map(lambda x: (picklehashes[x[0]], pickledir, x[0], imagedir), statpiepicklespackages))
+		results = pool.map(generatepiecharts, pietasks, 1)
+		## first copy the file for every package that needs it
+		for p in statpiepicklespackages:
+			oldfilename = "%s-%s" % (p[0], "piechart.png")
+			filename = "%s-%s" % (p[1], "statpiechart.png")
+			if os.path.exists(os.path.join(imagedir, oldfilename)):
+				shutil.copy(os.path.join(imagedir, oldfilename), os.path.join(imagedir, filename))
+		## then remove the temporary files
+		for p in statpiepicklespackages:
 			try:
 				filename = "%s-%s" % (p[0], "piechart.png")
 				os.unlink(os.path.join(imagedir, filename))
