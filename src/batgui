@@ -274,9 +274,18 @@ class BatFrame(wx.Frame):
 		self.notebookpanel.AddPage(self.unmatchedwindow, "Unmatched strings")
 		self.unmatchedwindow.SetPage("<html></html>")
 
-		self.nameswindow = wx.html.HtmlWindow(self.notebookpanel)
-		self.notebookpanel.AddPage(self.nameswindow, "Variable names")
+		## A tab for detailed information about function name matches
+		namematchestab = wx.SplitterWindow(self.notebookpanel)
+		self.notebookpanel.AddPage(namematchestab, "Variabe names")
+		## One window to display corresponding source code, initially empty
+		self.namematchesbrowser = wx.html.HtmlWindow(namematchestab)
+		self.namematchesbrowser.SetPage("<html></html")
+
+		## One window to display the matches, initially empty
+		self.nameswindow = BATHtmlWindow(namematchestab, self.namematchesbrowser, self.htmldir)
 		self.nameswindow.SetPage("<html></html>")
+		namematchestab.SplitVertically(self.nameswindow, self.namematchesbrowser)
+		namematchestab.SetSashGravity(0.5)
 
 		## A tab for detailed information about function name matches
 		functionmatchestab = wx.SplitterWindow(self.notebookpanel)
