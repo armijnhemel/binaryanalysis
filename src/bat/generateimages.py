@@ -64,7 +64,7 @@ def generateversionchart((versionpickle, picklehash, imagedir, pickledir)):
 	datapickle.close()
 
 	## calculate the possible widths and heights of chart, bars, labels and so on
-	maxversionstring = max(map(lambda x: x[0], data))
+	maxversionstring = max(map(lambda x: len(x[0]), data))
 
 	barwidth = 15
 	chartwidth = len(data) * barwidth + 10 * len(data)
@@ -73,9 +73,11 @@ def generateversionchart((versionpickle, picklehash, imagedir, pickledir)):
 	step = int(math.log(maxvalue,10))
 	valueStep = pow(10,step)
 
-	## calculate a possible good value for startx so labels are not cut off
+	## calculate a possible good value for startx and starty so labels are not cut off
 	startx = max(10 + step * 10, 30)
-	starty = len(maxversionstring) * 10 + 20
+
+	## TODO: fiddle with values to create nicer looking graphs
+	starty = maxversionstring * 10 + 20
 
 	drawheight = 225 + starty
 	drawwidth = chartwidth + startx + 10
