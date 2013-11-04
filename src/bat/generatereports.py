@@ -246,15 +246,6 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 								packagecount[package] = packagecount[package] + 1
 							else:
 								packagecount[package] = 1
-							'''
-							## for later use
-							for p in pvs:
-								(package,version) = p
-								if packages.has_key(package):
-									packages[package].append(version)
-								else:
-									packages[package] = [version]
-							'''
 				if packagecount != {}:
 					if i == 'classes':
 						classescount = packagecount
@@ -294,74 +285,50 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 
 		if language == 'C':
 			totalvars = 0
-			for k in ['variables', 'kernelvariables']:
-				if variablepvs.has_key(k):
-					totalvars += len(variablepvs[k])
-					packages = {}
-					packagecount = {}
-					uniquepackagecount = {}
-					## for each variable name determine in how many packages it can be found.
-					for c in variablepvs[k]:
-						lenres = len(variablepvs[k][c])
-						if lenres == 1:
-							pvs = variablepvs[k][c]
-							package = variablepvs[k][c].keys()[0]
-							if uniquepackagecount.has_key(package):
-								uniquepackagecount[package] = uniquepackagecount[package] + 1
-							else:
-								uniquepackagecount[package] = 1
-						else:
-							## cut off if it is too generic. This value is arbitrary
-							if lenres > 40:
-								continue
-							pvs = variablepvs[k][c]
-							for package in pvs.keys():
-								if packagecount.has_key(package):
-									packagecount[package] = packagecount[package] + 1
-								else:
-									packagecount[package] = 1
-							
-						'''
-						## for later use
-						for p in pvs:
-							(package,version) = p
-							if packages.has_key(package):
-								packages[package].append(version)
-							else:
-								packages[package] = [version]
-						'''
+			if variablepvs.has_key('versionresults'):
+				if variablepvs['versionresults'] != {}:
+					html += "<h1>Unique variable name matches per package</h1><p><ul>\n"
+					ukeys = map(lambda x: (x[0], len(x[1])), variablepvs['versionresults'].items())
+					ukeys.sort(key=lambda x: x[1], reverse=True)
+					for i in ukeys:
+						html += "<li><a href=\"#%s\">%s (%d)</a></li>" % (i[0], i[0], i[1])
+					html += "</ul></p>\n"
+					for i in ukeys:
+						html += "<hr><h2><a name=\"%s\" href=\"#%s\">Matches for %s (%d)</a></h2>\n" % (i[0], i[0], i[0], i[1])
+						upkgs = variablepvs['versionresults'][i[0]]
+						upkgs.sort()
+						for up in upkgs:
+							(varname, results) = up
+							html += "<h5>%s</h5><p><table><tr><td><b>Filename</b></td><td><b>Version(s)</b></td><td><b>Line number</b></td><td><b>SHA256</b></td></tr>" % cgi.escape(varname)
+							for r in results:
+								(checksum, linenumber, versionfilenames) = r 
+								for vf in versionfilenames:
+									(version, filename) = vf
+									html += "<tr><td>%s</td><td>%s</td><td><a href=\"unique:/%s#%d\">%d</a></td><td>%s</td></tr>\n" % (filename, version, checksum, linenumber, linenumber, checksum)
+							html += "</table></p>\n"
+			elif variablepvs.has_key('uniquepackages'):
+				if variablepvs['uniquepackages'] != {}:
 
-					if uniquepackagecount != {}:
-						if k == 'variables':
-							html = html + "<h3>Unique matches of variables</h3>\n<table>\n"
-						elif k == 'kernelvariables':
-							html = html + "<h3>Unique matches of kernel variables</h3>\n<table>\n"
-						html = html + "<tr><td><b>Name</b></td><td><b>Unique matches</b></td></tr>"
-						uniquevalues = sorted(uniquepackagecount, key = lambda x: uniquepackagecount.__getitem__(x), reverse=True)
-						for i in uniquevalues:
-							html = html + "<tr><td>%s</td><td>%d</td></tr>\n" % (i, uniquepackagecount[i])
-						html = html + "</table>\n"
-
-					if packagecount != {}:
-						if k == 'variables':
-							html = html + "<h3>Non-unique matches of variables</h3>\n<table>\n"
-						elif k == 'kernelvariables':
-							html = html + "<h3>Non-unique matches of kernel variables</h3>\n<table>\n"
-						html = html + "<tr><td><b>Name</b></td><td><b>Non-unique matches</b></td></tr>"
-						packagevalues = sorted(packagecount, key = lambda x: packagecount.__getitem__(x), reverse=True)
-						for i in packagevalues:
-							html = html + "<tr><td>%s</td><td>%d</td></tr>\n" % (i, packagecount[i])
-						html = html + "</table>\n"
+					ukeys = map(lambda x: (x[0], len(x[1])), variablepvs['uniquepackages'].items())
+					ukeys.sort(key=lambda x: x[1], reverse=True)
+					for i in ukeys:
+						html += "<li><a href=\"#%s\">%s (%d)</a></li>" % (i[0], i[0], i[1])
+					html += "</ul></p>"
+					for i in ukeys:
+						html += "<hr><h2><a name=\"%s\" href=\"#%s\">Matches for %s (%d)</a></h2><p>\n" % (i[0], i[0], i[0], i[1])
+						upkgs = variablepvs['uniquepackages'][i[0]]
+						upkgs.sort()
+						for v in upkgs:
+							html += "%s<br>\n" % v
+						html += "</p>\n"
 
 		footer = "</body></html>"
 		if html != "":
-			if totalvars != 0:
-				nameshtmlfile = gzip.open("%s/%s-names.html.gz" % (reportdir, filehash), 'wb')
-				nameshtmlfile.write(header)
-				nameshtmlfile.write("<p>Total matched variables: %d</p>" % (totalvars,))
-				nameshtmlfile.write(html)
-				nameshtmlfile.write(footer)
-				nameshtmlfile.close()
+			nameshtmlfile = gzip.open("%s/%s-names.html.gz" % (reportdir, filehash), 'wb')
+			nameshtmlfile.write(header)
+			nameshtmlfile.write(html)
+			nameshtmlfile.write(footer)
+			nameshtmlfile.close()
 
 	if res != None:
 		if res['unmatched'] != []:

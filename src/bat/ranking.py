@@ -896,6 +896,8 @@ def extractDynamic(scanfile, scanenv, clones, olddb=False):
 
 	## Scan C variables extracted from dynamically linked files.
 	if scanenv.get('BAT_VARNAME_SCAN'):
+		uniquevvs = {}
+		allvvs = {}
 		vvs = {}
 		for v in variables:
 			## These variable names are very generic and would not be useful, so skip.
@@ -905,26 +907,29 @@ def extractDynamic(scanfile, scanenv, clones, olddb=False):
 			pvs = []
 			res = c.execute("select distinct package from varnamecache where varname=?", (v,)).fetchall()
 			if res != []:
-				pvs = map(lambda x: (x[0],0), res)
+				pvs = map(lambda x: x[0], res)
 
 			pvs_tmp = []
 			for r in pvs:
-				if clones.has_key(r[0]):
-					pvs_tmp.append((clones[r[0]],r[1]))
+				if clones.has_key(r):
+					pvs_tmp.append(clones[r])
 				else:
 					pvs_tmp.append(r)
-			vvs[v] = pvs_tmp
-
-		vvs_rewrite = {}
-		for v in vvs.keys():
-			vvs_rewrite[v] = {}
-			for vs in vvs[v]:
-				(program, version) = vs
-				if not vvs_rewrite[v].has_key(program):
-					vvs_rewrite[v][program] = [version]
+			if len(pvs_tmp) == 1:
+				if uniquevvs.has_key(pvs_tmp[0]):
+					uniquevvs[pvs_tmp[0]].append(v)
 				else:
-					vvs_rewrite[v][program] = list(set(vvs_rewrite[v][program] + [version]))
-		variablepvs['variables'] = vvs_rewrite
+					uniquevvs[pvs_tmp[0]] = [v]
+			allvvs[v] = pvs_tmp
+
+		variablepvs = {'uniquepackages': uniquevvs, 'allvariables': allvvs}
+		variablepvs['packages'] = {}
+		variablepvs['versionresults'] = {}
+		for package in uniquevvs:
+			variablepvs['versionresults'][package] = []
+
+			variablepvs['packages'][package] = []
+
 	c.close()
 	conn.close()
 	return (dynamicRes, variablepvs)
@@ -963,6 +968,7 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 
 	scankernelfunctions = False
 	kernelfuncres = []
+	kernelparamres = []
 	if linuxkernel:
 		if scanenv.get('BAT_KERNELFUNCTION_SCAN') == '1':
 			scankernelfunctions = True
@@ -1103,6 +1109,10 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 						if len(res) != 0:
 							if len(scanline) != 0:
 								line = scanline
+
+			## result is still empty, perhaps it is a module parameter
+			if len(res) == 0:
+				pass
 
 		## nothing in the cache
 		if len(res) == 0 and not kernelfunctionmatched:

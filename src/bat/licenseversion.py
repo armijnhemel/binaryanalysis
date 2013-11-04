@@ -154,6 +154,7 @@ def prune(scanenv, uniques, package):
 		for k in pruneremove:
 			unique_sorted.remove(k)
 
+	## TODO: pruneme might have length 0, so uniques can be returned. Verify this.
 	notpruned = set(uniqueversions.keys()).difference(pruneme)
 	newuniques = []
 	for u in uniques:
@@ -231,6 +232,22 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		compute_version(pool, processors, scanenv, unpackreports[i], topleveldir, determinelicense, determinecopyright)
 	pool.terminate()
 
+## grab variable names.
+def grab_sha256_varname((masterdb, language, tasks)):
+	results = {}
+	## open the database containing all the strings that were extracted
+	## from source code.
+	conn = sqlite3.connect(masterdb)
+	## we have byte strings in our database, not utf-8 characters...I hope
+	conn.text_factory = str
+	c = conn.cursor()
+	for sha256sum in tasks:
+		c.execute("select version, filename from processed_file where sha256=?", (sha256sum,))
+		results[sha256sum] = c.fetchall()
+	c.close()
+	conn.close()
+	return results
+
 def grab_sha256_filename((masterdb, tasks)):
 	results = {}
 	## open the database containing all the strings that were extracted
@@ -286,9 +303,14 @@ def grab_sha256_parallel((masterdb, tasks, language, querytype)):
 	for line in tasks:
 		if querytype == "string":
 			c.execute("select distinct sha256, linenumber, language from extracted_file where programstring=?", (line,))
+			res = c.fetchall()
 		elif querytype == 'function':
 			c.execute("select distinct sha256, linenumber, language from extracted_function where functionname=?", (line,))
-		res = c.fetchall()
+			res = c.fetchall()
+		elif querytype == 'variable':
+			c.execute("select distinct sha256, linenumber, language, type from extracted_name where name=?", (line,))
+			res = c.fetchall()
+			res = filter(lambda x: x[3] == 'variable', res)
 		if res != None:
 			res = filter(lambda x: x[2] == language, res)
 			## TODO: make a list of line numbers
@@ -489,8 +511,6 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 			newreports.append((rank, package, newuniques, percentage, newpackageversions, packagelicenses))
 		res['reports'] = newreports
 
-	## TODO: determine versions of functions and variables here as well
-
 	if dynamicRes.has_key('versionresults'):
 
 		for package in dynamicRes['versionresults'].keys():
@@ -584,6 +604,94 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 			for v in list(set(vs)):
 				dynamicRes['packages'][package].append((v, vs.count(v)))
 		dynamicRes['versionresults'] = newresults
+
+	if variablepvs != {}:
+		if variablepvs.has_key('uniquepackages'):
+			for package in variablepvs['uniquepackages']:
+				vtasks_tmp = []
+				uniques = variablepvs['uniquepackages'][package]
+				if len(uniques) < processors:
+					step = 1
+				else:
+					step = len(uniques)/processors
+				for v in xrange(0, len(uniques), step):
+					vtasks_tmp.append(uniques[v:v+step])
+				vtasks = map(lambda x: (masterdb, x, language, 'variable'), filter(lambda x: x!= [], vtasks_tmp))
+				vsha256s = pool.map(grab_sha256_parallel, vtasks)
+				vsha256s = reduce(lambda x, y: x + y, filter(lambda x: x != [], vsha256s))
+
+                        	sha256_scan_versions = {}
+                        	tmplines = {}
+
+				for p in vsha256s:
+					(variablename, res) = p
+					for s in res:
+						(checksum, linenumber) = s
+						if not sha256_versions.has_key(checksum):
+							if sha256_scan_versions.has_key(checksum):
+								sha256_scan_versions[checksum].add((variablename, linenumber))
+							else:
+								sha256_scan_versions[checksum] = set([(variablename, linenumber)])
+						else:
+							for v in sha256_versions[checksum]:
+								(version, filename) = v
+								if not tmplines.has_key(variablename):
+									tmplines[variablename] = []
+							tmplines[variablename].append((checksum, linenumber, sha256_versions[checksum]))
+
+				vtasks_tmp = []
+				if len(sha256_scan_versions.keys()) < processors:
+					step = 1
+				else:
+					step = len(sha256_scan_versions.keys())/processors
+				for v in xrange(0, len(sha256_scan_versions.keys()), step):
+					vtasks_tmp.append(sha256_scan_versions.keys()[v:v+step])
+				vtasks = map(lambda x: (masterdb, x), vtasks_tmp)
+
+				## grab version and file information
+				fileres = pool.map(grab_sha256_filename, vtasks)
+				resdict = {}
+				map(lambda x: resdict.update(x), fileres)
+
+				## construct the full information needed by other scans
+				for checksum in resdict:
+					versres = resdict[checksum]
+					for l in sha256_scan_versions[checksum]:
+						(variablename, linenumber) = l
+						if not tmplines.has_key(variablename):
+							tmplines[variablename] = []
+						## TODO: store (checksum, linenumber(s), versres)
+						tmplines[variablename].append((checksum, linenumber, versres))
+					for v in versres:
+						if sha256_versions.has_key(checksum):
+							sha256_versions[checksum].append((v[0], v[1]))
+						else:
+							sha256_versions[checksum] = [(v[0], v[1])]
+				for l in tmplines.keys():
+					variablepvs['versionresults'][package].append((l, tmplines[l]))
+
+			newresults = {}
+			for package in variablepvs['versionresults'].keys():
+				newuniques = variablepvs['versionresults'][package]
+				## optionally prune version information
+
+				if pruning:
+					if len(newuniques) > minimumunique:
+						newuniques = prune(scanenv, newuniques, package)
+
+				newresults[package] = newuniques
+				uniqueversions = {}
+				variablepvs['packages'][package] = []
+				vs = []
+				for u in newuniques:
+					versionsha256s = u[1]
+					for s in versionsha256s:
+						(checksum, linenumber, versionfilenames) = s
+						vs = vs + list(set(map(lambda x: x[0], versionfilenames)))
+
+				for v in list(set(vs)):
+					variablepvs['packages'][package].append((v, vs.count(v)))
+			variablepvs['versionresults'] = newresults
 
 	if changed:
 		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
