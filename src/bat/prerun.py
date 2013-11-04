@@ -820,9 +820,30 @@ def verifyJavaClass(filename, tempdir=None, tags=[], offsets={}, debug=False, en
 	if len(offsets['java']) > 1:
 		tmpfile = tempfile.mkstemp()
 		os.fdopen(tmpfile[0]).close()
-		shutil.copy(filename, tmpfile[1])
+
+		## test for each offset found. If jcf-dump thinks it's a valid class file there
+		## are multiple class files embedded in this file. Else do a final test and tag
+		## as 'java'.
+		origclassfile = open(filename)
 		for i in offsets['java']:
-			pass
+			tmpclassfile = open(tmpfile[1], 'wb')
+			origclassfile.seek(i)
+			data = origclassfile.read()
+			tmpclassfile.write(data)
+			tmpclassfile.close()
+			p = subprocess.Popen(['jcf-dump', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			if p.returncode == 0:
+				origclassfile.close()
+				os.unlink(tmpfile[1])
+				return newtags
+
+		origclassfile.close()
+		os.unlink(tmpfile[1])
+		p = subprocess.Popen(['jcf-dump', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			return newtags
+		newtags.append('java')
 	else:
 		## The following will only work if the file has either one or multiple valid class
 		## files, starting with a valid class file and ending with a valid class file, or
