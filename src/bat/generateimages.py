@@ -142,6 +142,7 @@ def extractpickles((filehash, pickledir, topleveldir, unpacktempdir)):
 				statpiedata.append(len(unique))
 				assignedoruniquematches += len(unique)
 
+		## TODO: add information about matched but unassigned
 		if len(res['unmatched']) != 0:
 			statpielabels.append("unmatched")
 			## res['unmatched'] has duplicates removed, so not very reliable
