@@ -848,7 +848,7 @@ envvars     = BAT_IMAGEDIR=/tmp/images:AGGREGATE_IMAGE_SYMLINK=0
 description = Generate images of results of ranking
 storetarget = images
 storedir    = /tmp/images
-storetype   = -piechart.png:-version.png:-funcversion.png
+storetype   = -statpiechart.png:-piechart.png:-version.png:-funcversion.png
 cleanup     = yes
 priority    = 1
 
