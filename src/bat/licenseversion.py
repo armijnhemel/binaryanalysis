@@ -311,6 +311,10 @@ def grab_sha256_parallel((masterdb, tasks, language, querytype)):
 			c.execute("select distinct sha256, linenumber, language, type from extracted_name where name=?", (line,))
 			res = c.fetchall()
 			res = filter(lambda x: x[3] == 'variable', res)
+		elif querytype == 'kernelvariable':
+			c.execute("select distinct sha256, linenumber, language, type from extracted_name where name=?", (line,))
+			res = c.fetchall()
+			res = filter(lambda x: x[3] == 'kernelsymbol', res)
 		if res != None:
 			res = filter(lambda x: x[2] == language, res)
 			## TODO: make a list of line numbers
@@ -616,7 +620,13 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 					step = len(uniques)/processors
 				for v in xrange(0, len(uniques), step):
 					vtasks_tmp.append(uniques[v:v+step])
-				vtasks = map(lambda x: (masterdb, x, language, 'variable'), filter(lambda x: x!= [], vtasks_tmp))
+				if variablepvs.has_key('type'):
+					if variablepvs['type'] == 'linuxkernel':
+						vtasks = map(lambda x: (masterdb, x, language, 'kernelvariable'), filter(lambda x: x!= [], vtasks_tmp))
+					else:
+						vtasks = map(lambda x: (masterdb, x, language, 'variable'), filter(lambda x: x!= [], vtasks_tmp))
+				else:
+						vtasks = map(lambda x: (masterdb, x, language, 'variable'), filter(lambda x: x!= [], vtasks_tmp))
 				vsha256s = pool.map(grab_sha256_parallel, vtasks)
 				vsha256s = reduce(lambda x, y: x + y, filter(lambda x: x != [], vsha256s))
 

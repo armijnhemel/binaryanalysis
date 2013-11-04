@@ -727,36 +727,37 @@ def scankernelsymbols(variables, scanenv, clones):
 	## there are only byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
-	vvs = {}
+	allvvs = {}
+	uniquevvs = {}
 	variablepvs = {}
 	for v in variables:
 		pvs = []
 		res = c.execute("select distinct package from kernelcache where varname=?", (v,)).fetchall()
 		if res != []:
-			## set version to 0 for now
-			pvs = map(lambda x: (x[0],0), res)
+			pvs = map(lambda x: x[0], res)
 
 		pvs_tmp = []
 		for r in pvs:
-			if clones.has_key(r[0]):
-				pvs_tmp.append((clones[r[0]],r[1]))
+			if clones.has_key(r):
+				pvs_tmp.append(clones[r])
 			else:
 				pvs_tmp.append(r)
-		vvs[v] = pvs_tmp
+		if len(pvs_tmp) == 1:
+			if uniquevvs.has_key(pvs_tmp[0]):
+				uniquevvs[pvs_tmp[0]].append(v)
+			else:
+				uniquevvs[pvs_tmp[0]] = [v]
+		allvvs[v] = pvs_tmp
 	c.close()
 	conn.close()
 
-	vvs_rewrite = {}
-	for v in vvs.keys():
-		vvs_rewrite[v] = {}
-		for vs in vvs[v]:
-			(program, version) = vs
-			if not vvs_rewrite[v].has_key(program):
-				vvs_rewrite[v][program] = [version]
-			else:
-				vvs_rewrite[v][program] = list(set(vvs_rewrite[v][program] + [version]))
-	if vvs_rewrite != {}:
-		variablepvs['kernelvariables'] = vvs_rewrite
+	variablepvs = {'uniquepackages': uniquevvs, 'allvariables': allvvs}
+	variablepvs['packages'] = {}
+	variablepvs['versionresults'] = {}
+	variablepvs['type'] = 'linuxkernel'
+	for package in uniquevvs:
+		variablepvs['versionresults'][package] = []
+		variablepvs['packages'][package] = []
 	return variablepvs
 
 ## From dynamically linked ELF files it is possible to extract the dynamic
@@ -898,7 +899,6 @@ def extractDynamic(scanfile, scanenv, clones, olddb=False):
 	if scanenv.get('BAT_VARNAME_SCAN'):
 		uniquevvs = {}
 		allvvs = {}
-		vvs = {}
 		for v in variables:
 			## These variable names are very generic and would not be useful, so skip.
 			## This is based on research of millions of C files.
