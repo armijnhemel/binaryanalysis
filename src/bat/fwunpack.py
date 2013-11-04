@@ -2973,8 +2973,17 @@ def unpackPDF(filename, offset, trailer, tempdir=None):
 
 	## if the data is the whole file we can just hardlink
 	if offset == 0 and (trailer + 5 == filesize or trailer + 5 == filesize-1 or trailer + 5 == filesize-2):
-		os.link(filename, "%s/%s" % (tmpdir, "templink"))
-		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
+		templink = tempfile.mkstemp(dir=tmpdir)
+		os.fdopen(templink[0]).close()
+		os.unlink(templink[1])
+
+		try:
+			os.link(filename, templink[1])
+		except OSError, e:
+			## if filename and tmpdir are on different devices it is
+			## not possible to use hardlinks
+			shutil.copy(filename, templink[1])
+		shutil.move(templink[1], tmpfile[1])
 	else:
 		## first we use 'dd' or tail. Then we use truncate
 		if offset < 128:
