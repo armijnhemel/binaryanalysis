@@ -9,6 +9,7 @@ unique hits
 headers)
 * create more piecharts for visualizing how many hits were unique, assigned,
 or unmatched
+* fix labels for version charts
 
 2013-11-03
 * extract more information from Linux kernel source code files
