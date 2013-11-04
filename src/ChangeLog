@@ -1,3 +1,9 @@
+2013-11-04
+* remove templink hacks from PDF, ISO and TAR unpacking, which could possibly
+lead to race conditions and did not work if temporary unpack dir and file to
+be linked were on different partition.
+* fix blacklisting size bug in ISO unpacking
+
 2013-11-03
 * extract more information from Linux kernel source code files
 * start on extracting copyright information in licenseversion.py

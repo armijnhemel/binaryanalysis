@@ -86,6 +86,5 @@ BOTTLENECKS:
 9. add ramdisk unpacking for jffs2
 10. research/fix priority for Minix file system
 11. don't recreate ELF graphs (model for every ELF binary), but reuse graphs of dependencies. This would need a topological sort.
-12. get rid of the 'templink' hacks in ISO, TAR and PDF unpacking, because of possible race conditions
-13. split kernel module information off into separate database
-14. rename "programscans"/"leafscans" and settle on using one term
+12. split kernel module information off into separate database
+13. rename "programscans"/"leafscans" and settle on using one term
