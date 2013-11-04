@@ -702,6 +702,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				for v in list(set(vs)):
 					variablepvs['packages'][package].append((v, vs.count(v)))
 			variablepvs['versionresults'] = newresults
+			changed = True
 
 	if changed:
 		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
