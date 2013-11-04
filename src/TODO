@@ -88,3 +88,5 @@ BOTTLENECKS:
 11. don't recreate ELF graphs (model for every ELF binary), but reuse graphs of dependencies. This would need a topological sort.
 12. split kernel module information off into separate database
 13. rename "programscans"/"leafscans" and settle on using one term
+14. squash versions for variable name reports and function name reports
+15. create piecharts to better visualise the amount of strings matched and assigned

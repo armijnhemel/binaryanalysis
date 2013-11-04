@@ -3,6 +3,10 @@
 lead to race conditions and did not work if temporary unpack dir and file to
 be linked were on different partition.
 * fix blacklisting size bug in ISO unpacking
+* start on creating prettier variable names reporting, including versions for
+unique hits
+* fix edge case tagging for Java class files (multiple valid class file
+headers)
 
 2013-11-03
 * extract more information from Linux kernel source code files
