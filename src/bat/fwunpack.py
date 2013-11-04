@@ -507,8 +507,16 @@ def unpackTar(filename, offset, tempdir=None):
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset - 0x101,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
 	else:
-		os.link(filename, "%s/%s" % (tmpdir, "templink"))
-		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
+		templink = tempfile.mkstemp(dir=tmpdir)
+		os.fdopen(templink[0]).close()
+		os.unlink(templink[1])
+		try:
+			os.link(filename, templink[1])
+		except OSError, e:
+			## if filename and tmpdir are on different devices it is
+			## not possible to use hardlinks
+			shutil.copy(filename, templink[1])
+		shutil.move(templink[1], tmpfile[1])
 
 	tarsize = 0
 
