@@ -392,7 +392,7 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, debug=
 		if res != None:
 			(isooffset, size) = res
 			diroffsets.append((isooffset, offset - 32769, size))
-			blacklist.append((offset - 32769, offset - 32769 + size))
+			blacklist.append((offset - 32769, offset + size))
 			counter = counter + 1
 		else:
 			os.rmdir(tmpdir)
@@ -407,8 +407,16 @@ def unpackISO9660(filename, offset, tempdir=None, unpacktempdir=None):
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset - 32769,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
 	else:
-		os.link(filename, "%s/%s" % (tmpdir, "templink"))
-		shutil.move("%s/%s" % (tmpdir, "templink"), tmpfile[1])
+		templink = tempfile.mkstemp(dir=tmpdir)
+		os.fdopen(templink[0]).close()
+		os.unlink(templink[1])
+		try:
+			os.link(filename, templink[1])
+		except OSError, e:
+			## if filename and tmpdir are on different devices it is
+			## not possible to use hardlinks
+			shutil.copy(filename, templink[1])
+		shutil.move(templink[1], tmpfile[1])
 
 	## create a mountpoint
 	mountdir = tempfile.mkdtemp(dir=unpacktempdir)
@@ -441,7 +449,7 @@ def unpackISO9660(filename, offset, tempdir=None, unpacktempdir=None):
 	## then cleanup the temporary dir
 	shutil.rmtree(tmpdir2)
 	
-	## determine size
+	## determine size. It might not be accurate.
 	p = subprocess.Popen(['du', '-scb', mountdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
