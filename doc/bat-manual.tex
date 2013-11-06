@@ -7,7 +7,7 @@
 \setlength{\parskip}{4pt}
 
 \author{Armijn Hemel -- Tjaldur Software Governance Solutions}
-\title{Binary Analysis Tool User and Developer Manual - describing version 15}
+\title{Binary Analysis Tool User and Developer Manual - describing version 16}
 
 \begin{document}
 
@@ -641,11 +641,10 @@ python busybox-compare-configs.py -e /path/to/saved/config
     -f /path/to/vendor/configuration -n $version
 \end{verbatim}
 
-\subsection{\texttt{extractkernelstrings.py}, \texttt{extractkernelconfig.py}
-\\and \texttt{findkernelstrings.py}}
+\subsection{\texttt{extractkernelstrings.py} and \texttt{extractkernelconfig.py}}
 
-The three programs \texttt{extractkernelstrings.py},
-\texttt{extractkernelconfig.py} and \texttt{findkernelstrings.py} are very
+The two programs \texttt{extractkernelstrings.py} and
+\texttt{extractkernelconfig.py} are very
 experimental tools to derive a configuration from a Linux kernel image. They
 are far from mature and are not yet ready for production use. They will likely
 be merged into \texttt{batchextractprogramstrings.py} in the near future.
