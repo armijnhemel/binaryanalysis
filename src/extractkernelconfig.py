@@ -38,7 +38,7 @@ def matchconfig(filename, dirname, config, kerneldirlen):
 			## then see if it is relative to the top level directory
 			try:
 				os.stat(os.path.join(dirname[:kerneldirlen], filename))
-				return (os.path.join(dirname[:kerneldirlen], filename), config)
+				return (os.path.join(dirname[kerneldirlen:], filename), config)
 			except:
 				return None
 			else:
