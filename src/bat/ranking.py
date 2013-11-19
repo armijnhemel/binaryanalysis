@@ -284,8 +284,14 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 							if section in s:
 								elfsplits = s[7:].split()
 								if elfsplits[0].startswith(section):
+									## section actually contains no data, so skip
+									if elfsplits[1] == 'NOBITS':
+										continue
 									elfoffset = int(elfsplits[3], 16)
 									elfsize = int(elfsplits[4], 16)
+									## sanity check
+									if (elfoffset + elfsize) > os.stat(path).st_size:
+										continue
 									elftmp = tempfile.mkstemp(dir=unpacktempdir,suffix=section)
 									unpackelf = True
 									if blacklist != []:
