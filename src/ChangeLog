@@ -1,3 +1,11 @@
+2013-11-19
+* fix for ELF extraction in ranking.py. Needs more work.
+
+2013-11-06
+* fix error in storing paths in extractkernelconfig.py
+* add new script to derive a kernel configuration from BAT result and database
+with kernel configuration directives
+
 2013-11-04
 * remove templink hacks from PDF, ISO and TAR unpacking, which could possibly
 lead to race conditions and did not work if temporary unpack dir and file to
