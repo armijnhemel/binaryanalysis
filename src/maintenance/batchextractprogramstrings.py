@@ -766,7 +766,9 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 						## for the Linux kernel the variable names are sometimes
 						## stored in a special ELF section __ksymtab_strings
 						if csplit[1] == 'variable':
-							if "EXPORT_SYMBOL" in csplit[4]:
+							if "EXPORT_SYMBOL_GPL" in csplit[4]:
+								cresults.append((csplit[0], int(csplit[2]), 'gplkernelsymbol'))
+							elif "EXPORT_SYMBOL" in csplit[4]:
 								cresults.append((csplit[0], int(csplit[2]), 'kernelsymbol'))
 						elif csplit[1] == 'function':
 							cresults.append((csplit[0], int(csplit[2]), 'kernelfunction'))
@@ -775,7 +777,9 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 							if len(csplit) < 5:
 								cresults.append((csplit[0], int(csplit[2]), 'variable'))
 							else:
-								if "EXPORT_SYMBOL" in csplit[4]:
+								if "EXPORT_SYMBOL_GPL" in csplit[4]:
+									cresults.append((csplit[0], int(csplit[2]), 'gplkernelsymbol'))
+								elif "EXPORT_SYMBOL" in csplit[4]:
 									cresults.append((csplit[0], int(csplit[2]), 'kernelsymbol'))
 								else:
 									cresults.append((csplit[0], int(csplit[2]), 'variable'))
