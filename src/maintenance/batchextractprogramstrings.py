@@ -1220,6 +1220,14 @@ def main(argv):
 		c.execute('''create index if not exists kernelmodule_license_index on kernelmodule_license(license)''')
 		c.execute('''create index if not exists kernelmodule_parameter_index on kernelmodule_parameter(paramname)''')
 		c.execute('''create index if not exists kernelmodule_version_index on kernelmodule_version(version)''')
+
+		c.execute('''create index if not exists kernelmodule_alias_sha256index on kernelmodule_alias(sha256)''')
+		c.execute('''create index if not exists kernelmodule_author_sha256index on kernelmodule_author(sha256)''')
+		c.execute('''create index if not exists kernelmodule_description_sha256index on kernelmodule_description(sha256)''')
+		c.execute('''create index if not exists kernelmodule_firmware_sha256index on kernelmodule_firmware(sha256)''')
+		c.execute('''create index if not exists kernelmodule_license_sha256index on kernelmodule_license(sha256)''')
+		c.execute('''create index if not exists kernelmodule_parameter_sha256index on kernelmodule_parameter(sha256)''')
+		c.execute('''create index if not exists kernelmodule_version_sha256index on kernelmodule_version(sha256)''')
 		conn.commit()
 
 		if options.licenses or options.copyrights:
