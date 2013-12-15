@@ -1,3 +1,7 @@
+2013-12-15
+* ubifs -> ubi
+* add magic for ubifs
+
 2013-11-25
 * add missing indexes to database
 * split EXPORT_SYMBOL and EXPORT_SYMBOL_GPL

@@ -88,8 +88,8 @@ def findZip(data, offset=0):
 def findCramfs(data, offset=0):
 	return findType('cramfs', data, offset)
 
-def findUbifs(data, offset=0):
-	return findType('ubifs', data, offset)
+def findUbi(data, offset=0):
+	return findType('ubi', data, offset)
 
 def findRar(data, offset=0):
 	return findType('rar', data, offset)

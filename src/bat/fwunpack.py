@@ -2749,17 +2749,17 @@ def unpackLZMA(filename, offset, tempdir=None, minbytesize=1, lzma_tmpdir=None):
 	os.unlink(tmpfile[1])
 	return tmpdir
 
-## Search and unpack Ubifs. Since we can't easily determine the length of the
-## file system by using ubifs we will have to use a different measurement to
-## measure the size of ubifs. A good start is the sum of the size of the
+## Search and unpack Ubi. Since we can't easily determine the length of the
+## file system by using ubi we will have to use a different measurement to
+## measure the size of ubi. A good start is the sum of the size of the
 ## volumes that were unpacked.
 ## TODO: replace with a different implementation since a unubi that can unpack
 ## has been removed from Fedora and was never present in Debian or Ubuntu.
-def searchUnpackUbifs(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+def searchUnpackUbi(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
 	hints = []
-	if not offsets.has_key('ubifs'):
+	if not offsets.has_key('ubi'):
 		return ([], blacklist, [], hints)
-	if offsets['ubifs'] == []:
+	if offsets['ubi'] == []:
 		return ([], blacklist, [], hints)
 	datafile = open(filename, 'rb')
 	## We can use the values of offset and ubisize where offset != -1
@@ -2769,12 +2769,12 @@ def searchUnpackUbifs(filename, tempdir=None, blacklist=[], offsets={}, debug=Fa
 	## TODO: big file fixes
 	data = datafile.read()
 	datafile.close()
-	for offset in offsets['ubifs']:
+	for offset in offsets['ubi']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
-		tmpdir = dirsetup(tempdir, filename, "ubifs", counter)
-		res = unpackUbifs(data, offset, tmpdir)
+		tmpdir = dirsetup(tempdir, filename, "ubi", counter)
+		res = unpackUbi(data, offset, tmpdir)
 		if res != None:
 			(ubitmpdir, ubisize) = res
 			diroffsets.append((ubitmpdir, offset, ubisize))
@@ -2785,7 +2785,7 @@ def searchUnpackUbifs(filename, tempdir=None, blacklist=[], offsets={}, debug=Fa
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [], hints)
 
-def unpackUbifs(data, offset, tempdir=None):
+def unpackUbi(data, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], data[offset:])

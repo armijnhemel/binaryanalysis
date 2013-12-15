@@ -558,14 +558,14 @@ description = Unpack tar archives
 enabled     = yes
 
 ###### DO NOT USE UNLESS YOU HAVE the "unubi" tool!
-[ubifs]
+[ubi]
 type        = unpack
 module      = bat.fwunpack
 method      = searchUnpackUbifs
 priority    = 4
-magic       = ubifs
+magic       = ubi
 noscan      = text:xml:graphics:pdf:compressed:audio:video:mp4
-description = Unpack UBI file systems
+description = Unpack UBI
 enabled     = no
 
 [upx]
