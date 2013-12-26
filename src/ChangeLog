@@ -1,3 +1,6 @@
+2013-12-26
+* extract strings and other data from PHP files
+
 2013-12-15
 * ubifs -> ubi
 * add magic for ubifs
