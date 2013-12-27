@@ -98,6 +98,7 @@ extensions = {'.c'      : 'C',
               '.as'     : 'ActionScript',
               '.js'     : 'JavaScript',
               '.php'    : 'PHP',
+              '.py'     : 'Python',
              }
 
 ## a list of characters that 'strings' will split on when processing a binary file
@@ -571,7 +572,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	extracted_results = pool.map(extractstrings, filestoscan, 1)
 
 	for extractres in extracted_results:
-		(filehash, language, sqlres, moduleres, cresults, javaresults, phpresults) = extractres
+		(filehash, language, sqlres, moduleres, cresults, javaresults, phpresults, pythonresults) = extractres
 		for res in sqlres:
 			(pstring, linenumber) = res
 			cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (pstring, filehash, language, linenumber))
@@ -614,6 +615,12 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 				cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'PHP', linenumber))
 			else:
 				cursor.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, 'PHP', linenumber))
+		for res in list(set(pythonresults)):
+			(cname, linenumber, nametype) = res
+			if nametype == 'function' or nametype == 'member':
+				cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'Python', linenumber))
+			else:
+				cursor.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, 'Python', linenumber))
 	conn.commit()
 
 	for i in insertfiles:
@@ -755,8 +762,9 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 	# (name, linenumber, type)
 	javaresults = []
 	phpresults = []
+	pythonresults = []
 
-	if (language in ['C', 'Java', 'PHP']):
+	if (language in ['C', 'Java', 'PHP', 'Python']):
 
 		p2 = subprocess.Popen(["ctags", "-f", "-", "-x", os.path.join(i, p)], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 		(stanout2, stanerr2) = p2.communicate()
@@ -804,8 +812,16 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 					for i in ['variable', 'function', 'class']:
 						if csplit[1] == i:
 							phpresults.append((csplit[0], int(csplit[2]), i))
+				if language == 'Python':
+					## TODO: would be nice to store members with its surrounding class
+					for i in ['variable', 'member', 'function', 'class']:
+						if csplit[0] == '__init__':
+							break
+						if csplit[1] == i:
+							pythonresults.append((csplit[0], int(csplit[2]), i))
+							break
 
-	return (filehash, language, sqlres, moduleres, cresults, javaresults, phpresults)
+	return (filehash, language, sqlres, moduleres, cresults, javaresults, phpresults, pythonresults)
 
 ## Extract strings using xgettext. Apparently this does not always work correctly. For example for busybox 1.6.1:
 ## $ xgettext -a -o - fdisk.c
