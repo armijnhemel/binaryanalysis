@@ -1,0 +1,30 @@
+Crawling PHP's PEAR and PECL repositories
+
+PHP has an extension mechanism with which packages can be downloaded and
+installed, called 'pear'. Various 'channels' (or repositories) can be
+configured, like PEAR, PECL and more.
+
+The packages are downloaded, built (if needed) and installed on the system.
+The pear command also has an option to download packages. To download all
+packages there is a convenient 'download-all' option.
+
+For PEAR use:
+
+$ pear download-all
+
+For PECL use:
+
+$ pecl download-all
+
+By default only packages marked as 'stable' will be downloaded. To download
+other packages you can set the preferred_state, for example:
+
+$ pear config-set preferred_state alpha
+$ pear config-set preferred_state beta
+$ pear config-set preferred_state devel
+
+Please note: not all distributions build PHP with the pear command (for example
+Fedora does not) because it means that some packages will be installed outside
+the control of the system package manager which can lead to a sysadmin
+nightmare. You might need to build and install PHP as a normal user somewhere
+before being able to run the commands mentioned above.
