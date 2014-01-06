@@ -1,3 +1,7 @@
+2014-01-05
+* unpack files in parallel in generatelistrpm.py, at least for as much as
+possible
+
 2013-12-27
 * extract strings and other data from Python files
 
