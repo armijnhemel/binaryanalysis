@@ -18,26 +18,27 @@ translation_table_1_15 = { 'dhcprelay': 'APP_DHCPRELAY'
                          , 'udhcpd': 'APP_UDHCPD'
                          }
 
-translation_table = {'1.2': translation_table_1_15}
-translation_table = {'1.3': translation_table_1_15}
-translation_table = {'1.4': translation_table_1_15}
-translation_table = {'1.5': translation_table_1_15}
-translation_table = {'1.6': translation_table_1_15}
-translation_table = {'1.7': translation_table_1_15}
-translation_table = {'1.8': translation_table_1_15}
-translation_table = {'1.9': translation_table_1_15}
-translation_table = {'1.10': translation_table_1_15}
-translation_table = {'1.11': translation_table_1_15}
-translation_table = {'1.12': translation_table_1_15}
-translation_table = {'1.13': translation_table_1_15}
-translation_table = {'1.14': translation_table_1_15}
-translation_table = {'1.15': translation_table_1_15}
-translation_table = {'1.16': translation_table_1_15}
-translation_table = {'1.17': translation_table_1_15}
-translation_table = {'1.18': translation_table_1_15}
-translation_table = {'1.19': translation_table_1_15}
-translation_table = {'1.20': translation_table_1_15}
-translation_table = {'1.21': translation_table_1_15}
+translation_table = {'1.2': translation_table_1_15
+                    ,'1.3': translation_table_1_15
+                    ,'1.4': translation_table_1_15
+                    ,'1.5': translation_table_1_15
+                    ,'1.6': translation_table_1_15
+                    ,'1.7': translation_table_1_15
+                    ,'1.8': translation_table_1_15
+                    ,'1.9': translation_table_1_15
+                    ,'1.10': translation_table_1_15
+                    ,'1.11': translation_table_1_15
+                    ,'1.12': translation_table_1_15
+                    ,'1.13': translation_table_1_15
+                    ,'1.14': translation_table_1_15
+                    ,'1.15': translation_table_1_15
+                    ,'1.16': translation_table_1_15
+                    ,'1.17': translation_table_1_15
+                    ,'1.18': translation_table_1_15
+                    ,'1.19': translation_table_1_15
+                    ,'1.20': translation_table_1_15
+                    ,'1.21': translation_table_1_15
+                    ,'1.22': translation_table_1_15}
 
 ## helper method to extract the major version of a BusyBox program:
 ## 1.15.2 becomes 1.15
@@ -56,7 +57,7 @@ def prettyprint_configuration(configuration, version):
 			try:
 				newconfig = translation_table[extract_major_version(version)][config]
 				print "CONFIG_%s=y" % newconfig.upper()
-			except:
+			except Exception, e:
 				print "CONFIG_%s=y" % config.upper()
 
 ## Extracting configuration needs a two way pass.
