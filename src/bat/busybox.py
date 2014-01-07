@@ -18,8 +18,9 @@ translation_table_1_15 = { 'dhcprelay': 'APP_DHCPRELAY'
                          , 'udhcpd': 'APP_UDHCPD'
                          }
 
-translation_table = {'1.2': translation_table_1_15
-                    ,'1.3': translation_table_1_15
+## from 1.3 - 1.15 some programs had a different configuration directive
+## TODO: verify that this actually *works* 
+translation_table = {'1.3': translation_table_1_15
                     ,'1.4': translation_table_1_15
                     ,'1.5': translation_table_1_15
                     ,'1.6': translation_table_1_15
@@ -31,14 +32,7 @@ translation_table = {'1.2': translation_table_1_15
                     ,'1.12': translation_table_1_15
                     ,'1.13': translation_table_1_15
                     ,'1.14': translation_table_1_15
-                    ,'1.15': translation_table_1_15
-                    ,'1.16': translation_table_1_15
-                    ,'1.17': translation_table_1_15
-                    ,'1.18': translation_table_1_15
-                    ,'1.19': translation_table_1_15
-                    ,'1.20': translation_table_1_15
-                    ,'1.21': translation_table_1_15
-                    ,'1.22': translation_table_1_15}
+                    ,'1.15': translation_table_1_15}
 
 ## helper method to extract the major version of a BusyBox program:
 ## 1.15.2 becomes 1.15
