@@ -1,3 +1,7 @@
+2014-01-08
+* add script to compare results of FOSSology and Ninka to help find where they
+differ and to make FOSSology and Ninka better
+
 2014-01-05
 * unpack files in parallel in generatelistrpm.py, at least for as much as
 possible
