@@ -61,6 +61,7 @@ fossology_to_ninka = { 'No_license_found': 'NONE'
                      , 'Sun': 'sunRPC'
                      , 'SunPro': 'SunSimpleLic'
                      , 'W3C-IP': 'W3CLic'
+                     , 'Artistic-1.0': 'ArtisticLicensev1'
                      }
 
 def lookup((db, sha)):
