@@ -48,6 +48,15 @@ fossology_to_ninka = { 'No_license_found': 'NONE'
                      , 'BSD-2-Clause': 'spdxBSD2'
                      , 'BSD-3-Clause': 'spdxBSD3'
                      , 'EPL-1.0': 'EPLv1'
+                     , 'Artifex': 'artifex'
+                     , 'CDDL': 'CDDLic'
+                     , 'Public-domain': 'publicDomain'
+                     , 'Public-domain-ref': 'publicDomain'
+                     , 'IPL': 'IBMv1'
+                     , 'Intel': 'IntelACPILic'
+                     , 'MX4J-1.0': 'MX4JLicensev1'
+                     , 'Beerware': 'BeerWareVer42'
+                     , 'CPL-1.0': 'CPLv1'
                      }
 
 def lookup((db, sha)):
