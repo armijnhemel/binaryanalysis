@@ -49,6 +49,13 @@ stringsdbperlanguage = { 'C':              'BAT_STRINGSCACHE_C'
                        , 'ActionScript':   'BAT_STRINGSCACHE_ACTIONSCRIPT'
                        }
 
+## some regular expressions for Java, precompiled
+rejavaclass = re.compile("This class: \d+=([\w\.$]+), super")
+rejavaattribute = re.compile("Attribute \"SourceFile\", length:\d+, #\d+=\"([\w\.]+)\"")
+rejavafield = re.compile("Field name:\"([\w$]+)\"")
+rejavamethod= re.compile("Method name:\"([\w$]+)\"")
+rejavastring = re.compile("#\d+: String \d+=\"")
+
 ## Main part of the scan
 ##
 ## 1. extract the strings using 'strings' and only consider strings >= 5,
@@ -362,17 +369,18 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 					## extract the classname
 					## TODO: deal with inner classes properly
 					if i.startswith("This class: "):
-						res = re.match("This class: \d+=([\w\.$]+), super", i)
+						res = rejavaclass.match(i)
 						if res != None:
 							classname = [res.groups()[0]]
 					## extract the SourceFile attribute, if available
 					if i.startswith("Attribute \"SourceFile\","):
-						res = re.match("Attribute \"SourceFile\", length:\d+, #\d+=\"([\w\.]+)\"", i)
+						res = rejavaattribute.match(i)
 						if res != None:
-							sourcefile = [res.groups()[0]]
+							attribute = res.groups()[0]
+							sourcefile = [attribute]
 					## extract fields
 					if i.startswith("Field name:\""):
-						res = re.match("Field name:\"([\w$]+)\"", i)
+						res = rejavafield.match(i)
 						if res != None:
 							fieldname = res.groups()[0]
 							if '$' in fieldname:
@@ -381,7 +389,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 								fields.append(fieldname)
 					## extract methods
 					if i.startswith("Method name:\""):
-						res = re.match("Method name:\"([\w$]+)\"", i)
+						res = rejavamethod.match(i)
 						if res != None:
 							method = res.groups()[0]
 							## ignore synthetic methods that are inserted by the Java compiler
@@ -389,7 +397,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 								methods.append(method)
 					## process each line of stanout, looking for lines that look like this:
 					## #13: String 45="/"
-					if re.match("#\d+: String \d+=\"", i) != None:
+					if rejavastring.match(i) != None:
 						printstring = i.split("=", 1)[1][1:-1]
         					if len(printstring) >= stringcutoff:
 							lines.append(printstring)
