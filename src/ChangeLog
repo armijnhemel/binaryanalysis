@@ -1,3 +1,8 @@
+2014-01-12
+* update FOSSology/Ninka compare script
+* precompile some regular expressions in ranking.py to make processing Java
+class files a bit faster (I hope)
+
 2014-01-08
 * add script to compare results of FOSSology and Ninka to help find where they
 differ and to make FOSSology and Ninka better
