@@ -34,6 +34,7 @@ fossology_to_ninka = { 'No_license_found': 'NONE'
                      , 'LGPL-2.1+': 'LesserGPLv2.1+'
                      , 'LGPL-3.0': 'LesserGPLv3'
                      , 'LGPL-3.0+': 'LesserGPLv3+'
+                     , 'Apache-1.0': 'Apachev1.0'
                      , 'Apache-1.1': 'Apachev1.1'
                      , 'Apache-2.0': 'Apachev2'
                      , 'BSL-1.0': 'boostV1'
@@ -57,6 +58,9 @@ fossology_to_ninka = { 'No_license_found': 'NONE'
                      , 'MX4J-1.0': 'MX4JLicensev1'
                      , 'Beerware': 'BeerWareVer42'
                      , 'CPL-1.0': 'CPLv1'
+                     , 'Sun': 'sunRPC'
+                     , 'SunPro': 'SunSimpleLic'
+                     , 'W3C-IP': 'W3CLic'
                      }
 
 def lookup((db, sha)):
