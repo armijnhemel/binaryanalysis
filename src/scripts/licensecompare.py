@@ -47,6 +47,7 @@ fossology_to_ninka = { 'No_license_found': 'NONE'
                      , 'NPL-1.1': 'NPLv1_1'
                      , 'BSD-2-Clause': 'spdxBSD2'
                      , 'BSD-3-Clause': 'spdxBSD3'
+                     , 'EPL-1.0': 'EPLv1'
                      }
 
 def lookup((db, sha)):
