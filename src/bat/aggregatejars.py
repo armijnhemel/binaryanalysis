@@ -99,7 +99,7 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, processors, debug=Fal
 	## * pickle of file, only if either unique to a JAR, or shared in several JARs,
 	##   but not when the class file can also be found outside of a JAR.
 	if cleanclasses:
-		for i in jarfiles:
+		for i in alljarfiles:
 			classfiles = filter(lambda x: x.endswith('.class'), unpackreports[i]['scans'][0]['scanreports'])
 			for c in classfiles:
 				filehash = unpackreports[c]['sha256']
