@@ -92,3 +92,5 @@ BOTTLENECKS:
 14. squash versions for variable name reports and function name reports
 15. fix statistics piecharts to also include matched, but unassigned strings. Also take dupes into account.
 16. use order of strings in ELF binaries to assign strings earlier/better
+17. better deal with cloning of JAR files in aggregatejars.py to not do unnecessary duplicate work
+18. better deal with cloning of compressed archives to not do any unnecessary duplicate unpacking and scanning work
