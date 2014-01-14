@@ -145,6 +145,11 @@ def main(argv):
 	## create a pool of workers since all this work can be done in parallel
 	pool = Pool()
 
+	## two dictionaries that list per license scanner per license
+	## what the other license scanner thinks happens
+	ninkas = {}
+	fossologys = {}
+
 	while sha256s != []:
 		tmpsha256 = map(lambda x: (options.licenses, x), sha256s)
 		results = pool.map(lookup, tmpsha256, 1)
@@ -156,9 +161,28 @@ def main(argv):
 		unscannedcounter += len(unscanned)
 		for i in interesting:
 			interestingfile = dbconn.execute("select filename from processed_file where sha256=?", (i[1],)).fetchone()
+			if interestingfile == None:
+				## error in the database
+				continue
 			## checksum, result of Ninka and then result of FOSSology
 			(sha256, licenses) = i[1:]
 			print "%s -- %s -- %s -- %s" % (sha256, licenses[0][0], licenses[1][0], interestingfile[0])
+			if ninkas.has_key(licenses[0][0]):
+				if ninkas[licenses[0][0]].has_key(licenses[1][0]):
+					ninkas[licenses[0][0]][licenses[1][0]] += 1
+				else:
+					ninkas[licenses[0][0]][licenses[1][0]] = 1
+			else:
+				ninkas[licenses[0][0]] = {}
+				ninkas[licenses[0][0]][licenses[1][0]] = 1
+			if fossologys.has_key(licenses[1][0]):
+				if fossologys[licenses[1][0]].has_key(licenses[0][0]):
+					fossologys[licenses[1][0]][licenses[0][0]] += 1
+				else:
+					fossologys[licenses[1][0]][licenses[0][0]] = 1
+			else:
+				fossologys[licenses[1][0]] = {}
+				fossologys[licenses[1][0]][licenses[0][0]] = 1
 		sha256s = cursor.fetchmany(10000)
 
 	pool.close()
@@ -168,5 +192,15 @@ def main(argv):
 	conn.close()
 	print "unscanned:", unscannedcounter
 	print "agreed:", agreedcounter
+
+	print
+	for n in ninkas:
+		for f in ninkas[n]:
+			print "NINKA", n, f, ninkas[n][f]
+	print
+	for n in fossologys:
+		for f in fossologys[n]:
+			print "FOSSOLOGY", n, f, fossologys[n][f]
+
 if __name__ == "__main__":
 	main(sys.argv)
