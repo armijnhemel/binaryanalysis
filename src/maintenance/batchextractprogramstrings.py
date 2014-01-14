@@ -77,6 +77,16 @@ kernelexprs.append(re.compile("DEFINE_EVENT\s*\(\w+,\s*(\w+)", re.MULTILINE))
 recopyright = re.compile('^\[(\d+):\d+:(\w+)] \'(.*)\'')
 recopyright2 = re.compile('^\[(\d+):\d+:(\w+)] \'(.*)')
 
+oldallowedvals= ["b", "c", "h", "i", "l", "s"]
+
+reoldallowedexprs = []
+
+for v in oldallowedvals:
+	reoldallowedexprs.append(re.compile("\d+%s" % v))
+	reoldallowedexprs.append(re.compile("\d+\-\d+%s+" % v))
+
+rechar = re.compile("c\d+")
+
 ## list of extensions, plus what language they should be mapped to
 ## This is not necessarily correct, but right now it suffices. Ideally a parser
 ## would be run on each file to see what kind of file it is.
@@ -414,7 +424,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 
 	#ninkaversion = "b84eee21cb"
 	ninkaversion = "1.1"
-	insertfiles = []
+	insertfiles = set()
 	tmpsha256s = []
 	filehashes = {}
 	filestoscan = []
@@ -429,7 +439,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	## regenerated.
 	for s in scanfile_result:
 		(path, filename, filehash, extension) = s
-		insertfiles.append((os.path.join(path[srcdirlen:],filename), filehash))
+		insertfiles.add((os.path.join(path[srcdirlen:],filename), filehash))
 
 		## if many versions of a single package are processed there is likely going to be
 		## overlap. Avoid hitting the disk by remembering the SHA256 from a previous run.
@@ -598,7 +608,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		if moduleres.has_key('versions'):
 			for res in moduleres['versions']:
 				cursor.execute('''insert into kernelmodule_version (sha256, modulename, version) values (?,?,?)''', (filehash, None, res))
-		for res in set(cresults):
+		for res in cresults:
 			(cname, linenumber, nametype) = res
 			if nametype == 'function':
 				cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'C', linenumber))
@@ -655,17 +665,17 @@ def runfullninka((i, p, filehash, ninkaversion)):
 	ninkabasepath = '/gpl/ninka/ninka-%s' % ninkaversion
 	ninkaenv['PATH'] = ninkaenv['PATH'] + ":%s/comments" % ninkabasepath
 
-	ninkares = []
+	ninkares = set()
 
 	p2 = subprocess.Popen(["%s/ninka.pl" % ninkabasepath, os.path.join(i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
 	(stanout, stanerr) = p2.communicate()
 	ninkasplit = stanout.strip().split(';')[1:]
 	## filter out the licenses that can't be determined.
 	if ninkasplit[0] == '':
-		ninkares = ['UNKNOWN']
+		ninkares = set(['UNKNOWN'])
 	else:
 		licenses = ninkasplit[0].split(',')
-		ninkares = list(set(licenses))
+		ninkares = set(licenses)
 	return (filehash, ninkares)
 
 def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)):
@@ -747,7 +757,7 @@ def licensefossology((packages)):
 		for j in range(0,len(fosslines)):
 			fossysplit = fosslines[j].strip().rsplit(" ", 1)
 			licenses = fossysplit[-1].split(',')
-			fossologyres.append((packages[j][5], list(set(licenses))))
+			fossologyres.append((packages[j][5], set(licenses)))
 	return fossologyres
 
 ## TODO: get rid of ninkaversion before we call this method
@@ -759,7 +769,7 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 	## but variable names are sometimes stored in a special ELF
 	## section called __ksymtab__strings
 	# (name, linenumber, type)
-	cresults = []
+	cresults = set()
 
 	## this is specifically for Java
 	# (name, linenumber, type)
@@ -787,24 +797,24 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 						## stored in a special ELF section __ksymtab_strings
 						if csplit[1] == 'variable':
 							if "EXPORT_SYMBOL_GPL" in csplit[4]:
-								cresults.append((csplit[0], int(csplit[2]), 'gplkernelsymbol'))
+								cresults.add((csplit[0], int(csplit[2]), 'gplkernelsymbol'))
 							elif "EXPORT_SYMBOL" in csplit[4]:
-								cresults.append((csplit[0], int(csplit[2]), 'kernelsymbol'))
+								cresults.add((csplit[0], int(csplit[2]), 'kernelsymbol'))
 						elif csplit[1] == 'function':
-							cresults.append((csplit[0], int(csplit[2]), 'kernelfunction'))
+							cresults.add((csplit[0], int(csplit[2]), 'kernelfunction'))
 					else:
 						if csplit[1] == 'variable':
 							if len(csplit) < 5:
-								cresults.append((csplit[0], int(csplit[2]), 'variable'))
+								cresults.add((csplit[0], int(csplit[2]), 'variable'))
 							else:
 								if "EXPORT_SYMBOL_GPL" in csplit[4]:
-									cresults.append((csplit[0], int(csplit[2]), 'gplkernelsymbol'))
+									cresults.add((csplit[0], int(csplit[2]), 'gplkernelsymbol'))
 								elif "EXPORT_SYMBOL" in csplit[4]:
-									cresults.append((csplit[0], int(csplit[2]), 'kernelsymbol'))
+									cresults.add((csplit[0], int(csplit[2]), 'kernelsymbol'))
 								else:
-									cresults.append((csplit[0], int(csplit[2]), 'variable'))
+									cresults.add((csplit[0], int(csplit[2]), 'variable'))
 						elif csplit[1] == 'function':
-							cresults.append((csplit[0], int(csplit[2]), 'function'))
+							cresults.add((csplit[0], int(csplit[2]), 'function'))
 				if language == 'Java':
 					for i in ['method', 'class', 'field']:
 						if csplit[1] == i:
@@ -904,15 +914,13 @@ def extractsourcestrings(filename, filedir, language, package):
 					for p in parres:
 						paramres.append(p)
 					for p in parres2:
-						for v in oldallowedvals:
-							if re.search("\d+%s" % v, p[1]) != None:
-								paramres.append(p)
-								break
-							if re.search("\d+\-\d+%s+" % v, p[1]) != None:
+						for v in reoldallowedexprs:
+							if v.search(p[1]) != None:
 								paramres.append(p)
 								break
 						## and special case for characters
-						if re.search("c\d+", p[1]) != None:
+						#if re.search("c\d+", p[1]) != None:
+						if rechar.search(p[1]) != None:
 							paramres.append(p)
 			moduleres['parameters'] = paramres
 			## TODO: extract values for module_param_array as well
@@ -1319,7 +1327,7 @@ def main(argv):
 
 	oldpackage = ""
 	oldres = []
-	processed_hashes = []
+	processed_hashes = set()
 	for i in res:
 		try:
 			(package, version, filename, origin, filehash) = i
@@ -1337,7 +1345,7 @@ def main(argv):
 			if unpackres != None:
 				oldres = map(lambda x: x[2], unpackres)
 				oldpackage = package
-			processed_hashes.append(filehash)
+			processed_hashes.add(filehash)
 		except Exception, e:
 				# oops, something went wrong
 				print >>sys.stderr, e
