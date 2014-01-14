@@ -73,6 +73,10 @@ kernelexprs.append(re.compile("DEFINE_EVENT\s*\(\w+,\s*(\w+)", re.MULTILINE))
 #SYSCALL_DEFINE + friends go here
 #COMPAT_SYSCALL_DEFINE
 
+## some more precompiled regex
+recopyright = re.compile('^\[(\d+):\d+:(\w+)] \'(.*)\'')
+recopyright2 = re.compile('^\[(\d+):\d+:(\w+)] \'(.*)')
+
 ## list of extensions, plus what language they should be mapped to
 ## This is not necessarily correct, but right now it suffices. Ideally a parser
 ## would be run on each file to see what kind of file it is.
@@ -688,7 +692,7 @@ def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)
 			## unless some extra filtering is added, like searching for
 			## URLs that point to licenses that were not included in
 			## the binary.
-			res = re.match('^\[(\d+):\d+:(\w+)] \'(.*)\'', c.strip())
+			res = recopyright.match(c.strip())
 			if res != None:
 				if continuation:
 					if bufstr != "" and buftype != "":
@@ -710,7 +714,7 @@ def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)
 					buftype = "statement"
 					bufstr = res.groups()[2]
 			else:
-				res = re.match('^\[(\d+):\d+:(\w+)] \'(.*)', c.strip())
+				res = recopyright2.match(c.strip())
 				if res != None:
 					if res.groups()[1] == 'statement':
 						continuation = True
