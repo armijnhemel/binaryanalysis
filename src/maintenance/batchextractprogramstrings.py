@@ -529,7 +529,6 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		ninkaconn.close()
 
 		## TODO: sync names of licenses as found by FOSSology and Ninka
-		## TODO: dynamically determine the version of FOSSology
 		fossology_chunksize = 10
 		fossology_filestoscan = []
 		for i in range(0,len(filestoscan),fossology_chunksize):
@@ -555,12 +554,12 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 
 	## extract copyrights
 	if copyrights:
-		licenseconn = sqlite3.connect(licensedb, check_same_thread = False)
-		licensecursor = licenseconn.cursor()
-		licensecursor.execute('PRAGMA synchronous=off')
-
 		copyrightsres = pool.map(extractcopyrights, filestoscan, 1)
 		if copyrightsres != None:
+			licenseconn = sqlite3.connect(licensedb, check_same_thread = False)
+			licensecursor = licenseconn.cursor()
+			licensecursor.execute('PRAGMA synchronous=off')
+
 			for c in filter(lambda x: x != None, copyrightsres):
 				(filehash, cres) = c
 				for cr in cres:
@@ -568,9 +567,9 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 					## combination of parameters.
 					#licensecursor.execute('''delete from extracted_copyright where sha256 = ? and copyright = ? and type = ? and offset = ?''', (filehash, cr[1], cr[0], cr[2]))
 					licensecursor.execute('''insert into extracted_copyright (sha256, copyright, type, offset) values (?,?,?,?)''', (filehash, cr[1], cr[0], cr[2]))
-		licenseconn.commit()
-		licensecursor.close()
-		licenseconn.close()
+			licenseconn.commit()
+			licensecursor.close()
+			licenseconn.close()
 
 	## process the files to scan in parallel, then process the results
 	extracted_results = pool.map(extractstrings, filestoscan, 1)
@@ -599,7 +598,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		if moduleres.has_key('versions'):
 			for res in moduleres['versions']:
 				cursor.execute('''insert into kernelmodule_version (sha256, modulename, version) values (?,?,?)''', (filehash, None, res))
-		for res in list(set(cresults)):
+		for res in set(cresults):
 			(cname, linenumber, nametype) = res
 			if nametype == 'function':
 				cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'C', linenumber))
@@ -607,19 +606,19 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 				cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'linuxkernel', linenumber))
 			else:
 				cursor.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, 'C', linenumber))
-		for res in list(set(javaresults)):
+		for res in set(javaresults):
 			(cname, linenumber, nametype) = res
 			if nametype == 'method':
 				cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'Java', linenumber))
 			else:
 				cursor.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, 'Java', linenumber))
-		for res in list(set(phpresults)):
+		for res in set(phpresults):
 			(cname, linenumber, nametype) = res
 			if nametype == 'function':
 				cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'PHP', linenumber))
 			else:
 				cursor.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, 'PHP', linenumber))
-		for res in list(set(pythonresults)):
+		for res in set(pythonresults):
 			(cname, linenumber, nametype) = res
 			if nametype == 'function' or nametype == 'member':
 				cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'Python', linenumber))
