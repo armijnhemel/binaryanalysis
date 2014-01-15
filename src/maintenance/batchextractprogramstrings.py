@@ -548,7 +548,11 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		p2 = subprocess.Popen(["/usr/share/fossology/nomos/agent/nomos", "-V"], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 		(stanout, stanerr) = p2.communicate()
 		res = re.match("nomos build version: ([\d\.]+) ", stanout)
-		fossology_version = res.groups()[0]
+		if res != None:
+			fossology_version = res.groups()[0]
+		else:
+			## hack for not working version number in 2.4.0
+			fossology_version = '2.4.0'
 
 		for f in fossology_res:
 			for ff in f:
