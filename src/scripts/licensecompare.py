@@ -113,21 +113,21 @@ def lookup((db, sha)):
 def main(argv):
 	parser = OptionParser()
 	parser.add_option("-l", "--licensedb", action="store", dest="licenses", help="path to licensing database", metavar="FILE")
-	parser.add_option("-d", "--database", action="store", dest="db", help="path to licensing database", metavar="FILE")
+	parser.add_option("-d", "--database", action="store", dest="db", help="path to master database", metavar="FILE")
 	(options, args) = parser.parse_args()
 	if options.licenses == None:
 		parser.error("Need path to licensing database")
 	try:
 		conn = sqlite3.connect(options.licenses)
 	except:
-		print >>sys.stderr, "Can't open database"
+		print >>sys.stderr, "Can't open licensing database"
 		sys.exit(1)
 	if options.db == None:
-		parser.error("Need path to database")
+		parser.error("Need path to master database")
 	try:
 		dbconn = sqlite3.connect(options.db)
 	except:
-		print >>sys.stderr, "Can't open database"
+		print >>sys.stderr, "Can't open master database"
 		sys.exit(1)
 
 	cursor = conn.cursor()
