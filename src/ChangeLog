@@ -1,3 +1,7 @@
+2014-02-06
+* squash names for function names and variable names, making it easier on the
+GUI
+
 2014-01-13
 * fix bug in aggregatejars.py, if there were copies of JAR files results would
 only be aggregated for one instance.
