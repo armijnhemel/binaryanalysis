@@ -255,6 +255,7 @@ def unpack_verify(filedir, filename):
 ## reflect its true functionality...
 def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, rewrites):
 	print >>sys.stdout, "processing", filename
+	sys.stdout.flush()
 
         conn = sqlite3.connect(dbpath, check_same_thread = False)
 	c = conn.cursor()
@@ -311,15 +312,12 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 		identical = True
 		## compare amount of checksums for this version and the one recorded in the database.
 		## If they are not equal the package is not identical.
-		## TODO: make parallel
 		origlen = len(conn.execute('''select sha256 from processed_file where package=? and version=?''', (package, version)).fetchall())
 		if len(scanfile_result) == origlen:
-			for i in scanfile_result:
-				c.execute('''select sha256 from processed_file where package=? and version=? and sha256=?''', (package, version, i[2]))
-				cres = c.fetchall()
-				if len(cres) == 0:
-					identical = False
-					break
+			tasks = map(lambda x: (dbpath, package, version, x[2]), scanfile_result)
+			nonidenticals = filter(lambda x: x[1] == False, pool.map(grabhash, tasks, 1))
+			if len(nonidenticals) != 0:
+				identical = False
 		else:
 			identical = False
 
@@ -373,6 +371,19 @@ def cleanupdir(temporarydir):
 	except:
 		## nothing that can be done right now, so just give up
 		pass
+
+def grabhash((db, package, version, checksum)):
+	conn = sqlite3.connect(db)
+	c = conn.cursor()
+	c.execute('''select sha256 from processed_file where package=? and version=? and sha256=?''', (package, version, checksum))
+	cres = c.fetchall()
+	if len(cres) == 0:
+		identical = False
+	else:
+		identical = True
+	c.close()
+	conn.close()
+	return (checksum, identical)
 
 def computehash((path, filename)):
 	resolved_path = os.path.join(path, filename)
