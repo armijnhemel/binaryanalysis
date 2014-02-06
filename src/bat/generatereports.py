@@ -176,6 +176,7 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 		## if the results are stored in the pickle generate nice reports.
 		if dynamicRes.has_key('versionresults'):
 			if dynamicRes['versionresults'] != {}:
+				squashed_versions = {}
 				html += "<h1>Unique function name matches per package</h1><p><ul>\n"
 				ukeys = map(lambda x: (x[0], len(x[1])), dynamicRes['versionresults'].items())
 				ukeys.sort(key=lambda x: x[1], reverse=True)
@@ -183,17 +184,68 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 					html += "<li><a href=\"#%s\">%s (%d)</a></li>" % (i[0], i[0], i[1])
 				html += "</ul></p>\n"
 				for i in ukeys:
-					html += "<hr><h2><a name=\"%s\" href=\"#%s\">Matches for %s (%d)</a></h2>\n" % (i[0], i[0], i[0], i[1])
-					upkgs = dynamicRes['versionresults'][i[0]]
+					packagename = i[0]
+					html += "<hr><h2><a name=\"%s\" href=\"#%s\">Matches for %s (%d)</a></h2>\n" % (packagename, packagename, packagename, i[1])
+					upkgs = dynamicRes['versionresults'][packagename]
 					upkgs.sort()
 					for up in upkgs:
+						sh = {}
 						(funcname, results) = up
 						html += "<h5>%s</h5><p><table><tr><td><b>Filename</b></td><td><b>Version(s)</b></td><td><b>Line number</b></td><td><b>SHA256</b></td></tr>" % cgi.escape(funcname)
 						for r in results:
 							(checksum, linenumber, versionfilenames) = r 
 							for vf in versionfilenames:
 								(version, filename) = vf
-								html += "<tr><td>%s</td><td>%s</td><td><a href=\"unique:/%s#%d\">%d</a></td><td>%s</td></tr>\n" % (filename, version, checksum, linenumber, linenumber, checksum)
+
+								## if possible, remove the package name, plus version number, from the path
+								## that is displayed. This is to prevent that a line is printed for every
+								## version, even when the code has not changed. Usually it will be clear
+								## which file is meant.
+								if len(filename.split('/', 1)) > 1:
+									(pv, fp) = filename.split('/', 1)
+									## clean up some names first, especially when they have been changed by Debian
+									for e in ["+dfsg", "~dfsg", ".orig", ".dfsg1", ".dfsg2"]:
+										if pv.endswith(e):
+											pv = pv[:-len(e)]
+											break
+									## then check if the file directory name follows a certain pattern
+									if pv == "%s-%s" % (packagename, version) or pv == "%s_%s" % (packagename, version):
+										if sh.has_key(checksum):
+											sh[checksum].add((fp, version, linenumber))
+										else:
+											sh[checksum] = set([(fp, version, linenumber)])
+								else:
+									if sh.has_key(checksum):
+										sh[checksum].add((filename, version, linenumber))
+									else:
+										sh[checksum] = set([(filename, version, linenumber)])
+						for checksum in sh:
+							## per checksum we have a list of (filename, version)
+							## Now we need to check if we only have one filename, or if there are multiple.
+							## If there is just one it is easy:
+							chs = set(map(lambda x: x[0], sh[checksum]))
+
+							if len(chs) == 1:
+								linenumbers = sorted(set(map(lambda x: (x[2]), sh[checksum])))
+								versions = sorted(set(map(lambda x: (x[1]), sh[checksum])))
+								if squashed_versions.has_key(checksum):
+									versionline = squashed_versions[checksum]
+								else:
+									versionline = squash_versions(versions)
+									squashed_versions[checksum] = versionline
+								ch = sh[checksum].pop()
+								numlines = reduce(lambda x, y: "%s, %s" % (x,y), map(lambda x: "<a href=\"unique:/%s#%d\">%d</a>" % (checksum, x, x), linenumbers))
+								html+= "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (ch[0], versionline, numlines, checksum)
+							else:
+								for d in chs:
+									filterd = filter(lambda x: x[0] == d, sh[checksum])
+									linenumbers = sorted(set(map(lambda x: (x[2]), filterd)))
+									versions = sorted(set(map(lambda x: (x[1]), filterd)))
+									versionline = squash_versions(versions)
+									numlines = reduce(lambda x, y: "%s, %s" % (x,y), map(lambda x: "<a href=\"unique:/%s#%d\">%d</a>" % (checksum, x, x), linenumbers))
+									html += "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (d, versionline, numlines, checksum)
+
+
 						html += "</table></p>\n"
 		elif dynamicRes.has_key('uniquepackages'):
 			if dynamicRes['uniquepackages'] != {}:
@@ -216,6 +268,7 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 			nameshtmlfile.close()
 
 	if variablepvs != {}:
+		squashed_versions = {}
 		if language == 'Java':
 			header = "<html><body><h1>Unique matches of class names, field names and source file names</h1>"
 		elif language == 'C':
