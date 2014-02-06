@@ -1111,7 +1111,7 @@ def main(argv):
 		parser.error("Specify dir with files")
 	else:
 		try:
-			filelist = open(options.filedir + "/LIST").readlines()
+			filelist = open(os.path.join(options.filedir,"LIST")).readlines()
 		except:
 			parser.error("'LIST' not found in file dir")
 
