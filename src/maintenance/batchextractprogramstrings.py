@@ -309,12 +309,19 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 		## compute the hashes in parallel
 		scanfile_result = filter(lambda x: x != None, pool.map(computehash, scanfiles, 1))
 		identical = True
-		for i in scanfile_result:
-			c.execute('''select sha256 from processed_file where package=? and version=? and sha256=?''', (package, version, i[2]))
-			cres = c.fetchall()
-			if len(cres) == 0:
-				identical = False
-				break
+		## compare amount of checksums for this version and the one recorded in the database.
+		## If they are not equal the package is not identical.
+		## TODO: make parallel
+		origlen = len(conn.execute('''select sha256 from processed_file where package=? and version=?''', (package, version)).fetchall())
+		if len(scanfile_result) == origlen:
+			for i in scanfile_result:
+				c.execute('''select sha256 from processed_file where package=? and version=? and sha256=?''', (package, version, i[2]))
+				cres = c.fetchall()
+				if len(cres) == 0:
+					identical = False
+					break
+		else:
+			identical = False
 
 		if not identical:
 			## rewrite the version number and process further
