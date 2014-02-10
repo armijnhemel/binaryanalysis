@@ -84,10 +84,14 @@ def packfile((packfile, packdir, lenunpackdir)):
 	modorigpath = os.path.join(packdir, origpath[lenunpackdir:])
 	shutil.copy(os.path.join(origpath, origfile), modorigpath)
 
-def findversion((dbpath, s, package, processed)):
+def findversion((dbpath, s, package, processed, scanned_files)):
 	packfiles = set()
 	skipfiles = set()
 	(filepath, filename, checksum, extension) = s
+	if scanned_files.has_key(checksum):
+		firstoccur = scanned_files[checksum]
+		skipfiles.add(s + (firstoccur,))
+		return (packfiles, skipfiles)
 	## look up checksum in database
 	conn = sqlite3.connect(dbpath)
 	cursor = conn.cursor()
@@ -220,6 +224,8 @@ def computehasharchive((filedir, version, filename)):
 ## 6. pack archive
 ## 7. pack archive + metadata into BAT archive
 def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origin):
+	## keep a dictionary of checksum + version to avoid lookups
+	scanned_files = {}
 	## first sanity check: is there actually more than one version so a proper diff can be made?
 	if len(versionfilenames) == 1:
 		return None
@@ -279,7 +285,7 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 		scanfile_result = filter(lambda x: x != None, scanfile_res)
 		packfiles = set(filter(lambda x: x[2] == None, scanfile_result))
 
-		tasks = map(lambda x: (dbpath, x, package, processed), scanfile_result)
+		tasks = map(lambda x: (dbpath, x, package, processed, scanned_files), scanfile_result)
 		res = pool.map(findversion, tasks)
 		for r in res:
 			(respackfiles, resskipfiles) = r
@@ -292,6 +298,11 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 			shutil.rmtree(unpackdir)
 			processed.append(version)
 			continue
+
+		for r in skipfiles:
+			(origpath, origfile, checksum, extension, firstoccur) = r
+			if not scanned_files.has_key(checksum):
+				scanned_files[checksum] = firstoccur
 
 		## there are some files that need to be packed.
 		## first, create a temporary directory
