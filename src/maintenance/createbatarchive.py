@@ -291,8 +291,14 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 			(respackfiles, resskipfiles) = r
 			packfiles.update(respackfiles)
 			skipfiles.update(resskipfiles)
+			## add the files that were scanned in this version to scanned_files
+			for s in respackfiles:
+				if s[2] != None:
+					(origpath, origfile, checksum, extension) = s
+					scanned_files[s[2]] = version
 
 		print "skipping %s packing %s for version %s" % (len(skipfiles), len(packfiles), version)
+		sys.stdout.flush()
 		if len(skipfiles) == 0:
 			## Nothing to optimize, so just cleanup and continue to the next file
 			shutil.rmtree(unpackdir)
