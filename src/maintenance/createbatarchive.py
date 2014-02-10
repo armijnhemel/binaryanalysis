@@ -317,7 +317,6 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 				pass
 				#print e
 
-		storeexts = set()
 		storeexts = set(map(lambda x: x[3], packfiles))
 
 		print "copying %d files" % len(packfiles)
