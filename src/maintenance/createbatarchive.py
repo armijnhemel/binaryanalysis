@@ -243,11 +243,23 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 	## which will always be stored in full. The prime use case is the Linux kernel.
 	versions = map(lambda x: x[0], versionfilenames)
 
-	## keep a list of versions that have already been processed. Use a list to keep order when they were processed
-	processed = []
-	processed.append(versions[0])
 
 	res = filter(lambda x: x != None, pool.map(computehasharchive, map(lambda x: (filedir,) + x, versionfilenames),1))
+
+	## keep a list of versions that have already been processed. Use a list to keep order when they were processed
+	processed = []
+	for r in res:
+		(archivefilename, version, archivechecksum) = r
+		## to determine the version that is used as a 'base' first check if it is in the database
+		cursor.execute("select version from processed where sha256=?", (archivechecksum,))
+		versionres = cursor.fetchall()
+		if versionres != []:
+			## extra sanity check to see if it is the expected version
+			if versionres[0][0] != version:
+				continue
+			processed.append(versionres[0][0])
+			break
+
 	for r in res:
 		(archivefilename, version, archivechecksum) = r
 		if version in processed:
@@ -323,6 +335,7 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 				pass
 				#print e
 
+		## keep a list of lower case extensions for all remaining files
 		storeexts = set(map(lambda x: x[3], packfiles))
 
 		print "copying %d files" % len(packfiles)
@@ -346,7 +359,6 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 		batfile.write("\n")
 
 		## then add a line for each skipped file, plus in which version they can be found
-
 		batfile.write("## FILES THAT CAN BE FOUND IN OTHER PACKAGES\n")
 		batfile.write("## PATH CHECKSUM VERSION\n")
 		for i in skipfiles:
