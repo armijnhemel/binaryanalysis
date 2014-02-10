@@ -1,3 +1,9 @@
+2014-02-10
+* add script to create BAT archive files. This is useful in cases where a
+database needs to be recreated and various versions of programs vary little,
+but are big. The best example is the Linux kernel. Processing the BAT archive
+instead of the original file is a lot faster.
+
 2014-02-06
 * squash names for function names and variable names, making it easier on the
 GUI
