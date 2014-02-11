@@ -253,19 +253,63 @@ def unpack_verify(filedir, filename):
 
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
-def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, rewrites):
-	print >>sys.stdout, "processing", filename
-	sys.stdout.flush()
-
-        conn = sqlite3.connect(dbpath, check_same_thread = False)
-	c = conn.cursor()
-	c.execute('PRAGMA synchronous=off')
+def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, rewrites, batarchive):
 	## unpack the archive. If it fails, cleanup and return.
 	temporarydir = unpack(filedir, filename, '/gpl/tmp')
 	if temporarydir == None:
 		c.close()
 		conn.close()
 		return None
+
+	if batarchive:
+		## override the data for package, version, filename, origin, filehash
+		## first unpack
+		## first extract the MANIFEST.BAT file from the BAT archive
+		if not os.path.exists(os.path.join(temporarydir, "MANIFEST.BAT")):
+			return
+		manifest = os.path.join(temporarydir, "MANIFEST.BAT")
+		manifestfile = open(manifest)
+		manifestlines = manifestfile.readlines()
+		manifestfile.close()
+		inheader = False
+		infiles = False
+		inextensions = False
+		for i in manifestlines:
+			if "START META" in i:
+				inheader = True
+				continue
+			if "END META" in i:
+				inheader = False
+				continue
+			if "START FILES" in i:
+				infiles = True
+				continue
+			if "END FILES" in i:
+				infiles = False
+				continue
+			if "START EXTENSIONS" in i:
+				inextensions = True
+				continue
+			if "END EXTENSIONS" in i:
+				inextensions = False
+				continue
+			if inheader:
+				if i.startswith('package'):
+					package = i.split(':')[1].strip()
+				elif i.startswith('version'):
+					version = i.split(':')[1].strip()
+				elif i.startswith('origin'):
+					origin = i.split(':')[1].strip()
+				elif i.startswith('filename'):
+					filename = i.split(':')[1].strip()
+				elif i.startswith('sha256'):
+					filehash = i.split(':')[1].strip()
+	print >>sys.stdout, "processing", filename
+	sys.stdout.flush()
+
+        conn = sqlite3.connect(dbpath, check_same_thread = False)
+	c = conn.cursor()
+	c.execute('PRAGMA synchronous=off')
 
 	## First see if this exact version is in the rewrite list. If so, rewrite.
 	if rewrites.has_key(filehash):
@@ -291,6 +335,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 		## If the version is in 'processed' then it should be checked if every file is in processed_file
 		## If they are, then the versions are equivalent and no processing is needed.
 		## If not, one of the versions should be renamed.
+		## TODO: support for batarchive
 		osgen = os.walk(temporarydir)
 
 		try:
@@ -336,7 +381,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 				cleanupdir(temporarydir)
 			return
 
-	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256)
+	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive)
 	if sqlres != []:
 		## Add the file to the database: name of archive, sha256, packagename and version
 		## This is to be able to just update the database instead of recreating it.
@@ -418,19 +463,22 @@ def computehash((path, filename)):
 	filehash = h.hexdigest()
 	return (path, filename, filehash, extension)
 
-def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256):
+def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive):
 	osgen = os.walk(srcdir)
 
 	try:
 		scanfiles = []
 		while True:
 			i = osgen.next()
+			for p in i[2]:
+				if batarchive:
+					if p == 'MANIFEST.BAT':
+						continue
+				scanfiles.append((i[0], p))
 			## make sure all directories can be accessed
 			for d in i[1]:
 				if not os.path.islink(os.path.join(i[0], d)):
 					os.chmod(os.path.join(i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-			for p in i[2]:
-				scanfiles.append((i[0], p))
 	except Exception, e:
 		if str(e) != "":
 			print >>sys.stderr, package, version, e
@@ -660,6 +708,39 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 
 	for i in insertfiles:
 		cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, i[0], i[1]))
+	conn.commit()
+
+	if not os.path.exists(os.path.join(srcdir, "MANIFEST.BAT")):
+		return
+	manifest = os.path.join(srcdir, "MANIFEST.BAT")
+	manifestfile = open(manifest)
+	manifestlines = manifestfile.readlines()
+	manifestfile.close()
+	inheader = False
+	infiles = False
+	inextensions = False
+	for i in manifestlines:
+		if "START META" in i:
+			inheader = True
+			continue
+		if "END META" in i:
+			inheader = False
+			continue
+		if "START FILES" in i:
+			infiles = True
+			continue
+		if "END FILES" in i:
+			infiles = False
+			continue
+		if "START EXTENSIONS" in i:
+			inextensions = True
+			continue
+		if "END EXTENSIONS" in i:
+			inextensions = False
+			continue
+		if infiles:
+			(archivepath, archivechecksum, archiveversion) = i.strip().split('\t')
+			cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, archivepath, archivechecksum))
 	conn.commit()
 	return (scanfile_result)
 
@@ -1391,9 +1472,7 @@ def main(argv):
 				unpack_verify(options.filedir, filename)
 			if package != oldpackage:
 				oldres = []
-			if batarchive:
-				continue
-			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, options.db, cleanup, license, copyrights, pool, options.ninkacomments, options.licensedb, oldpackage, oldres, rewrites)
+			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, options.db, cleanup, license, copyrights, pool, options.ninkacomments, options.licensedb, oldpackage, oldres, rewrites, batarchive)
 			if unpackres != None:
 				oldres = map(lambda x: x[2], unpackres)
 				oldpackage = package
