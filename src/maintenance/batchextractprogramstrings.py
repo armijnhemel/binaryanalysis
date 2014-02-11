@@ -1459,24 +1459,36 @@ def main(argv):
 	oldpackage = ""
 	oldres = []
 	processed_hashes = set()
+
+	batarchives = []
+	resordered = []
+
+	## first loop through everything to filter out all the files that don't
+	## need processing, plus moving any batarchives to the end of the queue
+	for i in res:
+		(package, version, filename, origin, filehash, batarchive) = i
+		if filehash in blacklistsha256sums:
+			continue
+		## no need to process some files twice, even if they
+		## are under a different name.
+		if filehash in processed_hashes:
+			continue
+		if batarchive:
+			batarchives.append(i)
+		else:
+			resordered.append(i)
+		processed_hashes.add(filehash)
+
+	res = resordered + batarchives
 	for i in res:
 		try:
 			(package, version, filename, origin, filehash, batarchive) = i
-			if filehash in blacklistsha256sums:
-				continue
-			## no need to process some files twice, even if they
-			## are under a different name.
-			if filehash in processed_hashes:
-				continue
-			if options.verify:
-				unpack_verify(options.filedir, filename)
 			if package != oldpackage:
 				oldres = []
 			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, options.db, cleanup, license, copyrights, pool, options.ninkacomments, options.licensedb, oldpackage, oldres, rewrites, batarchive)
 			if unpackres != None:
 				oldres = map(lambda x: x[2], unpackres)
 				oldpackage = package
-			processed_hashes.add(filehash)
 		except Exception, e:
 				# oops, something went wrong
 				print >>sys.stderr, e
