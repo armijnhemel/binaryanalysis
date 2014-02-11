@@ -1336,11 +1336,7 @@ def main(argv):
 	for unpackfile in filelist:
 		try:
 			unpacks = unpackfile.strip().split()
-			if len(unpacks) == 3:
-				origin = "unknown"
-				(package, version, filename) = unpacks
-			else:
-				(package, version, filename, origin) = unpacks
+			(package, version, filename, origin) = unpacks
 			pkgmeta.append((options.filedir, package, version, filename, origin, options.db))
 		except Exception, e:
 			# oops, something went wrong
