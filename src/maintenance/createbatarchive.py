@@ -351,23 +351,29 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 
 		## First add a section with the name, version, origin, SHA256sum of the original archive
 		batfile.write("## META INFORMATION OF PACKAGE\n")
+		batfile.write("## START META\n")
 		batfile.write("package: %s\n" % package)
 		batfile.write("version: %s\n" % version)
 		batfile.write("filename: %s\n" % archivefilename)
 		batfile.write("origin: %s\n" % origin)
 		batfile.write("sha256: %s\n" % archivechecksum)
+		batfile.write("## END META\n")
 		batfile.write("\n")
 
 		## then add a line for each skipped file, plus in which version they can be found
 		batfile.write("## FILES THAT CAN BE FOUND IN OTHER PACKAGES\n")
 		batfile.write("## PATH CHECKSUM VERSION\n")
+		batfile.write("## START FILES\n")
 		for i in skipfiles:
 			(origpath, origfile, checksum, extension, firstoccur) = i
 			batfile.write("%s\t%s\t%s\n" % (os.path.join(origpath[lenunpackdir:], origfile), checksum, firstoccur))
+		batfile.write("## END FILES\n")
 		batfile.write("\n")
+		batfile.write("## START EXTENSIONS\n")
 		batfile.write("## EXTENSIONS OF UNPROCESSED FILES (LOWER CASED)\n")
 		batfile.write(reduce(lambda x,y: "%s %s" %(x, y), storeexts))
 		batfile.write("\n")
+		batfile.write("## END EXTENSIONS\n")
 		batfile.close()
 
 		print "packing"
