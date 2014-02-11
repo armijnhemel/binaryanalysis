@@ -1067,18 +1067,42 @@ def extractsourcestrings(filename, filedir, language, package):
 			lines.append(l[1:-1])
 	return (sqlres, moduleres)
 
-def checkalreadyscanned((filedir, package, version, filename, origin, dbpath)):
+def checkalreadyscanned((filedir, package, version, filename, origin, batarchive, dbpath)):
 	resolved_path = os.path.join(filedir, filename)
 	try:
 		os.stat(resolved_path)
 	except:
 		print >>sys.stderr, "Can't find %s" % filename
 		return None
-	scanfile = open(resolved_path, 'r')
-	h = hashlib.new('sha256')
-	h.update(scanfile.read())
-	scanfile.close()
-	filehash = h.hexdigest()
+	if batarchive:
+		## first extract the MANIFEST.BAT file from the BAT archive
+		## TODO: add support for unpackdir
+		archivedir = tempfile.mkdtemp()
+		tar = tarfile.open(resolved_path, 'r')
+		tarmembers = tar.getmembers()
+		for i in tarmembers:
+			## TODO: sanity check to see if there is a MANIFEST.BAT
+			if i.name.endswith('MANIFEST.BAT'):
+				tar.extract(i, path=archivedir)
+		manifest = os.path.join(archivedir, "MANIFEST.BAT")
+		manifestfile = open(manifest)
+		manifestlines = manifestfile.readlines()
+		manifestfile.close()
+		shutil.rmtree(archivedir)
+		for i in manifestlines:
+			## for later checks the package and filehash are important
+			## The rest needs to be overriden later anyway
+			if i.startswith('package'):
+				package = i.split(':')[1].strip()
+			elif i.startswith('sha256'):
+				filehash = i.split(':')[1].strip()
+				break
+	else:
+		scanfile = open(resolved_path, 'r')
+		h = hashlib.new('sha256')
+		h.update(scanfile.read())
+		scanfile.close()
+		filehash = h.hexdigest()
 
 	conn = sqlite3.connect(dbpath, check_same_thread = False)
 	c = conn.cursor()
@@ -1087,7 +1111,7 @@ def checkalreadyscanned((filedir, package, version, filename, origin, dbpath)):
 	if len(c.fetchall()) != 0:
 		res = None
 	else:
-		res = (package, version, filename, origin, filehash)
+		res = (package, version, filename, origin, filehash, batarchive)
 	c.close()
 	conn.close()
 
@@ -1336,8 +1360,16 @@ def main(argv):
 	for unpackfile in filelist:
 		try:
 			unpacks = unpackfile.strip().split()
-			(package, version, filename, origin) = unpacks
-			pkgmeta.append((options.filedir, package, version, filename, origin, options.db))
+			if len(unpacks) == 4:
+				(package, version, filename, origin) = unpacks
+				batarchive = False
+			else:
+				(package, version, filename, origin, bat) = unpacks
+				if bat == 'batarchive':
+					batarchive = True
+				else:
+					batarchive = False
+			pkgmeta.append((options.filedir, package, version, filename, origin, batarchive, options.db))
 		except Exception, e:
 			# oops, something went wrong
 			print >>sys.stderr, e
@@ -1348,7 +1380,7 @@ def main(argv):
 	processed_hashes = set()
 	for i in res:
 		try:
-			(package, version, filename, origin, filehash) = i
+			(package, version, filename, origin, filehash, batarchive) = i
 			if filehash in blacklistsha256sums:
 				continue
 			## no need to process some files twice, even if they
@@ -1359,6 +1391,8 @@ def main(argv):
 				unpack_verify(options.filedir, filename)
 			if package != oldpackage:
 				oldres = []
+			if batarchive:
+				continue
 			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, options.db, cleanup, license, copyrights, pool, options.ninkacomments, options.licensedb, oldpackage, oldres, rewrites)
 			if unpackres != None:
 				oldres = map(lambda x: x[2], unpackres)
