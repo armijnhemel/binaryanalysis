@@ -1,3 +1,8 @@
+2014-02-11
+* use better markers in MANIFEST.BAT file in BAT archive files
+* rewrite batchextractprogramstrings.py to support BAT archives. This still
+needs some more work to deal with some edge cases.
+
 2014-02-10
 * add script to create BAT archive files. This is useful in cases where a
 database needs to be recreated and various versions of programs vary little,

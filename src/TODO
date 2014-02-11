@@ -94,5 +94,6 @@ BOTTLENECKS:
 16. use order of strings in ELF binaries to assign strings earlier/better
 17. better deal with cloning of JAR files in aggregatejars.py to not do unnecessary duplicate work
 18. better deal with cloning of compressed archives to not do any unnecessary duplicate unpacking and scanning work
-19. work on 'BAT archive' format to only store the unique and unscanned files of a package, plus information about which files are not unique to a package, original checksum, and so on. In case for for example the Linux kernel this could save quite a bit of storage space, plus time for unpacking archives.
+19. make generatelistrpm.py a bit more parallel (bit using rpm -qpl)
 20. exclude acconfig.h (after verifying it is autoconf generated) when creating database
+21. generate generic manifest files for archives that can be processed and checked when regenerating the database to find out if the file is worth processing
