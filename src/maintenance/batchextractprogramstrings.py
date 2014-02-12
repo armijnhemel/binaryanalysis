@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 ## Binary Analysis Tool
-## Copyright 2009-2013 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2009-2014 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -255,6 +255,7 @@ def unpack_verify(filedir, filename):
 ## reflect its true functionality...
 def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, rewrites, batarchive):
 	## unpack the archive. If it fails, cleanup and return.
+	## TODO: make temporary dir configurable
 	temporarydir = unpack(filedir, filename, '/gpl/tmp')
 	if temporarydir == None:
 		c.close()
