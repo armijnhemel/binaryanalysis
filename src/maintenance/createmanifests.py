@@ -95,6 +95,9 @@ def grabhash(filedir, filename, filehash, pool):
 	if temporarydir == None:
 		return None
 
+	print "processing", filename
+	sys.stdout.flush()
+
 	## add 1 to deal with /
 	lenunpackdir = len(temporarydir) + 1
 
