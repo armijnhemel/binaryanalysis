@@ -201,18 +201,21 @@ def unpack(directory, filename, unpackdir=None):
 		except Exception, e:
 			print >>sys.stderr, "unpacking ZIP failed", e
 
-def computehasharchive((filedir, version, filename)):
+def computehasharchive((filedir, checksums, version, filename)):
 	resolved_path = os.path.join(filedir, filename)
 	try:
 		os.stat(resolved_path)
 	except:
 		print >>sys.stderr, "Can't find %s" % filename
 		return None
-	scanfile = open(resolved_path, 'r')
-	h = hashlib.new('sha256')
-	h.update(scanfile.read())
-	scanfile.close()
-	filehash = h.hexdigest()
+	if checksums.has_key(filename):
+		filehash = checksums[filename]
+	else:
+		scanfile = open(resolved_path, 'r')
+		h = hashlib.new('sha256')
+		h.update(scanfile.read())
+		scanfile.close()
+		filehash = h.hexdigest()
 	return (filename, version, filehash)
 
 ## per package:
@@ -243,8 +246,17 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 	## which will always be stored in full. The prime use case is the Linux kernel.
 	versions = map(lambda x: x[0], versionfilenames)
 
+	checksums = {}
+	if os.path.exists(os.path.join(filedir, "SHA256SUM")):
+		checksumlines = open(os.path.join(filedir, "SHA256SUM")).readlines()
+		for c in checksumlines:
+			checksumsplit = c.strip().split()
+			if len(checksumsplit) != 2:
+				continue
+			(archivechecksum, archivefilename) = checksumsplit
+			checksums[archivefilename] = archivechecksum
 
-	res = filter(lambda x: x != None, pool.map(computehasharchive, map(lambda x: (filedir,) + x, versionfilenames),1))
+	res = filter(lambda x: x != None, pool.map(computehasharchive, map(lambda x: (filedir,checksums) + x, versionfilenames),1))
 
 	## keep a list of versions that have already been processed. Use a list to keep order when they were processed
 	processed = []
