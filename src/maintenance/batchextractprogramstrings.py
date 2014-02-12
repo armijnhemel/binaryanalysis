@@ -1148,7 +1148,7 @@ def extractsourcestrings(filename, filedir, language, package):
 			lines.append(l[1:-1])
 	return (sqlres, moduleres)
 
-def checkalreadyscanned((filedir, package, version, filename, origin, batarchive, dbpath)):
+def checkalreadyscanned((filedir, package, version, filename, origin, batarchive, dbpath, checksums)):
 	resolved_path = os.path.join(filedir, filename)
 	try:
 		os.stat(resolved_path)
@@ -1179,11 +1179,14 @@ def checkalreadyscanned((filedir, package, version, filename, origin, batarchive
 				filehash = i.split(':')[1].strip()
 				break
 	else:
-		scanfile = open(resolved_path, 'r')
-		h = hashlib.new('sha256')
-		h.update(scanfile.read())
-		scanfile.close()
-		filehash = h.hexdigest()
+		if checksums.has_key(filename):
+			filehash = checksums[filename]
+		else:
+			scanfile = open(resolved_path, 'r')
+			h = hashlib.new('sha256')
+			h.update(scanfile.read())
+			scanfile.close()
+			filehash = h.hexdigest()
 
 	conn = sqlite3.connect(dbpath, check_same_thread = False)
 	c = conn.cursor()
@@ -1437,6 +1440,16 @@ def main(argv):
 	pool = Pool()
 
 	pkgmeta = []
+
+	checksums = {}
+	if os.path.exists(os.path.join(options.filedir, "SHA256SUM")):
+		checksumlines = open(os.path.join(options.filedir, "SHA256SUM")).readlines()
+		for c in checksumlines:
+			checksumsplit = c.strip().split()
+			if len(checksumsplit) != 2:
+				continue
+			(archivechecksum, archivefilename) = checksumsplit
+			checksums[archivefilename] = archivechecksum
 	## TODO: do all kinds of checks here
 	for unpackfile in filelist:
 		try:
@@ -1450,7 +1463,7 @@ def main(argv):
 					batarchive = True
 				else:
 					batarchive = False
-			pkgmeta.append((options.filedir, package, version, filename, origin, batarchive, options.db))
+			pkgmeta.append((options.filedir, package, version, filename, origin, batarchive, options.db, checksums))
 		except Exception, e:
 			# oops, something went wrong
 			print >>sys.stderr, e
