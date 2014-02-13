@@ -353,6 +353,8 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 			if str(e) != "":
 				print >>sys.stderr, package, version, e
 
+		## first filter out the uninteresting files
+		scanfiles = filter(lambda x: x != None, pool.map(filterfiles, scanfiles, 1))
 		## compute the hashes in parallel
 		scanfile_result = filter(lambda x: x != None, pool.map(computehash, scanfiles, 1))
 		identical = True
@@ -382,7 +384,22 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 				cleanupdir(temporarydir)
 			return
 
-	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive)
+	filetohash = {}
+
+	if not batarchive:
+		manifestdir = os.path.join(filedir, "MANIFESTS")
+		if os.path.exists(manifestdir):
+			if os.path.isdir(manifestdir):
+				manifestfile = os.path.join(manifestdir, "%s.bz2" % filehash)
+				if os.path.exists(manifestfile):
+					manifest = bz2.BZ2File(manifestfile, 'r')
+					manifestlines = manifest.readlines()
+					manifest.close()
+					for i in manifestlines:
+						(fileentry, hashentry) = i.strip().split()
+						filetohash[fileentry] = hashentry
+
+	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash)
 	if sqlres != []:
 		## Add the file to the database: name of archive, sha256, packagename and version
 		## This is to be able to just update the database instead of recreating it.
@@ -431,8 +448,9 @@ def grabhash((db, package, version, checksum)):
 	conn.close()
 	return (checksum, identical)
 
-def computehash((path, filename)):
-	resolved_path = os.path.join(path, filename)
+## Compute the SHA256 for a single file.
+def filterfiles((filedir, filename)):
+	resolved_path = os.path.join(filedir, filename)
 	try:
 		if not os.path.islink(resolved_path):
 			os.chmod(resolved_path, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
@@ -454,6 +472,10 @@ def computehash((path, filename)):
 
 	if not process:
 		return None
+	return (filedir, filename, extension)
+
+def computehash((filedir, filename, extension)):
+	resolved_path = os.path.join(filedir, filename)
 	filemagic = ms.file(os.path.realpath(resolved_path))
 	if filemagic == "AppleDouble encoded Macintosh file":
 		return None
@@ -462,9 +484,9 @@ def computehash((path, filename)):
 	h.update(scanfile.read())
 	scanfile.close()
 	filehash = h.hexdigest()
-	return (path, filename, filehash, extension)
+	return (filedir, filename, filehash, extension)
 
-def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive):
+def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash):
 	osgen = os.walk(srcdir)
 
 	try:
@@ -486,8 +508,26 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			return
 		pass
 
-	## compute the hashes in parallel
-	scanfile_result = filter(lambda x: x != None, pool.map(computehash, scanfiles, 1))
+	srcdirlen = len(srcdir)+1
+
+	## first filter out the uninteresting files
+	scanfiles = filter(lambda x: x != None, pool.map(filterfiles, scanfiles, 1))
+	## compute the hashes in parallel, or if available, use precomputed SHA256 from the MANIFEST file
+	if filetohash != {}:
+		scanfile_result = []
+		new_scanfiles = []
+		for i in scanfiles:
+			(scanfilesdir, scanfilesfile, scanfileextension) = i
+			if filetohash.has_key(os.path.join(scanfilesdir[srcdirlen:], scanfilesfile)):
+				scanhash = filetohash[(os.path.join(scanfilesdir[srcdirlen:], scanfilesfile))]
+				scanfile_result.append((scanfilesdir, scanfilesfile, scanhash, scanfileextension))
+			else:
+				new_scanfiles.append((scanfilesdir, scanfilesfile, scanfileextension))
+		## sanity checks in case the MANIFEST file is incomplete
+		if new_scanfiles != []:
+			scanfile_result += filter(lambda x: x != None, pool.map(computehash, new_scanfiles, 1))
+	else:
+		scanfile_result = filter(lambda x: x != None, pool.map(computehash, scanfiles, 1))
 
 	#ninkaversion = "b84eee21cb"
 	ninkaversion = "1.1"
@@ -495,7 +535,6 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	tmpsha256s = []
 	filehashes = {}
 	filestoscan = []
-	srcdirlen = len(srcdir)+1
 
 	## loop through the files to see which files should be scanned.
 	## A few assumptions are made:
