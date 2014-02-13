@@ -1,3 +1,10 @@
+2014-02-13
+* use manifest files with checksums for every individual source file if
+available
+
+2014-02-12
+* use file with precomputed SHA256 checksums for archives if available
+
 2014-02-11
 * use better markers in MANIFEST.BAT file in BAT archive files
 * rewrite batchextractprogramstrings.py to support BAT archives. This still

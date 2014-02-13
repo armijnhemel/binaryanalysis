@@ -96,4 +96,3 @@ BOTTLENECKS:
 18. better deal with cloning of compressed archives to not do any unnecessary duplicate unpacking and scanning work
 19. make generatelistrpm.py a bit more parallel (bit using rpm -qpl)
 20. exclude acconfig.h (after verifying it is autoconf generated) when creating database
-21. generate generic manifest files for archives that can be processed and checked when regenerating the database to find out if the file is worth processing
