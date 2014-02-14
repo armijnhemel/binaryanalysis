@@ -48,7 +48,9 @@ def clonedetect((db, package, packageclones)):
 				unique = True
 				break
 			else:
-				#clonep = clonep + clonesha256
+				if not packageclones:
+					if len(set(map(lambda x: x[0], clonesha256))) == 1:
+						continue
 				for p in clonesha256:
 					if not packageclones:
 						if p[0] == package[0]:
