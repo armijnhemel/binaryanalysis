@@ -145,7 +145,7 @@ def analyseModuleVersion(path, tags, blacklist=[], debug=False, envvars=[], unpa
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
 			return None
-		if stanout == "":
+		if stanout != "":
 			return (['linuxkernel', 'modulekernelversion'], stanout.split()[0])
 	else:
 		return (['linuxkernel', 'modulekernelversion'], stanout.split()[0])
