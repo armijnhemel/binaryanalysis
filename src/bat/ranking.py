@@ -1098,11 +1098,12 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 							if len(scanline) != 0:
 								line = scanline
 			else:
-				scanline = line.split(':', 1)
-				if len(scanline) > 1:
-					scanline = scanline[1]
-					if scanline.startswith(" "):
-						scanline = scanline[1:]
+				## In include/linux/kern_levels.h since kernel 3.6 a different format is
+				## used. TODO: actually check in the binary whether or not a match (if any)
+				## is preceded by 0x01
+				matchres = re.match("\d+", line)
+				if matchres != None:
+					scanline = line[1:]
 					if len(scanline) < stringcutoff:
 						continue
 					res = conn.execute("select package, filename FROM stringscache WHERE programstring=?", (scanline,)).fetchall()
@@ -1110,13 +1111,12 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 						if len(scanline) != 0:
 							line = scanline
 
-				## In include/linux/kern_levels.h since kernel 3.6 a different format is
-				## used. TODO: actually check in the binary whether or not a match (if any)
-				## is preceded by 0x01
 				if len(res) == 0:
-					matchres = re.match("\d+", line)
-					if matchres != None:
-						scanline = line[1:]
+					scanline = line.split(':', 1)
+					if len(scanline) > 1:
+						scanline = scanline[1]
+						if scanline.startswith(" "):
+							scanline = scanline[1:]
 						if len(scanline) < stringcutoff:
 							continue
 						res = conn.execute("select package, filename FROM stringscache WHERE programstring=?", (scanline,)).fetchall()
