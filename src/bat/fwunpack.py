@@ -1281,13 +1281,13 @@ def unpackCramfs(filename, offset, tempdir=None, unpacktempdir=None):
 
 	## right now this is a path to a specially adapted fsck.cramfs that ignores special inodes
 	## We actually need to create a new subdirectory inside tmpdir, otherwise the tool will complain
-	p = subprocess.Popen(['bat-fsck.cramfs', '-x', tmpdir2 + "/cramfs", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	p = subprocess.Popen(['bat-fsck.cramfs', '-x', os.path.join(tmpdir2, "cramfs"), tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
-		os.rmdir(tmpdir2)
+		shutil.rmtree(tmpdir2)
 		return
 	else:
 		## first copy all the contents from the temporary dir to tmpdir
