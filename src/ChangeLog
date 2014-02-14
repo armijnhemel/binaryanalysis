@@ -6,6 +6,7 @@
 first deal with the levels, then split on ':'. This reduces the amount of
 false positives I got for the kernel (and instead would get matches for Xen
 ).
+* fix crash when unpacking unsupported old cramfs file systems
 
 2014-02-13
 * use manifest files with checksums for every individual source file if
