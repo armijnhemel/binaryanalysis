@@ -85,13 +85,44 @@ def generatelist(filedir, origin):
 	except Exception, e:
 		pass
 
-def unpacksrpm(filedir, target):
+def scanrpm((filedir, filepath)):
 	extensions = [".tar.gz", ".tar.bz2", ".tar.xz", ".tgz", ".tbz2"]
+	p2 = subprocess.Popen(['rpm', '-qpl', "%s/%s" % (filedir, filepath)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p2.communicate()
+	rpmfiles = stanout.strip().rsplit("\n")
+	copyfiles = []
+	for f in rpmfiles:
+		sys.stdout.flush()
+		fsplit = f.lower().rsplit('.', 1)
+		if len(fsplit) == 1:
+			continue
+		(packageversion, extension) = fsplit
+		if extension in ["tgz", "tbz2"]:
+			copyfiles.append(f)
+			continue
+		elif extension in ["jar", "zip"]:
+			copyfiles.append(f)
+			continue
+		else:
+			try:
+				(packageversion, extension, compression) = f.lower().rsplit('.', 2)
+			except:
+				continue
+			if not (extension in ["tar"] and compression in ["gz", "bz2", "xz"]):
+				continue
+			else:
+				copyfiles.append(f)
+	return (filedir, filepath, copyfiles)
+
+def unpacksrpm(filedir, target):
 	files = os.walk(filedir)
 	uniquefiles = set()
 	uniquerpms = set()
 	nonuniquerpms = set()
 	rpm2copyfiles = {}
+
+	rpmscans = set()
+
 	try:
         	while True:
 			i = files.next()
@@ -99,50 +130,37 @@ def unpacksrpm(filedir, target):
 				## first filter out files that are likely no source rpm, just by
 				## looking at the extension.
 				res = p.rsplit('.', 2)
+				if len(res) != 3:
+					continue
 				if res[-1] != 'srpm' and (res[-1] != 'rpm' and res[-2] != 'src'):
 					continue
 				else:
-					p2 = subprocess.Popen(['rpm', '-qpl', "%s/%s" % (i[0], p)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-					(stanout, stanerr) = p2.communicate()
-					rpmfiles = stanout.strip().rsplit("\n")
-					copyfiles = []
-					for f in rpmfiles:
-						fsplit = f.lower().rsplit('.', 1)
-						if len(fsplit) == 1:
-							continue
-						(packageversion, extension) = fsplit
-						if extension in ["tgz", "tbz2"]:
-							copyfiles.append(f)
-							continue
-						elif extension in ["jar", "zip"]:
-							copyfiles.append(f)
-							continue
-						else:
-							try:
-								(packageversion, extension, compression) = f.lower().rsplit('.', 2)
-							except:
-								continue
-							if not (extension in ["tar"] and compression in ["gz", "bz2", "xz"]):
-								continue
-							else:
-								copyfiles.append(f)
-					unique = True
-					for f in copyfiles:
-						if f in uniquefiles:
-							unique = False
-							break
-					if unique:
-						uniquefiles.update(set(copyfiles))
-						uniquerpms.add(os.path.join(i[0], p))
-					else:
-						nonuniquerpms.add(os.path.join(i[0], p))
-					rpm2copyfiles[os.path.join(i[0], p)] = copyfiles
+					rpmscans.add((i[0], p))
 	except Exception, e:
-		print >>sys.stderr, e
+		pass
+		#print >>sys.stderr, e
+		#sys.stderr.flush()
+
+	pool = multiprocessing.Pool()
+	rpmres = pool.map(scanrpm, rpmscans, 1)
+
+	for r in rpmres:
+		(filedir, filepath, copyfiles) = r
+		unique = True
+		for f in copyfiles:
+			if f in uniquefiles:
+				unique = False
+				break
+		if unique:
+			uniquefiles.update(set(copyfiles))
+			uniquerpms.add(os.path.join(filedir, filepath))
+		else:
+			nonuniquerpms.add(os.path.join(filedir, filepath))
+		rpm2copyfiles[os.path.join(filedir, filepath)] = copyfiles
+
 	## unique RPMs can be unpacked in parallel, non-uniques cannot
 	## first process the unique RPMS in parallel
 	tasks = map(lambda x: (x, target, rpm2copyfiles[x]), uniquerpms)
-	pool = multiprocessing.Pool()
 	pool.map(parallel_unpack, tasks,1)
 	pool.terminate()
 
