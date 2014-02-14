@@ -1,3 +1,6 @@
+2014-02-14
+* add script to find full and (some) partial clones in the BAT database
+
 2014-02-13
 * use manifest files with checksums for every individual source file if
 available
