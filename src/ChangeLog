@@ -1,6 +1,11 @@
 2014-02-14
 * add script to find full and (some) partial clones in the BAT database
 * make generatelistrpm.py more parallel (rpm -qpl bit)
+* extract more data from Linux kernel sources
+* correct order for Linux kernel strings that are prefixed with kernel levels:
+first deal with the levels, then split on ':'. This reduces the amount of
+false positives I got for the kernel (and instead would get matches for Xen
+).
 
 2014-02-13
 * use manifest files with checksums for every individual source file if
