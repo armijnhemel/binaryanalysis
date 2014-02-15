@@ -96,4 +96,3 @@ BOTTLENECKS:
 18. better deal with cloning of compressed archives to not do any unnecessary duplicate unpacking and scanning work
 19. exclude acconfig.h (after verifying it is autoconf generated) when creating database
 20. fix support for Linux 2.4 kernel modules, as modinfo (at least on Fedora) no longer seems to work for 2.4 kernels
-21. support old cramfs file systems
