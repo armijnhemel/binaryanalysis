@@ -1095,7 +1095,6 @@ def extractsourcestrings(filename, filedir, language, package):
 						if rechar.search(p[1]) != None:
 							paramres.append(p)
 			moduleres['parameters'] = paramres
-			## TODO: extract values for module_param_array as well
 
 			## extract information from the MODULE_PARAM_DESC field
 
