@@ -1035,18 +1035,46 @@ def extractsourcestrings(filename, filedir, language, package):
 			## TODO: partially replace with call to xgettext and grep -n for weird accents
 
 			## Both module_param and MODULE_PARM formats were in use at the same time
+			## include/linux/moduleparam.h in Linux kernel sources documents various types
 			allowedvals= ["bool", "byte", "charp", "int", "uint", "string", "short", "ushort", "long", "ulong"]
 			oldallowedvals= ["b", "c", "h", "i", "l", "s"]
 			if "module_param" in filecontents:
+				## first try module_param()
 				regexres = re.findall("module_param\s*\(([\w\d]+),\s*(\w+)", filecontents, re.MULTILINE)
 				if regexres != []:
 					parres = filter(lambda x: x[1] in allowedvals, regexres)
 					for p in parres:
 						paramres.append(p)
 
+				## then module_param_named()
 				regexres = re.findall("module_param_named\s*\(([\w\d]+),\s*[\w\d]+,\s*(\w+)", filecontents, re.MULTILINE)
 				if regexres != []:
 					parres = filter(lambda x: x[1] in allowedvals, regexres)
+					for p in parres:
+						paramres.append(p)
+
+				## then module_param_array()
+				regexres = re.findall("module_param_array\s*\(([\w\d]+),\s*(\w+)", filecontents, re.MULTILINE)
+				if regexres != []:
+					parres = filter(lambda x: x[1] in allowedvals, regexres)
+					## oh, this is ugly...does this even work correctly with localised versions?
+					parres = map(lambda x: (x[0], "array of %s" % x[1]), parres)
+					for p in parres:
+						paramres.append(p)
+
+				## then module_param_array_named()
+				regexres = re.findall("module_param_array_named\s*\(([\w\d]+),\s*[\w\d]+,\s*(\w+)", filecontents, re.MULTILINE)
+				if regexres != []:
+					parres = filter(lambda x: x[1] in allowedvals, regexres)
+					## oh, this is ugly...does this even work correctly with localised versions?
+					parres = map(lambda x: (x[0], "array of %s" % x[1]), parres)
+					for p in parres:
+						paramres.append(p)
+
+				## finally module_param_string()
+				regexres = re.findall("module_param_string\s*\(([\w\d]+),", filecontents, re.MULTILINE)
+				if regexres != []:
+					parres = map(lambda x: (x, "string"), regexres)
 					for p in parres:
 						paramres.append(p)
 
