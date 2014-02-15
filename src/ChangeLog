@@ -1,3 +1,6 @@
+2014-02-15
+* extract more information from Linux kernel for module parameters
+
 2014-02-14
 * add script to find full and (some) partial clones in the BAT database
 * make generatelistrpm.py more parallel (rpm -qpl bit)
