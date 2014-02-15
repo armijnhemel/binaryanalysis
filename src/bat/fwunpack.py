@@ -1268,11 +1268,22 @@ def unpackCramfs(filename, offset, tempdir=None, unpacktempdir=None):
 	sizetmpfile.seek(offset+4)
 	tmpbytes = sizetmpfile.read(4)
 	sizetmpfile.close()
-
 	cramfslen = struct.unpack('<I', tmpbytes)[0]
-	if cramfslen > os.stat(filename).st_size:
-		os.unlink(tmpfile[1])
-		return
+
+	versiontmpfile = open(filename)
+	versiontmpfile.seek(offset+8)
+	tmpbytes = versiontmpfile.read(4)
+	versiontmpfile.close()
+
+	cramfsversion = struct.unpack('<I', tmpbytes)[0]
+	if cramfsversion != 0:
+		if cramfslen > os.stat(filename).st_size:
+			os.unlink(tmpfile[1])
+			return
+	else:
+		## this is an old cramfs version, so length
+		## field does not mean anything
+		cramfslen = os.stat(filename).st_size
 
 	unpackFile(filename, offset, tmpfile[1], tmpdir, length=cramfslen, unpacktempdir=unpacktempdir)
 
