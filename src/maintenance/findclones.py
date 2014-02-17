@@ -45,12 +45,12 @@ def counthashes((db, packageversion, packageclones, ignorepackages)):
 ## * ignorepackages -- list of packages that should be ignored
 def clonedetect((db, packageversion, packageclones, ignorepackages)):
 	(package, version) = packageversion
-	print >>sys.stderr, "processing %s, %s" % packageversion
-	conn = sqlite3.connect(db)
-	cursor = conn.cursor()
 	possibleclones = {}
 	if package in ignorepackages:
 		return (packageversion, possibleclones)
+	print >>sys.stderr, "processing %s, %s" % packageversion
+	conn = sqlite3.connect(db)
+	cursor = conn.cursor()
 	cursor.execute("select distinct sha256 from processed_file where package=? and version=?", packageversion)
 	sha256 = cursor.fetchall()
 	if len(sha256) != 0:
