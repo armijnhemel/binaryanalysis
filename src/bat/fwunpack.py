@@ -282,11 +282,12 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, debug=Fa
 	diroffsets = []
 	jffs2offsets.sort()
 
-	## TODO: add sanity checks to make sure jffs2_le and jffs2_be actually exist
 	for offset in jffs2offsets:
 		bigendian = False
-		if offset in offsets['jffs2_be']:
-			bigendian = True
+		## sanity check to make sure jffs2_be actually exists
+		if offsets.has_key('jffs2_be'):
+			if offset in offsets['jffs2_be']:
+				bigendian = True
 		## check if the offset found is in a blacklist
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
