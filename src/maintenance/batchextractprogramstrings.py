@@ -710,6 +710,9 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		if moduleres.has_key('author'):
 			for res in moduleres['author']:
 				cursor.execute('''insert into kernelmodule_author (sha256, modulename, author) values (?,?,?)''', (filehash, None, res))
+		if moduleres.has_key('descriptions'):
+			for res in moduleres['descriptions']:
+				cursor.execute('''insert into kernelmodule_description (sha256, modulename, description) values (?,?,?)''', (filehash, None, res))
 		if moduleres.has_key('firmware'):
 			for res in moduleres['firmware']:
 				cursor.execute('''insert into kernelmodule_firmware (sha256, modulename, firmware) values (?,?,?)''', (filehash, None, res))
@@ -719,9 +722,9 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		if moduleres.has_key('versions'):
 			for res in moduleres['versions']:
 				cursor.execute('''insert into kernelmodule_version (sha256, modulename, version) values (?,?,?)''', (filehash, None, res))
-		if moduleres.has_key('descriptions'):
-			for res in moduleres['descriptions']:
-				cursor.execute('''insert into kernelmodule_description (sha256, modulename, paramname, description) values (?,?,?, ?)''', (filehash, None) + res)
+		if moduleres.has_key('param_descriptions'):
+			for res in moduleres['param_descriptions']:
+				cursor.execute('''insert into kernelmodule_parameter_description (sha256, modulename, paramname, description) values (?,?,?, ?)''', (filehash, None) + res)
 		for res in cresults:
 			(cname, linenumber, nametype) = res
 			if nametype == 'function':
@@ -1017,10 +1020,11 @@ def extractsourcestrings(filename, filedir, language, package):
 			licenseres = []
 			aliasres = []
 			authorres = []
+			descriptionres = []
 			regresults = []
 			firmwareres = []
 			versionres = []
-			descriptionres = []
+			paramdescriptionres = []
 			for ex in kernelexprs:
 				regexres = ex.findall(filecontents)
 				if regexres != []:
@@ -1117,6 +1121,14 @@ def extractsourcestrings(filename, filedir, language, package):
 						authorres.append(p)
 			moduleres['author'] = authorres
 
+			## extract information from the MODULE_DESCRIPTION field
+			if "MODULE_DESCRIPTION" in filecontents:
+				regexres = re.findall("MODULE_DESCRIPTION\s*\(\s*\"([\w\d/_\(\)\[\]\\\\\!\?;#$%^\*&<>\{\}\':+=\|\-\.,\s]+)\"\s*\)\s*;", filecontents, re.MULTILINE)
+				if regexres != []:
+					for p in regexres:
+						descriptionres.append(p)
+			moduleres['descriptions'] = descriptionres
+
 			## extract information from the MODULE_FIRMWARE field
 			if "MODULE_FIRMWARE" in filecontents:
 				regexres = re.findall("MODULE_FIRMWARE\s*\(\s*\"([\w\d/_\-\.]+)\"\s*\)\s*;", filecontents, re.MULTILINE)
@@ -1145,8 +1157,9 @@ def extractsourcestrings(filename, filedir, language, package):
 				regexres = re.findall("MODULE_PARM_DESC\s*\(\s*([\w\d]+),\s*\"([\w\d/_\(\)\[\]\\\\\!\?;#$%^\*&<>\{\}\':+=\|\-\.,\s]+)\"\s*\)\s*;", filecontents, re.MULTILINE)
 				if regexres != []:
 					for p in regexres:
-						descriptionres.append(p)
-			moduleres['descriptions'] = descriptionres
+						paramdescriptionres.append(p)
+			moduleres['param_descriptions'] = paramdescriptionres
+
 			## TODO: extract and store: module description (various types)
 			## Although these are already stored as generic strings it makes sense to also store them
 			## separately with more module information
@@ -1459,10 +1472,11 @@ def main(argv):
 		## Store information about Linux kernel modules
 		c.execute('''create table if not exists kernelmodule_alias(sha256 text, modulename text, alias text)''')
 		c.execute('''create table if not exists kernelmodule_author(sha256 text, modulename text, author text)''')
-		c.execute('''create table if not exists kernelmodule_description(sha256 text, modulename text, paramname text, description text)''')
+		c.execute('''create table if not exists kernelmodule_description(sha256 text, modulename text, description text)''')
 		c.execute('''create table if not exists kernelmodule_firmware(sha256 text, modulename text, firmware text)''')
 		c.execute('''create table if not exists kernelmodule_license(sha256 text, modulename text, license text)''')
 		c.execute('''create table if not exists kernelmodule_parameter(sha256 text, modulename text, paramname text, paramtype text)''')
+		c.execute('''create table if not exists kernelmodule_parameter_description(sha256 text, modulename text, paramname text, description text)''')
 		c.execute('''create table if not exists kernelmodule_version(sha256 text, modulename text, version text)''')
 
 		c.execute('''create index if not exists kernelmodule_alias_index on kernelmodule_alias(alias)''')
@@ -1471,6 +1485,7 @@ def main(argv):
 		c.execute('''create index if not exists kernelmodule_firmware_index on kernelmodule_firmware(firmware)''')
 		c.execute('''create index if not exists kernelmodule_license_index on kernelmodule_license(license)''')
 		c.execute('''create index if not exists kernelmodule_parameter_index on kernelmodule_parameter(paramname)''')
+		c.execute('''create index if not exists kernelmodule_parameter_description_index on kernelmodule_parameter_description(description)''')
 		c.execute('''create index if not exists kernelmodule_version_index on kernelmodule_version(version)''')
 
 		c.execute('''create index if not exists kernelmodule_alias_sha256index on kernelmodule_alias(sha256)''')
@@ -1479,6 +1494,7 @@ def main(argv):
 		c.execute('''create index if not exists kernelmodule_firmware_sha256index on kernelmodule_firmware(sha256)''')
 		c.execute('''create index if not exists kernelmodule_license_sha256index on kernelmodule_license(sha256)''')
 		c.execute('''create index if not exists kernelmodule_parameter_sha256index on kernelmodule_parameter(sha256)''')
+		c.execute('''create index if not exists kernelmodule_parameter_description_sha256index on kernelmodule_parameter_description(sha256)''')
 		c.execute('''create index if not exists kernelmodule_version_sha256index on kernelmodule_version(sha256)''')
 		conn.commit()
 
