@@ -21,53 +21,71 @@ Results are output on stdout
 import sys, os, sqlite3, multiprocessing
 from optparse import OptionParser
 
+
+def counthashes((db, packageversion, packageclones, ignorepackages)):
+	(package, version) = packageversion
+	if package in ignorepackages:
+		return
+	print >>sys.stderr, "hashing %s, %s" % packageversion
+	conn = sqlite3.connect(db)
+	cursor = conn.cursor()
+	cursor.execute("select distinct sha256 from processed_file where package=? and version=?", packageversion)
+	sha256 = cursor.fetchall()
+	cursor.close()
+	conn.close()
+	return (packageversion, len(sha256))
+
 ## process packages by querying the database.
 ## This method takes three parameters:
 ## * db -- location of the database
-## * package -- tuple (packagename, version)
+## * packageversion -- tuple (packagename, version)
 ## * packageclones -- boolean to indicate whether or not clones
 ## between different versions of the same package should also be
-## considered. Default False.
-def clonedetect((db, package, packageclones)):
-	print >>sys.stderr, "processing %s, %s" % package
+## considered.
+## * ignorepackages -- list of packages that should be ignored
+def clonedetect((db, packageversion, packageclones, ignorepackages)):
+	(package, version) = packageversion
+	print >>sys.stderr, "processing %s, %s" % packageversion
 	conn = sqlite3.connect(db)
 	cursor = conn.cursor()
 	possibleclones = {}
-	sha256perpackage = {}
-	cursor.execute("select distinct sha256 from processed_file where package=? and version=?", package)
+	if package in ignorepackages:
+		return (packageversion, possibleclones)
+	cursor.execute("select distinct sha256 from processed_file where package=? and version=?", packageversion)
 	sha256 = cursor.fetchall()
-	sha256perpackage[package] = len(sha256)
 	if len(sha256) != 0:
-		unique = False
 		clonep = {}
 		for s in sha256:
 			cursor.execute('select distinct package, version from processed_file where sha256=?', s)
 			clonesha256 = cursor.fetchall()
 			## one file is unique to this package, so there are no complete clones
 			if len(clonesha256) == 1:
-				unique = True
+				clonep = {}
 				break
-			else:
+			if not packageclones:
+				if len(set(map(lambda x: x[0], clonesha256))) == 1:
+					continue
+			for p in clonesha256:
 				if not packageclones:
-					if len(set(map(lambda x: x[0], clonesha256))) == 1:
+					if p[0] == package:
 						continue
-				for p in clonesha256:
-					if not packageclones:
-						if p[0] == package[0]:
-							continue
-					else:
-						if p[1] == package[1]:
-							continue
-					if clonep.has_key(p):
-						clonep[p] += 1
-					else:
-						clonep[p] = 1
-				
-		if not unique:
-			possibleclones[package] = clonep
+				else:
+					if p[1] == version:
+						continue
+				if clonep.has_key(p):
+					clonep[p] += 1
+				else:
+					clonep[p] = 1
+
+	clonep_final = {}
+	for p in clonep:
+		## only consider results that contain the package completely
+		if clonep[p] >= len(sha256):
+			clonep_final[p] = clonep[p]
+	
 	cursor.close()
 	conn.close()
-	return (possibleclones, sha256perpackage)
+	return (packageversion, clonep_final)
 
 def main(argv):
 	parser = OptionParser()
@@ -83,38 +101,39 @@ def main(argv):
 	cursor.close()
 	conn.close()
 
+	#ignorepackages = ['linux']
+	ignorepackages = []
+
 	packages.sort()
 	pool = multiprocessing.Pool()
 	packageclones = False
-	scantasks = map(lambda x: (options.db, x, packageclones), packages)
+	sha256perpackage = {}
+	scantasks = map(lambda x: (options.db, x, packageclones, ignorepackages), packages)
+	hashes = pool.map(counthashes, scantasks, 1)
+
+	for i in hashes:
+		if i != None:
+			(package, lensha256) = i
+			sha256perpackage[package] = lensha256
+
 	cloneresults = pool.map(clonedetect, scantasks, 1)
 	pool.terminate()
+
 	clonedb = {}
-	sha256perpackage = {}
 	for i in cloneresults:
 		if i != None:
-			(clones, lensha256) = i
-			if len(clones) == 0:
-				continue
-			if len(clones) != 1:
-				## this should not happen
-				continue
-			else:
-				clonedb[clones.keys()[0]] = clones.values()
-			sha256perpackage.update(lensha256)
+			(package, clones) = i
+			clonedb[package] = clones
 
 	for i in clonedb:
 		for j in clonedb[i]:
-			for v in j.keys():
-				if clonedb.has_key(v):
-					if i in clonedb[v][0].keys():
-						if clonedb[v][0][i] == sha256perpackage[i]:
-							if clonedb[v][0][i] == sha256perpackage[v]:
-								args = i + v + (clonedb[v][0][i],)
-								print "identical:\t%s, %s == %s, %s -- %d" % args
-							else:
-								args = i + v + (clonedb[v][0][i], sha256perpackage[v])
-								print "partial:\t%s, %s << %s, %s -- %d %d" % args
+			if sha256perpackage.has_key(j):
+				if sha256perpackage[i] == sha256perpackage[j]:
+					args = i + j + (sha256perpackage[i],)
+					print "identical:\t%s, %s == %s, %s -- %d" % args
+				else:
+					args = i + j + (sha256perpackage[i], sha256perpackage[j])
+					print "partial:\t%s, %s << %s, %s -- %d %d" % args
 
 if __name__ == "__main__":
 	main(sys.argv)
