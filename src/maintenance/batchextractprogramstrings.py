@@ -719,6 +719,9 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		if moduleres.has_key('versions'):
 			for res in moduleres['versions']:
 				cursor.execute('''insert into kernelmodule_version (sha256, modulename, version) values (?,?,?)''', (filehash, None, res))
+		if moduleres.has_key('descriptions'):
+			for res in moduleres['descriptions']:
+				cursor.execute('''insert into kernelmodule_description (sha256, modulename, paramname, description) values (?,?,?, ?)''', (filehash, None) + res)
 		for res in cresults:
 			(cname, linenumber, nametype) = res
 			if nametype == 'function':
@@ -1017,6 +1020,7 @@ def extractsourcestrings(filename, filedir, language, package):
 			regresults = []
 			firmwareres = []
 			versionres = []
+			descriptionres = []
 			for ex in kernelexprs:
 				regexres = ex.findall(filecontents)
 				if regexres != []:
@@ -1096,8 +1100,6 @@ def extractsourcestrings(filename, filedir, language, package):
 							paramres.append(p)
 			moduleres['parameters'] = paramres
 
-			## extract information from the MODULE_PARAM_DESC field
-
 			## extract information from the MODULE_ALIAS field
 			if "MODULE_ALIAS" in filecontents:
 				regexres = re.findall("MODULE_ALIAS\s*\(\s*\"([\w\d:,\-\_\s/\[\]\*]+)\"\s*\)\s*;", filecontents, re.MULTILINE)
@@ -1139,6 +1141,12 @@ def extractsourcestrings(filename, filedir, language, package):
 						versionres.append(p)
 			moduleres['versions'] = versionres
 
+			if "MODULE_PARM_DESC" in filecontents:
+				regexres = re.findall("MODULE_PARM_DESC\s*\(\s*([\w\d]+),\s*\"([\w\d/_\(\)\[\]\\\\\!\?;#$%^\*&<>\{\}\':+=\|\-\.,\s]+)\"\s*\)\s*;", filecontents, re.MULTILINE)
+				if regexres != []:
+					for p in regexres:
+						descriptionres.append(p)
+			moduleres['descriptions'] = descriptionres
 			## TODO: extract and store: module description (various types)
 			## Although these are already stored as generic strings it makes sense to also store them
 			## separately with more module information
@@ -1451,7 +1459,7 @@ def main(argv):
 		## Store information about Linux kernel modules
 		c.execute('''create table if not exists kernelmodule_alias(sha256 text, modulename text, alias text)''')
 		c.execute('''create table if not exists kernelmodule_author(sha256 text, modulename text, author text)''')
-		c.execute('''create table if not exists kernelmodule_description(sha256 text, modulename text, description text)''')
+		c.execute('''create table if not exists kernelmodule_description(sha256 text, modulename text, paramname text, description text)''')
 		c.execute('''create table if not exists kernelmodule_firmware(sha256 text, modulename text, firmware text)''')
 		c.execute('''create table if not exists kernelmodule_license(sha256 text, modulename text, license text)''')
 		c.execute('''create table if not exists kernelmodule_parameter(sha256 text, modulename text, paramname text, paramtype text)''')
