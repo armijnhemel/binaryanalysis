@@ -1114,6 +1114,7 @@ def extractsourcestrings(filename, filedir, language, package):
 
 			## extract information from the MODULE_AUTHOR field
 			## TODO: this does not work well with accents and characters from various languages
+			## TODO: combine with extracted strings to increase quality
 			if "MODULE_AUTHOR" in filecontents:
 				regexres = re.findall("MODULE_AUTHOR\s*\(\s*\"([\w\d/\s,\.\-:<>@\(\)[\]\+&;'~\\\\]+)\"\s*\)\s*;", filecontents, re.MULTILINE)
 				if regexres != []:
@@ -1122,6 +1123,9 @@ def extractsourcestrings(filename, filedir, language, package):
 			moduleres['author'] = authorres
 
 			## extract information from the MODULE_DESCRIPTION field
+			## Although these are already stored as generic strings it makes sense to also store them
+			## separately with more module information
+			## TODO: combine with extracted strings to increase quality
 			if "MODULE_DESCRIPTION" in filecontents:
 				regexres = re.findall("MODULE_DESCRIPTION\s*\(\s*\"([\w\d/_\(\)\[\]\\\\\!\?;#$%^\*&<>\{\}\':+=\|\-\.,\s]+)\"\s*\)\s*;", filecontents, re.MULTILINE)
 				if regexres != []:
@@ -1159,10 +1163,6 @@ def extractsourcestrings(filename, filedir, language, package):
 					for p in regexres:
 						paramdescriptionres.append(p)
 			moduleres['param_descriptions'] = paramdescriptionres
-
-			## TODO: extract and store: module description (various types)
-			## Although these are already stored as generic strings it makes sense to also store them
-			## separately with more module information
 
 		for r in remove_chars:
 			if r in filecontents:
