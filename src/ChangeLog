@@ -1,3 +1,7 @@
+2014-02-16
+* extract more information from Linux kernel for modules and store in the
+database
+
 2014-02-15
 * extract more information from Linux kernel for module parameters
 
