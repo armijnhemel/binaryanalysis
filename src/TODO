@@ -82,16 +82,14 @@ BOTTLENECKS:
 5. verify and tag Android resources.arsc
 6. rework datastructures of ranking information (strings, function names, variables) so they are all the same
 7. rework ranking as an aggregate scan to be able to do database lookups in parallel for strings per file instead of per file.
-8. rework ELF graphs (allow edges to cross) as the images can get very very big for certain firmwares
-9. add ramdisk unpacking for jffs2
-10. research/fix priority for Minix file system
-11. don't recreate ELF graphs (model for every ELF binary), but reuse graphs of dependencies. This would need a topological sort.
-12. split kernel module information off into separate database
-13. rename "programscans"/"leafscans" and settle on using one term
-14. refactor name squashing
-15. fix statistics piecharts to also include matched, but unassigned strings. Also take dupes into account.
-16. use order of strings in ELF binaries to assign strings earlier/better
-17. better deal with cloning of JAR files in aggregatejars.py to not do unnecessary duplicate work
-18. better deal with cloning of compressed archives to not do any unnecessary duplicate unpacking and scanning work
-19. exclude acconfig.h (after verifying it is autoconf generated) when creating database
-20. fix support for Linux 2.4 kernel modules, as modinfo (at least on Fedora) no longer seems to work for 2.4 kernels
+8. add ramdisk unpacking for jffs2
+9. research/fix priority for Minix file system
+10. don't recreate ELF graphs (model for every ELF binary), but reuse graphs of dependencies. This would need a topological sort.
+11. split kernel module information off into separate database
+12. rename "programscans"/"leafscans" and settle on using one term
+13. refactor name squashing
+14. fix statistics piecharts to also include matched, but unassigned strings. Also take dupes into account.
+15. use order of strings in ELF binaries to assign strings earlier/better
+16. better deal with cloning of JAR files in aggregatejars.py to not do unnecessary duplicate work
+17. better deal with cloning of compressed archives to not do any unnecessary duplicate unpacking and scanning work
+18. fix support for Linux 2.4 kernel modules, as modinfo (at least on Fedora) no longer seems to work for 2.4 kernels
