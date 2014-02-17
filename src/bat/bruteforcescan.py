@@ -42,6 +42,7 @@ are packed in a tar file.
 import sys, os, os.path, magic, hashlib, subprocess, tempfile, shutil, stat, multiprocessing, cPickle, glob, tarfile, copy, gzip, Queue
 from optparse import OptionParser
 import ConfigParser
+import datetime
 import sqlite3
 import extractor
 import prerun, fsmagic
@@ -253,7 +254,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 			module = prerunscan['module']
 			method = prerunscan['method']
 			if debug:
-				print >>sys.stderr, module, method, filename
+				print >>sys.stderr, module, method, filename, datetime.datetime.utcnow().isoformat()
 				sys.stderr.flush()
 			## if there is extra information that needs to be pass, like locations
 			## of databases the environment can be used for it
@@ -337,7 +338,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 			module = unpackscan['module']
 			method = unpackscan['method']
 			if debug:
-				print >>sys.stderr, module, method, filetoscan
+				print >>sys.stderr, module, method, filetoscan, datetime.datetime.utcnow().isoformat()
 				sys.stderr.flush()
 			## if there is extra information we need to pass, like locations of databases
 			## we can use the environment for it
