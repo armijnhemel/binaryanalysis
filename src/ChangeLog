@@ -1,3 +1,7 @@
+2014-02-17
+* add more debug information
+* simplify clone detection script
+
 2014-02-16
 * extract more information from Linux kernel for modules and store in the
 database
