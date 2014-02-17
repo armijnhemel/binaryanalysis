@@ -467,7 +467,7 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, d
 		module = aggregatescan['module']
 		method = aggregatescan['method']
 		if debug:
-			print >>sys.stderr, module, method
+			print >>sys.stderr, "AGGREGATE BEGIN", method, datetime.datetime.utcnow().isoformat()
 			sys.stderr.flush()
 		## if there is extra information we need to pass, like locations of databases
 		## we can use the environment for it
@@ -496,6 +496,8 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, d
 				leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
 				leafreports = cPickle.dump(leafreports, leaf_file)
 				leaf_file.close()
+		if debug:
+			print >>sys.stderr, "AGGREGATE END", method, datetime.datetime.utcnow().isoformat()
 
 def postrunscan((filetoscan, unpackreports, scans, scantempdir, topleveldir, debug)):
 	for postrunscan in scans:
@@ -902,6 +904,8 @@ def runscan(scans, scan_binary):
 
 	## use a queue made with a manager to avoid some issues, see:
 	## http://docs.python.org/2/library/multiprocessing.html#pipes-and-queues
+	if debug:
+		print >>sys.stderr, "PRERUN UNPACK BEGIN", datetime.datetime.utcnow().isoformat()
 	scanmanager = multiprocessing.Manager()
 	scanqueue = multiprocessing.JoinableQueue(maxsize=0)
 	reportqueue = scanmanager.Queue(maxsize=0)
@@ -936,7 +940,11 @@ def runscan(scans, scan_binary):
 	
 	for p in processpool:
 		p.terminate()
+	if debug:
+		print >>sys.stderr, "PRERUN UNPACK END", datetime.datetime.utcnow().isoformat()
 
+	if debug:
+		print >>sys.stderr, "LEAF BEGIN", datetime.datetime.utcnow().isoformat()
 	poolresult = []
 	tagdict = {}
 	finalscans = []
@@ -1051,7 +1059,11 @@ def runscan(scans, scan_binary):
 		if tagdict.has_key(unpacksha256):
 			if unpackreports[i].has_key('tags'):
 				unpackreports[i]['tags'] = list(set(unpackreports[i]['tags'] + tagdict[unpacksha256]))
+	if debug:
+		print >>sys.stderr, "LEAF END", datetime.datetime.utcnow().isoformat()
 
+	if debug:
+		print >>sys.stderr, "AGGREGATE BEGIN", datetime.datetime.utcnow().isoformat()
 	if scans['aggregatescans'] != []:
 		tmpdebug=False
 		if debug:
@@ -1060,7 +1072,11 @@ def runscan(scans, scan_binary):
 				if not 'aggregate' in debugphases:
 					tmpdebug = False
 		aggregatescan(unpackreports, scans, scantempdir, topleveldir, os.path.basename(scan_binary), tmpdebug)
+	if debug:
+		print >>sys.stderr, "AGGREGATE END", datetime.datetime.utcnow().isoformat()
 
+	if debug:
+		print >>sys.stderr, "POSTRUN BEGIN", datetime.datetime.utcnow().isoformat()
 	## run postrunscans here, again in parallel, if needed/wanted
 	## These scans typically only have a few side effects, but don't change
 	## the reporting/scanning, just process the results. Examples: generate
@@ -1106,5 +1122,7 @@ def runscan(scans, scan_binary):
 
 		postrunresults = pool.map(postrunscan, postrunscans, 1)
 		pool.terminate()
+	if debug:
+		print >>sys.stderr, "POSTRUN END", datetime.datetime.utcnow().isoformat()
 
 	return (topleveldir, unpackreports)
