@@ -312,6 +312,8 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 										os.write(elftmp[0], data)
 										os.fdopen(elftmp[0]).close()
 										elfscanfiles.append(elftmp[1])
+									else:
+										os.unlink(elftmp[1])
 					datafile.close()
 
 					for i in elfscanfiles:
