@@ -3,6 +3,8 @@
 in the process of being unpacked and tagged. This is to avoid duplicate
 unpacking and tagging, which can take a lot of time if there is a lot of
 duplication.
+* fix PNG blacklisting
+* remove ELF files of which contents are in the blacklist
 
 2014-02-17
 * add more debug information
