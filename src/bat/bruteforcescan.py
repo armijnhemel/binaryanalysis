@@ -46,6 +46,8 @@ import datetime
 import sqlite3
 import extractor
 import prerun, fsmagic
+from multiprocessing import Process, Lock
+from multiprocessing.sharedctypes import Value, Array
 
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
@@ -126,7 +128,7 @@ def gethash(path, filename):
 	return h.hexdigest()
 
 ## scan a single file, possibly unpack and recurse
-def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optmagicscans):
+def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optmagicscans, processid, hashdict, llock):
 	prerunignore = {}
 	prerunmagic = {}
 	for prerunscan in prerunscans:
@@ -234,6 +236,21 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 				if offsets[magictype][0] - fsmagic.correction.get(magictype, 0) == 0:
 					zerooffsets.add(magictype)
 
+		## acquire the lock for the shared dictionary to see if this file was already
+		## scanned, or is in the process of being scanned.
+		llock.acquire()
+		if hashdict.has_key(filehash):
+			## if the hash is alreay there, return
+			unpackreports[relfiletoscan]['tags'] = ['duplicate']
+			for u in unpackreports:
+				reportqueue.put({u: unpackreports[u]})
+			llock.release()
+			scanqueue.task_done()
+			continue
+		else:
+			hashdict[filehash] = relfiletoscan
+			llock.release()
+
 		## prerun scans should be run before any of the other scans
 		for prerunscan in prerunscans:
 			ignore = False
@@ -316,7 +333,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 
 		unpacked = False
 		for unpackscan in unpackscans:
-			## the whole file has already been scanned by other scans, so we can
+			## the whole file has already been scanned by other scans, so
 			## continue with the program scans.
 			if extractor.inblacklist(0, blacklist) == filesize:
 				break
@@ -340,8 +357,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 			if debug:
 				print >>sys.stderr, module, method, filetoscan, datetime.datetime.utcnow().isoformat()
 				sys.stderr.flush()
-			## if there is extra information we need to pass, like locations of databases
-			## we can use the environment for it
+			## use the environment to pass extra information
 			if unpackscan.has_key('envvars'):
 				envvars = unpackscan['envvars'] + ":BAT_UNPACKED=%s" % unpacked
 			else:
@@ -428,8 +444,7 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, 
 		if debug:
 			print >>sys.stderr, method, filetoscan
 			sys.stderr.flush()
-		## if there is extra information we need to pass, like locations of databases
-		## we can use the environment for it
+		## use the environment to pass extra information
 		if leafscan.has_key('envvars'):
 			envvars = leafscan['envvars']
 		else:
@@ -469,8 +484,7 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, d
 		if debug:
 			print >>sys.stderr, "AGGREGATE BEGIN", method, datetime.datetime.utcnow().isoformat()
 			sys.stderr.flush()
-		## if there is extra information we need to pass, like locations of databases
-		## we can use the environment for it
+		## use the environment to pass extra information
 		if aggregatescan.has_key('envvars'):
 			envvars = aggregatescan['envvars']
 		else:
@@ -515,8 +529,7 @@ def postrunscan((filetoscan, unpackreports, scans, scantempdir, topleveldir, deb
 		if debug:
 			print >>sys.stderr, module, method, filetoscan
 			sys.stderr.flush()
-		## if there is extra information we need to pass, like locations of databases
-		## we can use the environment for it
+		## use the environment to pass extra information
 		if postrunscan.has_key('envvars'):
 			envvars = postrunscan['envvars']
 		else:
@@ -527,11 +540,11 @@ def postrunscan((filetoscan, unpackreports, scans, scantempdir, topleveldir, deb
 		exec "from %s import %s as bat_%s" % (module, method, method)
 
 		res = eval("bat_%s(filetoscan, unpackreports, scantempdir, topleveldir, debug=debug, envvars=envvars)" % (method))
-		## TODO: find out what we want to do with this
+		## TODO: find out what to do with this
 		if res != None:
 			pass
 
-## arrays for storing data for the scans we have.
+## arrays for storing data for the scans
 ## unpackscans: {name, module, method, ppoutput, priority}
 ## These are sorted by priority
 ## programscans: {name, module, method, ppoutput}
@@ -698,8 +711,7 @@ def readconfig(config):
 def prettyprint(batconf, res, scandate, scans, toplevelfile, topleveldir):
 	module = batconf['module']
 	method = batconf['output']
-	## if there is extra information we need to pass, like locations of databases
-	## we can use the environment for it
+	## use the environment to pass extra information
 	if batconf.has_key('envvars'):
 		envvars = batconf['envvars']
 	else:
@@ -906,14 +918,17 @@ def runscan(scans, scan_binary):
 	## http://docs.python.org/2/library/multiprocessing.html#pipes-and-queues
 	if debug:
 		print >>sys.stderr, "PRERUN UNPACK BEGIN", datetime.datetime.utcnow().isoformat()
+
+	lock = Lock()
 	scanmanager = multiprocessing.Manager()
 	scanqueue = multiprocessing.JoinableQueue(maxsize=0)
 	reportqueue = scanmanager.Queue(maxsize=0)
 	leafqueue = scanmanager.Queue(maxsize=0)
 	processpool = []
+	hashdict = scanmanager.dict()
 	map(lambda x: scanqueue.put(x), scantasks)
 	for i in range(0,processamount):
-		p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], magicscans, optmagicscans))
+		p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], magicscans, optmagicscans, i, hashdict, lock))
 		processpool.append(p)
 		p.start()
 
@@ -1047,10 +1062,30 @@ def runscan(scans, scan_binary):
 		for m in mergetags:
 			tagdict[m[0]] = m[1]
 
-	## we have a list of dicts and we just want one dict
+	dupes = []
+
+	## the result is a list of dicts which needs to be turned into one dict
 	for i in unpackreports_tmp:
 		for k in i:
+			if i[k].has_key('tags'):
+				## the file is a duplicate, store for later 
+				if 'duplicate' in i[k]['tags']:
+					dupes.append(i)
+					continue
 			unpackreports[k] = i[k]
+
+	for i in dupes:
+		for k in i:
+			dupesha256 = i[k]['sha256']
+			origname = i[k]['name']
+			origrealpath = i[k]['realpath']
+			origpath = i[k]['path']
+			## keep: name, realpath, path, copy the rest of the original
+			dupecopy = copy.deepcopy(unpackreports[hashdict[dupesha256]])
+			dupecopy['name'] = origname
+			dupecopy['path'] = origpath
+			dupecopy['realpath'] = origrealpath
+			unpackreports[k] = dupecopy
 
 	for i in unpackreports.keys():
 		if not unpackreports[i].has_key('sha256'):
@@ -1081,13 +1116,12 @@ def runscan(scans, scan_binary):
 	## These scans typically only have a few side effects, but don't change
 	## the reporting/scanning, just process the results. Examples: generate
 	## fancier reports, use microblogging to post scan results, etc.
-	## We make sure we don't process duplicates here as well, just like
+	## Make sure to not process duplicates here as well, just like
 	## in leaf scans.
 	## The assumption that is being made here is that the postrunscans only
 	## really use the SHA256 values, which is right now the case.
 	if scans['postrunscans'] != [] and unpackreports != {}:
-		## if unpackreports != {} we know that we have done deduplication
-		## already, so we can just reuse it here.
+		## if unpackreports != {} since deduplication has already been done
 		postrunscans = []
 		for i in map(lambda x: x[len(scantempdir)+1:], sha256_tmp.values()):
 			## results might have been changed by aggregate scans, so check if it still exists
