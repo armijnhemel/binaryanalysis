@@ -1085,6 +1085,7 @@ def runscan(scans, scan_binary):
 			dupecopy['name'] = origname
 			dupecopy['path'] = origpath
 			dupecopy['realpath'] = origrealpath
+			dupecopy['tags'].append('duplicate')
 			unpackreports[k] = dupecopy
 
 	for i in unpackreports.keys():

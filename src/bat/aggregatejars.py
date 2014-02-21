@@ -50,6 +50,10 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, processors, debug=Fal
 		## check extension: JAR, WAR, RAR (not Resource adapter), EAR
 		i_nocase = i.lower()
 		if i_nocase.endswith('.jar') or i_nocase.endswith('.ear') or i_nocase.endswith('.war') or i_nocase.endswith('.rar'):
+			if unpackreports[i].has_key('tags'):
+				if 'duplicate' in unpackreports[i]['tags']:
+					alljarfiles.append(i)
+					continue
 			if filehash in sha256seen:
 				alljarfiles.append(i)
 				continue
@@ -100,6 +104,9 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, processors, debug=Fal
 	##   but not when the class file can also be found outside of a JAR.
 	if cleanclasses:
 		for i in alljarfiles:
+			if unpackreports[i].has_key('tags'):
+				if 'duplicate' in unpackreports[i]['tags']:
+					continue
 			classfiles = filter(lambda x: x.endswith('.class'), unpackreports[i]['scans'][0]['scanreports'])
 			for c in classfiles:
 				filehash = unpackreports[c]['sha256']
