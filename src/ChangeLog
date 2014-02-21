@@ -1,3 +1,9 @@
+2014-02-21
+* use a shared dictionary of files that have been unpacked and tagged, or are
+in the process of being unpacked and tagged. This is to avoid duplicate
+unpacking and tagging, which can take a lot of time if there is a lot of
+duplication.
+
 2014-02-17
 * add more debug information
 * simplify clone detection script
