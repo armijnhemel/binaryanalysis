@@ -3179,7 +3179,7 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 					blacklist.append((0,len(data)))
 					return (diroffsets, blacklist, ['graphics', 'png'], hints)
 				else:
-					blacklist.append((0,trail+8))
+					blacklist.append((offset,trail+8))
 					diroffsets.append((tmpdir, offset, 0))
 					counter = counter + 1
 					break
