@@ -92,3 +92,4 @@ BOTTLENECKS:
 16. fix support for Linux 2.4 kernel modules, as modinfo (at least on Fedora) no longer seems to work for 2.4 kernels
 17. fix reporting of duplicate files, which right now might not show up correctly
 18. run jcf-dump in chunks for Java class files whenever possible, preventing launching a jcf-dump process per class file
+19. use ELF information to better tag duplicate ELF files
