@@ -29,6 +29,7 @@ On the left you will find a tree that can be browsed. Results can be shown by cl
 <li>&#x24b6; : the file is an Android Dalvik file</li>
 <li>&#x24b8; : the file is a compressed file</li>
 <li>&#x24b9; : the file is a directory (possibly empty)</li>
+<li>&#x229c; : the file is a duplicate of another file</li>
 <li>&#x24bc; : the file is a graphics file</li>
 <li>&#x24c1; : the file contains a Linux kernel or Linux kernel module </li>
 <li>&#x24c7; : the file is a resources file</li>
@@ -182,6 +183,7 @@ class BatFrame(wx.Frame):
 		self.filterconfigstate = []
 		self.filters = []
 		self.filterconfig = [(["audio", "mp3", "ogg"], "Audio files"),
+                                     (["duplicate"], "Duplicate files"),
                                      (["emptydir"], "Empty directories (after filters have been applied)"),
                                      (["empty"], "Empty files"),
                                      (["png", "bmp", "jpg", "gif", "graphics"], "Graphics files"),
@@ -620,7 +622,7 @@ class BatFrame(wx.Frame):
 				linktext = j
 			else:
 				linktext = j[parentlen:]
-			tagsentities = {'text': u'\u24c9', 'graphics': u'\u24bc', 'compressed': u'\u24b8', 'resource': u'\u24c7', 'static': u'\u24c8', 'dalvik': u'\u24b6', 'ranking': u'\u272a', 'linuxkernel': u'\u24c1'}
+			tagsentities = {'text': u'\u24c9', 'graphics': u'\u24bc', 'compressed': u'\u24b8', 'resource': u'\u24c7', 'static': u'\u24c8', 'dalvik': u'\u24b6', 'ranking': u'\u272a', 'linuxkernel': u'\u24c1', 'duplicate': u'\u229c'}
 
 			if self.unpackreports[j].has_key('tags'):
 				for t in self.unpackreports[j]['tags']:

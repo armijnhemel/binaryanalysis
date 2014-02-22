@@ -1,3 +1,6 @@
+2014-02-22
+* tag duplicate files in GUI
+
 2014-02-21
 * use a shared dictionary of files that have been unpacked and tagged, or are
 in the process of being unpacked and tagged. This is to avoid duplicate
