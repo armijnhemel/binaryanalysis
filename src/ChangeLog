@@ -1,3 +1,12 @@
+2014-02-25
+* support big endian cramfs
+* sanity checks in prerun.py
+* prevent ranking.py from being run even if there are no databases. This was a
+fallout from rewriting ranking.py for BAT 15
+* add scan to fix duplicates (only ELF libraries for now)
+* rework deduplication for postrun scans. This fixes reporting for duplicate
+scans.
+
 2014-02-22
 * tag duplicate files in GUI
 

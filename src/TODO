@@ -69,6 +69,7 @@ misc:
 * add piecharts/reports per directory that summarise what is inside a directory (recursively, perhaps only if something was unpacked)
 * add per scan debug to allow better custom debugging
 * test on latest OpenSUSE
+* check dependencies for Ubuntu 13.10
 * test on latest Debian, make sure configurations/dependencies work
 * replace calls to dd, tail, head and others with truncate() where possible to prevent launching an external process
 * replace hardcoded options in reporting with values of 'storetarget'
@@ -90,6 +91,5 @@ BOTTLENECKS:
 14. fix statistics piecharts to also include matched, but unassigned strings. Also take dupes into account.
 15. use order of strings in ELF binaries to assign strings earlier/better
 16. fix support for Linux 2.4 kernel modules, as modinfo (at least on Fedora) no longer seems to work for 2.4 kernels
-17. fix reporting of duplicate files, which right now might not show up correctly
-18. run jcf-dump in chunks for Java class files whenever possible, preventing launching a jcf-dump process per class file
-19. use ELF information to better tag duplicate ELF files
+17. run jcf-dump in chunks for Java class files whenever possible, preventing launching a jcf-dump process per class file
+18. allow package specific files to be processed by batchextractprogramstrings.py and put results the database as well, for example "built-ins/*.def" in GNU bash
