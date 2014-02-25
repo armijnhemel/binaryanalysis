@@ -1234,19 +1234,28 @@ def unpackRomfs(filename, offset, tempdir=None, unpacktempdir=None):
 ## the file system.
 def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
 	hints = []
-	if not offsets.has_key('cramfs'):
+	if not offsets.has_key('cramfs_le') and not offsets.has_key('cramfs_be'):
 		return ([], blacklist, [], hints)
-	if offsets['cramfs'] == []:
+	if offsets['cramfs_le'] == [] and offsets['cramfs_be'] == []:
 		return ([], blacklist, [], hints)
-
-	diroffsets = []
 	counter = 1
-	for offset in offsets['cramfs']:
+	cramfsoffsets = copy.deepcopy(offsets['cramfs_le']) + copy.deepcopy(offsets['cramfs_be'])
+	diroffsets = []
+	cramfsoffsets.sort()
+
+	print >>sys.stderr, cramfsoffsets
+
+	for offset in cramfsoffsets:
+		bigendian = False
+		## sanity check to make sure jffs2_be actually exists
+		if offsets.has_key('cramfs_be'):
+			if offset in offsets['cramfs_be']:
+				bigendian = True
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "cramfs", counter)
-		retval = unpackCramfs(filename, offset, tmpdir)
+		retval = unpackCramfs(filename, offset, tmpdir, bigendian=bigendian)
 		if retval != None:
 			(res, cramfssize) = retval
 			if cramfssize != 0:
@@ -1260,7 +1269,7 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, debug=F
 
 ## tries to unpack stuff using fsck.cramfs. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
-def unpackCramfs(filename, offset, tempdir=None, unpacktempdir=None):
+def unpackCramfs(filename, offset, tempdir=None, unpacktempdir=None, bigendian=False):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
@@ -1269,14 +1278,20 @@ def unpackCramfs(filename, offset, tempdir=None, unpacktempdir=None):
 	sizetmpfile.seek(offset+4)
 	tmpbytes = sizetmpfile.read(4)
 	sizetmpfile.close()
-	cramfslen = struct.unpack('<I', tmpbytes)[0]
+	if bigendian:
+		cramfslen = struct.unpack('>I', tmpbytes)[0]
+	else:
+		cramfslen = struct.unpack('<I', tmpbytes)[0]
 
 	versiontmpfile = open(filename)
 	versiontmpfile.seek(offset+8)
 	tmpbytes = versiontmpfile.read(4)
 	versiontmpfile.close()
 
-	cramfsversion = struct.unpack('<I', tmpbytes)[0]
+	if bigendian:
+		cramfsversion = struct.unpack('>I', tmpbytes)[0]
+	else:
+		cramfsversion = struct.unpack('<I', tmpbytes)[0]
 	if cramfsversion != 0:
 		if cramfslen > os.stat(filename).st_size:
 			os.unlink(tmpfile[1])
