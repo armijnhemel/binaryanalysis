@@ -818,6 +818,13 @@ enabled     = yes
 ### aggregate scans ###
 #######################
 
+[fixduplicates]
+type        = aggregate
+module      = bat.fixduplicates
+method      = fixduplicates
+enabled     = yes
+priority    = 100
+
 [findduplicates]
 type        = aggregate
 module      = bat.findduplicates
