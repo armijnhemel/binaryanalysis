@@ -1236,14 +1236,20 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, debug=F
 	hints = []
 	if not offsets.has_key('cramfs_le') and not offsets.has_key('cramfs_be'):
 		return ([], blacklist, [], hints)
-	if offsets['cramfs_le'] == [] and offsets['cramfs_be'] == []:
+	if offsets.has_key('cramfs_le'):
+		le_offsets = copy.deepcopy(offsets['cramfs_le'])
+	else:
+		le_offsets = []
+	if offsets.has_key('cramfs_be'):
+		be_offsets = copy.deepcopy(offsets['cramfs_be'])
+	else:
+		be_offsets = []
+	if le_offsets == [] and be_offsets == []:
 		return ([], blacklist, [], hints)
 	counter = 1
-	cramfsoffsets = copy.deepcopy(offsets['cramfs_le']) + copy.deepcopy(offsets['cramfs_be'])
+	cramfsoffsets = le_offsets + be_offsets
 	diroffsets = []
 	cramfsoffsets.sort()
-
-	print >>sys.stderr, cramfsoffsets
 
 	for offset in cramfsoffsets:
 		bigendian = False
