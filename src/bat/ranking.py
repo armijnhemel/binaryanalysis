@@ -1740,4 +1740,8 @@ def rankingsetup(envvars, debug=False):
 		if newenv.has_key('BAT_METHOD_SCAN'):
 			del newenv['BAT_METHOD_SCAN']
 
+	scanenvkeys = newenv.keys()
+	envcheck = set(map(lambda x: x in scanenvkeys, stringsdbperlanguage.values() + namecacheperlanguage.values()))
+	if envcheck == set([False]):
+		return (False, None)
 	return (True, newenv)
