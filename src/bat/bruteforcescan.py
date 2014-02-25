@@ -1117,14 +1117,13 @@ def runscan(scans, scan_binary):
 	## These scans typically only have a few side effects, but don't change
 	## the reporting/scanning, just process the results. Examples: generate
 	## fancier reports, use microblogging to post scan results, etc.
-	## Make sure to not process duplicates here as well, just like
-	## in leaf scans.
-	## The assumption that is being made here is that the postrunscans only
-	## really use the SHA256 values, which is right now the case.
+	## Duplicates that are tagged as 'duplicate' are not processed.
 	if scans['postrunscans'] != [] and unpackreports != {}:
 		## if unpackreports != {} since deduplication has already been done
+
+		dedupes = filter(lambda x: 'duplicate' not in unpackreports[x]['tags'], filter(lambda x: unpackreports[x].has_key('tags'), filter(lambda x: unpackreports[x].has_key('sha256'), unpackreports.keys())))
 		postrunscans = []
-		for i in map(lambda x: x[len(scantempdir)+1:], sha256_tmp.values()):
+		for i in dedupes:
 			## results might have been changed by aggregate scans, so check if it still exists
 			if unpackreports.has_key(i):
 				tmpdebug = False
