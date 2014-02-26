@@ -109,7 +109,7 @@ def generateversionchart((versionpickle, picklehash, imagedir, pickledir)):
 	renderPM.drawToFile(drawing, outname, fmt='PNG')
 	return picklehash
 
-def extractpickles((filehash, pickledir, topleveldir, unpacktempdir)):
+def extractpickles((filehash, pickledir, topleveldir, unpacktempdir, minpercentagecutoff, maxpercentagecutoff)):
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 	leafreports = cPickle.load(leaf_file)
 	leaf_file.close()
@@ -166,12 +166,12 @@ def extractpickles((filehash, pickledir, topleveldir, unpacktempdir)):
 		for j in res['reports']:
 			(rank, package, unique, percentage, packageversions, packagelicenses) = j
 			## less than half a percent, that's not significant anymore
-			if percentage < 0.5:
+			if percentage < minpercentagecutoff:
 				totals += percentage
 				others += percentage
-				if totals <= 99.0:
+				if totals <= maxpercentagecutoff:
 					continue
-			if totals >= 99.0:
+			if totals >= maxpercentagecutoff:
 				pielabels.append("others")
 				piedata.append(others + 100.0 - totals)
 				break
@@ -314,8 +314,23 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 
 	filehashes = set(map(lambda x: unpackreports[x]['sha256'], rankingfiles))
 
+	## default values for cut off percentages
+	minpercentagecutoff = 0.5
+	maxpercentagecutoff = 99.0
+
+	if scanenv.has_key('MINIMUM_PERCENTAGE'):
+		try:
+			minpercentagecutoff = float(scanenv['MINIMUM_PERCENTAGE'])
+		except:
+			pass
+	if scanenv.has_key('MAXIMUM_PERCENTAGE'):
+		try:
+			maxpercentagecutoff = float(scanenv['MAXIMUM_PERCENTAGE'])
+		except:
+			pass
+
 	## extract pickles
-	extracttasks = map(lambda x: (x, pickledir, topleveldir, unpacktempdir), filehashes)
+	extracttasks = map(lambda x: (x, pickledir, topleveldir, unpacktempdir, minpercentagecutoff, maxpercentagecutoff), filehashes)
 	pool = multiprocessing.Pool(processes=processors)
 	res = filter(lambda x: x != None, pool.map(extractpickles, extracttasks))
 	pool.terminate()
