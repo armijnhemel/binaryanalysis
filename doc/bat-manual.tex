@@ -57,21 +57,21 @@ met on the host system before installing BAT.
 
 To install on Fedora three packages are needed:
 \texttt{bat-extratools}, \texttt{bat-extratools-java} and \texttt{bat}. These
-can be downloaded from the website of the binary analysis tool in both prebuilt
-versions and as a source RPM file. When installing the three files there should
-be a list of dependencies that should be installed to let BAT work
-successfully. Some of these packages are not in Fedora by default but need to
-be installed through extra repositories, such as RPMfusion.
+can be downloaded from the BAT website in both prebuilt versions and as source
+RPM files. When installing the three files there should be a list of
+dependencies that should be installed to let BAT work successfully. Some of
+these packages are not in Fedora by default but need to be installed through
+external repositories, such as RPMfusion.
 
 \subsubsection{Installing on Debian and Ubuntu}
 
 To install on Debian and Ubuntu three packages are needed:
 \texttt{bat-extratools}, \texttt{bat-extratools-java} and \texttt{bat}. These
-can be downloaded from the website of the binary analysis tool in both prebuilt
-versions. When installing the three files there should be a list of
-dependencies that should be installed to let BAT work successfully. Some of
-these packages are not in Debian by default but need to be installed by
-enabling extra repositories such as Debian \texttt{non-free}.
+can be downloaded from the BAT website as binary DEB files. When installing the
+three files there should be a list of dependencies that should be installed to
+let BAT work successfully. Some of these packages are not in Debian by default
+but need to be installed by enabling extra repositories such as Debian
+\texttt{non-free}.
 
 The graphical interface might not work on Debian 6, because of a too old
 version of \texttt{wxPython}.
@@ -171,7 +171,7 @@ description = Unpack JFFS2 file systems
 enabled     = yes
 \end{verbatim}
 
-In BAT 15.0 the following file systems, compressed files and media files can be
+In BAT 16.0 the following file systems, compressed files and media files can be
 unpacked or extracted:
 
 \begin{itemize}
@@ -204,9 +204,10 @@ unpacker is therefore disabled by default.
 LZMA is another special case: there are many different valid headers for LZMA
 files, but in practice only a handful are used.
 
-If unpacking is successful a directory with unpacked files that can be scanned
-further is returned, and, if available, some meta information to avoid
-duplicate scanning (blacklisting information and tags).
+If unpacking is successful a directory with unpacked files is returned, and, if
+available, some meta information to avoid duplicate scanning (blacklisting
+information and tags). The unpacked files are added to the scan queue and
+scanned recursively.
 
 \subsubsection{Leaf scans}
 
@@ -470,7 +471,7 @@ cleanup     = yes
 The \texttt{cleanup} setting should be set to \texttt{yes} unless the results
 do not change in between subsequent runs of BAT.
 
-Currently (BAT 15) if \texttt{cleanup} is set the files are written directly to
+Currently (BAT 16) if \texttt{cleanup} is set the files are written directly to
 output directories. The values of these directories are hardcoded (and match
 values that the GUI expects) but these will be replaced by the value of
 \texttt{storetarget} in a later release.
@@ -2335,7 +2336,7 @@ Finally there are some scans that unpack text files (\texttt{base64}) or media
 files. The \texttt{lzma} unpack scan also has the lowest priority because of
 possibly many false positives.
 
-The order of the unpack scans as defined in BAT 15 is:
+The order of the unpack scans as defined in BAT 16 is:
 
 \begin{enumerate}
 \item \texttt{byteSwap}
