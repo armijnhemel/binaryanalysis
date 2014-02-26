@@ -1,3 +1,6 @@
+2014-02-26
+* make percentage cut off values for pie chart generation configurable
+
 2014-02-25
 * support big endian cramfs
 * sanity checks in prerun.py

@@ -60,9 +60,6 @@ HTML generation:
 * clean up/rewrite/make it easier to use
 * add license information if available
 
-image generation:
-* make cut-off values for pie chart generation configurable (but default to current values if not defined)
-
 misc:
 * replay script to unpack firmware based on only the pickle with unpacking data. After this set the default of outputlite to 'yes'
 * add configuration option to set temporary directory prefix for all scans
