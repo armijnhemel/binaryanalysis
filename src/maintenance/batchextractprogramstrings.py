@@ -735,6 +735,11 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 					cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'linuxkernel', linenumber))
 				else:
 					cursor.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, language, linenumber))
+		elif language == 'C#':
+			for res in results:
+				(cname, linenumber, nametype) = res
+				if nametype == 'method':
+					cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, language, linenumber))
 		elif language == 'Java':
 			for res in results:
 				(cname, linenumber, nametype) = res
@@ -930,7 +935,7 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 	## section called __ksymtab__strings
 	# (name, linenumber, type)
 
-	if (language in ['C', 'Java', 'PHP', 'Python']):
+	if (language in ['C', 'C#', 'Java', 'PHP', 'Python']):
 
 		p2 = subprocess.Popen(["ctags", "-f", "-", "-x", os.path.join(i, p)], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 		(stanout2, stanerr2) = p2.communicate()
@@ -968,6 +973,10 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 									results.add((csplit[0], int(csplit[2]), 'variable'))
 						elif csplit[1] == 'function':
 							results.add((csplit[0], int(csplit[2]), 'function'))
+				if language == 'C#':
+					for i in ['method']:
+						if csplit[1] == i:
+							results.add((csplit[0], int(csplit[2]), i))
 				if language == 'Java':
 					for i in ['method', 'class', 'field']:
 						if csplit[1] == i:
