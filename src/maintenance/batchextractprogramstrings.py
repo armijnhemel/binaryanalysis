@@ -696,7 +696,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	extracted_results = pool.map(extractstrings, filestoscan, 1)
 
 	for extractres in extracted_results:
-		(filehash, language, sqlres, moduleres, cresults, javaresults, phpresults, pythonresults) = extractres
+		(filehash, language, sqlres, moduleres, results) = extractres
 		for res in sqlres:
 			(pstring, linenumber) = res
 			cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (pstring, filehash, language, linenumber))
@@ -725,32 +725,39 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		if moduleres.has_key('param_descriptions'):
 			for res in moduleres['param_descriptions']:
 				cursor.execute('''insert into kernelmodule_parameter_description (sha256, modulename, paramname, description) values (?,?,?, ?)''', (filehash, None) + res)
-		for res in cresults:
-			(cname, linenumber, nametype) = res
-			if nametype == 'function':
-				cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'C', linenumber))
-			elif nametype == 'kernelfunction':
-				cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'linuxkernel', linenumber))
-			else:
-				cursor.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, 'C', linenumber))
-		for res in set(javaresults):
-			(cname, linenumber, nametype) = res
-			if nametype == 'method':
-				cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'Java', linenumber))
-			else:
-				cursor.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, 'Java', linenumber))
-		for res in set(phpresults):
-			(cname, linenumber, nametype) = res
-			if nametype == 'function':
-				cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'PHP', linenumber))
-			else:
-				cursor.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, 'PHP', linenumber))
-		for res in set(pythonresults):
-			(cname, linenumber, nametype) = res
-			if nametype == 'function' or nametype == 'member':
-				cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'Python', linenumber))
-			else:
-				cursor.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, 'Python', linenumber))
+
+		if language == 'C':
+			for res in results:
+				(cname, linenumber, nametype) = res
+				if nametype == 'function':
+					cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, language, linenumber))
+				elif nametype == 'kernelfunction':
+					cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'linuxkernel', linenumber))
+				else:
+					cursor.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, language, linenumber))
+		elif language == 'Java':
+			for res in results:
+				(cname, linenumber, nametype) = res
+				if nametype == 'method':
+					cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, language, linenumber))
+				else:
+					cursor.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, language, linenumber))
+
+		elif language == 'PHP':
+			for res in results:
+				(cname, linenumber, nametype) = res
+				if nametype == 'function':
+					cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, language, linenumber))
+				else:
+					cursor.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, language, linenumber))
+
+		elif language == 'Python':
+			for res in results:
+				(cname, linenumber, nametype) = res
+				if nametype == 'function' or nametype == 'member':
+					cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, language, linenumber))
+				else:
+					cursor.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, language, linenumber))
 	conn.commit()
 
 	for i in insertfiles:
@@ -914,18 +921,14 @@ def licensefossology((packages)):
 ## TODO: process more files at once to reduce overhead of calling ctags
 def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 	(sqlres, moduleres) = extractsourcestrings(p, i, language, package)
+
+	results = set()
+
 	## extract function names using ctags, except functions from
 	## the Linux kernel, since it will never be dynamically linked
 	## but variable names are sometimes stored in a special ELF
 	## section called __ksymtab__strings
 	# (name, linenumber, type)
-	cresults = set()
-
-	## this is specifically for Java
-	# (name, linenumber, type)
-	javaresults = []
-	phpresults = []
-	pythonresults = []
 
 	if (language in ['C', 'Java', 'PHP', 'Python']):
 
@@ -947,44 +950,44 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 						## stored in a special ELF section __ksymtab_strings
 						if csplit[1] == 'variable':
 							if "EXPORT_SYMBOL_GPL" in csplit[4]:
-								cresults.add((csplit[0], int(csplit[2]), 'gplkernelsymbol'))
+								results.add((csplit[0], int(csplit[2]), 'gplkernelsymbol'))
 							elif "EXPORT_SYMBOL" in csplit[4]:
-								cresults.add((csplit[0], int(csplit[2]), 'kernelsymbol'))
+								results.add((csplit[0], int(csplit[2]), 'kernelsymbol'))
 						elif csplit[1] == 'function':
-							cresults.add((csplit[0], int(csplit[2]), 'kernelfunction'))
+							results.add((csplit[0], int(csplit[2]), 'kernelfunction'))
 					else:
 						if csplit[1] == 'variable':
 							if len(csplit) < 5:
-								cresults.add((csplit[0], int(csplit[2]), 'variable'))
+								results.add((csplit[0], int(csplit[2]), 'variable'))
 							else:
 								if "EXPORT_SYMBOL_GPL" in csplit[4]:
-									cresults.add((csplit[0], int(csplit[2]), 'gplkernelsymbol'))
+									results.add((csplit[0], int(csplit[2]), 'gplkernelsymbol'))
 								elif "EXPORT_SYMBOL" in csplit[4]:
-									cresults.add((csplit[0], int(csplit[2]), 'kernelsymbol'))
+									results.add((csplit[0], int(csplit[2]), 'kernelsymbol'))
 								else:
-									cresults.add((csplit[0], int(csplit[2]), 'variable'))
+									results.add((csplit[0], int(csplit[2]), 'variable'))
 						elif csplit[1] == 'function':
-							cresults.add((csplit[0], int(csplit[2]), 'function'))
+							results.add((csplit[0], int(csplit[2]), 'function'))
 				if language == 'Java':
 					for i in ['method', 'class', 'field']:
 						if csplit[1] == i:
-							javaresults.append((csplit[0], int(csplit[2]), i))
+							results.add((csplit[0], int(csplit[2]), i))
 				if language == 'PHP':
 					## ctags does not nicely handle comments, so sometimes there are
 					## false positives.
 					for i in ['variable', 'function', 'class']:
 						if csplit[1] == i:
-							phpresults.append((csplit[0], int(csplit[2]), i))
+							results.add((csplit[0], int(csplit[2]), i))
 				if language == 'Python':
 					## TODO: would be nice to store members with its surrounding class
 					for i in ['variable', 'member', 'function', 'class']:
 						if csplit[0] == '__init__':
 							break
 						if csplit[1] == i:
-							pythonresults.append((csplit[0], int(csplit[2]), i))
+							results.add((csplit[0], int(csplit[2]), i))
 							break
 
-	return (filehash, language, sqlres, moduleres, cresults, javaresults, phpresults, pythonresults)
+	return (filehash, language, sqlres, moduleres, results)
 
 ## Extract strings using xgettext. Apparently this does not always work correctly. For example for busybox 1.6.1:
 ## $ xgettext -a -o - fdisk.c
