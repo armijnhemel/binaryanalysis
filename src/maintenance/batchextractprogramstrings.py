@@ -930,9 +930,113 @@ def licensefossology((packages)):
 ## TODO: process more files at once to reduce overhead of calling ctags
 def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 	if language == 'patch':
-		## processing patches needs additional work
-		sqlres = []
-		moduleres = {}
+		## The file is a patch/diff file. Take the following steps to deal with it:
+		## 1. find out what kind of diff file it is. Stick to dealing with a unified diff file for now
+		## 2. find out how many files are inside the diff
+		## 3. find out which files these manipulate and if these would have been processed
+		## 4. find out which lines are added to the files
+		patchfile = open(os.path.join(i,p))
+		patchcontent = patchfile.read()
+		patchfile.close()
+		patchlines = patchcontent.split('\n')
+
+		unified = False
+
+		## keep track of how many patches are in the file
+		unifiedpatches = 0
+		addlines = []
+		unifiedmin = False
+		unifiedplus = False
+		skippatch = False
+		oldfile = ""
+		newfile = ""
+
+		## keep track of how many lines are in the patch
+		linecounter = 0
+		for l in patchlines:
+			linecounter += 1
+			if unifiedmin and unifiedplus:
+				## at least one patch in the file seems to be valid
+				unified = True
+			if l.startswith('---'):
+				if unifiedmin:
+					## this should not happen, malformed patch
+					## unclear what to do with this so ignore for now
+					pass
+				unifiedmin = True
+				## reset some values
+				skippatch = False
+				unifiedplus = False
+				patchsplits = l.split()
+				if len(patchsplits) < 2:
+					## this should not happen, malformed patch
+					skippatch = True
+					continue
+				oldfile = os.path.basename(patchsplits[1])
+				continue
+			if l.startswith('+++'):
+				if not unifiedmin:
+					## this should not happen, malformed patch
+					skippatch = True
+					continue
+				## TODO: the line starting with '+++' should follow the line with '---' immediately
+				## assume for now that this happens
+				patchsplits = l.split()
+				if len(patchsplits) < 2:
+					## this should not happen, malformed patch
+					skippatch = True
+					continue
+
+				process = False
+				newfile = os.path.basename(patchsplits[1])
+				if newfile == oldfile:
+					## easy case since both file names have the same name.
+					p_nocase = oldfile.lower()
+					for extension in extensions.keys():
+						if (p_nocase.endswith(extension)) and not p_nocase == extension:
+							process = True
+							break
+				else:
+					## either oldfile or newfile needs to match
+					p_nocase = oldfile.lower()
+					for extension in extensions.keys():
+						if (p_nocase.endswith(extension)) and not p_nocase == extension:
+							process = True
+							break
+					if not process:
+						p_nocase = newfile.lower()
+						for extension in extensions.keys():
+							if (p_nocase.endswith(extension)) and not p_nocase == extension:
+								process = True
+								break
+
+				if not process:
+					skippatch = True
+					continue
+				unifiedplus = True
+			if not unifiedmin:
+				## first few lines of the patch
+				continue
+			if skippatch:
+				continue
+			## now process the lines
+			if l.startswith ('-'):
+				continue
+			if l.startswith (' '):
+				continue
+			## store the current line number in a list of lines that start with '+'
+			addlines.append(linecounter)
+
+		if not unified:
+			sqlres = []
+			moduleres = {}
+		else:
+			(patchsqlres, moduleres) = extractsourcestrings(p, i, language, package)
+			sqlres = []
+			for sql in patchsqlres:
+				(res, linenumber) = sql
+				if linenumber in addlines:
+					sqlres.append(sql)
 	else:
 		(sqlres, moduleres) = extractsourcestrings(p, i, language, package)
 
