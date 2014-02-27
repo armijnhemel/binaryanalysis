@@ -114,7 +114,11 @@ extensions = {'.c'      : 'C',
               '.js'     : 'JavaScript',
               '.php'    : 'PHP',
               '.py'     : 'Python',
+              '.patch'  : 'patch',
+              '.diff'   : 'patch',
              }
+
+languages = set(extensions.values())
 
 ## a list of characters that 'strings' will split on when processing a binary file
 splitcharacters = map(lambda x: chr(x), range(0,9) + range(14,32) + [127])
@@ -581,19 +585,11 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		licensecursor = licenseconn.cursor()
 		licensecursor.execute('PRAGMA synchronous=off')
 
-		## this is just an extra sanity check. This should not be triggered, but
-		## in case some data has been deleted it might come in handy.
-		#commentsfiletoscan = []
-		#for i in filestoscan:
-		#	lres = licensecursor.execute('''select sha256 from licenses where sha256 = ? and scanner = ? and version = ? LIMIT 1''', (i[5], "ninka", ninkaversion)).fetchall()
-		#	if lres != []:
-		#		continue
-		#	else:
-		#		commentsfiletoscan.append(i)
-
-		#comments_results = pool.map(extractcomments, commentsfiletoscan, 1)
-
-		comments_results = pool.map(extractcomments, filestoscan, 1)
+		if 'patch' in languages:
+			## patch files should not be scanned for license information
+			comments_results = pool.map(extractcomments, filter(lambda x: x[4] != 'patch', filestoscan), 1)
+		else:
+			comments_results = pool.map(extractcomments, filestoscan, 1)
 		commentshash = {}
 		commentshash2 = {}
 		for c in comments_results:
@@ -648,8 +644,12 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		## TODO: sync names of licenses as found by FOSSology and Ninka
 		fossology_chunksize = 10
 		fossology_filestoscan = []
-		for i in range(0,len(filestoscan),fossology_chunksize):
-			fossology_filestoscan.append((filestoscan[i:i+fossology_chunksize]))
+		if 'patch' in languages:
+			fossyfiles = filter(lambda x: x[4] != 'patch', filestoscan)
+		else:
+			fossyfiles = filestoscan
+		for i in range(0,len(fossyfiles),fossology_chunksize):
+			fossology_filestoscan.append((fossyfiles[i:i+fossology_chunksize]))
 		fossology_res = filter(lambda x: x != None, pool.map(licensefossology, fossology_filestoscan, 1))
 		## this requires FOSSology 2.3.0 or later
 		p2 = subprocess.Popen(["/usr/share/fossology/nomos/agent/nomos", "-V"], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
@@ -675,7 +675,11 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 
 	## extract copyrights
 	if copyrights:
-		copyrightsres = pool.map(extractcopyrights, filestoscan, 1)
+		if 'patch' in languages:
+			## patch files should not be scanned for copyright information
+			copyrightsres = pool.map(extractcopyrights, filter(lambda x: x[4] != 'patch', filestoscan), 1)
+		else:
+			copyrightsres = pool.map(extractcopyrights, filestoscan, 1)
 		if copyrightsres != None:
 			licenseconn = sqlite3.connect(licensedb, check_same_thread = False)
 			licensecursor = licenseconn.cursor()
@@ -925,7 +929,12 @@ def licensefossology((packages)):
 ## TODO: get rid of ninkaversion before we call this method
 ## TODO: process more files at once to reduce overhead of calling ctags
 def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
-	(sqlres, moduleres) = extractsourcestrings(p, i, language, package)
+	if language == 'patch':
+		## processing patches needs additional work
+		sqlres = []
+		moduleres = {}
+	else:
+		(sqlres, moduleres) = extractsourcestrings(p, i, language, package)
 
 	results = set()
 
@@ -1366,6 +1375,8 @@ def main(argv):
 		if "FATAL" in stanerr:
 			print >>sys.stderr, "ERROR: license scanning enabled, but FOSSology not running"
 			sys.exit(1)
+		if options.licensedb == None:
+			parser.error("License scanning enabled, but no path to licensing database supplied")
 		if options.ninkacomments == None:
 			parser.error("License scanning enabled, but no path to ninkacomments database supplied")
 		if options.ninkacomments == options.db:
@@ -1380,6 +1391,8 @@ def main(argv):
 		if "FATAL" in stanout:
 			print >>sys.stderr, "ERROR: copyright extraction enabled, but FOSSology not running"
 			sys.exit(1)
+		if options.licensedb == None:
+			parser.error("Copyright scanning enabled, but no path to copyright database supplied")
 	else:
 		copyrights = False
 
