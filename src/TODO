@@ -90,3 +90,4 @@ BOTTLENECKS:
 16. fix support for Linux 2.4 kernel modules, as modinfo (at least on Fedora) no longer seems to work for 2.4 kernels
 17. run jcf-dump in chunks for Java class files whenever possible, preventing launching a jcf-dump process per class file
 18. allow package specific files to be processed by batchextractprogramstrings.py and put results the database as well, for example "built-ins/*.def" in GNU bash
+19. update bat-fsck.cramfs to newer version of util-linux
