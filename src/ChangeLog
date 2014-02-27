@@ -1,3 +1,9 @@
+2014-02-27
+* store C# methods in database
+* declutter return values of extractstrings() in batchextractprogramstrings.py
+* start on processing patch/diff files (unified diff only) in
+batchextractprogramstrings.py
+
 2014-02-26
 * make percentage cut off values for pie chart generation configurable
 
