@@ -1,3 +1,9 @@
+2014-02-28
+* replace most (but not all) options in batchextractprogramstrings.py with a
+configuration file. The configuration options that are 'static' (location of
+databases, default settings for cleanups, etc.) are in the configuration file,
+other options are still passed on the commandline.
+
 2014-02-27
 * store C# methods in database
 * declutter return values of extractstrings() in batchextractprogramstrings.py
