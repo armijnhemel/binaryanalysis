@@ -3,6 +3,7 @@
 configuration file. The configuration options that are 'static' (location of
 databases, default settings for cleanups, etc.) are in the configuration file,
 other options are still passed on the commandline.
+* rename batchextractprogramstrings.py to createdb.py
 
 2014-02-27
 * store C# methods in database

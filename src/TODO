@@ -37,7 +37,6 @@ error handling:
 * better handle errors to give users a better indication if something went wrong
 
 database creation:
-* rename batchextractprogramstrings.py
 * handle embedded archives (ZIP files, tarballs, etc.)
 * handle patches (both normal and unified)
 * import licensing information from SPDX files
@@ -88,5 +87,5 @@ BOTTLENECKS:
 15. use order of strings in ELF binaries to assign strings earlier/better
 16. fix support for Linux 2.4 kernel modules, as modinfo (at least on Fedora) no longer seems to work for 2.4 kernels
 17. run jcf-dump in chunks for Java class files whenever possible, preventing launching a jcf-dump process per class file
-18. allow package specific files to be processed by batchextractprogramstrings.py and put results the database as well, for example "built-ins/*.def" in GNU bash
+18. allow package specific files to be processed by createdb.py and put results the database as well, for example "built-ins/*.def" in GNU bash
 19. update bat-fsck.cramfs to newer version of util-linux
