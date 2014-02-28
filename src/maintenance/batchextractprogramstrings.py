@@ -18,7 +18,7 @@ Compression is determined using magic
 '''
 
 import sys, os, magic, string, re, subprocess, shutil, stat
-import tempfile, bz2, tarfile, gzip
+import tempfile, bz2, tarfile, gzip, ConfigParser
 from optparse import OptionParser
 from multiprocessing import Pool
 import sqlite3, hashlib
@@ -1031,6 +1031,7 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 			sqlres = []
 			moduleres = {}
 		else:
+			## TODO: clean up
 			(patchsqlres, moduleres) = extractsourcestrings(p, i, language, package)
 			sqlres = []
 			for sql in patchsqlres:
@@ -1416,19 +1417,31 @@ def checkalreadyscanned((filedir, package, version, filename, origin, batarchive
 	return res
 
 def main(argv):
+	config = ConfigParser.ConfigParser()
+
 	parser = OptionParser()
+	parser.add_option("-c", "--config", action="store", dest="cfg", help="path to configuration file", metavar="FILE")
+
+	## the following options are provided on the commandline
 	parser.add_option("-b", "--blacklist", action="store", dest="blacklist", help="path to blacklist file", metavar="FILE")
-	parser.add_option("-c", "--copyrights", action="store_true", dest="copyrights", help="extract copyrights (default: false)")
-	parser.add_option("-d", "--database", action="store", dest="db", help="path to database", metavar="FILE")
 	parser.add_option("-f", "--filedir", action="store", dest="filedir", help="path to directory containing files to unpack", metavar="DIR")
-	parser.add_option("-l", "--licenses", action="store_true", dest="licenses", help="extract licenses (default: false)")
-	parser.add_option("-n", "--ninkacomments", action="store", dest="ninkacomments", help="path to ninkacomments database", metavar="FILE")
-	parser.add_option("-r", "--licensedb", action="store", dest="licensedb", help="path to licenses/copyrights database", metavar="FILE")
 	parser.add_option("-t", "--rewritelist", action="store", dest="rewritelist", help="path to rewrite list", metavar="FILE")
 	parser.add_option("-v", "--verify", action="store_true", dest="verify", help="verify files, don't process (default: false)")
-	parser.add_option("-w", "--wipe", action="store_true", dest="wipe", help="wipe database instead of update (default: false)")
-	parser.add_option("-z", "--cleanup", action="store_true", dest="cleanup", help="cleanup after unpacking? (default: false)")
 	(options, args) = parser.parse_args()
+
+
+	if options.cfg == None:
+		parser.error("Specify configuration file")
+	else:
+		if not os.path.exists(options.cfg):
+			parser.error("Configuration file does not exist")
+		try:
+			configfile = open(options.cfg, 'r')
+		except:
+			parser.error("Configuration file not readable")
+		config.readfp(configfile)
+		configfile.close()
+
 	if options.filedir == None:
 		parser.error("Specify dir with files")
 	else:
@@ -1436,9 +1449,6 @@ def main(argv):
 			filelist = open(os.path.join(options.filedir,"LIST")).readlines()
 		except:
 			parser.error("'LIST' not found in file dir")
-
-	if options.db == None:
-		parser.error("Specify path to database")
 
 	if options.blacklist != None:
 		try:
@@ -1461,17 +1471,56 @@ def main(argv):
 			# oops, something went wrong
 			print >>sys.stderr, e
 
-	if options.cleanup != None:
-		cleanup = True
-	else:
-		cleanup = False
-
-	if options.wipe != None:
-		wipe = True
-	else:
-		wipe = False
-
-	if options.licenses != None:
+	## search configuration to see if it is correct and/or not malformed
+	## first search for a section called 'extractconfig' with configtype = global
+	for section in config.sections():
+		if section == "extractconfig":
+			try:
+				sec = config.get(section, 'scancopyright')
+				if sec == 'yes':
+					scancopyright = True
+				else:
+					scancopyright = False
+			except:
+				scancopyright = False
+			try:
+				sec = config.get(section, 'scanlicense')
+				if sec == 'yes':
+					scanlicense = True
+				else:
+					scanlicense = False
+			except:
+				scanlicense = False
+			try:
+				masterdatabase = config.get(section, 'database')
+			except:
+				print >>sys.stderr, "Database location not defined in configuration file. Exiting..."
+				sys.exit(1)
+			try:
+				sec = config.get(section, 'cleanup')
+				if sec == 'yes':
+					cleanup = True
+				else:
+					cleanup = False
+			except:
+				cleanup = False
+			try:
+				sec = config.get(section, 'wipe')
+				if sec == 'yes':
+					wipe = True
+				else:
+					wipe = False
+			except:
+				wipe = False
+			try:
+				licensedb = config.get(section, 'licensedb')
+			except:
+				licensedb = None
+			try:
+				ninkacomments = config.get(section, 'ninkacommentsdb')
+			except:
+				ninkacomments = None
+	if scanlicense != None:
 		license = True
 		## check if FOSSology is actually running
 		p2 = subprocess.Popen(["/usr/share/fossology/nomos/agent/nomos", "-h"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -1479,23 +1528,23 @@ def main(argv):
 		if "FATAL" in stanerr:
 			print >>sys.stderr, "ERROR: license scanning enabled, but FOSSology not running"
 			sys.exit(1)
-		if options.licensedb == None:
+		if licensedb == None:
 			parser.error("License scanning enabled, but no path to licensing database supplied")
-		if options.ninkacomments == None:
+		if ninkacomments == None:
 			parser.error("License scanning enabled, but no path to ninkacomments database supplied")
-		if options.ninkacomments == options.db:
+		if ninkacomments == masterdatabase:
 			parser.error("Database and ninkacomments database cannot be the same")
 	else:
 		license = False
 
-	if options.copyrights != None:
+	if scancopyright != None:
 		copyrights = True
 		p2 = subprocess.Popen(["/usr/share/fossology/copyright/agent/copyright", "-h"], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 		(stanout, stanerr) = p2.communicate()
 		if "FATAL" in stanout:
 			print >>sys.stderr, "ERROR: copyright extraction enabled, but FOSSology not running"
 			sys.exit(1)
-		if options.licensedb == None:
+		if licensedb == None:
 			parser.error("Copyright scanning enabled, but no path to copyright database supplied")
 	else:
 		copyrights = False
@@ -1510,21 +1559,21 @@ def main(argv):
 	else:
 		rewrites = {}
 
-	if options.licenses != None and options.copyrights != None and options.licensedb == None:
-		parser.error("Specify path to licenses/copyrights database")
+	if (scanlicense or scancopyright) and licensedb == None:
+		print >>sys.stderr, "Specify path to licenses/copyrights database"
+		sys.exit(1)
 
-	conn = sqlite3.connect(options.db, check_same_thread = False)
+	conn = sqlite3.connect(masterdatabase, check_same_thread = False)
 	c = conn.cursor()
 	#c.execute('PRAGMA synchronous=off')
 
-	if options.licenses:
-		ninkaconn = sqlite3.connect(options.ninkacomments, check_same_thread = False)
+	if scanlicense:
+		ninkaconn = sqlite3.connect(ninkacomments, check_same_thread = False)
 		ninkac = ninkaconn.cursor()
 
-	if options.licenses or options.copyrights:
-		licenseconn = sqlite3.connect(options.licensedb, check_same_thread = False)
+	if scanlicense or scancopyright:
+		licenseconn = sqlite3.connect(licensedb, check_same_thread = False)
 		licensec = licenseconn.cursor()
-		#licensec.execute('PRAGMA synchronous=off')
 
 	if wipe:
 		try:
@@ -1627,7 +1676,7 @@ def main(argv):
 		c.execute('''create index if not exists kernelmodule_version_sha256index on kernelmodule_version(sha256)''')
 		conn.commit()
 
-		if options.licenses or options.copyrights:
+		if scanlicense or scancopyright:
 			## Store the extracted licenses per checksum.
 			licensec.execute('''create table if not exists licenses (sha256 text, license text, scanner text, version text)''')
 			licensec.execute('''create index if not exists license_index on licenses(sha256);''')
@@ -1644,7 +1693,7 @@ def main(argv):
 			licensec.close()
 			licenseconn.close()
 
-		if options.licenses:
+		if scanlicense:
 			## Store the comments extracted by Ninka per checksum.
 			ninkac.execute('''create table if not exists ninkacomments (sha256 text, license text, version text)''')
 			ninkac.execute('''create index if not exists comments_index on ninkacomments(sha256);''')
@@ -1684,7 +1733,7 @@ def main(argv):
 					batarchive = True
 				else:
 					batarchive = False
-			pkgmeta.append((options.filedir, package, version, filename, origin, batarchive, options.db, checksums))
+			pkgmeta.append((options.filedir, package, version, filename, origin, batarchive, masterdatabase, checksums))
 		except Exception, e:
 			# oops, something went wrong
 			print >>sys.stderr, e
@@ -1719,7 +1768,7 @@ def main(argv):
 			(package, version, filename, origin, filehash, batarchive) = i
 			if package != oldpackage:
 				oldres = []
-			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, options.db, cleanup, license, copyrights, pool, options.ninkacomments, options.licensedb, oldpackage, oldres, rewrites, batarchive)
+			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, masterdatabase, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldres, rewrites, batarchive)
 			if unpackres != None:
 				oldres = map(lambda x: x[2], unpackres)
 				oldpackage = package
