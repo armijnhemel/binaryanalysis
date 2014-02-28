@@ -1520,7 +1520,7 @@ def main(argv):
 				ninkacomments = config.get(section, 'ninkacommentsdb')
 			except:
 				ninkacomments = None
-	if scanlicense != None:
+	if scanlicense:
 		license = True
 		## check if FOSSology is actually running
 		p2 = subprocess.Popen(["/usr/share/fossology/nomos/agent/nomos", "-h"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
