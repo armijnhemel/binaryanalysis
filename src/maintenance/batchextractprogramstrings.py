@@ -1576,22 +1576,16 @@ def main(argv):
 		licensec = licenseconn.cursor()
 
 	if wipe:
-		try:
-			c.execute('''drop table extracted''')
-		except:
-			pass
-		try:
-			c.execute('''drop table processed''')
-		except:
-			pass
-		try:
-			c.execute('''drop table processed_file''')
-		except:
-			pass
-		try:
-			c.execute('''drop table extracted_file''')
-		except:
-			pass
+		## drop all tables and all the indexes. Probably this should not be used...
+		c.execute("select name from sqlite_master where type='table'")
+		tables = c.fetchall()
+		if len(tables) != 0:
+			for t in tables:
+				try:
+					c.execute('''drop table %s''' % t)
+				except Exception, e:
+					print >>sys.stderr, e
+		conn.commit()
 		try:
 			licensec.execute('''drop table licenses''')
 			licensec.execute('''drop table extracted_copyright''')
@@ -1603,8 +1597,6 @@ def main(argv):
 			ninkaconn.commit()
 		except:
 			pass
-
-		conn.commit()
         try:
 		## Keep an archive of which packages and archive files (tar.gz, tar.bz2, etc.) we've already
 		## processed, so we don't repeat work.
