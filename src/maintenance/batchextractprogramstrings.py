@@ -1537,7 +1537,7 @@ def main(argv):
 	else:
 		license = False
 
-	if scancopyright != None:
+	if scancopyright:
 		copyrights = True
 		p2 = subprocess.Popen(["/usr/share/fossology/copyright/agent/copyright", "-h"], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 		(stanout, stanerr) = p2.communicate()
