@@ -258,7 +258,7 @@ def unpack_verify(filedir, filename):
 
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
-def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, rewrites, batarchive):
+def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, rewrites, batarchive, packageconfig):
 	## unpack the archive. If it fails, cleanup and return.
 	## TODO: make temporary dir configurable
 	temporarydir = unpack(filedir, filename, '/gpl/tmp')
@@ -343,6 +343,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 		## If not, one of the versions should be renamed.
 		## TODO: support for batarchive
 		osgen = os.walk(temporarydir)
+		pkgconf = packageconfig.get(package,[])
 
 		try:
 			scanfiles = []
@@ -353,7 +354,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 					if not os.path.islink(os.path.join(i[0], d)):
 						os.chmod(os.path.join(i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 				for p in i[2]:
-					scanfiles.append((i[0], p))
+					scanfiles.append((i[0], p, pkgconf))
 		except Exception, e:
 			if str(e) != "":
 				print >>sys.stderr, package, version, e
@@ -404,7 +405,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 						(fileentry, hashentry) = i.strip().split()
 						filetohash[fileentry] = hashentry
 
-	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash)
+	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash, packageconfig)
 	if sqlres != []:
 		## Add the file to the database: name of archive, sha256, packagename and version
 		## This is to be able to just update the database instead of recreating it.
@@ -454,7 +455,7 @@ def grabhash((db, package, version, checksum)):
 	return (checksum, identical)
 
 ## Compute the SHA256 for a single file.
-def filterfiles((filedir, filename)):
+def filterfiles((filedir, filename, pkgconf)):
 	resolved_path = os.path.join(filedir, filename)
 	try:
 		if not os.path.islink(resolved_path):
@@ -473,13 +474,22 @@ def filterfiles((filedir, filename)):
 	for extension in extensions.keys():
 		if (p_nocase.endswith(extension)) and not p_nocase == extension:
 			process = True
+			language = extensions[extension]
 			break
 
 	if not process:
+		## now check the package specific extensions
+		for extlang in pkgconf:
+			(extension, language) = extlang
+			if (p_nocase.endswith(extension)) and not p_nocase == extension:
+				process = True
+				break
+	if not process:
 		return None
-	return (filedir, filename, extension)
 
-def computehash((filedir, filename, extension)):
+	return (filedir, filename, extension, language)
+
+def computehash((filedir, filename, extension, language)):
 	resolved_path = os.path.join(filedir, filename)
 	filemagic = ms.file(os.path.realpath(resolved_path))
 	if filemagic == "AppleDouble encoded Macintosh file":
@@ -489,10 +499,12 @@ def computehash((filedir, filename, extension)):
 	h.update(scanfile.read())
 	scanfile.close()
 	filehash = h.hexdigest()
-	return (filedir, filename, filehash, extension, extensions[extension])
+	return (filedir, filename, filehash, extension, language)
 
-def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash):
+def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash, packageconfig):
 	osgen = os.walk(srcdir)
+
+	pkgconf = packageconfig.get(package,[])
 
 	try:
 		scanfiles = []
@@ -502,7 +514,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 				if batarchive:
 					if p == 'MANIFEST.BAT':
 						continue
-				scanfiles.append((i[0], p))
+				scanfiles.append((i[0], p, pkgconf))
 			## make sure all directories can be accessed
 			for d in i[1]:
 				if not os.path.islink(os.path.join(i[0], d)):
@@ -1528,9 +1540,23 @@ def main(argv):
 				continue
 			try:
 				sec = config.get(section, 'extensions')
+				## extensions should be declared as "extension:language", for example:
+				## extensions = .foo:C .bar:Java
 				extensions = sec.split()
 				if extensions != []:
-					packageconfig[section] = extensions
+					for e in extensions:
+						extlang = e.split(':')
+						if len(extlang) != 2:
+							continue
+						(ext, lang) = extlang
+						## skip if the language of the extra extension is not
+						## in the list of currently supported languages
+						if not lang in languages:
+							continue
+						if packageconfig.has_key(section):
+							packageconfig[section].append((ext,lang))
+						else:
+							packageconfig[section] = [(ext,lang)]
 			except:
 				pass
 	if scanlicense:
@@ -1773,7 +1799,7 @@ def main(argv):
 			(package, version, filename, origin, filehash, batarchive) = i
 			if package != oldpackage:
 				oldres = []
-			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, masterdatabase, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldres, rewrites, batarchive)
+			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, masterdatabase, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldres, rewrites, batarchive, packageconfig)
 			if unpackres != None:
 				oldres = map(lambda x: x[2], unpackres)
 				oldpackage = package
