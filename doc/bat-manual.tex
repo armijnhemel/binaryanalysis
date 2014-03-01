@@ -1360,16 +1360,35 @@ If \texttt{cleanup} is set to \texttt{yes} (default) the temporary directory
 with unpacked sources will be removed. If \texttt{wipe} (default: \texttt{no})
 is set to \texttt{yes} all tables and indexes will first be dropped.
 
+Apart from the global section there are also package specific sections:
+
+\begin{verbatim}
+[bash]
+configtype = package
+extensions = .def:C
+\end{verbatim}
+
+The section name (in the example \texttt{bash}) is the name of the package and
+is used by \texttt{createdb.py} to match with a package name. The field
+\texttt{configtype} should be set to \texttt{package}. The only field is
+\texttt{extensions} which defines pairs of extensions and languages for files
+with package specific extensions that are interesting to scan. For example
+\texttt{bash} has quite a few strings that end up in binaries defined in its
+source tree that end on \texttt{.def}. These files are only interesting in the
+context of \texttt{bash}. An extension/language pair has a semicolon as a
+separator. Multiple pairs are separated by whitespace.
+
 \subsection{License extraction and copyright information extraction}
 
-\texttt{createdb.py} has a few additional commandline
-options. The most important is whether or not to also extract licenses from
+The configuration for \texttt{createdb.py} has a few options. The most important
+ones to consider are whether or not to also extract licenses and copyrights from
 the source code files.  License extraction is done using the Ninka license
-scanner and the Nomos license scanner from FOSSology. This option is disabled
+scanner and the Nomos license scanner from FOSSology. Copyright scanning is done
+using the copyright scanner from FOSSology. These options are disabled
 by default for a few reasons:
 
 \begin{itemize}
-\item extracting licenses costs significantly more time
+\item extracting licenses and copyrights costs significantly more time
 \item there are no packages for Fedora and Debian/Ubuntu for Ninka
 \end{itemize}
 
@@ -1377,21 +1396,6 @@ If you want to enable license extraction, you will have to install Ninka first
 and change one hardcoded path that points to the main Ninka script in
 \texttt{createdb.py}. You will also have to install FOSSology
 (for which packages are available for most distributions).
-
-License extraction is enabled by passing the \texttt{-l} to the script.
-Copyright extraction can be enabled by supplying \texttt{-c} to the script.
-
-If license extraction or copyright extraction is enabled the following additional
-parameters need to be supplied:
-
-\begin{itemize}
-\item \texttt{-r} or \texttt{--licensedb=} followed by the path for the
-licenses and copyright database
-\item \texttt{-n} or \texttt{--ninkacomments=} followed by the path for a
-caching database to store partial results from a Ninka scan, which can
-significantly speed up license scanning with Ninka. This is not needed if only
-copyright extraction is enabled.
-\end{itemize}
 
 \subsection{Configuring the ranking method}
 
