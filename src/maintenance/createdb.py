@@ -489,7 +489,7 @@ def computehash((filedir, filename, extension)):
 	h.update(scanfile.read())
 	scanfile.close()
 	filehash = h.hexdigest()
-	return (filedir, filename, filehash, extension)
+	return (filedir, filename, filehash, extension, extensions[extension])
 
 def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash):
 	osgen = os.walk(srcdir)
@@ -549,7 +549,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	## is modified by another tool, or deleted and needs to be
 	## regenerated.
 	for s in scanfile_result:
-		(path, filename, filehash, extension) = s
+		(path, filename, filehash, extension, language) = s
 		insertfiles.add((os.path.join(path[srcdirlen:],filename), filehash))
 
 		## if many versions of a single package are processed there is likely going to be
@@ -570,7 +570,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		if len(cursor.fetchall()) != 0:
 			#print >>sys.stderr, "duplicate %s %s: %s/%s" % (package, version, i[0], p)
 			continue
-		filestoscan.append((package, version, path, filename, extensions[extension], filehash, ninkaversion))
+		filestoscan.append((package, version, path, filename, language, filehash, ninkaversion))
 		if filehashes.has_key(filehash):
 			filehashes[filehash].append((path, filename))
 		else:
@@ -1471,6 +1471,8 @@ def main(argv):
 			# oops, something went wrong
 			print >>sys.stderr, e
 
+	packageconfig = {}
+
 	## search configuration to see if it is correct and/or not malformed
 	## first search for a section called 'extractconfig' with configtype = global
 	for section in config.sections():
@@ -1520,13 +1522,24 @@ def main(argv):
 				ninkacomments = config.get(section, 'ninkacommentsdb')
 			except:
 				ninkacomments = None
+		else:
+			sec = config.get(section, 'configtype')
+			if sec != 'package':
+				continue
+			try:
+				sec = config.get(section, 'extensions')
+				extensions = sec.split()
+				if extensions != []:
+					packageconfig[section] = extensions
+			except:
+				pass
 	if scanlicense:
 		license = True
-		## check if FOSSology is actually running
+		## check if PostgreSQL (for FOSSology) is actually running.
 		p2 = subprocess.Popen(["/usr/share/fossology/nomos/agent/nomos", "-h"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		(stanout, stanerr) = p2.communicate()
 		if "FATAL" in stanerr:
-			print >>sys.stderr, "ERROR: license scanning enabled, but FOSSology not running"
+			print >>sys.stderr, "ERROR: license scanning enabled, but PostgreSQL not running"
 			sys.exit(1)
 		if licensedb == None:
 			parser.error("License scanning enabled, but no path to licensing database supplied")
