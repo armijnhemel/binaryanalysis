@@ -1,3 +1,9 @@
+2014-03-01
+* add support for package specific extensions and process these files as well.
+Currently output from ctags is not yet processed since ctags looks at
+extensions to guess the language. Files should be temporarily be renamed first
+before being fed to ctags.
+
 2014-02-28
 * replace most (but not all) options in batchextractprogramstrings.py with a
 configuration file. The configuration options that are 'static' (location of
