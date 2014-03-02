@@ -83,7 +83,7 @@ BOTTLENECKS:
 11. split kernel module information off into separate database
 12. rename "programscans"/"leafscans" and settle on using one term
 13. refactor name squashing
-14. fix statistics piecharts to also include matched, but unassigned strings. Also take dupes into account.
+14. handle and report matched kernel function names
 15. use order of strings in ELF binaries to assign strings earlier/better
 16. fix support for Linux 2.4 kernel modules, as modinfo (at least on Fedora) no longer seems to work for 2.4 kernels
 17. run jcf-dump in chunks for Java class files whenever possible, preventing launching a jcf-dump process per class file

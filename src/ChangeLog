@@ -2,6 +2,12 @@
 * process patches with ctags to get (some) identifiers out of patches. This is
 not always complete since ctags depends on contextual information (like
 matching curly brackets) which might have gotten lost in the patch
+* keep better track of amount of unmatched lines and use this information for
+generating better piecharts with statistics about assignments
+* add number of matches in piecharts with statistics about assignments
+* keep better track of matched, but unassigned lines (too low score). Report
+these in the statistics piecharts and reports. Also fix a few errors: not all
+unmatched lines for the Linux kernel were stored
 
 2014-03-01
 * add support for package specific extensions and process these files as well.
