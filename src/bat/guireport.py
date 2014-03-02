@@ -164,16 +164,20 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, debug=False, env
 				functionmatches = functionmatches + "<h2>Versions per package</h2>" + versionhtml
 
 		if not stringsres == None:
-			if not (stringsres['extractedlines']) == 0 and not (stringsres['matchedlines']) == 0:
+			totalmatched = stringsres['matchedlines'] + stringsres['matchednonassignedlines']
+			if not (stringsres['extractedlines'] == 0 or totalmatched == 0):
 				matchesrows = '''
 <h2><a name="stringmatches" href="#stringmatches">String match statistics</a></h2>
 <table>
 <tr><td><b>Extracted lines</b></td><td>%d</td></tr>
 <tr><td><b>Matched lines</b></td><td>%d</td></tr>
+<tr><td><b>Matched lines (assigned)</b></td><td>%d</td></tr>
+<tr><td><b>Matched lines (unassigned)</b></td><td>%d</td></tr>
+<tr><td><b>Unmatched lines</b></td><td>%d</td></tr>
 <tr><td><b>Match percentage</b></td><td>%f%%</td></tr>
 </table>
                                                 '''
-				matchesrows = matchesrows % (stringsres['extractedlines'], stringsres['matchedlines'], (float(stringsres['matchedlines'])/stringsres['extractedlines']*100))
+				matchesrows = matchesrows % (stringsres['extractedlines'], totalmatched, stringsres['matchedlines'], stringsres['matchednonassignedlines'], stringsres['unmatchedlines'], (float(totalmatched)/stringsres['extractedlines']*100))
 				if len(stringsres['reports']) != 0:
 					versionhtml = ""
 					## nested table, urgghhhh

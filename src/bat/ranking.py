@@ -347,7 +347,10 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 				if stanout == '':
 					lines = []
 				else:
-					lines = stanout.split("\n")
+					if stanout.endswith('\n'):
+						lines = stanout[:-1].split("\n")
+					else:
+						lines = stanout.split("\n")
 		elif language == 'Java':
 			## TODO: check here if there are caches already or not. If there are none it makes
 			## no sense to continue.
@@ -1008,8 +1011,10 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 
 	matchedlines = 0
 	unmatchedlines = 0
+	matchednonassignedlines = 0
 	oldline = None
 	matched = False
+	matchednonassigned = False
 
 	## TODO: this should be done per language
 	if scanenv.has_key('BAT_SCORE_CACHE'):
@@ -1025,11 +1030,14 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 		## is a strong indication.
 		if line == oldline:
 			if matched:
-				matchedlines = matchedlines + 1
+				matchedlines += 1
+			elif matchednonassigned:
+				matchednonassignedlines += 1
 			else:
 				unmatchedlines += 1
 			continue
 		matched = False
+		matchednonassigned = False
 		oldline = line
 		kernelfunctionmatched = False
 		## skip empty lines
@@ -1048,9 +1056,9 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 			## cut off value that was defined.
 			if scoreres[1] < scorecutoff/100:
 				lenStringsFound = lenStringsFound + len(line)
-				matched = True
-				matchedlines = matchedlines + 1
 				nonUniqueMatchLines.append(line)
+				matchednonassignedlines += 1
+				matchednonassigned = True
 				continue
 
 		## if scoreres is None it could still be something else like a kernel function, or a
@@ -1067,6 +1075,10 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 				if len(kernelres) != 0:
 					kernelfuncres.append(line)
 					kernelfunctionmatched = True
+					## TODO: find out what to do with this, mark as "unmatched" for now
+					unmatched.append(line)
+					unmatchedlines += 1
+					continue
 
 		res = []
 		## then see if there is anything in the cache at all
@@ -1086,6 +1098,8 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 			if matchres != None:
 				scanline = line.split('>', 1)[1]
 				if len(scanline) < stringcutoff:
+					unmatched.append(line)
+					unmatchedlines += 1
 					continue
 				res = conn.execute("select package, filename FROM stringscache WHERE programstring=?", (scanline,)).fetchall()
 				if len(res) != 0:
@@ -1097,6 +1111,8 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 						if scanline.startswith(" "):
 							scanline = scanline[1:]
 						if len(scanline) < stringcutoff:
+							unmatched.append(line)
+							unmatchedlines += 1
 							continue
 						res = conn.execute("select package, filename FROM stringscache WHERE programstring=?", (scanline,)).fetchall()
 						if len(res) != 0:
@@ -1110,6 +1126,8 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 				if matchres != None:
 					scanline = line[1:]
 					if len(scanline) < stringcutoff:
+						unmatched.append(line)
+						unmatchedlines += 1
 						continue
 					res = conn.execute("select package, filename FROM stringscache WHERE programstring=?", (scanline,)).fetchall()
 					if len(res) != 0:
@@ -1123,6 +1141,8 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 						if scanline.startswith(" "):
 							scanline = scanline[1:]
 						if len(scanline) < stringcutoff:
+							unmatched.append(line)
+							unmatchedlines += 1
 							continue
 						res = conn.execute("select package, filename FROM stringscache WHERE programstring=?", (scanline,)).fetchall()
 						if len(res) != 0:
@@ -1137,6 +1157,7 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 		if len(res) == 0 and not kernelfunctionmatched:
 			unmatched.append(line)
 			unmatchedlines += 1
+			continue
 		if len(res) != 0:
 			## Assume:
 			## * database has no duplicates
@@ -1148,10 +1169,6 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 			## Add the length of the string to lenStringsFound.
 			## We're not really using it, except for reporting.
 			lenStringsFound = lenStringsFound + len(line)
-			matched = True
-
-			## for statistics it's nice to see how many lines were matched
-			matchedlines = matchedlines + 1
 
 			print >>sys.stderr, "\n%d matches found for <(|%s|)> in %s" % (len(res), line, path)
 
@@ -1191,7 +1208,9 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 					## so the score would be very close to 0. The largest value
 					## is sys.maxint, so use that one. The score will be
 					## small enough...
-					score = len(line) / sys.maxint
+					#score = len(line) / sys.maxint
+					matchednonassigned = True
+					matchednonassignedlines += 1
 					continue
 
 				if score > scorecutoff:
@@ -1201,6 +1220,8 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 						else:
 							nonUniqueMatches[packagename].append(line)
 				else:
+					matchednonassigned = True
+					matchednonassignedlines += 1
 					continue
 
 				## After having computed a score determine if the files
@@ -1239,6 +1260,10 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 					uniqueMatches[package] = [(line, [])]
 				else:
 					uniqueMatches[package].append((line, []))
+			matched = True
+
+			## for statistics it's nice to see how many lines were matched
+			matchedlines += 1
 	if lenlines != 0:
 		pass
 		#print >>sys.stderr, "matchedlines: %d for %s" % (matchedlines, path)
@@ -1429,7 +1454,7 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 	'''
 	if matchedlines == 0 and unmatched == []:
 		return
-	return {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched, 'scores': scores, 'unmatchedlines': unmatchedlines}
+	return {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched, 'scores': scores, 'unmatchedlines': unmatchedlines, 'matchednonassignedlines': matchednonassignedlines}
 
 
 def xmlprettyprint(leafreports, root, envvars=None):

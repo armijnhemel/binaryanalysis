@@ -136,6 +136,10 @@ def extractpickles((filehash, pickledir, topleveldir, unpacktempdir, minpercenta
 			statpielabels.append("unmatched (%d)" % res['unmatchedlines'])
 			statpiedata.append(res['unmatchedlines'])
 
+		if res['matchednonassignedlines'] != 0:
+			statpielabels.append("matched, not assigned (%d)" % res['matchednonassignedlines'])
+			statpiedata.append(res['matchednonassignedlines'])
+
 		assignedoruniquematches = 0
 		for j in res['nonUniqueAssignments']:
 			statpielabels.append("%s - assigned (%d)" % (j, res['nonUniqueAssignments'][j]))
