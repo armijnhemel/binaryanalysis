@@ -124,6 +124,8 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, processors, debug=Fal
 def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 	rankres = {}
 	matchedlines = 0
+	matchednonassignedlines = 0
+	unmatchedlines = 0
 	reports = []
 	extractedlines = 0
 	nonUniqueAssignments = {}
@@ -193,6 +195,8 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 		if stringmatches != None:
 			aggregated = True
 			matchedlines = matchedlines + stringmatches['matchedlines']
+			matchednonassignedlines = matchednonassignedlines + stringmatches['matchednonassignedlines']
+			unmatchedlines = unmatchedlines + stringmatches['unmatchedlines']
 			extractedlines = extractedlines + stringmatches['extractedlines']
 			if stringmatches['unmatched'] != []:
 				unmatched = unmatched + stringmatches['unmatched']
@@ -303,6 +307,8 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 
 	rankres['unmatched'] = list(set(unmatched))
 	rankres['matchedlines'] = matchedlines
+	rankres['matchednonassignedlines'] = matchednonassignedlines
+	rankres['unmatchedlines'] = unmatchedlines
 	rankres['extractedlines'] = extractedlines
 	rankres['nonUniqueAssignments'] = nonUniqueAssignments
 	rankres['nonUniqueMatches'] = nonUniqueMatches
