@@ -712,7 +712,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	extracted_results = pool.map(extractstrings, filestoscan, 1)
 
 	for extractres in extracted_results:
-		(filehash, language, sqlres, moduleres, results) = extractres
+		(filehash, language, origlanguage, sqlres, moduleres, results) = extractres
 		for res in sqlres:
 			(pstring, linenumber) = res
 			cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (pstring, filehash, language, linenumber))
@@ -941,12 +941,15 @@ def licensefossology((packages)):
 ## TODO: get rid of ninkaversion before we call this method
 ## TODO: process more files at once to reduce overhead of calling ctags
 def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
+	newlanguage = language
+
 	if language == 'patch':
 		## The file is a patch/diff file. Take the following steps to deal with it:
 		## 1. find out what kind of diff file it is. Stick to dealing with a unified diff file for now
 		## 2. find out how many files are inside the diff
 		## 3. find out which files these manipulate and if these would have been processed
 		## 4. find out which lines are added to the files
+		## 5. set newlanguage to the orginal language of the patched file, if possible
 		patchfile = open(os.path.join(i,p))
 		patchcontent = patchfile.read()
 		patchfile.close()
@@ -955,7 +958,7 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 		unified = False
 
 		## keep track of how many patches are in the file
-		unifiedpatches = 0
+		#unifiedpatches = 0
 		addlines = []
 		unifiedmin = False
 		unifiedplus = False
@@ -1001,12 +1004,16 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 
 				process = False
 				newfile = os.path.basename(patchsplits[1])
+
+				## check whether or not the file is an interesting file. TODO: fix for
+				## of patches for package specific extensions
 				if newfile == oldfile:
 					## easy case since both file names have the same name.
 					p_nocase = oldfile.lower()
 					for extension in extensions.keys():
 						if (p_nocase.endswith(extension)) and not p_nocase == extension:
 							process = True
+							newlanguage = extensions[extension]
 							break
 				else:
 					## either oldfile or newfile needs to match
@@ -1014,12 +1021,14 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 					for extension in extensions.keys():
 						if (p_nocase.endswith(extension)) and not p_nocase == extension:
 							process = True
+							newlanguage = extensions[extension]
 							break
 					if not process:
 						p_nocase = newfile.lower()
 						for extension in extensions.keys():
 							if (p_nocase.endswith(extension)) and not p_nocase == extension:
 								process = True
+								newlanguage = extensions[extension]
 								break
 
 				if not process:
@@ -1061,9 +1070,9 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 	## section called __ksymtab__strings
 	# (name, linenumber, type)
 
-	if (language in ['C', 'C#', 'Java', 'PHP', 'Python']):
+	if (newlanguage in ['C', 'C#', 'Java', 'PHP', 'Python']):
 
-		p2 = subprocess.Popen(["ctags", "-f", "-", "-x", os.path.join(i, p)], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+		p2 = subprocess.Popen(["ctags", "-f", "-", "-x", '--language-force=%s' % newlanguage, os.path.join(i, p)], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 		(stanout2, stanerr2) = p2.communicate()
 		if p2.returncode != 0:
 			pass
@@ -1075,54 +1084,61 @@ def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
 				csplit = res.strip().split()
 				if filter(lambda x: x not in string.printable, csplit[0]) != "":
 					continue
-				if language == 'C':
+				identifier = csplit[0]
+				tagtype = csplit[1]
+				linenumber = int(csplit[2])
+				if language == 'patch':
+					if not linenumber in addlines:
+						continue
+				if newlanguage == 'C':
 					if package == 'linux':
 						## for the Linux kernel the variable names are sometimes
 						## stored in a special ELF section __ksymtab_strings
-						if csplit[1] == 'variable':
+						if tagtype == 'variable':
 							if "EXPORT_SYMBOL_GPL" in csplit[4]:
-								results.add((csplit[0], int(csplit[2]), 'gplkernelsymbol'))
+								results.add((identifier, linenumber, 'gplkernelsymbol'))
 							elif "EXPORT_SYMBOL" in csplit[4]:
-								results.add((csplit[0], int(csplit[2]), 'kernelsymbol'))
-						elif csplit[1] == 'function':
-							results.add((csplit[0], int(csplit[2]), 'kernelfunction'))
+								results.add((identifier, linenumber, 'kernelsymbol'))
+						elif tagtype == 'function':
+							results.add((identifier, linenumber, 'kernelfunction'))
 					else:
-						if csplit[1] == 'variable':
+						if tagtype == 'variable':
 							if len(csplit) < 5:
-								results.add((csplit[0], int(csplit[2]), 'variable'))
+								results.add((identifier, linenumber, 'variable'))
 							else:
 								if "EXPORT_SYMBOL_GPL" in csplit[4]:
-									results.add((csplit[0], int(csplit[2]), 'gplkernelsymbol'))
+									results.add((identifier, linenumber, 'gplkernelsymbol'))
 								elif "EXPORT_SYMBOL" in csplit[4]:
-									results.add((csplit[0], int(csplit[2]), 'kernelsymbol'))
+									results.add((identifier, linenumber, 'kernelsymbol'))
 								else:
-									results.add((csplit[0], int(csplit[2]), 'variable'))
-						elif csplit[1] == 'function':
-							results.add((csplit[0], int(csplit[2]), 'function'))
-				if language == 'C#':
+									results.add((identifier, linenumber, 'variable'))
+						elif tagtype == 'function':
+							results.add((identifier, linenumber, 'function'))
+				if newlanguage == 'C#':
 					for i in ['method']:
-						if csplit[1] == i:
-							results.add((csplit[0], int(csplit[2]), i))
-				if language == 'Java':
+						if tagtype == i:
+							results.add((identifier, linenumber, i))
+				if newlanguage == 'Java':
 					for i in ['method', 'class', 'field']:
-						if csplit[1] == i:
-							results.add((csplit[0], int(csplit[2]), i))
-				if language == 'PHP':
+						if tagtype == i:
+							results.add((identifier, linenumber, i))
+				if newlanguage == 'PHP':
 					## ctags does not nicely handle comments, so sometimes there are
 					## false positives.
 					for i in ['variable', 'function', 'class']:
-						if csplit[1] == i:
-							results.add((csplit[0], int(csplit[2]), i))
-				if language == 'Python':
+						if tagtype == i:
+							results.add((identifier, linenumber, i))
+				if newlanguage == 'Python':
 					## TODO: would be nice to store members with its surrounding class
 					for i in ['variable', 'member', 'function', 'class']:
-						if csplit[0] == '__init__':
+						if identifier == '__init__':
 							break
-						if csplit[1] == i:
-							results.add((csplit[0], int(csplit[2]), i))
+						if tagtype == i:
+							results.add((identifier, linenumber, i))
 							break
 
-	return (filehash, language, sqlres, moduleres, results)
+	## return all results, as well as the original language, which is important in the case of 'patch'
+	return (filehash, newlanguage, language, sqlres, moduleres, results)
 
 ## Extract strings using xgettext. Apparently this does not always work correctly. For example for busybox 1.6.1:
 ## $ xgettext -a -o - fdisk.c
