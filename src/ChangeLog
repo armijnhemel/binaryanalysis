@@ -1,3 +1,8 @@
+2014-03-02
+* process patches with ctags to get (some) identifiers out of patches. This is
+not always complete since ctags depends on contextual information (like
+matching curly brackets) which might have gotten lost in the patch
+
 2014-03-01
 * add support for package specific extensions and process these files as well.
 Currently output from ctags is not yet processed since ctags looks at
