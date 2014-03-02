@@ -1007,6 +1007,7 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 	print >>sys.stderr, "total extracted strings for %s: %d" %(path, lenlines)
 
 	matchedlines = 0
+	unmatchedlines = 0
 	oldline = None
 	matched = False
 
@@ -1025,6 +1026,8 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 		if line == oldline:
 			if matched:
 				matchedlines = matchedlines + 1
+			else:
+				unmatchedlines += 1
 			continue
 		matched = False
 		oldline = line
@@ -1133,6 +1136,7 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 		## nothing in the cache
 		if len(res) == 0 and not kernelfunctionmatched:
 			unmatched.append(line)
+			unmatchedlines += 1
 		if len(res) != 0:
 			## Assume:
 			## * database has no duplicates
@@ -1425,7 +1429,7 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 	'''
 	if matchedlines == 0 and unmatched == []:
 		return
-	return {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched, 'scores': scores}
+	return {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched, 'scores': scores, 'unmatchedlines': unmatchedlines}
 
 
 def xmlprettyprint(leafreports, root, envvars=None):

@@ -132,25 +132,23 @@ def extractpickles((filehash, pickledir, topleveldir, unpacktempdir, minpercenta
 		statpiedata = []
 		statpielabels = []
 
+		if len(res['unmatched']) != 0:
+			statpielabels.append("unmatched (%d)" % res['unmatchedlines'])
+			statpiedata.append(res['unmatchedlines'])
+
 		assignedoruniquematches = 0
 		for j in res['nonUniqueAssignments']:
-			statpielabels.append("%s - assigned" % j)
+			statpielabels.append("%s - assigned (%d)" % (j, res['nonUniqueAssignments'][j]))
 			statpiedata.append(res['nonUniqueAssignments'][j])
 			assignedoruniquematches += res['nonUniqueAssignments'][j]
 		for j in res['reports']:
 			(rank, package, unique, percentage, packageversions, packagelicenses) = j
 			if len(unique) != 0:
-				statpielabels.append("%s - unique" % package)
+				statpielabels.append("%s - unique (%d)" % (package,len(unique)))
 				statpiedata.append(len(unique))
 				assignedoruniquematches += len(unique)
 
 		## TODO: add information about matched but unassigned
-		if len(res['unmatched']) != 0:
-			statpielabels.append("unmatched")
-			## res['unmatched'] has duplicates removed, so not very reliable
-			unmatched = res['extractedlines'] - res['matchedlines']
-			statpiedata.append(unmatched)
-
 		## now dump the data to a pickle
 		if statpielabels != [] and statpiedata != []:
 			tmppickle = tempfile.mkstemp(dir=unpacktempdir)
