@@ -137,16 +137,16 @@ def extractpickles((filehash, pickledir, topleveldir, unpacktempdir, minpercenta
 			statpiedata.append(res['unmatchedlines'])
 
 		if res['matchednonassignedlines'] != 0:
-			statpielabels.append("matched, not assigned (%d)" % res['matchednonassignedlines'])
+			statpielabels.append("matched, not\nassigned (%d)" % res['matchednonassignedlines'])
 			statpiedata.append(res['matchednonassignedlines'])
 
 		if res['matchednotclonelines'] != 0:
-			statpielabels.append("matched, not clones (%d)" % res['matchednotclonelines'])
+			statpielabels.append("matched, not\nclones (%d)" % res['matchednotclonelines'])
 			statpiedata.append(res['matchednotclonelines'])
 
 		assignedoruniquematches = 0
 		for j in res['nonUniqueAssignments']:
-			statpielabels.append("%s - assigned (%d)" % (j, res['nonUniqueAssignments'][j]))
+			statpielabels.append("%s -\nassigned (%d)" % (j, res['nonUniqueAssignments'][j]))
 			statpiedata.append(res['nonUniqueAssignments'][j])
 			assignedoruniquematches += res['nonUniqueAssignments'][j]
 		for j in res['reports']:
