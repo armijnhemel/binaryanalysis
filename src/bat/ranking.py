@@ -1079,9 +1079,6 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 				if len(kernelres) != 0:
 					kernelfuncres.append(line)
 					kernelfunctionmatched = True
-					## TODO: find out what to do with this, mark as "unmatched" for now
-					unmatched.append(line)
-					unmatchedlines += 1
 					continue
 
 		res = []
@@ -1459,7 +1456,14 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 	'''
 	if matchedlines == 0 and unmatched == []:
 		return
-	return {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched, 'scores': scores, 'unmatchedlines': unmatchedlines, 'matchednonassignedlines': matchednonassignedlines, 'matchednotclonelines': matchednotclonelines}
+
+	if scankernelfunctions:
+		matchedlines = matchedlines - len(kernelfuncres)
+		lenlines = lenlines - len(kernelfuncres)
+	returnres = {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched, 'scores': scores, 'unmatchedlines': unmatchedlines, 'matchednonassignedlines': matchednonassignedlines, 'matchednotclonelines': matchednotclonelines}
+	if scankernelfunctions:
+		returnres['kernelfunctions'] = kernelfuncres
+	return returnres
 
 
 def xmlprettyprint(leafreports, root, envvars=None):
