@@ -1462,7 +1462,8 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 		lenlines = lenlines - len(kernelfuncres)
 	returnres = {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched, 'scores': scores, 'unmatchedlines': unmatchedlines, 'matchednonassignedlines': matchednonassignedlines, 'matchednotclonelines': matchednotclonelines}
 	if scankernelfunctions:
-		returnres['kernelfunctions'] = kernelfuncres
+		if kernelfuncres != []:
+			returnres['kernelfunctions'] = kernelfuncres
 	return returnres
 
 
