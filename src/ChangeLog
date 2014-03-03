@@ -1,3 +1,7 @@
+2014-03-03
+* include statistics piecharts in reports in GUI
+* add more data to statistics piecharts
+
 2014-03-02
 * process patches with ctags to get (some) identifiers out of patches. This is
 not always complete since ctags depends on contextual information (like
