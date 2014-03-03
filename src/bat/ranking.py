@@ -1011,10 +1011,12 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 
 	matchedlines = 0
 	unmatchedlines = 0
+	matchednotclonelines = 0
 	matchednonassignedlines = 0
 	oldline = None
 	matched = False
 	matchednonassigned = False
+	matchednotclones = False
 
 	## TODO: this should be done per language
 	if scanenv.has_key('BAT_SCORE_CACHE'):
@@ -1033,6 +1035,8 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 				matchedlines += 1
 			elif matchednonassigned:
 				matchednonassignedlines += 1
+			elif matchednotclones:
+				matchednotclonelines += 1
 			else:
 				unmatchedlines += 1
 			continue
@@ -1228,6 +1232,7 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 				## the string was found in in are all called the same.
 				## filenames {name of file: { name of package: 1} }
 				if filter(lambda x: len(filenames[x]) != 1, filenames.keys()) == []:
+					matchednotclonelines += 1
 					for fn in filenames:
 						## The filename fn containing the matched string can only
 						## be found in one package.
@@ -1236,6 +1241,8 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 						## or 'bar.c' in foo (if any).
 						fnkey = filenames[fn][0]
 						nonUniqueScore[fnkey] = nonUniqueScore.get(fnkey,0) + score
+					matchednotclones = True
+					continue
 				else:
 					for fn in filenames:
 						## There are multiple packages in which the same
@@ -1266,8 +1273,6 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 			matchedlines += 1
 	if lenlines != 0:
 		pass
-		#print >>sys.stderr, "matchedlines: %d for %s" % (matchedlines, path)
-		#print >>sys.stderr, matchedlines/(lenlines * 1.0)
 
 	del lines
 
@@ -1454,7 +1459,7 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 	'''
 	if matchedlines == 0 and unmatched == []:
 		return
-	return {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched, 'scores': scores, 'unmatchedlines': unmatchedlines, 'matchednonassignedlines': matchednonassignedlines}
+	return {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched, 'scores': scores, 'unmatchedlines': unmatchedlines, 'matchednonassignedlines': matchednonassignedlines, 'matchednotclonelines': matchednotclonelines}
 
 
 def xmlprettyprint(leafreports, root, envvars=None):

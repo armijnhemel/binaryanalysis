@@ -164,20 +164,23 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, debug=False, env
 				functionmatches = functionmatches + "<h2>Versions per package</h2>" + versionhtml
 
 		if not stringsres == None:
-			totalmatched = stringsres['matchedlines'] + stringsres['matchednonassignedlines']
+			totalmatched = stringsres['matchedlines'] + stringsres['matchednonassignedlines'] + stringsres['matchednotclonelines']
 			if not (stringsres['extractedlines'] == 0 or totalmatched == 0):
 				matchesrows = '''
 <h2><a name="stringmatches" href="#stringmatches">String match statistics</a></h2>
 <table>
 <tr><td><b>Extracted lines</b></td><td>%d</td></tr>
-<tr><td><b>Matched lines</b></td><td>%d</td></tr>
-<tr><td><b>Matched lines (assigned)</b></td><td>%d</td></tr>
+<tr><td><b>Matched lines (total)</b></td><td>%d</td></tr>
+<tr><td><b>Matched lines (assigned and unique)</b></td><td>%d</td></tr>
+<tr><td><b>Matched lines (not clones)</b></td><td>%d</td></tr>
 <tr><td><b>Matched lines (unassigned)</b></td><td>%d</td></tr>
 <tr><td><b>Unmatched lines</b></td><td>%d</td></tr>
 <tr><td><b>Match percentage</b></td><td>%f%%</td></tr>
 </table>
                                                 '''
-				matchesrows = matchesrows % (stringsres['extractedlines'], totalmatched, stringsres['matchedlines'], stringsres['matchednonassignedlines'], stringsres['unmatchedlines'], (float(totalmatched)/stringsres['extractedlines']*100))
+				matchesrows = matchesrows % (stringsres['extractedlines'], totalmatched, stringsres['matchedlines'], stringsres['matchednotclonelines'], stringsres['matchednonassignedlines'], stringsres['unmatchedlines'], (float(totalmatched)/stringsres['extractedlines']*100))
+				## TODO: check if statpiechart.png exists
+				matchesrows = matchesrows + "<p><img src=\"%s\"/></p>" % ("%s/%s-statpiechart.png" % (imagesdir, filehash))
 				if len(stringsres['reports']) != 0:
 					versionhtml = ""
 					## nested table, urgghhhh
