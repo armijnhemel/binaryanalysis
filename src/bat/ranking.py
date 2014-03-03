@@ -509,6 +509,10 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 				os.unlink(tmpfile[1])
 		if res == None and dynamicRes == {} and variablepvs == {}:
 			return None
+		if res != None:
+			if res.has_key('kernelfunctions'):
+				dynamicRes['kernelfunctions'] = copy.deepcopy(res['kernelfunctions'])
+				del res['kernelfunctions']
 		return (['ranking'], (res, dynamicRes, variablepvs, language))
 
 	except Exception, e:
