@@ -1454,9 +1454,12 @@ def main(argv):
 	parser.add_option("-b", "--blacklist", action="store", dest="blacklist", help="path to blacklist file", metavar="FILE")
 	parser.add_option("-f", "--filedir", action="store", dest="filedir", help="path to directory containing files to unpack", metavar="DIR")
 	parser.add_option("-t", "--rewritelist", action="store", dest="rewritelist", help="path to rewrite list", metavar="FILE")
+	#parser.add_option("-u", "--updatelicense", action="store_true", dest="updatelicense", help="update licenses", default=False)
 	parser.add_option("-v", "--verify", action="store_true", dest="verify", help="verify files, don't process (default: false)")
 	(options, args) = parser.parse_args()
 
+	## placeholder for now
+	options.updatelicense = False
 
 	if options.cfg == None:
 		parser.error("Specify configuration file")
@@ -1630,8 +1633,19 @@ def main(argv):
 		licenseconn = sqlite3.connect(licensedb, check_same_thread = False)
 		licensec = licenseconn.cursor()
 
+	if scanlicense and options.updatelicense:
+		try:
+			licensec.execute('''drop table licenses''')
+			licenseconn.commit()
+		except:
+			pass
+		try:
+			ninkac.execute('''drop table ninkacomments''')
+			ninkaconn.commit()
+		except:
+			pass
 	if wipe:
-		## drop all tables and all the indexes. Probably this should not be used...
+		## drop all tables and all the indexes. Probably this option should not be used...
 		c.execute("select name from sqlite_master where type='table'")
 		tables = c.fetchall()
 		if len(tables) != 0:
