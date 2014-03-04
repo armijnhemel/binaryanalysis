@@ -40,7 +40,6 @@ database creation:
 * handle embedded archives (ZIP files, tarballs, etc.)
 * handle patches (both normal and unified)
 * import licensing information from SPDX files
-* rewrite ctags and xgettext invocations to scan multiple files at once to reduce overhead of calling ctags and xgettext
 * extract more information from Linux kernel, including values from __ATTR and friends, as far as possible
 
 ranking:
@@ -89,3 +88,4 @@ BOTTLENECKS:
 17. run jcf-dump in chunks for Java class files whenever possible, preventing launching a jcf-dump process per class file
 18. update bat-fsck.cramfs to newer version of util-linux
 19. better report non unique matched strings which are not clones
+20. store order of generation of BAT archives, since this order is important when processing BAT archives by createdb.py
