@@ -534,12 +534,12 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		scanfile_result = []
 		new_scanfiles = []
 		for i in scanfiles:
-			(scanfilesdir, scanfilesfile, scanfileextension) = i
+			(scanfilesdir, scanfilesfile, scanfileextension, language) = i
 			if filetohash.has_key(os.path.join(scanfilesdir[srcdirlen:], scanfilesfile)):
 				scanhash = filetohash[(os.path.join(scanfilesdir[srcdirlen:], scanfilesfile))]
-				scanfile_result.append((scanfilesdir, scanfilesfile, scanhash, scanfileextension))
+				scanfile_result.append((scanfilesdir, scanfilesfile, scanhash, scanfileextension, language))
 			else:
-				new_scanfiles.append((scanfilesdir, scanfilesfile, scanfileextension))
+				new_scanfiles.append((scanfilesdir, scanfilesfile, scanfileextension, language))
 		## sanity checks in case the MANIFEST file is incomplete
 		if new_scanfiles != []:
 			scanfile_result += filter(lambda x: x != None, pool.map(computehash, new_scanfiles, 1))
