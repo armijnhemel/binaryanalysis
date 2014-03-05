@@ -38,7 +38,7 @@ Also needed is a current database with processed packages.
 '''
 
 import sys, os, magic, string, re, subprocess, shutil, stat, multiprocessing
-import tempfile, bz2, tarfile, gzip
+import tempfile, bz2, tarfile, gzip, datetime
 from optparse import OptionParser
 import sqlite3, hashlib
 
@@ -226,7 +226,7 @@ def computehasharchive((filedir, checksums, version, filename)):
 ## 5. create text file with metadata
 ## 6. pack archive
 ## 7. pack archive + metadata into BAT archive
-def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origin):
+def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origin, outfile):
 	## keep a dictionary of checksum + version to avoid lookups
 	scanned_files = {}
 	## first sanity check: is there actually more than one version so a proper diff can be made?
@@ -280,7 +280,8 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 		print "processing: %s" % version
 		sys.stdout.flush()
 		## unpack the archive in a temporary directory
-		unpackdir = unpack(filedir, archivefilename)
+		#unpackdir = unpack(filedir, archivefilename)
+		unpackdir = unpack(filedir, archivefilename, '/gpl/tmp')
 		if unpackdir == None:
 			continue
 
@@ -305,6 +306,28 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 
 		packfiles = set()
 		skipfiles = set()
+
+		'''
+		## first filter out the uninteresting files
+		scanfiles = filter(lambda x: x != None, pool.map(filterfiles, scanfiles, 1))
+		## compute the hashes in parallel, or if available, use precomputed SHA256 from the MANIFEST file
+		if filetohash != {}:
+			scanfile_result = []
+			new_scanfiles = []
+			for i in scanfiles:
+				(scanfilesdir, scanfilesfile, scanfileextension) = i
+				if filetohash.has_key(os.path.join(scanfilesdir[srcdirlen:], scanfilesfile)):
+					scanhash = filetohash[(os.path.join(scanfilesdir[srcdirlen:], scanfilesfile))]
+					scanfile_result.append((scanfilesdir, scanfilesfile, scanhash, scanfileextension))
+				else:
+					new_scanfiles.append((scanfilesdir, scanfilesfile, scanfileextension))
+			## sanity checks in case the MANIFEST file is incomplete
+			if new_scanfiles != []:
+				scanfile_result += filter(lambda x: x != None, pool.map(computehash, new_scanfiles, 1))
+		else:
+			scanfile_result = filter(lambda x: x != None, pool.map(computehash, scanfiles, 1))
+		'''
+
 		scanfile_res = pool.map(computehash, scanfiles, 1)
 		scanfile_result = filter(lambda x: x != None, scanfile_res)
 		packfiles = set(filter(lambda x: x[2] == None, scanfile_result))
@@ -381,6 +404,7 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 			batfile.write("%s\t%s\t%s\n" % (os.path.join(origpath[lenunpackdir:], origfile), checksum, firstoccur))
 		batfile.write("## END FILES\n")
 		batfile.write("\n")
+		## TODO: add checksums of packfiles
 		batfile.write("## START EXTENSIONS\n")
 		batfile.write("## EXTENSIONS OF UNPROCESSED FILES (LOWER CASED)\n")
 		batfile.write(reduce(lambda x,y: "%s %s" %(x, y), storeexts))
@@ -405,6 +429,8 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 		shutil.rmtree(packdir)
 		shutil.rmtree(unpackdir)
 		processed.append(version)
+		outfile.write('%s-%s-%s-bat.tar.bz2' % (package,version,origin))
+		outfile.write("\n")
 	cursor.close()
 	conn.close()
 	return res
@@ -456,7 +482,10 @@ def main(argv):
 		else:
 			origins[origin] = [tuple(p[0:3])]
 
+	scandate = datetime.datetime.utcnow()
 	pool = multiprocessing.Pool()
+	outputfile = os.path.join(options.outdir, 'ARCHIVELIST-%s' % scandate.isoformat())
+	outfile = open(outputfile, 'w')
 	for o in origins.keys():
 		packages = {}
 		for p in origins[o]:
@@ -466,8 +495,9 @@ def main(argv):
 			else:
 				packages[package] = [(version,filename)]
 		for p in packages.keys():
-			packagewrite(options.db, options.filedir, options.outdir, pool, p, packages[p], o)
+			packagewrite(options.db, options.filedir, options.outdir, pool, p, packages[p], o, outfile)
 	pool.terminate()
+	outfile.close()
 
 if __name__ == "__main__":
 	main(sys.argv)
