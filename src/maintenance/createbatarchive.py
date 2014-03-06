@@ -128,7 +128,6 @@ def computehash((path, filename)):
 	p_nocase = filename.lower()
 	process = False
 	ext = p_nocase.split('.')[-1]
-	sys.stdout.flush()
 	for extension in extensions.keys():
 		if (p_nocase.endswith(extension)) and not p_nocase == extension:
 			process = True
