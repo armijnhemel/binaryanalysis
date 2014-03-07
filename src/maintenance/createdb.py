@@ -280,6 +280,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 		inheader = False
 		infiles = False
 		inextensions = False
+		emptyarchive = True
 		for i in manifestlines:
 			if "START META" in i:
 				inheader = True
@@ -310,6 +311,10 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 					filename = i.split(':')[1].strip()
 				elif i.startswith('sha256'):
 					filehash = i.split(':')[1].strip()
+			if infiles:
+				## if there is one valid line the 'FILES' section the archive is not empty
+				emptyarchive = False
+
 	print >>sys.stdout, "processing", filename
 	sys.stdout.flush()
 
@@ -406,11 +411,14 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 						filetohash[fileentry] = hashentry
 
 	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash, packageconfig)
-	if sqlres != []:
-		## Add the file to the database: name of archive, sha256, packagename and version
-		## This is to be able to just update the database instead of recreating it.
-		c.execute('''insert into processed (package, version, filename, origin, sha256) values (?,?,?,?,?)''', (package, version, filename, origin, filehash))
-		conn.commit()
+	if sqlres != None:
+		if sqlres != []:
+			## Add the file to the database: name of archive, sha256, packagename and version
+			## This is to be able to just update the database instead of recreating it.
+			c.execute('''insert into processed (package, version, filename, origin, sha256) values (?,?,?,?,?)''', (package, version, filename, origin, filehash))
+		elif batarchive and not emptyarchive:
+				c.execute('''insert into processed (package, version, filename, origin, sha256) values (?,?,?,?,?)''', (package, version, filename, origin, filehash))
+	conn.commit()
 	c.close()
 	conn.close()
 	if cleanup:
@@ -785,38 +793,39 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, i[0], i[1]))
 	conn.commit()
 
-	if not os.path.exists(os.path.join(srcdir, "MANIFEST.BAT")):
-		return
-	manifest = os.path.join(srcdir, "MANIFEST.BAT")
-	manifestfile = open(manifest)
-	manifestlines = manifestfile.readlines()
-	manifestfile.close()
-	inheader = False
-	infiles = False
-	inextensions = False
-	for i in manifestlines:
-		if "START META" in i:
-			inheader = True
-			continue
-		if "END META" in i:
-			inheader = False
-			continue
-		if "START FILES" in i:
-			infiles = True
-			continue
-		if "END FILES" in i:
-			infiles = False
-			continue
-		if "START EXTENSIONS" in i:
-			inextensions = True
-			continue
-		if "END EXTENSIONS" in i:
-			inextensions = False
-			continue
-		if infiles:
-			(archivepath, archivechecksum, archiveversion) = i.strip().split('\t')
-			cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, archivepath, archivechecksum))
-	conn.commit()
+	if batarchive:
+		if not os.path.exists(os.path.join(srcdir, "MANIFEST.BAT")):
+			return
+		manifest = os.path.join(srcdir, "MANIFEST.BAT")
+		manifestfile = open(manifest)
+		manifestlines = manifestfile.readlines()
+		manifestfile.close()
+		inheader = False
+		infiles = False
+		inextensions = False
+		for i in manifestlines:
+			if "START META" in i:
+				inheader = True
+				continue
+			if "END META" in i:
+				inheader = False
+				continue
+			if "START FILES" in i:
+				infiles = True
+				continue
+			if "END FILES" in i:
+				infiles = False
+				continue
+			if "START EXTENSIONS" in i:
+				inextensions = True
+				continue
+			if "END EXTENSIONS" in i:
+				inextensions = False
+				continue
+			if infiles:
+				(archivepath, archivechecksum, archiveversion) = i.strip().split('\t')
+				cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, archivepath, archivechecksum))
+		conn.commit()
 	return (scanfile_result)
 
 ## extract comments in parallel
@@ -1391,7 +1400,7 @@ def extractsourcestrings(filename, filedir, language, package):
 			lines.append(l[1:-1])
 	return (sqlres, moduleres)
 
-def checkalreadyscanned((filedir, package, version, filename, origin, batarchive, dbpath, checksums)):
+def checkalreadyscanned((filedir, package, version, filename, origin, batarchive, dbpath, checksums, archivechecksums)):
 	resolved_path = os.path.join(filedir, filename)
 	try:
 		os.stat(resolved_path)
@@ -1399,28 +1408,31 @@ def checkalreadyscanned((filedir, package, version, filename, origin, batarchive
 		print >>sys.stderr, "Can't find %s" % filename
 		return None
 	if batarchive:
-		## first extract the MANIFEST.BAT file from the BAT archive
-		## TODO: add support for unpackdir
-		archivedir = tempfile.mkdtemp()
-		tar = tarfile.open(resolved_path, 'r')
-		tarmembers = tar.getmembers()
-		for i in tarmembers:
-			## TODO: sanity check to see if there is a MANIFEST.BAT
-			if i.name.endswith('MANIFEST.BAT'):
-				tar.extract(i, path=archivedir)
-		manifest = os.path.join(archivedir, "MANIFEST.BAT")
-		manifestfile = open(manifest)
-		manifestlines = manifestfile.readlines()
-		manifestfile.close()
-		shutil.rmtree(archivedir)
-		for i in manifestlines:
-			## for later checks the package and filehash are important
-			## The rest needs to be overriden later anyway
-			if i.startswith('package'):
-				package = i.split(':')[1].strip()
-			elif i.startswith('sha256'):
-				filehash = i.split(':')[1].strip()
-				break
+		if archivechecksums.has_key(filename):
+			(filehash, package) = archivechecksums[filename]
+		else:
+			## first extract the MANIFEST.BAT file from the BAT archive
+			## TODO: add support for unpackdir
+			archivedir = tempfile.mkdtemp()
+			tar = tarfile.open(resolved_path, 'r')
+			tarmembers = tar.getmembers()
+			for i in tarmembers:
+				## TODO: sanity check to see if there is a MANIFEST.BAT
+				if i.name.endswith('MANIFEST.BAT'):
+					tar.extract(i, path=archivedir)
+			manifest = os.path.join(archivedir, "MANIFEST.BAT")
+			manifestfile = open(manifest)
+			manifestlines = manifestfile.readlines()
+			manifestfile.close()
+			shutil.rmtree(archivedir)
+			for i in manifestlines:
+				## for later checks the package and filehash are important
+				## The rest needs to be overriden later anyway
+				if i.startswith('package'):
+					package = i.split(':')[1].strip()
+				elif i.startswith('sha256'):
+					filehash = i.split(':')[1].strip()
+					break
 	else:
 		if checksums.has_key(filename):
 			filehash = checksums[filename]
@@ -1781,6 +1793,15 @@ def main(argv):
 				continue
 			(archivechecksum, archivefilename) = checksumsplit
 			checksums[archivefilename] = archivechecksum
+	archivechecksums = {}
+	if os.path.exists(os.path.join(options.filedir, "SHA256SUM-ARCHIVE")):
+		checksumlines = open(os.path.join(options.filedir, "SHA256SUM-ARCHIVE")).readlines()
+		for c in checksumlines:
+			checksumsplit = c.strip().split()
+			if len(checksumsplit) != 3:
+				continue
+			(archivefilename, origchecksum, origfilename) = checksumsplit
+			archivechecksums[archivefilename] = (origchecksum, origfilename)
 	## TODO: do all kinds of checks here
 	for unpackfile in filelist:
 		try:
@@ -1794,7 +1815,7 @@ def main(argv):
 					batarchive = True
 				else:
 					batarchive = False
-			pkgmeta.append((options.filedir, package, version, filename, origin, batarchive, masterdatabase, checksums))
+			pkgmeta.append((options.filedir, package, version, filename, origin, batarchive, masterdatabase, checksums, archivechecksums))
 		except Exception, e:
 			# oops, something went wrong
 			print >>sys.stderr, e
