@@ -1,3 +1,13 @@
+2014-03-08
+* createbatarchive.py: generate SHA256SUM-ARCHIVE files
+
+2014-03-07
+* createdb.py: use SHA256SUM-ARCHIVE if available
+
+2014-03-05
+* createbatarchive.py: store order in which archives were created as this is
+important for order in which the files should be read by createdb.py
+
 2014-03-03
 * include statistics piecharts in reports in GUI
 * add more data to statistics piecharts
