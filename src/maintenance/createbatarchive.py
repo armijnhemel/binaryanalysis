@@ -225,7 +225,7 @@ def computehasharchive((filedir, checksums, version, filename)):
 ## 5. create text file with metadata
 ## 6. pack archive
 ## 7. pack archive + metadata into BAT archive
-def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origin, outfile):
+def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origin, outfile, shaoutfile):
 	## keep a dictionary of checksum + version to avoid lookups
 	scanned_files = {}
 	## first sanity check: is there actually more than one version so a proper diff can be made?
@@ -430,6 +430,8 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 		processed.append(version)
 		outfile.write('%s-%s-%s-bat.tar.bz2' % (package,version,origin))
 		outfile.write("\n")
+		shaoutfile.write('%s-%s-%s-bat.tar.bz2\t%s\t%s' % (package,version,origin, archivechecksum, archivefilename))
+		shaoutfile.write("\n")
 	cursor.close()
 	conn.close()
 	return res
@@ -485,6 +487,8 @@ def main(argv):
 	pool = multiprocessing.Pool()
 	outputfile = os.path.join(options.outdir, 'ARCHIVELIST-%s' % scandate.isoformat())
 	outfile = open(outputfile, 'w')
+	shaoutputfile = os.path.join(options.outdir, 'SHA256SUM-ARCHIVE')
+	shaoutfile = open(shaoutputfile, 'w')
 	for o in origins.keys():
 		packages = {}
 		for p in origins[o]:
@@ -494,9 +498,10 @@ def main(argv):
 			else:
 				packages[package] = [(version,filename)]
 		for p in packages.keys():
-			packagewrite(options.db, options.filedir, options.outdir, pool, p, packages[p], o, outfile)
+			packagewrite(options.db, options.filedir, options.outdir, pool, p, packages[p], o, outfile, shaoutfile)
 	pool.terminate()
 	outfile.close()
+	shaoutfile.close()
 
 if __name__ == "__main__":
 	main(sys.argv)
