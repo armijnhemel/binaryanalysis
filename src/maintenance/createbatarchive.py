@@ -80,14 +80,14 @@ ms.load()
 
 
 def packfile((packfile, packdir, lenunpackdir)):
-	(origpath, origfile, checksum, extension) = packfile
+	(origpath, origfile, checksum, extension, process) = packfile
 	modorigpath = os.path.join(packdir, origpath[lenunpackdir:])
 	shutil.copy(os.path.join(origpath, origfile), modorigpath)
 
 def findversion((dbpath, s, package, processed, scanned_files)):
 	packfiles = set()
 	skipfiles = set()
-	(filepath, filename, checksum, extension) = s
+	(filepath, filename, checksum, extension, process) = s
 	if scanned_files.has_key(checksum):
 		firstoccur = scanned_files[checksum]
 		skipfiles.add(s + (firstoccur,))
@@ -100,7 +100,7 @@ def findversion((dbpath, s, package, processed, scanned_files)):
 	versions = set(map(lambda x: x[1], filter(lambda x: x[0] == package, res)))
 	foundversions = set(processed).intersection(versions)
 	if foundversions == set():
-		packfiles.add((filepath, filename, checksum, extension))
+		packfiles.add((filepath, filename, checksum, extension, process))
 	else:
 		for v in processed:
 			if v in foundversions:
@@ -132,17 +132,15 @@ def computehash((path, filename)):
 		if (p_nocase.endswith(extension)) and not p_nocase == extension:
 			process = True
 			break
-	if not process:
-		return (path, filename, None, ext)
 	filemagic = ms.file(os.path.realpath(resolved_path))
 	if filemagic == "AppleDouble encoded Macintosh file":
-		return (path, filename, None, ext)
+		process = False
 	scanfile = open(resolved_path, 'r')
 	h = hashlib.new('sha256')
 	h.update(scanfile.read())
 	scanfile.close()
 	filehash = h.hexdigest()
-	return (path, filename, filehash, ext)
+	return (path, filename, filehash, ext, process)
 
 ## unpack the directories to be scanned. For speed improvements it might be
 ## wise to use a ramdisk or tmpfs for this, although when using Ninka and
@@ -329,7 +327,7 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 
 		scanfile_res = pool.map(computehash, scanfiles, 1)
 		scanfile_result = filter(lambda x: x != None, scanfile_res)
-		packfiles = set(filter(lambda x: x[2] == None, scanfile_result))
+		packfiles = set(filter(lambda x: x[4] != True, scanfile_result))
 
 		tasks = map(lambda x: (dbpath, x, package, processed, scanned_files), scanfile_result)
 		res = pool.map(findversion, tasks)
@@ -339,8 +337,8 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 			skipfiles.update(resskipfiles)
 			## add the files that were scanned in this version to scanned_files
 			for s in respackfiles:
-				if s[2] != None:
-					(origpath, origfile, checksum, extension) = s
+				if s[4] != False:
+					(origpath, origfile, checksum, extension, process) = s
 					scanned_files[s[2]] = version
 
 		print "skipping %s packing %s for version %s" % (len(skipfiles), len(packfiles), version)
@@ -352,7 +350,7 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 			continue
 
 		for r in skipfiles:
-			(origpath, origfile, checksum, extension, firstoccur) = r
+			(origpath, origfile, checksum, extension, process, firstoccur) = r
 			if not scanned_files.has_key(checksum):
 				scanned_files[checksum] = firstoccur
 
@@ -399,7 +397,7 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 		batfile.write("## PATH CHECKSUM VERSION\n")
 		batfile.write("## START FILES\n")
 		for i in skipfiles:
-			(origpath, origfile, checksum, extension, firstoccur) = i
+			(origpath, origfile, checksum, extension, process, firstoccur) = i
 			batfile.write("%s\t%s\t%s\n" % (os.path.join(origpath[lenunpackdir:], origfile), checksum, firstoccur))
 		batfile.write("## END FILES\n")
 		batfile.write("\n")
