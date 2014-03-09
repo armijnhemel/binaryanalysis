@@ -423,7 +423,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 			## This is to be able to just update the database instead of recreating it.
 			c.execute('''insert into processed (package, version, filename, origin, sha256) values (?,?,?,?,?)''', (package, version, filename, origin, filehash))
 		elif batarchive and not emptyarchive:
-				c.execute('''insert into processed (package, version, filename, origin, sha256) values (?,?,?,?,?)''', (package, version, filename, origin, filehash))
+			c.execute('''insert into processed (package, version, filename, origin, sha256) values (?,?,?,?,?)''', (package, version, filename, origin, filehash))
 	conn.commit()
 	c.close()
 	conn.close()
