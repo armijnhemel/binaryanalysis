@@ -217,12 +217,20 @@ def unpack(directory, filename, unpackdir):
  		p = subprocess.Popen(['tar', 'jxf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		return tmpdir
+        elif 'LZMA compressed data, streamed' in filemagic:
+		if unpackdir != None:
+       			tmpdir = tempfile.mkdtemp(dir=unpackdir)
+		else:
+       			tmpdir = tempfile.mkdtemp()
+ 		p = subprocess.Popen(['tar', 'ixf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+		(stanout, stanerr) = p.communicate()
+		return tmpdir
         elif 'XZ compressed data' in filemagic:
 		if unpackdir != None:
        			tmpdir = tempfile.mkdtemp(dir=unpackdir)
 		else:
        			tmpdir = tempfile.mkdtemp()
- 		p = subprocess.Popen(['tar', 'Jxf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+ 		p = subprocess.Popen(['tar', 'ixf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		return tmpdir
         elif 'gzip compressed data' in filemagic:
@@ -263,8 +271,6 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 	## TODO: make temporary dir configurable
 	temporarydir = unpack(filedir, filename, '/gpl/tmp')
 	if temporarydir == None:
-		c.close()
-		conn.close()
 		return None
 
 	if batarchive:
