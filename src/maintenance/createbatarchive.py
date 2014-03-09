@@ -79,17 +79,21 @@ ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
 
-def packfile((packfile, packdir, lenunpackdir)):
+def packfile((packfile, packdir, lenunpackdir, version, seennotscanned_files)):
 	(origpath, origfile, checksum, extension, process) = packfile
 	modorigpath = os.path.join(packdir, origpath[lenunpackdir:])
 	shutil.copy(os.path.join(origpath, origfile), modorigpath)
 
-def findversion((dbpath, s, package, processed, scanned_files)):
+def findversion((dbpath, s, package, processed, scanned_files, seennotscanned_files)):
 	packfiles = set()
 	skipfiles = set()
 	(filepath, filename, checksum, extension, process) = s
 	if scanned_files.has_key(checksum):
 		firstoccur = scanned_files[checksum]
+		skipfiles.add(s + (firstoccur,))
+		return (packfiles, skipfiles)
+	elif seennotscanned_files.has_key(checksum):
+		firstoccur = seennotscanned_files[checksum]
 		skipfiles.add(s + (firstoccur,))
 		return (packfiles, skipfiles)
 	## look up checksum in database
@@ -226,6 +230,7 @@ def computehasharchive((filedir, checksums, version, filename)):
 def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origin, outfile, shaoutfile):
 	## keep a dictionary of checksum + version to avoid lookups
 	scanned_files = {}
+	seennotscanned_files = {}
 	## first sanity check: is there actually more than one version so a proper diff can be made?
 	if len(versionfilenames) == 1:
 		return None
@@ -327,9 +332,9 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 
 		scanfile_res = pool.map(computehash, scanfiles, 1)
 		scanfile_result = filter(lambda x: x != None, scanfile_res)
-		packfiles = set(filter(lambda x: x[4] != True, scanfile_result))
+		#packfiles = set(filter(lambda x: x[4] != True, scanfile_result))
 
-		tasks = map(lambda x: (dbpath, x, package, processed, scanned_files), scanfile_result)
+		tasks = map(lambda x: (dbpath, x, package, processed, scanned_files, seennotscanned_files), scanfile_result)
 		res = pool.map(findversion, tasks)
 		for r in res:
 			(respackfiles, resskipfiles) = r
@@ -340,6 +345,9 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 				if s[4] != False:
 					(origpath, origfile, checksum, extension, process) = s
 					scanned_files[s[2]] = version
+				elif s[4] == False:
+					(origpath, origfile, checksum, extension, process) = s
+					seennotscanned_files[s[2]] = version
 
 		print "skipping %s packing %s for version %s" % (len(skipfiles), len(packfiles), version)
 		sys.stdout.flush()
@@ -372,7 +380,7 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 
 		print "copying %d files" % len(packfiles)
 		sys.stdout.flush()
-		tasks = map(lambda x: (x, packdir, lenunpackdir), packfiles)
+		tasks = map(lambda x: (x, packdir, lenunpackdir, version, seennotscanned_files), packfiles)
 		pool.map(packfile, tasks)
 
 		print "creating BAT manifest"
@@ -395,11 +403,21 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 		## then add a line for each skipped file, plus in which version they can be found
 		batfile.write("## FILES THAT CAN BE FOUND IN OTHER PACKAGES\n")
 		batfile.write("## PATH CHECKSUM VERSION\n")
-		batfile.write("## START FILES\n")
+		batfile.write("## START DUPLICATE_FILES\n")
 		for i in skipfiles:
 			(origpath, origfile, checksum, extension, process, firstoccur) = i
-			batfile.write("%s\t%s\t%s\n" % (os.path.join(origpath[lenunpackdir:], origfile), checksum, firstoccur))
-		batfile.write("## END FILES\n")
+			if process:
+				batfile.write("%s\t%s\t%s\n" % (os.path.join(origpath[lenunpackdir:], origfile), checksum, firstoccur))
+		batfile.write("## END DUPLICATE_FILES\n")
+		batfile.write("\n")
+		batfile.write("## FILES THAT CAN BE FOUND IN OTHER PACKAGES BUT ARE NOT SCANNED\n")
+		batfile.write("## PATH CHECKSUM VERSION\n")
+		batfile.write("## START UNSCANNED_DUPLICATE_FILES\n")
+		for i in skipfiles:
+			(origpath, origfile, checksum, extension, process, firstoccur) = i
+			if not process:
+				batfile.write("%s\t%s\t%s\n" % (os.path.join(origpath[lenunpackdir:], origfile), checksum, firstoccur))
+		batfile.write("## END UNSCANNED_DUPLICATE_FILES\n")
 		batfile.write("\n")
 		## TODO: add checksums of packfiles
 		batfile.write("## START EXTENSIONS\n")
