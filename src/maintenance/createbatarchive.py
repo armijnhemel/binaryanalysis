@@ -366,22 +366,25 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 		## first, create a temporary directory
 		packdir = tempfile.mkdtemp()
 
-		## copy all files. First create all directories
-		packdirs = set(map(lambda x: x[lenunpackdir:], map(lambda x: x[0], packfiles)))
-		for i in packdirs:
-			try:
-				os.makedirs(os.path.join(packdir, i))
-			except Exception, e:
-				pass
-				#print e
+		if len(packfiles) != 0:
+			## copy all files. First create all directories
+			packdirs = set(map(lambda x: x[lenunpackdir:], map(lambda x: x[0], packfiles)))
+			for i in packdirs:
+				try:
+					os.makedirs(os.path.join(packdir, i))
+				except Exception, e:
+					pass
+					#print e
 
-		## keep a list of lower case extensions for all remaining files
-		storeexts = set(map(lambda x: x[3], packfiles))
+			## keep a list of lower case extensions for all remaining files
+			storeexts = set(map(lambda x: x[3], packfiles))
 
-		print "copying %d files" % len(packfiles)
-		sys.stdout.flush()
-		tasks = map(lambda x: (x, packdir, lenunpackdir, version, seennotscanned_files), packfiles)
-		pool.map(packfile, tasks)
+			print "copying %d files" % len(packfiles)
+			sys.stdout.flush()
+			tasks = map(lambda x: (x, packdir, lenunpackdir, version, seennotscanned_files), packfiles)
+			pool.map(packfile, tasks)
+		else:
+			storeexts = []
 
 		print "creating BAT manifest"
 		sys.stdout.flush()
@@ -422,9 +425,10 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 		## TODO: add checksums of packfiles
 		batfile.write("## START EXTENSIONS\n")
 		batfile.write("## EXTENSIONS OF UNPROCESSED FILES (LOWER CASED)\n")
-		batfile.write(reduce(lambda x,y: "%s %s" %(x, y), storeexts))
-		batfile.write("\n")
-		batfile.write("## END EXTENSIONS\n")
+		if len(storeexts) != 0:
+			batfile.write(reduce(lambda x,y: "%s %s" %(x, y), storeexts))
+			batfile.write("\n")
+			batfile.write("## END EXTENSIONS\n")
 		batfile.close()
 
 		print "packing"
