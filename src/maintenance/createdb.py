@@ -816,10 +816,10 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			if "END META" in i:
 				inheader = False
 				continue
-			if "START FILES" in i:
+			if "START DUPLICATE_FILES" in i:
 				infiles = True
 				continue
-			if "END FILES" in i:
+			if "END DUPLICATE_FILES" in i:
 				infiles = False
 				continue
 			if "START EXTENSIONS" in i:
