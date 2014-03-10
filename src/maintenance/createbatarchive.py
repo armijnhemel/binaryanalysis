@@ -71,6 +71,8 @@ extensions = {'.c'      : 'C',
               '.py'     : 'Python',
              }
 
+extensionskeys = extensions.keys()
+
 tarmagic = ['POSIX tar archive (GNU)'
            , 'tar archive'
            ]
@@ -117,13 +119,12 @@ def findversion((dbpath, s, package, processed, scanned_files, seennotscanned_fi
 
 def computehash((path, filename, filehash)):
 	resolved_path = os.path.join(path, filename)
-	try:
-		if not os.path.islink(resolved_path):
+	if not os.path.islink(resolved_path):
+		try:
 			os.chmod(resolved_path, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-	except Exception, e:
-		pass
-	## skip links
-	if os.path.islink(resolved_path):
+		except Exception, e:
+			pass
+	else:
 		return None
 	## nothing to determine about an empty file, so skip
 	if os.stat(resolved_path).st_size == 0:
@@ -132,13 +133,16 @@ def computehash((path, filename, filehash)):
 	p_nocase = filename.lower()
 	process = False
 	ext = p_nocase.split('.')[-1]
-	for extension in extensions.keys():
-		if (p_nocase.endswith(extension)) and not p_nocase == extension:
-			process = True
-			break
-	filemagic = ms.file(os.path.realpath(resolved_path))
-	if filemagic == "AppleDouble encoded Macintosh file":
-		process = False
+	if ext in extensionskeys:
+		for extension in extensionskeys:
+			if (p_nocase.endswith(extension)) and not p_nocase == extension:
+				process = True
+				break
+	if process:
+		## this check only makes sense if 'process' is set to True
+		filemagic = ms.file(os.path.realpath(resolved_path))
+		if filemagic == "AppleDouble encoded Macintosh file":
+			process = False
 	if filehash == None:
 		scanfile = open(resolved_path, 'r')
 		h = hashlib.new('sha256')
@@ -283,6 +287,11 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 			processed.append(versionres[0][0])
 			break
 
+	manifests = False
+	manifestdir = os.path.join(filedir, "MANIFESTS")
+	if os.path.exists(manifestdir):
+		if os.path.isdir(manifestdir):
+			manifests = True
 	for r in res:
 		(archivefilename, version, archivechecksum) = r
 		if version in processed:
@@ -292,7 +301,8 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 		sys.stdout.flush()
 		## unpack the archive in a temporary directory
 		#unpackdir = unpack(filedir, archivefilename)
-		unpackdir = unpack(filedir, archivefilename, '/gpl/tmp')
+		#unpackdir = unpack(filedir, archivefilename, '/gpl/tmp')
+		unpackdir = unpack(filedir, archivefilename, '/ramdisk')
 		if unpackdir == None:
 			continue
 
@@ -303,17 +313,15 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 
 		filetohash = {}
 
-		manifestdir = os.path.join(filedir, "MANIFESTS")
-		if os.path.exists(manifestdir):
-			if os.path.isdir(manifestdir):
-				manifestfile = os.path.join(manifestdir, "%s.bz2" % archivechecksum)
-				if os.path.exists(manifestfile):
-					manifest = bz2.BZ2File(manifestfile, 'r')
-					manifestlines = manifest.readlines()
-					manifest.close()
-					for i in manifestlines:
-						(fileentry, hashentry) = i.strip().split()
-						filetohash[fileentry] = hashentry
+		if manifests:
+			manifestfile = os.path.join(manifestdir, "%s.bz2" % archivechecksum)
+			if os.path.exists(manifestfile):
+				manifest = bz2.BZ2File(manifestfile, 'r')
+				manifestlines = manifest.readlines()
+				manifest.close()
+				for i in manifestlines:
+					(fileentry, hashentry) = i.strip().split()
+					filetohash[fileentry] = hashentry
 
 		try:
 			scanfiles = set()
@@ -324,8 +332,9 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 					if not os.path.islink(os.path.join(i[0], d)):
 						os.chmod(os.path.join(i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 				for p in i[2]:
-					if filetohash.has_key(os.path.join(i[0][lenunpackdir:], p)):
-						scanfiles.add((i[0], p, filetohash[os.path.join(i[0][lenunpackdir:], p)]))
+					normpath = os.path.join(i[0][lenunpackdir:], p)
+					if filetohash.has_key(normpath):
+						scanfiles.add((i[0], p, filetohash[normpath]))
 					else:
 						scanfiles.add((i[0], p, None))
 
@@ -336,9 +345,10 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 		packfiles = set()
 		skipfiles = set()
 
-		scanfile_res = pool.map(computehash, scanfiles, 1)
+		print "scanning"
+		sys.stdout.flush()
+		scanfile_res = pool.map(computehash, scanfiles)
 		scanfile_result = filter(lambda x: x != None, scanfile_res)
-		#packfiles = set(filter(lambda x: x[4] != True, scanfile_result))
 
 		tasks = map(lambda x: (dbpath, x, package, processed, scanned_files, seennotscanned_files), scanfile_result)
 		res = pool.map(findversion, tasks)
@@ -346,14 +356,13 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 			(respackfiles, resskipfiles) = r
 			packfiles.update(respackfiles)
 			skipfiles.update(resskipfiles)
-			## add the files that were scanned in this version to scanned_files
-			for s in respackfiles:
-				if s[4] != False:
-					(origpath, origfile, checksum, extension, process) = s
-					scanned_files[s[2]] = version
-				elif s[4] == False:
-					(origpath, origfile, checksum, extension, process) = s
-					seennotscanned_files[s[2]] = version
+		## add the files that were scanned in this version to scanned_files
+		for s in packfiles:
+			(origpath, origfile, checksum, extension, process) = s
+			if process != False:
+				scanned_files[checksum] = version
+			elif process == False:
+				seennotscanned_files[checksum] = version
 
 		print "skipping %s packing %s for version %s" % (len(skipfiles), len(packfiles), version)
 		sys.stdout.flush()
@@ -365,7 +374,8 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 
 		## there are some files that need to be packed.
 		## first, create a temporary directory
-		packdir = tempfile.mkdtemp()
+		## TODO: allow this to be set to for example a ramdisk
+		packdir = tempfile.mkdtemp(dir='/ramdisk')
 
 		if len(packfiles) != 0:
 			## copy all files. First create all directories
