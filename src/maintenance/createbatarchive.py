@@ -115,7 +115,7 @@ def findversion((dbpath, s, package, processed, scanned_files, seennotscanned_fi
 	conn.close()
 	return (packfiles, skipfiles)
 
-def computehash((path, filename)):
+def computehash((path, filename, filehash)):
 	resolved_path = os.path.join(path, filename)
 	try:
 		if not os.path.islink(resolved_path):
@@ -139,11 +139,12 @@ def computehash((path, filename)):
 	filemagic = ms.file(os.path.realpath(resolved_path))
 	if filemagic == "AppleDouble encoded Macintosh file":
 		process = False
-	scanfile = open(resolved_path, 'r')
-	h = hashlib.new('sha256')
-	h.update(scanfile.read())
-	scanfile.close()
-	filehash = h.hexdigest()
+	if filehash == None:
+		scanfile = open(resolved_path, 'r')
+		h = hashlib.new('sha256')
+		h.update(scanfile.read())
+		scanfile.close()
+		filehash = h.hexdigest()
 	return (path, filename, filehash, ext, process)
 
 ## unpack the directories to be scanned. For speed improvements it might be
@@ -300,6 +301,20 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 		## walk the files, get all the interesting ones
 		osgen = os.walk(unpackdir)
 
+		filetohash = {}
+
+		manifestdir = os.path.join(filedir, "MANIFESTS")
+		if os.path.exists(manifestdir):
+			if os.path.isdir(manifestdir):
+				manifestfile = os.path.join(manifestdir, "%s.bz2" % archivechecksum)
+				if os.path.exists(manifestfile):
+					manifest = bz2.BZ2File(manifestfile, 'r')
+					manifestlines = manifest.readlines()
+					manifest.close()
+					for i in manifestlines:
+						(fileentry, hashentry) = i.strip().split()
+						filetohash[fileentry] = hashentry
+
 		try:
 			scanfiles = set()
 			while True:
@@ -309,34 +324,17 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 					if not os.path.islink(os.path.join(i[0], d)):
 						os.chmod(os.path.join(i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 				for p in i[2]:
-					scanfiles.add((i[0], p))
+					if filetohash.has_key(os.path.join(i[0][lenunpackdir:], p)):
+						scanfiles.add((i[0], p, filetohash[os.path.join(i[0][lenunpackdir:], p)]))
+					else:
+						scanfiles.add((i[0], p, None))
+
 		except Exception, e:
 			if str(e) != "":
 				print >>sys.stderr, package, version, e
 
 		packfiles = set()
 		skipfiles = set()
-
-		'''
-		## first filter out the uninteresting files
-		scanfiles = filter(lambda x: x != None, pool.map(filterfiles, scanfiles, 1))
-		## compute the hashes in parallel, or if available, use precomputed SHA256 from the MANIFEST file
-		if filetohash != {}:
-			scanfile_result = []
-			new_scanfiles = []
-			for i in scanfiles:
-				(scanfilesdir, scanfilesfile, scanfileextension) = i
-				if filetohash.has_key(os.path.join(scanfilesdir[srcdirlen:], scanfilesfile)):
-					scanhash = filetohash[(os.path.join(scanfilesdir[srcdirlen:], scanfilesfile))]
-					scanfile_result.append((scanfilesdir, scanfilesfile, scanhash, scanfileextension))
-				else:
-					new_scanfiles.append((scanfilesdir, scanfilesfile, scanfileextension))
-			## sanity checks in case the MANIFEST file is incomplete
-			if new_scanfiles != []:
-				scanfile_result += filter(lambda x: x != None, pool.map(computehash, new_scanfiles, 1))
-		else:
-			scanfile_result = filter(lambda x: x != None, pool.map(computehash, scanfiles, 1))
-		'''
 
 		scanfile_res = pool.map(computehash, scanfiles, 1)
 		scanfile_result = filter(lambda x: x != None, scanfile_res)
