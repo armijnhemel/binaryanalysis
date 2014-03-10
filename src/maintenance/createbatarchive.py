@@ -363,11 +363,6 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 			processed.append(version)
 			continue
 
-		for r in skipfiles:
-			(origpath, origfile, checksum, extension, process, firstoccur) = r
-			if not scanned_files.has_key(checksum):
-				scanned_files[checksum] = firstoccur
-
 		## there are some files that need to be packed.
 		## first, create a temporary directory
 		packdir = tempfile.mkdtemp()
@@ -415,6 +410,8 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 		batfile.write("## START DUPLICATE_FILES\n")
 		for i in skipfiles:
 			(origpath, origfile, checksum, extension, process, firstoccur) = i
+			if not scanned_files.has_key(checksum):
+				scanned_files[checksum] = firstoccur
 			if process:
 				batfile.write("%s\t%s\t%s\n" % (os.path.join(origpath[lenunpackdir:], origfile), checksum, firstoccur))
 		batfile.write("## END DUPLICATE_FILES\n")
