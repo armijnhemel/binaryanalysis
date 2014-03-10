@@ -471,13 +471,13 @@ def grabhash((db, package, version, checksum)):
 ## Compute the SHA256 for a single file.
 def filterfiles((filedir, filename, pkgconf)):
 	resolved_path = os.path.join(filedir, filename)
-	try:
-		if not os.path.islink(resolved_path):
+	if not os.path.islink(resolved_path):
+		try:
 			os.chmod(resolved_path, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-	except Exception, e:
-		pass
-	## skip links
-	if os.path.islink(resolved_path):
+		except Exception, e:
+			pass
+	else:
+		## skip links
         	return None
 	## nothing to determine about an empty file, so skip
 	if os.stat(resolved_path).st_size == 0:
