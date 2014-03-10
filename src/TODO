@@ -88,4 +88,6 @@ BOTTLENECKS:
 17. run jcf-dump in chunks for Java class files whenever possible, preventing launching a jcf-dump process per class file
 18. update bat-fsck.cramfs to newer version of util-linux
 19. better report non unique matched strings which are not clones
-20. filter out more files in createbatarchive.py to create smaller archives. Since BAT archives are not independent of eachother anyway this should not matter.
+20. process UNSCANNED_DUPLICATE_FILES from BAT archives in createdb.py. This is needed if some of the unscanned duplicate files need to be processed.
+21. store meta data about media files (PNG, GIF, MP3, etc.) in database as some of these files are quite package specific
+22. createdb.py and createbatarchive.py: add option to set unpackdir (to for example ramdisk)

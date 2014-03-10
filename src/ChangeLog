@@ -1,3 +1,11 @@
+2014-03-10
+* createbatarchive.py: support MANIFESTS to prevent checksums from being
+generated if they are already known
+
+2014-03-09
+* support LZMA compressed data in createdb.py and createbatarchive.py
+* remove more duplicate information from the BAT archives
+
 2014-03-08
 * createbatarchive.py: generate SHA256SUM-ARCHIVE files
 
