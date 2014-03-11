@@ -71,7 +71,8 @@ extensions = {'.c'      : 'C',
               '.py'     : 'Python',
              }
 
-extensionskeys = extensions.keys()
+## extensions, without leading .
+extensionskeys = set(map(lambda x: x[1:], extensions.keys()))
 
 tarmagic = ['POSIX tar archive (GNU)'
            , 'tar archive'
@@ -86,16 +87,16 @@ def packfile((packfile, packdir, lenunpackdir, version, seennotscanned_files)):
 	modorigpath = os.path.join(packdir, origpath[lenunpackdir:])
 	shutil.copy(os.path.join(origpath, origfile), modorigpath)
 
-def findversion((dbpath, s, package, processed, scanned_files, seennotscanned_files)):
+def findversion((dbpath, s, package, processed_versions, scanned_files_version, seennotscanned_files_version)):
 	packfiles = set()
 	skipfiles = set()
 	(filepath, filename, checksum, extension, process) = s
-	if scanned_files.has_key(checksum):
-		firstoccur = scanned_files[checksum]
+	if scanned_files_version != None:
+		firstoccur = scanned_files_version
 		skipfiles.add(s + (firstoccur,))
 		return (packfiles, skipfiles)
-	elif seennotscanned_files.has_key(checksum):
-		firstoccur = seennotscanned_files[checksum]
+	elif seennotscanned_files_version != None:
+		firstoccur = seennotscanned_files_version
 		skipfiles.add(s + (firstoccur,))
 		return (packfiles, skipfiles)
 	## look up checksum in database
@@ -104,11 +105,11 @@ def findversion((dbpath, s, package, processed, scanned_files, seennotscanned_fi
 	cursor.execute("select package, version from processed_file where sha256=?", (checksum,))
 	res = cursor.fetchall()
 	versions = set(map(lambda x: x[1], filter(lambda x: x[0] == package, res)))
-	foundversions = set(processed).intersection(versions)
+	foundversions = set(processed_versions).intersection(versions)
 	if foundversions == set():
 		packfiles.add((filepath, filename, checksum, extension, process))
 	else:
-		for v in processed:
+		for v in processed_versions:
 			if v in foundversions:
 				firstoccur = v
 				break
@@ -119,25 +120,24 @@ def findversion((dbpath, s, package, processed, scanned_files, seennotscanned_fi
 
 def computehash((path, filename, filehash)):
 	resolved_path = os.path.join(path, filename)
-	if not os.path.islink(resolved_path):
-		try:
-			os.chmod(resolved_path, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-		except Exception, e:
-			pass
-	else:
-		return None
-	## nothing to determine about an empty file, so skip
-	if os.stat(resolved_path).st_size == 0:
-		return None
+	if filehash == None:
+		if not os.path.islink(resolved_path):
+			try:
+				os.chmod(resolved_path, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+			except Exception, e:
+				pass
+		else:
+			return None
+		## nothing to determine about an empty file, so skip
+		if os.stat(resolved_path).st_size == 0:
+			return None
 	## some filenames might have uppercase extensions, so lowercase them first
 	p_nocase = filename.lower()
 	process = False
 	ext = p_nocase.split('.')[-1]
-	if ext in extensionskeys:
-		for extension in extensionskeys:
-			if (p_nocase.endswith(extension)) and not p_nocase == extension:
-				process = True
-				break
+	if ext != p_nocase:
+		if ext in extensionskeys:
+			process = True
 	if process:
 		## this check only makes sense if 'process' is set to True
 		filemagic = ms.file(os.path.realpath(resolved_path))
@@ -165,10 +165,7 @@ def unpack(directory, filename, unpackdir=None):
 
 	## Assume if the files are bz2 or gzip compressed they are compressed tar files
 	if 'bzip2 compressed data' in filemagic:
-		if unpackdir != None:
-			tmpdir = tempfile.mkdtemp(dir=unpackdir)
-		else:
-			tmpdir = tempfile.mkdtemp()
+		tmpdir = tempfile.mkdtemp(dir=unpackdir)
 		## for some reason the tar.bz2 unpacking from python doesn't always work, like
 		## aeneas-1.0.tar.bz2 from GNU, so use a subprocess instead of using the
 		## Python tar functionality.
@@ -176,35 +173,23 @@ def unpack(directory, filename, unpackdir=None):
 		(stanout, stanerr) = p.communicate()
 		return tmpdir
 	elif 'LZMA compressed data, streamed' in filemagic:
-		if unpackdir != None:
-			tmpdir = tempfile.mkdtemp(dir=unpackdir)
-		else:
-			tmpdir = tempfile.mkdtemp()
+		tmpdir = tempfile.mkdtemp(dir=unpackdir)
 		p = subprocess.Popen(['tar', 'ixf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		return tmpdir
 	elif 'XZ compressed data' in filemagic:
-		if unpackdir != None:
-			tmpdir = tempfile.mkdtemp(dir=unpackdir)
-		else:
-			tmpdir = tempfile.mkdtemp()
+		tmpdir = tempfile.mkdtemp(dir=unpackdir)
 		p = subprocess.Popen(['tar', 'ixf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		return tmpdir
 	elif 'gzip compressed data' in filemagic:
-		if unpackdir != None:
-			tmpdir = tempfile.mkdtemp(dir=unpackdir)
-		else:
-			tmpdir = tempfile.mkdtemp()
+		tmpdir = tempfile.mkdtemp(dir=unpackdir)
 		p = subprocess.Popen(['tar', 'zxf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		return tmpdir
 	elif 'Zip archive data' in filemagic:
 		try:
-			if unpackdir != None:
-				tmpdir = tempfile.mkdtemp(dir=unpackdir)
-			else:
-				tmpdir = tempfile.mkdtemp()
+			tmpdir = tempfile.mkdtemp(dir=unpackdir)
 			p = subprocess.Popen(['unzip', "-B", os.path.join(directory, filename), '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 			(stanout, stanerr) = p.communicate()
 			if p.returncode != 0 and p.returncode != 1:
@@ -274,7 +259,7 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 	res = filter(lambda x: x != None, pool.map(computehasharchive, map(lambda x: (filedir,checksums) + x, versionfilenames),1))
 
 	## keep a list of versions that have already been processed. Use a list to keep order when they were processed
-	processed = []
+	processed_versions = []
 	for r in res:
 		(archivefilename, version, archivechecksum) = r
 		## to determine the version that is used as a 'base' first check if it is in the database
@@ -284,7 +269,7 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 			## extra sanity check to see if it is the expected version
 			if versionres[0][0] != version:
 				continue
-			processed.append(versionres[0][0])
+			processed_versions.append(versionres[0][0])
 			break
 
 	manifests = False
@@ -294,7 +279,7 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 			manifests = True
 	for r in res:
 		(archivefilename, version, archivechecksum) = r
-		if version in processed:
+		if version in processed_versions:
 			continue
 
 		print "processing: %s" % version
@@ -345,12 +330,16 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 		packfiles = set()
 		skipfiles = set()
 
-		print "scanning"
+		print "computing hashes"
 		sys.stdout.flush()
 		scanfile_res = pool.map(computehash, scanfiles)
 		scanfile_result = filter(lambda x: x != None, scanfile_res)
+		## scanfile_result: (path, filename, filehash, ext, process)
 
-		tasks = map(lambda x: (dbpath, x, package, processed, scanned_files, seennotscanned_files), scanfile_result)
+		print "scanning"
+		sys.stdout.flush()
+		## scanned_files and seennotscanned_files get larger and larger
+		tasks = map(lambda x: (dbpath, x, package, processed_versions, scanned_files.get(x[2], None), seennotscanned_files.get(x[2], None)), scanfile_result)
 		res = pool.map(findversion, tasks)
 		for r in res:
 			(respackfiles, resskipfiles) = r
@@ -369,7 +358,7 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 		if len(skipfiles) == 0:
 			## Nothing to optimize, so just cleanup and continue to the next file
 			shutil.rmtree(unpackdir)
-			processed.append(version)
+			processed_versions.append(version)
 			continue
 
 		## there are some files that need to be packed.
@@ -455,12 +444,12 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 			dumpfile.add(i)
 		dumpfile.close()
 
-		print "cleanup"
-		sys.stdout.flush()
 		## cleanup
+		print "cleanup\n"
+		sys.stdout.flush()
 		shutil.rmtree(packdir)
 		shutil.rmtree(unpackdir)
-		processed.append(version)
+		processed_versions.append(version)
 		outfile.write('%s-%s-%s-bat.tar.bz2' % (package,version,origin))
 		outfile.write("\n")
 		shaoutfile.write('%s-%s-%s-bat.tar.bz2\t%s\t%s' % (package,version,origin, archivechecksum, archivefilename))
