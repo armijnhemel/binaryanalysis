@@ -403,18 +403,17 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 
 	filetohash = {}
 
-	if not batarchive:
-		manifestdir = os.path.join(filedir, "MANIFESTS")
-		if os.path.exists(manifestdir):
-			if os.path.isdir(manifestdir):
-				manifestfile = os.path.join(manifestdir, "%s.bz2" % filehash)
-				if os.path.exists(manifestfile):
-					manifest = bz2.BZ2File(manifestfile, 'r')
-					manifestlines = manifest.readlines()
-					manifest.close()
-					for i in manifestlines:
-						(fileentry, hashentry) = i.strip().split()
-						filetohash[fileentry] = hashentry
+	manifestdir = os.path.join(filedir, "MANIFESTS")
+	if os.path.exists(manifestdir):
+		if os.path.isdir(manifestdir):
+			manifestfile = os.path.join(manifestdir, "%s.bz2" % filehash)
+			if os.path.exists(manifestfile):
+				manifest = bz2.BZ2File(manifestfile, 'r')
+				manifestlines = manifest.readlines()
+				manifest.close()
+				for i in manifestlines:
+					(fileentry, hashentry) = i.strip().split()
+					filetohash[fileentry] = hashentry
 
 	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash, packageconfig)
 	if sqlres != None:
