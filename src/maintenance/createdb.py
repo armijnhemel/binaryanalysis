@@ -118,6 +118,9 @@ extensions = {'.c'      : 'C',
               '.diff'   : 'patch',
              }
 
+## extensions, without leading .
+extensionskeys = set(map(lambda x: x[1:], extensions.keys()))
+
 languages = set(extensions.values())
 
 ## a list of characters that 'strings' will split on when processing a binary file
@@ -321,6 +324,20 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 				## if there is one valid line the 'FILES' section the archive is not empty
 				emptyarchive = False
 
+	filetohash = {}
+
+	manifestdir = os.path.join(filedir, "MANIFESTS")
+	if os.path.exists(manifestdir):
+		if os.path.isdir(manifestdir):
+			manifestfile = os.path.join(manifestdir, "%s.bz2" % filehash)
+			if os.path.exists(manifestfile):
+				manifest = bz2.BZ2File(manifestfile, 'r')
+				manifestlines = manifest.readlines()
+				manifest.close()
+				for i in manifestlines:
+					(fileentry, hashentry) = i.strip().split()
+					filetohash[fileentry] = hashentry
+
 	print >>sys.stdout, "processing", filename
 	sys.stdout.flush()
 
@@ -373,6 +390,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 		## first filter out the uninteresting files
 		scanfiles = filter(lambda x: x != None, pool.map(filterfiles, scanfiles, 1))
 		## compute the hashes in parallel
+		## TODO: use filetohash if available
 		scanfile_result = filter(lambda x: x != None, pool.map(computehash, scanfiles, 1))
 		identical = True
 		## compare amount of checksums for this version and the one recorded in the database.
@@ -400,20 +418,6 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 			if cleanup:
 				cleanupdir(temporarydir)
 			return
-
-	filetohash = {}
-
-	manifestdir = os.path.join(filedir, "MANIFESTS")
-	if os.path.exists(manifestdir):
-		if os.path.isdir(manifestdir):
-			manifestfile = os.path.join(manifestdir, "%s.bz2" % filehash)
-			if os.path.exists(manifestfile):
-				manifest = bz2.BZ2File(manifestfile, 'r')
-				manifestlines = manifest.readlines()
-				manifest.close()
-				for i in manifestlines:
-					(fileentry, hashentry) = i.strip().split()
-					filetohash[fileentry] = hashentry
 
 	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash, packageconfig)
 	if sqlres != None:
@@ -484,12 +488,11 @@ def filterfiles((filedir, filename, pkgconf)):
 	## some filenames might have uppercase extensions, so lowercase them first
 	p_nocase = filename.lower()
 	process = False
-	for extension in extensions.keys():
-		if (p_nocase.endswith(extension)) and not p_nocase == extension:
+	extension = p_nocase.split('.')[-1]
+	if extension != p_nocase:
+		if extension in extensionskeys:
 			process = True
-			language = extensions[extension]
-			break
-
+			language = extensions['.%s' % extension]
 	if not process:
 		## now check the package specific extensions
 		for extlang in pkgconf:
@@ -500,13 +503,13 @@ def filterfiles((filedir, filename, pkgconf)):
 	if not process:
 		return None
 
+	filemagic = ms.file(os.path.realpath(resolved_path))
+	if filemagic == "AppleDouble encoded Macintosh file":
+		return None
 	return (filedir, filename, extension, language)
 
 def computehash((filedir, filename, extension, language)):
 	resolved_path = os.path.join(filedir, filename)
-	filemagic = ms.file(os.path.realpath(resolved_path))
-	if filemagic == "AppleDouble encoded Macintosh file":
-		return None
 	scanfile = open(resolved_path, 'r')
 	h = hashlib.new('sha256')
 	h.update(scanfile.read())
@@ -562,7 +565,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	#ninkaversion = "b84eee21cb"
 	ninkaversion = "1.1"
 	insertfiles = set()
-	tmpsha256s = []
+	tmpsha256s = set()
 	filehashes = {}
 	filestoscan = []
 
@@ -590,7 +593,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		testres = cursor.fetchall()
 		if len(testres) != 0:
 			continue
-		tmpsha256s.append(filehash)
+		tmpsha256s.add(filehash)
 		cursor.execute('''select * from extracted_file where sha256=? LIMIT 1''', (filehash,))
 		if len(cursor.fetchall()) != 0:
 			#print >>sys.stderr, "duplicate %s %s: %s/%s" % (package, version, i[0], p)
