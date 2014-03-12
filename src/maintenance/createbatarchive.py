@@ -45,7 +45,7 @@ import sqlite3, hashlib
 ## list of extensions, plus what language they should be mapped to
 ## This is not necessarily correct, but right now it suffices. Ideally a parser
 ## would be run on each file to see what kind of file it is.
-## Keep in sync with batchextractprogramstrings.py !!
+## Keep in sync with createdb.py !!
 extensions = {'.c'      : 'C',
               '.cc'     : 'C',
               '.cpp'    : 'C',
