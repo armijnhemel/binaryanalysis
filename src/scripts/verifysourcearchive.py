@@ -36,7 +36,7 @@ ms.load()
 ## list of extensions, plus what language they should be mapped to
 ## This is not necessarily correct, but right now it suffices. Ideally a parser
 ## would be run on each file to see what kind of file it is.
-## This list should be kept in sync with the list in batchextractprogramstrings.py
+## This list should be kept in sync with the list in createdb.py
 extensions = {'c'      : 'C',
               'cc'     : 'C',
               'cpp'    : 'C',
