@@ -622,7 +622,7 @@ enabled     = yes
 ##################
 
 [architecture]
-type        = program
+type        = leaf
 module      = bat.checks
 method      = scanArchitecture
 noscan      = text:xml:graphics:pdf:compressed:audio:video:mp4:java
@@ -630,7 +630,7 @@ description = Scan executable file architecture
 enabled     = yes
 
 [busybox-version]
-type        = program
+type        = leaf
 module      = bat.busyboxversion
 method      = busybox_version
 noscan      = text:xml:graphics:pdf:compressed:audio:video:mp4:java
@@ -638,7 +638,7 @@ description = Extract BusyBox version number
 enabled     = yes
 
 [dproxy]
-type        = program
+type        = leaf
 module      = bat.checks
 method      = searchDproxy
 noscan      = text:xml:graphics:pdf:compressed:audio:video:mp4:java
@@ -646,7 +646,7 @@ description = Determine presence of dproxy
 enabled     = yes
 
 [ez-ipupdate]
-type        = program
+type        = leaf
 module      = bat.checks
 method      = searchEzIpupdate
 noscan      = text:xml:graphics:pdf:compressed:audio:video:mp4:java
@@ -654,7 +654,7 @@ description = Determine presence of ez-update
 enabled     = yes
 
 [file2package]
-type        = program
+type        = leaf
 module      = bat.file2package
 method      = filename2package
 ppmodule    = bat.file2package
@@ -665,7 +665,7 @@ setup       = file2packagesetup
 enabled     = no
 
 [forges]
-type        = program
+type        = leaf
 module      = bat.checks
 method      = scanForges
 ppmodule    = bat.checks
@@ -675,7 +675,7 @@ description = Scan for presence of markers of forges/collaborative software deve
 enabled     = yes
 
 [iproute]
-type        = program
+type        = leaf
 module      = bat.checks
 method      = searchIproute
 noscan      = text:xml:graphics:pdf:compressed:audio:video:mp4:java
@@ -683,7 +683,7 @@ description = Determine presence of iproute
 enabled     = yes
 
 [iptables]
-type        = program
+type        = leaf
 module      = bat.checks
 method      = searchIptables
 noscan      = text:xml:graphics:pdf:compressed:audio:video:mp4:java
@@ -691,7 +691,7 @@ description = Determine presence of iptables
 enabled     = yes
 
 [kernelchecks]
-type        = program
+type        = leaf
 module      = bat.kernelanalysis
 method      = kernelChecks
 ppmodule    = bat.kernelanalysis
@@ -701,7 +701,7 @@ description = Detect version number and some subsystems in Linux kernel
 enabled     = yes
 
 [kernelmodulelicense]
-type        = program
+type        = leaf
 module      = bat.kernelanalysis
 method      = analyseModuleLicense
 noscan      = text:xml:graphics:pdf:compressed:audio:video:mp4:java
@@ -709,7 +709,7 @@ description = Determine declared Linux kernel module license
 enabled     = yes
 
 [kernelmoduleversion]
-type        = program
+type        = leaf
 module      = bat.kernelanalysis
 method      = analyseModuleVersion
 noscan      = text:xml:graphics:pdf:compressed:audio:video:mp4:java
@@ -717,7 +717,7 @@ description = Determine declared Linux kernel module license
 enabled     = yes
 
 [libs]
-type        = program
+type        = leaf
 module      = bat.checks
 method      = searchDynamicLibs
 ppmodule    = bat.checks
@@ -727,7 +727,7 @@ description = Determine dynamically linked libraries
 enabled     = yes
 
 [libusb]
-type        = program
+type        = leaf
 module      = bat.checks
 method      = searchLibusb
 noscan      = text:xml:graphics:pdf:compressed:audio:video:mp4:java
@@ -735,7 +735,7 @@ description = Determine presence of libusb
 enabled     = yes
 
 [licenses]
-type        = program
+type        = leaf
 module      = bat.checks
 method      = scanLicenses
 ppmodule    = bat.checks
@@ -745,7 +745,7 @@ description = Scan for presence of license markers
 enabled     = yes
 
 [loadlin]
-type        = program
+type        = leaf
 module      = bat.checks
 method      = searchLoadLin
 noscan      = text:xml:graphics:pdf:compressed:audio:video:mp4:java
@@ -753,7 +753,7 @@ description = Determine presence of libusb
 enabled     = yes
 
 [pdf]
-type        = program
+type        = leaf
 module      = bat.checks
 method      = scanPDF
 ppmodule    = bat.checks
@@ -763,7 +763,7 @@ description = Determine characteristics of PDF files
 enabled     = yes
 
 [ranking]
-type        = program
+type        = leaf
 module      = bat.ranking
 method      = searchGeneric
 ppmodule    = bat.ranking
@@ -775,7 +775,7 @@ enabled     = yes
 setup       = rankingsetup
 
 [redboot]
-type        = program
+type        = leaf
 module      = bat.checks
 method      = searchRedBoot
 noscan      = text:xml:graphics:pdf:compressed:audio:video:mp4:java
@@ -783,7 +783,7 @@ description = Determine presence of RedBoot
 enabled     = yes
 
 [uboot]
-type        = program
+type        = leaf
 module      = bat.checks
 method      = searchUBoot
 noscan      = text:xml:graphics:pdf:compressed:audio:video:mp4:java
@@ -791,7 +791,7 @@ description = Determine presence of U-Boot
 enabled     = yes
 
 [vsftpd]
-type        = program
+type        = leaf
 module      = bat.checks
 method      = searchVsftpd
 noscan      = text:xml:graphics:pdf:compressed:audio:video:mp4:java
@@ -799,7 +799,7 @@ description = Determine presence of vsftpd
 enabled     = yes
 
 [wireless-tools]
-type        = program
+type        = leaf
 module      = bat.checks
 method      = searchWirelessTools
 noscan      = text:xml:graphics:pdf:compressed:audio:video:mp4:java
@@ -807,7 +807,7 @@ description = Determine presence of wireless-tools
 enabled     = yes
 
 [wpa-supplicant]
-type        = program
+type        = leaf
 module      = bat.checks
 method      = searchWpaSupplicant
 noscan      = text:xml:graphics:pdf:compressed:audio:video:mp4:java

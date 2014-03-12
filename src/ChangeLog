@@ -1,5 +1,8 @@
 2014-03-12
 * add script to test integrity of archives
+* add very crude kernel function name reporting
+* release BAT 16
+* replace "program scans" with "leaf scans" everywhere for BAT 17
 
 2014-03-10
 * createbatarchive.py: support MANIFESTS to prevent checksums from being

@@ -71,10 +71,10 @@ def generateNodes(elem, root, confs):
 ## has a pretty printing method defined, it will be used instead of the generic
 ## one.
 ## All interesting data can be found in the 'res' parameter
-def prettyprintresxmlsnippet(res, root, unpackscans, programscans):
+def prettyprintresxmlsnippet(res, root, unpackscans, leafscans):
 	## this should always be len == 1, have more checks
 	for i in res:
-		for confs in programscans:
+		for confs in leafscans:
 			if i == confs['name']:
 				try:
 					module = confs['module']
@@ -124,7 +124,7 @@ def prettyprintresxmlsnippet(res, root, unpackscans, programscans):
 						if 'scans' in elem:
 							childscannodes = []
 							for scan in elem['scans']:
-								childscannode = prettyprintresxmlsnippet(scan, root, unpackscans, programscans)
+								childscannode = prettyprintresxmlsnippet(scan, root, unpackscans, leafscans)
 								if childscannode != None:
 									childscannodes.append(childscannode)
 							if childscannodes != []:
@@ -173,7 +173,7 @@ def prettyprintresxml(res, scandate, scans, envvars=None):
 	if 'scans' in res:
 		childscannodes = []
 		for scan in res['scans']:
-			childscannode = prettyprintresxmlsnippet(scan, root, scans['unpackscans'], scans['programscans'])
+			childscannode = prettyprintresxmlsnippet(scan, root, scans['unpackscans'], scans['leafscans'])
 			if childscannode != None:
 				childscannodes.append(childscannode)
 		if childscannodes != []:

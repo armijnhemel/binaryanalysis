@@ -333,7 +333,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 		unpacked = False
 		for unpackscan in unpackscans:
 			## the whole file has already been scanned by other scans, so
-			## continue with the program scans.
+			## continue with the leaf scans.
 			if extractor.inblacklist(0, blacklist) == filesize:
 				break
 
@@ -546,10 +546,10 @@ def postrunscan((filetoscan, unpackreports, scans, scantempdir, topleveldir, deb
 ## arrays for storing data for the scans
 ## unpackscans: {name, module, method, ppoutput, priority}
 ## These are sorted by priority
-## programscans: {name, module, method, ppoutput}
+## leafscans: {name, module, method, ppoutput}
 def readconfig(config):
 	unpackscans = []
-	programscans = []
+	leafscans = []
 	prerunscans = []
 	postrunscans = []
 	aggregatescans = []
@@ -692,8 +692,8 @@ def readconfig(config):
 					conf['storetype'] = None
 					conf['cleanup'] = False
 
-			if config.get(section, 'type') == 'program':
-				programscans.append(conf)
+			if config.get(section, 'type') == 'leaf':
+				leafscans.append(conf)
 			elif config.get(section, 'type') == 'unpack':
 				unpackscans.append(conf)
 			elif config.get(section, 'type') == 'prerun':
@@ -705,7 +705,7 @@ def readconfig(config):
 	## sort the prerun scans on priority (highest priority first)
 	prerunscans = sorted(prerunscans, key=lambda x: x['priority'], reverse=True)
 	aggregatescans = sorted(aggregatescans, key=lambda x: x['priority'], reverse=True)
-	return {'batconfig': batconf, 'unpackscans': unpackscans, 'programscans': programscans, 'prerunscans': prerunscans, 'postrunscans': postrunscans, 'aggregatescans': aggregatescans}
+	return {'batconfig': batconf, 'unpackscans': unpackscans, 'leafscans': leafscans, 'prerunscans': prerunscans, 'postrunscans': postrunscans, 'aggregatescans': aggregatescans}
 
 def prettyprint(batconf, res, scandate, scans, toplevelfile, topleveldir):
 	module = batconf['module']
@@ -854,7 +854,7 @@ def runscan(scans, scan_binary):
 
 	magicscans = []
 	optmagicscans = []
-	for k in ["prerunscans", "unpackscans", "programscans", "postrunscans"]:
+	for k in ["prerunscans", "unpackscans", "leafscans", "postrunscans"]:
 		for s in scans[k]:
 			if s['magic'] != None:
 				magicscans = magicscans + s['magic'].split(':')
@@ -886,7 +886,7 @@ def runscan(scans, scan_binary):
 	## often it is wise to have it set to 'no'. This is because ranking writes
 	## to databases and you don't want concurrent writes.
 	## some categories of scans can still be run in parallel. For example
-	## if only one of the program scans has a side effect, then prerun, unpack
+	## if only one of the leaf scans has a side effect, then prerun, unpack
 	## and unpack scans can still be run in parallel.
 	## By setting 'multiprocessing' to 'yes' and indicating that some scans should
 	## not be run in parallel (which will be for the whole category of scans) it is
@@ -962,7 +962,7 @@ def runscan(scans, scan_binary):
 	poolresult = []
 	tagdict = {}
 	finalscans = []
-	if scans['programscans'] != []:
+	if scans['leafscans'] != []:
 		unpacktempdir = scans['batconfig']['tempdir']
 
 		if scans['batconfig']['multiprocessing']:
@@ -973,7 +973,7 @@ def runscan(scans, scan_binary):
 		## First run the 'setup' hooks for the scans and pass
 		## results via the environment. This should keep the
 		## code cleaner.
-		for sscan in scans['programscans']:
+		for sscan in scans['leafscans']:
 			if not sscan.has_key('setup'):
 				finalscans.append(sscan)
 				continue
@@ -1025,7 +1025,7 @@ def runscan(scans, scan_binary):
 		if debug:
 			tmpdebug = True
 			if debugphases != []:
-				if not 'program' in debugphases:
+				if not 'leaf' in debugphases:
 					tmpdebug = False
 		leaftasks_tmp = map(lambda x: x[:2] + (filterScans(finalscans, x[2]),) + x[2:-1] + (topleveldir, tmpdebug, unpacktempdir), leaftasks_tmp)
 
@@ -1038,7 +1038,7 @@ def runscan(scans, scan_binary):
 			if debugphases == []:
 				parallel = False
 			else:
-				if 'program' in debugphases:
+				if 'leaf' in debugphases:
 					parallel = False
 
 		if parallel:

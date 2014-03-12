@@ -68,7 +68,7 @@ misc:
 * replace calls to dd, tail, head and others with truncate() where possible to prevent launching an external process
 * replace hardcoded options in reporting with values of 'storetarget'
 
-BOTTLENECKS:
+BOTTLENECKS/HIGH PRIORITY:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
 2. preread (in parallel) leafreports of Java .class files which are shared between several JAR files for aggregate jars. This saves opening and reading the same files.
 3. replace own counters with collections.Counter(), also for code clarity
@@ -80,9 +80,9 @@ BOTTLENECKS:
 9. research/fix priority for Minix file system
 10. don't recreate ELF graphs (model for every ELF binary), but reuse graphs of dependencies. This would need a topological sort.
 11. split kernel module information off into separate database
-12. rename "programscans"/"leafscans" and settle on using one term
+12. better error detection in createdb.py and createbatarchive.py for corrupt bzip2 archives
 13. refactor name squashing
-14. handle and report matched kernel function names
+14. find versions of matched kernel function names and report
 15. use order of strings in ELF binaries to assign strings earlier/better
 16. fix support for Linux 2.4 kernel modules, as modinfo (at least on Fedora) no longer seems to work for 2.4 kernels
 17. run jcf-dump in chunks for Java class files whenever possible, preventing launching a jcf-dump process per class file
@@ -91,4 +91,3 @@ BOTTLENECKS:
 20. process UNSCANNED_DUPLICATE_FILES from BAT archives in createdb.py. This is needed if some of the unscanned duplicate files need to be processed.
 21. store meta data about media files (PNG, GIF, MP3, etc.) in database as some of these files are quite package specific
 22. createdb.py and createbatarchive.py: add option to set unpackdir (to for example ramdisk)
-23. better error detection in createdb.py and createbatarchive.py for corrupt bzip2 archives

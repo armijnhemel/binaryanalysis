@@ -123,7 +123,7 @@ def prettyprintscan(unpackreports, root, scannode, scans, topleveldir):
 		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 		leafreports = cPickle.load(leaf_file)
 		leaf_file.close()
-		ppnodes = prettyprintxmlsnippet(root, leafreports, scans['programscans'])
+		ppnodes = prettyprintxmlsnippet(root, leafreports, scans['leafscans'])
 		for p in ppnodes:
 			if scansnode == None:
 				scansnode = root.createElement("scans")
