@@ -17,7 +17,7 @@ separated by whitespace
 Compression is determined using magic
 '''
 
-import sys, os, magic, string, re, subprocess, shutil, stat
+import sys, os, magic, string, re, subprocess, shutil, stat, datetime
 import tempfile, bz2, tarfile, gzip, ConfigParser
 from optparse import OptionParser
 from multiprocessing import Pool
@@ -320,6 +320,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 					filename = i.split(':')[1].strip()
 				elif i.startswith('sha256'):
 					filehash = i.split(':')[1].strip()
+				continue
 			if infiles:
 				## if there is one valid line the 'FILES' section the archive is not empty
 				emptyarchive = False
@@ -338,7 +339,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 					(fileentry, hashentry) = i.strip().split()
 					filetohash[fileentry] = hashentry
 
-	print >>sys.stdout, "processing", filename
+	print >>sys.stdout, "processing", filename, datetime.datetime.utcnow().isoformat()
 	sys.stdout.flush()
 
         conn = sqlite3.connect(dbpath, check_same_thread = False)
@@ -680,7 +681,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			fossology_filestoscan.append((fossyfiles[i:i+fossology_chunksize]))
 		fossology_res = filter(lambda x: x != None, pool.map(licensefossology, fossology_filestoscan, 1))
 		## this requires FOSSology 2.3.0 or later
-		p2 = subprocess.Popen(["/usr/share/fossology/nomos/agent/nomos", "-V"], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+		p2 = subprocess.Popen(["/usr/share/fossology/nomos/agent/nomossa", "-V"], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 		(stanout, stanerr) = p2.communicate()
 		res = re.match("nomos build version: ([\d\.]+) ", stanout)
 		if res != None:
@@ -941,7 +942,7 @@ def licensefossology((packages)):
 	## FOSSology database, for example by being in the correct group.
 	fossologyres = []
 	fossscanfiles = map(lambda x: os.path.join(x[2], x[3]), packages)
-	scanargs = ["/usr/share/fossology/nomos/agent/nomos"] + fossscanfiles
+	scanargs = ["/usr/share/fossology/nomos/agent/nomossa"] + fossscanfiles
 	p2 = subprocess.Popen(scanargs, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 	(stanout, stanerr) = p2.communicate()
 	if "FATAL" in stanout:
@@ -1600,12 +1601,6 @@ def main(argv):
 				pass
 	if scanlicense:
 		license = True
-		## check if PostgreSQL (for FOSSology) is actually running.
-		p2 = subprocess.Popen(["/usr/share/fossology/nomos/agent/nomos", "-h"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-		(stanout, stanerr) = p2.communicate()
-		if "FATAL" in stanerr:
-			print >>sys.stderr, "ERROR: license scanning enabled, but PostgreSQL not running"
-			sys.exit(1)
 		if licensedb == None:
 			parser.error("License scanning enabled, but no path to licensing database supplied")
 		if ninkacomments == None:
