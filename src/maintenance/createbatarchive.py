@@ -353,13 +353,16 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 			elif process == False:
 				seennotscanned_files[checksum] = version
 
-		print "skipping %s packing %s for version %s" % (len(skipfiles), len(packfiles), version)
-		sys.stdout.flush()
 		if len(skipfiles) == 0:
+			print "no files skipped, use original file when generating database\n"
+			sys.stdout.flush()
 			## Nothing to optimize, so just cleanup and continue to the next file
 			shutil.rmtree(unpackdir)
 			processed_versions.append(version)
 			continue
+
+		print "skipping %s packing %s for version %s" % (len(skipfiles), len(packfiles), version)
+		sys.stdout.flush()
 
 		## there are some files that need to be packed.
 		## first, create a temporary directory
