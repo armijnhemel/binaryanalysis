@@ -174,6 +174,13 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 	if dynamicRes != {}:
 		html = ""
 		## if the results are stored in the pickle generate nice reports.
+		if dynamicRes.has_key('kernelfunctions'):
+			if dynamicRes['kernelfunctions'] != []:
+				if not dynamicRes.has_key('versionresults'):
+					html += "<h1>Kernel function name matches</h1><p><ul>\n"
+					for d in dynamicRes['kernelfunctions']:
+						html += "<li>%s</li>" % d
+					html += "</ul></p>\n"
 		if dynamicRes.has_key('versionresults'):
 			if dynamicRes['versionresults'] != {}:
 				squashed_versions = {}
