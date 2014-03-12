@@ -1,3 +1,14 @@
+bat (16.0) unstable; urgency=high
+
+  * increased fidelity for Linux kernel scanning
+  * add additional piecharts for reporting
+  * unpacking deduplication
+  * name squashing for function names and variable names
+  * big endian cramfs + old cramfs support
+  * much more (see ChangeLog)
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Wed, 12 Mar 2014 19:20:43 +0100
+
 bat (15.0) unstable; urgency=high
 
   * increased fidelity for Linux kernel scanning
@@ -10,7 +21,6 @@ bat (15.0) unstable; urgency=high
   * much much more (see ChangeLog)
 
  -- Armijn Hemel <armijn@binaryanalysis.org>  Thu, 10 Oct 2013 13:02:43 +0200
-
 bat (14.0) unstable; urgency=low
 
   * fix cramfs unpacking
