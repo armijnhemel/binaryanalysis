@@ -152,8 +152,7 @@ def computehash((path, filename, filehash)):
 	return (path, filename, filehash, ext, process)
 
 ## unpack the directories to be scanned. For speed improvements it might be
-## wise to use a ramdisk or tmpfs for this, although when using Ninka and
-## FOSSology it is definitely not I/O bound...
+## wise to use a ramdisk or tmpfs for this.
 def unpack(directory, filename, unpackdir=None):
 	try:
 		os.stat(os.path.join(directory, filename))
