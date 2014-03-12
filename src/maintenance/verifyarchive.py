@@ -102,7 +102,7 @@ def main(argv):
 			print >>sys.stderr, e
 
 	pool = multiprocessing.Pool()
-	unpackresults = pool.map(unpack, pkgmeta)
+	unpackresults = pool.map(unpack, pkgmeta, 1)
 	pool.terminate()
 	for i in unpackresults:
 		if i != None:
