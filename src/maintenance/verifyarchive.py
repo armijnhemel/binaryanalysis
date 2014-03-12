@@ -45,6 +45,15 @@ def unpack((directory, filename)):
 	elif 'gzip compressed data' in filemagic:
 		p = subprocess.Popen(['tar', 'ztf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
+	elif 'compress\'d data 16 bits' in filemagic:
+		p = subprocess.Popen(['tar', 'ztf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+	elif 'Minix filesystem' in filemagic and filename.endswith('.gz'):
+		## sometimes libmagic gets it wrong
+		p = subprocess.Popen(['tar', 'ztf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+	else:
+		return None
 	if p.returncode != 0:
 		return (filename, False)
 	else:
@@ -96,9 +105,10 @@ def main(argv):
 	unpackresults = pool.map(unpack, pkgmeta)
 	pool.terminate()
 	for i in unpackresults:
-		(filename, result) = i
-		if not result:
-			print "corrupt archive: %s" % filename
+		if i != None:
+			(filename, result) = i
+			if not result:
+				print "corrupt archive: %s" % filename
 
 if __name__ == "__main__":
 	main(sys.argv)
