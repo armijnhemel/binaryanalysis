@@ -1,6 +1,11 @@
+2014-03-12
+* add script to test integrity of archives
+
 2014-03-10
 * createbatarchive.py: support MANIFESTS to prevent checksums from being
 generated if they are already known
+* add script to efficiently copy BAT archives and normal files from the
+directory used to generate the BAT archives
 
 2014-03-09
 * support LZMA compressed data in createdb.py and createbatarchive.py

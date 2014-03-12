@@ -91,3 +91,4 @@ BOTTLENECKS:
 20. process UNSCANNED_DUPLICATE_FILES from BAT archives in createdb.py. This is needed if some of the unscanned duplicate files need to be processed.
 21. store meta data about media files (PNG, GIF, MP3, etc.) in database as some of these files are quite package specific
 22. createdb.py and createbatarchive.py: add option to set unpackdir (to for example ramdisk)
+23. better error detection in createdb.py and createbatarchive.py for corrupt bzip2 archives
