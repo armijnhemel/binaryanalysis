@@ -254,31 +254,31 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 			os.fdopen(tmpfile[0]).close()
 			scanfile = tmpfile[1]
 			createdtempfile = True
-        try:
-		## store the extracted string constants in the order
-		## in which they appear in the file
-		lines = []
+	## store the extracted string constants in the order
+	## in which they appear in the file
+	lines = []
 
-		## store the extracted function/method names
-		functionRes = {}
-		## store the extracted variable names
-		variablepvs = {}
-		functionnames = set()
-		variablenames = set()
-		if language == 'C':
-			## For ELF binaries concentrate on just a few sections of the
-			## binary, namely the .rodata and .data sections.
-			## The .rodata section might also contain other data, so expect
-			## false positives until there is a better way to get only the string
-			## constants :-(
-			## Also, in case of certain compiler flags string constants might be in
-			## different sections.
-			## TODO: find out which compilation settings influence this and how it
-			## can be detected that strings were moved to different sections.
-			if "ELF" in mstype:
-				elfscanfiles = []
-				## first determine the size and offset of .data and .rodata sections,
-				## carve these sections from the ELF file, then run 'strings'
+	## store the extracted function/method names
+	functionRes = {}
+	## store the extracted variable names
+	variablepvs = {}
+	functionnames = set()
+	variablenames = set()
+	if language == 'C':
+		## For ELF binaries concentrate on just a few sections of the
+		## binary, namely the .rodata and .data sections.
+		## The .rodata section might also contain other data, so expect
+		## false positives until there is a better way to get only the string
+		## constants :-(
+		## Also, in case of certain compiler flags string constants might be in
+		## different sections.
+		## TODO: find out which compilation settings influence this and how it
+		## can be detected that strings were moved to different sections.
+		if "ELF" in mstype:
+			elfscanfiles = []
+			## first determine the size and offset of .data and .rodata sections,
+			## carve these sections from the ELF file, then run 'strings'
+        		try:
 				p = subprocess.Popen(['readelf', '-SW', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				## check if there actually are sections. On some systems the
@@ -348,11 +348,18 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 					dynres = extractDynamicFromELF(path)
 					if dynres != None:
 						(functionnames, variablenames) = dynres
-			else:
-				## extract all strings from the binary. Only look at strings
-				## that are a certain amount of characters or longer. This is
-				## configurable through "stringcutoff" although the gain will be relatively
-				## low by also scanning strings < stringcutoff
+			except Exception, e:
+				print >>sys.stderr, "string scan failed for:", path, e, type(e)
+				if blacklist != [] and not linuxkernel:
+					## cleanup the tempfile
+					os.unlink(tmpfile[1])
+				return None
+		else:
+			## extract all strings from the binary. Only look at strings
+			## that are a certain amount of characters or longer. This is
+			## configurable through "stringcutoff" although the gain will be relatively
+			## low by also scanning strings < stringcutoff
+			try:
 				p = subprocess.Popen(['strings', '-n', str(stringcutoff), scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				if p.returncode != 0:
@@ -367,54 +374,53 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 						lines = stanout[:-1].split("\n")
 					else:
 						lines = stanout.split("\n")
-			if linuxkernel:
-				functionRes = {}
-				if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
-					variablepvs = scankernelsymbols(kernelsymbols, scanenv, clones)
-			else:
-				(functionRes, variablepvs) = scanDynamic(functionnames, variablenames, scanenv, clones)
-		elif language == 'Java':
-			if blacklist == []:
-				javares = extractJavaInfo(scanfile, scanenv, stringcutoff, mstype)
-			else:
-				javares = None
-			if javares == None:
-				if createdtempfile:
+			except Exception, e:
+				print >>sys.stderr, "string scan failed for:", path, e, type(e)
+				if blacklist != [] and not linuxkernel:
 					## cleanup the tempfile
 					os.unlink(tmpfile[1])
 				return None
-			(lines, javameta) = javares
-			variablepvs = extractVariablesJava(javameta, scanenv, clones)
-			functionRes = extractJavaNames(javameta, scanenv, clones)
-		elif language == 'JavaScipt':
-			## JavaScript can be minified, but using xgettext it is still
-			## possible to extract the strings from it
-			## results = extractor.extractStrings(os.path.dirname(path), os.path.basename(path))
-			## for r in results:
-			##	lines.append(r[0])
-			lines = []
+		if linuxkernel:
+			functionRes = {}
+			if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
+				variablepvs = scankernelsymbols(kernelsymbols, scanenv, clones)
 		else:
-			lines = []
-
-		res = computeScore(lines, path, scanenv, clones, linuxkernel, stringcutoff, language)
-		if createdtempfile:
-			## a tempfile was made because of blacklisting, so cleanup
-			os.unlink(tmpfile[1])
-		if res == None and functionRes == {} and variablepvs == {}:
+			(functionRes, variablepvs) = scanDynamic(functionnames, variablenames, scanenv, clones)
+	elif language == 'Java':
+		if blacklist == []:
+			javares = extractJavaInfo(scanfile, scanenv, stringcutoff, mstype)
+		else:
+			javares = None
+		if javares == None:
+			if createdtempfile:
+				## cleanup the tempfile
+				os.unlink(tmpfile[1])
 			return None
-		if res != None:
-			if res.has_key('kernelfunctions'):
-				functionRes['kernelfunctions'] = copy.deepcopy(res['kernelfunctions'])
-				del res['kernelfunctions']
-		return (['ranking'], (res, functionRes, variablepvs, language))
+		(lines, javameta) = javares
+		variablepvs = extractVariablesJava(javameta, scanenv, clones)
+		functionRes = extractJavaNames(javameta, scanenv, clones)
+	elif language == 'JavaScipt':
+		## JavaScript can be minified, but using xgettext it is still
+		## possible to extract the strings from it
+		## results = extractor.extractStrings(os.path.dirname(path), os.path.basename(path))
+		## for r in results:
+		##	lines.append(r[0])
+		lines = []
+	else:
+		lines = []
 
-	except Exception, e:
-		print >>sys.stderr, "string scan failed for:", path, e, type(e)
-		if blacklist != [] and not linuxkernel:
-			## cleanup the tempfile
-			os.unlink(tmpfile[1])
+	if createdtempfile:
+		## a tempfile was made because of blacklisting, so cleanup
+		os.unlink(tmpfile[1])
+
+	res = computeScore(lines, path, scanenv, clones, linuxkernel, stringcutoff, language)
+	if res == None and functionRes == {} and variablepvs == {}:
 		return None
-
+	if res != None:
+		if res.has_key('kernelfunctions'):
+			functionRes['kernelfunctions'] = copy.deepcopy(res['kernelfunctions'])
+			del res['kernelfunctions']
+	return (['ranking'], (res, functionRes, variablepvs, language))
 
 ## extract information from Java file, both Dalvik DEX and regular Java class files
 ## 1. string constants
@@ -477,6 +483,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, mstype):
 		## files, then process each file in $tmpdir and search file for lines containing
 		## "const-string" and other things as well.
 		## TODO: Research http://code.google.com/p/smali/ as a replacement for dedexer
+		skipfields = ['public', 'private', 'protected', 'static', 'final', 'volatile', 'transient']
 		javameta = {'classes': [], 'methods': [], 'fields': [], 'sourcefiles': [], 'javatype': 'Dalvik'}
 		classnames = set()
 		sourcefiles = set()
@@ -532,7 +539,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, mstype):
 								ctr = 1
 								for f in fieldstmp[1:]:
 									## these are keywords
-									if f in ['public', 'private', 'protected', 'static', 'final', 'volatile', 'transient']:
+									if f in skipfields:
 										ctr = ctr + 1
 										continue
 									if '$' in f:
@@ -1669,6 +1676,12 @@ def xmlprettyprint(leafreports, root, envvars=None):
 ## * run: boolean indicating whether or not the scan should run
 ## * envvars: (possibly) modified
 def rankingsetup(envvars, debug=False):
+	## TODO: verify if the following programs are available and work:
+	## * strings
+	## * jcf-dump
+	## * java
+	## * readelf
+	## * c++filt
 	scanenv = os.environ.copy()
 	newenv = {}
 	if envvars != None:
