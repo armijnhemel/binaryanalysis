@@ -29,14 +29,11 @@ BAT_NAMECACHE_$LANGUAGE :: location of database containing cached
                            to reduce lookups
 '''
 
-import string, re, os, os.path, magic, sys, tempfile, shutil, copy
+import string, re, os, os.path, sys, tempfile, shutil, copy
 import sqlite3
 import subprocess
 import xml.dom.minidom
 import extractor
-
-ms = magic.open(magic.MAGIC_NONE)
-ms.load()
 
 ## mapping of names for databases per language
 namecacheperlanguage = { 'C':       'BAT_NAMECACHE_C'
@@ -116,11 +113,6 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 	## * Flash/ActionScript
 
 	if 'elf' in tags:
-		mstype = "ELF"
-		language = 'C'
-	else:
-		mstype = ms.file(path)
-	if "bFLT" in mstype:
 		language = 'C'
 	elif "java" in tags:
 		language = 'Java'
@@ -128,7 +120,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 		language = 'Java'
 	else:
 		## Treat everything else as C
-		## TODO first check the filename extension. If it is .js treat it as
+		## TODO check for Javascript, .NET and others
 		## JavaScript
 		language='C'
 
@@ -137,7 +129,10 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 	if 'linuxkernel' in tags:
 		linuxkernel = True
 
-	(lines, functionRes, variablepvs) = extractGeneric(path, tags, clones, scanenv, filesize, stringcutoff, linuxkernel, language, blacklist, offsets, debug, unpacktempdir)
+	if language == 'C':
+		(lines, functionRes, variablepvs) = extractC(path, tags, clones, scanenv, filesize, stringcutoff, linuxkernel, blacklist, debug, unpacktempdir)
+	elif language == 'Java':
+		(lines, functionRes, variablepvs) = extractJava(path, tags, clones, scanenv, filesize, stringcutoff, blacklist, debug, unpacktempdir)
 
 	res = computeScore(lines, path, scanenv, clones, linuxkernel, stringcutoff, language)
 	if res == None and functionRes == {} and variablepvs == {}:
@@ -148,7 +143,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 			del res['kernelfunctions']
 	return (['ranking'], (res, functionRes, variablepvs, language))
 
-def extractGeneric(path, tags, clones, scanenv, filesize, stringcutoff, linuxkernel, language, blacklist=[], offsets={}, debug=False, unpacktempdir=None):
+def extractC(path, tags, clones, scanenv, filesize, stringcutoff, linuxkernel, blacklist=[], debug=False, unpacktempdir=None):
 	## special var to indicate whether or not the file is a Linux kernel
 	## image. If so extra checks can be done.
 	if linuxkernel:
@@ -277,102 +272,27 @@ def extractGeneric(path, tags, clones, scanenv, filesize, stringcutoff, linuxker
 	variablepvs = {}
 	functionnames = set()
 	variablenames = set()
-	if language == 'C':
-		## For ELF binaries concentrate on just a few sections of the
-		## binary, namely the .rodata and .data sections.
-		## The .rodata section might also contain other data, so expect
-		## false positives until there is a better way to get only the string
-		## constants :-(
-		## Also, in case of certain compiler flags string constants might be in
-		## different sections.
-		## TODO: find out which compilation settings influence this and how it
-		## can be detected that strings were moved to different sections.
-		if "elf" in tags:
-			elfscanfiles = []
-			## first determine the size and offset of .data and .rodata sections,
-			## carve these sections from the ELF file, then run 'strings'
-        		try:
-				p = subprocess.Popen(['readelf', '-SW', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-				(stanout, stanerr) = p.communicate()
-				## check if there actually are sections. On some systems the
-				## binary is somewhat corrupted and does not have section headers
-				## TODO: localisation fixes
-				if "There are no sections in this file." in stanout:
-					p = subprocess.Popen(['strings', '-n', str(stringcutoff), scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-					(stanout, stanerr) = p.communicate()
-					if p.returncode != 0:
-						if createdtempfile:
-							## cleanup the tempfile
-							os.unlink(tmpfile[1])
-						return None
-					lines = stanout.split("\n")
-				else:
-					st = stanout.strip().split("\n")
-					datafile = open(path, 'rb')
-					datafile.seek(0)
-					for s in st[3:]:
-						for section in [".data", ".rodata"]:
-							if section in s:
-								elfsplits = s[7:].split()
-								if elfsplits[0].startswith(section):
-									## section actually contains no data, so skip
-									if elfsplits[1] == 'NOBITS':
-										continue
-									elfoffset = int(elfsplits[3], 16)
-									elfsize = int(elfsplits[4], 16)
-									## sanity check
-									if (elfoffset + elfsize) > os.stat(path).st_size:
-										continue
-									elftmp = tempfile.mkstemp(dir=unpacktempdir,suffix=section)
-									unpackelf = True
-									if blacklist != []:
-										if extractor.inblacklist(elfoffset, blacklist) != None:
-											unpackelf = False
-										if extractor.inblacklist(elfoffset+elfoffset, blacklist) != None:
-											unpackelf = False
-									if unpackelf:
-										datafile.seek(elfoffset)
-										data = datafile.read(elfsize)
-										os.write(elftmp[0], data)
-										os.fdopen(elftmp[0]).close()
-										elfscanfiles.append(elftmp[1])
-									else:
-										os.unlink(elftmp[1])
-					datafile.close()
 
-					for i in elfscanfiles:
-						## TODO: check if -Tbinary is needed or not
-        					p = subprocess.Popen(['strings', '-n', str(stringcutoff), i], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-        					(stanout, stanerr) = p.communicate()
-
-        					st = stanout.split("\n")
-
-        					for s in st:
-                        				printstring = s
-                					if len(printstring) >= stringcutoff:
-                        					lines.append(printstring)
-						os.unlink(i)
-				if linuxkernel:
-					## no functions can be extracted from a Linux kernel ELF image
-					functionnames = set()
-					if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
-						kernelsymbols = extractkernelsymbols(scanfile, scanenv, unpacktempdir)
-				else:
-					dynres = extractDynamicFromELF(path)
-					if dynres != None:
-						(functionnames, variablenames) = dynres
-			except Exception, e:
-				print >>sys.stderr, "string scan failed for:", path, e, type(e)
-				if blacklist != [] and not linuxkernel:
-					## cleanup the tempfile
-					os.unlink(tmpfile[1])
-				return None
-		else:
-			## extract all strings from the binary. Only look at strings
-			## that are a certain amount of characters or longer. This is
-			## configurable through "stringcutoff" although the gain will be relatively
-			## low by also scanning strings < stringcutoff
-			try:
+	## For ELF binaries concentrate on just a few sections of the
+	## binary, namely the .rodata and .data sections.
+	## The .rodata section might also contain other data, so expect
+	## false positives until there is a better way to get only the string
+	## constants :-(
+	## Also, in case of certain compiler flags string constants might be in
+	## different sections.
+	## TODO: find out which compilation settings influence this and how it
+	## can be detected that strings were moved to different sections.
+	if "elf" in tags:
+		elfscanfiles = []
+		## first determine the size and offset of .data and .rodata sections,
+		## carve these sections from the ELF file, then run 'strings'
+       		try:
+			p = subprocess.Popen(['readelf', '-SW', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate()
+			## check if there actually are sections. On some systems the
+			## binary is somewhat corrupted and does not have section headers
+			## TODO: localisation fixes
+			if "There are no sections in this file." in stanout:
 				p = subprocess.Popen(['strings', '-n', str(stringcutoff), scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				if p.returncode != 0:
@@ -380,56 +300,132 @@ def extractGeneric(path, tags, clones, scanenv, filesize, stringcutoff, linuxker
 						## cleanup the tempfile
 						os.unlink(tmpfile[1])
 					return None
-				if stanout == '':
-					lines = []
-				else:
-					if stanout.endswith('\n'):
-						lines = stanout[:-1].split("\n")
-					else:
-						lines = stanout.split("\n")
-			except Exception, e:
-				print >>sys.stderr, "string scan failed for:", path, e, type(e)
-				if blacklist != [] and not linuxkernel:
-					## cleanup the tempfile
-					os.unlink(tmpfile[1])
-				return None
-		if linuxkernel:
-			functionRes = {}
-			if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
-				variablepvs = scankernelsymbols(kernelsymbols, scanenv, clones)
-		else:
-			(functionRes, variablepvs) = scanDynamic(functionnames, variablenames, scanenv, clones)
-	elif language == 'Java':
-		if 'dalvik' in tags:
-			javatype = 'dalvik'
-		else:
-			javatype = 'java'
-		if blacklist == []:
-			javares = extractJavaInfo(scanfile, scanenv, stringcutoff, javatype)
-		else:
-			javares = None
-		if javares == None:
-			if createdtempfile:
+				lines = stanout.split("\n")
+			else:
+				st = stanout.strip().split("\n")
+				datafile = open(path, 'rb')
+				datafile.seek(0)
+				for s in st[3:]:
+					for section in [".data", ".rodata"]:
+						if section in s:
+							elfsplits = s[7:].split()
+							if elfsplits[0].startswith(section):
+								## section actually contains no data, so skip
+								if elfsplits[1] == 'NOBITS':
+									continue
+								elfoffset = int(elfsplits[3], 16)
+								elfsize = int(elfsplits[4], 16)
+								## sanity check
+								if (elfoffset + elfsize) > os.stat(path).st_size:
+									continue
+								elftmp = tempfile.mkstemp(dir=unpacktempdir,suffix=section)
+								unpackelf = True
+								if blacklist != []:
+									if extractor.inblacklist(elfoffset, blacklist) != None:
+										unpackelf = False
+									if extractor.inblacklist(elfoffset+elfoffset, blacklist) != None:
+										unpackelf = False
+								if unpackelf:
+									datafile.seek(elfoffset)
+									data = datafile.read(elfsize)
+									os.write(elftmp[0], data)
+									os.fdopen(elftmp[0]).close()
+									elfscanfiles.append(elftmp[1])
+								else:
+									os.unlink(elftmp[1])
+				datafile.close()
+
+				for i in elfscanfiles:
+					## TODO: check if -Tbinary is needed or not
+       					p = subprocess.Popen(['strings', '-n', str(stringcutoff), i], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+       					(stanout, stanerr) = p.communicate()
+
+       					st = stanout.split("\n")
+
+       					for s in st:
+                       				printstring = s
+               					if len(printstring) >= stringcutoff:
+                       					lines.append(printstring)
+					os.unlink(i)
+			if linuxkernel:
+				## no functions can be extracted from a Linux kernel ELF image
+				functionnames = set()
+				if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
+					kernelsymbols = extractkernelsymbols(scanfile, scanenv, unpacktempdir)
+			else:
+				dynres = extractDynamicFromELF(path)
+				if dynres != None:
+					(functionnames, variablenames) = dynres
+		except Exception, e:
+			print >>sys.stderr, "string scan failed for:", path, e, type(e)
+			if blacklist != [] and not linuxkernel:
 				## cleanup the tempfile
 				os.unlink(tmpfile[1])
 			return None
-		(lines, javameta) = javares
-		variablepvs = extractVariablesJava(javameta, scanenv, clones)
-		functionRes = extractJavaNames(javameta, scanenv, clones)
-	elif language == 'JavaScipt':
-		## JavaScript can be minified, but using xgettext it is still
-		## possible to extract the strings from it
-		## results = extractor.extractStrings(os.path.dirname(path), os.path.basename(path))
-		## for r in results:
-		##	lines.append(r[0])
-		lines = []
 	else:
-		lines = []
-
+		## extract all strings from the binary. Only look at strings
+		## that are a certain amount of characters or longer. This is
+		## configurable through "stringcutoff" although the gain will be relatively
+		## low by also scanning strings < stringcutoff
+		try:
+			p = subprocess.Popen(['strings', '-n', str(stringcutoff), scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate()
+			if p.returncode != 0:
+				if createdtempfile:
+					## cleanup the tempfile
+					os.unlink(tmpfile[1])
+				return None
+			if stanout == '':
+				lines = []
+			else:
+				if stanout.endswith('\n'):
+					lines = stanout[:-1].split("\n")
+				else:
+					lines = stanout.split("\n")
+		except Exception, e:
+			print >>sys.stderr, "string scan failed for:", path, e, type(e)
+			if blacklist != [] and not linuxkernel:
+				## cleanup the tempfile
+				os.unlink(tmpfile[1])
+			return None
+	if linuxkernel:
+		functionRes = {}
+		if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
+			variablepvs = scankernelsymbols(kernelsymbols, scanenv, clones)
+	else:
+		(functionRes, variablepvs) = scanDynamic(functionnames, variablenames, scanenv, clones)
 	if createdtempfile:
-		## a tempfile was made because of blacklisting, so cleanup
+		## cleanup the tempfile
 		os.unlink(tmpfile[1])
 	return (lines, functionRes, variablepvs)
+
+def extractJava(scanfile, tags, clones, scanenv, filesize, stringcutoff, blacklist=[], debug=False, unpacktempdir=None):
+	if 'dalvik' in tags:
+		javatype = 'dalvik'
+	else:
+		javatype = 'java'
+	if blacklist == []:
+		javares = extractJavaInfo(scanfile, scanenv, stringcutoff, javatype)
+	else:
+		javares = None
+	if javares == None:
+		return None
+	(lines, javameta) = javares
+	variablepvs = extractVariablesJava(javameta, scanenv, clones)
+	functionRes = extractJavaNames(javameta, scanenv, clones)
+	return (lines, functionRes, variablepvs)
+
+'''
+def extractJavaScript(path, tags, clones, scanenv, filesize, stringcutoff, blacklist=[], debug=False, unpacktempdir=None):
+	## JavaScript can be minified, but using xgettext it is still
+	## possible to extract the strings from it
+	## results = extractor.extractStrings(os.path.dirname(path), os.path.basename(path))
+	## for r in results:
+	##	lines.append(r[0])
+	lines = []
+
+	return (lines, functionRes, variablepvs)
+'''
 
 ## extract information from Java file, both Dalvik DEX and regular Java class files
 ## 1. string constants
