@@ -62,8 +62,8 @@ rejavastring = re.compile("#\d+: String \d+=\"")
 ## Original code (in Perl) was written by Eelco Dolstra.
 ## Reimplementation in Python done by Armijn Hemel.
 ##
-def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
-	filesize = filesize = os.stat(path).st_size
+def searchGeneric(filepath, tags, blacklist=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+	filesize = os.stat(filepath).st_size
 	## whole file is blacklisted, so no need to scan
 	if extractor.inblacklist(0, blacklist) == filesize:
 		return None
@@ -130,13 +130,13 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 		linuxkernel = True
 
 	if language == 'C':
-		(lines, functionRes, variablepvs) = extractC(path, tags, clones, scanenv, filesize, stringcutoff, linuxkernel, blacklist, debug, unpacktempdir)
+		(lines, functionRes, variablepvs) = extractC(filepath, tags, clones, scanenv, filesize, stringcutoff, linuxkernel, blacklist, debug, unpacktempdir)
 	elif language == 'Java':
-		(lines, javameta) = extractJava(path, tags, clones, scanenv, filesize, stringcutoff, blacklist, debug, unpacktempdir)
+		(lines, javameta) = extractJava(filepath, tags, clones, scanenv, filesize, stringcutoff, blacklist, debug, unpacktempdir)
 		variablepvs = extractVariablesJava(javameta, scanenv, clones)
 		functionRes = extractJavaNames(javameta, scanenv, clones)
 
-	res = computeScore(lines, path, scanenv, clones, linuxkernel, stringcutoff, language)
+	res = computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, language)
 	if res == None and functionRes == {} and variablepvs == {}:
 		return None
 	if res != None:
@@ -145,7 +145,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 			del res['kernelfunctions']
 	return (['ranking'], (res, functionRes, variablepvs, language))
 
-def extractC(path, tags, clones, scanenv, filesize, stringcutoff, linuxkernel, blacklist=[], debug=False, unpacktempdir=None):
+def extractC(filepath, tags, clones, scanenv, filesize, stringcutoff, linuxkernel, blacklist=[], debug=False, unpacktempdir=None):
 	## special var to indicate whether or not the file is a Linux kernel
 	## image. If so extra checks can be done.
 	if linuxkernel:
@@ -157,13 +157,13 @@ def extractC(path, tags, clones, scanenv, filesize, stringcutoff, linuxkernel, b
 
 	createdtempfile = False
 	if "elf" in tags:
-		scanfile = path
+		scanfile = filepath
 	else:
 		## The file contains a Linux kernel image and it is not an ELF file.
 		## Kernel symbols recorded in the image could lead to false positives,
 		## so they first have to be found and be blacklisted.
 		if linuxkernel:
-			kernelfile = open(path, 'r')
+			kernelfile = open(filepath, 'r')
 			## TODO: this is inefficient
 			kerneldata = kernelfile.read()
 			kernelfile.close()
@@ -224,14 +224,14 @@ def extractC(path, tags, clones, scanenv, filesize, stringcutoff, linuxkernel, b
 		## analyzed, the file system should have been unpacked and been
 		## blacklisted.
 		if blacklist == []:
-			scanfile = path
+			scanfile = filepath
 		else:
 			## The blacklist is not empty. This could be a problem if
 			## the Linux kernel is an ELF file and contains for example
 			## an initrd.
 			## Parts of the file were already scanned, so
 			## carve the right parts from the file first
-			datafile = open(path, 'rb')
+			datafile = open(filepath, 'rb')
 			lastindex = 0
 			databytes = ""
 			datafile.seek(lastindex)
@@ -305,7 +305,7 @@ def extractC(path, tags, clones, scanenv, filesize, stringcutoff, linuxkernel, b
 				lines = stanout.split("\n")
 			else:
 				st = stanout.strip().split("\n")
-				datafile = open(path, 'rb')
+				datafile = open(filepath, 'rb')
 				datafile.seek(0)
 				for s in st[3:]:
 					for section in [".data", ".rodata"]:
@@ -318,7 +318,7 @@ def extractC(path, tags, clones, scanenv, filesize, stringcutoff, linuxkernel, b
 								elfoffset = int(elfsplits[3], 16)
 								elfsize = int(elfsplits[4], 16)
 								## sanity check
-								if (elfoffset + elfsize) > os.stat(path).st_size:
+								if (elfoffset + elfsize) > os.stat(filepath).st_size:
 									continue
 								elftmp = tempfile.mkstemp(dir=unpacktempdir,suffix=section)
 								unpackelf = True
@@ -355,11 +355,11 @@ def extractC(path, tags, clones, scanenv, filesize, stringcutoff, linuxkernel, b
 				if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
 					kernelsymbols = extractkernelsymbols(scanfile, scanenv, unpacktempdir)
 			else:
-				dynres = extractDynamicFromELF(path)
+				dynres = extractDynamicFromELF(filepath)
 				if dynres != None:
 					(functionnames, variablenames) = dynres
 		except Exception, e:
-			print >>sys.stderr, "string scan failed for:", path, e, type(e)
+			print >>sys.stderr, "string scan failed for:", filepath, e, type(e)
 			if blacklist != [] and not linuxkernel:
 				## cleanup the tempfile
 				os.unlink(tmpfile[1])
@@ -385,7 +385,7 @@ def extractC(path, tags, clones, scanenv, filesize, stringcutoff, linuxkernel, b
 				else:
 					lines = stanout.split("\n")
 		except Exception, e:
-			print >>sys.stderr, "string scan failed for:", path, e, type(e)
+			print >>sys.stderr, "string scan failed for:", filepath, e, type(e)
 			if blacklist != [] and not linuxkernel:
 				## cleanup the tempfile
 				os.unlink(tmpfile[1])
@@ -1007,7 +1007,7 @@ def scanDynamic(scanstr, variables, scanenv, clones):
 	return (dynamicRes, variablepvs)
 
 ## Look up strings in the database and compute a score
-def computeScore(lines, path, scanenv, clones, linuxkernel, stringcutoff, language='C'):
+def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, language='C'):
 	if len(lines) == 0:
 		return None
 	lenStringsFound = 0
@@ -1042,7 +1042,7 @@ def computeScore(lines, path, scanenv, clones, linuxkernel, stringcutoff, langua
 	kernelfuncres = []
 	kernelparamres = []
 	if linuxkernel:
-		if scanenv.get('BAT_KERNELFUNCTION_SCAN') == '1':
+		if scanenv.get('BAT_KERNELFUNCTION_SCAN') == '1' and language == 'C':
 			scankernelfunctions = True
 			funccache = scanenv.get(namecacheperlanguage['C'])
 			kernelconn = sqlite3.connect(funccache)
@@ -1060,7 +1060,7 @@ def computeScore(lines, path, scanenv, clones, linuxkernel, stringcutoff, langua
 
 	lenlines = len(lines)
 
-	print >>sys.stderr, "total extracted strings for %s: %d" %(path, lenlines)
+	print >>sys.stderr, "total extracted strings for %s: %d" %(filepath, lenlines)
 
 	matchedlines = 0
 	unmatchedlines = 0
@@ -1224,7 +1224,7 @@ def computeScore(lines, path, scanenv, clones, linuxkernel, stringcutoff, langua
 			## We're not really using it, except for reporting.
 			lenStringsFound = lenStringsFound + len(line)
 
-			print >>sys.stderr, "\n%d matches found for <(|%s|)> in %s" % (len(res), line, path)
+			print >>sys.stderr, "\n%d matches found for <(|%s|)> in %s" % (len(res), line, filepath)
 
 			pkgs = {}    ## {package name: [filenames without path]}
 	
