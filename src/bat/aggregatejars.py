@@ -307,7 +307,6 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 	dynamicresfinal['totalnames'] = namesmatched
 	dynamicresfinal['packages'] = packagesmatched
 
-	## TODO: add matchednotclone and friends
 	rankres['unmatched'] = list(set(unmatched))
 	rankres['matchedlines'] = matchedlines
 	rankres['matchednonassignedlines'] = matchednonassignedlines
