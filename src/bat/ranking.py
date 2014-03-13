@@ -119,13 +119,12 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 		mstype = "ELF"
 		language = 'C'
 	else:
-		## TODO: use more information already present in tags, like Dalvik or Java.
 		mstype = ms.file(path)
 	if "bFLT" in mstype:
 		language = 'C'
-	elif "compiled Java" in mstype:
+	elif "java" in tags:
 		language = 'Java'
-	elif "Dalvik dex file" in mstype:
+	elif "dalvik" in tags:
 		language = 'Java'
 	else:
 		## Treat everything else as C
@@ -133,12 +132,26 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 		## JavaScript
 		language='C'
 
-	## special var to indicate whether or not the file is a Linux kernel
-	## image. If so extra checks can be done.
 	linuxkernel = False
 
 	if 'linuxkernel' in tags:
 		linuxkernel = True
+
+	(lines, functionRes, variablepvs) = extractGeneric(path, tags, clones, scanenv, filesize, stringcutoff, linuxkernel, language, blacklist, offsets, debug, unpacktempdir)
+
+	res = computeScore(lines, path, scanenv, clones, linuxkernel, stringcutoff, language)
+	if res == None and functionRes == {} and variablepvs == {}:
+		return None
+	if res != None:
+		if res.has_key('kernelfunctions'):
+			functionRes['kernelfunctions'] = copy.deepcopy(res['kernelfunctions'])
+			del res['kernelfunctions']
+	return (['ranking'], (res, functionRes, variablepvs, language))
+
+def extractGeneric(path, tags, clones, scanenv, filesize, stringcutoff, linuxkernel, language, blacklist=[], offsets={}, debug=False, unpacktempdir=None):
+	## special var to indicate whether or not the file is a Linux kernel
+	## image. If so extra checks can be done.
+	if linuxkernel:
 		kernelsymbols = []
 
 	## ELF files are always scanned as a whole. Sometimes there are sections that
@@ -152,7 +165,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 		## The file contains a Linux kernel image and it is not an ELF file.
 		## Kernel symbols recorded in the image could lead to false positives,
 		## so they first have to be found and be blacklisted.
-		if 'linuxkernel' in tags:
+		if linuxkernel:
 			kernelfile = open(path, 'r')
 			## TODO: this is inefficient
 			kerneldata = kernelfile.read()
@@ -274,7 +287,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 		## different sections.
 		## TODO: find out which compilation settings influence this and how it
 		## can be detected that strings were moved to different sections.
-		if "ELF" in mstype:
+		if "elf" in tags:
 			elfscanfiles = []
 			## first determine the size and offset of .data and .rodata sections,
 			## carve these sections from the ELF file, then run 'strings'
@@ -387,8 +400,12 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 		else:
 			(functionRes, variablepvs) = scanDynamic(functionnames, variablenames, scanenv, clones)
 	elif language == 'Java':
+		if 'dalvik' in tags:
+			javatype = 'dalvik'
+		else:
+			javatype = 'java'
 		if blacklist == []:
-			javares = extractJavaInfo(scanfile, scanenv, stringcutoff, mstype)
+			javares = extractJavaInfo(scanfile, scanenv, stringcutoff, javatype)
 		else:
 			javares = None
 		if javares == None:
@@ -412,15 +429,7 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 	if createdtempfile:
 		## a tempfile was made because of blacklisting, so cleanup
 		os.unlink(tmpfile[1])
-
-	res = computeScore(lines, path, scanenv, clones, linuxkernel, stringcutoff, language)
-	if res == None and functionRes == {} and variablepvs == {}:
-		return None
-	if res != None:
-		if res.has_key('kernelfunctions'):
-			functionRes['kernelfunctions'] = copy.deepcopy(res['kernelfunctions'])
-			del res['kernelfunctions']
-	return (['ranking'], (res, functionRes, variablepvs, language))
+	return (lines, functionRes, variablepvs)
 
 ## extract information from Java file, both Dalvik DEX and regular Java class files
 ## 1. string constants
@@ -428,9 +437,9 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 ## 3. variable names
 ## 4. source file names
 ## 5. method names
-def extractJavaInfo(scanfile, scanenv, stringcutoff, mstype):
+def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype):
 	lines = []
-        if "compiled Java" in mstype:
+        if javatype == 'java':
 		classname = []
 		sourcefile = []
 		fields = []
@@ -477,14 +486,14 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, mstype):
 				printstring = i.split("=", 1)[1][1:-1]
         			if len(printstring) >= stringcutoff:
 					lines.append(printstring)
-		javameta = {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile, 'javatype': 'Java'}
-	elif "Dalvik dex" in mstype:
+		javameta = {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile, 'javatype': javatype}
+	elif javatype == 'dalvik':
 		## Using dedexer http://dedexer.sourceforge.net/ extract information from Dalvik
 		## files, then process each file in $tmpdir and search file for lines containing
 		## "const-string" and other things as well.
 		## TODO: Research http://code.google.com/p/smali/ as a replacement for dedexer
 		skipfields = ['public', 'private', 'protected', 'static', 'final', 'volatile', 'transient']
-		javameta = {'classes': [], 'methods': [], 'fields': [], 'sourcefiles': [], 'javatype': 'Dalvik'}
+		javameta = {'classes': [], 'methods': [], 'fields': [], 'sourcefiles': [], 'javatype': javatype}
 		classnames = set()
 		sourcefiles = set()
 		methods = set()
