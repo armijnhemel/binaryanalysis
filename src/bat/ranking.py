@@ -65,8 +65,6 @@ rejavastring = re.compile("#\d+: String \d+=\"")
 ## Original code (in Perl) was written by Eelco Dolstra.
 ## Reimplementation in Python done by Armijn Hemel.
 ##
-##
-##
 def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
 	filesize = filesize = os.stat(path).st_size
 	## whole file is blacklisted, so no need to scan
@@ -97,7 +95,18 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 		conn.close()
 
 	## Only consider strings that are len(stringcutoff) or larger
-	stringcutoff = 5
+	## it is *very* important to keep this value in sync with the
+	## database creation scripts!
+	if scanenv.has_key('BAT_STRING_CUTOFF'):
+		try:
+			stringcutoff = int(scanenv['BAT_STRING_CUTOFF'])
+			if stringcutoff < 1:
+				stringcutoff = 5
+		except ValueError, e:
+			stringcutoff = 5
+	else:
+		stringcutoff = 5
+
 	## use extra information for a few file types
 	## * ELF files
 	## * bFLT files
