@@ -58,13 +58,15 @@ rejavastring = re.compile("#\d+: String \d+=\"")
 
 ## Main part of the scan
 ##
-## 1. extract the strings using 'strings' and only consider strings >= 5,
-## although this should be configurable
-## 2. Then run it through extractGeneric, that queries the database and does
+## 1. extract string constants, function names, variable names, etc.
+## 2. Then run strings through computeScore, that queries the database and does
 ## funky statistics as described in our paper.
 ##
 ## Original code (in Perl) was written by Eelco Dolstra.
 ## Reimplementation in Python done by Armijn Hemel.
+##
+##
+##
 def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
 	filesize = filesize = os.stat(path).st_size
 	## whole file is blacklisted, so no need to scan
@@ -117,8 +119,9 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 	elif "Dalvik dex file" in mstype:
 		language = 'Java'
 	else:
-		## first check the filename extension. If it is .js treat it as
-		## JavaScript, else just consider it as 'C'.
+		## Treat everything else as C
+		## TODO first check the filename extension. If it is .js treat it as
+		## JavaScript
 		language='C'
 
 	## special var to indicate whether or not the file is a Linux kernel
@@ -243,9 +246,16 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 			scanfile = tmpfile[1]
 			createdtempfile = True
         try:
+		## store the extracted string constants in the order
+		## in which they appear in the file
 		lines = []
-		dynamicRes = {}
+
+		## store the extracted function/method names
+		functionRes = {}
+		## store the extracted variable names
 		variablepvs = {}
+		functionnames = set()
+		variablenames = set()
 		if language == 'C':
 			## For ELF binaries concentrate on just a few sections of the
 			## binary, namely the .rodata and .data sections.
@@ -257,17 +267,9 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 			## TODO: find out which compilation settings influence this and how it
 			## can be detected that strings were moved to different sections.
 			if "ELF" in mstype:
-				if linuxkernel:
-					dynamicRes = {}
-					if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
-						kernelvars = extractkernelsymbols(scanfile, scanenv, unpacktempdir)
-						variablepvs = scankernelsymbols(kernelvars, scanenv, clones)
-				else:
-					dynres = extractDynamic(path, scanenv, clones)
-					if dynres != None:
-						(dynamicRes,variablepvs) = dynres
 				elfscanfiles = []
-				## first determine the size and offset of .data and .rodata and carve them from the file
+				## first determine the size and offset of .data and .rodata sections,
+				## carve these sections from the ELF file, then run 'strings'
 				p = subprocess.Popen(['readelf', '-SW', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				## check if there actually are sections. On some systems the
@@ -317,7 +319,6 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 					datafile.close()
 
 					for i in elfscanfiles:
-						## run strings to get rid of weird characters that we don't even want to scan
 						## TODO: check if -Tbinary is needed or not
         					p = subprocess.Popen(['strings', '-n', str(stringcutoff), i], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         					(stanout, stanerr) = p.communicate()
@@ -329,14 +330,20 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
                 					if len(printstring) >= stringcutoff:
                         					lines.append(printstring)
 						os.unlink(i)
-			else:
 				if linuxkernel:
+					## no functions can be extracted from a Linux kernel ELF image
+					functionnames = set()
 					if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
-						variablepvs = scankernelsymbols(kernelsymbols, scanenv, clones)
+						kernelsymbols = extractkernelsymbols(scanfile, scanenv, unpacktempdir)
+				else:
+					dynres = extractDynamicFromELF(path)
+					if dynres != None:
+						(functionnames, variablenames) = dynres
+			else:
 				## extract all strings from the binary. Only look at strings
 				## that are a certain amount of characters or longer. This is
 				## configurable through "stringcutoff" although the gain will be relatively
-				## low by also scanning strings < 5.
+				## low by also scanning strings < stringcutoff
 				p = subprocess.Popen(['strings', '-n', str(stringcutoff), scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				if p.returncode != 0:
@@ -351,143 +358,25 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 						lines = stanout[:-1].split("\n")
 					else:
 						lines = stanout.split("\n")
+			if linuxkernel:
+				functionRes = {}
+				if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
+					variablepvs = scankernelsymbols(kernelsymbols, scanenv, clones)
+			else:
+				(functionRes, variablepvs) = scanDynamic(functionnames, variablenames, scanenv, clones)
 		elif language == 'Java':
-			## TODO: check here if there are caches already or not. If there are none it makes
-			## no sense to continue.
-			lines = []
-        		if "compiled Java" in mstype and blacklist == []:
-				classname = []
-				sourcefile = []
-				fields = []
-				methods = []
-				lines = []
-
-				p = subprocess.Popen(['jcf-dump', '--print-constants', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-				(stanout, stanerr) = p.communicate()
-				if p.returncode != 0:
-					if createdtempfile:
-						## cleanup the tempfile
-						os.unlink(tmpfile[1])
-					return None
-				javalines = stanout.splitlines()
-				for i in javalines:
-					## extract the classname
-					## TODO: deal with inner classes properly
-					if i.startswith("This class: "):
-						res = rejavaclass.match(i)
-						if res != None:
-							classname = [res.groups()[0]]
-					## extract the SourceFile attribute, if available
-					if i.startswith("Attribute \"SourceFile\","):
-						res = rejavaattribute.match(i)
-						if res != None:
-							attribute = res.groups()[0]
-							sourcefile = [attribute]
-					## extract fields
-					if i.startswith("Field name:\""):
-						res = rejavafield.match(i)
-						if res != None:
-							fieldname = res.groups()[0]
-							if '$' in fieldname:
-								continue
-							if fieldname != 'serialVersionUID':
-								fields.append(fieldname)
-					## extract methods
-					if i.startswith("Method name:\""):
-						res = rejavamethod.match(i)
-						if res != None:
-							method = res.groups()[0]
-							## ignore synthetic methods that are inserted by the Java compiler
-							if not method.startswith('access$'):
-								methods.append(method)
-					## process each line of stanout, looking for lines that look like this:
-					## #13: String 45="/"
-					if rejavastring.match(i) != None:
-						printstring = i.split("=", 1)[1][1:-1]
-        					if len(printstring) >= stringcutoff:
-							lines.append(printstring)
-				javameta = {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile}
-			elif "Dalvik dex" in mstype and blacklist == []:
-				## Using dedexer http://dedexer.sourceforge.net/ extract information from Dalvik
-				## files, then process each file in $tmpdir and search file for lines containing
-				## "const-string" and other things as well.
-				## alternatively, use code from here http://code.google.com/p/smali/
-				javameta = {'classes': [], 'methods': [], 'fields': [], 'sourcefiles': []}
-				classnames = set()
-				sourcefiles = set()
-				methods = set()
-				fields = set()
-				dex_tmpdir = None
-				if scanenv.has_key('DEX_TMPDIR'):
-					dex_tmpdir = scanenv['DEX_TMPDIR']
-				if dex_tmpdir != None:
-					dalvikdir = tempfile.mkdtemp(dir=dex_tmpdir)
-				else:
-					dalvikdir = tempfile.mkdtemp(dir=unpacktempdir)
-				p = subprocess.Popen(['java', '-jar', '/usr/share/java/bat-ddx.jar', '-d', dalvikdir, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-				(stanout, stanerr) = p.communicate()
-				if p.returncode == 0:
-					osgen = os.walk(dalvikdir)
-					try:
-						while True:
-							ddxfiles = osgen.next()
-							for ddx in ddxfiles[2]:
-								ddxlines = open("%s/%s" % (ddxfiles[0], ddx)).readlines()
-								for d in ddxlines:
-									## search for string constants
-									if "const-string" in d:
-										reres = re.match("\s+const-string\s+v\d+", d)
-										if reres != None:
-											printstring = d.strip().split(',', 1)[1][1:-1]
-        										if len(printstring) >= stringcutoff:
-												lines.append(printstring)
-									## extract method names
-									elif d.startswith(".method"):
-										method = (d.split('(')[0]).split(" ")[-1]
-										if method == '<init>' or method == '<clinit>':
-											pass
-										elif method.startswith('access$'):
-											pass
-										else:
-											methods.add(method)
-									## extract class files, including inner classes
-									elif d.startswith(".class") or d.startswith(".inner"):
-										classname = d.strip().split('/')[-1]
-										if "$" in classname:
-											classname = classname.split("$")[0]
-										classnames.add(classname)
-									## extract source code files
-									elif d.startswith(".source"):
-										sourcefile = d.strip().split(' ')[-1]
-										sourcefiles.add(sourcefile)
-									## extract fields
-									elif d.startswith(".field"):
-										field = d.strip().split(';')[0]
-										fieldstmp = field.split()
-										ctr = 1
-										for f in fieldstmp[1:]:
-											## these are keywords
-											if f in ['public', 'private', 'protected', 'static', 'final', 'volatile', 'transient']:
-												ctr = ctr + 1
-												continue
-											if '$' in f:
-												break
-											## often generated, so useless
-											if "serialVersionUID" in f:
-												break
-											fields.add(f)
-											break
-					except StopIteration:
-						pass
-				javameta['classes'] = list(classnames)
-				javameta['sourcefiles'] = list(sourcefiles)
-				javameta['methods'] = list(methods)
-				javameta['fields'] = list(fields)
-
-				## cleanup
-				shutil.rmtree(dalvikdir)
+			if blacklist == []:
+				javares = extractJavaInfo(scanfile, scanenv, stringcutoff, mstype)
+			else:
+				javares = None
+			if javares == None:
+				if createdtempfile:
+					## cleanup the tempfile
+					os.unlink(tmpfile[1])
+				return None
+			(lines, javameta) = javares
 			variablepvs = extractVariablesJava(javameta, scanenv, clones)
-			dynamicRes = extractJavaNames(javameta, scanenv, clones)
+			functionRes = extractJavaNames(javameta, scanenv, clones)
 		elif language == 'JavaScipt':
 			## JavaScript can be minified, but using xgettext it is still
 			## possible to extract the strings from it
@@ -498,22 +387,17 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 		else:
 			lines = []
 
-		res = extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, language)
-		if res != None:
-			if createdtempfile:
-				## a tempfile was made because of blacklisting, so cleanup
-				os.unlink(tmpfile[1])
-		else:
-			if createdtempfile:
-				## a tempfile was made because of blacklisting, so cleanup
-				os.unlink(tmpfile[1])
-		if res == None and dynamicRes == {} and variablepvs == {}:
+		res = computeScore(lines, path, scanenv, clones, linuxkernel, stringcutoff, language)
+		if createdtempfile:
+			## a tempfile was made because of blacklisting, so cleanup
+			os.unlink(tmpfile[1])
+		if res == None and functionRes == {} and variablepvs == {}:
 			return None
 		if res != None:
 			if res.has_key('kernelfunctions'):
-				dynamicRes['kernelfunctions'] = copy.deepcopy(res['kernelfunctions'])
+				functionRes['kernelfunctions'] = copy.deepcopy(res['kernelfunctions'])
 				del res['kernelfunctions']
-		return (['ranking'], (res, dynamicRes, variablepvs, language))
+		return (['ranking'], (res, functionRes, variablepvs, language))
 
 	except Exception, e:
 		print >>sys.stderr, "string scan failed for:", path, e, type(e)
@@ -521,6 +405,144 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 			## cleanup the tempfile
 			os.unlink(tmpfile[1])
 		return None
+
+
+## extract information from Java file, both Dalvik DEX and regular Java class files
+## 1. string constants
+## 2. class names
+## 3. variable names
+## 4. source file names
+## 5. method names
+def extractJavaInfo(scanfile, scanenv, stringcutoff, mstype):
+	lines = []
+        if "compiled Java" in mstype:
+		classname = []
+		sourcefile = []
+		fields = []
+		methods = []
+
+		p = subprocess.Popen(['jcf-dump', '--print-constants', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			return None
+		javalines = stanout.splitlines()
+		for i in javalines:
+			## extract the classname
+			## TODO: deal with inner classes properly
+			if i.startswith("This class: "):
+				res = rejavaclass.match(i)
+				if res != None:
+					classname = [res.groups()[0]]
+			## extract the SourceFile attribute, if available
+			if i.startswith("Attribute \"SourceFile\","):
+				res = rejavaattribute.match(i)
+				if res != None:
+					attribute = res.groups()[0]
+					sourcefile = [attribute]
+			## extract fields
+			if i.startswith("Field name:\""):
+				res = rejavafield.match(i)
+				if res != None:
+					fieldname = res.groups()[0]
+					if '$' in fieldname:
+						continue
+					if fieldname != 'serialVersionUID':
+						fields.append(fieldname)
+			## extract methods
+			if i.startswith("Method name:\""):
+				res = rejavamethod.match(i)
+				if res != None:
+					method = res.groups()[0]
+					## ignore synthetic methods that are inserted by the Java compiler
+					if not method.startswith('access$'):
+						methods.append(method)
+			## process each line of stanout, looking for lines that look like this:
+			## #13: String 45="/"
+			if rejavastring.match(i) != None:
+				printstring = i.split("=", 1)[1][1:-1]
+        			if len(printstring) >= stringcutoff:
+					lines.append(printstring)
+		javameta = {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile, 'javatype': 'Java'}
+	elif "Dalvik dex" in mstype:
+		## Using dedexer http://dedexer.sourceforge.net/ extract information from Dalvik
+		## files, then process each file in $tmpdir and search file for lines containing
+		## "const-string" and other things as well.
+		## TODO: Research http://code.google.com/p/smali/ as a replacement for dedexer
+		javameta = {'classes': [], 'methods': [], 'fields': [], 'sourcefiles': [], 'javatype': 'Dalvik'}
+		classnames = set()
+		sourcefiles = set()
+		methods = set()
+		fields = set()
+		dex_tmpdir = None
+		if scanenv.has_key('DEX_TMPDIR'):
+			dex_tmpdir = scanenv['DEX_TMPDIR']
+		if dex_tmpdir != None:
+			dalvikdir = tempfile.mkdtemp(dir=dex_tmpdir)
+		else:
+			dalvikdir = tempfile.mkdtemp(dir=unpacktempdir)
+		p = subprocess.Popen(['java', '-jar', '/usr/share/java/bat-ddx.jar', '-d', dalvikdir, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode == 0:
+			osgen = os.walk(dalvikdir)
+			try:
+				while True:
+					ddxfiles = osgen.next()
+					for ddx in ddxfiles[2]:
+						ddxlines = open("%s/%s" % (ddxfiles[0], ddx)).readlines()
+						for d in ddxlines:
+							## search for string constants
+							if "const-string" in d:
+								reres = re.match("\s+const-string\s+v\d+", d)
+								if reres != None:
+									printstring = d.strip().split(',', 1)[1][1:-1]
+        								if len(printstring) >= stringcutoff:
+										lines.append(printstring)
+							## extract method names
+							elif d.startswith(".method"):
+								method = (d.split('(')[0]).split(" ")[-1]
+								if method == '<init>' or method == '<clinit>':
+									pass
+								elif method.startswith('access$'):
+									pass
+								else:
+									methods.add(method)
+							## extract class files, including inner classes
+							elif d.startswith(".class") or d.startswith(".inner"):
+								classname = d.strip().split('/')[-1]
+								if "$" in classname:
+									classname = classname.split("$")[0]
+								classnames.add(classname)
+							## extract source code files
+							elif d.startswith(".source"):
+								sourcefile = d.strip().split(' ')[-1]
+								sourcefiles.add(sourcefile)
+							## extract fields
+							elif d.startswith(".field"):
+								field = d.strip().split(';')[0]
+								fieldstmp = field.split()
+								ctr = 1
+								for f in fieldstmp[1:]:
+									## these are keywords
+									if f in ['public', 'private', 'protected', 'static', 'final', 'volatile', 'transient']:
+										ctr = ctr + 1
+										continue
+									if '$' in f:
+										break
+									## often generated, so useless
+									if "serialVersionUID" in f:
+										break
+									fields.add(f)
+									break
+			except StopIteration:
+				pass
+		javameta['classes'] = list(classnames)
+		javameta['sourcefiles'] = list(sourcefiles)
+		javameta['methods'] = list(methods)
+		javameta['fields'] = list(fields)
+
+		## cleanup
+		shutil.rmtree(dalvikdir)
+	return (lines, javameta)
 
 def extractJavaNames(javameta, scanenv, clones):
 	if not scanenv.has_key(namecacheperlanguage['Java']):
@@ -783,40 +805,25 @@ def scankernelsymbols(variables, scanenv, clones):
 		variablepvs['packages'][package] = []
 	return variablepvs
 
-## From dynamically linked ELF files it is possible to extract the dynamic
-## symbol table. This table lists the functions and variables which are needed
-## from external libraries, but also lists local functions and variables.
-## By searching a database that contains which function names and variable names
-## can be found in which packages it is possible to identify which package was
-## used.
-def extractDynamic(scanfile, scanenv, clones, olddb=False):
-	dynamicRes = {}
-	variablepvs = {}
-
-	if not scanenv.has_key(namecacheperlanguage['C']):
-		return (dynamicRes, variablepvs)
-
+## extract dynamic linking information from the dynamic symbols table from an ELF
+## binary and return two sets:
+## 1. function names
+## 2. variable names
+def extractDynamicFromELF(scanfile):
  	p = subprocess.Popen(['readelf', '-W', '--dyn-syms', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		return (dynamicRes, variablepvs)
+		return (set(), set())
 
 	st = stanout.strip().split("\n")
 
+	## there is nothing in the dynamic ELF section
 	if st == ['']:
-		return (dynamicRes, variablepvs)
-
-	## open the database containing function names that were extracted
-	## from source code.
-	funccache = scanenv.get(namecacheperlanguage['C'])
-	conn = sqlite3.connect(funccache)
-	## we have byte strings in our database, not utf-8 characters...I hope
-	conn.text_factory = str
-	c = conn.cursor()
+		return (set(), set())
 
 	## Walk through the output of readelf, and split results accordingly
 	## in function names and variables.
-	scanstr = set()
+	functionnames = set()
 	mangles = []
 	variables = set()
 	for i in st[3:]:
@@ -846,28 +853,49 @@ def extractDynamic(scanfile, scanenv, clones, olddb=False):
 		if dynstr[7].startswith("_Z"):
 			mangles.append(dynstr[7])
 		else:
-			scanstr.add(dynstr[7])
+			functionnames.add(dynstr[7])
+	## run c++filt in batched mode to avoid launching many processes
+	## C++ demangling is tricky: the types declared in the function in the source code
+	## are not necessarily what demangling will return.
+	if mangles != []:
+		step = 100
+		for i in xrange(0, len(mangles), step):
+			offset = i
+			args = ['c++filt'] + mangles[offset:offset+step]
+			offset = offset + step
+			p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate()
+			if p.returncode != 0:
+				continue
+			for f in stanout.strip().split('\n'):
+				funcname = f.split('(', 1)[0].rsplit('::', 1)[-1].strip()
+				## TODO more sanity checks here, since demangling
+				## will sometimes not return a single function name
+				functionnames.add(funcname)
+	return (functionnames, variables)
+
+## From dynamically linked ELF files it is possible to extract the dynamic
+## symbol table. This table lists the functions and variables which are needed
+## from external libraries, but also lists local functions and variables.
+## By searching a database that contains which function names and variable names
+## can be found in which packages it is possible to identify which package was
+## used.
+def scanDynamic(scanstr, variables, scanenv, clones):
+	dynamicRes = {}
+	variablepvs = {}
+
+	if not scanenv.has_key(namecacheperlanguage['C']):
+		return (dynamicRes, variablepvs)
+
+	## open the database containing function names that were extracted
+	## from source code.
+	funccache = scanenv.get(namecacheperlanguage['C'])
+	conn = sqlite3.connect(funccache)
+	## we have byte strings in our database, not utf-8 characters...I hope
+	conn.text_factory = str
+	c = conn.cursor()
 
 	if scanenv.has_key('BAT_FUNCTION_SCAN'):
-		## run c++filt in batched mode to avoid launching many processes
-		## C++ demangling is tricky: the types declared in the function in the source code
-		## are not necessarily what demangling will return.
-		step = 100
-		if mangles != []:
-			for i in xrange(0, len(mangles), step):
-				offset = i
-				args = ['c++filt'] + mangles[offset:offset+step]
-				offset = offset + step
-				p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-				(stanout, stanerr) = p.communicate()
-				if p.returncode != 0:
-					continue
-				for f in stanout.strip().split('\n'):
-					funcname = f.split('(', 1)[0].rsplit('::', 1)[-1].strip()
-					## TODO more sanity checks here, since demangling
-					## will sometimes not return a single function name
-					scanstr.add(funcname)
-
 		uniquepackages = {}
 		namesmatched = 0
 		uniquematches = 0
@@ -957,8 +985,8 @@ def extractDynamic(scanfile, scanenv, clones, olddb=False):
 	conn.close()
 	return (dynamicRes, variablepvs)
 
-## Look up strings in the database
-def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, language='C'):
+## Look up strings in the database and compute a score
+def computeScore(lines, path, scanenv, clones, linuxkernel, stringcutoff, language='C'):
 	if len(lines) == 0:
 		return None
 	lenStringsFound = 0
@@ -1343,6 +1371,11 @@ def extractGeneric(lines, path, scanenv, clones, linuxkernel, stringcutoff, lang
 				string_split[strsplit].add(stri)
 			else:
 				string_split[strsplit] = set([stri])
+
+	## TODO: the difference between stringsLeft and new_stringsleft should be added to matched,
+	## but unassigned
+	if new_stringsleft == {}:
+		pass
 
 	stringsLeft = new_stringsleft
 
