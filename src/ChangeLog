@@ -1,3 +1,8 @@
+2014-03-13
+* ranking.py: optionally set string cut off value via configuration file
+* ranking.py: split extraction of string constants/identifiers and computing
+scores and doing database lookups
+
 2014-03-12
 * add script to test integrity of archives
 * add very crude kernel function name reporting
