@@ -132,7 +132,9 @@ def searchGeneric(path, tags, blacklist=[], offsets={}, debug=False, envvars=Non
 	if language == 'C':
 		(lines, functionRes, variablepvs) = extractC(path, tags, clones, scanenv, filesize, stringcutoff, linuxkernel, blacklist, debug, unpacktempdir)
 	elif language == 'Java':
-		(lines, functionRes, variablepvs) = extractJava(path, tags, clones, scanenv, filesize, stringcutoff, blacklist, debug, unpacktempdir)
+		(lines, javameta) = extractJava(path, tags, clones, scanenv, filesize, stringcutoff, blacklist, debug, unpacktempdir)
+		variablepvs = extractVariablesJava(javameta, scanenv, clones)
+		functionRes = extractJavaNames(javameta, scanenv, clones)
 
 	res = computeScore(lines, path, scanenv, clones, linuxkernel, stringcutoff, language)
 	if res == None and functionRes == {} and variablepvs == {}:
@@ -411,9 +413,7 @@ def extractJava(scanfile, tags, clones, scanenv, filesize, stringcutoff, blackli
 	if javares == None:
 		return None
 	(lines, javameta) = javares
-	variablepvs = extractVariablesJava(javameta, scanenv, clones)
-	functionRes = extractJavaNames(javameta, scanenv, clones)
-	return (lines, functionRes, variablepvs)
+	return (lines, javameta)
 
 '''
 def extractJavaScript(path, tags, clones, scanenv, filesize, stringcutoff, blacklist=[], debug=False, unpacktempdir=None):
