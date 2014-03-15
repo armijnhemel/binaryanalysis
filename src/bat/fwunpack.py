@@ -1194,6 +1194,11 @@ def unpackRomfs(filename, offset, tempdir=None, unpacktempdir=None):
 	romfsfile = open(tmpfile[1])
 	romfsdata = romfsfile.read(12)
 	romfsfile.close()
+	if len(romfsdata) < 12:
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
 	romfssize = struct.unpack('>L', romfsdata[8:12])[0]
 
 	if romfssize > os.stat(tmpfile[1]).st_size:
@@ -1284,6 +1289,10 @@ def unpackCramfs(filename, offset, tempdir=None, unpacktempdir=None, bigendian=F
 	sizetmpfile.seek(offset+4)
 	tmpbytes = sizetmpfile.read(4)
 	sizetmpfile.close()
+
+	if len(tmpbytes) < 4:
+		os.unlink(tmpfile[1])
+		return
 	if bigendian:
 		cramfslen = struct.unpack('>I', tmpbytes)[0]
 	else:
@@ -2282,6 +2291,100 @@ def unpackRZIP(filename, offset, tempdir=None):
 		os.unlink(tmpfile[1][:-3])
 		return None
 	
+def searchUnpackAndroidSparse(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+	hints = []
+	if not offsets.has_key('android-sparse'):
+		return ([], blacklist, [], hints)
+	if offsets['android-sparse'] == []:
+		return ([], blacklist, [], hints)
+
+	diroffsets = []
+	counter = 1
+	tags = []
+	for offset in offsets['android-sparse']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		tmpdir = dirsetup(tempdir, filename, "android-sparse", counter)
+		res = unpackAndroidSparse(filename, offset, tmpdir)
+		if res != None:
+			(sparsesize, sparsedir) = res
+			diroffsets.append((sparsedir, offset, sparsesize))
+
+			blacklist.append((offset, offset + sparsesize))
+			counter = counter + 1
+		else:
+			## cleanup
+			os.rmdir(tmpdir)
+	return (diroffsets, blacklist, tags, hints)
+
+def unpackAndroidSparse(filename, offset, tempdir=None):
+	tmpdir = unpacksetup(tempdir)
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.fdopen(tmpfile[0]).close()
+
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
+
+	outtmpfile = tempfile.mkstemp(dir=tempdir)
+	os.fdopen(outtmpfile[0]).close()
+
+	p = subprocess.Popen(['bat-simg2img', filename, outtmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		os.unlink(outtmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+	## checks to find the right size
+	## First check the size of the header. If it has some
+	## bizarre value (like bigger than the file it can unpack)
+	## it is not a valid romfs file system
+	sparsefile = open(filename)
+	sparsedata = sparsefile.read(28)
+	sparsefile.close()
+
+	## from sparse_format.h, everything little endian
+	## 0 - 3 : magic
+	## 4 - 5 : major version (TODO: add sanity check earlier)
+	## 6 - 7 : minor version
+	## 8 - 9 : file header size
+	## 10 - 11: chunk header size (should be 12 bytes)
+	## 12 - 15: block size
+	## 16 - 19: total blocks in original image
+	## 20 - 23: total chunks
+	## 24 - 27: CRC checksum
+	blocksize = struct.unpack('<L', sparsedata[12:16])[0]
+	chunkcount = struct.unpack('<L', sparsedata[20:24])[0]
+
+	## now reopen the file and read each chunk header.
+	sparsefile = open(filename)
+	## skip the header
+	seekctr = 28
+	for i in xrange(0,chunkcount):
+		sparsefile.seek(seekctr)
+		## read the chunk header
+		sparsedata = sparsefile.read(12)
+		## 0 - 1 : chunk type
+		## 2 - 3 : unused
+		## 4 - 7 : chunk size (for raw)
+		## 8 - 12 : total size
+		chunktype = sparsedata[0:2]
+		if chunktype == '\xc1\xca':
+			## RAW
+			chunksize = struct.unpack('<L', sparsedata[4:8])[0]
+			datasize = chunksize * blocksize
+		elif chunktype == '\xc2\xca':
+			## FILL
+			datasize = 4
+		elif chunktype == '\xc3\xca':
+			## DON'T CARE
+			datasize = 0
+		elif chunktype == '\xc4\xca':
+			## CRC
+			datasize = 4
+		seekctr = seekctr + 12 + datasize
+	os.unlink(tmpfile[1])
+	return (seekctr, tmpdir)
 
 def searchUnpackLRZIP(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
 	hints = []
