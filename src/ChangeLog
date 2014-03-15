@@ -1,3 +1,7 @@
+2014-03-15
+* add simg2img from AOSP to convert Android sparse files to ext4 images
+* unpack Android sparse files
+
 2014-03-13
 * ranking.py: optionally set string cut off value via configuration file
 * ranking.py: split extraction of string constants/identifiers and computing
