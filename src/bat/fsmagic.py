@@ -14,9 +14,12 @@ analysis.'''
 ## 2. include/linux/magic.h in the Linux kernel sources
 ## 3. http://www.squashfs-lzma.org/
 ## 4. http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=364260
+## 5. various other places
 
-## basically we are rebuilding the magic database here :(
-## (name: identifier)
+## This is not the same as the magic database, but just a list of
+## identifiers that are used for these file systems, compressed files,etc.
+## In BAT a lot more work is done to verify what a file really is, which
+## the magic database does not do.
 
 fsmagic = {
             'gzip':             '\x1f\x8b\x08',     # x08 is the only compression method according to RFC 1952
@@ -33,6 +36,7 @@ fsmagic = {
             'squashfs5':        '\x74\x71\x73\x68', # tqsh - used in DD-WRT
             'squashfs6':        '\x68\x73\x71\x74', # hsqt - used in DD-WRT
             'squashfs7':        '\x73\x71\x6c\x7a', # sqlz
+            'android-sparse':   '\x3a\xff\x26\xed',
             'lzma_alone':       '\x5d\x00\x00',
             'lzma_alone_alt':   '\x6d\x00\x00',     # used in OpenWrt
             'lzma_alone_alt2':  '\x6c\x00\x00',     # seen in some routers, like ZyXEL NBG5615
