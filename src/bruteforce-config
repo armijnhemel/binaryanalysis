@@ -228,6 +228,16 @@ noscan      = text:xml:graphics:pdf:bz2:gzip:lrzip:audio:video:mp4:java
 description = Unpack 7z compressed files
 enabled     = yes
 
+[android-sparse]
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackAndroidSparse
+priority    = 5
+magic       = android-sparse
+noscan      = text:xml:graphics:pdf:compressed:audio:video:mp4:elf:java
+description = Unpack Android sparse files and convert them to ext4
+enabled     = yes
+
 [ar]
 type        = unpack
 module      = bat.fwunpack
