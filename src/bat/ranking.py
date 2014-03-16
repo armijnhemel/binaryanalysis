@@ -130,9 +130,15 @@ def searchGeneric(filepath, tags, blacklist=[], offsets={}, debug=False, envvars
 		linuxkernel = True
 
 	if language == 'C':
-		(lines, functionRes, variablepvs) = extractC(filepath, tags, clones, scanenv, filesize, stringcutoff, linuxkernel, blacklist, debug, unpacktempdir)
+		res = extractC(filepath, tags, clones, scanenv, filesize, stringcutoff, linuxkernel, blacklist, debug, unpacktempdir)
+		if res == None:
+			return None
+		(lines, functionRes, variablepvs) = res
 	elif language == 'Java':
-		(lines, javameta) = extractJava(filepath, tags, clones, scanenv, filesize, stringcutoff, blacklist, debug, unpacktempdir)
+		res = extractJava(filepath, tags, clones, scanenv, filesize, stringcutoff, blacklist, debug, unpacktempdir)
+		if res == None:
+			return None
+		(lines, javameta) = res
 		variablepvs = extractVariablesJava(javameta, scanenv, clones)
 		functionRes = extractJavaNames(javameta, scanenv, clones)
 
