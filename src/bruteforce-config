@@ -51,6 +51,7 @@ type        = prerun
 module      = bat.prerun
 method      = verifyAndroidResource
 priority    = 1
+noscan      = elf:graphics:compressed:font:java:sqlite3
 description = Check if file is an Android resource file
 enabled     = yes
 
@@ -59,6 +60,7 @@ type        = prerun
 module      = bat.prerun
 method      = verifyAndroidXML
 priority    = 1
+noscan      = elf:graphics:compressed:font:java:sqlite3
 description = Check if file is an Android binary XML file
 enabled     = yes
 
@@ -67,6 +69,7 @@ type        = prerun
 module      = bat.prerun
 method      = verifyBZ2
 priority    = 1
+noscan      = elf:graphics:compressed:font:java:sqlite3
 description = Check if complete file is a valid bzip2 file
 enabled     = no
 
@@ -92,6 +95,7 @@ type        = prerun
 module      = bat.prerun
 method      = verifyGzip
 priority    = 1
+noscan      = elf:graphics:font:java:sqlite3
 description = Check if complete file is a valid gzip file
 enabled     = yes
 
@@ -100,6 +104,7 @@ type        = prerun
 module      = bat.prerun
 method      = verifyIco
 priority    = 1
+noscan      = elf:graphics:compressed:font:java:sqlite3
 description = Check if complete file is a valid Windows ICO file
 enabled     = yes
 
@@ -108,6 +113,7 @@ type        = prerun
 module      = bat.prerun
 method      = verifyJAR
 priority    = 1
+noscan      = elf:graphics:font:sqlite3
 description = Check if complete file is a valid JAR file
 enabled     = no
 
@@ -117,6 +123,7 @@ module      = bat.prerun
 method      = verifyJavaClass
 magic       = java
 priority    = 3
+noscan      = elf:graphics:compressed:font:sqlite3
 description = Check if complete file is a valid Java class file
 enabled     = yes
 
@@ -125,6 +132,7 @@ type        = prerun
 module      = bat.prerun
 method      = verifyMessageCatalog
 priority    = 1
+noscan      = elf:graphics:font:java:sqlite3
 description = Check if file is a valid GNU Message Catalog file
 enabled     = yes
 
@@ -134,6 +142,7 @@ module      = bat.prerun
 method      = verifyMP4
 magic       = mp4
 priority    = 1
+noscan      = elf:graphics:font:java:sqlite3
 description = Check if file is a valid MP4 file
 enabled     = yes
 
@@ -143,6 +152,7 @@ module      = bat.prerun
 method      = verifyOgg
 priority    = 1
 magic       = ogg
+noscan      = elf:graphics:font:java:sqlite3
 description = Check if file is a valid Ogg file
 enabled     = yes
 
@@ -152,6 +162,7 @@ module      = bat.prerun
 method      = verifyOTF
 priority    = 1
 magic       = otf
+noscan      = elf:graphics:java:sqlite3
 description = Check if file contains OpenType font data
 enabled     = yes
 
@@ -169,7 +180,7 @@ type        = prerun
 module      = bat.prerun
 method      = verifySqlite3
 priority    = 2
-noscan      = text:elf:graphics:compressed:font:pdf
+noscan      = text:elf:graphics:compressed:font:xml
 magic       = sqlite3
 description = Check if file contains a valid SQLite 3 database
 enabled     = yes
@@ -187,6 +198,7 @@ type        = prerun
 module      = bat.prerun
 method      = verifyTTF
 priority    = 1
+noscan      = elf:graphics:java:sqlite3
 description = Check if file contains a single TTF font
 enabled     = yes
 
@@ -195,6 +207,7 @@ type        = prerun
 module      = bat.prerun
 method      = verifyTZ
 priority    = 1
+noscan      = elf:graphics:font:java:sqlite3
 description = Check if file contains a timezone file
 enabled     = yes
 
@@ -203,6 +216,7 @@ type        = prerun
 module      = bat.prerun
 method      = verifyWOFF
 priority    = 1
+noscan      = elf:graphics:java:sqlite3
 description = Check if file contains a WOFF font
 enabled     = yes
 
@@ -211,6 +225,7 @@ type        = prerun
 module      = bat.prerun
 method      = verifyVimSwap
 priority    = 1
+noscan      = elf:graphics:font:compressed:java:sqlite3
 description = Check if file is a Vim swap file
 enabled     = yes
 
@@ -332,7 +347,7 @@ module      = bat.fwunpack
 method      = searchUnpackExe
 priority    = 2
 optmagic    = pkbac:winrar
-noscan      = text:xml:graphics:pdf:compressed:audio:video:mp4:java
+noscan      = text:xml:graphics:pdf:compressed:audio:video:mp4:java:resource
 description = Unpack Microsoft Windows Executable files
 enabled     = yes
 
