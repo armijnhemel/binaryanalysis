@@ -2328,10 +2328,11 @@ def unpackAndroidSparse(filename, offset, tempdir=None):
 	outtmpfile = tempfile.mkstemp(dir=tempdir)
 	os.fdopen(outtmpfile[0]).close()
 
-	p = subprocess.Popen(['bat-simg2img', filename, outtmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['bat-simg2img', tmpfile[1], outtmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.unlink(outtmpfile[1])
+		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
@@ -2339,7 +2340,7 @@ def unpackAndroidSparse(filename, offset, tempdir=None):
 	## First check the size of the header. If it has some
 	## bizarre value (like bigger than the file it can unpack)
 	## it is not a valid romfs file system
-	sparsefile = open(filename)
+	sparsefile = open(tmpfile[1])
 	sparsedata = sparsefile.read(28)
 	sparsefile.close()
 
@@ -2357,7 +2358,7 @@ def unpackAndroidSparse(filename, offset, tempdir=None):
 	chunkcount = struct.unpack('<L', sparsedata[20:24])[0]
 
 	## now reopen the file and read each chunk header.
-	sparsefile = open(filename)
+	sparsefile = open(tmpfile[1])
 	## skip the header
 	seekctr = 28
 	for i in xrange(0,chunkcount):
@@ -2382,7 +2383,16 @@ def unpackAndroidSparse(filename, offset, tempdir=None):
 		elif chunktype == '\xc4\xca':
 			## CRC
 			datasize = 4
+		else:
+			## dunno what's happening here, so exit
+			sparsefile.close()
+			os.unlink(outtmpfile[1])
+			os.unlink(tmpfile[1])
+			if tempdir == None:
+				os.rmdir(tmpdir)
+			return None
 		seekctr = seekctr + 12 + datasize
+	sparsefile.close()
 	os.unlink(tmpfile[1])
 	return (seekctr, tmpdir)
 
