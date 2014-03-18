@@ -177,8 +177,10 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 		if dynamicRes.has_key('kernelfunctions'):
 			if dynamicRes['kernelfunctions'] != []:
 				if not dynamicRes.has_key('versionresults'):
+					kernelfuncs = list(set(dynamicRes['kernelfunctions']))
+					kernelfuncs.sort()
 					html += "<h1>Kernel function name matches</h1><p><ul>\n"
-					for d in dynamicRes['kernelfunctions']:
+					for d in kernelfuncs:
 						html += "<li>%s</li>" % d
 					html += "</ul></p>\n"
 		if dynamicRes.has_key('versionresults'):
