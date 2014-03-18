@@ -1,3 +1,13 @@
+2014-03-18
+* further split ranking.py: put identifier extraction in identifier.py, merge
+the scoring algorithm into licenseversion.py. Needs additional work to make
+database look ups a bit more efficient.
+
+2014-03-16
+* fixes for android sparse files
+* checks for return values in ranking.py
+* ignore some more files by default in prerun tagging
+
 2014-03-15
 * add simg2img from AOSP to convert Android sparse files to ext4 images
 * unpack Android sparse files

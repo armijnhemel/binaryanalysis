@@ -74,7 +74,7 @@ BOTTLENECKS/HIGH PRIORITY:
 4. generate pie charts before determining version information to prevent huge pickles being read into memory. Do the same for unmatched results (HTML report).
 5. verify and tag Android resources.arsc
 6. rework datastructures of ranking information (strings, function names, variables) so they are all the same
-7. rework ranking as an aggregate scan to be able to do database lookups in parallel for strings per file instead of per file.
+7. licenseversion.py: do database lookups in parallel for strings per file instead of per file.
 8. add ramdisk unpacking for jffs2
 9. research/fix priority for Minix file system
 10. don't recreate ELF graphs (model for every ELF binary), but reuse graphs of dependencies. This would need a topological sort.
