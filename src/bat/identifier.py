@@ -761,7 +761,7 @@ def extractidentifiersetup(envvars, debug=False):
 			del newenv['BAT_KERNELFUNCTION_SCAN']
 
 	scanenvkeys = newenv.keys()
-	envcheck = set(map(lambda x: x in scanenvkeys, stringsdbperlanguage.values() + namecacheperlanguage.values()))
+	envcheck = set(map(lambda x: x in scanenvkeys, namecacheperlanguage.values()))
 	if envcheck == set([False]):
 		return (False, None)
 	return (True, newenv)
