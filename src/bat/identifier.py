@@ -106,7 +106,7 @@ def searchGeneric(filepath, tags, blacklist=[], offsets={}, debug=False, envvars
 			if res != None:
 				if res.has_key('kernelfunctions'):
 					if res['kernelfunctions'] != []:
-						functionRes['kernelfunctions'] = copy.deepcopy(res['kernelfunctions'])
+						cmeta['kernelfunctions'] = copy.deepcopy(res['kernelfunctions'])
 		return (['identifier'], (lines, cmeta, language))
 	elif language == 'Java':
 		res = extractJava(filepath, tags, scanenv, filesize, stringcutoff, blacklist, debug, unpacktempdir)
@@ -652,7 +652,6 @@ def extractKernelData(lines, filepath, scanenv):
 	else:
 		return None
 
-	scankernelfunctions = False
 	kernelfuncres = []
 	kernelparamres = []
 	oldline = None
@@ -679,9 +678,8 @@ def extractKernelData(lines, filepath, scanenv):
 			continue
 
 	returnres = {}
-	if scankernelfunctions:
-		if kernelfuncres != []:
-			returnres['kernelfunctions'] = kernelfuncres
+	if kernelfuncres != []:
+		returnres['kernelfunctions'] = kernelfuncres
 	kernelcursor.close()
 	kernelconn.close()
 	return returnres
