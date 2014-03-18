@@ -130,12 +130,18 @@ def searchGeneric(filepath, tags, blacklist=[], offsets={}, debug=False, envvars
 		linuxkernel = True
 
 	if language == 'C':
-		res = extractC(filepath, tags, clones, scanenv, filesize, stringcutoff, linuxkernel, blacklist, debug, unpacktempdir)
+		res = extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, blacklist, debug, unpacktempdir)
 		if res == None:
 			return None
-		(lines, functionRes, variablepvs) = res
+		(lines, functionnames, variablenames, kernelsymbols) = res
+		if linuxkernel:
+			functionRes = {}
+			if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
+				variablepvs = scankernelsymbols(kernelsymbols, scanenv, clones)
+		else:
+			(functionRes, variablepvs) = scanDynamic(functionnames, variablenames, scanenv, clones)
 	elif language == 'Java':
-		res = extractJava(filepath, tags, clones, scanenv, filesize, stringcutoff, blacklist, debug, unpacktempdir)
+		res = extractJava(filepath, tags, scanenv, filesize, stringcutoff, blacklist, debug, unpacktempdir)
 		if res == None:
 			return None
 		(lines, javameta) = res
@@ -151,11 +157,10 @@ def searchGeneric(filepath, tags, blacklist=[], offsets={}, debug=False, envvars
 			del res['kernelfunctions']
 	return (['ranking'], (res, functionRes, variablepvs, language))
 
-def extractC(filepath, tags, clones, scanenv, filesize, stringcutoff, linuxkernel, blacklist=[], debug=False, unpacktempdir=None):
+def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, blacklist=[], debug=False, unpacktempdir=None):
 	## special var to indicate whether or not the file is a Linux kernel
 	## image. If so extra checks can be done.
-	if linuxkernel:
-		kernelsymbols = []
+	kernelsymbols = []
 
 	## ELF files are always scanned as a whole. Sometimes there are sections that
 	## contain compressed data, like .gnu_debugdata which should not trigger the
@@ -274,10 +279,7 @@ def extractC(filepath, tags, clones, scanenv, filesize, stringcutoff, linuxkerne
 	## in which they appear in the file
 	lines = []
 
-	## store the extracted function/method names
-	functionRes = {}
-	## store the extracted variable names
-	variablepvs = {}
+	## store the extracted function/method names and extracted variable names
 	functionnames = set()
 	variablenames = set()
 
@@ -396,18 +398,13 @@ def extractC(filepath, tags, clones, scanenv, filesize, stringcutoff, linuxkerne
 				## cleanup the tempfile
 				os.unlink(tmpfile[1])
 			return None
-	if linuxkernel:
-		functionRes = {}
-		if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
-			variablepvs = scankernelsymbols(kernelsymbols, scanenv, clones)
-	else:
-		(functionRes, variablepvs) = scanDynamic(functionnames, variablenames, scanenv, clones)
 	if createdtempfile:
 		## cleanup the tempfile
 		os.unlink(tmpfile[1])
-	return (lines, functionRes, variablepvs)
+	#return (lines, functionRes, variablepvs)
+	return (lines, functionnames, variablenames, kernelsymbols)
 
-def extractJava(scanfile, tags, clones, scanenv, filesize, stringcutoff, blacklist=[], debug=False, unpacktempdir=None):
+def extractJava(scanfile, tags, scanenv, filesize, stringcutoff, blacklist=[], debug=False, unpacktempdir=None):
 	if 'dalvik' in tags:
 		javatype = 'dalvik'
 	else:
