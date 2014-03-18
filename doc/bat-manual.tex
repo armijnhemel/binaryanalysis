@@ -45,7 +45,7 @@ benefit from this.
 \subsection{Software requirements}
 
 To run BAT a recent Linux distribution is needed. Development is (currently)
-done on Fedora 18 and 19 and Ubuntu 12.04, so those platforms are likely to
+done on Fedora 19 and 20 and Ubuntu 12.04, so those platforms are likely to
 work best. Other platforms (like Debian 7) are tested with, but only to
 build binary releases.
 
@@ -175,9 +175,9 @@ In BAT 16.0 the following file systems, compressed files and media files can be
 unpacked or extracted:
 
 \begin{itemize}
-\item file systems: cramfs, ext2/ext3/ext4 (but not ext4 with extents),
-ISO9660, JFFS2, Minix (specific variant of v1 often found on older embedded
-Linux systems), SquashFS (several variants), romfs, YAFFS2 (specific variants)
+\item file systems: Android sparse files, cramfs, ext2/ext3/ext4, ISO9660,
+JFFS2, Minix (specific variant of v1 often found on older embedded Linux
+systems), SquashFS (several variants), romfs, YAFFS2 (specific variants)
 \item compressed files and executable formats: 7z, ar, ARJ, BASE64, BZIP2,
 compressed Flash, CAB, compress, CPIO, EXE (specific compression methods only),
 GZIP, InstallShield (old versions), LRZIP, LZIP, LZMA, LZO, RAR, RPM, RZIP,
@@ -215,11 +215,11 @@ Leaf scans are scans that are run on every single file after unpacking,
 including files that contained files that were found and extracted by unpackers.
 
 Leaf scans can be recognized in the configuration because their type is set to
-\texttt{program}, for example:
+\texttt{leaf}, for example:
 
 \begin{verbatim}
 [iptables]
-type        = program
+type        = leaf
 module      = bat.checks
 method      = searchIptables
 noscan      = text:xml:graphics:pdf:compressed:audio:video
@@ -227,8 +227,8 @@ description = Determine presence of iptables
 enabled     = yes
 \end{verbatim}
 
-Since \texttt{program} is a misnomer (a leftover from early days of BAT) it
-will very likely be replaced soon by another term.
+In earlier versions of BAT (16 and earlier) the term \texttt{program} was used
+instead of \texttt{leaf}.
 
 The current leaf scans that are available in BAT are:
 
@@ -250,7 +250,7 @@ sites (SourceForge, GitHub, etcetera)
 \end{itemize}
 
 The fast string searches are meant for quick sweep scanning only. They have
-their limits, can report false positives or miss finding a program. They should
+their limits, can report false positives or not identify a binary. They should
 only be used to signal that further inspection is necessary. For a thorough
 investigation the advanced search mode should be used. These scans are likely
 to be disabled in the future in the default configuration.
@@ -398,7 +398,7 @@ leaf scans and aggregate scans:
 
 \begin{verbatim}
 debug = yes
-debugphases = program:aggregate
+debugphases = leaf:aggregate
 \end{verbatim}
 
 The other global section is \texttt{viewer}. This section is specific for the
@@ -982,20 +982,20 @@ other files were carved, will be scanned by the leaf scans.
 
 \subsubsection{Writing a leaf scan}
 
-The program/leaf scans have a simple interface. There are six parameters
-passed to the scan, namely the absolute path of the file, the tags of the file,
-an optional blacklist with byte ranges that should not be scanned, an optional
-list of environment variables and an optional name of a directory for writing
-temporary results. For example:
+The leaf scans have a simple interface. There are six parameters passed to the
+scan, namely the absolute path of the file, the tags of the file, an optional
+blacklist with byte ranges that should not be scanned, an optional list of
+environment variables and an optional name of a directory for writing temporary
+results. For example:
 
 \begin{verbatim}
-def programScan(path, tags, blacklist=[], debug=False,
+def leafScan(path, tags, blacklist=[], debug=False,
                 envvars=None, unpacktempdir=None):
         ## code goes here
 \end{verbatim}
 
-There are no restrictions on the return values of the program/leaf scan, except
-if nothing could be found (in which case \texttt{None} is usd as return value).
+There are no restrictions on the return values of the leaf scan, except if
+nothing could be found (in which case \texttt{None} is usd as return value).
 The result value is a tuple with a list of tags as well as one of the following:
 
 \begin{itemize}
@@ -1015,7 +1015,7 @@ use of certain software.
 The simplest scans are the ones that search for hardcoded strings. These strings
 are frequently found just in the package for which the check is written for. For
 example, the following strings can often be found in copies of the
-\texttt{iptables} program and the related \texttt{libiptc} library:
+\texttt{iptables} binary and the related \texttt{libiptc} library:
 
 \begin{verbatim}
 markerStrings =
@@ -1029,8 +1029,7 @@ Although searching for hardcoded strings is very fast, this method has some
 drawbacks:
 
 \begin{itemize}
-\item a program sometimes does not have these exact strings embedded in the
-binary
+\item a binary sometimes does not have these exact strings embedded
 \item this method will only find the strings that are hardcoded and not any
 other significant strings
 \item if another package includes the string, it will be a false positive
@@ -1308,7 +1307,7 @@ files and outputs a new file with package names and versions rewritten for
 filenames that occur in both files. These two scripts are useful if a database
 needs to be regenerated, possibly with new packages.
 
-\subsection{Running the extraction program}
+\subsection{Creating the database}
 
 The program to extract strings from sourcecode is \texttt{createdb.py}. It is
 not part of the standard installation of BAT, but needs to be retrieved
@@ -1409,7 +1408,7 @@ the \texttt{envvars} option:
 
 \begin{verbatim}
 [ranking]
-type        = program
+type        = leaf
 module      = bat.ranking
 method      = searchGeneric
 ppmodule    = bat.ranking
@@ -2209,8 +2208,8 @@ files that contain some unexpected results.
 
 \subsection{Disable \texttt{tmp} on tmpfs}
 
-Some Linux distributions (most notably Fedora 18) have standardized on storing
-the \texttt{/tmp} file system on tmpfs. This means that part of the system
+Some Linux distributions (most notably Fedora 18 and later) have standardized on
+storing the \texttt{/tmp} file system on tmpfs. This means that part of the system
 memory is used for the \texttt{/tmp} file system. By default on Fedora it is
 set to 50\% of the system's memory. This could influence BAT in two ways:
 
