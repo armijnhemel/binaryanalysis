@@ -1110,6 +1110,10 @@ def runscan(scans, scan_binary):
 	if debug:
 		print >>sys.stderr, "AGGREGATE END", datetime.datetime.utcnow().isoformat()
 
+	for i in unpackreports:
+		if unpackreports[i].has_key('tags'):
+			unpackreports[i]['tags'] = list(set(unpackreports[i]['tags']))
+
 	if debug:
 		print >>sys.stderr, "POSTRUN BEGIN", datetime.datetime.utcnow().isoformat()
 	## run postrunscans here, again in parallel, if needed/wanted
