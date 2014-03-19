@@ -702,8 +702,9 @@ def readconfig(config):
 				postrunscans.append(conf)
 			elif config.get(section, 'type') == 'aggregate':
 				aggregatescans.append(conf)
-	## sort the prerun scans on priority (highest priority first)
+	## sort scans on priority (highest priority first)
 	prerunscans = sorted(prerunscans, key=lambda x: x['priority'], reverse=True)
+	leafscans = sorted(leafscans, key=lambda x: x['priority'], reverse=True)
 	aggregatescans = sorted(aggregatescans, key=lambda x: x['priority'], reverse=True)
 	return {'batconfig': batconf, 'unpackscans': unpackscans, 'leafscans': leafscans, 'prerunscans': prerunscans, 'postrunscans': postrunscans, 'aggregatescans': aggregatescans}
 
