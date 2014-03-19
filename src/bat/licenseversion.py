@@ -560,7 +560,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	## ignore files which don't have ranking results
 	rankingfiles = set()
 	filehashseen = set()
-	weeded = {}
+	hashtoname = {}
 	for i in unpackreports:
 		if not unpackreports[i].has_key('sha256'):
 			continue
@@ -569,11 +569,11 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		if not 'identifier' in unpackreports[i]['tags']:
 			continue
 		filehash = unpackreports[i]['sha256']
+		if hashtoname.has_key(filehash):
+			hashtoname[filehash].append(i)
+		else:
+			hashtoname[filehash] = [i]
 		if filehash in filehashseen:
-			if weeded.has_key(filehash):
-				weeded[filehash].append(i)
-			else:
-				weeded[filehash] = [i]
 			continue
 		filehashseen.add(filehash)
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
@@ -583,12 +583,14 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	pool = multiprocessing.Pool(processes=processors)
 
 	lookup_tasks = []
-	for i in rankingfiles:
-		retres = lookup_identifier(scanenv, unpackreports[i]['sha256'], os.path.join(unpackreports[i]['realpath'], unpackreports[i]['name']), topleveldir, clones)
-		if retres != None:
-			unpackreports[i]['tags'].append('ranking')
-			if weeded.has_key(unpackreports[i]['sha256']):
-				for w in weeded[unpackreports[i]['sha256']]:
+	lookup_tasks = map(lambda x: (scanenv, unpackreports[x]['sha256'], os.path.join(unpackreports[x]['realpath'], unpackreports[x]['name']), topleveldir, clones), rankingfiles)
+
+	res = pool.map(lookup_identifier, lookup_tasks,1)
+
+	for filehash in res:
+		if filehash != None:
+			if hashtoname.has_key(filehash):
+				for w in hashtoname[filehash]:
 					unpackreports[w]['tags'].append('ranking')
 
 	## aggregate the JAR files
@@ -1556,7 +1558,8 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 	returnres = {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched, 'scores': scores, 'unmatchedlines': unmatchedlines, 'matchednonassignedlines': matchednonassignedlines, 'matchednotclonelines': matchednotclonelines}
 	return returnres
 
-def lookup_identifier(scanenv, filehash, filename, topleveldir, clones):
+## match identifiers with data in the database
+def lookup_identifier((scanenv, filehash, filename, topleveldir, clones)):
 	## read the pickle
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 	leafreports = cPickle.load(leaf_file)
