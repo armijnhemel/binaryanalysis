@@ -708,6 +708,7 @@ noscan      = text:xml:graphics:pdf:compressed:resource:audio:video:mp4:vimswap:
 description = Classify packages using advanced ranking mechanism
 enabled     = yes
 setup       = extractidentifiersetup
+priority    = 1
 
 [iproute]
 type        = leaf
@@ -734,6 +735,7 @@ ppoutput    = xmlprettyprint
 noscan      = text:xml:graphics:pdf:compressed:audio:video:mp4:java
 description = Detect version number and some subsystems in Linux kernel
 enabled     = yes
+priority    = 2
 
 [kernelmodulelicense]
 type        = leaf
