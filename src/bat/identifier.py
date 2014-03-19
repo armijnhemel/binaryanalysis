@@ -101,6 +101,14 @@ def searchGeneric(filepath, tags, blacklist=[], offsets={}, debug=False, envvars
 		if res == None:
 			return None
 		(lines, cmeta) = res
+		if lines == []:
+			empty = True
+			for c in cmeta.keys():
+				if len(cmeta[c]) != 0:
+					empty = False
+					break
+			if empty:
+				return None
 		if linuxkernel:
 			res = extractKernelData(lines, filepath, scanenv)
 			if res != None:
