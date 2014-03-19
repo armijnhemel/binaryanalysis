@@ -49,6 +49,14 @@ version
 * the amount of strings/variables/function names found in A are significantly
 smaller than the amount in the most promising version (expressed as a maximum
 percentage)
+
+Ranking results for Java JAR files are aggregated. Individual class files often
+do not contain enough information. By aggregating the results of these classes
+it is possible to get a better view of what is inside a JAR.
+
+The parameter AGGREGATE_CLEAN can be set to 1 to indicated that .class files
+should be removed from the result set after aggregation. By default these files
+are not removed.
 '''
 
 ## mapping of names for databases per language
@@ -129,6 +137,310 @@ def squashlicenses(licenses):
 				else:
 					licenses = [(licenses[0][0], 'squashed')]
 	return licenses
+
+def aggregatejars(unpackreports, scantempdir, topleveldir, pool, scanenv, debug=False, unpacktempdir=None):
+	cleanclasses = False
+
+	if scanenv.get('AGGREGATE_CLEAN', 0) == '1':
+		cleanclasses = True
+
+	## find all JAR files. Do this by:
+	## 1. checking the tags for 'zip'
+	## 2. verifying for unpacked files that there are .class files
+	## 3. possibly verifying there is a META-INF directory with a manifest
+	sha256stofiles = {}
+	jarfiles = []
+	sha256seen = []
+	alljarfiles = []
+	for i in unpackreports:
+		if not unpackreports[i].has_key('sha256'):
+			continue
+		else:
+			filehash = unpackreports[i]['sha256']
+		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
+			continue
+		if cleanclasses:
+			if sha256stofiles.has_key(filehash):
+				sha256stofiles[filehash].append(i)
+			else:
+				sha256stofiles[filehash] = [i]
+		## check extension: JAR, WAR, RAR (not Resource adapter), EAR
+		i_nocase = i.lower()
+		if i_nocase.endswith('.jar') or i_nocase.endswith('.ear') or i_nocase.endswith('.war') or i_nocase.endswith('.rar'):
+			if unpackreports[i].has_key('tags'):
+				if 'duplicate' in unpackreports[i]['tags']:
+					alljarfiles.append(i)
+					continue
+			if filehash in sha256seen:
+				alljarfiles.append(i)
+				continue
+			leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+			leafreports = cPickle.load(leaf_file)
+			leaf_file.close()
+			if leafreports.has_key('tags'):
+				## check if it was tagged as a ZIP file
+				if 'zip' in leafreports['tags']:
+					## sanity checks
+					if unpackreports[i]['scans'] != []:
+						## since it was a single ZIP file there should be only
+						## one item in unpackreports[i]['scan']
+						if len(unpackreports[i]['scans']) != 1:
+							continue
+						## more sanity checks
+						if unpackreports[i]['scans'][0]['offset'] != 0:
+							continue
+						if unpackreports[i]['scans'][0]['scanname'] != 'zip':
+							continue
+						jarfiles.append(i)
+						sha256seen.append(filehash)
+						alljarfiles.append(i)
+	jartasks = []
+
+	for i in jarfiles:
+		classfiles = filter(lambda x: x.endswith('.class'), unpackreports[i]['scans'][0]['scanreports'])
+		classreports = map(lambda x: unpackreports[x], classfiles)
+		jartasks.append((i, unpackreports[i], classreports, topleveldir))
+
+	## TODO: only for files for which there actually is a result, plus
+	## all the clones of these files
+	for i in alljarfiles:
+		if unpackreports[i].has_key('tags'):
+			unpackreports[i]['tags'].append('ranking')
+		else:
+			unpackreports[i]['tags'] = ['ranking']
+
+	## if cleanclasses is set the following should be removed:
+	## * reference in unpackreports (always)
+	## * pickle of file, only if either unique to a JAR, or shared in several JARs,
+	##   but not when the class file can also be found outside of a JAR.
+	if cleanclasses:
+		for i in alljarfiles:
+			if unpackreports[i].has_key('tags'):
+				if 'duplicate' in unpackreports[i]['tags']:
+					continue
+			classfiles = filter(lambda x: x.endswith('.class'), unpackreports[i]['scans'][0]['scanreports'])
+			for c in classfiles:
+				filehash = unpackreports[c]['sha256']
+				if len(sha256stofiles[filehash]) == 1:
+					try:
+						os.unlink(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash))
+					except Exception, e:
+						print >>sys.stderr, "error removing", c, e
+						sys.stderr.flush()
+					sha256stofiles[filehash].remove(c)
+				else:
+					sha256stofiles[filehash].remove(c)
+				del unpackreports[c]
+
+def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
+	rankres = {}
+	matchedlines = 0
+	matchednonassignedlines = 0
+	matchednotclonelines = 0
+	unmatchedlines = 0
+	reports = []
+	extractedlines = 0
+	nonUniqueAssignments = {}
+	unmatched = []
+	nonUniqueMatches = {}
+	totalscore = 0
+	scoresperpkg = {}
+	uniqueMatchesperpkg = {}
+	packageversionsperpkg = {}
+	packagelicensesperpkg = {}
+
+	fieldmatches = {}
+	classmatches = {}
+	sourcematches = {}
+
+	## from dynamicres
+	totalnames = 0
+	uniquematches = 0
+	namesmatched = 0
+	packagesmatched = {}
+	dynamicresfinal = {}
+	pv = {}
+
+	upp = {}
+
+	aggregated = False
+
+	for c in unpackreports:
+		## sanity checks
+		if not c.has_key('tags'):
+			continue
+		if not 'ranking' in c['tags']:
+			continue
+		filehash = c['sha256']
+		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
+			continue
+
+		## read pickle file
+		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+		leafreports = cPickle.load(leaf_file)
+		leaf_file.close()
+
+		## and more sanity checks
+		if not 'binary' in leafreports['tags']:
+			continue
+		(stringmatches, dynamicres, varfunmatches, language) = leafreports['ranking']
+		if language != 'Java':
+			continue
+		if varfunmatches.has_key('fields'):
+			for f in varfunmatches['fields']:
+				## we only need one copy
+				if not fieldmatches.has_key(f):
+					fieldmatches[f] = varfunmatches['fields'][f]
+					aggregated = True
+		if varfunmatches.has_key('classes'):
+			for c in varfunmatches['classes']:
+				## we only need one copy
+				if not classmatches.has_key(c):
+					classmatches[c] = varfunmatches['classes'][c]
+					aggregated = True
+		if varfunmatches.has_key('sources'):
+			for c in varfunmatches['sources']:
+				## we only need one copy
+				if not sourcematches.has_key(c):
+					sourcematches[c] = varfunmatches['sources'][c]
+					aggregated = True
+		if stringmatches != None:
+			aggregated = True
+			matchedlines = matchedlines + stringmatches['matchedlines']
+			matchednonassignedlines = matchednonassignedlines + stringmatches['matchednonassignedlines']
+			matchednotclonelines = matchednotclonelines + stringmatches['matchednotclonelines']
+			unmatchedlines = unmatchedlines + stringmatches['unmatchedlines']
+			extractedlines = extractedlines + stringmatches['extractedlines']
+			if stringmatches['unmatched'] != []:
+				unmatched = unmatched + stringmatches['unmatched']
+			if stringmatches['nonUniqueAssignments'] != {}:
+				for n in stringmatches['nonUniqueAssignments'].keys():
+					if nonUniqueAssignments.has_key(n):
+						nonUniqueAssignments[n] = nonUniqueAssignments[n] + stringmatches['nonUniqueAssignments'][n]
+					else:
+						nonUniqueAssignments[n] = stringmatches['nonUniqueAssignments'][n]
+			if stringmatches['nonUniqueMatches'] != {}:
+				for n in stringmatches['nonUniqueMatches'].keys():
+					if nonUniqueMatches.has_key(n):
+						nonUniqueMatches[n] = list(set(nonUniqueMatches[n] + stringmatches['nonUniqueMatches'][n]))
+					else:
+						nonUniqueMatches[n] = stringmatches['nonUniqueMatches'][n]
+			if stringmatches['scores'] != {}:
+				for s in stringmatches['scores']:
+					totalscore = totalscore + stringmatches['scores'][s]
+					if scoresperpkg.has_key(s):
+						scoresperpkg[s] = scoresperpkg[s] + stringmatches['scores'][s]
+					else:
+						scoresperpkg[s] = stringmatches['scores'][s]
+			if stringmatches['reports'] != []:
+				for r in stringmatches['reports']:
+					(rank, package, unique, percentage, packageversions, packagelicenses) = r
+					## ignore rank and percentage
+					if uniqueMatchesperpkg.has_key(package):
+						tmpres = []
+						for p in r[2]:
+							if upp.has_key(p[0]):
+								continue
+							else:
+								tmpres.append(p)
+								upp[p[0]] = 1
+						uniqueMatchesperpkg[package] = uniqueMatchesperpkg[package] + tmpres
+					else:
+						uniqueMatchesperpkg[package] = r[2]
+					if packageversions != {}:
+						if not packageversionsperpkg.has_key(package):
+							packageversionsperpkg[package] = {}
+						for k in packageversions:
+							if packageversionsperpkg[package].has_key(k):
+								packageversionsperpkg[package][k] = packageversionsperpkg[package][k] + packageversions[k]
+							else:
+								packageversionsperpkg[package][k] = packageversions[k]
+					if packagelicensesperpkg.has_key(package):
+						packagelicensesperpkg[package] = packagelicensesperpkg[package] + r[5]
+					else:
+						packagelicensesperpkg[package] = r[5]
+		if dynamicres != {}:
+			aggregated = True
+			if dynamicres.has_key('uniquepackages'):
+				if dynamicres['uniquepackages'] != {}:
+					if not dynamicresfinal.has_key('uniquepackages'):
+						dynamicresfinal['uniquepackages'] = {}
+					for d in dynamicres['uniquepackages'].keys():
+						if dynamicresfinal['uniquepackages'].has_key(d):
+							dynamicresfinal['uniquepackages'][d] = list(set(dynamicresfinal['uniquepackages'][d] + dynamicres['uniquepackages'][d]))
+						else:
+							dynamicresfinal['uniquepackages'][d] = dynamicres['uniquepackages'][d]
+		'''
+		## this is unreliable: we could be counting many unique method
+		## names twice. We actually need the names of the methods that
+		## were found.
+		if dynamicres != {}:
+			totalnames = totalnames + dynamicres['totalnames']
+			uniquematches = uniquematches + dynamicres['uniquematches']
+			namesmatched = namesmatched + dynamicres['namesmatched']
+			if dynamicres.has_key('packages'):
+				for p in dynamicres['packages']:
+					if packagesmatched.has_key(p):
+						for m in packagesmatched[p]:
+							if pv.has_key(p):
+								if pv[p].has_key(m[0]):
+									pv[p][m[0]] = pv[p][m[0]] + m[1]
+								else:
+									pv[p][m[0]] = m[1]
+							else:
+								pv[p] = {}
+								pv[p][m[0]] = m[1]
+					else:
+						packagesmatched[p] = dynamicres['packages'][p]
+		'''
+
+	if not aggregated:
+		return (jarfile, aggregated)
+
+	scores_sorted = sorted(scoresperpkg, key = lambda x: scoresperpkg.__getitem__(x), reverse=True)
+
+	rank = 1
+	reports = []
+	for s in scores_sorted:
+		try:
+			percentage = (scoresperpkg[s]/totalscore)*100.0
+		except:
+			percentage = 0.0
+		reports.append((rank, s, uniqueMatchesperpkg.get(s,[]), percentage, packageversionsperpkg.get(s, {}), list(set(packagelicensesperpkg.get(s, [])))))
+		rank = rank+1
+
+	if dynamicresfinal.has_key('uniquepackages'):
+
+		dynamicresfinal['namesmatched'] = reduce(lambda x, y: x + y, map(lambda x: len(x[1]), dynamicresfinal['uniquepackages'].items()))
+	else:
+		dynamicresfinal['namesmatched'] = 0
+	dynamicresfinal['uniquematches'] = uniquematches
+	dynamicresfinal['totalnames'] = namesmatched
+	dynamicresfinal['packages'] = packagesmatched
+
+	rankres['unmatched'] = list(set(unmatched))
+	rankres['matchedlines'] = matchedlines
+	rankres['matchednonassignedlines'] = matchednonassignedlines
+	rankres['matchednotclonelines'] = matchednotclonelines
+	rankres['unmatchedlines'] = unmatchedlines
+	rankres['extractedlines'] = extractedlines
+	rankres['nonUniqueAssignments'] = nonUniqueAssignments
+	rankres['nonUniqueMatches'] = nonUniqueMatches
+	rankres['reports'] = reports
+
+	## now write the new result
+	## TODO: only do this if there actually is an aggregate result
+	filehash = jarreport['sha256']
+	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+	leafreports = cPickle.load(leaf_file)
+	leaf_file.close()
+
+	leafreports['ranking'] = (rankres, dynamicresfinal, {'classes': classmatches, 'fields': fieldmatches, 'sources': sourcematches}, 'Java')
+
+	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
+	leafreports = cPickle.dump(leafreports, leaf_file)
+	leaf_file.close()
+	return (jarfile, aggregated)
 
 def prune(scanenv, uniques, package):
 	uniqueversions = {}
@@ -262,7 +574,32 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 
 	pool = multiprocessing.Pool(processes=processors)
 	for i in rankingfiles:
-		compute_version(pool, processors, scanenv, unpackreports[i], topleveldir, determinelicense, determinecopyright, clones)
+		lookup_identifier(pool, scanenv, unpackreports[i], topleveldir, clones)
+
+	## aggregate the JAR files
+	aggregatejars(unpackreports, scantempdir, topleveldir, pool, scanenv, debug=False, unpacktempdir=None)
+
+	## .class files might have been removed at this point, so sanity check first
+	rankingfiles = set()
+	filehashseen = set()
+	for i in unpackreports:
+		if not unpackreports[i].has_key('sha256'):
+			continue
+		if not unpackreports[i].has_key('tags'):
+			continue
+		if not 'ranking' in unpackreports[i]['tags']:
+			continue
+		filehash = unpackreports[i]['sha256']
+		if filehash in filehashseen:
+			continue
+		filehashseen.add(filehash)
+		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
+			continue
+		rankingfiles.add(i)
+
+	## and determine versions, etc.
+	for i in rankingfiles:
+		compute_version(pool, processors, scanenv, unpackreports[i], topleveldir, determinelicense, determinecopyright)
 	pool.terminate()
 
 ## grab variable names.
@@ -1204,7 +1541,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 	returnres = {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched, 'scores': scores, 'unmatchedlines': unmatchedlines, 'matchednonassignedlines': matchednonassignedlines, 'matchednotclonelines': matchednotclonelines}
 	return returnres
 
-def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determinelicense, determinecopyright, clones):
+def lookup_identifier(pool, scanenv, unpackreport, topleveldir, clones):
 	## read the pickle
 	filehash = unpackreport['sha256']
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
@@ -1224,6 +1561,42 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 
 	## first compute the score for the lines
 	res = computeScore(lines, os.path.join(unpackreport['realpath'], unpackreport['name']), scanenv, clones, linuxkernel, 5, language)
+
+	## then look up results for function names, variable names, and so on.
+	if language == 'C':
+		if linuxkernel:
+			functionRes = {}
+			if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
+				variablepvs = scankernelsymbols(varfuns['kernelsymbols'], scanenv, clones)
+			## TODO: clean up
+			if varfuns.has_key('kernelfunctions'):
+				if varfuns['kernelfunctions'] != []:
+					functionRes['kernelfunctions'] = copy.deepcopy(varfuns['kernelfunctions'])
+		else:
+			(functionRes, variablepvs) = scanDynamic(varfuns['functionnames'], varfuns['variablenames'], scanenv, clones)
+	elif language == 'Java':
+		variablepvs = {}
+		variablepvs = extractVariablesJava(varfuns, scanenv, clones)
+		functionRes = extractJavaNames(varfuns, scanenv, clones)
+
+	## then write results back to disk
+	leafreports['ranking'] = (res, functionRes, variablepvs, language)
+	leafreports['tags'].append('ranking')
+	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
+	leafreports = cPickle.dump(leafreports, leaf_file)
+	leaf_file.close()
+	unpackreport['tags'].append('ranking')
+
+def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determinelicense, determinecopyright):
+	## read the pickle
+	filehash = unpackreport['sha256']
+	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+	leafreports = cPickle.load(leaf_file)
+	leaf_file.close()
+	if not leafreports.has_key('ranking'):
+		return
+
+	(res, functionRes, variablepvs, language) = leafreports['ranking']
 
 	masterdb = scanenv.get('BAT_DB')
 	if determinelicense or determinecopyright:
@@ -1250,7 +1623,6 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 	
 	if res != None:
 		newreports = []
-
 		for r in res['reports']:
 			(rank, package, unique, percentage, packageversions, packagelicenses) = r
 			if unique == []:
@@ -1401,21 +1773,6 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 			newreports.append((rank, package, newuniques, percentage, newpackageversions, packagelicenses))
 		res['reports'] = newreports
 
-	if language == 'C':
-		if linuxkernel:
-			functionRes = {}
-			if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
-				variablepvs = scankernelsymbols(varfuns['kernelsymbols'], scanenv, clones)
-			## TODO: clean up
-			if varfuns.has_key('kernelfunctions'):
-				if varfuns['kernelfunctions'] != []:
-					functionRes['kernelfunctions'] = copy.deepcopy(varfuns['kernelfunctions'])
-		else:
-			(functionRes, variablepvs) = scanDynamic(varfuns['functionnames'], varfuns['variablenames'], scanenv, clones)
-	elif language == 'Java':
-		variablepvs = {}
-		variablepvs = extractVariablesJava(varfuns, scanenv, clones)
-		functionRes = extractJavaNames(varfuns, scanenv, clones)
 	if functionRes.has_key('versionresults'):
 
 		for package in functionRes['versionresults'].keys():
