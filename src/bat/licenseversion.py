@@ -1576,8 +1576,19 @@ def lookup_identifier((scanenv, filehash, filename, topleveldir, clones)):
 	if 'linuxkernel' in leafreports['tags']:
 		linuxkernel = True
 
+	if scanenv.has_key('BAT_STRING_CUTOFF'):
+		try:
+			stringcutoff = int(scanenv['BAT_STRING_CUTOFF'])
+		except:
+			stringcutoff = 5
+	else:
+		stringcutoff = 5
+
 	## first compute the score for the lines
-	res = computeScore(lines, filename, scanenv, clones, linuxkernel, 5, language)
+	if len(lines) != 0:
+		res = computeScore(lines, filename, scanenv, clones, linuxkernel, stringcutoff, language)
+	else:
+		res = None
 
 	## then look up results for function names, variable names, and so on.
 	if language == 'C':
