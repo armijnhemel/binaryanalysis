@@ -560,6 +560,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	## ignore files which don't have ranking results
 	rankingfiles = set()
 	filehashseen = set()
+	weeded = {}
 	for i in unpackreports:
 		if not unpackreports[i].has_key('sha256'):
 			continue
@@ -569,6 +570,10 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 			continue
 		filehash = unpackreports[i]['sha256']
 		if filehash in filehashseen:
+			if weeded.has_key(filehash):
+				weeded[filehash].append(i)
+			else:
+				weeded[filehash] = [i]
 			continue
 		filehashseen.add(filehash)
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
@@ -576,8 +581,15 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		rankingfiles.add(i)
 
 	pool = multiprocessing.Pool(processes=processors)
+
+	lookup_tasks = []
 	for i in rankingfiles:
-		lookup_identifier(pool, scanenv, unpackreports[i], topleveldir, clones)
+		retres = lookup_identifier(scanenv, unpackreports[i]['sha256'], os.path.join(unpackreports[i]['realpath'], unpackreports[i]['name']), topleveldir, clones)
+		if retres != None:
+			unpackreports[i]['tags'].append('ranking')
+			if weeded.has_key(unpackreports[i]['sha256']):
+				for w in weeded[unpackreports[i]['sha256']]:
+					unpackreports[w]['tags'].append('ranking')
 
 	## aggregate the JAR files
 	aggregatejars(unpackreports, scantempdir, topleveldir, pool, scanenv, debug=False, unpacktempdir=None)
@@ -1544,9 +1556,8 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 	returnres = {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched, 'scores': scores, 'unmatchedlines': unmatchedlines, 'matchednonassignedlines': matchednonassignedlines, 'matchednotclonelines': matchednotclonelines}
 	return returnres
 
-def lookup_identifier(pool, scanenv, unpackreport, topleveldir, clones):
+def lookup_identifier(scanenv, filehash, filename, topleveldir, clones):
 	## read the pickle
-	filehash = unpackreport['sha256']
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 	leafreports = cPickle.load(leaf_file)
 	leaf_file.close()
@@ -1559,11 +1570,11 @@ def lookup_identifier(pool, scanenv, unpackreport, topleveldir, clones):
 		return
 
 	linuxkernel = False
-	if 'linuxkernel' in unpackreport['tags']:
+	if 'linuxkernel' in leafreports['tags']:
 		linuxkernel = True
 
 	## first compute the score for the lines
-	res = computeScore(lines, os.path.join(unpackreport['realpath'], unpackreport['name']), scanenv, clones, linuxkernel, 5, language)
+	res = computeScore(lines, filename, scanenv, clones, linuxkernel, 5, language)
 
 	## then look up results for function names, variable names, and so on.
 	if language == 'C':
@@ -1588,7 +1599,7 @@ def lookup_identifier(pool, scanenv, unpackreport, topleveldir, clones):
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
 	leafreports = cPickle.dump(leafreports, leaf_file)
 	leaf_file.close()
-	unpackreport['tags'].append('ranking')
+	return filehash
 
 def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determinelicense, determinecopyright):
 	## read the pickle
@@ -1967,7 +1978,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 
 	if changed:
 		leafreports['ranking'] = (res, functionRes, variablepvs, language)
-		leafreports['tags'].append('ranking')
+		leafreports['tags'] = list(set(leafreports['tags'] + ['ranking']))
 		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
 		leafreports = cPickle.dump(leafreports, leaf_file)
 		leaf_file.close()
