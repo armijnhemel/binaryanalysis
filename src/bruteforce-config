@@ -699,6 +699,16 @@ noscan      = graphics:compressed:audio:video:mp4
 description = Scan for presence of markers of forges/collaborative software development sites
 enabled     = yes
 
+[identifier]
+type        = leaf
+module      = bat.identifier
+method      = searchGeneric
+envvars     = BAT_NAMECACHE_C=/gpl/master/functioncache_c:DEX_TMPDIR=/ramdisk:BAT_STRING_CUTOFF=5
+noscan      = text:xml:graphics:pdf:compressed:resource:audio:video:mp4:vimswap:timezone:ico
+description = Classify packages using advanced ranking mechanism
+enabled     = yes
+setup       = extractidentifiersetup
+
 [iproute]
 type        = leaf
 module      = bat.checks
@@ -786,18 +796,6 @@ ppoutput    = pdfPrettyPrint
 noscan      = text:xml:graphics:compressed:audio:video:mp4:java
 description = Determine characteristics of PDF files
 enabled     = yes
-
-[ranking]
-type        = leaf
-module      = bat.ranking
-method      = searchGeneric
-ppmodule    = bat.ranking
-ppoutput    = xmlprettyprint
-envvars     = BAT_STRINGSCACHE_C=/gpl/master/stringscache_c:BAT_STRINGSCACHE_JAVA=/gpl/master/stringscache_java:BAT_NAMECACHE_C=/gpl/master/functioncache_c:BAT_NAMECACHE_JAVA=/gpl/master/functioncache_java:BAT_CLONE_DB=/tmp/clonedb
-noscan      = text:xml:graphics:pdf:compressed:resource:audio:video:mp4:vimswap:timezone:ico
-description = Classify packages using advanced ranking mechanism
-enabled     = yes
-setup       = rankingsetup
 
 [redboot]
 type        = leaf
@@ -898,15 +896,6 @@ storetype   = -unmatched.html.gz:-unique.html.gz:-names.html.gz:-functionnames.h
 cleanup     = yes
 priority    = 1
 
-[jars]
-type        = aggregate
-module      = bat.aggregatejars
-method      = aggregatejars
-noscan      = text:xml:graphics:pdf:audio:video:mp4
-envvars     = AGGREGATE_CLEAN=1
-enabled     = yes
-priority    = 4
-
 [kernelversions]
 type        = aggregate
 module      = bat.kernelanalysis
@@ -929,7 +918,7 @@ type        = aggregate
 module      = bat.licenseversion
 method      = determinelicense_version_copyright
 noscan      = text:xml:graphics:pdf:audio:video:mp4
-envvars     = BAT_DB=/gpl/master/master.sqlite3:BAT_RANKING_LICENSE=1:BAT_RANKING_VERSION=1:BAT_LICENSE_DB=/gpl/master/licenses.sqlite3:BAT_KEEP_VERSIONS=10:BAT_KEEP_MAXIMUM_PERCENTAGE=50:BAT_MINIMUM_UNIQUE=10:BAT_CLONE_DB=/tmp/clonedb
+envvars     = BAT_DB=/gpl/master/master.sqlite3:BAT_RANKING_LICENSE=1:BAT_RANKING_VERSION=1:BAT_LICENSE_DB=/gpl/master/licenses.sqlite3:BAT_KEEP_VERSIONS=10:BAT_KEEP_MAXIMUM_PERCENTAGE=50:BAT_MINIMUM_UNIQUE=10:BAT_CLONE_DB=/gpl/master/clonedb.sqlite3:BAT_STRINGSCACHE_C=/gpl/master/stringscache_c:BAT_STRINGSCACHE_JAVA=/gpl/master/stringscache_java:BAT_NAMECACHE_C=/gpl/master/functioncache_c:BAT_NAMECACHE_JAVA=/gpl/master/functioncache_java:BAT_STRING_CUTOFF=5:AGGREGATE_CLEAN=1
 enabled     = yes
 priority    = 3
 
