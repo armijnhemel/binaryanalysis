@@ -1063,6 +1063,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 	nonUniqueMatchLines = []
 	nonUniqueAssignments = {}
 	nonUniqueAssignedLines = {}
+	directAssignedScore = {}
 	unmatched = []
 
 	## setup code guarantees that this database exists and that sanity
