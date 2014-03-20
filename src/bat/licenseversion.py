@@ -1331,6 +1331,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 								assign_score = True
 								break
 						if assign_score:
+							#score = len(line)
 							if not nonUniqueMatches.has_key(uniquepackage_tmp):
 								nonUniqueMatches[uniquepackage_tmp] = [line]
 							else:
@@ -1341,6 +1342,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 								directAssignedScore[uniquepackage_tmp] = score
 							matcheddirectassignedlines += 1
 							matched = True
+							nonUniqueAssignments[uniquepackage_tmp] = nonUniqueAssignments.get(uniquepackage_tmp,0) + 1
 
 							## for statistics it's nice to see how many lines were matched
 							matchedlines += 1
@@ -1543,6 +1545,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 		## for each string in the package with the best gain add the score
 		## to the package and move on to the next package.
 		todelete = set()
+		## The following code is *NOT* accurate as there could very well be duplicates!
 		for xy in stringsPerPkg[best]:
 			best_score += 1
 
@@ -1554,7 +1557,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 			for st in string_split[a]:
 				del stringsLeft[st]
 		## store how many non unique strings were assigned per package
-		nonUniqueAssignments[best] = best_score
+		#nonUniqueAssignments[best] = nonUniqueAssignments.get(best,0) + best_score
 		if gain[best] < gaincutoff:
 			break
 		strleft = len(stringsLeft)
