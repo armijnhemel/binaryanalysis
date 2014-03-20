@@ -42,9 +42,10 @@ database creation:
 * extract more information from Linux kernel, including values from __ATTR and friends, as far as possible
 
 ranking:
+* combine string identifiers and function names to report most likely version
+* use (directly) assigned identifiers to determine the most likely version
 * use version information to report most likely licenses
 * use macholib to analyse Mach-O binaries (MacOS X)
-* split extractGeneric into two methods: one to extract all the info (including kernel module names and kernel function names), one for computing the end result
 * if there are more results for file for a line (different line numbers), combine the two results and put the line numbers in a list (first do research to see if this makes sense)
 
 busybox scanning:

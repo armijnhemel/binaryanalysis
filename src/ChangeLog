@@ -1,3 +1,8 @@
+2014-03-20
+* add (incomplete) option to not look at extracted strings in isolation, but
+use information about in which files they were found to make a better educated
+guess for assignment to a package
+
 2014-03-19
 * integrate aggregatejars.py into licenseversion.py since it is very specific
 to the ranking method used.
