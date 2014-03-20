@@ -1089,15 +1089,9 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 	packageversions = {}
 	packagelicenses = {}
 
-	## keep a copy of the original lines, in the original order
-	#origlines = copy.deepcopy(lines)
-
-	## sort the lines first, so it is easy to skip duplicates
-	lines.sort()
-
 	lenlines = len(lines)
 
-	print >>sys.stderr, "total extracted strings for %s: %d" %(filepath, lenlines)
+	print >>sys.stderr, "total extracted strings for %s: %d" % (filepath, lenlines)
 
 	matchedlines = 0
 	unmatchedlines = 0
@@ -1113,6 +1107,18 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 		precomputescore = True
 	else:
 		precomputescore = False
+
+	## try to use the same order of strings in the binary as in the source code
+	usesourceorder = False
+	if scanenv.has_key('USE_SOURCE_ORDER'):
+		usesourceorder = True
+		## don't use precomputed scores
+		precomputescore = False
+		uniquepackage_tmp = None
+		uniquefilenames_tmp = []
+	else:
+		## sort the lines first, so it is easy to skip duplicates
+		lines.sort()
 
 	for line in lines:
 		#print >>sys.stderr, "processing <|%s|>" % line
