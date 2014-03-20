@@ -239,11 +239,13 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 	rankres = {}
 	matchedlines = 0
 	matchednonassignedlines = 0
+	matcheddirectassignedlines = 0
 	matchednotclonelines = 0
 	unmatchedlines = 0
 	reports = []
 	extractedlines = 0
 	nonUniqueAssignments = {}
+	nonUniqueAssignedLines = {}
 	unmatched = []
 	nonUniqueMatches = {}
 	totalscore = 0
@@ -1060,6 +1062,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 	nonUniqueMatches = {}
 	nonUniqueMatchLines = []
 	nonUniqueAssignments = {}
+	nonUniqueAssignedLines = {}
 	unmatched = []
 
 	## setup code guarantees that this database exists and that sanity
@@ -1097,10 +1100,12 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 	unmatchedlines = 0
 	matchednotclonelines = 0
 	matchednonassignedlines = 0
+	matcheddirectassignedlines = 0
 	oldline = None
 	matched = False
 	matchednonassigned = False
 	matchednotclones = False
+	kernelfunctionmatched = False
 
 	## TODO: this should be done per language
 	if scanenv.has_key('BAT_SCORE_CACHE'):
@@ -1126,20 +1131,23 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 		## This does *not* alter the score in any way, but perhaps
 		## it should: having a very significant string a few times
 		## is a strong indication.
-		if line == oldline:
-			if matched:
-				matchedlines += 1
-			elif matchednonassigned:
-				matchednonassignedlines += 1
-			elif matchednotclones:
-				matchednotclonelines += 1
-			else:
-				unmatchedlines += 1
-			continue
-		matched = False
-		matchednonassigned = False
-		oldline = line
-		kernelfunctionmatched = False
+		if not usesourceorder:
+			if line == oldline:
+				if matched:
+					matchedlines += 1
+				elif matchednonassigned:
+					matchednonassignedlines += 1
+				elif matchednotclones:
+					matchednotclonelines += 1
+				else:
+					unmatchedlines += 1
+				continue
+			matched = False
+			matchednonassigned = False
+			matchednotclones = False
+			oldline = line
+			kernelfunctionmatched = False
+
 		## skip empty lines
 		if line == "": continue
 
@@ -1267,7 +1275,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 
 			print >>sys.stderr, "\n%d matches found for <(|%s|)> in %s" % (len(res), line, filepath)
 
-			pkgs = {}    ## {package name: [filenames without path]}
+			pkgs = {}    ## {package name: set([filenames without path])}
 	
 			filenames = {}
 
@@ -1295,6 +1303,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 				## This method assumes that files that are named the same
 				## also contain the same or similar content. This could lead
 				## to incorrect results.
+
 				## now determine the score for the string
 				try:
 					score = len(line) / pow(alpha, (len(filenames) - 1))
@@ -1303,10 +1312,38 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 					## so the score would be very close to 0. The largest value
 					## is sys.maxint, so use that one. The score will be
 					## small enough...
-					#score = len(line) / sys.maxint
-					matchednonassigned = True
-					matchednonassignedlines += 1
-					continue
+					if usesourceorder:
+						score = len(line) / sys.maxint
+					else:
+						matchednonassigned = True
+						matchednonassignedlines += 1
+						continue
+
+				## if it is assumed that the compiler puts string constants in the
+				## same order in the generated code then strings can be assigned
+				## to the package directly
+				if usesourceorder:
+					if uniquepackage_tmp in pkgs:
+						assign_score = False
+						for pf in uniquefilenames_tmp:
+							if pf in pkgs[uniquepackage_tmp]:
+								assign_score = True
+								break
+						if assign_score:
+							if not nonUniqueMatches.has_key(uniquepackage_tmp):
+								nonUniqueMatches[uniquepackage_tmp] = [line]
+							else:
+								nonUniqueMatches[uniquepackage_tmp].append(line)
+							if directAssignedScore.has_key(uniquepackage_tmp):
+								directAssignedScore[uniquepackage_tmp] += score
+							else:
+								directAssignedScore[uniquepackage_tmp] = score
+							matcheddirectassignedlines += 1
+							matched = True
+
+							## for statistics it's nice to see how many lines were matched
+							matchedlines += 1
+							continue
 
 				if score > scorecutoff:
 					for packagename in pkgs:
@@ -1358,6 +1395,9 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 					uniqueMatches[package] = [(line, [])]
 				else:
 					uniqueMatches[package].append((line, []))
+				if usesourceorder:
+					uniquepackage_tmp = package
+					uniquefilenames_tmp = pkgs[package]
 			matched = True
 
 			## for statistics it's nice to see how many lines were matched
@@ -1367,7 +1407,6 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 
 	del lines
 
-	## def computeScores(stringsLeft, uniqueScore, uniqueMatches, sameFileScore, nonUniqueAssignments):
 	## If the string is not unique, do a little bit more work to determine which
 	## file is the most likely, so also record the filename.
 	##
@@ -1521,7 +1560,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 
 	scores = {}
 	for k in set(uniqueScore.keys() + sameFileScore.keys()):
-		scores[k] = uniqueScore.get(k, 0) + sameFileScore.get(k, 0) + nonUniqueScore.get(k,0)
+		scores[k] = uniqueScore.get(k, 0) + sameFileScore.get(k, 0) + nonUniqueScore.get(k,0) + directAssignedScore.get(k,0)
 	scores_sorted = sorted(scores, key = lambda x: scores.__getitem__(x), reverse=True)
 
 	rank = 1
@@ -1559,7 +1598,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 	if scankernelfunctions:
 		matchedlines = matchedlines - len(kernelfuncres)
 		lenlines = lenlines - len(kernelfuncres)
-	returnres = {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched, 'scores': scores, 'unmatchedlines': unmatchedlines, 'matchednonassignedlines': matchednonassignedlines, 'matchednotclonelines': matchednotclonelines}
+	returnres = {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched, 'scores': scores, 'unmatchedlines': unmatchedlines, 'matchednonassignedlines': matchednonassignedlines, 'matchednotclonelines': matchednotclonelines, 'matcheddirectassignedlines': matcheddirectassignedlines}
 	return returnres
 
 ## match identifiers with data in the database
