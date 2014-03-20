@@ -1516,7 +1516,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 		strleft = len(stringsLeft)
 
 	scores = {}
-	for k in uniqueScore.keys() + sameFileScore.keys():
+	for k in set(uniqueScore.keys() + sameFileScore.keys()):
 		scores[k] = uniqueScore.get(k, 0) + sameFileScore.get(k, 0) + nonUniqueScore.get(k,0)
 	scores_sorted = sorted(scores, key = lambda x: scores.__getitem__(x), reverse=True)
 
