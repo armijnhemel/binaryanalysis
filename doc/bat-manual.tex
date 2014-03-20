@@ -7,7 +7,7 @@
 \setlength{\parskip}{4pt}
 
 \author{Armijn Hemel -- Tjaldur Software Governance Solutions}
-\title{Binary Analysis Tool User and Developer Manual - describing version 16}
+\title{Binary Analysis Tool User and Developer Manual - describing version 17}
 
 \begin{document}
 
@@ -493,7 +493,7 @@ There is a special hook for leaf scans to run setup code for the scan:
 setup     = nameOfSetupMethod
 \end{verbatim}
 
-In the standard distribution of BAT the files \texttt{bat/ranking.py} and
+In the standard distribution of BAT the files \texttt{bat/identifier.py} and
 \texttt{bat/licenseversion.py} contain very extensive examples of setup hooks.
 
 \subsection{Interpreting the results}
@@ -808,6 +808,9 @@ graphical representations of the input files.
 \item \texttt{generatereports.py}, \texttt{generateimages.py},
 \texttt{guireport.py} and \texttt{piecharts.py} generate textual and graphical
 representations of results of the analysis.
+\item \texttt{identifier.py} implements functionality to extract identifiers
+(string constants, function names, method names, variable names, and so on)
+from binary files and make them available for further analysis.
 \item \texttt{jffs2.py} has code specific to handling JFFS2 file systems.
 \item \texttt{kernelanalysis.py} includes code to extract information from
 Linux kernel images and Linux kernel modules.
@@ -817,8 +820,6 @@ the future variable names too), as well as optionally pruning the result set
 to only include relevant versions.
 \item \texttt{prerun.py} contains scans that are run in the pre-run phase for
 correctly tagging files as early in the process as possible.
-\item \texttt{ranking.py} implements an advanced method for classifying a
-binary using various ranking methods. It is explained in more detail later.
 \item \texttt{simpleprettyprint.py} has the default XML prettyprinter.
 \item \texttt{unpackrpm.py} has code specific to handling RPM archives.
 \end{itemize}
@@ -1218,9 +1219,9 @@ In the paper ``Finding Software License Violations Through Binary Code Clone
 Detection'' by Hemel et. al. (ACM 978-1-4503-0574-7/11/05), presented at
 the Mining Software Repositories 2011 conference, a method to use a database
 with strings extracted from source code was described. This functionality is
-available in the ranking module in the file \texttt{ranking.py}. This code
-is not enabled by default, but it has to be explicitely enabled in the
-configuration for \texttt{bruteforce.py}.
+available in the ranking module in the file \texttt{licenseversion.py}. This
+code is enabled by default, but if no database is present it will not do
+anything.
 
 To give good results the database that is used needs to be populated with as
 many packages as possible, from a cross cut of all of open source software, to
@@ -2272,21 +2273,22 @@ The \texttt{generateimages} postrun scan has five optional parameters:
 \texttt{AGGREGATE\_IMAGE\_SYMLINK}, \texttt{BAT\_IMAGEDIR}, \texttt{BAT\_PICKLEDIR}, \texttt{MAXIMUM\_PERCENTAGE}
 \texttt{MINIMUM\_PERCENTAGE}
 
-\subsection{\texttt{ranking}}
+\subsection{\texttt{identifier}}
 
-The \texttt{ranking} leaf scan has several parameters, including
+The \texttt{identifier} leaf scan has several parameters, including
 \texttt{DEX\_TMPDIR}. This parameter can be used to set a location where
 temporary files for DEX and ODEX (Android Dalvik files) unpacking can be
 written. This would typically be tmpfs or a ramdisk.
 
-\subsection{\texttt{jars}}
+\subsection{\texttt{licenseversion}}
 
-The \texttt{jars} aggregate scan has one parameter: \texttt{AGGREGATE\_CLEAN}.
-This parameter instructs the scan to remove results for individual Java class
-files from the result set after aggregating results at the JAR level. Java
-class files that are not unpacked from a JAR file are not removed from the
-result set. By default this parameter is set to 1 which means that results for
-Java class files are removed from the result set.
+The \texttt{licenseversion} aggregate scan has a few parameters that can
+influence performance. One of them is \texttt{AGGREGATE\_CLEAN}. This parameter
+instructs the scan to remove results for individual Java class files from the
+result set after aggregating results at the JAR level. Java class files that
+are not unpacked from a JAR file are not removed from the result set. By
+default this parameter is set to 0 which means that results for Java class
+files are not removed from the result set.
 
 \subsection{\texttt{prunefiles}}
 
