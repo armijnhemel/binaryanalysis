@@ -1276,9 +1276,9 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 				if clones.has_key(package):
 					package = clones[package]
 				if not pkgs.has_key(package):
-					pkgs[package] = [filename]
+					pkgs[package] = set([filename])
 				else:
-					pkgs[package].append(filename)
+					pkgs[package].add(filename)
 				if not filenames.has_key(filename):
 					filenames[filename] = [package]
 				else:
