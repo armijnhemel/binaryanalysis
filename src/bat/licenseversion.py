@@ -1147,19 +1147,17 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 		## helps reduce load on databases stored on slower disks
 		if precomputescore:
 			scoreres = conn.execute("select packages, score from scores where programstring=? LIMIT 1", (line,)).fetchone()
-		else:
-			scoreres = None
-		if scoreres != None:
-			## If the score is so low it will not have any influence on the final
-			## score, why even bother hitting the disk?
-			## Since there might be package rewrites this should be a bit less than the
-			## cut off value that was defined.
-			if scoreres[1] < scorecutoff/100:
-				lenStringsFound = lenStringsFound + len(line)
-				nonUniqueMatchLines.append(line)
-				matchednonassignedlines += 1
-				matchednonassigned = True
-				continue
+			if scoreres != None:
+				## If the score is so low it will not have any influence on the final
+				## score, why even bother hitting the disk?
+				## Since there might be package rewrites this should be a bit less than the
+				## cut off value that was defined.
+				if scoreres[1] < scorecutoff/100:
+					lenStringsFound = lenStringsFound + len(line)
+					nonUniqueMatchLines.append(line)
+					matchednonassignedlines += 1
+					matchednonassigned = True
+					continue
 
 		## if scoreres is None it could still be something else like a kernel function, or a
 		## kernel string in a different format, so keep searching.
