@@ -199,7 +199,7 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, debug=False, env
         <td><b>Determined licenses (Ninka &amp; FOSSology report the same)</b></td>
       </tr>\n'''
 					for j in stringsres['reports']:
-						(rank, packagename, uniquematches, percentage, packageversions, licenses) = j
+						(rank, packagename, uniquematches, uniquematcheslen, percentage, packageversions, licenses) = j
 						determinedlicenses = map(lambda x: x[0], filter(lambda x: x[1] == 'squashed', licenses))
 						ninkalicenses = map(lambda x: x[0], filter(lambda x: x[1] == 'ninka', licenses))
 						fossologylicenses = map(lambda x: x[0], filter(lambda x: x[1] == 'fossology', licenses))
@@ -227,8 +227,8 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, debug=False, env
 								determinedlicensestring = determinedlicenses[0]
 						else:
 							determinedlicensestring = ""
-						matchesrows = matchesrows + "    <tr><td>%d</td><td>%s</td><td>%f%%</td><td>%d</td><td>%d</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (rank, packagename, percentage, len(uniquematches), stringsres['nonUniqueAssignments'].get(packagename, 0), ninkalicensestring, fossologylicensestring, determinedlicensestring)
-						if len(uniquematches) != 0:
+						matchesrows = matchesrows + "    <tr><td>%d</td><td>%s</td><td>%f%%</td><td>%d</td><td>%d</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (rank, packagename, percentage, uniquematcheslen, stringsres['nonUniqueAssignments'].get(packagename, 0), ninkalicensestring, fossologylicensestring, determinedlicensestring)
+						if uniquematcheslen != 0:
 							## don't replace %s/% with os.path.join here, since this is valid in HTML
 							versionhtml = versionhtml + "<h5>%s</h5><p><img src=\"%s\"/></p>\n" % (packagename, "%s/%s-%s-version.png" % (imagesdir, filehash, packagename))
 					## don't replace %s/% with os.path.join here, since this is valid in HTML

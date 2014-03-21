@@ -339,7 +339,7 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 						scoresperpkg[s] = stringmatches['scores'][s]
 			if stringmatches['reports'] != []:
 				for r in stringmatches['reports']:
-					(rank, package, unique, percentage, packageversions, packagelicenses) = r
+					(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses) = r
 					## ignore rank and percentage
 					if uniqueMatchesperpkg.has_key(package):
 						tmpres = []
@@ -411,7 +411,7 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 			percentage = (scoresperpkg[s]/totalscore)*100.0
 		except:
 			percentage = 0.0
-		reports.append((rank, s, uniqueMatchesperpkg.get(s,[]), percentage, packageversionsperpkg.get(s, {}), list(set(packagelicensesperpkg.get(s, [])))))
+		reports.append((rank, s, uniqueMatchesperpkg.get(s,[]), uniquematcheslen, percentage, packageversionsperpkg.get(s, {}), list(set(packagelicensesperpkg.get(s, [])))))
 		rank = rank+1
 
 	if dynamicresfinal.has_key('uniquepackages'):
@@ -1656,7 +1656,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 			percentage = (scores[s]/totalscore)*100.0
 		except:
 			percentage = 0.0
-		reports.append((rank, s, uniqueMatches.get(s,[]), percentage, packageversions.get(s, {}), packagelicenses.get(s, [])))
+		reports.append((rank, s, uniqueMatches.get(s,[]), len(uniqueMatches.get(s,[])), percentage, packageversions.get(s, {}), packagelicenses.get(s, [])))
 		rank = rank+1
 
 	if matchedlines == 0 and unmatched == []:
@@ -1762,7 +1762,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 	if res != None:
 		newreports = []
 		for r in res['reports']:
-			(rank, package, unique, percentage, packageversions, packagelicenses) = r
+			(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses) = r
 			if unique == []:
 				newreports.append(r)
 				continue
@@ -1908,7 +1908,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				packagecopyrights = list(set(packagecopyrights_tmp))
 			else:
 				packagecopyrights = []
-			newreports.append((rank, package, newuniques, percentage, newpackageversions, packagelicenses))
+			newreports.append((rank, package, newuniques, uniquematcheslen, percentage, newpackageversions, packagelicenses))
 		res['reports'] = newreports
 
 	if functionRes.has_key('versionresults'):

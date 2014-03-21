@@ -456,13 +456,13 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 
 		if res['reports'] != []:
 			for j in res['reports']:
-				(rank, packagename, uniquematches, percentage, packageversions, licenses) = j
+				(rank, packagename, uniquematches, uniquematcheslen, percentage, packageversions, licenses) = j
 				if len(uniquematches) == 0:
 					continue
 				tmppickle = tempfile.mkstemp(dir=unpacktempdir)
 				cPickle.dump((packagename, uniquematches), os.fdopen(tmppickle[0], 'wb'))
 				picklehash = gethash(tmppickle[1])
-				reportresults.append((rank, picklehash, tmppickle[1], len(uniquematches), packagename))
+				reportresults.append((rank, picklehash, tmppickle[1], uniquematcheslen, packagename))
 	return (filehash, reportresults, functionresults, unmatchedresult)
 
 def generateunmatched((picklefile, pickledir, filehash, reportdir)):
