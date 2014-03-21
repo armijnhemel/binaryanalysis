@@ -24,13 +24,14 @@ software license compliance, with a special focus on supply chain management
 in consumer electronics.
 
 BAT consists of several programs written in Python. The most important program
-is the scanner for binary objects to detect the presence of Open Source
-software inside binaries. There are also other programs to help with specific
-compliance tasks, such as verifying if configurations for a given BusyBox
-binary match with the configuration in source code. Also included is a very
-experimental program to help scan Linux kernel images and a script to derive a
-possible configuration from a Linux kernel image, as well as programs to verify
-results from a binary scan with a source code archive.
+is the scanner for binary objects to unpack binaries recursively and apply a
+myriad of scans, for example for open source license compliance, visualising
+linking information, and so on.  There are also other programs to help with
+specific compliance tasks, such as verifying if configurations for a given
+BusyBox binary match with the configuration in source code. Also included is a
+very experimental program to help scan Linux kernel images and a script to
+derive a possible configuration from a Linux kernel image, as well as programs
+to verify results from a binary scan with a source code archive.
 
 \section{Installing the Binary Analysis Tool}
 
@@ -60,7 +61,7 @@ To install on Fedora three packages are needed:
 can be downloaded from the BAT website in both prebuilt versions and as source
 RPM files. When installing the three files there should be a list of
 dependencies that should be installed to let BAT work successfully. Some of
-these packages are not in Fedora by default but need to be installed through
+the dependencies are not in Fedora by default but need to be installed through
 external repositories, such as RPMfusion.
 
 \subsubsection{Installing on Debian and Ubuntu}
@@ -81,420 +82,69 @@ version of \texttt{wxPython}.
 BAT consists of several programs and a few helper scripts (not meant to be
 used directly). The main purpose of the Binary Analysis tool is to analyse
 arbitrary binaries and review results. Analysis of the binary is done via
-a commandline tool, while the results can be viewed using a special viewer.
+a commandline tool, while the results can be viewed using a special graphical
+viewer.
 
 The commandline interface functionality can be found in \texttt{bruteforce.py}.
 The graphical user interface is provided by \texttt{batgui}.
 
-\subsection{Inner workings of the analysis process}
+\subsection{Running \texttt{bruteforce.py}}
 
-BAT uses a brute force approach for analysing a binary. It assumes no prior
-knowledge of how a binary is constructed or what is inside the binary. Instead
-it tries to determine what is inside by applying a wide range of methods, such
-as looking for known identifiers of file systems and compressed files and
-running external tools to find contents in the binary.
-
-During scanning of a file the following steps are taken:
+Invoking \texttt{bruteforce.py} is simple. You will need to supply three
+parameters:
 
 \begin{enumerate}
-\item identifier search, using a list of known identifiers
-\item verifying file type of a file and, if successful, tagging it. Tags can
-be used later on to give more information to the scanner.
-\item unpacking file systems, compressed files and media files from the file,
-possibly carving it out of a larger file first.
-\item repeat steps 1 - 3 for each file that was unpacked in step 3
-\item run individual scans on each file if no further unpacking is possible
-\item optionally aggregate scan results
-\item process results from scans in step 5 and 6
-\item pack results into an archive that can be used by the viewer application
+\item \texttt{-c} : path to a configuration file
+\item \texttt{-b} : path to the binary to be scanned
+\item \texttt{-o} : path to an output file, where unpacked files, reports,
+plus the final program state be written to. This file can later be opened with
+the viewer.
 \end{enumerate}
 
-\subsubsection{Identifier search}
-
-The first action performed is scanning a file for known identifiers of
-compressed files, file systems and media files. The identifers are important
-for a few reasons: first, they are used to determine which checks will run. They
-are also used frequently throughout the code for verification and speeding up
-unpacking. If a scan depends on a specific identifier being present it can be
-set using the \texttt{magic} attribute in the configuration. If an identifier
-is not defined anywhere in the configuration file as needed it will be skipped
-during the identifier search to speed up the identifier search.
-
-The marker search cannot be enabled or disabled via the configuration file.
-
-\subsubsection{Pre-run checks}
-
-Before files are unpacked they are briefly inspected and if possible tagged.
-Tags are used to pass hints to methods that are run later to avoid unnecessarily
-scanning a file and to reduce the amount of false positives.
-
-For example, files that only contain text are tagged as \texttt{text}, all other
-files are tagged as \texttt{binary} (this depends on the implementation of
-Python. Python 2 only considers (by default) ASCII to be valid text). Methods
-that only work on binaries can then ignore anything that has been tagged as
-\texttt{text}.
-
-Other checks that are available are for valid XML, various Android formats,
-ELF executables and libraries, graphics files, audio files, and so on.
-
-The prerun checks can easily be identified in the configuration, since it has
-its type set to \texttt{prerun}:
-
-\begin{verbatim}
-[verifytext]
-type        = prerun
-module      = bat.prerun
-method      = verifyText
-priority    = 3
-description = Check if file contains just ASCII text
-enabled     = yes
-\end{verbatim}
-
-Prerun verifiers can optionally make use of tags that are already present by
-using \texttt{magic} and \texttt{noscan} attributes, which will be explained
-in detail later for the unpackers.
-
-\subsubsection{Unpackers}
-
-Unpackers can be recognized in the configuration because their type is set
-to \texttt{unpack}, for example:
-
-\begin{verbatim}
-[jffs2]
-type        = unpack
-module      = bat.fwunpack
-method      = searchUnpackJffs2
-priority    = 2
-magic       = jffs2_le:jffs2_be
-noscan      = text:xml:graphics:pdf:compressed:audio:video:mp4:elf:java:resource:dalvik
-description = Unpack JFFS2 file systems
-enabled     = yes
-\end{verbatim}
-
-In BAT 16.0 the following file systems, compressed files and media files can be
-unpacked or extracted:
-
-\begin{itemize}
-\item file systems: Android sparse files, cramfs, ext2/ext3/ext4, ISO9660,
-JFFS2, Minix (specific variant of v1 often found on older embedded Linux
-systems), SquashFS (several variants), romfs, YAFFS2 (specific variants)
-\item compressed files and executable formats: 7z, ar, ARJ, BASE64, BZIP2,
-compressed Flash, CAB, compress, CPIO, EXE (specific compression methods only),
-GZIP, InstallShield (old versions), LRZIP, LZIP, LZMA, LZO, RAR, RPM, RZIP,
-serialized Java, TAR, UPX, XZ, ZIP
-\item media files: GIF, ICO, PDF, PNG, WOFF
-\end{itemize}
-
-Unpacking differs per file type. Most files use one or more identifiers that
-can be searched for in a binary blob. Using this information it is possible
-to carve out the right parts of a binary blob and verify if it indeed contains
-a compressed file, media file or file system.
-
-There is not always an identifier that can be searched for. The YAFFS2 file
-system layout for example is dependent on the hardware specifics of the
-underlying flash chip. Without knowing these specifics it is not possible to
-specifically search for a valid YAFFS2 file system. This scan therefore tries
-to run on every file, unless explicitely filtered out (using \texttt{noscan}
-and tags).
-
-Other file types (such as ARJ files) have a very generic identifier, so there
-are a lot of false positives. This causes a big increase in runtime. The ARJ
-unpacker is therefore disabled by default.
-
-LZMA is another special case: there are many different valid headers for LZMA
-files, but in practice only a handful are used.
-
-If unpacking is successful a directory with unpacked files is returned, and, if
-available, some meta information to avoid duplicate scanning (blacklisting
-information and tags). The unpacked files are added to the scan queue and
-scanned recursively.
-
-\subsubsection{Leaf scans}
-
-Leaf scans are scans that are run on every single file after unpacking,
-including files that contained files that were found and extracted by unpackers.
-
-Leaf scans can be recognized in the configuration because their type is set to
-\texttt{leaf}, for example:
-
-\begin{verbatim}
-[iptables]
-type        = leaf
-module      = bat.checks
-method      = searchIptables
-noscan      = text:xml:graphics:pdf:compressed:audio:video
-description = Determine presence of iptables
-enabled     = yes
-\end{verbatim}
-
-In earlier versions of BAT (16 and earlier) the term \texttt{program} was used
-instead of \texttt{leaf}.
-
-The current leaf scans that are available in BAT are:
-
-\begin{itemize}
-\item fast string searches: dproxy, ez-ipupdate, iptables, iproute, libusb,
-Linux kernel, loadlin, RedBoot, U-Boot, vsftpd, wireless-tools, wpa-supplicant
-\item advanced search mode using ranking of strings, function names, variable
-names, field names and Java class names using a database (for ELF and Java,
-both regular JVM and Dalvik)
-\item BusyBox version number
-\item dynamic library dependencies (ELF files only)
-\item Linux kernel module license (Linux kernel modules only)
-\item Linux kernel version number, plus detection for several subsystems
-\item PDF meta data extraction
-\item architecture
-\item presence of URLs indicating an open source license
-\item presence of URLs indicating forges/collaborative software development
-sites (SourceForge, GitHub, etcetera)
-\end{itemize}
-
-The fast string searches are meant for quick sweep scanning only. They have
-their limits, can report false positives or not identify a binary. They should
-only be used to signal that further inspection is necessary. For a thorough
-investigation the advanced search mode should be used. These scans are likely
-to be disabled in the future in the default configuration.
-
-\subsubsection{Aggregators}
-
-Sometimes it helps to aggregate results of a number of files, or it could be
-useful to perform other actions after all the individual scans have run. The
-best example is dealing with JAR-files (Java ARchives). Individual Java class
-files often contain too little information to map them reliably to a source
-code package.
-
-Typically a class file contains just a few method names, or field names, or
-strings. If inner classes are used it can be even worse and information from a
-single source code file could be scattered across several class files.
-
-Since Java programs (note: excluding Android) are typically distributed as a
-JAR that is either included at runtime or directly executed, similar to an ELF
-library or ELF executable, it makes perfect sense to treat the JAR file as a
-single unit and aggregate results for the individual class files and assign
-them to the JAR file.
-
-Aggregators take all results of the entire scan as input.
-
-Currently the following aggregators are available:
-
-\begin{itemize}
-\item aggregating result of individual Java class files in case they come from
-the same JAR file.
-\item cleaning up/fixing results of duplicate files: often firmwares contain
-duplicate files. Sometimes some more information is available to make a better
-choice as to which file is the duplicate and which one is the original version
-\item checking dynamically linked ELF files
-\item finding duplicate files
-\item finding licenses and versions of strings and function names that were
-found and optionally pruning the result set to remove unlikely results.
-\item pruning files from the scan completely if they are not interesting (such
-as pictures, or text files) using tags.
-\item generating pictures of results of a scan
-\item generating reports of results of a scan
-\end{itemize}
-
-\subsubsection{Post-run methods}
-
-In BAT there are methods that are run after all the regular work has been
-performed, or ``post-run''. These methods should not alter the scan results in
-any way, but just use the information from the scanning process. A typical use
-case would be to present the data in a nicer to use format than the standard
-report, to use more external data sources or generate graphical representations
-of data.
-
-The post-run methods have the type \texttt{postrun} in the configuration, for
-example:
-
-\begin{verbatim}
-[hexdump]
-type        = postrun
-module      = bat.generatehexdump
-method      = generateHexdump
-noscan      = text:xml:graphics:pdf:audio:video
-envvars     = BAT_REPORTDIR=/tmp/images:BAT_IMAGE_MAXFILESIZE=100000000
-description = Create hexdump output of files
-enabled     = no
-storetarget = reports
-storedir    = /tmp/images
-storetype   = -hexdump.gz
-cleanup     = no
-\end{verbatim}
-
-\subsection{Configuring BAT}
-
-The analysis process is highly configurable: methods can be simply enabled and
-disabled, based on need: some methods can run for quite a long time, which
-might be undesirable at times. Configuration is done via a simple configuration
-file in Windows INI format.
-
-Most sections are specific to scanning methods, except two sections.
-
-The main configuration directive is \texttt{batconfig}. In this
-section various global settings are defined, such as \texttt{multiprocessing}
-which sets whether or not multiple CPUs (or cores) should be used during
-scanning. The default configuration as shipped in the official BAT distribution
-is to use multiple threads:
-
-\begin{verbatim}
-[batconfig]
-multiprocessing = yes
-\end{verbatim}
-
-If set to \texttt{yes} the program will start an extra process per CPU that is
-available for parts of the program that can be run in parallel. In most cases
-it is completely safe to use multiprocessing.
-
-It might be desirable to not use all processors on a machine, for example if
-there are multiple scans of BAT running at the same time, or if other tasks
-need to run on the machine. It is possible to set the maximum amount of
-processors to use using the \texttt{processors} option:
-
-\begin{verbatim}
-processors = 2
-\end{verbatim}
-
-Another setting in this section is \texttt{outputlite}:
-
-\begin{verbatim}
-outputlite = no
-\end{verbatim}
-
-It defaults to \texttt{no}. If set to \texttt{yes} the output archive will omit
-a full copy of the unpacked data, significantly decreasing the size of the
-output archive, but making it harder to do a ``post mortem'' on the unpacked
-data (a new analysis should be run to get it again). Future versions of BAT
-might change this setting to \texttt{yes}.
-
-There are two settings that determine where the code of the optional XML pretty
-printer can be found:
-
-\begin{verbatim}
-module = bat.simpleprettyprint
-output = prettyprintresxml
-\end{verbatim}
-
-These two settings should always be used together.
-
-There is one setting to set the prefix for creating temporary files or
-directories, namely \texttt{tempdir}. By default the directory for creating
-temporary files and directories is \texttt{/tmp}. There might be situations
-where the temporary directory might need to be changed, for example for
-unpacking on a faster medium (ramdisk, SSD) than a normal harddisk. It can be
-used as follows:
-
-\begin{verbatim}
-tempdir = /ssd/tmp
-\end{verbatim}
-
-To assist in debugging and finding errors in scans of BAT there are two
-settings: \texttt{debug} and \texttt{debugphases}. The setting \texttt{debug}
-can be used to enable and disable debugging. If set multiprocessing will be
-disabled and information about which file is scanned and which method is run
-will be printed on standard error. If specified without \texttt{debugphases}
-this will apply to all scan phases. The \texttt{debugphases} parameter can be
-used to limit this behaviour to just one or a few phases. The other phases will
-behave normally. For example, this will enable debugging, but just for the
-leaf scans and aggregate scans:
-
-\begin{verbatim}
-debug = yes
-debugphases = leaf:aggregate
-\end{verbatim}
-
-The other global section is \texttt{viewer}. This section is specific for the
-graphical frontend and is not used in any other parts of BAT and might be moved
-to a separate configuration file in a future version of BAT.
-
-\subsubsection{Enabling and disabling scans}
-
-The standard configuration file enables most of the scans and methods
-implemented in BAT by default. Scans can be enabled and disabled by setting the
-option \texttt{enabled} to \texttt{yes} and \texttt{no} respectively.
-
-Another way to not run a scan is to outcomment the entry in the configuration
-file (by starting the line with the \texttt{\#} character), or by removing the
-section from the configuration file.
-
-\subsubsection{Blacklisting and whitelisting scans}
-
-Files can be explicitely blacklisted for scanning by using the \texttt{noscan}
-configuration setting. The value of this parameter is a list of tags, separated
-by colons:
-
-\begin{verbatim}
-noscan      = text:xml:graphics:pdf:audio:video
-\end{verbatim}
-
-Similarly files can be whitelisted by using the \texttt{scanonly} setting. Only
-files that are tagged with any of the values in this list (if not empty) will
-be scanned. If there is an overlapping value in \texttt{scanonly} and
-\texttt{noscan} then the file will not be scanned.
-
-\subsubsection{Passing environment variables}
-
-All scans have an optional parameter \texttt{envvars} defaulting to an empty
-Python dictionary. In the configuration file a colon separated list of
-name/value pairs can be specified. These will then become available in the
-environment of the scan:
-
-\begin{verbatim}
-envvars     = BAT_REPORTDIR=/tmp/images:BAT_IMAGE_MAXFILESIZE=100000000
-\end{verbatim}
-
-It is up to the scans to parse the environment variables and to store them in
-the environment.
-
-\subsubsection{Storing results}
-
-Postrun scans and aggregate scans that output data, for example graphics files
-or reports, can specify which files should be added to the output file. There
-are three settings that should be set together:
-
-\begin{verbatim}
-storetarget = images
-storedir    = /tmp/images
-storetype   = -piechart.png:-version.png
-\end{verbatim}
-
-The \texttt{storetarget} setting specifies the relative directory inside the
-output TAR archive. The \texttt{storedir} setting tells where to get the files
-that need to be stored can be found (this should be where the postrun scan
-or aggregate scan stores its results). The \texttt{storetype} setting is a colon
-separated list of extensions/partial file names that the files should end in
-(typically the rest of the filename is a SHA256 value).
-
-The additional setting \texttt{cleanup} can be used to instruct BAT that the
-files generated by this postrun scan or aggregate scan should be removed after
-copying them into the result archive:
-
-\begin{verbatim}
-cleanup     = yes
-\end{verbatim}
-
-The \texttt{cleanup} setting should be set to \texttt{yes} unless the results
-do not change in between subsequent runs of BAT.
-
-Currently (BAT 16) if \texttt{cleanup} is set the files are written directly to
-output directories. The values of these directories are hardcoded (and match
-values that the GUI expects) but these will be replaced by the value of
-\texttt{storetarget} in a later release.
-
-\subsubsection{Running setup code}
-
-For some scans it is necessary to run some setup code to ensure that certain
-conditions are met, for example that databases exist, or that locations are
-readable/writeable. If this would be done during running of the scan (default
-in BAT 13 and earlier) the checks would be run each time the scan would be run.
-In reality the checks only need to run once.
-
-There is a special hook for leaf scans to run setup code for the scan:
-
-\begin{verbatim}
-setup     = nameOfSetupMethod
-\end{verbatim}
-
-In the standard distribution of BAT the files \texttt{bat/identifier.py} and
-\texttt{bat/licenseversion.py} contain very extensive examples of setup hooks.
+The default install of BAT comes with a configuration file (installed in
+\texttt{/etc/bat/} although this will likely change in the future) with default
+settings that have proven to work well but almost everything can be changed or
+tweaked. A lengthy explanation of the different types of scans and their
+configuration can be found in the appendix.
+
+A typical invocation looks like this:
+
+\texttt{python bruteforce.py -c /path/to/configuration -b /path/to/binary -o
+/path/to/outputfile}
+
+XML output, if enabled in the configuration file, will be written to standard
+output. Debugging messages will appear on standard error.
+
+\subsection{\texttt{batgui}}
+
+The \texttt{batgui} program is a graphical viewer for the results of
+\texttt{bruteforce.py}.
+
+\subsubsection{Viewing results with \texttt{batgui}}
+
+The \texttt{batgui} program was made to view the results of the analysis
+process easily, without having to dig through XML. The viewer has two modes:
+simple and advanced. In simple mode a tree of the unpack results will be shown,
+and each file in the tree can be clicked to display more information. Depending
+on which scans were run the tree will be decorated with more information, such
+as the type of the file (based on tags), or if matches were found with the
+ranking method. Using a filtering system (available from the menu) files that
+are typically uninteresting for license compliance engineering (empty
+files/directories, symbolic links, graphics files) can be ignored.
+
+Information that is shown per file depends on the scans that were run and the
+type of file. For most files information like size, type, path (both relative
+inside the unpacked binary, as well as absolute in the scanning tree) will be
+shown. If the ranking method was enabled results of the ranking process such as
+matched strings, function names and a license guess will be displayed as well.
+
+In the optional advanced mode more results will be shown, such as a graphical
+representation of a file, where every bit in the binary has been assigned a
+grayscale value, plus a textual representation of a file generated with
+\texttt{hexdump}. Advanced mode is disabled by default, since loading the
+additional pictures and data is quite resource intensive and it will only be
+useful in very specific cases. This functionality might be removed from future
+versions of BAT.
 
 \subsection{Interpreting the results}
 
@@ -542,58 +192,6 @@ configuration file)
 \item offset in the parent file of the compressed file, file system or media
 file
 \end{itemize}
-
-\subsection{Running \texttt{bruteforce.py}}
-
-Invoking \texttt{bruteforce.py} is relatively simple. You will need to supply
-three parameters:
-
-\begin{enumerate}
-\item \texttt{-c} : path to a configuration file
-\item \texttt{-b} : path to the binary to be scanned
-\item \texttt{-o} : path to an output file, where unpacked files, reports,
-plus the final program state be written to. This file can later be used with
-the viewer.
-\end{enumerate}
-
-A typical invocation looks like this:
-
-\texttt{python bruteforce.py -c /path/to/configuration -b /path/to/binary -o
-/path/to/outputfile}
-
-XML output, if enabled in the configuration file, will be written to standard
-output. Debugging messages will appear on standard error.
-
-\subsection{\texttt{batgui}}
-
-The \texttt{batgui} program is a graphical viewer for the results of
-\texttt{bruteforce.py}.
-
-\subsubsection{Viewing results with \texttt{batgui}}
-
-The \texttt{batgui} program was made to view the results of the analysis
-process easily, without having to dig through XML. The viewer has two modes:
-simple and advanced. In simple mode a tree of the unpack results will be shown,
-and each file in the tree can be clicked to display more information. Depending
-on which scans were run the tree will be decorated with more information, such
-as the type of the file (based on tags), or if matches were found with the
-ranking method. Using a filtering system (available from the menu) files that
-are typically uninteresting for license compliance engineering (empty
-files/directories, symbolic links, graphics files) can be ignored.
-
-Information that is shown per file depends on the scans that were run and the
-type of file. For most files information like size, type, path (both relative
-inside the unpacked binary, as well as absolute in the scanning tree) will be
-shown. If the ranking method was enabled results of the ranking process such as
-matched strings, function names and a license guess will be displayed as well.
-
-In the optional advanced mode more results will be shown, such as a graphical
-representation of a file, where every bit in the binary has been assigned a
-grayscale value, plus a textual representation of a file generated with
-\texttt{hexdump}. Advanced mode is disabled by default, since loading the
-additional pictures and data is quite resource intensive and it will only be
-useful in very specific cases. This functionality might be removed from future
-versions of BAT.
 
 \section{Additional programs in the Binary Analysis Tool}
 
@@ -761,6 +359,418 @@ The collection is split in two packages: \texttt{bat-extratools-java} contains
 the two Java packages, the \texttt{bat-extratools} package contains the rest.
 
 \appendix
+
+\section{BAT configuration}
+
+\subsection{Inner workings of the analysis process}
+
+BAT uses a brute force approach for analysing a binary. It assumes no prior
+knowledge of how a binary is constructed or what is inside the binary. Instead
+it tries to determine what is inside by applying a wide range of methods, such
+as looking for known identifiers of file systems and compressed files and
+running external tools to find contents in the binary.
+
+During scanning of a file the following steps are taken:
+
+\begin{enumerate}
+\item identifier search, using a list of known identifiers
+\item verifying file type of a file and, if successful, tagging it. Tags can
+be used later on to give more information to the scanner.
+\item unpacking file systems, compressed files and media files from the file,
+possibly carving it out of a larger file first.
+\item repeat steps 1 - 3 for each file that was unpacked in step 3
+\item run individual scans on each file if no further unpacking is possible
+\item optionally aggregate scan results
+\item process results from scans in step 5 and 6
+\item pack results into an archive that can be used by the viewer application
+\end{enumerate}
+
+\subsubsection{Identifier search}
+
+The first action performed is scanning a file for known identifiers of
+compressed files, file systems and media files. The identifers are important
+for a few reasons: first, they are used to determine which checks will run. They
+are also used frequently throughout the code for verification and speeding up
+unpacking. If a scan depends on a specific identifier being present it can be
+set using the \texttt{magic} attribute in the configuration. If an identifier
+is not defined anywhere in the configuration file as needed it will be skipped
+during the identifier search to speed up the identifier search.
+
+The marker search cannot be enabled or disabled via the configuration file.
+
+\subsubsection{Pre-run checks}
+
+Before files are unpacked they are briefly inspected and if possible tagged.
+Tags are used to pass hints to methods that are run later to avoid unnecessarily
+scanning a file and to reduce the amount of false positives.
+
+For example, files that only contain text are tagged as \texttt{text}, all other
+files are tagged as \texttt{binary} (this depends on the implementation of
+Python. Python 2 only considers (by default) ASCII to be valid text). Methods
+that only work on binaries can then ignore anything that has been tagged as
+\texttt{text}.
+
+Other checks that are available are for valid XML, various Android formats,
+ELF executables and libraries, graphics files, audio files, and so on.
+
+The prerun checks can easily be identified in the configuration, since it has
+its type set to \texttt{prerun}:
+
+\begin{verbatim}
+[verifytext]
+type        = prerun
+module      = bat.prerun
+method      = verifyText
+priority    = 3
+description = Check if file contains just ASCII text
+enabled     = yes
+\end{verbatim}
+
+Prerun verifiers can optionally make use of tags that are already present by
+using \texttt{magic} and \texttt{noscan} attributes, which will be explained
+in detail later for the unpackers.
+
+\subsubsection{Unpackers}
+
+Unpackers can be recognized in the configuration because their type is set
+to \texttt{unpack}, for example:
+
+\begin{verbatim}
+[jffs2]
+type        = unpack
+module      = bat.fwunpack
+method      = searchUnpackJffs2
+priority    = 2
+magic       = jffs2_le:jffs2_be
+noscan      = text:xml:graphics:pdf:compressed:audio:video:mp4:elf:java:resource:dalvik
+description = Unpack JFFS2 file systems
+enabled     = yes
+\end{verbatim}
+
+In BAT 17 the following file systems, compressed files and media files can be
+unpacked or extracted:
+
+\begin{itemize}
+\item file systems: Android sparse files, cramfs, ext2/ext3/ext4, ISO9660,
+JFFS2, Minix (specific variant of v1 often found on older embedded Linux
+systems), SquashFS (several variants), romfs, YAFFS2 (specific variants)
+\item compressed files and executable formats: 7z, ar, ARJ, BASE64, BZIP2,
+compressed Flash, CAB, compress, CPIO, EXE (specific compression methods only),
+GZIP, InstallShield (old versions), LRZIP, LZIP, LZMA, LZO, RAR, RPM, RZIP,
+serialized Java, TAR, UPX, XZ, ZIP
+\item media files: GIF, ICO, PDF, PNG, WOFF
+\end{itemize}
+
+Unpacking differs per file type. Most files use one or more identifiers that
+can be searched for in a binary blob. Using this information it is possible
+to carve out the right parts of a binary blob and verify if it indeed contains
+a compressed file, media file or file system.
+
+There is not always an identifier that can be searched for. The YAFFS2 file
+system layout for example is dependent on the hardware specifics of the
+underlying flash chip. Without knowing these specifics it is not possible to
+specifically search for a valid YAFFS2 file system. This scan therefore tries
+to run on every file, unless explicitely filtered out (using \texttt{noscan}
+and tags).
+
+Other file types (such as ARJ files) have a very generic identifier, so there
+are a lot of false positives. This causes a big increase in runtime. The ARJ
+unpacker is therefore disabled by default.
+
+LZMA is another special case: there are many different valid headers for LZMA
+files, but in practice only a handful are used.
+
+If unpacking is successful a directory with unpacked files is returned, and, if
+available, some meta information to avoid duplicate scanning (blacklisting
+information and tags). The unpacked files are added to the scan queue and
+scanned recursively.
+
+\subsubsection{Leaf scans}
+
+Leaf scans are scans that are run on every single file after unpacking,
+including files that contained files that were found and extracted by unpackers.
+
+Leaf scans can be recognized in the configuration because their type is set to
+\texttt{leaf}, for example:
+
+\begin{verbatim}
+[iptables]
+type        = leaf
+module      = bat.checks
+method      = searchIptables
+noscan      = text:xml:graphics:pdf:compressed:audio:video
+description = Determine presence of iptables
+enabled     = yes
+\end{verbatim}
+
+In earlier versions of BAT (16 and earlier) the term \texttt{program} was used
+instead of \texttt{leaf}.
+
+The current leaf scans that are available in BAT are:
+
+\begin{itemize}
+\item fast string searches: dproxy, ez-ipupdate, iptables, iproute, libusb,
+Linux kernel, loadlin, RedBoot, U-Boot, vsftpd, wireless-tools, wpa-supplicant
+\item advanced search mode using ranking of strings, function names, variable
+names, field names and Java class names using a database (for ELF and Java,
+both regular JVM and Dalvik)
+\item BusyBox version number
+\item dynamic library dependencies (ELF files only)
+\item Linux kernel module license (Linux kernel modules only)
+\item Linux kernel version number, plus detection for several subsystems
+\item PDF meta data extraction
+\item architecture
+\item presence of URLs indicating an open source license
+\item presence of URLs indicating forges/collaborative software development
+sites (SourceForge, GitHub, etcetera)
+\end{itemize}
+
+The fast string searches are meant for quick sweep scanning only. They have
+their limits, can report false positives or not identify a binary. They should
+only be used to signal that further inspection is necessary. For a thorough
+investigation the advanced search mode should be used. These scans are likely
+to be disabled in the future in the default configuration.
+
+\subsubsection{Aggregators}
+
+Sometimes it helps to aggregate results of a number of files, or it could be
+useful to perform other actions after all the individual scans have run. The
+best example is dealing with JAR-files (Java ARchives). Individual Java class
+files often contain too little information to map them reliably to a source
+code package.
+
+Typically a class file contains just a few method names, or field names, or
+strings. If inner classes are used it can be even worse and information from a
+single source code file could be scattered across several class files.
+
+Since Java programs (note: excluding Android) are typically distributed as a
+JAR that is either included at runtime or directly executed, similar to an ELF
+library or ELF executable, it makes perfect sense to treat the JAR file as a
+single unit and aggregate results for the individual class files and assign
+them to the JAR file.
+
+Aggregators take all results of the entire scan as input.
+
+Currently the following aggregators are available:
+
+\begin{itemize}
+\item aggregating result of individual Java class files in case they come from
+the same JAR file.
+\item cleaning up/fixing results of duplicate files: often firmwares contain
+duplicate files. Sometimes some more information is available to make a better
+choice as to which file is the duplicate and which one is the original version
+\item checking dynamically linked ELF files
+\item finding duplicate files
+\item finding licenses and versions of strings and function names that were
+found and optionally pruning the result set to remove unlikely results.
+\item pruning files from the scan completely if they are not interesting (such
+as pictures, or text files) using tags.
+\item generating pictures of results of a scan
+\item generating reports of results of a scan
+\end{itemize}
+
+\subsubsection{Post-run methods}
+
+In BAT there are methods that are run after all the regular work has been
+performed, or ``post-run''. These methods should not alter the scan results in
+any way, but just use the information from the scanning process. A typical use
+case would be to present the data in a nicer to use format than the standard
+report, to use more external data sources or generate graphical representations
+of data.
+
+The post-run methods have the type \texttt{postrun} in the configuration, for
+example:
+
+\begin{verbatim}
+[hexdump]
+type        = postrun
+module      = bat.generatehexdump
+method      = generateHexdump
+noscan      = text:xml:graphics:pdf:audio:video
+envvars     = BAT_REPORTDIR=/tmp/images:BAT_IMAGE_MAXFILESIZE=100000000
+description = Create hexdump output of files
+enabled     = no
+storetarget = reports
+storedir    = /tmp/images
+storetype   = -hexdump.gz
+cleanup     = no
+\end{verbatim}
+
+\subsection{Scan configuration}
+
+The analysis process is highly configurable: methods can be simply enabled and
+disabled, based on need: some methods can run for quite a long time, which
+might be undesirable at times. Configuration is done via a simple configuration
+file in Windows INI format.
+
+Most sections are specific to scanning methods, except two sections.
+
+The main configuration directive is \texttt{batconfig}. In this
+section various global settings are defined, such as \texttt{multiprocessing}
+which sets whether or not multiple CPUs (or cores) should be used during
+scanning. The default configuration as shipped in the official BAT distribution
+is to use multiple threads:
+
+\begin{verbatim}
+[batconfig]
+multiprocessing = yes
+\end{verbatim}
+
+If set to \texttt{yes} the program will start an extra process per CPU that is
+available for parts of the program that can be run in parallel. In most cases
+it is completely safe to use multiprocessing.
+
+It might be desirable to not use all processors on a machine, for example if
+there are multiple scans of BAT running at the same time, or if other tasks
+need to run on the machine. It is possible to set the maximum amount of
+processors to use using the \texttt{processors} option:
+
+\begin{verbatim}
+processors = 2
+\end{verbatim}
+
+Another setting in this section is \texttt{outputlite}:
+
+\begin{verbatim}
+outputlite = no
+\end{verbatim}
+
+It defaults to \texttt{no}. If set to \texttt{yes} the output archive will omit
+a full copy of the unpacked data, significantly decreasing the size of the
+output archive, but making it harder to do a ``post mortem'' on the unpacked
+data (a new analysis should be run to get it again). Future versions of BAT
+might change this setting to \texttt{yes}.
+
+There are two settings that determine where the code of the optional XML pretty
+printer can be found:
+
+\begin{verbatim}
+module = bat.simpleprettyprint
+output = prettyprintresxml
+\end{verbatim}
+
+These two settings should always be used together.
+
+There is one setting to set the prefix for creating temporary files or
+directories, namely \texttt{tempdir}. By default the directory for creating
+temporary files and directories is \texttt{/tmp}. There might be situations
+where the temporary directory might need to be changed, for example for
+unpacking on a faster medium (ramdisk, SSD) than a normal harddisk. It can be
+used as follows:
+
+\begin{verbatim}
+tempdir = /ssd/tmp
+\end{verbatim}
+
+To assist in debugging and finding errors in scans of BAT there are two
+settings: \texttt{debug} and \texttt{debugphases}. The setting \texttt{debug}
+can be used to enable and disable debugging. If set multiprocessing will be
+disabled and information about which file is scanned and which method is run
+will be printed on standard error. If specified without \texttt{debugphases}
+this will apply to all scan phases. The \texttt{debugphases} parameter can be
+used to limit this behaviour to just one or a few phases. The other phases will
+behave normally. For example, this will enable debugging, but just for the
+leaf scans and aggregate scans:
+
+\begin{verbatim}
+debug = yes
+debugphases = leaf:aggregate
+\end{verbatim}
+
+The other global section is \texttt{viewer}. This section is specific for the
+graphical frontend and is not used in any other parts of BAT and might be moved
+to a separate configuration file in a future version of BAT.
+
+\subsubsection{Enabling and disabling scans}
+
+The standard configuration file enables most of the scans and methods
+implemented in BAT by default. Scans can be enabled and disabled by setting the
+option \texttt{enabled} to \texttt{yes} and \texttt{no} respectively.
+
+Another way to not run a scan is to outcomment the entry in the configuration
+file (by starting the line with the \texttt{\#} character), or by removing the
+section from the configuration file.
+
+\subsubsection{Blacklisting and whitelisting scans}
+
+Files can be explicitely blacklisted for scanning by using the \texttt{noscan}
+configuration setting. The value of this parameter is a list of tags, separated
+by colons:
+
+\begin{verbatim}
+noscan      = text:xml:graphics:pdf:audio:video
+\end{verbatim}
+
+Similarly files can be whitelisted by using the \texttt{scanonly} setting. Only
+files that are tagged with any of the values in this list (if not empty) will
+be scanned. If there is an overlapping value in \texttt{scanonly} and
+\texttt{noscan} then the file will not be scanned.
+
+\subsubsection{Passing environment variables}
+
+All scans have an optional parameter \texttt{envvars} defaulting to an empty
+Python dictionary. In the configuration file a colon separated list of
+name/value pairs can be specified. These will then become available in the
+environment of the scan:
+
+\begin{verbatim}
+envvars     = BAT_REPORTDIR=/tmp/images:BAT_IMAGE_MAXFILESIZE=100000000
+\end{verbatim}
+
+It is up to the scans to parse the environment variables and to store them in
+the environment.
+
+\subsubsection{Storing results}
+
+Postrun scans and aggregate scans that output data, for example graphics files
+or reports, can specify which files should be added to the output file. There
+are three settings that should be set together:
+
+\begin{verbatim}
+storetarget = images
+storedir    = /tmp/images
+storetype   = -piechart.png:-version.png
+\end{verbatim}
+
+The \texttt{storetarget} setting specifies the relative directory inside the
+output TAR archive. The \texttt{storedir} setting tells where to get the files
+that need to be stored can be found (this should be where the postrun scan
+or aggregate scan stores its results). The \texttt{storetype} setting is a colon
+separated list of extensions/partial file names that the files should end in
+(typically the rest of the filename is a SHA256 value).
+
+The additional setting \texttt{cleanup} can be used to instruct BAT that the
+files generated by this postrun scan or aggregate scan should be removed after
+copying them into the result archive:
+
+\begin{verbatim}
+cleanup     = yes
+\end{verbatim}
+
+The \texttt{cleanup} setting should be set to \texttt{yes} unless the results
+do not change in between subsequent runs of BAT.
+
+Currently (BAT 17) if \texttt{cleanup} is set the files are written directly to
+output directories. The values of these directories are hardcoded (and match
+values that the GUI expects) but these will be replaced by the value of
+\texttt{storetarget} in a later release.
+
+\subsubsection{Running setup code}
+
+For some scans it is necessary to run some setup code to ensure that certain
+conditions are met, for example that databases exist, or that locations are
+readable/writeable. If this would be done during running of the scan (default
+in BAT 13 and earlier) the checks would be run each time the scan would be run.
+In reality the checks only need to run once.
+
+There is a special hook for leaf scans to run setup code for the scan:
+
+\begin{verbatim}
+setup     = nameOfSetupMethod
+\end{verbatim}
+
+In the standard distribution of BAT the files \texttt{bat/identifier.py} and
+\texttt{bat/licenseversion.py} contain very extensive examples of setup hooks.
 
 \section{Analyser internals}
 
@@ -2380,7 +2390,7 @@ Finally there are some scans that unpack text files (\texttt{base64}) or media
 files. The \texttt{lzma} unpack scan also has the lowest priority because of
 possibly many false positives.
 
-The order of the unpack scans as defined in BAT 16 is:
+The order of the unpack scans as defined in BAT 17 is:
 
 \begin{enumerate}
 \item \texttt{byteSwap}
