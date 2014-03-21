@@ -361,9 +361,9 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 							else:
 								packageversionsperpkg[package][k] = packageversions[k]
 					if packagelicensesperpkg.has_key(package):
-						packagelicensesperpkg[package] = packagelicensesperpkg[package] + r[5]
+						packagelicensesperpkg[package] = packagelicensesperpkg[package] + packagelicenses
 					else:
-						packagelicensesperpkg[package] = r[5]
+						packagelicensesperpkg[package] = packagelicenses
 		if dynamicres != {}:
 			aggregated = True
 			if dynamicres.has_key('uniquepackages'):
