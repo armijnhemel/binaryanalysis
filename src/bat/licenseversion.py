@@ -1367,13 +1367,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 							## store pkgs and line for backward lookups
 							backlog.append((line, pkgs[uniquepackage_tmp], score))
 
-				if score > scorecutoff:
-					for packagename in pkgs:
-						if not nonUniqueMatches.has_key(packagename):
-							nonUniqueMatches[packagename] = [line]
-						else:
-							nonUniqueMatches[packagename].append(line)
-				else:
+				if not score > scorecutoff:
 					matchednonassigned = True
 					matchednonassignedlines += 1
 					if not usesourceorder:
@@ -1637,6 +1631,10 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 			sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
 			best_score += 1
 			linecount[strsplit] = linecount[strsplit] - 1
+			if nonUniqueMatches.has_key(best):
+				nonUniqueMatches[best].append(strsplit)
+			else:
+				nonUniqueMatches[best]  = [strsplit]
 
 		for a in todelete:
 			for st in string_split[a]:
