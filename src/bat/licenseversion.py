@@ -1272,6 +1272,14 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 			if len(res) == 0:
 				pass
 
+			## if 'line' has been changed, then linecount should be changed accordingly
+			if line != origline:
+				linecount[origline] = linecount[origline] - 1
+				if linecount.has_key(line):
+					linecount[line] = linecount[line] + 1
+				else:
+					linecount[line] = 1
+
 		## nothing in the cache
 		if len(res) == 0 and not kernelfunctionmatched:
 			unmatched.append(line)
