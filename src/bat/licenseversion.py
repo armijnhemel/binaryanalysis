@@ -1049,7 +1049,6 @@ def scanDynamic(scanstr, variables, scanenv, clones):
 def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, language='C'):
 	if len(lines) == 0:
 		return None
-	lenStringsFound = 0
 	uniqueMatches = {}
 	uniqueScore = {}
 	nonUniqueScore = {}
@@ -1124,6 +1123,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 		uniquepackage_tmp = None
 		oldunique = None
 		uniquefilenames_tmp = []
+		## keep a backlog for strings that could be assigned possibly later
 		backlog = []
 	else:
 		## sort the lines first, so it is easy to skip duplicates
@@ -1176,13 +1176,12 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 				## Since there might be package rewrites this should be a bit less than the
 				## cut off value that was defined.
 				if scoreres[1] < scorecutoff/100:
-					lenStringsFound = lenStringsFound + len(line)
 					nonUniqueMatchLines.append(line)
 					matchednonassignedlines += 1
 					matchednonassigned = True
 					continue
 
-		## if scoreres is None it could still be something else like a kernel function, or a
+		## if scoreres is None the line could still be something else like a kernel function, or a
 		## kernel string in a different format, so keep searching.
 		## If the image is a Linux kernel image first try the Linux kernel specific matching
 		## like function names, then continue as normal.
@@ -1282,10 +1281,6 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 			## * database has no duplicates
 			## * filenames in the database have been processed using os.path.basename()
 
-			## Add the length of the string to lenStringsFound.
-			## We're not really using it, except for reporting.
-			lenStringsFound = lenStringsFound + len(line)
-
 			print >>sys.stderr, "\n%d matches found for <(|%s|)> in %s" % (len(res), line, filepath)
 
 			pkgs = {}    ## {package name: set([filenames without path])}
@@ -1357,7 +1352,6 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 							matched = True
 							nonUniqueAssignments[uniquepackage_tmp] = nonUniqueAssignments.get(uniquepackage_tmp,0) + 1
 
-							## for statistics it's nice to see how many lines were matched
 							matchedlines += 1
 							linecount[line] = linecount[line] - 1
 							continue
@@ -1471,7 +1465,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 
 	del lines
 
-	## clean up stringsLeft first, if possible. This currently only happens for
+	## clean up stringsLeft first
 	for l in stringsLeft.keys():
 		if linecount[stringsLeft[l]['string']] == 0:
 			del stringsLeft[l]
@@ -1543,9 +1537,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 				string_split[strsplit] = set([stri])
 
 	## TODO: the difference between stringsLeft and new_stringsleft should be added to matched,
-	## but unassigned
-	if new_stringsleft == {}:
-		pass
+	## but unassigned if the strings *only* occur in stringsLeft
 
 	stringsLeft = new_stringsleft
 
@@ -1625,7 +1617,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 			for st in string_split[a]:
 				del stringsLeft[st]
 		## store how many non unique strings were assigned per package
-		#nonUniqueAssignments[best] = nonUniqueAssignments.get(best,0) + best_score
+		nonUniqueAssignments[best] = nonUniqueAssignments.get(best,0) + best_score
 		if gain[best] < gaincutoff:
 			break
 		strleft = len(stringsLeft)
@@ -1649,21 +1641,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 			percentage = 0.0
 		reports.append((rank, s, uniqueMatches.get(s,[]), percentage, packageversions.get(s, {}), packagelicenses.get(s, [])))
 		rank = rank+1
-	'''
-	for s in scores_sorted:
-		if not nonUniqueMatches.has_key(s):
-			continue
-		correlation_sort = {}
-		for r in nonUniqueMatches:
-			if r == s:
-				continue
-			correlation = len(set(nonUniqueMatches[s]).intersection(set(nonUniqueMatches[r])))
-			if correlation != 0:
-				correlation_sort[r] = correlation
-		corr_sorted = sorted(correlation_sort, key = lambda x: correlation_sort.__getitem__(x), reverse=True)
-		for c in corr_sorted:
-			print >>sys.stderr, s, c, correlation_sort[c]
-	'''
+
 	if matchedlines == 0 and unmatched == []:
 		return
 
