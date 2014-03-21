@@ -1140,6 +1140,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 		## This does *not* alter the score in any way, but perhaps
 		## it should: having a very significant string a few times
 		## is a strong indication.
+		kernelfunctionmatched = False
 		if not usesourceorder:
 			if line == oldline:
 				if matched:
@@ -1161,7 +1162,6 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 			matchednonassigned = False
 			matchednotclones = False
 			oldline = line
-			kernelfunctionmatched = False
 
 		## skip empty lines
 		if line == "":
