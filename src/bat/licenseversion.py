@@ -1164,7 +1164,8 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 			kernelfunctionmatched = False
 
 		## skip empty lines
-		if line == "": continue
+		if line == "":
+			continue
 
 		## An extra check for lines that score extremely low. This
 		## helps reduce load on databases stored on slower disks
@@ -1349,7 +1350,6 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 							else:
 								directAssignedScore[uniquepackage_tmp] = score
 							matcheddirectassignedlines += 1
-							matched = True
 							nonUniqueAssignments[uniquepackage_tmp] = nonUniqueAssignments.get(uniquepackage_tmp,0) + 1
 
 							matchedlines += 1
@@ -1536,8 +1536,14 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 			else:
 				string_split[strsplit] = set([stri])
 
-	## TODO: the difference between stringsLeft and new_stringsleft should be added to matched,
+	## the difference between stringsLeft and new_stringsleft is matched
 	## but unassigned if the strings *only* occur in stringsLeft
+	oldstrleft = set()
+	for i in stringsLeft:
+		oldstrleft.add(stringsLeft[i]['string'])
+	for i in oldstrleft.difference(set(string_split.keys())):
+		matchednonassignedlines += linecount[i]
+		matchedlines -= linecount[i]
 
 	stringsLeft = new_stringsleft
 
@@ -1551,7 +1557,13 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 		#print >>sys.stderr, "round %d: %d strings left" % (roundNr, strleft)
 		gain = {}
 		stringsPerPkg = {}
+
+		oldstrleft = set()
+		for i in stringsLeft:
+			oldstrleft.add(stringsLeft[i]['string'])
+
 		## Determine to which packages the remaining strings belong.
+		newstrleft = set()
 		for stri in stringsLeft:
 			for p2 in pkgsScorePerString[stri]:
 				if p2 in useless_packages:
@@ -1560,6 +1572,11 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 				if not stringsPerPkg.has_key(p2):
 					stringsPerPkg[p2] = set()
 				stringsPerPkg[p2].add(stri)
+				newstrleft.add(stringsLeft[stri]['string'])
+
+		for i in oldstrleft.difference(newstrleft):
+			matchednonassignedlines += linecount[i]
+			matchedlines -= linecount[i]
 
 		for p2 in gain.keys():
 			## check if packages could ever contribute usefully.
@@ -1605,11 +1622,11 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 		todelete = set()
 		for xy in stringsPerPkg[best]:
 			x = stringsLeft[xy]
-			sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
 			strsplit = xy.rsplit('\t', 1)[0]
 			todelete.add(strsplit)
 			if linecount[strsplit] == 0:
 				break
+			sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
 			best_score += 1
 			linecount[strsplit] = linecount[strsplit] - 1
 
