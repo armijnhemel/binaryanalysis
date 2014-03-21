@@ -1121,12 +1121,19 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 		## don't use precomputed scores
 		precomputescore = False
 		uniquepackage_tmp = None
+		oldunique = None
 		uniquefilenames_tmp = []
+		backlog = []
 	else:
 		## sort the lines first, so it is easy to skip duplicates
 		lines.sort()
 
+	linecount = {}
 	for line in lines:
+		if linecount.has_key(line):
+			linecount[line] = linecount[line] + 1
+		else:
+			linecount[line] = 1
 		#print >>sys.stderr, "processing <|%s|>" % line
 		## speedup if the line happens to be the same as the old one
 		## This does *not* alter the score in any way, but perhaps
@@ -1266,9 +1273,6 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 			## Assume:
 			## * database has no duplicates
 			## * filenames in the database have been processed using os.path.basename()
-			## If not, uncomment the following few lines:
-			#res = map(lambda (x,y): (x, os.path.basename(y)), res)
-			#res = list(set(res))
 
 			## Add the length of the string to lenStringsFound.
 			## We're not really using it, except for reporting.
@@ -1347,6 +1351,9 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 							## for statistics it's nice to see how many lines were matched
 							matchedlines += 1
 							continue
+						else:
+							## store pkgs and line for backward lookups
+							backlog.append((line, pkgs[uniquepackage_tmp], score))
 
 				if score > scorecutoff:
 					for packagename in pkgs:
@@ -1401,6 +1408,42 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 				if usesourceorder:
 					uniquepackage_tmp = package
 					uniquefilenames_tmp = pkgs[package]
+					## process backlog
+					for b in xrange(len(backlog), 0, -1):
+						assign_score = False
+						(backlogline, backlogfilenames, backlogscore) = backlog[b-1]
+						for pf in uniquefilenames_tmp:
+							if pf in backlogfilenames:
+								assign_score = True
+								break
+						if assign_score:
+							## keep track of the old score in case it is changed/recomputed here
+							oldbacklogscore = backlogscore
+							##backlogscore = len(line)
+							if not nonUniqueMatches.has_key(uniquepackage_tmp):
+								nonUniqueMatches[uniquepackage_tmp] = [line]
+							else:
+								nonUniqueMatches[uniquepackage_tmp].append(line)
+							if directAssignedScore.has_key(uniquepackage_tmp):
+								directAssignedScore[uniquepackage_tmp] += backlogscore
+							else:
+								directAssignedScore[uniquepackage_tmp] = backlogscore
+							matcheddirectassignedlines += 1
+							nonUniqueAssignments[uniquepackage_tmp] = nonUniqueAssignments.get(uniquepackage_tmp,0) + 1
+							## remove the directly assigned string from stringsLeft
+							try:
+								for pf in backlogfilenames:
+									del stringsLeft['%s\t%s' % (backlogline, pf)]
+							except KeyError, e:
+								pass
+							## decrease matchednonassigned if the originally computed score
+							## is too low
+							if not oldbacklogscore > scorecutoff:
+								matchednonassigned = matchednonassigned - 1
+							## TODO: adapt matchednotclonelines and nonUniqueScore
+						else:
+							break
+					backlog = []
 			matched = True
 
 			## for statistics it's nice to see how many lines were matched
