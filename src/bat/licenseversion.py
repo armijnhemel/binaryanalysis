@@ -1273,7 +1273,11 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 
 			## result is still empty, perhaps it is a module parameter
 			if len(res) == 0:
-				pass
+				if '.' in line:
+					if line.count('.') == 1:
+						paramres = re.match("([\w_]+)\.([\w_]+)", line)
+						if paramres != None:
+							pass
 
 			## if 'line' has been changed, then linecount should be changed accordingly
 			if line != origline:
