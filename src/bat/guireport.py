@@ -199,7 +199,7 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, debug=False, env
         <td><b>Determined licenses (Ninka &amp; FOSSology report the same)</b></td>
       </tr>\n'''
 					for j in stringsres['reports']:
-						(rank, packagename, uniquematches, uniquematcheslen, percentage, packageversions, licenses) = j
+						(rank, packagename, uniquematches, uniquematcheslen, percentage, packageversions, licenses, copyrights) = j
 						determinedlicenses = map(lambda x: x[0], filter(lambda x: x[1] == 'squashed', licenses))
 						ninkalicenses = map(lambda x: x[0], filter(lambda x: x[1] == 'ninka', licenses))
 						fossologylicenses = map(lambda x: x[0], filter(lambda x: x[1] == 'fossology', licenses))

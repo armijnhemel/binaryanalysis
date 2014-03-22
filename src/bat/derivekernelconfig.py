@@ -104,7 +104,7 @@ def main(argv):
 			## first process string matches
 			if res != None:
 				for j in res['reports']:
-					(rank, packagename, uniquematches, uniquematcheslen, percentage, packageversions, licenses) = j
+					(rank, packagename, uniquematches, uniquematcheslen, percentage, packageversions, licenses, copyrights) = j
 					if len(uniquematches) == 0:
 						continue
 					if packagename != 'linux':

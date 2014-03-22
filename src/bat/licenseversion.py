@@ -339,7 +339,7 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 						scoresperpkg[s] = stringmatches['scores'][s]
 			if stringmatches['reports'] != []:
 				for r in stringmatches['reports']:
-					(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses) = r
+					(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses, packagecopyrights) = r
 					## ignore rank and percentage
 					if uniqueMatchesperpkg.has_key(package):
 						tmpres = []
@@ -406,12 +406,13 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 
 	rank = 1
 	reports = []
+	packagecopyrights = []
 	for s in scores_sorted:
 		try:
 			percentage = (scoresperpkg[s]/totalscore)*100.0
 		except:
 			percentage = 0.0
-		reports.append((rank, s, uniqueMatchesperpkg.get(s,[]), uniquematcheslen, percentage, packageversionsperpkg.get(s, {}), list(set(packagelicensesperpkg.get(s, [])))))
+		reports.append((rank, s, uniqueMatchesperpkg.get(s,[]), uniquematcheslen, percentage, packageversionsperpkg.get(s, {}), list(set(packagelicensesperpkg.get(s, []))), packagecopyrights))
 		rank = rank+1
 
 	if dynamicresfinal.has_key('uniquepackages'):
@@ -1091,6 +1092,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 	## keep a dict of versions per package and license per package found. Stub, empty by default.
 	packageversions = {}
 	packagelicenses = {}
+	packagecopyrights = {}
 
 	lenlines = len(lines)
 
@@ -1662,7 +1664,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 			percentage = (scores[s]/totalscore)*100.0
 		except:
 			percentage = 0.0
-		reports.append((rank, s, uniqueMatches.get(s,[]), len(uniqueMatches.get(s,[])), percentage, packageversions.get(s, {}), packagelicenses.get(s, [])))
+		reports.append((rank, s, uniqueMatches.get(s,[]), len(uniqueMatches.get(s,[])), percentage, packageversions.get(s, {}), packagelicenses.get(s, []), packagecopyrights.get(s,[])))
 		rank = rank+1
 
 	if matchedlines == 0 and unmatched == []:
@@ -1731,6 +1733,10 @@ def lookup_identifier((scanenv, filehash, filename, topleveldir, clones)):
 	leaf_file.close()
 	return filehash
 
+## determine the most likely versions for each of the scanned binaries
+## Currently finding the version is based on unique matches that were found.
+## If determinelicense or determinecopyright are set licenses and copyright statements
+## are also extracted.
 def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determinelicense, determinecopyright):
 	## read the pickle
 	filehash = unpackreport['sha256']
@@ -1768,7 +1774,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 	if res != None:
 		newreports = []
 		for r in res['reports']:
-			(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses) = r
+			(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses, packagecopyrights) = r
 			if unique == []:
 				newreports.append(r)
 				continue
@@ -1914,7 +1920,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				packagecopyrights = list(set(packagecopyrights_tmp))
 			else:
 				packagecopyrights = []
-			newreports.append((rank, package, newuniques, uniquematcheslen, percentage, newpackageversions, packagelicenses))
+			newreports.append((rank, package, newuniques, uniquematcheslen, percentage, newpackageversions, packagelicenses, packagecopyrights))
 		res['reports'] = newreports
 
 	if functionRes.has_key('versionresults'):
