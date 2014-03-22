@@ -49,6 +49,7 @@ def extractkernelstrings(kerneldir):
 	osgen = os.walk(kerneldir)
 	makefileresults = []
 	kconfigresults = []
+	moduleresults = []
 	version = ""
 
 	try:
@@ -90,6 +91,7 @@ def extractkernelstrings(kerneldir):
 									version = version + "." + extraversion
 							else:
 								continue
+						continue
 
 					## temporary store
 					tmpconfigs = {}
@@ -234,6 +236,7 @@ def extractkernelstrings(kerneldir):
 										match = matchconfig(f, i[0], tmpconfigs[tmpkey], kerneldirlen)
 										if match != None:
 											makefileresults.append(match)
+											moduleresults.append((match[0],tmpkey))
 				else:
 					configs = []
 					inhelp = False
@@ -311,9 +314,9 @@ def extractkernelstrings(kerneldir):
 							configtype = 'string'
 							continue
 	except StopIteration:
-		return (makefileresults, kconfigresults, version)
+		return (makefileresults, kconfigresults, moduleresults, version)
 
-def storematch(makefileresults, kconfigresults, dbcursor, version):
+def storematch(makefileresults, kconfigresults, moduleresults, dbcursor, version):
 	## store two things:
 	## 1. if it is a path/subdir, store subdir + configuration
 	##    making it searchable by subdir
@@ -324,6 +327,10 @@ def storematch(makefileresults, kconfigresults, dbcursor, version):
 		pathstring = res[0]
 		configstring = res[1]
 		dbcursor.execute('''insert into makefile (configstring, filename, version) values (?, ?, ?)''', (configstring, pathstring, version))
+
+	for res in moduleresults:
+		(modulename, filename) = res
+		dbcursor.execute('''insert into modulename (modulename, filename, version) values (?, ?, ?)''', (modulename, filename, version))
 
 def main(argv):
 	parser = OptionParser()
@@ -350,9 +357,10 @@ def main(argv):
 	c.execute('''create table if not exists makefile (configstring text, filename text, version text)''')
 	## TODO: process Kconfig files too
 	c.execute('''create table if not exists kconfig (configstring text, type text)''')
+	c.execute('''create table if not exists modulename (modulename text, filename text, version text)''')
 
-	(makefileresults, kconfigresults, version) = extractkernelstrings(kerneldir)
-	storematch(makefileresults, kconfigresults, c, version)
+	(makefileresults, kconfigresults, moduleresults, version) = extractkernelstrings(kerneldir)
+	storematch(makefileresults, kconfigresults, moduleresults, c, version)
 
 	conn.commit()
 	c.close()
