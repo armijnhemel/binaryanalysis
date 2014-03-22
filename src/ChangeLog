@@ -1,3 +1,13 @@
+2014-03-22
+* make reports for assigned strings and display them in the GUI
+* extract more information from Linux kernel
+* map file names of the Linux kernel to possibly used module names
+* merge extractkernelconfig.py into createdb.py
+
+2014-03-21
+* continue working on options to look at extracted strings in context. Also
+fix a few errors in string assignment.
+
 2014-03-20
 * add (incomplete) option to not look at extracted strings in isolation, but
 use information about in which files they were found to make a better educated
