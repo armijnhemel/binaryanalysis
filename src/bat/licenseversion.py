@@ -1053,7 +1053,6 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 	uniqueMatches = {}
 	uniqueScore = {}
 	nonUniqueScore = {}
-	nrUniqueMatches = 0
 	stringsLeft = {}
 	sameFileScore = {}
 	alpha = 5.0
@@ -1089,7 +1088,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 			kernelconn = sqlite3.connect(funccache)
 			kernelcursor = kernelconn.cursor()
 
-	## keep a dict of versions per package and license per package found. Stub, empty by default.
+	## keep a dict of versions, license and copyright statements per package. TODO: remove these.
 	packageversions = {}
 	packagelicenses = {}
 	packagecopyrights = {}
@@ -1098,23 +1097,28 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 
 	print >>sys.stderr, "total extracted strings for %s: %d" % (filepath, lenlines)
 
+	## some counters for keeping track of how many matches there are
 	matchedlines = 0
 	unmatchedlines = 0
 	matchednotclonelines = 0
 	matchednonassignedlines = 0
 	matcheddirectassignedlines = 0
-	oldline = None
-	matched = False
-	matchednonassigned = False
-	matchednotclones = False
-	kernelfunctionmatched = False
-	uniquematch = False
+	nrUniqueMatches = 0
 
 	## TODO: this should be done per language
 	if scanenv.has_key('BAT_SCORE_CACHE'):
 		precomputescore = True
 	else:
 		precomputescore = False
+
+	## start values for some state variables that are used
+	## most of these are only used if 'usesourceorder' == False
+	matched = False
+	matchednonassigned = False
+	matchednotclones = False
+	kernelfunctionmatched = False
+	uniquematch = False
+	oldline = None
 
 	## try to use the same order of strings in the binary as in the source code
 	usesourceorder = False
@@ -1133,17 +1137,18 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 
 	linecount = {}
 	for line in lines:
+		#print >>sys.stderr, "processing <|%s|>" % line
 		if linecount.has_key(line):
 			linecount[line] = linecount[line] + 1
 		else:
 			linecount[line] = 1
-		#print >>sys.stderr, "processing <|%s|>" % line
-		## speedup if the line happens to be the same as the old one
-		## This does *not* alter the score in any way, but perhaps
-		## it should: having a very significant string a few times
-		## is a strong indication.
 		kernelfunctionmatched = False
+
 		if not usesourceorder:
+			## speedup if the line happens to be the same as the old one
+			## This does *not* alter the score in any way, but perhaps
+			## it should: having a very significant string a few times
+			## is a strong indication.
 			if line == oldline:
 				if matched:
 					matchedlines += 1
@@ -1186,7 +1191,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 
 		## if scoreres is None the line could still be something else like a kernel function, or a
 		## kernel string in a different format, so keep searching.
-		## If the image is a Linux kernel image first try the Linux kernel specific matching
+		## If the image is a Linux kernel image first try Linux kernel specific matching
 		## like function names, then continue as normal.
 
 		if linuxkernel:
@@ -1201,14 +1206,10 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 					linecount[line] = linecount[line] - 1
 					continue
 
-		res = []
 		## then see if there is anything in the cache at all
-		if not kernelfunctionmatched:
-			res = conn.execute("select package, filename FROM stringscache WHERE programstring=?", (line,)).fetchall()
-		else:
-			res = []
+		res = conn.execute("select package, filename FROM stringscache WHERE programstring=?", (line,)).fetchall()
 
-		if len(res) == 0 and linuxkernel and not kernelfunctionmatched:
+		if len(res) == 0 and linuxkernel:
 			origline = line
 			## try a few variants that could occur in the Linux kernel
 			## The values of KERN_ERR and friends have changed in the years.
@@ -1283,7 +1284,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 					linecount[line] = 1
 
 		## nothing in the cache
-		if len(res) == 0 and not kernelfunctionmatched:
+		if len(res) == 0:
 			unmatched.append(line)
 			unmatchedlines += 1
 			continue
@@ -1410,8 +1411,6 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 				uniquematch = True
 				## the string is unique to this package and this package only
 				uniqueScore[package] = uniqueScore.get(package, 0) + len(line)
-
-				nrUniqueMatches = nrUniqueMatches + 1
 
 				## store the uniqueMatches without any information about checksums
 				if not uniqueMatches.has_key(package):
