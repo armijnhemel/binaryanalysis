@@ -727,7 +727,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			licenseconn.close()
 
 	## process the files to scan in parallel, then process the results
-	extracted_results = pool.map(extractstrings, filestoscan, 1)
+	extracted_results = pool.map(extractidentifiers, filestoscan, 1)
 
 	for extractres in extracted_results:
 		(filehash, language, origlanguage, sqlres, moduleres, results) = extractres
@@ -959,7 +959,7 @@ def licensefossology((packages)):
 
 ## TODO: get rid of ninkaversion before we call this method
 ## TODO: process more files at once to reduce overhead of calling ctags
-def extractstrings((package, version, i, p, language, filehash, ninkaversion)):
+def extractidentifiers((package, version, i, p, language, filehash, ninkaversion)):
 	newlanguage = language
 
 	if language == 'patch':
