@@ -40,11 +40,12 @@ On the left you will find a tree that can be browsed. Results can be shown by cl
 </p>
 
 <p>
-On the right there are views of the file. There are seven main views of the file:
+On the right there are views of the file. There are eight main views of the file:
 
 <ol>
 <li>Overview</li>
-<li>Uniquely matched strings</li>
+<li>Unique strings</li>
+<li>Assigned strings</li>
 <li>Unmatched strings</li>
 <li>Variable names</li>
 <li>Function names</li>
@@ -262,7 +263,7 @@ class BatFrame(wx.Frame):
 
 		## We have a tab for detailed information about matches
 		matchestab = wx.SplitterWindow(self.notebookpanel)
-		self.notebookpanel.AddPage(matchestab, "Uniquely matched strings")
+		self.notebookpanel.AddPage(matchestab, "Unique strings")
 		## One window to display corresponding source code, initially empty
 		self.matchesbrowser = wx.html.HtmlWindow(matchestab)
 		self.matchesbrowser.SetPage("<html></html")
@@ -271,6 +272,10 @@ class BatFrame(wx.Frame):
 		self.matcheswindow.SetPage("<html></html>")
 		matchestab.SplitVertically(self.matcheswindow, self.matchesbrowser)
 		matchestab.SetSashGravity(0.5)
+
+		self.assignedwindow = wx.html.HtmlWindow(self.notebookpanel)
+		self.notebookpanel.AddPage(self.assignedwindow, "Assigned strings")
+		self.assignedwindow.SetPage("<html></html>")
 
 		self.unmatchedwindow = wx.html.HtmlWindow(self.notebookpanel)
 		self.notebookpanel.AddPage(self.unmatchedwindow, "Unmatched strings")
@@ -502,6 +507,11 @@ class BatFrame(wx.Frame):
 					if self.advanced:
 						self.notebookpanel.EnableTab(2,False)
 					tag = 'text'
+			if os.path.exists(os.path.join(self.reportsdir, "%s-assigned.html.gz" % sha256sum)):
+				assignedhtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-assigned.html.gz" % sha256sum), 'r')
+				assignedhtml = assignedhtmlfile.read()
+				assignedhtmlfile.close()
+				self.assignedwindow.SetPage(assignedhtml)
 			if os.path.exists(os.path.join(self.reportsdir, "%s-unmatched.html.gz" % sha256sum)):
 				unmatchedhtmlfile = gzip.open(os.path.join(self.reportsdir, "%s-unmatched.html.gz" % sha256sum), 'r')
 				unmatchedhtml = unmatchedhtmlfile.read()
@@ -708,6 +718,7 @@ class BatFrame(wx.Frame):
 		self.matcheswindow.SetPage('<html></html>')
 		self.matchesbrowser.SetPage("<html></html>")
 		self.unmatchedwindow.SetPage("<html></html>")
+		self.assignedwindow.SetPage("<html></html>")
 		self.nameswindow.SetPage("<html></html>")
 		self.functionmatcheswindow.SetPage('<html></html>')
 		self.elfwindow.SetPage("<html></html>")
@@ -815,6 +826,7 @@ class BatFrame(wx.Frame):
 				if not self.advanced:
 					members = members + filter(lambda x: x.name.startswith('reports') and x.name.endswith('unique.html.gz'), self.tarmembers)
 					members = members + filter(lambda x: x.name.startswith('reports') and x.name.endswith('unmatched.html.gz'), self.tarmembers)
+					members = members + filter(lambda x: x.name.startswith('reports') and x.name.endswith('assigned.html.gz'), self.tarmembers)
 					members = members + filter(lambda x: x.name.startswith('reports') and x.name.endswith('guireport.html.gz'), self.tarmembers)
 					members = members + filter(lambda x: x.name.startswith('reports') and x.name.endswith('elfreport.html.gz'), self.tarmembers)
 					members = members + filter(lambda x: x.name.startswith('reports') and x.name.endswith('names.html.gz'), self.tarmembers)
