@@ -56,6 +56,7 @@ kernelexprs.append(re.compile("^\s*PARAM\(\s*(\w+)\)", re.MULTILINE))
 kernelexprs.append(re.compile("SCHED_FEAT\(\s*(\w+),", re.MULTILINE))
 kernelexprs.append(re.compile("DECLARE_STATS_COUNTER\(\s*(\w+)\)", re.MULTILINE))
 kernelexprs.append(re.compile("power_attr\(\s*(\w+)\)", re.MULTILINE))
+kernelexprs.append(re.compile("NETSTAT_ENTRY\(\s*(\w+)\)", re.MULTILINE))
 kernelexprs.append(re.compile("DEFINE_WRITEBACK_WORK_EVENT\(\s*(\w+)\)", re.MULTILINE))
 kernelexprs.append(re.compile("SETUP_DEV_ATTRIBUTE\(\s*(\w+)\)", re.MULTILINE))
 kernelexprs.append(re.compile("SETUP_LINK_ATTRIBUTE\(\s*(\w+)\)", re.MULTILINE))
@@ -1716,7 +1717,7 @@ def main(argv):
 		c.execute('''create index if not exists functionname_index on extracted_function(functionname)''')
 		c.execute('''create index if not exists functionname_language on extracted_function(language);''')
 
-		## Store different information extracted with ctags
+		## Store variable names/etc extracted
 		c.execute('''create table if not exists extracted_name (sha256 text, name text, type text, language text, linenumber int)''')
 		c.execute('''create index if not exists name_checksum_index on extracted_name(sha256);''')
 		c.execute('''create index if not exists name_name_index on extracted_name(name)''')
@@ -1750,6 +1751,12 @@ def main(argv):
 		c.execute('''create index if not exists kernelmodule_parameter_sha256index on kernelmodule_parameter(sha256)''')
 		c.execute('''create index if not exists kernelmodule_parameter_description_sha256index on kernelmodule_parameter_description(sha256)''')
 		c.execute('''create index if not exists kernelmodule_version_sha256index on kernelmodule_version(sha256)''')
+
+		## keep information about other files, such as media files, configuration files,
+		## and so on, for "circumstantial evidence"
+		c.execute('''create table if not exists misc(sha256 text, name text)''')
+		c.execute('''create index if not exists misc_sha256index on misc(sha256)''')
+		c.execute('''create index if not exists misc_nameindex on misc(name)''')
 		conn.commit()
 
 		if scanlicense or scancopyright:
