@@ -464,7 +464,26 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 				picklehash = gethash(tmppickle[1])
 				reportresults.append((rank, picklehash, tmppickle[1], uniquematcheslen, packagename))
 		if res['nonUniqueMatches'] != {}:
-			pass
+			order = map(lambda x: (len(res['nonUniqueMatches'][x]), x), res['nonUniqueMatches'].keys())
+			order.sort(reverse=True)
+			html = "<html><body><h1>Assigned strings per package</h1><p><ul>"
+			for r in order:
+				(count, packagename) = r
+				html += "<li><a href=\"#%s\">%s (%d)</a></li>" % (packagename, packagename, count)
+			html += "</ul></p><hr>"
+			html += "</body></html>"
+			for r in order:
+				(count, packagename) = r
+				html += "<h2><a name=\"%s\" href=\"#%s\">Matches for %s (%d)</a></h2><p>" % (packagename, packagename, packagename, count)
+				assignedmatches = res['nonUniqueMatches'][packagename]
+				assignedmatches.sort()
+				for rr in assignedmatches:
+					html += "%s<br>" % rr
+				html += "</p><hr>"
+			assignedhtmlfile = gzip.open("%s/%s-assigned.html.gz" % (reportdir, filehash), 'wb')
+			assignedhtmlfile.write(html)
+			assignedhtmlfile.write(footer)
+			assignedhtmlfile.close()
 	return (filehash, reportresults, functionresults, unmatchedresult)
 
 def generateunmatched((picklefile, pickledir, filehash, reportdir)):
@@ -473,10 +492,10 @@ def generateunmatched((picklefile, pickledir, filehash, reportdir)):
 	unmatches = cPickle.load(unmatched_pickle)
         unmatched_pickle.close()
 
-	unmatchedhtml = "<html><body><h1>Unmatched strings (%d strings)</h1><p><ul>" % (len(unmatches),)
+	unmatchedhtml = "<html><body><h1>Unmatched strings (%d strings)</h1><p>" % (len(unmatches),)
 	unmatchedsnippets = map(lambda x: "%s<br>\n" % cgi.escape(x), unmatches)
 	unmatchedhtml = unmatchedhtml + "".join(unmatchedsnippets)
-	unmatchedhtml = unmatchedhtml + "</body></html>"
+	unmatchedhtml = unmatchedhtml + "</p></body></html>"
 	unmatchedhtmlfile = gzip.open("%s/%s-unmatched.html.gz" % (reportdir, filehash), 'wb')
 	unmatchedhtmlfile.write(unmatchedhtml)
 	unmatchedhtmlfile.close()
