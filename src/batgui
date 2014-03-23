@@ -252,7 +252,7 @@ class BatFrame(wx.Frame):
 		## that is not a directory we change the information in all the panels.
 		#notebookpanel = wx.Notebook(self)
 		#self.notebookpanel = wx.aui.AuiNotebook(self)
-		self.notebookpanel = wx.lib.agw.flatnotebook.FlatNotebook(self, agwStyle=wx.lib.agw.flatnotebook.FNB_NO_X_BUTTON|wx.lib.agw.flatnotebook.FNB_NO_NAV_BUTTONS)
+		self.notebookpanel = wx.lib.agw.flatnotebook.FlatNotebook(self, agwStyle=wx.lib.agw.flatnotebook.FNB_NO_X_BUTTON)
 		flexgrid.Add(self.notebookpanel, flag=wx.EXPAND)
 
 		## There is an overview tab containing a window with some information, initially showing help text
