@@ -1583,8 +1583,12 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 				newstrleft.add(stringsLeft[stri]['string'])
 
 		for i in oldstrleft.difference(newstrleft):
-			matchednonassignedlines += linecount[i]
-			matchedlines -= linecount[i]
+			strsplit = i.rsplit('\t', 1)[0]
+			if linecount[strsplit] == 0:
+				continue
+			matchednonassignedlines += 1
+			matchedlines -= 1
+			linecount[strsplit] -= 1
 
 		for p2 in gain.keys():
 			## check if packages could ever contribute usefully.
@@ -1632,8 +1636,9 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 		for xy in stringsPerPkg[best]:
 			x = stringsLeft[xy]
 			strsplit = xy.rsplit('\t', 1)[0]
-			todelete.add(strsplit)
 			if linecount[strsplit] == 0:
+				## is this correct here?
+				todelete.add(strsplit)
 				continue
 			sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
 			best_score += 1
@@ -1651,6 +1656,14 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 		if gain[best] < gaincutoff:
 			break
 		strleft = len(stringsLeft)
+
+	for i in stringsLeft:
+		strsplit = i.rsplit('\t', 1)[0]
+		if linecount[strsplit] == 0:
+			continue
+		matchednonassignedlines += 1
+		matchedlines -= 1
+		linecount[strsplit] -= 1
 
 	scores = {}
 	for k in set(uniqueScore.keys() + sameFileScore.keys()):
