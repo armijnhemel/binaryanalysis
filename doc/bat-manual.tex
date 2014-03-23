@@ -85,12 +85,12 @@ arbitrary binaries and review results. Analysis of the binary is done via
 a commandline tool, while the results can be viewed using a special graphical
 viewer.
 
-The commandline interface functionality can be found in \texttt{bruteforce.py}.
+The commandline interface functionality can be found in \texttt{bat-scan}.
 The graphical user interface is provided by \texttt{batgui}.
 
-\subsection{Running \texttt{bruteforce.py}}
+\subsection{Running \texttt{bat-scan}}
 
-Invoking \texttt{bruteforce.py} is simple. You will need to supply three
+Invoking \texttt{bat-scan} is simple. You will need to supply three
 parameters:
 
 \begin{enumerate}
@@ -109,7 +109,7 @@ configuration can be found in the appendix.
 
 A typical invocation looks like this:
 
-\texttt{python bruteforce.py -c /path/to/configuration -b /path/to/binary -o
+\texttt{python bat-scan -c /path/to/configuration -b /path/to/binary -o
 /path/to/outputfile}
 
 XML output, if enabled in the configuration file, will be written to standard
@@ -118,7 +118,7 @@ output. Debugging messages will appear on standard error.
 \subsection{\texttt{batgui}}
 
 The \texttt{batgui} program is a graphical viewer for the results of
-\texttt{bruteforce.py}.
+\texttt{bat-scan}.
 
 \subsubsection{Viewing results with \texttt{batgui}}
 
@@ -130,13 +130,14 @@ on which scans were run the tree will be decorated with more information, such
 as the type of the file (based on tags), or if matches were found with the
 ranking method. Using a filtering system (available from the menu) files that
 are typically uninteresting for license compliance engineering (empty
-files/directories, symbolic links, graphics files) can be ignored.
+files/directories, symbolic links, graphics files and so on) can be ignored.
 
 Information that is shown per file depends on the scans that were run and the
 type of file. For most files information like size, type, path (both relative
 inside the unpacked binary, as well as absolute in the scanning tree) will be
 shown. If the ranking method was enabled results of the ranking process such as
-matched strings, function names and a license guess will be displayed as well.
+matched strings, function names, a license guess etecetera will be displayed as
+well.
 
 In the optional advanced mode more results will be shown, such as a graphical
 representation of a file, where every bit in the binary has been assigned a
@@ -148,7 +149,7 @@ versions of BAT.
 
 \subsection{Interpreting the results}
 
-There are two formats in which \texttt{bruteforce.py} can output its results:
+There are two formats in which \texttt{bat-scan} can output its results:
 
 \begin{enumerate}
 \item dump file containing program state, complete unpacked directory tree
@@ -158,7 +159,7 @@ dumps are meant to be used by \texttt{batgui}. This is the preferred format.
 \item XML file (optional/configurable)
 \end{enumerate}
 
-If configured \texttt{bruteforce.py} outputs its results in XML format on
+If configured \texttt{bat-scan} outputs its results in XML format on
 standard output. After redirecting the output to a file it is possible to look
 at this file with a commandline tool such as \texttt{xml\_pp} or a webbrowser
 such as Mozilla Firefox.
@@ -770,9 +771,8 @@ least 5 or more versions of SquashFS with LZMA compression out there).
 
 \subsection{Code organisation}
 
-Both \texttt{bruteforce.py} and \texttt{batgui} are merely frontends for the
-real scanner and only determine the list of scans, the binary to scan and the
-output file.
+\texttt{bat-scan} is merely a frontend for the real scanner and only determine
+the list of scans, the binary to scan and the output file.
 
 The meaty bits of the analyser can be found in files in the \texttt{bat}
 subdirectory.
@@ -1778,7 +1778,7 @@ BusyBox v1.15.2 (2009-12-03 00:14:42 CET)
 As an exception a BusyBox binary configured to include just a single applet
 will not contain contain the marker strings, or the BusyBox version string. In
 such a case a different detection mechanism will have to be used, for example
-the ranking code as used by \texttt{bruteforce.py}, although this will only be
+the ranking code as used by \texttt{bat-scan}, although this will only be
 necessary in a very small percentage of cases, since the vast majority of
 BusyBox instances include more than one applet.
 
