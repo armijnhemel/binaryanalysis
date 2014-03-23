@@ -1,3 +1,6 @@
+2014-03-23
+* store Linux kernel module names in database
+
 2014-03-22
 * make reports for assigned strings and display them in the GUI
 * extract more information from Linux kernel
