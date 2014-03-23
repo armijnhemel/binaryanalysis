@@ -1562,7 +1562,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 	## is only considered once anyway.
 	while strleft > 0:
 		roundNr = roundNr + 1
-		#print >>sys.stderr, "round %d: %d strings left" % (roundNr, strleft)
+		#print >>sys.stderr, "\nround %d: %d strings left" % (roundNr, strleft)
 		gain = {}
 		stringsPerPkg = {}
 
@@ -1578,8 +1578,8 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 					continue
 				gain[p2] = gain.get(p2, 0) + stringsLeft[stri]['score']
 				if not stringsPerPkg.has_key(p2):
-					stringsPerPkg[p2] = set()
-				stringsPerPkg[p2].add(stri)
+					stringsPerPkg[p2] = []
+				stringsPerPkg[p2].append(stri)
 				newstrleft.add(stringsLeft[stri]['string'])
 
 		for i in oldstrleft.difference(newstrleft):
@@ -1637,7 +1637,11 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 			x = stringsLeft[xy]
 			strsplit = xy.rsplit('\t', 1)[0]
 			if linecount[strsplit] == 0:
-				## is this correct here?
+				## is this correct here? There are situations where one
+				## string appears multiple times in a single source file
+				## and also the binary (eapol_sm.c in hostapd 0.3.9 contains
+				## the string "%s    state=%s" several times and binaries
+				## do too.
 				todelete.add(strsplit)
 				continue
 			sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
