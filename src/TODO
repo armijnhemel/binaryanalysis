@@ -90,3 +90,4 @@ BOTTLENECKS/HIGH PRIORITY:
 19. better report non unique matched strings which are not clones
 20. process UNSCANNED_DUPLICATE_FILES from BAT archives in createdb.py. This is needed if some of the unscanned duplicate files need to be processed.
 21. createdb.py: set TMPDIR for ctags to unpackdir
+22. rename bruteforce.py
