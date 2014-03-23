@@ -269,7 +269,7 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 					upkgs = dynamicRes['uniquepackages'][i[0]]
 					upkgs.sort()
 					for v in upkgs:
-						html += "%s<br>\n" % v
+						html += "%s<br>\n" % cgi.escape(v)
 					html += "</p>\n"
 		if html != "":
 			nameshtmlfile = gzip.open("%s/%s-functionnames.html.gz" % (reportdir, filehash), 'wb')
@@ -432,7 +432,7 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 						upkgs = variablepvs['uniquepackages'][i[0]]
 						upkgs.sort()
 						for v in upkgs:
-							html += "%s<br>\n" % v
+							html += "%s<br>\n" % cgi.escape(v)
 						html += "</p>\n"
 
 		footer = "</body></html>"
@@ -478,7 +478,7 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 				assignedmatches = res['nonUniqueMatches'][packagename]
 				assignedmatches.sort()
 				for rr in assignedmatches:
-					html += "%s<br>" % rr
+					html += "%s<br>\n" % cgi.escape(rr)
 				html += "</p><hr>"
 			assignedhtmlfile = gzip.open("%s/%s-assigned.html.gz" % (reportdir, filehash), 'wb')
 			assignedhtmlfile.write(html)
