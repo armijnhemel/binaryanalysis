@@ -1074,28 +1074,68 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		if moduleres.has_key('parameters'):
 			for res in moduleres['parameters']:
 				(pstring, ptype) = res
-				cursor.execute('''insert into kernelmodule_parameter (sha256, modulename, paramname, paramtype) values (?,?,?,?)''', (filehash, None, pstring, ptype))
+				if filehashtomodule.has_key(filehash):
+					modulenames = filehashtomodule[filehash]
+					for modulename in modulenames:
+						cursor.execute('''insert into kernelmodule_parameter (sha256, modulename, paramname, paramtype) values (?,?,?,?)''', (filehash, modulename, pstring, ptype))
+				else:
+					cursor.execute('''insert into kernelmodule_parameter (sha256, modulename, paramname, paramtype) values (?,?,?,?)''', (filehash, None, pstring, ptype))
 		if moduleres.has_key('alias'):
 			for res in moduleres['alias']:
-				cursor.execute('''insert into kernelmodule_alias (sha256, modulename, alias) values (?,?,?)''', (filehash, None, res))
+				if filehashtomodule.has_key(filehash):
+					modulenames = filehashtomodule[filehash]
+					for modulename in modulenames:
+						cursor.execute('''insert into kernelmodule_alias (sha256, modulename, alias) values (?,?,?)''', (filehash, modulename, res))
+				else:
+					cursor.execute('''insert into kernelmodule_alias (sha256, modulename, alias) values (?,?,?)''', (filehash, None, res))
 		if moduleres.has_key('author'):
 			for res in moduleres['author']:
-				cursor.execute('''insert into kernelmodule_author (sha256, modulename, author) values (?,?,?)''', (filehash, None, res))
+				if filehashtomodule.has_key(filehash):
+					modulenames = filehashtomodule[filehash]
+					for modulename in modulenames:
+						cursor.execute('''insert into kernelmodule_author (sha256, modulename, author) values (?,?,?)''', (filehash, modulename, res))
+				else:
+					cursor.execute('''insert into kernelmodule_author (sha256, modulename, author) values (?,?,?)''', (filehash, None, res))
 		if moduleres.has_key('descriptions'):
 			for res in moduleres['descriptions']:
-				cursor.execute('''insert into kernelmodule_description (sha256, modulename, description) values (?,?,?)''', (filehash, None, res))
+				if filehashtomodule.has_key(filehash):
+					modulenames = filehashtomodule[filehash]
+					for modulename in modulenames:
+						cursor.execute('''insert into kernelmodule_description (sha256, modulename, description) values (?,?,?)''', (filehash, modulename, res))
+				else:
+					cursor.execute('''insert into kernelmodule_description (sha256, modulename, description) values (?,?,?)''', (filehash, None, res))
 		if moduleres.has_key('firmware'):
 			for res in moduleres['firmware']:
-				cursor.execute('''insert into kernelmodule_firmware (sha256, modulename, firmware) values (?,?,?)''', (filehash, None, res))
+				if filehashtomodule.has_key(filehash):
+					modulenames = filehashtomodule[filehash]
+					for modulename in modulenames:
+						cursor.execute('''insert into kernelmodule_firmware (sha256, modulename, firmware) values (?,?,?)''', (filehash, modulename, res))
+				else:
+					cursor.execute('''insert into kernelmodule_firmware (sha256, modulename, firmware) values (?,?,?)''', (filehash, None, res))
 		if moduleres.has_key('license'):
 			for res in moduleres['license']:
-				cursor.execute('''insert into kernelmodule_license (sha256, modulename, license) values (?,?,?)''', (filehash, None, res))
+				if filehashtomodule.has_key(filehash):
+					modulenames = filehashtomodule[filehash]
+					for modulename in modulenames:
+						cursor.execute('''insert into kernelmodule_license (sha256, modulename, license) values (?,?,?)''', (filehash, modulename, res))
+				else:
+					cursor.execute('''insert into kernelmodule_license (sha256, modulename, license) values (?,?,?)''', (filehash, None, res))
 		if moduleres.has_key('versions'):
 			for res in moduleres['versions']:
-				cursor.execute('''insert into kernelmodule_version (sha256, modulename, version) values (?,?,?)''', (filehash, None, res))
+				if filehashtomodule.has_key(filehash):
+					modulenames = filehashtomodule[filehash]
+					for modulename in modulenames:
+						cursor.execute('''insert into kernelmodule_version (sha256, modulename, version) values (?,?,?)''', (filehash, modulename, res))
+				else:
+					cursor.execute('''insert into kernelmodule_version (sha256, modulename, version) values (?,?,?)''', (filehash, None, res))
 		if moduleres.has_key('param_descriptions'):
 			for res in moduleres['param_descriptions']:
-				cursor.execute('''insert into kernelmodule_parameter_description (sha256, modulename, paramname, description) values (?,?,?, ?)''', (filehash, None) + res)
+				if filehashtomodule.has_key(filehash):
+					modulenames = filehashtomodule[filehash]
+					for modulename in modulenames:
+						cursor.execute('''insert into kernelmodule_parameter_description (sha256, modulename, paramname, description) values (?,?,?,?)''', (filehash, modulename) + res)
+				else:
+					cursor.execute('''insert into kernelmodule_parameter_description (sha256, modulename, paramname, description) values (?,?,?,?)''', (filehash, None) + res)
 
 		if language == 'C':
 			for res in results:
