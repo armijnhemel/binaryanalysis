@@ -382,6 +382,7 @@ def extractkernelconfiguration(kerneldir):
 									match = matchconfig(f, i[0], tmpconfigs[tmpkey], kerneldirlen)
 									if match != None:
 										makefileresults.append(match)
+										moduleresults.append((os.path.normpath(match[0]),tmpkey))
 							else:
 								if dirstoconfigs.has_key(os.path.normpath(i[0][kerneldirlen:])):
 									for f in tmpvals:
@@ -389,6 +390,7 @@ def extractkernelconfiguration(kerneldir):
 											match = matchconfig(f, i[0], m, kerneldirlen)
 											if match != None:
 												makefileresults.append(match)
+												moduleresults.append((os.path.normpath(match[0]),tmpkey))
 						else:
 							res = re.match("([\w\.\-]+)\-y\s*[:+]=\s*([\w\-\.\s/=]*)", line.strip())
 							if res != None:
