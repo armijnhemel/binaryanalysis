@@ -83,10 +83,10 @@ BOTTLENECKS/HIGH PRIORITY:
 12. better error detection in createdb.py and createbatarchive.py for corrupt bzip2 archives
 13. refactor name squashing
 14. find versions of matched kernel function names and report
-15. use order of strings in ELF binaries to assign strings earlier/better
+15. store meta data about media files (PNG, GIF, MP3, etc.) in database as some of these files are quite package specific
 16. fix support for Linux 2.4 kernel modules, as modinfo (at least on Fedora) no longer seems to work for 2.4 kernels
 17. run jcf-dump in chunks for Java class files whenever possible, preventing launching a jcf-dump process per class file
 18. update bat-fsck.cramfs to newer version of util-linux
 19. better report non unique matched strings which are not clones
 20. process UNSCANNED_DUPLICATE_FILES from BAT archives in createdb.py. This is needed if some of the unscanned duplicate files need to be processed.
-21. store meta data about media files (PNG, GIF, MP3, etc.) in database as some of these files are quite package specific
+21. createdb.py: set TMPDIR for ctags to unpackdir
