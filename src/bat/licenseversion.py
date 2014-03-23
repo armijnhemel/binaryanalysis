@@ -23,20 +23,20 @@ BAT_STRINGSCACHE_$LANGUAGE :: location of database with cached strings
                               in $LANGUAGE per package to reduce lookups
 
 An additional classification method for dynamically linked executables or
-Java binaries based on function or method names takes an additional parameter:
+Java binaries based on function or method names takes this parameter:
 
 BAT_NAMECACHE_$LANGUAGE :: location of database containing cached
                            function names and variable names per package
                            to reduce lookups
 
-In this scan results can be optionally pruned. Results of scans can get very
+In this scan results can optionally be pruned. Results of scans can get very
 large, for example a scan of a Linux kernel image could have thousands of
 string matches, which can each be found in a few hundred kernel source code
 archives.
 
-By pruning results the amount of noise can be much reduce, reports can be made
+By pruning results the amount of noise can be much reduced, reports can be made
 smaller and source code checks using the results of BAT can be made more
-efficient.
+effective.
 
 To remove a version A from the set of versions the following conditions have
 to hold:
@@ -147,7 +147,7 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, pool, scanenv, debug=
 	## find all JAR files. Do this by:
 	## 1. checking the tags for 'zip'
 	## 2. verifying for unpacked files that there are .class files
-	## 3. possibly verifying there is a META-INF directory with a manifest
+	## 3. TODO: possibly verifying there is a META-INF directory with a manifest
 	sha256stofiles = {}
 	jarfiles = []
 	sha256seen = []
@@ -235,6 +235,7 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, pool, scanenv, debug=
 					sha256stofiles[filehash].remove(c)
 				del unpackreports[c]
 
+## aggregate results for a single JAR file
 def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 	rankres = {}
 	matchedlines = 0
@@ -1609,7 +1610,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
        		## Let's hope "sort" terminates on a comparison function that
        		## may not actually be a proper ordering.	
 		if len(close) > 1:
-			# print >>sys.stderr, "  doing battle royale between [close]"
+			# print >>sys.stderr, "  doing battle royale between", close
 			## reverse sort close, then best = close_sorted[0][0]
 			close_sorted = map(lambda x: (x, avgscores[x]), close)
 			close_sorted = sorted(close_sorted, key = lambda x: x[1], reverse=True)
@@ -1623,6 +1624,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 				best = close_sorted[-1][0]
 			else:
 				best = close_sorted[0][0]
+			#print >>sys.stderr, "  %s won" % best
 		best_score = 0
 		## for each string in the package with the best gain add the score
 		## to the package and move on to the next package.
@@ -1632,7 +1634,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 			strsplit = xy.rsplit('\t', 1)[0]
 			todelete.add(strsplit)
 			if linecount[strsplit] == 0:
-				break
+				continue
 			sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
 			best_score += 1
 			linecount[strsplit] = linecount[strsplit] - 1
@@ -1728,7 +1730,8 @@ def lookup_identifier((scanenv, filehash, filename, topleveldir, clones)):
 		variablepvs = extractVariablesJava(varfuns, scanenv, clones)
 		functionRes = extractJavaNames(varfuns, scanenv, clones)
 
-	## then write results back to disk
+	## then write results back to disk. This needs to be done because results for
+	## Java might need to be aggregated first.
 	leafreports['ranking'] = (res, functionRes, variablepvs, language)
 	leafreports['tags'].append('ranking')
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
