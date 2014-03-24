@@ -271,6 +271,7 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 	dynamicresfinal = {}
 	pv = {}
 
+	uniquematcheslenperpkg = {}
 	upp = {}
 
 	aggregated = False
@@ -298,22 +299,25 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 			continue
 		if varfunmatches.has_key('fields'):
 			for f in varfunmatches['fields']:
-				## we only need one copy
 				if not fieldmatches.has_key(f):
 					fieldmatches[f] = varfunmatches['fields'][f]
 					aggregated = True
+				else:
+					fieldmatches[f] += varfunmatches['fields'][f]
 		if varfunmatches.has_key('classes'):
 			for c in varfunmatches['classes']:
-				## we only need one copy
 				if not classmatches.has_key(c):
 					classmatches[c] = varfunmatches['classes'][c]
 					aggregated = True
+				else:
+					classmatches[c] += varfunmatches['classes'][c]
 		if varfunmatches.has_key('sources'):
 			for c in varfunmatches['sources']:
-				## we only need one copy
 				if not sourcematches.has_key(c):
 					sourcematches[c] = varfunmatches['sources'][c]
 					aggregated = True
+				else:
+					sourcematches[c] += varfunmatches['sources'][c]
 		if stringmatches != None:
 			aggregated = True
 			matchedlines = matchedlines + stringmatches['matchedlines']
@@ -369,6 +373,10 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 						packagelicensesperpkg[package] = packagelicensesperpkg[package] + packagelicenses
 					else:
 						packagelicensesperpkg[package] = packagelicenses
+					if uniquematcheslenperpkg.has_key(package):
+						uniquematcheslenperpkg[package] += uniquematcheslen
+					else:
+						uniquematcheslenperpkg[package] = uniquematcheslen
 		if dynamicres != {}:
 			aggregated = True
 			if dynamicres.has_key('uniquepackages'):
@@ -380,30 +388,6 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 							dynamicresfinal['uniquepackages'][d] = list(set(dynamicresfinal['uniquepackages'][d] + dynamicres['uniquepackages'][d]))
 						else:
 							dynamicresfinal['uniquepackages'][d] = dynamicres['uniquepackages'][d]
-		'''
-		## this is unreliable: we could be counting many unique method
-		## names twice. We actually need the names of the methods that
-		## were found.
-		if dynamicres != {}:
-			totalnames = totalnames + dynamicres['totalnames']
-			uniquematches = uniquematches + dynamicres['uniquematches']
-			namesmatched = namesmatched + dynamicres['namesmatched']
-			if dynamicres.has_key('packages'):
-				for p in dynamicres['packages']:
-					if packagesmatched.has_key(p):
-						for m in packagesmatched[p]:
-							if pv.has_key(p):
-								if pv[p].has_key(m[0]):
-									pv[p][m[0]] = pv[p][m[0]] + m[1]
-								else:
-									pv[p][m[0]] = m[1]
-							else:
-								pv[p] = {}
-								pv[p][m[0]] = m[1]
-					else:
-						packagesmatched[p] = dynamicres['packages'][p]
-		'''
-
 	if not aggregated:
 		return (jarfile, aggregated)
 
@@ -417,7 +401,7 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 			percentage = (scoresperpkg[s]/totalscore)*100.0
 		except:
 			percentage = 0.0
-		reports.append((rank, s, uniqueMatchesperpkg.get(s,[]), uniquematcheslen, percentage, packageversionsperpkg.get(s, {}), list(set(packagelicensesperpkg.get(s, []))), packagecopyrights))
+		reports.append((rank, s, uniqueMatchesperpkg.get(s,[]), uniquematcheslenperpkg.get(s,0), percentage, packageversionsperpkg.get(s, {}), list(set(packagelicensesperpkg.get(s, []))), packagecopyrights))
 		rank = rank+1
 
 	if dynamicresfinal.has_key('uniquepackages'):
