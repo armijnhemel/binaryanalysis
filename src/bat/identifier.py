@@ -34,6 +34,8 @@ rejavafield = re.compile("Field name:\"([\w$]+)\"")
 rejavamethod= re.compile("Method name:\"([\w$]+)\"")
 rejavastring = re.compile("#\d+: String \d+=\"")
 
+splitcharacters = map(lambda x: chr(x), range(0,9) + range(14,32) + [127])
+
 ## Main part of the scan
 ##
 ## 1. extract string constants, function names, variable names, etc.
@@ -453,8 +455,23 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype):
 			if rejavastring.match(i) != None:
 				printstring = i.split("=", 1)[1][1:-1]
 				printstring = printstring.decode('string-escape')
-        			if len(printstring) >= stringcutoff:
+				## now remove characthers like '\n' and '\r'
+				## first the easy case
+				printstring = printstring.strip('\0\n\r')
+        			if len(printstring) < stringcutoff:
+					continue
+				## then split mid string
+				splitchars = filter(lambda x: x in printstring, splitcharacters)
+				if splitchars == []:
 					lines.append(printstring)
+				#else:
+				#	for cc in splitchars:
+				#		splitlines = printstring.split(cc)
+				#		for sl in splitlines:
+        			#			if len(printstring) < stringcutoff:
+				#				continue
+				#			## TODO: now check for the other splitchars
+				#			lines.append(sl)
 		javameta = {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile, 'javatype': javatype}
 	elif javatype == 'dalvik':
 		## Using dedexer http://dedexer.sourceforge.net/ extract information from Dalvik
