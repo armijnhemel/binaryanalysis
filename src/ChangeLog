@@ -3,6 +3,8 @@
 * set TMPDIR for ctags in createdb.py to unpackdir
 * only tag JAR files with 'ranking' for which results have actually been
 aggregated
+* unescape output from jcf-dump
+* partially fix reporting for aggregate jars
 
 2014-03-23
 * store Linux kernel module names in database
