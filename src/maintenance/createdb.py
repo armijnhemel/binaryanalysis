@@ -583,10 +583,10 @@ def unpack_verify(filedir, filename):
 
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
-def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, rewrites, batarchive, packageconfig):
+def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir):
 	## unpack the archive. If it fails, cleanup and return.
 	## TODO: make temporary dir configurable
-	temporarydir = unpack(filedir, filename, '/gpl/tmp')
+	temporarydir = unpack(filedir, filename, unpackdir)
 	if temporarydir == None:
 		return None
 
@@ -734,7 +734,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 				cleanupdir(temporarydir)
 			return
 
-	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash, packageconfig)
+	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir)
 	if sqlres != None:
 		if sqlres != []:
 			## Add the file to the database: name of archive, sha256, packagename and version
@@ -832,7 +832,7 @@ def computehash((filedir, filename, extension, language)):
 	filehash = h.hexdigest()
 	return (filedir, filename, filehash, extension, language)
 
-def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash, packageconfig):
+def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir):
 	osgen = os.walk(srcdir)
 
 	pkgconf = packageconfig.get(package,[])
@@ -1065,6 +1065,11 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 				else:
 					filehashtomodule[filetohash[kernelfilename]] = [modulename]
 
+	unpackenv = os.environ.copy()
+	if not unpackenv.has_key('TMPDIR'):
+		unpackenv['TMPDIR'] = unpackdir
+
+	filestoscan = map(lambda x: x + (unpackenv,), filestoscan)
 	## process the files to scan in parallel, then process the results
 	extracted_results = pool.map(extractidentifiers, filestoscan, 1)
 
@@ -1338,7 +1343,7 @@ def licensefossology((packages)):
 
 ## TODO: get rid of ninkaversion before we call this method
 ## TODO: process more files at once to reduce overhead of calling ctags
-def extractidentifiers((package, version, i, p, language, filehash, ninkaversion)):
+def extractidentifiers((package, version, i, p, language, filehash, ninkaversion, unpackenv)):
 	newlanguage = language
 
 	if language == 'patch':
@@ -1470,7 +1475,7 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 
 	if (newlanguage in ['C', 'C#', 'Java', 'PHP', 'Python']):
 
-		p2 = subprocess.Popen(["ctags", "-f", "-", "-x", '--language-force=%s' % newlanguage, os.path.join(i, p)], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+		p2 = subprocess.Popen(["ctags", "-f", "-", "-x", '--language-force=%s' % newlanguage, os.path.join(i, p)], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE, env=unpackenv)
 		(stanout2, stanerr2) = p2.communicate()
 		if p2.returncode != 0:
 			pass
@@ -2239,13 +2244,15 @@ def main(argv):
 			resordered.append(i)
 		processed_hashes.add(filehash)
 
+	unpackdir = '/gpl/tmp'
+
 	res = resordered + batarchives
 	for i in res:
 		try:
 			(package, version, filename, origin, filehash, batarchive) = i
 			if package != oldpackage:
 				oldres = []
-			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, masterdatabase, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldres, rewrites, batarchive, packageconfig)
+			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, masterdatabase, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir)
 			if unpackres != None:
 				oldres = map(lambda x: x[2], unpackres)
 				oldpackage = package
