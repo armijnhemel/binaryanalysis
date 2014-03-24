@@ -452,6 +452,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype):
 			## #13: String 45="/"
 			if rejavastring.match(i) != None:
 				printstring = i.split("=", 1)[1][1:-1]
+				printstring = printstring.decode('string-escape')
         			if len(printstring) >= stringcutoff:
 					lines.append(printstring)
 		javameta = {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile, 'javatype': javatype}
