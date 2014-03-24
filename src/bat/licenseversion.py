@@ -201,12 +201,16 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, pool, scanenv, debug=
 		classreports = map(lambda x: unpackreports[x], classfiles)
 		jartasks.append((i, unpackreports[i], classreports, topleveldir))
 
+	ranked = set()
 	if jartasks != []:
 		res = pool.map(aggregate, jartasks, 1)
+		for i in res:
+			(jarfile, rankres) = i
+			if rankres:
+				for j in sha256stofiles[unpackreports[jarfile]['sha256']]:
+					ranked.add(j)
 
-	## TODO: only for files for which there actually is a result, plus
-	## all the clones of these files
-	for i in alljarfiles:
+	for i in ranked:
 		if unpackreports[i].has_key('tags'):
 			unpackreports[i]['tags'].append('ranking')
 		else:
