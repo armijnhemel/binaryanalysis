@@ -25,23 +25,23 @@ in consumer electronics.
 
 BAT consists of several programs written in Python. The most important program
 is the scanner for binary objects to unpack binaries recursively and apply a
-myriad of scans, for example for open source license compliance, visualising
-linking information, and so on.  There are also other programs to help with
-specific compliance tasks, such as verifying if configurations for a given
-BusyBox binary match with the configuration in source code. Also included is a
-very experimental program to help scan Linux kernel images and a script to
-derive a possible configuration from a Linux kernel image, as well as programs
-to verify results from a binary scan with a source code archive.
+anumber of scans, for example for open source license compliance, visualising
+linking information, finding version information, and so on.  There are also
+other programs to help with specific compliance tasks, such as verifying if
+configurations for a given BusyBox binary match with the configuration in
+source code. Also included is a very experimental program to derive a possible
+configuration from a Linux kernel image, as well as programs to verify results
+from a binary scan with a source code archive.
 
 \section{Installing the Binary Analysis Tool}
 
 \subsection{Hardware requirements}
 
-The tools in the Binary Analysis Tool can be quite resource intensive. Most of
-them seem to be memorybound and I/O-bound, so it makes more sense to invest
-in more memory and faster disks than in raw CPU power. Using more cores is
-highly recommended, since most of the programs in the Binary Analysis Tool will
-benefit from this.
+The tools in the Binary Analysis Tool can be quite resource intensive. These
+are largely I/O-bound (database access), so it better to invest in faster disks
+or ramdisks than in raw CPU power. Using more cores is also highly recommended,
+since most of the programs in the Binary Analysis Tool will vastly benefit from
+this.
 
 \subsection{Software requirements}
 
@@ -54,7 +54,7 @@ If the latest version from version control is used it is important to look at
 the file \texttt{setup.cfg} to get a list of the dependencies that should be
 met on the host system before installing BAT.
 
-\subsubsection{Installing on Fedora}
+\subsubsection{Installation on Fedora}
 
 To install on Fedora three packages are needed:
 \texttt{bat-extratools}, \texttt{bat-extratools-java} and \texttt{bat}. These
@@ -64,7 +64,7 @@ dependencies that should be installed to let BAT work successfully. Some of
 the dependencies are not in Fedora by default but need to be installed through
 external repositories, such as RPMfusion.
 
-\subsubsection{Installing on Debian and Ubuntu}
+\subsubsection{Installation on Debian and Ubuntu}
 
 To install on Debian and Ubuntu three packages are needed:
 \texttt{bat-extratools}, \texttt{bat-extratools-java} and \texttt{bat}. These
@@ -75,18 +75,15 @@ but need to be installed by enabling extra repositories such as Debian
 \texttt{non-free}.
 
 The graphical interface might not work on Debian 6, because of a too old
-version of \texttt{wxPython}.
+version of \texttt{wxPython} that is shipped in Debian 6.
 
 \section{Analysing binaries with the Binary Analysis Tool}
 
 BAT consists of several programs and a few helper scripts (not meant to be
 used directly). The main purpose of the Binary Analysis tool is to analyse
 arbitrary binaries and review results. Analysis of the binary is done via
-a commandline tool, while the results can be viewed using a special graphical
-viewer.
-
-The commandline interface functionality can be found in \texttt{bat-scan}.
-The graphical user interface is provided by \texttt{batgui}.
+a commandline tool (\texttt{bat-scan}), while the results can be viewed using
+a special graphical viewer (\texttt{batgui}).
 
 \subsection{Running \texttt{bat-scan}}
 
@@ -113,39 +110,7 @@ A typical invocation looks like this:
 /path/to/outputfile}
 
 XML output, if enabled in the configuration file, will be written to standard
-output. Debugging messages will appear on standard error.
-
-\subsection{\texttt{batgui}}
-
-The \texttt{batgui} program is a graphical viewer for the results of
-\texttt{bat-scan}.
-
-\subsubsection{Viewing results with \texttt{batgui}}
-
-The \texttt{batgui} program was made to view the results of the analysis
-process easily, without having to dig through XML. The viewer has two modes:
-simple and advanced. In simple mode a tree of the unpack results will be shown,
-and each file in the tree can be clicked to display more information. Depending
-on which scans were run the tree will be decorated with more information, such
-as the type of the file (based on tags), or if matches were found with the
-ranking method. Using a filtering system (available from the menu) files that
-are typically uninteresting for license compliance engineering (empty
-files/directories, symbolic links, graphics files and so on) can be ignored.
-
-Information that is shown per file depends on the scans that were run and the
-type of file. For most files information like size, type, path (both relative
-inside the unpacked binary, as well as absolute in the scanning tree) will be
-shown. If the ranking method was enabled results of the ranking process such as
-matched strings, function names, a license guess etecetera will be displayed as
-well.
-
-In the optional advanced mode more results will be shown, such as a graphical
-representation of a file, where every bit in the binary has been assigned a
-grayscale value, plus a textual representation of a file generated with
-\texttt{hexdump}. Advanced mode is disabled by default, since loading the
-additional pictures and data is quite resource intensive and it will only be
-useful in very specific cases. This functionality might be removed from future
-versions of BAT.
+output. Any debugging messages or error messages will appear on standard error.
 
 \subsection{Interpreting the results}
 
@@ -158,6 +123,8 @@ possibly some extra generated data, such as pictures and more reporting. These
 dumps are meant to be used by \texttt{batgui}. This is the preferred format.
 \item XML file (optional/configurable)
 \end{enumerate}
+
+\subsubsection{XML output}
 
 If configured \texttt{bat-scan} outputs its results in XML format on
 standard output. After redirecting the output to a file it is possible to look
@@ -193,6 +160,33 @@ configuration file)
 \item offset in the parent file of the compressed file, file system or media
 file
 \end{itemize}
+
+\subsubsection{Viewing results with \texttt{batgui}}
+
+The \texttt{batgui} program was made to view the results of the analysis
+process easily, without having to dig through XML. The viewer has two modes:
+simple and advanced. In simple mode a tree of the unpack results will be shown,
+and each file in the tree can be clicked to display more information. Depending
+on which scans were run the tree will be decorated with more information, such
+as the type of the file (based on tags), or if matches were found with the
+ranking method. Using a filtering system (available from the menu) files that
+are typically uninteresting for license compliance engineering (empty
+files/directories, symbolic links, graphics files and so on) can be ignored.
+
+Information that is shown per file depends on the scans that were run and the
+type of file. For most files information like size, type, path (both relative
+inside the unpacked binary, as well as absolute in the scanning tree) will be
+shown. If the ranking method was enabled results of the ranking process such as
+matched strings, function names, a license guess etecetera will be displayed as
+well.
+
+In the optional advanced mode more results will be shown, such as a graphical
+representation of a file, where every bit in the binary has been assigned a
+grayscale value, plus a textual representation of a file generated with
+\texttt{hexdump}. Advanced mode is disabled by default, since loading the
+additional pictures and data is quite resource intensive and it will only be
+useful in very specific cases. This functionality might be removed from future
+versions of BAT.
 
 \section{Additional programs in the Binary Analysis Tool}
 
