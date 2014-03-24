@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2013 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2013-2014 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -15,7 +15,7 @@ from optparse import OptionParser
 def main(argv):
 	parser = OptionParser()
         parser.add_option("-a", "--archive", action="store", dest="archive", help="result archive of BAT scan", metavar="ARCHIVE")
-        parser.add_option("-d", "--database", action="store", dest="database", help="database with kernel configurations", metavar="DATABASe")
+        parser.add_option("-d", "--database", action="store", dest="database", help="database with kernel configurations", metavar="DATABASE")
 	(options, args) = parser.parse_args()
 
 	if options.archive == None:
@@ -150,7 +150,7 @@ def main(argv):
 				tmpkernelfiles.add(p + "/")
 
 		for p in tmpkernelfiles:
-			cursor.execute("select configstring from makefile where filename=? and version=?", (p, i))
+			cursor.execute("select configstring from kernel_configuration where filename=? and version=?", (p, i))
 			configres = cursor.fetchall()
 			if configres != []:
 				configs += map(lambda x: x[0], configres)
