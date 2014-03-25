@@ -8,7 +8,7 @@
 This file contains a few convenience functions that are used throughout the code.
 '''
 
-import string, re, subprocess
+import string, re, subprocess, sys
 from xml.dom import minidom
 
 ## Helper method to replace unprintable characters with spaces.
@@ -49,6 +49,15 @@ def inblacklist(offset, blacklist):
 	for bl in blacklist:
 		if offset >= bl[0] and offset < bl[1]:
 			return bl[1]
+
+## convenience method to find the next lowest entry in the blacklist
+def lowestnextblacklist(offset, blacklist):
+	lowest = sys.maxint
+	for bl in blacklist:
+		if bl[0] > offset:
+			if bl[0] < lowest:
+				lowest = bl[0]
+	return lowest
 
 ###
 ## The helper method below is to specifically analyse Microsoft Windows binaries
