@@ -40,7 +40,13 @@ def unpacksetup(tempdir):
 		tmpdir = tempdir
 	return tmpdir
 
-def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpacktempdir=None):
+def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpacktempdir=None, blacklist=[]):
+	if blacklist != []:
+		if length == 0:
+			lowest = extractor.lowestnextblacklist(offset, blacklist)
+			## if the blacklist is not empty set 'length' to
+			## the first entry in the blacklist following offset
+			length=lowest
 	if offset == 0 and length == 0:
 		## use copy if we intend to *modify* tmpfile, or we end up
 		## modifying the orginal
@@ -77,12 +83,20 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 				(stanout, stanerr) = p.communicate()
 			else:
 				## use a two way pass
-				tmptmpfile = tempfile.mkstemp(dir=unpacktempdir)
+				tmptmpfile = tempfile.mkstemp(dir=tmpdir)
 				os.fdopen(tmptmpfile[0]).close()
-				p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmptmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-				(stanout, stanerr) = p.communicate()
-				p = subprocess.Popen(['dd', 'if=%s' % (tmptmpfile[1],), 'of=%s' % (tmpfile,), 'bs=%s' % (length,), 'count=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-				(stanout, stanerr) = p.communicate()
+
+				## First determine which side to cut first before cutting
+				if offset > (filesize - length):
+					p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmptmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+					(stanout, stanerr) = p.communicate()
+					p = subprocess.Popen(['dd', 'if=%s' % (tmptmpfile[1],), 'of=%s' % (tmpfile,), 'bs=%s' % (length,), 'count=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+					(stanout, stanerr) = p.communicate()
+				else:
+					p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmptmpfile[1],), 'bs=%s' % (length,), 'count=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+					(stanout, stanerr) = p.communicate()
+					p = subprocess.Popen(['dd', 'if=%s' % (tmptmpfile[1],), 'of=%s' % (tmpfile,), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+					(stanout, stanerr) = p.communicate()
 				os.unlink(tmptmpfile[1])
 
 ## There are certain routers that have all bytes swapped, because they use 16
@@ -293,7 +307,7 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, debug=Fa
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "jffs2", counter)
-		res = unpackJffs2(filename, offset, tmpdir, bigendian)
+		res = unpackJffs2(filename, offset, tmpdir, bigendian, blacklist)
 		if res != None:
 			(jffs2dir, jffs2size) = res
 			diroffsets.append((jffs2dir, offset, jffs2size))
@@ -303,13 +317,12 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, debug=Fa
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [], hints)
 
-def unpackJffs2(filename, offset, tempdir=None, bigendian=False):
+def unpackJffs2(filename, offset, tempdir=None, bigendian=False, blacklist=[]):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	unpackFile(filename, offset, tmpfile[1], tmpdir)
-
+	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
 	res = jffs2.unpackJFFS2(tmpfile[1], tmpdir, bigendian)
 	os.unlink(tmpfile[1])
 	if tempdir == None:
@@ -2143,7 +2156,7 @@ def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, debug
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "compress", counter)
-		res = unpackCompress(filename, offset, tmpdir, compress_tmpdir)
+		res = unpackCompress(filename, offset, tmpdir, compress_tmpdir, blacklist)
 		if res != None:
 			diroffsets.append((res, offset, 0))
 			counter = counter + 1
@@ -2152,7 +2165,7 @@ def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, debug
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [], hints)
 
-def unpackCompress(filename, offset, tempdir=None, compress_tmpdir=None):
+def unpackCompress(filename, offset, tempdir=None, compress_tmpdir=None, blacklist=[]):
 	tmpdir = unpacksetup(tempdir)
 
 	## if COMPRESS_TMPDIR is set to for example a ramdisk use that instead.
@@ -2160,12 +2173,12 @@ def unpackCompress(filename, offset, tempdir=None, compress_tmpdir=None):
 		tmpfile = tempfile.mkstemp(dir=compress_tmpdir)
 		os.fdopen(tmpfile[0]).close()
 		outtmpfile = tempfile.mkstemp(dir=compress_tmpdir)
-		unpackFile(filename, offset, tmpfile[1], compress_tmpdir)
+		unpackFile(filename, offset, tmpfile[1], compress_tmpdir, blacklist=blacklist)
 	else:
 		tmpfile = tempfile.mkstemp(dir=tmpdir)
 		os.fdopen(tmpfile[0]).close()
 		outtmpfile = tempfile.mkstemp(dir=tmpdir)
-		unpackFile(filename, offset, tmpfile[1], tmpdir)
+		unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
 
 	p = subprocess.Popen(['uncompress', '-c', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
