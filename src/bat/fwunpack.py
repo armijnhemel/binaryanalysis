@@ -2859,7 +2859,7 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, debug=Fal
 			if lzmacheckbyte not in ['\x01\x00', '\x02\x00', '\x03\x00', '\x04\x00', '\x06\x00', '\x08\x00', '\x10\x00', '\x20\x00', '\x30\x00', '\x40\x00', '\x60\x00', '\x80\x00', '\x80\x01', '\x0c\x00', '\x18\x00', '\x00\x00', '\x00\x01', '\x00\x02', '\x00\x03', '\x00\x04', '\xc0\x00']:
 				continue
 		tmpdir = dirsetup(tempdir, filename, "lzma", counter)
-		res = unpackLZMA(filename, offset, tmpdir, lzmalimit, lzma_tmpdir)
+		res = unpackLZMA(filename, offset, tmpdir, lzmalimit, lzma_tmpdir, blacklist)
 		if res != None:
 			diroffsets.append((res, offset, 0))
 			counter = counter + 1
@@ -2874,7 +2874,7 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, debug=Fal
 ## Newer versions of XZ (>= 5.0.0) have an option to test and list archives.
 ## Unfortunately this does not work for files with trailing data, so we can't
 ## use it to filter out "bad" files.
-def unpackLZMA(filename, offset, tempdir=None, minbytesize=1, lzma_tmpdir=None):
+def unpackLZMA(filename, offset, tempdir=None, minbytesize=1, lzma_tmpdir=None, blacklist=None):
 	tmpdir = unpacksetup(tempdir)
 
 	## if LZMA_TMPDIR is set to for example a ramdisk use that instead.
@@ -2882,12 +2882,12 @@ def unpackLZMA(filename, offset, tempdir=None, minbytesize=1, lzma_tmpdir=None):
 		tmpfile = tempfile.mkstemp(dir=lzma_tmpdir)
 		os.fdopen(tmpfile[0]).close()
 		outtmpfile = tempfile.mkstemp(dir=lzma_tmpdir)
-		unpackFile(filename, offset, tmpfile[1], lzma_tmpdir)
+		unpackFile(filename, offset, tmpfile[1], lzma_tmpdir, blacklist=blacklist)
 	else:
 		tmpfile = tempfile.mkstemp(dir=tmpdir)
 		os.fdopen(tmpfile[0]).close()
 		outtmpfile = tempfile.mkstemp(dir=tmpdir)
-		unpackFile(filename, offset, tmpfile[1], tmpdir)
+		unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
 	p = subprocess.Popen(['lzma', '-cd', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if os.stat(outtmpfile[1]).st_size < minbytesize:
