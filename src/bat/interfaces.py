@@ -1395,6 +1395,28 @@ lsbfunctions = ["__cxa_finalize",
                 "glob64", ## deprecated
                ]
 
+largefilefunctions = ["creat64",
+                      "fgetpos64",
+                      "freopen64",
+                      "fseeko64",
+                      "fsetpos64",
+                      "fstat64",
+                      "ftello64",
+                      "ftruncate64",
+                      "getrlimit64",
+                      "lockf64",
+                      "lstat64",
+                      "mkstemp64",
+                      "mmap64",
+                      "open64",
+                      "pread64",
+                      "pwrite64",
+                      "readdir64",
+                      "scandir64",
+                      "statvfs64",
+                      "setrlimit64",
+                     ]
+
 sysvfunctions = ["getutent", "getutid", "getutline", "pututline", "setutent", "endutent", "utmpname", "stime", "mallopt"]
 
 #XDR: External Data Representation Standard, RFC 1014, plus other RPC things
@@ -1518,7 +1540,7 @@ miscfunctions = ["inet_aton",
 
 c11functions = ["aligned_alloc"]
 
-allfunctions = posixfunctions + gnuextensionsfunctions + bsdfunctions + linuxfunctions + sysvfunctions + libcfunctions + gccfunctions + lsbfunctions + susfunctions + xdrfunctions + miscfunctions + c11functions
+allfunctions = posixfunctions + gnuextensionsfunctions + bsdfunctions + linuxfunctions + sysvfunctions + libcfunctions + gccfunctions + lsbfunctions + susfunctions + xdrfunctions + miscfunctions + c11functions + largefilefunctions
 
 posixvars = ["daylight",
     "environ",
