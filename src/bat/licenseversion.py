@@ -1557,13 +1557,14 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 		stringsPerPkg = {}
 
 		## cleanup
-		todelete = set()
-		for stri in stringsLeft:
-			if linecount[stringsLeft[stri]['string']] == 0:
-				todelete.add(stri)
+		if roundNr != 0:
+			todelete = set()
+			for stri in stringsLeft:
+				if linecount[stringsLeft[stri]['string']] == 0:
+					todelete.add(stri)
 
-		for a in todelete:
-			del stringsLeft[a]
+			for a in todelete:
+				del stringsLeft[a]
 
 		oldstrleft = set()
 		for i in stringsLeft:
