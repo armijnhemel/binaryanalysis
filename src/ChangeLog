@@ -1,3 +1,10 @@
+2014-03-25
+* set unpackdir for createdb.py via configuration
+* add large file support functions to findlibs.py
+* copy fewer bytes in unpackFile in fwunpack.py. For big files if only a small
+part of the file is needed (for example at the beginning and the rest is
+blacklisted) this can save quite a bit of I/O.
+
 2014-03-24
 * rename bruteforce.py to bat-scan
 * set TMPDIR for ctags in createdb.py to unpackdir
@@ -5,6 +12,7 @@
 aggregated
 * unescape output from jcf-dump
 * partially fix reporting for aggregate jars
+* more work on updating the manual for BAT 17
 
 2014-03-23
 * store Linux kernel module names in database

@@ -70,7 +70,7 @@ misc:
 
 BOTTLENECKS/HIGH PRIORITY:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
-2. preread (in parallel) leafreports of Java .class files which are shared between several JAR files for aggregate jars. This saves opening and reading the same files.
+2. update bat-fsck.cramfs to newer version of util-linux
 3. replace own counters with collections.Counter(), also for code clarity
 4. better report non unique matched strings which are not clones
 5. verify and tag Android resources.arsc
@@ -84,7 +84,6 @@ BOTTLENECKS/HIGH PRIORITY:
 13. refactor name squashing
 14. find versions of matched kernel function names and report
 15. store meta data about media files (PNG, GIF, MP3, etc.) in database as some of these files are quite package specific
-16. fix support for Linux 2.4 kernel modules, as modinfo (at least on Fedora) no longer seems to work for 2.4 kernels
+16. better report non unique matched strings which are not clones
 17. run jcf-dump in chunks for Java class files whenever possible, preventing launching a jcf-dump process per class file
-18. update bat-fsck.cramfs to newer version of util-linux
-19. better report non unique matched strings which are not clones
+18. handle "disk full" and other errors
