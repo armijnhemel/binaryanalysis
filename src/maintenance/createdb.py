@@ -1067,7 +1067,8 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 
 	unpackenv = os.environ.copy()
 	if not unpackenv.has_key('TMPDIR'):
-		unpackenv['TMPDIR'] = unpackdir
+		if unpackdir != None:
+			unpackenv['TMPDIR'] = unpackdir
 
 	filestoscan = map(lambda x: x + (unpackenv,), filestoscan)
 	## process the files to scan in parallel, then process the results
@@ -1959,6 +1960,10 @@ def main(argv):
 				ninkacomments = config.get(section, 'ninkacommentsdb')
 			except:
 				ninkacomments = None
+			try:
+				unpackdir = config.get(section, 'unpackdir')
+			except:
+				unpackdir = None
 		else:
 			sec = config.get(section, 'configtype')
 			if sec != 'package':
@@ -2006,6 +2011,14 @@ def main(argv):
 			parser.error("Copyright scanning enabled, but no path to copyright database supplied")
 	else:
 		copyrights = False
+
+	if unpackdir != None:
+		try:
+			testfile = tempfile.mkstemp(dir=unpackdir)
+			os.unlink(testfile[1])
+		except Exception, e:
+			print >>sys.stderr, "Can't use %s for unpacking" % unpackdir
+			unpackdir = None
 
 	## optionally rewrite files
 	if options.rewritelist != None:
@@ -2243,8 +2256,6 @@ def main(argv):
 		else:
 			resordered.append(i)
 		processed_hashes.add(filehash)
-
-	unpackdir = '/gpl/tmp'
 
 	res = resordered + batarchives
 	for i in res:
