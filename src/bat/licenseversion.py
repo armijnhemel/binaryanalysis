@@ -1573,12 +1573,11 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 				newstrleft.add(stringsLeft[stri]['string'])
 
 		for i in oldstrleft.difference(newstrleft):
-			strsplit = i.rsplit('\t', 1)[0]
-			if linecount[strsplit] == 0:
+			if linecount[i] == 0:
 				continue
 			matchednonassignedlines += 1
 			matchedlines -= 1
-			linecount[strsplit] -= 1
+			linecount[i] -= 1
 
 		for p2 in gain.keys():
 			## check if packages could ever contribute usefully.
