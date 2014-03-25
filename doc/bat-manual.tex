@@ -1344,6 +1344,7 @@ ninkacommentsdb = /home/bat/db/ninkacomments.sqlite3
 scancopyright = yes
 cleanup = yes
 wipe = no
+unpackdir = /ramdisk
 \end{verbatim}
 
 The global section is called \texttt{extractconfig}. The field
@@ -1359,7 +1360,9 @@ scanning is enabled.
 
 If \texttt{cleanup} is set to \texttt{yes} (default) the temporary directory
 with unpacked sources will be removed. If \texttt{wipe} (default: \texttt{no})
-is set to \texttt{yes} all tables and indexes will first be dropped.
+is set to \texttt{yes} all tables and indexes will first be dropped. The
+parameter \texttt{unpackdir} can be used to set a location where archives are
+unpacked, for example a ramdisk or SSDk.
 
 Apart from the global section there are also package specific sections:
 
