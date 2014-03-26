@@ -207,7 +207,7 @@ def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={},
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "java_serialized", counter)
-		res = unpackJavaSerialized(filename, offset, tmpdir)
+		res = unpackJavaSerialized(filename, offset, tmpdir, blacklist)
 		if res != None:
 			(serdir, size) = res
 			diroffsets.append((serdir, offset, size))
@@ -217,12 +217,12 @@ def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={},
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, tags, hints)
 
-def unpackJavaSerialized(filename, offset, tempdir=None):
+def unpackJavaSerialized(filename, offset, tempdir=None, blacklist=[]):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	unpackFile(filename, offset, tmpfile[1], tmpdir)
+	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
 
 	p = subprocess.Popen(['java', '-jar', '/usr/share/java/bat-jdeserialize.jar', '-blockdata', 'deserialize', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
         (stanout, stanerr) = p.communicate()
@@ -2030,13 +2030,13 @@ def unpackExt2fs(filename, offset, tempdir=None, unpackenv={}):
 
 ## tries to unpack stuff using zcat. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
-def unpackGzip(filename, offset, tempdir=None):
+def unpackGzip(filename, offset, tempdir=None, blacklist=[]):
 	## Assumes (for now) that zcat is in the path
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	unpackFile(filename, offset, tmpfile[1], tmpdir)
+	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
 
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
 	p = subprocess.Popen(['zcat', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
@@ -2107,7 +2107,7 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, debug=Fal
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "gzip", counter)
-		res = unpackGzip(filename, offset, tmpdir)
+		res = unpackGzip(filename, offset, tmpdir, blacklist)
 		if res != None:
 			(gzipres, gzipsize) = res
 			diroffsets.append((gzipres, offset, gzipsize))
