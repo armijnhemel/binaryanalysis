@@ -1362,7 +1362,7 @@ If \texttt{cleanup} is set to \texttt{yes} (default) the temporary directory
 with unpacked sources will be removed. If \texttt{wipe} (default: \texttt{no})
 is set to \texttt{yes} all tables and indexes will first be dropped. The
 parameter \texttt{unpackdir} can be used to set a location where archives are
-unpacked, for example a ramdisk or SSDk.
+unpacked, for example a ramdisk or SSD.
 
 Apart from the global section there are also package specific sections:
 
@@ -1408,7 +1408,7 @@ and change one hardcoded path that points to the main Ninka script in
 type        = leaf
 module      = bat.identifier
 method      = searchGeneric
-envvars     = BAT_NAMECACHE_C=/gpl/master/functioncache_c:
+envvars     = BAT_NAMECACHE_C=/home/bat/db/functioncache_c:
               DEX_TMPDIR=/ramdisk:BAT_STRING_CUTOFF=5
 noscan      = text:xml:graphics:pdf:compressed:
               resource:audio:video:mp4:vimswap:timezone:ico
@@ -1442,13 +1442,13 @@ type        = aggregate
 module      = bat.licenseversion
 method      = determinelicense_version_copyright
 noscan      = text:xml:graphics:pdf:audio:video:mp4
-envvars     = BAT_DB=/gpl/master/master.sqlite3:
-              BAT_LICENSE_DB=/gpl/master/licenses.sqlite3:
-              BAT_CLONE_DB=/gpl/master/clonedb.sqlite3:
-              BAT_STRINGSCACHE_C=/gpl/master/stringscache_c:
-              BAT_STRINGSCACHE_JAVA=/gpl/master/stringscache_java:
-              BAT_NAMECACHE_C=/gpl/master/functioncache_c:
-              BAT_NAMECACHE_JAVA=/gpl/master/functioncache_java:
+envvars     = BAT_DB=/home/bat/db/master.sqlite3:
+              BAT_LICENSE_DB=/home/bat/db/licenses.sqlite3:
+              BAT_CLONE_DB=/home/bat/db/clonedb.sqlite3:
+              BAT_STRINGSCACHE_C=/home/bat/db/stringscache_c:
+              BAT_STRINGSCACHE_JAVA=/home/bat/db/stringscache_java:
+              BAT_NAMECACHE_C=/home/bat/db/functioncache_c:
+              BAT_NAMECACHE_JAVA=/home/bat/db/functioncache_java:
               BAT_STRING_CUTOFF=5:AGGREGATE_CLEAN=1:USE_SOURCE_ORDER=1:
               BAT_RANKING_LICENSE=1:BAT_RANKING_VERSION=1:
               BAT_KEEP_VERSIONS=10:BAT_KEEP_MAXIMUM_PERCENTAGE=50:
@@ -1488,8 +1488,8 @@ The license database can be set with \texttt{BAT\_LICENSE\_DB}. If it is not
 supplied licensing information will not be used during the scan.
 
 \begin{verbatim}
-envvars  = BAT_DB=/gpl/master/master.sqlite3:BAT_RANKING_LICENSE=1:
-           BAT_RANKING_VERSION=1:BAT_LICENSE_DB=/gpl/master/licenses.sqlite3
+envvars  = BAT_DB=/home/bat/db/master.sqlite3:BAT_RANKING_LICENSE=1:
+           BAT_RANKING_VERSION=1:BAT_LICENSE_DB=/home/bat/db/licenses.sqlite3
 \end{verbatim}
 
 The entire database with all other information except license information is
@@ -2066,34 +2066,40 @@ python appletname-extractor.py -a /path/to/applets.h -n $VERSION
 The configuration will be written to a file \texttt{\$VERSION-config} and
 should be moved into the directory containing the other configurations.
 
-\section{Linux kernel scripts internals}
+\section{Linux kernel identifier extraction}
 
-The Linux kernel processing scripts are at the moment still very experimental.
-This is because there are a few challenges when working with Linux kernel
-source code and Linux kernel binaries. Because there are so many variants of
-the Linux kernel plus associated kernel drivers floating around (vendor
-versions, specific hardware ports, out of tree kernel drivers, etcetera) it is
-difficult to do a really good job.
+The \texttt{createdb.py} program processes Linux kernel source code files in a
+slightly different way than normal source code files. There is a lot of
+interesting information that can be extracted from the Linux kernel sources,
+as well as the binary.
 
-Although the scripts are right now doing a ``good enough'' job for core Linux
-kernel functionality, it will take a few more iterations to declare it fit for
-production use.
+There are a few challenges when working with Linux kernel source code and Linux
+kernel binaries. First of all there are many different variants in use and many
+vendors have their own slightly modified version, with extra drivers, or bug
+fixes from later versions, or bug fixes that might not yet have been applied to
+the version on \url{kernel.org}.
+
+Second is that in the Linux kernel binary string constants, function names,
+symbols, module parameters, and so on, are intertwined and some steps need to
+be taken to correctly split these to avoid false positives (there are other
+packages where kernel function names, module parameters, symbols, and so on,
+are valid string constants).
 
 \subsection{Extracting visible strings from the Linux kernel binary}
 
 If a kernel is an ELF binary (sometimes) the relevant sections of the
 binary can be read using \texttt{readelf}. Otherwise \texttt{strings} can be
 run on the binary. This method will return more strings than if using
-\texttt{readelf}, but the extra strings are only extra cruft that won't be
-matched.
+\texttt{readelf}, but the extra strings are mostly extra cruft that have a low
+chance of matching.
 
 \subsection{Extracting visible strings from a Linux kernel module}
 
 If a kernel module is an ELF binary (most cases) the relevant sections of the
 binary can be read using \texttt{readelf}. Otherwise \texttt{strings} can be
 run on the binary. This method will return more strings than if using
-\texttt{readelf}, but the extra strings are only extra cruft that won't be
-matched.
+\texttt{readelf}, but the extra strings are mostly extra cruft that have a low
+chance of matching.
 
 \subsection{Extracting strings from the Linux kernel sources}
 
@@ -2121,11 +2127,14 @@ kernel module itself. The names of these parameters are typically prefixed
 with the name of the module (which is often, but not always) and a dot, but
 without the extension of the file. In cases where the module name does not
 match the name of the file it was defined in extra information from the
-build system needs to be added to determine the right string. This is future
-work.
+build system needs to be added to determine the right string.
 
 The code for this is in the function \texttt{\_\_init param\_sysfs\_builtin} in
 \texttt{kernel/params.c}.
+
+Module names are extracted from the kernel Makefiles and stored in the database
+together with module information (author, license, description, parameters,
+and so on).
 
 \subsection{Forward porting and back porting}
 
@@ -2182,9 +2191,10 @@ gained by simply tweaking the configuration.
 
 BAT will benefit a lot from fast disk, enough memory and multiple cores. Many
 of the scans in BAT can be run in parallel and will scale very well (until
-of course disk I/O limits are hit). Invest in more cores instead of a faster
-CPU. Enough memory will prevent swapping which just kills performance,
-especially because the ranking scan in BAT can be very I/O intensive.
+of course disk I/O limits are reached). Invest in SSD to reduce disk I/O and
+more cores instead of a faster CPU. Enough memory will prevent swapping which
+just kills performance, especially because the ranking scan in BAT can be very
+I/O intensive.
 
 \subsection{Use \texttt{outputlite}}
 
@@ -2295,7 +2305,7 @@ the database used by this scan. The database can be generated using the scripts
 \texttt{createfiledatabasedebian.py} and \texttt{createfiledatabasefedora.py}
 in the subdirectory \texttt{maintenance} in the BAT source tree.
 
-\subsection{\texttt{file2package}}
+\subsection{\texttt{generateimages}}
 
 The \texttt{generateimages} postrun scan has five optional parameters:
 \texttt{AGGREGATE\_IMAGE\_SYMLINK}, \texttt{BAT\_IMAGEDIR}, \texttt{BAT\_PICKLEDIR}, \texttt{MAXIMUM\_PERCENTAGE}
@@ -2346,9 +2356,8 @@ the scans is specified, using the \texttt{priority} field: the higher the
 priority, the earlier the scan is run in the process. In this section the
 rationale behind this ordering is explained.
 
-The order for pre-run scans, unpack scans and aggregate scans is described
-below. The current leaf scans in BAT are all idempotent so there is no explicit
-order. Since postrun scans do not change the result files and they are 
+The order for pre-run scans, leaf scans, unpack scans and aggregate scans is
+described below. Since postrun scans do not change the result files and they are
 independent there is no order defined for them (although this might change in
 the future).
 
@@ -2425,6 +2434,13 @@ The order of the unpack scans as defined in BAT 17 is:
 \item \texttt{base64}, \texttt{gif}, \texttt{ico}, \texttt{png}, \texttt{swf},
 \texttt{lzma}
 \end{enumerate}
+
+\subsection{Leaf scans}
+
+There is currently only one explicit ordering: \texttt{kernelchecks} is run
+before \texttt{identifier} because \texttt{identifier} depends on the result
+of \texttt{kernelchecks}. For the rest the order of the leaf scans does not
+matter.
 
 \subsection{Aggregate scans}
 
