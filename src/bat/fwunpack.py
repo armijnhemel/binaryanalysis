@@ -344,7 +344,7 @@ def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, debug=False
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "ar", counter)
-		res = unpackAr(filename, offset, tmpdir)
+		res = unpackAr(filename, offset, tmpdir, blacklist)
 		if res != None:
 			(ardir, size) = res
 			diroffsets.append((ardir, offset, size))
@@ -354,12 +354,12 @@ def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, debug=False
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [], hints)
 
-def unpackAr(filename, offset, tempdir=None):
+def unpackAr(filename, offset, tempdir=None, blacklist=[]):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	unpackFile(filename, offset, tmpfile[1], tmpdir)
+	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
 
 	p = subprocess.Popen(['ar', 'tv', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
@@ -763,7 +763,7 @@ def searchUnpackCab(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "cab", counter)
-		res = unpackCab(filename, offset, tmpdir)
+		res = unpackCab(filename, offset, tmpdir, blacklist)
 		if res != None:
 			(cabdir, cabsize) = res
 			diroffsets.append((cabdir, offset, cabsize))
@@ -777,7 +777,7 @@ def searchUnpackCab(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 ## This method will not work when the CAB is embedded in a bigger file, such as
 ## a MINIX file system. We need to use more data from the metadata and perhaps
 ## adjust for certificates.
-def unpackCab(filename, offset, tempdir=None):
+def unpackCab(filename, offset, tempdir=None, blacklist=[]):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
 
@@ -785,7 +785,7 @@ def unpackCab(filename, offset, tempdir=None):
         tmpfile = tempfile.mkstemp(dir=tmpdir)
         os.fdopen(tmpfile[0]).close()
 
-        unpackFile(filename, offset, tmpfile[1], tmpdir)
+        unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
 
 	cab = file(tmpfile[1], "r")
 	buffer = cab.read(100)
@@ -1184,7 +1184,7 @@ def searchUnpackRomfs(filename, tempdir=None, blacklist=[], offsets={}, debug=Fa
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "romfs", counter)
-		res = unpackRomfs(filename, offset, tmpdir)
+		res = unpackRomfs(filename, offset, tmpdir, blacklist=blacklist)
 		if res != None:
 			(romfsdir, size) = res
 			diroffsets.append((romfsdir, offset, size))
@@ -1194,12 +1194,12 @@ def searchUnpackRomfs(filename, tempdir=None, blacklist=[], offsets={}, debug=Fa
 			os.rmdir(tmpdir)
         return (diroffsets, blacklist, [], hints)
 
-def unpackRomfs(filename, offset, tempdir=None, unpacktempdir=None):
+def unpackRomfs(filename, offset, tempdir=None, unpacktempdir=None, blacklist=[]):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	unpackFile(filename, offset, tmpfile[1], tmpdir)
+	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
 
 	## sanity check
 	## First check the size of the header. If it has some
@@ -1280,7 +1280,7 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, debug=F
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "cramfs", counter)
-		retval = unpackCramfs(filename, offset, tmpdir, bigendian=bigendian)
+		retval = unpackCramfs(filename, offset, tmpdir, bigendian=bigendian, blacklist=blacklist)
 		if retval != None:
 			(res, cramfssize) = retval
 			if cramfssize != 0:
@@ -1294,7 +1294,7 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, debug=F
 
 ## tries to unpack stuff using fsck.cramfs. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
-def unpackCramfs(filename, offset, tempdir=None, unpacktempdir=None, bigendian=False):
+def unpackCramfs(filename, offset, tempdir=None, unpacktempdir=None, bigendian=False, blacklist=[]):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
@@ -1330,7 +1330,7 @@ def unpackCramfs(filename, offset, tempdir=None, unpacktempdir=None, bigendian=F
 		## field does not mean anything
 		cramfslen = os.stat(filename).st_size
 
-	unpackFile(filename, offset, tmpfile[1], tmpdir, length=cramfslen, unpacktempdir=unpacktempdir)
+	unpackFile(filename, offset, tmpfile[1], tmpdir, length=cramfslen, unpacktempdir=unpacktempdir, blacklist=blacklist)
 
 	## directory to avoid name clashes
         tmpdir2 = tempfile.mkdtemp(dir=unpacktempdir)
@@ -1956,7 +1956,7 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, debug=F
 		if not checkExt2fs(ext2checkdata, 0, tmpdir):
 			os.rmdir(tmpdir)
 			continue
-		res = unpackExt2fs(filename, offset - 0x438, tmpdir, unpackenv=unpackenv)
+		res = unpackExt2fs(filename, offset - 0x438, tmpdir, unpackenv=unpackenv, blacklist=blacklist)
 		if res != None:
 			(ext2tmpdir, ext2size) = res
 			diroffsets.append((ext2tmpdir, offset - 0x438, ext2size))
@@ -1990,14 +1990,14 @@ def checkExt2fs(data, offset, tempdir=None):
 	return True
 
 ## Unpack an ext2 file system using e2tools and some custom written code from our own ext2 module
-def unpackExt2fs(filename, offset, tempdir=None, unpackenv={}):
+def unpackExt2fs(filename, offset, tempdir=None, unpackenv={}, blacklist=[]):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	unpackFile(filename, offset, tmpfile[1], tmpdir)
+	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
 
 	res = ext2.copyext2fs(tmpfile[1], tmpdir)
 	if res == None:
@@ -2203,7 +2203,7 @@ def unpackCompress(filename, offset, tempdir=None, compress_tmpdir=None, blackli
 ## return a directory for further processing, otherwise it will return None.
 ## We use bzcat instead of the bz2 module because that can't handle trailing
 ## data very well.
-def unpackBzip2(filename, offset, tempdir=None):
+def unpackBzip2(filename, offset, tempdir=None, blacklist=[]):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
 	## Assumes (for now) that bzcat is in the path
@@ -2211,7 +2211,7 @@ def unpackBzip2(filename, offset, tempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	unpackFile(filename, offset, tmpfile[1], tmpdir)
+	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
 
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
 	p = subprocess.Popen(['bzcat', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
@@ -2240,7 +2240,7 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, debug=Fa
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "bzip2", counter)
-		res = unpackBzip2(filename, offset, tmpdir)
+		res = unpackBzip2(filename, offset, tmpdir, blacklist)
 		if res != None:
 			diroffsets.append((res, offset, 0))
 			counter = counter + 1
@@ -2875,7 +2875,7 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, debug=Fal
 ## Newer versions of XZ (>= 5.0.0) have an option to test and list archives.
 ## Unfortunately this does not work for files with trailing data, so we can't
 ## use it to filter out "bad" files.
-def unpackLZMA(filename, offset, tempdir=None, minbytesize=1, lzma_tmpdir=None, blacklist=None):
+def unpackLZMA(filename, offset, tempdir=None, minbytesize=1, lzma_tmpdir=None, blacklist=[]):
 	tmpdir = unpacksetup(tempdir)
 
 	## if LZMA_TMPDIR is set to for example a ramdisk use that instead.
