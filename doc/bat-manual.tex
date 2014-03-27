@@ -1418,6 +1418,22 @@ setup       = extractidentifiersetup
 priority    = 1
 \end{verbatim}
 
+The three parameters are:
+
+\begin{itemize}
+\item \texttt{BAT\_NAMECACHE\_C} - in case the binary is a Linux kernel image
+or Linux kernel module the identifier extraction scan needs to be able to look
+up kernel function names to filter these out and assign to the function
+results. For this a caching database with function names is needed.
+\item \texttt{BAT\_STRING\_CUTOFF} - this value is the mimimal length of the
+string that is matched (default value is 5). If extracted strings are shorter
+than this value they will be ignored. It is important to keep this parameter in
+sync with the minimum length of strings in the database extract script.
+\item \texttt{DEX\_TMPDIR} - set the location of a temporary location for
+unpacking Android DEX files. This can be for example set to the location of a
+ramdisk.
+\end{itemize}
+
 \subsection{Configuring the ranking method}
 
 The ranking method can be found in \texttt{bat/licenseversion.py}. The ranking
@@ -1457,6 +1473,10 @@ enabled     = yes
 priority    = 3
 \end{verbatim}
 
+The entire database with all other information except license information is
+\texttt{BAT\_DB}. This option is mandatory. If it is not supplied scanning with
+the determining versions and licenses will fail.
+
 In the database the strings, averages, function names, variable names, etcetera
 are split per language family (C, Java, C\#, and so on). The reason for this is
 that strings/function names that are very significant in one programming
@@ -1485,16 +1505,33 @@ Wireshark, or KOffice that was forked into Calligra, after which development
 on KOffice effectively stopped and everyone moved to Calligra.
 
 The license database can be set with \texttt{BAT\_LICENSE\_DB}. If it is not
-supplied licensing information will not be used during the scan.
+supplied licensing information will not be used during the scan. If
+\texttt{BAT\_RANKING\_LICENSE} is not set to 1 no license information will be
+extracted. If \texttt{BAT\_RANKING\_VERSION} is not set to 1 no version
+information will be extracted. If \texttt{BAT\_RANKING\_LICENSE} is set to 1 it
+automatically sets \texttt{BAT\_RANKING\_VERSION} to 1 as well.
 
-\begin{verbatim}
-envvars  = BAT_DB=/home/bat/db/master.sqlite3:BAT_RANKING_LICENSE=1:
-           BAT_RANKING_VERSION=1:BAT_LICENSE_DB=/home/bat/db/licenses.sqlite3
-\end{verbatim}
+The parameter \texttt{USE\_SOURCE\_ORDER} can be used to tell the matching
+algorithm to assume that identifiers in the binary code are similar as in the
+source code and that the compiler has not reordered these. As compilers often
+keep the order this assigns more strings to packages. As soon as compilers
+start reordering identifiers this method will not work. The default setting
+is to not use the order of identifiers.
 
-The entire database with all other information except license information is
-\texttt{BAT\_DB}. This option is mandatory. If it is not supplied scanning with
-the determining versions and licenses will fail.
+The parameter \texttt{BAT\_STRING\_CUTOFF} indiciates the mimimal length of the
+string that is matched (default value is 5). If extracted strings are shorter
+than this value they will be ignored. It is important to keep this parameter in
+sync with the minimum length of strings in the database extract script.
+
+Results of Java class files are aggregated per JAR where the class files were
+found in. If the parameter \texttt{AGGREGATE\_CLEAN} is set to 1 the class
+files will be removed from the result set after aggregating the results. By
+default class files will not be removed.
+
+The parameters \texttt{BAT\_KEEP\_VERSIONS}, \texttt{BAT\_MINIMUM\_UNIQUE} and
+\texttt{BAT\_KEEP\_MAXIMUM\_PERCENTAGE} are used to tell the pruning methods
+how many versions to keep, how many unique strings minimally should be found,
+and so on.
 
 \subsubsection{Interpreting the results}
 
@@ -1546,7 +1583,7 @@ in a different, more uniform, way.
 
 \subsection{Database design}
 
-The main database currently has 12 tables, 7 of which are Linux kernel specific:
+The main database currently has 14 tables, 9 of which are Linux kernel specific:
 
 \begin{itemize}
 \item \texttt{processed}
@@ -1554,12 +1591,14 @@ The main database currently has 12 tables, 7 of which are Linux kernel specific:
 \item \texttt{extracted\_file}
 \item \texttt{extracted\_function}
 \item \texttt{extracted\_name}
+\item \texttt{kernel\_configuration}
 \item \texttt{kernelmodule\_alias}
 \item \texttt{kernelmodule\_author}
 \item \texttt{kernelmodule\_description}
 \item \texttt{kernelmodule\_firmware}
 \item \texttt{kernelmodule\_license}
 \item \texttt{kernelmodule\_parameter}
+\item \texttt{kernelmodule\_parameter\_description}
 \item \texttt{kernelmodule\_version}
 \end{itemize}
 
@@ -1669,20 +1708,18 @@ It has the following fields:
 can be found
 \end{itemize}
 
-\subsubsection{\texttt{licenses} table}
+\subsubsection{\texttt{kernel\_configuration} table}
 
-This table stores the licenses that were extracted from files using a source
-code scanner, like Ninka or FOSSology. If a file has more than one licenses
-there will be multiple rows for a file. It has these fields:
+The Makefiles in the Linux kernel configuration contain a lot of information
+about which configuration includes which files. This information can be used to
+reconstruct a possible kernel configuration that was used to create the Linux
+binary image. The table has the following fields:
 
 \begin{itemize}
-\item \texttt{sha256}: SHA256 checksum of the file
-\item \texttt{license}: license as found by the scanner
-\item \texttt{scanner}: scanner name. Currently only Ninka and FOSSology are
-used in BAT, but is not limited to that: the scanner could also be a person
-doing a manual review.
-\item \texttt{version}: version of scanner. This is useful if there is for
-example a bug in a scanner, or to compare results from various versions.
+\item \texttt{configstring}: configuration directive in Linux kernel
+\item \texttt{filename}: filename/directory name to which the configuration
+directive applies
+\item \texttt{version}: Linux kernel version
 \end{itemize}
 
 \subsubsection{\texttt{kernelmodule\_alias} table}
@@ -1711,18 +1748,15 @@ This information is declared in the Linux kernel source code using the
 
 \subsubsection{\texttt{kernelmodule\_description} table}
 
-This table is not yet used.
+This table is used to store information about Linux kernel module descriptions.
+This information is declared in the Linux kernel source code using the
+\texttt{MODULE\_DESCRIPTION} macro. The table has the following fields:
 
-%This table is used to store information about Linux kernel module aliases. This
-%information is declared in the Linux kernel source code using the
-%\texttt{MODULE\_ALIAS} macro. The table has the following fields:
-%
-%\begin{itemize}
-%\item \texttt{sha256}: SHA256 checksum of the file
-%\item \texttt{modulename}: name of the source code file
-%\item \texttt{description}:
-%\end{itemize}
-                %c.execute('''create table if not exists kernelmodule_description(sha256 text, modulename text, description text)''')
+\begin{itemize}
+\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{modulename}: name of the source code file
+\item \texttt{description}:
+\end{itemize}
 
 \subsubsection{\texttt{kernelmodule\_firmware} table}
 
@@ -1765,6 +1799,19 @@ kernel at the same time. The table has the following fields:
 code (various formats have been used)
 \end{itemize}
 
+\subsubsection{\texttt{kernelmodule\_parameter\_description} table}
+
+This table is used to store information about Linux kernel module parameters
+descriptions.  This information is declared in the Linux kernel source code
+using the \texttt{MODULE\_PARM\_DESC} macro. The table has the following fields:
+
+\begin{itemize}
+\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{modulename}: name of the source code file
+\item \texttt{paramname}: name of the parameter
+\item \texttt{description}: descriptio of the parameter
+\end{itemize}
+
 \subsubsection{\texttt{kernelmodule\_version} table}
 
 This table is used to store information about Linux kernel module versions.
@@ -1775,6 +1822,22 @@ This information is declared in the Linux kernel source code using the
 \item \texttt{sha256}: SHA256 checksum of the file
 \item \texttt{modulename}: name of the source code file
 \item \texttt{version}: contents of the \texttt{MODULE\_VERSION} macro
+\end{itemize}
+
+\subsubsection{\texttt{licenses} table}
+
+This table stores the licenses that were extracted from files using a source
+code scanner, like Ninka or FOSSology. If a file has more than one licenses
+there will be multiple rows for a file. It has these fields:
+
+\begin{itemize}
+\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{license}: license as found by the scanner
+\item \texttt{scanner}: scanner name. Currently only Ninka and FOSSology are
+used in BAT, but is not limited to that: the scanner could also be a person
+doing a manual review.
+\item \texttt{version}: version of scanner. This is useful if there is for
+example a bug in a scanner, or to compare results from various versions.
 \end{itemize}
 
 \section{BusyBox script internals}
@@ -1887,7 +1950,7 @@ configuration can be reconstructed.
 
 Depending on how the binary was compiled this can be trivial, or quite hard.
 
-\subsubsection{Binaries linked with uClibc}
+\subsubsection{BusyBox linked with uClibc}
 
 In binaries that link against uClibc (a particular C library) the name of the
 main function of the applet is sometimes (but not always) included in the
@@ -1916,7 +1979,7 @@ lib-$(CONFIG_WGET)         += wget.o
 (example taken from \texttt{networking/Kbuild} in BusyBox 1.15.2). There are
 cases where the format could be slightly different.
 
-\subsubsection{Binaries linked with glibc \& uClibc exceptions}
+\subsubsection{BusyBox linked with glibc \& uClibc exceptions}
 
 Sometimes the method described in the previous section does not work for
 binaries that are linked with uClibc. It also does not work with binaries
@@ -1941,10 +2004,10 @@ applet that was added appears alphabetically before any of the applets that
 can be recognized using a list of applet names extracted from the source code,
 or it appears alphabetically after the last one that can be recognized.
 
-\subsection{Pretty printing a configuration}
+\subsection{Pretty printing a BusyBox configuration}
 
-Pretty printing a configuration is fairly straightforward, but there are a few
-cases where it is hard to make a good guess:
+Pretty printing a BusyBox configuration is fairly straightforward, but there
+are a few cases where it is hard to make a good guess:
 
 \begin{enumerate}
 \item aliases
@@ -2009,7 +2072,7 @@ feature \texttt{ENABLE\_FEATURE\_DIFF\_DIR} is not enabled.
 
 Implementing this will be a lot of work and it will likely not be very useful.
 
-\subsection{Feeding information into the tool}
+\subsection{Using BusyBox configurations}
 
 By referencing with information extracted from the standard BusyBox sourcecode
 it is possible to get a far more accurate configuration, because it is known
