@@ -574,7 +574,6 @@ def unpackTar(filename, offset, tempdir=None, tar_tmpdir=None):
 		tmpfile = tempfile.mkstemp(dir=tar_tmpdir)
 	else:
 		tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.fdopen(tmpfile[0]).close()
 
 	if offset != 0x101:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset - 0x101,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -592,8 +591,16 @@ def unpackTar(filename, offset, tempdir=None, tar_tmpdir=None):
 		shutil.move(templink[1], tmpfile[1])
 
 	tarsize = 0
+	if not tarfile.is_tarfile(tmpfile[1]):
+		## not a tar file, so clean up
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return (None, None)
 
 	try:
+		## tmpfile[1] cannot be a closed file for some reason. Strange.
 		tar = tarfile.open(tmpfile[1], 'r')
 		tarmembers = tar.getmembers()
 		## assume that the last member is also the last in the file
@@ -611,6 +618,7 @@ def unpackTar(filename, offset, tempdir=None, tar_tmpdir=None):
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return (None, None)
+	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
 	return (tmpdir, tarsize)
 
