@@ -4,6 +4,9 @@
 * add TAR_TMPDIR so tar can be unpacked on for example ramdisk
 * filter out false positives for tar files earlier, possibly preventing a lot
 of I/O for large files
+* precompile a regular expression used for processing output from dedexer
+* unpack contents of file systems converted with simg2img directly instead of
+storing and scanning the temporary ext4 file system
 
 2014-03-26
 * extract more identifiers from the Linux kernel
