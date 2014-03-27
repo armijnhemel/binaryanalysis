@@ -522,6 +522,29 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 		return ([], blacklist, [], hints)
 	taroffsets.sort()
 
+	scanenv = os.environ.copy()
+
+	if envvars != None:
+		for en in envvars.split(':'):
+			try:
+				(envname, envvalue) = en.split('=')
+				scanenv[envname] = envvalue
+			except Exception, e:
+				pass
+
+	tar_tmpdir = scanenv.get('TAR_TMPDIR', None)
+	if tar_tmpdir != None:
+		if not os.path.exists(tar_tmpdir):
+			tar_tmpdir = None
+
+	## TODO: make sure this check is only done once through a setup scan
+	try:
+		tmpfile = tempfile.mkstemp(dir=tar_tmpdir)
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+	except OSError, e:
+		tar_tmpdir=None
+
 	diroffsets = []
 	counter = 1
 	for offset in taroffsets:
@@ -532,8 +555,9 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
+
 		tmpdir = dirsetup(tempdir, filename, "tar", counter)
-		(res, tarsize) = unpackTar(filename, offset, tmpdir)
+		(res, tarsize) = unpackTar(filename, offset, tmpdir, tar_tmpdir)
 		if res != None:
 			diroffsets.append((res, offset - 0x101, tarsize))
 			counter = counter + 1
@@ -544,9 +568,13 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 	return (diroffsets, blacklist, [], hints)
 
 
-def unpackTar(filename, offset, tempdir=None):
+def unpackTar(filename, offset, tempdir=None, tar_tmpdir=None):
 	tmpdir = unpacksetup(tempdir)
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	if tar_tmpdir != None:
+		tmpfile = tempfile.mkstemp(dir=tar_tmpdir)
+	else:
+		tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.fdopen(tmpfile[0]).close()
 
 	if offset != 0x101:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset - 0x101,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -583,7 +611,6 @@ def unpackTar(filename, offset, tempdir=None):
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return (None, None)
-	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
 	return (tmpdir, tarsize)
 
