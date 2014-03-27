@@ -1,3 +1,14 @@
+2014-03-27
+* manual updates
+* add JFFS2_TMPDIR so jffs2 can be unpacked on for example ramdisk
+* add TAR_TMPDIR so tar can be unpacked on for example ramdisk
+* filter out false positives for tar files earlier, possibly preventing a lot
+of I/O for large files
+
+2014-03-26
+* extract more identifiers from the Linux kernel
+* more unpack optimisations in fwunpack.py
+
 2014-03-25
 * set unpackdir for createdb.py via configuration
 * add large file support functions to findlibs.py

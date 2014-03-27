@@ -67,6 +67,7 @@ misc:
 * test on latest Debian, make sure configurations/dependencies work
 * replace calls to dd, tail, head and others with truncate() where possible to prevent launching an external process
 * replace hardcoded options in reporting with values of 'storetarget'
+* tag webp files
 
 BOTTLENECKS/HIGH PRIORITY:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
@@ -76,7 +77,7 @@ BOTTLENECKS/HIGH PRIORITY:
 5. verify and tag Android resources.arsc
 6. rework datastructures of ranking information (strings, function names, variables) so they are all similar
 7. createbatarchive.py: add option to set unpackdir (to for example ramdisk)
-8. add ramdisk unpacking for jffs2
+8. jffs2 unpacking: try to filter out false positives earlier by looking at a small number of bytes before copying and unpacking the file
 9. research/fix priority for Minix file system
 10. don't recreate ELF graphs (model for every ELF binary), but reuse graphs of dependencies. This would need a topological sort.
 11. process UNSCANNED_DUPLICATE_FILES from BAT archives in createdb.py. This is needed if some of the unscanned duplicate files need to be processed.
