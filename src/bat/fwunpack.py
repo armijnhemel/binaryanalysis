@@ -572,8 +572,32 @@ def unpackTar(filename, offset, tempdir=None, tar_tmpdir=None):
 	tmpdir = unpacksetup(tempdir)
 	if tar_tmpdir != None:
 		tmpfile = tempfile.mkstemp(dir=tar_tmpdir)
+		testtar = tempfile.mkstemp(dir=tar_tmpdir)
+		os.fdopen(testtar[0]).close()
 	else:
 		tmpfile = tempfile.mkstemp(dir=tmpdir)
+		testtar = tempfile.mkstemp(dir=tmpdir)
+		os.fdopen(testtar[0]).close()
+
+	## first read about 1MB from the tar file and do a very simple rough check to
+	## filter out false positives
+	if os.stat(filename).st_size > 1024*1024:
+		tartest = open(testtar[1], 'wb')
+		testtarfile = open(filename, 'r')
+		testtarfile.seek(offset - 0x101)
+		testtarbuffer = testtarfile.read(1024*1024)
+		testtarfile.close()
+		tartest.write(testtarbuffer)
+		tartest.close()
+		if not tarfile.is_tarfile(tartest.name):
+			os.unlink(testtar[1])
+			## not a tar file, so clean up
+			os.fdopen(tmpfile[0]).close()
+			os.unlink(tmpfile[1])
+			if tempdir == None:
+				os.rmdir(tmpdir)
+			return (None, None)
+	os.unlink(testtar[1])
 
 	if offset != 0x101:
 		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset - 0x101,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
