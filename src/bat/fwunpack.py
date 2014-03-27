@@ -292,6 +292,30 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, debug=Fa
 		return ([], blacklist, [], hints)
 	if offsets['jffs2_le'] == [] and offsets['jffs2_be'] == []:
 		return ([], blacklist, [], hints)
+
+	scanenv = os.environ.copy()
+
+	if envvars != None:
+		for en in envvars.split(':'):
+			try:
+				(envname, envvalue) = en.split('=')
+				scanenv[envname] = envvalue
+			except Exception, e:
+				pass
+
+	jffs2_tmpdir = scanenv.get('JFFS2_TMPDIR', None)
+	if jffs2_tmpdir != None:
+		if not os.path.exists(jffs2_tmpdir):
+			jffs2_tmpdir = None
+
+	## TODO: make sure this check is only done once through a setup scan
+	try:
+		tmpfile = tempfile.mkstemp(dir=jffs2_tmpdir)
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+	except OSError, e:
+		jffs2_tmpdir=None
+
 	counter = 1
 	jffs2offsets = copy.deepcopy(offsets['jffs2_le']) + copy.deepcopy(offsets['jffs2_be'])
 	diroffsets = []
@@ -308,7 +332,7 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, debug=Fa
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "jffs2", counter)
-		res = unpackJffs2(filename, offset, tmpdir, bigendian, blacklist)
+		res = unpackJffs2(filename, offset, tmpdir, bigendian, jffs2_tmpdir, blacklist)
 		if res != None:
 			(jffs2dir, jffs2size) = res
 			diroffsets.append((jffs2dir, offset, jffs2size))
@@ -318,12 +342,18 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, debug=Fa
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [], hints)
 
-def unpackJffs2(filename, offset, tempdir=None, bigendian=False, blacklist=[]):
+def unpackJffs2(filename, offset, tempdir=None, bigendian=False, jffs2_tmpdir=None, blacklist=[]):
 	tmpdir = unpacksetup(tempdir)
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.fdopen(tmpfile[0]).close()
 
-	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
+	if jffs2_tmpdir != None:
+		tmpfile = tempfile.mkstemp(dir=jffs2_tmpdir)
+		os.fdopen(tmpfile[0]).close()
+		unpackFile(filename, offset, tmpfile[1], jffs2_tmpdir, blacklist=blacklist)
+	else:
+		tmpfile = tempfile.mkstemp(dir=tmpdir)
+		os.fdopen(tmpfile[0]).close()
+		unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
+
 	res = jffs2.unpackJFFS2(tmpfile[1], tmpdir, bigendian)
 	os.unlink(tmpfile[1])
 	if tempdir == None:
