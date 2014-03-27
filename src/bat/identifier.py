@@ -33,6 +33,7 @@ rejavaattribute = re.compile("Attribute \"SourceFile\", length:\d+, #\d+=\"([\w\
 rejavafield = re.compile("Field name:\"([\w$]+)\"")
 rejavamethod= re.compile("Method name:\"([\w$]+)\"")
 rejavastring = re.compile("#\d+: String \d+=\"")
+reconststring = re.compile("\s+const-string\s+v\d+")
 
 splitcharacters = map(lambda x: chr(x), range(0,9) + range(14,32) + [127])
 
@@ -503,7 +504,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype):
 						for d in ddxlines:
 							## search for string constants
 							if "const-string" in d:
-								reres = re.match("\s+const-string\s+v\d+", d)
+								reres = reconststring.match(d)
 								if reres != None:
 									printstring = d.strip().split(',', 1)[1][1:-1]
         								if len(printstring) >= stringcutoff:
