@@ -2497,6 +2497,14 @@ def unpackAndroidSparse(filename, offset, tempdir=None):
 		seekctr = seekctr + 12 + datasize
 	sparsefile.close()
 	os.unlink(tmpfile[1])
+	## set path for Debian
+	unpackenv = os.environ.copy()
+	unpackenv['PATH'] = unpackenv['PATH'] + ":/sbin"
+	res = unpackExt2fs(outtmpfile[1], 0, tmpdir, unpackenv=unpackenv)
+	if res == None:
+		## TODO: clean up in case there is a screw up
+		pass
+	os.unlink(outtmpfile[1])
 	return (seekctr, tmpdir)
 
 def searchUnpackLRZIP(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
