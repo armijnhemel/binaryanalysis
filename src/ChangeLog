@@ -1,3 +1,7 @@
+2014-03-28
+* add tagKnownExtension to quickly verify files (currently only ZIP files) to
+prevent genericMarkerSearch to run for big files
+
 2014-03-27
 * manual updates
 * add JFFS2_TMPDIR so jffs2 can be unpacked on for example ramdisk

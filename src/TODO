@@ -88,3 +88,4 @@ BOTTLENECKS/HIGH PRIORITY:
 16. better report non unique matched strings which are not clones
 17. run jcf-dump in chunks for Java class files whenever possible, preventing launching a jcf-dump process per class file
 18. handle "disk full" and other errors
+19. clean up for tagKnownExtension, add more extensions if possible. Research big firmwares for this to see which extensions to focus on first.
