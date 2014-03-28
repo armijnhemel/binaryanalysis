@@ -2310,30 +2310,33 @@ files that contain some unexpected results.
 
 \subsection{Disable \texttt{tmp} on tmpfs}
 
-Some Linux distributions (most notably Fedora 18 and later) have standardized on
-storing the \texttt{/tmp} file system on tmpfs. This means that part of the system
-memory is used for the \texttt{/tmp} file system. By default on Fedora it is
+Some Linux distributions (most notably Fedora 18 and later) store the
+\texttt{/tmp} file system on tmpfs. This means that part of the system memory
+is used for the \texttt{/tmp} file system. By default on Fedora it is
 set to 50\% of the system's memory. This could influence BAT in two ways:
 
 \begin{enumerate}
 \item less memory available for processing
 \item BAT unpacks to \texttt{/tmp} by default, unless configured differently. If
 the unpack results grow big enough (which is fairly easy with big firmwares) it
-could fill up the partition.
+could fill up the partition. However, there are some external tools that will
+write temporary results to \texttt{/tmp}.
 \end{enumerate}
 
 There are various solutions, apart from adding more memory to the machine:
 
 \begin{itemize}
-\item configure BAT to use another path for unpacking than \texttt{/tmp}
-\item disable \texttt{tmp} on tmpfs
+\item configure BAT to use another path than \texttt{/tmp} for unpacking and
+storing results and configure some scans in BAT to use \texttt{/tmp} or a
+different ramdisk (recommended)
+\item disable \texttt{tmp} on tmpfs (not recommended)
 \end{itemize}
 
 \subsection{Use tmpfs for writing temporary results}
 
 A few scans can use tmpfs or a ramdisk to write temporary results. The scans
 that can benefit from this are LZMA unpacking, ranking (temporary results of
-DEX and ODEX unpacking) and compress unpacking.
+DEX and ODEX unpacking), compress unpacking, JFFS2 unpacking and TAR unpacking.
 
 \section{Parameter description for default scans}
 
@@ -2341,6 +2344,13 @@ This section describes the default parameters for several of the scans as
 shipped in BAT, if not described earlier in this document. These parameters are
 passed to the scans as part of the environment and are defined in the
 \texttt{envvars} setting in the configuration file.
+
+\subsection{\texttt{jffs2}}
+
+The \texttt{JFFS2\_TMPDIR} parameter is used to let the scan use a different
+location for unpacking temporary files than the standard unpacking directory.
+It was introduced to let the scan unpack onto a tmpfs file system to avoid disk
+I/O and speed up scanning.
 
 \subsection{\texttt{lzma}}
 
@@ -2356,6 +2366,13 @@ By default \texttt{LZMA\_MINIMUM\_SIZE} is set to 10 bytes, but this is a very
 conservative setting.
 
 The \texttt{LZMA\_TMPDIR} parameter is used to let the scan use a different
+location for unpacking temporary files than the standard unpacking directory.
+It was introduced to let the scan unpack onto a tmpfs file system to avoid disk
+I/O and speed up scanning.
+
+\subsection{\texttt{tar}}
+
+The \texttt{TAR\_TMPDIR} parameter is used to let the scan use a different
 location for unpacking temporary files than the standard unpacking directory.
 It was introduced to let the scan unpack onto a tmpfs file system to avoid disk
 I/O and speed up scanning.
