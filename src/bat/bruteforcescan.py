@@ -41,8 +41,7 @@ are packed in a tar file.
 
 import sys, os, os.path, magic, hashlib, subprocess, tempfile, shutil, stat, multiprocessing, cPickle, glob, tarfile, copy, gzip, Queue
 from optparse import OptionParser
-import datetime
-import sqlite3
+import datetime, sqlite3, re
 import extractor
 import prerun, fsmagic
 from multiprocessing import Process, Lock
@@ -125,6 +124,45 @@ def gethash(path, filename):
 		hashdata = scanfile.read(10000000)
 	scanfile.close()
 	return h.hexdigest()
+
+## tag files based on extension and a few simple tests and possibly skip
+## the generic marker search based on the results. This is to prevent
+## a lot of I/O for large files.
+## Example: ZIP files and JAR files often have a known extension. With
+## a few simple tests it is easy to see if the entire file is a ZIP file
+## or not.
+## returns a dictionary with offsets
+## TODO: refactor so code can be shared with fwunpack.py
+def tagKnownExtension(filename):
+	offsets = {}
+	extensions = filename.rsplit('.', 1)
+	if len(extensions) == 1:
+		return offsets
+
+	extension = extensions[-1].lower()
+	if extension == 'zip' or extension == 'jar' or extension == 'apk':
+		p = subprocess.Popen(['zipinfo', '-v', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+
+		## check if the file is encrypted, if so bail out
+		res = re.search("file security status:\s+(\w*)\sencrypted", stanout)
+		if res == None:
+			return offsets
+
+		if res.groups(0)[0] != 'not':
+			return offsets
+
+		## non-encrypted file, so continue processing it
+		res = re.search("Actual[\w\s]*end-(?:of-)?cent(?:ral)?-dir record[\w\s]*:\s*(\d+) \(", stanout)
+		if res != None:
+			endofcentraldir = int(res.groups(0)[0])
+		else:
+			return offsets
+		## TODO: determine commentsize
+		commentsize = 0
+		if endofcentraldir + 22 + commentsize == os.stat(filename).st_size:
+			offsets['zip'] = [0]
+	return offsets
 
 ## scan a single file, possibly unpack and recurse
 def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optmagicscans, processid, hashdict, llock):
@@ -221,7 +259,11 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 		unpackreports[relfiletoscan]['sha256'] = filehash
 
 		## scan for markers
-		offsets =  prerun.genericMarkerSearch(filetoscan, magicscans, optmagicscans)
+		tagOffsets = tagKnownExtension(filetoscan)
+		if tagOffsets != {}:
+			offsets = tagOffsets
+		else:
+			offsets =  prerun.genericMarkerSearch(filetoscan, magicscans, optmagicscans)
 
 		## we have all offsets with markers here, so sscans that are not needed
 		## can be filtered out.
