@@ -574,7 +574,6 @@ def generatereports(unpackreports, scantempdir, topleveldir, processors, debug=F
 	## misnomer since 'rank' is no longer used
 	resultranks = {}
 
-	counter = 0
 	for r in res:
 		(filehash, resultreports, functionresults, unmatchedresult) = r
 		if unmatchedresult != None:
@@ -588,7 +587,6 @@ def generatereports(unpackreports, scantempdir, topleveldir, processors, debug=F
 				unmatchedpicklespackages.add((picklehash, filehash))
 				picklehashes[picklehash] = os.path.basename(tmppickle)
 		if resultreports != []:
-			counter += 1
 			for report in resultreports:
 				(rank, picklehash, tmppickle, uniquematcheslen, packagename) = report
 				if resultranks.has_key(filehash):
