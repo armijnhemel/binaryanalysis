@@ -343,6 +343,21 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, debug=Fa
 	return (diroffsets, blacklist, [], hints)
 
 def unpackJffs2(filename, offset, tempdir=None, bigendian=False, jffs2_tmpdir=None, blacklist=[]):
+	## first a simple sanity check. Read bytes 4-8 from the inode, which
+	## represent the total node of the inode. If the total length of the
+	## inode is bigger than the total size of the file it is not a valid
+	## JFFS2 file system, so return.
+	jffs2file = open(filename, 'r')
+	jffs2file.seek(4)
+	jffs2buffer = jffs2file.read(4)
+	if not bigendian:
+		jffs2inodesize = struct.unpack('<I', jffs2buffer)[0]
+	else:
+		jffs2inodesize = struct.unpack('>I', jffs2buffer)[0]
+	jffs2file.close()
+	if jffs2inodesize > os.stat(filename).st_size:
+		return
+
 	tmpdir = unpacksetup(tempdir)
 
 	if jffs2_tmpdir != None:
