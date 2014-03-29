@@ -347,6 +347,8 @@ def unpackJffs2(filename, offset, tempdir=None, bigendian=False, jffs2_tmpdir=No
 	## represent the total node of the inode. If the total length of the
 	## inode is bigger than the total size of the file it is not a valid
 	## JFFS2 file system, so return.
+	## If offset + size of the JFFS2 inode is blacklisted it is also not
+	## a valid JFFS2 file system
 	jffs2file = open(filename, 'r')
 	jffs2file.seek(4)
 	jffs2buffer = jffs2file.read(4)
@@ -355,7 +357,10 @@ def unpackJffs2(filename, offset, tempdir=None, bigendian=False, jffs2_tmpdir=No
 	else:
 		jffs2inodesize = struct.unpack('>I', jffs2buffer)[0]
 	jffs2file.close()
-	if jffs2inodesize > os.stat(filename).st_size:
+	if (offset + jffs2inodesize) > os.stat(filename).st_size:
+		return
+	blacklistoffset = extractor.inblacklist(offset + jffs2inodesize, blacklist)
+	if blacklistoffset != None:
 		return
 
 	tmpdir = unpacksetup(tempdir)
