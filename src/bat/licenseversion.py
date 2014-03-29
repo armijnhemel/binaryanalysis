@@ -4,7 +4,7 @@
 ## Copyright 2011-2014 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
-import os, os.path, sys, subprocess, copy, cPickle, multiprocessing, sqlite3, re, datetime, collections
+import os, os.path, sys, subprocess, copy, cPickle, multiprocessing, sqlite3, re, collections
 
 '''
 This file contains the ranking algorithm as described in the paper
@@ -113,6 +113,9 @@ fossology_to_ninka = { 'No_license_found': 'NONE'
                      , 'Intel': 'InterACPILic'
                      , 'Artistic': 'ArtisticLicensev1'
                      }
+
+reerrorlevel = re.compile("<[\d+cd]>")
+reparam = re.compile("([\w_]+)\.([\w_]+)")
 
 ## The scanners that are used in BAT are Ninka and FOSSology. These scanners
 ## don't always agree on results, but when they do, it is very reliable.
@@ -440,7 +443,7 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 	return (jarfile, aggregated)
 
 def prune(scanenv, uniques, package):
-	uniqueversions = {}
+	uniqueversions = collections.Counter()
 
 	linesperversion = {}
 
@@ -452,13 +455,10 @@ def prune(scanenv, uniques, package):
 			map(lambda x: versions.add(x[0]), versionfilenames)
 		for version in versions:
 			if linesperversion.has_key(version):
-				linesperversion[version].append(line)
+				linesperversion[version].add(line)
 			else:
-				linesperversion[version] = [line]
-			if uniqueversions.has_key(version):
-				uniqueversions[version] += 1
-			else:
-				uniqueversions[version] = 1
+				linesperversion[version] = set([line])
+		uniqueversions.update(versions)
 
 	## there is only one version, so no need to continue
 	if len(uniqueversions.keys()) == 1:
@@ -484,7 +484,7 @@ def prune(scanenv, uniques, package):
 				## and skip all equivalents since the results would be the
 				## same as with the current 'l' and no versions would be
 				## pruned that weren't already pruned.
-				if set(linesperversion[k]) == linesperversion_l:
+				if linesperversion[k] == linesperversion_l:
 					equivalents.add(k)
 				continue
 			if uniqueversions[k] > uniqueversions[l]:
@@ -508,6 +508,7 @@ def prune(scanenv, uniques, package):
 			if filterres != []:
 				newres.append((checksum, linenumber, filterres))
 		newuniques.append((line, newres))
+
 	return newuniques
 
 def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, processors, debug=False, envvars=None, unpacktempdir=None):
@@ -1207,7 +1208,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 			## In 2.6 it used to be for example <3> (defined in include/linux/kernel.h
 			## or include/linux/printk.h )
 			## In later kernels this was changed.
-			matchres = re.match("<[\d+cd]>", line)
+			matchres = reerrorlevel.match(line)
 			if matchres != None:
 				scanline = line.split('>', 1)[1]
 				if len(scanline) < stringcutoff:
@@ -1266,7 +1267,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 			if len(res) == 0:
 				if '.' in line:
 					if line.count('.') == 1:
-						paramres = re.match("([\w_]+)\.([\w_]+)", line)
+						paramres = reparam.match(line)
 						if paramres != None:
 							pass
 
@@ -1805,15 +1806,16 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 			newpackageversions = {}
 			packagecopyrights = []
 			uniques = list(set(map(lambda x: x[0], unique)))
+			lenuniques = len(uniques)
 
 			## first grab all possible checksums, plus associated line numbers for this string. Since
 			## these are unique strings they will only be present in the package (or clones of the package).
 			vtasks_tmp = []
-			if len(uniques) < processors:
+			if lenuniques < processors:
 				step = 1
 			else:
-				step = len(uniques)/processors
-			for v in xrange(0, len(uniques), step):
+				step = lenuniques/processors
+			for v in xrange(0, lenuniques, step):
 				vtasks_tmp.append(uniques[v:v+step])
 			vtasks = map(lambda x: (masterdb, x, language, 'string'), filter(lambda x: x!= [], vtasks_tmp))
 			vsha256s = pool.map(grab_sha256_parallel, vtasks)
@@ -1904,11 +1906,12 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 			if determinelicense:
 				vtasks_tmp = []
 				licensesha256s = list(set(licensesha256s))
-				if len(licensesha256s) < processors:
+				lenlicensesha256s = len(licensesha256s)
+				if lenlicensesha256s < processors:
 					step = 1
 				else:
-					step = len(licensesha256s)/processors
-				for v in xrange(0, len(licensesha256s), step):
+					step = lenlicensesha256s/processors
+				for v in xrange(0, lenlicensesha256s, step):
 					vtasks_tmp.append(licensesha256s[v:v+step])
 				vtasks = map(lambda x: (licensedb, x), filter(lambda x: x!= [], vtasks_tmp))
 
@@ -1926,11 +1929,12 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 			if determinecopyright:
 				vtasks_tmp = []
 				copyrightsha256s = list(set(copyrightsha256s))
-				if len(copyrightsha256s) < processors:
+				lencopyrightsha256s = len(copyrightsha256s)
+				if lencopyrightsha256s < processors:
 					step = 1
 				else:
-					step = len(copyrightsha256s)/processors
-				for v in xrange(0, len(copyrightsha256s), step):
+					step = lencopyrightsha256s/processors
+				for v in xrange(0, lencopyrightsha256s, step):
 					vtasks_tmp.append(copyrightsha256s[v:v+step])
 				vtasks = map(lambda x: (licensedb, x), filter(lambda x: x!= [], vtasks_tmp))
 
