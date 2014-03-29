@@ -24,7 +24,7 @@ htmldir = /home/armijn/html/files
 type        = prerun
 module      = bat.prerun
 method      = searchXML
-priority    = 100
+priority    = 2
 description = Check XML validity
 enabled     = yes
 
@@ -77,7 +77,7 @@ enabled     = no
 type        = prerun
 module      = bat.prerun
 method      = verifyELF
-priority    = 2
+priority    = 3
 description = Check if file is a valid ELF library/executable/object
 enabled     = yes
 
@@ -86,7 +86,7 @@ type        = prerun
 module      = bat.prerun
 method      = verifyGraphics
 magic       = bmp:jpeg:jpegtrailer:gif87:gif89:png:pngtrailer
-priority    = 2
+priority    = 3
 description = Check if file is a valid graphics file, or consists of just graphics files
 enabled     = yes
 
@@ -94,7 +94,7 @@ enabled     = yes
 type        = prerun
 module      = bat.prerun
 method      = verifyGzip
-priority    = 1
+priority    = 3
 noscan      = elf:graphics:font:java:sqlite3
 description = Check if complete file is a valid gzip file
 enabled     = yes
