@@ -1127,13 +1127,9 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 		## sort the lines first, so it is easy to skip duplicates
 		lines.sort()
 
-	linecount = {}
+	linecount = collections.Counter(lines)
 	for line in lines:
 		#print >>sys.stderr, "processing <|%s|>" % line
-		if linecount.has_key(line):
-			linecount[line] = linecount[line] + 1
-		else:
-			linecount[line] = 1
 		kernelfunctionmatched = False
 
 		if not usesourceorder:
