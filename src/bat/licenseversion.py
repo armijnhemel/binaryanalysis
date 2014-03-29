@@ -4,7 +4,7 @@
 ## Copyright 2011-2014 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
-import os, os.path, sys, subprocess, copy, cPickle, multiprocessing, sqlite3, re
+import os, os.path, sys, subprocess, copy, cPickle, multiprocessing, sqlite3, re, datetime, collections
 
 '''
 This file contains the ranking algorithm as described in the paper
@@ -2028,15 +2028,15 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 			newresults[package] = newuniques
 			uniqueversions = {}
 			functionRes['packages'][package] = []
-			vs = []
+			vs = collections.Counter()
 			for u in newuniques:
 				versionsha256s = u[1]
 				for s in versionsha256s:
 					(checksum, linenumber, versionfilenames) = s
-					vs = vs + list(set(map(lambda x: x[0], versionfilenames)))
+					vs.update(set(map(lambda x: x[0], versionfilenames)))
 
-			for v in list(set(vs)):
-				functionRes['packages'][package].append((v, vs.count(v)))
+			for v in vs:
+				functionRes['packages'][package].append((v, vs[v]))
 		functionRes['versionresults'] = newresults
 
 	if variablepvs != {}:
@@ -2122,15 +2122,15 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				newresults[package] = newuniques
 				uniqueversions = {}
 				variablepvs['packages'][package] = []
-				vs = []
+				vs = collections.Counter()
 				for u in newuniques:
 					versionsha256s = u[1]
 					for s in versionsha256s:
 						(checksum, linenumber, versionfilenames) = s
-						vs = vs + list(set(map(lambda x: x[0], versionfilenames)))
+						vs.update(set(map(lambda x: x[0], versionfilenames)))
 
-				for v in list(set(vs)):
-					variablepvs['packages'][package].append((v, vs.count(v)))
+				for v in vs:
+					variablepvs['packages'][package].append((v, vs[v]))
 			variablepvs['versionresults'] = newresults
 			changed = True
 
