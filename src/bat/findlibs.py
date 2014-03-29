@@ -773,7 +773,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 			continue
 		filehash = unpackreports[i]['sha256']
 		ppname = os.path.join(unpackreports[i]['path'], unpackreports[i]['name'])
-		seen = []
+		seen = set()
 		elfgraph = pydot.Dot(graph_type='digraph')
 		rootnode = pydot.Node(ppname)
 		elfgraph.add_node(rootnode)
@@ -805,12 +805,12 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 				if len(squashedelffiles[j]) != 1:
 					continue
 				processnodes.add((rootnode, squashedelffiles[j][0], 0, "unused"))
-				seen.append((i,j))
+				seen.add((i,j))
 		if possiblyusedlibsperfile.has_key(i):
 			for j in possiblyusedlibsperfile[i]:
 				processnodes.add((rootnode, j, 0, "undeclared"))
-				seen.append((i,j))
-		seen = seen + map(lambda x: (i, x[0]), squashedgraph[i])
+				seen.add((i,j))
+		seen.update(map(lambda x: (i, x[0]), squashedgraph[i]))
 
 		while True:
 			newprocessnodes = set()
@@ -837,12 +837,12 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 								newprocessnodes.add((tmpnode,) +  n[0:-1] + ("knowninterface",))
 							else:
 								newprocessnodes.add((tmpnode,) +  n[0:-1] + ("used",))
-							seen.append((nodetext, n[0]))
+							seen.add((nodetext, n[0]))
 				if possiblyusedlibsperfile.has_key(nodetext):
 					for u in possiblyusedlibsperfile[nodetext]:
 						if not (nodetext, u) in seen:
 							newprocessnodes.add((tmpnode, u, 0, "undeclared"))
-							seen.append((nodetext, u))
+							seen.add((nodetext, u))
 				if unusedlibsperfile.has_key(nodetext):
 					for u in unusedlibsperfile[nodetext]:
 						if not (nodetext, u) in seen:
@@ -851,7 +851,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 							if len(squashedelffiles[u]) != 1:
 								continue
 							newprocessnodes.add((tmpnode, squashedelffiles[u][0], 0, "unused"))
-							seen.append((nodetext, u))
+							seen.add((nodetext, u))
 			processnodes = newprocessnodes
 			if processnodes == set():
 				break
