@@ -131,6 +131,8 @@ def findRedBoot(lines):
 ## extract the kernel version from the module
 ## TODO: merge with module license extraction
 def analyseModuleVersion(path, tags, blacklist=[], debug=False, envvars=[], unpacktempdir=None):
+	if not 'elf' in tags:
+		return
 	## TODO: refactor
 	if not "relocatable" in ms.file(path):
 		return None
@@ -152,6 +154,8 @@ def analyseModuleVersion(path, tags, blacklist=[], debug=False, envvars=[], unpa
 
 ## analyse a kernel module. Requires that the modinfo program from module-init-tools has been installed
 def analyseModuleLicense(path, tags, blacklist=[], debug=False, envvars=[], unpacktempdir=None):
+	if not 'elf' in tags:
+		return
 	if not "relocatable" in ms.file(path):
 		return None
 	p = subprocess.Popen(['/sbin/modinfo', "-F", "license", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
