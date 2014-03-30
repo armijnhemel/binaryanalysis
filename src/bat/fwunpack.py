@@ -1353,6 +1353,7 @@ def unpackRomfs(filename, offset, tempdir=None, unpacktempdir=None, blacklist=[]
 	## determine the size and cleanup
 	datafile = open(tmpfile[1])
 	datafile.seek(8)
+	## TODO: replace with romfssize??
 	sizedata = datafile.read(4)
 	size = struct.unpack('>I', sizedata)[0]
 	datafile.close()
@@ -1406,17 +1407,12 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, debug=F
 ## tries to unpack stuff using fsck.cramfs. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
 def unpackCramfs(filename, offset, tempdir=None, unpacktempdir=None, bigendian=False, blacklist=[]):
-	tmpdir = unpacksetup(tempdir)
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.fdopen(tmpfile[0]).close()
-
 	sizetmpfile = open(filename)
 	sizetmpfile.seek(offset+4)
 	tmpbytes = sizetmpfile.read(4)
 	sizetmpfile.close()
 
 	if len(tmpbytes) < 4:
-		os.unlink(tmpfile[1])
 		return
 	if bigendian:
 		cramfslen = struct.unpack('>I', tmpbytes)[0]
@@ -1434,12 +1430,15 @@ def unpackCramfs(filename, offset, tempdir=None, unpacktempdir=None, bigendian=F
 		cramfsversion = struct.unpack('<I', tmpbytes)[0]
 	if cramfsversion != 0:
 		if cramfslen > os.stat(filename).st_size:
-			os.unlink(tmpfile[1])
 			return
 	else:
 		## this is an old cramfs version, so length
 		## field does not mean anything
 		cramfslen = os.stat(filename).st_size
+
+	tmpdir = unpacksetup(tempdir)
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.fdopen(tmpfile[0]).close()
 
 	unpackFile(filename, offset, tmpfile[1], tmpdir, length=cramfslen, unpacktempdir=unpacktempdir, blacklist=blacklist)
 
