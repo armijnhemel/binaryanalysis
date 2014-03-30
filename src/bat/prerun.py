@@ -594,7 +594,7 @@ def verifyWOFF(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars
 		newtags.append('resource')
 	return newtags
 
-## very simplistic verifier for some TrueType fonts
+## very simplistic verifier for OpenType fonts
 def verifyOTF(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
 	newtags = []
 	if not 'binary' in tags:
@@ -605,6 +605,28 @@ def verifyOTF(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 		return newtags
 	if not 0 in offsets['otf']:
 		return newtags
+
+	## sanity check: list the tables and see if offset + length
+	## matches the file length
+	filesize = os.stat(filename).st_size
+	p = subprocess.Popen(['ttx', '-l', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		return newtags
+	lengthmatch = False
+	for l in stanout.strip().split('\n')[3:]:
+		ttfsplits = l.strip().split()
+		try:
+			ttflength = int(ttfsplits[2])
+			ttfoffset = int(ttfsplits[3])
+			if ttflength + ttfoffset == filesize:
+				lengthmatch = True
+				break
+		except:
+			return newtags
+	if not lengthmatch:
+		return newtags
+
 	## first create a temporary directory where ttx can write its temporary files
 	fontdir = tempfile.mkdtemp(dir=unpacktempdir)
 	## now check if it is a valid file by running ogginfo
