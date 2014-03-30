@@ -46,13 +46,14 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, debug=False, envvar
 		for key in marker_keys:
 			if not fsmagic.fsmagic.has_key(key):
 				continue
-			res = databuffer.find(fsmagic.fsmagic[key])
+			bufkey = fsmagic.fsmagic[key]
+			res = databuffer.find(bufkey)
 			if res == -1:
 				continue
 			else:
 				while res != -1:
 					offsets[key].add(offset + res)
-					res = databuffer.find(fsmagic.fsmagic[key], res+1)
+					res = databuffer.find(bufkey, res+1)
 		## move the offset 99950
 		datafile.seek(offset + 99950)
 		## read 100000 bytes with a 50 bytes overlap with the previous
