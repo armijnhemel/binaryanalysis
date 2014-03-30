@@ -118,9 +118,10 @@ There are two formats in which \texttt{bat-scan} can output its results:
 
 \begin{enumerate}
 \item dump file containing program state, complete unpacked directory tree
-containing all unpacked data (unless \texttt{outputlite} was set), plus
-possibly some extra generated data, such as pictures and more reporting. These
-dumps are meant to be used by \texttt{batgui}. This is the preferred format.
+containing all unpacked data (unless \texttt{outputlite} was set to
+\texttt{yes}), plus possibly some extra generated data, such as pictures and
+more reporting. These dumps are meant to be used by \texttt{batgui}. This is
+the preferred format.
 \item XML file (optional/configurable)
 \end{enumerate}
 
@@ -621,14 +622,14 @@ processors = 2
 Another setting in this section is \texttt{outputlite}:
 
 \begin{verbatim}
-outputlite = no
+outputlite = yes
 \end{verbatim}
 
-It defaults to \texttt{no}. If set to \texttt{yes} the output archive will omit
+It defaults to \texttt{yes}. If set to \texttt{yes} the output archive will omit
 a full copy of the unpacked data, significantly decreasing the size of the
 output archive, but making it harder to do a ``post mortem'' on the unpacked
-data (a new analysis should be run to get it again). Future versions of BAT
-might change this setting to \texttt{yes}.
+data (a new analysis should be run to get it again). In previous versions of BAT
+this setting defaulted to \texttt{no}.
 
 There are two settings that determine where the code of the optional XML pretty
 printer can be found:
@@ -2261,18 +2262,21 @@ I/O intensive.
 
 \subsection{Use \texttt{outputlite}}
 
-Using the default configuration the original unpacked data is included into
-the result archive. This is done to make it easier to do a post mortem after a
-scan. The original data can take up a lot of space, since every original file,
-plus everything that might have been extracted from that file, will be
-included, which leads to large archives and long associated packing time.
+Using the default configuration the original unpacked data is not included into
+the result archive.
+
+There are situations where it makes sense to include the data into the result
+archive, for example to make it easier to do a ``post mortem'' after a scan.
+The original data can take up a lot of space, since every original file, plus
+everything that might have been extracted from that file, will be included,
+which leads to large archives and long associated packing time.
 
 It also has performance impact on the BAT viewer, which needs to unpack some
 data from the archive. The smaller the archive is, the faster unpacking is.
 
 If the original data and the unpacked data is not relevant, then setting the
 option \texttt{outputlite} to \texttt{yes} in the section \texttt{[batconfig]}
-is recommended:
+is highly recommended:
 
 \begin{verbatim}
 outputlite = yes
