@@ -25,6 +25,7 @@ type        = prerun
 module      = bat.prerun
 method      = searchXML
 priority    = 2
+noscan      = elf:graphics:compressed:font:java:sqlite3:audio:video
 description = Check XML validity
 enabled     = yes
 
