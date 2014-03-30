@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2009-2013 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2009-2014 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -16,6 +16,7 @@ import extractor
 import xml.dom.minidom
 
 ## generic searcher for certain marker strings
+## TODO: implement overlap between subsequent buffer reads
 def genericSearch(path, markerDict, blacklist=[], unpacktempdir=None):
 	results = []
         try:
