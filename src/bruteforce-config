@@ -6,7 +6,7 @@
 multiprocessing = yes
 module = bat.simpleprettyprint
 output = prettyprintresxml
-outputlite = no
+outputlite = yes
 
 ############################
 ### viewer configuration ###
