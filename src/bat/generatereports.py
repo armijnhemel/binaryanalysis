@@ -558,6 +558,9 @@ def generatereports(unpackreports, scantempdir, topleveldir, processors, debug=F
 			continue
 		filehashes.add(filehash)
 
+	if len(filehashes) == 0:
+		return
+
 	unmatchedpicklespackages = set()
 	picklespackages = set()
 	picklehashes = {}
