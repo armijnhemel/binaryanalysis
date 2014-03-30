@@ -267,53 +267,46 @@ def xmlPrettyPrintWindowsDeps(res, root, envvars=None):
 
 ## method to extract meta information from PDF files
 def scanPDF(path, tags, blacklist=[], debug=False, envvars=None, unpacktempdir=None):
-	## we only want to scan whole PDF files. If anything has been carved from
-	## it, we don't want to see it. Blacklists are a good indicator, but we
-	## should have some way to prevent other scans from analysing this file.
+	## Only consider whole PDF files. If anything has been carved from
+	## it, skip it. Blacklists are a good indicator.
 	if blacklist != []:
 		return None
-	ms = magic.open(magic.MAGIC_NONE)
-	ms.load()
-	mstype = ms.file(path)
-	ms.close()
-	if not 'PDF document' in mstype:
-                return None
-	else:
-		p = subprocess.Popen(['pdfinfo', "%s" % (path,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-		if p.returncode != 0:
-                	return
-		else:
-			pdfinfo = {}
-			pdflines = stanout.rstrip().split("\n")
-			for pdfline in pdflines:
-				pdfsplit = pdfline.split(":", 1)
-				if len(pdfsplit) != 2:
-					continue
-				(tag, value) = pdfsplit
-				if tag == "Title":
-					pdfinfo['title'] = value.strip()
-				if tag == "Author":
-					pdfinfo['author'] = value.strip()
-				if tag == "Creator":
-					pdfinfo['creator'] = value.strip()
-				if tag == "CreationDate":
-					pdfinfo['creationdate'] = value.strip()
-				if tag == "Producer":
-					pdfinfo['producer'] = value.strip()
-				if tag == "Tagged":
-					pdfinfo['tagged'] = value.strip()
-				if tag == "Pages":
-					pdfinfo['pages'] = int(value.strip())
-				if tag == "Page size":
-					pdfinfo['pagesize'] = value.strip()
-				if tag == "Encrypted":
-					pdfinfo['encrypted'] = value.strip()
-				if tag == "Optimized":
-					pdfinfo['optimized'] = value.strip()
-				if tag == "PDF version":
-					pdfinfo['version'] = value.strip()
-			return (['pdfinfo'], pdfinfo)
+	if not 'pdf' in tags:
+		return None
+	p = subprocess.Popen(['pdfinfo', "%s" % (path,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+               	return
+	pdfinfo = {}
+	pdflines = stanout.rstrip().split("\n")
+	for pdfline in pdflines:
+		pdfsplit = pdfline.split(":", 1)
+		if len(pdfsplit) != 2:
+			continue
+		(tag, value) = pdfsplit
+		if tag == "Title":
+			pdfinfo['title'] = value.strip()
+		if tag == "Author":
+			pdfinfo['author'] = value.strip()
+		if tag == "Creator":
+			pdfinfo['creator'] = value.strip()
+		if tag == "CreationDate":
+			pdfinfo['creationdate'] = value.strip()
+		if tag == "Producer":
+			pdfinfo['producer'] = value.strip()
+		if tag == "Tagged":
+			pdfinfo['tagged'] = value.strip()
+		if tag == "Pages":
+			pdfinfo['pages'] = int(value.strip())
+		if tag == "Page size":
+			pdfinfo['pagesize'] = value.strip()
+		if tag == "Encrypted":
+			pdfinfo['encrypted'] = value.strip()
+		if tag == "Optimized":
+			pdfinfo['optimized'] = value.strip()
+		if tag == "PDF version":
+			pdfinfo['version'] = value.strip()
+	return (['pdfinfo'], pdfinfo)
 
 def pdfPrettyPrint(res, root, envvars=None):
 	tmpnode = root.createElement('pdfinfo')
