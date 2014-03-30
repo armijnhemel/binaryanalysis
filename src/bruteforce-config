@@ -142,7 +142,7 @@ type        = prerun
 module      = bat.prerun
 method      = verifyMP4
 magic       = mp4
-priority    = 1
+priority    = 3
 noscan      = elf:graphics:font:java:sqlite3
 description = Check if file is a valid MP4 file
 enabled     = yes
@@ -151,7 +151,7 @@ enabled     = yes
 type        = prerun
 module      = bat.prerun
 method      = verifyOgg
-priority    = 1
+priority    = 3
 magic       = ogg
 noscan      = elf:graphics:font:java:sqlite3
 description = Check if file is a valid Ogg file
@@ -895,7 +895,7 @@ envvars     = BAT_REPORTDIR=/tmp/images
 description = Generate reports of results of ranking
 storetarget = reports
 storedir    = /tmp/images
-storetype   = -unmatched.html.gz:-unique.html.gz:-names.html.gz:-functionnames.html.gz
+storetype   = -assigned.html.gz:-unmatched.html.gz:-unique.html.gz:-names.html.gz:-functionnames.html.gz
 cleanup     = yes
 priority    = 1
 
