@@ -88,23 +88,19 @@ def genericSearch(path, markerDict, blacklist=[], unpacktempdir=None):
 ## nearly always to determine which library in which path is used, since most installations
 ## don't change the default search paths.
 def searchDynamicLibs(path, tags, blacklist=[], debug=False, envvars=None, unpacktempdir=None):
-	ms = magic.open(magic.MAGIC_NONE)
-	ms.load()
-	mstype = ms.file(path)
-	ms.close()
-	if "ELF" in mstype:
-		libs = []
-		p = subprocess.Popen(['readelf', '-d', "%s" % (path,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-		if p.returncode != 0:
-                	return
-		for line in stanout.split('\n'):
-			if "Shared library:" in line:
-				libs.append(line.split(': ')[1][1:-1])
-		if libs == []:
-			return None
-		else:
-			return (['libs'], libs)
+	if not 'elf' in tags:
+		return
+	libs = []
+	p = subprocess.Popen(['readelf', '-d', "%s" % (path,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+               	return
+	for line in stanout.split('\n'):
+		if "Shared library:" in line:
+			libs.append(line.split(': ')[1][1:-1])
+	if libs == []:
+		return None
+	return (['libs'], libs)
 
 def dynamicLibsPrettyPrint(res, root, envvars=None):
 	tmpnode = root.createElement('libs')
@@ -120,18 +116,15 @@ def dynamicLibsPrettyPrint(res, root, envvars=None):
 ## This is necessary because sometimes leftovers from different products (and
 ## different architectures) can be found in one firmware.
 def scanArchitecture(path, tags, blacklist=[], debug=False, envvars=None, unpacktempdir=None):
-	ms = magic.open(magic.MAGIC_NONE)
-	ms.load()
-	mstype = ms.file(path)
-	ms.close()
-	if "ELF" in mstype:
-		p = subprocess.Popen(['readelf', '-h', "%s" % (path,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-		if p.returncode != 0:
-			return
-		for line in stanout.split('\n'):
-			if "Machine:" in line:
-				return (['architecture'], line.split(':')[1].strip())
+	if not 'elf' in tags:
+		return
+	p = subprocess.Popen(['readelf', '-h', "%s" % (path,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		return
+	for line in stanout.split('\n'):
+		if "Machine:" in line:
+			return (['architecture'], line.split(':')[1].strip())
 
 def searchLoadLin(path, tags, blacklist=[], debug=False, envvars=None, unpacktempdir=None):
 	markerStrings = {'loadlin': [ 'Ooops..., size of "setup.S" has become too long for LOADLIN,'
