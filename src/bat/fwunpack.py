@@ -1303,26 +1303,29 @@ def searchUnpackRomfs(filename, tempdir=None, blacklist=[], offsets={}, debug=Fa
         return (diroffsets, blacklist, [], hints)
 
 def unpackRomfs(filename, offset, tempdir=None, unpacktempdir=None, blacklist=[]):
+	## First check the size of the header. If it has some
+	## bizarre value (like bigger than the file it can unpack)
+	## it is not a valid romfs file system
+	romfsfile = open(filename)
+	romfsfile.seek(offset)
+	romfsdata = romfsfile.read(12)
+	romfsfile.close()
+	if len(romfsdata) < 12:
+		return None
+	romfssize = struct.unpack('>L', romfsdata[8:12])[0]
+
+	if romfssize > os.stat(filename).st_size:
+		return None
+
+	## It could be a valid romfs, so unpack
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
 	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
 
-	## sanity check
-	## First check the size of the header. If it has some
-	## bizarre value (like bigger than the file it can unpack)
-	## it is not a valid romfs file system
-	romfsfile = open(tmpfile[1])
-	romfsdata = romfsfile.read(12)
-	romfsfile.close()
-	if len(romfsdata) < 12:
-		os.unlink(tmpfile[1])
-		if tempdir == None:
-			os.rmdir(tmpdir)
-		return None
-	romfssize = struct.unpack('>L', romfsdata[8:12])[0]
-
+	## Compare the value of the header again, but now with the
+	## unpacked file.
 	if romfssize > os.stat(tmpfile[1]).st_size:
 		os.unlink(tmpfile[1])
 		if tempdir == None:
@@ -1340,14 +1343,14 @@ def unpackRomfs(filename, offset, tempdir=None, unpacktempdir=None, blacklist=[]
 			os.rmdir(tmpdir)
 		shutil.rmtree(tmpdir2)
 		return None
-	## then we move all the contents using shutil.move()
+	## then move all the contents using shutil.move()
 	mvfiles = os.listdir(tmpdir2)
 	for f in mvfiles:
 		shutil.move(os.path.join(tmpdir2, f), tmpdir)
-	## then we cleanup the temporary dir
+	## then cleanup the temporary dir
 	shutil.rmtree(tmpdir2)
 
-	## determine the size
+	## determine the size and cleanup
 	datafile = open(tmpfile[1])
 	datafile.seek(8)
 	sizedata = datafile.read(4)
