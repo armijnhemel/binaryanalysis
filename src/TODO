@@ -77,7 +77,7 @@ BOTTLENECKS/HIGH PRIORITY:
 5. verify and tag Android resources.arsc
 6. rework datastructures of ranking information (strings, function names, variables) so they are all similar
 7. createbatarchive.py: add option to set unpackdir (to for example ramdisk)
-8. jffs2 unpacking: try to filter out false positives earlier by looking at a small number of bytes before copying and unpacking the file
+8. clean up for tagKnownExtension, add more extensions if possible. Research big firmwares for this to see which extensions to focus on first.
 9. research/fix priority for Minix file system
 10. don't recreate ELF graphs (model for every ELF binary), but reuse graphs of dependencies. This would need a topological sort.
 11. process UNSCANNED_DUPLICATE_FILES from BAT archives in createdb.py. This is needed if some of the unscanned duplicate files need to be processed.
@@ -88,4 +88,3 @@ BOTTLENECKS/HIGH PRIORITY:
 16. better report non unique matched strings which are not clones
 17. run jcf-dump in chunks for Java class files whenever possible, preventing launching a jcf-dump process per class file
 18. handle "disk full" and other errors
-19. clean up for tagKnownExtension, add more extensions if possible. Research big firmwares for this to see which extensions to focus on first.

@@ -1,3 +1,9 @@
+2014-03-29
+* replace own counters with collections.Counter()
+* add sanity check for JFFS2 inodes to filter out false positives earlier and
+preventing copying data unnecessarily
+* change priorities for checkXML and a few other prerun checks
+
 2014-03-28
 * add tagKnownExtension to quickly verify files (currently only ZIP files) to
 prevent genericMarkerSearch to run for big files
