@@ -306,6 +306,9 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 			continue
 		rankingfiles.append(i)
 
+	if len(rankingfiles) == 0:
+		return
+
 	pickles = set()
 	piepickles = set()
 	piepicklespackages = set()
