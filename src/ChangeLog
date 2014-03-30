@@ -1,3 +1,12 @@
+2014-03-30
+* rework checks for OpenType font data
+* run some sanity checks in fwunpack.py earlier to prevent data being copied
+needlessly
+* return earlier in generateimages.py and generatereports.py if there are no
+ranking results
+* rework PDF processing in checks.py
+* rework ELF dynamic lib searching and architecture checks in checks.py
+
 2014-03-29
 * replace own counters with collections.Counter()
 * add sanity check for JFFS2 inodes to filter out false positives earlier and
