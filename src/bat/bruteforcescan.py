@@ -165,7 +165,7 @@ def tagKnownExtension(filename):
 	return offsets
 
 ## scan a single file, possibly unpack and recurse
-def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optmagicscans, processid, hashdict, llock):
+def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optmagicscans, processid, hashdict, llock, unpacktempdir):
 	prerunignore = {}
 	prerunmagic = {}
 	for prerunscan in prerunscans:
@@ -321,7 +321,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 			else:
 				envvars = None
 			exec "from %s import %s as bat_%s" % (module, method, method)
-			scantags = eval("bat_%s(filetoscan, tempdir, tags, offsets, debug=debug, envvars=envvars)" % (method))
+			scantags = eval("bat_%s(filetoscan, tempdir, tags, offsets, debug=debug, envvars=envvars, unpacktempdir=unpacktempdir)" % (method))
 			## append the tag results. These will be used later to be able to specifically filter
 			## out files
 			if scantags != []:
@@ -568,7 +568,7 @@ def postrunscan((filetoscan, unpackreports, scans, scantempdir, topleveldir, deb
 		module = postrunscan['module']
 		method = postrunscan['method']
 		if debug:
-			print >>sys.stderr, module, method, filetoscan
+			print >>sys.stderr, module, method, filetoscan, datetime.datetime.utcnow().isoformat()
 			sys.stderr.flush()
 		## use the environment to pass extra information
 		if postrunscan.has_key('envvars'):
@@ -887,8 +887,10 @@ def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=Fa
 def runscan(scans, scan_binary):
 	if scans['batconfig']['tempdir'] != None:
 		topleveldir = tempfile.mkdtemp(dir=scans['batconfig']['tempdir'])
+		unpacktempdir = scans['batconfig']['tempdir']
 	else:
 		topleveldir = tempfile.mkdtemp()
+		unpacktempdir = None
 	os.makedirs("%s/data" % (topleveldir,))
 	scantempdir = "%s/data" % (topleveldir,)
 	shutil.copy(scan_binary, scantempdir)
@@ -970,7 +972,7 @@ def runscan(scans, scan_binary):
 	hashdict = scanmanager.dict()
 	map(lambda x: scanqueue.put(x), scantasks)
 	for i in range(0,processamount):
-		p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], magicscans, optmagicscans, i, hashdict, lock))
+		p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], magicscans, optmagicscans, i, hashdict, lock, unpacktempdir))
 		processpool.append(p)
 		p.start()
 
@@ -1006,8 +1008,6 @@ def runscan(scans, scan_binary):
 	tagdict = {}
 	finalscans = []
 	if scans['leafscans'] != []:
-		unpacktempdir = scans['batconfig']['tempdir']
-
 		if scans['batconfig']['multiprocessing']:
 			parallel = True
 		else:
