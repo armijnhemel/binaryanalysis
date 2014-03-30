@@ -890,23 +890,22 @@ def unpackCab(filename, offset, tempdir=None, blacklist=[]):
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
 
-        tmpdir = unpacksetup(tempdir)
-        tmpfile = tempfile.mkstemp(dir=tmpdir)
-        os.fdopen(tmpfile[0]).close()
-
-        unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
-
-	cab = file(tmpfile[1], "r")
+	cab = file(filename, "r")
+	cab.seek(offset)
 	buffer = cab.read(100)
 	cab.close()
 
 	mstype = ms.buffer(buffer)
 	if "Microsoft Cabinet archive data" not in mstype:
 		ms.close()
-		os.unlink(tmpfile[1])
-		if tempdir == None:
-			os.rmdir(tmpdir)
 		return None
+
+	tmpdir = unpacksetup(tempdir)
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.fdopen(tmpfile[0]).close()
+
+	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
+
 	p = subprocess.Popen(['cabextract', '-d', tmpdir, tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
@@ -1826,7 +1825,6 @@ def unpackSquashfsWithLZMA(filename, offset, command, tmpdir):
 		## a top level "pruning" script :-(
 		squashsize = 1
 		return (tmpdir, squashsize)
-	pass
 
 ## squashfs variant from Atheros, with LZMA
 def unpackSquashfsAtherosLZMA(filename, offset, tmpdir):
@@ -2300,7 +2298,7 @@ def unpackCompress(filename, offset, tempdir=None, compress_tmpdir=None, blackli
 			os.rmdir(tmpdir)
 		return None
 	if compress_tmpdir != None:
-		## create the directory and move the LZMA file
+		## create the directory and move the compressed file
 		try:
 			os.makedirs(tmpdir)
 		except OSError, e:
