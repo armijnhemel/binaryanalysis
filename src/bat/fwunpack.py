@@ -770,7 +770,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 			## were concatenated.
 			offset = offsets['pkbac'][0]
 			tmpdir = dirsetup(tempdir, filename, "exe", counter)
-			res = unpack7z(filename, 0, tmpdir)
+			res = unpack7z(filename, 0, tmpdir, blacklist)
 			if res != None:
 				diroffsets.append((res, 0, os.stat(filename).st_size))
 				blacklist.append((0, os.stat(filename).st_size))
@@ -801,7 +801,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 	## Ideally we should also do something with innounp
 	## As a last resort try 7-zip
 	tmpdir = dirsetup(tempdir, filename, "exe", counter)
-	res = unpack7z(filename, 0, tmpdir)
+	res = unpack7z(filename, 0, tmpdir, blacklist)
 	if res != None:
 		diroffsets.append((res, 0, os.stat(filename).st_size))
 		blacklist.append((0, os.stat(filename).st_size))
@@ -939,8 +939,8 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[], offsets={}, debug=False
 		return ([], blacklist, [], hints)
 
 	## for now only try to unpack if 7z starts at offset 0
-	if offsets['7z'][0] != 0:
-		return ([], blacklist, [], hints)
+	#if offsets['7z'][0] != 0:
+	#	return ([], blacklist, [], hints)
 
 	counter = 1
 	diroffsets = []
@@ -949,18 +949,18 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[], offsets={}, debug=False
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "7z", counter)
-		res = unpack7z(filename, offset, tmpdir)
+		res = unpack7z(filename, offset, tmpdir, blacklist)
 		if res != None:
-			diroffsets.append((res, offset, 0))
+			(size7s, resdir) = res
+			diroffsets.append((resdir, offset, size7s))
 			counter = counter + 1
-			break
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [], hints)
 
 
-def unpack7z(filename, offset, tempdir=None):
+def unpack7z(filename, offset, tempdir=None, blacklist=[]):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
 	## Assumes (for now) that 7z is in the path
@@ -968,7 +968,7 @@ def unpack7z(filename, offset, tempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	unpackFile(filename, offset, tmpfile[1], tmpdir)
+	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
 
 	param = "-o%s" % tmpdir
 	p = subprocess.Popen(['7z', param, '-l', '-y', 'x', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -988,7 +988,13 @@ def unpack7z(filename, offset, tempdir=None):
 			os.rmdir(tmpdir)
 		return None
 	os.unlink(tmpfile[1])
-	return tmpdir
+	sizeres = re.search("Compressed:\s+(\d+)", stanout)
+	if sizeres != None:
+		size7s = int(sizeres.groups()[0])
+	else:
+		size7s = 0
+	
+	return (size7s, tmpdir)
 
 ## unpack lzip archives.
 ## This method returns a blacklist.
