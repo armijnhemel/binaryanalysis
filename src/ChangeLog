@@ -1,3 +1,6 @@
+2014-03-31
+* rework 7z unpacking
+
 2014-03-30
 * rework checks for OpenType font data
 * run some sanity checks in fwunpack.py earlier to prevent data being copied

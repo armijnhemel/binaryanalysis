@@ -11,7 +11,7 @@ file systems:
 
 compression/executables:
 * E00
-* 7z only works if a whole file is compressed with 7z. Rework and test with D-Link firmware DSL-524T_FW_V3.00B01T02.UK-A.20060621.zip
+* add special 7z case and test with D-Link firmware DSL-524T_FW_V3.00B01T02.UK-A.20060621.zip
 * better support for ZIP file comments http://www.pkware.com/documents/casestudies/APPNOTE.TXT
 * use python-pefile for PE analysis
 * NBG5615 uImage
