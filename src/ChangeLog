@@ -6,6 +6,7 @@ needlessly
 ranking results
 * rework PDF processing in checks.py
 * rework ELF dynamic lib searching and architecture checks in checks.py
+* change outputlite default to 'yes'
 
 2014-03-29
 * replace own counters with collections.Counter()

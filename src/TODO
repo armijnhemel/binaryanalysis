@@ -58,12 +58,12 @@ HTML generation:
 * add license information if available
 
 misc:
-* replay script to unpack firmware based on only the pickle with unpacking data. After this set the default of outputlite to 'yes'
+* replay script to unpack firmware based on only the pickle with unpacking data
 * add configuration option to set temporary directory prefix for all scans
 * add piecharts/reports per directory that summarise what is inside a directory (recursively, perhaps only if something was unpacked)
 * add per scan debug to allow better custom debugging
 * test on latest OpenSUSE
-* check dependencies for Ubuntu 13.10
+* check dependencies for Ubuntu 14.04 LTS
 * test on latest Debian, make sure configurations/dependencies work
 * replace calls to dd, tail, head and others with truncate() where possible to prevent launching an external process
 * replace hardcoded options in reporting with values of 'storetarget'
@@ -86,5 +86,5 @@ BOTTLENECKS/HIGH PRIORITY:
 14. find versions of matched kernel function names and report
 15. store meta data about media files (PNG, GIF, MP3, etc.) in database as some of these files are quite package specific
 16. better report non unique matched strings which are not clones
-17. run jcf-dump in chunks for Java class files whenever possible, preventing launching a jcf-dump process per class file
+17. get rid of calls to python magic in kernel analysis checks, replace with readelf
 18. handle "disk full" and other errors
