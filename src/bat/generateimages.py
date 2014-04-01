@@ -314,8 +314,8 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 	piepicklespackages = set()
 	statpiepickles = set()
 	statpiepicklespackages = set()
-	funcpicklespackages = []
-	versionpicklespackages = []
+	funcpicklespackages = set()
+	versionpicklespackages = set()
 	picklehashes = {}
 	pickletofile = {}
 	funcfilehashpackage = {}
@@ -393,12 +393,12 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 					pickletofile[picklehash].append(filehash)
 				else:
 					pickletofile[picklehash] = [filehash]
-				versionpicklespackages.append((picklehash, package))
+				versionpicklespackages.add((picklehash, package))
 				os.unlink(tmppickle)
 			else:
 				shutil.move(tmppickle, pickledir)
 				pickles.add(picklehash)
-				versionpicklespackages.append((picklehash, package))
+				versionpicklespackages.add((picklehash, package))
 				picklehashes[picklehash] = os.path.basename(tmppickle)
 				if pickletofile.has_key(picklehash):
 					pickletofile[picklehash].append(filehash)
@@ -416,12 +416,12 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 					pickletofile[picklehash].append(filehash)
 				else:
 					pickletofile[picklehash] = [filehash]
-				funcpicklespackages.append((picklehash, package))
+				funcpicklespackages.add((picklehash, package))
 				os.unlink(tmppickle)
 			else:
 				shutil.move(tmppickle, pickledir)
 				pickles.add(picklehash)
-				funcpicklespackages.append((picklehash, package))
+				funcpicklespackages.add((picklehash, package))
 				picklehashes[picklehash] = os.path.basename(tmppickle)
 				if pickletofile.has_key(picklehash):
 					pickletofile[picklehash].append(filehash)
@@ -466,9 +466,6 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 				#print >>sys.stderr, "ERR", e
 				pass
 
-	funcpicklespackages = list(set(funcpicklespackages))
-	versionpicklespackages = list(set(versionpicklespackages))
-
 	generatetasks = map(lambda x: (picklehashes[x[0]], x[0], imagedir, pickledir), funcpicklespackages) + map(lambda x: (picklehashes[x[0]], x[0], imagedir, pickledir), versionpicklespackages)
 
 	results = pool.map(generateversionchart, set(generatetasks), 1)
@@ -479,16 +476,16 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 	funcpickletopackage = {}
 	for r in funcpicklespackages:
 		if funcpickletopackage.has_key(r[0]):
-			funcpickletopackage[r[0]].append(r[1])
+			funcpickletopackage[r[0]].add(r[1])
 		else:
-			funcpickletopackage[r[0]] = [r[1]]
+			funcpickletopackage[r[0]] = set([r[1]])
 	
 	versionpickletopackage = {}
 	for r in versionpicklespackages:
 		if versionpickletopackage.has_key(r[0]):
-			versionpickletopackage[r[0]].append(r[1])
+			versionpickletopackage[r[0]].add(r[1])
 		else:
-			versionpickletopackage[r[0]] = [r[1]]
+			versionpickletopackage[r[0]] = set([r[1]])
 
 	for r in set(results):
 		picklefilehash = r.split('.', 1)[0]
@@ -537,5 +534,8 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 			os.unlink(os.path.join(imagedir, r))
 
 	## cleanup
-	for i in set(map(lambda x: x[0], funcpicklespackages + versionpicklespackages)):
+	cleanpickles = set()
+	cleanpickles.update(map(lambda x: x[0], funcpicklespackages))
+	cleanpickles.update(map(lambda x: x[0], versionpicklespackages))
+	for i in cleanpickles:
 		os.unlink(os.path.join(pickledir, picklehashes[i]))
