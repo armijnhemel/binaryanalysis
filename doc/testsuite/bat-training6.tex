@@ -100,11 +100,7 @@ The ranking scan uses several caching databases:
 \item function names
 \end{itemize}
 
-These are automatically generated at runtime and will vastly speed up the same search later.
-
-The configuration setting \texttt{multiprocessing} should be set to \texttt{no}: multiple programs trying to update the same database does not work well.
-
-As soon as the caching databases are fully generated (or fully enough) \texttt{multiprocessing} can be set to \texttt{yes}.
+If caching databases are not found then the ranking code will be automatically disabled.
 }
 
 \begin{frame}[fragile]

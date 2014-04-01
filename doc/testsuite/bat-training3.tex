@@ -66,8 +66,8 @@ plus more to come.
 Unpacking scans try to extract file systems and compressed files, sometimes from a larger binary blob, by ``carving'' it from a larger binary. Currently some 30 file systems and compressed files are supported:
 
 \begin{itemize}
-\item file systems: cramfs, ext2/ext3/ext4, ISO9660, JFFS2, Minix (specific
-variant of v1), SquashFS (several variants), romfs, YAFFS2 (specific variants)
+\item file systems: Android sparse files, cramfs, ext2/ext3/ext4, ISO9660, JFFS2,
+Minix (specific variant of v1), SquashFS (many variants), romfs, YAFFS2 (specific variants)
 \item compressed files and executable formats: 7z, ar, ARJ, BASE64, BZIP2,
 compressed Flash, CAB, compress, CPIO, EXE (specific compression methods only),
 GZIP, InstallShield (old versions), LRZIP, LZIP, LZMA, LZO, RAR, RPM, serialized
@@ -86,7 +86,7 @@ Java, TAR, UPX, XZ, ZIP
 \item quick scan for identifiers of several collaborative software development sites (sourceforge, github, etcetera)
 \item Linux kernel version check
 \item BusyBox version check
-\item advanced string matching scan using information from a large database extracted from source code
+\item identifier extraction
 \item \dots
 \end{itemize}
 }
@@ -95,8 +95,8 @@ Java, TAR, UPX, XZ, ZIP
 \frametitle{Aggregate scans}
 
 \begin{itemize}
+\item advanced string matching scan using information from a large database extracted from source code
 \item finding duplicate files the entire scanned archive
-\item aggregating results of Java class files and assign to a JAR file
 \item checking correctness of declared dependencies in dynamically linked ELF files
 \item looking up version information and license information of found results, with optional version pruning
 \item generating reports of the results
@@ -126,7 +126,7 @@ The configuration file is in Windows INI format and contains several parts:
 \item general configuration
 \item configuration directives for ``prerun'' scans
 \item configuration directives for ``unpack'' scans
-\item configuration directives for per file scans
+\item configuration directives for ``leaf'' scans
 \item configuration directives for ``aggregate'' scans
 \item configuration directives for ``postrun'' scans
 \end{itemize}
@@ -164,7 +164,7 @@ There are four optional configuration settings:
 The configuration for each type of scan has a few mandatory options:
 
 \begin{itemize}
-\item \texttt{type} - \texttt{prerun}, \texttt{unpack}, \texttt{program} or \texttt{postrun}
+\item \texttt{type} - \texttt{prerun}, \texttt{unpack}, \texttt{leaf}, \texttt{aggregate} or \texttt{postrun}
 \item \texttt{module} - Python module (including package) the scan can be found
 \item \texttt{method} - the method for the scan
 \item \texttt{enabled} - \texttt{yes} enables a scan, \texttt{no} disables a scan
@@ -238,7 +238,7 @@ The following example is for querying a database to see if the name of the file 
 
 \begin{verbatim}
 [file2package]
-type        = program
+type        = leaf
 module      = bat.file2package
 method      = filename2package
 xmloutput   = xmlprettyprint
