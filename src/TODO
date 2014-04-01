@@ -86,5 +86,5 @@ BOTTLENECKS/HIGH PRIORITY:
 14. find versions of matched kernel function names and report
 15. store meta data about media files (PNG, GIF, MP3, etc.) in database as some of these files are quite package specific
 16. better report non unique matched strings which are not clones
-17. get rid of calls to python magic in kernel analysis checks, replace with readelf
+17 findlibs.py: fix architecture checks since right now they don't work
 18. handle "disk full" and other errors

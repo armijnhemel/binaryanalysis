@@ -1,3 +1,9 @@
+2014-04-01
+* extract more information from ELF files
+* replace calls to libmagic in kernelanalysis with tag lookups
+* some list -> set() conversions, don't store too much temporary data in
+generateimages.py unnecessarily
+
 2014-03-31
 * rework 7z unpacking
 
