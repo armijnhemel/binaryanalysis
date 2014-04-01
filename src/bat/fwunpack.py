@@ -44,10 +44,11 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 	if blacklist != []:
 		if length == 0:
 			lowest = extractor.lowestnextblacklist(offset, blacklist)
-			## if the blacklist is not empty set 'length' to
-			## the first entry in the blacklist following offset,
-			## but relative to offset
-			length=lowest-offset
+			if not lowest == 0:
+				## if the blacklist is not empty set 'length' to
+				## the first entry in the blacklist following offset,
+				## but relative to offset
+				length=lowest-offset
 	if offset == 0 and length == 0:
 		## use copy if we intend to *modify* tmpfile, or we end up
 		## modifying the orginal
@@ -91,8 +92,10 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 				if offset > (filesize - length):
 					p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmptmpfile[1],), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 					(stanout, stanerr) = p.communicate()
+					## TODO: replace with truncate(length)
 					p = subprocess.Popen(['dd', 'if=%s' % (tmptmpfile[1],), 'of=%s' % (tmpfile,), 'bs=%s' % (length,), 'count=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 					(stanout, stanerr) = p.communicate()
+					print >>sys.stderr, os.stat(tmpfile).st_size
 				else:
 					p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmptmpfile[1],), 'bs=%s' % (length+offset,), 'count=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 					(stanout, stanerr) = p.communicate()

@@ -57,6 +57,8 @@ def lowestnextblacklist(offset, blacklist):
 		if bl[0] > offset:
 			if bl[0] < lowest:
 				lowest = bl[0]
+	if lowest == sys.maxint:
+		return 0
 	return lowest
 
 ###
