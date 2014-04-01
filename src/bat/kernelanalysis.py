@@ -6,11 +6,7 @@
 
 import os, sys, string, re, subprocess, cPickle
 import extractor
-import magic
 import xml.dom.minidom
-
-ms = magic.open(magic.MAGIC_NONE)
-ms.load()
 
 def xmlprettyprint(res, root, envvars=None):
 	topnode = root.createElement("kernelchecks")
@@ -131,11 +127,8 @@ def findRedBoot(lines):
 ## extract the kernel version from the module
 ## TODO: merge with module license extraction
 def analyseModuleVersion(path, tags, blacklist=[], debug=False, envvars=[], unpacktempdir=None):
-	if not 'elf' in tags:
+	if not 'elfrelocatable' in tags:
 		return
-	## TODO: refactor
-	if not "relocatable" in ms.file(path):
-		return None
 	## 2.6 and later Linux kernel
 	p = subprocess.Popen(['/sbin/modinfo', "-F", "vermagic", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
@@ -154,9 +147,7 @@ def analyseModuleVersion(path, tags, blacklist=[], debug=False, envvars=[], unpa
 
 ## analyse a kernel module. Requires that the modinfo program from module-init-tools has been installed
 def analyseModuleLicense(path, tags, blacklist=[], debug=False, envvars=[], unpacktempdir=None):
-	if not 'elf' in tags:
-		return
-	if not "relocatable" in ms.file(path):
+	if not "elfrelocatable" in tags:
 		return None
 	p = subprocess.Popen(['/sbin/modinfo', "-F", "license", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         (stanout, stanerr) = p.communicate()

@@ -777,6 +777,13 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 				return newtags
 			else:
 				startprogramheader = int(res.groups()[0])
+		if "Type:" in i:
+			if "EXEC" in i:
+				newtags.append('elfexecutable')
+			elif "REL" in i:
+				newtags.append('elfrelocatable')
+			elif "DYN" in i:
+				newtags.append('elfdynamic')
 
 	## This does not work well, for example for Linux kernel modules
 	#if thisheadersize != startprogramheader:
