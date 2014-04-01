@@ -253,14 +253,18 @@ Note: \texttt{description} has been split for readability but is actually one li
 \begin{frame}[fragile]
 \frametitle{Aggregate scans configuration directive example}
 \begin{verbatim}
-[jars]
+[findlibs]
 type        = aggregate
-module      = bat.aggregatejars
-method      = aggregatejars
-noscan      = text:xml:graphics:pdf:audio:video
-envvars     = AGGREGATE_CLEAN=0
+module      = bat.findlibs
+method      = findlibs
+envvars     = BAT_IMAGEDIR=/tmp/images
+noscan      = text:xml:graphics:pdf:audio:video:mp4
 enabled     = yes
-priority    = 2
+storetarget = images
+storedir    = /tmp/images
+storetype   = -graph.png
+cleanup     = yes
+priority    = 5
 \end{verbatim}
 \end{frame}
 
@@ -289,7 +293,7 @@ Note: \texttt{envvars} has been split for readability but is actually one line i
 The raw output of the Binary Analysis Tool is written as a tar archive. The tar archive consists of:
 
 \begin{itemize}
-\item full directory tree of unpacked files (if any), unless \texttt{outputlite} was specified
+\item full directory tree of unpacked files (if any), if \texttt{outputlite} was specified (default: \texttt{no})
 \item gzip compressed Python pickles with the results of the scan
 \item (optional) pictures and reports with results of the scan
 \end{itemize}

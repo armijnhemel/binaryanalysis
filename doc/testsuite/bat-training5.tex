@@ -61,6 +61,7 @@ A prerun scan takes 5 parameters:
 \item \texttt{tags} (default \texttt{[]}) - any existing tags for this file (from other prerun scans)
 \item \texttt{offsets} (default \texttt{\{\}}) - offsets of identifiers
 \item \texttt{envvars} (default \texttt{None}) - optional environment variables
+\item \texttt{unpacktempdir} (default \texttt{None}) - optional directory for writing temporary files
 \end{itemize}
 The return value should be a list of tags (strings), or an empty list.
 }
@@ -69,7 +70,8 @@ The return value should be a list of tags (strings), or an empty list.
 \frametitle{Prerun scan example}
 \begin{verbatim}
 def searchXML(filename, tempdir=None, tags=[],
-              offsets={}, envvars=None):
+              offsets={}, envvars=None,
+              unpacktempdir=None):
 
     newtags = []
 

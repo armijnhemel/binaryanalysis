@@ -45,21 +45,18 @@ The parameter \texttt{-o} allows you to set an origin of where the source was do
 
 \frame{
 \frametitle{Generating the database}
-The script to generate the database is called \texttt{batchextractprogramstrings.py}. It can be found in the source repository of BAT in the directory \texttt{maintenance}. It can extract a lot more than just string constants:
+The script to generate the database is called \texttt{createdb.py}. It can be found in the source repository of BAT in the directory \texttt{maintenance}. It can extract:
 
 \begin{itemize}
 \item string constants (\texttt{xgettext}) and function names (\texttt{ctags})
 \item license information (using Ninka and FOSSology)
 \item copyright information (using FOSSology)
+\item configuration from Linux kernel Makefiles
 \end{itemize}
 
 It can be invoked as follows:
 
-\texttt{python batchextractprogramstrings.py -z -d /path/to/database -f /path/to/dir/with/files}
-
-For license information Ninka and FOSSology should be installed. The \texttt{-l} flag should be added to invocation, plus \texttt{-n} to specify the position for a caching database for Ninka.
-
-For copyright information and FOSSology should be installed. The \texttt{-c} flag should be added to invocation.
+\texttt{python createdb.py -c /path/to/configurationfile -d /path/to/database -f /path/to/dir/with/files}
 }
 
 \frame{
