@@ -291,7 +291,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 	if scanenv.get('AGGREGATE_IMAGE_SYMLINK', 0) == '1':
 		symlinks = True
 
-	rankingfiles = []
+	filehashes = set()
 
 	## filter out the files which don't have ranking results
 	for i in unpackreports:
@@ -304,9 +304,9 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 		filehash = unpackreports[i]['sha256']
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue
-		rankingfiles.append(i)
+		filehashes.add(filehash)
 
-	if len(rankingfiles) == 0:
+	if len(filehashes) == 0:
 		return
 
 	pickles = set()
@@ -320,8 +320,6 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, debug=Fa
 	pickletofile = {}
 	funcfilehashpackage = {}
 	verfilehashpackage = {}
-
-	filehashes = set(map(lambda x: unpackreports[x]['sha256'], rankingfiles))
 
 	## default values for cut off percentages
 	minpercentagecutoff = 0.5
