@@ -1,3 +1,6 @@
+2014-04-02
+* rename bruteforce-config to bat-scan.config
+
 2014-04-01
 * extract more information from ELF files
 * replace calls to libmagic in kernelanalysis with tag lookups

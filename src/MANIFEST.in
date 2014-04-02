@@ -1,4 +1,4 @@
-include bruteforce-config
+include bat-scan.config
 include configs/*
 include bat/*
 include README
