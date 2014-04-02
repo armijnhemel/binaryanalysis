@@ -1,3 +1,17 @@
+bat (17.0) unstable; urgency=high
+
+  * add Android file system unpacking
+  * fix Java aggregation
+  * unescape output from jcf-dump
+  * prevent I/O for big file unpacking, resulting in big speed ups
+  * rename executables and configuration files
+  * split identifier extraction and identifier assignment
+  * optionally assign strings based on order in which they appear in the
+    binary
+  * much more (see ChangeLog)
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Wed, 2 Apr 2014 20:31:31 +0200
+
 bat (16.0) unstable; urgency=high
 
   * increased fidelity for Linux kernel scanning
