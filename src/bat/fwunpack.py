@@ -353,7 +353,7 @@ def unpackJffs2(filename, offset, tempdir=None, bigendian=False, jffs2_tmpdir=No
 	## If offset + size of the JFFS2 inode is blacklisted it is also not
 	## a valid JFFS2 file system
 	jffs2file = open(filename, 'r')
-	jffs2file.seek(4)
+	jffs2file.seek(offset+4)
 	jffs2buffer = jffs2file.read(4)
 	if not bigendian:
 		jffs2inodesize = struct.unpack('<I', jffs2buffer)[0]
