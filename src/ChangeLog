@@ -1,5 +1,9 @@
+2014-04-03
+* fix offset for JFFS2 unpacking
+
 2014-04-02
 * rename bruteforce-config to bat-scan.config
+* release BAT 17
 
 2014-04-01
 * extract more information from ELF files
