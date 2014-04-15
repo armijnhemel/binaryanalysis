@@ -1123,6 +1123,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 		uniquefilenames_tmp = []
 		## keep a backlog for strings that could be assigned possibly later
 		backlog = []
+		notclonesbacklog = []
 	else:
 		## sort the lines first, so it is easy to skip duplicates
 		lines.sort()
@@ -1391,6 +1392,8 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 					matchednotclones = True
 					if not usesourceorder:
 						linecount[line] = linecount[line] - 1
+					else:
+						notclonesbacklog.append((line, filenames))
 					continue
 				else:
 					for fn in filenames:
@@ -1453,10 +1456,19 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 							if not oldbacklogscore > scorecutoff:
 								matchednonassigned = matchednonassigned - 1
 							linecount[backlogline] = linecount[backlogline] - 1
-							## TODO: adapt matchednotclonelines and nonUniqueScore
+							for cl in notclonesbacklog:
+								(notclone, filenames) = cl
+								if notclone == backlogline:
+									matchednotclonelines -= 1
+									for fn in filenames:
+										fnkey = filenames[fn][0]
+										nonUniqueScore[fnkey] = nonUniqueScore.get(fnkey) - backlogscore
+									notclonesbacklog.remove(cl)
+									break
 						else:
 							break
 					backlog = []
+					notclonesbacklog = []
 			matched = True
 
 			## for statistics it's nice to see how many lines were matched
