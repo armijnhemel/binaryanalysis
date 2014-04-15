@@ -1,3 +1,7 @@
+2014-04-15
+* fix scoring for strings that were matchednotclones, but later directly
+assigned to a package
+
 2014-04-03
 * fix offset for JFFS2 unpacking
 
