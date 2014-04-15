@@ -391,6 +391,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 								## libraries to consider
 								filtersquash.append(target)
 				else:
+					## TODO: fix this. What was I thinking?
 					filtersquash = filter(lambda x: leafreports['architecture'] == leafreports['architecture'], squashedelffiles[l])
 				## now walk through the possible files that can resolve this dependency.
 				## First verify how many possible files are in 'filtersquash' have.
