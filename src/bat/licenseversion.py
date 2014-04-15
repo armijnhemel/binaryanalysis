@@ -1151,6 +1151,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 					matchednotclonelines += 1
 				else:
 					unmatchedlines += 1
+					linecount[line] = linecount[line] - 1
 				continue
 			uniquematch = False
 			matched = False
@@ -1210,6 +1211,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 				if len(scanline) < stringcutoff:
 					unmatched.append(line)
 					unmatchedlines += 1
+					linecount[line] = linecount[line] - 1
 					continue
 				res = conn.execute("select package, filename FROM stringscache WHERE programstring=?", (scanline,)).fetchall()
 				if len(res) != 0:
@@ -1223,6 +1225,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 						if len(scanline) < stringcutoff:
 							unmatched.append(line)
 							unmatchedlines += 1
+							linecount[line] = linecount[line] - 1
 							continue
 						res = conn.execute("select package, filename FROM stringscache WHERE programstring=?", (scanline,)).fetchall()
 						if len(res) != 0:
@@ -1238,6 +1241,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 					if len(scanline) < stringcutoff:
 						unmatched.append(line)
 						unmatchedlines += 1
+						linecount[line] = linecount[line] - 1
 						continue
 					res = conn.execute("select package, filename FROM stringscache WHERE programstring=?", (scanline,)).fetchall()
 					if len(res) != 0:
@@ -1253,6 +1257,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 						if len(scanline) < stringcutoff:
 							unmatched.append(line)
 							unmatchedlines += 1
+							linecount[line] = linecount[line] - 1
 							continue
 						res = conn.execute("select package, filename FROM stringscache WHERE programstring=?", (scanline,)).fetchall()
 						if len(res) != 0:
@@ -1279,6 +1284,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 		if len(res) == 0:
 			unmatched.append(line)
 			unmatchedlines += 1
+			linecount[line] = linecount[line] - 1
 			continue
 		if len(res) != 0:
 			## Assume:
