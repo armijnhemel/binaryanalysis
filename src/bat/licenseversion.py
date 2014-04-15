@@ -1177,6 +1177,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 					nonUniqueMatchLines.append(line)
 					matchednonassignedlines += 1
 					matchednonassigned = True
+					linecount[line] = linecount[line] - 1
 					continue
 
 		## if scoreres is None the line could still be something else like a kernel function, or a
