@@ -81,7 +81,7 @@ kernelexprs.append(re.compile("DMI_SYSFS_SEL_FIELD\s*\((\w+)", re.MULTILINE))
 kernelexprs.append(re.compile("^TRACE_EVENT\s*\(\s*(\w+),", re.MULTILINE))
 kernelexprs.append(re.compile("^\s*PARAM\(\s*(\w+)\)", re.MULTILINE))
 kernelexprs.append(re.compile("PROC\(\s*(\w+),", re.MULTILINE))
-kernelexprs.append(re.compile(" FORMAT\(\s*(\w+))", re.MULTILINE))
+kernelexprs.append(re.compile(" FORMAT\(\s*(\w+)\)", re.MULTILINE))
 kernelexprs.append(re.compile("SCHED_FEAT\(\s*(\w+),", re.MULTILINE))
 kernelexprs.append(re.compile("DECLARE_STATS_COUNTER\(\s*(\w+)\)", re.MULTILINE))
 kernelexprs.append(re.compile("power_attr\(\s*(\w+)\)", re.MULTILINE))
@@ -589,7 +589,7 @@ def unpack_verify(filedir, filename):
 
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
-def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir):
+def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes):
 	## unpack the archive. If it fails, cleanup and return.
 	## TODO: make temporary dir configurable
 	temporarydir = unpack(filedir, filename, unpackdir)
@@ -712,13 +712,14 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 		scanfiles = filter(lambda x: x != None, pool.map(filterfiles, scanfiles, 1))
 		## compute the hashes in parallel
 		## TODO: use filetohash if available
+		scanfiles = map(lambda x: x + (extrahashes,), scanfiles)
 		scanfile_result = filter(lambda x: x != None, pool.map(computehash, scanfiles, 1))
 		identical = True
 		## compare amount of checksums for this version and the one recorded in the database.
 		## If they are not equal the package is not identical.
 		origlen = len(conn.execute('''select sha256 from processed_file where package=? and version=?''', (package, version)).fetchall())
 		if len(scanfile_result) == origlen:
-			tasks = map(lambda x: (dbpath, package, version, x[2]), scanfile_result)
+			tasks = map(lambda x: (dbpath, package, version, x[2]['sha256']), scanfile_result)
 			nonidenticals = filter(lambda x: x[1] == False, pool.map(grabhash, tasks, 1))
 			if len(nonidenticals) != 0:
 				identical = False
@@ -740,7 +741,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 				cleanupdir(temporarydir)
 			return
 
-	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir)
+	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes)
 	if sqlres != None:
 		if sqlres != []:
 			## Add the file to the database: name of archive, sha256, packagename and version
@@ -829,16 +830,24 @@ def filterfiles((filedir, filename, pkgconf)):
 		return None
 	return (filedir, filename, extension, language)
 
-def computehash((filedir, filename, extension, language)):
+def computehash((filedir, filename, extension, language, extrahashes)):
+	filehashes = {}
 	resolved_path = os.path.join(filedir, filename)
 	scanfile = open(resolved_path, 'r')
 	h = hashlib.new('sha256')
 	h.update(scanfile.read())
 	scanfile.close()
-	filehash = h.hexdigest()
-	return (filedir, filename, filehash, extension, language)
+	filehashes['sha256'] = h.hexdigest()
+	for i in extrahashes:
+		scanfile = open(resolved_path, 'r')
+		h = hashlib.new(i)
+		h.update(scanfile.read())
+		scanfile.close()
+		filehashes[i] = h.hexdigest()
+		
+	return (filedir, filename, filehashes, extension, language)
 
-def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir):
+def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes):
 	osgen = os.walk(srcdir)
 
 	pkgconf = packageconfig.get(package,[])
@@ -874,18 +883,19 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			(scanfilesdir, scanfilesfile, scanfileextension, language) = i
 			if filetohash.has_key(os.path.join(scanfilesdir[srcdirlen:], scanfilesfile)):
 				scanhash = filetohash[(os.path.join(scanfilesdir[srcdirlen:], scanfilesfile))]
-				scanfile_result.append((scanfilesdir, scanfilesfile, scanhash, scanfileextension, language))
+				scanfile_result.append((scanfilesdir, scanfilesfile, {'sha256': scanhash}, scanfileextension, language))
 			else:
-				new_scanfiles.append((scanfilesdir, scanfilesfile, scanfileextension, language))
+				new_scanfiles.append((scanfilesdir, scanfilesfile, scanfileextension, language, extrahashes))
 		## sanity checks in case the MANIFEST file is incomplete
 		if new_scanfiles != []:
 			scanfile_result += filter(lambda x: x != None, pool.map(computehash, new_scanfiles, 1))
 	else:
+		scanfiles = map(lambda x: x + (extrahashes,), scanfiles)
 		scanfile_result = filter(lambda x: x != None, pool.map(computehash, scanfiles, 1))
 
 	#ninkaversion = "b84eee21cb"
 	ninkaversion = "1.1"
-	insertfiles = set()
+	insertfiles = []
 	tmpsha256s = set()
 	filehashes = {}
 	filestoscan = []
@@ -901,8 +911,9 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	if filetohash == {}:
 		addtofiletohash = True
 	for s in scanfile_result:
-		(path, filename, filehash, extension, language) = s
-		insertfiles.add((os.path.join(path[srcdirlen:],filename), filehash))
+		(path, filename, extractedfilehashes, extension, language) = s
+		filehash = extractedfilehashes['sha256']
+		insertfiles.append((os.path.join(path[srcdirlen:],filename), extractedfilehashes))
 		if addtofiletohash:
 			filetohash[os.path.join(path[srcdirlen:],filename)] = filehash
 
@@ -1191,7 +1202,17 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	conn.commit()
 
 	for i in insertfiles:
-		cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, i[0], i[1]))
+		filehash = i[1]['sha256']
+		cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, i[0], filehash))
+		if len(i[1]) != 1:
+			cursor.execute('''select sha256 from hashconversion where sha256=? LIMIT 1''', (filehash,))
+			if len(cursor.fetchall()) == 0:
+				cursor.execute('''insert into hashconversion (sha256) values (?)''', (filehash,))
+				for k in i[1].keys():
+					if k == 'sha256':
+						continue
+					query = "update hashconversion set %s='%s' where sha256=?" % (k, i[1][k])
+					cursor.execute(query, (filehash,))
 	conn.commit()
 
 	if batarchive:
@@ -1970,6 +1991,15 @@ def main(argv):
 				unpackdir = config.get(section, 'unpackdir')
 			except:
 				unpackdir = None
+			try:
+				extrahashes = []
+				sec = config.get(section, 'extrahashes')
+				hashvalues = sec.split(':')
+				for h in hashvalues:
+					if h in hashlib.algorithms:
+						extrahashes.append(h)
+			except:
+				extrahashes = []
 		else:
 			sec = config.get(section, 'configtype')
 			if sec != 'package':
@@ -2193,6 +2223,16 @@ def main(argv):
 			ninkaconn.commit()
 			ninkac.close()
 			ninkaconn.close()
+		if extrahashes != []:
+			c.execute('''create table if not exists hashconversion (sha256 text)''')
+			c.execute('''create index if not exists hashconversion_sha256_index on hashconversion(sha256);''')
+			for h in extrahashes:
+				## TODO: check whether or not these columns already exist
+				tablequery = "alter table hashconversion add column %s text;" % h
+				indexquery = "create index if not exists hashconversion_%s_index on hashconversion(%s)" % (h, h)
+				c.execute(tablequery)
+				c.execute(indexquery)
+			conn.commit()
 	except Exception, e:
 		print >>sys.stderr, e
 
@@ -2269,7 +2309,7 @@ def main(argv):
 			(package, version, filename, origin, filehash, batarchive) = i
 			if package != oldpackage:
 				oldres = []
-			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, masterdatabase, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir)
+			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, masterdatabase, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes)
 			if unpackres != None:
 				oldres = map(lambda x: x[2], unpackres)
 				oldpackage = package
