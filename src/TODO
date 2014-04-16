@@ -88,3 +88,4 @@ BOTTLENECKS/HIGH PRIORITY:
 16. better report non unique matched strings which are not clones
 17 findlibs.py: fix architecture checks since right now they don't work
 18. handle "disk full" and other errors
+19. add support for different hashes to createbatarchive.py

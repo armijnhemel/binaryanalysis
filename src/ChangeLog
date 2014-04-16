@@ -1,3 +1,7 @@
+2014-04-16
+* allow creation of a hash conversion table in createdb.py. Values are limited
+to hashes from hashlib in Python
+
 2014-04-15
 * fix scoring for strings that were matchednotclones, but later directly
 assigned to a package
