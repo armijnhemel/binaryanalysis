@@ -2040,7 +2040,7 @@ def main(argv):
 		copyrights = True
 		p2 = subprocess.Popen(["/usr/share/fossology/copyright/agent/copyright", "-h"], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 		(stanout, stanerr) = p2.communicate()
-		if "FATAL" in stanout:
+		if "FATAL" in stanout or "FATAL" in stanerr:
 			print >>sys.stderr, "ERROR: copyright extraction enabled, but FOSSology not running"
 			sys.exit(1)
 		if licensedb == None:
