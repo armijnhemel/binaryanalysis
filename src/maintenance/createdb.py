@@ -1517,6 +1517,18 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 					continue
 				identifier = csplit[0]
 				tagtype = csplit[1]
+				if newlanguage == 'Java':
+					if tagtype not in ['method', 'class', 'field']:
+						continue
+				elif newlanguage == 'C#':
+					if tagtype not in ['method']:
+						continue
+				elif newlanguage == 'PHP':
+					if tagtype not in ['variable', 'function', 'class']:
+						continue
+				elif newlanguage == 'Python':
+					if tagtype not in ['variable', 'member', 'function', 'class']:
+						continue
 				linenumber = int(csplit[2])
 				if language == 'patch':
 					if not linenumber in addlines:
