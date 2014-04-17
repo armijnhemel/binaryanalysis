@@ -89,3 +89,4 @@ BOTTLENECKS/HIGH PRIORITY:
 17 findlibs.py: fix architecture checks since right now they don't work
 18. handle "disk full" and other errors
 19. add support for different hashes to createbatarchive.py
+20. take order of archive creation into account in createdb.py

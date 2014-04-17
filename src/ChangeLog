@@ -1,3 +1,7 @@
+2014-04-17
+* fix check to see if postgresql/fossology is running
+* sanity checks to filter out output from ctags that is not interesting
+
 2014-04-16
 * allow creation of a hash conversion table in createdb.py. Values are limited
 to hashes from hashlib in Python
