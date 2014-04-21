@@ -1,3 +1,6 @@
+2014-04-21
+* add script to create and update SHA256SUM file in source code directories
+
 2014-04-17
 * fix check to see if postgresql/fossology is running
 * sanity checks to filter out output from ctags that is not interesting

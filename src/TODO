@@ -90,3 +90,4 @@ BOTTLENECKS/HIGH PRIORITY:
 18. handle "disk full" and other errors
 19. add support for different hashes to createbatarchive.py
 20. take order of archive creation into account in createdb.py
+21. add blacklist for files for database creation (like icudt46l_dat.S in chromium)
