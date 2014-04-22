@@ -1834,7 +1834,7 @@ def extractsourcestrings(filename, filedir, language, package):
 			lines.append(l[1:-1])
 	return (sqlres, moduleres)
 
-def checkalreadyscanned((filedir, package, version, filename, origin, batarchive, dbpath, checksums, archivechecksums)):
+def checkalreadyscanned((filedir, package, version, filename, origin, batarchive, dbpath, checksum, archivechecksums)):
 	resolved_path = os.path.join(filedir, filename)
 	try:
 		os.stat(resolved_path)
@@ -1868,8 +1868,8 @@ def checkalreadyscanned((filedir, package, version, filename, origin, batarchive
 					filehash = i.split(':')[1].strip()
 					break
 	else:
-		if checksums.has_key(filename):
-			filehash = checksums[filename]
+		if checksum != None:
+			filehash = checksum
 		else:
 			scanfile = open(resolved_path, 'r')
 			h = hashlib.new('sha256')
@@ -2286,7 +2286,7 @@ def main(argv):
 					batarchive = True
 				else:
 					batarchive = False
-			pkgmeta.append((options.filedir, package, version, filename, origin, batarchive, masterdatabase, checksums, archivechecksums))
+			pkgmeta.append((options.filedir, package, version, filename, origin, batarchive, masterdatabase, checksums.get(filename, None), archivechecksums))
 		except Exception, e:
 			# oops, something went wrong
 			print >>sys.stderr, e
