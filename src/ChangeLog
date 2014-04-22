@@ -1,3 +1,7 @@
+2014-04-22
+* createdb.py: don't pass dict around necessarily to avoid serialization in
+case the dict is large.
+
 2014-04-21
 * add script to create and update SHA256SUM file in source code directories
 
