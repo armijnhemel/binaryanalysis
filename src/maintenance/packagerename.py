@@ -52,26 +52,30 @@ def main(argv):
 	cursor = conn.cursor()
 	for r in renamefiles:
 		(oldpackage, oldversion, newpackage, newversion) = r
-		renamesha256 = []
-		renamesha256 = []
-		removesha256 = []
-		cursor.execute('select sha256 from processed_file where package=? and version=?', ((r[0], r[1])))
+		renamesha256 = set()
+		removesha256 = set()
+		cursor.execute('select sha256 from processed_file where package=? and version=?', ((oldpackage, oldversion)))
 		sha256s = cursor.fetchall()
+		## now check for each SHA256 if it already exists with the new version (and the
+		## old entry only needs to be removed) or if it actually needs to be renamed.
 		for sha256 in sha256s:
 			cursor.execute('select distinct package, version from processed_file where sha256=?', sha256)
 			res = cursor.fetchall()
-			if (r[0], r[1]) in res:
-				if (r[2], r[3]) in res:
-					removesha256.append(sha256)
-					continue
-				else:
-					renamesha256.append(sha256)
+			if (newpackage, newversion) in res:
+				removesha256.add(sha256)
+				continue
+			else:
+				renamesha256.add(sha256)
+			break
 		if dump:
 			## first dump all data
 			programstrings = []
 			functionnames = []
 			varnames = []
-			allsha256 = removesha256 + renamesha256
+			allsha256 = set()
+			#allsha256 = removesha256 + renamesha256
+			allsha256.update(removesha256)
+			allsha256.update(renamesha256)
 			for s in allsha256:
 				res = cursor.execute("select programstring,language from extracted_file where sha256=?", (s[0],))
 				if res != None:
