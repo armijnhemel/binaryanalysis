@@ -31,6 +31,7 @@ def main(argv):
 		parser.error("No directory found")
 	dirlist = os.listdir(options.filedir)
 	dirlist = filter(lambda x: x != 'LIST' and x != 'SHA256SUM', dirlist)
+	dirlist = filter(lambda x: os.path.isfile(os.path.join(options.filedir, x)), dirlist)
 
 	## no files, so exit
 	if len(dirlist) == 0:
