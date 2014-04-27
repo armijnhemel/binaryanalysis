@@ -382,7 +382,7 @@ def extractJava(scanfile, tags, scanenv, filesize, stringcutoff, blacklist=[], d
 	else:
 		javatype = 'java'
 	if blacklist == []:
-		javares = extractJavaInfo(scanfile, scanenv, stringcutoff, javatype)
+		javares = extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir)
 	else:
 		javares = None
 	if javares == None:
@@ -408,7 +408,7 @@ def extractJavaScript(path, tags, scanenv, filesize, stringcutoff, blacklist=[],
 ## 3. variable names
 ## 4. source file names
 ## 5. method names
-def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype):
+def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 	lines = []
         if javatype == 'java':
 		classname = []
