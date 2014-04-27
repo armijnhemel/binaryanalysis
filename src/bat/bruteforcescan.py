@@ -483,7 +483,7 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, 
 		module = leafscan['module']
 		method = leafscan['method']
 		if debug:
-			print >>sys.stderr, method, filetoscan
+			print >>sys.stderr, method, filetoscan, datetime.datetime.utcnow().isoformat()
 			sys.stderr.flush()
 		## use the environment to pass extra information
 		if leafscan.has_key('envvars'):
@@ -885,12 +885,8 @@ def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=Fa
 	dumpfile.close()
 
 def runscan(scans, scan_binary):
-	if scans['batconfig']['tempdir'] != None:
-		topleveldir = tempfile.mkdtemp(dir=scans['batconfig']['tempdir'])
-		unpacktempdir = scans['batconfig']['tempdir']
-	else:
-		topleveldir = tempfile.mkdtemp()
-		unpacktempdir = None
+	unpacktempdir = scans['batconfig']['tempdir']
+	topleveldir = tempfile.mkdtemp(dir=unpacktempdir)
 	os.makedirs("%s/data" % (topleveldir,))
 	scantempdir = "%s/data" % (topleveldir,)
 	shutil.copy(scan_binary, scantempdir)
