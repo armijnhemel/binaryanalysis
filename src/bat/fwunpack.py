@@ -773,10 +773,11 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 			## were concatenated.
 			offset = offsets['pkbac'][0]
 			tmpdir = dirsetup(tempdir, filename, "exe", counter)
-			res = unpack7z(filename, 0, tmpdir, blacklist)
-			if res != None:
-				diroffsets.append((res, 0, os.stat(filename).st_size))
-				blacklist.append((0, os.stat(filename).st_size))
+			tmpres = unpack7z(filename, 0, tmpdir, blacklist)
+			if tmpres != None:
+				(size7z, res) = tmpres
+				diroffsets.append((res, 0, size7z))
+				blacklist.append((0, size7z))
 				newtags.append('exe')
 				return (diroffsets, blacklist, newtags, hints)
 			else:
@@ -804,10 +805,11 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 	## Ideally we should also do something with innounp
 	## As a last resort try 7-zip
 	tmpdir = dirsetup(tempdir, filename, "exe", counter)
-	res = unpack7z(filename, 0, tmpdir, blacklist)
-	if res != None:
-		diroffsets.append((res, 0, os.stat(filename).st_size))
-		blacklist.append((0, os.stat(filename).st_size))
+	tmpres = unpack7z(filename, 0, tmpdir, blacklist)
+	if tmpres != None:
+		(size7z, res) = tmpres
+		diroffsets.append((res, 0, size7z))
+		blacklist.append((0, size7z))
 		newtags.append('exe')
 		return (diroffsets, blacklist, newtags, hints)
 	else:
