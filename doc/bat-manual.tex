@@ -7,7 +7,7 @@
 \setlength{\parskip}{4pt}
 
 \author{Armijn Hemel -- Tjaldur Software Governance Solutions}
-\title{Binary Analysis Tool User and Developer Manual - describing version 17}
+\title{Binary Analysis Tool User and Developer Manual - describing version 18}
 
 \begin{document}
 
@@ -440,7 +440,7 @@ description = Unpack JFFS2 file systems
 enabled     = yes
 \end{verbatim}
 
-In BAT 17 the following file systems, compressed files and media files can be
+In BAT 18 the following file systems, compressed files and media files can be
 unpacked or extracted:
 
 \begin{itemize}
@@ -743,7 +743,7 @@ cleanup     = yes
 The \texttt{cleanup} setting should be set to \texttt{yes} unless the results
 do not change in between subsequent runs of BAT.
 
-Currently (BAT 17) if \texttt{cleanup} is set the files are written directly to
+Currently (BAT 18) if \texttt{cleanup} is set the files are written directly to
 output directories. The values of these directories are hardcoded (and match
 values that the GUI expects) but these will be replaced by the value of
 \texttt{storetarget} in a later release.
@@ -2504,7 +2504,7 @@ Finally there are some scans that unpack text files (\texttt{base64}) or media
 files. The \texttt{lzma} unpack scan also has the lowest priority because of
 possibly many false positives.
 
-The order of the unpack scans as defined in BAT 17 is:
+The order of the unpack scans as defined in BAT 18 is:
 
 \begin{enumerate}
 \item \texttt{byteSwap}
