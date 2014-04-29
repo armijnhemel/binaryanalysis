@@ -1,5 +1,6 @@
 2014-04-29
 * bat/bruteforcescan.py: add debugging statements to writeDumpfile()
+* tag BAT 18
 
 2014-04-27
 * identifier.py: add missing parameter if DEX_TMPDIR was not set
