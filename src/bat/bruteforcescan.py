@@ -871,7 +871,9 @@ def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=Fa
 		pool.map(compressPickle, fnames, 1)
 		pool.terminate()
 		dumpfile.add('filereports')
-	except Exception,e:	print >>sys.stderr, "wrteDumpfile", e
+	except Exception,e:
+		print >>sys.stderr, "writeDumpfile", e
+		sys.stderr.flush()
 
 	dumpadds = set()
 	for i in (scans['postrunscans'] + scans['aggregatescans']):
@@ -882,6 +884,7 @@ def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=Fa
 			except Exception, e:
 				if debug:
 					print >>sys.stderr, "writeDumpfile:", e
+					sys.stderr.flush()
 				else:
 					pass
 	for i in dumpadds:
