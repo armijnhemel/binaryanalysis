@@ -1,5 +1,9 @@
+2014-04-29
+* bat/bruteforcescan.py: add debugging statements to writeDumpfile()
+
 2014-04-27
 * identifier.py: add missing parameter if DEX_TMPDIR was not set
+* fwunpack.py: fix EXE 7z unpacking
 
 2014-04-22
 * createdb.py: don't pass dict around necessarily to avoid serialization in
