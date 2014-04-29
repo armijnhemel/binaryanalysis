@@ -1,3 +1,12 @@
+bat (18.0) unstable; urgency=high
+
+  * fix JFFS2 and EXE 7z unpacking
+  * fix for identifier.py if DEX_TMPDIR was not set
+  * fix for scoring for assigned strings
+  * smaller fixes (see ChangeLog)
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Tue, 29 Apr 2014 12:52:31 +0200
+
 bat (17.0) unstable; urgency=high
 
   * add Android file system unpacking
