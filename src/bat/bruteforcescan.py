@@ -812,7 +812,7 @@ def dumpData(unpackreports, scans, tempdir):
 							try:
 								os.unlink(os.path.join(i['storedir'],c))
 							except Exception, e:
-								print >>sys.stderr, "removing failed", c, e
+								print >>sys.stderr, "dumpData: removing failed", c, e
 		else:
 			## nothing will be dumped if one of the three parameters is missing
 			pass
@@ -832,7 +832,7 @@ def dumpData(unpackreports, scans, tempdir):
 				try:
 					os.unlink(os.path.join(i['storedir'],r))
 				except Exception, e:
-					print >>sys.stderr, "removing failed", r, e
+					print >>sys.stderr, "dumpData: removing failed", r, e
 					pass
 
 	picklefile = open(os.path.join(tempdir, 'scandata.pickle'), 'wb')
@@ -851,7 +851,7 @@ def compressPickle((infile)):
 ## packed are hardcoded, the other files are determined from the configuration.
 ## The configuration option 'lite' allows to leave out the extracted data, to
 ## speed up extraction of data in the GUI.
-def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=False):
+def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=False, debug=False):
 	dumpData(unpackreports, scans, tempdir)
 	dumpfile = tarfile.open(outputfile, 'w:gz')
 	os.chdir(tempdir)
@@ -871,7 +871,7 @@ def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=Fa
 		pool.map(compressPickle, fnames, 1)
 		pool.terminate()
 		dumpfile.add('filereports')
-	except Exception,e:	print >>sys.stderr, e
+	except Exception,e:	print >>sys.stderr, "wrteDumpfile", e
 
 	dumpadds = set()
 	for i in (scans['postrunscans'] + scans['aggregatescans']):
@@ -879,7 +879,11 @@ def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=Fa
 			try:
 				os.stat(i['storetarget'])
 				dumpadds.add(i['storetarget'])
-			except:	pass
+			except Exception, e:
+				if debug:
+					print >>sys.stderr, "writeDumpfile:", e
+				else:
+					pass
 	for i in dumpadds:
 		dumpfile.add(i)
 	dumpfile.close()
