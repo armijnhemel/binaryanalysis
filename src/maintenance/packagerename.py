@@ -66,7 +66,6 @@ def main(argv):
 				continue
 			else:
 				renamesha256.add(sha256)
-			break
 		if dump:
 			## first dump all data
 			programstrings = []
