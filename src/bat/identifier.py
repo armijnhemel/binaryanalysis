@@ -164,6 +164,8 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 
 			## check all jiffies, grab the first one that is surrounded by NULL characters
 			for jiff in jiffies:
+				if extractor.inblacklist(jiff, blacklist) != None:
+					continue
 				if extractor.check_null(kerneldata, jiff, 'loops_per_jiffy'):
 					jiffy_pos = jiff
 					break
