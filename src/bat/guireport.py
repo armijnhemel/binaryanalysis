@@ -105,7 +105,9 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, debug=False, env
 	if leafreports.has_key('architecture'):
 		tablerows = tablerows + tablerowtemplate % ("Architecture", leafreports['architecture'])
 	if leafreports.has_key('kernelmodulelicense'):
-		tablerows = tablerows + tablerowtemplate % ("Kernel module license", leafreports['kernelmodulelicense'])
+		if leafreports['kernelmodulelicense'] != set([]):
+			licenses = reduce(lambda x, y: x + ", " + y, leafreports['kernelmodulelicense'])
+			tablerows = tablerows + tablerowtemplate % ("Kernel module license", licenses)
 	if leafreports.has_key('libs'):
 		if leafreports['libs'] != []:
 			tablerows = tablerows + tablerowtemplate % ("Declared shared libraries", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['libs']))

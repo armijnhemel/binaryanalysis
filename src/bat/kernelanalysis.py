@@ -156,7 +156,8 @@ def analyseModuleLicense(path, tags, blacklist=[], debug=False, envvars=[], unpa
 	if stanout == "":
 		return None
         else:
-                return (['modulelicense'], stanout.strip())
+		licenses = set(stanout.strip().split('\n'))
+		return (['modulelicense'], licenses)
 
 ## match versions of kernel modules and linux kernels inside a firmware
 ## This is not a fool proof method. There are situations possible where the kernel
