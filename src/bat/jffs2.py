@@ -43,6 +43,10 @@ def readJFFS2Inodes(path, bigendian):
 			if res != None:
 				namesize = int(res.groups()[0])
 			nodename = name[-namesize:]
+			if direntries.has_key(inodenr):
+				## if this happens then either the file system is corrupt, or
+				## there is more than one file system.
+				break
 			direntries[inodenr] = {'offset': offset, 'size': 0, 'parent': pinodenr, 'name': nodename}
 			if offset > maxoffset:
 				maxoffset = offset
