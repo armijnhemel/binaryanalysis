@@ -68,6 +68,7 @@ misc:
 * replace calls to dd, tail, head and others with truncate() where possible to prevent launching an external process
 * replace hardcoded options in reporting with values of 'storetarget'
 * tag webp files
+* optionally generate SVG files for graphs (findlibs.py)
 
 BOTTLENECKS/HIGH PRIORITY:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.

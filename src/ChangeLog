@@ -1,6 +1,15 @@
+2014-05-09:
+* fixes for unpacking squashfs file systems (Atheros 2 flavour)
+* don't try to move symlinked directories in cramfs unpacking, since
+shutil.move() doesn't like that
+* fix if there are duplicate JFFS2 inode numbers in a file. This could happen
+if there are two file systems that have been concatenated.
+
 2014-04-29
 * bat/bruteforcescan.py: add debugging statements to writeDumpfile()
 * tag BAT 18
+* don't extract kernel symbols from blacklisted parts of files (like tar
+files)
 
 2014-04-27
 * identifier.py: add missing parameter if DEX_TMPDIR was not set
