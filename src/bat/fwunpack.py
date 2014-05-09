@@ -1394,7 +1394,7 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, debug=F
 
 	for offset in cramfsoffsets:
 		bigendian = False
-		## sanity check to make sure jffs2_be actually exists
+		## sanity check to make sure cramfs_be actually exists
 		if offsets.has_key('cramfs_be'):
 			if offset in offsets['cramfs_be']:
 				bigendian = True
@@ -1467,9 +1467,12 @@ def unpackCramfs(filename, offset, tempdir=None, unpacktempdir=None, bigendian=F
 		return
 	else:
 		## first copy all the contents from the temporary dir to tmpdir
-		mvfiles = os.listdir(tmpdir2 + "/cramfs")
+		mvfiles = os.listdir(os.path.join(tmpdir2, "cramfs"))
 		for f in mvfiles:
-			shutil.move(tmpdir2 + "/cramfs/" + f, tmpdir)
+			## skip symbolic links for now
+			if os.path.islink(os.path.join(tmpdir2, 'cramfs', f)):
+				continue
+			shutil.move(os.path.join(tmpdir2, "cramfs", f), tmpdir)
 		## determine if the whole file actually is the cramfs file. Do this by running bat-fsck.cramfs again with -v and check stderr.
 		## If there is no warning or error on stderr, we know that the entire file is the cramfs file and it can be blacklisted.
 		p = subprocess.Popen(['bat-fsck.cramfs', '-v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
