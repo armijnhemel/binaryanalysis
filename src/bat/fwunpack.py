@@ -1755,6 +1755,20 @@ def unpackSquashfsAtheros2LZMA(filename, offset, tmpdir, unpacktempdir=None):
 		if stanerr != "" and len(stanerrlines) != inode_error:
 			shutil.rmtree(tmpdir2)
 			return None
+	if "uncompress failed, unknown error -3" in stanerr:
+		## files might have been written, but possibly not correct, so
+		## remove them
+		rmfiles = os.listdir(tmpdir)
+		if rmfiles != []:
+			## TODO: This does not yet correctly process symlinks links
+			for rmfile in rmfiles:
+				if os.path.join(tmpdir, rmfile) == filename:	
+					continue
+				try:
+					shutil.rmtree(os.path.join(tmpdir, rmfile))
+				except:
+					os.remove(os.path.join(tmpdir, rmfile))
+		return None
 	## move all the contents using shutil.move()
 	mvfiles = os.listdir(os.path.join(tmpdir2, "squashfs-root"))
 	for f in mvfiles:
