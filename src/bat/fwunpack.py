@@ -1756,9 +1756,13 @@ def unpackSquashfsAtheros2LZMA(filename, offset, tmpdir, unpacktempdir=None):
 			shutil.rmtree(tmpdir2)
 			return None
 	## move all the contents using shutil.move()
-	mvfiles = os.listdir(tmpdir2 + "/squashfs-root")
+	mvfiles = os.listdir(os.path.join(tmpdir2 + "squashfs-root"))
 	for f in mvfiles:
-		shutil.move(tmpdir2 + "/squashfs-root/" + f, tmpdir)
+		try:
+			shutil.move(os.path.join(tmpdir2, "squashfs-root", f), tmpdir)
+		except Exception, e:
+			## TODO: find out how to treat this properly
+			pass
 	## then we cleanup the temporary dir
 	shutil.rmtree(tmpdir2)
 	## like with 'normal' squashfs we can use 'file' to determine the size
