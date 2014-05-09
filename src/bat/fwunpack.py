@@ -1756,7 +1756,7 @@ def unpackSquashfsAtheros2LZMA(filename, offset, tmpdir, unpacktempdir=None):
 			shutil.rmtree(tmpdir2)
 			return None
 	## move all the contents using shutil.move()
-	mvfiles = os.listdir(os.path.join(tmpdir2 + "squashfs-root"))
+	mvfiles = os.listdir(os.path.join(tmpdir2, "squashfs-root"))
 	for f in mvfiles:
 		try:
 			shutil.move(os.path.join(tmpdir2, "squashfs-root", f), tmpdir)
