@@ -1,3 +1,9 @@
+2014-05-11:
+* fwunpack.py: don't read a whole file when unpacking GIF files
+* fwunpack.py: fix GIF blacklisting
+* identifier.py: if loops_per_jiffy is the first symbol in the list it could
+be preceded by a non-NULL character
+
 2014-05-09:
 * fixes for unpacking squashfs file systems (Atheros 2 flavour)
 * don't try to move symlinked directories in cramfs unpacking, since

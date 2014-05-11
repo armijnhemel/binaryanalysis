@@ -92,3 +92,4 @@ BOTTLENECKS/HIGH PRIORITY:
 19. add support for different hashes to createbatarchive.py
 20. take order of archive creation into account in createdb.py
 21. add blacklist for files for database creation (like icudt46l_dat.S in chromium)
+22. Android Eclair YAFFS2
