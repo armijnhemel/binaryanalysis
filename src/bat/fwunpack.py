@@ -3354,16 +3354,17 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 	gifoffsets.sort()
 
 	datafile = open(filename, 'rb')
+	datafile.seek(gifoffsets[0])
 	data = datafile.read()
 	datafile.close()
 
-	## GIF files have a trailer. We search for them here, since it is very very
-	## generic character. It would cost too many resources to also for these
-	## in all cases.
+	## GIF files have a trailer. Search for them here instead of in the top level identifier
+	## search, since it is very generic character. It would cost too many resources to also
+	## for these in all cases.
 	traileroffsets = []
-	trailer = data.find(';', gifoffsets[0])
+	trailer = data.find(';')
 	while(trailer != -1):
-		traileroffsets.append(trailer)
+		traileroffsets.append(trailer + gifoffsets[0])
 		trailer = data.find(';',trailer+1)
 	if traileroffsets == []:
 		return ([], blacklist, [], hints)
@@ -3371,33 +3372,32 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 	diroffsets = []
 	counter = 1
 
+	lendata = len(data) + gifoffsets[0]
 	for i in range (0,len(gifoffsets)):
 		offset = gifoffsets[i]
 		if i < len(gifoffsets) - 1:
 			nextoffset = gifoffsets[i+1]
 		else:
-			nextoffset = len(data)
-		## first check if we're not blacklisted for the header
+			nextoffset = lendata
+		## first check if the header is not blacklisted
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
-		## we're only interested in the trailers that are bigger than the offset
+		## only consider the trailers that are bigger than the offset
 		traileroffsets = filter(lambda x: x>=offset, traileroffsets)
 		for trail in traileroffsets:
-			if trail <= offset:
-				continue
 			## There is no trailer before the next header, so this can't be correct.
 			## This breaks apart if by any chance one of the identifiers is in the 
 			## file as normal data. Chances for that are very very low.
 			if trail >= nextoffset:
 				break
-			## check if we're not blacklisted for the trailer
+			## check if the trailer is not blacklisted
 			blacklistoffset = extractor.inblacklist(trail, blacklist)
 			if blacklistoffset != None:
 				continue
 			tmpdir = dirsetup(tempdir, filename, "gif", counter)
 			tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".gif", dir=tmpdir)
-			os.write(tmpfile[0], data[offset:trail+1])
+			os.write(tmpfile[0], data[offset-gifoffsets[0]:trail+1-gifoffsets[0]])
 			os.fdopen(tmpfile[0]).close()
 			p = subprocess.Popen(['gifinfo', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 			(stanout, stanerr) = p.communicate()
@@ -3405,9 +3405,8 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 				os.unlink(tmpfile[1])
 				os.rmdir(tmpdir)
 			else:
-				## basically we have a copy of the original
-				## image here, so why bother?
-				if offset == 0 and trail == len(data) - 1:
+				## basically this is copy of the original image so why bother?
+				if offset == 0 and trail == lendata - 1:
 					os.unlink(tmpfile[1])
 					os.rmdir(tmpdir)
 					blacklist.append((0, os.stat(filename).st_size))
@@ -3415,6 +3414,7 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 				else:
 					diroffsets.append((tmpdir, offset, 0))
 					counter = counter + 1
+					blacklist.append((offset, trail))
 					## go to the next header
 					break
 	return (diroffsets, blacklist, [], hints)
