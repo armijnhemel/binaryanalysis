@@ -163,30 +163,39 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 						jiffyoffset = jiffy + 1
 
 			## check all jiffies, grab the first one that is surrounded by NULL characters
+			## If it is the first symbol it could happen that it is only *followed* by a NULL
+			## character but not *preceded* by a NULL characeter
 			for jiff in jiffies:
 				if extractor.inblacklist(jiff, blacklist) != None:
 					continue
 				if extractor.check_null(kerneldata, jiff, 'loops_per_jiffy'):
 					jiffy_pos = jiff
 					break
-			if jiffy_pos != -1:
-				if not extractor.check_null(kerneldata, jiffy_pos, 'loops_per_jiffy'):
-					pass
 				else:
-					## then work forwards until a symbol that is
-					## found that is either not a printable character
-					## or a NULL character.
-					offset = jiffy_pos + len('loops_per_jiffy')
-					lastnull = offset + 1
-					while True:
-						if not kerneldata[offset] in string.printable:
-							if not kerneldata[offset] == chr(0x00):
-								break
-							else:
-								lastnull = offset
-						offset += 1
+					## sometimes "loops_per_jiffy" is not preceded by a NULL character.
+					## For now only consider this if there only is one "loops_per_jiffy"
+					## in the file.
+					if len(jiffies) == 1:
+						if kerneldata[jiff + len('loops_per_jiffy')] == chr(0x00):
+							jiffy_pos = jiff
+							break
+			if jiffy_pos != -1:
+				## work forwards until a symbol that is
+				## found that is either not a printable character
+				## or a NULL character.
+				offset = jiffy_pos + len('loops_per_jiffy')
+				lastnull = offset + 1
+				while True:
+					if not kerneldata[offset] in string.printable:
+						if not kerneldata[offset] == chr(0x00):
+							break
+						else:
+							lastnull = offset
+					offset += 1
 
-					## and backwards
+				if extractor.check_null(kerneldata, jiffy_pos, 'loops_per_jiffy'):
+					## loops_per_jiffy is not the first symbol in the list
+					## so work backwards
 					offset = jiffy_pos
 					firstnull = jiffy_pos - 1
 
@@ -197,8 +206,10 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 							else:
 								firstnull = offset
 						offset -= 1
-					kernelsymdata = kerneldata[firstnull:lastnull]
-					kernelsymbols = filter(lambda x: x != '', kernelsymdata.split('\x00'))
+				else:
+					firstnull = jiffy_pos
+				kernelsymdata = kerneldata[firstnull:lastnull]
+				kernelsymbols = filter(lambda x: x != '', kernelsymdata.split('\x00'))
 				blacklist.append((firstnull,lastnull))
 
 		## If part of the file is blacklisted the blacklisted byte ranges
