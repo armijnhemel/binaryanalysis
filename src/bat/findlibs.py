@@ -62,9 +62,12 @@ def knownInterface(names, ptype):
 				return False
 	return True
 
-def writeGraph((elfgraph, filehash, imagedir)):
+## generate PNG files and optionally SVG
+def writeGraph((elfgraph, filehash, imagedir, generatesvg)):
 	elfgraph_tmp = pydot.graph_from_dot_data(elfgraph)
 	elfgraph_tmp.write_png(os.path.join(imagedir, '%s-graph.png' % filehash))
+	if generatesvg:
+		elfgraph_tmp.write_png(os.path.join(imagedir, '%s-graph.svg' % filehash))
 
 ## extract variable names, function names and the soname from an ELF file
 def extractfromelf((path, filename)):
@@ -186,6 +189,10 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 			os.makedirs(imagedir)
 		except Exception, e:
 			return
+
+	generatesvg = False
+	if scanenv.get('ELF_SVG', '0') == '1':
+		generatesvg = True
 
 	## store names of all ELF files present in scan archive
 	elffiles = set()
@@ -858,7 +865,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 				break
 
 		elfgraph_data = elfgraph.to_string()
-		elfgraphs.add((elfgraph_data, filehash, imagedir))
+		elfgraphs.add((elfgraph_data, filehash, imagedir, generatesvg))
 
 	pool = multiprocessing.Pool(processes=processors)
 	elfres = pool.map(writeGraph, elfgraphs,1)
