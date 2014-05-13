@@ -253,7 +253,6 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 	reports = []
 	extractedlines = 0
 	nonUniqueAssignments = {}
-	nonUniqueAssignedLines = {}
 	unmatched = []
 	nonUniqueMatches = {}
 	totalscore = 0
@@ -1038,30 +1037,19 @@ def scanDynamic(scanstr, variables, scanenv, clones):
 	conn.close()
 	return (dynamicRes, variablepvs)
 
-## Look up strings in the database and compute a score
-def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, language='C'):
-	if len(lines) == 0:
-		return None
+## Look up strings in the database and assign strings to packages.
+def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfunctions, stringcutoff, linecount, language):
 	uniqueMatches = {}
-	uniqueScore = {}
 	nonUniqueScore = {}
 	stringsLeft = {}
 	sameFileScore = {}
 	alpha = 5.0
-	gaincutoff = 1
 	scorecutoff = 1.0e-20
 	nonUniqueMatches = {}
 	nonUniqueMatchLines = []
 	nonUniqueAssignments = {}
-	nonUniqueAssignedLines = {}
-	directAssignedScore = {}
 	directAssignedString = {}
 	unmatched = []
-
-	## setup code guarantees that this database exists and that sanity
-	## checks were done.
-	if not scanenv.has_key(stringsdbperlanguage[language]):
-		return None
 
 	stringscache = scanenv.get(stringsdbperlanguage[language])
 	## open the database containing all the strings that were extracted
@@ -1080,11 +1068,6 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 			funccache = scanenv.get(namecacheperlanguage['C'])
 			kernelconn = sqlite3.connect(funccache)
 			kernelcursor = kernelconn.cursor()
-
-	## keep a dict of versions, license and copyright statements per package. TODO: remove these.
-	packageversions = {}
-	packagelicenses = {}
-	packagecopyrights = {}
 
 	lenlines = len(lines)
 
@@ -1118,19 +1101,21 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 	usesourceorder = False
 	if scanenv.has_key('USE_SOURCE_ORDER'):
 		usesourceorder = True
+
 		## don't use precomputed scores
 		precomputescore = False
+
+		## keep track of which package was the most uniquely matched package
 		uniquepackage_tmp = None
-		oldunique = None
 		uniquefilenames_tmp = []
-		## keep a backlog for strings that could be assigned possibly later
+
+		## keep a backlog for strings that could possibly be assigned later
 		backlog = []
 		notclonesbacklog = []
 	else:
 		## sort the lines first, so it is easy to skip duplicates
 		lines.sort()
 
-	linecount = collections.Counter(lines)
 	for line in lines:
 		#print >>sys.stderr, "processing <|%s|>" % line
 		kernelfunctionmatched = False
@@ -1169,13 +1154,13 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 		## An extra check for lines that score extremely low. This
 		## helps reduce load on databases stored on slower disks
 		if precomputescore:
-			scoreres = conn.execute("select packages, score from scores where programstring=? LIMIT 1", (line,)).fetchone()
+			scoreres = conn.execute("select score from scores where programstring=? LIMIT 1", (line,)).fetchone()
 			if scoreres != None:
 				## If the score is so low it will not have any influence on the final
 				## score, why even bother hitting the disk?
 				## Since there might be package rewrites this should be a bit less than the
 				## cut off value that was defined.
-				if scoreres[1] < scorecutoff/100:
+				if scoreres[0] < scorecutoff/100:
 					nonUniqueMatchLines.append(line)
 					matchednonassignedlines += 1
 					matchednonassigned = True
@@ -1268,7 +1253,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 							if len(scanline) != 0:
 								line = scanline
 
-			## result is still empty, perhaps it is a module parameter
+			## result is still empty, perhaps it is a module parameter. TODO
 			if len(res) == 0:
 				if '.' in line:
 					if line.count('.') == 1:
@@ -1333,7 +1318,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 					## pow(alpha, (len(filenames) - 1)) is overflowing here
 					## so the score would be very close to 0. The largest value
 					## is sys.maxint, so use that one. The score will be
-					## small enough...
+					## smaller than almost any value of scorecutoff...
 					if usesourceorder:
 						score = len(line) / sys.maxint
 					else:
@@ -1347,27 +1332,22 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 				## to the package directly
 				if usesourceorder:
 					if uniquepackage_tmp in pkgs:
-						assign_score = False
+						assign_string = False
 						assign_filename = None
 						for pf in uniquefilenames_tmp:
 							if pf in pkgs[uniquepackage_tmp]:
-								assign_score = True
+								assign_string = True
 								assign_filename = pf
 								break
-						if assign_score:
-							#score = len(line)
+						if assign_string:
 							if not nonUniqueMatches.has_key(uniquepackage_tmp):
 								nonUniqueMatches[uniquepackage_tmp] = [line]
 							else:
 								nonUniqueMatches[uniquepackage_tmp].append(line)
-							if directAssignedScore.has_key(uniquepackage_tmp):
-								directAssignedScore[uniquepackage_tmp] += score
-							else:
-								directAssignedScore[uniquepackage_tmp] = score
 							if directAssignedString.has_key(uniquepackage_tmp):
-								directAssignedString[uniquepackage_tmp].append((line, assign_filename))
+								directAssignedString[uniquepackage_tmp].append((line, assign_filename, score))
 							else:
-								directAssignedString[uniquepackage_tmp] = [(line, assign_filename)]
+								directAssignedString[uniquepackage_tmp] = [(line, assign_filename, score)]
 							matcheddirectassignedlines += 1
 							nonUniqueAssignments[uniquepackage_tmp] = nonUniqueAssignments.get(uniquepackage_tmp,0) + 1
 
@@ -1419,10 +1399,8 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 						stringsLeft['%s\t%s' % (line, fn)] = {'string': line, 'score': score, 'filename': fn, 'pkgs' : filenames[fn]}
 
 			else:
-				uniquematch = True
 				## the string is unique to this package and this package only
-				uniqueScore[package] = uniqueScore.get(package, 0) + len(line)
-
+				uniquematch = True
 				## store the uniqueMatches without any information about checksums
 				if not uniqueMatches.has_key(package):
 					uniqueMatches[package] = [(line, [])]
@@ -1434,15 +1412,15 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 					uniquefilenames_tmp = pkgs[package]
 					## process backlog
 					for b in xrange(len(backlog), 0, -1):
-						assign_score = False
+						assign_string = False
 						assign_filename = None
 						(backlogline, backlogfilenames, backlogscore) = backlog[b-1]
 						for pf in uniquefilenames_tmp:
 							if pf in backlogfilenames:
-								assign_score = True
+								assign_string = True
 								assign_filename = pf
 								break
-						if assign_score:
+						if assign_string:
 							## keep track of the old score in case it is changed/recomputed here
 							oldbacklogscore = backlogscore
 							##backlogscore = len(line)
@@ -1450,14 +1428,10 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 								nonUniqueMatches[uniquepackage_tmp] = [backlogline]
 							else:
 								nonUniqueMatches[uniquepackage_tmp].append(backlogline)
-							if directAssignedScore.has_key(uniquepackage_tmp):
-								directAssignedScore[uniquepackage_tmp] += backlogscore
-							else:
-								directAssignedScore[uniquepackage_tmp] = backlogscore
 							if directAssignedString.has_key(uniquepackage_tmp):
-								directAssignedString[uniquepackage_tmp].append((backlogline, assign_filename))
+								directAssignedString[uniquepackage_tmp].append((backlogline, assign_filename, backlogscore))
 							else:
-								directAssignedString[uniquepackage_tmp] = [(backlogline, assign_filename)]
+								directAssignedString[uniquepackage_tmp] = [(backlogline, assign_filename, backlogscore)]
 							matcheddirectassignedlines += 1
 							nonUniqueAssignments[uniquepackage_tmp] = nonUniqueAssignments.get(uniquepackage_tmp,0) + 1
 							## remove the directly assigned string from stringsLeft,
@@ -1491,15 +1465,67 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 
 			## for statistics it's nice to see how many lines were matched
 			matchedlines += 1
-	if lenlines != 0:
-		pass
-
-	del lines
+	c.close()
+	conn.close()
 
 	## clean up stringsLeft first
 	for l in stringsLeft.keys():
 		if linecount[stringsLeft[l]['string']] == 0:
 			del stringsLeft[l]
+
+	return (unmatched, uniqueMatches, nonUniqueMatches, nonUniqueMatchLines, directAssignedString, nonUniqueAssignments, stringsLeft, notclones, nonUniqueScore, sameFileScore, matchednonassigned, matchedlines, unmatchedlines, matchednotclonelines, matcheddirectassignedlines, matchednonassignedlines, nrUniqueMatches, kernelfuncres)
+
+def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, language='C'):
+	if len(lines) == 0:
+		return None
+	## setup code guarantees that this database exists and that sanity
+	## checks were done.
+	if not scanenv.has_key(stringsdbperlanguage[language]):
+		return None
+
+	lenlines = len(lines)
+
+	gaincutoff = 1
+	## keep a dict of versions, license and copyright statements per package. TODO: remove these.
+	packageversions = {}
+	packagelicenses = {}
+	packagecopyrights = {}
+
+	stringscache = scanenv.get(stringsdbperlanguage[language])
+	## open the database containing all the strings that were extracted
+	## from source code.
+	conn = sqlite3.connect(stringscache)
+	## we have byte strings in our database, not utf-8 characters...I hope
+	conn.text_factory = str
+	c = conn.cursor()
+
+	linecount = collections.Counter(lines)
+
+	scankernelfunctions = False
+
+	if linuxkernel:
+		if scanenv.get('BAT_KERNELFUNCTION_SCAN') == 1 and language == 'C':
+			scankernelfunctions = True
+
+	## first look up and assign strings for as far as possible.
+	## strings that have not been assigned will be assigned later based
+	## on their score.
+	res = lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfunctions, stringcutoff, linecount, language)
+	(unmatched, uniqueMatches, nonUniqueMatches, nonUniqueMatchLines, directAssignedString, nonUniqueAssignments, stringsLeft, notclones, nonUniqueScore, sameFileScore, matchednonassigned, matchedlines, unmatchedlines, matchednotclonelines, matcheddirectassignedlines, matchednonassignedlines, nrUniqueMatches, kernelfuncres) = res
+
+	uniqueScore = {}
+	for package in uniqueMatches:
+		if not uniqueScore.has_key(package):
+			uniqueScore[package] = 0
+		for line in uniqueMatches[package]:
+			uniqueScore[package] += len(line[0])
+
+	directAssignedScore = {}
+	for package in directAssignedString:
+		if not directAssignedScore.has_key(package):
+			directAssignedScore[package] = 0
+		for line in directAssignedString[package]:
+			directAssignedScore[package] += line[2]
 
 	## If the string is not unique, do a little bit more work to determine which
 	## file is the most likely, so also record the filename.
