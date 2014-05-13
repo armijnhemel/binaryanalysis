@@ -1055,6 +1055,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 	nonUniqueAssignments = {}
 	nonUniqueAssignedLines = {}
 	directAssignedScore = {}
+	directAssignedString = {}
 	unmatched = []
 
 	## setup code guarantees that this database exists and that sanity
@@ -1347,9 +1348,11 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 				if usesourceorder:
 					if uniquepackage_tmp in pkgs:
 						assign_score = False
+						assign_filename = None
 						for pf in uniquefilenames_tmp:
 							if pf in pkgs[uniquepackage_tmp]:
 								assign_score = True
+								assign_filename = pf
 								break
 						if assign_score:
 							#score = len(line)
@@ -1361,6 +1364,10 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 								directAssignedScore[uniquepackage_tmp] += score
 							else:
 								directAssignedScore[uniquepackage_tmp] = score
+							if directAssignedString.has_key(uniquepackage_tmp):
+								directAssignedString[uniquepackage_tmp].append((line, assign_filename))
+							else:
+								directAssignedString[uniquepackage_tmp] = [(line, assign_filename)]
 							matcheddirectassignedlines += 1
 							nonUniqueAssignments[uniquepackage_tmp] = nonUniqueAssignments.get(uniquepackage_tmp,0) + 1
 
@@ -1428,10 +1435,12 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 					## process backlog
 					for b in xrange(len(backlog), 0, -1):
 						assign_score = False
+						assign_filename = None
 						(backlogline, backlogfilenames, backlogscore) = backlog[b-1]
 						for pf in uniquefilenames_tmp:
 							if pf in backlogfilenames:
 								assign_score = True
+								assign_filename = pf
 								break
 						if assign_score:
 							## keep track of the old score in case it is changed/recomputed here
@@ -1445,6 +1454,10 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 								directAssignedScore[uniquepackage_tmp] += backlogscore
 							else:
 								directAssignedScore[uniquepackage_tmp] = backlogscore
+							if directAssignedString.has_key(uniquepackage_tmp):
+								directAssignedString[uniquepackage_tmp].append((backlogline, assign_filename))
+							else:
+								directAssignedString[uniquepackage_tmp] = [(backlogline, assign_filename)]
 							matcheddirectassignedlines += 1
 							nonUniqueAssignments[uniquepackage_tmp] = nonUniqueAssignments.get(uniquepackage_tmp,0) + 1
 							## remove the directly assigned string from stringsLeft,
