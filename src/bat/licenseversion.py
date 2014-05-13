@@ -1111,6 +1111,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 	kernelfunctionmatched = False
 	uniquematch = False
 	oldline = None
+	notclones = []
 
 	## try to use the same order of strings in the binary as in the source code
 	usesourceorder = False
@@ -1393,6 +1394,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 					matchednotclones = True
 					if not usesourceorder:
 						linecount[line] = linecount[line] - 1
+						notclones.append((line, filenames))
 					else:
 						notclonesbacklog.append((line, filenames))
 					continue
@@ -1468,6 +1470,8 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 									break
 						else:
 							break
+					## store notclones for later use
+					notclones += notclonesbacklog
 					backlog = []
 					notclonesbacklog = []
 			matched = True
