@@ -2143,9 +2143,9 @@ def main(argv):
 		## Since there is a lot of duplication inside source packages we store strings per checksum
 		## which we can later link with files
 		c.execute('''create table if not exists processed_file (package text, version text, filename text, sha256 text)''')
-		c.execute('''create index if not exists processedfile_index on processed_file(sha256)''')
-		c.execute('''create index if not exists processedfile_package_index on processed_file(package)''')
-		c.execute('''create unique index if not exists processedfile_package_index_unique on processed_file(package, version, filename, sha256)''')
+		c.execute('''create index if not exists processedfile_package_sha256_index on processed_file(sha256, package)''')
+		c.execute('''create index if not exists processedfile_package_version_index on processed_file(package, version)''')
+		## TODO: use analyze processedfile_package_version_index and processedfile_package_sha256_index
 
 		## Store the extracted strings per checksum, not per (package, version, filename).
 		## This saves a lot of space in the database
