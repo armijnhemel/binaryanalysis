@@ -508,7 +508,7 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, 
 		picklefile.close()
 	return (filehash, list(set(newtags)))
 
-def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, debug):
+def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, debug, unpacktempdir):
 	## aggregate scans look at the entire result and possibly modify it.
 	## The best example is JAR files: individual .class files will not be
 	## very significant (or even insignificant), but combined results are.
@@ -518,7 +518,6 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, d
 		processors = scans['batconfig']['processors']
 	else:
 		processors = None
-	unpacktempdir = scans['batconfig']['tempdir']
 	for aggregatescan in scans['aggregatescans']:
 		module = aggregatescan['module']
 		method = aggregatescan['method']
@@ -1158,7 +1157,7 @@ def runscan(scans, scan_binary):
 			if debugphases != []:
 				if not 'aggregate' in debugphases:
 					tmpdebug = False
-		aggregatescan(unpackreports, scans, scantempdir, topleveldir, os.path.basename(scan_binary), tmpdebug)
+		aggregatescan(unpackreports, scans, scantempdir, topleveldir, os.path.basename(scan_binary), tmpdebug, unpacktempdir)
 	if debug:
 		print >>sys.stderr, "AGGREGATE END", datetime.datetime.utcnow().isoformat()
 
