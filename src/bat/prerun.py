@@ -990,14 +990,14 @@ def verifyVimSwap(filename, tempdir=None, tags=[], offsets={}, debug=False, envv
 
 def verifyTZ(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
 	newtags = []
-	datafile = open(filename, 'rb')
-	databuffer = datafile.read(4)
-	datafile.close()
-	if databuffer == 'TZif':
-		## simplistic check for timezone data. This should be enough for
-		## most Linux based machines to filter the majority of the
-		## timezone files without any extra checks.
-		if "zoneinfo" in filename:
+	if "zoneinfo" in filename:
+		datafile = open(filename, 'rb')
+		databuffer = datafile.read(4)
+		datafile.close()
+		if databuffer == 'TZif':
+			## simplistic check for timezone data. This should be enough for
+			## most Linux based machines to filter the majority of the
+			## timezone files without any extra checks.
 			newtags.append('timezone')
 			newtags.append('resource')
 	return newtags
