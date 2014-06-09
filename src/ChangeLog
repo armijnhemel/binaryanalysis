@@ -1,3 +1,6 @@
+2014-06-09:
+* open script to create scores table in the caching database
+
 2014-05-11:
 * fwunpack.py: don't read a whole file when unpacking GIF files
 * fwunpack.py: fix GIF blacklisting
