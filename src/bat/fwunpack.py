@@ -2296,6 +2296,18 @@ def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, debug
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
+		## according to the specification the "bits per code" has
+		## to be 9 <= bits per code <= 16
+		## The "bits per code" field is masked with 0x1f
+		compressfile = open(filename, 'rb')
+		compressfile.seek(offset+2)
+		compressdata = compressfile.read(1)
+		compressfile.close()
+		compressbits = ord(compressdata) & 0x1f
+		if compressbits < 9:
+			continue
+		if compressbits > 16:
+			continue
 		tmpdir = dirsetup(tempdir, filename, "compress", counter)
 		res = unpackCompress(filename, offset, tmpdir, compress_tmpdir, blacklist)
 		if res != None:
