@@ -1,5 +1,11 @@
+2014-06-11:
+* extra sanity check for compress unpacking
+
 2014-06-09:
 * open script to create scores table in the caching database
+
+2014-05-12:
+* findlibs.py: optionally generate SVG files
 
 2014-05-11:
 * fwunpack.py: don't read a whole file when unpacking GIF files
