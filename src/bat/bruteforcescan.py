@@ -892,13 +892,14 @@ def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=Fa
 
 def runscan(scans, scan_binary):
 	unpacktempdir = scans['batconfig']['tempdir']
-	if not os.path.exists(unpacktempdir):
-		unpacktempdir = None
-	try:
-		topleveldir = tempfile.mkdtemp(dir=unpacktempdir)
-	except:
-		unpacktempdir = None
-		topleveldir = tempfile.mkdtemp(dir=unpacktempdir)
+	if unpacktempdir != None:
+		if not os.path.exists(unpacktempdir):
+			unpacktempdir = None
+		try:
+			topleveldir = tempfile.mkdtemp(dir=unpacktempdir)
+		except:
+			unpacktempdir = None
+	topleveldir = tempfile.mkdtemp(dir=unpacktempdir)
 	os.makedirs("%s/data" % (topleveldir,))
 	scantempdir = "%s/data" % (topleveldir,)
 	shutil.copy(scan_binary, scantempdir)
