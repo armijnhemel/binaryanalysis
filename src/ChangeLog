@@ -1,3 +1,6 @@
+2014-06-13:
+* add per package per file blacklisting for createdb.py
+
 2014-06-11:
 * extra sanity check for compress unpacking
 
