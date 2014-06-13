@@ -895,11 +895,12 @@ def runscan(scans, scan_binary):
 	if unpacktempdir != None:
 		if not os.path.exists(unpacktempdir):
 			unpacktempdir = None
-		try:
-			topleveldir = tempfile.mkdtemp(dir=unpacktempdir)
-		except:
-			unpacktempdir = None
-	topleveldir = tempfile.mkdtemp(dir=unpacktempdir)
+	try:
+		## test if unpacktempdir is actually writable
+		topleveldir = tempfile.mkdtemp(dir=unpacktempdir)
+	except:
+		unpacktempdir = None
+		topleveldir = tempfile.mkdtemp(dir=unpacktempdir)
 	os.makedirs("%s/data" % (topleveldir,))
 	scantempdir = "%s/data" % (topleveldir,)
 	shutil.copy(scan_binary, scantempdir)
