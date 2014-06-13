@@ -692,7 +692,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 		## If not, one of the versions should be renamed.
 		## TODO: support for batarchive
 		osgen = os.walk(temporarydir)
-		pkgconf = packageconfig.get(package,[])
+		pkgconf = packageconfig.get(package,{})
 
 		try:
 			scanfiles = []
@@ -804,6 +804,9 @@ def filterfiles((filedir, filename, pkgconf)):
 	else:
 		## skip links
         	return None
+	if pkgconf.has_key('blacklist'):
+		if filename in pkgconf['blacklist']:
+			return None
 	## nothing to determine about an empty file, so skip
 	if os.stat(resolved_path).st_size == 0:
 		return None
@@ -817,11 +820,12 @@ def filterfiles((filedir, filename, pkgconf)):
 			language = extensions['.%s' % extension]
 	if not process:
 		## now check the package specific extensions
-		for extlang in pkgconf:
-			(extension, language) = extlang
-			if (p_nocase.endswith(extension)) and not p_nocase == extension:
-				process = True
-				break
+		if pkgconf.has_key('extensions'):
+			for extlang in pkgconf['extensions']:
+				(extension, language) = extlang
+				if (p_nocase.endswith(extension)) and not p_nocase == extension:
+					process = True
+					break
 	if not process:
 		return None
 
@@ -850,7 +854,7 @@ def computehash((filedir, filename, extension, language, extrahashes)):
 def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes):
 	osgen = os.walk(srcdir)
 
-	pkgconf = packageconfig.get(package,[])
+	pkgconf = packageconfig.get(package,{})
 
 	try:
 		scanfiles = []
@@ -2032,10 +2036,29 @@ def main(argv):
 						if not lang in languages:
 							continue
 						if packageconfig.has_key(section):
-							packageconfig[section].append((ext,lang))
+							if packageconfig[section].has_key('extensions'):
+								packageconfig[section]['extensions'].append((ext,lang))
+							else:
+								packageconfig[section]['extensions'] [(ext,lang)]
 						else:
-							packageconfig[section] = [(ext,lang)]
+							packageconfig[section] = {}
+							packageconfig[section]['extensions'] = [(ext,lang)]
 			except:
+				pass
+			try:
+				sec = config.get(section, 'blacklist')
+				blacklistitems = sec.split(':')
+				if blacklistitems != []:
+					for b in blacklistitems:
+						if packageconfig.has_key(section):	
+							if packageconfig[section].has_key('blacklist'):
+								packageconfig[section]['blacklist'].append(b)
+							else:
+								packageconfig[section]['blacklist'] = [b]
+						else:
+							packageconfig[section] = {}
+							packageconfig[section]['blacklist'] = [b]
+			except Exception, e:
 				pass
 	if scanlicense:
 		license = True
