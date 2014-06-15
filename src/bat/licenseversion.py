@@ -4,7 +4,7 @@
 ## Copyright 2011-2014 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
-import os, os.path, sys, subprocess, copy, cPickle, multiprocessing, sqlite3, re, collections
+import os, os.path, sys, subprocess, copy, cPickle, multiprocessing, sqlite3, re, collections, datetime
 
 '''
 This file contains the ranking algorithm as described in the paper
@@ -1038,7 +1038,7 @@ def scanDynamic(scanstr, variables, scanenv, clones):
 	return (dynamicRes, variablepvs)
 
 ## Look up strings in the database and assign strings to packages.
-def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfunctions, stringcutoff, linecount, language):
+def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfunctions, stringcutoff, precomputescore, usesourceorder, linecount, language):
 	uniqueMatches = {}
 	nonUniqueScore = {}
 	stringsLeft = {}
@@ -1081,12 +1081,6 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 	matcheddirectassignedlines = 0
 	nrUniqueMatches = 0
 
-	## TODO: this should be done per language
-	if scanenv.has_key('BAT_SCORE_CACHE'):
-		precomputescore = True
-	else:
-		precomputescore = False
-
 	## start values for some state variables that are used
 	## most of these are only used if 'usesourceorder' == False
 	matched = False
@@ -1097,11 +1091,8 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 	oldline = None
 	notclones = []
 
-	## try to use the same order of strings in the binary as in the source code
-	usesourceorder = False
-	if scanenv.has_key('USE_SOURCE_ORDER'):
-		usesourceorder = True
 
+	if usesourceorder:
 		## don't use precomputed scores
 		precomputescore = False
 
@@ -1423,7 +1414,6 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 						if assign_string:
 							## keep track of the old score in case it is changed/recomputed here
 							oldbacklogscore = backlogscore
-							##backlogscore = len(line)
 							if not nonUniqueMatches.has_key(uniquepackage_tmp):
 								nonUniqueMatches[uniquepackage_tmp] = [backlogline]
 							else:
@@ -1507,10 +1497,21 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 		if scanenv.get('BAT_KERNELFUNCTION_SCAN') == 1 and language == 'C':
 			scankernelfunctions = True
 
+	## TODO: this should be done per language
+	if scanenv.has_key('BAT_SCORE_CACHE'):
+		precomputescore = True
+	else:
+		precomputescore = False
+
+	## try to use the same order of strings in the binary as in the source code
+	usesourceorder = False
+	if scanenv.has_key('USE_SOURCE_ORDER'):
+		usesourceorder = True
+
 	## first look up and assign strings for as far as possible.
 	## strings that have not been assigned will be assigned later based
 	## on their score.
-	res = lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfunctions, stringcutoff, linecount, language)
+	res = lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfunctions, stringcutoff, precomputescore, usesourceorder, linecount, language)
 	(unmatched, uniqueMatches, nonUniqueMatches, nonUniqueMatchLines, directAssignedString, nonUniqueAssignments, stringsLeft, notclones, nonUniqueScore, sameFileScore, matchednonassigned, matchedlines, unmatchedlines, matchednotclonelines, matcheddirectassignedlines, matchednonassignedlines, nrUniqueMatches, kernelfuncres) = res
 
 	uniqueScore = {}
