@@ -46,7 +46,7 @@ this.
 \subsection{Software requirements}
 
 To run BAT a recent Linux distribution is needed. Development is (currently)
-done on Fedora 19 and 20 and Ubuntu 12.04, so those platforms are likely to
+done on Fedora 19 and 20 and Ubuntu 14.04, so those platforms are likely to
 work best. Other platforms (like Debian 7) are tested with, but only to
 build binary releases.
 
@@ -1188,9 +1188,9 @@ Currently no rebuildable packages for DEB based systems are made for releases.
 The Debian scripts were written according to the documentation for
 \texttt{debhelper} found at \url{https://wiki.ubuntu.com/PackagingGuide/Python}.
 
-Package building and testing is done on Ubuntu 12.04 LTS and Ubuntu 13.04.
-For Ubuntu 13.04 the file \texttt{debian/control-ubuntu1210} should be moved to
-\texttt{debian/control} first.
+Package building and testing is done on Ubuntu 14.04 LTS. Older versions of
+Ubuntu are no longer supported and its use is discouraged. This is because
+versions of Ubuntu older than 14.04 use a broken version of the PyDot package.
 
 To build a \texttt{.deb} package do an export of the Subversion repository
 first.  Change to the directory \texttt{src} and type:
