@@ -14,7 +14,7 @@ package version filename origin
 
 separated by whitespace
 
-Compression is determined using magic
+Compression is currently determined using libmagic
 
 Currently the following information is stored in the knowledgebase:
 
@@ -25,6 +25,13 @@ Currently the following information is stored in the knowledgebase:
 * method names (Java/C#)
 * licenses (all languages)
 * copyright information (all languages)
+
+Files that are processed:
+* have a certain extension
+* are explicitely defined in the configuration file (per package)
+* configure.ac from packages using GNU autotools
+
+Sometimes files are explicitely ignored in packages.
 
 For the Linux kernel additional information is extracted:
 
@@ -41,7 +48,6 @@ This tool extracts configurations from Makefiles and Kconfig files in Linux
 kernels and tries to determine which files are included by a configuration
 directives. This information is useful to try and determine a mapping from a
 binary kernel image and modules back to a configuration.
-
 '''
 
 import sys, os, magic, string, re, subprocess, shutil, stat, datetime
@@ -818,6 +824,9 @@ def filterfiles((filedir, filename, pkgconf)):
 		if extension in extensionskeys:
 			process = True
 			language = extensions['.%s' % extension]
+	if filename == 'configure.ac':
+		process = True
+		language = 'C'
 	if not process:
 		## now check the package specific extensions
 		if pkgconf.has_key('extensions'):
@@ -897,7 +906,6 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		scanfiles = map(lambda x: x + (extrahashes,), scanfiles)
 		scanfile_result = filter(lambda x: x != None, pool.map(computehash, scanfiles, 1))
 
-	#ninkaversion = "b84eee21cb"
 	ninkaversion = "1.1"
 	insertfiles = []
 	tmpsha256s = set()
@@ -914,6 +922,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	addtofiletohash = False
 	if filetohash == {}:
 		addtofiletohash = True
+	filestoscanextra = []
 	for s in scanfile_result:
 		(path, filename, extractedfilehashes, extension, language) = s
 		filehash = extractedfilehashes['sha256']
@@ -939,7 +948,10 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		if len(cursor.fetchall()) != 0:
 			#print >>sys.stderr, "duplicate %s %s: %s/%s" % (package, version, i[0], p)
 			continue
-		filestoscan.append((package, version, path, filename, language, filehash, ninkaversion))
+		if filename == 'configure.ac':
+			filestoscanextra.append((package, version, path, filename, language, filehash))
+		else:
+			filestoscan.append((package, version, path, filename, language, filehash, ninkaversion))
 		if filehashes.has_key(filehash):
 			filehashes[filehash].append((path, filename))
 		else:
@@ -1063,6 +1075,20 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			licenseconn.commit()
 			licensecursor.close()
 			licenseconn.close()
+
+	## extract data from configure.ac instances
+	if filestoscanextra != []:
+		for f in filestoscanextra:
+			(package, version, path, filename, language, filehash) = f
+			configureac = open(os.path.join(path, filename), 'r')
+			configureaclines = configureac.read()
+			configureac.close()
+			## name, version, bugreport address, other things
+			## The bugreport address is the most interesting at the moment
+			configureres = re.search("AC_INIT\(\[[\w\s]+\],\s*(?:[\w]+\()?\[[\w\s/\-\.]+\]\)?,\s*\[([\w\-@:/\.+]+)\]", configureaclines, re.MULTILINE)
+			if configureres != None:
+				configureresgroups = configureres.groups()
+				cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (configureresgroups[0], filehash, language, 0))
 
 	## extract configuration from the Linux kernel Makefiles
 	## store two things:
