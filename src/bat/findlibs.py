@@ -322,6 +322,19 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 	## Keep a list of files that are identical, for example copies of libraries
 	dupes = {}
 
+	## grab and store the architecture of each file. Files should have the same architecture,
+	## or, at least the same base architecture.
+	architectures = {}
+	for i in elffiles:
+		if elftypes[i] == 'kernelmod':
+			continue
+		filehash = unpackreports[i]['sha256']
+		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+		leafreports = cPickle.load(leaf_file)
+		leaf_file.close()
+
+		architectures[i] = leafreports['architecture']
+
 	## Is this correct???
 	ignorefuncs = set(["__ashldi3", "__ashrdi3", "__cmpdi2", "__divdi3", "__fixdfdi", "__fixsfdi", "__fixunsdfdi", "__fixunssfdi", "__floatdidf", "__floatdisf", "__floatundidf", "__lshrdi3", "__moddi3", "__ucmpdi2", "__udivdi3", "__umoddi3", "main"])
 	for i in elffiles:
@@ -398,8 +411,13 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, e
 								## libraries to consider
 								filtersquash.append(target)
 				else:
-					## TODO: fix this. What was I thinking?
-					filtersquash = filter(lambda x: leafreports['architecture'] == leafreports['architecture'], squashedelffiles[l])
+					filtersquash = squashedelffiles[l]
+
+				## verify that the architectures are actually the same.
+				## TODO: verify that this actually works. It could be that older binaries are
+				## copied around and keep lingering for many years.
+				#filtersquash = map(lambda x: architectures[f] == architectures[i], filtersquash)
+
 				## now walk through the possible files that can resolve this dependency.
 				## First verify how many possible files are in 'filtersquash' have.
 				## In the common case this will be just one and then everything is easy.
