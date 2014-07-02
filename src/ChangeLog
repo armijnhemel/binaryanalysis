@@ -1,3 +1,9 @@
+2014-07-02:
+* remove useless architecture check from findlibs.py. Add a new one but
+disable it.
+* process configure.ac in createdb.py to get values from AC_INIT that might
+end up in a binary
+
 2014-07-01:
 * deprecate support for Ubuntu < 14.04
 

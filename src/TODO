@@ -86,10 +86,9 @@ BOTTLENECKS/HIGH PRIORITY:
 14. find versions of matched kernel function names and report
 15. store meta data about media files (PNG, GIF, MP3, etc.) in database as some of these files are quite package specific
 16. better report non unique matched strings which are not clones
-17 findlibs.py: fix architecture checks since right now they don't work
+17. add "conflicts" directive to configuration file so conflicting modules can be detected and reported to the user
 18. handle "disk full" and other errors
 19. add support for different hashes to createbatarchive.py
 20. take order of archive creation into account in createdb.py
 21. Android Eclair YAFFS2
-22. look into default automake macros (AC_INIT and friends) since these could end up in the binary (PACKAGE_BUGREPORT for example)
-23. remove old FOSSology notation from licenseversion.py and replace with later. Alternatively, remove "license squashing" entirely from licenseversion.py and instead get this information from a cleaned up database.
+22. remove old FOSSology notation from licenseversion.py and replace with later used notation. Alternatively, remove "license squashing" entirely from licenseversion.py and instead get this information from a cleaned up database.
