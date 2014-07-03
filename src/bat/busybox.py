@@ -113,7 +113,7 @@ def extract_configuration(lines, busybox, bbconfig):
 				## search through the original binary until finding an exact match
 				## that is surrounded by NULL characters, which is how the applet
 				## list in BusyBox works.
-				## The risk is that the first hit is not actualy in that list, but
+				## The risk is that the first hit is not actually in that list, but
 				## is somewhere else in the binary.
 				res = extractor.check_null(lines, offset, i)
 				while res == False:
