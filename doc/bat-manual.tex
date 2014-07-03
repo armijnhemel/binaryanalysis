@@ -48,11 +48,14 @@ this.
 To run BAT a recent Linux distribution is needed. Development is (currently)
 done on Fedora 19 and 20 and Ubuntu 14.04, so those platforms are likely to
 work best. Other platforms (like Debian 7) are tested with, but only to
-build binary releases.
+build binary releases. Ubuntu versions older than 14.04, will not work due to
+a broken version of the PyDot package.
 
 If the latest version from version control is used it is important to look at
 the file \texttt{setup.cfg} to get a list of the dependencies that should be
-met on the host system before installing BAT.
+met on the host system before installing BAT if the host system is Fedora. If
+the host system is Ubuntu or Debian this information will be in
+\texttt{debian/control}.
 
 \subsubsection{Installation on Fedora}
 
