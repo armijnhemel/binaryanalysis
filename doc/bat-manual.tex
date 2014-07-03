@@ -1213,6 +1213,13 @@ to the correct directories (\texttt{bat-extratools} and
 \texttt{bat-extratools-java} and type: \texttt{debuild -uc -us} to
 build the packages.
 
+There are some dependencies that need to be installed beforehand, such as
+\texttt{javahelper}, \texttt{ant} and \texttt{default-jdk} for bulding
+\texttt{bat-extratools-java} and \texttt{zlib1g-dev}, \texttt{liblzo2-dev}
+and \texttt{liblzma-dev} for building \texttt{bat-extratools}. These
+dependencies are documented in the file \texttt{debian/control} and
+\texttt{debuild} will warn if these packages are missing.
+
 \section{Binary Analysis Tool knowledgebase}
 
 BAT comes with a mechanism to use a database backend. The default version of
