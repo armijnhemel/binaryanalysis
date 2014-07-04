@@ -1,3 +1,13 @@
+bat (19.0) unstable; urgency=high
+
+  * deprecate support for Ubuntu < 14.04
+  * extra sanity checks/speedups for compress unpacking
+  * fixes for JFFS2 unpacking and squashfs unpacking
+  * fix GIF blacklisting
+  * smaller fixes (see ChangeLog)
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Fri, 4 Jul 2014 20:43:31 +0200
+
 bat (18.0) unstable; urgency=high
 
   * fix JFFS2 and EXE 7z unpacking
