@@ -1,3 +1,11 @@
+2014-07-06:
+* replace old FOSSology notation with the newer (SPDX) names as used in
+FOSSology
+
+2014-07-05:
+* tag and release BAT 19
+* enable findlibs.py by default (effective BAT 20)
+
 2014-07-02:
 * remove useless architecture check from findlibs.py. Add a new one but
 disable it.

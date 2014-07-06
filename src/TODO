@@ -67,7 +67,6 @@ misc:
 * replace calls to dd, tail, head and others with truncate() where possible to prevent launching an external process
 * replace hardcoded options in reporting with values of 'storetarget'
 * tag webp files
-* optionally generate SVG files for graphs (findlibs.py)
 
 BOTTLENECKS/HIGH PRIORITY:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
@@ -91,4 +90,3 @@ BOTTLENECKS/HIGH PRIORITY:
 19. add support for different hashes to createbatarchive.py
 20. take order of archive creation into account in createdb.py
 21. Android Eclair YAFFS2
-22. remove old FOSSology notation from licenseversion.py and replace with later used notation. Alternatively, remove "license squashing" entirely from licenseversion.py and instead get this information from a cleaned up database.
