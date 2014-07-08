@@ -2135,7 +2135,11 @@ def main(argv):
 	if not os.path.exists(masterdbdir):
 		print >>sys.stderr, "Cannot create database %s" % masterdatabase
 		sys.exit(1)
-	conn = sqlite3.connect(masterdatabase, check_same_thread = False)
+	try:
+		conn = sqlite3.connect(masterdatabase, check_same_thread = False)
+	except:
+		print >>sys.stderr, "Cannot create database %s" % masterdatabase
+		sys.exit(1)
 	c = conn.cursor()
 	#c.execute('PRAGMA synchronous=off')
 
