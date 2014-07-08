@@ -2131,6 +2131,10 @@ def main(argv):
 		print >>sys.stderr, "Specify path to licenses/copyrights database"
 		sys.exit(1)
 
+	masterdbdir = os.path.dirname(masterdatabase)
+	if not os.path.exists(masterdbdir):
+		print >>sys.stderr, "Cannot create database %s" % masterdatabase
+		sys.exit(1)
 	conn = sqlite3.connect(masterdatabase, check_same_thread = False)
 	c = conn.cursor()
 	#c.execute('PRAGMA synchronous=off')
