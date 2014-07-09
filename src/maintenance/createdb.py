@@ -595,7 +595,7 @@ def unpack_verify(filedir, filename):
 
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
-def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes):
+def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, newlist):
 	## unpack the archive. If it fails, cleanup and return.
 	## TODO: make temporary dir configurable
 	temporarydir = unpack(filedir, filename, unpackdir)
@@ -747,7 +747,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 				cleanupdir(temporarydir)
 			return
 
-	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes)
+	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist)
 	if sqlres != None:
 		if sqlres != []:
 			## Add the file to the database: name of archive, sha256, packagename and version
@@ -860,7 +860,7 @@ def computehash((filedir, filename, extension, language, extrahashes)):
 		
 	return (filedir, filename, filehashes, extension, language)
 
-def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes):
+def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist):
 	osgen = os.walk(srcdir)
 
 	pkgconf = packageconfig.get(package,{})
@@ -1231,6 +1231,15 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 					cursor.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, language, linenumber))
 	conn.commit()
 
+	if update:
+		updatefile = open(newlist, 'a')
+		for extractres in extracted_results:
+			(filehash, language, origlanguage, sqlres, moduleres, results) = extractres
+			updatefile.write("%s\t%s\n" % (filehash, language))
+		for f in filestoscanextra:
+			(package, version, path, filename, language, filehash) = f
+			updatefile.write("%s\t%s\n" % (filehash, language))
+		updatefile.close()
 	for i in insertfiles:
 		filehash = i[1]['sha256']
 		cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, i[0], filehash))
@@ -1929,6 +1938,7 @@ def main(argv):
 	## the following options are provided on the commandline
 	parser.add_option("-b", "--blacklist", action="store", dest="blacklist", help="path to blacklist file", metavar="FILE")
 	parser.add_option("-f", "--filedir", action="store", dest="filedir", help="path to directory containing files to unpack", metavar="DIR")
+	parser.add_option("-n", "--newlist", action="store", dest="newlist", help="path to file with list to write new hashes to")
 	parser.add_option("-t", "--rewritelist", action="store", dest="rewritelist", help="path to rewrite list", metavar="FILE")
 	#parser.add_option("-u", "--updatelicense", action="store_true", dest="updatelicense", help="update licenses", default=False)
 	parser.add_option("-v", "--verify", action="store_true", dest="verify", help="verify files, don't process (default: false)")
@@ -1948,6 +1958,25 @@ def main(argv):
 			parser.error("Configuration file not readable")
 		config.readfp(configfile)
 		configfile.close()
+
+	update = False
+	if options.newlist != None:
+		if os.path.exists(options.newlist):
+			try:
+				updatefile = open(options.newlist, 'a')
+				updatefile.close()
+				update = True
+			except:
+				print >>sys.stderr, "Cannot open %s for appending", options.newlist
+				sys.exit(1)
+		else:
+			## extra sanity check to see if the parent directory exists.
+			## If not, bail out.
+			if os.path.exists(os.path.dirname(options.newlist)):
+				update = True
+			else:
+				print >>sys.stderr, "Cannot open %s for appending", options.newlist
+				sys.exit(1)
 
 	if options.filedir == None:
 		parser.error("Specify dir with files")
@@ -2133,7 +2162,7 @@ def main(argv):
 
 	masterdbdir = os.path.dirname(masterdatabase)
 	if not os.path.exists(masterdbdir):
-		print >>sys.stderr, "Cannot create database %s" % masterdatabase
+		print >>sys.stderr, "Cannot create database %s, directory %s does not exist" % (masterdatabase, masterdbdir)
 		sys.exit(1)
 	try:
 		conn = sqlite3.connect(masterdatabase, check_same_thread = False)
@@ -2378,7 +2407,7 @@ def main(argv):
 			(package, version, filename, origin, filehash, batarchive) = i
 			if package != oldpackage:
 				oldres = []
-			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, masterdatabase, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes)
+			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, masterdatabase, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist)
 			if unpackres != None:
 				oldres = map(lambda x: x[2], unpackres)
 				oldpackage = package
