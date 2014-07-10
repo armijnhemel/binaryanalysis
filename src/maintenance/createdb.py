@@ -1385,9 +1385,60 @@ def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)
 		if continuation:
 			if bufstr != "" and buftype != "":
 				copyrightsres.append((buftype, bufstr, offset))
-		## TODO: clean up 'statement' and 'url', since there is quite a
-		## bit of bogus data present.
-	return (filehash, copyrightsres)
+
+		newcopyrightsres = []
+		for c in copyrightsres:
+			(buftype, bufstr, offset) = c
+			## ignore all statements for now
+			if buftype == 'statement':
+				continue
+			elif buftype == 'email':
+				if "example" in bufstr:
+					exampleskip = False
+					## ignore all e-mail addresses from example.com/net/org
+					for e in ["example.org", "example.com", "example.net"]:
+						if "@%s" % e in bufstr:
+							exampleskip = True
+							break
+					if exampleskip:
+						continue
+			elif buftype == 'url':
+				if "example" in bufstr:
+					## filter out anything with example.com/net/org
+					exampleskip = False
+					for e in ["example.org", "example.com", "example.net"]:
+						if "http://%s" % e in bufstr:
+							exampleskip = True
+							break
+						if "https://%s" % e in bufstr:
+							exampleskip = True
+							break
+						if "http://www.%s" % e in bufstr:
+							exampleskip = True
+							break
+						if "https://www.%s" % e in bufstr:
+							exampleskip = True
+							break
+						if "@%s" % e in bufstr:
+							exampleskip = True
+							break
+					if exampleskip:
+						continue
+				## filter out some more things. This needs to be much expanded
+				elif "ftp://127.0.0.1" in bufstr:
+					continue
+				elif "ftp://localhost/" in bufstr:
+					continue
+				elif "http://127.0.0.1" in bufstr:
+					continue
+				elif "http://localhost/" in bufstr:
+					continue
+				elif "https://127.0.0.1" in bufstr:
+					continue
+				elif "https://localhost/" in bufstr:
+					continue
+			newcopyrightsres.append(c)
+	return (filehash, newcopyrightsres)
 
 def licensefossology((packages)):
 	## Also run FOSSology. This requires that the user has enough privileges to actually connect to the
