@@ -1,3 +1,12 @@
+2014-07-10:
+* createdb.py: ignore statements extracted with copyright agent from
+FOSSology, clean up URLs and e-mail addresses that cannot point to any real
+copyright holders (example.com/net/org, localhost).
+
+2014-07-09:
+* createdb.py: optionally generate a list of checksum/language pairs that are
+added to the database
+
 2014-07-06:
 * replace old FOSSology notation with the newer (SPDX) names as used in
 FOSSology
