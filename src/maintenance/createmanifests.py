@@ -54,6 +54,9 @@ def unpack(directory, filename, unpackdir):
 		## Python tar functionality.
  		p = subprocess.Popen(['tar', 'jxf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			os.rmdir(unpackdir)
+			return
 		return tmpdir
         elif 'XZ compressed data' in filemagic:
 		if unpackdir != None:
