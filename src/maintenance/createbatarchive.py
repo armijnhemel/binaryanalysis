@@ -224,7 +224,7 @@ def computehasharchive((filedir, checksums, version, filename)):
 ## 5. create text file with metadata
 ## 6. pack archive
 ## 7. pack archive + metadata into BAT archive
-def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origin, outfile, shaoutfile):
+def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origin, outfile, shaoutfile, unpacktempdir):
 	## keep a dictionary of checksum + version to avoid lookups
 	scanned_files = {}
 	seennotscanned_files = {}
@@ -284,9 +284,7 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 		print "processing: %s" % version
 		sys.stdout.flush()
 		## unpack the archive in a temporary directory
-		#unpackdir = unpack(filedir, archivefilename)
-		#unpackdir = unpack(filedir, archivefilename, '/gpl/tmp')
-		unpackdir = unpack(filedir, archivefilename, '/ramdisk')
+		unpackdir = unpack(filedir, archivefilename, unpacktempdir)
 		if unpackdir == None:
 			continue
 
@@ -465,6 +463,7 @@ def main(argv):
 	parser.add_option("-d", "--database", action="store", dest="db", help="path to database", metavar="FILE")
 	parser.add_option("-f", "--filedir", action="store", dest="filedir", help="path to directory containing files to unpack", metavar="DIR")
 	parser.add_option("-o", "--outdir", action="store", dest="outdir", help="path to directory to write BAT archive files", metavar="DIR")
+	parser.add_option("-t", "--tempdir", action="store", dest="tempdir", help="path to temporary directory to unpack archives", metavar="DIR")
 
 	(options, args) = parser.parse_args()
 	if options.filedir == None:
@@ -483,6 +482,18 @@ def main(argv):
 	else:
 		if not os.path.exists(options.outdir):
 			parser.error("output dir does not exist")
+
+	unpackdir = None
+	## check if the temporary directory exists and is writable
+	if options.tempdir != None:
+		if os.path.exists(options.tempdir):
+			try:
+				tmptest = tempfile.mkstemp(dir=options.tempdir)
+				os.unlink(tmptest[1])
+				unpackdir = options.tempdir
+			except:
+				pass
+
 	## first process the LIST file
 	pkgmeta = []
 	for unpackfile in filelist:
@@ -522,7 +533,7 @@ def main(argv):
 			else:
 				packages[package] = [(version,filename)]
 		for p in packages.keys():
-			packagewrite(options.db, options.filedir, options.outdir, pool, p, packages[p], o, outfile, shaoutfile)
+			packagewrite(options.db, options.filedir, options.outdir, pool, p, packages[p], o, outfile, shaoutfile, unpackdir)
 	pool.terminate()
 	outfile.close()
 	shaoutfile.close()
