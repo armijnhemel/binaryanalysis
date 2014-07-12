@@ -545,6 +545,13 @@ def unpack(directory, filename, unpackdir):
 		## Python tar functionality.
  		p = subprocess.Popen(['tar', 'jxf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			print >>sys.stderr, "corrupt bz2 archive %s/%s" % (directory, filename)
+			try:
+				shutil.rmtree(tmpdir)
+			except:
+				pass
+			return None
 		return tmpdir
         elif 'LZMA compressed data, streamed' in filemagic:
 		if unpackdir != None:
@@ -581,7 +588,7 @@ def unpack(directory, filename, unpackdir):
 			if p.returncode != 0 and p.returncode != 1:
 				print >>sys.stderr, "unpacking ZIP failed for", filename, stanerr
 				shutil.rmtree(tmpdir)
-				pass
+				return None
 			else:
 				return tmpdir
 		except Exception, e:
