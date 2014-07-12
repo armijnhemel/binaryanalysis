@@ -1,4 +1,4 @@
-#!/usr/bin.python
+#!/usr/bin/python
 
 ## Binary Analysis Tool
 ## Copyright 2014 Armijn Hemel for Tjaldur Software Governance Solutions
