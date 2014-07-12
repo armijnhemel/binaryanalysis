@@ -169,6 +169,9 @@ def unpack(directory, filename, unpackdir=None):
 		## aeneas-1.0.tar.bz2 from GNU, so use a subprocess instead of using the
 		## Python tar functionality.
 		p = subprocess.Popen(['tar', 'jxf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+		if p.returncode != 0:
+			os.rmdir(unpackdir)
+			return
 		(stanout, stanerr) = p.communicate()
 		return tmpdir
 	elif 'LZMA compressed data, streamed' in filemagic:
