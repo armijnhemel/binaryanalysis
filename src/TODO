@@ -75,18 +75,16 @@ BOTTLENECKS/HIGH PRIORITY:
 4. better report non unique matched strings which are not clones
 5. verify and tag Android resources.arsc
 6. rework datastructures of ranking information (strings, function names, variables) so they are all similar
-7. createbatarchive.py: add option to set unpackdir (to for example ramdisk)
+7. Android Eclair YAFFS2
 8. clean up for tagKnownExtension, add more extensions if possible. Research big firmwares for this to see which extensions to focus on first.
 9. research/fix priority for Minix file system
 10. don't recreate ELF graphs (model for every ELF binary), but reuse graphs of dependencies. This would need a topological sort.
 11. process UNSCANNED_DUPLICATE_FILES from BAT archives in createdb.py. This is needed if some of the unscanned duplicate files need to be processed.
-12. better error detection in createdb.py and createbatarchive.py for corrupt bzip2 archives
+12. take order of archive creation into account in createdb.py
 13. refactor name squashing
 14. find versions of matched kernel function names and report
 15. store meta data about media files (PNG, GIF, MP3, etc.) in database as some of these files are quite package specific
 16. better report non unique matched strings which are not clones
 17. add "conflicts" directive to configuration file so conflicting modules can be detected and reported to the user
 18. handle "disk full" and other errors
-19. add support for different hashes to createbatarchive.py
-20. take order of archive creation into account in createdb.py
-21. Android Eclair YAFFS2
+19. add support for different hashes to createmanifests.py and createdb.py when reading from a manifest file
