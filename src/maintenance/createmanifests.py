@@ -91,7 +91,7 @@ def unpack(directory, filename, unpackdir):
 		except Exception, e:
 			print >>sys.stderr, "unpacking ZIP failed", e
 
-def grabhash(filedir, filename, filehash, pool):
+def grabhash(filedir, filename, filehash, pool, extrahashes):
 	## unpack the archive. If it fails, cleanup and return.
 	## TODO: make temporary dir configurable
 	temporarydir = unpack(filedir, filename, '/gpl/tmp')
@@ -115,7 +115,7 @@ def grabhash(filedir, filename, filehash, pool):
 				if not os.path.islink(os.path.join(i[0], d)):
 					os.chmod(os.path.join(i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 			for p in i[2]:
-				scanfiles.append((i[0], p))
+				scanfiles.append((i[0], p, extrahashes))
 	except Exception, e:
 		if str(e) != "":
 			print >>sys.stderr, e
@@ -150,7 +150,7 @@ def cleanupdir(temporarydir):
 		## nothing that can be done right now, so just give up
 		pass
 
-def computehash((path, filename)):
+def computehash((path, filename, extrahashes)):
 	resolved_path = os.path.join(path, filename)
 	try:
 		if not os.path.islink(resolved_path):
@@ -160,12 +160,19 @@ def computehash((path, filename)):
 	## skip links
 	if os.path.islink(resolved_path):
         	return None
+	filehashes = {}
 	scanfile = open(resolved_path, 'r')
 	h = hashlib.new('sha256')
 	h.update(scanfile.read())
 	scanfile.close()
-	filehash = h.hexdigest()
-	return (path, filename, filehash)
+	filehashes['sha256'] = h.hexdigest()
+	for i in extrahashes:
+		scanfile = open(resolved_path, 'r')
+		h = hashlib.new(i)
+		h.update(scanfile.read())
+		scanfile.close()
+		filehashes[i] = h.hexdigest()
+	return (path, filename, filehashes)
 
 def checkalreadyscanned((filedir, filename, checksums)):
 	resolved_path = os.path.join(filedir, filename)
@@ -210,6 +217,8 @@ def main(argv):
 			(archivechecksum, archivefilename) = checksumsplit
 			checksums[archivefilename] = archivechecksum
 
+	extrahashes = ['md5', 'sha1']
+
 	for unpackfile in filelist:
 		try:
 			unpacks = unpackfile.strip().split()
@@ -235,15 +244,35 @@ def main(argv):
 	else:
 		outputdir = "/tmp"
 
+	print "outputting hashes to %s" % outputdir
+	sys.stdout.flush()
+
 	for r in res:
 		(filename, filehash) = r
 		manifest = os.path.join(outputdir, "%s.bz2" % filehash)
 		manifestfile = bz2.BZ2File(manifest, 'w')
-		unpackres = grabhash(options.filedir, filename, filehash, pool)
+		unpackres = grabhash(options.filedir, filename, filehash, pool, extrahashes)
+		## first write the scanned/supported hashes, in the order in which they
+		## appear for each file
+		if extrahashes == []:
+			manifestfile.write("sha256\n")
+		else:
+			hashesstring = "sha256"
+			for h in extrahashes:
+				hashesstring += "\t%s" % h
+			manifestfile.write("%s\n" % hashesstring)
 		for u in unpackres:
-			manifestfile.write("%s\t%s\n" % (os.path.join(u[0], u[1]), u[2]))
+			if extrahashes == []:
+				manifestfile.write("%s\t%s\n" % (os.path.join(u[0], u[1]), u[2]['sha256']))
+			else:
+				hashesstring = "\t%s" % u[2]['sha256']
+				for h in extrahashes:
+					hashesstring += "\t%s" % u[2][h]
+				manifestfile.write("%s\t%s\n" % (os.path.join(u[0], u[1]), hashesstring))
 		manifestfile.close()
 	pool.terminate()
+	print "%d hashes were written to %s" % (len(res), outputdir)
+	sys.stdout.flush()
 
 if __name__ == "__main__":
     main(sys.argv)
