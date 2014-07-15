@@ -65,6 +65,7 @@ def comparebinaries(path1, path2):
 	if gethash(dirpath1, basepath1) == gethash(dirpath2, basepath2):
 		return 0
 	difftmp = tempfile.mkstemp()
+	os.fdopen(difftmp[0]).close()
 	p = subprocess.Popen(["bsdiff", path1, path2, difftmp[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	## cleanup
 	(stanout, stanerr) = p.communicate()
