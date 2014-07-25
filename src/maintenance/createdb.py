@@ -668,10 +668,25 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 				manifest = bz2.BZ2File(manifestfile, 'r')
 				manifestlines = manifest.readlines()
 				manifest.close()
-				for i in manifestlines:
-					(fileentry, hashentry) = i.strip().split()
-					filetohash[fileentry] = hashentry
-
+				checksumsused = manifestlines[0].strip().split()
+				## first line is always a list of supported hashes.
+				process = True
+				if set(checksumsused).intersection(set(extrahashes)) != set(extrahashes):
+					process = False
+				if process:
+					for i in manifestlines[1:]:
+						entries = i.strip().split()
+						fileentry = entries[0]
+						## sha256 is always the first hash
+						hashentry = entries[1]
+						filetohash[fileentry] = {}
+						filetohash[fileentry]['sha256'] = hashentry
+						counter = 1
+						for c in checksumsused[1:]:
+							## only record results for hashes that are in 'extrahashes'
+							if c in extrahashes:
+								filetohash[fileentry][c] = entries[counter+1]
+							counter += 1
 	print >>sys.stdout, "processing", filename, datetime.datetime.utcnow().isoformat()
 	sys.stdout.flush()
 
@@ -902,8 +917,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		for i in scanfiles:
 			(scanfilesdir, scanfilesfile, scanfileextension, language) = i
 			if filetohash.has_key(os.path.join(scanfilesdir[srcdirlen:], scanfilesfile)):
-				scanhash = filetohash[(os.path.join(scanfilesdir[srcdirlen:], scanfilesfile))]
-				scanfile_result.append((scanfilesdir, scanfilesfile, {'sha256': scanhash}, scanfileextension, language))
+				scanfile_result.append((scanfilesdir, scanfilesfile, filetohash[os.path.join(scanfilesdir[srcdirlen:], scanfilesfile)], scanfileextension, language))
 			else:
 				new_scanfiles.append((scanfilesdir, scanfilesfile, scanfileextension, language, extrahashes))
 		## sanity checks in case the MANIFEST file is incomplete
