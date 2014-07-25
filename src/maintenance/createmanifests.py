@@ -194,6 +194,8 @@ def checkalreadyscanned((filedir, filename, checksums)):
 def main(argv):
 	parser = OptionParser()
 	parser.add_option("-f", "--filedir", action="store", dest="filedir", help="path to directory containing files to unpack", metavar="DIR")
+	parser.add_option("-u", "--update", action="store_true", dest="update", help="only create manifest files for new archives")
+
 	(options, args) = parser.parse_args()
 	if options.filedir == None:
 		parser.error("Specify dir with files")
@@ -249,6 +251,8 @@ def main(argv):
 
 	for r in res:
 		(filename, filehash) = r
+		if options.update and os.path.exists(os.path.join(outputdir, "%s.bz2" % filehash)):
+			continue
 		manifest = os.path.join(outputdir, "%s.bz2" % filehash)
 		manifestfile = bz2.BZ2File(manifest, 'w')
 		unpackres = grabhash(options.filedir, filename, filehash, pool, extrahashes)
