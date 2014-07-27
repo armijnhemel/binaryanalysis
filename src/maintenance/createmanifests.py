@@ -91,10 +91,9 @@ def unpack(directory, filename, unpackdir):
 		except Exception, e:
 			print >>sys.stderr, "unpacking ZIP failed", e
 
-def grabhash(filedir, filename, filehash, pool, extrahashes):
+def grabhash(filedir, filename, filehash, pool, extrahashes, temporarydir):
 	## unpack the archive. If it fails, cleanup and return.
-	## TODO: make temporary dir configurable
-	temporarydir = unpack(filedir, filename, '/gpl/tmp')
+	temporarydir = unpack(filedir, filename, temporarydir)
 	if temporarydir == None:
 		return None
 
@@ -195,6 +194,7 @@ def main(argv):
 	parser = OptionParser()
 	parser.add_option("-f", "--filedir", action="store", dest="filedir", help="path to directory containing files to unpack", metavar="DIR")
 	parser.add_option("-u", "--update", action="store_true", dest="update", help="only create manifest files for new archives")
+	parser.add_option("-t", "--temporarydir", action="store", dest="unpackdir", help="set unpacking directory (default: /tmp)", metavar="DIR")
 
 	(options, args) = parser.parse_args()
 	if options.filedir == None:
@@ -204,6 +204,10 @@ def main(argv):
 			filelist = open(os.path.join(options.filedir,"LIST")).readlines()
 		except:
 			parser.error("'LIST' not found in file dir")
+
+	if options.unpackdir != None:
+		if not os.path.exists(options.unpackdir):
+			parser.error("temporary unpacking directory '%s' does not exist" % options.unpackdir)
 
 	pool = Pool()
 
@@ -255,7 +259,7 @@ def main(argv):
 			continue
 		manifest = os.path.join(outputdir, "%s.bz2" % filehash)
 		manifestfile = bz2.BZ2File(manifest, 'w')
-		unpackres = grabhash(options.filedir, filename, filehash, pool, extrahashes)
+		unpackres = grabhash(options.filedir, filename, filehash, pool, extrahashes, options.unpackdir)
 		## first write the scanned/supported hashes, in the order in which they
 		## appear for each file
 		if extrahashes == []:
