@@ -595,6 +595,7 @@ def readconfig(config):
 	postrunscans = []
 	aggregatescans = []
 	batconf = {}
+	tmpbatconfdebug = set()
 	for section in config.sections():
 		if section == "batconfig":
 			try:
@@ -652,6 +653,7 @@ def readconfig(config):
 			continue
 		
 		elif config.has_option(section, 'type'):
+			debug = False
 			## scans have to be explicitely enabled
 			if not config.has_option(section, 'enabled'):
 				continue
@@ -685,6 +687,12 @@ def readconfig(config):
 				conf['scanonly'] = None
 			try:
 				conf['extensionsignore'] = config.get(section, 'extensionsignore')
+			except:
+				pass
+			try:
+				scandebug = config.get(section, 'debug')
+				if scandebug == 'yes':
+					debug = True
 			except:
 				pass
 			try:
@@ -735,14 +743,28 @@ def readconfig(config):
 
 			if config.get(section, 'type') == 'leaf':
 				leafscans.append(conf)
+				if debug:
+					tmpbatconfdebug.add('leaf')
 			elif config.get(section, 'type') == 'unpack':
 				unpackscans.append(conf)
+				if debug:
+					tmpbatconfdebug.add('unpack')
 			elif config.get(section, 'type') == 'prerun':
 				prerunscans.append(conf)
+				if debug:
+					tmpbatconfdebug.add('prerun')
 			elif config.get(section, 'type') == 'postrun':
 				postrunscans.append(conf)
+				if debug:
+					tmpbatconfdebug.add('postrun')
 			elif config.get(section, 'type') == 'aggregate':
 				aggregatescans.append(conf)
+				if debug:
+					tmpbatconfdebug.add('aggregate')
+	if tmpbatconfdebug != set():
+		tmpbatconfdebug.update(batconf['debugphases'])
+		batconf['debugphases'] = list(tmpbatconfdebug)
+		
 	## sort scans on priority (highest priority first)
 	prerunscans = sorted(prerunscans, key=lambda x: x['priority'], reverse=True)
 	leafscans = sorted(leafscans, key=lambda x: x['priority'], reverse=True)
