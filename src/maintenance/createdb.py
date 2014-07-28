@@ -1980,7 +1980,7 @@ def checkalreadyscanned((filedir, package, version, filename, origin, batarchive
 					break
 	else:
 		if checksum != None:
-			filehash = checksum
+			filehash = checksum['sha256']
 		else:
 			scanfile = open(resolved_path, 'r')
 			h = hashlib.new('sha256')
@@ -2416,12 +2416,22 @@ def main(argv):
 	checksums = {}
 	if os.path.exists(os.path.join(options.filedir, "SHA256SUM")):
 		checksumlines = open(os.path.join(options.filedir, "SHA256SUM")).readlines()
-		for c in checksumlines:
+		tmpextrahashes = checksumlines[0].strip().split()
+		for c in checksumlines[1:]:
+			archivechecksums = {}
 			checksumsplit = c.strip().split()
-			if len(checksumsplit) != 2:
-				continue
-			(archivechecksum, archivefilename) = checksumsplit
-			checksums[archivefilename] = archivechecksum
+			archivefilename = checksumsplit[-1]
+			## sha256 is always the first hash
+			archivechecksums['sha256'] = checksumsplit[0]
+			counter = 1
+			for h in tmpextrahashes:
+				if h == 'sha256':
+					continue
+				if h not in extrahashes:
+					continue
+				archivechecksums[h] = checksumsplit[counter]
+				counter += 1
+			checksums[archivefilename] = archivechecksums
 	archivechecksums = {}
 	if os.path.exists(os.path.join(options.filedir, "SHA256SUM-ARCHIVE")):
 		checksumlines = open(os.path.join(options.filedir, "SHA256SUM-ARCHIVE")).readlines()
@@ -2431,6 +2441,7 @@ def main(argv):
 				continue
 			(archivefilename, origchecksum, origfilename) = checksumsplit
 			archivechecksums[archivefilename] = (origchecksum, origfilename)
+
 	## TODO: do all kinds of checks here
 	for unpackfile in filelist:
 		try:

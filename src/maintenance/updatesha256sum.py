@@ -12,14 +12,23 @@ for each file, that speeds up database creation.
 import os, os.path, sys, hashlib, multiprocessing
 from optparse import OptionParser
 
-def computehash((filedir, filename)):
+def computehash((filedir, filename, extrahashes)):
+	filehashes = {}
 	resolved_path = os.path.join(filedir, filename)
 	scanfile = open(resolved_path, 'r')
 	h = hashlib.new('sha256')
 	h.update(scanfile.read())
 	scanfile.close()
-	filehash = h.hexdigest()
-        return (filename, filehash)
+	filehashes['sha256'] = h.hexdigest()
+
+	## TODO: just read the files once, because they could be big
+	for i in extrahashes:
+		scanfile = open(resolved_path, 'r')
+		h = hashlib.new(i)
+		h.update(scanfile.read())
+		scanfile.close()
+		filehashes[i] = h.hexdigest()
+        return (filename, filehashes)
 
 def main(argv):
 	parser = OptionParser()
@@ -36,39 +45,72 @@ def main(argv):
 	## no files, so exit
 	if len(dirlist) == 0:
 		sys.exit(0)
-	filenamestosha256s = {}
+
+	extrahashes = ['md5', 'sha1']
+
+	filetohash = {}
 	if os.path.exists(os.path.join(options.filedir, "SHA256SUM")):
 		sha256file = os.path.join(options.filedir, "SHA256SUM")
 		sha256lines = open(sha256file, 'r').readlines()
-		for i in sha256lines:
-			(sha256, filename) = i.strip().split()
-			if filename == 'SHA256SUM':
-				continue
-			if filename == 'LIST':
-				continue
-			filenamestosha256s[filename] = sha256
+		## first line should have the supported hashes
+
+		checksumsused = sha256lines[0].strip().split()
+		## first line is always a list of supported hashes.
+		process = True
+		if set(checksumsused).intersection(set(extrahashes)) != set(extrahashes):
+			process = False
+		if process:
+			for i in manifestlines[1:]:
+				entries = i.strip().split()
+				if filename == 'SHA256SUM':
+					continue
+				if filename == 'LIST':
+					continue
+				filename = entries[0]
+				## sha256 is always the first hash and second entry
+				hashentry = entries[1]
+				filetohash[filename] = {}
+				filetohash[filename]['sha256'] = hashentry
+				counter = 2
+				for c in checksumsused[1:]:
+					## only record results for hashes that are in 'extrahashes'
+					if c in extrahashes:
+						filetohash[fileentry][c] = entries[counter]
+					counter += 1
 
 	## determine which files need to be scanned
-	diffset = set(dirlist).difference(set(filenamestosha256s))
+	diffset = set(dirlist).difference(set(filetohash))
 	if len(diffset) == 0:
 		sys.exit(0)
 
 	## find hashes in parallel
-	shatasks = map(lambda x: (options.filedir, x), diffset)
+	shatasks = map(lambda x: (options.filedir, x, extrahashes), diffset)
 	pool = multiprocessing.Pool()
 	sharesults = pool.map(computehash, shatasks)
 	pool.terminate()
 
 	for i in sharesults:
-		(filename, sha256) = i
-		filenamestosha256s[filename] = sha256
+		(filename, filehashes) = i
+		filetohash[filename] = filehashes
 
 	## write results
-	filenameskeys = filenamestosha256s.keys()
+	filenameskeys = filetohash.keys()
 	filenameskeys.sort()
 	sha256file = open(os.path.join(options.filedir, "SHA256SUM"), 'w')
+	## first write a line with the hashes that are supported
+	if extrahashes == []:
+		sha256file.write("sha256\n")
+	else:
+		hashesstring = "sha256"
+		for h in extrahashes:
+			hashesstring += "\t%s" % h
+		sha256file.write("%s\n" % hashesstring)
 	for i in filenameskeys:
-		sha256file.write("%s  %s\n" % (filenamestosha256s[i], i))
+		## first hashes, since file names could contain spaces
+		hashesstring = filetohash[i]['sha256']
+		for h in extrahashes:
+			hashesstring += "\t%s" % filetohash[i][h]
+		sha256file.write("%s  %s\n" % (hashesstring, i))
 	sha256file.close()
 
 if __name__ == "__main__":
