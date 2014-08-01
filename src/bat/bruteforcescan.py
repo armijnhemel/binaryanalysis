@@ -465,7 +465,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 				reportqueue.put({u: unpackreports[u]})
 		scanqueue.task_done()
 
-def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, debug,unpacktempdir)):
+def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, debug, unpacktempdir)):
 	reports = {}
 	newtags = []
 
@@ -490,8 +490,13 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, 
 			envvars = leafscan['envvars']
 		else:
 			envvars = None
+
+		scandebug = False
+		if leafscan.has_key('debug'):
+			scandebug = True
+
 		exec "from %s import %s as bat_%s" % (module, method, method)
-		res = eval("bat_%s(filetoscan, tags, blacklist, debug=debug, envvars=envvars,unpacktempdir=unpacktempdir)" % (method))
+		res = eval("bat_%s(filetoscan, tags, blacklist, debug=debug, envvars=envvars, unpacktempdir=unpacktempdir, scandebug=scandebug)" % (method))
 		if res != None:
 			(nt, leafres) = res
 			reports[leafscan['name']] = leafres
@@ -693,6 +698,7 @@ def readconfig(config):
 				scandebug = config.get(section, 'debug')
 				if scandebug == 'yes':
 					debug = True
+					conf['debug'] = True
 			except:
 				pass
 			try:
@@ -1045,6 +1051,13 @@ def runscan(scans, scan_binary):
 		else:
 			parallel = False
 
+		tmpdebug=False
+		if debug:
+			tmpdebug = True
+			if debugphases != []:
+				if not 'leaf' in debugphases:
+					tmpdebug = False
+
 		## First run the 'setup' hooks for the scans and pass
 		## results via the environment. This should keep the
 		## code cleaner.
@@ -1052,7 +1065,7 @@ def runscan(scans, scan_binary):
 			if not sscan.has_key('setup'):
 				finalscans.append(sscan)
 				continue
-			setupres = runSetup(sscan, debug)
+			setupres = runSetup(sscan, tmpdebug)
 			(setuprun, newenv) = setupres
 			if not setuprun:
 				continue
@@ -1096,12 +1109,6 @@ def runscan(scans, scan_binary):
 
 		## reverse sort on size: scan largest files first
 		leaftasks_tmp.sort(key=lambda x: x[-1], reverse=True)
-		tmpdebug=False
-		if debug:
-			tmpdebug = True
-			if debugphases != []:
-				if not 'leaf' in debugphases:
-					tmpdebug = False
 		leaftasks_tmp = map(lambda x: x[:2] + (filterScans(finalscans, x[2]),) + x[2:-1] + (topleveldir, tmpdebug, unpacktempdir), leaftasks_tmp)
 
 		if scans['batconfig']['multiprocessing']:
