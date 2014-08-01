@@ -63,7 +63,7 @@ plus more to come.
 
 \frame{
 \frametitle{Unpacking scans}
-Unpacking scans try to extract file systems and compressed files, sometimes from a larger binary blob, by ``carving'' it from a larger binary. Currently some 30 file systems and compressed files are supported:
+Unpacking scans try to extract file systems and compressed files, sometimes from a larger binary blob, by ``carving'' it from a larger binary. Currently some 30 file systems, compressed files and media files are supported, including:
 
 \begin{itemize}
 \item file systems: Android sparse files, cramfs, ext2/ext3/ext4, ISO9660, JFFS2,
@@ -135,7 +135,7 @@ The general configuration is mandatory, the other directives are optional.
 }
 
 \begin{frame}[fragile]
-\frametitle{General configuration}
+\frametitle{General configuration (1)}
 
 \begin{verbatim}
 [batconfig]
@@ -147,17 +147,20 @@ output = prettyprintresxml
 \texttt{multiprocessing} is for using multiple threads. If a scan is not safe (example: it writes to a database) it should be set to \texttt{no}.
 
 \texttt{output} and \texttt{module} are used together to specify an (optional) method that prints results in XML.
+\end{frame}
 
+\frame{
+\frametitle{General configuration (2)}
 There are four optional configuration settings:
 
 \begin{itemize}
 \item \texttt{outputlite}: do not include full copy of the data in the output archive.
 \item \texttt{debug}: disable multiprocessing and output debugging information on standard error
-\item \texttt{debugphases}: used to let \texttt{debug} apply to only specific scanning phases
+\item \texttt{debugphases}: apply \texttt{debug} only to specific scanning phases
 \item \texttt{tempdir}: set prefix where temporary files should be created (default: \texttt{/tmp})
 \end{itemize}
+}
 
-\end{frame}
 
 \frame{
 \frametitle{Mandatory scan configuration options}
