@@ -141,6 +141,11 @@ def tagKnownExtension(filename):
 
 	extension = extensions[-1].lower()
 	if extension == 'zip' or extension == 'jar' or extension == 'apk':
+		datafile = open(filename, 'rb')
+		databuffer = datafile.read(10)
+		datafile.close()
+		if databuffer.find(fsmagic.fsmagic['zip']) != 0:
+			return offsets
 		p = subprocess.Popen(['zipinfo', '-v', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
 
