@@ -20,7 +20,7 @@ This module is to fix these situations.
 1. In ELF shared libraries the SONAME and RPATH attributes can be used.
 '''
 
-def fixduplicates(unpackreports, scantempdir, topleveldir, processors, debug=False, envvars=None, unpacktempdir=None):
+def fixduplicates(unpackreports, scantempdir, topleveldir, processors, scandebug=False, envvars=None, unpacktempdir=None):
 	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):

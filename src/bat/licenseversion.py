@@ -146,7 +146,7 @@ def squashlicenses(licenses):
 					licenses = [(licenses[0][0], 'squashed')]
 	return licenses
 
-def aggregatejars(unpackreports, scantempdir, topleveldir, pool, scanenv, debug=False, unpacktempdir=None):
+def aggregatejars(unpackreports, scantempdir, topleveldir, pool, scanenv, scandebug=False, unpacktempdir=None):
 	cleanclasses = False
 
 	if scanenv.get('AGGREGATE_CLEAN', 0) == '1':
@@ -515,9 +515,9 @@ def prune(scanenv, uniques, package):
 
 	return newuniques
 
-def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, processors, debug=False, envvars=None, unpacktempdir=None):
+def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, processors, scandebug=False, envvars=None, unpacktempdir=None):
 	scanenv = os.environ.copy()
-	envvars = licensesetup(envvars, debug)
+	envvars = licensesetup(envvars, scandebug)
 	if envvars[0]:
 		for en in envvars[1].items():
 			try:
@@ -582,7 +582,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	pool = multiprocessing.Pool(processes=processors)
 
 	lookup_tasks = []
-	lookup_tasks = map(lambda x: (scanenv, unpackreports[x]['sha256'], os.path.join(unpackreports[x]['realpath'], unpackreports[x]['name']), topleveldir, clones), rankingfiles)
+	lookup_tasks = map(lambda x: (scanenv, unpackreports[x]['sha256'], os.path.join(unpackreports[x]['realpath'], unpackreports[x]['name']), topleveldir, clones, scandebug), rankingfiles)
 
 	res = pool.map(lookup_identifier, lookup_tasks,1)
 
@@ -593,7 +593,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 					unpackreports[w]['tags'].append('ranking')
 
 	## aggregate the JAR files
-	aggregatejars(unpackreports, scantempdir, topleveldir, pool, scanenv, debug=False, unpacktempdir=None)
+	aggregatejars(unpackreports, scantempdir, topleveldir, pool, scanenv, scandebug=False, unpacktempdir=None)
 
 	## .class files might have been removed at this point, so sanity check first
 	rankingfiles = set()
@@ -1043,7 +1043,7 @@ def scanDynamic(scanstr, variables, scanenv, clones):
 	return (dynamicRes, variablepvs)
 
 ## Look up strings in the database and assign strings to packages.
-def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfunctions, stringcutoff, precomputescore, usesourceorder, linecount, language):
+def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfunctions, stringcutoff, precomputescore, usesourceorder, linecount, language, scandebug):
 	uniqueMatches = {}
 	nonUniqueScore = {}
 	stringsLeft = {}
@@ -1075,8 +1075,9 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 			kernelcursor = kernelconn.cursor()
 
 	lenlines = len(lines)
-
-	print >>sys.stderr, "total extracted strings for %s: %d" % (filepath, lenlines)
+	
+	if scandebug:
+		print >>sys.stderr, "total extracted strings for %s: %d" % (filepath, lenlines)
 
 	## some counters for keeping track of how many matches there are
 	matchedlines = 0
@@ -1113,7 +1114,8 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 		lines.sort()
 
 	for line in lines:
-		#print >>sys.stderr, "processing <|%s|>" % line
+		#if scandebug:
+		#	print >>sys.stderr, "processing <|%s|>" % line
 		kernelfunctionmatched = False
 
 		if not usesourceorder:
@@ -1276,7 +1278,8 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 			## * database has no duplicates
 			## * filenames in the database have been processed using os.path.basename()
 
-			print >>sys.stderr, "\n%d matches found for <(|%s|)> in %s" % (len(res), line, filepath)
+			if scandebug:
+				print >>sys.stderr, "\n%d matches found for <(|%s|)> in %s" % (len(res), line, filepath)
 
 			pkgs = {}    ## {package name: set([filenames without path])}
 	
@@ -1470,7 +1473,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 
 	return (unmatched, uniqueMatches, nonUniqueMatches, nonUniqueMatchLines, directAssignedString, nonUniqueAssignments, stringsLeft, notclones, nonUniqueScore, sameFileScore, matchednonassigned, matchedlines, unmatchedlines, matchednotclonelines, matcheddirectassignedlines, matchednonassignedlines, nrUniqueMatches, kernelfuncres)
 
-def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, language='C'):
+def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, scandebug, language='C'):
 	if len(lines) == 0:
 		return None
 	## setup code guarantees that this database exists and that sanity
@@ -1516,7 +1519,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 	## first look up and assign strings for as far as possible.
 	## strings that have not been assigned will be assigned later based
 	## on their score.
-	res = lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfunctions, stringcutoff, precomputescore, usesourceorder, linecount, language)
+	res = lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfunctions, stringcutoff, precomputescore, usesourceorder, linecount, language, scandebug)
 	(unmatched, uniqueMatches, nonUniqueMatches, nonUniqueMatchLines, directAssignedString, nonUniqueAssignments, stringsLeft, notclones, nonUniqueScore, sameFileScore, matchednonassigned, matchedlines, unmatchedlines, matchednotclonelines, matcheddirectassignedlines, matchednonassignedlines, nrUniqueMatches, kernelfuncres) = res
 
 	uniqueScore = {}
@@ -1617,7 +1620,8 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 	## is only considered once anyway.
 	while strleft > 0:
 		roundNr = roundNr + 1
-		#print >>sys.stderr, "\nround %d: %d strings left" % (roundNr, strleft)
+		#if scandebug:
+		#	print >>sys.stderr, "\nround %d: %d strings left" % (roundNr, strleft)
 		gain = {}
 		stringsPerPkg = {}
 
@@ -1678,7 +1682,8 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
        		## Let's hope "sort" terminates on a comparison function that
        		## may not actually be a proper ordering.	
 		if len(close) > 1:
-			# print >>sys.stderr, "  doing battle royale between", close
+			#if scandebug:
+			#	print >>sys.stderr, "  doing battle royale between", close
 			## reverse sort close, then best = close_sorted[0][0]
 			close_sorted = map(lambda x: (x, avgscores[x]), close)
 			close_sorted = sorted(close_sorted, key = lambda x: x[1], reverse=True)
@@ -1692,7 +1697,8 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 				best = close_sorted[-1][0]
 			else:
 				best = close_sorted[0][0]
-			#print >>sys.stderr, "  %s won" % best
+			#if scandebug:
+			#	print >>sys.stderr, "  %s won" % best
 		best_score = 0
 		## for each string in the package with the best gain add the score
 		## to the package and move on to the next package.
@@ -1763,7 +1769,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, la
 	return returnres
 
 ## match identifiers with data in the database
-def lookup_identifier((scanenv, filehash, filename, topleveldir, clones)):
+def lookup_identifier((scanenv, filehash, filename, topleveldir, clones, scandebug)):
 	## read the pickle
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 	leafreports = cPickle.load(leaf_file)
@@ -1790,7 +1796,7 @@ def lookup_identifier((scanenv, filehash, filename, topleveldir, clones)):
 
 	## first compute the score for the lines
 	if len(lines) != 0:
-		res = computeScore(lines, filename, scanenv, clones, linuxkernel, stringcutoff, language)
+		res = computeScore(lines, filename, scanenv, clones, linuxkernel, stringcutoff, scandebug, language)
 	else:
 		res = None
 

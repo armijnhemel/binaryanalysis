@@ -531,9 +531,19 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, d
 	for aggregatescan in scans['aggregatescans']:
 		module = aggregatescan['module']
 		method = aggregatescan['method']
+
+		scandebug = False
+		if aggregatescan.has_key('debug'):
+			scandebug = True
+
 		if debug:
 			print >>sys.stderr, "AGGREGATE BEGIN", method, datetime.datetime.utcnow().isoformat()
 			sys.stderr.flush()
+			scandebug = True
+
+		#if scandebug:
+		#	processors=1
+
 		## use the environment to pass extra information
 		if aggregatescan.has_key('envvars'):
 			envvars = aggregatescan['envvars']
@@ -542,9 +552,10 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, d
 		if aggregatescan['cleanup']:
 			## this is an ugly hack *cringe*
 			envvars += ":overridedir=1"
+
 		exec "from %s import %s as bat_%s" % (module, method, method)
 
-		res = eval("bat_%s(unpackreports, scantempdir, topleveldir, processors, debug=debug, envvars=envvars, unpacktempdir=unpacktempdir)" % (method))
+		res = eval("bat_%s(unpackreports, scantempdir, topleveldir, processors, scandebug=scandebug, envvars=envvars, unpacktempdir=unpacktempdir)" % (method))
 		if res != None:
 			if res.keys() != []:
 				filehash = unpackreports[scan_binary]['sha256']

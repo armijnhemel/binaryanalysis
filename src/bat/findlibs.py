@@ -164,7 +164,7 @@ def extractfromelf((path, filename)):
 
 	return (filename, list(localfuncs), list(remotefuncs), list(localvars), list(remotevars), list(weaklocalfuncs), list(weakremotefuncs), list(weaklocalvars), list(weakremotevars), sonames, elftype, rpaths)
 
-def findlibs(unpackreports, scantempdir, topleveldir, processors, debug=False, envvars=None, unpacktempdir=None):
+def findlibs(unpackreports, scantempdir, topleveldir, processors, scandebug=False, envvars=None, unpacktempdir=None):
 	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):

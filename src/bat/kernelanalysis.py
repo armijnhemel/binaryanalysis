@@ -167,7 +167,7 @@ def analyseModuleLicense(path, tags, blacklist=[], debug=False, envvars=[], unpa
 ## Also match the architectures of the modules: they should be for the same architecture
 ## but sometimes modules for an entirely different architecture pop up, which is a
 ## sign that something is wrong.
-def kernelmodulecheck(unpackreports, scantempdir, topleveldir, processors, debug=False, envvars=None, unpacktempdir=None):
+def kernelmodulecheck(unpackreports, scantempdir, topleveldir, processors, scandebug=False, envvars=None, unpacktempdir=None):
 	kernelversions = set()
 	moduleversions = {}
 	modulearchitectures = {}
