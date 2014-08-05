@@ -65,26 +65,49 @@ The Ninka scanner can be used to extract licensing information from source code 
 
 \url{https://github.com/dmgerman/ninka/}
 
-As of the time of writing the latest version is \texttt{bf83428}. This version number is hardcoded a few times in \texttt{batchextractprogramstrings.py} and should be changed if the version of Ninka changes.
+As of the time of writing the latest version is \texttt{1.1}. This version number is hardcoded a few times in \texttt{createdb.py} and should be changed if the version of Ninka changes.
 
-Installing it works as follows:
+Ninka can be installed as follows:
 
 \begin{enumerate}
 \item unpack in \texttt{/tmp}
-\item \texttt{cd /tmp/dmgerman-ninka-bf83428/comments/}
-\item \texttt{tar zxf comments.tar.gz}
+\item \texttt{cd /tmp/ninka-1.1/}
 \item \texttt{cd comments}
 \item \texttt{make clean; make}
 \end{enumerate}
-
-Now Ninka is ready to be used by \texttt{batchextractprogramstrings.py}.
 }
 
 \frame{
 \frametitle{Installing FOSSology}
-There are binary packages available for most distributions. They can either be already found inside the distribution, or downloaded from:
+There are binary packages available for most distributions. Most major distributions already have support. Alternatively, packages can be downloaded from:
 
 \url{http://www.fossology.org/}
+}
+
+\begin{frame}[fragile]
+\frametitle{Creating the configuration file}
+The standard BAT distribution comes with an example configuration file for \texttt{createdb.py}:
+
+\begin{verbatim}
+[extractconfig]
+configtype = global
+database = /tmp/test/master.sqlite3
+scanlicense = yes
+licensedb = /tmp/test/licenses.sqlite3
+ninkacommentsdb = /tmp/test/ninkacomments.sqlite3
+scancopyright = yes
+cleanup = yes
+wipe = no
+\end{verbatim}
+\end{frame}
+
+\frame{
+\frametitle{Running the database creation script}
+The database extraction script can be run as follows:
+
+\texttt{python createdb.py -c /path/to/configuration/file -f /path/to/directory/with/sources}
+
+This will create, depending on the configuration, one to three files: the main database, a licenses database and a temporary database for Ninka, which can be ignored or discarded later.
 }
 
 \frame{
@@ -100,24 +123,45 @@ The ranking scan uses several caching databases:
 If caching databases are not found then the ranking code will be automatically disabled.
 }
 
+\frame{
+\frametitle{Configuring the ranking scan}
+The functionality for the ranking scan is split in two separate scans:
+
+\begin{enumerate}
+\item identifier extraction (in the \texttt{[identifier]} scan)
+\item identifier lookup and scoring (in the \texttt{[versionlicensecopyright]} scan)
+\end{enumerate}
+
+Both scans need to be configured with the right database information
+}
+
 \begin{frame}[fragile]
-\frametitle{Database configuration}
-The parameters for the databases are passed via the environment:
+\frametitle{Database configuration (1)}
+The parameters for the databases are passed via the environment. In \texttt{[identifier]}:
 
 \begin{verbatim}
-[ranking]
+[identifier]
 ...
-envvars = BAT_AVG_C=/path/to/avg/db/for/c
- :BAT_STRINGSCACHE_C=/path/to/caching/db/for/c
- :BAT_DB=/path/to/main/db
- :BAT_FUNCTIONNAMECACHE_C=/path/to/funcname/cache
- :BAT_RANKING_FULLCACHE=0
+envvars = BAT_NAMECACHE_C=/gpl/master/functioncache_c
+...
+\end{verbatim}
+
+Only the caching database for C needs to be added here to
+be able to filter out Linux kernel function names.
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Database configuration (2)}
+
+\begin{verbatim}
+[versionlicensecopyright]
+envvars = BAT_DB=/path/to/main_database:
+      BAT_STRINGSCACHE_C=/path/to/stringscache_for_c:
+      BAT_NAMECACHE_C=/path/to/functioncache_for_c
 ...
 \end{verbatim}
 
 Caches for other programming language families (like Java) can be added in a similar way.
-
-If caches are fully generated \texttt{BAT\_RANKING\_FULLCACHE} should be set to \texttt{1} to let BAT skip some code and speed up execution.
 \end{frame}
 
 \begin{frame}[fragile]
