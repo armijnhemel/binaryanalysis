@@ -746,6 +746,11 @@ def readconfig(config):
 			except:
 				pass
 
+			try:
+				conf['conflicts'] = config.get(section, 'conflicts').split(':')
+			except:
+				pass
+
 			## some things only make sense in a particular context
 			if config.get(section, 'type') == 'postrun' or config.get(section, 'type') == 'aggregate':
 				try:

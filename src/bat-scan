@@ -52,6 +52,18 @@ def main(argv):
 	scans = bat.bruteforcescan.readconfig(config)
 	configfile.close()
 
+	## check if there are any conflicts in the configuration file
+	## conflicts are determined per phase
+	for s in scans:
+		if s == 'batconfig':
+			continue
+		scannames = set(map(lambda x: x['name'], scans[s]))
+		conflicts = set(reduce(lambda x, y: x + y, map(lambda x: x.get('conflicts', []), scans[s])))
+		if scannames.intersection(conflicts) != set():
+			errorstring = reduce(lambda x, y: x + " " + y, scannames.intersection(conflicts))
+			print >>sys.stderr, "conflict in configuration file: %s" % errorstring
+			sys.exit(1)
+
 	scandate = datetime.datetime.utcnow()
 
 	(tempdir, unpackreports) = bat.bruteforcescan.runscan(scans, options.fw)
