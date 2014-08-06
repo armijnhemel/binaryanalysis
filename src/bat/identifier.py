@@ -100,7 +100,7 @@ def searchGeneric(filepath, tags, blacklist=[], offsets={}, scandebug=False, env
 		linuxkernel = True
 
 	if language == 'C':
-		res = extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, blacklist, debug, unpacktempdir)
+		res = extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, blacklist, scandebug, unpacktempdir)
 		if res == None:
 			return None
 		(lines, cmeta) = res
@@ -120,13 +120,13 @@ def searchGeneric(filepath, tags, blacklist=[], offsets={}, scandebug=False, env
 						cmeta['kernelfunctions'] = copy.deepcopy(res['kernelfunctions'])
 		return (['identifier'], (lines, cmeta, language))
 	elif language == 'Java':
-		res = extractJava(filepath, tags, scanenv, filesize, stringcutoff, blacklist, debug, unpacktempdir)
+		res = extractJava(filepath, tags, scanenv, filesize, stringcutoff, blacklist, scandebug, unpacktempdir)
 		if res == None:
 			return None
 		(lines, javameta) = res
 		return (['identifier'], (lines, javameta, language))
 
-def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, blacklist=[], debug=False, unpacktempdir=None):
+def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, blacklist=[], scandebug=False, unpacktempdir=None):
 	## special var to indicate whether or not the file is a Linux kernel
 	## image. If so extra checks can be done.
 	kernelsymbols = []
@@ -389,7 +389,7 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 	cmeta['kernelsymbols'] = kernelsymbols
 	return (lines, cmeta)
 
-def extractJava(scanfile, tags, scanenv, filesize, stringcutoff, blacklist=[], debug=False, unpacktempdir=None):
+def extractJava(scanfile, tags, scanenv, filesize, stringcutoff, blacklist=[], scandebug=False, unpacktempdir=None):
 	if 'dalvik' in tags:
 		javatype = 'dalvik'
 	else:
@@ -404,7 +404,7 @@ def extractJava(scanfile, tags, scanenv, filesize, stringcutoff, blacklist=[], d
 	return (lines, javameta)
 
 '''
-def extractJavaScript(path, tags, scanenv, filesize, stringcutoff, blacklist=[], debug=False, unpacktempdir=None):
+def extractJavaScript(path, tags, scanenv, filesize, stringcutoff, blacklist=[], scandebug=False, unpacktempdir=None):
 	## JavaScript can be minified, but using xgettext it is still
 	## possible to extract the strings from it
 	## results = extractor.extractStrings(os.path.dirname(path), os.path.basename(path))
