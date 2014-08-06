@@ -15,7 +15,7 @@ This scan should be run as a leaf scan.
 import os, os.path, sqlite3, sys, subprocess
 import xml.dom.minidom
 
-def filename2package(path, tags, blacklist=[], debug=False, envvars=None):
+def filename2package(path, tags, blacklist=[], scandebug=False, envvars=None):
 	scanenv = os.environ.copy()
 	if envvars != None:
 		for en in envvars.split(':'):

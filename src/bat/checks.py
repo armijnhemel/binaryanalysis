@@ -88,7 +88,7 @@ def genericSearch(path, markerDict, blacklist=[], unpacktempdir=None):
 ## the dynamic linker configuration on the device. With some mixing and matching it is
 ## nearly always to determine which library in which path is used, since most installations
 ## don't change the default search paths.
-def searchDynamicLibs(path, tags, blacklist=[], debug=False, envvars=None, unpacktempdir=None, scandebug=False):
+def searchDynamicLibs(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktempdir=None):
 	if not 'elf' in tags:
 		return
 	libs = []
@@ -116,7 +116,7 @@ def dynamicLibsPrettyPrint(res, root, envvars=None):
 ## This method uses readelf to determine the architecture of the executable file.
 ## This is necessary because sometimes leftovers from different products (and
 ## different architectures) can be found in one firmware.
-def scanArchitecture(path, tags, blacklist=[], debug=False, envvars=None, unpacktempdir=None, scandebug=False):
+def scanArchitecture(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktempdir=None):
 	if not 'elf' in tags:
 		return
 	p = subprocess.Popen(['readelf', '-h', "%s" % (path,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -127,7 +127,7 @@ def scanArchitecture(path, tags, blacklist=[], debug=False, envvars=None, unpack
 		if "Machine:" in line:
 			return (['architecture'], line.split(':')[1].strip())
 
-def searchLoadLin(path, tags, blacklist=[], debug=False, envvars=None, unpacktempdir=None, scandebug=False):
+def searchLoadLin(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktempdir=None):
 	markerStrings = {'loadlin': [ 'Ooops..., size of "setup.S" has become too long for LOADLIN,'
 			, 'LOADLIN started from $'
 			]}
@@ -135,7 +135,7 @@ def searchLoadLin(path, tags, blacklist=[], debug=False, envvars=None, unpacktem
 	if res != None:
 		return (['loadlin'], True)
 
-def searchIptables(path, tags, blacklist=[], debug=False, envvars=None, unpacktempdir=None, scandebug=False):
+def searchIptables(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktempdir=None):
 	markerStrings = {'iptables':[ 'iptables who? (do you need to insmod?)'
 			, 'Will be implemented real soon.  I promise ;)'
 			, 'can\'t initialize iptables table `%s\': %s'
@@ -144,7 +144,7 @@ def searchIptables(path, tags, blacklist=[], debug=False, envvars=None, unpackte
 	if res != None:
 		return (['iptables'], True)
 
-def searchDproxy(path, tags, blacklist=[], debug=False, envvars=None,unpacktempdir=None, scandebug=False):
+def searchDproxy(path, tags, blacklist=[], scandebug=False, envvars=None,unpacktempdir=None):
 	markerStrings = {'dproxy': [ '# dproxy monitors this file to determine when the machine is'
 			, '# If you want dproxy to log debug info specify a file here.'
 			]}
@@ -152,7 +152,7 @@ def searchDproxy(path, tags, blacklist=[], debug=False, envvars=None,unpacktempd
 	if res != None:
 		return (['dproxy'], True)
 
-def searchEzIpupdate(path, tags, blacklist=[], debug=False, envvars=None, unpacktempdir=None, scandebug=False):
+def searchEzIpupdate(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktempdir=None):
 	markerStrings = {'ez-ipupdate': [ 'ez-ipupdate Version %s, Copyright (C) 1998-'
 			, '%s says that your IP address has not changed since the last update'
 			, 'you must provide either an interface or an address'
@@ -161,7 +161,7 @@ def searchEzIpupdate(path, tags, blacklist=[], debug=False, envvars=None, unpack
 	if res != None:
 		return (['ez-ipupdate'], True)
 
-def searchLibusb(path, tags, blacklist=[], debug=False, envvars=None, unpacktempdir=None, scandebug=False):
+def searchLibusb(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktempdir=None):
 	markerStrings = {'libusb': [ 'Check that you have permissions to write to %s/%s and, if you don\'t, that you set up hotplug (http://linux-hotplug.sourceforge.net/) correctly.'
 			, 'usb_os_find_busses: Skipping non bus directory %s'
 			, 'usb_os_init: couldn\'t find USB VFS in USB_DEVFS_PATH'
@@ -170,7 +170,7 @@ def searchLibusb(path, tags, blacklist=[], debug=False, envvars=None, unpacktemp
 	if res != None:
 		return (['libusb'], True)
 
-def searchVsftpd(path, tags, blacklist=[], debug=False, envvars=None, unpacktempdir=None, scandebug=False):
+def searchVsftpd(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktempdir=None):
 	markerStrings = {'vsftpd': [ 'vsftpd: version'
 			, '(vsFTPd '
 			, 'VSFTPD_LOAD_CONF'
@@ -181,7 +181,7 @@ def searchVsftpd(path, tags, blacklist=[], debug=False, envvars=None, unpacktemp
 	if res != None:
 		return (['vsftpd'], True)
 
-def searchHostapd(path, tags, blacklist=[], debug=False, envvars=None, unpacktempdir=None, scandebug=False):
+def searchHostapd(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktempdir=None):
 	markerStrings = {'hostapd': [ 'hostapd v'
 			]}
 
@@ -189,7 +189,7 @@ def searchHostapd(path, tags, blacklist=[], debug=False, envvars=None, unpacktem
 	if res != None:
 		return (['hostapd'], True)
 
-def searchWpaSupplicant(path, tags, blacklist=[], debug=False, envvars=None, unpacktempdir=None, scandebug=False):
+def searchWpaSupplicant(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktempdir=None):
 	markerStrings = {'wpasupplicant': [ 'wpa_supplicant v'
 			]}
 
@@ -197,7 +197,7 @@ def searchWpaSupplicant(path, tags, blacklist=[], debug=False, envvars=None, unp
 	if res != None:
 		return (['wpasupplicant'], True)
 
-def searchIproute(path, tags, blacklist=[], debug=False, envvars=None, unpacktempdir=None, scandebug=False):
+def searchIproute(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktempdir=None):
 	markerStrings = {'iproute2':[ 'Usage: tc [ OPTIONS ] OBJECT { COMMAND | help }'
 			, 'tc utility, iproute2-ss%s'
 			, 'Option "%s" is unknown, try "tc -help".'
@@ -207,7 +207,7 @@ def searchIproute(path, tags, blacklist=[], debug=False, envvars=None, unpacktem
 	if res != None:
 		return (['iproute2'], True)
 
-def searchWirelessTools(path, tags, blacklist=[], debug=False, envvars=None, unpacktempdir=None, scandebug=False):
+def searchWirelessTools(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktempdir=None):
 	markerStrings = {'wireless-tools': [ "Driver has no Wireless Extension version information."
 			, "Wireless Extension version too old."
 			, "Wireless-Tools version"
@@ -219,14 +219,14 @@ def searchWirelessTools(path, tags, blacklist=[], debug=False, envvars=None, unp
 	if res != None:
 		return (['wireless-tools'], True)
 
-def searchRedBoot(path, tags, blacklist=[], debug=False, envvars=None, unpacktempdir=None, scandebug=False):
+def searchRedBoot(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktempdir=None):
 	markerStrings = {'redboot': ["Display RedBoot version information"]}
 
 	res = genericSearch(path, markerStrings, blacklist)
 	if res != None:
 		return (['redboot'], True)
 
-def searchUBoot(path, tags, blacklist=[], debug=False, envvars=None, unpacktempdir=None, scandebug=False):
+def searchUBoot(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktempdir=None):
         markerStrings = {'uboot': [ "run script starting at addr"
 			, "Hit any key to stop autoboot: %2d"
 			, "## Binary (kermit) download aborted"
@@ -240,7 +240,7 @@ def searchUBoot(path, tags, blacklist=[], debug=False, envvars=None, unpacktempd
 ## What actually do these dependencies mean?
 ## Are they dependencies of the installer itself, or of the programs that are
 ## installed by the installer?
-def searchWindowsDependencies(path, tags, blacklist=[], debug=False, envvars=None, unpacktempdir=None, scandebug=False):
+def searchWindowsDependencies(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktempdir=None):
 	## first determine if we are dealing with a MS Windows executable
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
@@ -260,7 +260,7 @@ def xmlPrettyPrintWindowsDeps(res, root, envvars=None):
 	pass
 
 ## method to extract meta information from PDF files
-def scanPDF(path, tags, blacklist=[], debug=False, envvars=None, unpacktempdir=None, scandebug=False):
+def scanPDF(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktempdir=None):
 	## Only consider whole PDF files. If anything has been carved from
 	## it, skip it. Blacklists are a good indicator.
 	if blacklist != []:
@@ -318,7 +318,7 @@ def pdfPrettyPrint(res, root, envvars=None):
 ######################################
 ## This should only be used as an indicator for further investigation,
 ## never as proof that a binary is actually licensed under a license!
-def scanLicenses(path, tags, blacklist=[], debug=False, envvars=None, unpacktempdir=None, scandebug=False):
+def scanLicenses(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktempdir=None):
 	licenseidentifiers = {}
 
 	## identifiers for any GNU license (could apply to multiple licenses)
@@ -391,7 +391,7 @@ def licensesPrettyPrint(res, root, envvars=None):
 ## scan for mentions of several forges
 ## Some of the URLs of the forges no longer work or are redirected, but they
 ## might still pop up in binaries.
-def scanForges(path, tags, blacklist=[], debug=False, envvars=None, unpacktempdir=None, scandebug=False):
+def scanForges(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktempdir=None):
 	forgeidentifiers = {}
 
 	forgeidentifiers['sourceforge.net'] = ["sourceforge.net"]
@@ -431,7 +431,7 @@ def forgesPrettyPrint(res, root, envvars=None):
 ## experimental clamscan feature
 ## Always run freshclam before scanning to get the latest
 ## virus signatures!
-def scanVirus(path, tags, blacklist=[], debug=False, envvars=None, unpacktempdir=None, scandebug=False):
+def scanVirus(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktempdir=None):
 	p = subprocess.Popen(['clamscan', "%s" % (path,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode == 0:

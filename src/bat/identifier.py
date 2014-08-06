@@ -46,7 +46,7 @@ splitcharacters = map(lambda x: chr(x), range(0,9) + range(14,32) + [127])
 ## Original code (in Perl) was written by Eelco Dolstra.
 ## Reimplementation in Python done by Armijn Hemel.
 ##
-def searchGeneric(filepath, tags, blacklist=[], offsets={}, debug=False, envvars=None, unpacktempdir=None, scandebug=False):
+def searchGeneric(filepath, tags, blacklist=[], offsets={}, scandebug=False, envvars=None, unpacktempdir=None):
 	filesize = os.stat(filepath).st_size
 	## whole file is blacklisted, so no need to scan
 	if extractor.inblacklist(0, blacklist) == filesize:

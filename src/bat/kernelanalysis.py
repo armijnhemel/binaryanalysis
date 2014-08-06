@@ -19,7 +19,7 @@ def xmlprettyprint(res, root, envvars=None):
 		topnode.appendChild(tmpnode)
 	return topnode
 
-def kernelChecks(path, tags, blacklist=[], debug=False, envvars=None, unpacktempdir=None, scandebug=False):
+def kernelChecks(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktempdir=None):
 	results = {}
         try:
                 kernelbinary = open(path, 'rb')
@@ -126,7 +126,7 @@ def findRedBoot(lines):
 
 ## extract the kernel version from the module
 ## TODO: merge with module license extraction
-def analyseModuleVersion(path, tags, blacklist=[], debug=False, envvars=[], unpacktempdir=None, scandebug=False):
+def analyseModuleVersion(path, tags, blacklist=[], scandebug=False, envvars=[], unpacktempdir=None):
 	if not 'elfrelocatable' in tags:
 		return
 	## 2.6 and later Linux kernel
@@ -146,7 +146,7 @@ def analyseModuleVersion(path, tags, blacklist=[], debug=False, envvars=[], unpa
 		return (['linuxkernel', 'modulekernelversion'], stanout.split()[0])
 
 ## analyse a kernel module. Requires that the modinfo program from module-init-tools has been installed
-def analyseModuleLicense(path, tags, blacklist=[], debug=False, envvars=[], unpacktempdir=None, scandebug=False):
+def analyseModuleLicense(path, tags, blacklist=[], scandebug=False, envvars=[], unpacktempdir=None):
 	if not "elfrelocatable" in tags:
 		return None
 	p = subprocess.Popen(['/sbin/modinfo', "-F", "license", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)

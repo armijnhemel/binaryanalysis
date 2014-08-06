@@ -487,21 +487,24 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, 
 		report = {}
 		module = leafscan['module']
 		method = leafscan['method']
+
+		scandebug = False
+		if leafscan.has_key('debug'):
+			scandebug = True
+			debug = True
+
 		if debug:
 			print >>sys.stderr, method, filetoscan, datetime.datetime.utcnow().isoformat()
 			sys.stderr.flush()
+			scandebug = True
 		## use the environment to pass extra information
 		if leafscan.has_key('envvars'):
 			envvars = leafscan['envvars']
 		else:
 			envvars = None
 
-		scandebug = False
-		if leafscan.has_key('debug'):
-			scandebug = True
-
 		exec "from %s import %s as bat_%s" % (module, method, method)
-		res = eval("bat_%s(filetoscan, tags, blacklist, debug=debug, envvars=envvars, unpacktempdir=unpacktempdir, scandebug=scandebug)" % (method))
+		res = eval("bat_%s(filetoscan, tags, blacklist, scandebug=scandebug, envvars=envvars, unpacktempdir=unpacktempdir)" % (method))
 		if res != None:
 			(nt, leafres) = res
 			reports[leafscan['name']] = leafres
@@ -535,6 +538,7 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, d
 		scandebug = False
 		if aggregatescan.has_key('debug'):
 			scandebug = True
+			debug = True
 
 		if debug:
 			print >>sys.stderr, "AGGREGATE BEGIN", method, datetime.datetime.utcnow().isoformat()
