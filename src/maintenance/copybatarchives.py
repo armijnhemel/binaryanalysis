@@ -27,6 +27,11 @@ def main(argv):
 
 	if options.archivedir == None:
 		parser.error("specify archivedir")
+	else:
+		try:
+			archivelist = open(os.path.join(options.archivedir,"ARCHIVELIST")).readlines()
+		except:
+			parser.error("'ARCHIVELIST' not found in file dir")
 	if options.origdir == None:
 		parser.error("specify origdir")
 	else:
@@ -58,6 +63,8 @@ def main(argv):
 
 	copyfromarchives = set()
 	copyfromorig = set()
+	archivetometa = {}
+
 	for unpackfile in filelist:
 		try:
 			unpacks = unpackfile.strip().split()
@@ -65,6 +72,7 @@ def main(argv):
 				(package, version, filename, origin) = unpacks
 				if '%s-%s-%s-bat.tar.bz2' % (package, version, origin) in archivenames:
 					copyfromarchives.add('%s-%s-%s-bat.tar.bz2' % (package, version, origin))
+					archivetometa['%s-%s-%s-bat.tar.bz2' % (package, version, origin)] = (version, origin)
 				else:
 					copyfromorig.add(filename)
 		except:
@@ -93,6 +101,22 @@ def main(argv):
 		#sha256sums = open(os.path.join(options.origdir, 'SHA256SUM')).readlines()
 	#if os.path.exists(os.path.join(options.archivedir, 'SHA256SUM')):
 		#sha256sums = open(os.path.join(options.archivedir, 'SHA256SUM')).readlines()
+
+	print "writing LIST"
+	newlistfile = open(os.path.join(options.targetdir, "LIST"), 'wb')
+	## walk the original LIST file and write lines for the files for which there are no archives
+	for f in filelist:
+		unpacks = f.strip().split()
+		filename = unpacks[2]
+		if filename in copyfromorig:
+			newlistfile.write(f)
+	## then walk the list for archives
+	for f in archivelist:
+		archivename = f.strip()
+		if archivename in copyfromarchives:
+			(version, origin) = archivetometa[archivename]
+			newlistfile.write("%s\t%s\t%s\t%s\tbatarchive\n" % (archivename[:-12], version, origin, archivename))
+	newlistfile.close()
 
 if __name__ == "__main__":
 	main(sys.argv)
