@@ -54,7 +54,7 @@ import sys, os, magic, string, re, subprocess, shutil, stat, datetime
 import tempfile, bz2, tarfile, gzip, ConfigParser
 from optparse import OptionParser
 from multiprocessing import Pool
-import sqlite3, hashlib
+import sqlite3, hashlib, zlib
 
 tarmagic = ['POSIX tar archive (GNU)'
            , 'tar archive'
@@ -895,10 +895,14 @@ def computehash((filedir, filename, extension, language, extrahashes)):
 	filehashes['sha256'] = h.hexdigest()
 	for i in extrahashes:
 		scanfile = open(resolved_path, 'r')
-		h = hashlib.new(i)
-		h.update(scanfile.read())
+		if i == 'crc32':
+			crcdata = scanfile.read()
+			filehashes[i] = zlib.crc32(crcdata) & 0xffffffff
+		else:
+			h = hashlib.new(i)
+			h.update(scanfile.read())
+			filehashes[i] = h.hexdigest()
 		scanfile.close()
-		filehashes[i] = h.hexdigest()
 		
 	return (filedir, filename, filehashes, extension, language)
 
@@ -2160,6 +2164,8 @@ def main(argv):
 				hashvalues = sec.split(':')
 				for h in hashvalues:
 					if h in hashlib.algorithms:
+						extrahashes.append(h)
+					elif h == 'crc32':
 						extrahashes.append(h)
 			except:
 				extrahashes = []
