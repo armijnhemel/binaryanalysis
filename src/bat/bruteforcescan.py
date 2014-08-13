@@ -273,6 +273,14 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 		else:
 			offsets =  prerun.genericMarkerSearch(filetoscan, magicscans, optmagicscans)
 
+		if "encrypted" in tags:
+			leaftasks.append((filetoscan, magic, tags, blacklist, filehash, filesize))
+			for l in leaftasks:
+				leafqueue.put(l)
+			unpackreports[relfiletoscan]['tags'] = tags
+			for u in unpackreports:
+				reportqueue.put({u: unpackreports[u]})
+			scanqueue.task_done()
 		## we have all offsets with markers here, so sscans that are not needed
 		## can be filtered out.
 		## Also keep track of the "most promising" scans (offset 0) to try
