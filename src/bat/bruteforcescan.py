@@ -135,9 +135,10 @@ def gethash(path, filename):
 ## TODO: refactor so code can be shared with fwunpack.py
 def tagKnownExtension(filename):
 	offsets = {}
+	tags = []
 	extensions = filename.rsplit('.', 1)
 	if len(extensions) == 1:
-		return offsets
+		return (tags, offsets)
 
 	extension = extensions[-1].lower()
 	if extension == 'zip' or extension == 'jar' or extension == 'apk':
@@ -145,28 +146,30 @@ def tagKnownExtension(filename):
 		databuffer = datafile.read(10)
 		datafile.close()
 		if databuffer.find(fsmagic.fsmagic['zip']) != 0:
-			return offsets
+			return (tags, offsets)
 		p = subprocess.Popen(['zipinfo', '-v', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
 
-		## check if the file is encrypted, if so bail out
-		res = re.search("file security status:\s+(\w*)\sencrypted", stanout)
-		if res == None:
-			return offsets
-
-		if res.groups(0)[0] != 'not':
-			return offsets
-
-		## non-encrypted file, so continue processing it
 		res = re.search("Actual[\w\s]*end-(?:of-)?cent(?:ral)?-dir record[\w\s]*:\s*(\d+) \(", stanout)
 		if res != None:
 			endofcentraldir = int(res.groups(0)[0])
 		else:
-			return offsets
+			return (tags, offsets)
+
 		## TODO: determine commentsize
 		commentsize = 0
 		if endofcentraldir + 22 + commentsize == os.stat(filename).st_size:
 			offsets['zip'] = [0]
+			tags.append('zip')
+
+		## check if the file is encrypted, if so bail out
+		res = re.search("file security status:\s+(\w*)\sencrypted", stanout)
+		if res == None:
+			return ([], offsets)
+
+		if res.groups(0)[0] != 'not':
+			tags.append('encrypted')
+			return (tags, offsets)
 	return offsets
 
 ## scan a single file, possibly unpack and recurse
@@ -266,7 +269,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 		## scan for markers
 		tagOffsets = tagKnownExtension(filetoscan)
 		if tagOffsets != {}:
-			offsets = tagOffsets
+			(tags, offsets) = tagOffsets
 		else:
 			offsets =  prerun.genericMarkerSearch(filetoscan, magicscans, optmagicscans)
 
