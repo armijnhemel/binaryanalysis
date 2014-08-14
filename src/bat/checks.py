@@ -427,18 +427,3 @@ def forgesPrettyPrint(res, root, envvars=None):
 		tmpnode2 = root.createElement(key)
 		tmpnode.appendChild(tmpnode2)
 	return tmpnode
-
-## experimental clamscan feature
-## Always run freshclam before scanning to get the latest
-## virus signatures!
-def scanVirus(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktempdir=None):
-	p = subprocess.Popen(['clamscan', "%s" % (path,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode == 0:
-               	return
-	else:
-		## Oooh, virus found!
-		viruslines = stanout.split("\n")
-		## first line contains the report:
-		virusname = viruslines[0].strip()[len(path) + 2:-6]
-		return (['virus'], virusname)
