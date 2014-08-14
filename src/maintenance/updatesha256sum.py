@@ -9,7 +9,7 @@ This script is to update the SHA256SUM file in a directory that contains sha256 
 for each file, that speeds up database creation.
 '''
 
-import os, os.path, sys, hashlib, multiprocessing
+import os, os.path, sys, hashlib, multiprocessing, zlib
 from optparse import OptionParser
 
 def computehash((filedir, filename, extrahashes)):
@@ -24,10 +24,14 @@ def computehash((filedir, filename, extrahashes)):
 	## TODO: just read the files once, because they could be big
 	for i in extrahashes:
 		scanfile = open(resolved_path, 'r')
-		h = hashlib.new(i)
-		h.update(scanfile.read())
+		if i == 'crc32':
+			crcdata = scanfile.read()
+			filehashes[i] = zlib.crc32(crcdata) & 0xffffffff
+		else:
+			h = hashlib.new(i)
+			h.update(scanfile.read())
+			filehashes[i] = h.hexdigest()
 		scanfile.close()
-		filehashes[i] = h.hexdigest()
         return (filename, filehashes)
 
 def main(argv):
@@ -46,7 +50,7 @@ def main(argv):
 	if len(dirlist) == 0:
 		sys.exit(0)
 
-	extrahashes = ['md5', 'sha1']
+	extrahashes = ['md5', 'sha1', 'crc32']
 
 	filetohash = {}
 	if os.path.exists(os.path.join(options.filedir, "SHA256SUM")):

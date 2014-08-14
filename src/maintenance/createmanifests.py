@@ -22,7 +22,7 @@ Compression is determined using magic
 '''
 
 import sys, os, magic, string, re, subprocess, shutil, stat
-import tempfile, bz2, tarfile, gzip, hashlib
+import tempfile, bz2, tarfile, gzip, hashlib, zlib
 from optparse import OptionParser
 from multiprocessing import Pool
 
@@ -167,10 +167,14 @@ def computehash((path, filename, extrahashes)):
 	filehashes['sha256'] = h.hexdigest()
 	for i in extrahashes:
 		scanfile = open(resolved_path, 'r')
-		h = hashlib.new(i)
-		h.update(scanfile.read())
+		if i == 'crc32':
+			crcdata = scanfile.read()
+			filehashes[i] = zlib.crc32(crcdata) & 0xffffffff
+		else:
+			h = hashlib.new(i)
+			h.update(scanfile.read())
+			filehashes[i] = h.hexdigest()
 		scanfile.close()
-		filehashes[i] = h.hexdigest()
 	return (path, filename, filehashes)
 
 def checkalreadyscanned((filedir, filename, checksums)):
@@ -209,6 +213,8 @@ def main(argv):
 		if not os.path.exists(options.unpackdir):
 			parser.error("temporary unpacking directory '%s' does not exist" % options.unpackdir)
 
+	options.unpackdir = '/ramdisk'
+
 	pool = Pool()
 
 	pkgmeta = []
@@ -223,7 +229,7 @@ def main(argv):
 			(archivechecksum, archivefilename) = checksumsplit
 			checksums[archivefilename] = archivechecksum
 
-	extrahashes = ['md5', 'sha1']
+	extrahashes = ['md5', 'sha1', 'crc32']
 
 	for unpackfile in filelist:
 		try:
