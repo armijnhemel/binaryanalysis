@@ -622,7 +622,7 @@ def unpack_verify(filedir, filename):
 
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
-def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, newlist):
+def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
 	## unpack the archive. If it fails, cleanup and return.
 	## TODO: make temporary dir configurable
 	temporarydir = unpack(filedir, filename, unpackdir)
@@ -748,7 +748,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 				i = osgen.next()
 				## make sure all directories can be accessed
 				for d in i[1]:
-					if not os.path.islink(os.path.join(i[0], d)):
+					if not os.path.islink(os.path.join(i[0], d, False)):
 						os.chmod(os.path.join(i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 				for p in i[2]:
 					scanfiles.append((i[0], p, pkgconf))
@@ -789,7 +789,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 				cleanupdir(temporarydir)
 			return
 
-	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist)
+	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles)
 	if sqlres != None:
 		if sqlres != []:
 			## Add the file to the database: name of archive, sha256, packagename and version
@@ -842,7 +842,7 @@ def grabhash((db, package, version, checksum)):
 	return (checksum, identical)
 
 ## Compute the SHA256 for a single file.
-def filterfiles((filedir, filename, pkgconf)):
+def filterfiles((filedir, filename, pkgconf, allfiles)):
 	resolved_path = os.path.join(filedir, filename)
 	if not os.path.islink(resolved_path):
 		try:
@@ -877,8 +877,10 @@ def filterfiles((filedir, filename, pkgconf)):
 				if (p_nocase.endswith(extension)) and not p_nocase == extension:
 					process = True
 					break
-	if not process:
+	if not process and not allfiles:
 		return None
+	elif not process and allfiles:
+		language = None
 
 	filemagic = ms.file(os.path.realpath(resolved_path))
 	if filemagic == "AppleDouble encoded Macintosh file":
@@ -906,7 +908,7 @@ def computehash((filedir, filename, extension, language, extrahashes)):
 		
 	return (filedir, filename, filehashes, extension, language)
 
-def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist):
+def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
 	osgen = os.walk(srcdir)
 
 	pkgconf = packageconfig.get(package,{})
@@ -919,7 +921,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 				if batarchive:
 					if p == 'MANIFEST.BAT':
 						continue
-				scanfiles.append((i[0], p, pkgconf))
+				scanfiles.append((i[0], p, pkgconf, allfiles))
 			## make sure all directories can be accessed
 			for d in i[1]:
 				if not os.path.islink(os.path.join(i[0], d)):
@@ -950,6 +952,9 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	else:
 		scanfiles = map(lambda x: x + (extrahashes,), scanfiles)
 		scanfile_result = filter(lambda x: x != None, pool.map(computehash, scanfiles, 1))
+
+	miscfiles = filter(lambda x: x[4] == None, scanfile_result)
+	scanfile_result = filter(lambda x: x[4] != None, scanfile_result)
 
 	ninkaversion = "1.1"
 	insertfiles = []
@@ -2147,6 +2152,14 @@ def main(argv):
 			except:
 				wipe = False
 			try:
+				sec = config.get(section, 'allfiles')
+				if sec == 'yes':
+					allfiles = True
+				else:
+					allfiles = False
+			except:
+				allfiles = False
+			try:
 				licensedb = config.get(section, 'licensedb')
 			except:
 				licensedb = None
@@ -2516,7 +2529,7 @@ def main(argv):
 			(package, version, filename, origin, filehash, batarchive) = i
 			if package != oldpackage:
 				oldres = []
-			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, masterdatabase, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist)
+			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, masterdatabase, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
 			if unpackres != None:
 				oldres = map(lambda x: x[2], unpackres)
 				oldpackage = package
