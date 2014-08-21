@@ -58,6 +58,8 @@ def main(argv):
 		if s == 'batconfig':
 			continue
 		scannames = set(map(lambda x: x['name'], scans[s]))
+		if len(scannames) == 0:
+			continue
 		conflicts = set(reduce(lambda x, y: x + y, map(lambda x: x.get('conflicts', []), scans[s])))
 		if scannames.intersection(conflicts) != set():
 			errorstring = reduce(lambda x, y: x + " " + y, scannames.intersection(conflicts))
