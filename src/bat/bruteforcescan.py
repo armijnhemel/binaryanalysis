@@ -170,7 +170,7 @@ def tagKnownExtension(filename):
 		if res.groups(0)[0] != 'not':
 			tags.append('encrypted')
 			return (tags, offsets)
-	return offsets
+	return (tags, offsets)
 
 ## scan a single file, possibly unpack and recurse
 def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optmagicscans, processid, hashdict, llock, unpacktempdir):
@@ -200,8 +200,6 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 		leaftasks = []
 		unpackreports = {}
 		blacklist = []
-		offsets = {}
-		tags = []
 		(path, filename, lenscandir, tempdir, debug) = scanqueue.get()
 		lentempdir = len(tempdir)
 
@@ -268,9 +266,8 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 
 		## scan for markers
 		tagOffsets = tagKnownExtension(filetoscan)
-		if tagOffsets != {}:
-			(tags, offsets) = tagOffsets
-		else:
+		(tags, offsets) = tagOffsets
+		if offsets == {}:
 			offsets =  prerun.genericMarkerSearch(filetoscan, magicscans, optmagicscans)
 
 		if "encrypted" in tags:
