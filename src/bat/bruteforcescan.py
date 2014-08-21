@@ -932,8 +932,9 @@ def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=Fa
 		pool.terminate()
 		dumpfile.add('filereports')
 	except Exception,e:
-		print >>sys.stderr, "writeDumpfile", e
-		sys.stderr.flush()
+		if debug:
+			print >>sys.stderr, "writeDumpfile", e
+			sys.stderr.flush()
 
 	dumpadds = set()
 	for i in (scans['postrunscans'] + scans['aggregatescans']):
