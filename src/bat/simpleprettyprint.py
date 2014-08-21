@@ -119,6 +119,8 @@ def prettyprintscan(unpackreports, root, scannode, scans, topleveldir):
 	## pretty print the individual results for the top level file.
 	if unpackreports[scannode].has_key('sha256'):
 		filehash = unpackreports[scannode]['sha256']
+		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
+			return scansnode
 
 		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 		leafreports = cPickle.load(leaf_file)
