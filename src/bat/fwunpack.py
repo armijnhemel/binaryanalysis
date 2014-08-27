@@ -958,6 +958,9 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[], offsets={}, debug=False
 			(size7s, resdir) = res
 			diroffsets.append((resdir, offset, size7s))
 			counter = counter + 1
+			if offset == 0 and size7s == os.stat(filename).st_size:
+				tags.append("compressed")
+				tags.append("7z")
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
