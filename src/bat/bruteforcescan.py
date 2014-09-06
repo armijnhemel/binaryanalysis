@@ -200,6 +200,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 		leaftasks = []
 		unpackreports = {}
 		blacklist = []
+		tags = []
 		(path, filename, lenscandir, tempdir, debug) = scanqueue.get()
 		lentempdir = len(tempdir)
 
