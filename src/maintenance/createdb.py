@@ -135,8 +135,8 @@ kernelexprs.append(re.compile("DEFINE_EVENT\s*\(\w+,\s*(\w+)", re.MULTILINE))
 #COMPAT_SYSCALL_DEFINE
 
 ## some more precompiled regex
-recopyright = re.compile('^\[(\d+):\d+:(\w+)] \'(.*)\'')
-recopyright2 = re.compile('^\[(\d+):\d+:(\w+)] \'(.*)')
+recopyright = re.compile('^\s*\[(\d+):\d+:(\w+)] \'(.*)\'$')
+recopyright2 = re.compile('^\s*\[(\d+):\d+:(\w+)] \'(.*)')
 
 oldallowedvals= ["b", "c", "h", "i", "l", "s"]
 
@@ -1389,6 +1389,8 @@ def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)
 		bufstr = ""
 		buftype = ""
 		offset = 0
+		if len(clines[-1]) == 0:
+			clines = clines[:-1]
 		for c in clines[1:]:
 			## Extract copyright information, like URLs, e-mail
 			## addresses and copyright statements.
@@ -1399,41 +1401,49 @@ def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)
 			## unless some extra filtering is added, like searching for
 			## URLs that point to licenses that were not included in
 			## the binary.
-			res = recopyright.match(c.strip())
-			if res != None:
-				if continuation:
-					if bufstr != "" and buftype != "":
-						copyrightsres.append((buftype, bufstr, offset))
-				continuation = False
-				bufstr = ""
-				buftype = ""
-				offset = res.groups()[0]
-				## e-mail addresses are never on multiple lines
-				if res.groups()[1] == 'email':
-					copyrightsres.append(('email', res.groups()[2], offset))
-				## urls should are never on multiple lines
-				elif res.groups()[1] == 'url':
-					copyrightsres.append(('url', res.groups()[2], offset))
-				## copyright statements can be on multiple lines, but this is
-				## the start of a new statement
-				elif res.groups()[1] == 'statement':
-					continuation = True
-					buftype = "statement"
-					bufstr = res.groups()[2]
-			else:
-				res = recopyright2.match(c.strip())
+			if '[' in c and ']' in c:
+				res = recopyright.match(c)
 				if res != None:
-					if res.groups()[1] == 'statement':
+					if continuation:
+						if bufstr != "" and buftype != "":
+							if bufstr.endswith("'"):
+								bufstr = bufstr[:-1]
+							copyrightsres.append((buftype, bufstr, offset))
+					continuation = False
+					bufstr = ""
+					buftype = ""
+					offset = res.groups()[0]
+					## e-mail addresses are never on multiple lines
+					if res.groups()[1] == 'email':
+						copyrightsres.append(('email', res.groups()[2], offset))
+					## urls should are never on multiple lines
+					elif res.groups()[1] == 'url':
+						copyrightsres.append(('url', res.groups()[2], offset))
+					## copyright statements can be on multiple lines, but this is
+					## the start of a new statement
+					elif res.groups()[1] == 'statement':
 						continuation = True
 						buftype = "statement"
 						bufstr = res.groups()[2]
-						offset = res.groups()[0]
 				else:
-					bufstr = bufstr + "\n" + c.strip()
-					continuation = True
+					res = recopyright2.match(c)
+					if res != None:
+						if res.groups()[1] == 'statement':
+							continuation = True
+							buftype = "statement"
+							bufstr = res.groups()[2]
+							offset = res.groups()[0]
+					else:
+						bufstr = bufstr + "\n" + c
+						continuation = True
+			else:
+				bufstr = bufstr + "\n" + c
+				continuation = True
 		## perhaps some lingering data
 		if continuation:
 			if bufstr != "" and buftype != "":
+				if bufstr.endswith("'"):
+					bufstr = bufstr[:-1]
 				copyrightsres.append((buftype, bufstr, offset))
 
 		newcopyrightsres = []
