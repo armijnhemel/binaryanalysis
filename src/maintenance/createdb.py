@@ -55,6 +55,7 @@ import tempfile, bz2, tarfile, gzip, ConfigParser
 from optparse import OptionParser
 from multiprocessing import Pool
 import sqlite3, hashlib, zlib
+import batextensions
 
 tarmagic = ['POSIX tar archive (GNU)'
            , 'tar archive'
@@ -148,35 +149,7 @@ for v in oldallowedvals:
 
 rechar = re.compile("c\d+")
 
-## list of extensions, plus what language they should be mapped to
-## This is not necessarily correct, but right now it suffices. Ideally a parser
-## would be run on each file to see what kind of file it is.
-extensions = {'.c'      : 'C',
-              '.cc'     : 'C',
-              '.cpp'    : 'C',
-              '.cxx'    : 'C',
-              '.c++'    : 'C',
-              '.h'      : 'C',
-              '.hh'     : 'C',
-              '.hpp'    : 'C',
-              '.hxx'    : 'C',
-              '.l'      : 'C',
-              '.qml'    : 'C',
-              '.s'      : 'C',
-              '.txx'    : 'C',
-              '.y'      : 'C',
-              '.cs'     : 'C#',
-              '.groovy' : 'Java',
-              '.java'   : 'Java',
-              '.jsp'    : 'Java',
-              '.scala'  : 'Java',
-              '.as'     : 'ActionScript',
-              '.js'     : 'JavaScript',
-              '.php'    : 'PHP',
-              '.py'     : 'Python',
-              '.patch'  : 'patch',
-              '.diff'   : 'patch',
-             }
+extensions = batextensions.extensions
 
 ## extensions, without leading .
 extensionskeys = set(map(lambda x: x[1:], extensions.keys()))

@@ -41,35 +41,9 @@ import sys, os, magic, string, re, subprocess, shutil, stat, multiprocessing
 import tempfile, bz2, tarfile, gzip, datetime
 from optparse import OptionParser
 import sqlite3, hashlib
+import batextensions
 
-## list of extensions, plus what language they should be mapped to
-## This is not necessarily correct, but right now it suffices. Ideally a parser
-## would be run on each file to see what kind of file it is.
-## Keep in sync with createdb.py !!
-extensions = {'.c'      : 'C',
-              '.cc'     : 'C',
-              '.cpp'    : 'C',
-              '.cxx'    : 'C',
-              '.c++'    : 'C',
-              '.h'      : 'C',
-              '.hh'     : 'C',
-              '.hpp'    : 'C',
-              '.hxx'    : 'C',
-              '.l'      : 'C',
-              '.qml'    : 'C',
-              '.s'      : 'C',
-              '.txx'    : 'C',
-              '.y'      : 'C',
-              '.cs'     : 'C#',
-              '.groovy' : 'Java',
-              '.java'   : 'Java',
-              '.jsp'    : 'Java',
-              '.scala'  : 'Java',
-              '.as'     : 'ActionScript',
-              '.js'     : 'JavaScript',
-              '.php'    : 'PHP',
-              '.py'     : 'Python',
-             }
+extensions = batextensions.extensions
 
 ## extensions, without leading .
 extensionskeys = set(map(lambda x: x[1:], extensions.keys()))
