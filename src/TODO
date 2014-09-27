@@ -63,28 +63,24 @@ misc:
 * add piecharts/reports per directory that summarise what is inside a directory (recursively, perhaps only if something was unpacked)
 * add per scan debug to allow better custom debugging
 * test on latest OpenSUSE
-* test on latest Debian, make sure configurations/dependencies work
-* replace calls to dd, tail, head and others with truncate() where possible to prevent launching an external process
 * replace hardcoded options in reporting with values of 'storetarget'
 * tag webp files
 
 BOTTLENECKS/HIGH PRIORITY:
 1. ELF tagging is sometimes incorrect, so LZMA unpacker tries to extract LZMA files in vain from these ELF files, which costs a lot of time.
-2. update bat-fsck.cramfs to newer version of util-linux
+2. update bat-fsck.cramfs to util-linux 2.24.2 (or wait for util-linux 2.25 to be used everywhere)
 3. replace own counters with collections.Counter(), also for code clarity
 4. better report non unique matched strings which are not clones
 5. verify and tag Android resources.arsc
 6. rework datastructures of ranking information (strings, function names, variables) so they are all similar
-7. Android Eclair YAFFS2
+7. handle "disk full" and other errors
 8. clean up for tagKnownExtension, add more extensions if possible. Research big firmwares for this to see which extensions to focus on first.
 9. research/fix priority for Minix file system
 10. don't recreate ELF graphs (model for every ELF binary), but reuse graphs of dependencies. This would need a topological sort.
 11. process UNSCANNED_DUPLICATE_FILES from BAT archives in createdb.py. This is needed if some of the unscanned duplicate files need to be processed.
-12. take order of archive creation into account in createdb.py
+12. better report non unique matched strings which are not clones
 13. refactor name squashing
 14. find versions of matched kernel function names and report
 15. store meta data about media files (PNG, GIF, MP3, etc.) in database as some of these files are quite package specific
-16. better report non unique matched strings which are not clones
-17. add "conflicts" directive to configuration file so conflicting modules can be detected and reported to the user
-18. handle "disk full" and other errors
-19. add support for different hashes to createmanifests.py and createdb.py when reading from a manifest file
+16. try to find right ELF sections where string constants can be found
+17. process entries of encrypted ZIP files
