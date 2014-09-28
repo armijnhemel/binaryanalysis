@@ -38,18 +38,17 @@ from a binary scan with a source code archive.
 \subsection{Hardware requirements}
 
 The tools in the Binary Analysis Tool can be quite resource intensive. These
-are largely I/O-bound (database access), so it better to invest in faster disks
-or ramdisks than in raw CPU power. Using more cores is also highly recommended,
-since most of the programs in the Binary Analysis Tool will vastly benefit from
-this.
+are largely I/O-bound (database access), so it is better to invest in faster
+disks or ramdisks than in raw CPU power. Using more cores is also highly
+recommended, since most of the programs in the Binary Analysis Tool will vastly
+benefit from this.
 
 \subsection{Software requirements}
 
 To run BAT a recent Linux distribution is needed. Development is (currently)
 done on Fedora 19 and 20 and Ubuntu 14.04, so those platforms are likely to
-work best. Other platforms (like Debian 7) are tested with, but only to
-build binary releases. Ubuntu versions older than 14.04, will not work due to
-a broken version of the PyDot package.
+work best. Ubuntu versions older than 14.04, will not work due to a broken
+version of the PyDot package. Debian versions older than 7 are unsupported.
 
 If the latest version from version control is used it is important to look at
 the file \texttt{setup.cfg} to get a list of the dependencies that should be
@@ -77,7 +76,7 @@ let BAT work successfully. Some of these packages are not in Debian by default
 but need to be installed by enabling extra repositories such as Debian
 \texttt{non-free}.
 
-The graphical interface might not work on Debian 6, because of a too old
+The graphical interface will not work on Debian 6, because of a too old
 version of \texttt{wxPython} that is shipped in Debian 6.
 
 \section{Analysing binaries with the Binary Analysis Tool}
@@ -137,9 +136,9 @@ such as Mozilla Firefox.
 
 This XML file is not meant for human consumption, but for use by for example
 reporting tools. A word of warning is needed: the XML format is not very well
-designed and not well maintained. If you want to programmatically process
-information from BAT it is recommended to use the Python pickles to extract
-information instead.
+designed and not well maintained and it might be removed in the future. If you
+want to programmatically process information from BAT it is recommended to use
+the Python pickles to extract information instead.
 
 The default XML pretty printer as shipped by BAT outputs a file that starts
 with metadata, such as:
