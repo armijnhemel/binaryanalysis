@@ -97,7 +97,7 @@ def main(argv):
 	## find hashes in parallel
 	shatasks = map(lambda x: (options.filedir, x, extrahashes), diffset)
 	pool = multiprocessing.Pool()
-	sharesults = pool.map(computehash, shatasks)
+	sharesults = pool.map(computehash, shatasks, 1)
 	pool.terminate()
 
 	for i in sharesults:
