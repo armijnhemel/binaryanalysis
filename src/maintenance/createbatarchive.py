@@ -225,11 +225,12 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 	checksums = {}
 	if os.path.exists(os.path.join(filedir, "SHA256SUM")):
 		checksumlines = open(os.path.join(filedir, "SHA256SUM")).readlines()
-		for c in checksumlines:
+		for c in checksumlines[1:]:
 			checksumsplit = c.strip().split()
-			if len(checksumsplit) != 2:
+			if len(checksumsplit) < 2:
 				continue
-			(archivechecksum, archivefilename) = checksumsplit
+			archivefilename = checksumsplit[0]
+			archivechecksum = checksumsplit[1]
 			checksums[archivefilename] = archivechecksum
 
 	res = filter(lambda x: x != None, pool.map(computehasharchive, map(lambda x: (filedir,checksums) + x, versionfilenames),1))
