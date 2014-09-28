@@ -222,11 +222,12 @@ def main(argv):
 	checksums = {}
 	if os.path.exists(os.path.join(options.filedir, "SHA256SUM")):
 		checksumlines = open(os.path.join(options.filedir, "SHA256SUM")).readlines()
-		for c in checksumlines:
+		for c in checksumlines[1:]:
 			checksumsplit = c.strip().split()
-			if len(checksumsplit) != 2:
+			if len(checksumsplit) < 2:
 				continue
-			(archivechecksum, archivefilename) = checksumsplit
+			archivefilename = checksumsplit[0]
+			archivechecksum = checksumsplit[1]
 			checksums[archivefilename] = archivechecksum
 
 	extrahashes = ['md5', 'sha1', 'crc32']
