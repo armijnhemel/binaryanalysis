@@ -16,22 +16,29 @@ def computehash((filedir, filename, extrahashes)):
 	filehashes = {}
 	resolved_path = os.path.join(filedir, filename)
 	scanfile = open(resolved_path, 'r')
-	h = hashlib.new('sha256')
-	h.update(scanfile.read())
+	filedata = scanfile.read()
 	scanfile.close()
+	h = hashlib.new('sha256')
+	h.update(filedata)
 	filehashes['sha256'] = h.hexdigest()
 
-	## TODO: just read the files once, because they could be big
-	for i in extrahashes:
-		scanfile = open(resolved_path, 'r')
-		if i == 'crc32':
-			crcdata = scanfile.read()
-			filehashes[i] = zlib.crc32(crcdata) & 0xffffffff
-		else:
-			h = hashlib.new(i)
-			h.update(scanfile.read())
-			filehashes[i] = h.hexdigest()
-		scanfile.close()
+	if 'crc32' in extrahashes:
+		filehashes['crc32'] = zlib.crc32(filedata) & 0xffffffff
+
+	## first remove 'crc32' from extrahashes
+	extrahashesset = set(extrahashes)
+	try:
+		extrahashesset.remove('crc32')
+	except KeyError:
+		pass
+
+	temphashes = {}
+	for i in extrahashesset:
+		temphashes[i] = hashlib.new(i)
+	for i in extrahashesset:
+		temphashes[i].update(filedata)
+	for i in extrahashesset:
+		filehashes[i] = temphashes[i].hexdigest()
         return (filename, filehashes)
 
 def main(argv):
@@ -64,13 +71,13 @@ def main(argv):
 		if set(checksumsused).intersection(set(extrahashes)) != set(extrahashes):
 			process = False
 		if process:
-			for i in manifestlines[1:]:
+			for i in sha256lines[1:]:
 				entries = i.strip().split()
+				filename = entries[0]
 				if filename == 'SHA256SUM':
 					continue
 				if filename == 'LIST':
 					continue
-				filename = entries[0]
 				## sha256 is always the first hash and second entry
 				hashentry = entries[1]
 				filetohash[filename] = {}
@@ -79,7 +86,7 @@ def main(argv):
 				for c in checksumsused[1:]:
 					## only record results for hashes that are in 'extrahashes'
 					if c in extrahashes:
-						filetohash[fileentry][c] = entries[counter]
+						filetohash[filename][c] = entries[counter]
 					counter += 1
 
 	## determine which files need to be scanned
@@ -114,7 +121,7 @@ def main(argv):
 		hashesstring = filetohash[i]['sha256']
 		for h in extrahashes:
 			hashesstring += "\t%s" % filetohash[i][h]
-		sha256file.write("%s  %s\n" % (hashesstring, i))
+		sha256file.write("%s  %s\n" % (i, hashesstring))
 	sha256file.close()
 
 if __name__ == "__main__":
