@@ -2442,10 +2442,10 @@ def main(argv):
 		for c in checksumlines[1:]:
 			archivechecksums = {}
 			checksumsplit = c.strip().split()
-			archivefilename = checksumsplit[-1]
+			archivefilename = checksumsplit[0]
 			## sha256 is always the first hash
-			archivechecksums['sha256'] = checksumsplit[0]
-			counter = 1
+			archivechecksums['sha256'] = checksumsplit[1]
+			counter = 2
 			for h in tmpextrahashes:
 				if h == 'sha256':
 					continue
