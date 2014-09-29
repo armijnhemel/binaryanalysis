@@ -2665,14 +2665,14 @@ def unpackZip(filename, offset, tempdir=None):
 	(stanout, stanerr) = p.communicate()
 
 	## check if the file is encrypted, if so bail out
-	res = re.search("file security status:\s+(\w*)\sencrypted", stanout)
-	if res == None:
+	res = set(re.findall("file security status:\s+(\w*)\sencrypted", stanout))
+	if len(res) == 0:
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return (None, None)
 
-	if res.groups(0)[0] != 'not':
+	if '' in res:
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
