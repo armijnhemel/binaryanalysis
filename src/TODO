@@ -83,4 +83,5 @@ BOTTLENECKS/HIGH PRIORITY:
 14. find versions of matched kernel function names and report
 15. store meta data about media files (PNG, GIF, MP3, etc.) in database as some of these files are quite package specific
 16. try to find right ELF sections where string constants can be found
-17. process entries of encrypted ZIP files
+17. store checksum of archive files in hashconversion tables as well
+18. optionally output results of some scans in other formats (JSON, XML, etc.)

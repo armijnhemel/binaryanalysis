@@ -1,3 +1,12 @@
+2014-09-29:
+* fix detection of encrypted ZIP files
+* process entries in encrypted ZIP files and check if there is a known file
+inside the archive, that can be used in a known plaintext attack
+
+2014-09-28:
+* change format of SHA256SUM file to keep it more in sync with other files.
+Also fix updatesha256sum.py and make it read less data.
+
 2014-08-14:
 * optionally compute CRC32 for files for manifest files
 * move optional virus scan to separate module
