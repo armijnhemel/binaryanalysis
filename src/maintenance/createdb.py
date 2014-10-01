@@ -595,14 +595,16 @@ def unpack_verify(filedir, filename):
 
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
-def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbpath, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
+def unpack_getstrings(filedir, package, version, filename, origin, checksums, dbpath, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
 	## unpack the archive. If it fails, cleanup and return.
 	## TODO: make temporary dir configurable
 	temporarydir = unpack(filedir, filename, unpackdir)
 	if temporarydir == None:
 		return None
 
-	if batarchive:
+	if not batarchive:
+		filehash = checksums['sha256']
+	else:
 		## override the data for package, version, filename, origin, filehash
 		## first unpack
 		## first extract the MANIFEST.BAT file from the BAT archive
@@ -768,6 +770,16 @@ def unpack_getstrings(filedir, package, version, filename, origin, filehash, dbp
 			## Add the file to the database: name of archive, sha256, packagename and version
 			## This is to be able to just update the database instead of recreating it.
 			c.execute('''insert into processed (package, version, filename, origin, sha256) values (?,?,?,?,?)''', (package, version, filename, origin, filehash))
+			process_extra_hashes = set()
+
+			c.execute('''select sha256 from hashconversion where sha256=? LIMIT 1''', (filehash,))
+			if len(c.fetchall()) == 0:
+				c.execute('''insert into hashconversion (sha256) values (?)''', (filehash,))
+				for k in checksums.keys():
+					if k == 'sha256':
+						continue
+					query = "update hashconversion set %s='%s' where sha256=?" % (k, checksums[k])
+					c.execute(query, (filehash,))
 		elif batarchive and not emptyarchive:
 			c.execute('''insert into processed (package, version, filename, origin, sha256) values (?,?,?,?,?)''', (package, version, filename, origin, filehash))
 	conn.commit()
@@ -2512,7 +2524,7 @@ def main(argv):
 			(package, version, filename, origin, filehash, batarchive) = i
 			if package != oldpackage:
 				oldres = []
-			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, filehash, masterdatabase, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
+			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums[filename], masterdatabase, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
 			if unpackres != None:
 				oldres = map(lambda x: x[2], unpackres)
 				oldpackage = package
