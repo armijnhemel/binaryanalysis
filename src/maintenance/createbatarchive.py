@@ -143,10 +143,10 @@ def unpack(directory, filename, unpackdir=None):
 		## aeneas-1.0.tar.bz2 from GNU, so use a subprocess instead of using the
 		## Python tar functionality.
 		p = subprocess.Popen(['tar', 'jxf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
-		if p.returncode != 0:
-			os.rmdir(unpackdir)
-			return
 		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			shutil.rmtree(tmpdir)
+			return
 		return tmpdir
 	elif 'LZMA compressed data, streamed' in filemagic:
 		tmpdir = tempfile.mkdtemp(dir=unpackdir)
@@ -279,7 +279,9 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 				manifest = bz2.BZ2File(manifestfile, 'r')
 				manifestlines = manifest.readlines()
 				manifest.close()
-				for i in manifestlines:
+				## the first line of the manifest should be the hashes
+				## TODO
+				for i in manifestlines[1:]:
 					(fileentry, hashentry) = i.strip().split()
 					filetohash[fileentry] = hashentry
 
@@ -469,7 +471,7 @@ def main(argv):
 				tmptest = tempfile.mkstemp(dir=options.tempdir)
 				os.unlink(tmptest[1])
 				unpackdir = options.tempdir
-			except:
+			except Exception, e:
 				pass
 
 	## first process the LIST file
