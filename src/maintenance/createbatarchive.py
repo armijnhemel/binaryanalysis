@@ -283,7 +283,7 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 				for c in manifestlines[1:]:
 					archivechecksums = {}
 					checksumsplit = c.strip().split()
-					archivefilename = checksumsplit[0]
+					fileentry = checksumsplit[0]
 					## sha256 is always the first hash
 					archivechecksums['sha256'] = checksumsplit[1]
 					counter = 2
@@ -292,8 +292,8 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 							continue
 						archivechecksums[h] = checksumsplit[counter]
 						counter += 1
-						checksums[archivefilename] = archivechecksums
-					filetohash[archivefilename] = archivechecksums['sha256']
+						checksums[fileentry] = archivechecksums
+					filetohash[fileentry] = archivechecksums['sha256']
 
 		try:
 			scanfiles = set()
