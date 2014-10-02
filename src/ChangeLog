@@ -1,3 +1,9 @@
+2014-10-02:
+* fix createbatarchives.py for new format of manifest files
+
+2014-10-01:
+* record extrahashes (if available) for processed archives
+
 2014-09-29:
 * fix detection of encrypted ZIP files
 * process entries in encrypted ZIP files and check if there is a known file
