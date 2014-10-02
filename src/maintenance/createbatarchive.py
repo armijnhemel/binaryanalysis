@@ -279,11 +279,21 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 				manifest = bz2.BZ2File(manifestfile, 'r')
 				manifestlines = manifest.readlines()
 				manifest.close()
-				## the first line of the manifest should be the hashes
-				## TODO
-				for i in manifestlines[1:]:
-					(fileentry, hashentry) = i.strip().split()
-					filetohash[fileentry] = hashentry
+				tmpextrahashes = manifestlines[0].strip().split()
+				for c in manifestlines[1:]:
+					archivechecksums = {}
+					checksumsplit = c.strip().split()
+					archivefilename = checksumsplit[0]
+					## sha256 is always the first hash
+					archivechecksums['sha256'] = checksumsplit[1]
+					counter = 2
+					for h in tmpextrahashes:
+						if h == 'sha256':
+							continue
+						archivechecksums[h] = checksumsplit[counter]
+						counter += 1
+						checksums[archivefilename] = archivechecksums
+					filetohash[archivefilename] = archivechecksums['sha256']
 
 		try:
 			scanfiles = set()
