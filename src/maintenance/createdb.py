@@ -2466,6 +2466,9 @@ def main(argv):
 				archivechecksums[h] = checksumsplit[counter]
 				counter += 1
 			checksums[archivefilename] = archivechecksums
+	else:
+		print >>sys.stderr, "SHA256SUM not found"
+		sys.exit(1)
 	archivechecksums = {}
 	if os.path.exists(os.path.join(options.filedir, "SHA256SUM-ARCHIVE")):
 		checksumlines = open(os.path.join(options.filedir, "SHA256SUM-ARCHIVE")).readlines()
@@ -2530,7 +2533,7 @@ def main(argv):
 				oldpackage = package
 		except Exception, e:
 				# oops, something went wrong
-				print >>sys.stderr, e
+				print >>sys.stderr, "unpacking error", e
 
 if __name__ == "__main__":
     main(sys.argv)
