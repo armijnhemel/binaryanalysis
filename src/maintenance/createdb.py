@@ -1142,10 +1142,10 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		for res in moduleresults:
 			(kernelfilename, modulename) = res
 			if filetohash.has_key(kernelfilename):
-				if filehashtomodule.has_key(filetohash[kernelfilename]):
-					filehashtomodule[filetohash[kernelfilename]].append(modulename)
+				if filehashtomodule.has_key(filetohash[kernelfilename]['sha256']):
+					filehashtomodule[filetohash[kernelfilename]['sha256']].append(modulename)
 				else:
-					filehashtomodule[filetohash[kernelfilename]] = [modulename]
+					filehashtomodule[filetohash[kernelfilename]['sha256']] = [modulename]
 
 	unpackenv = os.environ.copy()
 	if not unpackenv.has_key('TMPDIR'):
