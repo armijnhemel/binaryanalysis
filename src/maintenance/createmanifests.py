@@ -151,6 +151,9 @@ def cleanupdir(temporarydir):
 
 def computehash((path, filename, extrahashes)):
 	resolved_path = os.path.join(path, filename)
+	if not os.path.isfile(resolved_path):
+		## filter out fifo and pipe
+		return None
 	try:
 		if not os.path.islink(resolved_path):
 			os.chmod(resolved_path, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
@@ -269,6 +272,9 @@ def main(argv):
 		unpackres = grabhash(options.filedir, filename, filehash, pool, extrahashes, options.unpackdir)
 		## first write the scanned/supported hashes, in the order in which they
 		## appear for each file
+		if unpackres == None:
+			manifestfile.close()
+			continue
 		if extrahashes == []:
 			manifestfile.write("sha256\n")
 		else:
