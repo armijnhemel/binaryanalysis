@@ -180,15 +180,15 @@ def computehash((path, filename, extrahashes)):
 		scanfile.close()
 	return (path, filename, filehashes)
 
-def checkalreadyscanned((filedir, filename, checksums)):
+def checkalreadyscanned((filedir, filename, checksum)):
 	resolved_path = os.path.join(filedir, filename)
 	try:
 		os.stat(resolved_path)
 	except:
 		print >>sys.stderr, "Can't find %s" % filename
 		return None
-	if checksums.has_key(filename):
-		filehash = checksums[filename]
+	if checksum != None:
+		filehash = checksum
 	else:
 		scanfile = open(resolved_path, 'r')
 		h = hashlib.new('sha256')
@@ -247,7 +247,7 @@ def main(argv):
 					batarchive = True
 				else:
 					batarchive = False
-			pkgmeta.append((options.filedir, filename, checksums))
+			pkgmeta.append((options.filedir, filename, checksums[filename]))
 		except Exception, e:
 			# oops, something went wrong
 			print >>sys.stderr, e
