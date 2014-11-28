@@ -134,7 +134,7 @@ def main(argv):
 
 	notsame = []
 
-	bla = cursor.execute("select distinct sha256 from licenses")
+	cursor.execute("select distinct sha256 from licenses")
 	sha256s = cursor.fetchmany(10000)
 
 	unscannedcounter = 0
