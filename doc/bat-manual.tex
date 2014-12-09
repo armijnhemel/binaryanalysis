@@ -391,7 +391,8 @@ set using the \texttt{magic} attribute in the configuration. If an identifier
 is not defined anywhere in the configuration file as needed it will be skipped
 during the identifier search to speed up the identifier search.
 
-The marker search cannot be enabled or disabled via the configuration file.
+The marker search cannot be enabled or disabled via the configuration file. The
+markers that are searched for are found in \url{bat/fsmagic.py}.
 
 \subsubsection{Pre-run checks}
 
@@ -455,6 +456,9 @@ GZIP, InstallShield (old versions), LRZIP, LZIP, LZMA, LZO, RAR, RPM, RZIP,
 serialized Java, TAR, UPX, XZ, ZIP
 \item media files: GIF, ICO, PDF, PNG, WOFF
 \end{itemize}
+
+Most of the unpackers for these file systems, compressed files and media files
+are located in the file \url{bat/fwunpack.py}.
 
 Unpacking differs per file type. Most files use one or more identifiers that
 can be searched for in a binary blob. Using this information it is possible
@@ -618,7 +622,7 @@ it is completely safe to use multiprocessing.
 It might be desirable to not use all processors on a machine, for example if
 there are multiple scans of BAT running at the same time, or if other tasks
 need to run on the machine. It is possible to set the maximum amount of
-processors to use using the \texttt{processors} option:
+processors to use with the \texttt{processors} option:
 
 \begin{verbatim}
 processors = 2
