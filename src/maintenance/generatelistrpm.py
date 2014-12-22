@@ -20,9 +20,14 @@ import sys, os, os.path, subprocess, tempfile, shutil, stat
 from optparse import OptionParser
 import multiprocessing
 
-def parallel_unpack((rpmfile, target, copyfiles)):
+def parallel_unpack((rpmfile, target, copyfiles, unpacktmpdir)):
+	## cutoff is at 200 MiB
+	cutoff = 209715200
 	## make a temporary directory
-	cpiodir = tempfile.mkdtemp()
+	if os.stat(rpmfile).st_size < cutoff:
+		cpiodir = tempfile.mkdtemp(dir=unpacktmpdir)
+	else:
+		cpiodir = tempfile.mkdtemp()
 
 	cpiotmp = tempfile.mkstemp(dir=cpiodir)
 
@@ -31,8 +36,8 @@ def parallel_unpack((rpmfile, target, copyfiles)):
 	os.fsync(cpiotmp[0])
 	os.fdopen(cpiotmp[0]).close()
 
-	p2 = subprocess.Popen(['cpio', '-i', '-d', '--no-absolute-filenames'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=cpiodir)
-	(cpiostanout, cpiostanerr) = p2.communicate(open(cpiotmp[1]).read())
+	p2 = subprocess.Popen(['cpio', '-i', '-d', '--no-absolute-filenames', '-F', cpiotmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=cpiodir)
+	(cpiostanout, cpiostanerr) = p2.communicate()
 	for f in copyfiles:
 		shutil.copy(os.path.join(cpiodir, f), target)
 		os.chmod("%s/%s" % (target, f), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
@@ -56,7 +61,7 @@ def generatelist(filedir, origin):
 					print >>sys.stderr, "can't split %s -- add manually" % (p,)
 					continue
 				(packageversion, extension) = res
-				if extension in ["tgz", "tbz2"]:
+				if extension in ["tgz", "tbz2", "tar"]:
 					pass
 				elif extension in ["jar", "zip"]:
 					pass
@@ -65,7 +70,7 @@ def generatelist(filedir, origin):
 						(packageversion, extension, compression) = p.rsplit('.', 2)
 					except:
 						continue
-					if not (extension in ["tar"] and compression in ["gz", "bz2", "xz"]):
+					if not (extension in ["tar"] and compression in ["gz", "bz2", "bz", "lz", "lzma", "xz", "Z"]):
 						continue
 				## exceptions go here
 				if "wireless_tools" in packageversion:
@@ -85,8 +90,12 @@ def generatelist(filedir, origin):
 	except Exception, e:
 		pass
 
+## scan each RPM file and see if there are any source code archives inside.
+## This check is based on conventions on how source code archives are named and
+## might miss things.
+## TODO: add checksum that can be obtained using the --dump option of RPM
 def scanrpm((filedir, filepath)):
-	extensions = [".tar.gz", ".tar.bz2", ".tar.xz", ".tgz", ".tbz2"]
+	extensions = [".tar.gz", ".tar.bz2", ".tar.bz", ".tar.xz", ".tgz", ".tbz2", ".tar.Z", "tar.lz", "tar.lzma"]
 	p2 = subprocess.Popen(['rpm', '-qpl', "%s/%s" % (filedir, filepath)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p2.communicate()
 	rpmfiles = stanout.strip().rsplit("\n")
@@ -97,7 +106,7 @@ def scanrpm((filedir, filepath)):
 		if len(fsplit) == 1:
 			continue
 		(packageversion, extension) = fsplit
-		if extension in ["tgz", "tbz2"]:
+		if extension in ["tgz", "tbz2", "tar"]:
 			copyfiles.append(f)
 			continue
 		elif extension in ["jar", "zip"]:
@@ -108,13 +117,13 @@ def scanrpm((filedir, filepath)):
 				(packageversion, extension, compression) = f.lower().rsplit('.', 2)
 			except:
 				continue
-			if not (extension in ["tar"] and compression in ["gz", "bz2", "xz"]):
+			if not (extension in ["tar"] and compression in ["gz", "bz2", "bz", "lz", "lzma", "xz", "Z"]):
 				continue
 			else:
 				copyfiles.append(f)
 	return (filedir, filepath, copyfiles)
 
-def unpacksrpm(filedir, target):
+def unpacksrpm(filedir, target, unpacktmpdir):
 	files = os.walk(filedir)
 	uniquefiles = set()
 	uniquerpms = set()
@@ -160,7 +169,7 @@ def unpacksrpm(filedir, target):
 
 	## unique RPMs can be unpacked in parallel, non-uniques cannot
 	## first process the unique RPMS in parallel
-	tasks = map(lambda x: (x, target, rpm2copyfiles[x]), uniquerpms)
+	tasks = map(lambda x: (x, target, rpm2copyfiles[x], unpacktmpdir), uniquerpms)
 	pool.map(parallel_unpack, tasks,1)
 	pool.terminate()
 
@@ -183,8 +192,8 @@ def unpacksrpm(filedir, target):
 		(cpiostanout, cpiostanerr) = p1.communicate()
 		os.fsync(cpiotmp[0])
 		os.fdopen(cpiotmp[0]).close()
-		p2 = subprocess.Popen(['cpio', '-i', '-d', '--no-absolute-filenames'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=cpiodir)
-		(cpiostanout, cpiostanerr) = p2.communicate(open(cpiotmp[1]).read())
+		p2 = subprocess.Popen(['cpio', '-i', '-d', '--no-absolute-filenames', '-F', cpiotmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=cpiodir)
+		(cpiostanout, cpiostanerr) = p2.communicate()
 		for f in rpm2copyfiles[n]:
 			shutil.copy(os.path.join(cpiodir, f), target)
 			os.chmod("%s/%s" % (target, f), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
@@ -197,6 +206,10 @@ def main(argv):
 	parser.add_option("-o", "--origin", action="store", dest="origin", help="origin of packages (default: unknown)", metavar="ORIGIN")
 	parser.add_option("-t", "--target-directory", action="store", dest="target", help="target directory where files are stored (default: generated temporary directory)", metavar="DIR")
 	(options, args) = parser.parse_args()
+
+	## TODO: sanity checks for unpacktmpdir
+	unpacktmpdir = '/ramdisk'
+
 	if options.filedir == None:
 		parser.error("Specify dir with files")
 	if options.origin == None:
@@ -215,7 +228,7 @@ def main(argv):
 			#	pass
 			pass
 		target = options.target
-	unpacksrpm(options.filedir, target)
+	unpacksrpm(options.filedir, target, unpacktmpdir)
 	generatelist(target, origin)
 
 if __name__ == "__main__":
