@@ -85,3 +85,4 @@ BOTTLENECKS/HIGH PRIORITY:
 16. try to find right ELF sections where string constants can be found
 17. optionally output results of some scans in other formats (JSON, XML, etc.)
 18. createdb.py: use and store output from Monk
+19. generatelistrpm.py: use information from rpm2cpio's --dump option to get checksums and better decide if files should be unpacked or not

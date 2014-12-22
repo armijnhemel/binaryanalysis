@@ -1,3 +1,14 @@
+2014-12-22:
+* maintenance/generatelistrpm.py: prevent disk I/O by using -F flag for cpio,
+start working on making unpacking location configurable to be able to use
+ramdisks to speed up operations.
+
+2014-10-20:
+* exclude some more files from some packages
+
+2014-10-13:
+* fixes for extra hashes for kernel information extraction
+
 2014-10-02:
 * fix createbatarchives.py for new format of manifest files
 
