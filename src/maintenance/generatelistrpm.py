@@ -93,24 +93,25 @@ def generatelist(filedir, origin):
 ## scan each RPM file and see if there are any source code archives inside.
 ## This check is based on conventions on how source code archives are named and
 ## might miss things.
-## TODO: add checksum that can be obtained using the --dump option of RPM
+## TODO: collect patches as well
 def scanrpm((filedir, filepath)):
 	extensions = [".tar.gz", ".tar.bz2", ".tar.bz", ".tar.xz", ".tgz", ".tbz2", ".tar.Z", "tar.lz", "tar.lzma"]
-	p2 = subprocess.Popen(['rpm', '-qpl', "%s/%s" % (filedir, filepath)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p2 = subprocess.Popen(['rpm', '-qpl', '--dump', "%s/%s" % (filedir, filepath)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p2.communicate()
 	rpmfiles = stanout.strip().rsplit("\n")
 	copyfiles = []
-	for f in rpmfiles:
-		sys.stdout.flush()
+	for fs in rpmfiles:
+		## the interesting data from '--dump' are md5sum and the size (not used at the moment)
+		(f, size, mtime, md5sum, rest) = fs.split(' ', 4)
 		fsplit = f.lower().rsplit('.', 1)
 		if len(fsplit) == 1:
 			continue
 		(packageversion, extension) = fsplit
 		if extension in ["tgz", "tbz2", "tar"]:
-			copyfiles.append(f)
+			copyfiles.append((f, md5sum))
 			continue
 		elif extension in ["jar", "zip"]:
-			copyfiles.append(f)
+			copyfiles.append((f, md5sum))
 			continue
 		else:
 			try:
@@ -120,7 +121,7 @@ def scanrpm((filedir, filepath)):
 			if not (extension in ["tar"] and compression in ["gz", "bz2", "bz", "lz", "lzma", "xz", "Z"]):
 				continue
 			else:
-				copyfiles.append(f)
+				copyfiles.append((f,md5sum))
 	return (filedir, filepath, copyfiles)
 
 def unpacksrpm(filedir, target, unpacktmpdir):
@@ -142,7 +143,7 @@ def unpacksrpm(filedir, target, unpacktmpdir):
 				if len(res) != 3:
 					continue
 				if res[-1] != 'srpm' and (res[-1] != 'rpm' and res[-2] != 'src'):
-					continue
+					ccontinue
 				else:
 					rpmscans.add((i[0], p))
 	except Exception, e:
@@ -153,19 +154,27 @@ def unpacksrpm(filedir, target, unpacktmpdir):
 	pool = multiprocessing.Pool()
 	rpmres = pool.map(scanrpm, rpmscans, 1)
 
+	uniquemd5s = set()
+
 	for r in rpmres:
 		(filedir, filepath, copyfiles) = r
 		unique = True
-		for f in copyfiles:
+		for fs in copyfiles:
+			(f, md5sum) = fs
+			if md5sum in uniquemd5s:
+				unique = False
+				break
 			if f in uniquefiles:
+				#print "files with different checksums and same name", f, filedir, filepath, md5sum
 				unique = False
 				break
 		if unique:
-			uniquefiles.update(set(copyfiles))
+			uniquefiles.update(set(map(lambda x: x[0], copyfiles)))
+			uniquemd5s.update(set(map(lambda x: x[1], copyfiles)))
 			uniquerpms.add(os.path.join(filedir, filepath))
 		else:
 			nonuniquerpms.add(os.path.join(filedir, filepath))
-		rpm2copyfiles[os.path.join(filedir, filepath)] = copyfiles
+		rpm2copyfiles[os.path.join(filedir, filepath)] = map(lambda x: x[0], copyfiles)
 
 	## unique RPMs can be unpacked in parallel, non-uniques cannot
 	## first process the unique RPMS in parallel
