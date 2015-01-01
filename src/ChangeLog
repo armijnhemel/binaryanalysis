@@ -1,3 +1,9 @@
+2015-01-01:
+* extract more information from Linux kernel
+
+2014-12-31:
+* extract more information from Linux kernel
+
 2014-12-22:
 * maintenance/generatelistrpm.py: prevent disk I/O by using -F flag for cpio,
 start working on making unpacking location configurable to be able to use
