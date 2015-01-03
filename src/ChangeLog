@@ -2,6 +2,7 @@
 * start documenting the internal data structures of BAT
 * add script for copyright extraction using Ninka and FOSSosogy and
 correlating the results from both. This still needs a lot of work.
+* start extracting security related information from C source code
 
 2015-01-01:
 * extract more information from Linux kernel
