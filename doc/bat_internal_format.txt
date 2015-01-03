@@ -1,0 +1,34 @@
+This document describes the format of the datastructures used internally by BAT 20.
+
+Because the data can grow quite big (especially when dealing with packages with possibly millons of matches, like the Linux kernel) the data in BAT is kept in two separate data structures:
+
+* unpackreports -- this is a dictionary that keeps metainformation about all the files, like checksums, tags, offsets of filesystems/compressed files contained in the file, names of files that were unpacked from this file, ranges of 'blacklisted' bytes that don't need to be (re)scanned, and so on. The keys of this dictionary are the paths that a file is unpacked to by BAT. Files that are duplicates (same checksum) are tagged as such. This dictionary is at the end of a scan written to a Python pickle called "scandata.pickle".
+
+* leafreports -- this has all the per file specific scan results, such as the matching data, but also the results of other scans. Because of memory constraints this data is kept on disk, not in memory, in a Python pickle file for each checksum. The data is read from disk on a per need basis. The Python pickles (gzip compressed) can be found in the directory "filereports" inside the scan result archive.
+
+Some data is duplicated between the two:
+
+* tags: tags are used by many scans to determine whether or not the scan should be run for the file. To prevent that each scan reads the pickles with the leaf reports the data in tags is duplicated between entries for files in unpackreports and the corresponding leafreport.
+
+Data kept in unpackreports
+
+The following data is packed in each entry for unpackreports:
+
+* name: name of the file
+* path: relative directory path inside the unpacked file system or compressed file
+* realpath: full directory used during the scan
+* magic: output of libmagic. This is dependent on the version of libmagic and the configuration of the host system and is only used for informational purposes, not for any determination, as libmagic only looks at a limited portion of the file.
+* tags: list of tags as given to the file by BAT
+* size: size of the file in bytes. This field only exists for real files, not for directories, pipes, symbolic links, fifos, device files, and so on.
+* sha256: checksum of the file. This only exists for real files, not for directories, pipes, symbolic links, fifos, device files, and so on.
+* scans: List of scan results if a file system or compressed file could be found inside. This only exists for real files, not for directories, pipes, symbolic links, fifos, device files, and so on. Each scan result is a dictionary with results.
+
+Data kept in scanresults (unpackreports)
+
+Data kept in leaf reports
+
+Data used for generating matching piecharts
+
+Data used for generating matching barcharts
+
+Data used for generating ELF linking graphs
