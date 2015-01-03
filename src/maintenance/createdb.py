@@ -25,6 +25,7 @@ Currently the following information is stored in the knowledgebase:
 * method names (Java/C#)
 * licenses (all languages)
 * copyright information (all languages)
+* limited security information (C)
 
 Files that are processed:
 * have a certain extension
@@ -168,6 +169,19 @@ kernelexprs.append(re.compile("VMCOREINFO_NUMBER\s*\((\w+)", re.MULTILINE))
 ## some more precompiled regex
 recopyright = re.compile('^\s*\[(\d+):\d+:(\w+)] \'(.*)\'$')
 recopyright2 = re.compile('^\s*\[(\d+):\d+:(\w+)] \'(.*)')
+
+## precompiled regular expression for extracting security information
+## ENV33-C
+resystem = re.compile('system\(.*\);')
+
+## MSC24-C -- https://www.securecoding.cert.org/confluence/display/seccode/MSC24-C.+Do+not+use+deprecated+or+obsolescent+functions
+msc24checks = []
+msc24checks.append((re.compile('gets\(.*\);'), 'gets'))
+msc24obsolescent = ["asctime","atof", "atoi", "atol", "atoll", "ctime", "fopen", "freopen", "rewind", "setbuf"]
+for m in msc24obsolescent:
+	msc24checks.append((re.compile('\s+%s\(.*\);' % m), m))
+## TODO
+#msc24uncheckedobsolescent = ["bsearch", "fprintf", "fscanf", "fwprintf", "fwscanf", "getenv", "gmtime", "localtime", "mbsrtowcs", "mbstowcs", "memcpy", "memmove", "printf", "qsort", "setbuf", "snprintf", "sprintf", "sscanf", "strcat", "strcpy", "strerror", "strncat", "strncpy", "strtok", "swprintf", "swscanf", "vfprintf", "vfscanf", "vfwprintf", "vfwscanf", "vprintf", "vscanf", "vsnprintf", "vsprintf", "vsscanf", "vswprintf", "vswscanf", "vwprintf", "vwscanf", "wcrtomb", "wcscat", "wcscpy", "wcsncat", "wcsncpy", "wcsrtombs", "wcstok", "wcstombs", "wctomb", "wmemcpy", "wmemmove", "wprintf", "wscanf"]
 
 oldallowedvals= ["b", "c", "h", "i", "l", "s"]
 
@@ -1745,8 +1759,53 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 							results.add((identifier, linenumber, i))
 							break
 
+	'''
+	if language == 'C':
+		securityresults = securityScan(i,p)
+		if securityresults != []:
+			pass
+	'''
+		
 	## return all results, as well as the original language, which is important in the case of 'patch'
 	return (filehash, newlanguage, language, sqlres, moduleres, results)
+
+## Scan the file for possible security bugs, try to classify them according to the
+## CERT secure coding standard and possibly some other standards.
+def securityScan(i,p):
+	## first slurp in the file
+	fc = open(os.path.join(i,p), 'r')
+	filecontent = fc.read()
+	fc.close()
+	smells = []
+
+	## Then check for a few smells
+	## ENV33-C
+	res = resystem.search(filecontent)
+	if res != None:
+		## additional checks to weed out false positives
+		## find the line where the command can be found
+		## with a crude hack
+		systempos = -1 
+		while True:
+			systempos = filecontent.find('system(', systempos + 1)
+			if systempos == -1:
+				break
+			lineno = filecontent.count('\n', 0, systempos) + 1
+			smells.append(('ENV33-C', lineno))
+	for m in msc24checks:
+		res = m[0].search(filecontent)
+		if res != None:
+			## additional checks to weed out false positives
+			## find the line where the command can be found
+			## with a crude hack
+			systempos = -1 
+			while True:
+				systempos = filecontent.find('%s(' % m[1], systempos + 1)
+				if systempos == -1:
+					break
+				lineno = filecontent.count('\n', 0, systempos) + 1
+				smells.append(('MSC24-C', lineno))
+	return smells
 
 ## Extract strings using xgettext. Apparently this does not always work correctly. For example for busybox 1.6.1:
 ## $ xgettext -a -o - fdisk.c
