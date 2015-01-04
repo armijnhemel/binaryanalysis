@@ -1164,7 +1164,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			configureaclines = configureac.read()
 			configureac.close()
 			if "AC_INIT" in configureaclines:
-				## name, version, bugreport address, other things
+				## name, version, bugreport address, possibly other things like URL
 				## The bugreport address is the most interesting at the moment
 				configureres = re.search("AC_INIT\(\[[\w\s]+\],\s*(?:[\w]+\()?\[?[\w\s/\-\.]+\]?\)?,\s*\[([\w\-@:/\.+]+)\]", configureaclines, re.MULTILINE)
 				if configureres != None:
