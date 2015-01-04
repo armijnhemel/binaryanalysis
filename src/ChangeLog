@@ -1,3 +1,6 @@
+2015-01-04:
+* simplify data structures used in identifier.py, document changes
+
 2015-01-03:
 * start documenting the internal data structures of BAT
 * add script for copyright extraction using Ninka and FOSSosogy and
