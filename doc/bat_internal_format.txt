@@ -41,19 +41,16 @@ Data for the kernelmoduleversion scan
 
 Data for the identifier scan
 
-The identifier scan extracts identifiers from a binary. These are later processed by for example the ranking scan. The current data is stored as a tuple (this will very likely change in BAT 20 or BAT 21):
+The identifier scan extracts identifiers from a binary. These are later processed by for example the ranking scan. The data is stored as a dictionary (the datastructure has changed compared to BAT 19 and earlier versions).
 
-([string identifiers], {other symbols}, language)
+The first element is a list of string identifiers as extracted by running "strings" on the binary. The second element of the tuple is a dictionary that contains various other symbols than string identifiers. Possible keys of the dictionary are:
 
-The first element is a list of string identifiers as extracted by running "strings" on the binary. The second element of the tuple is a dictionary that contains various other symbols than string identifiers:
-
+* strings: list of string identifiers
 * functionnames: a set of function names
 * variablenames: a set of variable names
 * kernelsymbols: a list of Linux kernel symbols
-
-The third element is the language family that BAT thinks the source code files (that were used to generat the binary) are part of.
-
-Likely the list of identifiers and the language will be merged into the dictionary.
+* kernelfunctions: a list of identifiers extracted and identified as Linux kernel functions
+* language: language family that BAT thinks the source code files (that were used to generate the binary) are part of.
 
 Data for the ranking scan
 
