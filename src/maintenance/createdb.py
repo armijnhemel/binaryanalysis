@@ -1156,18 +1156,22 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			licenseconn.close()
 
 	## extract data from configure.ac instances
+	## TODO: make it less specific for configure.ac
 	if filestoscanextra != []:
 		for f in filestoscanextra:
 			(package, version, path, filename, language, filehash) = f
 			configureac = open(os.path.join(path, filename), 'r')
 			configureaclines = configureac.read()
 			configureac.close()
-			## name, version, bugreport address, other things
-			## The bugreport address is the most interesting at the moment
-			configureres = re.search("AC_INIT\(\[[\w\s]+\],\s*(?:[\w]+\()?\[[\w\s/\-\.]+\]\)?,\s*\[([\w\-@:/\.+]+)\]", configureaclines, re.MULTILINE)
-			if configureres != None:
-				configureresgroups = configureres.groups()
-				cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (configureresgroups[0], filehash, language, 0))
+			if "AC_INIT" in configureaclines:
+				## name, version, bugreport address, other things
+				## The bugreport address is the most interesting at the moment
+				configureres = re.search("AC_INIT\(\[[\w\s]+\],\s*(?:[\w]+\()?\[?[\w\s/\-\.]+\]?\)?,\s*\[([\w\-@:/\.+]+)\]", configureaclines, re.MULTILINE)
+				if configureres != None:
+					configureresgroups = configureres.groups()
+					ac_init_pos = configureaclines.find('AC_INIT(')
+					lineno = configureaclines.count('\n', 0, ac_init_pos) + 1
+					cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (configureresgroups[0], filehash, language, lineno))
 
 	## extract configuration from the Linux kernel Makefiles
 	## store two things:
