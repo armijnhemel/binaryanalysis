@@ -1,5 +1,6 @@
 2015-01-04:
 * simplify data structures used in identifier.py, document changes
+* fix regular expression for AC_INIT, record line number for result as well
 
 2015-01-03:
 * start documenting the internal data structures of BAT
