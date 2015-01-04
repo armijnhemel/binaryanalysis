@@ -957,13 +957,15 @@ def verifyJAR(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 	newtags.append('zip')
 	return newtags
 
-## Method to verify if a program is a valid PE executable
-def verifyPE(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+## Method to verify if a Windows executable is a valid 7z file
+def verifyExe(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
 	newtags = []
 	if not offsets.has_key('pe'):
 		return newtags
 	## a PE file *has* to start with the identifier 'MZ'
 	if offsets['pe'][0] != 0:
+		return newtags
+	if not filename.lower().endswith('.exe'):
 		return newtags
 	datafile = open(filename, 'rb')
 	databuffer = datafile.read(100000)
@@ -971,11 +973,10 @@ def verifyPE(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=N
 	## the string 'PE\0\0' has to appear fairly early in the file
 	if not 'PE\0\0' in databuffer:
 		return newtags
-	## this is a dead giveaway
-	## TODO: verify if the entire file is a PE executable
-	## or if it is part of a larger blob
-	if "This program cannot be run in DOS mode." in databuffer:
-		pass
+	## this is a dead giveaway. Ignore DOS executables for now
+	if not "This program cannot be run in DOS mode." in databuffer:
+		return newtags
+	## run 7z l on the file and see if the file size matches 'Physical Size' in the output of 7z
 	return newtags
 
 def verifyVimSwap(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):

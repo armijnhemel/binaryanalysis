@@ -103,28 +103,29 @@ def searchGeneric(filepath, tags, blacklist=[], offsets={}, scandebug=False, env
 		res = extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, blacklist, scandebug, unpacktempdir)
 		if res == None:
 			return None
-		(lines, cmeta) = res
-		if lines == []:
-			empty = True
-			for c in cmeta.keys():
-				if len(cmeta[c]) != 0:
-					empty = False
-					break
-			if empty:
-				return None
+		cmeta = res
+		empty = True
+		for c in cmeta.keys():
+			if len(cmeta[c]) != 0:
+				empty = False
+				break
+		if empty:
+			return None
 		if linuxkernel:
-			res = extractKernelData(lines, filepath, scanenv)
+			res = extractKernelData(cmeta['strings'], filepath, scanenv)
 			if res != None:
 				if res.has_key('kernelfunctions'):
 					if res['kernelfunctions'] != []:
 						cmeta['kernelfunctions'] = copy.deepcopy(res['kernelfunctions'])
-		return (['identifier'], (lines, cmeta, language))
+		cmeta['language'] = language
+		return (['identifier'], cmeta)
 	elif language == 'Java':
 		res = extractJava(filepath, tags, scanenv, filesize, stringcutoff, blacklist, scandebug, unpacktempdir)
 		if res == None:
 			return None
-		(lines, javameta) = res
-		return (['identifier'], (lines, javameta, language))
+		javameta = res
+		javameta['language'] = language
+		return (['identifier'], javameta)
 
 def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, blacklist=[], scandebug=False, unpacktempdir=None):
 	## special var to indicate whether or not the file is a Linux kernel
@@ -384,10 +385,11 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 	if createdtempfile:
 		## cleanup the tempfile
 		os.unlink(tmpfile[1])
+	cmeta['strings'] = lines
 	cmeta['functionnames'] = functionnames
 	cmeta['variablenames'] = variablenames
 	cmeta['kernelsymbols'] = kernelsymbols
-	return (lines, cmeta)
+	return cmeta
 
 def extractJava(scanfile, tags, scanenv, filesize, stringcutoff, blacklist=[], scandebug=False, unpacktempdir=None):
 	if 'dalvik' in tags:
@@ -400,8 +402,7 @@ def extractJava(scanfile, tags, scanenv, filesize, stringcutoff, blacklist=[], s
 		javares = None
 	if javares == None:
 		return None
-	(lines, javameta) = javares
-	return (lines, javameta)
+	return javares
 
 '''
 def extractJavaScript(path, tags, scanenv, filesize, stringcutoff, blacklist=[], scandebug=False, unpacktempdir=None):
@@ -486,7 +487,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 				#				continue
 				#			## TODO: now check for the other splitchars
 				#			lines.append(sl)
-		javameta = {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile, 'javatype': javatype}
+		javameta = {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile, 'javatype': javatype, 'strings': lines}
 	elif javatype == 'dalvik':
 		## Using dedexer http://dedexer.sourceforge.net/ extract information from Dalvik
 		## files, then process each file in $tmpdir and search file for lines containing
@@ -564,10 +565,11 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 		javameta['sourcefiles'] = list(sourcefiles)
 		javameta['methods'] = list(methods)
 		javameta['fields'] = list(fields)
+		javameta['strings'] = lines
 
 		## cleanup
 		shutil.rmtree(dalvikdir)
-	return (lines, javameta)
+	return javameta
 
 ## Linux kernels that are stored as statically linked ELF files and Linux kernel
 ## modules often have a section __ksymtab_strings. This section contains variables

@@ -1777,10 +1777,15 @@ def lookup_identifier((scanenv, filehash, filename, topleveldir, clones, scandeb
 	if not leafreports.has_key('identifier'):
 		return
 
-	(lines, varfuns, language) = leafreports['identifier']
-
-	if lines == None and varfuns == {}:
+	if leafreports['identifier'] == {}:
 		return
+
+	lines = leafreports['identifier']['strings']
+
+	if lines == None:
+		return
+
+	language = leafreports['identifier']['language']
 
 	linuxkernel = False
 	if 'linuxkernel' in leafreports['tags']:
@@ -1805,17 +1810,17 @@ def lookup_identifier((scanenv, filehash, filename, topleveldir, clones, scandeb
 		if linuxkernel:
 			functionRes = {}
 			if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
-				variablepvs = scankernelsymbols(varfuns['kernelsymbols'], scanenv, clones)
+				variablepvs = scankernelsymbols(leafreports['identifier']['kernelsymbols'], scanenv, clones)
 			## TODO: clean up
-			if varfuns.has_key('kernelfunctions'):
-				if varfuns['kernelfunctions'] != []:
-					functionRes['kernelfunctions'] = copy.deepcopy(varfuns['kernelfunctions'])
+			if leafreports['identifier'].has_key('kernelfunctions'):
+				if leafreports['identifier']['kernelfunctions'] != []:
+					functionRes['kernelfunctions'] = copy.deepcopy(leafreports['identifier']['kernelfunctions'])
 		else:
-			(functionRes, variablepvs) = scanDynamic(varfuns['functionnames'], varfuns['variablenames'], scanenv, clones)
+			(functionRes, variablepvs) = scanDynamic(leafreports['identifier']['functionnames'], leafreports['identifier']['variablenames'], scanenv, clones)
 	elif language == 'Java':
 		variablepvs = {}
-		variablepvs = extractVariablesJava(varfuns, scanenv, clones)
-		functionRes = extractJavaNames(varfuns, scanenv, clones)
+		variablepvs = extractVariablesJava(leafreports['identifier'], scanenv, clones)
+		functionRes = extractJavaNames(leafreports['identifier'], scanenv, clones)
 
 	## then write results back to disk. This needs to be done because results for
 	## Java might need to be aggregated first.
