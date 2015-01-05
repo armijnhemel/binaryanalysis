@@ -1374,6 +1374,8 @@ scanlicense = yes
 licensedb = /home/bat/db/licenses.sqlite3
 ninkacommentsdb = /home/bat/db/ninkacomments.sqlite3
 scancopyright = yes
+scansecurity = yes
+securitydb = /home/bat/db/security.sqlite3
 cleanup = yes
 wipe = no
 unpackdir = /ramdisk
@@ -1389,6 +1391,11 @@ is used to set the path to the copyright and licensing database. The parameter
 \texttt{ninkacommentsdb} can be used for setting a caching database for mapping
 comments to licenses, as used by Ninka. This setting is mandatory if license
 scanning is enabled.
+
+The setting \texttt{scansecurity} enables extraction of security information
+from source code. The parameter \texttt{securitydb} points to the database file
+that security information should be written to. At the moment only C files are
+searched for security bugs.
 
 If \texttt{cleanup} is set to \texttt{yes} (default) the temporary directory
 with unpacked sources will be removed. If \texttt{wipe} (default: \texttt{no})
@@ -1645,6 +1652,12 @@ During creation an additional table \texttt{ninkacomments} is used, but this
 is only used to cache licensing information determined by the Ninka license
 scanner. It is not used otherwise.
 
+The security database has 1 table:
+
+\begin{itemize}
+\item \texttt{security}
+\end{itemize}
+
 \subsubsection{\texttt{processed} table}
 
 This table is to keep track of which versions of which packages were scanned.
@@ -1870,6 +1883,21 @@ used in BAT, but is not limited to that: the scanner could also be a person
 doing a manual review.
 \item \texttt{version}: version of scanner. This is useful if there is for
 example a bug in a scanner, or to compare results from various versions.
+\end{itemize}
+
+\subsubsection{\texttt{security} table}
+
+This table stores security information that was extracted from files. It has
+these fields:
+
+\begin{itemize}
+\item \texttt{checksum}: SHA256 checksum of the file
+\item \texttt{securitybug}: identifier for a security bug, for example
+identifiers for the CERT secure coding standard.
+\item \texttt{linenumber}: line number where the security bug can be found
+\item \texttt{whitelist}: boolean value indicating whether or not the bug can
+safely be ignored. The idea is that this can be set by security reviewers if
+the security bug cannot be triggered to lower the amount of false positives.
 \end{itemize}
 
 \section{BusyBox script internals}
