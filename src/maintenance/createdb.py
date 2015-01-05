@@ -639,7 +639,7 @@ def unpack_verify(filedir, filename):
 
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
-def unpack_getstrings(filedir, package, version, filename, origin, checksums, dbpath, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
+def unpack_getstrings(filedir, package, version, filename, origin, checksums, dbpath, cleanup, license, copyrights, security, pool, ninkacomments, licensedb, securitydb, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
 	## unpack the archive. If it fails, cleanup and return.
 	## TODO: make temporary dir configurable
 	temporarydir = unpack(filedir, filename, unpackdir)
@@ -808,7 +808,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, db
 				cleanupdir(temporarydir)
 			return
 
-	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles)
+	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, security, pool, ninkacomments, licensedb, securitydb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles)
 	if sqlres != None:
 		if sqlres != []:
 			## Add the file to the database: name of archive, sha256, packagename and version
@@ -937,7 +937,7 @@ def computehash((filedir, filename, extension, language, extrahashes)):
 		
 	return (filedir, filename, filehashes, extension, language)
 
-def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
+def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, security, pool, ninkacomments, licensedb, securitydb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
 	osgen = os.walk(srcdir)
 
 	pkgconf = packageconfig.get(package,{})
@@ -1200,12 +1200,21 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		if unpackdir != None:
 			unpackenv['TMPDIR'] = unpackdir
 
-	filestoscan = map(lambda x: x + (unpackenv,), filestoscan)
+	filestoscan = map(lambda x: x + (unpackenv, security, securitydb), filestoscan)
 	## process the files to scan in parallel, then process the results
 	extracted_results = pool.map(extractidentifiers, filestoscan, 1)
+	
+	if security:
+		securityconn = sqlite3.connect(securitydb, check_same_thread = False)
+		securityc = securityconn.cursor()
+		securityc.execute('PRAGMA synchronous=off')
 
 	for extractres in extracted_results:
-		(filehash, language, origlanguage, sqlres, moduleres, results) = extractres
+		(filehash, language, origlanguage, sqlres, moduleres, results, securityresults) = extractres
+		if security:
+			for res in securityresults:
+				(securitybug, linenumber) = res
+				securityc.execute('''insert into security (checksum, securitybug, linenumber, whitelist) values (?,?,?,?)''', (filehash, securitybug, linenumber, False))
 		for res in sqlres:
 			(pstring, linenumber) = res
 			cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (pstring, filehash, language, linenumber))
@@ -1313,6 +1322,10 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 				else:
 					cursor.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, language, linenumber))
 	conn.commit()
+	if security:
+		securityconn.commit()
+		securityc.close()
+		securityconn.close()
 
 	if update:
 		updatefile = open(newlist, 'a')
@@ -1554,7 +1567,7 @@ def licensefossology((packages)):
 
 ## TODO: get rid of ninkaversion before we call this method
 ## TODO: process more files at once to reduce overhead of calling ctags
-def extractidentifiers((package, version, i, p, language, filehash, ninkaversion, unpackenv)):
+def extractidentifiers((package, version, i, p, language, filehash, ninkaversion, unpackenv, security, securitydb)):
 	newlanguage = language
 
 	if language == 'patch':
@@ -1763,15 +1776,13 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 							results.add((identifier, linenumber, i))
 							break
 
-	'''
-	if language == 'C':
-		securityresults = securityScan(i,p)
-		if securityresults != []:
-			pass
-	'''
+	securityresults = []
+	if security:
+		if language == 'C':
+			securityresults = securityScan(i,p)
 		
 	## return all results, as well as the original language, which is important in the case of 'patch'
-	return (filehash, newlanguage, language, sqlres, moduleres, results)
+	return (filehash, newlanguage, language, sqlres, moduleres, results, securityresults)
 
 ## Scan the file for possible security bugs, try to classify them according to the
 ## CERT secure coding standard and possibly some other standards.
@@ -2219,6 +2230,14 @@ def main(argv):
 			except:
 				scanlicense = False
 			try:
+				sec = config.get(section, 'scansecurity')
+				if sec == 'yes':
+					scansecurity = True
+				else:
+					scansecurity = False
+			except:
+				scansecurity = False
+			try:
 				masterdatabase = config.get(section, 'database')
 			except:
 				print >>sys.stderr, "Database location not defined in configuration file. Exiting..."
@@ -2255,6 +2274,10 @@ def main(argv):
 				ninkacomments = config.get(section, 'ninkacommentsdb')
 			except:
 				ninkacomments = None
+			try:
+				securitydb = config.get(section, 'securitydb')
+			except:
+				securitydb = None
 			try:
 				unpackdir = config.get(section, 'unpackdir')
 			except:
@@ -2337,6 +2360,11 @@ def main(argv):
 	else:
 		copyrights = False
 
+	if scansecurity:
+		security = True
+		## TODO: more checks
+	else:
+		security = False
 	if unpackdir != None:
 		try:
 			testfile = tempfile.mkstemp(dir=unpackdir)
@@ -2359,6 +2387,10 @@ def main(argv):
 		print >>sys.stderr, "Specify path to licenses/copyrights database"
 		sys.exit(1)
 
+	if scansecurity and securitydb == None:
+		print >>sys.stderr, "Specify path to security database"
+		sys.exit(1)
+
 	masterdbdir = os.path.dirname(masterdatabase)
 	if not os.path.exists(masterdbdir):
 		print >>sys.stderr, "Cannot create database %s, directory %s does not exist" % (masterdatabase, masterdbdir)
@@ -2378,6 +2410,10 @@ def main(argv):
 	if scanlicense or scancopyright:
 		licenseconn = sqlite3.connect(licensedb, check_same_thread = False)
 		licensec = licenseconn.cursor()
+
+	if scansecurity:
+		securityconn = sqlite3.connect(securitydb, check_same_thread = False)
+		securityc = securityconn.cursor()
 
 	if scanlicense and options.updatelicense:
 		try:
@@ -2410,6 +2446,11 @@ def main(argv):
 		try:
 			ninkac.execute('''drop table ninkacomments''')
 			ninkaconn.commit()
+		except:
+			pass
+		try:
+			securityc.execute('''drop table security''')
+			securityconn.commit()
 		except:
 			pass
         try:
@@ -2520,6 +2561,14 @@ def main(argv):
 			ninkaconn.commit()
 			ninkac.close()
 			ninkaconn.close()
+		if scansecurity:
+			## Store the comments extracted by Ninka per checksum.
+			securityc.execute('''create table if not exists security (checksum text, securitybug text, linenumber int, whitelist tinyint(1))''')
+			securityc.execute('''create index if not exists security_index on security(checksum);''')
+
+			securityconn.commit()
+			securityc.close()
+			securityconn.close()
 		if extrahashes != []:
 			c.execute('''create table if not exists hashconversion (sha256 text)''')
 			c.execute('''create index if not exists hashconversion_sha256_index on hashconversion(sha256);''')
@@ -2620,7 +2669,7 @@ def main(argv):
 			(package, version, filename, origin, filehash, batarchive) = i
 			if package != oldpackage:
 				oldres = []
-			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums[filename], masterdatabase, cleanup, license, copyrights, pool, ninkacomments, licensedb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
+			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums[filename], masterdatabase, cleanup, license, copyrights, security, pool, ninkacomments, licensedb, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
 			if unpackres != None:
 				oldres = map(lambda x: x[2], unpackres)
 				oldpackage = package
