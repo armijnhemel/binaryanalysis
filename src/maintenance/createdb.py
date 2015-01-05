@@ -1213,8 +1213,8 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		(filehash, language, origlanguage, sqlres, moduleres, results, securityresults) = extractres
 		if security:
 			for res in securityresults:
-				(securitybug, linenumber) = res
-				securityc.execute('''insert into security (checksum, securitybug, linenumber, whitelist) values (?,?,?,?)''', (filehash, securitybug, linenumber, False))
+				(securitybug, linenumber, function) = res
+				securityc.execute('''insert into security (checksum, securitybug, linenumber, function, whitelist) values (?,?,?,?,?)''', (filehash, securitybug, linenumber, function, False))
 		for res in sqlres:
 			(pstring, linenumber) = res
 			cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (pstring, filehash, language, linenumber))
@@ -1806,7 +1806,7 @@ def securityScan(i,p):
 			if systempos == -1:
 				break
 			lineno = filecontent.count('\n', 0, systempos) + 1
-			smells.append(('ENV33-C', lineno))
+			smells.append(('ENV33-C', lineno, 'system'))
 	for m in msc24checks:
 		res = m[0].search(filecontent)
 		if res != None:
@@ -1819,7 +1819,7 @@ def securityScan(i,p):
 				if systempos == -1:
 					break
 				lineno = filecontent.count('\n', 0, systempos) + 1
-				smells.append(('MSC24-C', lineno))
+				smells.append(('MSC24-C', lineno, m[1]))
 	return smells
 
 ## Extract strings using xgettext. Apparently this does not always work correctly. For example for busybox 1.6.1:
@@ -2563,7 +2563,7 @@ def main(argv):
 			ninkaconn.close()
 		if scansecurity:
 			## Store the comments extracted by Ninka per checksum.
-			securityc.execute('''create table if not exists security (checksum text, securitybug text, linenumber int, whitelist tinyint(1))''')
+			securityc.execute('''create table if not exists security (checksum text, securitybug text, linenumber int, function text, whitelist tinyint(1))''')
 			securityc.execute('''create index if not exists security_index on security(checksum);''')
 
 			securityconn.commit()
