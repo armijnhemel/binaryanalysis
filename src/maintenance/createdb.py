@@ -2676,6 +2676,7 @@ def main(argv):
 		except Exception, e:
 				# oops, something went wrong
 				print >>sys.stderr, "unpacking error", e
+	pool.close()
 
 if __name__ == "__main__":
     main(sys.argv)
