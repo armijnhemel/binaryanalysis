@@ -684,6 +684,11 @@ def readconfig(config):
 					## to see if the directory is writable
 			except:
 				batconf['tempdir'] = None
+			try:
+				## global set of environment variables
+				batconf['envvars'] = config.get(section, 'envvars')
+			except:
+				pass
 			continue
 		
 		elif config.has_option(section, 'type'):
