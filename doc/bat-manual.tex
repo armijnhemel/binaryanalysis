@@ -676,6 +676,17 @@ debug = yes
 debugphases = leaf:aggregate
 \end{verbatim}
 
+Since BAT 20 it is possible to supply global environment variables. These can
+be shared between scans. They can be overridden by individual scans:
+
+\begin{verbatim}
+envvars     = BAT_NAMECACHE_C=/home/bat/db/functioncache_c
+\end{verbatim}
+
+As a rule of thumb: settings that are shared between all scans (such as the
+location of various databases) should be set in the global sections, while scan
+specific options should be in the scan sections.
+
 The other global section is \texttt{viewer}. This section is specific for the
 graphical frontend and is not used in any other parts of BAT and might be moved
 to a separate configuration file in a future version of BAT.
@@ -718,6 +729,17 @@ envvars     = BAT_REPORTDIR=/tmp/images:BAT_IMAGE_MAXFILESIZE=100000000
 
 It is up to the scans to parse the environment variables and to store them in
 the environment.
+
+\subsubsection{Scan names}
+
+The name of the scan is used in various places, for example for storing results
+or for determining scan conflicts. The \texttt{name} parameter can be used to
+set the name for the scan. If no name is specified the name of the section of
+the scan is used instead.
+
+\begin{verbatim}
+name = gzip
+\end{verbatim}
 
 \subsubsection{Scan conflicts}
 
