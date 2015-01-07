@@ -8,7 +8,7 @@
 This file contains a few methods that can be useful for security scanning.
 '''
 
-import os, sys, sqlite3, zipfile, subprocess
+import os, sys, sqlite3, zipfile, subprocess, re, cPickle
 
 ## This method extracts the CRC32 checksums from the entries of the encrypted zip file and checks
 ## whether or not there are any files in the database with the same CRC32. If so, a known plaintext
@@ -110,3 +110,46 @@ def scanVirus(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktem
 		## first line contains the report:
 		virusname = viruslines[0].strip()[len(path) + 2:-6]
 		return (['virus'], virusname)
+
+## experimental feature to detect possible smells in binaries
+## Many ODMs use shell commands in their programs using the system() call
+## which has turned out to be vulnerable in certain instances.
+## Some of these can be detected by looking for typical shell invocation
+## patterns, such as %s or * in combination with hard coded paths
+## TODO: add more patterns
+def scanShellInvocations(unpackreports, scantempdir, topleveldir, processors, scandebug=False, envvars=None, unpacktempdir=None):
+	for i in unpackreports:
+		## Limit to ELF binaries for now
+		if not unpackreports[i].has_key('tags'):
+			continue
+		if not unpackreports[i].has_key('sha256'):
+			continue
+		if not 'elf' in unpackreports[i]['tags']:
+			continue
+		if not 'identifier' in unpackreports[i]['tags']:
+			continue
+
+		filehash = unpackreports[i]['sha256']
+
+		## read pickle file
+		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+		leafreports = cPickle.load(leaf_file)
+		leaf_file.close()
+
+		strs = leafreports['identifier']['strings']
+		buggylines = []
+		for line in strs:
+			if '/sbin' in line or '/bin' in line:
+				possiblybuggy = False
+				for c in ['%s', '*']:
+					if c in line:
+						buggylines.append(line)
+						break
+		## now write back the results
+		if buggylines != []:
+			leafreports['shellinvocations'] = buggylines
+			leafreports['tags'].append('shellinvocations')
+			unpackreports[i]['tags'].append('shellinvocations')
+			leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
+			cPickle.dump(leafreports, leaf_file)
+			leaf_file.close()
