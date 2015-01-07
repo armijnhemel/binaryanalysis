@@ -694,11 +694,14 @@ def readconfig(config):
 			if config.get(section, 'enabled') == 'no':
 				continue
 			conf = {}
-			conf['name']   = section
 			conf['module'] = config.get(section, 'module')
 			conf['method'] = config.get(section, 'method')
 
 			## some scans might, or might not, have these defined
+			try:
+				conf['name']   = config.get(section, 'name')
+			except:
+				conf['name']   = section
 			try:
 				conf['envvars'] = config.get(section, 'envvars')
 			except:
