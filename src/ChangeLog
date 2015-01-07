@@ -1,3 +1,10 @@
+2015-01-07:
+* start on detecting shell invocations in ELF binaries to detect possible
+security bugs
+
+2015-01-05:
+* add database table for security scanning to createdb.py
+
 2015-01-04:
 * simplify data structures used in identifier.py, document changes
 * fix regular expression for AC_INIT, record line number for result as well
