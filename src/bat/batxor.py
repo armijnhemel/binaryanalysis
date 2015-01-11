@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2012-2013 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2012-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -22,6 +22,7 @@ import fwunpack
 ## some of the signatures we know about:
 ## * Splashtop (fast boot environment)
 ## * Bococom router series (2.6.21, Ralink chipset)
+## * Sitecom WL-340 and WL-342
 
 ## Finding new signatures is done by hand. A good helper tool can be found in
 ## the bat-visualisation directory in bat-extratools
@@ -29,6 +30,8 @@ import fwunpack
 ## The signatures of various known XOR "encrypted" firmwares.
 signatures = { 'splashtop': ['\x51', '\x57', '\x45', '\x52']
              , 'bococom':   ['\x3a', '\x93', '\xa2', '\x95', '\xc3', '\x63', '\x48', '\x45', '\x58', '\x09', '\x12', '\x03', '\x08', '\xc8', '\x3c']
+             , 'sitecom':   ['\x78', '\x3c', '\x9e', '\xcf', '\x67', '\xb3', '\x59', '\xac']
+
              }
 
 ## Ooooh, this is so inefficient...
@@ -38,15 +41,20 @@ def unpackXOR(filename, sig, tempdir=None):
 	os.fdopen(tmpfile[0]).close()
 
 	fwunpack.unpackFile(filename, 0, tmpfile[1], tmpdir, modify=True)
-	data = open(filename).read()
+	datafile = open(filename)
+	datafile.seek(0)
+	data = datafile.read(1000000)
 
 	## read data, XOR, write data out again
 	f2 = open(tmpfile[1], 'w')
 	counter = 0
-	for i in data:
-		f2.write(chr(ord(i) ^ ord(signatures[sig][counter])))
-		counter = (counter+1)%len(signatures[sig])
+	while data != '':
+		for i in data:
+			f2.write(chr(ord(i) ^ ord(signatures[sig][counter])))
+			counter = (counter+1)%len(signatures[sig])
+		data = datafile.read(1000000)
 	f2.close()
+	datafile.close()
 	return tmpdir
 
 def searchUnpackXOR(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
@@ -93,6 +101,7 @@ def searchUnpackXOR(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 				diroffsets.append((res, 0, os.stat(filename).st_size))
 				## blacklist the whole file
 				blacklist.append((0, os.stat(filename).st_size))
+				break
 	if res == None:
 		os.rmdir(tmpdir)
 		return (diroffsets, blacklist, [], hints)
