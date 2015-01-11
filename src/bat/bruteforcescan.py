@@ -200,8 +200,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 		leaftasks = []
 		unpackreports = {}
 		blacklist = []
-		tags = []
-		(path, filename, lenscandir, tempdir, debug) = scanqueue.get()
+		(path, filename, lenscandir, tempdir, debug, tags) = scanqueue.get()
 		lentempdir = len(tempdir)
 
 		## absolute path of the file in the file system (so including temporary dir)
@@ -267,7 +266,8 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 
 		## scan for markers
 		tagOffsets = tagKnownExtension(filetoscan)
-		(tags, offsets) = tagOffsets
+		(newtags, offsets) = tagOffsets
+		tags = tags + newtags
 		if offsets == {}:
 			offsets =  prerun.genericMarkerSearch(filetoscan, magicscans, optmagicscans)
 
@@ -452,7 +452,10 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 							try:
 								if not os.path.islink("%s/%s" % (i[0], p)):
 									os.chmod("%s/%s" % (i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-								scantasks.append((i[0], p, len(scandir), tempdir, debug))
+								if "temporary" in tags and diroffset[1] == 0 and diroffset[2] == filesize:
+									scantasks.append((i[0], p, len(scandir), tempdir, debug, ['temporary']))
+								else:
+									scantasks.append((i[0], p, len(scandir), tempdir, debug, []))
 								relscanpath = "%s/%s" % (i[0][lentempdir:], p)
 								if relscanpath.startswith('/'):
 									relscanpath = relscanpath[1:]
@@ -1005,7 +1008,8 @@ def runscan(scans, scan_binary):
 		if debugphases != []:
 			if not ('prerun' in debugphases or 'unpack' in debugphases):
 				tmpdebug = False
-	scantasks = [(scantempdir, os.path.basename(scan_binary), len(scantempdir), scantempdir, tmpdebug)]
+	tags = []
+	scantasks = [(scantempdir, os.path.basename(scan_binary), len(scantempdir), scantempdir, tmpdebug, tags)]
 
 	## Use multithreading to speed up scanning. Sometimes we hit http://bugs.python.org/issue9207
 	## Threading can be configured in the configuration file, but
