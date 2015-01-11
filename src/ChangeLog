@@ -1,3 +1,8 @@
+2015-01-11:
+* further document BAT internals
+* properly handle 'temporary' tag
+* add another signature for XOR module, performance fixes for XOR
+
 2015-01-07:
 * start on detecting shell invocations in ELF binaries to detect possible
 security bugs
