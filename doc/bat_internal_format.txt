@@ -28,7 +28,7 @@ Data kept in scanresults (unpackreports)
 If any data could be unpacked/carved from a larger file the 'scans' element for a file in unpackreports will be a list with results. Each result is a dictionary with the following elements:
 
 * offset: data offset in the original file where the file system/compressed file starts
-* size: size of the file system or compressed file. This element will sometimes be missing.
+* size: size of the file system or compressed file in the original file. This element will sometimes be missing.
 * scanreports: list of files that were unpacked from the file. These correspond to other elements in unpackreports
 * scanname: the name of the scan that was used to unpack/decompress the file, for example 'gzip' or 'lzma'
 
@@ -60,6 +60,29 @@ The first element is a list of string identifiers as extracted by running "strin
 * language: language family that BAT thinks the source code files (that were used to generate the binary) are part of.
 
 Data for the ranking scan
+
+The current ranking scan stores its results as a tuple with the following elements:
+
+* string identifier results: a dictionary with various results for matching string identifiers
+* function name results: a dictionary with various results for matching function names
+* variable results: a dictionary with various results for matching variable names
+* language: language family that BAT thinks the source code files (that were used to generate the binary) are part of.
+
+Please note that this format will likely change in the future.
+
+Data for string identifier results (ranking scan):
+
+* extractedlines: number indicating how many lines were extracted from the binary
+* matchedlines: number indicating how many lines were matched to the database
+* unmatchedlines: number indicating the number of unmatched lines
+* unmatched: list of unmatched lines
+* matcheddirectassignedlines: number indicating number of matches that could directly be assigned to a package
+* matchednonassignedlines: number indicating number of matches that could not be assigned (score too low)
+* matchednotclonelines: number indicating number of matches that were matched, but which are not cloned between packages (needs work)
+* reports: a list with the results (rank, unique matches, licenses, etc.) per package
+* nonUniqueMatches: dictionary listing per package the non unique assignments (package name as key, list of lines as value)
+* nonUniqueAssignments: dictionary listing non unique assignments per package (package name as key, number of lines assigned as value)
+* scores: dictionary listing computed score per package (package name as key, score as value)
 
 Data used for generating matching piecharts
 
