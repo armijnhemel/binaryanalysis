@@ -21,32 +21,33 @@
 The Binary Analysis Tool (BAT) is a framework that can help developers and
 companies check binary files. Its primary application is for Open Source
 software license compliance, with a special focus on supply chain management
-in consumer electronics.
+in consumer electronics, but it can also be used for other checks of binary
+for example the presence of security bugs.
 
 BAT consists of several programs written in Python. The most important program
 is the scanner for binary objects to unpack binaries recursively and apply a
-anumber of scans, for example for open source license compliance, visualising
+number of scans, for example for open source license compliance, visualising
 linking information, finding version information, and so on.  There are also
-other programs to help with specific compliance tasks, such as verifying if
-configurations for a given BusyBox binary match with the configuration in
-source code. Also included is a very experimental program to derive a possible
-configuration from a Linux kernel image, as well as programs to verify results
-from a binary scan with a source code archive.
+other programs to help with specific license compliance tasks, such as
+verifying if configurations for a given BusyBox binary match with the
+configuration in source code. Also included is a very experimental program to
+derive a possible configuration from a Linux kernel image, as well as programs
+to verify results from a binary scan with a source code archive.
 
 \section{Installing the Binary Analysis Tool}
 
 \subsection{Hardware requirements}
 
-The tools in the Binary Analysis Tool can be quite resource intensive. These
-are largely I/O-bound (database access), so it is better to invest in faster
-disks or ramdisks than in raw CPU power. Using more cores is also highly
-recommended, since most of the programs in the Binary Analysis Tool will vastly
-benefit from this.
+The tools in the Binary Analysis Tool can be quite resource intensive. They
+are largely I/O-bound (database access, reading files from disk), so it is
+better to invest in faster disks or ramdisks than in raw CPU power. Using more
+cores is also highly recommended, since most of the programs in the Binary
+Analysis Tool will vastly benefit from this.
 
 \subsection{Software requirements}
 
 To run BAT a recent Linux distribution is needed. Development is (currently)
-done on Fedora 19 and 20 and Ubuntu 14.04, so those platforms are likely to
+done on Fedora 19, 20 and 21 and Ubuntu 14.04, so those platforms are likely to
 work best. Ubuntu versions older than 14.04, will not work due to a broken
 version of the PyDot package. Debian versions older than 7 are unsupported.
 
@@ -75,9 +76,6 @@ three files there should be a list of dependencies that should be installed to
 let BAT work successfully. Some of these packages are not in Debian by default
 but need to be installed by enabling extra repositories such as Debian
 \texttt{non-free}.
-
-The graphical interface will not work on Debian 6, because of a too old
-version of \texttt{wxPython} that is shipped in Debian 6.
 
 \section{Analysing binaries with the Binary Analysis Tool}
 
@@ -136,9 +134,10 @@ such as Mozilla Firefox.
 
 This XML file is not meant for human consumption, but for use by for example
 reporting tools. A word of warning is needed: the XML format is not very well
-designed and not well maintained and it might be removed in the future. If you
-want to programmatically process information from BAT it is recommended to use
-the Python pickles to extract information instead.
+designed and not well maintained and it will likely be removed in the future.
+If you want to programmatically process information from BAT it is recommended
+to use the Python pickles to extract information instead. In the BAT source
+code repository a file documenting these pickles can be found.
 
 The default XML pretty printer as shipped by BAT outputs a file that starts
 with metadata, such as:
