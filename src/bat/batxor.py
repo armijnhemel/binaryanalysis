@@ -16,7 +16,7 @@ For this we need to keep some state, possibly even delete the file only later,
 by tagging it as 'temporary' and removing it later on.
 '''
 
-import sys, os, os.path, tempfile, re
+import sys, os, os.path, tempfile, re, mmap
 import fwunpack
 
 ## some of the signatures we know about:
@@ -34,7 +34,6 @@ signatures = { 'splashtop': ['\x51', '\x57', '\x45', '\x52']
 
              }
 
-## Ooooh, this is so inefficient...
 def unpackXOR(filename, sig, tempdir=None):
 	tmpdir = fwunpack.unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
@@ -86,7 +85,8 @@ def searchUnpackXOR(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 
 	## open the file, so we can search for signatures
 	## TODO: use the identifier search we have elsewhere.
-	data = open(filename).read()
+	datafile = os.open(filename, os.O_RDONLY)
+	datamm = mmap.mmap(datafile, 0, access=mmap.ACCESS_READ)
 
 	tmpdir = fwunpack.dirsetup(tempdir, filename, "xor", counter)
 	res = None
@@ -94,7 +94,7 @@ def searchUnpackXOR(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 		bs = reduce(lambda x, y: x + y, signatures[s])
 		## find all instances of the signature. We might want to tweak
 		## this a bit.
-		bsres = re.findall(bs, data)
+		bsres = re.findall(bs, datamm)
 		if len(bsres) > 0:
 			res = unpackXOR(filename, s, tmpdir)
 			if res != None:
@@ -102,6 +102,8 @@ def searchUnpackXOR(filename, tempdir=None, blacklist=[], offsets={}, debug=Fals
 				## blacklist the whole file
 				blacklist.append((0, os.stat(filename).st_size))
 				break
+	datamm.close()
+	os.close(datafile)
 	if res == None:
 		os.rmdir(tmpdir)
 		return (diroffsets, blacklist, [], hints)
