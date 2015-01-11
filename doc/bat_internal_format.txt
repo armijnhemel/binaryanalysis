@@ -2,9 +2,9 @@ This document describes the format of the datastructures used internally by (as 
 
 Because the data can grow quite big (especially when dealing with packages with possibly millons of matches, like the Linux kernel) the data in BAT is kept in two separate data structures:
 
-* unpackreports -- this is a dictionary that keeps metainformation about all the files, like checksums, tags, offsets of filesystems/compressed files contained in the file, names of files that were unpacked from this file, ranges of 'blacklisted' bytes that don't need to be (re)scanned, and so on. The keys of this dictionary are the paths that a file is unpacked to by BAT. Files that are duplicates (same checksum) are tagged as such. This dictionary is at the end of a scan written to a Python pickle called "scandata.pickle".
+* unpackreports: this is a dictionary that keeps metainformation about all the files, like checksums, tags, offsets of filesystems/compressed files contained in the file, names of files that were unpacked from this file, ranges of 'blacklisted' bytes that don't need to be (re)scanned, and so on. The keys of this dictionary are the paths that a file is unpacked to by BAT. Files that are duplicates (same checksum) are tagged as such. This dictionary is at the end of a scan written to a Python pickle called "scandata.pickle".
 
-* leafreports -- this has all the per file specific scan results, such as the matching data, but also the results of other scans. Because of memory constraints this data is kept on disk, not in memory, in a Python pickle file for each checksum. The data is read from disk on a per need basis. The Python pickles (gzip compressed) can be found in the directory "filereports" inside the scan result archive.
+* leafreports: this has all the per file specific scan results, such as the matching data, but also the results of other scans. Because of memory constraints this data is kept on disk, not in memory, in a Python pickle file for each checksum. The data is read from disk on a per need basis. The Python pickles (gzip compressed) can be found in the directory "filereports" inside the scan result archive.
 
 Some data is duplicated between the two:
 
