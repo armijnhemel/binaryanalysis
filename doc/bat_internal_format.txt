@@ -84,7 +84,31 @@ Data for string identifier results (ranking scan):
 * nonUniqueAssignments: dictionary listing non unique assignments per package (package name as key, number of lines assigned as value)
 * scores: dictionary listing computed score per package (package name as key, score as value)
 
+Data stored in 'reports' (string identifier results)
+
+The result stored in 'reports' is an 8 tuple with the following information:
+
+1. rank: number indicating the rank (numbered from 1 for the highest ranked package)
+2. package name: name of the package
+3. unique
+4. uniquematcheslen
+5. percentage
+6. packageversions
+7. packagelicenses
+8. packagecopyrights
+
 Data used for generating matching piecharts
+
+Two types of piecharts are generated: piecharts depicting how the strings were matched and a piechart for the score. For the piechart displaying statistics about how strings were matched (stored as $checksum-statpiechart.png) the following information from 'reports' is used:
+
+*
+
+For the piechart for the score the following data from 'reports' is used:
+
+* percentage
+* package name
+
+Each combination (package name, percentage) is then used to create a slice of the piechart and label it.
 
 Data used for generating matching barcharts
 
