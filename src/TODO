@@ -87,3 +87,4 @@ BOTTLENECKS/HIGH PRIORITY:
 18. createdb.py: use and store output from Monk
 19. generatelistrpm.py: use information from rpm2cpio's --dump option to get checksums and better decide if files should be unpacked or not
 20. add database driver hints to configuration variables to easier provide for better databases. Perhaps use URL notation for this?
+21. bat/checks.py: use SPDX names for reported licenses
