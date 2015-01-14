@@ -88,8 +88,18 @@ def runSetup(setupscan, debug=False):
 	else:
 		envvars = None
 
+	scanenv = os.environ.copy()
+	if envvars == None:
+		return
+	for en in envvars.split(':'):
+		try:
+			(envname, envvalue) = en.split('=')
+			scanenv[envname] = envvalue
+		except Exception, e:
+			pass
+
 	exec "from %s import %s as bat_%s" % (module, method, method)
-	scanres = eval("bat_%s(envvars, debug=debug)" % (method))
+	scanres = eval("bat_%s(scanenv, debug=debug)" % (method))
 	return scanres
 
 ## method to filter scans, based on the tags that were found for a
@@ -115,7 +125,7 @@ def filterScans(scans, tags):
 ## compute a SHA256 hash. This is done in chunks to prevent a big file from
 ## being read in its entirety at once, slowing down a machine.
 def gethash(path, filename):
-	scanfile = open("%s/%s" % (path, filename), 'r')
+	scanfile = open(os.path.join(path, filename), 'r')
 	h = hashlib.new('sha256')
 	scanfile.seek(0)
 	hashdata = scanfile.read(10000000)
@@ -204,10 +214,10 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 		lentempdir = len(tempdir)
 
 		## absolute path of the file in the file system (so including temporary dir)
-		filetoscan = "%s/%s" % (path, filename)
+		filetoscan = os.path.join(path, filename)
 
 		## relative path of the file in the temporary dir
-		relfiletoscan = "%s/%s" % (path[lentempdir:], filename)
+		relfiletoscan = filetoscan[lentempdir:]
 		if relfiletoscan.startswith('/'):
 			relfiletoscan = relfiletoscan[1:]
 
@@ -227,7 +237,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 		unpackreports[relfiletoscan]['path'] = storepath
 		unpackreports[relfiletoscan]['realpath'] = path
 
-		if os.path.islink("%s/%s" % (path, filename)):
+		if os.path.islink(filetoscan):
 			tags.append('symlink')
 			unpackreports[relfiletoscan]['tags'] = tags
 			for l in leaftasks:
@@ -237,7 +247,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 			scanqueue.task_done()
 			continue
 		## no use checking pipes, sockets, device files, etcetera
-		if not os.path.isfile("%s/%s" % (path, filename)) and not os.path.isdir("%s/%s" % (path, filename)):
+		if not os.path.isfile(filetoscan) and not os.path.isdir(filetoscan):
 			for l in leaftasks:
 				leafqueue.put(l)
 			for u in unpackreports:
@@ -245,7 +255,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 			scanqueue.task_done()
 			continue
 
-		filesize = os.lstat("%s/%s" % (path, filename)).st_size
+		filesize = os.lstat(filetoscan).st_size
 		unpackreports[relfiletoscan]['size'] = filesize
 
 		## empty file, not interested in further scanning
@@ -446,8 +456,9 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
                 				i = osgen.next()
 						## make sure all directories can be accessed
 						for d in i[1]:
-							if not os.path.islink("%s/%s" % (i[0], d)):
-								os.chmod("%s/%s" % (i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+							directoryname = os.path.join(i[0], d)
+							if not os.path.islink(directoryname):
+								os.chmod(directoryname, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
                 				for p in i[2]:
 							try:
 								if not os.path.islink("%s/%s" % (i[0], p)):

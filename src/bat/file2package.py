@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2012-2013 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2012-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -12,7 +12,7 @@ mined from distributions like Fedora and Debian.
 This scan should be run as a leaf scan.
 '''
 
-import os, os.path, sqlite3, sys, subprocess
+import os, os.path, sqlite3, sys, subprocess, copy
 import xml.dom.minidom
 
 def filename2package(path, tags, blacklist=[], scandebug=False, envvars=None):
@@ -55,17 +55,8 @@ def xmlprettyprint(res, root, envvars=None):
 		topnode.appendChild(tmpnode)
 	return topnode
 
-def file2packagesetup(envvars, debug=False):
-	scanenv = os.environ.copy()
-	newenv = {}
-	if envvars != None:
-		for en in envvars.split(':'):
-			try:
-				(envname, envvalue) = en.split('=')
-				scanenv[envname] = envvalue
-				newenv[envname] = envvalue
-			except Exception, e:
-				pass
+def file2packagesetup(scanenv, debug=False):
+	newenv = copy.deepcopy(scanenv)
 
 	## Is the package database defined?
 	if not scanenv.has_key('BAT_PACKAGE_DB'):

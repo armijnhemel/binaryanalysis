@@ -732,23 +732,15 @@ def extractKernelData(lines, filepath, scanenv):
 ## Returns tuple (run, envvars)
 ## * run: boolean indicating whether or not the scan should run
 ## * envvars: (possibly) modified
-def extractidentifiersetup(envvars, debug=False):
+def extractidentifiersetup(scanenv, debug=False):
 	## TODO: verify if the following programs are available and work:
 	## * strings
 	## * jcf-dump
 	## * java
 	## * readelf
 	## * c++filt
-	scanenv = os.environ.copy()
-	newenv = {}
-	if envvars != None:
-		for en in envvars.split(':'):
-			try:
-				(envname, envvalue) = en.split('=')
-				scanenv[envname] = envvalue
-				newenv[envname] = envvalue
-			except Exception, e:
-				pass
+
+	newenv = copy.deepcopy(scanenv)
 
 	if scanenv.has_key('DEX_TMPDIR'):
 		dex_tmpdir = scanenv['DEX_TMPDIR']
