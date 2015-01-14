@@ -11,18 +11,6 @@ This file contains a few convenience functions that are used throughout the code
 import string, re, subprocess, sys
 from xml.dom import minidom
 
-## Helper method to replace unprintable characters with spaces.
-## This is useful for doing regular expressions to extract the BusyBox
-## version, while retaining all offsets in the file.
-def extract_printables(lines):
-        printables = ""
-        for i in lines:
-                if i in string.printable:
-                        printables += i
-                else:
-                        printables += " "
-        return printables
-
 def isPrintables(lines):
 	return len(lines) == len(filter(lambda x: x in string.printable, lines))
 

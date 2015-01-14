@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2009-2013 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2009-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 import os, sys, string, re, subprocess, cPickle
@@ -56,8 +56,7 @@ def extractKernelVersion(lines):
 	if offset == -1:
 		return
         ## kernel version numbers should fit within 100 characters
-        printables = extractor.extract_printables(lines[offset:offset+100])
-        res = re.search("Linux version ([\d\.\d\w-]+) \(", printables)
+        res = re.search("Linux version ([\d\.\d\w-]+) \(", lines[offset:offset+100])
         if res != None:
                 return res.groups(0)[0]
         else:
