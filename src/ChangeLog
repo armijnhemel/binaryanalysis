@@ -1,3 +1,9 @@
+2015-01-14:
+* start moving customization of environment out of scans and to
+bat/bruteforcescan.py
+* bat/bruteforcescan.py: simplify a few paths
+* bat/extractor.py: remove unnecessary method
+
 2015-01-11:
 * further document BAT internals
 * properly handle 'temporary' tag
