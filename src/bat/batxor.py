@@ -62,9 +62,14 @@ def searchUnpackXOR(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 
 	## If something else already unpacked (parts) of the file we're not
 	## going to continue.
-	if scanenv['BAT_UNPACKED'] == 'True':
-		return (diroffsets, blacklist, [], hints)
+	if 'BAT_UNPACKED' in scanenv:
+		if scanenv['BAT_UNPACKED'] == 'True':
+			return (diroffsets, blacklist, [], hints)
 
+	if 'XOR_MINIMUM' in scanenv:
+		xor_minimum = int(scanenv['XOR_MINIMUM'])
+	else:
+		xor_minimum = 0
 	## only continue if no other scan has succeeded
 	if blacklist != []:
 		return (diroffsets, blacklist, [], hints)
@@ -87,6 +92,8 @@ def searchUnpackXOR(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		## this a bit.
 		bsres = re.findall(bs, datamm)
 		if len(bsres) > 0:
+			if len(bsres) < xor_minimum:
+				continue
 			res = unpackXOR(filename, s, tmpdir)
 			if res != None:
 				diroffsets.append((res, 0, os.stat(filename).st_size))
