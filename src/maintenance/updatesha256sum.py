@@ -23,7 +23,10 @@ def computehash((filedir, filename, extrahashes)):
 	filehashes['sha256'] = h.hexdigest()
 
 	if 'crc32' in extrahashes:
-		filehashes['crc32'] = zlib.crc32(filedata) & 0xffffffff
+		try:
+			filehashes['crc32'] = zlib.crc32(filedata) & 0xffffffff
+		except:
+			return None
 
 	## first remove 'crc32' from extrahashes
 	extrahashesset = set(extrahashes)
@@ -97,7 +100,7 @@ def main(argv):
 	## find hashes in parallel
 	shatasks = map(lambda x: (options.filedir, x, extrahashes), diffset)
 	pool = multiprocessing.Pool()
-	sharesults = pool.map(computehash, shatasks, 1)
+	sharesults = filter(lambda x: x != None, pool.map(computehash, shatasks, 1))
 	pool.terminate()
 
 	for i in sharesults:
