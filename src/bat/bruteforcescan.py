@@ -817,24 +817,53 @@ def readconfig(config):
 		tmpbatconfdebug.update(batconf['debugphases'])
 		batconf['debugphases'] = list(tmpbatconfdebug)
 
+	## set and/or amend environment for prerun scans
 	for s in prerunscans:
 		if not 'environment' in s:
 			s['environment'] = copy.deepcopy(scanenv)
+		else:
+			for e in batconf['environment']:
+				if not e in s['environment']:
+					s['environment'][e] = copy.deepcopy(batconf['environment'][e])
+
+	## set and/or amend environment for unpack scans
 	for s in unpackscans:
 		if not 'environment' in s:
 			s['environment'] = copy.deepcopy(scanenv)
+		else:
+			for e in batconf['environment']:
+				if not e in s['environment']:
+					s['environment'][e] = copy.deepcopy(batconf['environment'][e])
+
+	## set and/or amend environment for leaf scans
 	for s in leafscans:
 		if not 'environment' in s:
 			s['environment'] = copy.deepcopy(scanenv)
+		else:
+			for e in batconf['environment']:
+				if not e in s['environment']:
+					s['environment'][e] = copy.deepcopy(batconf['environment'][e])
+
+	## set and/or amend environment for aggregate scans
 	for s in aggregatescans:
 		if not 'environment' in s:
 			s['environment'] = copy.deepcopy(scanenv)
+		else:
+			for e in batconf['environment']:
+				if not e in s['environment']:
+					s['environment'][e] = copy.deepcopy(batconf['environment'][e])
 		if s['cleanup']:
 			## this is an ugly hack *cringe*
 			s['environment']['overridedir'] = True
+
+	## set and/or amend environment for postrun scans
 	for s in postrunscans:
 		if not 'environment' in s:
 			s['environment'] = copy.deepcopy(scanenv)
+		else:
+			for e in batconf['environment']:
+				if not e in s['environment']:
+					s['environment'][e] = copy.deepcopy(batconf['environment'][e])
 		if s['cleanup']:
 			## this is an ugly hack *cringe*
 			s['environment']['overridedir'] = True
