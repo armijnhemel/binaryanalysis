@@ -522,6 +522,8 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	if not envresult:
 		return None
 
+	## the environment might have changed and been cleaned up,
+	## so overwrite the old one
 	scanenv = newenv
 
 	determineversion = False
