@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2009-2013 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2009-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 ## Stand alone module to determine the version of BusyBox. Has a method for being called
@@ -11,7 +11,7 @@ import sys, os, tempfile, copy
 from optparse import OptionParser
 import busybox, extractor
 
-def busybox_version(filename, tags, blacklist=[], scandebug=False, envvars=None, unpacktempdir=None):
+def busybox_version(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	try:
                 filesize = os.stat(filename).st_size
 		## if the whole file is blacklisted, we don't have to scan

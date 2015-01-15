@@ -30,7 +30,7 @@ import fsmagic, extractor
 ## method to search for all the markers in magicscans
 ## Although it is in this method it is actually not a pre-run scan, so perhaps
 ## it should be moved to bruteforcescan.py instead.
-def genericMarkerSearch(filename, magicscans, optmagicscans, debug=False, envvars=None):
+def genericMarkerSearch(filename, magicscans, optmagicscans, debug=False):
 	datafile = open(filename, 'rb')
 	databuffer = []
 	offsets = {}
@@ -74,7 +74,7 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, debug=False, envvar
 ## Verify a file is an XML file using xmllint.
 ## Actually we *could* do this with xml.dom.minidom (although some parser settings should be set
 ## to deal with unresolved entities) to avoid launching another process
-def searchXML(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def searchXML(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	p = subprocess.Popen(['xmllint','--noout', "--nonet", filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
@@ -90,7 +90,7 @@ def searchXML(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 ##
 ## Interesting link with background info:
 ## * http://fedoraproject.org/wiki/Features/PythonEncodingUsesSystemLocale
-def verifyText(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyText(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	datafile = open(filename, 'rb')
 	databuffer = []
@@ -112,20 +112,20 @@ def verifyText(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars
 	return newtags
 
 ## Quick check to verify if a file is a graphics file.
-def verifyGraphics(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyGraphics(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if "text" in tags or "compressed" in tags or "audio" in tags:
 		return newtags
-	newtags = verifyJPEG(filename, tempdir, tags, offsets, envvars)
+	newtags = verifyJPEG(filename, tempdir, tags, offsets, scanenv)
 	if newtags == []:
-		newtags = verifyPNG(filename, tempdir, tags, offsets, envvars)
+		newtags = verifyPNG(filename, tempdir, tags, offsets, scanenv)
 	if newtags == []:
-		newtags = verifyGIF(filename, tempdir, tags, offsets, envvars)
+		newtags = verifyGIF(filename, tempdir, tags, offsets, scanenv)
 	if newtags == []:
-		newtags = verifyBMP(filename, tempdir, tags, offsets, envvars)
+		newtags = verifyBMP(filename, tempdir, tags, offsets, scanenv)
 	return newtags
 
-def verifyBMP(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyBMP(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not offsets.has_key('bmp'):
 		return newtags
@@ -139,7 +139,7 @@ def verifyBMP(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 	newtags.append("graphics")
 	return newtags
 
-def verifyGIF(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyGIF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	## sanity checks
 	if not filename.lower().endswith('.gif'):
@@ -185,7 +185,7 @@ def verifyGIF(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 	newtags.append('gif')
 	return newtags
 
-def verifyJPEG(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyJPEG(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not offsets.has_key('jpeg') or not offsets.has_key('jpegtrailer'):
 		return newtags
@@ -205,7 +205,7 @@ def verifyJPEG(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars
 	newtags.append("graphics")
 	return newtags
 
-def verifyPNG(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyPNG(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not offsets.has_key('png'):
 		return newtags
@@ -231,7 +231,7 @@ def verifyPNG(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 ## Check to verify if a file is a gzip compressed file. This requires
 ## launching an external process, possibly for a big file, so first run a
 ## few checks to make sure to only do that in promising cases.
-def verifyGzip(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyGzip(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if "text" in tags or "graphics" in tags or "compressed" in tags or "audio" in tags:
 		return newtags
@@ -257,7 +257,7 @@ def verifyGzip(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars
 	newtags.append("compressed")
 	return newtags
 
-def verifyBZ2(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyBZ2(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if "text" in tags or "graphics" in tags or "compressed" in tags:
 		return newtags
@@ -307,7 +307,7 @@ def verifyBZ2(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 ## * XML
 ## 
 ## Each of these can be constructed in a different way. Focus is on tables first.
-def verifyAndroidResource(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyAndroidResource(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not 'binary' in tags:
 		return newtags
@@ -346,7 +346,7 @@ def verifyAndroidResource(filename, tempdir=None, tags=[], offsets={}, debug=Fal
 ## file ends in '.xml', plus check the first four bytes of the file
 ## If it is an Android XML file, mark it as a 'resource' file
 ## TODO: have a better check here to increase fidelity
-def verifyAndroidXML(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyAndroidXML(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not 'binary' in tags:
 		return newtags
@@ -367,7 +367,7 @@ def verifyAndroidXML(filename, tempdir=None, tags=[], offsets={}, debug=False, e
 ## the file is 'classes.dex', plus check the first four bytes of the file, plus
 ## verify a length checksum in the header.
 ## The main reason for this check is to bring down false positives for lzma unpacking
-def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not offsets.has_key('dex'):
 		return newtags
@@ -402,7 +402,7 @@ def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, debug=False, e
 ## The main reason for this check is to bring down false positives for lzma unpacking
 ## The specification of the header can be found at:
 ## https://android.googlesource.com/platform/dalvik.git/+/master/libdex/DexFile.h
-def verifyAndroidOdex(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyAndroidOdex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not 'binary' in tags:
 		return newtags
@@ -466,7 +466,7 @@ def verifyAndroidOdex(filename, tempdir=None, tags=[], offsets={}, debug=False, 
 ## verify if this is a GNU message catalog. We check if the name of the
 ## file ends in '.po', plus check the first few bytes of the file
 ## If it is a GNU message catalog, mark it as a 'resource' file
-def verifyMessageCatalog(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyMessageCatalog(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not 'binary' in tags:
 		return newtags
@@ -491,7 +491,7 @@ def verifyMessageCatalog(filename, tempdir=None, tags=[], offsets={}, debug=Fals
 
 ## Simple verifier for SQLite 3 files
 ## See http://sqlite.org/fileformat.html
-def verifySqlite3(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifySqlite3(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not 'binary' in tags:
 		return newtags
@@ -528,7 +528,7 @@ def verifySqlite3(filename, tempdir=None, tags=[], offsets={}, debug=False, envv
 ## Extremely simple verifier for Ogg files.
 ## This will not tag all Ogg files, but it will be good enough
 ## for the common cases
-def verifyOgg(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyOgg(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not filename.endswith('.ogg'):
 		return newtags
@@ -550,7 +550,7 @@ def verifyOgg(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 	return newtags
 
 ## extremely simple verifier for MP4 to reduce false positives
-def verifyMP4(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyMP4(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not 'binary' in tags:
 		return newtags
@@ -574,7 +574,7 @@ def verifyMP4(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 
 ## very simplistic verifier for some Web Open Font Format
 ## http://people.mozilla.com/~jkew/woff/
-def verifyWOFF(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyWOFF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not 'binary' in tags:
 		return newtags
@@ -595,7 +595,7 @@ def verifyWOFF(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars
 	return newtags
 
 ## very simplistic verifier for OpenType fonts
-def verifyOTF(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyOTF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not 'binary' in tags:
 		return newtags
@@ -660,7 +660,7 @@ def verifyOTF(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 	return newtags
 
 ## very simplistic verifier for some Windows icon files
-def verifyIco(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyIco(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not filename.endswith('.ico'):
 		return newtags
@@ -687,7 +687,7 @@ def verifyIco(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 	return newtags
 
 ## very simplistic verifier for some TrueType fonts
-def verifyTTF(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyTTF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not filename.endswith('.ttf'):
 		return newtags
@@ -717,7 +717,7 @@ def verifyTTF(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 ## This might not work for all ELF files and it is a conservative verification, only used to
 ## reduce false positives of LZMA scans.
 ## This does for sure not work for Linux kernel modules on some devices.
-def verifyELF(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not 'binary' in tags:
 		return newtags
@@ -837,7 +837,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 	return newtags
 
 ## simple helper method to verify if a file is a valid Java class file
-def verifyJavaClass(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyJavaClass(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not offsets.has_key('java'):
 		return newtags
@@ -896,7 +896,7 @@ def verifyJavaClass(filename, tempdir=None, tags=[], offsets={}, debug=False, en
 	return newtags
 
 ## Method to verify if a ZIP file is actually a JAR and tag it as such.
-def verifyJAR(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyJAR(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	## assume JAR files have a naming convention
 	if not filename.lower().endswith('.jar'):
@@ -958,7 +958,7 @@ def verifyJAR(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 	return newtags
 
 ## Method to verify if a Windows executable is a valid 7z file
-def verifyExe(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyExe(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not offsets.has_key('pe'):
 		return newtags
@@ -979,7 +979,7 @@ def verifyExe(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=
 	## run 7z l on the file and see if the file size matches 'Physical Size' in the output of 7z
 	return newtags
 
-def verifyVimSwap(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyVimSwap(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if filename.endswith('.swp'):
 		datafile = open(filename, 'rb')
@@ -989,7 +989,7 @@ def verifyVimSwap(filename, tempdir=None, tags=[], offsets={}, debug=False, envv
 			newtags.append('vimswap')
 	return newtags
 
-def verifyTZ(filename, tempdir=None, tags=[], offsets={}, debug=False, envvars=None, unpacktempdir=None):
+def verifyTZ(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if "zoneinfo" in filename:
 		datafile = open(filename, 'rb')

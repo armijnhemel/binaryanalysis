@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2012-2013 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2012-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -28,17 +28,9 @@ Parameters for configuration file:
 import os, os.path, sys, subprocess
 from PIL import Image
 
-def generateImages(filename, unpackreport, scantempdir, topleveldir, debug=False, envvars={}):
+def generateImages(filename, unpackreport, scantempdir, topleveldir, scanenv={}, debug=False):
 	if not unpackreport.has_key('sha256'):
 		return
-	scanenv = os.environ.copy()
-	if envvars != None:
-		for en in envvars.split(':'):
-			try:
-				(envname, envvalue) = en.split('=')
-				scanenv[envname] = envvalue
-			except Exception, e:
-				pass
 
 	imagedir = scanenv.get('BAT_IMAGEDIR', "%s/%s" % (topleveldir, "images"))
 	try:

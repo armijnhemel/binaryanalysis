@@ -8,7 +8,7 @@ import os, sys, string, re, subprocess, cPickle
 import extractor
 import xml.dom.minidom
 
-def xmlprettyprint(res, root, envvars=None):
+def xmlprettyprint(res, root, scanenv={}):
 	topnode = root.createElement("kernelchecks")
 	for i in res.keys():
 		tmpnode = root.createElement(i)
@@ -19,7 +19,7 @@ def xmlprettyprint(res, root, envvars=None):
 		topnode.appendChild(tmpnode)
 	return topnode
 
-def kernelChecks(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktempdir=None):
+def kernelChecks(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	results = {}
         try:
                 kernelbinary = open(path, 'rb')
@@ -125,7 +125,7 @@ def findRedBoot(lines):
 
 ## extract the kernel version from the module
 ## TODO: merge with module license extraction
-def analyseModuleVersion(path, tags, blacklist=[], scandebug=False, envvars=[], unpacktempdir=None):
+def analyseModuleVersion(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	if not 'elfrelocatable' in tags:
 		return
 	## 2.6 and later Linux kernel
@@ -145,7 +145,7 @@ def analyseModuleVersion(path, tags, blacklist=[], scandebug=False, envvars=[], 
 		return (['linuxkernel', 'modulekernelversion'], stanout.split()[0])
 
 ## analyse a kernel module. Requires that the modinfo program from module-init-tools has been installed
-def analyseModuleLicense(path, tags, blacklist=[], scandebug=False, envvars=[], unpacktempdir=None):
+def analyseModuleLicense(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	if not "elfrelocatable" in tags:
 		return None
 	p = subprocess.Popen(['/sbin/modinfo', "-F", "license", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -166,7 +166,7 @@ def analyseModuleLicense(path, tags, blacklist=[], scandebug=False, envvars=[], 
 ## Also match the architectures of the modules: they should be for the same architecture
 ## but sometimes modules for an entirely different architecture pop up, which is a
 ## sign that something is wrong.
-def kernelmodulecheck(unpackreports, scantempdir, topleveldir, processors, scandebug=False, envvars=None, unpacktempdir=None):
+def kernelmodulecheck(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
 	kernelversions = set()
 	moduleversions = {}
 	modulearchitectures = {}

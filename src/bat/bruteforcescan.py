@@ -83,23 +83,9 @@ def runSetup(setupscan, debug=False):
 	if debug:
 		print >>sys.stderr, module, method
 		sys.stderr.flush()
-	if setupscan.has_key('envvars'):
-		envvars = setupscan['envvars']
-	else:
-		envvars = None
-
-	scanenv = os.environ.copy()
-	if envvars == None:
-		return
-	for en in envvars.split(':'):
-		try:
-			(envname, envvalue) = en.split('=')
-			scanenv[envname] = envvalue
-		except Exception, e:
-			pass
 
 	exec "from %s import %s as bat_%s" % (module, method, method)
-	scanres = eval("bat_%s(scanenv, debug=debug)" % (method))
+	scanres = eval("bat_%s(setupscan['environment'], debug=debug)" % (method))
 	return scanres
 
 ## method to filter scans, based on the tags that were found for a
@@ -338,14 +324,8 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 			if debug:
 				print >>sys.stderr, module, method, filename, datetime.datetime.utcnow().isoformat()
 				sys.stderr.flush()
-			## if there is extra information that needs to be pass, like locations
-			## of databases the environment can be used for it
-			if prerunscan.has_key('envvars'):
-				envvars = prerunscan['envvars']
-			else:
-				envvars = None
 			exec "from %s import %s as bat_%s" % (module, method, method)
-			scantags = eval("bat_%s(filetoscan, tempdir, tags, offsets, debug=debug, envvars=envvars, unpacktempdir=unpacktempdir)" % (method))
+			scantags = eval("bat_%s(filetoscan, tempdir, tags, offsets, prerunscan['environment'], debug=debug, unpacktempdir=unpacktempdir)" % (method))
 			## append the tag results. These will be used later to be able to specifically filter
 			## out files
 			if scantags != []:
@@ -422,16 +402,13 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 			if debug:
 				print >>sys.stderr, module, method, filetoscan, datetime.datetime.utcnow().isoformat()
 				sys.stderr.flush()
-			## use the environment to pass extra information
-			if unpackscan.has_key('envvars'):
-				envvars = unpackscan['envvars'] + ":BAT_UNPACKED=%s" % unpacked
-			else:
-				envvars = "BAT_UNPACKED=%s" % unpacked
+
+			unpackscan['environment']['BAT_UNPACKED'] = unpacked
 			## return value is the temporary dir, plus offset in the parent file
 			## plus a blacklist containing blacklisted ranges for the *original*
 			## file and a hash with offsets for each marker.
 			exec "from %s import %s as bat_%s" % (module, method, method)
-			scanres = eval("bat_%s(filetoscan, tempdir, blacklist, offsets, debug=debug, envvars=envvars)" % (method))
+			scanres = eval("bat_%s(filetoscan, tempdir, blacklist, offsets, unpackscan['environment'], debug=debug)" % (method))
 			## result is either empty, or contains offsets, tags and hints
 			if len(scanres) == 4:
 				(diroffsets, blacklist, scantags, hints) = scanres
@@ -520,14 +497,9 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, 
 			print >>sys.stderr, method, filetoscan, datetime.datetime.utcnow().isoformat()
 			sys.stderr.flush()
 			scandebug = True
-		## use the environment to pass extra information
-		if leafscan.has_key('envvars'):
-			envvars = leafscan['envvars']
-		else:
-			envvars = None
 
 		exec "from %s import %s as bat_%s" % (module, method, method)
-		res = eval("bat_%s(filetoscan, tags, blacklist, scandebug=scandebug, envvars=envvars, unpacktempdir=unpacktempdir)" % (method))
+		res = eval("bat_%s(filetoscan, tags, blacklist, leafscan['environment'], scandebug=scandebug, unpacktempdir=unpacktempdir)" % (method))
 		if res != None:
 			(nt, leafres) = res
 			reports[leafscan['name']] = leafres
@@ -568,21 +540,13 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, d
 			sys.stderr.flush()
 			scandebug = True
 
-		#if scandebug:
-		#	processors=1
-
-		## use the environment to pass extra information
-		if aggregatescan.has_key('envvars'):
-			envvars = aggregatescan['envvars']
-		else:
-			envvars = None
 		if aggregatescan['cleanup']:
 			## this is an ugly hack *cringe*
-			envvars += ":overridedir=1"
+			aggregatescan['environment']['overridedir'] = True
 
 		exec "from %s import %s as bat_%s" % (module, method, method)
 
-		res = eval("bat_%s(unpackreports, scantempdir, topleveldir, processors, scandebug=scandebug, envvars=envvars, unpacktempdir=unpacktempdir)" % (method))
+		res = eval("bat_%s(unpackreports, scantempdir, topleveldir, processors, aggregatescan['environment'], scandebug=scandebug, unpacktempdir=unpacktempdir)" % (method))
 		if res != None:
 			if res.keys() != []:
 				filehash = unpackreports[scan_binary]['sha256']
@@ -617,17 +581,12 @@ def postrunscan((filetoscan, unpackreports, scans, scantempdir, topleveldir, deb
 		if debug:
 			print >>sys.stderr, module, method, filetoscan, datetime.datetime.utcnow().isoformat()
 			sys.stderr.flush()
-		## use the environment to pass extra information
-		if postrunscan.has_key('envvars'):
-			envvars = postrunscan['envvars']
-		else:
-			envvars = None
 		if postrunscan['cleanup']:
 			## this is an ugly hack *cringe*
-			envvars += ":overridedir=1"
+			postrunscan['environment']['overridedir'] = True
 		exec "from %s import %s as bat_%s" % (module, method, method)
 
-		res = eval("bat_%s(filetoscan, unpackreports, scantempdir, topleveldir, debug=debug, envvars=envvars)" % (method))
+		res = eval("bat_%s(filetoscan, unpackreports, scantempdir, topleveldir, postrunscan['environment'], debug=debug)" % (method))
 		## TODO: find out what to do with this
 		if res != None:
 			pass
@@ -644,6 +603,17 @@ def readconfig(config):
 	aggregatescans = []
 	batconf = {}
 	tmpbatconfdebug = set()
+	## first make a copy of the environment so
+	## every scan has the same environment
+	scanenv = os.environ.copy()
+
+	## clean up the environment a bit to reduce data passed around
+	unneededenvs = ["KDE_IS_PRELINKED", "LESSOPEN", "SSH_CLIENT", "TERMCAP",
+                        "KDEDIRS", "LS_COLORS", "QT_PLUGIN_PATH", "MAIL",
+                        "QT_GRAPHICSSYSTEM_CHECKED"]
+	for s in unneededenvs:
+		if s in scanenv:
+			del scanenv[s]
 	for section in config.sections():
 		if section == "batconfig":
 			try:
@@ -698,11 +668,22 @@ def readconfig(config):
 					## to see if the directory is writable
 			except:
 				batconf['tempdir'] = None
+			newenv = copy.deepcopy(scanenv)
 			try:
 				## global set of environment variables
-				batconf['envvars'] = config.get(section, 'envvars')
+				envvars = config.get(section, 'envvars')
+				if envvars == None:
+					pass
+				else:
+					for en in envvars.split(':'):
+						try:
+							(envname, envvalue) = en.split('=')
+							newenv[envname] = envvalue
+						except Exception, e:
+							pass
 			except:
 				pass
+			batconf['environment'] = newenv
 			continue
 		
 		elif config.has_option(section, 'type'):
@@ -721,10 +702,23 @@ def readconfig(config):
 				conf['name']   = config.get(section, 'name')
 			except:
 				conf['name']   = section
+
+			newenv = copy.deepcopy(scanenv)
 			try:
-				conf['envvars'] = config.get(section, 'envvars')
+				envvars = config.get(section, 'envvars')
+				if envvars == None:
+					pass
+				else:
+					for en in envvars.split(':'):
+						try:
+							(envname, envvalue) = en.split('=')
+							newenv[envname] = envvalue
+						except Exception, e:
+							print >>sys.stderr, "EXCEPTION", e
+							pass
 			except:
 				pass
+			conf['environment'] = newenv
 			try:
 				conf['magic'] = config.get(section, 'magic')
 			except:
@@ -826,7 +820,23 @@ def readconfig(config):
 	if tmpbatconfdebug != set():
 		tmpbatconfdebug.update(batconf['debugphases'])
 		batconf['debugphases'] = list(tmpbatconfdebug)
-		
+
+	for s in prerunscans:
+		if not 'environment' in s:
+			s['environment'] = copy.deepcopy(scanenv)
+	for s in unpackscans:
+		if not 'environment' in s:
+			s['environment'] = copy.deepcopy(scanenv)
+	for s in leafscans:
+		if not 'environment' in s:
+			s['environment'] = copy.deepcopy(scanenv)
+	for s in aggregatescans:
+		if not 'environment' in s:
+			s['environment'] = copy.deepcopy(scanenv)
+	for s in postrunscans:
+		if not 'environment' in s:
+			s['environment'] = copy.deepcopy(scanenv)
+
 	## sort scans on priority (highest priority first)
 	prerunscans = sorted(prerunscans, key=lambda x: x['priority'], reverse=True)
 	leafscans = sorted(leafscans, key=lambda x: x['priority'], reverse=True)
@@ -836,13 +846,8 @@ def readconfig(config):
 def prettyprint(batconf, res, scandate, scans, toplevelfile, topleveldir):
 	module = batconf['module']
 	method = batconf['output']
-	## use the environment to pass extra information
-	if batconf.has_key('envvars'):
-		envvars = batconf['envvars']
-	else:
-		envvars = None
 	exec "from %s import %s as bat_%s" % (module, method, method)
-	output = eval("bat_%s(res, scandate, scans, toplevelfile, topleveldir, envvars)" % (method))
+	output = eval("bat_%s(res, scandate, scans, toplevelfile, topleveldir, batconf['environment'])" % (method))
 	return output
 
 def dumpData(unpackreports, scans, tempdir):
@@ -1133,10 +1138,7 @@ def runscan(scans, scan_binary):
 			if newenv.has_key('parallel'):
 				if newenv['parallel'] == False:
 					parallel = False
-			newenvvars = ""
-			for n in newenv.keys():
-				newenvvars = newenvvars + ":%s=%s" % (n, newenv[n])
-			sscan['envvars'] = newenvvars[1:]
+			sscan['environment'] = newenv
 			finalscans.append(sscan)
 
 		## Sometimes there are identical files inside a blob.

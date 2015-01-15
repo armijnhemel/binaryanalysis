@@ -515,16 +515,14 @@ def prune(scanenv, uniques, package):
 
 	return newuniques
 
-def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, processors, scandebug=False, envvars=None, unpacktempdir=None):
-	scanenv = os.environ.copy()
-	envvars = licensesetup(envvars, scandebug)
-	if envvars[0]:
-		for en in envvars[1].items():
-			try:
-				(envname, envvalue) = en
-				scanenv[envname] = envvalue
-			except Exception, e:
-				pass
+def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
+
+	(envresult, newenv) = licensesetup(scanenv, scandebug)
+
+	if not envresult:
+		return None
+
+	scanenv = newenv
 
 	determineversion = False
 	if scanenv.get('BAT_RANKING_VERSION', 0) == '1':
@@ -2224,21 +2222,12 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 ## method that makes sure that everything is set up properly and modifies
 ## the environment, as well as determines whether the scan should be run at
 ## all.
-## Returns tuple (run, envvars)
+## Returns tuple (run, environment)
 ## * run: boolean indicating whether or not the scan should run
-## * envvars: (possibly) modified
+## * environment: (possibly) modified
 ## This is the minimum that is needed for determining the licenses
-def licensesetup(envvars, debug=False):
-	scanenv = os.environ.copy()
-	newenv = {}
-	if envvars != None:
-		for en in envvars.split(':'):
-			try:
-				(envname, envvalue) = en.split('=')
-				scanenv[envname] = envvalue
-				newenv[envname] = envvalue
-			except Exception, e:
-				pass
+def licensesetup(scanenv, debug=False):
+	newenv = copy.deepcopy(scanenv)
 
 	## Is the master database defined?
 	if not scanenv.has_key('BAT_DB'):

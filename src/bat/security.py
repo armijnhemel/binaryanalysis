@@ -14,17 +14,9 @@ import os, sys, sqlite3, zipfile, subprocess, re, cPickle
 ## whether or not there are any files in the database with the same CRC32. If so, a known plaintext
 ## attack is possible to decrypt the archive and extract the key. The return value will be the files
 ## or checksums in the database for which there is a plaintext version available.
-def scanEncryptedZip(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktempdir=None):
+def scanEncryptedZip(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	if not 'zip' in tags and not 'encrypted' in tags:
 		return
-	scanenv = os.environ.copy()
-	if envvars != None:
-		for en in envvars.split(':'):
-			try:
-				(envname, envvalue) = en.split('=')
-				scanenv[envname] = envvalue
-			except Exception, e:
-				pass
 
 	if not scanenv.has_key('BAT_DB'):
 		return
@@ -49,18 +41,7 @@ def scanEncryptedZip(path, tags, blacklist=[], scandebug=False, envvars=None, un
 		return (['encryptedzip-attack'], plaintexts)
 	return
 
-def encryptedZipSetup(envvars, debug=False):
-	scanenv = os.environ.copy()
-	newenv = {}
-	if envvars != None:
-		for en in envvars.split(':'):
-			try:
-				(envname, envvalue) = en.split('=')
-				scanenv[envname] = envvalue
-				newenv[envname] = envvalue
-			except Exception, e:
-				pass
-
+def encryptedZipSetup(scanenv, debug=False):
 	## first check if there is a database defined
 	if not scanenv.has_key('BAT_DB'):
 		return (False, None)
@@ -99,7 +80,7 @@ def encryptedZipSetup(envvars, debug=False):
 ## experimental clamscan feature
 ## Always run freshclam before scanning to get the latest
 ## virus signatures!
-def scanVirus(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktempdir=None):
+def scanVirus(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	p = subprocess.Popen(['clamscan', "%s" % (path,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode == 0:
@@ -117,7 +98,7 @@ def scanVirus(path, tags, blacklist=[], scandebug=False, envvars=None, unpacktem
 ## Some of these can be detected by looking for typical shell invocation
 ## patterns, such as %s or * in combination with hard coded paths
 ## TODO: add more patterns
-def scanShellInvocations(unpackreports, scantempdir, topleveldir, processors, scandebug=False, envvars=None, unpacktempdir=None):
+def scanShellInvocations(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
 	for i in unpackreports:
 		## Limit to ELF binaries for now
 		if not unpackreports[i].has_key('tags'):

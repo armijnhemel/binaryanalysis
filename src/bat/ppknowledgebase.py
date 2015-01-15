@@ -136,7 +136,7 @@ def prettyprintresxmlsnippet(res, root, unpackscans, leafscans):
 	return topnode
 
 ## top level XML pretty printing, view results with xml_pp or Firefox
-def prettyprintresxml(res, scandate, scans, envvars=None):
+def prettyprintresxml(res, scandate, scans, scanenv={}):
 	root = xml.dom.minidom.Document()
 	topnode = root.createElement("report")
 	tmpnode = root.createElement('scandate')
@@ -144,15 +144,6 @@ def prettyprintresxml(res, scandate, scans, envvars=None):
 	tmpnodetext.data = scandate.isoformat()
 	tmpnode.appendChild(tmpnodetext)
 	topnode.appendChild(tmpnode)
-
-	scanenv = os.environ.copy()
-	if envvars != None:
-		for en in envvars.split(':'):
-			try:
-				(envname, envvalue) = en.split('=')
-				scanenv[envname] = envvalue
-			except Exception, e:
-				pass
 
 	## open the database containing all the strings that were extracted
 	## from source code.

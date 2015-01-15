@@ -56,18 +56,9 @@ def unpackXOR(filename, sig, tempdir=None):
 	datafile.close()
 	return tmpdir
 
-def searchUnpackXOR(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+def searchUnpackXOR(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = []
 	diroffsets = []
-	scanenv = os.environ.copy()
-
-	if envvars != None:
-		for en in envvars.split(':'):
-			try:
-				(envname, envvalue) = en.split('=')
-				scanenv[envname] = envvalue
-			except Exception, e:
-				pass
 
 	## If something else already unpacked (parts) of the file we're not
 	## going to continue.

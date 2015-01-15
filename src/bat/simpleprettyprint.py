@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2009-2013 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2009-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -12,7 +12,7 @@ a method that has the same parameters as prettyprintresxml
 * scans: full configuration of scans that were run
 * toplevelfile: name of top level file so the root can be determined easily
 * topleveldir: name of the directory where results are stored so pickles with results can be found
-* envvars: a set of environment variables, possibly None
+* scanenv: environment, possibly empty
 
 Ideally the XML snippets would be generated in parallel. Unfortunately it seems that the
 way that the XML is generated does not work nicely with multiprocessing which passes parameters
@@ -69,12 +69,8 @@ def prettyprintxmlsnippet(root, leafreports, scanconfigs):
 				else:
 					module = config['module']
 				method = config['ppoutput']
-				if config.has_key('envvars'):
-					envvars = config['envvars']
-				else:
-					envvars = None
 				exec "from %s import %s as bat_%s" % (module, method, method)
-				xmlres = eval("bat_%s(leafreports[i], root, envvars)" % (method))
+				xmlres = eval("bat_%s(leafreports[i], root, config['environment'])" % (method))
 				if xmlres != None:
 					tmpnode = xmlres
 					topnodes.append(tmpnode)
@@ -87,7 +83,7 @@ def prettyprintxmlsnippet(root, leafreports, scanconfigs):
 	return topnodes
 
 ## top level XML pretty printing, view results with xml_pp or Firefox
-def prettyprintresxml(unpackreports, scandate, scans, toplevelfile, topleveldir, envvars=None):
+def prettyprintresxml(unpackreports, scandate, scans, toplevelfile, topleveldir, scanenv={}):
 	root = xml.dom.minidom.Document()
 	topnode = root.createElement("report")
 	tmpnode = root.createElement('scandate')

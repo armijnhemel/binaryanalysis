@@ -46,20 +46,11 @@ splitcharacters = map(lambda x: chr(x), range(0,9) + range(14,32) + [127])
 ## Original code (in Perl) was written by Eelco Dolstra.
 ## Reimplementation in Python done by Armijn Hemel.
 ##
-def searchGeneric(filepath, tags, blacklist=[], offsets={}, scandebug=False, envvars=None, unpacktempdir=None):
+def searchGeneric(filepath, tags, blacklist=[], scanenv={}, offsets={}, scandebug=False, unpacktempdir=None):
 	filesize = os.stat(filepath).st_size
 	## whole file is blacklisted, so no need to scan
 	if extractor.inblacklist(0, blacklist) == filesize:
 		return None
-
-	scanenv = os.environ.copy()
-	if envvars != None:
-		for en in envvars.split(':'):
-			try:
-				(envname, envvalue) = en.split('=')
-				scanenv[envname] = envvalue
-			except Exception, e:
-				pass
 
 	## Only consider strings that are len(stringcutoff) or larger
 	## it is *very* important to keep this value in sync with the
@@ -729,9 +720,9 @@ def extractKernelData(lines, filepath, scanenv):
 ## stub for method that makes sure that everything is set up properly and modifies
 ## the environment, as well as determines whether the scan should be run at
 ## all.
-## Returns tuple (run, envvars)
+## Returns tuple (run, environment)
 ## * run: boolean indicating whether or not the scan should run
-## * envvars: (possibly) modified
+## * environment: (possibly) modified
 def extractidentifiersetup(scanenv, debug=False):
 	## TODO: verify if the following programs are available and work:
 	## * strings

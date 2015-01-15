@@ -247,16 +247,7 @@ def gethash(path):
 	scanfile.close()
 	return h.hexdigest()
 
-def generateimages(unpackreports, scantempdir, topleveldir, processors, scandebug=False, envvars=None, unpacktempdir=None):
-	scanenv = os.environ.copy()
-	if envvars != None:
-		for en in envvars.split(':'):
-			try:
-				(envname, envvalue) = en.split('=')
-				scanenv[envname] = envvalue
-			except Exception, e:
-				pass
-
+def generateimages(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
 	if scanenv.has_key('overridedir'):
 		try:
 			del scanenv['BAT_IMAGEDIR']

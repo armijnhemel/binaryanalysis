@@ -2,7 +2,7 @@
 #-*- coding: utf-8 -*-
 
 ## Binary Analysis Tool
-## Copyright 2014 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2014-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 import os, os.path, sys, subprocess, copy, cPickle, multiprocessing
@@ -20,16 +20,7 @@ This module is to fix these situations.
 1. In ELF shared libraries the SONAME and RPATH attributes can be used.
 '''
 
-def fixduplicates(unpackreports, scantempdir, topleveldir, processors, scandebug=False, envvars=None, unpacktempdir=None):
-	scanenv = os.environ.copy()
-	if envvars != None:
-		for en in envvars.split(':'):
-			try:
-				(envname, envvalue) = en.split('=')
-				scanenv[envname] = envvalue
-			except Exception, e:
-				pass
-
+def fixduplicates(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
 	## First deal with ELF files
 	## store names of all ELF files present in scan archive
 	elffiles = set()

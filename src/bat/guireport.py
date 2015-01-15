@@ -12,19 +12,11 @@ This should be run as a postrun scan
 
 import os, os.path, sys, cPickle, gzip
 
-def guireport(filename, unpackreport, scantempdir, topleveldir, debug=False, envvars={}):
+def guireport(filename, unpackreport, scantempdir, topleveldir, scanenv, debug=False):
 	if not unpackreport.has_key('sha256'):
 		return
-	scanenv = os.environ.copy()
 	## this is a placeholder. The GUI should replace this one on the fly
 	imagesdir = "REPLACEME"
-	if envvars != None:
-		for en in envvars.split(':'):
-			try:
-				(envname, envvalue) = en.split('=')
-				scanenv[envname] = envvalue
-			except Exception, e:
-				pass
 
 	if scanenv.has_key('overridedir'):
 		try:

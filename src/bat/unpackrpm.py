@@ -41,7 +41,7 @@ def unpackRPM(filename, offset, tempdir=None):
 ## duplicates at the moment. We can defeat this easily by setting the blacklist
 ## upperbound to the start of compression + 1. This is ugly and should actually
 ## be fixed.
-def searchUnpackRPM(filename, tempdir=None, blacklist=[], offsets={}, debug=False, envvars=None):
+def searchUnpackRPM(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = []
 	if not offsets.has_key('rpm'):
 		return ([], blacklist, [], hints)

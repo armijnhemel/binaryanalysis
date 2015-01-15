@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2013 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2013-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 import sys
@@ -11,7 +11,7 @@ This aggregate scan traverses the unpackreports and reports all duplicate
 files.
 '''
 
-def findduplicates(unpackreports, scantempdir, topleveldir, processors, scandebug=False, envvars=None, unpacktempdir=None):
+def findduplicates(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
 	filehashes = {}
 	for r in unpackreports.keys():
 		if unpackreports[r].has_key('sha256'):

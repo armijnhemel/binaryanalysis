@@ -19,18 +19,9 @@ This should be run as a postrun scan
 
 import os, os.path, sys, subprocess, gzip
 
-def generateHexdump(filename, unpackreport, scantempdir, topleveldir, debug=False, envvars={}):
+def generateHexdump(filename, unpackreport, scantempdir, topleveldir, scanenv={}, debug=False):
 	if not unpackreport.has_key('sha256'):
 		return
-	scanenv = os.environ.copy()
-	if envvars != None:
-		for en in envvars.split(':'):
-			try:
-				(envname, envvalue) = en.split('=')
-				scanenv[envname] = envvalue
-			except Exception, e:
-				pass
-
 	reportdir = scanenv.get('BAT_REPORTDIR', '.')
 	try:
 		os.stat(reportdir)
