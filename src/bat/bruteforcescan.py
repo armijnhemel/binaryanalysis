@@ -403,12 +403,15 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 				print >>sys.stderr, module, method, filetoscan, datetime.datetime.utcnow().isoformat()
 				sys.stderr.flush()
 
-			unpackscan['environment']['BAT_UNPACKED'] = unpacked
+			## make a copy before changing the environment
+			newenv = copy.deepcopy(unpackscan['environment'])
+			newenv['BAT_UNPACKED'] = unpacked
+
 			## return value is the temporary dir, plus offset in the parent file
 			## plus a blacklist containing blacklisted ranges for the *original*
 			## file and a hash with offsets for each marker.
 			exec "from %s import %s as bat_%s" % (module, method, method)
-			scanres = eval("bat_%s(filetoscan, tempdir, blacklist, offsets, unpackscan['environment'], debug=debug)" % (method))
+			scanres = eval("bat_%s(filetoscan, tempdir, blacklist, offsets, newenv, debug=debug)" % (method))
 			## result is either empty, or contains offsets, tags and hints
 			if len(scanres) == 4:
 				(diroffsets, blacklist, scantags, hints) = scanres
@@ -540,10 +543,6 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, d
 			sys.stderr.flush()
 			scandebug = True
 
-		if aggregatescan['cleanup']:
-			## this is an ugly hack *cringe*
-			aggregatescan['environment']['overridedir'] = True
-
 		exec "from %s import %s as bat_%s" % (module, method, method)
 
 		res = eval("bat_%s(unpackreports, scantempdir, topleveldir, processors, aggregatescan['environment'], scandebug=scandebug, unpacktempdir=unpacktempdir)" % (method))
@@ -581,9 +580,6 @@ def postrunscan((filetoscan, unpackreports, scans, scantempdir, topleveldir, deb
 		if debug:
 			print >>sys.stderr, module, method, filetoscan, datetime.datetime.utcnow().isoformat()
 			sys.stderr.flush()
-		if postrunscan['cleanup']:
-			## this is an ugly hack *cringe*
-			postrunscan['environment']['overridedir'] = True
 		exec "from %s import %s as bat_%s" % (module, method, method)
 
 		res = eval("bat_%s(filetoscan, unpackreports, scantempdir, topleveldir, postrunscan['environment'], debug=debug)" % (method))
@@ -833,9 +829,15 @@ def readconfig(config):
 	for s in aggregatescans:
 		if not 'environment' in s:
 			s['environment'] = copy.deepcopy(scanenv)
+		if s['cleanup']:
+			## this is an ugly hack *cringe*
+			s['environment']['overridedir'] = True
 	for s in postrunscans:
 		if not 'environment' in s:
 			s['environment'] = copy.deepcopy(scanenv)
+		if s['cleanup']:
+			## this is an ugly hack *cringe*
+			s['environment']['overridedir'] = True
 
 	## sort scans on priority (highest priority first)
 	prerunscans = sorted(prerunscans, key=lambda x: x['priority'], reverse=True)
