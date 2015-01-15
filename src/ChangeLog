@@ -1,3 +1,9 @@
+2015-01-15:
+* remove environment customization code per scan, do it globally instead
+* allow environment variables to be set globally
+* introduce XOR_MINIMUM to set a minimum threshold for XOR signatures to
+reduce false positives
+
 2015-01-14:
 * start moving customization of environment out of scans and to
 bat/bruteforcescan.py

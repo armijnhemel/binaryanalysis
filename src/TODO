@@ -90,6 +90,5 @@ BOTTLENECKS/HIGH PRIORITY:
 21. bat/checks.py: use SPDX names for reported licenses
 22. rename database columns named 'sha256' to 'checksum', except in 'hashconversion' table. Make rename script to help convert old databases database columns named 'sha256' to 'checksum', except in 'hashconversion' table. Make a rename script to help convert old databases
 23. add some sort of sanity checker for configuration
-24. bat/batxor.py: add check for minimum level of occurences of certain patterns to avoid false positives. This is because very often NUL bytes are used for padding in firmwares and XORing a pattern with a NUL byte results in the pattern.
+24. bat/batxor.py: try to take 'partial XOR' into account (where only part of the file has been 'encrypted' with XOR)
 25. bat/batxor.py: report key that was used to XOR, possibly remove temporary file from directory tree
-26. bat/batxor.py: try to take 'partial XOR' into account (where only part of the file has been 'encrypted' with XOR)
