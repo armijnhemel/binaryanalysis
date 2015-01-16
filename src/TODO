@@ -92,3 +92,4 @@ BOTTLENECKS/HIGH PRIORITY:
 23. add some sort of sanity checker for configuration
 24. bat/batxor.py: try to take 'partial XOR' into account (where only part of the file has been 'encrypted' with XOR)
 25. bat/batxor.py: report key that was used to XOR, possibly remove temporary file from directory tree
+26. bat/bruteforcescan.py: research passing information from unpackscans to leafscans (via environment?)

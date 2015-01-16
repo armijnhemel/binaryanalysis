@@ -2,6 +2,7 @@
 * fix finding signatures in bat/batxor.py
 * add scripts/findxor.py, a very simplistic script to find XOR keys in
 firmware files
+* maintenance/createmanifests.py: don't create manifest files without content
 
 2015-01-15:
 * remove environment customization code per scan, do it globally instead
