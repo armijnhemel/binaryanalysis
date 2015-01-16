@@ -31,7 +31,6 @@ import fwunpack
 signatures = { 'splashtop': ['\x51', '\x57', '\x45', '\x52']
              , 'bococom':   ['\x3a', '\x93', '\xa2', '\x95', '\xc3', '\x63', '\x48', '\x45', '\x58', '\x09', '\x12', '\x03', '\x08', '\xc8', '\x3c']
              , 'sitecom':   ['\x78', '\x3c', '\x9e', '\xcf', '\x67', '\xb3', '\x59', '\xac']
-
              }
 
 def unpackXOR(filename, sig, tempdir=None):
@@ -90,9 +89,16 @@ def searchUnpackXOR(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		bs = reduce(lambda x, y: x + y, signatures[s])
 		## find all instances of the signature. We might want to tweak
 		## this a bit.
-		bsres = re.findall(bs, datamm)
-		if len(bsres) > 0:
-			if len(bsres) < xor_minimum:
+		bsres = datamm.find(bs)
+		if bsres == -1:
+			continue
+		siginstances = [bsres]
+		while bsres != -1:
+			bsres = datamm.find(bs, bsres +1)
+			if bsres != -1:
+				siginstances.append(bsres)
+		if len(siginstances) > 0:
+			if len(siginstances) < xor_minimum:
 				continue
 			res = unpackXOR(filename, s, tmpdir)
 			if res != None:
