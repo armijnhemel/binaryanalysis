@@ -275,14 +275,13 @@ def main(argv):
 		(filename, filehash) = r
 		if options.update and os.path.exists(os.path.join(outputdir, "%s.bz2" % filehash)):
 			continue
-		manifest = os.path.join(outputdir, "%s.bz2" % filehash)
-		manifestfile = bz2.BZ2File(manifest, 'w')
 		unpackres = grabhash(options.filedir, filename, filehash, pool, extrahashes, options.unpackdir)
+		if unpackres == None:
+			continue
 		## first write the scanned/supported hashes, in the order in which they
 		## appear for each file
-		if unpackres == None:
-			manifestfile.close()
-			continue
+		manifest = os.path.join(outputdir, "%s.bz2" % filehash)
+		manifestfile = bz2.BZ2File(manifest, 'w')
 		if extrahashes == []:
 			manifestfile.write("sha256\n")
 		else:
