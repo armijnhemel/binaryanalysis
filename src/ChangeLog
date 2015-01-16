@@ -1,3 +1,8 @@
+2015-01-16:
+* fix finding signatures in bat/batxor.py
+* add scripts/findxor.py, a very simplistic script to find XOR keys in
+firmware files
+
 2015-01-15:
 * remove environment customization code per scan, do it globally instead
 * allow environment variables to be set globally
