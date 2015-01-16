@@ -2426,6 +2426,13 @@ shipped in BAT, if not described earlier in this document. These parameters are
 passed to the scans as part of the environment and are defined in the
 \texttt{envvars} setting in the configuration file.
 
+\subsection{\texttt{compress}}
+
+The \texttt{COMPRESS\_TMPDIR} parameter is used to let the scan use a different
+location for unpacking temporary files than the standard unpacking directory.
+It was introduced to let the scan unpack onto a tmpfs file system to avoid disk
+I/O and speed up scanning.
+
 \subsection{\texttt{jffs2}}
 
 The \texttt{JFFS2\_TMPDIR} parameter is used to let the scan use a different
@@ -2444,7 +2451,7 @@ parameter was introduced because false positives in LZMA unpacking are very
 common, often leading to small sized files that contain no useful data.
 
 By default \texttt{LZMA\_MINIMUM\_SIZE} is set to 10 bytes, but this is a very
-conservative setting.
+conservative setting and can likely be set higher safely.
 
 The \texttt{LZMA\_TMPDIR} parameter is used to let the scan use a different
 location for unpacking temporary files than the standard unpacking directory.
@@ -2457,6 +2464,12 @@ The \texttt{TAR\_TMPDIR} parameter is used to let the scan use a different
 location for unpacking temporary files than the standard unpacking directory.
 It was introduced to let the scan unpack onto a tmpfs file system to avoid disk
 I/O and speed up scanning.
+
+\subsection{\texttt{xor}}
+
+The \texttt{XOR\_MINIMUM} parameter is used to set the minimum amount of
+occurences of a key that have to be present in the file before XOR unpacking
+is done. This is to reduce false positives.
 
 \subsection{\texttt{file2package}}
 
