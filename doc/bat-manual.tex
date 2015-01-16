@@ -684,7 +684,7 @@ envvars     = BAT_NAMECACHE_C=/home/bat/db/functioncache_c
 
 As a rule of thumb: settings that are shared between all scans (such as the
 location of various databases) should be set in the global sections, while scan
-specific options should be in the scan sections.
+specific options should be in the scan specific sections.
 
 The other global section is \texttt{viewer}. This section is specific for the
 graphical frontend and is not used in any other parts of BAT and might be moved
@@ -717,17 +717,14 @@ be scanned. If there is an overlapping value in \texttt{scanonly} and
 
 \subsubsection{Passing environment variables}
 
-All scans have an optional parameter \texttt{envvars} defaulting to an empty
+All scans have an optional parameter \texttt{scanenv} defaulting to an empty
 Python dictionary. In the configuration file a colon separated list of
-name/value pairs can be specified. These will then become available in the
-environment of the scan:
+name/value pairs can be specified using the keyword \texttt{envvars}. These will
+then become available in the environment of the scan:
 
 \begin{verbatim}
 envvars     = BAT_REPORTDIR=/tmp/images:BAT_IMAGE_MAXFILESIZE=100000000
 \end{verbatim}
-
-It is up to the scans to parse the environment variables and to store them in
-the environment.
 
 \subsubsection{Scan names}
 
@@ -884,11 +881,11 @@ file is. This is currently unused and might be removed in the future.
 \item \texttt{tags} is the set of tags that have already been defined for the
 file.
 \item \texttt{offsets} is the set of offsets that have been found for the file
+\item \texttt{scanenv} is an optionally empty dictionary of environment variables
+that can be used to pass extra information to the pre-run method.
 \item \texttt{debug} is an environment variable that can be used to optionally
 set the scan in debugging mode so it can print more information on standard
 error. By default it is set to \texttt{False}.
-\item \texttt{envvars} is an optionally empty set of environment variables that
-can be used to pass extra information to the pre-run method.
 \item \texttt{unpacktempdir} is the location of a directory for writing
 temporary files. This value is optional and by default it is set to
 \texttt{None}.
@@ -904,7 +901,7 @@ Example:
 
 \begin{verbatim}
 def prerunMethod(filename, tempdir=None, tags=[], offsets={},
-                 debug=False, envvars=None, unpacktempdir=None):
+                 scanenv={}, debug=False, unpacktempdir=None):
         newtags = []
         newtags.append('helloworld')
         return newtags
@@ -921,7 +918,7 @@ The unpackers have a strict interface:
 
 \begin{verbatim}
 def unpackScan(filename, tempdir=None, blacklist=[], offsets={},
-               debug=False, envvars=None):
+               scanenv={}, debug=False):
         ## code goes here
 \end{verbatim}
 
@@ -939,11 +936,11 @@ list after finishing a scan.
 to a list of offsets in the file where these identifiers can be found. This
 list is filled by the scan \texttt{genericMarker} which always runs before
 anything else.
+\item \texttt{scanenv} is an optionally empty dictionary of environment variables
+that can be used to pass extra information to the pre-run method.
 \item \texttt{debug} is an environment variable that can be used to optionally
 set the scan in debugging mode so it can print more information on standard
 error. By default it is set to \texttt{False}.
-\item \texttt{envvars} is an optionally empty set of environment variables that
-can be used to pass extra information to the pre-run method.
 \end{itemize}
 
 Return values are:
@@ -1033,8 +1030,8 @@ environment variables and an optional name of a directory for writing temporary
 results. For example:
 
 \begin{verbatim}
-def leafScan(path, tags, blacklist=[], debug=False,
-                envvars=None, unpacktempdir=None):
+def leafScan(path, tags, blacklist=[], scanenv={},
+                debug=False, unpacktempdir=None):
         ## code goes here
 \end{verbatim}
 
@@ -1112,8 +1109,8 @@ modify results.
 Aggregators have a strict interface:
 
 \begin{verbatim}
-def aggregateexample(unpackreports, scantempdir, topleveldir, debug=False,
-                     envvars=None, unpacktempdir=None)
+def aggregateexample(unpackreports, scantempdir, topleveldir, scanenv,
+                     debug=False, unpacktempdir=None)
 \end{verbatim}
 
 \begin{itemize}
@@ -1122,10 +1119,10 @@ def aggregateexample(unpackreports, scantempdir, topleveldir, debug=False,
 the scan
 \item \texttt{topleveldir} is the location of the top level directory of the
 scan
+\item \texttt{scanenv} is a dictionary of environment variables
 \item \texttt{debug} is an environment variable that can be used to optionally
 set the scan in debugging mode so it can print more information on standard
 error. By default it is set to \texttt{False}.
-\item \texttt{envvars} is an optional dictionary of environment variables
 \item \texttt{unpacktempdir} is the location of a directory for writing
 temporary files. This value is optional and by default it is set to
 \texttt{None}.
@@ -1151,7 +1148,7 @@ Post-run methods have a strict interface:
 
 \begin{verbatim}
 def postrunHelloWorld(filename, unpackreport, scantempdir, topleveldir,
-                      debug=False, envvars={}):
+                      scanenv={}, debug=False):
         print "Hello World"
 \end{verbatim}
 
@@ -1162,10 +1159,10 @@ unpacking.
 \item \texttt{scantempdir} is the directory that contains the unpacked data
 \item \texttt{topleveldir} is the top level directory containing the data
 directory and the directory with the per file result pickles.
+\item \texttt{scanenv} is an optional dictionary of environment variables
 \item \texttt{debug} is an environment variable that can be used to optionally
 set the scan in debugging mode so it can print more information on standard
 error. By default it is set to \texttt{False}.
-\item \texttt{envvars} is an optional dictionary of environment variables
 \end{itemize}
 
 The post-run methods should read any results of the leaf scans from the pickles
