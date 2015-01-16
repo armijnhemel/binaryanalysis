@@ -58,6 +58,14 @@ def unpack(directory, filename, unpackdir):
 			shutil.rmtree(tmpdir)
 			return
 		return tmpdir
+	elif 'LZMA compressed data, streamed' in filemagic:
+		if unpackdir != None:
+       			tmpdir = tempfile.mkdtemp(dir=unpackdir)
+		else:
+       			tmpdir = tempfile.mkdtemp()
+		p = subprocess.Popen(['tar', 'ixf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+		(stanout, stanerr) = p.communicate()
+		return tmpdir
         elif 'XZ compressed data' in filemagic:
 		if unpackdir != None:
        			tmpdir = tempfile.mkdtemp(dir=unpackdir)
