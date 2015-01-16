@@ -16,7 +16,7 @@ For this we need to keep some state, possibly even delete the file only later,
 by tagging it as 'temporary' and removing it later on.
 '''
 
-import sys, os, os.path, tempfile, re, mmap
+import sys, os, os.path, tempfile, mmap
 import fwunpack
 
 ## some of the signatures we know about:
