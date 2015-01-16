@@ -726,6 +726,10 @@ then become available in the environment of the scan:
 envvars     = BAT_REPORTDIR=/tmp/images:BAT_IMAGE_MAXFILESIZE=100000000
 \end{verbatim}
 
+If the environment of a scan needs to be adapted in the context of a single
+file it is important to first make a copy of the environment or the
+environment might be modified for the scan for all other files that are scanned.
+
 \subsubsection{Scan names}
 
 The name of the scan is used in various places, for example for storing results
