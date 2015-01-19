@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2013 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2013-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -69,7 +69,7 @@ def sourceWalk(scandir, dbpath):
 						h.update(scanfile.read())
 						scanfile.close()
 						filehash = h.hexdigest()
-						cursor.execute('''select sha256 from processed_file where sha256=? limit 1''', (filehash,))
+						cursor.execute('''select checksum from processed_file where checksum=? limit 1''', (filehash,))
 						res = cursor.fetchall()
 						## there is at least one hit, so ignore
 						if len(res) != 0:
