@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2013 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2013-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -414,24 +414,24 @@ def main(argv):
 	c = conn.cursor()
 
 	## The database is a reduced version of the BAT database
-	c.execute('''create table if not exists processed_file (filename text, sha256 text)''')
-	c.execute('''create index if not exists processedfile_index on processed_file(sha256)''')
+	c.execute('''create table if not exists processed_file (filename text, checksum text)''')
+	c.execute('''create index if not exists processedfile_index on processed_file(checksum)''')
 
 	## add tables and indexes
-	c.execute('''create table if not exists extracted_file (programstring text, sha256 text, language text, linenumber int)''')
-	c.execute('''create index if not exists programstring_index on extracted_file(programstring)''')
-	c.execute('''create index if not exists extracted_hash on extracted_file(sha256)''')
-	c.execute('''create index if not exists extracted_language on extracted_file(language);''')
+	c.execute('''create table if not exists extracted_string (stringidentifier text, checksum text, language text, linenumber int)''')
+	c.execute('''create index if not exists stringidentifier_index on extracted_string(stringidentifier)''')
+	c.execute('''create index if not exists extracted_hash on extracted_string(checksum)''')
+	c.execute('''create index if not exists extracted_language on extracted_string(language);''')
 
 	## Store the function names extracted, per checksum
-	c.execute('''create table if not exists extracted_function (sha256 text, functionname text, language text, linenumber int)''')
-	c.execute('''create index if not exists function_index on extracted_function(sha256);''')
+	c.execute('''create table if not exists extracted_function (checksum text, functionname text, language text, linenumber int)''')
+	c.execute('''create index if not exists function_index on extracted_function(checksum);''')
 	c.execute('''create index if not exists functionname_index on extracted_function(functionname)''')
 	c.execute('''create index if not exists functionname_language on extracted_function(language);''')
 
 	## Store different information extracted with ctags
-	c.execute('''create table if not exists extracted_name (sha256 text, name text, type text, language text, linenumber int)''')
-	c.execute('''create index if not exists name_checksum_index on extracted_name(sha256);''')
+	c.execute('''create table if not exists extracted_name (checksum text, name text, type text, language text, linenumber int)''')
+	c.execute('''create index if not exists name_checksum_index on extracted_name(checksum);''')
 	c.execute('''create index if not exists name_name_index on extracted_name(name)''')
 	c.execute('''create index if not exists name_type_index on extracted_name(type)''')
 	c.execute('''create index if not exists name_language_index on extracted_name(language);''')
@@ -441,23 +441,23 @@ def main(argv):
 		(filepath, filename, filehash, language, sqlres, cresults, javaresults) = extractres
 		for res in sqlres:
 			(pstring, linenumber) = res
-			c.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (pstring, filehash, language, linenumber))
+			c.execute('''insert into extracted_string (stringidentifier, checksum, language, linenumber) values (?,?,?,?)''', (pstring, filehash, language, linenumber))
 		for res in list(set(cresults)):
 			(cname, linenumber, nametype) = res
 			if nametype == 'function':
-				c.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'C', linenumber))
+				c.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'C', linenumber))
 			elif nametype == 'kernelfunction':
-				c.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'linuxkernel', linenumber))
+				c.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'linuxkernel', linenumber))
 			else:
-				c.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, 'C', linenumber))
+				c.execute('''insert into extracted_name (checksum, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, 'C', linenumber))
 		for res in list(set(javaresults)):
 			(cname, linenumber, nametype) = res
 			if nametype == 'method':
-				c.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'Java', linenumber))
+				c.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'Java', linenumber))
 			else:
-				c.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, 'Java', linenumber))
+				c.execute('''insert into extracted_name (checksum, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, 'Java', linenumber))
 		resolved_path = os.path.join(filepath, filename)
-		c.execute('''insert into processed_file (filename, sha256) values (?,?)''', (resolved_path, filehash))
+		c.execute('''insert into processed_file (filename, checksum) values (?,?)''', (resolved_path, filehash))
 	conn.commit()
 
 	for l in picklelist:
@@ -488,7 +488,7 @@ def main(argv):
 				for r in res:
 					if r[2] != language:
 						continue
-					fileres = c.execute('select * from processed_file where sha256=?', (r[0],)).fetchall()
+					fileres = c.execute('select * from processed_file where checksum=?', (r[0],)).fetchall()
 					for fr in fileres:
 						#print fr, package, package in fr[0]
 						pass
@@ -504,13 +504,13 @@ def main(argv):
 					continue
 				for u in uniquematches:
 					(uniquestring, matches) = u
-					res = c.execute('select * from extracted_file where programstring=?', (uniquestring,)).fetchall()
+					res = c.execute('select * from extracted_string where stringidentifier=?', (uniquestring,)).fetchall()
 					if res == []:
 						notfoundstrings.append(uniquestring)
 					for r in res:
 						if r[2] != language:
 							continue
-						fileres = c.execute('select * from processed_file where sha256=?', (r[0],)).fetchall()
+						fileres = c.execute('select * from processed_file where checksum=?', (r[0],)).fetchall()
 						for fr in fileres:
 							#print fr, package, package in fr[0]
 							pass
