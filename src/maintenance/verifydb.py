@@ -8,7 +8,7 @@ from optparse import OptionParser
 from multiprocessing import Pool
 
 ## Binary Analysis Tool
-## Copyright 2012-2013 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2012-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -38,13 +38,13 @@ def main(argv):
 	cursor = conn.cursor()
 
 	print "checking processed"
-	cursor.execute("select distinct sha256 from processed")
+	cursor.execute("select distinct checksum from processed")
 	res = cursor.fetchall()
 	for r in res:
-		cursor.execute('select sha256 from processed where sha256=?', r)
+		cursor.execute('select checksum from processed where checksum=?', r)
 		processed_results = cursor.fetchall()
 		if len(processed_results) != 1:
-			cursor.execute('select * from processed where sha256=?', r)
+			cursor.execute('select * from processed where checksum=?', r)
 			processed_results = cursor.fetchall()
 			print "identical:", map(lambda x: "%s %s" % (x[0], x[1]), processed_results)
 
@@ -58,16 +58,16 @@ def main(argv):
 		#print "processing", totals
 		for r in res:
 			(package,version) = r
-			ncursor.execute('select sha256 from processed where package=? and version=? LIMIT 1', r)
+			ncursor.execute('select checksum from processed where package=? and version=? LIMIT 1', r)
 			pres = ncursor.fetchall()
 			if pres == []:
 				print "database not in sync", r
 		res = cursor.fetchmany(40000)
 	cursor.close()
 
-	for i in ["extracted_file", "extracted_function"]:
+	for i in ["extracted_string", "extracted_function"]:
 		cursor = conn.cursor()
-		cursor.execute("select distinct(sha256) from %s" % i)
+		cursor.execute("select distinct(checksum) from %s" % i)
 		res = cursor.fetchmany(40000)
 		ncursor = conn.cursor()
 		totals = 0
@@ -75,7 +75,7 @@ def main(argv):
 			totals += len(res)
 			print "processing %s" % i, totals
 			for r in res:
-				ncursor.execute('select sha256 from processed_file where sha256=? LIMIT 1', r)
+				ncursor.execute('select checksum from processed_file where checksum=? LIMIT 1', r)
 				pres = ncursor.fetchall()
 				if pres == []:
 					print "database %s not in sync" % i, r[0]
