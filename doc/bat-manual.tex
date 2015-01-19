@@ -1649,7 +1649,7 @@ The main database currently has 14 tables, 9 of which are Linux kernel specific:
 \begin{itemize}
 \item \texttt{processed}
 \item \texttt{processed\_file}
-\item \texttt{extracted\_file}
+\item \texttt{extracted\_string}
 \item \texttt{extracted\_function}
 \item \texttt{extracted\_name}
 \item \texttt{kernel\_configuration}
@@ -1693,7 +1693,7 @@ It has the following fields:
 \item \texttt{version}: version of the package
 \item \texttt{filename}: name of the archive
 \item \texttt{origin}: site where the archive was downloaded (optional)
-\item \texttt{sha256}: SHA256 checksum of the archive
+\item \texttt{checksum}: SHA256 checksum of the archive
 \end{itemize}
 
 \subsubsection{\texttt{processed\_file} table}
@@ -1708,18 +1708,18 @@ It has the following fields:
 \item \texttt{version}: version of the package the file is from (same as in
 \texttt{processed})
 \item \texttt{filename}: relative path inside the source code archive
-\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{checksum}: SHA256 checksum of the file
 \end{itemize}
 
-\subsubsection{\texttt{extracted\_file} table}
+\subsubsection{\texttt{extracted\_string} table}
 This table stores the individual strings that were extracted from files and
 that could possibly end up in binaries.
 
 It has the following fields:
 
 \begin{itemize}
-\item \texttt{programstring}: string constant that was extracted
-\item \texttt{sha256}: SHA256 checksum of file the string constant was
+\item \texttt{stringidentifier}: string constant that was extracted
+\item \texttt{checksum}: SHA256 checksum of file the string constant was
 extracted from
 \item \texttt{language}: language the source code file was written in (mapped
 to a language family, such as C or Java)
@@ -1733,7 +1733,7 @@ in the source code file (if determined using using \texttt{xgettext}) or $0$
 In this table information about C functions and Java methods is stored.
 
 \begin{itemize}
-\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{checksum}: SHA256 checksum of the file
 \item \texttt{functionname}: function name or method name that was extracted
 \item \texttt{language}: language the source code file was written in (mapped
 to a language family, such as C or Java)
@@ -1750,7 +1750,7 @@ Linux kernel variable names.
 It has the following fields:
 
 \begin{itemize}
-\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{checksum}: SHA256 checksum of the file
 \item \texttt{name}: name of variable, field or class name that was extracted
 \item \texttt{type}: type (field, variable, class name, etcetera)
 \item \texttt{language}: language the source code file was written in (mapped
@@ -1767,7 +1767,7 @@ FOSSology.
 It has the following fields:
 
 \begin{itemize}
-\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{checksum}: SHA256 checksum of the file
 \item \texttt{copyright}: copyright information that was extracted
 \item \texttt{type}: type of information that was extracted, currently
 \texttt{url}, \texttt{email} or \texttt{statement}
@@ -1796,7 +1796,7 @@ information is declared in the Linux kernel source code using the
 \texttt{MODULE\_ALIAS} macro. The table has the following fields:
 
 \begin{itemize}
-\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{checksum}: SHA256 checksum of the file
 \item \texttt{modulename}: name of the source code file
 \item \texttt{alias}: contents of the \texttt{MODULE\_ALIAS} macro
 \end{itemize}
@@ -1808,7 +1808,7 @@ This information is declared in the Linux kernel source code using the
 \texttt{MODULE\_AUTHOR} macro. The table has the following fields:
 
 \begin{itemize}
-\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{checksum}: SHA256 checksum of the file
 \item \texttt{modulename}: name of the source code file
 \item \texttt{author}: contents of the \texttt{MODULE\_AUTHOR} macro
 \end{itemize}
@@ -1820,7 +1820,7 @@ This information is declared in the Linux kernel source code using the
 \texttt{MODULE\_DESCRIPTION} macro. The table has the following fields:
 
 \begin{itemize}
-\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{checksum}: SHA256 checksum of the file
 \item \texttt{modulename}: name of the source code file
 \item \texttt{description}:
 \end{itemize}
@@ -1832,7 +1832,7 @@ This information is declared in the Linux kernel source code using the
 \texttt{MODULE\_FIRMWARE} macro. The table has the following fields:
 
 \begin{itemize}
-\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{checksum}: SHA256 checksum of the file
 \item \texttt{modulename}: name of the source code file
 \item \texttt{firmware}: contents of the \texttt{MODULE\_FIRMWARE} macro
 \end{itemize}
@@ -1844,7 +1844,7 @@ This information is declared in the Linux kernel source code using the
 \texttt{MODULE\_LICENSE} macro. The table has the following fields:
 
 \begin{itemize}
-\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{checksum}: SHA256 checksum of the file
 \item \texttt{modulename}: name of the source code file
 \item \texttt{license}: contents of the \texttt{MODULE\_LICENSE} macro
 \end{itemize}
@@ -1859,7 +1859,7 @@ different versions of the Linux kernel and both formats have been used in the
 kernel at the same time. The table has the following fields:
 
 \begin{itemize}
-\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{checksum}: SHA256 checksum of the file
 \item \texttt{modulename}: name of the source code file
 \item \texttt{paramname}: name of the parameter
 \item \texttt{paramtype}: type of the parameter, as specified in the source
@@ -1873,7 +1873,7 @@ descriptions.  This information is declared in the Linux kernel source code
 using the \texttt{MODULE\_PARM\_DESC} macro. The table has the following fields:
 
 \begin{itemize}
-\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{checksum}: SHA256 checksum of the file
 \item \texttt{modulename}: name of the source code file
 \item \texttt{paramname}: name of the parameter
 \item \texttt{description}: descriptio of the parameter
@@ -1886,7 +1886,7 @@ This information is declared in the Linux kernel source code using the
 \texttt{MODULE\_VERSION} macro. The table has the following fields:
 
 \begin{itemize}
-\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{checksum}: SHA256 checksum of the file
 \item \texttt{modulename}: name of the source code file
 \item \texttt{version}: contents of the \texttt{MODULE\_VERSION} macro
 \end{itemize}
@@ -1898,7 +1898,7 @@ code scanner, like Ninka or FOSSology. If a file has more than one licenses
 there will be multiple rows for a file. It has these fields:
 
 \begin{itemize}
-\item \texttt{sha256}: SHA256 checksum of the file
+\item \texttt{checksum}: SHA256 checksum of the file
 \item \texttt{license}: license as found by the scanner
 \item \texttt{scanner}: scanner name. Currently only Ninka and FOSSology are
 used in BAT, but is not limited to that: the scanner could also be a person
