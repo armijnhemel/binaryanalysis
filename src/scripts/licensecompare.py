@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2014 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2014-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -67,7 +67,7 @@ fossology_to_ninka = { 'No_license_found': 'NONE'
 def lookup((db, sha)):
 	conn = sqlite3.connect(db)
 	cursor = conn.cursor()
-	licenses = cursor.execute("select distinct license, scanner from licenses where sha256=?", sha).fetchall()
+	licenses = cursor.execute("select distinct license, scanner from licenses where checksum=?", sha).fetchall()
 	cursor.close()
 	conn.close()
 	## 2 licenses were found, one from Ninka, one from FOSSology
@@ -134,7 +134,7 @@ def main(argv):
 
 	notsame = []
 
-	cursor.execute("select distinct sha256 from licenses")
+	cursor.execute("select distinct checksum from licenses")
 	sha256s = cursor.fetchmany(10000)
 
 	unscannedcounter = 0
@@ -160,7 +160,7 @@ def main(argv):
 		unscanned = filter(lambda x: x[0] == 'unscanned', results)
 		unscannedcounter += len(unscanned)
 		for i in interesting:
-			interestingfile = dbconn.execute("select filename from processed_file where sha256=?", (i[1],)).fetchone()
+			interestingfile = dbconn.execute("select filename from processed_file where checksum=?", (i[1],)).fetchone()
 			if interestingfile == None:
 				## error in the database
 				continue
