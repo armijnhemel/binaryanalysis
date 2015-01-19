@@ -743,13 +743,13 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, db
 						version = rewrites[filehash]['newversion']
 
 	## Then check if version exists in the database.
-	c.execute('''select sha256 from processed where package=? and version=? LIMIT 1''', (package, version))
+	c.execute('''select checksum from processed where package=? and version=? LIMIT 1''', (package, version))
 	checkres = c.fetchall()
 	if len(checkres) == 0:
 		## If the version is not in 'processed' check if there are already any strings
 		## from program + version. If so, first remove the results before adding to
 		## avoid unnecessary duplication.
-		c.execute('''select sha256 from processed_file where package=? and version=? LIMIT 1''', (package, version))
+		c.execute('''select checksum from processed_file where package=? and version=? LIMIT 1''', (package, version))
 		if len(c.fetchall()) != 0:
 			c.execute('''delete from processed_file where package=? and version=?''', (package, version))
 			conn.commit()
@@ -784,7 +784,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, db
 		identical = True
 		## compare amount of checksums for this version and the one recorded in the database.
 		## If they are not equal the package is not identical.
-		origlen = len(conn.execute('''select sha256 from processed_file where package=? and version=?''', (package, version)).fetchall())
+		origlen = len(conn.execute('''select checksum from processed_file where package=? and version=?''', (package, version)).fetchall())
 		if len(scanfile_result) == origlen:
 			tasks = map(lambda x: (dbpath, package, version, x[2]['sha256']), scanfile_result)
 			nonidenticals = filter(lambda x: x[1] == False, pool.map(grabhash, tasks, 1))
@@ -799,7 +799,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, db
 			## If the version is not in 'processed' check if there are already any strings
 			## from program + version. If so, first remove the results before adding to
 			## avoid unnecessary duplication.
-			c.execute('''select sha256 from processed_file where package=? and version=? LIMIT 1''', (package, version))
+			c.execute('''select checksum from processed_file where package=? and version=? LIMIT 1''', (package, version))
 			if len(c.fetchall()) != 0:
 				c.execute('''delete from processed_file where package=? and version=?''', (package, version))
 				conn.commit()
@@ -813,7 +813,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, db
 		if sqlres != []:
 			## Add the file to the database: name of archive, sha256, packagename and version
 			## This is to be able to just update the database instead of recreating it.
-			c.execute('''insert into processed (package, version, filename, origin, sha256) values (?,?,?,?,?)''', (package, version, filename, origin, filehash))
+			c.execute('''insert into processed (package, version, filename, origin, checksum) values (?,?,?,?,?)''', (package, version, filename, origin, filehash))
 			process_extra_hashes = set()
 
 			c.execute('''select sha256 from hashconversion where sha256=? LIMIT 1''', (filehash,))
@@ -825,7 +825,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, db
 					query = "update hashconversion set %s='%s' where sha256=?" % (k, checksums[k])
 					c.execute(query, (filehash,))
 		elif batarchive and not emptyarchive:
-			c.execute('''insert into processed (package, version, filename, origin, sha256) values (?,?,?,?,?)''', (package, version, filename, origin, filehash))
+			c.execute('''insert into processed (package, version, filename, origin, checksum) values (?,?,?,?,?)''', (package, version, filename, origin, filehash))
 	conn.commit()
 	c.close()
 	conn.close()
@@ -860,7 +860,7 @@ def cleanupdir(temporarydir):
 def grabhash((db, package, version, checksum)):
 	conn = sqlite3.connect(db)
 	c = conn.cursor()
-	c.execute('''select sha256 from processed_file where package=? and version=? and sha256=?''', (package, version, checksum))
+	c.execute('''select checksum from processed_file where package=? and version=? and checksum=?''', (package, version, checksum))
 	cres = c.fetchall()
 	if len(cres) == 0:
 		identical = False
@@ -1018,12 +1018,12 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 				continue
 		if filehash in tmpsha256s:
 			continue
-		cursor.execute("select * from processed_file where sha256=? LIMIT 1", (filehash,))
+		cursor.execute("select * from processed_file where checksum=? LIMIT 1", (filehash,))
 		testres = cursor.fetchall()
 		if len(testres) != 0:
 			continue
 		tmpsha256s.add(filehash)
-		cursor.execute('''select * from extracted_file where sha256=? LIMIT 1''', (filehash,))
+		cursor.execute('''select * from extracted_string where checksum=? LIMIT 1''', (filehash,))
 		if len(cursor.fetchall()) != 0:
 			#print >>sys.stderr, "duplicate %s %s: %s/%s" % (package, version, i[0], p)
 			continue
@@ -1064,7 +1064,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 
 		licensefilestoscan = []
 		for c in commentshash2:
-			ninkacursor.execute('''select license, version from ninkacomments where sha256=?''', (c,))
+			ninkacursor.execute('''select license, version from ninkacomments where checksum=?''', (c,))
 			res = ninkacursor.fetchall()
 			if len(res) > 0:
 				## store all the licenses that are already known for this comment
@@ -1072,8 +1072,8 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 					(filelicense, scannerversion) = r
 					for f in commentshash2[c]:
 						## only use this if there actually are duplicates
-						#licensecursor.execute('''delete from licenses where sha256 = ? and license = ? and scanner = ? and version = ?''', (f, filelicense, "ninka", scannerversion))
-						licensecursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (f, filelicense, "ninka", scannerversion))
+						#licensecursor.execute('''delete from licenses where checksum = ? and license = ? and scanner = ? and version = ?''', (f, filelicense, "ninka", scannerversion))
+						licensecursor.execute('''insert into licenses (checksum, license, scanner, version) values (?,?,?,?)''', (f, filelicense, "ninka", scannerversion))
 			else:
 				licensefilestoscan.append(commentshash2[c][0])
 		licenseconn.commit()
@@ -1091,9 +1091,9 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		for l in license_results:
 			licenses = l[1]
 			for license in licenses:
-				ninkacursor.execute('''insert into ninkacomments (sha256, license, version) values (?,?,?)''', (commentshash[l[0]], license, ninkaversion))
+				ninkacursor.execute('''insert into ninkacomments (checksum, license, version) values (?,?,?)''', (commentshash[l[0]], license, ninkaversion))
 				for f in commentshash2[commentshash[l[0]]]:
-					licensecursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (f, license, "ninka", ninkaversion))
+					licensecursor.execute('''insert into licenses (checksum, license, scanner, version) values (?,?,?,?)''', (f, license, "ninka", ninkaversion))
 		licenseconn.commit()
 		ninkaconn.commit()
 
@@ -1126,8 +1126,8 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 				(filehash, fres) = ff
 				for license in fres:
 
-					#licensecursor.execute('''delete from licenses where sha256 = ? and license = ? and scanner = ? and version = ?''', (filehash, license, "fossology", fossology_version))
-					licensecursor.execute('''insert into licenses (sha256, license, scanner, version) values (?,?,?,?)''', (filehash, license, "fossology", fossology_version))
+					#licensecursor.execute('''delete from licenses where checksum = ? and license = ? and scanner = ? and version = ?''', (filehash, license, "fossology", fossology_version))
+					licensecursor.execute('''insert into licenses (checksum, license, scanner, version) values (?,?,?,?)''', (filehash, license, "fossology", fossology_version))
 		licenseconn.commit()
 		licensecursor.close()
 		licenseconn.close()
@@ -1149,8 +1149,8 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 				for cr in cres:
 					## OK, this delete is *really* stupid because we don't have an index for this
 					## combination of parameters.
-					#licensecursor.execute('''delete from extracted_copyright where sha256 = ? and copyright = ? and type = ? and offset = ?''', (filehash, cr[1], cr[0], cr[2]))
-					licensecursor.execute('''insert into extracted_copyright (sha256, copyright, type, offset) values (?,?,?,?)''', (filehash, cr[1], cr[0], cr[2]))
+					#licensecursor.execute('''delete from extracted_copyright where checksum = ? and copyright = ? and type = ? and offset = ?''', (filehash, cr[1], cr[0], cr[2]))
+					licensecursor.execute('''insert into extracted_copyright (checksum, copyright, type, offset) values (?,?,?,?)''', (filehash, cr[1], cr[0], cr[2]))
 			licenseconn.commit()
 			licensecursor.close()
 			licenseconn.close()
@@ -1171,7 +1171,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 					configureresgroups = configureres.groups()
 					ac_init_pos = configureaclines.find('AC_INIT(')
 					lineno = configureaclines.count('\n', 0, ac_init_pos) + 1
-					cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (configureresgroups[0], filehash, language, lineno))
+					cursor.execute('''insert into extracted_string (stringidentifier, checksum, language, linenumber) values (?,?,?,?)''', (configureresgroups[0], filehash, language, lineno))
 
 	## extract configuration from the Linux kernel Makefiles
 	## store two things:
@@ -1217,110 +1217,110 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 				securityc.execute('''insert into security (checksum, securitybug, linenumber, function, whitelist) values (?,?,?,?,?)''', (filehash, securitybug, linenumber, function, False))
 		for res in sqlres:
 			(pstring, linenumber) = res
-			cursor.execute('''insert into extracted_file (programstring, sha256, language, linenumber) values (?,?,?,?)''', (pstring, filehash, language, linenumber))
+			cursor.execute('''insert into extracted_string (stringidentifier, checksum, language, linenumber) values (?,?,?,?)''', (pstring, filehash, language, linenumber))
 		if moduleres.has_key('parameters'):
 			for res in moduleres['parameters']:
 				(pstring, ptype) = res
 				if filehashtomodule.has_key(filehash):
 					modulenames = filehashtomodule[filehash]
 					for modulename in modulenames:
-						cursor.execute('''insert into kernelmodule_parameter (sha256, modulename, paramname, paramtype) values (?,?,?,?)''', (filehash, modulename, pstring, ptype))
+						cursor.execute('''insert into kernelmodule_parameter (checksum, modulename, paramname, paramtype) values (?,?,?,?)''', (filehash, modulename, pstring, ptype))
 				else:
-					cursor.execute('''insert into kernelmodule_parameter (sha256, modulename, paramname, paramtype) values (?,?,?,?)''', (filehash, None, pstring, ptype))
+					cursor.execute('''insert into kernelmodule_parameter (checksum, modulename, paramname, paramtype) values (?,?,?,?)''', (filehash, None, pstring, ptype))
 		if moduleres.has_key('alias'):
 			for res in moduleres['alias']:
 				if filehashtomodule.has_key(filehash):
 					modulenames = filehashtomodule[filehash]
 					for modulename in modulenames:
-						cursor.execute('''insert into kernelmodule_alias (sha256, modulename, alias) values (?,?,?)''', (filehash, modulename, res))
+						cursor.execute('''insert into kernelmodule_alias (checksum, modulename, alias) values (?,?,?)''', (filehash, modulename, res))
 				else:
-					cursor.execute('''insert into kernelmodule_alias (sha256, modulename, alias) values (?,?,?)''', (filehash, None, res))
+					cursor.execute('''insert into kernelmodule_alias (checksum, modulename, alias) values (?,?,?)''', (filehash, None, res))
 		if moduleres.has_key('author'):
 			for res in moduleres['author']:
 				if filehashtomodule.has_key(filehash):
 					modulenames = filehashtomodule[filehash]
 					for modulename in modulenames:
-						cursor.execute('''insert into kernelmodule_author (sha256, modulename, author) values (?,?,?)''', (filehash, modulename, res))
+						cursor.execute('''insert into kernelmodule_author (checksum, modulename, author) values (?,?,?)''', (filehash, modulename, res))
 				else:
-					cursor.execute('''insert into kernelmodule_author (sha256, modulename, author) values (?,?,?)''', (filehash, None, res))
+					cursor.execute('''insert into kernelmodule_author (checksum, modulename, author) values (?,?,?)''', (filehash, None, res))
 		if moduleres.has_key('descriptions'):
 			for res in moduleres['descriptions']:
 				if filehashtomodule.has_key(filehash):
 					modulenames = filehashtomodule[filehash]
 					for modulename in modulenames:
-						cursor.execute('''insert into kernelmodule_description (sha256, modulename, description) values (?,?,?)''', (filehash, modulename, res))
+						cursor.execute('''insert into kernelmodule_description (checksum, modulename, description) values (?,?,?)''', (filehash, modulename, res))
 				else:
-					cursor.execute('''insert into kernelmodule_description (sha256, modulename, description) values (?,?,?)''', (filehash, None, res))
+					cursor.execute('''insert into kernelmodule_description (checksum, modulename, description) values (?,?,?)''', (filehash, None, res))
 		if moduleres.has_key('firmware'):
 			for res in moduleres['firmware']:
 				if filehashtomodule.has_key(filehash):
 					modulenames = filehashtomodule[filehash]
 					for modulename in modulenames:
-						cursor.execute('''insert into kernelmodule_firmware (sha256, modulename, firmware) values (?,?,?)''', (filehash, modulename, res))
+						cursor.execute('''insert into kernelmodule_firmware (checksum, modulename, firmware) values (?,?,?)''', (filehash, modulename, res))
 				else:
-					cursor.execute('''insert into kernelmodule_firmware (sha256, modulename, firmware) values (?,?,?)''', (filehash, None, res))
+					cursor.execute('''insert into kernelmodule_firmware (checksum, modulename, firmware) values (?,?,?)''', (filehash, None, res))
 		if moduleres.has_key('license'):
 			for res in moduleres['license']:
 				if filehashtomodule.has_key(filehash):
 					modulenames = filehashtomodule[filehash]
 					for modulename in modulenames:
-						cursor.execute('''insert into kernelmodule_license (sha256, modulename, license) values (?,?,?)''', (filehash, modulename, res))
+						cursor.execute('''insert into kernelmodule_license (checksum, modulename, license) values (?,?,?)''', (filehash, modulename, res))
 				else:
-					cursor.execute('''insert into kernelmodule_license (sha256, modulename, license) values (?,?,?)''', (filehash, None, res))
+					cursor.execute('''insert into kernelmodule_license (checksum, modulename, license) values (?,?,?)''', (filehash, None, res))
 		if moduleres.has_key('versions'):
 			for res in moduleres['versions']:
 				if filehashtomodule.has_key(filehash):
 					modulenames = filehashtomodule[filehash]
 					for modulename in modulenames:
-						cursor.execute('''insert into kernelmodule_version (sha256, modulename, version) values (?,?,?)''', (filehash, modulename, res))
+						cursor.execute('''insert into kernelmodule_version (checksum, modulename, version) values (?,?,?)''', (filehash, modulename, res))
 				else:
-					cursor.execute('''insert into kernelmodule_version (sha256, modulename, version) values (?,?,?)''', (filehash, None, res))
+					cursor.execute('''insert into kernelmodule_version (checksum, modulename, version) values (?,?,?)''', (filehash, None, res))
 		if moduleres.has_key('param_descriptions'):
 			for res in moduleres['param_descriptions']:
 				if filehashtomodule.has_key(filehash):
 					modulenames = filehashtomodule[filehash]
 					for modulename in modulenames:
-						cursor.execute('''insert into kernelmodule_parameter_description (sha256, modulename, paramname, description) values (?,?,?,?)''', (filehash, modulename) + res)
+						cursor.execute('''insert into kernelmodule_parameter_description (checksum, modulename, paramname, description) values (?,?,?,?)''', (filehash, modulename) + res)
 				else:
-					cursor.execute('''insert into kernelmodule_parameter_description (sha256, modulename, paramname, description) values (?,?,?,?)''', (filehash, None) + res)
+					cursor.execute('''insert into kernelmodule_parameter_description (checksum, modulename, paramname, description) values (?,?,?,?)''', (filehash, None) + res)
 
 		if language == 'C':
 			for res in results:
 				(cname, linenumber, nametype) = res
 				if nametype == 'function':
-					cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, language, linenumber))
+					cursor.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, language, linenumber))
 				elif nametype == 'kernelfunction':
-					cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'linuxkernel', linenumber))
+					cursor.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'linuxkernel', linenumber))
 				else:
-					cursor.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, language, linenumber))
+					cursor.execute('''insert into extracted_name (checksum, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, language, linenumber))
 		elif language == 'C#':
 			for res in results:
 				(cname, linenumber, nametype) = res
 				if nametype == 'method':
-					cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, language, linenumber))
+					cursor.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, language, linenumber))
 		elif language == 'Java':
 			for res in results:
 				(cname, linenumber, nametype) = res
 				if nametype == 'method':
-					cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, language, linenumber))
+					cursor.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, language, linenumber))
 				else:
-					cursor.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, language, linenumber))
+					cursor.execute('''insert into extracted_name (checksum, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, language, linenumber))
 
 		elif language == 'PHP':
 			for res in results:
 				(cname, linenumber, nametype) = res
 				if nametype == 'function':
-					cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, language, linenumber))
+					cursor.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, language, linenumber))
 				else:
-					cursor.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, language, linenumber))
+					cursor.execute('''insert into extracted_name (checksum, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, language, linenumber))
 
 		elif language == 'Python':
 			for res in results:
 				(cname, linenumber, nametype) = res
 				if nametype == 'function' or nametype == 'member':
-					cursor.execute('''insert into extracted_function (sha256, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, language, linenumber))
+					cursor.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, language, linenumber))
 				else:
-					cursor.execute('''insert into extracted_name (sha256, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, language, linenumber))
+					cursor.execute('''insert into extracted_name (checksum, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, language, linenumber))
 	conn.commit()
 	if security:
 		securityconn.commit()
@@ -1338,7 +1338,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		updatefile.close()
 	for i in insertfiles:
 		filehash = i[1]['sha256']
-		cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, i[0], filehash))
+		cursor.execute('''insert into processed_file (package, version, filename, checksum) values (?,?,?,?)''', (package, version, i[0], filehash))
 		if len(i[1]) != 1:
 			cursor.execute('''select sha256 from hashconversion where sha256=? LIMIT 1''', (filehash,))
 			if len(cursor.fetchall()) == 0:
@@ -1381,7 +1381,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 				continue
 			if infiles:
 				(archivepath, archivechecksum, archiveversion) = i.strip().split('\t')
-				cursor.execute('''insert into processed_file (package, version, filename, sha256) values (?,?,?,?)''', (package, version, archivepath, archivechecksum))
+				cursor.execute('''insert into processed_file (package, version, filename, checksum) values (?,?,?,?)''', (package, version, archivepath, archivechecksum))
 		conn.commit()
 	return (scanfile_result)
 
@@ -2119,7 +2119,7 @@ def checkalreadyscanned((filedir, package, version, filename, origin, batarchive
 	conn = sqlite3.connect(dbpath, check_same_thread = False)
 	c = conn.cursor()
 	## Check if we've already processed this file. If so, we can easily skip it and return.
-	c.execute('''select * from processed where sha256=?''', (filehash,))
+	c.execute('''select * from processed where checksum=?''', (filehash,))
 	if len(c.fetchall()) != 0:
 		res = None
 	else:
@@ -2456,41 +2456,41 @@ def main(argv):
         try:
 		## Keep an archive of which packages and archive files (tar.gz, tar.bz2, etc.) we've already
 		## processed, so we don't repeat work.
-		c.execute('''create table if not exists processed (package text, version text, filename text, origin text, sha256 text)''')
+		c.execute('''create table if not exists processed (package text, version text, filename text, origin text, checksum text)''')
 		c.execute('''create index if not exists processed_index on processed(package, version)''')
-		c.execute('''create index if not exists processed_checksum on processed(sha256)''')
+		c.execute('''create index if not exists processed_checksum on processed(checksum)''')
 		c.execute('''create index if not exists processed_origin on processed(origin)''')
 
 		## Keep an archive of which packages are blacklisted. This is useful during database creation,
 		## or during database expansion.
-		#c.execute('''create table if not exists blacklist (package text, version text, filename text, origin text, sha256 text)''')
+		#c.execute('''create table if not exists blacklist (package text, version text, filename text, origin text, checksum text)''')
 		#c.execute('''create index if not exists blacklist_index on blacklist(package, version)''')
 
 		## Since there is a lot of duplication inside source packages we store strings per checksum
 		## which we can later link with files
-		c.execute('''create table if not exists processed_file (package text, version text, filename text, sha256 text)''')
-		c.execute('''create index if not exists processedfile_package_sha256_index on processed_file(sha256, package)''')
+		c.execute('''create table if not exists processed_file (package text, version text, filename text, checksum text)''')
+		c.execute('''create index if not exists processedfile_package_checksum_index on processed_file(checksum, package)''')
 		c.execute('''create index if not exists processedfile_package_version_index on processed_file(package, version)''')
-		## TODO: use analyze processedfile_package_version_index and processedfile_package_sha256_index
+		## TODO: use analyze processedfile_package_version_index and processedfile_package_checksum_index
 
 		## Store the extracted strings per checksum, not per (package, version, filename).
 		## This saves a lot of space in the database
 		## The field 'language' denotes what 'language' (family) the file the string is extracted from
 		## is in. Possible values: extensions.values()
-		c.execute('''create table if not exists extracted_file (programstring text, sha256 text, language text, linenumber int)''')
-		c.execute('''create index if not exists programstring_index on extracted_file(programstring)''')
-		c.execute('''create index if not exists extracted_hash on extracted_file(sha256)''')
-		c.execute('''create index if not exists extracted_language on extracted_file(language);''')
+		c.execute('''create table if not exists extracted_string (stringidentifier text, checksum text, language text, linenumber int)''')
+		c.execute('''create index if not exists stringidentifier_index on extracted_string(stringidentifier)''')
+		c.execute('''create index if not exists extracted_hash_index on extracted_string(checksum)''')
+		c.execute('''create index if not exists extracted_language_index on extracted_string(language);''')
 
 		## Store the function names extracted, per checksum
-		c.execute('''create table if not exists extracted_function (sha256 text, functionname text, language text, linenumber int)''')
-		c.execute('''create index if not exists function_index on extracted_function(sha256);''')
+		c.execute('''create table if not exists extracted_function (checksum text, functionname text, language text, linenumber int)''')
+		c.execute('''create index if not exists function_index on extracted_function(checksum);''')
 		c.execute('''create index if not exists functionname_index on extracted_function(functionname)''')
 		c.execute('''create index if not exists functionname_language on extracted_function(language);''')
 
 		## Store variable names/etc extracted
-		c.execute('''create table if not exists extracted_name (sha256 text, name text, type text, language text, linenumber int)''')
-		c.execute('''create index if not exists name_checksum_index on extracted_name(sha256);''')
+		c.execute('''create table if not exists extracted_name (checksum text, name text, type text, language text, linenumber int)''')
+		c.execute('''create index if not exists name_checksum_index on extracted_name(checksum);''')
 		c.execute('''create index if not exists name_name_index on extracted_name(name)''')
 		c.execute('''create index if not exists name_type_index on extracted_name(type)''')
 		c.execute('''create index if not exists name_language_index on extracted_name(language);''')
@@ -2502,14 +2502,14 @@ def main(argv):
 		c.execute('''create index if not exists kernel_configuration_filename on kernel_configuration(filename)''')
 
 		## Store information about Linux kernel modules
-		c.execute('''create table if not exists kernelmodule_alias(sha256 text, modulename text, alias text)''')
-		c.execute('''create table if not exists kernelmodule_author(sha256 text, modulename text, author text)''')
-		c.execute('''create table if not exists kernelmodule_description(sha256 text, modulename text, description text)''')
-		c.execute('''create table if not exists kernelmodule_firmware(sha256 text, modulename text, firmware text)''')
-		c.execute('''create table if not exists kernelmodule_license(sha256 text, modulename text, license text)''')
-		c.execute('''create table if not exists kernelmodule_parameter(sha256 text, modulename text, paramname text, paramtype text)''')
-		c.execute('''create table if not exists kernelmodule_parameter_description(sha256 text, modulename text, paramname text, description text)''')
-		c.execute('''create table if not exists kernelmodule_version(sha256 text, modulename text, version text)''')
+		c.execute('''create table if not exists kernelmodule_alias(checksum text, modulename text, alias text)''')
+		c.execute('''create table if not exists kernelmodule_author(checksum text, modulename text, author text)''')
+		c.execute('''create table if not exists kernelmodule_description(checksum text, modulename text, description text)''')
+		c.execute('''create table if not exists kernelmodule_firmware(checksum text, modulename text, firmware text)''')
+		c.execute('''create table if not exists kernelmodule_license(checksum text, modulename text, license text)''')
+		c.execute('''create table if not exists kernelmodule_parameter(checksum text, modulename text, paramname text, paramtype text)''')
+		c.execute('''create table if not exists kernelmodule_parameter_description(checksum text, modulename text, paramname text, description text)''')
+		c.execute('''create table if not exists kernelmodule_version(checksum text, modulename text, version text)''')
 
 		c.execute('''create index if not exists kernelmodule_alias_index on kernelmodule_alias(alias)''')
 		c.execute('''create index if not exists kernelmodule_author_index on kernelmodule_author(author)''')
@@ -2520,34 +2520,34 @@ def main(argv):
 		c.execute('''create index if not exists kernelmodule_parameter_description_index on kernelmodule_parameter_description(description)''')
 		c.execute('''create index if not exists kernelmodule_version_index on kernelmodule_version(version)''')
 
-		c.execute('''create index if not exists kernelmodule_alias_sha256index on kernelmodule_alias(sha256)''')
-		c.execute('''create index if not exists kernelmodule_author_sha256index on kernelmodule_author(sha256)''')
-		c.execute('''create index if not exists kernelmodule_description_sha256index on kernelmodule_description(sha256)''')
-		c.execute('''create index if not exists kernelmodule_firmware_sha256index on kernelmodule_firmware(sha256)''')
-		c.execute('''create index if not exists kernelmodule_license_sha256index on kernelmodule_license(sha256)''')
-		c.execute('''create index if not exists kernelmodule_parameter_sha256index on kernelmodule_parameter(sha256)''')
-		c.execute('''create index if not exists kernelmodule_parameter_description_sha256index on kernelmodule_parameter_description(sha256)''')
-		c.execute('''create index if not exists kernelmodule_version_sha256index on kernelmodule_version(sha256)''')
+		c.execute('''create index if not exists kernelmodule_alias_checksum_index on kernelmodule_alias(checksum)''')
+		c.execute('''create index if not exists kernelmodule_author_checksum_index on kernelmodule_author(checksum)''')
+		c.execute('''create index if not exists kernelmodule_description_checksum_index on kernelmodule_description(checksum)''')
+		c.execute('''create index if not exists kernelmodule_firmware_checksum_index on kernelmodule_firmware(checksum)''')
+		c.execute('''create index if not exists kernelmodule_license_checksum_index on kernelmodule_license(checksum)''')
+		c.execute('''create index if not exists kernelmodule_parameter_checksum_index on kernelmodule_parameter(checksum)''')
+		c.execute('''create index if not exists kernelmodule_parameter_description_checksum_index on kernelmodule_parameter_description(checksum)''')
+		c.execute('''create index if not exists kernelmodule_version_checksum_index on kernelmodule_version(checksum)''')
 
 		## keep information about other files, such as media files, configuration files,
 		## and so on, for "circumstantial evidence"
-		c.execute('''create table if not exists misc(sha256 text, name text)''')
-		c.execute('''create index if not exists misc_sha256index on misc(sha256)''')
-		c.execute('''create index if not exists misc_nameindex on misc(name)''')
+		c.execute('''create table if not exists misc(checksum text, name text)''')
+		c.execute('''create index if not exists misc_checksum_index on misc(checksum)''')
+		c.execute('''create index if not exists misc_name_index on misc(name)''')
 		conn.commit()
 
 		if scanlicense or scancopyright:
 			## Store the extracted licenses per checksum.
-			licensec.execute('''create table if not exists licenses (sha256 text, license text, scanner text, version text)''')
-			licensec.execute('''create index if not exists license_index on licenses(sha256);''')
+			licensec.execute('''create table if not exists licenses (checksum text, license text, scanner text, version text)''')
+			licensec.execute('''create index if not exists license_index on licenses(checksum);''')
 
 			## Store the copyrights extracted by FOSSology, per checksum
 			## type can be:
 			## * email
 			## * statement
 			## * url
-			licensec.execute('''create table if not exists extracted_copyright (sha256 text, copyright text, type text, offset int)''')
-			licensec.execute('''create index if not exists copyright_index on extracted_copyright(sha256);''')
+			licensec.execute('''create table if not exists extracted_copyright (checksum text, copyright text, type text, offset int)''')
+			licensec.execute('''create index if not exists copyright_index on extracted_copyright(checksum);''')
 			licensec.execute('''create index if not exists copyright_type_index on extracted_copyright(copyright, type);''')
 			licenseconn.commit()
 			licensec.close()
@@ -2555,8 +2555,8 @@ def main(argv):
 
 		if scanlicense:
 			## Store the comments extracted by Ninka per checksum.
-			ninkac.execute('''create table if not exists ninkacomments (sha256 text, license text, version text)''')
-			ninkac.execute('''create index if not exists comments_index on ninkacomments(sha256);''')
+			ninkac.execute('''create table if not exists ninkacomments (checksum text, license text, version text)''')
+			ninkac.execute('''create index if not exists comments_index on ninkacomments(checksum);''')
 
 			ninkaconn.commit()
 			ninkac.close()
