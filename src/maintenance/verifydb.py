@@ -12,7 +12,7 @@ from multiprocessing import Pool
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
-This script verifies that the tables in a database are in sync, which means: all of the files in the tables "extracted_file", "licenses" and "extracted_function" can also be found in "processed_file"
+This script verifies that the tables in a database are in sync, which means: all of the files in the tables "extracted_string", "licenses" and "extracted_function" can also be found in "processed_file"
 
 Usage:
 

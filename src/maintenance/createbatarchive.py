@@ -76,7 +76,7 @@ def findversion((dbpath, s, package, processed_versions, scanned_files_version, 
 	## look up checksum in database
 	conn = sqlite3.connect(dbpath)
 	cursor = conn.cursor()
-	cursor.execute("select package, version from processed_file where sha256=?", (checksum,))
+	cursor.execute("select package, version from processed_file where checksum=?", (checksum,))
 	res = cursor.fetchall()
 	versions = set(map(lambda x: x[1], filter(lambda x: x[0] == package, res)))
 	foundversions = set(processed_versions).intersection(versions)
@@ -240,7 +240,7 @@ def packagewrite(dbpath, filedir, outdir, pool, package, versionfilenames, origi
 	for r in res:
 		(archivefilename, version, archivechecksum) = r
 		## to determine the version that is used as a 'base' first check if it is in the database
-		cursor.execute("select version from processed where sha256=?", (archivechecksum,))
+		cursor.execute("select version from processed where checksum=?", (archivechecksum,))
 		versionres = cursor.fetchall()
 		if versionres != []:
 			## extra sanity check to see if it is the expected version

@@ -54,12 +54,12 @@ def main(argv):
 		(oldpackage, oldversion, newpackage, newversion) = r
 		renamesha256 = set()
 		removesha256 = set()
-		cursor.execute('select sha256 from processed_file where package=? and version=?', ((oldpackage, oldversion)))
+		cursor.execute('select checksum from processed_file where package=? and version=?', ((oldpackage, oldversion)))
 		sha256s = cursor.fetchall()
 		## now check for each SHA256 if it already exists with the new version (and the
 		## old entry only needs to be removed) or if it actually needs to be renamed.
 		for sha256 in sha256s:
-			cursor.execute('select distinct package, version from processed_file where sha256=?', sha256)
+			cursor.execute('select distinct package, version from processed_file where checksum=?', sha256)
 			res = cursor.fetchall()
 			if (newpackage, newversion) in res:
 				removesha256.add(sha256)
@@ -76,21 +76,21 @@ def main(argv):
 			allsha256.update(removesha256)
 			allsha256.update(renamesha256)
 			for s in allsha256:
-				res = cursor.execute("select programstring,language from extracted_file where sha256=?", (s[0],))
+				res = cursor.execute("select stringidentifier,language from extracted_string where checksum=?", (s[0],))
 				if res != None:
 					programstrings += res
-				res = cursor.execute("select functionname,language from extracted_function where sha256=?", (s[0],))
+				res = cursor.execute("select functionname,language from extracted_function where checksum=?", (s[0],))
 				if res != None:
 					functionnames += res
-				res = cursor.execute("select name,language,type from extracted_name where sha256=?", (s[0],))
+				res = cursor.execute("select name,language,type from extracted_name where checksum=?", (s[0],))
 				if res != None:
 					varnames += res
 			pickledumps.append({'package': oldpackage, 'programstrings': programstrings, 'functionnames': functionnames, 'varnames': varnames})
 
 		for s in renamesha256:
-			cursor.execute("update processed_file set package=?, version=? where sha256=? and package=? and version=?", (r[2], r[3], s[0], r[0], r[1]))
+			cursor.execute("update processed_file set package=?, version=? where checksum=? and package=? and version=?", (r[2], r[3], s[0], r[0], r[1]))
 		for s in removesha256:
-			cursor.execute("delete from processed_file where sha256=? and package=? and version=?", (s[0], r[0], r[1]))
+			cursor.execute("delete from processed_file where checksum=? and package=? and version=?", (s[0], r[0], r[1]))
 		conn.commit()
 		cursor.execute("select * from processed where package=? and version=?", (r[2], r[3]))
 		res = cursor.fetchall()
