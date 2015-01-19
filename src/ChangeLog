@@ -1,3 +1,10 @@
+2015-01-19:
+* fix database renaming script, rename tables and various indexes, sync rest
+of the code to reflect the changes
+
+2015-01-18:
+* add first version of database renaming script: replace sha256 with checksum
+
 2015-01-16:
 * fix finding signatures in bat/batxor.py
 * add scripts/findxor.py, a very simplistic script to find XOR keys in
