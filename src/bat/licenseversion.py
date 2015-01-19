@@ -628,7 +628,7 @@ def grab_sha256_varname((masterdb, language, tasks)):
 	conn.text_factory = str
 	c = conn.cursor()
 	for sha256sum in tasks:
-		c.execute("select version, filename from processed_file where sha256=?", (sha256sum,))
+		c.execute("select version, filename from processed_file where checksum=?", (sha256sum,))
 		results[sha256sum] = c.fetchall()
 	c.close()
 	conn.close()
@@ -643,7 +643,7 @@ def grab_sha256_filename((masterdb, tasks)):
 	conn.text_factory = str
 	c = conn.cursor()
 	for sha256sum in tasks:
-		c.execute("select version, filename from processed_file where sha256=?", (sha256sum,))
+		c.execute("select version, filename from processed_file where checksum=?", (sha256sum,))
 		results[sha256sum] = c.fetchall()
 	c.close()
 	conn.close()
@@ -656,7 +656,7 @@ def grab_sha256_copyright((copyrightdb, tasks)):
 	conn.text_factory = str
 	c = conn.cursor()
 	for sha256sum in tasks:
-		c.execute("select distinct copyright, type from extracted_copyright where sha256=?", (sha256sum,))
+		c.execute("select distinct copyright, type from extracted_copyright where checksum=?", (sha256sum,))
 		res = c.fetchall()
 		## filter out statements for now, possibly include them later
 		res = filter(lambda x: x[1] != 'statement', res)
@@ -672,7 +672,7 @@ def grab_sha256_license((licensedb, tasks)):
 	conn.text_factory = str
 	c = conn.cursor()
 	for sha256sum in tasks:
-		c.execute("select distinct license, scanner from licenses where sha256=?", (sha256sum,))
+		c.execute("select distinct license, scanner from licenses where checksum=?", (sha256sum,))
 		results[sha256sum] = c.fetchall()
 	c.close()
 	conn.close()
@@ -688,17 +688,17 @@ def grab_sha256_parallel((masterdb, tasks, language, querytype)):
 	c = conn.cursor()
 	for line in tasks:
 		if querytype == "string":
-			c.execute("select distinct sha256, linenumber, language from extracted_file where programstring=?", (line,))
+			c.execute("select distinct checksum, linenumber, language from extracted_string where stringidentifier=?", (line,))
 			res = c.fetchall()
 		elif querytype == 'function':
-			c.execute("select distinct sha256, linenumber, language from extracted_function where functionname=?", (line,))
+			c.execute("select distinct checksum, linenumber, language from extracted_function where functionname=?", (line,))
 			res = c.fetchall()
 		elif querytype == 'variable':
-			c.execute("select distinct sha256, linenumber, language, type from extracted_name where name=?", (line,))
+			c.execute("select distinct checksum, linenumber, language, type from extracted_name where name=?", (line,))
 			res = c.fetchall()
 			res = filter(lambda x: x[3] == 'variable', res)
 		elif querytype == 'kernelvariable':
-			c.execute("select distinct sha256, linenumber, language, type from extracted_name where name=?", (line,))
+			c.execute("select distinct checksum, linenumber, language, type from extracted_name where name=?", (line,))
 			res = c.fetchall()
 			res = filter(lambda x: x[3] == 'kernelsymbol', res)
 		if res != None:
@@ -1152,7 +1152,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 		## An extra check for lines that score extremely low. This
 		## helps reduce load on databases stored on slower disks
 		if precomputescore:
-			scoreres = conn.execute("select score from scores where programstring=? LIMIT 1", (line,)).fetchone()
+			scoreres = conn.execute("select score from scores where stringidentifier=? LIMIT 1", (line,)).fetchone()
 			if scoreres != None:
 				## If the score is so low it will not have any influence on the final
 				## score, why even bother hitting the disk?
@@ -1183,7 +1183,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 					continue
 
 		## then see if there is anything in the cache at all
-		res = conn.execute("select package, filename FROM stringscache WHERE programstring=?", (line,)).fetchall()
+		res = conn.execute("select package, filename FROM stringscache WHERE stringidentifier=?", (line,)).fetchall()
 
 		if len(res) == 0 and linuxkernel:
 			origline = line
@@ -1200,7 +1200,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 					unmatchedlines += 1
 					linecount[line] = linecount[line] - 1
 					continue
-				res = conn.execute("select package, filename FROM stringscache WHERE programstring=?", (scanline,)).fetchall()
+				res = conn.execute("select package, filename FROM stringscache WHERE stringidentifier=?", (scanline,)).fetchall()
 				if len(res) != 0:
 					line = scanline
 				else:
@@ -1214,7 +1214,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 							unmatchedlines += 1
 							linecount[line] = linecount[line] - 1
 							continue
-						res = conn.execute("select package, filename FROM stringscache WHERE programstring=?", (scanline,)).fetchall()
+						res = conn.execute("select package, filename FROM stringscache WHERE stringidentifier=?", (scanline,)).fetchall()
 						if len(res) != 0:
 							if len(scanline) != 0:
 								line = scanline
@@ -1230,7 +1230,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 						unmatchedlines += 1
 						linecount[line] = linecount[line] - 1
 						continue
-					res = conn.execute("select package, filename FROM stringscache WHERE programstring=?", (scanline,)).fetchall()
+					res = conn.execute("select package, filename FROM stringscache WHERE stringidentifier=?", (scanline,)).fetchall()
 					if len(res) != 0:
 						if len(scanline) != 0:
 							line = scanline
@@ -1246,7 +1246,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 							unmatchedlines += 1
 							linecount[line] = linecount[line] - 1
 							continue
-						res = conn.execute("select package, filename FROM stringscache WHERE programstring=?", (scanline,)).fetchall()
+						res = conn.execute("select package, filename FROM stringscache WHERE stringidentifier=?", (scanline,)).fetchall()
 						if len(res) != 0:
 							if len(scanline) != 0:
 								line = scanline
@@ -2251,8 +2251,8 @@ def licensesetup(scanenv, debug=False):
 		conn.close()
 		return (False, None)
 
-	## extracted_file is needed for string matches
-	res = c.execute("select * from sqlite_master where type='table' and name='extracted_file'").fetchall()
+	## extracted_string is needed for string matches
+	res = c.execute("select * from sqlite_master where type='table' and name='extracted_string'").fetchall()
 	if res == []:
 		stringmatches = False
 	else:
