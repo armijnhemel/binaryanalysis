@@ -12,6 +12,8 @@ before using BAT 20.
 
 Because all data is copied and 'vacuum' is run you will need 3 times as much
 diskspace as the original database.
+
+In some cases it might be easier to regenerate a new database.
 '''
 
 import sys, os
@@ -45,7 +47,6 @@ def main(argv):
 		licenseconn.close()
 		sys.exit(1)
 
-	## first create a new table
 	print "creating new licenses table"
 	licensecursor.execute("create table licenses_new (checksum text, license text, scanner text, version text)")
 	print "copying all licensing data"
@@ -73,7 +74,6 @@ def main(argv):
 
 	licensecursor.close()
 	licenseconn.close()
-	sys.exit(0)
 
 	masterconn = sqlite3.connect(options.masterdb)
 	mastercursor = masterconn.cursor()
@@ -201,7 +201,7 @@ def main(argv):
 	print "copying all kernelmodule_license data"
 	mastercursor.execute("insert into kernelmodule_license_new select sha256, modulename, license from kernelmodule_license")
 	print "dropping old kernelmodule_license table"
-	mastercursor.execute("drop table kernelmodule_parameter")
+	mastercursor.execute("drop table kernelmodule_license")
 	print "renaming kernelmodule_license table"
 	mastercursor.execute("alter table kernelmodule_license_new rename to kernelmodule_license")
 	print "recreating indexes"
@@ -229,8 +229,33 @@ def main(argv):
 	print "renaming kernelmodule_parameter_description table"
 	mastercursor.execute("alter table kernelmodule_parameter_description_new rename to kernelmodule_parameter_description")
 	print "recreating indexes"
-	mastercursor.execute("create index kernelmodule_parameter_description_index on kernelmodule_parameter_description(description)"
+	mastercursor.execute("create index kernelmodule_parameter_description_index on kernelmodule_parameter_description(description)")
 	mastercursor.execute("create index kernelmodule_parameter_description_checksum_index on kernelmodule_parameter_description(checksum)")
+
+	print "creating new kernelmodule_version table"
+	mastercursor.execute("create table kernelmodule_version_new(checksum text, modulename text, version text)")
+	print "copying all kernelmodule_version data"
+	mastercursor.execute("insert into kernelmodule_version_new select sha256, modulename, version from kernelmodule_version")
+	print "dropping old kernelmodule_version table"
+	mastercursor.execute("drop table kernelmodule_version")
+	print "renaming kernelmodule_version table"
+	mastercursor.execute("alter table kernelmodule_version_new rename to kernelmodule_version")
+	print "recreating indexes"
+	mastercursor.execute("create index if not exists kernelmodule_version_index on kernelmodule_version(version)")
+	mastercursor.execute("create index if not exists kernelmodule_version_checksum_index on kernelmodule_version(checksum)")
+
+	print "creating new misc table"
+	mastercursor.execute("create table if not exists misc_new(checksum text, name text)")
+	print "copying all misc data"
+	mastercursor.execute("insert into misc_new select sha256, name from misc")
+	print "droppping old misc table"
+	mastercursor.execute("drop table misc")
+	print "renaming misc table"
+	mastercursor.execute("alter table misc_new rename to misc")
+	print "recreating indexes"
+	mastercursor.execute("create index if not exists misc_checksum_index on misc(checksum)")
+	mastercursor.execute("create index if not exists misc_name_index on misc(name)")
+	mastercursor.execute("vacuum")
 
 	mastercursor.close()
 	masterconn.close()
