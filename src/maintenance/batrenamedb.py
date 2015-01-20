@@ -24,6 +24,7 @@ def main(argv):
 	parser = OptionParser()
 	parser.add_option("-l", "--licensedb", action="store", dest="licensedb", help="path to licenses database file", metavar="FILE")
 	parser.add_option("-m", "--masterdb", action="store", dest="masterdb", help="path to master database file", metavar="FILE")
+	parser.add_option("-n", "--newmasterdb", action="store", dest="newmasterdb", help="path to newmaster database file", metavar="FILE")
 
 	(options, args) = parser.parse_args()
 
@@ -31,11 +32,15 @@ def main(argv):
 		parser.exit("licenses database not supplied, exiting")
 	if options.masterdb == None:
 		parser.exit("master database not supplied, exiting")
+	if options.newmasterdb == None:
+		parser.exit("new master database not supplied, exiting")
 
 	if not os.path.exists(options.licensedb):
 		parser.exit("licenses database does not exist, exiting")
 	if not os.path.exists(options.masterdb):
 		parser.exit("master database does not exist, exiting")
+	if os.path.exists(options.newmasterdb):
+		parser.exit("new master database already exists, exiting")
 
 	licenseconn = sqlite3.connect(options.licensedb)
 	licensecursor = licenseconn.cursor()
@@ -75,8 +80,13 @@ def main(argv):
 	licensecursor.close()
 	licenseconn.close()
 
+	## then move on to the master database
+	## first create the new tables
+	## then vacuum
+	## then recreate indexes
 	masterconn = sqlite3.connect(options.masterdb)
 	mastercursor = masterconn.cursor()
+
 	try:
 		mastercursor.execute("select * from sqlite_master")
 	except:
@@ -85,177 +95,157 @@ def main(argv):
 		masterconn.close()
 		sys.exit(1)
 
+	mastercursor.execute("attach '%s' as slave" % options.newmasterdb)
 	print "creating new processed table"
-	mastercursor.execute('''create table processed_new (package text, version text, filename text, origin text, checksum text)''')
+	mastercursor.execute('''create table slave.processed (package text, version text, filename text, origin text, checksum text)''')
 	print "copying all processed data"
-	mastercursor.execute("insert into processed_new select package, version, filename, origin, sha256 from processed")
-	print "dropping old processed table"
-	mastercursor.execute("drop table processed")
-	print "renaming processed table"
-	mastercursor.execute("alter table processed_new rename to processed")
-	print "recreating indexes"
-	mastercursor.execute('''create index if not exists processed_index on processed(package, version)''')
-	mastercursor.execute('''create index if not exists processed_checksum on processed(checksum)''')
-	mastercursor.execute('''create index if not exists processed_origin on processed(origin)''')
+	mastercursor.execute("insert into slave.processed select package, version, filename, origin, sha256 from processed")
 
 	print "creating new processed_file table"
-	mastercursor.execute('''create table processed_file_new (package text, version text, filename text, checksum text)''')
+	mastercursor.execute('''create table slave.processed_file (package text, version text, filename text, checksum text)''')
 	print "copying all processed_file data"
-	mastercursor.execute("insert into processed_file_new select package, version, filename, sha256 from processed_file")
-	print "dropping old processed_file table"
-	mastercursor.execute("drop table processed_file")
-	print "renaming processed_file table"
-	mastercursor.execute("alter table processed_file_new rename to processed_file")
-	print "recreating indexes"
-	mastercursor.execute('''create index if not exists processedfile_package_sha256_index on processed_file(checksum, package)''')
-	mastercursor.execute('''create index if not exists processedfile_package_version_index on processed_file(package, version)''')
-
+	mastercursor.execute("insert into slave.processed_file select package, version, filename, sha256 from processed_file")
 	print "creating new extracted_string table"
-	mastercursor.execute('''create table if not exists extracted_string(stringidentifier text, checksum text, language text, linenumber int)''')  
+	mastercursor.execute('''create table if not exists slave.extracted_string(stringidentifier text, checksum text, language text, linenumber int)''')  
 	print "copying all extracted_file data"
-	mastercursor.execute("insert into extracted_string select stringidentifier, sha256, language, linenumber from extracted_file")
-	print "dropping old extracted_file table"
-	mastercursor.execute("drop table extracted_file")
-	print "recreating indexes"
-	mastercursor.execute('''create index if not exists stringidentifier_index on extracted_string(stringidentifier)''')
-	mastercursor.execute('''create index if not exists extracted_hash on extracted_string(checksum)''')
-	mastercursor.execute('''create index if not exists extracted_language on extracted_string(language);''')
+	mastercursor.execute("insert into slave.extracted_string select programstring, sha256, language, linenumber from extracted_file")
 
 	print "creating new extracted_function table"
-	mastercursor.execute('''create table if not exists extracted_function_new (checksum text, functionname text, language text, linenumber int)''')
+	mastercursor.execute('''create table if not exists slave.extracted_function (checksum text, functionname text, language text, linenumber int)''')
 	print "copying all extracted_function data"
-	mastercursor.execute("insert into extracted_function_new select sha256, functionname, language, linenumber from extracted_file")
-	print "dropping old extracted_function table"
-	mastercursor.execute("drop table extracted_function")
-	print "renaming extracted_function table"
-	mastercursor.execute("alter table extracted_function_new rename to extracted_function")
-	print "recreating indexes"
-	mastercursor.execute('''create index if not exists function_checksum_index on extracted_function(checksum);''')
-	mastercursor.execute('''create index if not exists function_name_index on extracted_function(functionname)''')
-	mastercursor.execute('''create index if not exists function_name_language on extracted_function(language);''')
+	mastercursor.execute("insert into slave.extracted_function select sha256, functionname, language, linenumber from extracted_function")
 
 	print "creating new extracted_name table"
-	mastercursor.execute('''create table if not exists extracted_name_new (checksum text, name text, type text, language text, linenumber int)''')
+	mastercursor.execute('''create table if not exists slave.extracted_name (checksum text, name text, type text, language text, linenumber int)''')
 	print "copying all extracted_name data"
-	mastercursor.execute("insert into extracted_name_new select sha256, name, language, type, linenumber from extracted_file")
-	print "dropping old extracted_name table"
-	mastercursor.execute("drop table extracted_name")
-	print "renaming extracted_name table"
-	mastercursor.execute("alter table extracted_name_new rename to extracted_name")
-	print "recreating indexes"
-	mastercursor.execute('''create index if not exists name_checksum_index on extracted_name(checksum);''')
-	mastercursor.execute('''create index if not exists name_name_index on extracted_name(name)''')
-	mastercursor.execute('''create index if not exists name_type_index on extracted_name(type)''')
-	mastercursor.execute('''create index if not exists name_language_index on extracted_name(language);''')
+	mastercursor.execute("insert into slave.extracted_name select sha256, name, language, type, linenumber from extracted_name")
 
 	print "creating new kernelmodule_alias"
-	mastercursor.execute("create table kernelmodule_alias_new(checksum text, modulename text, alias text)")
+	mastercursor.execute("create table slave.kernelmodule_alias(checksum text, modulename text, alias text)")
 	print "copying all kernelmodule_alias data"
-	mastercursor.execute("insert into kernelmodule_alias_new select sha256, modulename, alias from kernelmodule_alias")
-	print "dropping old kernelmodule_alias table"
-	mastercursor.execute("drop table kernelmodule_alias")
-	print "renaming kernelmodule_alias table"
-	mastercursor.execute("alter table kernelmodule_alias_new rename to kernelmodule_alias")
-	print "recreating indexes"
-	mastercursor.execute("create index kernelmodule_alias_index on kernelmodule_alias(alias)")
-	mastercursor.execute("create index kernelmodule_alias_checksum_index on kernelmodule_alias(checksum)")
+	mastercursor.execute("insert into slave.kernelmodule_alias select sha256, modulename, alias from kernelmodule_alias")
 
 	print "creating new kernelmodule_author table"
-	mastercursor.execute("create table kernelmodule_author_new(checksum text, modulename text, author text)")
+	mastercursor.execute("create table slave.kernelmodule_author(checksum text, modulename text, author text)")
 	print "copying all kernelmodule_author data"
-	mastercursor.execute("insert into kernelmodule_author_new select sha256, modulename, author from kernelmodule_author")
-	print "dropping old kernelmodule_author table"
-	mastercursor.execute("drop table kernelmodule_author")
-	print "renaming kernelmodule_author table"
-	mastercursor.execute("alter table kernelmodule_author_new rename to kernelmodule_author")
-	print "recreating indexes"
-	mastercursor.execute("create index kernelmodule_author_index on kernelmodule_author(author)")
-	mastercursor.execute("create index kernelmodule_author_checksum_index on kernelmodule_author(checksum)")
+	mastercursor.execute("insert into slave.kernelmodule_author select sha256, modulename, author from kernelmodule_author")
 
 	print "creating new kernelmodule_description table"
-	mastercursor.execute("create table kernelmodule_description_new(checksum text, modulename text, description text)")
+	mastercursor.execute("create table slave.kernelmodule_description(checksum text, modulename text, description text)")
 	print "copying all kernelmodule_description data"
-	mastercursor.execute("insert into kernelmodule_description_new select sha256, modulename, author from kernelmodule_description")
-	print "dropping old kernelmodule_description table"
-	mastercursor.execute("drop table kernelmodule_description")
-	print "renaming kernelmodule_description table"
-	mastercursor.execute("alter table kernelmodule_description_new rename to kernelmodule_description")
-	print "recreating indexes"
-	mastercursor.execute("create index kernelmodule_description_index on kernelmodule_description(description)")
-	mastercursor.execute("create index kernelmodule_description_checksum_index on kernelmodule_description(checksum)")
+	mastercursor.execute("insert into slave.kernelmodule_description select sha256, modulename, author from kernelmodule_description")
 
 	print "creating new kernelmodule_firmware table"
-	mastercursor.execute("create table kernelmodule_firmware_new(checksum text, modulename text, firmware text)")
+	mastercursor.execute("create table slave.kernelmodule_firmware(checksum text, modulename text, firmware text)")
 	print "copying all kernelmodule_firmware data"
-	mastercursor.execute("insert into kernelmodule_firmware_new select sha256, modulename, firmware from kernelmodule_firmware")
-	print "dropping old kernelmodule_firmware table"
-	mastercursor.execute("drop table kernelmodule_firmware")
-	print "renaming kernelmodule_firmware table"
-	mastercursor.execute("alter table kernelmodule_firmware_new rename to kernelmodule_firmware")
-	print "recreating indexes"
-	mastercursor.execute("create index kernelmodule_firmware_index on kernelmodule_firmware(firmware)")
-	mastercursor.execute("create index kernelmodule_firmware_checksum_index on kernelmodule_firmware(checksum)")
+	mastercursor.execute("insert into slave.kernelmodule_firmware select sha256, modulename, firmware from kernelmodule_firmware")
 
 	print "creating new kernelmodule_license table"
-	mastercursor.execute("create table kernelmodule_license_new(checksum text, modulename text, license text)")
+	mastercursor.execute("create table slave.kernelmodule_license(checksum text, modulename text, license text)")
 	print "copying all kernelmodule_license data"
-	mastercursor.execute("insert into kernelmodule_license_new select sha256, modulename, license from kernelmodule_license")
-	print "dropping old kernelmodule_license table"
-	mastercursor.execute("drop table kernelmodule_license")
-	print "renaming kernelmodule_license table"
-	mastercursor.execute("alter table kernelmodule_license_new rename to kernelmodule_license")
-	print "recreating indexes"
-	mastercursor.execute("create index kernelmodule_license_index on kernelmodule_license(license)")
-	mastercursor.execute("create index kernelmodule_license_checksum_index on kernelmodule_license(checksum)")
+	mastercursor.execute("insert into slave.kernelmodule_license select sha256, modulename, license from kernelmodule_license")
 
 	print "creating new kernelmodule_parameter"
-	mastercursor.execute("create table kernelmodule_parameter_new(checksum text, modulename text, paramname text, paramtype text)")
+	mastercursor.execute("create table slave.kernelmodule_parameter(checksum text, modulename text, paramname text, paramtype text)")
 	print "copying all kernelmodule_parameter data"
-	mastercursor.execute("insert into kernelmodule_parameter_new select sha256, modulename, paramname, paramtype from kernelmodule_parameter")
-	print "dropping old kernelmodule_parameter table"
-	mastercursor.execute("drop table kernelmodule_parameter")
-	print "renaming kernelmodule_parameter table"
-	mastercursor.execute("alter table kernelmodule_parameter_new rename to kernelmodule_parameter")
-	print "recreating indexes"
-	mastercursor.execute("create index kernelmodule_parameter_index on kernelmodule_parameter(paramname)")
-	mastercursor.execute("create index kernelmodule_parameter_checksum_index on kernelmodule_parameter(checksum)")
+	mastercursor.execute("insert into slave.kernelmodule_parameter select sha256, modulename, paramname, paramtype from kernelmodule_parameter")
 
 	print "creating new kernelmodule_parameter_description"
-	mastercursor.execute("create table kernelmodule_parameter_description_new(checksum text, modulename text, paramname text, description text)")
+	mastercursor.execute("create table slave.kernelmodule_parameter_description(checksum text, modulename text, paramname text, description text)")
 	print "copying all kernelmodule_parameter_description data"
-	mastercursor.execute("insert into kernelmodule_parameter_description_new select sha256, modulename, paramname, description from kernelmodule_parameter_description")
-	print "dropping old kernelmodule_parameter_description table"
-	mastercursor.execute("drop table kernelmodule_parameter_description")
-	print "renaming kernelmodule_parameter_description table"
-	mastercursor.execute("alter table kernelmodule_parameter_description_new rename to kernelmodule_parameter_description")
-	print "recreating indexes"
-	mastercursor.execute("create index kernelmodule_parameter_description_index on kernelmodule_parameter_description(description)")
-	mastercursor.execute("create index kernelmodule_parameter_description_checksum_index on kernelmodule_parameter_description(checksum)")
+	mastercursor.execute("insert into slave.kernelmodule_parameter_description select sha256, modulename, paramname, description from kernelmodule_parameter_description")
 
 	print "creating new kernelmodule_version table"
-	mastercursor.execute("create table kernelmodule_version_new(checksum text, modulename text, version text)")
+	mastercursor.execute("create table slave.kernelmodule_version(checksum text, modulename text, version text)")
 	print "copying all kernelmodule_version data"
-	mastercursor.execute("insert into kernelmodule_version_new select sha256, modulename, version from kernelmodule_version")
-	print "dropping old kernelmodule_version table"
-	mastercursor.execute("drop table kernelmodule_version")
-	print "renaming kernelmodule_version table"
-	mastercursor.execute("alter table kernelmodule_version_new rename to kernelmodule_version")
-	print "recreating indexes"
-	mastercursor.execute("create index if not exists kernelmodule_version_index on kernelmodule_version(version)")
-	mastercursor.execute("create index if not exists kernelmodule_version_checksum_index on kernelmodule_version(checksum)")
+	mastercursor.execute("insert into slave.kernelmodule_version select sha256, modulename, version from kernelmodule_version")
 
+	print "creating new kernel_configuration table"
+	mastercursor.execute("create table if not exists slave.kernel_configuration(configstring text, filename text, version text)")
+
+	mastercursor.execute("insert into slave.kernel_configuration select configstring, filename, version from kernel_configuration")
 	print "creating new misc table"
-	mastercursor.execute("create table if not exists misc_new(checksum text, name text)")
+	mastercursor.execute("create table if not exists slave.misc(checksum text, name text)")
 	print "copying all misc data"
-	mastercursor.execute("insert into misc_new select sha256, name from misc")
-	print "droppping old misc table"
-	mastercursor.execute("drop table misc")
-	print "renaming misc table"
-	mastercursor.execute("alter table misc_new rename to misc")
-	print "recreating indexes"
-	mastercursor.execute("create index if not exists misc_checksum_index on misc(checksum)")
-	mastercursor.execute("create index if not exists misc_name_index on misc(name)")
+	mastercursor.execute("insert into slave.misc select sha256, name from misc")
+
+	print "creating new hashconversion table"
+	mastercursor.execute("create table slave.hashconversion (sha256 text, md5 text, sha1 text, crc32 text)")
+	print "copying all hashconversion data"
+	mastercursor.execute("insert into slave.hashconversion select sha256, md5, sha1, crc32 from hashconversion")
+
+	print "vacuuming"
 	mastercursor.execute("vacuum")
+
+	print "recreating indexes processed"
+	mastercursor.execute('''create index if not exists slave.processed_index on processed(package, version)''')
+	mastercursor.execute('''create index if not exists slave.processed_checksum on processed(checksum)''')
+	mastercursor.execute('''create index if not exists slave.processed_origin on processed(origin)''')
+
+	print "recreating indexes processed_file"
+	mastercursor.execute('''create index if not exists slave.processedfile_package_sha256_index on processed_file(checksum, package)''')
+	mastercursor.execute('''create index if not exists slave.processedfile_package_version_index on processed_file(package, version)''')
+
+	print "recreating indexes extracted_string"
+	mastercursor.execute('''create index if not exists slave.stringidentifier_index on extracted_string(stringidentifier)''')
+	mastercursor.execute('''create index if not exists slave.extracted_hash on extracted_string(checksum)''')
+	mastercursor.execute('''create index if not exists slave.extracted_language on extracted_string(language);''')
+
+	print "recreating indexes extracted_function"
+	mastercursor.execute('''create index if not exists slave.function_checksum_index on extracted_function(checksum);''')
+	mastercursor.execute('''create index if not exists slave.function_name_index on extracted_function(functionname)''')
+	mastercursor.execute('''create index if not exists slave.function_name_language on extracted_function(language);''')
+
+	print "recreating indexes extracted_name"
+	mastercursor.execute('''create index if not exists slave.name_checksum_index on extracted_name(checksum);''')
+	mastercursor.execute('''create index if not exists slave.name_name_index on extracted_name(name)''')
+	mastercursor.execute('''create index if not exists slave.name_type_index on extracted_name(type)''')
+	mastercursor.execute('''create index if not exists slave.name_language_index on extracted_name(language);''')
+
+	print "recreating indexes kernelmodule_alias"
+	mastercursor.execute("create index slave.kernelmodule_alias_index on kernelmodule_alias(alias)")
+	mastercursor.execute("create index slave.kernelmodule_alias_checksum_index on kernelmodule_alias(checksum)")
+
+	print "recreating indexes kernelmodule_author"
+	mastercursor.execute("create index slave.kernelmodule_author_index on kernelmodule_author(author)")
+	mastercursor.execute("create index slave.kernelmodule_author_checksum_index on kernelmodule_author(checksum)")
+
+	print "recreating indexes kernelmodule_description"
+	mastercursor.execute("create index slave.kernelmodule_description_index on kernelmodule_description(description)")
+	mastercursor.execute("create index slave.kernelmodule_description_checksum_index on kernelmodule_description(checksum)")
+
+	print "recreating indexes kernelmodule_firmware"
+	mastercursor.execute("create index slave.kernelmodule_firmware_index on kernelmodule_firmware(firmware)")
+	mastercursor.execute("create index slave.kernelmodule_firmware_checksum_index on kernelmodule_firmware(checksum)")
+
+	print "recreating indexes kernelmodule_license"
+	mastercursor.execute("create index slave.kernelmodule_license_index on kernelmodule_license(license)")
+	mastercursor.execute("create index slave.kernelmodule_license_checksum_index on kernelmodule_license(checksum)")
+
+	print "recreating indexes kernelmodule_parameter"
+	mastercursor.execute("create index slave.kernelmodule_parameter_index on kernelmodule_parameter(paramname)")
+	mastercursor.execute("create index slave.kernelmodule_parameter_checksum_index on kernelmodule_parameter(checksum)")
+
+	print "recreating indexes kernel_parameter_description"
+	mastercursor.execute("create index slave.kernelmodule_parameter_description_index on kernelmodule_parameter_description(description)")
+	mastercursor.execute("create index slave.kernelmodule_parameter_description_checksum_index on kernelmodule_parameter_description(checksum)")
+
+	print "recreating indexes kernelmodule_version"
+	mastercursor.execute("create index slave.kernelmodule_version_index on kernelmodule_version(version)")
+	mastercursor.execute("create index slave.kernelmodule_version_checksum_index on kernelmodule_version(checksum)")
+
+	print "recreating indexes kernel_configuration"
+	mastercursor.execute("create index slave.kernel_configuration_filename on kernel_configuration(filename)")
+
+	print "recreating indexes misc"
+	mastercursor.execute("create index if not exists slave.misc_checksum_index on misc(checksum)")
+	mastercursor.execute("create index if not exists slave.misc_name_index on misc(name)")
+
+	print "recreating indexes hashconversion"
+	mastercursor.execute("create index slave.hashconversion_sha256_index on hashconversion(sha256)")
+	mastercursor.execute("create index slave.hashconversion_md5_index on hashconversion(md5)")
+	mastercursor.execute("create index slave.hashconversion_sha1_index on hashconversion(sha1)")
+	mastercursor.execute("create index slave.hashconversion_crc32_index on hashconversion(crc32)")
 
 	mastercursor.close()
 	masterconn.close()
