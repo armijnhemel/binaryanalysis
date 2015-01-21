@@ -133,7 +133,7 @@ def main(argv):
 	print "creating new kernelmodule_description table"
 	mastercursor.execute("create table slave.kernelmodule_description(checksum text, modulename text, description text)")
 	print "copying all kernelmodule_description data"
-	mastercursor.execute("insert into slave.kernelmodule_description select sha256, modulename, author from kernelmodule_description")
+	mastercursor.execute("insert into slave.kernelmodule_description select sha256, modulename, description from kernelmodule_description")
 
 	print "creating new kernelmodule_firmware table"
 	mastercursor.execute("create table slave.kernelmodule_firmware(checksum text, modulename text, firmware text)")
@@ -174,8 +174,8 @@ def main(argv):
 	print "copying all hashconversion data"
 	mastercursor.execute("insert into slave.hashconversion select sha256, md5, sha1, crc32 from hashconversion")
 
-	print "vacuuming"
-	mastercursor.execute("vacuum")
+	#print "vacuuming"
+	#mastercursor.execute("vacuum")
 
 	print "recreating indexes processed"
 	mastercursor.execute('''create index if not exists slave.processed_index on processed(package, version)''')
@@ -183,7 +183,7 @@ def main(argv):
 	mastercursor.execute('''create index if not exists slave.processed_origin on processed(origin)''')
 
 	print "recreating indexes processed_file"
-	mastercursor.execute('''create index if not exists slave.processedfile_package_sha256_index on processed_file(checksum, package)''')
+	mastercursor.execute('''create index if not exists slave.processedfile_package_checksum_index on processed_file(checksum, package)''')
 	mastercursor.execute('''create index if not exists slave.processedfile_package_version_index on processed_file(package, version)''')
 
 	print "recreating indexes extracted_string"
