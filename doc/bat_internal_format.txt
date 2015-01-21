@@ -65,7 +65,7 @@ The current ranking scan stores its results as a tuple with the following elemen
 
 * string identifier results: a dictionary with various results for matching string identifiers
 * function name results: a dictionary with various results for matching function names
-* variable results: a dictionary with various results for matching variable names
+* variable name results: a dictionary with various results for matching variable names
 * language: language family that BAT thinks the source code files (that were used to generate the binary) are part of.
 
 Please note that this format will likely change in the future.
@@ -106,6 +106,17 @@ The unique matches data stored in 'reports' is a list of tuples. The tuple has t
   * a checksum (SHA256)
   * line number of the match
   * a list of tuples (package version, file inside the package)
+
+Data for function name results (ranking scan):
+
+The function name results dictionary has the following keys. Sometimes these keys are missing (meaning: no results).
+
+* uniquepackages: {}
+* totalnames: number of function names that was extracted from the dynamic linking section of the binary
+* namesmatched: number of function names that were matched with function names in the database
+* uniquematches: number of unique matches
+* versionresults:
+* packages:
 
 Data used for generating matching piecharts
 
