@@ -115,8 +115,16 @@ The function name results dictionary has the following keys. Sometimes these key
 * totalnames: number of function names that was extracted from the dynamic linking section of the binary
 * namesmatched: number of function names that were matched with function names in the database
 * uniquematches: number of unique matches
-* versionresults:
-* packages:
+* versionresults: dictionary, packages as keys, values are lists of tuples with results.
+* packages: dictionary, packages as keys, values are a list of tuples (version, number of unique results)
+
+The  matches data stored in 'versionrsults' is a list of tuples. The tuple has two elements:
+
+* function name identifier: the actual matched function name
+* a list of tuples with match information. Each tuple consists of:
+  * a checksum (SHA256)
+  * line number of the match
+  * a list of tuples (package version, file inside the package)
 
 Data used for generating matching piecharts
 
