@@ -111,16 +111,34 @@ Data for function name results (ranking scan):
 
 The function name results dictionary has the following keys. Sometimes these keys are missing (meaning: no results).
 
-* uniquepackages: {}
+* uniquepackages: dictionary, packages as keys, values are list of function names unique for that package. This data can also be retrieved by analysing "versionresults"
 * totalnames: number of function names that was extracted from the dynamic linking section of the binary
 * namesmatched: number of function names that were matched with function names in the database
-* uniquematches: number of unique matches
-* versionresults: dictionary, packages as keys, values are lists of tuples with results.
+* uniquematches: number of unique matches, can also be retrieved by analysing either "uniquepackages" or "versionresults"
+* versionresults: dictionary, packages as keys, values are lists of tuples with results. This data can also be retrieved by analysing "versionresults".
 * packages: dictionary, packages as keys, values are a list of tuples (version, number of unique results)
 
-The  matches data stored in 'versionrsults' is a list of tuples. The tuple has two elements:
+The matches data stored in 'versionresults' is a list of tuples. The tuple has two elements:
 
 * function name identifier: the actual matched function name
+* a list of tuples with match information. Each tuple consists of:
+  * a checksum (SHA256)
+  * line number of the match
+  * a list of tuples (package version, file inside the package)
+
+Data for version name results (ranking scan):
+
+The variable name results dictionary has the following keys:
+
+* uniquepackages: dictionary, packages as keys, values are list of varibale names unique for that package. This data can also be retrieved by analysing "versionresults"
+* totalnames: number of function names that was extracted from the dynamic linking section of the binary
+* allvariables: dictionary, variable names as keys, list of packages (no version number) in which they occur as values.
+* versionresults: dictionary, packages as keys, values are lists of tuples with results. This data can also be retrieved by analysing "versionresults".
+* packages: dictionary, packages as keys, values are a list of tuples (version, number of unique results)
+
+The matches data stored in 'versionresults' is a list of tuples. The tuple has two elements:
+
+* variable name identifier: the actual matched variable name
 * a list of tuples with match information. Each tuple consists of:
   * a checksum (SHA256)
   * line number of the match
