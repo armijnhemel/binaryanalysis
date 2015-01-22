@@ -599,17 +599,14 @@ def readconfig(config):
 	aggregatescans = []
 	batconf = {}
 	tmpbatconfdebug = set()
-	## first make a copy of the environment so
-	## every scan has the same environment
-	scanenv = os.environ.copy()
 
-	## clean up the environment a bit to reduce data passed around
-	unneededenvs = ["KDE_IS_PRELINKED", "LESSOPEN", "SSH_CLIENT", "TERMCAP",
-                        "KDEDIRS", "LS_COLORS", "QT_PLUGIN_PATH", "MAIL",
-                        "QT_GRAPHICSSYSTEM_CHECKED"]
-	for s in unneededenvs:
-		if s in scanenv:
-			del scanenv[s]
+	## first create an environment so every scan has the same one
+	oldenv = os.environ.copy()
+	scanenv = {}
+
+	for i in ['PATH', 'PWD', 'HOME', 'HOSTNAME', 'LANG', 'USER']:
+		scanenv[i] = copy.deepcopy(oldenv[i])
+
 	for section in config.sections():
 		if section == "batconfig":
 			try:
