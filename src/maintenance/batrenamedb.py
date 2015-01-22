@@ -97,28 +97,28 @@ def main(argv):
 
 	mastercursor.execute("attach '%s' as slave" % options.newmasterdb)
 	print "creating new processed table"
-	mastercursor.execute('''create table slave.processed (package text, version text, filename text, origin text, checksum text)''')
+	mastercursor.execute("create table slave.processed (package text, version text, filename text, origin text, checksum text)")
 	print "copying all processed data"
 	mastercursor.execute("insert into slave.processed select package, version, filename, origin, sha256 from processed")
 
 	print "creating new processed_file table"
-	mastercursor.execute('''create table slave.processed_file (package text, version text, filename text, checksum text)''')
+	mastercursor.execute("create table slave.processed_file (package text, version text, filename text, checksum text)")
 	print "copying all processed_file data"
 	mastercursor.execute("insert into slave.processed_file select package, version, filename, sha256 from processed_file")
 	print "creating new extracted_string table"
-	mastercursor.execute('''create table if not exists slave.extracted_string(stringidentifier text, checksum text, language text, linenumber int)''')  
+	mastercursor.execute("create table if not exists slave.extracted_string(stringidentifier text, checksum text, language text, linenumber int)")  
 	print "copying all extracted_file data"
 	mastercursor.execute("insert into slave.extracted_string select programstring, sha256, language, linenumber from extracted_file")
 
 	print "creating new extracted_function table"
-	mastercursor.execute('''create table if not exists slave.extracted_function (checksum text, functionname text, language text, linenumber int)''')
+	mastercursor.execute("create table if not exists slave.extracted_function (checksum text, functionname text, language text, linenumber int)")
 	print "copying all extracted_function data"
 	mastercursor.execute("insert into slave.extracted_function select sha256, functionname, language, linenumber from extracted_function")
 
 	print "creating new extracted_name table"
-	mastercursor.execute('''create table if not exists slave.extracted_name (checksum text, name text, type text, language text, linenumber int)''')
+	mastercursor.execute("create table if not exists slave.extracted_name (checksum text, name text, type text, language text, linenumber int)")
 	print "copying all extracted_name data"
-	mastercursor.execute("insert into slave.extracted_name select sha256, name, language, type, linenumber from extracted_name")
+	mastercursor.execute("insert into slave.extracted_name select sha256, name, type, language, linenumber from extracted_name")
 
 	print "creating new kernelmodule_alias"
 	mastercursor.execute("create table slave.kernelmodule_alias(checksum text, modulename text, alias text)")
@@ -178,29 +178,29 @@ def main(argv):
 	#mastercursor.execute("vacuum")
 
 	print "recreating indexes processed"
-	mastercursor.execute('''create index if not exists slave.processed_index on processed(package, version)''')
-	mastercursor.execute('''create index if not exists slave.processed_checksum on processed(checksum)''')
-	mastercursor.execute('''create index if not exists slave.processed_origin on processed(origin)''')
+	mastercursor.execute("create index if not exists slave.processed_index on processed(package, version)"
+	mastercursor.execute("create index if not exists slave.processed_checksum on processed(checksum)"
+	mastercursor.execute("create index if not exists slave.processed_origin on processed(origin)"
 
 	print "recreating indexes processed_file"
-	mastercursor.execute('''create index if not exists slave.processedfile_package_checksum_index on processed_file(checksum, package)''')
-	mastercursor.execute('''create index if not exists slave.processedfile_package_version_index on processed_file(package, version)''')
+	mastercursor.execute("create index if not exists slave.processedfile_package_checksum_index on processed_file(checksum, package)"
+	mastercursor.execute("create index if not exists slave.processedfile_package_version_index on processed_file(package, version)"
 
 	print "recreating indexes extracted_string"
-	mastercursor.execute('''create index if not exists slave.stringidentifier_index on extracted_string(stringidentifier)''')
-	mastercursor.execute('''create index if not exists slave.extracted_hash on extracted_string(checksum)''')
-	mastercursor.execute('''create index if not exists slave.extracted_language on extracted_string(language);''')
+	mastercursor.execute("create index if not exists slave.stringidentifier_index on extracted_string(stringidentifier)"
+	mastercursor.execute("create index if not exists slave.extracted_hash on extracted_string(checksum)"
+	mastercursor.execute("create index if not exists slave.extracted_language on extracted_string(language);"
 
 	print "recreating indexes extracted_function"
-	mastercursor.execute('''create index if not exists slave.function_checksum_index on extracted_function(checksum);''')
-	mastercursor.execute('''create index if not exists slave.function_name_index on extracted_function(functionname)''')
-	mastercursor.execute('''create index if not exists slave.function_name_language on extracted_function(language);''')
+	mastercursor.execute("create index if not exists slave.function_checksum_index on extracted_function(checksum);"
+	mastercursor.execute("create index if not exists slave.function_name_index on extracted_function(functionname)"
+	mastercursor.execute("create index if not exists slave.function_name_language on extracted_function(language);"
 
 	print "recreating indexes extracted_name"
-	mastercursor.execute('''create index if not exists slave.name_checksum_index on extracted_name(checksum);''')
-	mastercursor.execute('''create index if not exists slave.name_name_index on extracted_name(name)''')
-	mastercursor.execute('''create index if not exists slave.name_type_index on extracted_name(type)''')
-	mastercursor.execute('''create index if not exists slave.name_language_index on extracted_name(language);''')
+	mastercursor.execute("create index if not exists slave.name_checksum_index on extracted_name(checksum)")
+	mastercursor.execute("create index if not exists slave.name_name_index on extracted_name(name)")
+	mastercursor.execute("create index if not exists slave.name_type_index on extracted_name(type)")
+	mastercursor.execute("create index if not exists slave.name_language_index on extracted_name(language)")
 
 	print "recreating indexes kernelmodule_alias"
 	mastercursor.execute("create index slave.kernelmodule_alias_index on kernelmodule_alias(alias)")
