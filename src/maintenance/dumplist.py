@@ -43,7 +43,7 @@ def main(argv):
 
 	## TODO: add some sanity checks for 'origin' first
 	if options.origin != None:
-		cursor.execute("select package, version, filename, origin from processed where origin=?", (options.origin,))
+		cursor.execute("select package, version, filename, origin, downloadurl from processed where origin=?", (options.origin,))
 	else:
 		cursor.execute("select package, version, filename, origin from processed")
 	res = cursor.fetchall()
@@ -53,7 +53,7 @@ def main(argv):
 		listfile = open(options.listfile, 'w')
 		for i in res:
 			(package, version, filename, origin) = i
-			listfile.write("%s\t%s\t%s\t%s\n" % (package, version, filename, origin))
+			listfile.write("%s\t%s\t%s\t%s\t%s\n" % (package, version, filename, origin, downloadurl))
 		listfile.flush()
 		listfile.close()
 
