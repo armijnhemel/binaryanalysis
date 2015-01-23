@@ -330,13 +330,13 @@ def scanLicenses(path, tags, blacklist=[], scanenv={}, scandebug=False, unpackte
                                 "http://www.gnu.org/copyleft/gpl.html"]
 
 	## identifiers specifically for GPLv2
-	licenseidentifiers['GPLv2'] = ["http://gnu.org/licenses/gpl-2.0.html", "http://www.gnu.org/licenses/old-licenses/gpl-2.0.html"]
+	licenseidentifiers['GPL-2.0'] = ["http://gnu.org/licenses/gpl-2.0.html", "http://www.gnu.org/licenses/old-licenses/gpl-2.0.html"]
 
 	## identifiers specifically for LGPLv2.1
-	licenseidentifiers['LGPLv2.1'] = ["http://gnu.org/licenses/old-licenses/lgpl-2.1.html"]
+	licenseidentifiers['LGPL-2.1'] = ["http://gnu.org/licenses/old-licenses/lgpl-2.1.html"]
 
 	## identifiers specifically for Apache 2.0
-	licenseidentifiers['Apache2.0'] = ["http://www.apache.org/licenses/LICENSE-2.0", "http://opensource.org/licenses/apache2.0.php"]
+	licenseidentifiers['Apache-2.0'] = ["http://www.apache.org/licenses/LICENSE-2.0", "http://opensource.org/licenses/apache2.0.php"]
 
 	## identifiers for MPL license
 	licenseidentifiers['MPL'] = ["http://www.mozilla.org/MPL/"]
@@ -360,10 +360,10 @@ def scanLicenses(path, tags, blacklist=[], scanenv={}, scandebug=False, unpackte
 	licenseidentifiers['OpenSSL'] = ["http://www.openssl.org/source/license.html"]
 
 	## identifiers specifically for Boost
-	licenseidentifiers['Boost'] = ["http://www.boost.org/LICENSE_1_0.txt", "http://pocoproject.org/license.html"]
+	licenseidentifiers['BSL-1.0'] = ["http://www.boost.org/LICENSE_1_0.txt", "http://pocoproject.org/license.html"]
 
 	## identifiers specifically for zlib
-	licenseidentifiers['zlib'] = ["http://www.zlib.net/zlib_license.html"]
+	licenseidentifiers['Zlib'] = ["http://www.zlib.net/zlib_license.html"]
 
 	## identifiers specifically for jQuery
 	licenseidentifiers['jQuery'] = ["http://jquery.org/license"]
