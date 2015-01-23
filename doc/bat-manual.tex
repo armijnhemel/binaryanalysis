@@ -840,6 +840,9 @@ packages from popular distributions in a database.
 archive.
 \item \texttt{findlibs.py} is for researching dynamically linked ELF files in
 the archive.
+\item \texttt{findsymbols.py} is for researching relationships between Linux
+kernel modules and the Linux kernel in the archive, specifically for the
+declared licenses and the license of symbols used.
 \item \texttt{fsmagic.py} contains identifiers of various file systems and
 compressed files, like magic headers and offsets for which might need to be
 corrected.
@@ -2488,6 +2491,13 @@ in the subdirectory \texttt{maintenance} in the BAT source tree.
 For the \texttt{findlibs} aggregate scan the \texttt{ELF\_SVG} parameter can be
 set to \texttt{1} to output the graphs in SVG format.
 
+\subsection{\texttt{findsymbols}}
+
+For the \texttt{findsymbols} aggregate scan the \texttt{KERNELSYMBOL\_SVG}
+parameter can be set to \texttt{1} to output the graphs in SVG format. The
+\texttt{KERNELSYMBOL\_CSV} parameter can be set to output a spreadsheet in
+Excel-format.
+
 \subsection{\texttt{generateimages}}
 
 The \texttt{generateimages} postrun scan has five optional parameters:
@@ -2638,6 +2648,7 @@ The order for pre-run scans is:
 \item \texttt{prunefiles} (disabled by default)
 \item \texttt{findduplicates}
 \item \texttt{findlibs}
+\item \texttt{findsymbols}
 \item \texttt{jars}, \texttt{kernelversions}
 \item \texttt{versionlicensecopyright}
 \item \texttt{generateimages}, \texttt{generatereports}
