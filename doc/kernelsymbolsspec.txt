@@ -1,0 +1,60 @@
+Visualising symbol relationships in the Linux kernel
+
+The Linux kernel supports dynamic module loading. Kernel modules sometimes need to invoke functions that live in another piece of kernel code. Like dynamically linking user space programs during compilation time a list of symbols that are needed by the module at runtime, as well as a list of symbols that are defined/exported, are recorded. During runtime these symbols are resolved.
+
+The Linux kernel developers have marked certain symbols as "for use by GPL licensed code only" to indicate that modules that use these symbols are expected to be GPLv2 (or compatible) licensed. Linux kernel modules that have a license that is not compatible with the GPLv2 license should not use these modules. Failure to comply can result in legal action by copyright holders, who wish to uphold the license requirements.
+
+The visualisation code presented here tries to visualise dependencies between symbols used and the license. It does so by extracting symbols from the Linux kernel modules and kernel images, resolving symbols, querying a database with symbols extracted from Linux kernel source code and mapping the value of the exported symbol with the declared license of the module. This way we can catch if a module that is declared proprietary is actually using a GPL symbol.
+
+EXPORT_SYMBOL and EXPORT_SYMBOL_GPL
+
+The mechanism used to export normal kernel symbols is EXPORT_SYMBOL(). The GPL only kernel symbols are exported using EXPORT_SYMBOL_GPL(). If the license of a module is not GPL compatible it will not be able to call GPL only symbols. Sometimes vendors change EXPORT_SYMBOL_GPL() to EXPORT_SYMBOL() to work around these restrictions. The visualisation code can help catch these cases.
+
+Steps for visualising
+
+1. extract symbols from Linux kernel modules
+
+The symbols in Linux kernel modules can be found in the symbol table of the ELF file. Using the command:
+
+$ readelf -W --syms
+
+this information can be extracted and processed.
+
+2. extract symbols from the main Linux kernel image.
+
+If the Linux kernel is an ELF image then symbols can be obtained in a similar way as for Linux kernel modules. If the Linux kernel image is not an ELF image then some extra work has to be done. By looking for a known symbol that can be found in all kernel images (such as "loops_per_jiffy") and searching around it (kernel symbols are separated by NUL characters) a list of symbols can be obtained.
+
+3. extract version information from each module and each kernel image. During runtime typically the modules and main kernel image need to have the same version. Although sometimes modules with different versions are "forced" to load into the running kernel this is rare.
+
+4. find out for each module where each needed symbol is defined. Some filtering is done based on the versions extracted from step 3. It might turn out that some symbols are not defined anywhere, which is an error that should be reported.
+
+5. for each symbol query the database to see what its type is. The result can be one of three things: normal kernel symbol, gpl only kernel symbol, or unknown. The unknown symbols indicate either out of tree kernel code or an omission in the database. The version extracted in step 3 is used because symbols can change over time (usually from normal kernel symbol to gpl only kernel symbol).
+
+6. extract the declared license from each module using
+
+$ modinfo -l /path/to/kernelmodule
+
+7. Create a graph, checking the type for each symbol and seeing if there is a mismatch between GPL symbols that are needed and a declared license that is not GPL compatible.
+
+
+Installing the kernel visualisation code in BAT
+
+The code should be copied into the directory with other BAT modules with the right ownership and permissions (rest as the other files). This can either be done manually, or by rebuilding the BAT binary package (see BAT manual for instructions).
+
+The following section should be added to the BAT configuration file:
+
+[findsymbols]
+type        = aggregate
+module      = bat.kernelsymbols
+method      = findsymbols
+envvars     = BAT_DB=/gpl/master/master.sqlite3:KERNELSYMBOL_SVG=1:KERNELSYMBOL_DEPENDENCIES=1
+noscan      = text:xml:graphics:pdf:audio:video:mp4
+enabled     = yes
+storetarget = images
+storedir    = /tmp/images
+storetype   = -graph.png:-graph.svg
+cleanup     = yes
+priority    = 5
+
+
+GraphViz should be installed as a dependency. Since there are buggy versions of GraphViz in older versions of Debian and Ubuntu either a recent version of Fedora (20 being the latest at time of writing this documentation), or Ubuntu (14.04 LTS being the latest at time of writing this documentation) should be used.
