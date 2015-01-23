@@ -45,7 +45,7 @@ def main(argv):
 	if options.origin != None:
 		cursor.execute("select package, version, filename, origin, downloadurl from processed where origin=?", (options.origin,))
 	else:
-		cursor.execute("select package, version, filename, origin from processed")
+		cursor.execute("select package, version, filename, origin, downloadurl from processed")
 	res = cursor.fetchall()
 	cursor.close()
 
