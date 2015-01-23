@@ -639,7 +639,7 @@ def unpack_verify(filedir, filename):
 
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
-def unpack_getstrings(filedir, package, version, filename, origin, checksums, dbpath, cleanup, license, copyrights, security, pool, ninkacomments, licensedb, securitydb, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
+def unpack_getstrings(filedir, package, version, filename, origin, checksums, downloadurl, dbpath, cleanup, license, copyrights, security, pool, ninkacomments, licensedb, securitydb, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
 	## unpack the archive. If it fails, cleanup and return.
 	## TODO: make temporary dir configurable
 	temporarydir = unpack(filedir, filename, unpackdir)
@@ -813,7 +813,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, db
 		if sqlres != []:
 			## Add the file to the database: name of archive, sha256, packagename and version
 			## This is to be able to just update the database instead of recreating it.
-			c.execute('''insert into processed (package, version, filename, origin, checksum) values (?,?,?,?,?)''', (package, version, filename, origin, filehash))
+			c.execute('''insert into processed (package, version, filename, origin, checksum, downloadurl) values (?,?,?,?,?,?)''', (package, version, filename, origin, filehash, downloadurl))
 			process_extra_hashes = set()
 
 			c.execute('''select sha256 from hashconversion where sha256=? LIMIT 1''', (filehash,))
@@ -825,7 +825,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, db
 					query = "update hashconversion set %s='%s' where sha256=?" % (k, checksums[k])
 					c.execute(query, (filehash,))
 		elif batarchive and not emptyarchive:
-			c.execute('''insert into processed (package, version, filename, origin, checksum) values (?,?,?,?,?)''', (package, version, filename, origin, filehash))
+			c.execute('''insert into processed (package, version, filename, origin, checksum, download) values (?,?,?,?,?,?)''', (package, version, filename, origin, filehash, downloadurl))
 	conn.commit()
 	c.close()
 	conn.close()
@@ -985,7 +985,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	miscfiles = filter(lambda x: x[4] == None, scanfile_result)
 	scanfile_result = filter(lambda x: x[4] != None, scanfile_result)
 
-	ninkaversion = "1.2-test"
+	ninkaversion = "1.3rc1"
 	insertfiles = []
 	tmpsha256s = set()
 	filehashes = {}
@@ -2073,7 +2073,7 @@ def extractsourcestrings(filename, filedir, language, package):
 			lines.append(l[1:-1])
 	return (sqlres, moduleres)
 
-def checkalreadyscanned((filedir, package, version, filename, origin, batarchive, dbpath, checksum, archivechecksums)):
+def checkalreadyscanned((filedir, package, version, filename, origin, downloadurl, batarchive, dbpath, checksum, archivechecksums)):
 	resolved_path = os.path.join(filedir, filename)
 	try:
 		os.stat(resolved_path)
@@ -2123,7 +2123,7 @@ def checkalreadyscanned((filedir, package, version, filename, origin, batarchive
 	if len(c.fetchall()) != 0:
 		res = None
 	else:
-		res = (package, version, filename, origin, filehash, batarchive)
+		res = (package, version, filename, origin, filehash, downloadurl, batarchive)
 	c.close()
 	conn.close()
 
@@ -2353,7 +2353,7 @@ def main(argv):
 		p2 = subprocess.Popen(["/usr/share/fossology/copyright/agent/copyright", "-h"], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 		(stanout, stanerr) = p2.communicate()
 		if "FATAL" in stanout or "FATAL" in stanerr:
-			print >>sys.stderr, "ERROR: copyright extraction enabled, but FOSSology not running"
+			print >>sys.stderr, "ERROR: copyright extraction enabled, but FOSSology not running (start PostgreSQL?)"
 			sys.exit(1)
 		if licensedb == None:
 			parser.error("Copyright scanning enabled, but no path to copyright database supplied")
@@ -2456,7 +2456,7 @@ def main(argv):
         try:
 		## Keep an archive of which packages and archive files (tar.gz, tar.bz2, etc.) we've already
 		## processed, so we don't repeat work.
-		c.execute('''create table if not exists processed (package text, version text, filename text, origin text, checksum text)''')
+		c.execute('''create table if not exists processed (package text, version text, filename text, origin text, checksum text, downloadurl text)''')
 		c.execute('''create index if not exists processed_index on processed(package, version)''')
 		c.execute('''create index if not exists processed_checksum on processed(checksum)''')
 		c.execute('''create index if not exists processed_origin on processed(origin)''')
@@ -2624,6 +2624,7 @@ def main(argv):
 	## TODO: do all kinds of checks here
 	for unpackfile in filelist:
 		try:
+			downloadurl = None
 			unpacks = unpackfile.strip().split()
 			if len(unpacks) == 4:
 				(package, version, filename, origin) = unpacks
@@ -2634,7 +2635,7 @@ def main(argv):
 					batarchive = True
 				else:
 					batarchive = False
-			pkgmeta.append((options.filedir, package, version, filename, origin, batarchive, masterdatabase, checksums.get(filename, None), archivechecksums))
+			pkgmeta.append((options.filedir, package, version, filename, origin, downloadurl, batarchive, masterdatabase, checksums.get(filename, None), archivechecksums))
 		except Exception, e:
 			# oops, something went wrong
 			print >>sys.stderr, e
@@ -2650,7 +2651,7 @@ def main(argv):
 	## first loop through everything to filter out all the files that don't
 	## need processing, plus moving any batarchives to the end of the queue
 	for i in res:
-		(package, version, filename, origin, filehash, batarchive) = i
+		(package, version, filename, origin, filehash, downloadurl, batarchive) = i
 		if filehash in blacklistsha256sums:
 			continue
 		## no need to process some files twice, even if they
@@ -2666,10 +2667,10 @@ def main(argv):
 	res = resordered + batarchives
 	for i in res:
 		try:
-			(package, version, filename, origin, filehash, batarchive) = i
+			(package, version, filename, origin, filehash, downloadurl, batarchive) = i
 			if package != oldpackage:
 				oldres = []
-			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums[filename], masterdatabase, cleanup, license, copyrights, security, pool, ninkacomments, licensedb, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
+			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums[filename], downloadurl, masterdatabase, cleanup, license, copyrights, security, pool, ninkacomments, licensedb, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
 			if unpackres != None:
 				oldres = map(lambda x: x[2], unpackres)
 				oldpackage = package
