@@ -1,3 +1,12 @@
+2015-01-23:
+* add bat/kernelsymbols.py, a module to research and display relationships
+between Linux kernel images and modules, specifically for GPL licensed kernel
+symbols.
+
+2015-01-20:
+* rework database renaming script slightly: don't drop tables, but merely copy
+data into a separate database. This saves a lot of I/O and waiting time.
+
 2015-01-19:
 * fix database renaming script, rename tables and various indexes, sync rest
 of the code to reflect the changes
