@@ -45,6 +45,8 @@ def encryptedZipSetup(scanenv, debug=False):
 	## first check if there is a database defined
 	if not scanenv.has_key('BAT_DB'):
 		return (False, None)
+	if not os.path.exists(scanenv['BAT_DB']):
+		return (False, None)
 	c = sqlite3.connect(scanenv['BAT_DB'])
 	cursor = c.cursor()
 
