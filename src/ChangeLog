@@ -2,6 +2,8 @@
 * add bat/kernelsymbols.py, a module to research and display relationships
 between Linux kernel images and modules, specifically for GPL licensed kernel
 symbols.
+* bat/checks.py: convert as many license names as possible to SPDX notation
+* createdb.py: start recording downloadurl, needs more work
 
 2015-01-20:
 * rework database renaming script slightly: don't drop tables, but merely copy
