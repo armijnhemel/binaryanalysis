@@ -97,7 +97,7 @@ def main(argv):
 
 	mastercursor.execute("attach '%s' as slave" % options.newmasterdb)
 	print "creating new processed table"
-	mastercursor.execute("create table slave.processed (package text, version text, filename text, origin text, checksum text)")
+	mastercursor.execute("create table slave.processed (package text, version text, filename text, origin text, checksum text, downloadurl text)")
 	print "copying all processed data"
 	mastercursor.execute("insert into slave.processed select package, version, filename, origin, sha256 from processed")
 
