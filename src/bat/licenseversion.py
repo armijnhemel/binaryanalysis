@@ -2262,29 +2262,35 @@ def licensesetup(scanenv, debug=False):
 	## the right schema remove it from the configuration
 	if scanenv.get('BAT_RANKING_LICENSE', 0) == '1' or scanenv.get('BAT_RANKING_COPYRIGHT', 0) == 1:
 		if scanenv.get('BAT_LICENSE_DB') != None:
-			try:
-				licenseconn = sqlite3.connect(scanenv.get('BAT_LICENSE_DB'))
-				licensecursor = licenseconn.cursor()
-				licensecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='licenses';")
-				if licensecursor.fetchall() == []:
-					if newenv.has_key('BAT_LICENSE_DB'):
-						del newenv['BAT_LICENSE_DB']
-					if newenv.has_key('BAT_RANKING_LICENSE'):
-						del newenv['BAT_RANKING_LICENSE']
-				## also check if copyright information exists
-				licensecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='extracted_copyright';")
-				if licensecursor.fetchall() == []:
-					if newenv.has_key('BAT_RANKING_COPYRIGHT'):
-						del newenv['BAT_RANKING_COPYRIGHT']
-				licensecursor.close()
-				licenseconn.close()
-			except:
+			if not os.path.exists(scanenv.get('BAT_LICENSE_DB')):
 				if newenv.has_key('BAT_LICENSE_DB'):
 					del newenv['BAT_LICENSE_DB']
 				if newenv.has_key('BAT_RANKING_LICENSE'):
 					del newenv['BAT_RANKING_LICENSE']
-				if newenv.has_key('BAT_RANKING_COPYRIGHT'):
-					del newenv['BAT_RANKING_COPYRIGHT']
+			else:
+				try:
+					licenseconn = sqlite3.connect(scanenv.get('BAT_LICENSE_DB'))
+					licensecursor = licenseconn.cursor()
+					licensecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='licenses';")
+					if licensecursor.fetchall() == []:
+						if newenv.has_key('BAT_LICENSE_DB'):
+							del newenv['BAT_LICENSE_DB']
+						if newenv.has_key('BAT_RANKING_LICENSE'):
+							del newenv['BAT_RANKING_LICENSE']
+					## also check if copyright information exists
+					licensecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='extracted_copyright';")
+					if licensecursor.fetchall() == []:
+						if newenv.has_key('BAT_RANKING_COPYRIGHT'):
+							del newenv['BAT_RANKING_COPYRIGHT']
+					licensecursor.close()
+					licenseconn.close()
+				except:
+					if newenv.has_key('BAT_LICENSE_DB'):
+						del newenv['BAT_LICENSE_DB']
+					if newenv.has_key('BAT_RANKING_LICENSE'):
+						del newenv['BAT_RANKING_LICENSE']
+					if newenv.has_key('BAT_RANKING_COPYRIGHT'):
+						del newenv['BAT_RANKING_COPYRIGHT']
 	## cleanup
 	c.close()
 	conn.close()
