@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2011-2013 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2011-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -18,11 +18,21 @@ from optparse import OptionParser
 ## where extension is tar.gz, tar.bz2, tar.xz, tgz, zip, tbz2, etc.
 def generatelist(filedir, origin):
 	files = os.walk(filedir)
+	downloadurls = {}
+	if os.path.exists(os.path.join(filedir, "DOWNLOADURL")):
+		urls = map(lambda x: x.strip(), open(os.path.join(filedir, "DOWNLOADURL")).readlines())
+		for ur in urls:
+			filename = ur.rsplit('/', 1)[-1]
+			downloadurls[filename] = ur
 	try:
         	while True:
 			i = files.next()
 			for p in i[2]:
 				if p == "LIST":
+					continue
+				if p == "SHA256SUM":
+					continue
+				if p == "DOWNLOADURL":
 					continue
 				## first determine things like the extension
 				res = p.rsplit('.', 1)
@@ -39,7 +49,7 @@ def generatelist(filedir, origin):
 						(packageversion, extension, compression) = p.rsplit('.', 2)
 					except:
 						continue
-					if not (extension in ["tar"] and compression in ["gz", "bz2", "xz"]):
+					if not (extension in ["tar"] and compression in ["gz", "bz2", "xz", "lz", "lzma", "Z"]):
 						continue
 				## exceptions go here
 				if "wireless_tools" in packageversion:
@@ -53,8 +63,11 @@ def generatelist(filedir, origin):
 						if len(res) == 1:
 							print >>sys.stderr, "can't split %s -- add manually" % (p,)
 							continue
+				downloadurl = ""
 				(package, version) = res
-				print "%s\t%s\t%s\t%s" % (package, version, p, origin)
+				if p in downloadurls:
+					downloadurl = downloadurls[p]
+				print "%s\t%s\t%s\t%s\t%s" % (package, version, p, origin, downloadurl)
 				
 	except Exception, e:
 		pass
