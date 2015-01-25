@@ -2629,8 +2629,17 @@ def main(argv):
 			if len(unpacks) == 4:
 				(package, version, filename, origin) = unpacks
 				batarchive = False
-			else:
-				(package, version, filename, origin, bat) = unpacks
+			## temporary hack to allow two formats to exist next to eachother.
+			## Will be removed in BAT 21.
+			elif len(unpacks) == 5:
+				(package, version, filename, origin, fifthelement) = unpacks
+				if fifthelement == 'batarchive':
+					batarchive = True
+				else:
+					batarchive = False
+					downloadurl = fifthelement
+			elif len(unpacks) == 6:
+				(package, version, filename, origin, downloadurl, bat) = unpacks
 				if bat == 'batarchive':
 					batarchive = True
 				else:
