@@ -2620,31 +2620,27 @@ def main(argv):
 				continue
 			(archivefilename, origchecksum, origfilename) = checksumsplit
 			archivechecksums[archivefilename] = (origchecksum, origfilename)
+	downloadurls = {}
+	if os.path.exists(os.path.join(options.filedir, "DOWNLOADURL")):
+		downloadlines = map(lambda x: x.strip(), open(os.path.join(options.filedir, "DOWNLOADURL")).readlines())
+		for d in downloadlines:
+			archivefilename = d.rsplit('/', 1)[-1]
+			downloadurls[archivefilename] = d
 
 	## TODO: do all kinds of checks here
 	for unpackfile in filelist:
 		try:
-			downloadurl = None
 			unpacks = unpackfile.strip().split()
 			if len(unpacks) == 4:
 				(package, version, filename, origin) = unpacks
 				batarchive = False
-			## temporary hack to allow two formats to exist next to eachother.
-			## Will be removed in BAT 21.
 			elif len(unpacks) == 5:
-				(package, version, filename, origin, fifthelement) = unpacks
-				if fifthelement == 'batarchive':
-					batarchive = True
-				else:
-					batarchive = False
-					downloadurl = fifthelement
-			elif len(unpacks) == 6:
-				(package, version, filename, origin, downloadurl, bat) = unpacks
+				(package, version, filename, origin, bat) = unpacks
 				if bat == 'batarchive':
 					batarchive = True
 				else:
 					batarchive = False
-			pkgmeta.append((options.filedir, package, version, filename, origin, downloadurl, batarchive, masterdatabase, checksums.get(filename, None), archivechecksums))
+			pkgmeta.append((options.filedir, package, version, filename, origin, downloadurls.get(filename,None), batarchive, masterdatabase, checksums.get(filename, None), archivechecksums))
 		except Exception, e:
 			# oops, something went wrong
 			print >>sys.stderr, e

@@ -18,12 +18,6 @@ from optparse import OptionParser
 ## where extension is tar.gz, tar.bz2, tar.xz, tgz, zip, tbz2, etc.
 def generatelist(filedir, origin):
 	files = os.walk(filedir)
-	downloadurls = {}
-	if os.path.exists(os.path.join(filedir, "DOWNLOADURL")):
-		urls = map(lambda x: x.strip(), open(os.path.join(filedir, "DOWNLOADURL")).readlines())
-		for ur in urls:
-			filename = ur.rsplit('/', 1)[-1]
-			downloadurls[filename] = ur
 	try:
         	while True:
 			i = files.next()
@@ -63,11 +57,8 @@ def generatelist(filedir, origin):
 						if len(res) == 1:
 							print >>sys.stderr, "can't split %s -- add manually" % (p,)
 							continue
-				downloadurl = ""
 				(package, version) = res
-				if p in downloadurls:
-					downloadurl = downloadurls[p]
-				print "%s\t%s\t%s\t%s\t%s" % (package, version, p, origin, downloadurl)
+				print "%s\t%s\t%s\t%s\t" % (package, version, p, origin)
 				
 	except Exception, e:
 		pass
