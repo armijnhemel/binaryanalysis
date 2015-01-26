@@ -81,6 +81,8 @@ def main(argv):
 					continue
 				if filename == 'LIST':
 					continue
+				if filename == 'DOWNLOADURL':
+					continue
 				## sha256 is always the first hash and second entry
 				hashentry = entries[1]
 				filetohash[filename] = {}
