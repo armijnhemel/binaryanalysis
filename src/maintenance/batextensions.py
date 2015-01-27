@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 ## Binary Analysis Tool
-## Copyright 2009-2014 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2009-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 ## list of extensions, plus what language they should be mapped to
@@ -31,6 +31,7 @@ extensions = {'.c'      : 'C',
               '.js'     : 'JavaScript',
               '.php'    : 'PHP',
               '.py'     : 'Python',
+              '.rb'     : 'Ruby',
               '.patch'  : 'patch',
               '.diff'   : 'patch',
              }
