@@ -271,8 +271,12 @@ def main(argv):
 	print "outputting hashes to %s" % outputdir
 	sys.stdout.flush()
 
+	uniquehashes = set()
 	for r in res:
 		(filename, filehash) = r
+		if filehash in uniquehashes:
+			continue
+		uniquehashes.add(filehash)
 		if options.update and os.path.exists(os.path.join(outputdir, "%s.bz2" % filehash)):
 			continue
 		unpackres = grabhash(options.filedir, filename, filehash, pool, extrahashes, options.unpackdir)
@@ -299,7 +303,7 @@ def main(argv):
 				manifestfile.write("%s\t%s\n" % (os.path.join(u[0], u[1]), hashesstring))
 		manifestfile.close()
 	pool.terminate()
-	print "%d hashes were written to %s" % (len(res), outputdir)
+	print "%d hashes were written to %s" % (len(uniquehashes), outputdir)
 	sys.stdout.flush()
 
 if __name__ == "__main__":
