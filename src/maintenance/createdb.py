@@ -1338,7 +1338,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		updatefile.close()
 	for i in insertfiles:
 		filehash = i[1]['sha256']
-		cursor.execute('''insert into processed_file (package, version, filename, checksum) values (?,?,?,?)''', (package, version, i[0], filehash))
+		cursor.execute('''insert into processed_file (package, version, pathname, checksum, filename) values (?,?,?,?,?)''', (package, version, i[0], filehash, os.path.basename(i[0])))
 		if len(i[1]) != 1:
 			cursor.execute('''select sha256 from hashconversion where sha256=? LIMIT 1''', (filehash,))
 			if len(cursor.fetchall()) == 0:
@@ -1381,7 +1381,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 				continue
 			if infiles:
 				(archivepath, archivechecksum, archiveversion) = i.strip().split('\t')
-				cursor.execute('''insert into processed_file (package, version, filename, checksum) values (?,?,?,?)''', (package, version, archivepath, archivechecksum))
+				cursor.execute('''insert into processed_file (package, version, pathname, checksum, filename) values (?,?,?,?,?)''', (package, version, archivepath, archivechecksum, os.path.basename(archivepath)))
 		conn.commit()
 	return (scanfile_result)
 
@@ -2468,9 +2468,10 @@ def main(argv):
 
 		## Since there is a lot of duplication inside source packages we store strings per checksum
 		## which we can later link with files
-		c.execute('''create table if not exists processed_file (package text, version text, filename text, checksum text)''')
+		c.execute('''create table if not exists processed_file (package text, version text, pathname text, checksum text, filename text)''')
 		c.execute('''create index if not exists processedfile_package_checksum_index on processed_file(checksum, package)''')
 		c.execute('''create index if not exists processedfile_package_version_index on processed_file(package, version)''')
+		c.execute('''create index if not exists processedfile_filename_index on processed_file(filename)''')
 		## TODO: use analyze processedfile_package_version_index and processedfile_package_checksum_index
 
 		## Store the extracted strings per checksum, not per (package, version, filename).
@@ -2529,6 +2530,15 @@ def main(argv):
 		c.execute('''create index if not exists kernelmodule_parameter_description_checksum_index on kernelmodule_parameter_description(checksum)''')
 		c.execute('''create index if not exists kernelmodule_version_checksum_index on kernelmodule_version(checksum)''')
 
+		## keep information specifically about for files
+		c.execute('''create table if not exists rpm(rpmname text, checksum text, downloadurl text)''')
+		c.execute('''create index if not exists rpm_checksum_index on rpm(checksum text)''')
+		c.execute('''create index if not exists rpm_rpmname_index on rpm(rpmname text)''')
+
+		## keep information about aliases of archives (different origins, etc.)
+		c.execute('''create table if not exists archivealias(checksum text, archivename text, origin text, downloadurl text)''')
+		c.execute('''create index if not exists archivealias_checksum_index on archivealias(checksum text)''')
+
 		## keep information about other files, such as media files, configuration files,
 		## and so on, for "circumstantial evidence"
 		c.execute('''create table if not exists misc(checksum text, name text)''')
@@ -2562,9 +2572,10 @@ def main(argv):
 			ninkac.close()
 			ninkaconn.close()
 		if scansecurity:
-			## Store the comments extracted by Ninka per checksum.
-			securityc.execute('''create table if not exists security (checksum text, securitybug text, linenumber int, function text, whitelist tinyint(1))''')
-			securityc.execute('''create index if not exists security_index on security(checksum);''')
+			securityc.execute('''create table if not exists security_cert(checksum text, securitybug text, linenumber int, function text, whitelist tinyint(1))''')
+			securityc.execute('''create index if not exists security_cert_checksum_index on security(checksum);''')
+			securityc.execute('''create table if not exists security_cve(checksum text, cve text)''')
+			securityc.execute('''create index if not exists security_cve_checksum_index on security(checksum);''')
 
 			securityconn.commit()
 			securityc.close()
