@@ -1,7 +1,7 @@
 #! /usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2014 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2014-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -29,7 +29,7 @@ def counthashes((db, packageversion, packageclones, ignorepackages)):
 	print >>sys.stderr, "hashing %s, %s" % packageversion
 	conn = sqlite3.connect(db)
 	cursor = conn.cursor()
-	cursor.execute("select distinct sha256 from processed_file where package=? and version=?", packageversion)
+	cursor.execute("select distinct checksum from processed_file where package=? and version=?", packageversion)
 	sha256 = cursor.fetchall()
 	cursor.close()
 	conn.close()
@@ -51,12 +51,12 @@ def clonedetect((db, packageversion, packageclones, ignorepackages)):
 	print >>sys.stderr, "processing %s, %s" % packageversion
 	conn = sqlite3.connect(db)
 	cursor = conn.cursor()
-	cursor.execute("select distinct sha256 from processed_file where package=? and version=?", packageversion)
+	cursor.execute("select distinct checksum from processed_file where package=? and version=?", packageversion)
 	sha256 = cursor.fetchall()
 	if len(sha256) != 0:
 		clonep = {}
 		for s in sha256:
-			cursor.execute('select distinct package, version from processed_file where sha256=?', s)
+			cursor.execute('select distinct package, version from processed_file where checksum=?', s)
 			clonesha256 = cursor.fetchall()
 			## one file is unique to this package, so there are no complete clones
 			if len(clonesha256) == 1:
