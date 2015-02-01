@@ -1,3 +1,15 @@
+2015-02-01:
+* createdb.py: keep basename for files in processed_file
+* createdb.py: add more tables for security, for keeping more metadata for
+RPM files and for package clones
+
+2015-01-26:
+* createdb.py: use DOWNLOADURL file
+* start processing Ruby files
+
+2015-01-25:
+* createdb.py: store download urls for files in 'processed' column
+
 2015-01-23:
 * add bat/kernelsymbols.py, a module to research and display relationships
 between Linux kernel images and modules, specifically for GPL licensed kernel
