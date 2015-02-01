@@ -628,7 +628,7 @@ def grab_sha256_varname((masterdb, language, tasks)):
 	conn.text_factory = str
 	c = conn.cursor()
 	for sha256sum in tasks:
-		c.execute("select version, filename from processed_file where checksum=?", (sha256sum,))
+		c.execute("select version, pathname from processed_file where checksum=?", (sha256sum,))
 		results[sha256sum] = c.fetchall()
 	c.close()
 	conn.close()
@@ -643,7 +643,7 @@ def grab_sha256_filename((masterdb, tasks)):
 	conn.text_factory = str
 	c = conn.cursor()
 	for sha256sum in tasks:
-		c.execute("select version, filename from processed_file where checksum=?", (sha256sum,))
+		c.execute("select version, pathname from processed_file where checksum=?", (sha256sum,))
 		results[sha256sum] = c.fetchall()
 	c.close()
 	conn.close()
