@@ -2532,12 +2532,12 @@ def main(argv):
 
 		## keep information specifically about for files
 		c.execute('''create table if not exists rpm(rpmname text, checksum text, downloadurl text)''')
-		c.execute('''create index if not exists rpm_checksum_index on rpm(checksum text)''')
-		c.execute('''create index if not exists rpm_rpmname_index on rpm(rpmname text)''')
+		c.execute('''create index if not exists rpm_checksum_index on rpm(checksum)''')
+		c.execute('''create index if not exists rpm_rpmname_index on rpm(rpmname)''')
 
 		## keep information about aliases of archives (different origins, etc.)
 		c.execute('''create table if not exists archivealias(checksum text, archivename text, origin text, downloadurl text)''')
-		c.execute('''create index if not exists archivealias_checksum_index on archivealias(checksum text)''')
+		c.execute('''create index if not exists archivealias_checksum_index on archivealias(checksum)''')
 
 		## keep information about other files, such as media files, configuration files,
 		## and so on, for "circumstantial evidence"
@@ -2573,9 +2573,9 @@ def main(argv):
 			ninkaconn.close()
 		if scansecurity:
 			securityc.execute('''create table if not exists security_cert(checksum text, securitybug text, linenumber int, function text, whitelist tinyint(1))''')
-			securityc.execute('''create index if not exists security_cert_checksum_index on security(checksum);''')
+			securityc.execute('''create index if not exists security_cert_checksum_index on security_cert(checksum);''')
 			securityc.execute('''create table if not exists security_cve(checksum text, cve text)''')
-			securityc.execute('''create index if not exists security_cve_checksum_index on security(checksum);''')
+			securityc.execute('''create index if not exists security_cve_checksum_index on security_cve(checksum);''')
 
 			securityconn.commit()
 			securityc.close()
