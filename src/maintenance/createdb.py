@@ -1214,7 +1214,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		if security:
 			for res in securityresults:
 				(securitybug, linenumber, function) = res
-				securityc.execute('''insert into security (checksum, securitybug, linenumber, function, whitelist) values (?,?,?,?,?)''', (filehash, securitybug, linenumber, function, False))
+				securityc.execute('''insert into security_cert (checksum, securitybug, linenumber, function, whitelist) values (?,?,?,?,?)''', (filehash, securitybug, linenumber, function, False))
 		for res in sqlres:
 			(pstring, linenumber) = res
 			cursor.execute('''insert into extracted_string (stringidentifier, checksum, language, linenumber) values (?,?,?,?)''', (pstring, filehash, language, linenumber))
