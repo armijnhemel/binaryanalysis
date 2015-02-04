@@ -95,3 +95,4 @@ BOTTLENECKS/HIGH PRIORITY:
 26. createdb.py: extract identifiers for Ruby
 27. createdb.py: add package clones to alias table
 28. createdb.py: start recording metadata for RPM files (such as applied patches). Do the same for DEB files, if possible/feasible.
+29. createdb.py: stop using FOSSology's copyright agent and replace it with our own code as FOSSology is too slow
