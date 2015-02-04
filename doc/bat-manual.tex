@@ -315,6 +315,13 @@ This script will not catch:
 The \texttt{verifysourcearchive.py} program is to verify a source code archive
 using the result of a scan done with BAT.
 
+\subsection{\texttt{findxor.py}}
+
+The \texttt{findxor.py} program can be used to find possible XOR ``encryption''
+keys. It prints the top 10 (hardcoded limit) of most common byte sequences (16
+bytes) in the file. These can then be added to the \texttt{batxor.py} module in
+BAT. This will likely change in the future.
+
 \section{Binary Analysis Tool extratools collection}
 
 To help with unpacking non-standard file systems, or standard file systems for
@@ -1711,8 +1718,9 @@ It has the following fields:
 \texttt{processed})
 \item \texttt{version}: version of the package the file is from (same as in
 \texttt{processed})
-\item \texttt{filename}: relative path inside the source code archive
+\item \texttt{pathname}: relative path inside the source code archive
 \item \texttt{checksum}: SHA256 checksum of the file
+\item \texttt{filename}: filename of the file, without path component
 \end{itemize}
 
 \subsubsection{\texttt{extracted\_string} table}
@@ -1911,7 +1919,7 @@ doing a manual review.
 example a bug in a scanner, or to compare results from various versions.
 \end{itemize}
 
-\subsubsection{\texttt{security} table}
+\subsubsection{\texttt{security\_cert} table}
 
 This table stores security information that was extracted from files. It has
 these fields:
@@ -1924,6 +1932,15 @@ identifiers for the CERT secure coding standard.
 \item \texttt{whitelist}: boolean value indicating whether or not the bug can
 safely be ignored. The idea is that this can be set by security reviewers if
 the security bug cannot be triggered to lower the amount of false positives.
+\end{itemize}
+
+\subsubsection{\texttt{security\_cve} table}
+
+This table stores information about relations between paths and CVE numbers.
+
+\begin{itemize}
+\item \texttt{checksum}: SHA256 checksum of the file
+\item \texttt{cve}: CVE identifier
 \end{itemize}
 
 \section{BusyBox script internals}
