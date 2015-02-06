@@ -1397,7 +1397,11 @@ def extractcomments((package, version, i, p, language, filehash, ninkaversion)):
 
 	p1 = subprocess.Popen(["%s/ninka.pl" % ninkabasepath, "-c", os.path.join(i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
 	(stanout, stanerr) = p1.communicate()
-	scanfile = open("%s/%s.comments" % (i, p), 'r')
+	commentsfile = os.path.join(i, "%s.comments" % p)
+	if not os.path.exists(commentsfile):
+		if '$' in commentsfile:
+			commentsfile = commentsfile.replace('$', '\$')
+	scanfile = open(commentsfile, 'r')
 	ch = hashlib.new('sha256')
 	ch.update(scanfile.read())
 	scanfile.close()
