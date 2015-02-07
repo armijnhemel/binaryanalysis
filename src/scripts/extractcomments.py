@@ -103,11 +103,15 @@ def extractCopyrights((filedir, filename)):
 	if len(copyrightsres) != 0:
 		match = True
 		unmatchedcopyrightsres = []
-		## first check if the .comments file is not identical to the
-		if os.stat("%s/%s.comments" % (filedir, filename)).st_size == os.stat("%s/%s" % (filedir, filename)).st_size:
+		## first check if the .comments file is not identical to the entire file
+		commentsfile = os.path.join(filedir, "%s.comments" % filename
+		if not os.path.exists(commentsfile):
+			if '$' in commentsfile:
+				commentsfile = commentsfile.replace('$', '\$')
+		if os.stat(commentsfile).st_size == os.stat("%s/%s" % (filedir, filename)).st_size:
 			match = False
 		if match:
-        		ninkacommentsfile = open("%s/%s.comments" % (filedir, filename), 'r')
+        		ninkacommentsfile = open(commentsfile, 'r')
 			ninkadata = ninkacommentsfile.read()
 			ninkacommentsfile.close()
 			ninkadata = ninkadata.lower()
