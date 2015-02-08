@@ -700,6 +700,8 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 			if infiles:
 				## if there is one valid line the 'FILES' section the archive is not empty
 				emptyarchive = False
+		checksums = checksums[filename]
+		downloadurl = downloadurl.get(filename, None)
 
 	filetohash = {}
 
@@ -2609,7 +2611,10 @@ def main(argv):
 					batarchive = True
 				else:
 					batarchive = False
-			pkgmeta.append((options.filedir, package, version, filename, origin, downloadurls.get(filename,None), batarchive, masterdatabase, checksums.get(filename, None), archivechecksums))
+			if not batarchive:
+				pkgmeta.append((options.filedir, package, version, filename, origin, downloadurls.get(filename,None), batarchive, masterdatabase, checksums.get(filename, None), archivechecksums))
+			else:
+				pkgmeta.append((options.filedir, package, version, filename, origin, downloadurls, batarchive, masterdatabase, checksums.get(filename, None), archivechecksums))
 		except Exception, e:
 			# oops, something went wrong
 			print >>sys.stderr, e
@@ -2644,7 +2649,10 @@ def main(argv):
 			(package, version, filename, origin, filehash, downloadurl, batarchive) = i
 			if package != oldpackage:
 				oldres = set()
-			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums[filename], downloadurl, masterdatabase, cleanup, license, copyrights, security, pool, ninkacomments, licensedb, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
+			if not batarchive:
+				unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums[filename], downloadurl, masterdatabase, cleanup, license, copyrights, security, pool, ninkacomments, licensedb, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
+			else:
+				unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums, downloadurl, masterdatabase, cleanup, license, copyrights, security, pool, ninkacomments, licensedb, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
 			if unpackres != None:
 				oldres = set(map(lambda x: x[2]['sha256'], unpackres))
 				oldpackage = package
