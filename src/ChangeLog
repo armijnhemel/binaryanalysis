@@ -1,3 +1,13 @@
+2015-02-08:
+* createdb.py: replace calls to FOSSology copyright scanner with a single
+Python method. Currently only 'email' and 'url' are parsed, not other
+statements (this is a TODO). This shaves about 25% of the run time of the
+database creation script.
+* createdb.py: work around more Ninka regressions
+
+2015-02-06:
+* createdb.py: work around Ninka regression
+
 2015-02-01:
 * createdb.py: keep basename for files in processed_file
 * createdb.py: add more tables for security, for keeping more metadata for
