@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2014 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2014-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -94,9 +94,11 @@ def main(argv):
 		manifests = os.listdir(os.path.join(options.archivedir, 'MANIFESTS'))
 		for i in manifests:
 			shutil.copy(os.path.join(options.archivedir, 'MANIFESTS', i), os.path.join(options.targetdir, 'MANIFESTS'))
-	print "copying checksums"
+	print "copying checksums and downloadurl"
 	if os.path.exists(os.path.join(options.origdir, 'SHA256SUM')):
 		shutil.copy(os.path.join(options.origdir, 'SHA256SUM'), options.targetdir)
+	if os.path.exists(os.path.join(options.origdir, 'DOWNLOADURL')):
+		shutil.copy(os.path.join(options.origdir, 'DOWNLOADURL'), options.targetdir)
 	#if os.path.exists(os.path.join(options.origdir, 'SHA256SUM')):
 		#sha256sums = open(os.path.join(options.origdir, 'SHA256SUM')).readlines()
 	#if os.path.exists(os.path.join(options.archivedir, 'SHA256SUM')):
@@ -115,7 +117,7 @@ def main(argv):
 		archivename = f.strip()
 		if archivename in copyfromarchives:
 			(version, origin) = archivetometa[archivename]
-			newlistfile.write("%s\t%s\t%s\t%s\tbatarchive\n" % (archivename[:-12], version, origin, archivename))
+			newlistfile.write("%s\t%s\t%s\t%s\tbatarchive\n" % (archivename[:-12], version, archivename, origin))
 	newlistfile.close()
 
 if __name__ == "__main__":
