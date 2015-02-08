@@ -4,6 +4,10 @@ Python method. Currently only 'email' and 'url' are parsed, not other
 statements (this is a TODO). This shaves about 25% of the run time of the
 database creation script.
 * createdb.py: work around more Ninka regressions
+* createdb.py: fix checking previously scanned hashes. Instead of comparing
+complete dicts only check SHA256
+* createdb.py: fixes for BAT archives, although there is still something
+broken.
 
 2015-02-06:
 * createdb.py: work around Ninka regression

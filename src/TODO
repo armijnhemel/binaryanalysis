@@ -96,3 +96,6 @@ BOTTLENECKS/HIGH PRIORITY:
 27. createdb.py: add package clones to alias table
 28. createdb.py: start recording metadata for RPM files (such as applied patches). Do the same for DEB files, if possible/feasible.
 29. createdb.py: reimplement FOSSology's statement extractor and store results
+30. createdb.py: add support for adding an authoritive license/copyright database. Data for checksums from this database will not be extracted, but instead copied. This is useful if someone has done a manual review of licenses/copyrights and it has already been 'cleared'.
+31. createdb.py: add support for copying data from a previous database. This is useful if certain extracted data has not changed (for example: function names).
+32. createbatarchive.py: copy all unused files into archives (example: Makefiles for Linux kernel)
