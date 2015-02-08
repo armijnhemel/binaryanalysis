@@ -193,6 +193,10 @@ for v in oldallowedvals:
 
 rechar = re.compile("c\d+")
 
+## from FOSSology
+fossologyurlre = re.compile("((:?ht|f)tps?\\:\\/\\/[^\\s\\<]+[^\\<\\.\\,\\s])")
+fossologyemailre = re.compile("[\\<\\(]?([\\w\\-\\.\\+]{1,100}@[\\w\\-\\.\\+]{1,100}\\.[a-z]{1,4})[\\>\\)]?")
+
 extensions = batextensions.extensions
 
 ## extensions, without leading .
@@ -1427,129 +1431,78 @@ def runfullninka((i, p, filehash, ninkaversion)):
 		ninkares = set(licenses)
 	return (filehash, ninkares)
 
+## extract copyrights from the file. Previous versions of this method invoked the
+## FOSSology copyright agent. This method mimics the behaviour of the FOSSology
+## copyright agent.
 def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)):
+	filepath = os.path.join(i,p)
+	srcfile = open(filepath, 'r')
+	srcdata = srcfile.read()
+	srcfile.close()
+	## FOSSology uses lowercase data
+	srcdata = srcdata.lower()
 	copyrightsres = []
-	p2 = subprocess.Popen(["/usr/share/fossology/copyright/agent/copyright", "-C", os.path.join(i, p)], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-	(stanout, stanerr) = p2.communicate()
-	if "FATAL" in stanout:
-		## TODO: better error handling
-		return None
-	else:
-		clines = stanout.split("\n")
-		continuation = True
-		bufstr = ""
-		buftype = ""
+	## first the e-mail address results
+	if '@' in srcdata:
+		res = fossologyemailre.findall(srcdata)
 		offset = 0
-		if len(clines[-1]) == 0:
-			clines = clines[:-1]
-		for c in clines[1:]:
-			## Extract copyright information, like URLs, e-mail
-			## addresses and copyright statements.
-			## Copyright statements and URLs are not very accurate.
-			## URLs extracted from BusyBox for example contain links
-			## to standards, RFCs, other project's bug trackers, and
-			## so on. It is not a good indicator of anything
-			## unless some extra filtering is added, like searching for
-			## URLs that point to licenses that were not included in
-			## the binary.
-			if '[' in c and ']' in c:
-				res = recopyright.match(c)
-				if res != None:
-					if continuation:
-						if bufstr != "" and buftype != "":
-							if bufstr.endswith("'"):
-								bufstr = bufstr[:-1]
-							copyrightsres.append((buftype, bufstr, offset))
-					continuation = False
-					bufstr = ""
-					buftype = ""
-					offset = res.groups()[0]
-					## e-mail addresses are never on multiple lines
-					if res.groups()[1] == 'email':
-						copyrightsres.append(('email', res.groups()[2], offset))
-					## urls should are never on multiple lines
-					elif res.groups()[1] == 'url':
-						copyrightsres.append(('url', res.groups()[2], offset))
-					## copyright statements can be on multiple lines, but this is
-					## the start of a new statement
-					elif res.groups()[1] == 'statement':
-						continuation = True
-						buftype = "statement"
-						bufstr = res.groups()[2]
-				else:
-					res = recopyright2.match(c)
-					if res != None:
-						if res.groups()[1] == 'statement':
-							continuation = True
-							buftype = "statement"
-							bufstr = res.groups()[2]
-							offset = res.groups()[0]
-					else:
-						bufstr = bufstr + "\n" + c
-						continuation = True
-			else:
-				bufstr = bufstr + "\n" + c
-				continuation = True
-		## perhaps some lingering data
-		if continuation:
-			if bufstr != "" and buftype != "":
-				if bufstr.endswith("'"):
-					bufstr = bufstr[:-1]
-				copyrightsres.append((buftype, bufstr, offset))
-
-		newcopyrightsres = []
-		for c in copyrightsres:
-			(buftype, bufstr, offset) = c
-			## ignore all statements for now
-			if buftype == 'statement':
+		for e in res:
+			exampleskip = False
+			## ignore all e-mail addresses from example.com/net/org
+			for em in ["example.org", "example.com", "example.net"]:
+				if "@%s" % em in e:
+					exampleskip = True
+					break
+			if exampleskip:
 				continue
-			elif buftype == 'email':
-				if "example" in bufstr:
-					exampleskip = False
-					## ignore all e-mail addresses from example.com/net/org
-					for e in ["example.org", "example.com", "example.net"]:
-						if "@%s" % e in bufstr:
-							exampleskip = True
-							break
-					if exampleskip:
-						continue
-			elif buftype == 'url':
-				if "example" in bufstr:
-					## filter out anything with example.com/net/org
-					exampleskip = False
-					for e in ["example.org", "example.com", "example.net"]:
-						if "http://%s" % e in bufstr:
-							exampleskip = True
-							break
-						if "https://%s" % e in bufstr:
-							exampleskip = True
-							break
-						if "http://www.%s" % e in bufstr:
-							exampleskip = True
-							break
-						if "https://www.%s" % e in bufstr:
-							exampleskip = True
-							break
-						if "@%s" % e in bufstr:
-							exampleskip = True
-							break
-					if exampleskip:
-						continue
-				## filter out some more things. This needs to be much expanded
-				elif "ftp://127.0.0.1" in bufstr:
+			offset = srcdata.find(e, offset)
+			copyrightsres.append(('email', e, offset))
+			offset += 1
+	## then URLs
+	if '://' in srcdata:
+		res = fossologyurlre.finditer(srcdata)
+		offset = 0
+		for urlres in res:
+			e = urlres.groups()[0]
+			offset = srcdata.find(e, offset)
+			if "example" in e:
+				## filter out anything with example.com/net/org
+				exampleskip = False
+				for em in ["example.org", "example.com", "example.net"]:
+					if "http://%s" % em in e:
+						exampleskip = True
+						break
+					if "https://%s" % em in e:
+						exampleskip = True
+						break
+					if "http://www.%s" % em in e:
+						exampleskip = True
+						break
+					if "https://www.%s" % em in e:
+						exampleskip = True
+						break
+					if "@%s" % em in e:
+						exampleskip = True
+						break
+				if exampleskip:
 					continue
-				elif "ftp://localhost/" in bufstr:
-					continue
-				elif "http://127.0.0.1" in bufstr:
-					continue
-				elif "http://localhost/" in bufstr:
-					continue
-				elif "https://127.0.0.1" in bufstr:
-					continue
-				elif "https://localhost/" in bufstr:
-					continue
-			newcopyrightsres.append(c)
-	return (filehash, newcopyrightsres)
+			## filter out some more things. This needs to be much expanded
+			elif "ftp://127.0.0.1" in e:
+				continue
+			elif "ftp://localhost/" in e:
+				continue
+			elif "http://127.0.0.1" in e:
+				continue
+			elif "http://localhost/" in e:
+				continue
+			elif "https://127.0.0.1" in e:
+				continue
+			elif "https://localhost/" in e:
+				continue
+			copyrightsres.append(('url', e, offset))
+			offset += 1
+	## then statements. This is a TODO.
+	return (filehash, copyrightsres)
 
 def licensefossology((packages)):
 	## Also run FOSSology. This requires that the user has enough privileges to actually connect to the
