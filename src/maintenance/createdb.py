@@ -1018,7 +1018,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		## This only really helps if the files are scanned in release order to decrease
 		## the deltas.
 		if package == oldpackage:
-			if s[2] in oldsha256:
+			if filehash in oldsha256:
 				continue
 		if filehash in tmpsha256s:
 			continue
@@ -2643,10 +2643,10 @@ def main(argv):
 		try:
 			(package, version, filename, origin, filehash, downloadurl, batarchive) = i
 			if package != oldpackage:
-				oldres = []
+				oldres = set()
 			unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums[filename], downloadurl, masterdatabase, cleanup, license, copyrights, security, pool, ninkacomments, licensedb, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
 			if unpackres != None:
-				oldres = map(lambda x: x[2], unpackres)
+				oldres = set(map(lambda x: x[2]['sha256'], unpackres))
 				oldpackage = package
 		except Exception, e:
 				# oops, something went wrong
