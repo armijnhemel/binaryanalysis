@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2011-2014 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2011-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -13,15 +13,59 @@ This variant is specifically for processing a directory full of SRPM files.
 2. files are unpacked using cpio
 3. archives (ZIP, tar.gz, tar.bz, tgz, etc.) are moved to a temporary directory. TODO: Any patches are put in a special patch
 directory.
-4. LIST file for temporary directory is created
+4.
+5. LIST file for temporary directory is created
 '''
 
-import sys, os, os.path, subprocess, tempfile, shutil, stat
+import sys, os, os.path, subprocess, tempfile, shutil, stat, sqlite3
 from optparse import OptionParser
 import multiprocessing
 
-def parallel_unpack((rpmfile, target, copyfiles, unpacktmpdir)):
+## spec file scanner to process any patches that are actually applied
+## extract the following:
+## * name
+## * version
+## * release
+## * source inputs
+## * any applied patches
+## * any unapplied patches
+## * possibly license and URL
+def scanspec(specfile):
+	result = {}
+	patches = {}
+	appliedpatches = set()
+	speclines = map(lambda x: x.strip(), open(specfile, 'r').readlines())
+	for s in speclines:
+		if line.startswith('Name:'):
+			pass
+		elif line.startswith('Release:'):
+			pass
+		elif line.startswith('Version:'):
+			pass
+		elif line.startswith('URL:'):
+			url = line.split(':',1)[1].strip()
+			result['url'] = url
+		elif line.startswith('License:'):
+			license = line.split(':',1)[1].strip()
+			result['license'] = license
+		elif line.startswith('Source'):
+			## possibly subsitute version and other variables
+			## possibly remove URLs and other things, so just the
+			## name of the source code file is kept
+			pass
+		elif line.startswith('Patch'):
+			patchsplit = line.split(':', 1)
+			patches[patchsplit[0].lower()] = patchsplit[1]
+		elif line.startswith('%patch'):
+			## check if patch is known. If so, apply it
+			appliedpatch = line[1:].split('', 1)[0]
+			if appliedpatch in patches:
+				appliedpatches.add(patches[appliedpatch]
+	return result
+
+def parallel_unpack((rpmfile, target, copyfiles, unpacktmpdir, cutoff)):
 	## cutoff is at 200 MiB
+	## TODO: make configurable
 	cutoff = 209715200
 	## make a temporary directory
 	if os.stat(rpmfile).st_size < cutoff:
@@ -40,7 +84,7 @@ def parallel_unpack((rpmfile, target, copyfiles, unpacktmpdir)):
 	(cpiostanout, cpiostanerr) = p2.communicate()
 	for f in copyfiles:
 		shutil.copy(os.path.join(cpiodir, f), target)
-		os.chmod("%s/%s" % (target, f), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+		os.chmod(os.path.join(target, f), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 	shutil.rmtree(cpiodir)
 
 ## it's either in the form of:
@@ -178,7 +222,10 @@ def unpacksrpm(filedir, target, unpacktmpdir):
 
 	## unique RPMs can be unpacked in parallel, non-uniques cannot
 	## first process the unique RPMS in parallel
-	tasks = map(lambda x: (x, target, rpm2copyfiles[x], unpacktmpdir), uniquerpms)
+	## cutoff is at 200 MiB
+	## TODO: make configurable
+	cutoff = 209715200
+	tasks = map(lambda x: (x, target, rpm2copyfiles[x], unpacktmpdir, cutoff), uniquerpms)
 	pool.map(parallel_unpack, tasks,1)
 	pool.terminate()
 
@@ -205,7 +252,7 @@ def unpacksrpm(filedir, target, unpacktmpdir):
 		(cpiostanout, cpiostanerr) = p2.communicate()
 		for f in rpm2copyfiles[n]:
 			shutil.copy(os.path.join(cpiodir, f), target)
-			os.chmod("%s/%s" % (target, f), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+			os.chmod(os.path.join(target, f), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 		shutil.rmtree(cpiodir)
 	return target
 
