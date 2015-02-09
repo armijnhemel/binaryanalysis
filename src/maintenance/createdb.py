@@ -812,6 +812,8 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 		else:
 			if cleanup:
 				cleanupdir(temporarydir)
+			c.close()
+			conn.close()
 			return
 
 	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, security, pool, ninkacomments, licensedb, securitydb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles)
