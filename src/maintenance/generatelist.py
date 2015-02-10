@@ -58,7 +58,7 @@ def generatelist(filedir, origin):
 							print >>sys.stderr, "can't split %s -- add manually" % (p,)
 							continue
 				(package, version) = res
-				print "%s\t%s\t%s\t%s\t" % (package, version, p, origin)
+				print "%s\t%s\t%s\t%s" % (package, version, p, origin)
 				
 	except Exception, e:
 		pass
