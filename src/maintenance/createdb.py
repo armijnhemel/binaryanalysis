@@ -1149,6 +1149,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			copyrightsres = pool.map(extractcopyrights, filestoscan, 1)
 		if copyrightsres != None:
 			licenseconn = sqlite3.connect(licensedb, check_same_thread = False)
+			licenseconn.text_factory = str
 			licensecursor = licenseconn.cursor()
 			licensecursor.execute('PRAGMA synchronous=off')
 
