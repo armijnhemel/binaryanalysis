@@ -1408,9 +1408,9 @@ def extractcomments((package, version, i, p, language, filehash, ninkaversion)):
 	(stanout, stanerr) = p1.communicate()
 	commentsfile = os.path.join(i, "%s.comments" % p)
 	if not os.path.exists(commentsfile):
-		for i in ['$', ';', ' ']:
-			if i in commentsfile:
-				commentsfile = commentsfile.replace(i, '\%s' % i)
+		for j in ['$', ';', ' ']:
+			if j in commentsfile:
+				commentsfile = commentsfile.replace(j, '\%s' % j)
 	scanfile = open(commentsfile, 'r')
 	ch = hashlib.new('sha256')
 	ch.update(scanfile.read())
