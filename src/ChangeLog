@@ -1,3 +1,10 @@
+2015-02-14:
+* better workaround for Ninka regressions
+
+2015-02-10:
+* createdb.py: change text_factory for cursor for copyright statement
+extraction that was causing some issues.
+
 2015-02-08:
 * createdb.py: replace calls to FOSSology copyright scanner with a single
 Python method. Currently only 'email' and 'url' are parsed, not other
