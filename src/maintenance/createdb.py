@@ -994,6 +994,8 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	scanfile_result = filter(lambda x: x[4] != None, scanfile_result)
 
 	ninkaversion = "1.3rc1"
+	brokenninka = True
+	#brokenninka = False
 	insertfiles = []
 	tmpsha256s = set()
 	filehashes = {}
@@ -1055,9 +1057,9 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 
 		if 'patch' in languages:
 			## patch files should not be scanned for license information
-			comments_results = pool.map(extractcomments, filter(lambda x: x[4] != 'patch', filestoscan), 1)
+			comments_results = pool.map(extractcomments, map(lambda x: x+ (brokenninka,), filter(lambda x: x[4] != 'patch', filestoscan)), 1)
 		else:
-			comments_results = pool.map(extractcomments, filestoscan, 1)
+			comments_results = pool.map(extractcomments, map(lambda x: x + (brokenninka,), filestoscan), 1)
 		commentshash = {}
 		commentshash2 = {}
 		for c in comments_results:
@@ -1089,7 +1091,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		licensescanfiles = []
 
 		for l in licensefilestoscan:
-			licensescanfiles.append((filehashes[l][0][0], filehashes[l][0][1], l, ninkaversion))
+			licensescanfiles.append((filehashes[l][0][0], filehashes[l][0][1], l, ninkaversion, brokenninka))
 		license_results = pool.map(runfullninka, licensescanfiles, 1)
 
 		## we now know the licenses for files we didn't know before. So:
@@ -1395,7 +1397,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	return (scanfile_result)
 
 ## extract comments in parallel
-def extractcomments((package, version, i, p, language, filehash, ninkaversion)):
+def extractcomments((package, version, i, p, language, filehash, ninkaversion, brokenninka)):
 	## first generate a .comments file with Ninka and see if it is already
 	## known. This is because often license headers are identical, and
 	## there is no need to rescan the files if the headers are identical.
@@ -1404,29 +1406,83 @@ def extractcomments((package, version, i, p, language, filehash, ninkaversion)):
 	ninkabasepath = '/gpl/ninka/ninka-%s' % ninkaversion
 	ninkaenv['PATH'] = ninkaenv['PATH'] + ":%s/comments" % ninkabasepath
 
-	p1 = subprocess.Popen(["%s/ninka.pl" % ninkabasepath, "-c", os.path.join(i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
+	broken = False
+	if brokenninka:
+		for b in ['$', ' ', ';']:
+			if b in i:
+				broken = True
+				break
+	if broken:
+		while True:
+			ninkatmp = tempfile.mkstemp()
+			os.fdopen(ninkatmp[0]).close()
+			if not '$' in ninkatmp[1]:
+				break
+			if not ' ' in ninkatmp[1]:
+				break
+			if not ';' in ninkatmp[1]:
+				break
+			os.unlink(ninkatmp[1])
+		shutil.copy(os.path.join(i,p), ninkatmp[1])
+		p1 = subprocess.Popen(["%s/ninka.pl" % ninkabasepath, "-c", ninkatmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
+	else:
+		p1 = subprocess.Popen(["%s/ninka.pl" % ninkabasepath, "-c", os.path.join(i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
+
 	(stanout, stanerr) = p1.communicate()
-	commentsfile = os.path.join(i, "%s.comments" % p)
+	if broken:
+		os.unlink(ninkatmp[1])
+		commentsfile = "%s.comments" % ninkatmp[1]
+	else:
+		commentsfile = os.path.join(i, "%s.comments" % p)
 	if not os.path.exists(commentsfile):
 		for j in ['$', ';', ' ']:
-			if j in commentsfile:
-				commentsfile = commentsfile.replace(j, '\%s' % j)
+			if j in p:
+				p = p.replace(j, '\%s' % j)
+		commentsfile = os.path.join(i, "%s.comments" % p)
 	scanfile = open(commentsfile, 'r')
 	ch = hashlib.new('sha256')
 	ch.update(scanfile.read())
 	scanfile.close()
 	commentshash = ch.hexdigest()
+	if broken:
+		os.unlink(commentsfile)
 	return (filehash, commentshash)
 
-def runfullninka((i, p, filehash, ninkaversion)):
+def runfullninka((i, p, filehash, ninkaversion, brokenninka)):
 	ninkaenv = os.environ.copy()
 	ninkabasepath = '/gpl/ninka/ninka-%s' % ninkaversion
 	ninkaenv['PATH'] = ninkaenv['PATH'] + ":%s/comments" % ninkabasepath
 
 	ninkares = set()
 
-	p2 = subprocess.Popen(["%s/ninka.pl" % ninkabasepath, os.path.join(i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
+	broken = False
+	if brokenninka:
+		for b in ['$', ' ', ';']:
+			if b in i:
+				broken = True
+				break
+	if broken:
+		while True:
+			ninkatmp = tempfile.mkstemp()
+			os.fdopen(ninkatmp[0]).close()
+			if not '$' in ninkatmp[1]:
+				break
+			if not ' ' in ninkatmp[1]:
+				break
+			if not ';' in ninkatmp[1]:
+				break
+			os.unlink(ninkatmp[1])
+		shutil.copy(os.path.join(i,p), ninkatmp[1])
+		p2 = subprocess.Popen(["%s/ninka.pl" % ninkabasepath, "-d", ninkatmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
+	else:
+		p2 = subprocess.Popen(["%s/ninka.pl" % ninkabasepath, os.path.join(i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
 	(stanout, stanerr) = p2.communicate()
+	if broken:
+		os.unlink(ninkatmp[1])
+		## cleanup
+		if os.path.exists("%s.license" % ninkatmp[1]):
+			os.unlink("%s.license" % ninkatmp[1])
+	## TODO: handle cases with ';' in filename
 	ninkasplit = stanout.strip().split(';')[1:]
 	## filter out the licenses that can't be determined.
 	if ninkasplit[0] == '':
