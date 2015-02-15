@@ -297,7 +297,7 @@ def main(argv):
 			if extrahashes == []:
 				manifestfile.write("%s\t%s\n" % (os.path.join(u[0], u[1]), u[2]['sha256']))
 			else:
-				hashesstring = "\t%s" % u[2]['sha256']
+				hashesstring = "%s" % u[2]['sha256']
 				for h in extrahashes:
 					hashesstring += "\t%s" % u[2][h]
 				manifestfile.write("%s\t%s\n" % (os.path.join(u[0], u[1]), hashesstring))
