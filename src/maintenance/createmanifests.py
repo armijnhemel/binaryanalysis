@@ -69,7 +69,7 @@ def unpack(directory, filename, unpackdir):
 			shutil.rmtree(tmpdir)
 			return
 		return tmpdir
-        elif 'XZ compressed data' in filemagic:
+        elif 'XZ compressed data' in filemagic or ('data' in filemagic and filename.endswith('.xz')):
 		if unpackdir != None:
        			tmpdir = tempfile.mkdtemp(dir=unpackdir)
 		else:
