@@ -601,6 +601,9 @@ def unpack(directory, filename, unpackdir):
        			tmpdir = tempfile.mkdtemp()
  		p = subprocess.Popen(['tar', 'ixf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			shutil.rmtree(tmpdir)
+			return
 		return tmpdir
         elif 'XZ compressed data' in filemagic:
 		if unpackdir != None:
@@ -609,14 +612,20 @@ def unpack(directory, filename, unpackdir):
        			tmpdir = tempfile.mkdtemp()
  		p = subprocess.Popen(['tar', 'ixf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			shutil.rmtree(tmpdir)
+			return
 		return tmpdir
-        elif 'gzip compressed data' in filemagic:
+	elif 'gzip compressed data' in filemagic or 'compress\'d data 16 bits' in filemagic or ('Minix filesystem' in filemagic and filename.endswith('.gz')):
 		if unpackdir != None:
        			tmpdir = tempfile.mkdtemp(dir=unpackdir)
 		else:
        			tmpdir = tempfile.mkdtemp()
  		p = subprocess.Popen(['tar', 'zxf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			shutil.rmtree(tmpdir)
+			return
 		return tmpdir
 	elif 'Zip archive data' in filemagic:
 		try:
