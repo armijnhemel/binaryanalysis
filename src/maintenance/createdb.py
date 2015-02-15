@@ -1408,21 +1408,33 @@ def extractcomments((package, version, i, p, language, filehash, ninkaversion, b
 
 	broken = False
 	if brokenninka:
-		for b in ['$', ' ', ';']:
+		for b in ['$', ' ', ';', '(', ')']:
 			if b in i:
+				broken = True
+				break
+			if b in p:
 				broken = True
 				break
 	if broken:
 		while True:
 			ninkatmp = tempfile.mkstemp()
 			os.fdopen(ninkatmp[0]).close()
-			if not '$' in ninkatmp[1]:
-				break
-			if not ' ' in ninkatmp[1]:
-				break
-			if not ';' in ninkatmp[1]:
-				break
-			os.unlink(ninkatmp[1])
+			if '$' in ninkatmp[1]:
+				os.unlink(ninkatmp[1])
+				continue
+			if ' ' in ninkatmp[1]:
+				os.unlink(ninkatmp[1])
+				continue
+			if ';' in ninkatmp[1]:
+				os.unlink(ninkatmp[1])
+				continue
+			if '(' in ninkatmp[1]:
+				os.unlink(ninkatmp[1])
+				continue
+			if ')' in ninkatmp[1]:
+				os.unlink(ninkatmp[1])
+				continue
+			break
 		shutil.copy(os.path.join(i,p), ninkatmp[1])
 		p1 = subprocess.Popen(["%s/ninka.pl" % ninkabasepath, "-c", ninkatmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
 	else:
@@ -1435,7 +1447,7 @@ def extractcomments((package, version, i, p, language, filehash, ninkaversion, b
 	else:
 		commentsfile = os.path.join(i, "%s.comments" % p)
 	if not os.path.exists(commentsfile):
-		for j in ['$', ';', ' ']:
+		for j in ['$', ';', ' ', '(', ')']:
 			if j in p:
 				p = p.replace(j, '\%s' % j)
 		commentsfile = os.path.join(i, "%s.comments" % p)
@@ -1457,21 +1469,33 @@ def runfullninka((i, p, filehash, ninkaversion, brokenninka)):
 
 	broken = False
 	if brokenninka:
-		for b in ['$', ' ', ';']:
+		for b in ['$', ' ', ';', '(', ')']:
 			if b in i:
+				broken = True
+				break
+			if b in p:
 				broken = True
 				break
 	if broken:
 		while True:
 			ninkatmp = tempfile.mkstemp()
 			os.fdopen(ninkatmp[0]).close()
-			if not '$' in ninkatmp[1]:
-				break
-			if not ' ' in ninkatmp[1]:
-				break
-			if not ';' in ninkatmp[1]:
-				break
-			os.unlink(ninkatmp[1])
+			if '$' in ninkatmp[1]:
+				os.unlink(ninkatmp[1])
+				continue
+			if ' ' in ninkatmp[1]:
+				os.unlink(ninkatmp[1])
+				continue
+			if ';' in ninkatmp[1]:
+				os.unlink(ninkatmp[1])
+				continue
+			if '(' in ninkatmp[1]:
+				os.unlink(ninkatmp[1])
+				continue
+			if ')' in ninkatmp[1]:
+				os.unlink(ninkatmp[1])
+				continue
+			break
 		shutil.copy(os.path.join(i,p), ninkatmp[1])
 		p2 = subprocess.Popen(["%s/ninka.pl" % ninkabasepath, "-d", ninkatmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
 	else:
