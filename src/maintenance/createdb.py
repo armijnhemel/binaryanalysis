@@ -616,7 +616,7 @@ def unpack(directory, filename, unpackdir):
 			shutil.rmtree(tmpdir)
 			return
 		return tmpdir
-	elif 'gzip compressed data' in filemagic or 'compress\'d data 16 bits' in filemagic or ('Minix filesystem' in filemagic and filename.endswith('.gz')):
+	elif 'gzip compressed data' in filemagic or 'compress\'d data 16 bits' in filemagic or ('Minix filesystem' in filemagic and filename.endswith('.gz')) or ('JPEG 2000 image' in filemagic and filename.endswith('.gz'):
 		if unpackdir != None:
        			tmpdir = tempfile.mkdtemp(dir=unpackdir)
 		else:
