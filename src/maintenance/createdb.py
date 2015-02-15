@@ -720,7 +720,8 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 					process = False
 				if process:
 					for i in manifestlines[1:]:
-						entries = i.strip().split()
+						i = i.strip().replace('\t\t', '\t')
+						entries = i.split('\t')
 						fileentry = entries[0]
 						## sha256 is always the first hash
 						hashentry = entries[1]
