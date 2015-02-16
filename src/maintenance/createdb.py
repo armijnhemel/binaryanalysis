@@ -746,6 +746,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 	sys.stdout.flush()
 
         conn = sqlite3.connect(dbpath, check_same_thread = False)
+	conn.text_factory = str
 	c = conn.cursor()
 	c.execute('PRAGMA synchronous=off')
 
@@ -1418,7 +1419,7 @@ def extractcomments((package, version, i, p, language, filehash, ninkaversion, b
 
 	broken = False
 	if brokenninka:
-		for b in ['$', ' ', ';', '(', ')']:
+		for b in ['$', ' ', ';', '(', ')', '[', ']', '`']:
 			if b in i:
 				broken = True
 				break
@@ -1444,6 +1445,15 @@ def extractcomments((package, version, i, p, language, filehash, ninkaversion, b
 			if ')' in ninkatmp[1]:
 				os.unlink(ninkatmp[1])
 				continue
+			if '[' in ninkatmp[1]:
+				os.unlink(ninkatmp[1])
+				continue
+			if ']' in ninkatmp[1]:
+				os.unlink(ninkatmp[1])
+				continue
+			if '`' in ninkatmp[1]:
+				os.unlink(ninkatmp[1])
+				continue
 			break
 		shutil.copy(os.path.join(i,p), ninkatmp[1])
 		p1 = subprocess.Popen(["%s/ninka.pl" % ninkabasepath, "-c", ninkatmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
@@ -1457,7 +1467,7 @@ def extractcomments((package, version, i, p, language, filehash, ninkaversion, b
 	else:
 		commentsfile = os.path.join(i, "%s.comments" % p)
 	if not os.path.exists(commentsfile):
-		for j in ['$', ';', ' ', '(', ')']:
+		for j in ['$', ';', ' ', '(', ')', '[', ']', '`']:
 			if j in p:
 				p = p.replace(j, '\%s' % j)
 		commentsfile = os.path.join(i, "%s.comments" % p)
@@ -1479,7 +1489,7 @@ def runfullninka((i, p, filehash, ninkaversion, brokenninka)):
 
 	broken = False
 	if brokenninka:
-		for b in ['$', ' ', ';', '(', ')']:
+		for b in ['$', ' ', ';', '(', ')', '[', ']', '`']:
 			if b in i:
 				broken = True
 				break
@@ -1503,6 +1513,15 @@ def runfullninka((i, p, filehash, ninkaversion, brokenninka)):
 				os.unlink(ninkatmp[1])
 				continue
 			if ')' in ninkatmp[1]:
+				os.unlink(ninkatmp[1])
+				continue
+			if '[' in ninkatmp[1]:
+				os.unlink(ninkatmp[1])
+				continue
+			if ']' in ninkatmp[1]:
+				os.unlink(ninkatmp[1])
+				continue
+			if '`' in ninkatmp[1]:
 				os.unlink(ninkatmp[1])
 				continue
 			break
