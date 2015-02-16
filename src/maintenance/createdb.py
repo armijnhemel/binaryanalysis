@@ -1419,7 +1419,7 @@ def extractcomments((package, version, i, p, language, filehash, ninkaversion, b
 
 	broken = False
 	if brokenninka:
-		for b in ['$', ' ', ';', '(', ')', '[', ']', '`']:
+		for b in ['$', ' ', ';', '(', ')', '[', ']', '`', '\'', '\\']:
 			if b in i:
 				broken = True
 				break
@@ -1454,6 +1454,12 @@ def extractcomments((package, version, i, p, language, filehash, ninkaversion, b
 			if '`' in ninkatmp[1]:
 				os.unlink(ninkatmp[1])
 				continue
+			if '\'' in ninkatmp[1]:
+				os.unlink(ninkatmp[1])
+				continue
+			if '\\' in ninkatmp[1]:
+				os.unlink(ninkatmp[1])
+				continue
 			break
 		shutil.copy(os.path.join(i,p), ninkatmp[1])
 		p1 = subprocess.Popen(["%s/ninka.pl" % ninkabasepath, "-c", ninkatmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
@@ -1467,7 +1473,7 @@ def extractcomments((package, version, i, p, language, filehash, ninkaversion, b
 	else:
 		commentsfile = os.path.join(i, "%s.comments" % p)
 	if not os.path.exists(commentsfile):
-		for j in ['$', ';', ' ', '(', ')', '[', ']', '`']:
+		for j in ['$', ';', ' ', '(', ')', '[', ']', '`', '\'', '\\']:
 			if j in p:
 				p = p.replace(j, '\%s' % j)
 		commentsfile = os.path.join(i, "%s.comments" % p)
@@ -1489,7 +1495,7 @@ def runfullninka((i, p, filehash, ninkaversion, brokenninka)):
 
 	broken = False
 	if brokenninka:
-		for b in ['$', ' ', ';', '(', ')', '[', ']', '`']:
+		for b in ['$', ' ', ';', '(', ')', '[', ']', '`', '\'', '\\']:
 			if b in i:
 				broken = True
 				break
@@ -1522,6 +1528,12 @@ def runfullninka((i, p, filehash, ninkaversion, brokenninka)):
 				os.unlink(ninkatmp[1])
 				continue
 			if '`' in ninkatmp[1]:
+				os.unlink(ninkatmp[1])
+				continue
+			if '\'' in ninkatmp[1]:
+				os.unlink(ninkatmp[1])
+				continue
+			if '\\' in ninkatmp[1]:
 				os.unlink(ninkatmp[1])
 				continue
 			break
@@ -2767,6 +2779,9 @@ def main(argv):
 				unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums, downloadurl, masterdatabase, cleanup, license, copyrights, security, pool, ninkacomments, licensedb, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
 			if unpackres != None:
 				oldres = set(map(lambda x: x[2]['sha256'], unpackres))
+				## by updating oldres instead of overwriting itsome more files could be filtered
+				## earlier. However, in some cases (Linux kernel) it could cost a lot more memory
+				#oldres.update(map(lambda x: x[2]['sha256'], unpackres))
 				oldpackage = package
 		except Exception, e:
 				# oops, something went wrong
