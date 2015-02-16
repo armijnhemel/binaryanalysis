@@ -731,6 +731,10 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 					for i in manifestlines[1:]:
 						i = i.strip().replace('\t\t', '\t')
 						entries = i.split('\t')
+						if len(entries) != 2 + len(extrahashes):
+							## if this happens there is a newline
+							## in the file name which is pure evil
+							continue
 						fileentry = entries[0]
 						## sha256 is always the first hash
 						hashentry = entries[1]
@@ -2093,13 +2097,13 @@ def extractsourcestrings(filename, filedir, language, package):
 			scanfile.write(filecontents)
 			scanfile.close()
 
-	p1 = subprocess.Popen(['xgettext', '-a', "--omit-header", "--no-wrap", os.path.join(filedir, filename), '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p1 = subprocess.Popen(['xgettext', '-a', "--omit-header", "--no-wrap", os.path.join(filedir, filename), '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	(stanout, stanerr) = p1.communicate()
 	if p1.returncode != 0:
 		## analyze stderr first
 		if "Non-ASCII" in stanerr:
 			## rerun xgettext with a different encoding
-			p2 = subprocess.Popen(['xgettext', '-a', "--omit-header", "--no-wrap", "--from-code=utf-8", os.path.join(filedir, filename), '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			p2 = subprocess.Popen(['xgettext', '-a', "--omit-header", "--no-wrap", "--from-code=utf-8", os.path.join(filedir, filename), '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 			## overwrite stanout
 			(stanout, pstanerr) = p2.communicate()
 			if p2.returncode != 0:
