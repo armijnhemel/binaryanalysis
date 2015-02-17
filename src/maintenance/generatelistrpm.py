@@ -374,9 +374,15 @@ def unpacksrpm(filedir, target, unpacktmpdir, rpmdatabase):
 				break
 		if not unique:
 			continue
+
 		## make a temporary directory
-		cpiodir = tempfile.mkdtemp()
+		if os.stat(n).st_size < cutoff:
+			cpiodir = tempfile.mkdtemp(dir=unpacktmpdir)
+		else:
+			cpiodir = tempfile.mkdtemp()
+
 		cpiotmp = tempfile.mkstemp(dir=cpiodir)
+
 		p1 = subprocess.Popen(['rpm2cpio', n], stdin=subprocess.PIPE, stdout=cpiotmp[0], stderr=subprocess.PIPE, close_fds=True, cwd=cpiodir)
 		(cpiostanout, cpiostanerr) = p1.communicate()
 		os.fsync(cpiotmp[0])
