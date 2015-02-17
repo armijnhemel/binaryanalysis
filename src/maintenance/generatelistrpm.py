@@ -361,8 +361,6 @@ def unpacksrpm(filedir, target, unpacktmpdir, rpmdatabase):
 	tasks = map(lambda x: (x, target, rpm2copyfiles[x], unpacktmpdir, cutoff), uniquerpms)
 	res = pool.map(parallel_unpack, tasks,1)
 	pool.terminate()
-	for r in res:
-		print r
 
 	## ... then unpack the non-unique RPMS, possibly overwriting already unpacked data
 	## And yes, probably there is a more efficient way to do this.
