@@ -1,5 +1,12 @@
-2015-02-14:
+2015-02-17:
+* more workarounds for Ninka regressions
+
+2015-02-16:
+* more workarounds for Ninka regressions
+
+2015-02-15:
 * better workaround for Ninka regressions
+* fix errors in creating manifest files
 
 2015-02-10:
 * createdb.py: change text_factory for cursor for copyright statement
