@@ -21,7 +21,7 @@ def main(argv):
 		sys.exit(1)
 
 	conn = sqlite3.connect(options.db)
-	c = conn3.cursor()
+	c = conn.cursor()
 
 	c.execute("create table if not exists scores (stringidentifier text, packages int, score real)")
 	c.execute("create index if not exists scoresindex on scores(stringidentifier)")
