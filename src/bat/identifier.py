@@ -278,7 +278,7 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 			## binary is somewhat corrupted and does not have section headers
 			## TODO: localisation fixes
 			if "There are no sections in this file." in stanout:
-				p = subprocess.Popen(['strings', '-n', str(stringcutoff), scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+				p = subprocess.Popen(['strings', '-a', '-n', str(stringcutoff), scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				if p.returncode != 0:
 					if createdtempfile:
@@ -322,7 +322,7 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 
 				for i in elfscanfiles:
 					## TODO: check if -Tbinary is needed or not
-       					p = subprocess.Popen(['strings', '-n', str(stringcutoff), i], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+       					p = subprocess.Popen(['strings', '-a', '-n', str(stringcutoff), i], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
        					(stanout, stanerr) = p.communicate()
 
        					st = stanout.split("\n")
@@ -353,7 +353,7 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 		## configurable through "stringcutoff" although the gain will be relatively
 		## low by also scanning strings < stringcutoff
 		try:
-			p = subprocess.Popen(['strings', '-n', str(stringcutoff), scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			p = subprocess.Popen(['strings', '-a', '-n', str(stringcutoff), scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 			(stanout, stanerr) = p.communicate()
 			if p.returncode != 0:
 				if createdtempfile:
@@ -591,8 +591,8 @@ def extractkernelsymbols(scanfile, scanenv, unpacktempdir):
 		return {}
 
 	variables = set()
-        #p = subprocess.Popen(['strings', '-n', str(stringcutoff), elftmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-        p = subprocess.Popen(['strings', elftmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+        #p = subprocess.Popen(['strings', '-a', '-n', str(stringcutoff), elftmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+        p = subprocess.Popen(['strings', '-a', elftmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         (stanout, stanerr) = p.communicate()
 	st = stanout.split("\n")
 	for s in st:
