@@ -528,7 +528,10 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, d
 	if scans['batconfig'].has_key('processors'):
 		processors = scans['batconfig']['processors']
 	else:
-		processors = None
+		try:
+			processors = multiprocessing.cpu_count()
+		except NotImplementedError:
+			processors = None
 	for aggregatescan in scans['aggregatescans']:
 		module = aggregatescan['module']
 		method = aggregatescan['method']
