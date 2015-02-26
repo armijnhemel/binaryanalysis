@@ -8,7 +8,7 @@
 This file contains a few methods that can be useful for security scanning.
 '''
 
-import os, sys, sqlite3, zipfile, subprocess, re, cPickle
+import os, sys, sqlite3, zipfile, subprocess, re, cPickle, copy
 
 ## This method extracts the CRC32 checksums from the entries of the encrypted zip file and checks
 ## whether or not there are any files in the database with the same CRC32. If so, a known plaintext
@@ -47,6 +47,8 @@ def encryptedZipSetup(scanenv, debug=False):
 		return (False, None)
 	if not os.path.exists(scanenv['BAT_DB']):
 		return (False, None)
+
+	newenv = copy.deepcopy(scanenv)
 	c = sqlite3.connect(scanenv['BAT_DB'])
 	cursor = c.cursor()
 
