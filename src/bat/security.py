@@ -8,7 +8,7 @@
 This file contains a few methods that can be useful for security scanning.
 '''
 
-import os, sys, sqlite3, zipfile, subprocess, re, cPickle, copy
+import os, sys, sqlite3, zipfile, subprocess, re, cPickle, copy, tempfile
 
 ## This method extracts the CRC32 checksums from the entries of the encrypted zip file and checks
 ## whether or not there are any files in the database with the same CRC32. If so, a known plaintext
@@ -138,3 +138,59 @@ def scanShellInvocations(unpackreports, scantempdir, topleveldir, processors, sc
 			leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
 			cPickle.dump(leafreports, leaf_file)
 			leaf_file.close()
+
+## stubs for cracking passwords with "John the Ripper"
+## 1. look for files called 'passwd' and 'shadow'
+## 2. search for individual entries in the database
+## 3. crack unknown entries
+def crackPasswords(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
+	passwdfiles = []
+	for u in unpackreports.keys():
+		if not (os.path.basename(u) == 'shadow' or os.path.basename(u) == 'passwd'):
+			continue
+		if 'symlink' in unpackreports[u]['tags']:
+			continue
+		passwdfiles.append(u)
+
+	db = False
+	if "BAT_PASSWD_DB" in scanenv:
+		db = True
+		conn = sqlite3.open(scanenv['BAT_PASSWD_DB'])
+		cursor = conn.cursor()
+
+	seenhashes = set()
+	foundpasswords = []
+
+	for i in passwdfiles:
+		pwdfile = os.path.join(scantempdir, i)
+		pwentries = map(lambda x: x.strip(), open(pwdfile).readlines())
+		scanfile = False
+		scanlines = []
+		for p in pwentries:
+			pwfields = p.split(':')
+			if len(pwfields[1]) > 1:
+				if pwfields[1] in seenhashes:
+					continue
+				seenhashes.add(pwfields[1])
+				if db:
+					cursor.execute("select password from security_password where password=?", (pwfields[1],))
+					res = cursor.fetchall()
+					if len(res) != 0:
+						foundpasswords.append((pwfields[0], pwfields[1],password))
+						continue
+				scanfile = True
+				scanlines.append(p)
+		if scanfile:
+			## print the lines with passwords that need to be
+			## scanned with JTR to a separate file
+			tmppwdfile = tempfile.mkstemp()
+			os.fdopen(tmppwdfile[0]).close()
+			newpwdfile = open(tmppwdfile[1], 'w')
+			for s in scanlines:
+				newpwdfile.write(s)
+			newpwdfile.close()
+			os.unlink(tmppwdfile[1])
+
+	if db:
+		cursor.close()
+		conn.close()
