@@ -192,9 +192,10 @@ def crackPasswords(unpackreports, scantempdir, topleveldir, processors, scanenv,
 					continue
 				seenhashes.add(pwfields[1])
 				if db:
-					cursor.execute("select password from security_password where password=?", (pwfields[1],))
-					res = cursor.fetchall()
+					cursor.execute("select password from security_password where hash=?", (pwfields[1],))
+					res = cursor.fetchone()
 					if len(res) != 0:
+						password = res[0]
 						foundpasswords.append((pwfields[1],password))
 						hashestopassword[pwfields[1]] = password
 						continue
@@ -257,6 +258,7 @@ def crackPasswords(unpackreports, scantempdir, topleveldir, processors, scanenv,
 		(orighash, foundpassword) = f
 		for l in hashestologins[orighash]:
 			res.add((l, foundpassword))
+		print res, orighash
 	return {'passwords': res}
 			
 def crackPasswordsSetup(scanenv, debug=False):
@@ -278,6 +280,6 @@ def crackPasswordsSetup(scanenv, debug=False):
 		del newenv['BAT_SECURITY_DB']
 		return (True, newenv)
 	cursor.close()
-	conn.close()
+	c.close()
 	## environment hasn't changed
 	return (False, None)
