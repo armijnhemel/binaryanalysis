@@ -1943,6 +1943,15 @@ This table stores information about relations between paths and CVE numbers.
 \item \texttt{cve}: CVE identifier
 \end{itemize}
 
+\subsubsection{\texttt{security\_password} table}
+
+This table stores information about relations between hashes and derived passwords.
+
+\begin{itemize}
+\item \texttt{hash}: hash value as found in password or shadow file
+\item \texttt{password}: password found with a password cracker
+\end{itemize}
+
 \section{BusyBox script internals}
 
 The BusyBox processing scripts look simple, but behind the internals are a bit
