@@ -258,7 +258,6 @@ def crackPasswords(unpackreports, scantempdir, topleveldir, processors, scanenv,
 		(orighash, foundpassword) = f
 		for l in hashestologins[orighash]:
 			res.add((l, foundpassword))
-		print res, orighash
 	return {'passwords': res}
 			
 def crackPasswordsSetup(scanenv, debug=False):
@@ -283,3 +282,51 @@ def crackPasswordsSetup(scanenv, debug=False):
 	c.close()
 	## environment hasn't changed
 	return (False, None)
+
+## search all files based on the usernames and passwords found
+## Of special interest are:
+## * binaries
+## * HTML pages
+## * JavaScript files
+def searchLogins(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
+	toplevelelem = None
+	for u in unpackreports.keys():
+		if 'passwords' in unpackreports[u]['tags']:
+			toplevelelem = u
+			break
+	if toplevelelem == None:
+		return
+
+	filehash = unpackreports[u]['sha256']
+	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+	leafreports = cPickle.load(leaf_file)
+	leaf_file.close()
+
+	logins = map(lambda x: x[0], leafreports['passwords'])
+
+	if logins == []:
+		return
+
+	candidates = set()
+	for u in unpackreports.keys():
+		## scan dupes or not? It could save a lot of disk I/O
+		#if 'dupe' in unpackreports[u]['tags']:
+		#	continue
+		if 'symlink' in unpackreports[u]['tags']:
+			continue
+		if 'empty' in unpackreports[u]['tags']:
+			continue
+		if 'linuxkernel' in unpackreports[u]['tags']:
+			continue
+		if 'graphics' in unpackreports[u]['tags']:
+			continue
+		if os.path.basename(u) == 'shadow' or os.path.basename(u) == 'passwd':
+			continue
+		## TODO: make this more efficient
+		scanfile = open(os.path.join(scantempdir, u), 'rb')
+		scandata = scanfile.read()
+		scanfile.close()
+		for l in logins:
+			if l in scandata:
+				candidates.add((l,u))
+	return {'logins': candidates}
