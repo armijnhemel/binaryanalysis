@@ -1,5 +1,19 @@
+2015-02-27:
+* more password cracking with JtR
+* search files for presence of login names for which passwords were found,
+which can give hints about vulnerable binaries
+
+2015-02-26:
+* workaround for CVE-2014-8485
+* start on cracking passwords with JtR
+
+2015-02-25:
+* add code to read .spec files with RPM's own Python module, even though this
+is unsafe.
+
 2015-02-17:
 * more workarounds for Ninka regressions
+* process RPM spec files further
 
 2015-02-16:
 * more workarounds for Ninka regressions
@@ -11,6 +25,9 @@
 2015-02-10:
 * createdb.py: change text_factory for cursor for copyright statement
 extraction that was causing some issues.
+
+2015-02-09:
+* generatelistrpm.py: start working on processing RPM spec files
 
 2015-02-08:
 * createdb.py: replace calls to FOSSology copyright scanner with a single
