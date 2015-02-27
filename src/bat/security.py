@@ -158,10 +158,17 @@ def crackPasswords(unpackreports, scantempdir, topleveldir, processors, scanenv,
 		else:
 			passwdfiles.append((u, 'passwd'))
 
+	(envresult, newenv) = crackPasswordsSetup(scanenv, scandebug)
+
+	if envresult:
+		newscanenv = newenv
+	else:
+		newscanenv = scanenv
+
 	db = False
-	if "BAT_SECURITY_DB" in scanenv:
+	if "BAT_SECURITY_DB" in newscanenv:
 		db = True
-		conn = sqlite3.open(scanenv['BAT_SECURITY_DB'])
+		conn = sqlite3.connect(newscanenv['BAT_SECURITY_DB'])
 		cursor = conn.cursor()
 
 	seenhashes = set()
@@ -252,12 +259,13 @@ def crackPasswords(unpackreports, scantempdir, topleveldir, processors, scanenv,
 			res.add((l, foundpassword))
 	return {'passwords': res}
 			
-def crackPasswordSetup(scanenv, debug=False):
+def crackPasswordsSetup(scanenv, debug=False):
 	## first check if there is a database defined
 	if not scanenv.has_key('BAT_SECURITY_DB'):
 		return (False, None)
 	if not os.path.exists(scanenv['BAT_SECURITY_DB']):
-		return (False, None)
+		del newenv['BAT_SECURITY_DB']
+		return (True, newenv)
 
 	newenv = copy.deepcopy(scanenv)
 	c = sqlite3.connect(scanenv['BAT_SECURITY_DB'])
@@ -267,8 +275,9 @@ def crackPasswordSetup(scanenv, debug=False):
 	if res == []:
 		cursor.close()
 		c.close()
-		return (False, None)
-
+		del newenv['BAT_SECURITY_DB']
+		return (True, newenv)
 	cursor.close()
 	conn.close()
-	return (True, newenv)
+	## environment hasn't changed
+	return (False, None)
