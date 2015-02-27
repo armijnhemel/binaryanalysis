@@ -249,9 +249,8 @@ def crackPasswords(unpackreports, scantempdir, topleveldir, processors, scanenv,
 	for f in foundpasswords:
 		(orighash, foundpassword) = f
 		for l in hashestologins[orighash]:
-			res.append((l, foundpassword))
-	## TODO: find out how to return and use these passwords properly
-	return
+			res.add((l, foundpassword))
+	return {'passwords': res}
 			
 def crackPasswordSetup(scanenv, debug=False):
 	## first check if there is a database defined
