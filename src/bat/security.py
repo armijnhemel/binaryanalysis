@@ -80,12 +80,11 @@ def encryptedZipSetup(scanenv, debug=False):
 		
 	return (True, newenv)
 
-
 ## experimental clamscan feature
 ## Always run freshclam before scanning to get the latest
 ## virus signatures!
 def scanVirus(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
-	p = subprocess.Popen(['clamscan', "%s" % (path,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['clamscan', "%s" % (path,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode == 0:
                	return
@@ -143,6 +142,10 @@ def scanShellInvocations(unpackreports, scantempdir, topleveldir, processors, sc
 ## 1. look for files called 'passwd' and 'shadow'
 ## 2. search for individual entries in the database
 ## 3. crack unknown entries
+##
+## This is implemented as an "aggregate scan". Running "John the Ripper"
+## is an expensive operation and often there can be duplicate password
+## or shadow files in firmwares.
 def crackPasswords(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
 	passwdfiles = []
 	for u in unpackreports.keys():
@@ -150,25 +153,34 @@ def crackPasswords(unpackreports, scantempdir, topleveldir, processors, scanenv,
 			continue
 		if 'symlink' in unpackreports[u]['tags']:
 			continue
-		passwdfiles.append(u)
+		if os.path.basename(u) == 'shadow':
+			passwdfiles.append((u, 'shadow'))
+		else:
+			passwdfiles.append((u, 'passwd'))
 
 	db = False
-	if "BAT_PASSWD_DB" in scanenv:
+	if "BAT_SECURITY_DB" in scanenv:
 		db = True
-		conn = sqlite3.open(scanenv['BAT_PASSWD_DB'])
+		conn = sqlite3.open(scanenv['BAT_SECURITY_DB'])
 		cursor = conn.cursor()
 
 	seenhashes = set()
 	foundpasswords = []
+	hashestopassword = {}
+	hashestologins = {}
 
 	for i in passwdfiles:
-		pwdfile = os.path.join(scantempdir, i)
+		(pwdfilename, pwdfiletype) = i
+		pwdfile = os.path.join(scantempdir, pwdfilename)
 		pwentries = map(lambda x: x.strip(), open(pwdfile).readlines())
 		scanfile = False
 		scanlines = []
 		for p in pwentries:
 			pwfields = p.split(':')
 			if len(pwfields[1]) > 1:
+				if pwfields[1] not in hashestologins:
+					hashestologins[pwfields[1]] = set()
+				hashestologins[pwfields[1]].add(pwfields[0])
 				if pwfields[1] in seenhashes:
 					continue
 				seenhashes.add(pwfields[1])
@@ -176,7 +188,8 @@ def crackPasswords(unpackreports, scantempdir, topleveldir, processors, scanenv,
 					cursor.execute("select password from security_password where password=?", (pwfields[1],))
 					res = cursor.fetchall()
 					if len(res) != 0:
-						foundpasswords.append((pwfields[0], pwfields[1],password))
+						foundpasswords.append((pwfields[1],password))
+						hashestopassword[pwfields[1]] = password
 						continue
 				scanfile = True
 				scanlines.append(p)
@@ -189,8 +202,74 @@ def crackPasswords(unpackreports, scantempdir, topleveldir, processors, scanenv,
 			for s in scanlines:
 				newpwdfile.write(s)
 			newpwdfile.close()
+
+			## now scan with JTR
+			if processors == None or processors <= 1:
+				p = subprocess.Popen(['john', "%s" % (tmppwdfile[1],)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+				(stanout, stanerr) = p.communicate()
+			else:
+				p = subprocess.Popen(['john', "--fork=%d" % processors, "%s" % (tmppwdfile[1],)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+				(stanout, stanerr) = p.communicate()
+			if p.returncode != 0:
+				os.unlink(tmppwdfile[1])
+				if db:
+					cursor.close()
+					conn.close()
+               			return
+
+			## JTR has successfully run, so now get the results
+			p = subprocess.Popen(['john', "--show", "%s" % (tmppwdfile[1],)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+			(stanout, stanerr) = p.communicate()
+			counter = 0
+			for stan in stanout.split('\n'):
+				if ":NO PASSWORD:" in stan.strip():
+					counter += 1
+					continue
+				stansplit = stan.strip().split(':')
+				if len(stansplit) < 8:
+					counter += 1
+					continue
+				if pwdfiletype == 'passwd':
+					pass
+				else:
+					if len(stansplit) == 9:
+						password = stansplit[1]
+						orighash = scanlines[counter].split(':')[1]
+						foundpasswords.append((orighash, password))
+						hashestopassword[orighash] = password
+				counter += 1
 			os.unlink(tmppwdfile[1])
 
 	if db:
 		cursor.close()
 		conn.close()
+
+	res = set()
+	## now return the found login + password combinations
+	for f in foundpasswords:
+		(orighash, foundpassword) = f
+		for l in hashestologins[orighash]:
+			res.append((l, foundpassword))
+	## TODO: find out how to return and use these passwords properly
+	return
+			
+def crackPasswordSetup(scanenv, debug=False):
+	## first check if there is a database defined
+	if not scanenv.has_key('BAT_SECURITY_DB'):
+		return (False, None)
+	if not os.path.exists(scanenv['BAT_SECURITY_DB']):
+		return (False, None)
+
+	newenv = copy.deepcopy(scanenv)
+	c = sqlite3.connect(scanenv['BAT_SECURITY_DB'])
+	cursor = c.cursor()
+	## then check the database schema to see if the right table is there
+	res = c.execute("select * from sqlite_master where type='table' and name='security_password'").fetchall()
+	if res == []:
+		cursor.close()
+		c.close()
+		return (False, None)
+
+	cursor.close()
+	conn.close()
+	return (True, newenv)
