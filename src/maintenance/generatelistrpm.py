@@ -2,7 +2,7 @@
 
 ## Binary Analysis Tool
 ## Copyright 2011-2015 Armijn Hemel for Tjaldur Software Governance Solutions
-## Licensed under Apache 2.0, see LICENSE file for details
+## Licensed under GPL 2
 
 '''
 Helper script to generate the LIST files for the string extraction scripts. While this script is not foolproof, it will save lots of typing :-)
@@ -20,9 +20,25 @@ directory.
 import sys, os, os.path, subprocess, tempfile, shutil, stat, sqlite3, re
 from optparse import OptionParser
 import multiprocessing
-import hashlib
+import hashlib, zlib, urllib
+import rpm
 
-## spec file scanner to process any patches that are actually applied
+## backup method that uses the RPM module's built in functionality to expamd
+## macros
+## WARNING WARNING WARNING: this is dangerous as commands from the RPM spec file
+## that could invoke external commands will run!
+## Never run this on a machine where it could do harm!
+def scanspec2(specfile, specdir):
+	spec = os.path.join(specdir, specfile)
+	try:
+		parsedspec = rpm.spec(spec)
+	except Exception, e:
+		return None
+	patches = filter(lambda x: x[2] == 2, parsedspec.sources)
+	return patches
+	
+## homebrew spec file scanner. This is to avoid to use the RPM python bindings
+## due to security concerns.
 ## extract the following:
 ## * name
 ## * version
@@ -31,10 +47,11 @@ import hashlib
 ## * any applied patches
 ## * any unapplied patches
 ## * possibly license and URL
-## TODO: also process if, undefine, etc. and verify what patches exist
-def scanspec(specfile, specdir):
+## TODO: also process if, undefine, etc.
+def scanspec(specfile, specdir, insecurerpm):
 	result = {}
 	patches = {}
+	sources = set()
 	appliedpatches = set()
 	speclines = map(lambda x: x.rstrip(), open(os.path.join(specdir, specfile), 'r').readlines())
 	defines = {}
@@ -91,7 +108,9 @@ def scanspec(specfile, specdir):
 				continue
 			globaldefines[definesplit[1]] = definesplit[2]
 		elif line.startswith('Release:'):
-			pass
+			## release usually has %{?dist} in it, which is dependent
+			## on the machine. This is not really reliable for matching.
+			release = line.split(':',1)[1].strip()
 		elif line.startswith('Version:'):
 			if 'version' in result:
 				continue
@@ -111,6 +130,7 @@ def scanspec(specfile, specdir):
 		elif line.startswith('URL:'):
 			url = line.split(':',1)[1].strip()
 			if not '%{' in url:
+				#result['url'] = urllib.unquote(url)
 				result['url'] = url
 				continue
 			specreplaces = re.findall("%{([\w\d]+)}", url)
@@ -127,10 +147,26 @@ def scanspec(specfile, specdir):
 			license = line.split(':',1)[1].strip()
 			result['license'] = license
 		elif line.startswith('Source'):
-			## possibly subsitute version and other variables
-			## possibly remove URLs and other things, so just the
-			## name of the source code file is kept
-			pass
+			sourcesplit = line.split(':',1)
+			if len(sourcesplit) != 2:
+				continue
+			source = sourcesplit[1].strip()
+			source = os.path.basename(source)
+			if not '%{' in source:
+				if os.path.exists(os.path.join(specdir, source)):
+					sources.add(source)
+			specreplaces = re.findall("%{([\w\d]+)}", source)
+			for s in specreplaces:
+				if s in result:
+					source = source.replace("%{" + s + "}", result[s])
+				elif s in defines:
+					source = source.replace("%{" + s + "}", defines[s])
+				elif s in globaldefines:
+					source = source.replace("%{" + s + "}", globaldefines[s])
+			if '%{' in source:
+				continue
+			if os.path.exists(os.path.join(specdir, source)):
+				sources.add(source)
 		elif line.startswith('Patch'):
 			patchsplit = line.split(':', 1)
 			if len(patchsplit) == 1:
@@ -183,9 +219,11 @@ def scanspec(specfile, specdir):
 		result['unresolvedpatches'] = unresolvedpatches
 	if len(missingpatches) != 0:
 		result['missingpatches'] = missingpatches
+	if len(sources) != 0:
+		result['sources'] = sources
 	return result
 
-def parallel_unpack((rpmfile, target, copyfiles, unpacktmpdir, cutoff)):
+def parallel_unpack((rpmfile, target, copyfiles, unpacktmpdir, cutoff, insecurerpm, extrahashes)):
 	## cutoff is at 200 MiB
 	## TODO: make configurable
 	cutoff = 209715200
@@ -205,20 +243,37 @@ def parallel_unpack((rpmfile, target, copyfiles, unpacktmpdir, cutoff)):
 	p2 = subprocess.Popen(['cpio', '-i', '-d', '--no-absolute-filenames', '-F', cpiotmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cpiodir)
 	(cpiostanout, cpiostanerr) = p2.communicate()
 	os.unlink(cpiotmp[1])
-	## first analyse the spec file
-	res = []
-	'''
+
+	filechecksums = {}
 	unpackedfiles = os.listdir(cpiodir)
+	for f in unpackedfiles:
+		filechecksums[f] = scanhashes(os.path.join(cpiodir, f), extrahashes)
+	## then analyse the spec file
 	specfiles = filter(lambda x: x.endswith('.spec'), unpackedfiles)
-	for f in specfiles:
-		res.append(scanspec(f, cpiodir))
+	## there should only be one spec file
+	if len(specfiles) != 1:
+		shutil.rmtree(cpiodir)
+		return
+	f = specfiles[0]
+	specres = scanspec(f,cpiodir,insecurerpm)
+	if "unresolvedpatches" in specres and insecurerpm:
+		extrapatches = scanspec2(f,cpiodir)
+	if "missingpatches" in specres and insecurerpm:
+		extrapatches = scanspec2(f,cpiodir)
+	specres['rpmname'] = os.path.basename(rpmfile)
+	specres['filechecksums'] = filechecksums
 	'''
 	## copy the source code files
 	for f in copyfiles:
 		shutil.copy(os.path.join(cpiodir, f), target)
 		os.chmod(os.path.join(target, f), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+	## copy the patches
+	for f in copyfiles:
+		shutil.copy(os.path.join(cpiodir, f), target)
+		os.chmod(os.path.join(target, f), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+	'''
 	shutil.rmtree(cpiodir)
-	return res
+	return specres
 
 ## it's either in the form of:
 ##   package-version.extension
@@ -267,19 +322,47 @@ def generatelist(filedir, origin):
 	except Exception, e:
 		pass
 
+def scanhashes(resolved_path, extrahashes):
+	filehashes = {}
+	scanfile = open(resolved_path, 'r')
+	h = hashlib.new('sha256')
+	h.update(scanfile.read())
+	scanfile.close()
+	filehashes['sha256'] = h.hexdigest()
+
+	## TODO: sanity checks for crc32 for really big files
+	for i in extrahashes:
+		scanfile = open(resolved_path, 'r')
+		if i == 'crc32':
+			crcdata = scanfile.read()
+			filehashes[i] = zlib.crc32(crcdata) & 0xffffffff
+		else:
+			h = hashlib.new(i)
+			h.update(scanfile.read())
+			filehashes[i] = h.hexdigest()
+		scanfile.close()
+	return filehashes
+
 ## scan each RPM file and see if there are any source code archives inside.
 ## This check is based on conventions on how source code archives are named and
 ## might miss things.
-## TODO: collect patches as well
-## TODO: extract the spec file
-def scanrpm((filedir, filepath)):
-	p2 = subprocess.Popen(['rpm', '-qpl', '--dump', "%s/%s" % (filedir, filepath)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+## TODO: store patches as well
+def scanrpm((filedir, filepath, filehashes, extrahashes)):
+
+	## running rpm -qpl --dump is a lot faster than using the RPM Python module
+	resolved_path = os.path.join(filedir, filepath)
+	p2 = subprocess.Popen(['rpm', '-qpl', '--dump', resolved_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p2.communicate()
 	rpmfiles = stanout.strip().rsplit("\n")
 	copyfiles = []
+	rpmchecksums = set()
 	for fs in rpmfiles:
 		## the interesting data from '--dump' are md5sum and the size (not used at the moment)
-		(f, size, mtime, md5sum, rest) = fs.split(' ', 4)
+		splitresults = fs.split(' ', 4)
+		if len(splitresults) < 5:
+			continue
+		(f, size, mtime, md5sum, rest) = splitresults
+		rpmchecksums.add((f, md5sum))
 		fsplit = f.lower().rsplit('.', 1)
 		if len(fsplit) == 1:
 			continue
@@ -293,23 +376,46 @@ def scanrpm((filedir, filepath)):
 		else:
 			try:
 				(packageversion, extension, compression) = f.lower().rsplit('.', 2)
-			except:
+			except Exception, e:
 				continue
 			if not (extension in ["tar"] and compression in ["gz", "bz2", "bz", "lz", "lzma", "xz", "Z"]):
 				continue
 			else:
 				copyfiles.append((f,md5sum))
-	return (filedir, filepath, copyfiles)
+	if filehashes == None:
+		filehashes = scanhashes(resolved_path, extrahashes)
+	return (filedir, filepath, copyfiles, filehashes, rpmchecksums)
 
-def unpacksrpm(filedir, target, unpacktmpdir, rpmdatabase):
+def unpacksrpm(filedir, target, unpacktmpdir, origin, rpmdatabase, insecurerpm):
 	files = os.walk(filedir)
 	uniquefiles = set()
 	uniquerpms = set()
 	nonuniquerpms = set()
 	rpm2copyfiles = {}
 
-	rpmscans = set()
+	## hardcode for now
+	extrahashes = ['md5', 'sha1', 'crc32']
+	checksums = {}
+	if os.path.exists(os.path.join(filedir, 'SHA256SUM')):
+		checksumlines = open(os.path.join(filedir, "SHA256SUM")).readlines()
+		tmpextrahashes = checksumlines[0].strip().split()
+		for c in checksumlines[1:]:
+			archivechecksums = {}
+			checksumsplit = c.strip().split()
+			archivefilename = checksumsplit[0]
+			## sha256 is always the first hash
+			archivechecksums['sha256'] = checksumsplit[1]
+			counter = 2
+			for h in tmpextrahashes:
+				if h == 'sha256':
+					continue
+				if h not in extrahashes:
+					continue
+				archivechecksums[h] = checksumsplit[counter]
+				counter += 1
+			checksums[archivefilename] = archivechecksums
 
+	rpmscans = []
 	try:
         	while True:
 			i = files.next()
@@ -319,10 +425,10 @@ def unpacksrpm(filedir, target, unpacktmpdir, rpmdatabase):
 				res = p.rsplit('.', 2)
 				if len(res) != 3:
 					continue
-				if res[-1] != 'srpm' and (res[-1] != 'rpm' and res[-2] != 'src'):
-					continue
-				else:
-					rpmscans.add((i[0], p))
+				if res[-1] == 'srpm':
+					rpmscans.append((i[0], p, checksums.get(p, None), extrahashes))
+				elif res[-1] == 'rpm' and res[-2] == 'src':
+					rpmscans.append((i[0], p, checksums.get(p, None), extrahashes))
 	except Exception, e:
 		pass
 		#print >>sys.stderr, e
@@ -333,8 +439,27 @@ def unpacksrpm(filedir, target, unpacktmpdir, rpmdatabase):
 
 	uniquemd5s = set()
 
+	conn = sqlite3.connect(rpmdatabase)
+	cursor = conn.cursor()
+	insertrpms = []
+
 	for r in rpmres:
-		(filedir, filepath, copyfiles) = r
+		(filedir, filepath, copyfiles, filehashes, rpmchecksums) = r
+		if not filepath in checksums:
+			checksums[filepath] = filehashes
+		downloadurl = None
+		cursor.execute("select rpmname, origin, downloadurl from rpm where checksum=?", (filehashes['sha256'],))
+		res = cursor.fetchall()
+		if len(res) != 0:
+			process = True
+			for r in res:
+				(dbrpmname, dborigin, dbdownloadurl) = r
+				if dbrpmname == filepath and dborigin == origin and dbdownloadurl == downloadurl:
+					process = False
+					break
+			if not process:
+				continue
+		insertrpms.append(r)
 		unique = True
 		for fs in copyfiles:
 			(f, md5sum) = fs
@@ -352,58 +477,131 @@ def unpacksrpm(filedir, target, unpacktmpdir, rpmdatabase):
 		else:
 			nonuniquerpms.add(os.path.join(filedir, filepath))
 		rpm2copyfiles[os.path.join(filedir, filepath)] = map(lambda x: x[0], copyfiles)
+	conn.commit()
 
 	## unique RPMs can be unpacked in parallel, non-uniques cannot
 	## first process the unique RPMS in parallel
 	## cutoff is at 200 MiB
 	## TODO: make configurable
 	cutoff = 209715200
-	tasks = map(lambda x: (x, target, rpm2copyfiles[x], unpacktmpdir, cutoff), uniquerpms)
+	tasks = map(lambda x: (x, target, rpm2copyfiles[x], unpacktmpdir, cutoff, insecurerpm, extrahashes), uniquerpms)
 	res = pool.map(parallel_unpack, tasks,1)
 	pool.terminate()
 
+	for r in res:
+		version = r.get('version', None)
+		name = r.get('name', None)
+		rpmname = r.get('rpmname', None)
+		license = r.get('license', None)
+		url = r.get('url', None)
+		rpmname = r.get('rpmname', None)
+		rpmchecksum = checksums[rpmname]['sha256']
+		cursor.execute("insert into rpm_info(checksum, name, version, url, license) values (?,?,?,?,?)", (rpmchecksum, name, version, url, license))
+		filechecksums = r.get('filechecksums', {})
+		for f in filechecksums:
+			filetype = None
+			if f.endswith('.spec'):
+				filetype = 'spec'
+			else:
+				if 'appliedpatches' in r:
+					if f in r['appliedpatches']:
+						filetype = 'patch'
+				if 'sources' in r:
+					if f in r['sources']:
+						filetype = 'source'
+			cursor.execute("insert into rpm_contents(filename, type, checksum, rpmchecksum) values (?,?,?,?)", (f, filetype, filechecksums[f]['sha256'], rpmchecksum))
+
 	## ... then unpack the non-unique RPMS, possibly overwriting already unpacked data
 	## And yes, probably there is a more efficient way to do this.
-	for n in nonuniquerpms:
+	for rpmfile in nonuniquerpms:
 		## first check if for all the 'copyfiles' a file with the same name already exists. If so,
 		## then don't unpack.
 		unique = False
-		for f in rpm2copyfiles[n]:
+		for f in rpm2copyfiles[rpmfile]:
 			if not os.path.exists(os.path.join(target, f)):
 				unique = True
 				break
 		if not unique:
 			continue
 
+		filechecksums = {}
+
 		## make a temporary directory
-		if os.stat(n).st_size < cutoff:
+		if os.stat(rpmfile).st_size < cutoff:
 			cpiodir = tempfile.mkdtemp(dir=unpacktmpdir)
 		else:
 			cpiodir = tempfile.mkdtemp()
 
 		cpiotmp = tempfile.mkstemp(dir=cpiodir)
 
-		p1 = subprocess.Popen(['rpm2cpio', n], stdin=subprocess.PIPE, stdout=cpiotmp[0], stderr=subprocess.PIPE, close_fds=True, cwd=cpiodir)
+		p1 = subprocess.Popen(['rpm2cpio', rpmfile], stdin=subprocess.PIPE, stdout=cpiotmp[0], stderr=subprocess.PIPE, close_fds=True, cwd=cpiodir)
 		(cpiostanout, cpiostanerr) = p1.communicate()
 		os.fsync(cpiotmp[0])
 		os.fdopen(cpiotmp[0]).close()
 		p2 = subprocess.Popen(['cpio', '-i', '-d', '--no-absolute-filenames', '-F', cpiotmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cpiodir)
 		(cpiostanout, cpiostanerr) = p2.communicate()
 		os.unlink(cpiotmp[1])
+
+		## first analyse the spec file
+
+		unpackedfiles = os.listdir(cpiodir)
+		for f in unpackedfiles:
+			filechecksums[f] = scanhashes(os.path.join(cpiodir, f), extrahashes)
+		specfiles = filter(lambda x: x.endswith('.spec'), unpackedfiles)
+		if len(specfiles) != 1:
+			shutil.rmtree(cpiodir)
+			continue
+		f = specfiles[0]
+		specres = scanspec(f,cpiodir,insecurerpm)
+		if "unresolvedpatches" in specres and insecurerpm:
+			extrapatches = scanspec2(f,cpiodir)
+		if "missingpatches" in specres and insecurerpm:
+			extrapatches = scanspec2(f,cpiodir)
+		rpmname = os.path.basename(rpmfile)
+
+		version = specres.get('version', None)
+		name = specres.get('name', None)
+		license = specres.get('license', None)
+		url = specres.get('url', None)
+		rpmchecksum = checksums[rpmname]['sha256']
+		cursor.execute("insert into rpm_info(checksum, name, version, url, license) values (?,?,?,?,?)", (rpmchecksum, name, version, url, license))
+		for f in filechecksums:
+			filetype = None
+			if f.endswith('.spec'):
+				filetype = 'spec'
+			else:
+				if 'appliedpatches' in specres:
+					if f in specres['appliedpatches']:
+						filetype = 'patch'
+			cursor.execute("insert into rpm_contents(filename, type, checksum, rpmchecksum) values (?,?,?,?)", (f, filetype, filechecksums[f]['sha256'], rpmchecksum))
+
+		'''
 		for f in rpm2copyfiles[n]:
 			shutil.copy(os.path.join(cpiodir, f), target)
 			os.chmod(os.path.join(target, f), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+		'''
 		shutil.rmtree(cpiodir)
+
+	## finally add everything about the RPM file itself to the database
+	for r in insertrpms:
+		(filedir, filepath, copyfiles, filehashes, rpmchecksums) = r
+		cursor.execute("insert into rpm (rpmname, checksum, origin, downloadurl) values (?,?,?,?)", (filepath, filehashes['sha256'], origin, downloadurl))
+	conn.commit()
+	cursor.close()
+	conn.close()
+
 	return target
 
 def main(argv):
 	parser = OptionParser()
+	#parser.add_option("-c", "--configuration", action="store", dest="configuration", help="path to configuration", metavar="FILE")
 	parser.add_option("-f", "--filedir", action="store", dest="filedir", help="path to directory containing files to unpack", metavar="DIR")
 	parser.add_option("-o", "--origin", action="store", dest="origin", help="origin of packages (default: unknown)", metavar="ORIGIN")
 	parser.add_option("-t", "--target-directory", action="store", dest="target", help="target directory where files are stored (default: generated temporary directory)", metavar="DIR")
 	(options, args) = parser.parse_args()
 
 	## TODO: sanity checks for unpacktmpdir
+	## TODO: make configurable
 	unpacktmpdir = '/ramdisk'
 
 	if options.filedir == None:
@@ -413,14 +611,30 @@ def main(argv):
 	else:
 		origin = options.origin
 
+	## TODO: make configurable
 	rpmdatabase = '/tmp/rpmdb.sqlite3'
-	#conn = sqlite3.connect(rpmdatabase)
-	#cursor = conn.cursor()
-	#cursor.execute('''create table if not exists rpm(rpmname text, checksum text, downloadurl text)''')
-	#cursor.execute('''create index if not exists rpm_checksum_index on rpm(checksum)''')
-	#cursor.execute('''create index if not exists rpm_rpmname_index on rpm(rpmname)''')
-	#cursor.close()
-	#conn.close()
+	patchesdir = '/tmp/patches'
+
+	## This setting is to instruct the unpacking whether or not to use the RPM module's
+	## built-in functionality to do expansion of various macros. This is dangerous
+	## as it would execute scripts that could come from untrusted resources.
+	## TODO: make configurable.
+	insecurerpm = False
+
+	conn = sqlite3.connect(rpmdatabase)
+	cursor = conn.cursor()
+	cursor.execute('''create table if not exists rpm(rpmname text, checksum text, origin text, downloadurl text)''')
+	cursor.execute('''create index if not exists rpm_checksum_index on rpm(checksum)''')
+	cursor.execute('''create index if not exists rpm_rpmname_index on rpm(rpmname)''')
+	cursor.execute('''create table if not exists rpm_info(checksum text, name text, version text, url text, license text)''')
+	cursor.execute('''create index if not exists rpm_info_checksum_index on rpm_info(checksum)''')
+	cursor.execute('''create index if not exists rpm_info_name_index on rpm_info(name)''')
+	cursor.execute('''create index if not exists rpm_info_version_index on rpm_info(version)''')
+	cursor.execute('''create table if not exists rpm_contents(filename text, type text, checksum text, rpmchecksum text)''')
+	cursor.execute('''create index if not exists rpm_contents_checksum_index on rpm_contents(checksum)''')
+	cursor.execute('''create index if not exists rpm_contents_rpmchecksum_index on rpm_contents(rpmchecksum)''')
+	cursor.close()
+	conn.close()
 
 	if options.target == None:
 		target = tempfile.mkdtemp()[1]
@@ -433,8 +647,8 @@ def main(argv):
 			#	pass
 			pass
 		target = options.target
-	unpacksrpm(options.filedir, target, unpacktmpdir, rpmdatabase)
-	generatelist(target, origin)
+	unpacksrpm(options.filedir, target, unpacktmpdir, origin, rpmdatabase, insecurerpm)
+	#generatelist(target, origin)
 
 if __name__ == "__main__":
 	main(sys.argv)
