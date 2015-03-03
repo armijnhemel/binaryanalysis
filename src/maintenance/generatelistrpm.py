@@ -19,7 +19,7 @@ directory.
 
 import sys, os, os.path, subprocess, tempfile, shutil, stat, sqlite3, re
 from optparse import OptionParser
-import multiprocessing
+import multiprocessing, ConfigParser
 import hashlib, zlib, urllib
 import rpm
 
@@ -130,7 +130,6 @@ def scanspec(specfile, specdir, insecurerpm):
 		elif line.startswith('URL:'):
 			url = line.split(':',1)[1].strip()
 			if not '%{' in url:
-				#result['url'] = urllib.unquote(url)
 				result['url'] = url
 				continue
 			specreplaces = re.findall("%{([\w\d]+)}", url)
@@ -593,16 +592,28 @@ def unpacksrpm(filedir, target, unpacktmpdir, origin, rpmdatabase, insecurerpm):
 	return target
 
 def main(argv):
+	config = ConfigParser.ConfigParser()
+
 	parser = OptionParser()
-	#parser.add_option("-c", "--configuration", action="store", dest="configuration", help="path to configuration", metavar="FILE")
+	parser.add_option("-c", "--configuration", action="store", dest="cfg", help="path to configuration", metavar="FILE")
 	parser.add_option("-f", "--filedir", action="store", dest="filedir", help="path to directory containing files to unpack", metavar="DIR")
 	parser.add_option("-o", "--origin", action="store", dest="origin", help="origin of packages (default: unknown)", metavar="ORIGIN")
 	parser.add_option("-t", "--target-directory", action="store", dest="target", help="target directory where files are stored (default: generated temporary directory)", metavar="DIR")
 	(options, args) = parser.parse_args()
 
-	## TODO: sanity checks for unpacktmpdir
-	## TODO: make configurable
-	unpacktmpdir = '/ramdisk'
+	## read the configuration file. This should be the same as
+	## the configuration file used for createdb.py
+	if options.cfg == None:
+		parser.error("Specify configuration file")
+	else:
+		if not os.path.exists(options.cfg):
+			parser.error("Configuration file does not exist")
+		try:
+			configfile = open(options.cfg, 'r')
+		except:
+			parser.error("Configuration file not readable")
+		config.readfp(configfile)
+		configfile.close()
 
 	if options.filedir == None:
 		parser.error("Specify dir with files")
@@ -610,6 +621,17 @@ def main(argv):
 		origin = "unknown"
 	else:
 		origin = options.origin
+
+	## search configuration to see if it is correct and/or not malformed
+	## first search for a section called 'extractconfig' with configtype = global
+	for section in config.sections():
+		if section == "extractconfig":
+			try:
+				unpackdir = config.get(section, 'unpackdir')
+			except:
+				unpackdir = None
+
+	## TODO: sanity checks for unpackdir
 
 	## TODO: make configurable
 	rpmdatabase = '/tmp/rpmdb.sqlite3'
@@ -647,7 +669,7 @@ def main(argv):
 			#	pass
 			pass
 		target = options.target
-	unpacksrpm(options.filedir, target, unpacktmpdir, origin, rpmdatabase, insecurerpm)
+	unpacksrpm(options.filedir, target, unpackdir, origin, rpmdatabase, insecurerpm)
 	#generatelist(target, origin)
 
 if __name__ == "__main__":
