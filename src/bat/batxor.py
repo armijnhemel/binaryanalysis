@@ -24,8 +24,8 @@ import fwunpack
 ## * Bococom router series (2.6.21, Ralink chipset)
 ## * Sitecom WL-340 and WL-342
 
-## Finding new signatures is done by hand. A good helper tool can be found in
-## the bat-visualisation directory in bat-extratools
+## Finding new signatures is done by hand. A helper tool (findxor.py) can be
+## found in the scripts directory
 
 ## The signatures of various known XOR "encrypted" firmwares.
 signatures = { 'splashtop': ['\x51', '\x57', '\x45', '\x52']
