@@ -43,6 +43,9 @@ def main(argv):
 	(options, args) = parser.parse_args()
 	if options.firmware == None:
 		parser.exit("Path to firmware not supplied, exiting")
+	if os.path.isdir(options.firmware):
+		print >>sys.stderr, "%s is not a file" % options.firmware
+		sys.exit(1)
 
 	findpadding(options.firmware)
 
