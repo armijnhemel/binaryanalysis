@@ -2665,6 +2665,8 @@ def main(argv):
 			securityc.execute('''create index if not exists security_cert_checksum_index on security_cert(checksum);''')
 			securityc.execute('''create table if not exists security_cve(checksum text, cve text)''')
 			securityc.execute('''create index if not exists security_cve_checksum_index on security_cve(checksum);''')
+			securityc.execute('''create table if not exists security_password(hash text, password text)''')
+			securityc.execute('''create index if not exists security_password_hash_index on security_cve(checksum);''')
 
 			securityconn.commit()
 			securityc.close()
