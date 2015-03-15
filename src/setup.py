@@ -5,14 +5,14 @@ import glob
 import os.path
 
 setup(name='bat',
-      version='20.0',
+      version='21.0',
       description='Binary Analysis Tool',
       author='Tjaldur Software Governance Solutions',
       author_email='info@binaryanalysis.org',
       url='http://www.binaryanalysis.org/',
       packages=['bat'],
       license="Apache 2.0",
-      scripts=['maintenance/batconfigcheck.py', 'maintenance/busybox-appletname-extractor.py', 'maintenance/clonedbinit.py', 'bat-scan', 'busybox-compare-configs.py', 'batgui'],
+      scripts=['maintenance/batconfigcheck.py', 'maintenance/busybox-appletname-extractor.py', 'maintenance/clonedbinit.py', 'bat-scan', 'busybox-compare-configs.py'],
       data_files=[('/etc/bat/configs', glob.glob('configs/*')),
                   ('/etc/bat',  ['bat-scan.config']),
                  ],
