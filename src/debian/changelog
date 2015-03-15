@@ -1,3 +1,16 @@
+bat (20.0) unstable; urgency=medium
+
+  * better handle encrypted ZIP files
+  * findlibs.py enabled by default
+  * add "phase" and "scan" conflict detection
+  * use SPDX names for reporting (as much as possible)
+  * script to visualise Linux kernel module linking
+  * security: try to detect shell commands in binaries (possibly using unchecked input)
+  * security: try to find XOR keys used for "encrypting" binaries
+  * security: start on password cracking/detection with JtR
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Sun, 15 Mar 2015 17:21:31 +0100
+
 bat (19.0) unstable; urgency=high
 
   * deprecate support for Ubuntu < 14.04
