@@ -631,6 +631,14 @@ def readconfig(config):
 			except:
 				pass
 			try:
+				reportendofphase = config.get(section, 'reportendofphase')
+				if reportendofphase == 'yes':
+					batconf['reportendofphase'] = True
+				else:
+					batconf['reportendofphase'] = False
+			except:
+				batconf['reportendofphase'] = False
+			try:
 				debug = config.get(section, 'debug')
 				if debug == 'yes':
 					batconf['debug'] = True
@@ -1133,6 +1141,8 @@ def runscan(scans, scan_binary):
 		p.terminate()
 	if debug:
 		print >>sys.stderr, "PRERUN UNPACK END", datetime.datetime.utcnow().isoformat()
+	if scans['batconfig']['reportendofphase']:
+		print "PRERUN UNPACK END", datetime.datetime.utcnow().isoformat()
 
 	if debug:
 		print >>sys.stderr, "LEAF BEGIN", datetime.datetime.utcnow().isoformat()
@@ -1269,6 +1279,8 @@ def runscan(scans, scan_binary):
 				unpackreports[i]['tags'] = list(set(unpackreports[i]['tags'] + tagdict[unpacksha256]))
 	if debug:
 		print >>sys.stderr, "LEAF END", datetime.datetime.utcnow().isoformat()
+	if scans['batconfig']['reportendofphase']:
+		print "LEAF END", datetime.datetime.utcnow().isoformat()
 
 	if debug:
 		print >>sys.stderr, "AGGREGATE BEGIN", datetime.datetime.utcnow().isoformat()
@@ -1282,6 +1294,8 @@ def runscan(scans, scan_binary):
 		aggregatescan(unpackreports, scans, scantempdir, topleveldir, os.path.basename(scan_binary), tmpdebug, unpacktempdir)
 	if debug:
 		print >>sys.stderr, "AGGREGATE END", datetime.datetime.utcnow().isoformat()
+	if scans['batconfig']['reportendofphase']:
+		print "AGGREGATE END", datetime.datetime.utcnow().isoformat()
 
 	for i in unpackreports:
 		if unpackreports[i].has_key('tags'):
@@ -1334,5 +1348,7 @@ def runscan(scans, scan_binary):
 		pool.terminate()
 	if debug:
 		print >>sys.stderr, "POSTRUN END", datetime.datetime.utcnow().isoformat()
+	if scans['batconfig']['reportendofphase']:
+		print "POSTRUN END", datetime.datetime.utcnow().isoformat()
 
 	return (topleveldir, unpackreports)
