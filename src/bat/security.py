@@ -297,6 +297,9 @@ def searchLogins(unpackreports, scantempdir, topleveldir, processors, scanenv, s
 	if toplevelelem == None:
 		return
 
+	if not "passwords" in unpackreports[toplevelelem]['tags']:
+		return
+
 	filehash = unpackreports[u]['sha256']
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 	leafreports = cPickle.load(leaf_file)
