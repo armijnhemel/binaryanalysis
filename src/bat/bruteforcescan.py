@@ -532,6 +532,22 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, d
 			processors = multiprocessing.cpu_count()
 		except NotImplementedError:
 			processors = None
+
+	filehash = unpackreports[scan_binary]['sha256']
+	leaf_file_path = os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)
+
+	## first record what the top level element is. This will be used by other scans
+	leaf_file = open(leaf_file_path, 'rb')
+	leafreports = cPickle.load(leaf_file)
+	leaf_file.close()
+
+	unpackreports[scan_binary]['tags'].append('toplevel')
+	leafreports['tags'].append('toplevel')
+
+	leaf_file = open(leaf_file_path, 'wb')
+	leafreports = cPickle.dump(leafreports, leaf_file)
+	leaf_file.close()
+
 	for aggregatescan in scans['aggregatescans']:
 		module = aggregatescan['module']
 		method = aggregatescan['method']
@@ -551,17 +567,16 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, d
 		res = eval("bat_%s(unpackreports, scantempdir, topleveldir, processors, aggregatescan['environment'], scandebug=scandebug, unpacktempdir=unpacktempdir)" % (method))
 		if res != None:
 			if res.keys() != []:
-				filehash = unpackreports[scan_binary]['sha256']
-
-				leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+				leaf_file = open(leaf_file_path, 'rb')
 				leafreports = cPickle.load(leaf_file)
 				leaf_file.close()
 
 				for reskey in set(res.keys()):
 					leafreports[reskey] = res[reskey]
 					unpackreports[scan_binary]['tags'].append(reskey)
+					leafreports['tags'].append(reskey)
 
-				leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
+				leaf_file = open(leaf_file_path, 'wb')
 				leafreports = cPickle.dump(leafreports, leaf_file)
 				leaf_file.close()
 		if debug:
@@ -628,6 +643,12 @@ def readconfig(config):
 				pass
 			try:
 				batconf['processors'] = int(config.get(section, 'processors'))
+			except:
+				pass
+			try:
+				dbbackend = config.get(section, 'dbbackend')
+				if dbbackend in ['sqlite3']:
+					batconf['dbbackend'] = dbbackend
 			except:
 				pass
 			try:

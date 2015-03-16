@@ -291,7 +291,7 @@ def crackPasswordsSetup(scanenv, debug=False):
 def searchLogins(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
 	toplevelelem = None
 	for u in unpackreports.keys():
-		if 'passwords' in unpackreports[u]['tags']:
+		if 'toplevel' in unpackreports[u]['tags']:
 			toplevelelem = u
 			break
 	if toplevelelem == None:
