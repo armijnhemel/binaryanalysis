@@ -1,3 +1,12 @@
+2015-03-16:
+* add "reportendofphase" option
+* tag "toplevel" element before aggregate scans are run
+* simplify standard configuration
+
+2015-03-15:
+* release BAT 20.0
+* remove batgui from default distribution
+
 2015-02-27:
 * more password cracking with JtR
 * search files for presence of login names for which passwords were found,
