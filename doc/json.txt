@@ -1,0 +1,256 @@
+JSON exchange format for BAT
+
+Each scan will have a number of JSON files:
+
+* top level file with information about the unpacked files and the data structure
+* files with results per unique file (checksum)
+
+This distinction is done because the data can grow quite big (especially when dealing with packages with possibly millons of matches, like the Linux kernel) and because there is often duplication of files inside firmwares/archives, which can easily inflate the result set.
+
+The top level file will be called "scandata.json" (but this can be changed).
+
+Top level file, description:
+
+{
+  'name': <name of the file including relative path inside unpacking directory>,
+  'path': <relative path inside the unpacked file system or compressed file>,
+  'magic': <output of libmagic>,
+  'tags': <list of tags>,
+  'size': <size in bytes, optional>
+  'checksum': <checksum of the file, optional>,
+  'checksumtype': <type of checksum, only present if checksumtype is set too>,
+  'scans': [
+     {'offset': <offset in the original file where the file system/compressed file starts>,
+      'size': <size of the file system/compressed file in the original file, optional>,
+      'scanname': <name of the scan that unpacked this file system/compressed file>,
+      'scanreports': <list of files that were unpacked from the file system/compressed file>
+     }
+           ]
+}
+
+Top level file, data type:
+
+{
+  'name': string
+  'path': string
+  'magic': string
+  'tags': [string]
+  'size': number
+  'checksum': string
+  'checksumtype': string
+  'scans': [
+     {'offset': number,
+      'size': number,
+      'scanname': string
+      'scanreports': [string]
+     }
+           ]
+}
+
+The files with the actual results will be called $checksum.json where the checksum can be found in the top level file.
+
+Depending on the scans that are activated there will be different results available in the JSON file. Since scans are added on a regular basis this will change over time. For sake of simplicity only a few scans will be described in detail. All other data should be ignored.
+
+The following scans will be described:
+
+* architecture: scan architecture for an ELF file
+* busybox-version: extract the version number of BusyBox from a binary
+* forges: scan for presence of markers of collaborative development sites
+* licenses: scan for presence of markers of some open source licenses
+* kernelmoduleversion
+* identifier: extracted identifiers (TODO: see if this is actually needed, since these are just the raw results that are then used by 'ranking' and other scans)
+* ranking
+
+All elements except "tags" are optional.
+
+In the element "stringresults" there are a few elements that could optionally be computed at run time (length of results), but they might also be added to the JSON.
+
+Result file, description:
+
+{
+  'tags': <list of tags>,
+  'busybox-version': <version number of BusyBox>,
+  'forges': <list of names of forges/collaborative development sites>
+  'licenses': <list of names of license (families)>
+  'ranking': {
+     'language': <language that BAT thinks source files were in>,
+     'stringresults': {
+          'unmatched': <list of unmatched strings>,
+          'matchednonassignedlines': <number with lines that were assigned, but for which the score is too low>,
+          'matchednotclonelines': <number indicating number of matches that were matched, but which are not cloned between packages>,
+          'nonUniqueMatches': [
+                               {
+                  'package': <name of package>,
+                  'nonuniquelines': <list of non-uniquely but assigned lines>
+                               }
+                              ],
+          'scores: [
+                               {
+                  'package': <name of package>,
+                  'computedscore': <computed score per package>
+                               }
+                   ],
+          'reports: [
+                               {
+                  'package': <name of package>,
+                  'rank': <rank of package>,
+                  'unique': [
+                          {
+                            'identifier': <the uniquely matched string>,
+                            'identifierdata': [
+                                    {
+                                       'filechecksum': <checksum of source code file>,
+                                       'linenumber': <line number of the match>,
+                                       'packagedata': [
+                                             {
+                                                'packageversion': <version of the package>,
+                                                'sourcefilename': <name of the source code file>
+                                             }
+                                                      ]
+                                    }
+                                              ]
+                          }
+                            ],
+                  'percentage': <percentage of score as computed by BAT>,
+                  'packageversions': [
+                                   {
+                                      'packageversion': <version of package>,
+                                      'packagehits': <amount of unique matches for version>
+                                   }
+                                     ]
+                               }
+                    ],
+             },
+     'functionnameresults': {
+                 'totalfunctionnames': <total amount of function names extracted<.
+                 'versionresults': [
+                        'functionname': <name of function>.
+                        'functionnamedata': [
+                               'filechecksum': <checksum of the source code file>,
+                               'linenumber': <line number where function name can be found in source code file>,
+                               'packagedata': [
+                                       {
+                                         'packageversion': <version of the package>,
+                                         'sourcefilename': <path of the source code file in the package>,
+                                       }
+                                               ]
+                                            ]
+                                   ],
+                            },
+     'variablenameresults': {
+                 'totalvariablenames': number,
+                 'versionresults': [
+                        'variablename': string,
+                        'variablenamedata': [
+                               'filechecksum': <checksum of the source code file>,
+                               'linenumber': <line number where variable name can be found in source code file>,
+                               'packagedata': [
+                                       {
+                                         'packageversion': <version of the package>,
+                                         'sourcefilename': <path of the source code file in the package>,
+                                       }
+                                               ]
+                                            ]
+                                   ],
+                            },
+    },
+  'security': {
+     'virusscan': <name of virus found by ClamAV>,
+     'shellinvocations': <list of identifiers from the binary that contain possible shell invocation bugs>
+              }
+}
+
+Result file, data type:
+
+{
+  'tags': [string],
+  'busybox-version': string,
+  'forges': [string],
+  'licenses': [string],
+  'ranking': {
+     'language': string,
+     'stringresults': {
+          'unmatched': [string],
+          'matchednonassignedlines': number,
+          'matchednotclonelines': number,
+          'nonUniqueMatches': [
+                               {
+                  'package': string,
+                  'nonuniquelines': [string]
+                               }
+                              ],
+          'scores: [
+                               {
+                  'package': string,
+                  'computedscore': number
+                               }
+                             ],
+          'reports: [
+                               {
+                  'package': string,
+                  'rank': number,
+                  'unique': [
+                          {
+                            'identifier': string,
+                            'identifierdata': [
+                                    {
+                                       'filechecksum': string,
+                                       'linenumber': number,
+                                       'packagedata': [
+                                             {
+                                                'packageversion': string,
+                                                'sourcefilename': string,
+                                             }
+                                                      ]
+                                    }
+                                              ]
+                          }
+                            ],
+                  'percentage': number,
+                  'packageversions': [
+                                   {
+                                      'packageversion': string,
+                                      'packagehits': number,
+                                   }
+                                     ]
+                               }
+                    ],
+          },
+     'functionnameresults': {
+                 'totalfunctionnames': number,
+                 'versionresults': [
+                        'functionname': string,
+                        'functionnamedata': [
+                               'filechecksum': string,
+                               'linenumber': number,
+                               'packagedata': [
+                                       {
+                                         'packageversion': string,
+                                         'sourcefilename': string,
+                                       }
+                                               ]
+                                            ]
+                                   ],
+                            },
+     'variablenameresults': {
+                 'totalvariablenames': number,
+                 'versionresults': [
+                        'variablename': string,
+                        'variablenamedata': [
+                               'filechecksum': string,
+                               'linenumber': number,
+                               'packagedata': [
+                                       {
+                                         'packageversion': string,
+                                         'sourcefilename': string,
+                                       }
+                                               ]
+                                            ]
+                                   ],
+                            },
+      }
+  'security': {
+     'virusscan': string,
+     'shellinvocations': [string]
+              }
+}
