@@ -43,12 +43,50 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 		jsondumps.append(jsonreport)
 
 	if jsondumps != []:
-		print json.dumps(jsondumps, indent=4)
+		jsonfile = open(os.path.join(topleveldir, "scandata.json"), 'w')
+		jsonfile.write(json.dumps(jsondumps, indent=4))
+		jsonfile.close()
 
+	filehashes = set()
 	## then print results for each of the individual reports
 	for unpackreport in unpackreports:
-		## first see if there is a filehash
-		if "filehash" in unpackreports[unpackreport]:
-			## then see if there is already a JSON file
-			pass
-			## then mangle the data and dump it into a JSON file
+		## first see if there is a filehash. If not, skip
+		if not "sha256" in unpackreports[unpackreport]:
+			continue
+		filehash = unpackreports[unpackreport]['sha256']
+		if filehash in filehashes:
+			continue
+		## then check if there is a pickle file. If not, continue
+		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
+			continue
+		## then check if the data for this file has already been dumped. If so, continue.
+		if os.path.exists(os.path.join(topleveldir, "reports", "%s.json" % filehash)):
+			continue
+		## read the data from the pickle file
+		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+		leafreports = cPickle.load(leaf_file)
+		leaf_file.close()
+		## then mangle the data and dump it into a JSON file
+		jsonreport = {}
+
+		if "tags" in leafreports:
+			jsonreport['tags'] = list(set(copy.deepcopy(leafreports['tags'])))
+		## now go through all of the scans that are there. This is hardcoded.
+		## TODO: make more generic based on configuration.
+		for i in ['busybox-version', 'forges', 'licenses']:
+			if i in leafreports:
+				jsonreport[i] = copy.deepcopy(leafreports[i])
+
+		## then the 'ranking' scan
+		if 'ranking' in leafreports:
+			jsonreport['ranking'] = {}
+			(stringidentifiers, functionnameresults, variablenameresults, language) = leafreports['ranking']
+			jsonreport['ranking']['language'] = language
+
+		## dump the JSON to a file
+		jsonfile = open(os.path.join(topleveldir, "reports", "%s.json" % filehash), 'w')
+		jsonfile.write(json.dumps(jsonreport, indent=4))
+		jsonfile.close()
+
+		## finally add the hash to the list of hashes that can be skipped
+		filehashes.add(filehash)
