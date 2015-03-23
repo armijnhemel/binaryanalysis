@@ -81,7 +81,66 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 		if 'ranking' in leafreports:
 			jsonreport['ranking'] = {}
 			(stringidentifiers, functionnameresults, variablenameresults, language) = leafreports['ranking']
+
+			## first the language
 			jsonreport['ranking']['language'] = language
+
+			## then the string identifier results
+			jsonreport['ranking']['stringresults'] = {}
+			jsonreport['ranking']['stringresults']['unmatched'] = []
+			jsonreport['ranking']['stringresults']['matchednonassignedlines'] = 0
+			jsonreport['ranking']['stringresults']['matchednotclonelines'] = 0
+			if 'unmatched' in stringidentifiers:
+				jsonreport['ranking']['stringresults']['unmatched'] = stringidentifiers['unmatched']
+
+			if 'matchednonassignedlines' in stringidentifiers:
+				jsonreport['ranking']['stringresults']['matchednonassignedlines'] = stringidentifiers['matchednonassignedlines']
+			if 'matchednotclonelines' in stringidentifiers:
+				jsonreport['ranking']['stringresults']['matchednotclonelines'] = stringidentifiers['matchednotclonelines']
+
+			if 'nonUniqueMatches' in stringidentifiers:
+				jsonreport['ranking']['stringresults']['nonUniqueMatches'] = []
+				for u in stringidentifiers['nonUniqueMatches']:
+					nonuniquereport = {}
+					nonuniquereport['package'] = u
+					nonuniquereport['nonuniquelines'] = stringidentifiers['nonUniqueMatches'][u]
+					jsonreport['ranking']['stringresults']['nonUniqueMatches'].append(nonuniquereport)
+
+			if 'scores' in stringidentifiers:
+				jsonreport['ranking']['stringresults']['scores'] = []
+				for u in stringidentifiers['scores']:
+					scorereport = {}
+					scorereport['package'] = u
+					scorereport['computedscore'] = stringidentifiers['scores'][u]
+					jsonreport['ranking']['stringresults']['scores'].append(scorereport)
+
+			if 'reports' in stringidentifiers:
+				jsonreport['ranking']['stringresults']['reports'] = []
+				for u in stringidentifiers['reports']:
+					(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses, packagecopyrights) = u
+					report = {}
+					report['package'] = package
+					report['rank'] = rank
+					report['percentage'] = percentage
+					report['unique'] = []
+					for un in unique:
+						(identifier, identifierdata) = un
+						uniquereport = {}
+						uniquereport['identifier'] = identifier
+						report['unique'].append(uniquereport)
+						continue
+					report['packageversions'] = []
+					for p in packageversions:
+						continue
+					jsonreport['ranking']['stringresults']['reports'].append(report)
+
+			## then the functionname results
+			jsonreport['ranking']['functionnameresults'] = {}
+
+			## then the variablename results
+			jsonreport['ranking']['variablenameresults'] = {}
+
+		## then security
 
 		## dump the JSON to a file
 		jsonfile = open(os.path.join(topleveldir, "reports", "%s.json" % filehash), 'w')
