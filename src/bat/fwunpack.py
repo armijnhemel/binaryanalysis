@@ -3061,6 +3061,7 @@ def searchUnpackUbi(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		if res != None:
 			(ubitmpdir, ubisize) = res
 			diroffsets.append((ubitmpdir, offset, ubisize))
+			blacklist.append((offset, offset+ubisize))
 			## TODO use ubisize to set the blacklist correctly
 			counter = counter + 1
 		else:
@@ -3070,10 +3071,11 @@ def searchUnpackUbi(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 
 def unpackUbi(data, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	tmpfile = tempfile.mkstemp()
 	os.write(tmpfile[0], data[offset:])
-	## use unubi to unpack the data
-	p = subprocess.Popen(['unubi', '-d', tmpdir, tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	## take a two step approach: first unpack the UBI images,
+	## then extract the individual files from these images
+	p = subprocess.Popen(['ubi_extract_images.py', '-o', tmpdir, tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 
 	if p.returncode != 0:
@@ -3083,23 +3085,39 @@ def unpackUbi(data, offset, tempdir=None):
 			os.rmdir(tmpdir)
 		return None
 	else:
+		p = subprocess.Popen(['ubi_display_info.py', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			os.fdopen(tmpfile[0]).close()
+			os.unlink(tmpfile[1])
+			if tempdir == None:
+				os.rmdir(tmpdir)
+			return None
+
+		stanoutlines = stanout.split('\n')
+		for s in stanoutlines:
+			if 'PEB Size' in s:
+				blocksize = int(s.split(':')[1].strip())
+        		if 'Total Block Count' in s:
+				blockcount = int(s.split(':')[1].strip())
+
+		ubisize = blocksize * blockcount
+
 		## clean up the temporary files
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		## determine the sum of the size of the unpacked files
-		osgen = os.walk(tempdir)
-		ubisize = 0
-		try:
-			while True:
-				i = osgen.next()
-				for p in i[2]:
-					ubisize = ubisize + os.stat("%s/%s" % (i[0], p)).st_size
-        	except StopIteration:
-                	pass
-		if ubisize == 0:
-			if tempdir == None:
-				os.rmdir(tmpdir)
-			return None
+
+		## now the second stage, unpacking the images that were extracted
+
+		ubitmpdir = os.path.join(tmpdir, os.path.basename(tmpfile[1]))
+		for i in os.listdir(ubitmpdir):
+			p = subprocess.Popen(['ubi_extract_files.py', '-o', tmpdir, os.path.join(ubitmpdir, i)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate()
+			os.unlink(os.path.join(ubitmpdir, i))
+
+		os.rmdir(ubitmpdir)
+
 		return (tmpdir, ubisize)
 
 ## unpacking for ARJ. The file format is described at:
