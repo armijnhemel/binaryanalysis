@@ -219,8 +219,10 @@ Result file, data type:
      'functionnameresults': {
                  'totalfunctionnames': number,
                  'versionresults': [
-                        'functionname': string,
-                        'functionnamedata': [
+                    'package': string,
+                    'unique': [
+                            'functionname': string,
+                            'functionnamedata': [
                                'filechecksum': string,
                                'linenumber': number,
                                'packagedata': [
@@ -228,9 +230,10 @@ Result file, data type:
                                          'packageversion': string,
                                          'sourcefilename': string,
                                        }
-                                               ]
-                                            ]
-                                   ],
+                                               ] // packagedata
+                                            ]   // functionnamedata
+                             ] // unique
+                                   ], // versionresults
                             },
      'variablenameresults': {
                  'totalvariablenames': number,
