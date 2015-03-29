@@ -876,6 +876,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 		elfgraph_data = elfgraph.to_string()
 		elfgraphs.add((elfgraph_data, filehash, imagedir, generatesvg))
 
-	pool = multiprocessing.Pool(processes=processors)
-	elfres = pool.map(writeGraph, elfgraphs,1)
-	pool.terminate()
+	if len(elfgraphs) != 0:
+		pool = multiprocessing.Pool(processes=processors)
+		elfres = pool.map(writeGraph, elfgraphs,1)
+		pool.terminate()
