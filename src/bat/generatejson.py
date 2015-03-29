@@ -90,55 +90,134 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 			jsonreport['ranking']['stringresults']['unmatched'] = []
 			jsonreport['ranking']['stringresults']['matchednonassignedlines'] = 0
 			jsonreport['ranking']['stringresults']['matchednotclonelines'] = 0
-			if 'unmatched' in stringidentifiers:
-				jsonreport['ranking']['stringresults']['unmatched'] = stringidentifiers['unmatched']
+			jsonreport['ranking']['stringresults']['nonUniqueMatches'] = []
+			jsonreport['ranking']['stringresults']['scores'] = []
+			jsonreport['ranking']['stringresults']['reports'] = []
+			if stringidentifiers != None:
+				if 'unmatched' in stringidentifiers:
+					jsonreport['ranking']['stringresults']['unmatched'] = stringidentifiers['unmatched']
 
-			if 'matchednonassignedlines' in stringidentifiers:
-				jsonreport['ranking']['stringresults']['matchednonassignedlines'] = stringidentifiers['matchednonassignedlines']
-			if 'matchednotclonelines' in stringidentifiers:
-				jsonreport['ranking']['stringresults']['matchednotclonelines'] = stringidentifiers['matchednotclonelines']
+				if 'matchednonassignedlines' in stringidentifiers:
+					jsonreport['ranking']['stringresults']['matchednonassignedlines'] = stringidentifiers['matchednonassignedlines']
+				if 'matchednotclonelines' in stringidentifiers:
+					jsonreport['ranking']['stringresults']['matchednotclonelines'] = stringidentifiers['matchednotclonelines']
 
-			if 'nonUniqueMatches' in stringidentifiers:
-				jsonreport['ranking']['stringresults']['nonUniqueMatches'] = []
-				for u in stringidentifiers['nonUniqueMatches']:
-					nonuniquereport = {}
-					nonuniquereport['package'] = u
-					nonuniquereport['nonuniquelines'] = stringidentifiers['nonUniqueMatches'][u]
-					jsonreport['ranking']['stringresults']['nonUniqueMatches'].append(nonuniquereport)
+				if 'nonUniqueMatches' in stringidentifiers:
+					jsonreport['ranking']['stringresults']['nonUniqueMatches'] = []
+					for u in stringidentifiers['nonUniqueMatches']:
+						nonuniquereport = {}
+						nonuniquereport['package'] = u
+						nonuniquereport['nonuniquelines'] = stringidentifiers['nonUniqueMatches'][u]
+						jsonreport['ranking']['stringresults']['nonUniqueMatches'].append(nonuniquereport)
 
-			if 'scores' in stringidentifiers:
-				jsonreport['ranking']['stringresults']['scores'] = []
-				for u in stringidentifiers['scores']:
-					scorereport = {}
-					scorereport['package'] = u
-					scorereport['computedscore'] = stringidentifiers['scores'][u]
-					jsonreport['ranking']['stringresults']['scores'].append(scorereport)
+				if 'scores' in stringidentifiers:
+					jsonreport['ranking']['stringresults']['scores'] = []
+					for u in stringidentifiers['scores']:
+						scorereport = {}
+						scorereport['package'] = u
+						scorereport['computedscore'] = stringidentifiers['scores'][u]
+						jsonreport['ranking']['stringresults']['scores'].append(scorereport)
 
-			if 'reports' in stringidentifiers:
-				jsonreport['ranking']['stringresults']['reports'] = []
-				for u in stringidentifiers['reports']:
-					(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses, packagecopyrights) = u
-					report = {}
-					report['package'] = package
-					report['rank'] = rank
-					report['percentage'] = percentage
-					report['unique'] = []
-					for un in unique:
-						(identifier, identifierdata) = un
-						uniquereport = {}
-						uniquereport['identifier'] = identifier
-						report['unique'].append(uniquereport)
-						continue
-					report['packageversions'] = []
-					for p in packageversions:
-						continue
-					jsonreport['ranking']['stringresults']['reports'].append(report)
+				if 'reports' in stringidentifiers:
+					jsonreport['ranking']['stringresults']['reports'] = []
+					for u in stringidentifiers['reports']:
+						(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses, packagecopyrights) = u
+						report = {}
+						report['package'] = package
+						report['rank'] = rank
+						report['percentage'] = percentage
+						report['unique'] = []
+						for un in unique:
+							(identifier, identifierdata) = un
+							uniquereport = {}
+							uniquereport['identifier'] = identifier
+							uniquereport['identifierdata'] = []
+							for iddata in identifierdata:
+								(filechecksum, linenumber, fileversiondata) = iddata
+								identifierdatareport = {}
+								identifierdatareport['filechecksum'] = filechecksum
+								identifierdatareport['lineumber'] = linenumber
+								identifierdatareport['packagedata'] = []
+								for pack in fileversiondata:
+									(packageversion, sourcefilename) = pack
+									fileversionreport = {}
+									fileversionreport['packageversion'] = packageversion
+									fileversionreport['sourcefilename'] = sourcefilename
+									identifierdatareport['packagedata'].append(fileversionreport)
+								uniquereport['identifierdata'].append(identifierdatareport)
+							report['unique'].append(uniquereport)
+						report['packageversions'] = []
+						for p in packageversions:
+							packagereport = {}
+							packagereport['packageversion'] = p
+							packagereport['packagehits'] = packageversions[p]
+							report['packageversions'].append(packagereport)
+						jsonreport['ranking']['stringresults']['reports'].append(report)
 
 			## then the functionname results
 			jsonreport['ranking']['functionnameresults'] = {}
+			jsonreport['ranking']['functionnameresults']['totalfunctionnames'] = 0
+			jsonreport['ranking']['functionnameresults']['versionresults'] = []
+			if 'totalnames' in functionnameresults:
+				jsonreport['ranking']['functionnameresults']['totalfunctionnames'] = functionnameresults['totalnames']
+			if 'versionresults' in functionnameresults:
+				for packagename in functionnameresults['versionresults']:
+					packagereport = {}
+					packagereport['package'] = packagename
+					packagereport['unique'] = []
+					for un in functionnameresults['versionresults'][packagename]:
+						(identifier, identifierdata) = un
+						uniquereport = {}
+						uniquereport['identifier'] = identifier
+						uniquereport['identifierdata'] = []
+						for iddata in identifierdata:
+							(filechecksum, linenumber, fileversiondata) = iddata
+							identifierdatareport = {}
+							identifierdatareport['filechecksum'] = filechecksum
+							identifierdatareport['lineumber'] = linenumber
+							identifierdatareport['packagedata'] = []
+							for pack in fileversiondata:
+								(packageversion, sourcefilename) = pack
+								fileversionreport = {}
+								fileversionreport['packageversion'] = packageversion
+								fileversionreport['sourcefilename'] = sourcefilename
+								identifierdatareport['packagedata'].append(fileversionreport)
+							uniquereport['identifierdata'].append(identifierdatareport)
+						packagereport['unique'].append(uniquereport)
+					jsonreport['ranking']['functionnameresults']['versionresults'].append(packagereport)
 
 			## then the variablename results
 			jsonreport['ranking']['variablenameresults'] = {}
+			jsonreport['ranking']['variablenameresults'] = {}
+			jsonreport['ranking']['variablenameresults']['totalfunctionnames'] = 0
+			jsonreport['ranking']['variablenameresults']['versionresults'] = []
+			if 'totalnames' in variablenameresults:
+				jsonreport['ranking']['variablenameresults']['totalvariablenames'] = variablenameresults['totalnames']
+			if 'versionresults' in variablenameresults:
+				for packagename in variablenameresults['versionresults']:
+					packagereport = {}
+					packagereport['package'] = packagename
+					packagereport['unique'] = []
+					for un in variablenameresults['versionresults'][packagename]:
+						(identifier, identifierdata) = un
+						uniquereport = {}
+						uniquereport['identifier'] = identifier
+						uniquereport['identifierdata'] = []
+						for iddata in identifierdata:
+							(filechecksum, linenumber, fileversiondata) = iddata
+							identifierdatareport = {}
+							identifierdatareport['filechecksum'] = filechecksum
+							identifierdatareport['lineumber'] = linenumber
+							identifierdatareport['packagedata'] = []
+							for pack in fileversiondata:
+								(packageversion, sourcefilename) = pack
+								fileversionreport = {}
+								fileversionreport['packageversion'] = packageversion
+								fileversionreport['sourcefilename'] = sourcefilename
+								identifierdatareport['packagedata'].append(fileversionreport)
+							uniquereport['identifierdata'].append(identifierdatareport)
+						packagereport['unique'].append(uniquereport)
+					jsonreport['ranking']['variablenameresults']['versionresults'].append(packagereport)
 
 		## then security
 
