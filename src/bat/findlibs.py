@@ -165,6 +165,9 @@ def extractfromelf((path, filename)):
 	return (filename, list(localfuncs), list(remotefuncs), list(localvars), list(remotevars), list(weaklocalfuncs), list(weakremotefuncs), list(weaklocalvars), list(weakremotevars), sonames, elftype, rpaths)
 
 def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
+	## crude check for broken PyDot
+	if pydot.__version__ == '1.0.3' or pydot.__version__ == '1.0.2':
+		return
 	if scanenv.has_key('overridedir'):
 		try:
 			del scanenv['BAT_IMAGEDIR']
