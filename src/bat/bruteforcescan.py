@@ -1005,6 +1005,9 @@ def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=Fa
 	os.chdir(tempdir)
 	shutil.copy(configfile, '.')
 	dumpfile.add('scandata.pickle')
+	## temporary ugly hack for packing scandata.json too, TODO: fix and make more flexible
+	if os.path.exists('scandata.json'):
+		dumpfile.add('scandata.json')
 	if not lite:
 		dumpfile.add('data')
 	try:
