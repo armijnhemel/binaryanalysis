@@ -12,7 +12,7 @@ including the ranking algorithm.
 The documentation of the format can be found in the 'doc' directory (subject to change)
 '''
 
-import os, sys, re, json, cPickle, multiprocessing, copy
+import os, sys, re, json, cPickle, multiprocessing, copy, sqlite3
 
 def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, scandebug=False, unpacktempdir=None):
 	toplevelelem = None
@@ -23,6 +23,18 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 
 	## first the data needs to be a bit mangled
 	jsondumps = []
+
+	#outputhash = 'md5'
+	outputhash = None
+
+	if outputhash != None and outputhash != 'sha256':
+		if not scanenv.has_key('BAT_DB'):
+			return
+
+
+	hashcache = {}
+	c = sqlite3.connect(scanenv['BAT_DB'])
+	cursor = c.cursor()
 
 	for unpackreport in unpackreports:
 		jsonreport = {}
@@ -135,7 +147,22 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 							for iddata in identifierdata:
 								(filechecksum, linenumber, fileversiondata) = iddata
 								identifierdatareport = {}
-								identifierdatareport['filechecksum'] = filechecksum
+								if outputhash != None and outputhash != 'sha256':
+									if filechecksum in hashcache:
+										identifierdatareport['filechecksum'] = hashcache[filechecksum]
+										identifierdatareport['filechecksumtype'] = outputhash
+									else:
+										convertedhash = cursor.execute("select %s from hashconversion where sha256=?" % outputhash, (filechecksum,)).fetchone()
+										if convertedhash != None:
+											hashcache[filechecksum] = convertedhash[0]
+											identifierdatareport['filechecksum'] = convertedhash[0]
+											identifierdatareport['filechecksumtype'] = outputhash
+										else:
+											identifierdatareport['filechecksum'] = filechecksum
+											identifierdatareport['filechecksumtype'] = 'sha256'
+								else:
+									identifierdatareport['filechecksum'] = filechecksum
+									identifierdatareport['filechecksumtype'] = 'sha256'
 								identifierdatareport['lineumber'] = linenumber
 								identifierdatareport['packagedata'] = []
 								for pack in fileversiondata:
@@ -173,7 +200,22 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 						for iddata in identifierdata:
 							(filechecksum, linenumber, fileversiondata) = iddata
 							identifierdatareport = {}
-							identifierdatareport['filechecksum'] = filechecksum
+							if outputhash != None and outputhash != 'sha256':
+								if filechecksum in hashcache:
+									identifierdatareport['filechecksum'] = hashcache[filechecksum]
+									identifierdatareport['filechecksumtype'] = outputhash
+								else:
+									convertedhash = cursor.execute("select %s from hashconversion where sha256=?" % outputhash, (filechecksum,)).fetchone()
+									if convertedhash != None:
+										hashcache[filechecksum] = convertedhash[0]
+										identifierdatareport['filechecksum'] = convertedhash[0]
+										identifierdatareport['filechecksumtype'] = outputhash
+									else:
+										identifierdatareport['filechecksum'] = filechecksum
+										identifierdatareport['filechecksumtype'] = 'sha256'
+							else:
+								identifierdatareport['filechecksum'] = filechecksum
+								identifierdatareport['filechecksumtype'] = 'sha256'
 							identifierdatareport['lineumber'] = linenumber
 							identifierdatareport['packagedata'] = []
 							for pack in fileversiondata:
@@ -206,7 +248,22 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 						for iddata in identifierdata:
 							(filechecksum, linenumber, fileversiondata) = iddata
 							identifierdatareport = {}
-							identifierdatareport['filechecksum'] = filechecksum
+							if outputhash != None and outputhash != 'sha256':
+								if filechecksum in hashcache:
+									identifierdatareport['filechecksum'] = hashcache[filechecksum]
+									identifierdatareport['filechecksumtype'] = outputhash
+								else:
+									convertedhash = cursor.execute("select %s from hashconversion where sha256=?" % outputhash, (filechecksum,)).fetchone()
+									if convertedhash != None:
+										hashcache[filechecksum] = convertedhash[0]
+										identifierdatareport['filechecksum'] = convertedhash[0]
+										identifierdatareport['filechecksumtype'] = outputhash
+									else:
+										identifierdatareport['filechecksum'] = filechecksum
+										identifierdatareport['filechecksumtype'] = 'sha256'
+							else:
+								identifierdatareport['filechecksum'] = filechecksum
+								identifierdatareport['filechecksumtype'] = 'sha256'
 							identifierdatareport['lineumber'] = linenumber
 							identifierdatareport['packagedata'] = []
 							for pack in fileversiondata:
