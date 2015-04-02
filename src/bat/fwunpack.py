@@ -1707,9 +1707,12 @@ def unpackSquashfsDDWRTLZMA(filename, offset, tmpdir, unpacktempdir=None):
 		return None
 	else:
 		## move all the contents using shutil.move()
-		mvfiles = os.listdir(tmpdir2 + "/squashfs-root")
+		mvfiles = os.listdir(os.path.join(tmpdir2, "squashfs-root"))
 		for f in mvfiles:
-			shutil.move(tmpdir2 + "/squashfs-root/" + f, tmpdir)
+			mvpath = os.path.join(tmpdir2, "squashfs-root", f)
+			if os.path.islink(mvpath) and not os.path.exists(mvpath):
+				continue
+			shutil.move(mvpath, tmpdir)
 		## then cleanup the temporary dir
 		shutil.rmtree(tmpdir2)
 		## unlike with 'normal' squashfs 'file' cannot be used to determine the size
