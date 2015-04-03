@@ -928,6 +928,7 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 
 	counter = 1
 	diroffsets = []
+	tags = []
 	for offset in offsets['7z']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
@@ -944,7 +945,7 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [], hints)
+	return (diroffsets, blacklist, tags, hints)
 
 
 def unpack7z(filename, offset, tempdir=None, blacklist=[]):
