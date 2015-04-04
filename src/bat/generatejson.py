@@ -24,8 +24,10 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 	## first the data needs to be a bit mangled
 	jsondumps = []
 
-	#outputhash = 'md5'
-	outputhash = None
+	if "OUTPUTHASH" in scanenv:
+		outputhash = scanenv['OUTPUTHASH']
+	else:
+		outputhash = None
 
 	if outputhash != None and outputhash != 'sha256':
 		if not scanenv.has_key('BAT_DB'):

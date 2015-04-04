@@ -642,7 +642,10 @@ def readconfig(config):
 			except:
 				pass
 			try:
-				batconf['reporthash'] = int(config.get(section, 'reporthash'))
+				reporthash = config.get(section, 'reporthash')
+				## TODO: make more configurable, perform checks, etc. etc.
+				if reporthash in ['sha256', 'sha1', 'md5', 'crc32']:
+					batconf['reporthash'] = reporthash
 			except:
 				pass
 			try:
@@ -888,6 +891,8 @@ def readconfig(config):
 		if s['cleanup']:
 			## this is an ugly hack *cringe*
 			s['environment']['overridedir'] = True
+		if 'reporthash' in batconf:
+			s['environment']['OUTPUTHASH'] = batconf['reporthash']
 
 	## set and/or amend environment for postrun scans
 	for s in postrunscans:
