@@ -54,6 +54,8 @@ def main(argv):
 			pass
 
 	if options.fwdir != None:
+		if options.outputfile != None:
+			parser.error("-o/--outputfile cannot be used for directory scanning")
 		if not os.path.exists(options.fwdir):
         		parser.error("firmware directory does not exist")
 		if not os.path.isdir(options.fwdir):
