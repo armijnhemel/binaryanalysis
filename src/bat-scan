@@ -98,9 +98,12 @@ def main(argv):
 				continue
 			if os.path.islink(scanpath):
 				continue
-			outputfile = tempfile.mkstemp(dir=options.outdir)
-			os.fdopen(outputfile[0]).close()
-			scanfiles.append((scanpath, outputfile[1]))
+			## template: "%s.tar.gz"
+			outpath = os.path.join(options.outdir, "%s.tar.gz" % s)
+			if not os.path.exists(outpath):
+				scanfiles.append((scanpath, outpath))
+			else:
+				print >>sys.stderr, "output file for %s exists, skipping scan" % s
 
 	for so in scanfiles:
 		(scanfile, outputfile) = so
