@@ -642,6 +642,10 @@ def readconfig(config):
 			except:
 				pass
 			try:
+				batconf['reporthash'] = int(config.get(section, 'reporthash'))
+			except:
+				pass
+			try:
 				batconf['processors'] = int(config.get(section, 'processors'))
 			except:
 				pass
@@ -1166,7 +1170,7 @@ def runscan(scans, scan_binary):
 	if debug:
 		print >>sys.stderr, "PRERUN UNPACK END", datetime.datetime.utcnow().isoformat()
 	if scans['batconfig']['reportendofphase']:
-		print "PRERUN UNPACK END", datetime.datetime.utcnow().isoformat()
+		print "PRERUN UNPACK END %s" % os.path.basename(scan_binary), datetime.datetime.utcnow().isoformat()
 
 	if debug:
 		print >>sys.stderr, "LEAF BEGIN", datetime.datetime.utcnow().isoformat()
@@ -1304,7 +1308,7 @@ def runscan(scans, scan_binary):
 	if debug:
 		print >>sys.stderr, "LEAF END", datetime.datetime.utcnow().isoformat()
 	if scans['batconfig']['reportendofphase']:
-		print "LEAF END", datetime.datetime.utcnow().isoformat()
+		print "LEAF END %s" % os.path.basename(scan_binary), datetime.datetime.utcnow().isoformat()
 
 	if debug:
 		print >>sys.stderr, "AGGREGATE BEGIN", datetime.datetime.utcnow().isoformat()
@@ -1319,7 +1323,7 @@ def runscan(scans, scan_binary):
 	if debug:
 		print >>sys.stderr, "AGGREGATE END", datetime.datetime.utcnow().isoformat()
 	if scans['batconfig']['reportendofphase']:
-		print "AGGREGATE END", datetime.datetime.utcnow().isoformat()
+		print "AGGREGATE END %s" % os.path.basename(scan_binary), datetime.datetime.utcnow().isoformat()
 
 	for i in unpackreports:
 		if unpackreports[i].has_key('tags'):
@@ -1373,6 +1377,6 @@ def runscan(scans, scan_binary):
 	if debug:
 		print >>sys.stderr, "POSTRUN END", datetime.datetime.utcnow().isoformat()
 	if scans['batconfig']['reportendofphase']:
-		print "POSTRUN END", datetime.datetime.utcnow().isoformat()
+		print "POSTRUN END %s" % os.path.basename(scan_binary), datetime.datetime.utcnow().isoformat()
 
 	return (topleveldir, unpackreports)
