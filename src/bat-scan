@@ -22,31 +22,50 @@ def main(argv):
 	parser.add_option("-b", "--binary", action="store", dest="fw", help="path to binary file", metavar="FILE")
 	parser.add_option("-c", "--config", action="store", dest="cfg", help="path to configuration file", metavar="FILE")
 	parser.add_option("-o", "--outputfile", action="store", dest="outputfile", help="path to output file", metavar="FILE")
-	(options, args) = parser.parse_args()
-	if options.fw == None:
-        	parser.error("Path to binary file needed")
-	if not os.path.exists(options.fw):
-        	parser.error("No file to scan found")
+	parser.add_option("-d", "--directory", action="store", dest="fwdir", help="path to directory with files to be scanned", metavar="DIR")
+	parser.add_option("-u", "--outputdir", action="store", dest="outdir", help="path to directory to write results to", metavar="DIR")
 
+	(options, args) = parser.parse_args()
 	if options.cfg != None:
 		try:
         		configfile = open(options.cfg, 'r')
 		except:
-			print >>sys.stderr, "Need configuration file"
-			sys.exit(1)
+			parser.error("Need configuration file")
 	else:
-		print >>sys.stderr, "Need configuration file"
-		sys.exit(1)
+		parser.error("Need configuration file")
 
-	if options.outputfile == None:
-        	parser.error("Path to output file needed")
-		sys.exit(1)
-	try:
-		os.stat(options.outputfile)
-		print >>sys.stderr, "output file already exists"
-		sys.exit(1)
-	except Exception, e:
-		pass
+	if options.fw == None and options.fwdir == None:
+        	parser.error("Path to binary file or directory needed")
+
+	if options.fw != None and options.fwdir != None:
+        	parser.error("Don't supply binary file and directory at the same time")
+
+	if options.fw != None:
+		if not os.path.exists(options.fw):
+        		parser.error("No file to scan found")
+
+		if options.outputfile == None:
+        		parser.error("Path to output file needed")
+		try:
+			os.stat(options.outputfile)
+			print >>sys.stderr, "output file already exists"
+			sys.exit(1)
+		except Exception, e:
+			pass
+
+	if options.fwdir != None:
+		if not os.path.exists(options.fwdir):
+        		parser.error("firmware directory does not exist")
+		if not os.path.isdir(options.fwdir):
+        		parser.error("directory path is not a directory")
+
+		if options.outdir == None:
+        		parser.error("output directory not supplied")
+		else:
+			if not os.path.exists(options.outdir):
+        			parser.error("output directory does not exist")
+			if not os.path.isdir(options.outdir):
+        			parser.error("output path is not a directory")
 
 	config.readfp(configfile)
 	scans = bat.bruteforcescan.readconfig(config)
@@ -66,18 +85,37 @@ def main(argv):
 			print >>sys.stderr, "conflict in configuration file: %s" % errorstring
 			sys.exit(1)
 
-	scandate = datetime.datetime.utcnow()
+	scanfiles = []
+	if options.fw != None:
+		scanfiles.append((options.fw, options.outputfile))
 
-	(tempdir, unpackreports) = bat.bruteforcescan.runscan(scans, options.fw)
+	if options.fwdir != None:
+		scanls = os.listdir(options.fwdir)
+		for s in scanls:
+			## first filter out symlinks, empty files, etc.
+			scanpath = os.path.join(options.fwdir, s)
+			if os.stat(scanpath).st_size == 0:
+				continue
+			if os.path.islink(scanpath):
+				continue
+			outputfile = tempfile.mkstemp(dir=options.outdir)
+			os.fdopen(outputfile[0]).close()
+			scanfiles.append((scanpath, outputfile[1]))
 
-	if not scans['batconfig'].has_key('output'):
-		## no printing?
-		pass
-	else:
-		output = bat.bruteforcescan.prettyprint(scans['batconfig'], unpackreports, scandate, scans, os.path.basename(options.fw), tempdir)
-		print output
+	for so in scanfiles:
+		(scanfile, outputfile) = so
+		scandate = datetime.datetime.utcnow()
 
-	bat.bruteforcescan.writeDumpfile(unpackreports, scans, options.outputfile, os.path.realpath(options.cfg), tempdir, scans['batconfig']['outputlite'], scans['batconfig']['debug'])
+		(tempdir, unpackreports) = bat.bruteforcescan.runscan(scans, scanfile)
+
+		if not scans['batconfig'].has_key('output'):
+			## no printing?
+			pass
+		else:
+			output = bat.bruteforcescan.prettyprint(scans['batconfig'], unpackreports, scandate, scans, os.path.basename(scamfile), tempdir)
+			print output
+
+		bat.bruteforcescan.writeDumpfile(unpackreports, scans, outputfile, os.path.realpath(options.cfg), tempdir, scans['batconfig']['outputlite'], scans['batconfig']['debug'])
 
 if __name__ == "__main__":
         main(sys.argv)
