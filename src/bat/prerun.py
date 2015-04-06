@@ -857,12 +857,6 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	else:
 		sectionheaderindex = struct.unpack('>H', elfunpackbytes)[0]
 
-	## now get the list of sections that there is
-	headers_to_skip = (numbersectionheaders-1) - sectionheaderindex
-
-	## then read sectionheadersize bytes backwards until startsectionheader - sectionheadersize*headers_to_skip
-	section_byte_end = startsectionheader - sectionheadersize * headers_to_skip
-
 	dynamic = False
 	sectionoffset = startsectionheader
 	counter = 0
