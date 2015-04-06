@@ -732,58 +732,120 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		return newtags
-	## process output of readelf
-	for i in stanout.strip().split("\n"):
-		if "Size of this header" in i:
-			res = re.match("\s*Size of this header:\s+(\d+)\s+\(bytes\)", i)
-			if res == None:
-				return newtags
-			else:
-				thisheadersize = int(res.groups()[0])
-		if "Size of program headers" in i:
-			res = re.match("\s*Size of program headers:\s+(\d+)\s+\(bytes\)", i)
-			if res == None:
-				return newtags
-			else:
-				programheadersize = int(res.groups()[0])
-		if "Number of program headers" in i:
-			res = re.match("\s*Number of program headers:\s+(\d+)", i)
-			if res == None:
-				return newtags
-			else:
-				numberprogramheaders = int(res.groups()[0])
-		if "Size of section headers" in i:
-			res = re.match("\s*Size of section headers:\s+(\d+)\s+\(bytes\)", i)
-			if res == None:
-				return newtags
-			else:
-				sectionheadersize = int(res.groups()[0])
-		if "Number of section headers" in i:
-			res = re.match("\s*Number of section headers:\s+(\d+)", i)
-			if res == None:
-				return newtags
-			else:
-				numbersectionheaders = int(res.groups()[0])
-		if "Start of section headers" in i:
-			res = re.match("\s*Start of section headers:\s+(\d+)\s+\(bytes into file\)", i)
-			if res == None:
-				return newtags
-			else:
-				startsectionheader = int(res.groups()[0])
 
-		if "Start of program headers" in i:
-			res = re.match("\s*Start of program headers:\s+(\d+)\s+\(bytes into file\)", i)
-			if res == None:
-				return newtags
-			else:
-				startprogramheader = int(res.groups()[0])
-		if "Type:" in i:
-			if "EXEC" in i:
-				newtags.append('elfexecutable')
-			elif "REL" in i:
-				newtags.append('elfrelocatable')
-			elif "DYN" in i:
-				newtags.append('elfdynamic')
+	## don't rely on output of readelf as it does not take localized systems into account
+	## Instead, use specification found here: http://en.wikipedia.org/wiki/Executable_and_Linkable_Format
+	elffile = open(filename, 'rb')
+	elfbytes = elffile.read()
+	elffile.close()
+
+	## just set some default values: little endian, 32 bit
+	littleendian = True
+	bit32 = True
+
+	## first check if this is a 32 bit or 64 bit binary
+	if struct.unpack('>B', elfbytes[4])[0] != 1:
+		bit32 = False
+	## then check if this is a little endian or big endian binary
+	if struct.unpack('>B', elfbytes[5])[0] != 1:
+		littleendian = False
+
+	## check the type
+	if littleendian:
+		elftypebyte = struct.unpack('<H', elfbytes[0x10:0x10+2])[0]
+	else:
+		elftypebyte = struct.unpack('>H', elfbytes[0x10:0x10+2])[0]
+	if elftypebyte == 1:
+		elftype = 'elfrelocatable'
+	elif elftypebyte == 2:
+		elftype = 'elfexecutable'
+	elif elftypebyte == 3:
+		elftype = 'elfdynamic'
+	elif elftypebyte == 4:
+		elftype = 'elfcore'
+	newtags.append(elftype)
+
+	## the size of the ELF header
+	if bit32:
+		elfunpackbytes = elfbytes[0x28:0x28+2]
+	else:
+		elfunpackbytes = elfbytes[0x34:0x34+2]
+	if littleendian:
+		thisheadersize = struct.unpack('<H', elfunpackbytes)[0]
+	else:
+		thisheadersize = struct.unpack('>H', elfunpackbytes)[0]
+
+	## the size of the program headers
+	if bit32:
+		elfunpackbytes = elfbytes[0x2A:0x2A+2]
+	else:
+		elfunpackbytes = elfbytes[0x36:0x36+2]
+	if littleendian:
+		programheadersize = struct.unpack('<H', elfunpackbytes)[0]
+	else:
+		programheadersize = struct.unpack('>H', elfunpackbytes)[0]
+
+	## the amount of program headers
+	if bit32:
+		elfunpackbytes = elfbytes[0x2C:0x2C+2]
+	else:
+		elfunpackbytes = elfbytes[0x38:0x38+2]
+	if littleendian:
+		numberprogramheaders = struct.unpack('<H', elfunpackbytes)[0]
+	else:
+		numberprogramheaders = struct.unpack('>H', elfunpackbytes)[0]
+
+	## the size of the section headers
+	if bit32:
+		elfunpackbytes = elfbytes[0x2E:0x2E+2]
+	else:
+		elfunpackbytes = elfbytes[0x3A:0x3A+2]
+	if littleendian:
+		sectionheadersize = struct.unpack('<H', elfunpackbytes)[0]
+	else:
+		sectionheadersize = struct.unpack('>H', elfunpackbytes)[0]
+
+	## the amount of section headers
+	if bit32:
+		elfunpackbytes = elfbytes[0x30:0x30+2]
+	else:
+		elfunpackbytes = elfbytes[0x3C:0x3C+2]
+	if littleendian:
+		numbersectionheaders = struct.unpack('<H', elfunpackbytes)[0]
+	else:
+		numbersectionheaders = struct.unpack('>H', elfunpackbytes)[0]
+
+	## the start of section headers
+	if bit32:
+		elfunpackbytes = elfbytes[0x20:0x20+4]
+	else:
+		elfunpackbytes = elfbytes[0x28:0x28+8]
+	if littleendian:
+		if bit32:
+			startsectionheader = struct.unpack('<I', elfunpackbytes)[0]
+		else:
+			startsectionheader = struct.unpack('<Q', elfunpackbytes)[0]
+	else:
+		if bit32:
+			startsectionheader = struct.unpack('>I', elfunpackbytes)[0]
+		else:
+			startsectionheader = struct.unpack('>Q', elfunpackbytes)[0]
+
+	## the start of program headers
+	if bit32:
+		elfunpackbytes = elfbytes[0x1C:0x1C+4]
+	else:
+		elfunpackbytes = elfbytes[0x20:0x20+8]
+	if littleendian:
+		if bit32:
+			startprogramheader = struct.unpack('<I', elfunpackbytes)[0]
+		else:
+			startprogramheader = struct.unpack('<Q', elfunpackbytes)[0]
+	else:
+		if bit32:
+			startprogramheader = struct.unpack('>I', elfunpackbytes)[0]
+		else:
+			startprogramheader = struct.unpack('>Q', elfunpackbytes)[0]
 
 	## This does not work well, for example for Linux kernel modules
 	#if thisheadersize != startprogramheader:
