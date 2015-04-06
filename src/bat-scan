@@ -117,7 +117,7 @@ def main(argv):
 			## no printing?
 			pass
 		else:
-			output = bat.bruteforcescan.prettyprint(scans['batconfig'], unpackreports, scandate, scans, os.path.basename(scamfile), tempdir)
+			output = bat.bruteforcescan.prettyprint(scans['batconfig'], unpackreports, scandate, scans, os.path.basename(scanfile), tempdir)
 			print output
 
 		bat.bruteforcescan.writeDumpfile(unpackreports, scans, outputfile, os.path.realpath(options.cfg), tempdir, scans['batconfig']['outputlite'], scans['batconfig']['debug'])
