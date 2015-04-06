@@ -847,6 +847,36 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		else:
 			startprogramheader = struct.unpack('>Q', elfunpackbytes)[0]
 
+	## the start of section header index
+	if bit32:
+		elfunpackbytes = elfbytes[0x32:0x32+2]
+	else:
+		elfunpackbytes = elfbytes[0x3E:0x3E+2]
+	if littleendian:
+		sectionheaderindex = struct.unpack('<H', elfunpackbytes)[0]
+	else:
+		sectionheaderindex = struct.unpack('>H', elfunpackbytes)[0]
+
+	## now get the list of sections that there is
+	headers_to_skip = (numbersectionheaders-1) - sectionheaderindex
+
+	## then read sectionheadersize bytes backwards until startsectionheader - sectionheadersize*headers_to_skip
+	section_byte_end = startsectionheader - sectionheadersize * headers_to_skip
+
+	dynamic = False
+	sectionoffset = startsectionheader
+	counter = 0
+	while counter != numbersectionheaders:
+		sectionnamestart = elfbytes.rfind('\x00', 0, sectionoffset)
+		if sectionoffset - sectionnamestart == 1:
+			sectionoffset = sectionnamestart
+			continue
+		if elfbytes[sectionnamestart+1:sectionoffset] == '.dynamic':
+			dynamic = True
+			break
+		sectionoffset = sectionnamestart
+		counter += 1
+
 	## This does not work well, for example for Linux kernel modules
 	#if thisheadersize != startprogramheader:
 	#	return newtags
@@ -872,13 +902,12 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 				totalsize = int(spl[2], 16) + int(spl[3], 16)
 				if totalsize == os.stat(filename).st_size:
 					newtags.append("elf")
-	p = subprocess.Popen(['readelf', '-d', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		return newtags
-	## OK, this completely does not work with localised versions
-	## TODO: come up with a method that works with localised versions
-	if stanout.strip() == "There is no dynamic section in this file.":
+	#p = subprocess.Popen(['readelf', '-d', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	#(stanout, stanerr) = p.communicate()
+	#if p.returncode != 0:
+	#	return newtags
+
+	if not dynamic:
 		newtags.append("static")
 	else:
 		newtags.append("dynamic")
