@@ -233,7 +233,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 			## then the variablename results
 			jsonreport['ranking']['variablenameresults'] = {}
 			jsonreport['ranking']['variablenameresults'] = {}
-			jsonreport['ranking']['variablenameresults']['totalfunctionnames'] = 0
+			jsonreport['ranking']['variablenameresults']['totalvariablenames'] = 0
 			jsonreport['ranking']['variablenameresults']['versionresults'] = []
 			if 'totalnames' in variablenameresults:
 				jsonreport['ranking']['variablenameresults']['totalvariablenames'] = variablenameresults['totalnames']
