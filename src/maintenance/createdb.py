@@ -652,7 +652,7 @@ def unpack_verify(filedir, filename):
 
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
-def unpack_getstrings(filedir, package, version, filename, origin, checksums, downloadurl, dbpath, cleanup, license, copyrights, security, pool, ninkacomments, licensedb, securitydb, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
+def unpack_getstrings(filedir, package, version, filename, origin, checksums, downloadurl, dbpath, cleanup, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, securitydb, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
 	## unpack the archive. If it fails, cleanup and return.
 	## TODO: make temporary dir configurable
 	temporarydir = unpack(filedir, filename, unpackdir)
@@ -831,7 +831,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 			conn.close()
 			return
 
-	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, security, pool, ninkacomments, licensedb, securitydb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles)
+	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, securitydb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles)
 	if sqlres != None:
 		if sqlres != []:
 			## Add the file to the database: name of archive, sha256, packagename and version
@@ -960,7 +960,7 @@ def computehash((filedir, filename, extension, language, extrahashes)):
 		
 	return (filedir, filename, filehashes, extension, language)
 
-def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, security, pool, ninkacomments, licensedb, securitydb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
+def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, securitydb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
 	osgen = os.walk(srcdir)
 
 	pkgconf = packageconfig.get(package,{})
@@ -1127,14 +1127,14 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		ninkaconn.close()
 
 		## TODO: sync names of licenses as found by FOSSology and Ninka
-		fossology_chunksize = 10
+		nomoschunks = 10
 		fossology_filestoscan = []
 		if 'patch' in languages:
 			fossyfiles = filter(lambda x: x[4] != 'patch', filestoscan)
 		else:
 			fossyfiles = filestoscan
-		for i in range(0,len(fossyfiles),fossology_chunksize):
-			fossology_filestoscan.append((fossyfiles[i:i+fossology_chunksize]))
+		for i in range(0,len(fossyfiles),nomoschunks):
+			fossology_filestoscan.append((fossyfiles[i:i+nomoschunks]))
 		fossology_res = filter(lambda x: x != None, pool.map(licensefossology, fossology_filestoscan, 1))
 		## this requires FOSSology 2.3.0 or later
 		p2 = subprocess.Popen(["/usr/share/fossology/nomos/agent/nomossa", "-V"], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
@@ -2303,6 +2303,9 @@ def main(argv):
 
 	packageconfig = {}
 
+	## default values
+	nomoschunks = 10
+
 	## search configuration to see if it is correct and/or not malformed
 	## first search for a section called 'extractconfig' with configtype = global
 	for section in config.sections():
@@ -2364,6 +2367,10 @@ def main(argv):
 				licensedb = config.get(section, 'licensedb')
 			except:
 				licensedb = None
+			try:
+				nomoschunks = int(config.get(section, 'nomoschunks'))
+			except:
+				nomoschunks = 10
 			try:
 				ninkacomments = config.get(section, 'ninkacommentsdb')
 			except:
@@ -2781,9 +2788,9 @@ def main(argv):
 			if package != oldpackage:
 				oldres = set()
 			if not batarchive:
-				unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums[filename], downloadurl, masterdatabase, cleanup, license, copyrights, security, pool, ninkacomments, licensedb, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
+				unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums[filename], downloadurl, masterdatabase, cleanup, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
 			else:
-				unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums, downloadurl, masterdatabase, cleanup, license, copyrights, security, pool, ninkacomments, licensedb, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
+				unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums, downloadurl, masterdatabase, cleanup, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
 			if unpackres != None:
 				oldres = set(map(lambda x: x[2]['sha256'], unpackres))
 				## by updating oldres instead of overwriting itsome more files could be filtered
