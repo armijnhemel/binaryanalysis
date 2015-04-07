@@ -654,14 +654,14 @@ def unpack_verify(filedir, filename):
 ## reflect its true functionality...
 def unpack_getstrings(filedir, package, version, filename, origin, checksums, downloadurl, dbpath, cleanup, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, securitydb, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
 	## unpack the archive. If it fails, cleanup and return.
-	## TODO: make temporary dir configurable
-	temporarydir = unpack(filedir, filename, unpackdir)
-	if temporarydir == None:
-		return None
+	## TODO: make temporarydir configurable
 
 	if not batarchive:
 		filehash = checksums['sha256']
 	else:
+		temporarydir = unpack(filedir, filename, unpackdir)
+		if temporarydir == None:
+			return None
 		## override the data for package, version, filename, origin, filehash
 		## first unpack
 		## first extract the MANIFEST.BAT file from the BAT archive
@@ -714,38 +714,58 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 
 	filetohash = {}
 
+	has_manifest = False
 	manifestdir = os.path.join(filedir, "MANIFESTS")
 	if os.path.exists(manifestdir):
 		if os.path.isdir(manifestdir):
 			manifestfile = os.path.join(manifestdir, "%s.bz2" % filehash)
 			if os.path.exists(manifestfile):
-				manifest = bz2.BZ2File(manifestfile, 'r')
-				manifestlines = manifest.readlines()
-				manifest.close()
-				checksumsused = manifestlines[0].strip().split()
-				## first line is always a list of supported hashes.
-				process = True
-				if set(checksumsused).intersection(set(extrahashes)) != set(extrahashes):
-					process = False
-				if process:
-					for i in manifestlines[1:]:
-						i = i.strip().replace('\t\t', '\t')
-						entries = i.split('\t')
-						if len(entries) != 2 + len(extrahashes):
-							## if this happens there is a newline
-							## in the file name which is pure evil
-							continue
-						fileentry = entries[0]
-						## sha256 is always the first hash
-						hashentry = entries[1]
-						filetohash[fileentry] = {}
-						filetohash[fileentry]['sha256'] = hashentry
-						counter = 1
-						for c in checksumsused[1:]:
-							## only record results for hashes that are in 'extrahashes'
-							if c in extrahashes:
-								filetohash[fileentry][c] = entries[counter+1]
-							counter += 1
+				has_manifest = True
+
+	if has_manifest:
+		manifest = bz2.BZ2File(manifestfile, 'r')
+		manifestlines = manifest.readlines()
+		manifest.close()
+		checksumsused = manifestlines[0].strip().split()
+		## first line is always a list of supported hashes.
+		process = True
+		if set(checksumsused).intersection(set(extrahashes)) != set(extrahashes):
+			process = False
+		if process:
+			for i in manifestlines[1:]:
+				i = i.strip().replace('\t\t', '\t')
+				entries = i.split('\t')
+				if len(entries) != 2 + len(extrahashes):
+					## if this happens there is a newline
+					## in the file name which is pure evil
+					continue
+				fileentry = entries[0]
+				## sha256 is always the first hash
+				hashentry = entries[1]
+				filetohash[fileentry] = {}
+				filetohash[fileentry]['sha256'] = hashentry
+				counter = 1
+				for c in checksumsused[1:]:
+					## only record results for hashes that are in 'extrahashes'
+					if c in extrahashes:
+						filetohash[fileentry][c] = entries[counter+1]
+					counter += 1
+		pkgconf = packageconfig.get(package,{})
+		processstatus = set()
+		for f in filetohash.keys():
+			processstatus.add(filterfilename(f, pkgconf)[0])
+
+		if True in processstatus:
+			temporarydir = unpack(filedir, filename, unpackdir)
+			if temporarydir == None:
+				return None
+		else:
+			return None
+	else:
+		temporarydir = unpack(filedir, filename, unpackdir)
+		if temporarydir == None:
+			return None
+
 	print >>sys.stdout, "processing", filename, datetime.datetime.utcnow().isoformat()
 	sys.stdout.flush()
 
@@ -893,6 +913,29 @@ def grabhash((db, package, version, checksum)):
 	conn.close()
 	return (checksum, identical)
 
+def filterfilename(filename, pkgconf):
+	## some filenames might have uppercase extensions, so lowercase them first
+	p_nocase = filename.lower()
+	process = False
+	language = None
+	extension = p_nocase.split('.')[-1]
+	if extension != p_nocase:
+		if extension in extensionskeys:
+			process = True
+			language = extensions['.%s' % extension]
+	if filename == 'configure.ac':
+		process = True
+		language = 'C'
+	if not process:
+		## now check the package specific extensions
+		if pkgconf.has_key('extensions'):
+			for extlang in pkgconf['extensions']:
+				(extension, language) = extlang
+				if (p_nocase.endswith(extension)) and not p_nocase == extension:
+					process = True
+					break
+	return (process, extension, language)
+
 ## Compute the SHA256 for a single file.
 def filterfiles((filedir, filename, pkgconf, allfiles)):
 	resolved_path = os.path.join(filedir, filename)
@@ -910,25 +953,9 @@ def filterfiles((filedir, filename, pkgconf, allfiles)):
 	## nothing to determine about an empty file, so skip
 	if os.stat(resolved_path).st_size == 0:
 		return None
-	## some filenames might have uppercase extensions, so lowercase them first
-	p_nocase = filename.lower()
-	process = False
-	extension = p_nocase.split('.')[-1]
-	if extension != p_nocase:
-		if extension in extensionskeys:
-			process = True
-			language = extensions['.%s' % extension]
-	if filename == 'configure.ac':
-		process = True
-		language = 'C'
-	if not process:
-		## now check the package specific extensions
-		if pkgconf.has_key('extensions'):
-			for extlang in pkgconf['extensions']:
-				(extension, language) = extlang
-				if (p_nocase.endswith(extension)) and not p_nocase == extension:
-					process = True
-					break
+
+	(process, extension, language) = filterfilename(filename, pkgconf)
+
 	if not process and not allfiles:
 		return None
 	elif not process and allfiles:
