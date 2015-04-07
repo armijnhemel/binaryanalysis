@@ -858,18 +858,31 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		sectionheaderindex = struct.unpack('>H', elfunpackbytes)[0]
 
 	dynamic = False
-	sectionoffset = startsectionheader
-	counter = 0
-	while counter != numbersectionheaders:
-		sectionnamestart = elfbytes.rfind('\x00', 0, sectionoffset)
-		if sectionoffset - sectionnamestart == 1:
-			sectionoffset = sectionnamestart
-			continue
-		if elfbytes[sectionnamestart+1:sectionoffset] == '.dynamic':
-			dynamic = True
-			break
-		sectionoffset = sectionnamestart
-		counter += 1
+
+	## first find the table with the names of the sections
+	## then grab the list of sections
+	## TODO
+
+	## process the section headers
+	offset = 0
+	dynamiccount = 0
+	for i in xrange(0,numbersectionheaders):
+		sectionheader = elfbytes[startsectionheader+offset:startsectionheader+sectionheadersize+offset]
+		if littleendian:
+			sh_name = struct.unpack('<I', sectionheader[0:4])[0]
+		else:
+			sh_name = struct.unpack('>I', sectionheader[0:4])[0]
+		if littleendian:
+			sh_type = struct.unpack('<I', sectionheader[4:8])[0]
+		else:
+			sh_type = struct.unpack('>I', sectionheader[4:8])[0]
+		if sh_type == 6:
+			dynamiccount += 1
+		offset += sectionheadersize
+
+	## dynamic count cannot be larger than 1
+	if dynamiccount == 1:
+		dynamic = True
 
 	## This does not work well, for example for Linux kernel modules
 	#if thisheadersize != startprogramheader:
@@ -896,11 +909,6 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 				totalsize = int(spl[2], 16) + int(spl[3], 16)
 				if totalsize == os.stat(filename).st_size:
 					newtags.append("elf")
-	#p = subprocess.Popen(['readelf', '-d', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	#(stanout, stanerr) = p.communicate()
-	#if p.returncode != 0:
-	#	return newtags
-
 	if not dynamic:
 		newtags.append("static")
 	else:
