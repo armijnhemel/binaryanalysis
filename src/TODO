@@ -5,7 +5,6 @@ file systems:
 * FAT32
 * MBR (use python-construct)
 * NTFS
-* ubifs (unubi was removed from mtd-utils)
 * more generic YAFFS2 support
 * squashfs as described at http://www.devttys0.com/2011/08/extracting-non-standard-squashfs-images/
 
@@ -87,7 +86,7 @@ BOTTLENECKS/HIGH PRIORITY:
 18. createdb.py: use and store output from Monk
 19. generatelistrpm.py: use information from rpm2cpio's --dump option to get checksums and better decide if files should be unpacked or not
 20. add database driver hints to configuration variables to easier provide for better databases. Perhaps use URL notation for this?
-21. let BAT take a directory as argument instead of a single file
+21. createdb.py: only do chmod for files and directories once
 22. bat/bruteforcescan.py: research passing information from unpackscans to leafscans (via environment?)
 23. add some sort of sanity checker for configuration
 24. bat/batxor.py: try to take 'partial XOR' into account (where only part of the file has been 'encrypted' with XOR)
@@ -97,8 +96,5 @@ BOTTLENECKS/HIGH PRIORITY:
 28. createdb.py: start recording metadata for RPM files (such as applied patches). Do the same for DEB files, if possible/feasible.
 29. createdb.py: reimplement FOSSology's statement extractor and store results
 30. createdb.py: add support for adding an authoritive license/copyright database. Data for checksums from this database will not be extracted, but instead copied. This is useful if someone has done a manual review of licenses/copyrights and it has already been 'cleared'.
-31. createdb.py: add support for copying data from a previous database. This is useful if certain extracted data has not changed (for example: function names).
+31. createdb.py: add support for copying data from another database from a previous run. This is useful if certain extracted data has not changed (for example: function names).
 32. createbatarchive.py: copy all unused files into archives (example: Makefiles for Linux kernel)
-33. createdb.py: first check (using manifest files) whether or not an archive needs to be unpacked before actually unpacking it. In case of big archive files (wesnoth, texlive, etc.) this could save a lot of time if it is found that unpacking is not needed.
-34. createdb.py: make 'chunks' for Nomos configurable
-35. createdb.py: only do chmod for files and directories once

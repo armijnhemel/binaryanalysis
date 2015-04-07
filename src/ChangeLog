@@ -1,3 +1,43 @@
+2015-04-07:
+* generatejson.py: fix cut/paste error
+* createdb.py: make chunksize for Nomos configurable
+* createdb.py: don't unpack archives, for example if there are presumably no
+source code files in the archive that need to be scanned
+* prerun.py: further rework verifyELF
+
+2015-04-06:
+* prerun.py: start reworking verifyELF to avoid processing output of readelf
+that is locale sensitive
+
+2015-04-04:
+* bat-scan: allow a whole directory to be scanned instead of just a single file
+* introduce "reporthash" option to allow that another hash (currently MD5,
+SHA1, CRC32) can be reported. At the moment only supported in generatejson.py
+
+2015-04-03:
+* fix for 7z unpacking
+
+2015-04-02:
+* fix for http://bugs.python.org/issue9993 (thanks to Johannes Hessling for
+reporting)
+
+2015-04-01:
+* pack scandata.json if present
+
+2015-03-30:
+* generatelistrpm.py: optionally use the possibly unsafe handling of spec
+files by RPM itself
+
+2015-03-24:
+* fwunpack.py: replace unubi by ubi_reader
+* add ubi_reader to bat-extratools
+
+2015-03-23:
+* generatejson.py: output more results as JSON
+
+2015-03-22:
+* start on outputting (partial) results as JSON
+
 2015-03-16:
 * add "reportendofphase" option
 * tag "toplevel" element before aggregate scans are run
