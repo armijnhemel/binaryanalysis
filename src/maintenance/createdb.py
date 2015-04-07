@@ -753,6 +753,8 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 		pkgconf = packageconfig.get(package,{})
 		processstatus = set()
 		for f in filetohash.keys():
+			if filetohash[f]['sha256'] in oldsha256:
+				continue
 			processstatus.add(filterfilename(f, pkgconf)[0])
 
 		if True in processstatus:
