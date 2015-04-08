@@ -942,11 +942,11 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 			if offset == 0 and size7s == os.stat(filename).st_size:
 				tags.append("compressed")
 				tags.append("7z")
+			blacklist.append((offset, offset+size7s))
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, tags, hints)
-
 
 def unpack7z(filename, offset, tempdir=None, blacklist=[]):
 	## first unpack things, write things to a file and return
@@ -961,6 +961,7 @@ def unpack7z(filename, offset, tempdir=None, blacklist=[]):
 	param = "-o%s" % tmpdir
 	p = subprocess.Popen(['7z', param, '-l', '-y', 'x', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
+	
 	if p.returncode != 0:
 		os.unlink(tmpfile[1])
 		## 7z might have exited, but perhaps left some files behind, so remove them
@@ -981,7 +982,6 @@ def unpack7z(filename, offset, tempdir=None, blacklist=[]):
 		size7s = int(sizeres.groups()[0])
 	else:
 		size7s = 0
-	
 	return (size7s, tmpdir)
 
 ## unpack lzip archives.
