@@ -652,7 +652,7 @@ def unpack_verify(filedir, filename):
 
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
-def unpack_getstrings(filedir, package, version, filename, origin, checksums, downloadurl, dbpath, cleanup, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, securitydb, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
+def unpack_getstrings(filedir, package, version, filename, origin, checksums, downloadurl, dbpath, cleanup, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, authlicensedb, securitydb, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
 	## unpack the archive. If it fails, cleanup and return.
 	## TODO: make temporarydir configurable
 
@@ -853,7 +853,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 			conn.close()
 			return
 
-	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, securitydb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles)
+	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, authlicensedb, securitydb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles)
 	if sqlres != None:
 		if sqlres != []:
 			## Add the file to the database: name of archive, sha256, packagename and version
@@ -989,7 +989,7 @@ def computehash((filedir, filename, extension, language, extrahashes)):
 		
 	return (filedir, filename, filehashes, extension, language)
 
-def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, securitydb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
+def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, authlicensedb, securitydb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
 	osgen = os.walk(srcdir)
 
 	pkgconf = packageconfig.get(package,{})
@@ -1099,11 +1099,36 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		licensecursor = licenseconn.cursor()
 		licensecursor.execute('PRAGMA synchronous=off')
 
+		ignorefiles = set()
+
+		## if authlicensedb is not empty see if the checksum can be found in this database
+		if authlicensedb != None:
+			authlicenseconn = sqlite3.connect(authlicensedb, check_same_thread = False)
+			authlicensecursor = authlicenseconn.cursor()
+			authlicensecursor.execute('PRAGMA synchronous=off')
+
+			## then check for every file in filestoscan to see if they are already in authlicensedb
+			for f in filestoscan:
+				authlicensecursor.execute("select distinct * from licenses where checksum=?", (f[5],))
+				authlicenses = authlicensecursor.fetchall()
+				if len(authlicenses) != 0:
+					for a in authlicenses:
+						licensecursor.execute("insert into licenses values (?,?,?,?)", a)
+					licenseconn.commit()
+					ignorefiles.add(f[5])
+			authlicensecursor.close()
+			authlicenseconn.close()
+
+		if len(ignorefiles) != 0:
+			filtered_files = filter(lambda x: x[5] not in ignorefiles, filestoscan)
+		else:
+			filtered_files = filestoscan
+
 		if 'patch' in languages:
 			## patch files should not be scanned for license information
-			comments_results = pool.map(extractcomments, map(lambda x: x+ (brokenninka,), filter(lambda x: x[4] != 'patch', filestoscan)), 1)
+			comments_results = pool.map(extractcomments, map(lambda x: x+ (brokenninka,), filter(lambda x: x[4] != 'patch', filtered_files)), 1)
 		else:
-			comments_results = pool.map(extractcomments, map(lambda x: x + (brokenninka,), filestoscan), 1)
+			comments_results = pool.map(extractcomments, map(lambda x: x + (brokenninka,), filtered_files), 1)
 		commentshash = {}
 		commentshash2 = {}
 		for c in comments_results:
@@ -1159,9 +1184,9 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		nomoschunks = 10
 		fossology_filestoscan = []
 		if 'patch' in languages:
-			fossyfiles = filter(lambda x: x[4] != 'patch', filestoscan)
+			fossyfiles = filter(lambda x: x[4] != 'patch', filtered_files)
 		else:
-			fossyfiles = filestoscan
+			fossyfiles = filtered_files
 		for i in range(0,len(fossyfiles),nomoschunks):
 			fossology_filestoscan.append((fossyfiles[i:i+nomoschunks]))
 		fossology_res = filter(lambda x: x != None, pool.map(licensefossology, fossology_filestoscan, 1))
@@ -2412,6 +2437,10 @@ def main(argv):
 			except:
 				licensedb = None
 			try:
+				authlicensedb = config.get(section, 'authlicensedb')
+			except:
+				authlicensedb = None
+			try:
 				nomoschunks = int(config.get(section, 'nomoschunks'))
 			except:
 				nomoschunks = 10
@@ -2490,6 +2519,11 @@ def main(argv):
 			parser.error("License scanning enabled, but no path to ninkacomments database supplied")
 		if ninkacomments == masterdatabase:
 			parser.error("Database and ninkacomments database cannot be the same")
+		if authlicensedb != None:
+			if licensedb == authlicensedb:
+				authlicensedb = None
+			if not os.path.exists(authlicensedb):
+				authlicensedb = None
 	else:
 		license = False
 
@@ -2684,6 +2718,15 @@ def main(argv):
 		c.execute('''create table if not exists misc(checksum text, name text)''')
 		c.execute('''create index if not exists misc_checksum_index on misc(checksum)''')
 		c.execute('''create index if not exists misc_name_index on misc(name)''')
+		if extrahashes != []:
+			c.execute('''create table if not exists hashconversion (sha256 text)''')
+			c.execute('''create index if not exists hashconversion_sha256_index on hashconversion(sha256);''')
+			for h in extrahashes:
+				## TODO: check whether or not these columns already exist
+				tablequery = "alter table hashconversion add column %s text;" % h
+				indexquery = "create index if not exists hashconversion_%s_index on hashconversion(%s)" % (h, h)
+				c.execute(tablequery)
+				c.execute(indexquery)
 		conn.commit()
 
 		if scanlicense or scancopyright:
@@ -2722,16 +2765,6 @@ def main(argv):
 			securityconn.commit()
 			securityc.close()
 			securityconn.close()
-		if extrahashes != []:
-			c.execute('''create table if not exists hashconversion (sha256 text)''')
-			c.execute('''create index if not exists hashconversion_sha256_index on hashconversion(sha256);''')
-			for h in extrahashes:
-				## TODO: check whether or not these columns already exist
-				tablequery = "alter table hashconversion add column %s text;" % h
-				indexquery = "create index if not exists hashconversion_%s_index on hashconversion(%s)" % (h, h)
-				c.execute(tablequery)
-				c.execute(indexquery)
-			conn.commit()
 	except Exception, e:
 		print >>sys.stderr, e
 
@@ -2832,9 +2865,9 @@ def main(argv):
 			if package != oldpackage:
 				oldres = set()
 			if not batarchive:
-				unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums[filename], downloadurl, masterdatabase, cleanup, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
+				unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums[filename], downloadurl, masterdatabase, cleanup, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, authlicensedb, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
 			else:
-				unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums, downloadurl, masterdatabase, cleanup, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
+				unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums, downloadurl, masterdatabase, cleanup, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, authlicensedb, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
 			if unpackres != None:
 				oldres = set(map(lambda x: x[2]['sha256'], unpackres))
 				## by updating oldres instead of overwriting itsome more files could be filtered
