@@ -1376,6 +1376,13 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 					cursor.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, language, linenumber))
 				else:
 					cursor.execute('''insert into extracted_name (checksum, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, language, linenumber))
+		elif language == 'Ruby':
+			for res in results:
+				(cname, linenumber, nametype) = res
+				if nametype == 'method':
+					cursor.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, language, linenumber))
+				else:
+					cursor.execute('''insert into extracted_name (checksum, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, language, linenumber))
 	conn.commit()
 	if security:
 		securityconn.commit()
@@ -1820,7 +1827,7 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 	## section called __ksymtab__strings
 	# (name, linenumber, type)
 
-	if (newlanguage in ['C', 'C#', 'Java', 'PHP', 'Python']):
+	if (newlanguage in ['C', 'C#', 'Java', 'PHP', 'Python', 'Ruby']):
 
 		p2 = subprocess.Popen(["ctags", "-f", "-", "-x", '--language-force=%s' % newlanguage, os.path.join(i, p)], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE, env=unpackenv)
 		(stanout2, stanerr2) = p2.communicate()
@@ -1847,6 +1854,10 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 						continue
 				elif newlanguage == 'Python':
 					if tagtype not in ['variable', 'member', 'function', 'class']:
+						continue
+				elif newlanguage == 'Ruby':
+					## TODO: fix for "singleton method"
+					if tagtype not in ['module', 'method', 'class']:
 						continue
 				linenumber = int(csplit[2])
 				if language == 'patch':
@@ -1898,6 +1909,10 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 						if tagtype == i:
 							results.add((identifier, linenumber, i))
 							break
+				if newlanguage == 'Ruby':
+					for i in ['module', 'method', 'class']:
+						if tagtype == i:
+							results.add((identifier, linenumber, i))
 
 	securityresults = []
 	if security:
