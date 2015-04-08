@@ -153,6 +153,8 @@ def crackPasswords(unpackreports, scantempdir, topleveldir, processors, scanenv,
 			continue
 		if 'symlink' in unpackreports[u]['tags']:
 			continue
+		if 'elf' in unpackreports[u]['tags']:
+			continue
 		if os.path.basename(u) == 'shadow':
 			passwdfiles.append((u, 'shadow'))
 		else:
@@ -184,6 +186,9 @@ def crackPasswords(unpackreports, scantempdir, topleveldir, processors, scanenv,
 		scanlines = []
 		for p in pwentries:
 			pwfields = p.split(':')
+
+			if len(pwfields) < 7:
+				continue
 			if len(pwfields[1]) > 1:
 				if pwfields[1] not in hashestologins:
 					hashestologins[pwfields[1]] = set()
@@ -194,7 +199,7 @@ def crackPasswords(unpackreports, scantempdir, topleveldir, processors, scanenv,
 				if db:
 					cursor.execute("select password from security_password where hash=?", (pwfields[1],))
 					res = cursor.fetchone()
-					if len(res) != 0:
+					if res != None:
 						password = res[0]
 						foundpasswords.append((pwfields[1],password))
 						hashestopassword[pwfields[1]] = password
