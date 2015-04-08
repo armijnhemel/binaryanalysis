@@ -74,7 +74,7 @@ BOTTLENECKS/HIGH PRIORITY:
 6. rework datastructures of ranking information (strings, function names, variables) so they are all similar
 7. handle "disk full" and other errors
 8. clean up for tagKnownExtension, add more extensions if possible. Research big firmwares for this to see which extensions to focus on first.
-9. research/fix priority for Minix file system
+9. Python 3 support
 10. don't recreate ELF graphs (model for every ELF binary), but reuse graphs of dependencies. This would need a topological sort.
 11. process UNSCANNED_DUPLICATE_FILES from BAT archives in createdb.py. This is needed if some of the unscanned duplicate files need to be processed.
 12. better report non unique matched strings which are not clones
@@ -82,7 +82,7 @@ BOTTLENECKS/HIGH PRIORITY:
 14. find versions of matched kernel function names and report
 15. store meta data about media files (PNG, GIF, MP3, etc.) in database as some of these files are quite package specific
 16. try to find right ELF sections where string constants can be found
-17. optionally output results of some scans in other formats (JSON, XML, etc.)
+17. fwunpack.py: add more sanity checks for GIF unpacking
 18. createdb.py: use and store output from Monk
 19. generatelistrpm.py: use information from rpm2cpio's --dump option to get checksums and better decide if files should be unpacked or not
 20. add database driver hints to configuration variables to easier provide for better databases. Perhaps use URL notation for this?
@@ -91,10 +91,8 @@ BOTTLENECKS/HIGH PRIORITY:
 23. add some sort of sanity checker for configuration
 24. bat/batxor.py: try to take 'partial XOR' into account (where only part of the file has been 'encrypted' with XOR)
 25. bat/batxor.py: report key that was used to XOR, possibly remove temporary file from directory tree
-26. createdb.py: extract identifiers for Ruby
+26. createbatarchive.py: copy all unused files into archives (example: Makefiles for Linux kernel)
 27. createdb.py: add package clones to alias table
 28. createdb.py: start recording metadata for RPM files (such as applied patches). Do the same for DEB files, if possible/feasible.
 29. createdb.py: reimplement FOSSology's statement extractor and store results
-30. createdb.py: add support for adding an authoritive license/copyright database. Data for checksums from this database will not be extracted, but instead copied. This is useful if someone has done a manual review of licenses/copyrights and it has already been 'cleared'.
-31. createdb.py: add support for copying data from another database from a previous run. This is useful if certain extracted data has not changed (for example: function names).
-32. createbatarchive.py: copy all unused files into archives (example: Makefiles for Linux kernel)
+30. fwunpack.py: rework length check for 7z to not depend on US English locale

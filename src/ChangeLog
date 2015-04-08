@@ -1,3 +1,13 @@
+2015-04-08:
+* createdb.py: add more identifiers from Ruby files
+* createdb.py: allow copying of licenses and copyrights from an "authoritive
+license" database if available
+* fwunpack.py: initialize unpacktempdir for squashfs with 7z compression
+* fwunpack.py: correctly blacklist 7z unpacked files
+* security.py: extra sanity check for password files
+* security.py: don't look at binaries called "passwd" or "shadow"
+* security.py: fix db return value
+
 2015-04-07:
 * generatejson.py: fix cut/paste error
 * createdb.py: make chunksize for Nomos configurable
