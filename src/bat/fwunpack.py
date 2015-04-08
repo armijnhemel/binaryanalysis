@@ -1530,6 +1530,8 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, scane
 				tmpfile = tempfile.mkstemp(dir=sqshtmpdir)
 				os.fdopen(tmpfile[0]).close()
 
+				## set unpacktempdir to None as ugly temporary hack
+				unpacktempdir = None
 				sqshtmpfile = tempfile.mkstemp(dir=unpacktempdir)
 				os.fdopen(sqshtmpfile[0]).close()
 
