@@ -1106,6 +1106,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			authlicenseconn = sqlite3.connect(authlicensedb, check_same_thread = False)
 			authlicensecursor = authlicenseconn.cursor()
 			authlicensecursor.execute('PRAGMA synchronous=off')
+			## TODO: check for presence of licenses
 
 			## then check for every file in filestoscan to see if they are already in authlicensedb
 			for f in filestoscan:
@@ -1213,16 +1214,42 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 
 	## extract copyrights
 	if copyrights:
+		licenseconn = sqlite3.connect(licensedb, check_same_thread = False)
+		licenseconn.text_factory = str
+		licensecursor = licenseconn.cursor()
+		licensecursor.execute('PRAGMA synchronous=off')
+
+		ignorefiles = set()
+		## if authlicensedb is not empty see if the checksum can be found in this database
+		if authlicensedb != None:
+			authlicenseconn = sqlite3.connect(authlicensedb, check_same_thread = False)
+			authlicensecursor = authlicenseconn.cursor()
+			authlicensecursor.execute('PRAGMA synchronous=off')
+			## TODO: check for presence of extracted_copyright
+
+			## then check for every file in filestoscan to see if they are already in authlicensedb
+			for f in filestoscan:
+				authlicensecursor.execute("select distinct * from extracted_copyright where checksum=?", (f[5],))
+				authlicenses = authlicensecursor.fetchall()
+				if len(authlicenses) != 0:
+					for a in authlicenses:
+						licensecursor.execute("insert into extracted_copyright values (?,?,?,?)", a)
+					licenseconn.commit()
+					ignorefiles.add(f[5])
+			authlicensecursor.close()
+			authlicenseconn.close()
+
+		if len(ignorefiles) != 0:
+			filtered_files = filter(lambda x: x[5] not in ignorefiles, filestoscan)
+		else:
+			filtered_files = filestoscan
+
 		if 'patch' in languages:
 			## patch files should not be scanned for copyright information
-			copyrightsres = pool.map(extractcopyrights, filter(lambda x: x[4] != 'patch', filestoscan), 1)
+			copyrightsres = pool.map(extractcopyrights, filter(lambda x: x[4] != 'patch', filtered_files), 1)
 		else:
-			copyrightsres = pool.map(extractcopyrights, filestoscan, 1)
+			copyrightsres = pool.map(extractcopyrights, filtered_files, 1)
 		if copyrightsres != None:
-			licenseconn = sqlite3.connect(licensedb, check_same_thread = False)
-			licenseconn.text_factory = str
-			licensecursor = licenseconn.cursor()
-			licensecursor.execute('PRAGMA synchronous=off')
 
 			for c in filter(lambda x: x != None, copyrightsres):
 				(filehash, cres) = c
@@ -1231,9 +1258,9 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 					## combination of parameters.
 					#licensecursor.execute('''delete from extracted_copyright where checksum = ? and copyright = ? and type = ? and offset = ?''', (filehash, cr[1], cr[0], cr[2]))
 					licensecursor.execute('''insert into extracted_copyright (checksum, copyright, type, offset) values (?,?,?,?)''', (filehash, cr[1], cr[0], cr[2]))
-			licenseconn.commit()
-			licensecursor.close()
-			licenseconn.close()
+		licenseconn.commit()
+		licensecursor.close()
+		licenseconn.close()
 
 	## extract data from configure.ac instances
 	## TODO: make it less specific for configure.ac
