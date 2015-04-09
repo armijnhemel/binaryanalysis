@@ -1,3 +1,11 @@
+2015-04-09:
+* fwunpack.py: check for presence of block terminator just before GIF trailer,
+as is required by valid GIF files
+* fwunpack.py: check blacklists for GIF files earlier
+* fwunpack.py: add more sanity checks for PDF (version number)
+* fwunpack.py: test for broken ZIP archives with bad CRC checksums
+* fwunpack.py: more sanity checks for JFFS2 and RZIP
+
 2015-04-08:
 * createdb.py: add more identifiers from Ruby files
 * createdb.py: allow copying of licenses and copyrights from an "authoritive
