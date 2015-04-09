@@ -3273,12 +3273,19 @@ def searchUnpackPDF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
+		## first check whether or not the file has a valid PDF version
+		pdffile = open(filename)
+		pdffile.seek(offset+5)
+		pdfbytes = pdffile.read(1)
+		pdffile.close()
+		if pdfbytes[0] != '1':
+			continue
 		for trailer in offsets['pdftrailer']:
+			if offset > trailer:
+				continue
 			blacklistoffset = extractor.inblacklist(trailer, blacklist)
 			if blacklistoffset != None:
 				break
-			if offset > trailer:
-				continue
 			tmpdir = dirsetup(tempdir, filename, "pdf", counter)
 			res = unpackPDF(filename, offset, trailer, tmpdir)
 			if res != None:
