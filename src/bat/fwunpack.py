@@ -3371,12 +3371,16 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 
 	## GIF files have a trailer. Search for them here instead of in the top level identifier
 	## search, since it is very generic character. It would cost too many resources to also
-	## for these in all cases.
+	## look for these in all cases.
 	traileroffsets = []
 	trailer = data.find(';')
 	while(trailer != -1):
-		traileroffsets.append(trailer + gifoffsets[0])
+		## check if the byte before the trailer is the so called "block terminator"
+		## from the GIF specification. If not, then skip.
+		if data[trailer-1] == '\x00':
+			traileroffsets.append(trailer + gifoffsets[0])
 		trailer = data.find(';',trailer+1)
+
 	if traileroffsets == []:
 		return ([], blacklist, [], hints)
 
