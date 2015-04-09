@@ -2436,6 +2436,9 @@ def unpackRZIP(filename, offset, tempdir=None):
 	rzipfile.seek(0)
 	rzipdata = rzipfile.read(10)
 	rzipfile.close()
+
+	if len(rzipdata) < 10:
+		return
 	rzipsize = struct.unpack('>L', rzipdata[6:10])[0]
 
 	tmpdir = unpacksetup(tempdir)
