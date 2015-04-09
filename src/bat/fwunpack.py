@@ -3358,7 +3358,12 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	hints = []
 	gifoffsets = []
 	for marker in fsmagic.gif:
-		gifoffsets = gifoffsets + offsets[marker]
+		## first check if the header is not blacklisted
+		for m in offsets[marker]:
+			blacklistoffset = extractor.inblacklist(m, blacklist)
+			if blacklistoffset != None:
+				continue
+			gifoffsets.append(m)
 	if gifoffsets == []:
 		return ([], blacklist, [], hints)
 
@@ -3378,7 +3383,10 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		## check if the byte before the trailer is the so called "block terminator"
 		## from the GIF specification. If not, then skip.
 		if data[trailer-1] == '\x00':
-			traileroffsets.append(trailer + gifoffsets[0])
+			## check if the trailer is not blacklisted
+			blacklistoffset = extractor.inblacklist(trailer, blacklist)
+			if blacklistoffset == None:
+				traileroffsets.append(trailer + gifoffsets[0])
 		trailer = data.find(';',trailer+1)
 
 	if traileroffsets == []:
@@ -3407,9 +3415,6 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			if trail >= nextoffset:
 				break
 			## check if the trailer is not blacklisted
-			blacklistoffset = extractor.inblacklist(trail, blacklist)
-			if blacklistoffset != None:
-				continue
 			tmpdir = dirsetup(tempdir, filename, "gif", counter)
 			tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".gif", dir=tmpdir)
 			os.write(tmpfile[0], data[offset-gifoffsets[0]:trail+1-gifoffsets[0]])
