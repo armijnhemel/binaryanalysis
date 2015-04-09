@@ -313,7 +313,12 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 	diroffsets = []
 	jffs2offsets.sort()
 
+	filesize = os.stat(filename).st_size
+
 	for offset in jffs2offsets:
+		## at least 8 bytes are needed for a JFFS2 file system
+		if filesize - offset < 8:
+			break
 		bigendian = False
 		## sanity check to make sure jffs2_be actually exists
 		if offsets.has_key('jffs2_be'):
@@ -324,7 +329,7 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "jffs2", counter)
-		res = unpackJffs2(filename, offset, tmpdir, bigendian, jffs2_tmpdir, blacklist)
+		res = unpackJffs2(filename, offset, filesize, tmpdir, bigendian, jffs2_tmpdir, blacklist)
 		if res != None:
 			(jffs2dir, jffs2size) = res
 			diroffsets.append((jffs2dir, offset, jffs2size))
@@ -334,7 +339,7 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [], hints)
 
-def unpackJffs2(filename, offset, tempdir=None, bigendian=False, jffs2_tmpdir=None, blacklist=[]):
+def unpackJffs2(filename, offset, filesize, tempdir=None, bigendian=False, jffs2_tmpdir=None, blacklist=[]):
 	## first a simple sanity check. Read bytes 4-8 from the inode, which
 	## represent the total node of the inode. If the total length of the
 	## inode is bigger than the total size of the file it is not a valid
@@ -344,12 +349,15 @@ def unpackJffs2(filename, offset, tempdir=None, bigendian=False, jffs2_tmpdir=No
 	jffs2file = open(filename, 'r')
 	jffs2file.seek(offset+4)
 	jffs2buffer = jffs2file.read(4)
+
+	if len(jffs2buffer) < 4:
+		return
 	if not bigendian:
 		jffs2inodesize = struct.unpack('<I', jffs2buffer)[0]
 	else:
 		jffs2inodesize = struct.unpack('>I', jffs2buffer)[0]
 	jffs2file.close()
-	if (offset + jffs2inodesize) > os.stat(filename).st_size:
+	if (offset + jffs2inodesize) > filesize:
 		return
 	blacklistoffset = extractor.inblacklist(offset + jffs2inodesize, blacklist)
 	if blacklistoffset != None:
