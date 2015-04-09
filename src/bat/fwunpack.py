@@ -2776,6 +2776,14 @@ def unpackZip(filename, offset, tempdir=None):
 					zipentries.append(zipname)
 
 			if not weirdzip:
+				p = subprocess.Popen(['unzip', '-t', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+				(stanout, stanerr) = p.communicate()
+				if p.returncode != 0 and p.returncode != 1:
+					os.unlink(tmpfile[1])
+					if tempdir == None:
+						os.rmdir(tmpdir)
+					return (None, None)
+
 				p = subprocess.Popen(['unzip', '-o', tmpfile[1], '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 				if p.returncode != 0 and p.returncode != 1:
