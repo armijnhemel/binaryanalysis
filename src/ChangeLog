@@ -1,3 +1,7 @@
+2015-04-12:
+* findlibs.py: fix error in resolving symbolic links. Also resolve symbolic
+linsk recursively, if possible.
+
 2015-04-09:
 * fwunpack.py: check for presence of block terminator just before GIF trailer,
 as is required by valid GIF files

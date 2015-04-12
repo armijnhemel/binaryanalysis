@@ -19,6 +19,7 @@ compression/executables:
 dynamic ELF scanning
 * take RPATH into account
 * add more functions from LSB and other standards
+* resolve symbolic links that are relative, using relative path inside the unpacked file
 
 queueing system:
 * let top level script also read from a queue
@@ -96,3 +97,5 @@ BOTTLENECKS/HIGH PRIORITY:
 28. createdb.py: start recording metadata for RPM files (such as applied patches). Do the same for DEB files, if possible/feasible.
 29. createdb.py: reimplement FOSSology's statement extractor and store results
 30. fwunpack.py: rework length check for 7z to not depend on US English locale
+31. try to detect Debian Packages files (for example: Raspbian)
+32. generatejson.py: try to make sure that all data that is dumped is actually UTF-8
