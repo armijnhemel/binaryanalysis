@@ -209,19 +209,53 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 	## a list of unresolvable files: they don't exist on the system
 	unresolvable = []
 
-	## store all symlinks in the scan archive, since they might point to libraries
+	## Frequently programs do not record the name of the library, but the
+	## name of a symbolic link that points to the library. To correctly resolve
+	## symbols these symbolic links first have to be resolved. This can be a
+	## multistep process if symbolic links point to other link. Symbolic links could
+	## be absolute links or relative paths. Absolute paths first have to be converted
+	## into paths relative to the root of the firmware, so they do not point to the
+	## host system, possibly contaminating results.
+	## store all symlinks in the scan archive that point to ELF files (as far as can be determined)
 	symlinks = {}
+	symlinklinks = {}
+	scantempdirlen = len(scantempdir) + 1
 	for i in unpackreports:
 		if not unpackreports[i].has_key('sha256'):
-			## possibly there are symlinks
 			## TODO: rewrite symlinks to absolute paths before storing
 			if unpackreports[i].has_key('tags'):
+				store = False
 				if 'symlink' in unpackreports[i]['tags']:
-					target = unpackreports[i]['magic'].split('`')[-1][:-1]
-					if symlinks.has_key(os.path.basename(i)):
-						symlinks[os.path.basename(i)].append({'original': i, 'target': target})
+					target = os.readlink(os.path.join(scantempdir, i))
+
+					if os.path.isabs(target):
+						## the target points to an absolute path. Try to find
+						## a relative path instead inside the path
+						relscanpathlen = len(unpackreports[i]['path'])
+						reltarget = os.path.relpath(target, '/')
+						linkpath = os.path.join(unpackreports[i]['realpath'][:-relscanpathlen], reltarget)
+						if os.path.islink(linkpath):
+							symlinklinks[i] = linkpath[scantempdirlen:]
+							continue
+						if os.path.exists(linkpath):
+							target = reltarget
+							store = True
 					else:
-						symlinks[os.path.basename(i)] = [{'original': i, 'target': target}]
+						if target.startswith('..'):
+							## TODO
+							pass
+						else:
+							linkpath = os.path.join(unpackreports[i]['realpath'], target)
+							if os.path.islink(linkpath):
+								symlinklinks[i] = linkpath[scantempdirlen:]
+								continue
+							if os.path.exists(linkpath):
+								store = True
+					if store:
+						if symlinks.has_key(os.path.basename(i)):
+							symlinks[os.path.basename(i)].append({'original': i, 'target': target})
+						else:
+							symlinks[os.path.basename(i)] = [{'original': i, 'target': target}]
 			continue
 		filehash = unpackreports[i]['sha256']
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
@@ -242,6 +276,22 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 		else:
 			squashedelffiles[os.path.basename(i)].append(i)
 		elffiles.add(i)
+
+	## there are some symlinks that point to symlinks
+	if len(symlinklinks) != 0:
+		resolving = True
+		while len(symlinklinks) != 0 and resolving:
+			symlinklinksnew = copy.deepcopy(symlinklinks)
+			resolving = False
+			for s in symlinklinks:
+				sll = symlinklinks[s]
+				if os.path.basename(sll) in symlinks:
+					if len(symlinks[os.path.basename(sll)]) == 1:
+						target = symlinks[os.path.basename(sll)][0]['target']
+						symlinks[os.path.basename(s)] = [{'original': s, 'target': target}]
+						del symlinklinksnew[s]
+						resolving = True
+			symlinklinks = symlinklinksnew
 
 	## map functions to libraries. For each function name a list of libraries
 	## that define the function is kept.
