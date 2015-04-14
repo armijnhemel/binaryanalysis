@@ -1,6 +1,31 @@
+2015-04-14:
+* prerun.py: more sanity checks for ELF files that are truncated but which
+'readelf' thinks are valid
+* bruteforcescan.py: don't try to copy environment variables that don't exist
+in readconfig()
+* fwunpack.py: some size checks for bat-unsquashfs42. On Fedora the default
+unsquashfs will handle lzma compressed data, on Ubuntu it will not. The size
+checking code in the wrapper around bat-unsquashfs42 was not working well.
+* fwunpack.py: if a file name was set in a gzip file try to rename the
+unpacked file to that name if possible
+* bruteforcescan.py: make 'template' available that unpack scans can use to
+avoid using temporary file names, but have more predictable names
+* generatejson.py: gzip compress JSON files
+* fwunpack.py: don't try to unpack deleted files and directories from JFFS2
+file systems
+* bruteforcescan.py: restore cwd to old value after writing dump file
+* bat-scan: always set cwd to a known value before scanning a file
+* fwunpack.py: clean up after one of the Atheros variants of squashfs
+* fwunpack.py: correcty handle symlinks for squashfs if unpacking is done on
+another device than where results are stored and results are moved with
+shutil.move(). Instead of moving (which would result in a copy, possibly of
+entire file systems!) recreate the symbolic links.
+* add first try for renaming files based on having more information available
+after unpacking and some analysis
+
 2015-04-12:
 * findlibs.py: fix error in resolving symbolic links. Also resolve symbolic
-linsk recursively, if possible.
+links recursively, if possible.
 
 2015-04-09:
 * fwunpack.py: check for presence of block terminator just before GIF trailer,

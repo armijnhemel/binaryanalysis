@@ -100,3 +100,4 @@ BOTTLENECKS/HIGH PRIORITY:
 31. try to detect Debian Packages files (for example: Raspbian)
 32. generatejson.py: try to make sure that all data that is dumped is actually UTF-8
 33. replace temporary filenames in unpackers where no file information is available with templates (configurable)
+34. rework unsquashfs file size checking code
