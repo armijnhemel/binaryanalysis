@@ -2260,7 +2260,43 @@ def unpackGzip(filename, offset, tempdir=None, blacklist=[]):
 	if filesizeoffset - crcoffset != 4:
 		os.unlink(tmpfile[1])
 		return (tmpdir, 2)
+
+	## now check the temporary file to see if gzip set a name in the file and
+	## rename outtmpfile, if possible.
+	## The format for gzip is described in RFC 1952.
+	## 1. check if "FEXTRA" is set. If so, don't continue searching for the name
+	## 2. check if "FNAME" is set. If so, it follows immediately after MTIME
+	## TODO: also process if FEXTRA is set
+	rename = False
+	gzipfile = open(tmpfile[1])
+	gzipfile.seek(2)
+	gzipbyte = gzipfile.read(1)
+	if (ord(gzipbyte) >> 2 & 1) == 1:
+		gzipfile.close()
+	else:
+		gzipfile.seek(3)
+		gzipbyte = gzipfile.read(1)
+		if ord(gzipbyte) >> 3 & 1 == 1:
+			rename = True
+			renamename = ''
+			gzipfile.seek(10)
+			gzipbyte = gzipfile.read(1)
+			while gzipbyte != '\0':
+				renamename += gzipbyte
+				gzipbyte = gzipfile.read(1)
+		gzipfile.close()
+
 	os.unlink(tmpfile[1])
+
+	if rename:
+		mvname = os.path.basename(renamename)
+		if not os.path.exists(os.path.join(tmpdir, mvname)):
+			try:
+				shutil.move(outtmpfile[1], os.path.join(tmpdir, mvname))
+			except Exception, e:
+				## if there is an exception don't rename
+				pass
+
 	## to calculate the size, subtract the offset
 	return (tmpdir, filesizeoffset + 4 - offset)
 
