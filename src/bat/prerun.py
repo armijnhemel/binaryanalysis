@@ -871,6 +871,10 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	dynamiccount = 0
 	for i in xrange(0,numbersectionheaders):
 		sectionheader = elfbytes[startsectionheader+offset:startsectionheader+sectionheadersize+offset]
+		if (startsectionheader + offset) > len(elfbytes):
+			return []
+		if (startsectionheader + sectionheadersize + offset) > len(elfbytes):
+			return []
 		if littleendian:
 			sh_name = struct.unpack('<I', sectionheader[0:4])[0]
 		else:
