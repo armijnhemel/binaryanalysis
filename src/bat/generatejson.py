@@ -12,7 +12,7 @@ including the ranking algorithm.
 The documentation of the format can be found in the 'doc' directory (subject to change)
 '''
 
-import os, sys, re, json, cPickle, multiprocessing, copy, sqlite3
+import os, sys, re, json, cPickle, multiprocessing, copy, sqlite3, gzip
 
 def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, scandebug=False, unpacktempdir=None):
 	toplevelelem = None
@@ -281,7 +281,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 		## then security
 
 		## dump the JSON to a file
-		jsonfile = open(os.path.join(topleveldir, "reports", "%s.json" % filehash), 'w')
+		jsonfile = gzip.open(os.path.join(topleveldir, "reports", "%s.json.gz" % filehash), 'w')
 		jsonfile.write(json.dumps(jsonreport, indent=4))
 		jsonfile.close()
 
