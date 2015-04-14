@@ -831,6 +831,9 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		else:
 			startsectionheader = struct.unpack('>Q', elfunpackbytes)[0]
 
+	if startsectionheader > len(elfbytes):
+		return []
+
 	## the start of program headers
 	if bit32:
 		elfunpackbytes = elfbytes[0x1C:0x1C+4]
