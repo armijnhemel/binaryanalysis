@@ -1721,7 +1721,8 @@ def unpackSquashfsDDWRTLZMA(filename, offset, tmpdir, unpacktempdir=None):
 		mvfiles = os.listdir(os.path.join(tmpdir2, "squashfs-root"))
 		for f in mvfiles:
 			mvpath = os.path.join(tmpdir2, "squashfs-root", f)
-			if os.path.islink(mvpath) and not os.path.exists(mvpath):
+			if os.path.islink(mvpath):
+				os.symlink(os.readlink(mvpath), os.path.join(tmpdir, f))
 				continue
 			try:
 				shutil.move(mvpath, tmpdir)
@@ -1775,7 +1776,8 @@ def unpackSquashfsAtheros2LZMA(filename, offset, tmpdir, unpacktempdir=None):
 	mvfiles = os.listdir(os.path.join(tmpdir2, "squashfs-root"))
 	for f in mvfiles:
 		mvpath = os.path.join(tmpdir2, "squashfs-root", f)
-		if os.path.islink(mvpath) and not os.path.exists(mvpath):
+		if os.path.islink(mvpath):
+			os.symlink(os.readlink(mvpath), os.path.join(tmpdir, f))
 			continue
 		try:
 			shutil.move(mvpath, tmpdir)
@@ -1822,7 +1824,8 @@ def unpackSquashfsOpenWrtLZMA(filename, offset, tmpdir, unpacktempdir=None):
 		mvfiles = os.listdir(os.path.join(tmpdir2, "squashfs-root"))
 		for f in mvfiles:
 			mvpath = os.path.join(tmpdir2, "squashfs-root", f)
-			if os.path.islink(mvpath) and not os.path.exists(mvpath):
+			if os.path.islink(mvpath):
+				os.symlink(os.readlink(mvpath), os.path.join(tmpdir, f))
 				continue
 			try:
 				shutil.move(mvpath, tmpdir)
