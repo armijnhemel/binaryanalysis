@@ -322,7 +322,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 			module = prerunscan['module']
 			method = prerunscan['method']
 			if debug:
-				print >>sys.stderr, module, method, filename, datetime.datetime.utcnow().isoformat()
+				print >>sys.stderr, module, method, filetoscan, datetime.datetime.utcnow().isoformat()
 				sys.stderr.flush()
 			exec "from %s import %s as bat_%s" % (module, method, method)
 			scantags = eval("bat_%s(filetoscan, tempdir, tags, offsets, prerunscan['environment'], debug=debug, unpacktempdir=unpacktempdir)" % (method))
