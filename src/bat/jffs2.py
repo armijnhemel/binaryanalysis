@@ -38,6 +38,8 @@ def readJFFS2Inodes(path, bigendian):
 			res = re.search("\s+#ino\s*(\d+)", inode)
 			if res != None:
 				inodenr = int(res.groups()[0])
+			if inodenr == 0:
+				continue
 			## use the namesize to get the name.
 			res = re.search("\s+nsize\s*(\d+)", namesize)
 			if res != None:
