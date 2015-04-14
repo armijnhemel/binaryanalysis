@@ -623,7 +623,8 @@ def readconfig(config):
 	scanenv = {}
 
 	for i in ['PATH', 'PWD', 'HOME', 'HOSTNAME', 'LANG', 'USER']:
-		scanenv[i] = copy.deepcopy(oldenv[i])
+		if i in oldenv:
+			scanenv[i] = copy.deepcopy(oldenv[i])
 
 	for section in config.sections():
 		if section == "batconfig":
@@ -735,6 +736,14 @@ def readconfig(config):
 			except:
 				conf['name']   = section
 
+			try:
+				conf['template']   = config.get(section, 'template')
+				if not '%' in template:
+					template = template + "-%s-%d"
+			except:
+				conf['template']   = None
+
+			## deal with the environment
 			newenv = copy.deepcopy(scanenv)
 			try:
 				envvars = config.get(section, 'envvars')
