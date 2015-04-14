@@ -107,9 +107,15 @@ def main(argv):
 			else:
 				print >>sys.stderr, "output file for %s exists, skipping scan" % s
 
+	origcwd = os.getcwd()
 	for so in scanfiles:
 		(scanfile, outputfile) = so
 		scandate = datetime.datetime.utcnow()
+
+		## force the cwd  to a known value. This is to prevent mysterious
+		## errors in case some old results are cleaned up and the cwd is not
+		## restored in the code that had to change cwd for some reason.
+		os.chdir(origcwd)
 
 		(tempdir, unpackreports) = bat.bruteforcescan.runscan(scans, scanfile)
 
