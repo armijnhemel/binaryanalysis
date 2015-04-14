@@ -407,6 +407,10 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 			newenv = copy.deepcopy(unpackscan['environment'])
 			newenv['BAT_UNPACKED'] = unpacked
 
+			if 'template' in unpackscan:
+				if unpackscan['template'] != None:
+					newenv['TEMPLATE'] = unpackscan['template']
+
 			## return value is the temporary dir, plus offset in the parent file
 			## plus a blacklist containing blacklisted ranges for the *original*
 			## file and a hash with offsets for each marker.
@@ -737,9 +741,19 @@ def readconfig(config):
 				conf['name']   = section
 
 			try:
-				conf['template']   = config.get(section, 'template')
-				if not '%' in template:
-					template = template + "-%s-%d"
+				template = config.get(section, 'template')
+
+				## check for certain values and reset template if necessary
+				if '%' in template:
+					template = None
+					conf['template'] = None
+					continue
+				if '/' in template:
+					template = None
+					conf['template'] = None
+					continue
+				template = template + "-%s"
+				conf['template']   = template
 			except:
 				conf['template']   = None
 
