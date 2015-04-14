@@ -2974,6 +2974,7 @@ def searchUnpackRar(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		if res != None:
 			(endofarchive, rardir) = res
 			diroffsets.append((rardir, offset, 0))
+			blacklist.append((offset, endofarchive))
 			counter = counter + 1
 		else:
 			## cleanup
@@ -2992,6 +2993,11 @@ def unpackRar(filename, offset, tempdir=None):
 	# this way we won't waste too many resources when we don't need to
 	p = subprocess.Popen(['unrar', 'vt', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
 	rarstring = stanout.strip().split("\n")[-1]
 	res = re.search("\s*\d+\s*\d+\s+(\d+)\s+\d+%", rarstring)
 	if res != None:
