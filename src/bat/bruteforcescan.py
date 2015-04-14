@@ -1034,6 +1034,7 @@ def compressPickle((infile)):
 def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=False, debug=False):
 	dumpData(unpackreports, scans, tempdir)
 	dumpfile = tarfile.open(outputfile, 'w:gz')
+	oldcwd = os.getcwd()
 	os.chdir(tempdir)
 	shutil.copy(configfile, '.')
 	dumpfile.add('scandata.pickle')
@@ -1074,6 +1075,7 @@ def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=Fa
 	for i in dumpadds:
 		dumpfile.add(i)
 	dumpfile.close()
+	os.chdir(oldcwd)
 
 def runscan(scans, scan_binary):
 	unpacktempdir = scans['batconfig']['tempdir']
