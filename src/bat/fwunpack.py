@@ -1849,8 +1849,31 @@ def unpackSquashfs42(filename, offset, tmpdir):
 	else:
 		if "gzip uncompress failed with error code " in stanerr:
 			return None
-		## unlike with 'normal' squashfs we can't always use 'file' to determine the size
-		squashsize = 1
+
+		## determine the size of the file for the blacklist. The size can be extracted
+		## from the header, but it depends on the endianness and the version of squashfs
+		## used.
+		sqshfile = open(filename, 'rb')
+		sqshfile.seek(offset)
+		sqshheader = sqshfile.read(4)
+		bigendian = False
+		if sqshheader == 'sqsh':
+			bigendian = True
+		## get the version from the header
+		sqshfile.seek(28)
+		version = ord(sqshfile.read(1))
+
+		if version == 4:
+			sqshfile.seek(40)
+			squashdata = sqshfile.read(8)
+			if bigendian:
+				squashsize = struct.unpack('>Q', squashdata)[0]
+			else:
+				squashsize = struct.unpack('<Q', squashdata)[0]
+		else:
+			squashsize = 1
+		sqshfile.close()
+		
 		return (tmpdir, squashsize)
 
 ## generic function for all kinds of squashfs+lzma variants that were copied
