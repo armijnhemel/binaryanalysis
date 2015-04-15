@@ -219,10 +219,9 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 	## store all symlinks in the scan archive that point to ELF files (as far as can be determined)
 	symlinks = {}
 	symlinklinks = {}
-	scantempdirlen = len(scantempdir) + 1
+	scantempdirlen = len(scantempdir)
 	for i in unpackreports:
 		if not unpackreports[i].has_key('sha256'):
-			## TODO: rewrite symlinks to absolute paths before storing
 			if unpackreports[i].has_key('tags'):
 				store = False
 				if 'symlink' in unpackreports[i]['tags']:
@@ -230,7 +229,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 
 					if os.path.isabs(target):
 						## the target points to an absolute path. Try to find
-						## a relative path instead inside the path
+						## a relative path instead inside the file system
 						relscanpathlen = len(unpackreports[i]['path'])
 						reltarget = os.path.relpath(target, '/')
 						linkpath = os.path.join(unpackreports[i]['realpath'][:-relscanpathlen], reltarget)
@@ -238,7 +237,6 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 							symlinklinks[i] = linkpath[scantempdirlen:]
 							continue
 						if os.path.exists(linkpath):
-							target = reltarget
 							store = True
 					else:
 						if target.startswith('..'):
@@ -250,12 +248,14 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 								symlinklinks[i] = linkpath[scantempdirlen:]
 								continue
 							if os.path.exists(linkpath):
+								relscanpathlen = len(unpackreports[i]['path'])
+								target = os.path.join(unpackreports[i]['realpath'][-relscanpathlen:], target)
 								store = True
 					if store:
 						if symlinks.has_key(os.path.basename(i)):
-							symlinks[os.path.basename(i)].append({'original': i, 'target': target})
+							symlinks[os.path.basename(i)].append({'original': i, 'target': target, 'absolutepath': linkpath})
 						else:
-							symlinks[os.path.basename(i)] = [{'original': i, 'target': target}]
+							symlinks[os.path.basename(i)] = [{'original': i, 'target': target, 'absolutepath': linkpath}]
 			continue
 		filehash = unpackreports[i]['sha256']
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
@@ -288,7 +288,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 				if os.path.basename(sll) in symlinks:
 					if len(symlinks[os.path.basename(sll)]) == 1:
 						target = symlinks[os.path.basename(sll)][0]['target']
-						symlinks[os.path.basename(s)] = [{'original': s, 'target': target}]
+						absolutepath = symlinks[os.path.basename(sll)][0]['absolutepath']
+						symlinks[os.path.basename(s)] = [{'original': s, 'target': target, 'absolutepath': absolutepath}]
 						del symlinklinksnew[s]
 						resolving = True
 			symlinklinks = symlinklinksnew
