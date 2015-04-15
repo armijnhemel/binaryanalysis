@@ -26,6 +26,8 @@ def renamefiles(unpackreports, scantempdir, topleveldir, processors, scanenv, sc
 			if 'linuxkernel' in unpackreports[r]['tags']:
 				if 'modulekernelversion' in unpackreports[r]['tags']:
 					continue
+				if 'duplicate' in unpackreports[r]['tags']:
+					continue
 				kernelfiles.add(r)
 
 	template = "initramfs"
