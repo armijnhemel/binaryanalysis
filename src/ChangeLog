@@ -1,3 +1,9 @@
+2015-04-15:
+* renamefiles.py: handle duplicate files separately as they are not unpacked
+but results are copied instead
+* findlibs.py: store absolute paths for ELF files, both relative inside file
+system as well as on disk
+
 2015-04-14:
 * prerun.py: more sanity checks for ELF files that are truncated but which
 'readelf' thinks are valid

@@ -101,3 +101,4 @@ BOTTLENECKS/HIGH PRIORITY:
 32. generatejson.py: try to make sure that all data that is dumped is actually UTF-8
 33. replace temporary filenames in unpackers where no file information is available with templates (configurable)
 34. rework unsquashfs file size checking code
+35. copy kernel module files (2.6 and later) to a temporary file with name ending '.ko' if the filename doesn't end in .ko or modinfo will barf
