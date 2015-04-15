@@ -56,9 +56,10 @@ def renamefiles(unpackreports, scantempdir, topleveldir, processors, scanenv, sc
 							if not os.path.exists(targetname):
 								## on disk
 								shutil.move(origname, targetname)
-								origcpio = "%s-cpio-1" % origname
-								targetcpio = "%s-cpio-1" % targetname
-								shutil.move(origcpio, targetcpio)
+								if not "duplicate" in unpackreports[unpackfile]['tags']:
+									origcpio = "%s-cpio-1" % origname
+									targetcpio = "%s-cpio-1" % targetname
+									shutil.move(origcpio, targetcpio)
 								## in unpackreports
 								unpackreports[unpackfile]['name'] = template
 								newunpackreportsname = os.path.join(os.path.dirname(unpackfile), template)
