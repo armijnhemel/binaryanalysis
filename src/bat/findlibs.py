@@ -691,6 +691,13 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 							#print >>sys.stderr, "NOT FOUND WEAK", r, weakfuncstolibs[r], filteredlibs
 					elif funcstolibs.has_key(r):
 						if len(funcstolibs[r]) == 1:
+							## there are a few scenarions:
+							## 1. the file is a plugin that is loaded into executables
+							##    at run time.
+							## 2. false positives.
+							if elftypes[i] == 'lib':
+								if list(set(map(lambda x: elftypes[x], funcstolibs[r]))) == ['exe']:
+									plugsinto += funcstolibs[r]
 							possiblesolutions = possiblesolutions + funcstolibs[r]
 							continue
 						else:
@@ -742,6 +749,11 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 				pass
 				#print >>sys.stderr, "POSSIBLY USED", i, possiblyused
 				#print >>sys.stderr
+		else:
+			## there are files that are dynamically linked
+			if elftypes[i] == 'lib':
+				## if there are undefined references, then it is likely a plugin
+				pass
 		usedlibs_tmp = {}
 		for l in usedlibs:
 			if usedlibs_tmp.has_key(l[0]):
