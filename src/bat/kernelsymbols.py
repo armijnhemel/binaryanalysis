@@ -4,7 +4,8 @@
 ## Copyright 2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
-import os, os.path, sys, subprocess, copy, cPickle, multiprocessing, pydot, sqlite3, collections, csv
+import os, os.path, sys, subprocess, copy, cPickle, multiprocessing
+import pydot, sqlite3, collections, csv, tempfile, shutil
 
 '''
 This plugin for the Binary Analysis Tool can be used to check how the symbols
@@ -141,10 +142,20 @@ def extractfromkernelfile((filehash, filename, topleveldir, scantempdir)):
 			remotesymbols.add(funcname)
 
 	## now extract the defined dependencies using modinfo
-	p = subprocess.Popen(['/sbin/modinfo', "-F", "depends", os.path.join(scantempdir, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		return
+	if 'misnamedkernelmodule' in leafreports['tags']:
+		tmpfile = tempfile.mkstemp(suffix='.ko')
+		os.fdopen(tmpfile[0]).close()
+		shutil.copy(os.path.join(scantempdir, filename), tmpfile[1])
+		p = subprocess.Popen(['/sbin/modinfo', "-F", "depends", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+		os.unlink(tmpfile[1])
+		if p.returncode != 0:
+			return
+	else:
+		p = subprocess.Popen(['/sbin/modinfo', "-F", "depends", os.path.join(scantempdir, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			return
 
 	## dependencies are separated by ','
 	if stanout.strip() != '':
