@@ -1,3 +1,10 @@
+2015-04-16:
+* kernelanalysis.py/kernelsymbols.py: deal with Linux kernel modules (2.6
+kernel and higher) that do not have a name ending in .ko
+* findlibs.py: deal with symbolic links that use absolute paths (default,
+since almost all symbolic links are now rewritten to use absolute paths),
+rework storing absolute paths for targets of symbolic links
+
 2015-04-15:
 * renamefiles.py: handle duplicate files separately as they are not unpacked
 but results are copied instead
