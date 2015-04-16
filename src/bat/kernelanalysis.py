@@ -4,7 +4,7 @@
 ## Copyright 2009-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
-import os, sys, string, re, subprocess, cPickle
+import os, sys, string, re, subprocess, cPickle, tempfile, shutil
 import extractor
 import xml.dom.minidom
 
@@ -124,15 +124,29 @@ def findRedBoot(lines):
 	return lines.find("No RedBoot partition table detected in %s")
 
 ## extract the kernel version from the module
-## TODO: merge with module license extraction
 def analyseModuleVersion(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	if not 'elfrelocatable' in tags:
 		return
+	license = None
+	modulekernelversion = ''
 	## 2.6 and later Linux kernel
 	p = subprocess.Popen(['/sbin/modinfo', "-F", "vermagic", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		return None
+		if path.endswith('.ko'):
+			return None
+		tmpfile = tempfile.mkstemp(dir=unpacktempdir, suffix='.ko')
+		os.fdopen(tmpfile[0]).close()
+		shutil.copy(path, tmpfile[1])
+
+		sys.stdout.flush()
+		p2 = subprocess.Popen(['/sbin/modinfo', "-F", "vermagic", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout2, stanerr2) = p2.communicate()
+		if p2.returncode != 0:
+			os.unlink(tmpfile[1])
+			return None
+		os.unlink(tmpfile[1])
+		stanout = stanout2
 	if stanout == "":
 		## 2.4 kernel
 		p = subprocess.Popen(['/sbin/modinfo', "-F", "kernel_version", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -140,9 +154,10 @@ def analyseModuleVersion(path, tags, blacklist=[], scanenv={}, scandebug=False, 
 		if p.returncode != 0:
 			return None
 		if stanout != "":
-			return (['linuxkernel', 'modulekernelversion'], stanout.split()[0])
+			modulekernelversion = stanout.split()[0]
 	else:
-		return (['linuxkernel', 'modulekernelversion'], stanout.split()[0])
+		modulekernelversion = stanout.split()[0]
+	return (['linuxkernel', 'modulekernelversion'], modulekernelversion)
 
 ## analyse a kernel module. Requires that the modinfo program from module-init-tools has been installed
 def analyseModuleLicense(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
@@ -151,12 +166,25 @@ def analyseModuleLicense(path, tags, blacklist=[], scanenv={}, scandebug=False, 
 	p = subprocess.Popen(['/sbin/modinfo', "-F", "license", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         (stanout, stanerr) = p.communicate()
         if p.returncode != 0:
+		if path.endswith('.ko'):
+			return None
+		tmpfile = tempfile.mkstemp(dir=unpacktempdir, suffix='.ko')
+		os.fdopen(tmpfile[0]).close()
+		shutil.copy(path, tmpfile[1])
+
+		sys.stdout.flush()
+		p2 = subprocess.Popen(['/sbin/modinfo', "-F", "license", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout2, stanerr2) = p2.communicate()
+		if p2.returncode != 0:
+			os.unlink(tmpfile[1])
+			return None
+		os.unlink(tmpfile[1])
+		stanout = stanout2
                 return None
 	if stanout == "":
 		return None
-        else:
-		licenses = set(stanout.strip().split('\n'))
-		return (['modulelicense'], licenses)
+	licenses = set(stanout.strip().split('\n'))
+	return (['modulelicense'], licenses)
 
 ## match versions of kernel modules and linux kernels inside a firmware
 ## This is not a fool proof method. There are situations possible where the kernel
