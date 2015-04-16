@@ -130,6 +130,7 @@ def analyseModuleVersion(path, tags, blacklist=[], scanenv={}, scandebug=False, 
 	license = None
 	modulekernelversion = ''
 	## 2.6 and later Linux kernel
+	newtags = []
 	p = subprocess.Popen(['/sbin/modinfo', "-F", "vermagic", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
@@ -138,8 +139,6 @@ def analyseModuleVersion(path, tags, blacklist=[], scanenv={}, scandebug=False, 
 		tmpfile = tempfile.mkstemp(dir=unpacktempdir, suffix='.ko')
 		os.fdopen(tmpfile[0]).close()
 		shutil.copy(path, tmpfile[1])
-
-		sys.stdout.flush()
 		p2 = subprocess.Popen(['/sbin/modinfo', "-F", "vermagic", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout2, stanerr2) = p2.communicate()
 		if p2.returncode != 0:
@@ -147,6 +146,7 @@ def analyseModuleVersion(path, tags, blacklist=[], scanenv={}, scandebug=False, 
 			return None
 		os.unlink(tmpfile[1])
 		stanout = stanout2
+		newtags.append('misnamedkernelmodule')
 	if stanout == "":
 		## 2.4 kernel
 		p = subprocess.Popen(['/sbin/modinfo', "-F", "kernel_version", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -157,12 +157,15 @@ def analyseModuleVersion(path, tags, blacklist=[], scanenv={}, scandebug=False, 
 			modulekernelversion = stanout.split()[0]
 	else:
 		modulekernelversion = stanout.split()[0]
-	return (['linuxkernel', 'modulekernelversion'], modulekernelversion)
+	newtags.append('linuxkernel')
+	newtags.append('modulekernelversion')
+	return (newtags, modulekernelversion)
 
 ## analyse a kernel module. Requires that the modinfo program from module-init-tools has been installed
 def analyseModuleLicense(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	if not "elfrelocatable" in tags:
 		return None
+	newtags = []
 	p = subprocess.Popen(['/sbin/modinfo', "-F", "license", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         (stanout, stanerr) = p.communicate()
         if p.returncode != 0:
@@ -171,8 +174,6 @@ def analyseModuleLicense(path, tags, blacklist=[], scanenv={}, scandebug=False, 
 		tmpfile = tempfile.mkstemp(dir=unpacktempdir, suffix='.ko')
 		os.fdopen(tmpfile[0]).close()
 		shutil.copy(path, tmpfile[1])
-
-		sys.stdout.flush()
 		p2 = subprocess.Popen(['/sbin/modinfo', "-F", "license", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout2, stanerr2) = p2.communicate()
 		if p2.returncode != 0:
@@ -180,11 +181,12 @@ def analyseModuleLicense(path, tags, blacklist=[], scanenv={}, scandebug=False, 
 			return None
 		os.unlink(tmpfile[1])
 		stanout = stanout2
-                return None
+		newtags.append('misnamedkernelmodule')
 	if stanout == "":
 		return None
 	licenses = set(stanout.strip().split('\n'))
-	return (['modulelicense'], licenses)
+	newtags.append('modulelicense')
+	return (newtags, licenses)
 
 ## match versions of kernel modules and linux kernels inside a firmware
 ## This is not a fool proof method. There are situations possible where the kernel
