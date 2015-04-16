@@ -253,9 +253,9 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 								store = True
 					if store:
 						if symlinks.has_key(os.path.basename(i)):
-							symlinks[os.path.basename(i)].append({'original': i, 'target': target, 'absolutepath': linkpath})
+							symlinks[os.path.basename(i)].append({'original': i, 'target': target, 'absolutetargetpath': linkpath[scantempdirlen+1:]})
 						else:
-							symlinks[os.path.basename(i)] = [{'original': i, 'target': target, 'absolutepath': linkpath}]
+							symlinks[os.path.basename(i)] = [{'original': i, 'target': target, 'absolutetargetpath': linkpath[scantempdirlen+1:]}]
 			continue
 		filehash = unpackreports[i]['sha256']
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
@@ -429,22 +429,19 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 						if not sonames.has_key(l):
 							unresolvable.append(l)
 							continue
-						else:
-							if len(sonames[l]) == 1:
-								possiblyused.append(sonames[l][0])
-								filtersquash = filtersquash + squashedelffiles[os.path.basename(sonames[l][0])]
-							else:
-								## TODO: more libraries could possibly
-								## fullfill the dependency.
-								unresolvable.append(l)
-								continue
+						if len(sonames[l]) != 1:
+							## TODO: more libraries could possibly
+							## fullfill the dependency.
+							unresolvable.append(l)
+							continue
+						possiblyused.append(sonames[l][0])
+						filtersquash = filtersquash + squashedelffiles[os.path.basename(sonames[l][0])]
 					else:
 						## there are one or possibly more symlinks that can fullfill
 						## this requirement
 						for sl in symlinks[l]:
-							## absolute link, figure out how to deal with that
 							if sl['target'].startswith('/'):
-								pass
+								target = sl['absolutetargetpath']
 							else:
 								target = os.path.normpath(os.path.join(os.path.dirname(sl['original']), sl['target']))
 								## TODO: verify if any of the links are symlinks
@@ -454,7 +451,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 									pass
 								## add all resolved symlinks to the list of
 								## libraries to consider
-								filtersquash.append(target)
+							filtersquash.append(target)
 				else:
 					filtersquash = squashedelffiles[l]
 
