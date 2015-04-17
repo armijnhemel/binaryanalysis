@@ -288,8 +288,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 				if os.path.basename(sll) in symlinks:
 					if len(symlinks[os.path.basename(sll)]) == 1:
 						target = symlinks[os.path.basename(sll)][0]['target']
-						absolutepath = symlinks[os.path.basename(sll)][0]['absolutepath']
-						symlinks[os.path.basename(s)] = [{'original': s, 'target': target, 'absolutepath': absolutepath}]
+						absolutepath = symlinks[os.path.basename(sll)][0]['absolutetargetpath']
+						symlinks[os.path.basename(s)] = [{'original': s, 'target': target, 'absolutetargetpath': absolutepath}]
 						del symlinklinksnew[s]
 						resolving = True
 			symlinklinks = symlinklinksnew
@@ -852,6 +852,10 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 					pass
 				else:
 					squashedgraph[i].append((squashedelffiles[dependency][0], amountofsymbols, knowninterface))
+		## TODO: wiggle possible plugins into the linking graph
+		#if i in pluginsperexecutable:
+		#	for p in pluginsperexecutable[i]:
+		#		amountofsymbols = plugins[p][i]
 
 	## TODO: make more parallel
 	elfgraphs = set()

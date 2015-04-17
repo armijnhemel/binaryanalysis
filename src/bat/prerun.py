@@ -717,6 +717,7 @@ def verifyTTF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 ## This might not work for all ELF files and it is a conservative verification, only used to
 ## reduce false positives of LZMA scans.
 ## This does for sure not work for Linux kernel modules on some devices.
+## TODO: move out to a separate module
 def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not 'binary' in tags:
