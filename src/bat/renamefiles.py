@@ -17,7 +17,7 @@ unpacked files. For example:
 '''
 
 def renamefiles(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
-	## only focus on initramfs for now
+	## only focus on initramfs that is also compressed for now
 	kernelfiles = set()
 	## known compressions for initramfs
 	initramfscompressions = ['gzip']
@@ -31,7 +31,6 @@ def renamefiles(unpackreports, scantempdir, topleveldir, processors, scanenv, sc
 				kernelfiles.add(r)
 
 	template = "initramfs"
-	counter = 1
 	for r in kernelfiles:
 		if unpackreports[r]['scans'] != []:
 			for s in unpackreports[r]['scans']:
