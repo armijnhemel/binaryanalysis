@@ -80,7 +80,7 @@ def extractfromelf((path, filename)):
 	weakremotefuncs = set()
 	weaklocalvars = set()
 	weaklocalfuncs = set()
-	sonames = set()
+	elfsonames = set()
 	elftype = ""
 
 	p = subprocess.Popen(['readelf', '-W', '--dyn-syms', os.path.join(path, filename)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -143,11 +143,10 @@ def extractfromelf((path, filename)):
 			if len(soname_split) < 2:
 				continue
 			soname = line.split(': ')[1][1:-1]
-			sonames.add(soname)
+			elfsonames.add(soname)
 		if "(RPATH)" in line:
 			rpath_split = line.split('[')[1]
 			rpaths = rpath_split[:-1].split(':')
-	sonames = set(sonames)
 
 	p = subprocess.Popen(['readelf', '-h', "%s" % os.path.join(path, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
@@ -162,7 +161,7 @@ def extractfromelf((path, filename)):
 			if "REL" in line:
 				elftype = "kernelmod"
 
-	return (filename, list(localfuncs), list(remotefuncs), list(localvars), list(remotevars), list(weaklocalfuncs), list(weakremotefuncs), list(weaklocalvars), list(weakremotevars), sonames, elftype, rpaths)
+	return (filename, list(localfuncs), list(remotefuncs), list(localvars), list(remotevars), list(weaklocalfuncs), list(weakremotefuncs), list(weaklocalvars), list(weakremotevars), elfsonames, elftype, rpaths)
 
 def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
 	## crude check for broken PyDot
@@ -299,7 +298,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 	funcstolibs = {}
 	weakfuncstolibs = {}
 
-	## Map sonames to libraries For each soname a list of files that define the
+	## Map sonames to libraries. For each soname a list of files that define the
 	## soname is kept.
 	sonames = {}
 
@@ -339,7 +338,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 			else:
 				weakfuncstolibs[funcname] = [filename]
 
-		## store normal functions and variables ...
+		## store normal remote and local functions and variables ...
 		localfunctionnames[filename] = localfuncs
 		remotefunctionnames[filename] = remotefuncs
 		localvariablenames[filename] = localvars
@@ -350,6 +349,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 		weakremotefunctionnames[filename] = weakremotefuncs
 		weaklocalvariablenames[filename] = weaklocalvars
 		weakremotevariablenames[filename] = weakremotevars
+
+		## record per ELF file what kind of ELF file it is
 		elftypes[filename] = elftype
 
 	## For each file keep a list of other files that use this file. This is mostly
@@ -397,20 +398,20 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 		leafreports = cPickle.load(leaf_file)
 		leaf_file.close()
 
+		if remotefunctionnames[i] == [] and remotevariablenames[i] == [] and weakremotefunctionnames == [] and weakremotevariablenames == []:
+			## nothing to resolve, so continue
+			continue
+		## keep copies of the original data
+		remotefuncswc = copy.copy(remotefunctionnames[i])
+		remotevarswc = copy.copy(remotevariablenames[i])
+
+		funcsfound = []
+		varsfound = []
+		filteredlibs = []
+
+		## reverse mapping
+		filteredlookup = {}
 		if leafreports.has_key('libs'):
-			if remotefunctionnames[i] == [] and remotevariablenames[i] == [] and weakremotefunctionnames == [] and weakremotevariablenames == []:
-				## nothing to resolve, so continue
-				continue
-			## keep copies of the original data
-			remotefuncswc = copy.copy(remotefunctionnames[i])
-			remotevarswc = copy.copy(remotevariablenames[i])
-
-			funcsfound = []
-			varsfound = []
-			filteredlibs = []
-
-			## reverse mapping
-			filteredlookup = {}
 			for l in leafreports['libs']:
 
 				## temporary storage to hold the names of the libraries
