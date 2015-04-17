@@ -169,7 +169,7 @@ def tagKnownExtension(filename):
 	return (tags, offsets)
 
 ## scan a single file, possibly unpack and recurse
-def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optmagicscans, processid, hashdict, llock, unpacktempdir):
+def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optmagicscans, processid, hashdict, llock, template, unpacktempdir):
 	prerunignore = {}
 	prerunmagic = {}
 	for prerunscan in prerunscans:
@@ -407,9 +407,8 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 			newenv = copy.deepcopy(unpackscan['environment'])
 			newenv['BAT_UNPACKED'] = unpacked
 
-			if 'template' in unpackscan:
-				if unpackscan['template'] != None:
-					newenv['TEMPLATE'] = unpackscan['template']
+			if template != None:
+				newenv['TEMPLATE'] = template % unpackscan['name']
 
 			## return value is the temporary dir, plus offset in the parent file
 			## plus a blacklist containing blacklisted ranges for the *original*
@@ -721,6 +720,23 @@ def readconfig(config):
 			except:
 				pass
 			batconf['environment'] = newenv
+			try:
+				template = config.get(section, 'template')
+
+				## check for certain values and reset template if necessary
+				if '%' in template:
+					template = None
+					conf['template'] = None
+					continue
+				if '/' in template:
+					template = None
+					conf['template'] = None
+					continue
+				template = template + "-%s"
+				batconf['template']   = template
+			except:
+				batconf['template']   = None
+
 			continue
 		
 		elif config.has_option(section, 'type'):
@@ -739,23 +755,6 @@ def readconfig(config):
 				conf['name']   = config.get(section, 'name')
 			except:
 				conf['name']   = section
-
-			try:
-				template = config.get(section, 'template')
-
-				## check for certain values and reset template if necessary
-				if '%' in template:
-					template = None
-					conf['template'] = None
-					continue
-				if '/' in template:
-					template = None
-					conf['template'] = None
-					continue
-				template = template + "-%s"
-				conf['template']   = template
-			except:
-				conf['template']   = None
 
 			## deal with the environment
 			newenv = copy.deepcopy(scanenv)
@@ -1156,6 +1155,8 @@ def runscan(scans, scan_binary):
 	else:
 		processamount = 1
 
+	template = scans['batconfig']['template']
+
 	## use a queue made with a manager to avoid some issues, see:
 	## http://docs.python.org/2/library/multiprocessing.html#pipes-and-queues
 	if debug:
@@ -1170,7 +1171,7 @@ def runscan(scans, scan_binary):
 	hashdict = scanmanager.dict()
 	map(lambda x: scanqueue.put(x), scantasks)
 	for i in range(0,processamount):
-		p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], magicscans, optmagicscans, i, hashdict, lock, unpacktempdir))
+		p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], magicscans, optmagicscans, i, hashdict, lock, template, unpacktempdir))
 		processpool.append(p)
 		p.start()
 
