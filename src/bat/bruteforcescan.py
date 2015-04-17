@@ -919,6 +919,8 @@ def readconfig(config):
 			s['environment']['overridedir'] = True
 		if 'reporthash' in batconf:
 			s['environment']['OUTPUTHASH'] = batconf['reporthash']
+		if 'template' in batconf:
+			s['environment']['TEMPLATE'] = batconf['template']
 
 	## set and/or amend environment for postrun scans
 	for s in postrunscans:
