@@ -1134,6 +1134,7 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
+	template = None
 	if 'TEMPLATE' in scanenv:
 		template = scanenv['TEMPLATE']
 	## If there only is one header, it makes more sense to work backwards
