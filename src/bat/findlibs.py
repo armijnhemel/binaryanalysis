@@ -362,6 +362,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 	unusedlibsperfile = {}
 	possiblyusedlibsperfile = {}
 	plugins = {}
+	pluginsperexecutable = {}
 
 	notfoundfuncsperfile = {}
 	notfoundvarssperfile = {}
@@ -771,6 +772,14 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 				else:
 					pcount[p] = 1
 			plugins[i] = pcount
+
+	## store plugins per executable
+	for p in plugins:
+		for pl in plugins[p]:
+			if pl in pluginsperexecutable:
+				pluginsperexecutable[pl].append(p)
+			else:
+				pluginsperexecutable[pl] = [p]
 
 	## for each ELF file for which there are results write back the results to
 	## 'leafreports'. Also update tags if the file is a plugin.
