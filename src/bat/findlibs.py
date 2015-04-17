@@ -51,6 +51,7 @@ https://dev.openwrt.org/ticket/6847
 https://bugs.busybox.net/show_bug.cgi?id=729
 '''
 
+## helper function to find if names can be found in known interfaces
 def knownInterface(names, ptype):
 	if ptype == 'functions':
 		for i in names:
@@ -506,10 +507,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 									usedby[filtersquash[0]].append(i)
 								else:
 									usedby[filtersquash[0]] = [i]
-								if knownInterface(localfuncsfound, 'functions'):
-									usedlibs.append((l,len(localfuncsfound), True))
-								else:
-									usedlibs.append((l,len(localfuncsfound), False))
+								knowninterface = knownInterface(localfuncsfound, 'functions')
+								usedlibs.append((l,len(localfuncsfound), knowninterface, 'functions'))
 							funcsfound = funcsfound + localfuncsfound
 							remotefuncswc = list(set(remotefuncswc).difference(set(funcsfound)))
 					if remotevarswc != []:
@@ -520,10 +519,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 									usedby[filtersquash[0]].append(i)
 								else:
 									usedby[filtersquash[0]] = [i]
-								if knownInterface(localvarsfound, 'variables'):
-									usedlibs.append((l,len(localvarsfound), True))
-								else:
-									usedlibs.append((l,len(localvarsfound), False))
+								knowninterface = knownInterface(localvarsfound, 'variables')
+								usedlibs.append((l,len(localvarsfound), knowninterface, 'variables'))
 							varsfound = varsfound + localvarsfound
 							remotevarswc = list(set(remotevarswc).difference(set(varsfound)))
 				else:
@@ -544,10 +541,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 							else:
 								usedby[f] = [i]
 							if len(filteredlookup[f]) == 1:
-								if knownInterface(localfuncsfound, 'functions'):
-									usedlibs.append((filteredlookup[f][0],len(localfuncsfound), True))
-								else:
-									usedlibs.append((filteredlookup[f][0],len(localfuncsfound), False))
+								knowninterface = knownInterface(localfuncsfound, 'functions')
+								usedlibs.append((filteredlookup[f][0],len(localfuncsfound), knowninterface, 'functions'))
 							else:
 								## this should never happen
 								pass
@@ -562,10 +557,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 							else:
 								usedby[f] = [i]
 							if len(filteredlookup[f]) == 1:
-								if knownInterface(localvarsfound, 'variables'):
-									usedlibs.append((filteredlookup[f][0],len(localvarsfound), True))
-								else:
-									usedlibs.append((filteredlookup[f][0],len(localvarsfound), False))
+								knowninterface = knownInterface(localvarsfound, 'variables')
+								usedlibs.append((filteredlookup[f][0],len(localvarsfound), knowninterface, 'variables'))
 							else:
 								## this should never happen
 								pass
@@ -584,10 +577,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 							else:
 								usedby[f] = [i]
 							if len(filteredlookup[f]) == 1:
-								if knownInterface(localfuncsfound, 'functions'):
-									usedlibs.append((filteredlookup[f][0],len(localfuncsfound), True))
-								else:
-									usedlibs.append((filteredlookup[f][0],len(localfuncsfound), False))
+								knowninterface = knownInterface(localfuncsfound, 'functions')
+								usedlibs.append((filteredlookup[f][0],len(localfuncsfound), knowninterface, 'functions'))
 							else:
 								## this should never happen
 								pass
@@ -602,10 +593,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 							else:
 								usedby[f] = [i]
 							if len(filteredlookup[f]) == 1:
-								if knownInterface(localvarsfound, 'variables'):
-									usedlibs.append((filteredlookup[f][0],len(localvarsfound), True))
-								else:
-									usedlibs.append((filteredlookup[f][0],len(localvarsfound), False))
+								knowninterface = knownInterface(localvarsfound, 'variables')
+								usedlibs.append((filteredlookup[f][0],len(localvarsfound), knowninterface, 'variables'))
 							else:
 								## this should never happen
 								pass
@@ -627,10 +616,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 							else:
 								usedby[f] = [i]
 							if len(filteredlookup[f]) == 1:
-								if knownInterface(localfuncsfound, 'functions'):
-									usedlibs.append((filteredlookup[f][0],len(localfuncsfound), True))
-								else:
-									usedlibs.append((filteredlookup[f][0],len(localfuncsfound), False))
+								knowninterface = knownInterface(localfuncsfound, 'functions')
+								usedlibs.append((filteredlookup[f][0],len(localfuncsfound), knowninterface, 'functions'))
 							else:
 								## this should never happen
 								pass
@@ -646,10 +633,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 							else:
 								usedby[f] = [i]
 							if len(filteredlookup[f]) == 1:
-								if knownInterface(localvarsfound, 'variables'):
-									usedlibs.append((filteredlookup[f][0],len(localvarsfound), True))
-								else:
-									usedlibs.append((filteredlookup[f][0],len(localvarsfound), False))
+								knowninterface = knownInterface(localvarsfound, 'variables')
+								usedlibs.append((filteredlookup[f][0],len(localvarsfound), knowninterface, 'variables'))
 							else:
 								## this should never happen
 								pass
@@ -756,6 +741,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 				## if there are undefined references, then it is likely a plugin
 				pass
 		usedlibs_tmp = {}
+
+		## combine the results
 		for l in usedlibs:
 			if usedlibs_tmp.has_key(l[0]):
 				inposix = usedlibs_tmp[l[0]][1] and l[2]
