@@ -37,6 +37,9 @@ def renamefiles(unpackreports, scantempdir, topleveldir, processors, scanenv, sc
 			for s in unpackreports[r]['scans']:
 				if len(s['scanreports']) != 1:
 					continue
+				renamefiles = set()
+				origcpio = ''
+				targetcpio = ''
 				if s['scanname'] in initramfscompressions:
 					unpackfile = s['scanreports'][0]
 					if not unpackreports[unpackfile]['name'].startswith('tmp'):
@@ -66,6 +69,27 @@ def renamefiles(unpackreports, scantempdir, topleveldir, processors, scanenv, sc
 								unpackreports[unpackfile]['name'] = template
 								newunpackreportsname = os.path.join(os.path.dirname(unpackfile), template)
 								unpackreports[r]['scans'][0]['scanreports'][0] = newunpackreportsname
-								unpackreports[newunpackreportsname] = copy.deepcopy(unpackreports[unpackfile])
-								## TODO: recursively change paths of all unpacked files
-								del unpackreports[unpackfile]
+								renamefiles.add(unpackfile)
+
+				while len(renamefiles) != 0:
+					newrenamefiles = set()
+					for r in renamefiles:
+						origcpio = '/%s' % os.path.basename(origcpio)
+						targetcpio = '/%s' % os.path.basename(targetcpio)
+						newr = r.replace(origcpio, targetcpio)
+
+						realpath = copy.deepcopy(unpackreports[r]['realpath'])
+						newrealpath = realpath.replace(origcpio, targetcpio)
+						unpackreports[r]['realpath'] = newrealpath
+						for sc in unpackreports[r]['scans']:
+							if 'scanreports' in sc:
+								newrenamefiles.update(sc['scanreports'])
+								newscanreports = []
+								for scr in sc['scanreports']:
+									newscanreports.append(scr.replace(origcpio, targetcpio))
+									sc['scanreports'] = newscanreports
+
+						## then rename and delete the old value
+						unpackreports[newr] = copy.deepcopy(unpackreports[r])
+						del unpackreports[r]
+					renamefiles = newrenamefiles
