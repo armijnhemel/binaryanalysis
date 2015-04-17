@@ -408,7 +408,13 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 			newenv['BAT_UNPACKED'] = unpacked
 
 			if template != None:
-				newenv['TEMPLATE'] = template % unpackscan['name']
+				templen = len(re.findall('%s', template))
+				if templen == 2:
+					newenv['TEMPLATE'] = template % (os.path.basename(filetoscan), unpackscan['name'])
+				elif templen == 1:
+					newenv['TEMPLATE'] = template % unpackscan['name']
+				else:
+					newenv['TEMPLATE'] = template
 
 			## return value is the temporary dir, plus offset in the parent file
 			## plus a blacklist containing blacklisted ranges for the *original*
@@ -724,17 +730,15 @@ def readconfig(config):
 				template = config.get(section, 'template')
 
 				## check for certain values and reset template if necessary
-				if '%' in template:
-					template = None
-					conf['template'] = None
-					continue
 				if '/' in template:
 					template = None
-					conf['template'] = None
+					batconf['template'] = None
 					continue
+				if '%' in template:
+					batconf['template'] = template
 				template = template + "-%s"
 				batconf['template']   = template
-			except:
+			except Exception, e:
 				batconf['template']   = None
 
 			continue
