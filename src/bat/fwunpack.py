@@ -1134,7 +1134,9 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 	datafile = open(filename, 'rb')
 	data = datafile.read()
 	datafile.close()
-	## If we only have one header, it makes more sense to work backwards
+	if 'TEMPLATE' in scanenv:
+		template = scanenv['TEMPLATE']
+	## If there only is one header, it makes more sense to work backwards
 	## since most archives are probably complete files.
 	if len(offsets['xz']) == 1:
 		offsets['xztrailer'] = sorted(offsets['xztrailer'], reverse=True)
@@ -1158,7 +1160,7 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 				if data[trail-2:trail] != streamflags:
 					continue
 				tmpdir = dirsetup(tempdir, filename, "xz", counter)
-				res = unpackXZ(data, offset, trail, tmpdir)
+				res = unpackXZ(data, offset, trail, template, tmpdir)
 				if res != None:
 					diroffsets.append((res, offset, 0))
 					blacklist.append((offset, trail))
@@ -1169,7 +1171,7 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 					os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [], hints)
 
-def unpackXZ(data, offset, trailer, tempdir=None):
+def unpackXZ(data, offset, trailer, template, tempdir=None):
 	## first unpack the data, write things to a file and return
 	## the directory if the file is not empty
 	## Assumes (for now) that xz is in the path
@@ -1199,6 +1201,8 @@ def unpackXZ(data, offset, trailer, tempdir=None):
 			os.rmdir(tmpdir)
 		return None
 	os.unlink(tmpfile[1])
+	if template != None:
+		shutil.move(outtmpfile[1], os.path.join(tmpdir, template))
 	return tmpdir
 
 ## Not sure how cpio works if we have a cpio archive within a cpio archive
