@@ -742,19 +742,27 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 				pass
 		usedlibs_tmp = {}
 
-		## combine the results
+		## combine the results from usedlibs for variable names and function names
 		for l in usedlibs:
+			(numberofsymbols, knowninterface) = l[1:-1]
 			if usedlibs_tmp.has_key(l[0]):
-				inposix = usedlibs_tmp[l[0]][1] and l[2]
-				usedlibs_tmp[l[0]] = (usedlibs_tmp[l[0]][0] + l[1], inposix)
+				inposix = usedlibs_tmp[l[0]][1] and knowninterface
+				usedlibs_tmp[l[0]] = (usedlibs_tmp[l[0]][0] + numberofsymbols, inposix)
 			else:
 				usedlibs_tmp[l[0]] = (l[1], l[2])
+
+		## for each file get the list of libraries that are used
 		if not usedlibsperfile.has_key(i):
 			usedlibsp = list(set(map(lambda x: x[0], usedlibs)))
 			usedlibsp.sort()
 			usedlibsperfile[i] = usedlibsp
+
+		## rework the data from usedlibs_tmp into a list of tuples
+		## [(name of ELF file, amount of symbols, known interface)]
 		if not usedlibsandcountperfile.has_key(i):
 			usedlibsandcountperfile[i] = map(lambda x: (x[0],) + x[1], usedlibs_tmp.items())
+
+		## store information about plugins
 		if plugsinto != []:
 			pcount = {}
 			for p in plugsinto:
@@ -764,46 +772,49 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 					pcount[p] = 1
 			plugins[i] = pcount
 
-	## return a dictionary, with for each ELF file for which there are results
-	## a separate dictionary with the results. These will be added to 'scans' in
-	## leafreports by the top level script.
-	aggregatereturn = {}
+	## for each ELF file for which there are results write back the results to
+	## 'leafreports'. Also update tags if the file is a plugin.
 	for i in elffiles:
 		if elftypes[i] == 'kernelmod':
 			continue
 		writeback = False
-		filehash = unpackreports[i]['sha256']
 
-		if not aggregatereturn.has_key(i):
-			aggregatereturn[i] = {}
+		if i in plugins:
+			unpackreports[i]['tags'].append('plugin')
+
+		aggregatereturn = {}
+
 		if usedby.has_key(i):
-			aggregatereturn[i]['elfusedby'] = list(set(usedby[i]))
+			aggregatereturn['elfusedby'] = list(set(usedby[i]))
 			writeback = True
 		if usedlibsperfile.has_key(i):
-			aggregatereturn[i]['elfused'] = usedlibsperfile[i]
+			aggregatereturn['elfused'] = usedlibsperfile[i]
 			writeback = True
 		if unusedlibsperfile.has_key(i):
-			aggregatereturn[i]['elfunused'] = unusedlibsperfile[i]
+			aggregatereturn['elfunused'] = unusedlibsperfile[i]
 			writeback = True
 		if notfoundfuncsperfile.has_key(i):
-			aggregatereturn[i]['notfoundfuncs'] = notfoundfuncsperfile[i]
+			aggregatereturn['notfoundfuncs'] = notfoundfuncsperfile[i]
 			writeback = True
 		if notfoundvarssperfile.has_key(i):
-			aggregatereturn[i]['notfoundvars'] = notfoundvarssperfile[i]
+			aggregatereturn['notfoundvars'] = notfoundvarssperfile[i]
 			writeback = True
 		if possiblyusedlibsperfile.has_key(i):
-			aggregatereturn[i]['elfpossiblyused'] = possiblyusedlibsperfile[i]
+			aggregatereturn['elfpossiblyused'] = possiblyusedlibsperfile[i]
 			writeback = True
 
 		## only write the new leafreport if there actually is something to write back
 		if writeback:
+			filehash = unpackreports[i]['sha256']
 			leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 			leafreports = cPickle.load(leaf_file)
 			leaf_file.close()
 
-			for e in aggregatereturn[i]:
-				if aggregatereturn[i].has_key(e):
-					leafreports[e] = copy.deepcopy(aggregatereturn[i][e])
+			for e in aggregatereturn:
+				if aggregatereturn.has_key(e):
+					leafreports[e] = copy.deepcopy(aggregatereturn[e])
+			if i in plugins:
+				leafreports['tags'].append('plugin')
 
 			leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
 			leafreports = cPickle.dump(leafreports, leaf_file)
@@ -818,19 +829,20 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 		if not squashedgraph.has_key(i):
 			squashedgraph[i] = []
 		for d in libdeps:
-			if not squashedelffiles.has_key(d[0]):
-				if sonames.has_key(d[0]):
-					if len(sonames[d[0]]) != 1:
+			(dependency, amountofsymbols, knowninterface) = d
+			if not squashedelffiles.has_key(dependency):
+				if sonames.has_key(dependency):
+					if len(sonames[dependency]) != 1:
 						continue
 					else:
-						squashedgraph[i].append((sonames[d[0]][0], d[1], d[2]))
+						squashedgraph[i].append((sonames[dependency][0], amountofsymbols, knowninterface))
 				else:
 					continue
 			else:
-				if len(squashedelffiles[d[0]]) != 1:
+				if len(squashedelffiles[dependency]) != 1:
 					pass
 				else:
-					squashedgraph[i].append((squashedelffiles[d[0]][0], d[1], d[2]))
+					squashedgraph[i].append((squashedelffiles[dependency][0], amountofsymbols, knowninterface))
 
 	## TODO: make more parallel
 	elfgraphs = set()
@@ -843,7 +855,10 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 		ppname = os.path.join(unpackreports[i]['path'], unpackreports[i]['name'])
 		seen = set()
 		elfgraph = pydot.Dot(graph_type='digraph')
-		rootnode = pydot.Node(ppname)
+		if i in plugins:
+			rootnode = pydot.Node(ppname, color='blue', style='dashed')
+		else:
+			rootnode = pydot.Node(ppname)
 		elfgraph.add_node(rootnode)
 
 		## processnodes is a tuple with 4 values:
