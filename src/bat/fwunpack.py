@@ -150,6 +150,9 @@ def searchUnpackBase64(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 	hints = []
 	counter = 1
 	diroffsets = []
+	template = None
+	if 'TEMPLATE' in scanenv:
+		template = scanenv['TEMPLATE']
 	tmpdir = dirsetup(tempdir, filename, "base64", counter)
 	p = subprocess.Popen(['base64', '-d', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
@@ -160,6 +163,13 @@ def searchUnpackBase64(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 		tmpfile = tempfile.mkstemp(dir=tmpdir)
 		os.write(tmpfile[0], stanout)
 		os.fdopen(tmpfile[0]).close()
+		if template != None:
+			mvpath = os.path.join(tmpdir, template)
+			if not os.path.exists(mvpath):
+				try:
+					shutil.move(tmpfile[1], mvpath)
+				except:
+					pass
 		## the whole file is blacklisted
 		blacklist.append((0, os.stat(filename).st_size))
 		diroffsets.append((tmpdir, 0, os.stat(filename).st_size))
@@ -1203,7 +1213,11 @@ def unpackXZ(data, offset, trailer, template, tempdir=None):
 		return None
 	os.unlink(tmpfile[1])
 	if template != None:
-		shutil.move(outtmpfile[1], os.path.join(tmpdir, template))
+		if not os.path.exists(os.path.join(tmpdir, template)):
+			try:
+				shutil.move(outtmpfile[1], os.path.join(tmpdir, template))
+			except Exception, e:
+				pass
 	return tmpdir
 
 ## Not sure how cpio works if we have a cpio archive within a cpio archive
@@ -2211,7 +2225,7 @@ def unpackExt2fs(filename, offset, tempdir=None, unpackenv={}, blacklist=[]):
 
 ## tries to unpack stuff using zcat. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
-def unpackGzip(filename, offset, tempdir=None, blacklist=[]):
+def unpackGzip(filename, offset, template, tempdir=None, blacklist=[]):
 	## Assumes (for now) that zcat is in the path
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
@@ -2305,6 +2319,15 @@ def unpackGzip(filename, offset, tempdir=None, blacklist=[]):
 			except Exception, e:
 				## if there is an exception don't rename
 				pass
+	else:
+		if template != None:
+			if not os.path.exists(os.path.join(tmpdir, template)):
+				try:
+					shutil.move(outtmpfile[1], os.path.join(tmpdir, template))
+				except Exception, e:
+					## if there is an exception don't rename
+					pass
+		pass
 
 	## to calculate the size, subtract the offset
 	return (tmpdir, filesizeoffset + 4 - offset)
@@ -2319,12 +2342,15 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 	newtags = []
 	counter = 1
 	diroffsets = []
+	template = None
+	if 'TEMPLATE' in scanenv:
+		template = scanenv['TEMPLATE']
 	for offset in offsets['gzip']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "gzip", counter)
-		res = unpackGzip(filename, offset, tmpdir, blacklist)
+		res = unpackGzip(filename, offset, template, tmpdir, blacklist)
 		if res != None:
 			(gzipres, gzipsize) = res
 			diroffsets.append((gzipres, offset, gzipsize))
@@ -3042,6 +3068,10 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 	diroffsets = []
 	counter = 1
 
+	template = None
+	if 'TEMPLATE' in scanenv:
+		template = scanenv['TEMPLATE']
+
 	lzmalimit = int(scanenv.get('LZMA_MINIMUM_SIZE', 1))
 	lzma_file = open(filename, 'rb')
 
@@ -3094,7 +3124,7 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			if lzmacheckbyte not in ['\x01\x00', '\x02\x00', '\x03\x00', '\x04\x00', '\x06\x00', '\x08\x00', '\x10\x00', '\x20\x00', '\x30\x00', '\x40\x00', '\x60\x00', '\x80\x00', '\x80\x01', '\x0c\x00', '\x18\x00', '\x00\x00', '\x00\x01', '\x00\x02', '\x00\x03', '\x00\x04', '\xc0\x00']:
 				continue
 		tmpdir = dirsetup(tempdir, filename, "lzma", counter)
-		res = unpackLZMA(filename, offset, tmpdir, lzmalimit, lzma_tmpdir, blacklist)
+		res = unpackLZMA(filename, offset, template, tmpdir, lzmalimit, lzma_tmpdir, blacklist)
 		if res != None:
 			diroffsets.append((res, offset, 0))
 			counter = counter + 1
@@ -3109,7 +3139,7 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 ## Newer versions of XZ (>= 5.0.0) have an option to test and list archives.
 ## Unfortunately this does not work for files with trailing data, so we can't
 ## use it to filter out "bad" files.
-def unpackLZMA(filename, offset, tempdir=None, minbytesize=1, lzma_tmpdir=None, blacklist=[]):
+def unpackLZMA(filename, offset, template, tempdir=None, minbytesize=1, lzma_tmpdir=None, blacklist=[]):
 	tmpdir = unpacksetup(tempdir)
 
 	## if LZMA_TMPDIR is set to for example a ramdisk use that instead.
@@ -3139,7 +3169,24 @@ def unpackLZMA(filename, offset, tempdir=None, minbytesize=1, lzma_tmpdir=None, 
 			os.makedirs(tmpdir)
 		except OSError, e:
 			pass
-		shutil.move(outtmpfile[1], tmpdir)
+
+		if template != None:
+			mvpath = os.path.join(tmpdir, template)
+			if not os.path.exists(mvpath):
+				try:
+					shutil.move(outtmpfile[1], mvpath)
+				except Exception, e:
+					pass
+		else:
+			shutil.move(outtmpfile[1], tmpdir)
+	else:
+		if template != None:
+			mvpath = os.path.join(tmpdir, template)
+			if not os.path.exists(mvpath):
+				try:
+					shutil.move(outtmpfile[1], mvpath)
+				except Exception, e:
+					pass
 	os.unlink(tmpfile[1])
 	return tmpdir
 
@@ -3309,11 +3356,14 @@ def searchUnpackIco(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	hints = []
 	counter = 1
 	offset = 0
+	template = None
+	if 'TEMPLATE' in scanenv:
+		template = scanenv['TEMPLATE']
 	blacklistoffset = extractor.inblacklist(offset, blacklist)
 	if blacklistoffset != None:
 		return (diroffsets, blacklist, [], hints)
 	tmpdir = dirsetup(tempdir, filename, "ico", counter)
-	res = unpackIco(filename, offset, tmpdir)
+	res = unpackIco(filename, offset, template, tmpdir)
 	if res != None:
 		icotmpdir = res
 		diroffsets.append((icotmpdir, offset, 0))
@@ -3322,23 +3372,34 @@ def searchUnpackIco(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [], hints)
 
-def unpackIco(filename, offset, tempdir=None):
+def unpackIco(filename, offset, template, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	unpackFile(filename, offset, tmpfile[1], tmpdir)
+	icofile = tmpfile[1]
 
-	p = subprocess.Popen(['icotool', '-x', '-o', tmpdir, tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	if template != None:
+		mvpath = os.path.join(tmpdir, template)
+		if not os.path.exists(mvpath):
+			try:
+				shutil.move(tmpfile[1], mvpath)
+				icofile = mvpath
+			except:
+				pass
+
+	unpackFile(filename, offset, icofile, tmpdir)
+
+	p = subprocess.Popen(['icotool', '-x', '-o', tmpdir, icofile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 
 	if p.returncode != 0 or "no images matched" in stanerr:
-		os.unlink(tmpfile[1])
+		os.unlink(icofile)
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
 	## clean up the temporary files
-	os.unlink(tmpfile[1])
+	os.unlink(icofile)
 	return tmpdir
 
 ###

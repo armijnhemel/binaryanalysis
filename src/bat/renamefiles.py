@@ -30,7 +30,13 @@ def renamefiles(unpackreports, scantempdir, topleveldir, processors, scanenv, sc
 					continue
 				kernelfiles.add(r)
 
-	template = "initramfs"
+	if 'TEMPLATE' in scanenv:
+		template = scanenv['TEMPLATE']
+		if template != None:
+			templatecutoff = template.find('%')
+			template = template[:templatecutoff]
+
+	cpiotemplate = "initramfs"
 	for r in kernelfiles:
 		if unpackreports[r]['scans'] != []:
 			for s in unpackreports[r]['scans']:
@@ -39,9 +45,16 @@ def renamefiles(unpackreports, scantempdir, topleveldir, processors, scanenv, sc
 				renamefiles = set()
 				origcpio = ''
 				targetcpio = ''
+				process = False
 				if s['scanname'] in initramfscompressions:
 					unpackfile = s['scanreports'][0]
-					if not unpackreports[unpackfile]['name'].startswith('tmp'):
+					if unpackreports[unpackfile]['name'].startswith('tmp'):
+						process = True
+					else:
+						if template != None:
+							if unpackreports[unpackfile]['name'].startswith(template):
+								process = True
+					if not process:
 						continue
 					if unpackreports[unpackfile]['scans'] != []:
 						if len(unpackreports[unpackfile]['scans']) != 1:
@@ -56,7 +69,7 @@ def renamefiles(unpackreports, scantempdir, topleveldir, processors, scanenv, sc
 							## 2. any paths in scanreports (path, realpath)
 							## 3. references in parent file
 							origname = os.path.join(unpackreports[unpackfile]['realpath'], unpackreports[unpackfile]['name'])
-							targetname = os.path.join(unpackreports[unpackfile]['realpath'], template)
+							targetname = os.path.join(unpackreports[unpackfile]['realpath'], cpiotemplate)
 							if not os.path.exists(targetname):
 								## on disk
 								shutil.move(origname, targetname)
@@ -65,8 +78,8 @@ def renamefiles(unpackreports, scantempdir, topleveldir, processors, scanenv, sc
 									targetcpio = "%s-cpio-1" % targetname
 									shutil.move(origcpio, targetcpio)
 								## in unpackreports
-								unpackreports[unpackfile]['name'] = template
-								newunpackreportsname = os.path.join(os.path.dirname(unpackfile), template)
+								unpackreports[unpackfile]['name'] = cpiotemplate
+								newunpackreportsname = os.path.join(os.path.dirname(unpackfile), cpiotemplate)
 								unpackreports[r]['scans'][0]['scanreports'][0] = newunpackreportsname
 								renamefiles.add(unpackfile)
 
