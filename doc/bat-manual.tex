@@ -7,7 +7,7 @@
 \setlength{\parskip}{4pt}
 
 \author{Armijn Hemel -- Tjaldur Software Governance Solutions}
-\title{Binary Analysis Tool User and Developer Manual - describing version 20}
+\title{Binary Analysis Tool User and Developer Manual - describing version 21}
 
 \begin{document}
 
@@ -59,23 +59,23 @@ the host system is Ubuntu or Debian this information will be in
 
 \subsubsection{Installation on Fedora}
 
-To install on Fedora three packages are needed:
-\texttt{bat-extratools}, \texttt{bat-extratools-java} and \texttt{bat}. These
-can be downloaded from the BAT website in both prebuilt versions and as source
-RPM files. When installing the three files there should be a list of
-dependencies that should be installed to let BAT work successfully. Some of
-the dependencies are not in Fedora by default but need to be installed through
-external repositories, such as RPMfusion.
+To install on Fedora four packages are needed:
+\texttt{bat-extratools}, \texttt{bat-extratools-java}, \texttt{ubi\_reader}
+and \texttt{bat}. These can be downloaded from the BAT website in both prebuilt
+versions and as source RPM files. When installing the three files there should
+be a list of dependencies that should be installed to let BAT work successfully.
+Some of the dependencies are not in Fedora by default but need to be installed
+through external repositories, such as RPMfusion.
 
 \subsubsection{Installation on Debian and Ubuntu}
 
 To install on Debian and Ubuntu three packages are needed:
-\texttt{bat-extratools}, \texttt{bat-extratools-java} and \texttt{bat}. These
-can be downloaded from the BAT website as binary DEB files. When installing the
-three files there should be a list of dependencies that should be installed to
-let BAT work successfully. Some of these packages are not in Debian by default
-but need to be installed by enabling extra repositories such as Debian
-\texttt{non-free}.
+\texttt{bat-extratools}, \texttt{bat-extratools-java}, \texttt{ubi\_reader}
+and \texttt{bat}. These can be downloaded from the BAT website as binary DEB
+files When installing the three files there should be a list of dependencies
+that should be installed to let BAT work successfully. Some of these packages
+are not in Debian by default but need to be installed by enabling extra
+repositories such as Debian \texttt{non-free}.
 
 \section{Analysing binaries with the Binary Analysis Tool}
 
@@ -87,8 +87,11 @@ a special graphical viewer (\texttt{batgui}).
 
 \subsection{Running \texttt{bat-scan}}
 
-Invoking \texttt{bat-scan} is simple. You will need to supply three
-parameters:
+The \texttt{bat-scan} program can scan in two modes: either scan a single
+binary, or scan a whole directory of files.
+
+To scan a single binary you will need to supply three parameters to
+\texttt{bat-scan}:
 
 \begin{enumerate}
 \item \texttt{-c} : path to a configuration file
@@ -111,6 +114,15 @@ A typical invocation looks like this:
 
 XML output, if enabled in the configuration file, will be written to standard
 output. Any debugging messages or error messages will appear on standard error.
+
+To scan a directory you will need to supply three parameters to
+\texttt{bat-scan}:
+
+\begin{enumerate}
+\item \texttt{-c} : path to a configuration file
+\item \texttt{-d} : path to a directory with files to be scanned
+\item \texttt{-u} : path to a directory where output files will be written to
+\end{enumerate}
 
 \subsection{Interpreting the results}
 
@@ -136,10 +148,11 @@ This XML file is not meant for human consumption, but for use by for example
 reporting tools. A word of warning is needed: the XML format is not very well
 designed and not well maintained and it will likely be removed in the future.
 If you want to programmatically process information from BAT it is recommended
-to use the Python pickles to extract information instead. In the BAT source
-code repository a file documenting these pickles can be found.
+to use the Python pickles (or optionally JSON output) to extract information
+instead. In the BAT source code repository a file documenting these pickles
+can be found.
 
-The default XML pretty printer as shipped by BAT outputs a file that starts
+The default XML pretty printer as shipped by BAT outputs an XML file that starts
 with metadata, such as:
 
 \begin{itemize}
@@ -349,6 +362,7 @@ file systems.
 \item various versions of \texttt{unsquashfs} that enable unpacking variants
 of SquashFS. These versions have either been lifted from vendor SDKs, the
 OpenWrt project, or upstream SquashFS project.
+\item \texttt{ubi\_reader} is a set of tools to deal with UBI/UBIFS images.
 \item \texttt{bat-visualisation} containing a few custom tools to help generate
 pictures. These might be removed in the future.
 \item two Java projects: \texttt{jdeserialize} and \texttt{ddex}, to help
@@ -356,8 +370,9 @@ respectively with unpacking serialized Java files and scanning binary files
 from the Dalvik VM (Android).
 \end{itemize}
 
-The collection is split in two packages: \texttt{bat-extratools-java} contains
-the two Java packages, the \texttt{bat-extratools} package contains the rest.
+The collection is split in three packages: \texttt{bat-extratools-java} contains
+the two Java packages, the \texttt{ubi\_reader} package contains UBI/UBIFS
+specific tools, the \texttt{bat-extratools} package contains the rest.
 
 \appendix
 
@@ -378,12 +393,14 @@ During scanning of a file the following steps are taken:
 \item verifying file type of a file and, if successful, tagging it. Tags can
 be used later on to give more information to the scanner.
 \item unpacking file systems, compressed files and media files from the file,
-possibly carving it out of the file first.
+carving them out of the file first.
 \item repeat steps 1 - 3 for each file that was unpacked in step 3
 \item run individual scans on each file if no further unpacking is possible
-\item optionally aggregate scan results
-\item process results from scans in step 5 and 6
+\item optionally aggregate scan results or modify results based on information
+that has become available during the scan
+\item process results from scans in step 5 and 6 and generate reports
 \item pack results into an archive that can be used by the viewer application
+or other applications
 \end{enumerate}
 
 \subsubsection{Identifier search}
@@ -399,6 +416,12 @@ during the identifier search to speed up the identifier search.
 
 The marker search cannot be enabled or disabled via the configuration file. The
 markers that are searched for are found in \url{bat/fsmagic.py}.
+
+As an optimization there is one method that is run for ZIP-files (including
+Android APK files and Java JAR) before the generic marker search: large
+firmwares tend to be distributed as ZIP-files. By quickly checking if a file
+is a complete ZIP-file time can be saved. This method might be extended to
+other types in the near future.
 
 \subsubsection{Pre-run checks}
 
@@ -449,17 +472,18 @@ description = Unpack JFFS2 file systems
 enabled     = yes
 \end{verbatim}
 
-In BAT 20 the following file systems, compressed files and media files can be
+In BAT 21 the following file systems, compressed files and media files can be
 unpacked or extracted:
 
 \begin{itemize}
 \item file systems: Android sparse files, cramfs, ext2/ext3/ext4, ISO9660,
 JFFS2, Minix (specific variant of v1 often found on older embedded Linux
-systems), SquashFS (several variants), romfs, YAFFS2 (specific variants)
+systems), SquashFS (several variants), romfs, YAFFS2 (specific variants),
+ubifs
 \item compressed files and executable formats: 7z, ar, ARJ, BASE64, BZIP2,
 compressed Flash, CAB, compress, CPIO, EXE (specific compression methods only),
-GZIP, InstallShield (old versions), LRZIP, LZIP, LZMA, LZO, RAR, RPM, RZIP,
-serialized Java, TAR, UPX, XZ, ZIP
+GZIP, InstallShield (old versions), LRZIP, LZIP, LZMA, LZO, pack200, RAR, RPM,
+RZIP, serialized Java, TAR, UPX, XZ, ZIP
 \item media files: GIF, ICO, PDF, PNG, WOFF
 \end{itemize}
 
@@ -683,7 +707,9 @@ debugphases = leaf:aggregate
 \end{verbatim}
 
 Since BAT 20 it is possible to supply global environment variables. These can
-be shared between scans. They can be overridden by individual scans:
+be shared between scans. They can be overridden by individual scans. For example
+to set the environment variable \texttt{BAT\_NAMECACHE\_C} for all scans you
+would put something like this in the global configuration:
 
 \begin{verbatim}
 envvars     = BAT_NAMECACHE_C=/home/bat/db/functioncache_c
@@ -792,7 +818,7 @@ cleanup     = yes
 The \texttt{cleanup} setting should be set to \texttt{yes} unless the results
 do not change in between subsequent runs of BAT.
 
-Currently (BAT 20) if \texttt{cleanup} is set the files are written directly to
+Currently (BAT 21) if \texttt{cleanup} is set the files are written directly to
 output directories. The values of these directories are hardcoded (and match
 values that the GUI expects) but these will be replaced by the value of
 \texttt{storetarget} in a later release.
@@ -822,13 +848,16 @@ least 5 or more versions of SquashFS with LZMA compression out there).
 
 \subsection{Code organisation}
 
-\texttt{bat-scan} is merely a frontend for the real scanner and only determine
-the list of scans, the binary to scan and the output file.
+\texttt{bat-scan} is merely a frontend for the real scanner and only handle
+the list of scans, the binary/binaries to scan and where to write the output
+file(s).
 
 The meaty bits of the analyser can be found in files in the \texttt{bat}
-subdirectory.
+subdirectory:
 
 \begin{itemize}
+\item \texttt{batxor.py} contains experimental code to deal with files that
+have been obfuscated with XOR.
 \item \texttt{bruteforcescan.py} contains the main logic of the program: it
 launches scans based on what is inside the binary and the scans that are
 enabled, collects results from scans and writes results to an output file.
@@ -845,11 +874,14 @@ throughout the code.
 packages from popular distributions in a database.
 \item \texttt{findduplicates.py} is used to find duplicate files in the scanned
 archive.
-\item \texttt{findlibs.py} is for researching dynamically linked ELF files in
-the archive.
+\item \texttt{findlibs.py} and \texttt{interfaces.py} are for researching
+dynamically linked ELF files in the archive.
 \item \texttt{findsymbols.py} is for researching relationships between Linux
 kernel modules and the Linux kernel in the archive, specifically for the
 declared licenses and the license of symbols used.
+\item \texttt{fixduplicates.py} is used to correct tagging of files that were
+tagged incorrectly as duplicates, as they are the original, not the copy. For
+now this is only for ELF files.
 \item \texttt{fsmagic.py} contains identifiers of various file systems and
 compressed files, like magic headers and offsets for which might need to be
 corrected.
@@ -866,6 +898,9 @@ from binary files and make them available for further analysis.
 \item \texttt{jffs2.py} has code specific to handling JFFS2 file systems.
 \item \texttt{kernelanalysis.py} includes code to extract information from
 Linux kernel images and Linux kernel modules.
+\item \texttt{kernelsymbols.py} is used for generating dependency graphs for
+Linux kernel modules and indicating any possible license issues of exported
+symbols and declared licenses.
 \item \texttt{licenseversion.py} is responsible for getting version and
 license information for uniquely identified strings and function names (and in
 the future variable names too), as well as optionally pruning the result set
@@ -873,6 +908,12 @@ to only include relevant versions. It also contains code to aggregate results
 of Java class files from a JAR file and assign results to the JAR file.
 \item \texttt{prerun.py} contains scans that are run in the pre-run phase for
 correctly tagging files as early in the process as possible.
+\item \texttt{prunefiles.py} can be used to remove files with a certain tag
+from the scan results. This is useful for for example graphics files.
+\item \texttt{renamefiles.py} is used for renaming files to use a more logical
+name after more contextual information from the scan has become available. For
+example: detect an initramfs in the Linux kernel and rename the temporary file
+to \texttt{initramfs}.
 \item \texttt{security.py} contains several security scans.
 \item \texttt{simpleprettyprint.py} has the default XML prettyprinter.
 \item \texttt{unpackrpm.py} has code specific to handling RPM archives.
@@ -2637,7 +2678,7 @@ Finally there are some scans that unpack text files (\texttt{base64}) or media
 files. The \texttt{lzma} unpack scan also has the lowest priority because of
 possibly many false positives.
 
-The order of the unpack scans as defined in BAT 20 is:
+The order of the unpack scans as defined in BAT 21 is:
 
 \begin{enumerate}
 \item \texttt{byteSwap}
