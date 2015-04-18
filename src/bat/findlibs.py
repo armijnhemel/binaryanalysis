@@ -49,6 +49,11 @@ header that confuses standard readelf:
 
 https://dev.openwrt.org/ticket/6847
 https://bugs.busybox.net/show_bug.cgi?id=729
+
+Symbolic links can be a challenge as well if they point to locations that are
+only known at run time, for example other file systems that are mounted. Since
+BAT will not unpack these in the same locations as where they are supposed to be
+mounted some links might not resolve properly.
 '''
 
 ## helper function to find if names can be found in known interfaces
@@ -229,7 +234,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 
 					if os.path.isabs(target):
 						## the target points to an absolute path. Try to find
-						## a relative path instead inside the file system
+						## the file relative to the root of the file system or
+						## compressed file.
 						relscanpathlen = len(unpackreports[i]['path'])
 						reltarget = os.path.relpath(target, '/')
 						linkpath = os.path.join(unpackreports[i]['realpath'][:-relscanpathlen], reltarget)
@@ -239,9 +245,22 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 						if os.path.exists(linkpath):
 							store = True
 					else:
+						## the target points to a relative path.
+						## Two situations: starting in the same directory, or
+						## pointing to a different directory
 						if target.startswith('..'):
-							## TODO
-							pass
+							relscanpathlen = len(unpackreports[i]['path'])
+							reltarget = os.path.join(unpackreports[i]['path'], target)
+							linkpath = os.path.join(unpackreports[i]['realpath'], target)
+							if os.path.islink(linkpath):
+								symlinklinks[i] = os.path.normpath(linkpath[scantempdirlen:])
+								continue
+							if os.path.exists(linkpath):
+								relscanpathlen = len(unpackreports[i]['path'])
+								reltarget = os.path.normpath(reltarget)
+								linkpath = os.path.normpath(linkpath)
+								target = reltarget
+								store = True
 						else:
 							linkpath = os.path.join(unpackreports[i]['realpath'], target)
 							if os.path.islink(linkpath):
