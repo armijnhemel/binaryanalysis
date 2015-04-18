@@ -14,7 +14,9 @@ The documentation of the format can be found in the 'doc' directory (subject to 
 
 import os, sys, re, json, cPickle, multiprocessing, copy, sqlite3, gzip
 
-def writejson((filehash,topleveldir, outputhash)):
+def writejson((filehash,topleveldir, outputhash, batdb)):
+	c = sqlite3.connect(batdb)
+	cursor = c.cursor()
 	hashcache = {}
 	## read the data from the pickle file
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
@@ -220,6 +222,7 @@ def writejson((filehash,topleveldir, outputhash)):
 
 	## then security information
 	## TODO
+	cursor.close()
 
 	## dump the JSON to a file
 	jsonfile = gzip.open(os.path.join(topleveldir, "reports", "%s.json.gz" % filehash), 'w')
@@ -244,10 +247,6 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 	if outputhash != None and outputhash != 'sha256':
 		if not scanenv.has_key('BAT_DB'):
 			return
-
-
-	c = sqlite3.connect(scanenv['BAT_DB'])
-	cursor = c.cursor()
 
 	for unpackreport in unpackreports:
 		jsonreport = {}
@@ -291,7 +290,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 		if os.path.exists(os.path.join(topleveldir, "reports", "%s.json.gz" % filehash)):
 			continue
 		filehashes.add(filehash)
-		jsontasks.append((filehash, topleveldir, outputhash))
+		jsontasks.append((filehash, topleveldir, outputhash, scanenv['BAT_DB']))
 
 	pool = multiprocessing.Pool(processes=processors)
 	pool.map(writejson, jsontasks)
