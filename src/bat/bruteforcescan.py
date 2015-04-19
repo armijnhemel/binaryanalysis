@@ -902,6 +902,8 @@ def readconfig(config):
 			for e in batconf['environment']:
 				if not e in s['environment']:
 					s['environment'][e] = copy.deepcopy(batconf['environment'][e])
+		if 'dbbackend' in s:
+			s['environment']['DBBACKEND'] = s['dbbackend']
 
 	## set and/or amend environment for unpack scans
 	for s in unpackscans:
@@ -911,6 +913,8 @@ def readconfig(config):
 			for e in batconf['environment']:
 				if not e in s['environment']:
 					s['environment'][e] = copy.deepcopy(batconf['environment'][e])
+		if 'dbbackend' in s:
+			s['environment']['DBBACKEND'] = s['dbbackend']
 
 	## set and/or amend environment for leaf scans
 	for s in leafscans:
@@ -920,6 +924,8 @@ def readconfig(config):
 			for e in batconf['environment']:
 				if not e in s['environment']:
 					s['environment'][e] = copy.deepcopy(batconf['environment'][e])
+		if 'dbbackend' in s:
+			s['environment']['DBBACKEND'] = s['dbbackend']
 
 	## set and/or amend environment for aggregate scans
 	for s in aggregatescans:
@@ -950,6 +956,8 @@ def readconfig(config):
 		if s['cleanup']:
 			## this is an ugly hack *cringe*
 			s['environment']['overridedir'] = True
+		if 'dbbackend' in s:
+			s['environment']['DBBACKEND'] = s['dbbackend']
 
 	## sort scans on priority (highest priority first)
 	prerunscans = sorted(prerunscans, key=lambda x: x['priority'], reverse=True)
