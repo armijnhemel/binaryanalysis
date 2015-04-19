@@ -4,7 +4,9 @@
 ## Copyright 2011-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
-import os, os.path, sys, subprocess, copy, cPickle, multiprocessing, sqlite3, re, collections, datetime
+import os, os.path, sys, subprocess, copy, cPickle
+import multiprocessing, re, collections, datetime
+import bat.batdb
 
 '''
 This file contains the ranking algorithm as described in the paper
@@ -542,11 +544,13 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	if not determinelicense and not determineversion and not determinecopyright:
 		return None
 
+	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
+
 	## Some methods use a database to lookup renamed packages.
 	clonedb = scanenv.get('BAT_CLONE_DB')
 	clones = {}
 	if clonedb != None:
-		conn = sqlite3.connect(clonedb)
+		conn = batdb.getConnection(clonedb)
 		c = conn.cursor()
 		clonestmp = c.execute("SELECT originalname,newname from renames").fetchall()
 		for cl in clonestmp:
@@ -582,7 +586,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	pool = multiprocessing.Pool(processes=processors)
 
 	lookup_tasks = []
-	lookup_tasks = map(lambda x: (scanenv, unpackreports[x]['sha256'], os.path.join(unpackreports[x]['realpath'], unpackreports[x]['name']), topleveldir, clones, scandebug), rankingfiles)
+	lookup_tasks = map(lambda x: (scanenv, unpackreports[x]['sha256'], os.path.join(unpackreports[x]['realpath'], unpackreports[x]['name']), topleveldir, clones, batdb, scandebug), rankingfiles)
 
 	res = pool.map(lookup_identifier, lookup_tasks,1)
 
@@ -615,15 +619,15 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 
 	## and determine versions, etc.
 	for i in rankingfiles:
-		compute_version(pool, processors, scanenv, unpackreports[i], topleveldir, determinelicense, determinecopyright)
+		compute_version(pool, processors, scanenv, unpackreports[i], topleveldir, determinelicense, determinecopyright, batdb)
 	pool.terminate()
 
 ## grab variable names.
-def grab_sha256_varname((masterdb, language, tasks)):
+def grab_sha256_varname((batdb, masterdb, language, tasks)):
 	results = {}
 	## open the database containing all the strings that were extracted
 	## from source code.
-	conn = sqlite3.connect(masterdb)
+	conn = batdb.getConnection(masterdb)
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
@@ -634,11 +638,11 @@ def grab_sha256_varname((masterdb, language, tasks)):
 	conn.close()
 	return results
 
-def grab_sha256_filename((masterdb, tasks)):
+def grab_sha256_filename((batdb, masterdb, tasks)):
 	results = {}
 	## open the database containing all the strings that were extracted
 	## from source code.
-	conn = sqlite3.connect(masterdb)
+	conn = batdb.getConnection(masterdb)
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
@@ -650,9 +654,9 @@ def grab_sha256_filename((masterdb, tasks)):
 	return results
 
 ## grab copyright statements from the license database
-def grab_sha256_copyright((copyrightdb, tasks)):
+def grab_sha256_copyright((batdb, copyrightdb, tasks)):
 	results = {}
-	conn = sqlite3.connect(copyrightdb)
+	conn = batdb.getConnection(copyrightdb)
 	conn.text_factory = str
 	c = conn.cursor()
 	for sha256sum in tasks:
@@ -666,9 +670,9 @@ def grab_sha256_copyright((copyrightdb, tasks)):
 	return results
 
 ## grab licenses from the license database
-def grab_sha256_license((licensedb, tasks)):
+def grab_sha256_license((batdb, licensedb, tasks)):
 	results = {}
-	conn = sqlite3.connect(licensedb)
+	conn = batdb.getConnection(licensedb)
 	conn.text_factory = str
 	c = conn.cursor()
 	for sha256sum in tasks:
@@ -678,11 +682,11 @@ def grab_sha256_license((licensedb, tasks)):
 	conn.close()
 	return results
 
-def grab_sha256_parallel((masterdb, tasks, language, querytype)):
+def grab_sha256_parallel((batdb, masterdb, tasks, language, querytype)):
 	results = []
 	## open the database containing all the strings that were extracted
 	## from source code.
-	conn = sqlite3.connect(masterdb)
+	conn = batdb.getConnection(masterdb)
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
@@ -710,7 +714,7 @@ def grab_sha256_parallel((masterdb, tasks, language, querytype)):
 	conn.close()
 	return results
 
-def extractJavaNames(javameta, scanenv, clones):
+def extractJavaNames(javameta, scanenv, batdb, clones):
 	if not scanenv.has_key(namecacheperlanguage['Java']):
 		return {}
 
@@ -726,7 +730,7 @@ def extractJavaNames(javameta, scanenv, clones):
 
 	funccache = scanenv.get(namecacheperlanguage['Java'])
 
-	conn = sqlite3.connect(funccache)
+	conn = batdb.getConnection(funccache)
 	conn.text_factory = str
 	c = conn.cursor()
 
@@ -770,7 +774,7 @@ def extractJavaNames(javameta, scanenv, clones):
 		dynamicRes['packages'][i] = []
 	return dynamicRes
 
-def extractVariablesJava(javameta, scanenv, clones):
+def extractVariablesJava(javameta, scanenv, batdb, clones):
 	if not scanenv.has_key(namecacheperlanguage['Java']):
 		return {}
 
@@ -793,7 +797,7 @@ def extractVariablesJava(javameta, scanenv, clones):
 
 	funccache = scanenv.get(namecacheperlanguage['Java'])
 
-	conn = sqlite3.connect(funccache)
+	conn = batdb.getConnection(funccache)
 	conn.text_factory = str
 	c = conn.cursor()
 
@@ -892,11 +896,9 @@ def extractVariablesJava(javameta, scanenv, clones):
 	conn.close()
 	return variablepvs
 
-def scankernelsymbols(variables, scanenv, clones):
+def scankernelsymbols(variables, scanenv, batdb, clones):
 	kernelcache = scanenv.get(namecacheperlanguage['C'])
-	conn = sqlite3.connect(kernelcache)
-	## there are only byte strings in our database, not utf-8 characters...I hope
-	conn.text_factory = str
+	conn = batdb.getConnection(kernelcache)
 	c = conn.cursor()
 	allvvs = {}
 	uniquevvs = {}
@@ -937,7 +939,7 @@ def scankernelsymbols(variables, scanenv, clones):
 ## By searching a database that contains which function names and variable names
 ## can be found in which packages it is possible to identify which package was
 ## used.
-def scanDynamic(scanstr, variables, scanenv, clones):
+def scanDynamic(scanstr, variables, scanenv, batdb, clones):
 	dynamicRes = {}
 	variablepvs = {}
 
@@ -947,9 +949,8 @@ def scanDynamic(scanstr, variables, scanenv, clones):
 	## open the database containing function names that were extracted
 	## from source code.
 	funccache = scanenv.get(namecacheperlanguage['C'])
-	conn = sqlite3.connect(funccache)
+	conn = batdb.getConnection(funccache)
 	## we have byte strings in our database, not utf-8 characters...I hope
-	conn.text_factory = str
 	c = conn.cursor()
 
 	if scanenv.has_key('BAT_FUNCTION_SCAN'):
@@ -1043,7 +1044,7 @@ def scanDynamic(scanstr, variables, scanenv, clones):
 	return (dynamicRes, variablepvs)
 
 ## Look up strings in the database and assign strings to packages.
-def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfunctions, stringcutoff, precomputescore, usesourceorder, linecount, language, scandebug):
+def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfunctions, stringcutoff, precomputescore, usesourceorder, linecount, language, batdb, scandebug):
 	uniqueMatches = {}
 	nonUniqueScore = {}
 	stringsLeft = {}
@@ -1059,9 +1060,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 	stringscache = scanenv.get(stringsdbperlanguage[language])
 	## open the database containing all the strings that were extracted
 	## from source code.
-	conn = sqlite3.connect(stringscache)
-	## we have byte strings in our database, not utf-8 characters...I hope
-	conn.text_factory = str
+	conn = batdb.getConnection(stringscache)
 	c = conn.cursor()
 
 	scankernelfunctions = False
@@ -1071,7 +1070,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 		if scanenv.get('BAT_KERNELFUNCTION_SCAN') == 1 and language == 'C':
 			scankernelfunctions = True
 			funccache = scanenv.get(namecacheperlanguage['C'])
-			kernelconn = sqlite3.connect(funccache)
+			kernelconn = batdb.getConnection(funccache)
 			kernelcursor = kernelconn.cursor()
 
 	lenlines = len(lines)
@@ -1473,7 +1472,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 
 	return (unmatched, uniqueMatches, nonUniqueMatches, nonUniqueMatchLines, directAssignedString, nonUniqueAssignments, stringsLeft, notclones, nonUniqueScore, sameFileScore, matchednonassigned, matchedlines, unmatchedlines, matchednotclonelines, matcheddirectassignedlines, matchednonassignedlines, nrUniqueMatches, kernelfuncres)
 
-def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, scandebug, language='C'):
+def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, scandebug, batdb, language='C'):
 	if len(lines) == 0:
 		return None
 	## setup code guarantees that this database exists and that sanity
@@ -1492,9 +1491,8 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, sc
 	stringscache = scanenv.get(stringsdbperlanguage[language])
 	## open the database containing all the strings that were extracted
 	## from source code.
-	conn = sqlite3.connect(stringscache)
+	conn = batdb.getConnection(stringscache)
 	## we have byte strings in our database, not utf-8 characters...I hope
-	conn.text_factory = str
 	c = conn.cursor()
 
 	linecount = collections.Counter(lines)
@@ -1519,7 +1517,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, sc
 	## first look up and assign strings for as far as possible.
 	## strings that have not been assigned will be assigned later based
 	## on their score.
-	res = lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfunctions, stringcutoff, precomputescore, usesourceorder, linecount, language, scandebug)
+	res = lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfunctions, stringcutoff, precomputescore, usesourceorder, linecount, language, batdb, scandebug)
 	(unmatched, uniqueMatches, nonUniqueMatches, nonUniqueMatchLines, directAssignedString, nonUniqueAssignments, stringsLeft, notclones, nonUniqueScore, sameFileScore, matchednonassigned, matchedlines, unmatchedlines, matchednotclonelines, matcheddirectassignedlines, matchednonassignedlines, nrUniqueMatches, kernelfuncres) = res
 
 	uniqueScore = {}
@@ -1769,7 +1767,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, sc
 	return returnres
 
 ## match identifiers with data in the database
-def lookup_identifier((scanenv, filehash, filename, topleveldir, clones, scandebug)):
+def lookup_identifier((scanenv, filehash, filename, topleveldir, clones, batdb, scandebug)):
 	## read the pickle
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 	leafreports = cPickle.load(leaf_file)
@@ -1801,7 +1799,7 @@ def lookup_identifier((scanenv, filehash, filename, topleveldir, clones, scandeb
 
 	## first compute the score for the lines
 	if len(lines) != 0:
-		res = computeScore(lines, filename, scanenv, clones, linuxkernel, stringcutoff, scandebug, language)
+		res = computeScore(lines, filename, scanenv, clones, linuxkernel, stringcutoff, scandebug, batdb, language)
 	else:
 		res = None
 
@@ -1810,17 +1808,17 @@ def lookup_identifier((scanenv, filehash, filename, topleveldir, clones, scandeb
 		if linuxkernel:
 			functionRes = {}
 			if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
-				variablepvs = scankernelsymbols(leafreports['identifier']['kernelsymbols'], scanenv, clones)
+				variablepvs = scankernelsymbols(leafreports['identifier']['kernelsymbols'], scanenv, batdb, clones)
 			## TODO: clean up
 			if leafreports['identifier'].has_key('kernelfunctions'):
 				if leafreports['identifier']['kernelfunctions'] != []:
 					functionRes['kernelfunctions'] = copy.deepcopy(leafreports['identifier']['kernelfunctions'])
 		else:
-			(functionRes, variablepvs) = scanDynamic(leafreports['identifier']['functionnames'], leafreports['identifier']['variablenames'], scanenv, clones)
+			(functionRes, variablepvs) = scanDynamic(leafreports['identifier']['functionnames'], leafreports['identifier']['variablenames'], scanenv, batdb, clones)
 	elif language == 'Java':
 		variablepvs = {}
-		variablepvs = extractVariablesJava(leafreports['identifier'], scanenv, clones)
-		functionRes = extractJavaNames(leafreports['identifier'], scanenv, clones)
+		variablepvs = extractVariablesJava(leafreports['identifier'], scanenv, batdb, clones)
+		functionRes = extractJavaNames(leafreports['identifier'], scanenv, batdb, clones)
 
 	## then write results back to disk. This needs to be done because results for
 	## Java might need to be aggregated first.
@@ -1835,7 +1833,7 @@ def lookup_identifier((scanenv, filehash, filename, topleveldir, clones, scandeb
 ## Currently finding the version is based on unique matches that were found.
 ## If determinelicense or determinecopyright are set licenses and copyright statements
 ## are also extracted.
-def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determinelicense, determinecopyright):
+def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determinelicense, determinecopyright, batdb):
 	## read the pickle
 	filehash = unpackreport['sha256']
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
@@ -1892,7 +1890,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				step = lenuniques/processors
 			for v in xrange(0, lenuniques, step):
 				vtasks_tmp.append(uniques[v:v+step])
-			vtasks = map(lambda x: (masterdb, x, language, 'string'), filter(lambda x: x!= [], vtasks_tmp))
+			vtasks = map(lambda x: (batdb, masterdb, x, language, 'string'), filter(lambda x: x!= [], vtasks_tmp))
 			vsha256s = pool.map(grab_sha256_parallel, vtasks)
 			vsha256s = reduce(lambda x, y: x + y, filter(lambda x: x != [], vsha256s))
 
@@ -1918,7 +1916,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				step = len(sha256_scan_versions)/processors
 			for v in xrange(0, len(sha256_scan_versions), step):
 				vtasks_tmp.append(sha256_scan_versions.keys()[v:v+step])
-			vtasks = map(lambda x: (masterdb, x), filter(lambda x: x!= [], vtasks_tmp))
+			vtasks = map(lambda x: (batdb, masterdb, x), filter(lambda x: x!= [], vtasks_tmp))
 
 			## grab version and file information
 			fileres = pool.map(grab_sha256_filename, vtasks)
@@ -1988,7 +1986,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 					step = lenlicensesha256s/processors
 				for v in xrange(0, lenlicensesha256s, step):
 					vtasks_tmp.append(licensesha256s[v:v+step])
-				vtasks = map(lambda x: (licensedb, x), filter(lambda x: x!= [], vtasks_tmp))
+				vtasks = map(lambda x: (batdb, licensedb, x), filter(lambda x: x!= [], vtasks_tmp))
 
 				packagelicenses = pool.map(grab_sha256_license, vtasks)
 				## result is a list of {sha256sum: list of licenses}
@@ -2041,7 +2039,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				step = len(functionnames)/processors
 			for v in xrange(0, len(functionnames), step):
 				vtasks_tmp.append(functionnames[v:v+step])
-			vtasks = map(lambda x: (masterdb, x, 'C', 'function'), vtasks_tmp)
+			vtasks = map(lambda x: (batdb, masterdb, x, 'C', 'function'), vtasks_tmp)
 
 			vsha256s = pool.map(grab_sha256_parallel, vtasks)
 			vsha256s = reduce(lambda x, y: x + y, filter(lambda x: x != [], vsha256s))
@@ -2072,7 +2070,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				step = len(sha256_scan_versions.keys())/processors
 			for v in xrange(0, len(sha256_scan_versions.keys()), step):
 				vtasks_tmp.append(sha256_scan_versions.keys()[v:v+step])
-			vtasks = map(lambda x: (masterdb, x), vtasks_tmp)
+			vtasks = map(lambda x: (batdb, masterdb, x), vtasks_tmp)
 
 			## grab version and file information
 			fileres = pool.map(grab_sha256_filename, vtasks)
@@ -2131,11 +2129,11 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 					vtasks_tmp.append(uniques[v:v+step])
 				if variablepvs.has_key('type'):
 					if variablepvs['type'] == 'linuxkernel':
-						vtasks = map(lambda x: (masterdb, x, language, 'kernelvariable'), filter(lambda x: x!= [], vtasks_tmp))
+						vtasks = map(lambda x: (batdb, masterdb, x, language, 'kernelvariable'), filter(lambda x: x!= [], vtasks_tmp))
 					else:
-						vtasks = map(lambda x: (masterdb, x, language, 'variable'), filter(lambda x: x!= [], vtasks_tmp))
+						vtasks = map(lambda x: (batdb, masterdb, x, language, 'variable'), filter(lambda x: x!= [], vtasks_tmp))
 				else:
-						vtasks = map(lambda x: (masterdb, x, language, 'variable'), filter(lambda x: x!= [], vtasks_tmp))
+						vtasks = map(lambda x: (batdb, masterdb, x, language, 'variable'), filter(lambda x: x!= [], vtasks_tmp))
 				vsha256s = pool.map(grab_sha256_parallel, vtasks)
 				vsha256s = reduce(lambda x, y: x + y, filter(lambda x: x != [], vsha256s))
 
@@ -2165,7 +2163,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 					step = len(sha256_scan_versions.keys())/processors
 				for v in xrange(0, len(sha256_scan_versions.keys()), step):
 					vtasks_tmp.append(sha256_scan_versions.keys()[v:v+step])
-				vtasks = map(lambda x: (masterdb, x), vtasks_tmp)
+				vtasks = map(lambda x: (batdb, masterdb, x), vtasks_tmp)
 
 				## grab version and file information
 				fileres = pool.map(grab_sha256_filename, vtasks)
@@ -2251,7 +2249,8 @@ def licensesetup_sqlite3(scanenv, debug=False):
 
 	## Does the master database have the right tables?
 	## processed_file is always needed
-	conn = sqlite3.connect(masterdb)
+	batdb = bat.batdb.BatDb('sqlite3')
+	conn = batdb.getConnection(masterdb)
 	c = conn.cursor()
 	res = c.execute("select * from sqlite_master where type='table' and name='processed_file'").fetchall()
 	if res == []:
@@ -2277,7 +2276,7 @@ def licensesetup_sqlite3(scanenv, debug=False):
 					del newenv['BAT_RANKING_LICENSE']
 			else:
 				try:
-					licenseconn = sqlite3.connect(scanenv.get('BAT_LICENSE_DB'))
+					licenseconn = batdb.getConnection(scanenv.get('BAT_LICENSE_DB'))
 					licensecursor = licenseconn.cursor()
 					licensecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='licenses';")
 					if licensecursor.fetchall() == []:
@@ -2314,7 +2313,7 @@ def licensesetup_sqlite3(scanenv, debug=False):
 				continue
 
 			stringscache = scanenv.get(stringsdbperlanguage[language])
-			conn = sqlite3.connect(stringscache)
+			conn = batdb.getConnection(stringscache)
 			conn.text_factory = str
 			c = conn.cursor()
 
@@ -2344,7 +2343,7 @@ def licensesetup_sqlite3(scanenv, debug=False):
 	if scanenv.has_key('BAT_CLONE_DB'):
 		clonedb = scanenv.get('BAT_CLONE_DB')
 		if os.path.exists(clonedb):
-			conn = sqlite3.connect(clonedb)
+			conn = batdb.getConnection(clonedb)
 			c = conn.cursor()
 			c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='renames';")
 			if c.fetchall() == []:
@@ -2381,7 +2380,7 @@ def licensesetup_sqlite3(scanenv, debug=False):
 				newenv['BAT_FUNCTION_SCAN'] = 1
 
 			## Sanity check for kernel function names
-			cacheconn = sqlite3.connect(namecache)
+			cacheconn = batdb.getConnection(namecache)
 			cachecursor = cacheconn.cursor()
 			cachecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='kernelfunctionnamecache';")
 			kernelfuncs = cachecursor.fetchall()
