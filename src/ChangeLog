@@ -1,9 +1,36 @@
+2015-04-19:
+* bruteforcescan.py: always process global configuration first
+* bruteforcescan.py: pass dbbackend flag to all scans in the environment
+* findlibs.py: prepare for multiple db backends
+* licenseversion.py: prepare for multiple db backends
+* identifier.py: prepare for multiple db backends
+* file2package.py: prepare for multiple db backends
+* kernelsymbols.py: prepare for multiple db backends
+* createdb.py: only chmod files and directories once
+* add bat database connection abstraction class (batdb.py)
+* licenseversion.py: use new database connection abstraction class
+
+2015-04-18:
+* findlibs.py: deal with relative symbolic links that point to paths outside
+of the directory of the symbolic link (one or more levels up)
+* generatejson.py: write JSON files in parallel
+
+2015-04-17:
+* findlibs.py: refactor, more documentation, make reverse mapping of plugins,
+use different colours for nodes that are plugins, tag plugins as 'plugin'
+* bruteforcescan.py: set template for anonymous files only at top level
+* fwunpack.py: use templates for anonymous files in XZ unpacking, ICO
+unpacking, GZIP unpacking and LZMA unpacking
+* renamefiles.py: recursively rename files and paths, also after templates
+have been applied
+
 2015-04-16:
 * kernelanalysis.py/kernelsymbols.py: deal with Linux kernel modules (2.6
 kernel and higher) that do not have a name ending in .ko
 * findlibs.py: deal with symbolic links that use absolute paths (default,
 since almost all symbolic links are now rewritten to use absolute paths),
 rework storing absolute paths for targets of symbolic links
+* findlibs.py: record more data about plugins
 
 2015-04-15:
 * renamefiles.py: handle duplicate files separately as they are not unpacked
