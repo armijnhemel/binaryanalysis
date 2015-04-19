@@ -124,6 +124,14 @@ To scan a directory you will need to supply three parameters to
 \item \texttt{-u} : path to a directory where output files will be written to
 \end{enumerate}
 
+For example:
+
+\texttt{python bat-scan -c /path/to/configuration -d /path/to/dirwithbinaries
+-u /path/to/dirwithoutputfiles}
+
+The format of output files in ``directory scan'' mode will be the name of the
+original file with the suffix \texttt{.tar.gz}.
+
 \subsection{Interpreting the results}
 
 There are two formats in which \texttt{bat-scan} can output its results:
