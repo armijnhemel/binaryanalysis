@@ -167,6 +167,11 @@ def extractfromkernelfile((filehash, filename, topleveldir, scantempdir)):
 
 ## the main method called by BAT
 def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={}, scandebug=False, unpacktempdir=None):
+	(envresult, newenv) = kernelsymbolssetup(scanenv, scandebug)
+
+	if not envresult:
+		return None
+
 	## if KERNELSYMBOL_SVG is set in the configuration then the graph will
 	## also be generated in SVG format by writeGraph()
 	generatesvg = False
@@ -216,10 +221,6 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 		return
 
 	masterdb = scanenv.get('BAT_DB')
-
-	## Does the master database exist?
-	if not os.path.exists(masterdb):
-		return
 
 	## open database connection to the master database
 	masterconn = sqlite3.connect(masterdb)
@@ -640,3 +641,26 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 	pool = multiprocessing.Pool(processes=processors)
 	pool.map(writeGraph, symbolgraphs, 1)
 	pool.terminate()
+
+def kernelsymbolssetup(scanenv, debug=False):
+	if not 'DBBACKEND' in scanenv:
+		return (False, None)
+	if scanenv['DBBACKEND'] == 'sqlite3':
+		return kernelsymbolssetup_sqlite3(scanenv, debug)
+	return (False, None)
+
+def kernelsymbolssetup_sqlite3(scanenv, debug=False):
+	newenv = copy.deepcopy(scanenv)
+
+	## Is the master database defined?
+	if not scanenv.has_key('BAT_DB'):
+		(False, None)
+
+	masterdb = scanenv.get('BAT_DB')
+
+	## Does the master database exist?
+	if not os.path.exists(masterdb):
+		(False, None)
+
+	## TODO: many more checks
+	return (True, newenv)
