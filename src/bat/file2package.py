@@ -47,6 +47,14 @@ def xmlprettyprint(res, root, scanenv={}):
 	return topnode
 
 def file2packagesetup(scanenv, debug=False):
+	if not 'DBBACKEND' in scanenv:
+		return (False, None)
+	if scanenv['DBBACKEND'] == 'sqlite3':
+		return file2packagesetup_sqlite3(scanenv, debug)
+	return (False, None)
+
+## checks specific for sqlite3 databases
+def file2packagesetup_sqlite3(scanenv, debug=False):
 	newenv = copy.deepcopy(scanenv)
 
 	## Is the package database defined?
