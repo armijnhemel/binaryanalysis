@@ -635,115 +635,121 @@ def readconfig(config):
 		if i in oldenv:
 			scanenv[i] = copy.deepcopy(oldenv[i])
 
+	sectionstoprocess = set()
+
+	## process sections, make sure that the global configuration is
+	## always processed first.
 	for section in config.sections():
-		if section == "batconfig":
-			try:
-				mp = config.get(section, 'multiprocessing')
-				if mp == 'yes':
-					batconf['multiprocessing'] = True
-				else:
-					batconf['multiprocessing'] = False
-			except:
-				batconf['multiprocessing'] = False
-			try:
-				batconf['output'] = config.get(section, 'output')
-				batconf['module'] = config.get(section, 'module')
-				batconf['method'] = config.get(section, 'method')
-			except:
-				pass
-			try:
-				reporthash = config.get(section, 'reporthash')
-				## TODO: make more configurable, perform checks, etc. etc.
-				if reporthash in ['sha256', 'sha1', 'md5', 'crc32']:
-					batconf['reporthash'] = reporthash
-			except:
-				pass
-			try:
-				batconf['processors'] = int(config.get(section, 'processors'))
-			except:
-				pass
-			try:
-				dbbackend = config.get(section, 'dbbackend')
-				if dbbackend in ['sqlite3']:
-					batconf['dbbackend'] = dbbackend
-			except:
-				pass
-			try:
-				reportendofphase = config.get(section, 'reportendofphase')
-				if reportendofphase == 'yes':
-					batconf['reportendofphase'] = True
-				else:
-					batconf['reportendofphase'] = False
-			except:
-				batconf['reportendofphase'] = False
-			try:
-				debug = config.get(section, 'debug')
-				if debug == 'yes':
-					batconf['debug'] = True
-				else:
-					batconf['debug'] = False
-			except:
-				batconf['debug'] = False
-			try:
-				debugphases = config.get(section, 'debugphases')
-				if debugphases.strip() == "":
-					batconf['debugphases'] = []
-				else:
-					batconf['debugphases'] = debugphases.split(':')
-			except:
-				batconf['debugphases'] = []
-			try:
-				outputlite = config.get(section, 'outputlite')
-				if outputlite == 'yes':
-					batconf['outputlite'] = True
-				else:
-					batconf['outputlite'] = False
-			except:
-				batconf['outputlite'] = False
-			try:
-				unpacktempdir = config.get(section, 'tempdir')
-				if not os.path.isdir(unpacktempdir):
-					batconf['tempdir'] = None
-				else:
-					batconf['tempdir'] = unpacktempdir
-					## TODO: try to create a temporary directory
-					## to see if the directory is writable
-			except:
-				batconf['tempdir'] = None
-			newenv = copy.deepcopy(scanenv)
-			try:
-				## global set of environment variables
-				envvars = config.get(section, 'envvars')
-				if envvars == None:
-					pass
-				else:
-					for en in envvars.split(':'):
-						try:
-							(envname, envvalue) = en.split('=')
-							newenv[envname] = envvalue
-						except Exception, e:
-							pass
-			except:
-				pass
-			batconf['environment'] = newenv
-			try:
-				template = config.get(section, 'template')
-
-				## check for certain values and reset template if necessary
-				if '/' in template:
-					template = None
-					batconf['template'] = None
-					continue
-				if '%' in template:
-					batconf['template'] = template
-				template = template + "-%s"
-				batconf['template']   = template
-			except Exception, e:
-				batconf['template']   = None
-
+		if section != "batconfig":
+			sectionstoprocess.add(section)
 			continue
-		
-		elif config.has_option(section, 'type'):
+		try:
+			mp = config.get(section, 'multiprocessing')
+			if mp == 'yes':
+				batconf['multiprocessing'] = True
+			else:
+				batconf['multiprocessing'] = False
+		except:
+			batconf['multiprocessing'] = False
+		try:
+			batconf['output'] = config.get(section, 'output')
+			batconf['module'] = config.get(section, 'module')
+			batconf['method'] = config.get(section, 'method')
+		except:
+			pass
+		try:
+			reporthash = config.get(section, 'reporthash')
+			## TODO: make more configurable, perform checks, etc. etc.
+			if reporthash in ['sha256', 'sha1', 'md5', 'crc32']:
+				batconf['reporthash'] = reporthash
+		except:
+			pass
+		try:
+			batconf['processors'] = int(config.get(section, 'processors'))
+		except:
+			pass
+		try:
+			dbbackend = config.get(section, 'dbbackend')
+			if dbbackend in ['sqlite3']:
+				batconf['dbbackend'] = dbbackend
+		except:
+			pass
+		try:
+			reportendofphase = config.get(section, 'reportendofphase')
+			if reportendofphase == 'yes':
+				batconf['reportendofphase'] = True
+			else:
+				batconf['reportendofphase'] = False
+		except:
+			batconf['reportendofphase'] = False
+		try:
+			debug = config.get(section, 'debug')
+			if debug == 'yes':
+				batconf['debug'] = True
+			else:
+				batconf['debug'] = False
+		except:
+			batconf['debug'] = False
+		try:
+			debugphases = config.get(section, 'debugphases')
+			if debugphases.strip() == "":
+				batconf['debugphases'] = []
+			else:
+				batconf['debugphases'] = debugphases.split(':')
+		except:
+			batconf['debugphases'] = []
+		try:
+			outputlite = config.get(section, 'outputlite')
+			if outputlite == 'yes':
+				batconf['outputlite'] = True
+			else:
+				batconf['outputlite'] = False
+		except:
+			batconf['outputlite'] = False
+		try:
+			unpacktempdir = config.get(section, 'tempdir')
+			if not os.path.isdir(unpacktempdir):
+				batconf['tempdir'] = None
+			else:
+				batconf['tempdir'] = unpacktempdir
+				## TODO: try to create a temporary directory
+				## to see if the directory is writable
+		except:
+			batconf['tempdir'] = None
+		newenv = copy.deepcopy(scanenv)
+		try:
+			## global set of environment variables
+			envvars = config.get(section, 'envvars')
+			if envvars == None:
+				pass
+			else:
+				for en in envvars.split(':'):
+					try:
+						(envname, envvalue) = en.split('=')
+						newenv[envname] = envvalue
+					except Exception, e:
+						pass
+		except:
+			pass
+
+		batconf['environment'] = newenv
+		try:
+			template = config.get(section, 'template')
+
+			## check for certain values and reset template if necessary
+			if '/' in template:
+				template = None
+				batconf['template'] = None
+				continue
+			if '%' in template:
+				batconf['template'] = template
+			template = template + "-%s"
+			batconf['template']   = template
+		except Exception, e:
+			batconf['template']   = None
+	
+	for section in sectionstoprocess:
+		if config.has_option(section, 'type'):
 			debug = False
 			## scans have to be explicitely enabled
 			if not config.has_option(section, 'enabled'):
@@ -760,6 +766,15 @@ def readconfig(config):
 			except:
 				conf['name']   = section
 
+			## see if a dbbackend is defined. If not, check if the
+			## top level configuration has it defined.
+			try:
+				dbbackend = config.get(section, 'dbbackend')
+				if dbbackend in ['sqlite3']:
+					conf['dbbackend'] = dbbackend
+			except:
+				if 'dbbackend' in batconf:
+					conf['dbbackend'] = copy.deepcopy(batconf['dbbackend'])
 			## deal with the environment
 			newenv = copy.deepcopy(scanenv)
 			try:
@@ -914,6 +929,8 @@ def readconfig(config):
 			for e in batconf['environment']:
 				if not e in s['environment']:
 					s['environment'][e] = copy.deepcopy(batconf['environment'][e])
+		if 'dbbackend' in s:
+			s['environment']['DBBACKEND'] = s['dbbackend']
 		if s['cleanup']:
 			## this is an ugly hack *cringe*
 			s['environment']['overridedir'] = True
