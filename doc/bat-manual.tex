@@ -2684,7 +2684,7 @@ The order of the unpack scans as defined in BAT 21 is:
 \item \texttt{byteSwap}
 \item \texttt{tar}
 \item \texttt{pdf\_unpack}, \texttt{iso9660}
-\item \texttt{cramfs}, \texttt{ext2fs}
+\item \texttt{cramfs}, \texttt{ext2fs}, \texttt{ubi}
 \item \texttt{ar}, \texttt{cpio}, \texttt{java\_serialized}, \texttt{romfs},
 \texttt{rpm}, \texttt{upx}, \texttt{yaffs}
 \item \texttt{exe}, \texttt{jffs2}, \texttt{squashfs}
@@ -2707,18 +2707,19 @@ matter.
 
 Aggregate scans have a clear order. Reports and (most) images are generated at
 the very end when all information is known. Other scans are mostly independent
-of eachother, but are run before \texttt{versionlicensecopyright} to prevent
-having to read big report pickles from disk.
+of eachother, but are usually run before \texttt{versionlicensecopyright} to
+prevent having to read big report pickles from disk.
 
 The order for pre-run scans is:
 
 \begin{enumerate}
+\item \texttt{fixduplicates}
 \item \texttt{prunefiles} (disabled by default)
 \item \texttt{findduplicates}
-\item \texttt{findlibs}
-\item \texttt{findsymbols}
+\item \texttt{findlibs} \texttt{findsymbols}
 \item \texttt{jars}, \texttt{kernelversions}
 \item \texttt{versionlicensecopyright}
+\item \texttt{shellinvocations}
 \item \texttt{generateimages}, \texttt{generatereports}, \texttt{generatejson}
 \end{enumerate}
 
