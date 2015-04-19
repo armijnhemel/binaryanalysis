@@ -593,7 +593,6 @@ def unpack(directory, filename, unpackdir):
 			except:
 				pass
 			return None
-		return tmpdir
         elif 'LZMA compressed data, streamed' in filemagic:
 		if unpackdir != None:
        			tmpdir = tempfile.mkdtemp(dir=unpackdir)
@@ -604,7 +603,6 @@ def unpack(directory, filename, unpackdir):
 		if p.returncode != 0:
 			shutil.rmtree(tmpdir)
 			return
-		return tmpdir
         elif 'XZ compressed data' in filemagic or ('data' in filemagic and filename.endswith('.xz')):
 		if unpackdir != None:
        			tmpdir = tempfile.mkdtemp(dir=unpackdir)
@@ -615,7 +613,6 @@ def unpack(directory, filename, unpackdir):
 		if p.returncode != 0:
 			shutil.rmtree(tmpdir)
 			return
-		return tmpdir
 	elif 'gzip compressed data' in filemagic or 'compress\'d data 16 bits' in filemagic or ('Minix filesystem' in filemagic and filename.endswith('.gz')) or ('JPEG 2000 image' in filemagic and filename.endswith('.gz')):
 		if unpackdir != None:
        			tmpdir = tempfile.mkdtemp(dir=unpackdir)
@@ -626,7 +623,6 @@ def unpack(directory, filename, unpackdir):
 		if p.returncode != 0:
 			shutil.rmtree(tmpdir)
 			return
-		return tmpdir
 	elif 'Zip archive data' in filemagic:
 		try:
 			if unpackdir != None:
@@ -639,10 +635,28 @@ def unpack(directory, filename, unpackdir):
 				print >>sys.stderr, "unpacking ZIP failed for", filename, stanerr
 				shutil.rmtree(tmpdir)
 				return None
-			else:
-				return tmpdir
 		except Exception, e:
 			print >>sys.stderr, "unpacking ZIP failed", e
+			return None
+	osgen = os.walk(tmpdir)
+	while True:
+		try:
+			i = osgen.next()
+			## make sure all directories and files can be accessed
+			for d in i[1]:
+				if not os.path.islink(os.path.join(i[0], d)):
+					os.chmod(os.path.join(i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+			for p in i[2]:
+				if not os.path.islink(os.path.join(i[0], p)):
+					os.chmod(os.path.join(i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+		except StopIteration:
+			break
+		except Exception, e:
+			print e, type(e)
+			if str(e) != "":
+				print >>sys.stderr, 'blah', e
+			break
+	return tmpdir
 
 def unpack_verify(filedir, filename):
 	try:
@@ -785,6 +799,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 						package = rewrites[filehash]['newpackage']
 						version = rewrites[filehash]['newversion']
 
+	allchmod = False
 	## Then check if version exists in the database.
 	c.execute('''select checksum from processed where package=? and version=? LIMIT 1''', (package, version))
 	checkres = c.fetchall()
@@ -808,10 +823,6 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 			scanfiles = []
 			while True:
 				i = osgen.next()
-				## make sure all directories can be accessed
-				for d in i[1]:
-					if not os.path.islink(os.path.join(i[0], d, False)):
-						os.chmod(os.path.join(i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 				for p in i[2]:
 					scanfiles.append((i[0], p, pkgconf))
 		except Exception, e:
@@ -879,23 +890,6 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 	return sqlres
 
 def cleanupdir(temporarydir):
-	osgen = os.walk(temporarydir)
-	try:
-		while True:
-			i = osgen.next()
-			## make sure all directories can be accessed
-			for d in i[1]:
-				if not os.path.islink(os.path.join(i[0], d)):
-					os.chmod(os.path.join(i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-			for p in i[2]:
-				try:
-					if not os.path.islink(os.path.join(i[0], p)):
-						os.chmod(os.path.join(i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-				except Exception, e:
-					#print e
-					pass
-	except StopIteration:
-		pass
 	try:
 		shutil.rmtree(temporarydir)
 	except:
@@ -941,13 +935,7 @@ def filterfilename(filename, pkgconf):
 ## Compute the SHA256 for a single file.
 def filterfiles((filedir, filename, pkgconf, allfiles)):
 	resolved_path = os.path.join(filedir, filename)
-	if not os.path.islink(resolved_path):
-		try:
-			os.chmod(resolved_path, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-		except Exception, e:
-			pass
-	else:
-		## skip links
+	if os.path.islink(resolved_path):
         	return None
 	if pkgconf.has_key('blacklist'):
 		if filename in pkgconf['blacklist']:
@@ -1003,10 +991,6 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 					if p == 'MANIFEST.BAT':
 						continue
 				scanfiles.append((i[0], p, pkgconf, allfiles))
-			## make sure all directories can be accessed
-			for d in i[1]:
-				if not os.path.islink(os.path.join(i[0], d)):
-					os.chmod(os.path.join(i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 	except Exception, e:
 		if str(e) != "":
 			print >>sys.stderr, package, version, e
