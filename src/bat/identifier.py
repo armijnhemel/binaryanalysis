@@ -717,13 +717,20 @@ def extractKernelData(lines, filepath, scanenv):
 	kernelconn.close()
 	return returnres
 
-## stub for method that makes sure that everything is set up properly and modifies
+def extractidentifiersetup(scanenv, debug=False):
+	if not 'DBBACKEND' in scanenv:
+		return (False, None)
+	if scanenv['DBBACKEND'] == 'sqlite3':
+		return extractidentifiersetup_sqlite3(scanenv, debug)
+	return (False, None)
+
+## method that makes sure that everything is set up properly and modifies
 ## the environment, as well as determines whether the scan should be run at
 ## all.
 ## Returns tuple (run, environment)
 ## * run: boolean indicating whether or not the scan should run
 ## * environment: (possibly) modified
-def extractidentifiersetup(scanenv, debug=False):
+def extractidentifiersetup_sqlite3(scanenv, debug=False):
 	## TODO: verify if the following programs are available and work:
 	## * strings
 	## * jcf-dump
