@@ -2221,6 +2221,14 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 		leaf_file.close()
 		unpackreport['tags'].append('ranking')
 
+
+def licensesetup(scanenv, debug=False):
+	if not 'DBBACKEND' in scanenv:
+		return (False, None)
+	if scanenv['DBBACKEND'] == 'sqlite3':
+		return licensesetup_sqlite3(scanenv, debug)
+	return (False, None)
+
 ## method that makes sure that everything is set up properly and modifies
 ## the environment, as well as determines whether the scan should be run at
 ## all.
@@ -2228,7 +2236,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 ## * run: boolean indicating whether or not the scan should run
 ## * environment: (possibly) modified
 ## This is the minimum that is needed for determining the licenses
-def licensesetup(scanenv, debug=False):
+def licensesetup_sqlite3(scanenv, debug=False):
 	newenv = copy.deepcopy(scanenv)
 
 	## Is the master database defined?
