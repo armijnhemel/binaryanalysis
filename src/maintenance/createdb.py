@@ -652,9 +652,8 @@ def unpack(directory, filename, unpackdir):
 		except StopIteration:
 			break
 		except Exception, e:
-			print e, type(e)
 			if str(e) != "":
-				print >>sys.stderr, 'blah', e
+				print >>sys.stderr, e
 			break
 	return tmpdir
 
