@@ -8,7 +8,8 @@
 This file contains a few methods that can be useful for security scanning.
 '''
 
-import os, sys, sqlite3, zipfile, subprocess, re, cPickle, copy, tempfile
+import os, sys, zipfile, subprocess, re, cPickle, copy, tempfile
+import bat.batdb
 
 ## This method extracts the CRC32 checksums from the entries of the encrypted zip file and checks
 ## whether or not there are any files in the database with the same CRC32. If so, a known plaintext
@@ -23,7 +24,8 @@ def scanEncryptedZip(path, tags, blacklist=[], scanenv={}, scandebug=False, unpa
 
 	encryptedzip = zipfile.ZipFile(path, 'r')
 	encryptedinfos = encryptedzip.infolist()
-	c = sqlite3.connect(scanenv['BAT_DB'])
+	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
+	c = batdb.getConnection(scanenv['BAT_DB'])
 	cursor = c.cursor()
 	plaintexts = set()
 	for e in encryptedinfos:
@@ -42,6 +44,13 @@ def scanEncryptedZip(path, tags, blacklist=[], scanenv={}, scandebug=False, unpa
 	return
 
 def encryptedZipSetup(scanenv, debug=False):
+	if not 'DBBACKEND' in scanenv:
+		return (False, None)
+	if scanenv['DBBACKEND'] == 'sqlite3':
+		return encryptedZipSetup_sqlite3(scanenv, debug)
+	return (False, None)
+
+def encryptedZipSetup_sqlite3(scanenv, debug=False):
 	## first check if there is a database defined
 	if not scanenv.has_key('BAT_DB'):
 		return (False, None)
@@ -49,7 +58,8 @@ def encryptedZipSetup(scanenv, debug=False):
 		return (False, None)
 
 	newenv = copy.deepcopy(scanenv)
-	c = sqlite3.connect(scanenv['BAT_DB'])
+	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
+	c = batdb.getConnection(scanenv['BAT_DB'])
 	cursor = c.cursor()
 
 	## then check the database schema to see if there are crc32 checksums
