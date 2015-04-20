@@ -12,7 +12,7 @@ including the ranking algorithm.
 The documentation of the format can be found in the 'doc' directory (subject to change)
 '''
 
-import os, sys, re, json, cPickle, multiprocessing, copy, gzip
+import os, sys, re, json, cPickle, multiprocessing, copy, gzip, codecs
 import bat.batdb
 
 def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb)):
@@ -251,8 +251,23 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 
 	for unpackreport in unpackreports:
 		jsonreport = {}
+		filehash = copy.deepcopy(unpackreports[unpackreport]['sha256'])
 		if "name" in unpackreports[unpackreport]:
-			jsonreport['name'] = copy.deepcopy(unpackreports[unpackreport]['name'])
+			name = copy.deepcopy(unpackreports[unpackreport]['name'])
+			## check whether or not the name of the file does not contain any weird
+			## characters by decoding it to UTF-8
+			decoded = False
+			for i in ['utf-8', 'ascii', 'latin-1']:
+				try:
+					name = name.decode(i)
+					decoded = True
+					break
+				except Exception, e:
+					pass
+			if decoded:
+				jsonreport['name'] = name
+			else:
+				jsonreport['name'] = "name-for-%s-cannot-be-displayed" % filehash
 		if "path" in unpackreports[unpackreport]:
 			jsonreport['path'] = copy.deepcopy(unpackreports[unpackreport]['path'])
 		if "tags" in unpackreports[unpackreport]:
@@ -260,7 +275,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 		if "magic" in unpackreports[unpackreport]:
 			jsonreport['magic'] = copy.deepcopy(unpackreports[unpackreport]['magic'])
 		if "sha256" in unpackreports[unpackreport]:
-			jsonreport['checksum'] = copy.deepcopy(unpackreports[unpackreport]['sha256'])
+			jsonreport['checksum'] = filehash
 			jsonreport['checksumtype'] = 'sha256'
 		if "scans" in unpackreports[unpackreport]:
 			if unpackreports[unpackreport]['scans'] != []:
