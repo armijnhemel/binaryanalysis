@@ -12,10 +12,11 @@ including the ranking algorithm.
 The documentation of the format can be found in the 'doc' directory (subject to change)
 '''
 
-import os, sys, re, json, cPickle, multiprocessing, copy, sqlite3, gzip
+import os, sys, re, json, cPickle, multiprocessing, copy, gzip
+import bat.batdb
 
-def writejson((filehash,topleveldir, outputhash, batdb)):
-	c = sqlite3.connect(batdb)
+def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb)):
+	c = batdb.getConnection(hashdatabase)
 	cursor = c.cursor()
 	hashcache = {}
 	## read the data from the pickle file
@@ -274,6 +275,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 	filehashes = set()
 	jsontasks = []
 
+	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
 	## create tasks for printing results for each of the individual reports
 	for unpackreport in unpackreports:
 		## first see if there is a filehash. If not, continue
@@ -290,7 +292,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 		if os.path.exists(os.path.join(topleveldir, "reports", "%s.json.gz" % filehash)):
 			continue
 		filehashes.add(filehash)
-		jsontasks.append((filehash, topleveldir, outputhash, scanenv['BAT_DB']))
+		jsontasks.append((filehash, topleveldir, outputhash, scanenv['BAT_DB'], batdb))
 
 	pool = multiprocessing.Pool(processes=processors)
 	pool.map(writejson, jsontasks)
