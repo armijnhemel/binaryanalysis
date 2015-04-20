@@ -18,7 +18,7 @@ BAT_NAMECACHE_$LANGUAGE :: location of database containing cached
 '''
 
 import string, re, os, os.path, sys, tempfile, shutil, copy
-import sqlite3
+import bat.batdb
 import subprocess
 import extractor
 
@@ -103,7 +103,7 @@ def searchGeneric(filepath, tags, blacklist=[], scanenv={}, offsets={}, scandebu
 		if empty:
 			return None
 		if linuxkernel:
-			res = extractKernelData(cmeta['strings'], filepath, scanenv)
+			res = extractKernelData(cmeta['strings'], filepath, scanenv, scandebug)
 			if res != None:
 				if res.has_key('kernelfunctions'):
 					if res['kernelfunctions'] != []:
@@ -672,15 +672,16 @@ def extractDynamicFromELF(scanfile):
 	return (functionnames, variables)
 
 ## extract Linux kernel data from a binary file. False positives could exist.
-def extractKernelData(lines, filepath, scanenv):
+def extractKernelData(lines, filepath, scanenv, scandebug):
 	if len(lines) == 0:
 		return None
 
 	## setup code guarantees that this database exists and that sanity
 	## checks were done.
 	if scanenv.get('BAT_KERNELFUNCTION_SCAN') == '1':
+		batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
 		funccache = scanenv.get(namecacheperlanguage['C'])
-		kernelconn = sqlite3.connect(funccache)
+		kernelconn = batdb.getConnection(funccache)
 		kernelcursor = kernelconn.cursor()
 	else:
 		return None
@@ -691,10 +692,12 @@ def extractKernelData(lines, filepath, scanenv):
 
 	lenlines = len(lines)
 
-	#print >>sys.stderr, "total extracted strings for %s: %d" %(filepath, lenlines)
+	if scandebug:
+		print >>sys.stderr, "total extracted strings for %s: %d" %(filepath, lenlines)
 
 	for line in lines:
-		#print >>sys.stderr, "processing <|%s|>" % line
+		if scandebug:
+			print >>sys.stderr, "processing <|%s|>" % line
 		if line == oldline:
 			continue
 		kernelfunctionmatched = False
@@ -753,6 +756,8 @@ def extractidentifiersetup_sqlite3(scanenv, debug=False):
 		else:
 			del newenv['DEX_TMPDIR']
 
+	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
+
 	## check the various caching databases, first for C
 	if scanenv.has_key(namecacheperlanguage['C']):
 		namecache = scanenv.get(namecacheperlanguage['C'])
@@ -770,7 +775,7 @@ def extractidentifiersetup_sqlite3(scanenv, debug=False):
 				newenv['BAT_KERNELSYMBOL_SCAN'] = 1
 
 			## Sanity check for kernel function names
-			cacheconn = sqlite3.connect(namecache)
+			cacheconn = batdb.getConnection(namecache)
 			cachecursor = cacheconn.cursor()
 			cachecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='kernelfunctionnamecache';")
 
