@@ -5,7 +5,8 @@
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 import os, os.path, sys, subprocess, copy, cPickle, multiprocessing
-import pydot, sqlite3, collections, csv, tempfile, shutil
+import pydot, collections, csv, tempfile, shutil
+import bat.batdb
 
 '''
 This plugin for the Binary Analysis Tool can be used to check how the symbols
@@ -216,6 +217,8 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 		except Exception, e:
 			return
 
+	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
+
 	## Is the master database defined?
 	if not scanenv.has_key('BAT_DB'):
 		return
@@ -223,7 +226,7 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 	masterdb = scanenv.get('BAT_DB')
 
 	## open database connection to the master database
-	masterconn = sqlite3.connect(masterdb)
+	masterconn = batdb.getConnection(masterdb)
 	mastercursor = masterconn.cursor()
 
 	## store names of all files containing Linux kernel images or modules
