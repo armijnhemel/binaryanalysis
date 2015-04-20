@@ -251,7 +251,11 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 
 	for unpackreport in unpackreports:
 		jsonreport = {}
-		filehash = copy.deepcopy(unpackreports[unpackreport]['sha256'])
+		filehash = None
+		if "sha256" in unpackreports[unpackreport]:
+			filehash = copy.deepcopy(unpackreports[unpackreport]['sha256'])
+			jsonreport['checksum'] = filehash
+			jsonreport['checksumtype'] = 'sha256'
 		if "name" in unpackreports[unpackreport]:
 			name = copy.deepcopy(unpackreports[unpackreport]['name'])
 			## check whether or not the name of the file does not contain any weird
@@ -267,7 +271,10 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 			if decoded:
 				jsonreport['name'] = name
 			else:
-				jsonreport['name'] = "name-for-%s-cannot-be-displayed" % filehash
+				if filehash != None:
+					jsonreport['name'] = "name-for-%s-cannot-be-displayed" % filehash
+				else:
+					continue
 		if "path" in unpackreports[unpackreport]:
 			jsonreport['path'] = copy.deepcopy(unpackreports[unpackreport]['path'])
 		if "tags" in unpackreports[unpackreport]:
