@@ -41,7 +41,7 @@ are packed in a tar file.
 
 import sys, os, os.path, magic, hashlib, subprocess, tempfile, shutil, stat, multiprocessing, cPickle, glob, tarfile, copy, gzip, Queue
 from optparse import OptionParser
-import datetime, sqlite3, re
+import datetime, re
 import extractor
 import prerun, fsmagic
 from multiprocessing import Process, Lock
