@@ -1239,8 +1239,8 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 				for cr in cres:
 					## OK, this delete is *really* stupid because we don't have an index for this
 					## combination of parameters.
-					#licensecursor.execute('''delete from extracted_copyright where checksum = ? and copyright = ? and type = ? and offset = ?''', (filehash, cr[1], cr[0], cr[2]))
-					licensecursor.execute('''insert into extracted_copyright (checksum, copyright, type, offset) values (?,?,?,?)''', (filehash, cr[1], cr[0], cr[2]))
+					#licensecursor.execute('''delete from extracted_copyright where checksum = ? and copyright = ? and type = ? and byteoffset = ?''', (filehash, cr[1], cr[0], cr[2]))
+					licensecursor.execute('''insert into extracted_copyright (checksum, copyright, type, byteoffset) values (?,?,?,?)''', (filehash, cr[1], cr[0], cr[2]))
 		licenseconn.commit()
 		licensecursor.close()
 		licenseconn.close()
@@ -2749,7 +2749,7 @@ def main(argv):
 			## * email
 			## * statement
 			## * url
-			licensec.execute('''create table if not exists extracted_copyright (checksum text, copyright text, type text, offset int)''')
+			licensec.execute('''create table if not exists extracted_copyright (checksum text, copyright text, type text, byteoffset int)''')
 			licensec.execute('''create index if not exists copyright_index on extracted_copyright(checksum);''')
 			licensec.execute('''create index if not exists copyright_type_index on extracted_copyright(copyright, type);''')
 			licenseconn.commit()
