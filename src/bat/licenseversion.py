@@ -552,7 +552,8 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	if clonedb != None:
 		conn = batdb.getConnection(clonedb)
 		c = conn.cursor()
-		clonestmp = c.execute("SELECT originalname,newname from renames").fetchall()
+		c.execute("SELECT originalname,newname from renames")
+		clonestmp = c.fetchall()
 		for cl in clonestmp:
 			(originalname,newname) = cl
 			if not clones.has_key(originalname):
@@ -2225,6 +2226,10 @@ def licensesetup(scanenv, debug=False):
 		return (False, None)
 	if scanenv['DBBACKEND'] == 'sqlite3':
 		return licensesetup_sqlite3(scanenv, debug)
+	if scanenv['DBBACKEND'] == 'postgresql':
+		## TODO: postgresql specific checks
+		return (True, scanenv)
+		#return licensesetup_sqlite3(scanenv, debug)
 	return (False, None)
 
 ## method that makes sure that everything is set up properly and modifies
