@@ -16,8 +16,9 @@ import os, sys, re, json, cPickle, multiprocessing, copy, gzip, codecs
 import bat.batdb
 
 def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb)):
-	c = batdb.getConnection(hashdatabase)
-	cursor = c.cursor()
+	if batdb != None:
+		c = batdb.getConnection(hashdatabase)
+		cursor = c.cursor()
 	hashcache = {}
 	## read the data from the pickle file
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
@@ -223,7 +224,8 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb)):
 
 	## then security information
 	## TODO
-	cursor.close()
+	if batdb != None:
+		cursor.close()
 
 	## dump the JSON to a file
 	jsonfile = gzip.open(os.path.join(topleveldir, "reports", "%s.json.gz" % filehash), 'w')
@@ -246,8 +248,13 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 		outputhash = None
 
 	if outputhash != None and outputhash != 'sha256':
+		if not 'DBBACKEND' in scanenv:
+			return
+		batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
 		if not scanenv.has_key('BAT_DB'):
 			return
+	else:
+		batdb = None
 
 	for unpackreport in unpackreports:
 		jsonreport = {}
@@ -297,7 +304,6 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 	filehashes = set()
 	jsontasks = []
 
-	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
 	## create tasks for printing results for each of the individual reports
 	for unpackreport in unpackreports:
 		## first see if there is a filehash. If not, continue
