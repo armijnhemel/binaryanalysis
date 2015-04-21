@@ -66,3 +66,6 @@ create table if not exists security_cve(checksum text, cve text);
 create index security_cve_checksum_index on security_cve(checksum);
 create table if not exists security_password(hash text, password text);
 create index security_password_hash_index on security_cve(checksum);
+create table if not exists renames (originalname text, newname text);
+create index renames_index on renames (originalname);
+create index renames_index on renames (newname);
