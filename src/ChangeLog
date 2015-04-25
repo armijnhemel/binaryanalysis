@@ -1,3 +1,15 @@
+2015-04-21:
+* batdb.py: more PostgreSQL support
+* createdb.py: change database statements to avoid reserved PostgreSQL
+keywords
+* add file with create statements that can be used to set up the right
+database tables in PostgreSQL
+* several files: fixes for using PostgreSQL as backend
+
+2015-04-20:
+* generatejson.py: use database abstraction layer
+* generatejson.py: hack for encoding issues
+
 2015-04-19:
 * bruteforcescan.py: always process global configuration first
 * bruteforcescan.py: pass dbbackend flag to all scans in the environment

@@ -106,3 +106,4 @@ BOTTLENECKS/HIGH PRIORITY:
 38. findlibs.py: detect more plugins (iptables) and integrate information about plugins in linking graphs of program they plug into
 39. ranking: indicate whether or not unique matches were repeated and if so how often
 40. ELF: extract information from debugging sections if possible
+41. createdb.py: add authoritive database for identifiers. Add a section for packages to indicate they should always be scanned for identifiers (this is actually only for the Linux kernel).
