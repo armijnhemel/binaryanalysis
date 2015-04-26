@@ -24,6 +24,16 @@ def main(argv):
 	postgresqlconn = psycopg2.connect("dbname=bat user=bat password=bat")
 	postgresqlcursor = postgresqlconn.cursor()
 
+	## TODO: make configurable
+	cleandb = True
+	if cleandb:
+		postgresqlcursor.execute("delete from processed")
+		postgresqlcursor.execute("delete from processed_file")
+		postgresqlcursor.execute("delete from extracted_string")
+		postgresqlcursor.execute("delete from extracted_function")
+		postgresqlcursor.execute("delete from extracted_name")
+		postgresqlconn.commit()
+
 	## then import all the data
 	## first processed
 	sqlitecursor.execute("select distinct * from processed")
@@ -44,6 +54,42 @@ def main(argv):
 		data = sqlitecursor.fetchmany(10000)
 	postgresqlconn.commit()
 
+	## then extracted_string
+	sqlitecursor.execute("select distinct * from extracted_string")
+	data = sqlitecursor.fetchmany(10000)
+	while data != []:
+		for d in data:
+			#stringidentifier, checksum, language, linenumber
+			postgresqlcursor.execute("insert into extracted_string (stringidentifier, checksum, language, linenumber) values (%s, %s, %s, %s)", d)
+		postgresqlconn.commit()
+		data = sqlitecursor.fetchmany(10000)
+	postgresqlconn.commit()
+
+	## then extracted_function
+	sqlitecursor.execute("select distinct * from extracted_function")
+	data = sqlitecursor.fetchmany(10000)
+	while data != []:
+		for d in data:
+			#checksum, functionname, language, linenumber
+			postgresqlcursor.execute("insert into extracted_function (checksum, functionname, language, linenumber) values (%s, %s, %s, %s)", d)
+		postgresqlconn.commit()
+		data = sqlitecursor.fetchmany(10000)
+	postgresqlconn.commit()
+
+	## then extracted_name
+	sqlitecursor.execute("select distinct * from extracted_name")
+	data = sqlitecursor.fetchmany(10000)
+	while data != []:
+		for d in data:
+			# checksum, name, type, language, linenumber
+			postgresqlcursor.execute("insert into extracted_name (checksum, name, type, language, linenumber) values (%s, %s, %s, %s, %s)", d)
+		postgresqlconn.commit()
+		data = sqlitecursor.fetchmany(10000)
+	postgresqlconn.commit()
+
+	## then copy all the caches
+
+	## finally clean up
 	postgresqlcursor.close()
 	postgresqlconn.close()
 
