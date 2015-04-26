@@ -1152,7 +1152,8 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 		## An extra check for lines that score extremely low. This
 		## helps reduce load on databases stored on slower disks
 		if precomputescore:
-			scoreres = conn.execute("select score from scores where stringidentifier=? LIMIT 1", (line,)).fetchone()
+			c.execute("select score from scores where stringidentifier=? LIMIT 1", (line,))
+			scoreres = c.fetchone()
 			if scoreres != None:
 				## If the score is so low it will not have any influence on the final
 				## score, why even bother hitting the disk?
@@ -1183,7 +1184,8 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 					continue
 
 		## then see if there is anything in the cache at all
-		res = conn.execute("select package, filename FROM stringscache WHERE stringidentifier=?", (line,)).fetchall()
+		c.execute("select package, filename FROM stringscache WHERE stringidentifier=?", (line,))
+		res = c.fetchall()
 
 		if len(res) == 0 and linuxkernel:
 			origline = line
@@ -1567,7 +1569,8 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, sc
 	## suck the average string scores database into memory. Even with a few million packages
 	## this will not cost much memory and it prevents many database lookups.
 	avgscores = {}
-	res = conn.execute("select package, avgstrings from avgstringscache").fetchall()
+	c.execute("select package, avgstrings from avgstringscache")
+	res = c.fetchall()
 	c.close()
 	conn.close()
 
