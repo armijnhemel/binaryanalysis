@@ -109,7 +109,7 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb)):
 							else:
 								identifierdatareport['filechecksum'] = filechecksum
 								identifierdatareport['filechecksumtype'] = 'sha256'
-							identifierdatareport['lineumber'] = linenumber
+							identifierdatareport['linenumber'] = linenumber
 							identifierdatareport['packagedata'] = []
 							for pack in fileversiondata:
 								(packageversion, sourcefilename) = pack
@@ -162,7 +162,7 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb)):
 						else:
 							identifierdatareport['filechecksum'] = filechecksum
 							identifierdatareport['filechecksumtype'] = 'sha256'
-						identifierdatareport['lineumber'] = linenumber
+						identifierdatareport['linenumber'] = linenumber
 						identifierdatareport['packagedata'] = []
 						for pack in fileversiondata:
 							(packageversion, sourcefilename) = pack
@@ -210,7 +210,7 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb)):
 						else:
 							identifierdatareport['filechecksum'] = filechecksum
 							identifierdatareport['filechecksumtype'] = 'sha256'
-						identifierdatareport['lineumber'] = linenumber
+						identifierdatareport['linenumber'] = linenumber
 						identifierdatareport['packagedata'] = []
 						for pack in fileversiondata:
 							(packageversion, sourcefilename) = pack
