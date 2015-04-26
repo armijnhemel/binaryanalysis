@@ -725,6 +725,9 @@ def extractidentifiersetup(scanenv, debug=False):
 		return (False, None)
 	if scanenv['DBBACKEND'] == 'sqlite3':
 		return extractidentifiersetup_sqlite3(scanenv, debug)
+	if scanenv['DBBACKEND'] == 'postgresql':
+		## TODO
+		return (True, scanenv)
 	return (False, None)
 
 ## method that makes sure that everything is set up properly and modifies
