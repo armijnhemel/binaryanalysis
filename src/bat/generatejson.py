@@ -64,7 +64,7 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb)):
 				jsonreport['ranking']['stringresults']['nonUniqueMatches'] = []
 				for u in stringidentifiers['nonUniqueMatches']:
 					nonuniquereport = {}
-					nonuniquereport['package'] = u
+					nonuniquereport['packagename'] = u
 					nonuniquereport['nonuniquelines'] = stringidentifiers['nonUniqueMatches'][u]
 					jsonreport['ranking']['stringresults']['nonUniqueMatches'].append(nonuniquereport)
 
@@ -72,7 +72,7 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb)):
 				jsonreport['ranking']['stringresults']['scores'] = []
 				for u in stringidentifiers['scores']:
 					scorereport = {}
-					scorereport['package'] = u
+					scorereport['packagename'] = u
 					scorereport['computedscore'] = stringidentifiers['scores'][u]
 					jsonreport['ranking']['stringresults']['scores'].append(scorereport)
 
@@ -81,7 +81,7 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb)):
 				for u in stringidentifiers['reports']:
 					(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses, packagecopyrights) = u
 					report = {}
-					report['package'] = package
+					report['packagename'] = package
 					report['rank'] = rank
 					report['percentage'] = percentage
 					report['unique'] = []
@@ -136,7 +136,7 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb)):
 		if 'versionresults' in functionnameresults:
 			for packagename in functionnameresults['versionresults']:
 				packagereport = {}
-				packagereport['package'] = packagename
+				packagereport['packagename'] = packagename
 				packagereport['unique'] = []
 				for un in functionnameresults['versionresults'][packagename]:
 					(identifier, identifierdata) = un
@@ -184,7 +184,7 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb)):
 		if 'versionresults' in variablenameresults:
 			for packagename in variablenameresults['versionresults']:
 				packagereport = {}
-				packagereport['package'] = packagename
+				packagereport['packagename'] = packagename
 				packagereport['unique'] = []
 				for un in variablenameresults['versionresults'][packagename]:
 					(identifier, identifierdata) = un
