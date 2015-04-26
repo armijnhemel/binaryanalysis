@@ -665,7 +665,7 @@ def unpack_verify(filedir, filename):
 
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
-def unpack_getstrings(filedir, package, version, filename, origin, checksums, downloadurl, dbpath, cleanup, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, authlicensedb, securitydb, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
+def unpack_getstrings(filedir, package, version, filename, origin, checksums, downloadurl, dbpath, cleanup, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, authlicensedb, authdb, authcopy, securitydb, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
 	## unpack the archive. If it fails, cleanup and return.
 	## TODO: make temporarydir configurable
 
@@ -863,9 +863,9 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 			conn.close()
 			return
 
-	sqlres = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, authlicensedb, securitydb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles)
-	if sqlres != None:
-		if sqlres != []:
+	extractionresults = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, authlicensedb, authdb, authcopy, securitydb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles)
+	if extractionresults != None:
+		if extractionresults != []:
 			## Add the file to the database: name of archive, sha256, packagename and version
 			## This is to be able to just update the database instead of recreating it.
 			c.execute('''insert into processed (package, version, filename, origin, checksum, downloadurl) values (?,?,?,?,?,?)''', (package, version, filename, origin, filehash, downloadurl))
@@ -886,7 +886,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 	conn.close()
 	if cleanup:
 		cleanupdir(temporarydir)
-	return sqlres
+	return extractionresults
 
 def cleanupdir(temporarydir):
 	try:
@@ -976,7 +976,7 @@ def computehash((filedir, filename, extension, language, extrahashes)):
 		
 	return (filedir, filename, filehashes, extension, language)
 
-def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, authlicensedb, securitydb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
+def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, authlicensedb, authdb, authcopy, securitydb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
 	osgen = os.walk(srcdir)
 
 	pkgconf = packageconfig.get(package,{})
@@ -1284,13 +1284,14 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 					filehashtomodule[filetohash[kernelfilename]['sha256']].append(modulename)
 				else:
 					filehashtomodule[filetohash[kernelfilename]['sha256']] = [modulename]
+		conn.commit()
 
 	unpackenv = os.environ.copy()
 	if not unpackenv.has_key('TMPDIR'):
 		if unpackdir != None:
 			unpackenv['TMPDIR'] = unpackdir
 
-	filestoscan = map(lambda x: x + (unpackenv, security, securitydb), filestoscan)
+	filestoscan = map(lambda x: x + (unpackenv, security, authdb, pkgconf), filestoscan)
 	## process the files to scan in parallel, then process the results
 	extracted_results = pool.map(extractidentifiers, filestoscan, 1)
 	
@@ -1300,12 +1301,12 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		securityc.execute('PRAGMA synchronous=off')
 
 	for extractres in extracted_results:
-		(filehash, language, origlanguage, sqlres, moduleres, results, securityresults) = extractres
+		(filehash, language, origlanguage, stringres, moduleres, results, securityresults) = extractres
 		if security:
 			for res in securityresults:
 				(securitybug, linenumber, function) = res
 				securityc.execute('''insert into security_cert (checksum, securitybug, linenumber, function, whitelist) values (?,?,?,?,?)''', (filehash, securitybug, linenumber, function, False))
-		for res in sqlres:
+		for res in stringres:
 			(pstring, linenumber) = res
 			cursor.execute('''insert into extracted_string (stringidentifier, checksum, language, linenumber) values (?,?,?,?)''', (pstring, filehash, language, linenumber))
 		if moduleres.has_key('parameters'):
@@ -1427,7 +1428,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	if update:
 		updatefile = open(newlist, 'a')
 		for extractres in extracted_results:
-			(filehash, language, origlanguage, sqlres, moduleres, results) = extractres
+			(filehash, language, origlanguage, stringres, moduleres, results) = extractres
 			updatefile.write("%s\t%s\n" % (filehash, language))
 		for f in filestoscanextra:
 			(package, version, path, filename, language, filehash) = f
@@ -1480,6 +1481,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 				(archivepath, archivechecksum, archiveversion) = i.strip().split('\t')
 				cursor.execute('''insert into processed_file (package, version, pathname, checksum, filename) values (?,?,?,?,?)''', (package, version, archivepath, archivechecksum, os.path.basename(archivepath)))
 		conn.commit()
+
 	return (scanfile_result)
 
 ## extract comments in parallel
@@ -1732,9 +1734,55 @@ def licensefossology((packages)):
 
 ## TODO: get rid of ninkaversion before we call this method
 ## TODO: process more files at once to reduce overhead of calling ctags
-def extractidentifiers((package, version, i, p, language, filehash, ninkaversion, unpackenv, security, securitydb)):
+def extractidentifiers((package, version, i, p, language, filehash, ninkaversion, unpackenv, security, authdb, pkgconf)):
 	newlanguage = language
 
+	scanidentifiers = True
+	if authdb != None:
+		if not 'alwaysscan' in pkgconf:
+			authconn = sqlite3.connect(authdb)
+			authcursor = authconn.cursor()
+			moduleres = {}
+			authres = authcursor.execute('select checksum from processed_file where checksum=? LIMIT 1', (filehash,)).fetchall()
+			if len(authres) != 0:
+				scanidentifiers = False
+				stringres = []
+				funcvarresults = set()
+				## first get all string identifiers
+				authcursor.execute('select stringidentifier, language, linenumber from extracted_string where checksum=?', (filehash,))
+				for f in authcursor.fetchall():
+					(stringidentifier, newlanguage, linenumber) = f
+					stringres.append((stringidentifier, linenumber))
+				## then get all function names/variable names
+				authcursor.execute('select functionname, language, linenumber from extracted_function where checksum=?', (filehash,))
+				for f in authcursor.fetchall():
+					(cname, newlanguage, linenumber) = f
+					if newlanguage in ['C', 'Python', 'PHP']:
+						nametype = 'function'
+					elif newlanguage == 'linuxkernel':
+						nametype = 'kernelfunction'
+						newlanguage = 'C'
+					else:
+						nametype = 'method'
+					funcvarresults.add((cname, linenumber, nametype))
+
+				authcursor.execute('select name, language, type, linenumber from extracted_name where checksum=?', (filehash,))
+				for f in authcursor.fetchall():
+					(cname, newlanguage, nametype, linenumber) = f
+					funcvarresults.add((cname, linenumber, nametype))
+			authcursor.close()
+			authconn.close()
+
+	## always scan security results for now
+	securityresults = []
+	if security:
+		if language == 'C':
+			securityresults = securityScan(i,p)
+
+	if not scanidentifiers:
+		## no scanning is needed, so just pass the results that were extracted from the database instead
+		return (filehash, newlanguage, language, stringres, moduleres, funcvarresults, securityresults)
+		
 	if language == 'patch':
 		## The file is a patch/diff file. Take the following steps to deal with it:
 		## 1. find out what kind of diff file it is. Stick to dealing with a unified diff file for now
@@ -1841,20 +1889,20 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 			addlines.append(linecounter)
 
 		if not unified:
-			sqlres = []
+			stringres = []
 			moduleres = {}
 		else:
 			## TODO: clean up
-			(patchsqlres, moduleres) = extractsourcestrings(p, i, language, package)
-			sqlres = []
-			for sql in patchsqlres:
+			(patchstringres, moduleres) = extractsourcestrings(p, i, language, package)
+			stringres = []
+			for sql in patchstringres:
 				(res, linenumber) = sql
 				if linenumber in addlines:
-					sqlres.append(sql)
+					stringres.append(sql)
 	else:
-		(sqlres, moduleres) = extractsourcestrings(p, i, language, package)
+		(stringres, moduleres) = extractsourcestrings(p, i, language, package)
 
-	results = set()
+	funcvarresults = set()
 
 	## extract function names using ctags, except functions from
 	## the Linux kernel, since it will never be dynamically linked
@@ -1903,59 +1951,60 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 						## for the Linux kernel the variable names are sometimes
 						## stored in a special ELF section __ksymtab_strings
 						if tagtype == 'variable':
+							## TODO: is this correct?
+							if len(csplit) < 5:
+								funcvarresults.add((identifier, linenumber, 'variable'))
 							if "EXPORT_SYMBOL_GPL" in csplit[4]:
-								results.add((identifier, linenumber, 'gplkernelsymbol'))
+								funcvarresults.add((identifier, linenumber, 'gplkernelsymbol'))
 							elif "EXPORT_SYMBOL" in csplit[4]:
-								results.add((identifier, linenumber, 'kernelsymbol'))
+								funcvarresults.add((identifier, linenumber, 'kernelsymbol'))
+							else:
+								## TODO: is this correct?
+								funcvarresults.add((identifier, linenumber, 'variable'))
 						elif tagtype == 'function':
-							results.add((identifier, linenumber, 'kernelfunction'))
+							funcvarresults.add((identifier, linenumber, 'kernelfunction'))
 					else:
 						if tagtype == 'variable':
 							if len(csplit) < 5:
-								results.add((identifier, linenumber, 'variable'))
+								funcvarresults.add((identifier, linenumber, 'variable'))
 							else:
 								if "EXPORT_SYMBOL_GPL" in csplit[4]:
-									results.add((identifier, linenumber, 'gplkernelsymbol'))
+									funcvarresults.add((identifier, linenumber, 'gplkernelsymbol'))
 								elif "EXPORT_SYMBOL" in csplit[4]:
-									results.add((identifier, linenumber, 'kernelsymbol'))
+									funcvarresults.add((identifier, linenumber, 'kernelsymbol'))
 								else:
-									results.add((identifier, linenumber, 'variable'))
+									funcvarresults.add((identifier, linenumber, 'variable'))
 						elif tagtype == 'function':
-							results.add((identifier, linenumber, 'function'))
+							funcvarresults.add((identifier, linenumber, 'function'))
 				if newlanguage == 'C#':
 					for i in ['method']:
 						if tagtype == i:
-							results.add((identifier, linenumber, i))
+							funcvarresults.add((identifier, linenumber, i))
 				if newlanguage == 'Java':
 					for i in ['method', 'class', 'field']:
 						if tagtype == i:
-							results.add((identifier, linenumber, i))
+							funcvarresults.add((identifier, linenumber, i))
 				if newlanguage == 'PHP':
 					## ctags does not nicely handle comments, so sometimes there are
 					## false positives.
 					for i in ['variable', 'function', 'class']:
 						if tagtype == i:
-							results.add((identifier, linenumber, i))
+							funcvarresults.add((identifier, linenumber, i))
 				if newlanguage == 'Python':
 					## TODO: would be nice to store members with its surrounding class
 					for i in ['variable', 'member', 'function', 'class']:
 						if identifier == '__init__':
 							break
 						if tagtype == i:
-							results.add((identifier, linenumber, i))
+							funcvarresults.add((identifier, linenumber, i))
 							break
 				if newlanguage == 'Ruby':
 					for i in ['module', 'method', 'class']:
 						if tagtype == i:
-							results.add((identifier, linenumber, i))
+							funcvarresults.add((identifier, linenumber, i))
 
-	securityresults = []
-	if security:
-		if language == 'C':
-			securityresults = securityScan(i,p)
-		
 	## return all results, as well as the original language, which is important in the case of 'patch'
-	return (filehash, newlanguage, language, sqlres, moduleres, results, securityresults)
+	return (filehash, newlanguage, language, stringres, moduleres, funcvarresults, securityresults)
 
 ## Scan the file for possible security bugs, try to classify them according to the
 ## CERT secure coding standard and possibly some other standards.
@@ -2005,15 +2054,17 @@ def securityScan(i,p):
 ## TODO: process more files at once to reduce overhead of calling xgettext
 def extractsourcestrings(filename, filedir, language, package):
 	remove_chars = ["\\a", "\\b", "\\v", "\\f", "\\e", "\\0"]
-	sqlres = []
+	stringres = []
 
-	## moduleres is only used for storing information about Linux kernel module
+	## moduleres is only used for storing information about Linux kernel modules
+	## TODO: fix for out of tree kernel modules
 	moduleres = {}
-	## for files that we think are in the 'C' family we first check for unprintable
+
+	## For files that likely are in the 'C' family first check for unprintable
 	## characters like \0. xgettext doesn't like these and will stop as soon as it
 	## encounters one of these characters, possibly missing out on some very significant
-	## strings that we *do* want to see because they end up in the binary. We replace
-	## them with \n, then run xgettext.
+	## strings that might end up in the binary.
+	## Solution: First replace these characters with \n, then run xgettext.
 	## TODO: fix for octal values, like \010
 	if language == 'C':
 		changed = False
@@ -2044,7 +2095,7 @@ def extractsourcestrings(filename, filedir, language, package):
 				## The linenumber is set to 0 since using regular expressions
 				## it is not easy to find that out unless an extra step is performed.
 				## This is something for a future TODO.
-				sqlres += map(lambda x: (x, 0), filter(lambda x: x != '_name' and x != 'name', list(set(regresults))))
+				stringres += map(lambda x: (x, 0), filter(lambda x: x != '_name' and x != 'name', list(set(regresults))))
 			## Extract a whole bunch of information relating to modules. Using regular expressions is
 			## actually not the right way to do it since some of the information is hidden in macros
 			## and #defines and what not, so actually the source tree needs to be properly preprocessed
@@ -2192,7 +2243,7 @@ def extractsourcestrings(filename, filedir, language, package):
 			## overwrite stanout
 			(stanout, pstanerr) = p2.communicate()
 			if p2.returncode != 0:
-				return (sqlres, moduleres)
+				return (stringres, moduleres)
 	source = stanout 
 	lines = []
 	linenumbers = []
@@ -2239,12 +2290,12 @@ def extractsourcestrings(filename, filedir, language, package):
 							if sline == '':
 								continue
 							for i in range(0, len(linenumbers)):
-								sqlres.append((sline, linenumbers[i]))
+								stringres.append((sline, linenumbers[i]))
 			linenumbers = []
 		## the other strings are added to the list of strings we need to process
 		else:
 			lines.append(l[1:-1])
-	return (sqlres, moduleres)
+	return (stringres, moduleres)
 
 def checkalreadyscanned((filedir, package, version, filename, origin, downloadurl, batarchive, dbpath, checksum, archivechecksums)):
 	resolved_path = os.path.join(filedir, filename)
@@ -2451,6 +2502,14 @@ def main(argv):
 			except:
 				authlicensedb = None
 			try:
+				authdb = config.get(section, 'authdatabase')
+			except:
+				authdb = None
+			try:
+				authcopy = config.get(section, 'authcopy').split(':')
+			except:
+				authcopy = []
+			try:
 				nomoschunks = int(config.get(section, 'nomoschunks'))
 			except:
 				nomoschunks = 10
@@ -2507,6 +2566,21 @@ def main(argv):
 			except:
 				pass
 			try:
+				sec = config.get(section, 'alwaysscan')
+				alwaysscanitems = sec.split(':')
+				if alwaysscanitems != []:
+					for b in alwaysscanitems:
+						if packageconfig.has_key(section):	
+							if packageconfig[section].has_key('alwaysscan'):
+								packageconfig[section]['alwaysscan'].append(b)
+							else:
+								packageconfig[section]['alwaysscan'] = [b]
+						else:
+							packageconfig[section] = {}
+							packageconfig[section]['alwaysscan'] = [b]
+			except Exception, e:
+				pass
+			try:
 				sec = config.get(section, 'blacklist')
 				blacklistitems = sec.split(':')
 				if blacklistitems != []:
@@ -2536,6 +2610,10 @@ def main(argv):
 				authlicensedb = None
 	else:
 		license = False
+
+	if authdb != None:
+		if not os.path.exists(authdb):
+			authdb = None
 
 	if scancopyright:
 		copyrights = True
@@ -2875,9 +2953,9 @@ def main(argv):
 			if package != oldpackage:
 				oldres = set()
 			if not batarchive:
-				unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums[filename], downloadurl, masterdatabase, cleanup, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, authlicensedb, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
+				unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums[filename], downloadurl, masterdatabase, cleanup, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, authlicensedb, authdb, authcopy, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
 			else:
-				unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums, downloadurl, masterdatabase, cleanup, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, authlicensedb, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
+				unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums, downloadurl, masterdatabase, cleanup, license, copyrights, security, pool, nomoschunks, ninkacomments, licensedb, authlicensedb, authdb, authcopy, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
 			if unpackres != None:
 				oldres = set(map(lambda x: x[2]['sha256'], unpackres))
 				## by updating oldres instead of overwriting itsome more files could be filtered
