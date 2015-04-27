@@ -24,11 +24,20 @@ def filename2package(path, tags, blacklist=[], scanenv={}, scandebug=False, unpa
 	## select the packages that are available. It would be better to also have the directory
 	## name available, so we should get rid of 'path' and use something else that is better
 	## suited
-	c.execute("select distinct package, packageversion, source from file where filename = '%s'" % (os.path.basename(path),))
+	c.execute("select distinct package, packageversion, source, distroversion from file where filename = '%s'" % (os.path.basename(path),))
 	res = c.fetchall()
 	## TODO: filter results, only return files that are not in tons of packages
 	if res != []:
-		return (['file2package'], res)
+		returnres = []
+		for r in res:
+			(package, packageversion, distribution, distroversion) = r
+			distrores = {}
+			distrores['package'] = package
+			distrores['packageversion'] = packageversion
+			distrores['distribution'] = distribution
+			distrores['distributionversion'] = distroversion
+			returnres.append(distrores)
+		return (['file2package'], returnres)
 	return None
 
 def xmlprettyprint(res, root, scanenv={}):
