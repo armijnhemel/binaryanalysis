@@ -1,3 +1,15 @@
+2015-04-27:
+* file2package.py: fix invocation of filename2package, pass results in a more
+sane format
+* guireport.py: print more information from distribution checks
+
+2015-04-26:
+* generatejson.py: fix typos
+* createdb.py: optionally copy results obtained with ctags and xgettext from
+another database
+* add bat-sqlitetopostgresql.py conversion script for importing data from
+SQLite into PostgeSQL
+
 2015-04-21:
 * batdb.py: more PostgreSQL support
 * createdb.py: change database statements to avoid reserved PostgreSQL
