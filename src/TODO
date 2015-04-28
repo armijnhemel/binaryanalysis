@@ -106,4 +106,12 @@ BOTTLENECKS/HIGH PRIORITY:
 38. findlibs.py: detect more plugins (iptables) and integrate information about plugins in linking graphs of program they plug into
 39. ranking: indicate whether or not unique matches were repeated and if so how often
 40. ELF: extract information from debugging sections if possible
-41. createdb.py: add authoritive database for identifiers. Add a section for packages to indicate they should always be scanned for identifiers (this is actually only for the Linux kernel).
+41. createdb.py: separate Linux kernel code from 'support' code (scripts, etc.) and don't tag functions, variables, etc in the non-kernel code as 'linuxkernel'
+42. scrub credentials from bat configuration file before it is copied into the scan archive
+43. make summary that correlates information from many sources (ranking incl subscans, file2package, etc.) to come up with a guess of which packages are inside a binary
+44. identifier.py/licenseversion.py: rename tables of caching databases
+45. prerun.py: recognize JavaScript files using SlimIt
+46. createdb.py: extract JavaScript using xgettext (0.18.3 or later, as 0.18.2 has no support for JavaScript on Fedora) or SlimIt
+47. identifier.py: extract JavaScript using xgettext (0.18.3 or later, as 0.18.2 has no support for JavaScript on Fedora) or SlimIt
+48. collect patterns of false positives and actively exclude them (series of HTML tags, country names, etc.).
+49. try to detect 'third party' copies in other packages and tag them in the database

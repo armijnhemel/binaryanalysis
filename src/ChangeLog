@@ -1,3 +1,6 @@
+2015-04-28:
+* bat-sqlitetopostgresql.py: dump more data in PostgreSQL
+
 2015-04-27:
 * file2package.py: fix invocation of filename2package, pass results in a more
 sane format
