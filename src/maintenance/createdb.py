@@ -1743,33 +1743,38 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 			authconn = sqlite3.connect(authdb)
 			authcursor = authconn.cursor()
 			moduleres = {}
-			authres = authcursor.execute('select checksum from processed_file where checksum=? LIMIT 1', (filehash,)).fetchall()
+			authres = authcursor.execute('select distinct package from processed_file where checksum=?', (filehash,)).fetchall()
 			if len(authres) != 0:
-				scanidentifiers = False
-				stringres = []
-				funcvarresults = set()
-				## first get all string identifiers
-				authcursor.execute('select stringidentifier, language, linenumber from extracted_string where checksum=?', (filehash,))
-				for f in authcursor.fetchall():
-					(stringidentifier, newlanguage, linenumber) = f
-					stringres.append((stringidentifier, linenumber))
-				## then get all function names/variable names
-				authcursor.execute('select functionname, language, linenumber from extracted_function where checksum=?', (filehash,))
-				for f in authcursor.fetchall():
-					(cname, newlanguage, linenumber) = f
-					if newlanguage in ['C', 'Python', 'PHP']:
-						nametype = 'function'
-					elif newlanguage == 'linuxkernel':
-						nametype = 'kernelfunction'
-						newlanguage = 'C'
-					else:
-						nametype = 'method'
-					funcvarresults.add((cname, linenumber, nametype))
+				filterres = len(filter(lambda x: x[0] == 'linux', authres))
+				if filterres == 0:
+					scanidentifiers = False
+					stringres = []
+					funcvarresults = set()
+					## first get all string identifiers
+					authcursor.execute('select stringidentifier, language, linenumber from extracted_string where checksum=?', (filehash,))
+					for f in authcursor.fetchall():
+						(stringidentifier, newlanguage, linenumber) = f
+						stringres.append((stringidentifier, linenumber))
+					## then get all function names/variable names
+					authcursor.execute('select functionname, language, linenumber from extracted_function where checksum=?', (filehash,))
+					for f in authcursor.fetchall():
+						(cname, newlanguage, linenumber) = f
+						if newlanguage in ['C', 'Python', 'PHP']:
+							nametype = 'function'
+						elif newlanguage == 'linuxkernel':
+							scanidentifiers = True
+							newlanguage = 'C'
+							#nametype = 'kernelfunction'
+							break
+						else:
+							nametype = 'method'
+						funcvarresults.add((cname, linenumber, nametype))
 
-				authcursor.execute('select name, language, type, linenumber from extracted_name where checksum=?', (filehash,))
-				for f in authcursor.fetchall():
-					(cname, newlanguage, nametype, linenumber) = f
-					funcvarresults.add((cname, linenumber, nametype))
+					if not scanidentifiers:
+						authcursor.execute('select name, language, type, linenumber from extracted_name where checksum=?', (filehash,))
+						for f in authcursor.fetchall():
+							(cname, newlanguage, nametype, linenumber) = f
+							funcvarresults.add((cname, linenumber, nametype))
 			authcursor.close()
 			authconn.close()
 
@@ -1782,7 +1787,7 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 	if not scanidentifiers:
 		## no scanning is needed, so just pass the results that were extracted from the database instead
 		return (filehash, newlanguage, language, stringres, moduleres, funcvarresults, securityresults)
-		
+
 	if language == 'patch':
 		## The file is a patch/diff file. Take the following steps to deal with it:
 		## 1. find out what kind of diff file it is. Stick to dealing with a unified diff file for now
@@ -2730,7 +2735,7 @@ def main(argv):
 
 		## Since there is a lot of duplication inside source packages we store strings per checksum
 		## which we can later link with files
-		c.execute('''create table if not exists processed_file (package text, version text, pathname text, checksum text, filename text)''')
+		c.execute('''create table if not exists processed_file (package text, version text, pathname text, checksum text, filename text, thirdparty tinyint(1))''')
 		c.execute('''create index if not exists processedfile_package_checksum_index on processed_file(checksum, package)''')
 		c.execute('''create index if not exists processedfile_package_version_index on processed_file(package, version)''')
 		c.execute('''create index if not exists processedfile_filename_index on processed_file(filename)''')
@@ -2741,7 +2746,7 @@ def main(argv):
 		## The field 'language' denotes what 'language' (family) the file the string is extracted from
 		## is in. Possible values: extensions.values()
 		c.execute('''create table if not exists extracted_string (stringidentifier text, checksum text, language text, linenumber int)''')
-		c.execute('''create index if not exists stringidentifier_index on extracted_string(stringidentifier)''')
+		c.execute('''create index if not exists stringidentifier_index on extracted_string(stringidentifier,language)''')
 		c.execute('''create index if not exists extracted_hash_index on extracted_string(checksum)''')
 		c.execute('''create index if not exists extracted_language_index on extracted_string(language);''')
 
