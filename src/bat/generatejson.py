@@ -20,7 +20,7 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb)):
 	if batdb != None:
 		batconnection = batdb.getConnection(hashdatabase)
 		if batconnection != None:
-			cursor = c.cursor()
+			cursor = batconnection.cursor()
 	hashcache = {}
 	## read the data from the pickle file
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
