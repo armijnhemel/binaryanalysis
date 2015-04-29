@@ -43,8 +43,8 @@ def main(argv):
 
 	## create table for renamed packages
 	c.execute('''create table if not exists renames (originalname text, newname text)''')
-	c.execute('''create index if not exists renames_index on renames (originalname)''')
-	c.execute('''create index if not exists renames_index on renames (newname)''')
+	c.execute('''create index if not exists renames_index_originalname on renames (originalname)''')
+	c.execute('''create index if not exists renames_index_newname on renames (newname)''')
 
 	## insert some values as examples
 	c.execute('''insert into renames values ('ethereal', 'wireshark')''')
