@@ -693,7 +693,7 @@ def grab_sha256_parallel((batdb, masterdb, tasks, language, querytype)):
 	c = conn.cursor()
 	for line in tasks:
 		if querytype == "string":
-			c.execute("select distinct checksum, linenumber, language from extracted_string where stringidentifier=?", (line,))
+			c.execute("select distinct checksum, linenumber, language from extracted_string where stringidentifier=? and language=?", (line,language))
 			res = c.fetchall()
 		elif querytype == 'function':
 			c.execute("select distinct checksum, linenumber, language from extracted_function where functionname=?", (line,))
@@ -2230,10 +2230,17 @@ def licensesetup(scanenv, debug=False):
 	if scanenv['DBBACKEND'] == 'sqlite3':
 		return licensesetup_sqlite3(scanenv, debug)
 	if scanenv['DBBACKEND'] == 'postgresql':
-		## TODO: postgresql specific checks
-		return (True, scanenv)
-		#return licensesetup_sqlite3(scanenv, debug)
+		return licensesetup_postgresql(scanenv, debug)
 	return (False, None)
+
+def licensesetup_postgresql(scanenv, debug=False):
+	newenv = copy.deepcopy(scanenv)
+	batdb = bat.batdb.BatDb('postgresql')
+	conn = batdb.getConnection(None)
+	if conn == None:
+		return (False, None)
+	conn.close()
+	return (True, newenv)
 
 ## method that makes sure that everything is set up properly and modifies
 ## the environment, as well as determines whether the scan should be run at
