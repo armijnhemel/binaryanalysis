@@ -21,7 +21,7 @@ def filename2package(path, tags, blacklist=[], scanenv={}, scandebug=False, unpa
 		return
 	## open the database containing the mapping of filenames to package
 	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
-	conn = batdb.getConnection(scanenv['BAT_PACKAGE_DB'])
+	conn = batdb.getConnection(scanenv['BAT_PACKAGE_DB'],scanenv)
 	c = conn.cursor()
 	## select the packages that are available. It would be better to also have the directory
 	## name available, so we should get rid of 'path' and use something else that is better
@@ -73,7 +73,7 @@ def file2packagesetup(scanenv, debug=False):
 def file2packagesetup_postgresql(scanenv, debug=False):
 	newenv = copy.deepcopy(scanenv)
 	batdb = bat.batdb.BatDb('postgresql')
-	conn = batdb.getConnection(None)
+	conn = batdb.getConnection(None,scanenv)
 	if conn == None:
 		return (False, None)
 	conn.close()
