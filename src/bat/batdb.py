@@ -27,6 +27,6 @@ class BatDb():
 			## TODO: use environment variables for this instead of hardcoding
 			try:
 				self.conn = psycopg2.connect("dbname=bat user=bat password=bat")
-			except:
+			except Exception, e:
 				return
 		return self.conn
