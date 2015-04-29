@@ -16,9 +16,11 @@ import os, sys, re, json, cPickle, multiprocessing, copy, gzip, codecs
 import bat.batdb
 
 def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb)):
+	batconnection = None
 	if batdb != None:
-		c = batdb.getConnection(hashdatabase)
-		cursor = c.cursor()
+		batconnection = batdb.getConnection(hashdatabase)
+		if batconnection != None:
+			cursor = c.cursor()
 	hashcache = {}
 	## read the data from the pickle file
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
@@ -224,8 +226,9 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb)):
 
 	## then security information
 	## TODO
-	if batdb != None:
+	if batconnection != None:
 		cursor.close()
+		batconnection.close()
 
 	## dump the JSON to a file
 	jsonfile = gzip.open(os.path.join(topleveldir, "reports", "%s.json.gz" % filehash), 'w')
