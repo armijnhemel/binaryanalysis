@@ -14,7 +14,7 @@ class BatDb():
 	def __init__(self, dbbackend):
 		self.conn = None
 		self.dbbackend = dbbackend
-	def getConnection(self, database):
+	def getConnection(self, database, scanenv={}):
 		if self.dbbackend == 'sqlite3':
 			## check if the database file exists
 			if not os.path.exists(database):
@@ -24,9 +24,15 @@ class BatDb():
 			self.conn.text_factory = str
 		elif self.dbbackend == 'postgresql':
 			import psycopg2
-			## TODO: use environment variables for this instead of hardcoding
+			if not 'POSTGRESQL_USER' in scanenv:
+				return
+			if not 'POSTGRESQL_PASSWORD' in scanenv:
+				return
+			if not 'POSTGRESQL_DB' in scanenv:
+				return
 			try:
-				self.conn = psycopg2.connect("dbname=bat user=bat password=bat")
+				self.conn = psycopg2.connect("dbname=%s user=%s password=%s" % (scanenv['POSTGRESQL_DB'],scanenv['POSTGRESQL_USER'],scanenv['POSTGRESQL_PASSWORD']))
 			except Exception, e:
+				print e
 				return
 		return self.conn
