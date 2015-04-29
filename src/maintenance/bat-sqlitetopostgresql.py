@@ -9,7 +9,7 @@
 Convert BAT databases from SQLite to PostgreSQL
 '''
 
-import os, sys, sqlite3
+import os, sys, sqlite3, datetime
 import psycopg2
 from optparse import OptionParser
 
@@ -38,6 +38,7 @@ def main(argv):
 	## TODO: make configurable
 	cleandb = True
 	if cleandb:
+		print "cleaning old tables", datetime.datetime.utcnow().isoformat()
 		postgresqlcursor.execute("delete from processed")
 		postgresqlcursor.execute("delete from processed_file")
 		postgresqlcursor.execute("delete from extracted_string")
@@ -47,6 +48,7 @@ def main(argv):
 
 	## then import all the data
 	## first processed
+	print "importing processed", datetime.datetime.utcnow().isoformat()
 	sqlitecursor.execute("select distinct * from processed")
 	data = sqlitecursor.fetchall()
 	for d in data:
@@ -55,16 +57,18 @@ def main(argv):
 	postgresqlconn.commit()
 
 	## then processed_file
+	print "importing processed_file", datetime.datetime.utcnow().isoformat()
 	sqlitecursor.execute("select distinct * from processed_file")
 	data = sqlitecursor.fetchmany(10000)
 	while data != []:
 		for d in data:
 			#package, version, pathname, checksum, filename
-			postgresqlcursor.execute("insert into processed_file (package, version, pathname, checksum, filename) values (%s, %s, %s, %s, %s)", d)
+			postgresqlcursor.execute("insert into processed_file (package, version, pathname, checksum, filename, thirdparty) values (%s, %s, %s, %s, %s, %s)", d)
 		postgresqlconn.commit()
 		data = sqlitecursor.fetchmany(10000)
 	postgresqlconn.commit()
 
+	print "importing extracted_string", datetime.datetime.utcnow().isoformat()
 	## then extracted_string
 	sqlitecursor.execute("select distinct * from extracted_string")
 	data = sqlitecursor.fetchmany(10000)
@@ -76,6 +80,7 @@ def main(argv):
 		data = sqlitecursor.fetchmany(10000)
 	postgresqlconn.commit()
 
+	print "importing extracted_function", datetime.datetime.utcnow().isoformat()
 	## then extracted_function
 	sqlitecursor.execute("select distinct * from extracted_function")
 	data = sqlitecursor.fetchmany(10000)
@@ -87,6 +92,7 @@ def main(argv):
 		data = sqlitecursor.fetchmany(10000)
 	postgresqlconn.commit()
 
+	print "importing extracted_name", datetime.datetime.utcnow().isoformat()
 	## then extracted_name
 	sqlitecursor.execute("select distinct * from extracted_name")
 	data = sqlitecursor.fetchmany(10000)
@@ -101,6 +107,7 @@ def main(argv):
 	## then other stuff
 
 	## then all the kernel specific data
+	print "importing Linux kernel information", datetime.datetime.utcnow().isoformat()
 	sqlitecursor.execute("select distinct * from kernel_configuration")
 	data = sqlitecursor.fetchmany(10000)
 	while data != []:
@@ -211,6 +218,7 @@ def main(argv):
 			postgresqlcursor.execute("delete from file")
 		sqlitecursor.execute("select distinct * from file")
 		data = sqlitecursor.fetchmany(10000)
+		print "importing Linux distribution information", datetime.datetime.utcnow().isoformat()
 		while data != []:
 			for d in data:
 				# filename, directory, package, packageversion, source, distroversion
