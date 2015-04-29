@@ -9,9 +9,33 @@
 Convert BAT databases from SQLite to PostgreSQL
 '''
 
-import os, sys, sqlite3, datetime
+import os, sys, sqlite3, datetime, multiprocessing
 import psycopg2
 from optparse import OptionParser
+
+def insertintopostgresql((sqlitedatabase, tablename, preparedstatement, execquery)):
+	print "importing %s" % tablename, datetime.datetime.utcnow().isoformat()
+	sqliteconn = sqlite3.connect(sqlitedatabase)
+	sqlitecursor = sqliteconn.cursor()
+	sqlitecursor.execute("PRAGMA synchronous=off")
+	postgresqlconn = psycopg2.connect("dbname=bat user=bat password=bat")
+	postgresqlcursor = postgresqlconn.cursor()
+	postgresqlcursor.execute('set synchronous_commit=off')
+
+	selectquery = "select distinct * from %s" % tablename
+	sqlitecursor.execute(selectquery)
+	data = sqlitecursor.fetchmany(10000)
+	postgresqlcursor.execute(preparedstatement)
+	while data != []:
+		postgresqlcursor.executemany(execquery, data)
+		data = sqlitecursor.fetchmany(10000)
+
+	postgresqlconn.commit()
+	postgresqlcursor.close()
+	postgresqlconn.close()
+	sqlitecursor.close()
+	sqliteconn.close()
+	print "importing %s finished" % tablename, datetime.datetime.utcnow().isoformat()
 
 def main(argv):
 	parser = OptionParser()
@@ -99,57 +123,49 @@ def main(argv):
 				## something went wrong, so finish the transaction
 				postgresqlconn.commit()
 		postgresqlconn.commit()
+		if options.filesqlitedb != None:
+			postgresqlcursor.execute("truncate file")
+			postgresqlconn.commit()
+			try:
+				postgresqlcursor.execute("drop index file_index")
+			except:
+				postgresqlconn.commit()
+	postgresqlconn.commit()
+	postgresqlcursor.close()
 
-	## then import all the data
-	## first processed
-	print "importing processed", datetime.datetime.utcnow().isoformat()
+	## prepared statements that will later be compiled
+	preparedstatements = {}
+	preparedstatements['processed'] = "prepare batprocessed as insert into processed (package, version, filename, origin, checksum, downloadurl) values ($1, $2, $3, $4, $5, $6)"
+	preparedstatements['processed_file'] = "prepare batprocessed_file as insert into processed_file (package, version, pathname, checksum, filename, thirdparty) values ($1, $2, $3, $4, $5, $6)"
+	preparedstatements['extracted_string'] = "prepare batextracted_string as insert into extracted_string (stringidentifier, checksum, language, linenumber) values ($1, $2, $3, $4)"
+	preparedstatements['extracted_function'] = "prepare batextracted_function as insert into extracted_function (checksum, functionname, language, linenumber) values ($1, $2, $3, $4)"
+	preparedstatements['extracted_name'] = "prepare batextracted_name as insert into extracted_name (checksum, name, type, language, linenumber) values ($1, $2, $3, $4, $5)"
 
-	sqlitecursor.execute("select distinct * from processed")
-	data = sqlitecursor.fetchall()
-	postgresqlcursor.execute("prepare batprocessed as insert into processed (package, version, filename, origin, checksum, downloadurl) values ($1, $2, $3, $4, $5, $6)")
-	postgresqlcursor.executemany("execute batprocessed(%s,%s,%s,%s,%s,%s)", data)
+	## queries that will be launched
+	execqueries = {}
+	execqueries['processed'] = "execute batprocessed(%s,%s,%s,%s,%s,%s)"
+	execqueries['processed_file'] = "execute batprocessed_file(%s,%s,%s,%s,%s,%s)"
+	execqueries['extracted_string'] = "execute batextracted_string(%s, %s, %s, %s)"
+	execqueries['extracted_function'] = "execute batextracted_function(%s, %s, %s, %s)"
+	execqueries['extracted_name'] = "execute batextracted_name(%s, %s, %s, %s, %s)"
 
-	## then processed_file
-	print "importing processed_file", datetime.datetime.utcnow().isoformat()
+	tables = ['processed', 'processed_file', 'extracted_string', 'extracted_function', 'extracted_name']
+	tabletasks = map(lambda x: (options.sqlitedb, x, preparedstatements[x], execqueries[x]), tables)
 
-	sqlitecursor.execute("select distinct * from processed_file")
-	data = sqlitecursor.fetchmany(10000)
-	postgresqlcursor.execute("prepare batprocessed_file as insert into processed_file (package, version, pathname, checksum, filename, thirdparty) values ($1, $2, $3, $4, $5, $6)")
-	while data != []:
-		postgresqlcursor.executemany("execute batprocessed_file(%s,%s,%s,%s,%s,%s)", data)
-		data = sqlitecursor.fetchmany(10000)
+	if options.filesqlitedb != None:
+		tables.append('file')
+		preparedstatement = "prepare batfile as insert into file (filename, directory, package, packageversion, source, distroversion) values ($1, $2, $3, $4, $5, $6)"
+		execquery = "execute batfile(%s, %s, %s, %s, %s, %s)"
+		tabletasks.append((options.filesqlitedb,'file',preparedstatement, execquery))
 
-	## then extracted_string
-	print "importing extracted_string", datetime.datetime.utcnow().isoformat()
+	## create a pool of workers
+	workers = min(len(tabletasks), multiprocessing.cpu_count)
+	pool = multiprocessing.Pool(workers)
 
-	sqlitecursor.execute("select distinct * from extracted_string")
-	data = sqlitecursor.fetchmany(10000)
-	postgresqlcursor.execute("prepare batextracted_string as insert into extracted_string (stringidentifier, checksum, language, linenumber) values ($1, $2, $3, $4)")
-	while data != []:
-		postgresqlcursor.executemany("execute batextracted_string(%s, %s, %s, %s)", data)
-		data = sqlitecursor.fetchmany(10000)
+	pool.map(insertintopostgresql, tabletasks, 1)
+	pool.terminate()
 
-	print "importing extracted_function", datetime.datetime.utcnow().isoformat()
-	## then extracted_function
-	sqlitecursor.execute("select distinct * from extracted_function")
-	data = sqlitecursor.fetchmany(10000)
-	postgresqlcursor.execute("prepare batextracted_function as insert into extracted_function (checksum, functionname, language, linenumber) values ($1, $2, $3, $4)")
-	while data != []:
-		for d in data:
-			#checksum, functionname, language, linenumber
-			postgresqlcursor.execute("execute batextracted_function(%s, %s, %s, %s)", d)
-		data = sqlitecursor.fetchmany(10000)
-
-	print "importing extracted_name", datetime.datetime.utcnow().isoformat()
-	## then extracted_name
-	sqlitecursor.execute("select distinct * from extracted_name")
-	data = sqlitecursor.fetchmany(10000)
-	while data != []:
-		for d in data:
-			# checksum, name, type, language, linenumber
-			postgresqlcursor.execute("insert into extracted_name (checksum, name, type, language, linenumber) values (%s, %s, %s, %s, %s)", d)
-		data = sqlitecursor.fetchmany(10000)
-
+	'''
 	## then other stuff
 
 	## then all the kernel specific data
@@ -230,42 +246,10 @@ def main(argv):
 
 	sqlitecursor.close()
 	sqliteconn.close()
-
-	postgresqlconn.commit()
-	## then copy all the caches
-	## then any other database that might be kicking around
-	## first file lists
-	if options.filesqlitedb != None:
-		## first set up sqlite cursor
-		sqliteconn = sqlite3.connect(options.filesqlitedb)
-		sqlitecursor = sqliteconn.cursor()
-		if cleandb:
-			postgresqlcursor.execute("truncate file")
-			try:
-				postgresqlcursor.execute("drop index file_index")
-			except:
-				postgresqlconn.commit()
-			postgresqlconn.commit()
-		print "importing Linux distribution information", datetime.datetime.utcnow().isoformat()
-		sqlitecursor.execute("select distinct * from file")
-		data = sqlitecursor.fetchmany(10000)
-		postgresqlcursor.execute("prepare batfile as insert into file (filename, directory, package, packageversion, source, distroversion) values ($1, $2, $3, $4, $5, $6)")
-		counter = len(data)
-		while data != []:
-			postgresqlcursor.executemany("execute batfile(%s, %s, %s, %s, %s, %s)", data)
-			data = sqlitecursor.fetchmany(10000)
-			counter += len(data)
-		postgresqlconn.commit()
-		sqlitecursor.close()
-		sqliteconn.close()
+	'''
 
 	## then licenses and copyright
 	## then security
-
-	## finally clean up
-	postgresqlconn.commit()
-	postgresqlcursor.close()
-	postgresqlconn.close()
 
 	print "Finished! Don't forget to recreate indexes!"
 
