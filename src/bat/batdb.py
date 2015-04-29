@@ -25,5 +25,8 @@ class BatDb():
 		elif self.dbbackend == 'postgresql':
 			import psycopg2
 			## TODO: use environment variables for this instead of hardcoding
-			self.conn = psycopg2.connect("dbname=bat user=bat password=bat")
+			try:
+				self.conn = psycopg2.connect("dbname=bat user=bat password=bat")
+			except:
+				return
 		return self.conn
