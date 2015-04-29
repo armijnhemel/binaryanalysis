@@ -57,6 +57,10 @@ def generatelist(filedir, origin):
 						if len(res) == 1:
 							print >>sys.stderr, "can't split %s -- add manually" % (p,)
 							continue
+					## perhaps there is a better split possible
+					if res[1] in ['src', 'source', 'sources', 'Source', 'CLEAN', 'RHsemiCLEAN', 'RHCLEAN']:
+						if '-' in res[0]:
+							pass
 				(package, version) = res
 				print "%s\t%s\t%s\t%s" % (package, version, p, origin)
 				

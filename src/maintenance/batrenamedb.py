@@ -102,7 +102,7 @@ def main(argv):
 	mastercursor.execute("insert into slave.processed select package, version, filename, origin, sha256 from processed")
 
 	print "creating new processed_file table"
-	mastercursor.execute("create table slave.processed_file (package text, version text, filename text, checksum text)")
+	mastercursor.execute("create table slave.processed_file (package text, version text, pathname text, checksum text, filename text)")
 	print "copying all processed_file data"
 	mastercursor.execute("insert into slave.processed_file select package, version, filename, sha256 from processed_file")
 	print "creating new extracted_string table"
