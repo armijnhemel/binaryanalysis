@@ -14,12 +14,14 @@ This scan should be run as a leaf scan.
 
 import os, os.path, sqlite3, sys, subprocess, copy
 import xml.dom.minidom
+import bat.batdb
 
 def filename2package(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	if not scanenv.has_key('BAT_PACKAGE_DB'):
 		return
 	## open the database containing the mapping of filenames to package
-	conn = sqlite3.connect(scanenv.get('BAT_PACKAGE_DB'))
+	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
+	conn = batdb.getConnection(scanenv['BAT_PACKAGE_DB'])
 	c = conn.cursor()
 	## select the packages that are available. It would be better to also have the directory
 	## name available, so we should get rid of 'path' and use something else that is better
@@ -37,7 +39,11 @@ def filename2package(path, tags, blacklist=[], scanenv={}, scandebug=False, unpa
 			distrores['distribution'] = distribution
 			distrores['distributionversion'] = distroversion
 			returnres.append(distrores)
+		c.close()
+		conn.close()
 		return (['file2package'], returnres)
+	c.close()
+	conn.close()
 	return None
 
 def xmlprettyprint(res, root, scanenv={}):
@@ -60,7 +66,18 @@ def file2packagesetup(scanenv, debug=False):
 		return (False, None)
 	if scanenv['DBBACKEND'] == 'sqlite3':
 		return file2packagesetup_sqlite3(scanenv, debug)
+	if scanenv['DBBACKEND'] == 'postgresql':
+		return file2packagesetup_postgresql(scanenv, debug)
 	return (False, None)
+
+def file2packagesetup_postgresql(scanenv, debug=False):
+	newenv = copy.deepcopy(scanenv)
+	batdb = bat.batdb.BatDb('postgresql')
+	conn = batdb.getConnection(None)
+	if conn == None:
+		return (False, None)
+	conn.close()
+	return (True, scanenv)
 
 ## checks specific for sqlite3 databases
 def file2packagesetup_sqlite3(scanenv, debug=False):
