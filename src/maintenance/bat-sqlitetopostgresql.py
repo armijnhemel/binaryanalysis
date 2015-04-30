@@ -42,9 +42,13 @@ def main(argv):
 	parser.add_option("-d", "--database", action="store", dest="sqlitedb", help="path to SQLite database file", metavar="FILE")
 	parser.add_option("-l", "--licensedatabase", action="store", dest="licensesqlitedb", help="path to SQLite license database file", metavar="FILE")
 	parser.add_option("-f", "--filedatabase", action="store", dest="filesqlitedb", help="path to SQLite license database file", metavar="FILE")
+	parser.add_option("-k", "--kernelcache", action="store", dest="kernelcachedb", help="path to SQLite kernel cache database file", metavar="FILE")
 	(options, args) = parser.parse_args()
 	if options.sqlitedb == None:
 		parser.error("Specify SQLite database file")
+
+	if options.kernelcachedb == None:
+		parser.error("Specify SQLite kernelcache database file")
 
 	if not os.path.exists(options.sqlitedb):
 		print >>sys.stderr, "SQLite database file does not exist, exiting"
@@ -103,7 +107,10 @@ def main(argv):
                    "misc_name_index",
                    "hashconversion_sha256_index",
                    "renames_index_originalname",
-                   "renames_index_newname",]
+                   "renames_index_originalname",
+                   "renames_index_newname",
+                   "linuxkernelfunctionname_index",
+                   "linuxkernelnamecache_index",]
 
 	## TODO: make configurable
 	cleandb = True
@@ -119,6 +126,7 @@ def main(argv):
 			query = "drop index %s" % i
 			try:
 				postgresqlcursor.execute(query)
+				postgresqlconn.commit()
 			except Exception, e:
 				## something went wrong, so finish the transaction
 				postgresqlconn.commit()
@@ -140,6 +148,15 @@ def main(argv):
 	preparedstatements['extracted_string'] = "prepare batextracted_string as insert into extracted_string (stringidentifier, checksum, language, linenumber) values ($1, $2, $3, $4)"
 	preparedstatements['extracted_function'] = "prepare batextracted_function as insert into extracted_function (checksum, functionname, language, linenumber) values ($1, $2, $3, $4)"
 	preparedstatements['extracted_name'] = "prepare batextracted_name as insert into extracted_name (checksum, name, type, language, linenumber) values ($1, $2, $3, $4, $5)"
+	preparedstatements['kernel_configuration'] = "prepare batkernel_configuration as insert into kernel_configuration (configstring, filename, version) values ($1, $2, $3)"
+	preparedstatements['kernelmodule_alias'] = "prepare batkernelmodule_alias as insert into kernelmodule_alias(checksum, modulename, alias) values ($1, $2, $3)"
+	preparedstatements['kernelmodule_author'] = "prepare batkernelmodule_author as insert into kernelmodule_author(checksum, modulename, author) values ($1, $2, $3)"
+	preparedstatements['kernelmodule_description'] = "prepare batkernelmodule_description as insert into kernelmodule_description(checksum, modulename, description) values ($1, $2, $3)"
+	preparedstatements['kernelmodule_firmware'] = "prepare batkernelmodule_firmware as insert into kernelmodule_firmware(checksum, modulename, firmware) values ($1, $2, $3)"
+	preparedstatements['kernelmodule_license'] = "prepare batkernelmodule_license as insert into kernelmodule_license(checksum, modulename, license) values ($1, $2, $3)"
+	preparedstatements['kernelmodule_parameter'] = "prepare batkernelmodule_parameter as insert into kernelmodule_parameter(checksum, modulename, paramname, paramtype) values ($1, $2, $3, $4)"
+	preparedstatements['kernelmodule_parameter_description'] = "prepare batkernelmodule_parameter_description as insert into kernelmodule_parameter_description(checksum, modulename, paramname, description) values ($1, $2, $3, $4)"
+	preparedstatements['kernelmodule_version'] = "prepare batkernelmodule_version as insert into kernelmodule_version(checksum, modulename, version) values ($1, $2, $3)"
 
 	## queries that will be launched
 	execqueries = {}
@@ -148,9 +165,33 @@ def main(argv):
 	execqueries['extracted_string'] = "execute batextracted_string(%s, %s, %s, %s)"
 	execqueries['extracted_function'] = "execute batextracted_function(%s, %s, %s, %s)"
 	execqueries['extracted_name'] = "execute batextracted_name(%s, %s, %s, %s, %s)"
+	execqueries['kernel_configuration'] = "execute batkernel_configuration(%s, %s, %s)"
+	execqueries['kernelmodule_alias'] = "execute batkernelmodule_alias(%s, %s, %s)"
+	execqueries['kernelmodule_author'] = "execute batkernelmodule_author(%s, %s, %s)"
+	execqueries['kernelmodule_description'] = "execute batkernelmodule_description(%s, %s, %s)"
+	execqueries['kernelmodule_firmware'] = "execute batkernelmodule_firmware(%s, %s, %s)"
+	execqueries['kernelmodule_license'] = "execute batkernelmodule_license(%s, %s, %s)"
+	execqueries['kernelmodule_parameter'] = "execute batkernelmodule_parameter(%s, %s, %s, %s)"
+	execqueries['kernelmodule_parameter_description'] = "execute batkernelmodule_parameter_description(%s, %s, %s, %s)"
+	execqueries['kernelmodule_version'] = "execute batkernelmodule_version(%s, %s, %s)"
 
-	tables = ['processed', 'processed_file', 'extracted_string', 'extracted_function', 'extracted_name']
+	tables = ['processed', 'processed_file', 'extracted_string', 'extracted_function',
+                  'extracted_name', 'kernel_configuration','kernelmodule_alias',
+                  'kernelmodule_author','kernelmodule_description','kernelmodule_firmware',
+                  'kernelmodule_license','kernelmodule_parameter', 'kernelmodule_parameter_description',
+                  'kernelmodule_version']
+
 	tabletasks = map(lambda x: (options.sqlitedb, x, preparedstatements[x], execqueries[x]), tables)
+
+	if options.kernelcachedb != None:
+		## TODO: use new name
+		tables.append('kernelfunctionnamecache')
+		#tables.append('linuxkernelfunctionnamecache')
+		## (functionname text, package text)
+		preparedstatement = "prepare batlinuxkernelfunctionnamecache as insert into linuxkernelfunctionnamecache (functionname, package) values ($1, $2)"
+		execquery = "execute batlinuxkernelfunctionnamecache(%s, %s)"
+		#tabletasks.append((options.kernelcachedb,'linuxkernelfunctionnamecache',preparedstatement, execquery))
+		tabletasks.append((options.kernelcachedb,'kernelfunctionnamecache',preparedstatement, execquery))
 
 	if options.filesqlitedb != None:
 		tables.append('file')
@@ -168,84 +209,8 @@ def main(argv):
 	'''
 	## then other stuff
 
-	## then all the kernel specific data
-	print "importing Linux kernel information", datetime.datetime.utcnow().isoformat()
-	sqlitecursor.execute("select distinct * from kernel_configuration")
-	data = sqlitecursor.fetchmany(10000)
-	while data != []:
-		for d in data:
-			# kernel_configuration(configstring text, filename text, version text)
-			postgresqlcursor.execute("insert into kernel_configuration (configstring, filename, version) values (%s, %s, %s)", d)
-		data = sqlitecursor.fetchmany(10000)
-
-	sqlitecursor.execute("select distinct * from kernelmodule_alias")
-	data = sqlitecursor.fetchmany(10000)
-	while data != []:
-		for d in data:
-			# kernelmodule_alias(checksum text, modulename text, alias text)
-			postgresqlcursor.execute("insert into kernelmodule_alias (checksum, modulename, alias) values (%s, %s, %s)", d)
-		data = sqlitecursor.fetchmany(10000)
-
-	sqlitecursor.execute("select distinct * from kernelmodule_author")
-	data = sqlitecursor.fetchmany(10000)
-	while data != []:
-		for d in data:
-			# kernelmodule_alias(checksum text, modulename text, author text)
-			postgresqlcursor.execute("insert into kernelmodule_author (checksum, modulename, author) values (%s, %s, %s)", d)
-		data = sqlitecursor.fetchmany(10000)
-
-	sqlitecursor.execute("select distinct * from kernelmodule_description")
-	data = sqlitecursor.fetchmany(10000)
-	while data != []:
-		for d in data:
-			# kernelmodule_description(checksum text, modulename text, description text)
-			postgresqlcursor.execute("insert into kernelmodule_description (checksum, modulename, description) values (%s, %s, %s)", d)
-		data = sqlitecursor.fetchmany(10000)
-
-	sqlitecursor.execute("select distinct * from kernelmodule_firmware")
-	data = sqlitecursor.fetchmany(10000)
-	while data != []:
-		for d in data:
-			# kernelmodule_firmware(checksum text, modulename text, firmware text)
-			postgresqlcursor.execute("insert into kernelmodule_firmware (checksum, modulename, firmware) values (%s, %s, %s)", d)
-		data = sqlitecursor.fetchmany(10000)
-
-	sqlitecursor.execute("select distinct * from kernelmodule_license")
-	data = sqlitecursor.fetchmany(10000)
-	while data != []:
-		for d in data:
-			# kernelmodule_license(checksum text, modulename text, license text)
-			postgresqlcursor.execute("insert into kernelmodule_license (checksum, modulename, license) values (%s, %s, %s)", d)
-		data = sqlitecursor.fetchmany(10000)
-
-	sqlitecursor.execute("select distinct * from kernelmodule_parameter")
-	data = sqlitecursor.fetchmany(10000)
-	while data != []:
-		for d in data:
-			# kernelmodule_parameter(checksum text, modulename text, paramname text, paramtype text)
-			postgresqlcursor.execute("insert into kernelmodule_parameter(checksum, modulename, paramname, paramtype) values (%s, %s, %s, %s)", d)
-		data = sqlitecursor.fetchmany(10000)
-
-	sqlitecursor.execute("select distinct * from kernelmodule_parameter_description")
-	data = sqlitecursor.fetchmany(10000)
-	while data != []:
-		for d in data:
-			# kernelmodule_parameter_description(checksum text, modulename text, paramname text, description text)
-			postgresqlcursor.execute("insert into kernelmodule_parameter_description(checksum, modulename, paramname, description) values (%s, %s, %s, %s)", d)
-		data = sqlitecursor.fetchmany(10000)
-
-	sqlitecursor.execute("select distinct * from kernelmodule_version")
-	data = sqlitecursor.fetchmany(10000)
-	while data != []:
-		for d in data:
-			# kernelmodule_version(checksum text, modulename text, version text)
-			postgresqlcursor.execute("insert into kernelmodule_version(checksum, modulename, version) values (%s, %s, %s)", d)
-		data = sqlitecursor.fetchmany(10000)
-
 	## then all hashes -- hardcoded SHA256, SHA1, MD5, CRC32
 
-	sqlitecursor.close()
-	sqliteconn.close()
 	'''
 
 	## then licenses and copyright
