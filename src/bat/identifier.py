@@ -686,6 +686,8 @@ def extractKernelData(lines, filepath, scanenv, scandebug):
 	else:
 		return None
 
+	dbbackend = scanenv['DBBACKEND']
+
 	kernelfuncres = []
 	kernelparamres = []
 	oldline = None
@@ -708,7 +710,10 @@ def extractKernelData(lines, filepath, scanenv, scandebug):
 		## This is where things get a bit ugly. The strings in a Linux
 		## kernel image could also be function names, not string constants.
 		## There could be false positives here...
-		kernelcursor.execute("select package FROM kernelfunctionnamecache WHERE functionname=?", (line,)).fetchall()
+		if dbbackend == 'sqlite3':
+			kernelcursor.execute("select package FROM linuxkernelfunctionnamecache WHERE functionname = ?;", (line,))
+		elif dbbackend == 'postgresql':
+			kernelcursor.execute("select package FROM linuxkernelfunctionnamecache WHERE functionname = %s;", (line,))
 		kernelres = kernelcursor.fetchall()
 		if len(kernelres) != 0:
 			kernelfuncres.append(line)
@@ -790,7 +795,7 @@ def extractidentifiersetup_sqlite3(scanenv, debug=False):
 			## Sanity check for kernel function names
 			cacheconn = batdb.getConnection(namecache)
 			cachecursor = cacheconn.cursor()
-			cachecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='kernelfunctionnamecache';")
+			cachecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='linuxkernelfunctionnamecache';")
 
 			kernelfuncs = cachecursor.fetchall()
 			if kernelfuncs == []:
