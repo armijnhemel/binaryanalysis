@@ -23,3 +23,5 @@ create table if not exists security_cve(checksum text, cve text);
 create table if not exists security_password(hash text, password text);
 create table if not exists renames (originalname text, newname text);
 create table if not exists file(filename text, directory text, package text, packageversion text, source text, distroversion text);
+create table if not exists linuxkernelfunctionnamecache (functionname text, package text);
+create table if not exists linuxkernelnamecache (varname text, package text);
