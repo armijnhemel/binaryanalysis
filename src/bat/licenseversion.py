@@ -906,7 +906,7 @@ def scankernelsymbols(variables, scanenv, batdb, clones):
 	variablepvs = {}
 	for v in variables:
 		pvs = []
-		res = c.execute("select distinct package from kernelcache where varname=?", (v,)).fetchall()
+		res = c.execute("select distinct package from linuxkernelnamecache where varname=?", (v,)).fetchall()
 		if res != []:
 			pvs = map(lambda x: x[0], res)
 
@@ -1176,7 +1176,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 			## kernel image could also be function names, not string constants.
 			## There could be false positives here...
 			if scankernelfunctions:
-				kernelres = kernelconn.execute("select package FROM kernelfunctionnamecache WHERE functionname=?", (line,)).fetchall()
+				kernelres = kernelconn.execute("select package FROM linuxkernelfunctionnamecache WHERE functionname=?", (line,)).fetchall()
 				if len(kernelres) != 0:
 					kernelfuncres.append(line)
 					kernelfunctionmatched = True
