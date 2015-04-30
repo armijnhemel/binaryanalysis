@@ -115,3 +115,5 @@ BOTTLENECKS/HIGH PRIORITY:
 47. identifier.py: extract JavaScript using xgettext (0.18.3 or later, as 0.18.2 has no support for JavaScript on Fedora) or SlimIt
 48. collect patterns of false positives and actively exclude them (series of HTML tags, country names, etc.).
 49. try to detect 'third party' copies in other packages and tag them in the database
+50. kernelsymbols.py: combine information from ranking with license field to see if the license field has been changed
+51. createdb.py: deduplicate data extracted from kernel modules (license field, etc.) as it sometimes is in the module twice
