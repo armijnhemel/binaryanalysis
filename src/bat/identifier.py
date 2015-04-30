@@ -681,7 +681,7 @@ def extractKernelData(lines, filepath, scanenv, scandebug):
 	if scanenv.get('BAT_KERNELFUNCTION_SCAN') == '1':
 		batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
 		funccache = scanenv.get(namecacheperlanguage['C'])
-		kernelconn = batdb.getConnection(funccache)
+		kernelconn = batdb.getConnection(funccache,scanenv)
 		kernelcursor = kernelconn.cursor()
 	else:
 		return None
@@ -708,7 +708,8 @@ def extractKernelData(lines, filepath, scanenv, scandebug):
 		## This is where things get a bit ugly. The strings in a Linux
 		## kernel image could also be function names, not string constants.
 		## There could be false positives here...
-		kernelres = kernelconn.execute("select package FROM kernelfunctionnamecache WHERE functionname=?", (line,)).fetchall()
+		kernelcursor.execute("select package FROM kernelfunctionnamecache WHERE functionname=?", (line,)).fetchall()
+		kernelres = kernelcursor.fetchall()
 		if len(kernelres) != 0:
 			kernelfuncres.append(line)
 			continue
@@ -726,9 +727,18 @@ def extractidentifiersetup(scanenv, debug=False):
 	if scanenv['DBBACKEND'] == 'sqlite3':
 		return extractidentifiersetup_sqlite3(scanenv, debug)
 	if scanenv['DBBACKEND'] == 'postgresql':
-		## TODO
-		return (True, scanenv)
+		return extractidentifiersetup_postgresql(scanenv, debug)
 	return (False, None)
+
+def extractidentifiersetup_postgresql(scanenv, debug=False):
+	newenv = copy.deepcopy(scanenv)
+	batdb = bat.batdb.BatDb('postgresql')
+	conn = batdb.getConnection(None,scanenv)
+	if conn == None:
+		return (False, None)
+	## TODO: more checks
+	conn.close()
+	return (True, scanenv)
 
 ## method that makes sure that everything is set up properly and modifies
 ## the environment, as well as determines whether the scan should be run at
