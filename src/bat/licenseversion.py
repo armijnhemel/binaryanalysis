@@ -61,16 +61,27 @@ should be removed from the result set after aggregation. By default these files
 are not removed.
 '''
 
-## mapping of names for databases per language
-namecacheperlanguage = { 'C':       'BAT_NAMECACHE_C'
-                       , 'Java':    'BAT_NAMECACHE_JAVA'
-                       }
+## mapping of environment variable names for databases per language
+namecacheperlanguageenv = { 'C':       'BAT_NAMECACHE_C'
+                          , 'Java':    'BAT_NAMECACHE_JAVA'
+                          }
 
-stringsdbperlanguage = { 'C':              'BAT_STRINGSCACHE_C'
-                       , 'Java':           'BAT_STRINGSCACHE_JAVA'
-                       , 'C#':             'BAT_STRINGSCACHE_C#'
-                       , 'ActionScript':   'BAT_STRINGSCACHE_ACTIONSCRIPT'
-                       }
+namecacheperlanguagetable = { 'C':      'functionnamecache_c'
+                            , 'Java':   'functionnamecache_java'
+                            }
+
+## mapping of environment variable names for databases per language
+stringsdbperlanguageenv = { 'C':              'BAT_STRINGSCACHE_C'
+                          , 'Java':           'BAT_STRINGSCACHE_JAVA'
+                          , 'C#':             'BAT_STRINGSCACHE_C#'
+                          , 'ActionScript':   'BAT_STRINGSCACHE_ACTIONSCRIPT'
+                          }
+
+stringsdbperlanguagetable = { 'C':                'stringscache_c'
+                            , 'Java':             'stringscache_java'
+                            , 'C#':               'stringscache_csharp'
+                            , 'ActionScript':     'stringscache_actionscript'
+                            }
 
 ## mappings from FOSSology to Ninka and vice versa
 ninka_to_fossology = { 'LesserGPLv2+': 'LGPL-2.0+'
@@ -550,7 +561,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	clonedb = scanenv.get('BAT_CLONE_DB')
 	clones = {}
 	if clonedb != None:
-		conn = batdb.getConnection(clonedb)
+		conn = batdb.getConnection(clonedb,scanenv)
 		c = conn.cursor()
 		c.execute("SELECT originalname,newname from renames")
 		clonestmp = c.fetchall()
@@ -628,7 +639,7 @@ def grab_sha256_varname((batdb, masterdb, language, tasks)):
 	results = {}
 	## open the database containing all the strings that were extracted
 	## from source code.
-	conn = batdb.getConnection(masterdb)
+	conn = batdb.getConnection(masterdb,scanenv)
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
@@ -643,7 +654,7 @@ def grab_sha256_filename((batdb, masterdb, tasks)):
 	results = {}
 	## open the database containing all the strings that were extracted
 	## from source code.
-	conn = batdb.getConnection(masterdb)
+	conn = batdb.getConnection(masterdb,scanenv)
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
@@ -657,7 +668,7 @@ def grab_sha256_filename((batdb, masterdb, tasks)):
 ## grab copyright statements from the license database
 def grab_sha256_copyright((batdb, copyrightdb, tasks)):
 	results = {}
-	conn = batdb.getConnection(copyrightdb)
+	conn = batdb.getConnection(copyrightdb,scanenv)
 	conn.text_factory = str
 	c = conn.cursor()
 	for sha256sum in tasks:
@@ -673,7 +684,7 @@ def grab_sha256_copyright((batdb, copyrightdb, tasks)):
 ## grab licenses from the license database
 def grab_sha256_license((batdb, licensedb, tasks)):
 	results = {}
-	conn = batdb.getConnection(licensedb)
+	conn = batdb.getConnection(licensedb,scanenv)
 	conn.text_factory = str
 	c = conn.cursor()
 	for sha256sum in tasks:
@@ -687,7 +698,7 @@ def grab_sha256_parallel((batdb, masterdb, tasks, language, querytype)):
 	results = []
 	## open the database containing all the strings that were extracted
 	## from source code.
-	conn = batdb.getConnection(masterdb)
+	conn = batdb.getConnection(masterdb,scanenv)
 	## we have byte strings in our database, not utf-8 characters...I hope
 	conn.text_factory = str
 	c = conn.cursor()
@@ -716,7 +727,7 @@ def grab_sha256_parallel((batdb, masterdb, tasks, language, querytype)):
 	return results
 
 def extractJavaNames(javameta, scanenv, batdb, clones):
-	if not scanenv.has_key(namecacheperlanguage['Java']):
+	if not scanenv.has_key(namecacheperlanguageenv['Java']):
 		return {}
 
 	dynamicRes = {}  # {'namesmatched': 0, 'totalnames': int, 'uniquematches': int, 'packages': {} }
@@ -729,9 +740,9 @@ def extractJavaNames(javameta, scanenv, batdb, clones):
 	fields = javameta['fields']
 	sourcefile = javameta['sourcefiles']
 
-	funccache = scanenv.get(namecacheperlanguage['Java'])
+	funccache = scanenv.get(namecacheperlanguageenv['Java'])
 
-	conn = batdb.getConnection(funccache)
+	conn = batdb.getConnection(funccache,scanenv)
 	conn.text_factory = str
 	c = conn.cursor()
 
@@ -739,7 +750,9 @@ def extractJavaNames(javameta, scanenv, batdb, clones):
 		for meth in methods:
 			if meth == 'main':
 				continue
-			res = c.execute("select distinct package from functionnamecache where functionname=?", (meth,)).fetchall()
+			query = "select distinct package from %s where functionname=?" % namecacheperlanguagetable['Java']
+			c.execute(query, (meth,)).fetchall()
+			res = c.fetchall()
 			if res != []:
 				namesmatched += 1
 				packages_tmp = []
@@ -776,7 +789,7 @@ def extractJavaNames(javameta, scanenv, batdb, clones):
 	return dynamicRes
 
 def extractVariablesJava(javameta, scanenv, batdb, clones):
-	if not scanenv.has_key(namecacheperlanguage['Java']):
+	if not scanenv.has_key(namecacheperlanguageenv['Java']):
 		return {}
 
 	variablepvs = {}
@@ -796,9 +809,9 @@ def extractVariablesJava(javameta, scanenv, batdb, clones):
 	## open the database containing function names that were extracted
 	## from source code.
 
-	funccache = scanenv.get(namecacheperlanguage['Java'])
+	funccache = scanenv.get(namecacheperlanguageenv['Java'])
 
-	conn = batdb.getConnection(funccache)
+	conn = batdb.getConnection(funccache,scanenv)
 	conn.text_factory = str
 	c = conn.cursor()
 
@@ -898,8 +911,8 @@ def extractVariablesJava(javameta, scanenv, batdb, clones):
 	return variablepvs
 
 def scankernelsymbols(variables, scanenv, batdb, clones):
-	kernelcache = scanenv.get(namecacheperlanguage['C'])
-	conn = batdb.getConnection(kernelcache)
+	kernelcache = scanenv.get(namecacheperlanguageenv['C'])
+	conn = batdb.getConnection(kernelcache,scanenv)
 	c = conn.cursor()
 	allvvs = {}
 	uniquevvs = {}
@@ -944,13 +957,13 @@ def scanDynamic(scanstr, variables, scanenv, batdb, clones):
 	dynamicRes = {}
 	variablepvs = {}
 
-	if not scanenv.has_key(namecacheperlanguage['C']):
+	if not scanenv.has_key(namecacheperlanguageenv['C']):
 		return (dynamicRes, variablepvs)
 
 	## open the database containing function names that were extracted
 	## from source code.
-	funccache = scanenv.get(namecacheperlanguage['C'])
-	conn = batdb.getConnection(funccache)
+	funccache = scanenv.get(namecacheperlanguageenv['C'])
+	conn = batdb.getConnection(funccache,scanenv)
 	## we have byte strings in our database, not utf-8 characters...I hope
 	c = conn.cursor()
 
@@ -966,7 +979,8 @@ def scanDynamic(scanstr, variables, scanenv, batdb, clones):
 		## C++ functions could be in an executable several times with different types we
 		## deduplicate first
 		for funcname in scanstr:
-			c.execute("select package from functionnamecache where functionname=?", (funcname,))
+			query = "select package from %s where functionname=?" % namecacheperlanguagetable['C']
+			c.execute(query, (funcname,))
 			res = c.fetchall()
 			pkgs = []
 			if res != []:
@@ -1058,10 +1072,10 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 	directAssignedString = {}
 	unmatched = []
 
-	stringscache = scanenv.get(stringsdbperlanguage[language])
+	stringscache = scanenv.get(stringsdbperlanguageenv[language])
 	## open the database containing all the strings that were extracted
 	## from source code.
-	conn = batdb.getConnection(stringscache)
+	conn = batdb.getConnection(stringscache,scanenv)
 	c = conn.cursor()
 
 	scankernelfunctions = False
@@ -1070,8 +1084,8 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 	if linuxkernel:
 		if scanenv.get('BAT_KERNELFUNCTION_SCAN') == 1 and language == 'C':
 			scankernelfunctions = True
-			funccache = scanenv.get(namecacheperlanguage['C'])
-			kernelconn = batdb.getConnection(funccache)
+			funccache = scanenv.get(namecacheperlanguageenv['C'])
+			kernelconn = batdb.getConnection(funccache,scanenv)
 			kernelcursor = kernelconn.cursor()
 
 	lenlines = len(lines)
@@ -1184,7 +1198,13 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 					continue
 
 		## then see if there is anything in the cache at all
-		c.execute("select package, filename FROM stringscache WHERE stringidentifier=?", (line,))
+		if batdb.dbbackend == 'sqlite3':
+			kernelstringquery = "select package, filename FROM %s WHERE stringidentifier=?" % stringsdbperlanguagetable[language]
+
+		elif batdb.dbbackend == 'postgresql':
+			kernelstringquery = "select package, filename FROM %s WHERE stringidentifier=" % stringsdbperlanguagetable[language]
+			kernelstringquery += "%s;"
+		c.execute(kernelstringquery, (line,))
 		res = c.fetchall()
 
 		if len(res) == 0 and linuxkernel:
@@ -1202,7 +1222,8 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 					unmatchedlines += 1
 					linecount[line] = linecount[line] - 1
 					continue
-				res = conn.execute("select package, filename FROM stringscache WHERE stringidentifier=?", (scanline,)).fetchall()
+				c.execute(kernelstringquery, (scanline,))
+				res = c.fetchall()
 				if len(res) != 0:
 					line = scanline
 				else:
@@ -1216,7 +1237,8 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 							unmatchedlines += 1
 							linecount[line] = linecount[line] - 1
 							continue
-						res = conn.execute("select package, filename FROM stringscache WHERE stringidentifier=?", (scanline,)).fetchall()
+						c.execute(kernelstringquery, (scanline,))
+						res = c.fetchall()
 						if len(res) != 0:
 							if len(scanline) != 0:
 								line = scanline
@@ -1232,7 +1254,8 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 						unmatchedlines += 1
 						linecount[line] = linecount[line] - 1
 						continue
-					res = conn.execute("select package, filename FROM stringscache WHERE stringidentifier=?", (scanline,)).fetchall()
+					c.execute(kernelstringquery, (scanline,))
+					res = c.fetchall()
 					if len(res) != 0:
 						if len(scanline) != 0:
 							line = scanline
@@ -1248,7 +1271,8 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 							unmatchedlines += 1
 							linecount[line] = linecount[line] - 1
 							continue
-						res = conn.execute("select package, filename FROM stringscache WHERE stringidentifier=?", (scanline,)).fetchall()
+						c.execute(kernelstringquery, (scanline,))
+						res = c.fetchall()
 						if len(res) != 0:
 							if len(scanline) != 0:
 								line = scanline
@@ -1480,7 +1504,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, sc
 		return None
 	## setup code guarantees that this database exists and that sanity
 	## checks were done.
-	if not scanenv.has_key(stringsdbperlanguage[language]):
+	if not scanenv.has_key(stringsdbperlanguageenv[language]):
 		return None
 
 	lenlines = len(lines)
@@ -1491,10 +1515,10 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, sc
 	packagelicenses = {}
 	packagecopyrights = {}
 
-	stringscache = scanenv.get(stringsdbperlanguage[language])
+	stringscache = scanenv.get(stringsdbperlanguageenv[language])
 	## open the database containing all the strings that were extracted
 	## from source code.
-	conn = batdb.getConnection(stringscache)
+	conn = batdb.getConnection(stringscache,scanenv)
 	## we have byte strings in our database, not utf-8 characters...I hope
 	c = conn.cursor()
 
@@ -2236,7 +2260,7 @@ def licensesetup(scanenv, debug=False):
 def licensesetup_postgresql(scanenv, debug=False):
 	newenv = copy.deepcopy(scanenv)
 	batdb = bat.batdb.BatDb('postgresql')
-	conn = batdb.getConnection(None)
+	conn = batdb.getConnection(None,scanenv)
 	if conn == None:
 		return (False, None)
 	conn.close()
@@ -2317,17 +2341,17 @@ def licensesetup_sqlite3(scanenv, debug=False):
 	c.close()
 	conn.close()
 
-	for language in stringsdbperlanguage.keys():
-		if scanenv.has_key(stringsdbperlanguage[language]):
+	for language in stringsdbperlanguageenv.keys():
+		if scanenv.has_key(stringsdbperlanguageenv[language]):
 			## sanity checks to see if the database exists.
-			stringscache = scanenv.get(stringsdbperlanguage[language])
+			stringscache = scanenv.get(stringsdbperlanguageenv[language])
 			if not os.path.exists(stringscache):
 				## remove from the configuration
-				if newenv.has_key(stringsdbperlanguage[language]):
-					del newenv[stringsdbperlanguage[language]]
+				if newenv.has_key(stringsdbperlanguageenv[language]):
+					del newenv[stringsdbperlanguageenv[language]]
 				continue
 
-			stringscache = scanenv.get(stringsdbperlanguage[language])
+			stringscache = scanenv.get(stringsdbperlanguageenv[language])
 			conn = batdb.getConnection(stringscache)
 			conn.text_factory = str
 			c = conn.cursor()
@@ -2350,8 +2374,8 @@ def licensesetup_sqlite3(scanenv, debug=False):
 		else:
 			## strings cache is not defined, but it should be there according to
 			## the configuration so remove from the configuration
-			if newenv.has_key(stringsdbperlanguage[language]):
-				del newenv[stringsdbperlanguage[language]]
+			if newenv.has_key(stringsdbperlanguageenv[language]):
+				del newenv[stringsdbperlanguageenv[language]]
 
 	## check the cloning database. If it does not exist, or does not have
 	## the right schema remove it from the configuration
@@ -2371,8 +2395,8 @@ def licensesetup_sqlite3(scanenv, debug=False):
 				del newenv['BAT_CLONE_DB']
 
 	## check the various caching databases, first for C
-	if scanenv.has_key(namecacheperlanguage['C']):
-		namecache = scanenv.get(namecacheperlanguage['C'])
+	if scanenv.has_key(namecacheperlanguageenv['C']):
+		namecache = scanenv.get(namecacheperlanguageenv['C'])
 		## the cache should exist. If it doesn't exist then something is horribly wrong.
 		if not os.path.exists(namecache):
 			if newenv.has_key('BAT_KERNELSYMBOL_SCAN'):
@@ -2383,8 +2407,8 @@ def licensesetup_sqlite3(scanenv, debug=False):
 				del newenv['BAT_VARNAME_SCAN']
 			if newenv.has_key('BAT_FUNCTION_SCAN'):
 				del newenv['BAT_FUNCTION_SCAN']
-			if newenv.has_key(namecacheperlanguage['C']):
-				del newenv[namecacheperlanguage['C']]
+			if newenv.has_key(namecacheperlanguageenv['C']):
+				del newenv[namecacheperlanguageenv['C']]
 		else:
 			## TODO: add checks for each individual table
 			if not newenv.has_key('BAT_KERNELSYMBOL_SCAN'):
@@ -2419,8 +2443,8 @@ def licensesetup_sqlite3(scanenv, debug=False):
 			del newenv['BAT_FUNCTION_SCAN']
 
 	## then check for Java
-	if scanenv.has_key(namecacheperlanguage['Java']):
-		namecache = scanenv.get(namecacheperlanguage['Java'])
+	if scanenv.has_key(namecacheperlanguageenv['Java']):
+		namecache = scanenv.get(namecacheperlanguageenv['Java'])
 		## check if the cache exists. If not, something is wrong.
 		if not os.path.exists(namecache):
 			if newenv.has_key('BAT_CLASSNAME_SCAN'):
@@ -2429,8 +2453,8 @@ def licensesetup_sqlite3(scanenv, debug=False):
 				del newenv['BAT_FIELDNAME_SCAN']
 			if newenv.has_key('BAT_METHOD_SCAN'):
 				del newenv['BAT_METHOD_SCAN']
-			if newenv.has_key(namecacheperlanguage['Java']):
-				del newenv[namecacheperlanguage['Java']]
+			if newenv.has_key(namecacheperlanguageenv['Java']):
+				del newenv[namecacheperlanguageenv['Java']]
 		else:
 			## TODO: add checks for each individual table
 			if not newenv.has_key('BAT_CLASSNAME_SCAN'):
@@ -2449,9 +2473,9 @@ def licensesetup_sqlite3(scanenv, debug=False):
 			del newenv['BAT_METHOD_SCAN']
 
 	## extra sanity check to see if there is at least one entry from
-	## stringsdperlanguage and namecacheperlanguage in the new environment.
+	## stringsdperlanguage and namecacheperlanguageenv in the new environment.
 	scanenvkeys = newenv.keys()
-	envcheck = set(map(lambda x: x in scanenvkeys, stringsdbperlanguage.values() + namecacheperlanguage.values()))
+	envcheck = set(map(lambda x: x in scanenvkeys, stringsdbperlanguageenv.values() + namecacheperlanguageenv.values()))
 	if envcheck == set([False]):
 		return (False, None)
 	return (True, newenv)
