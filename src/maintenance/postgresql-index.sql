@@ -46,3 +46,5 @@ create index security_password_hash_index on security_cve(checksum);
 create index renames_index_originalname on renames (originalname);
 create index renames_index_newname on renames (newname);
 create index file_index on file(filename, directory);
+create index linuxkernelfunctionname_index on linuxkernelfunctionnamecache(functionname);
+create index linuxkernelnamecache_index on linuxkernelnamecache(varname);
