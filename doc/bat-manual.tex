@@ -1569,15 +1569,18 @@ and change one hardcoded path that points to the main Ninka script in
 
 \subsection{Converting the SQLite database to PostgreSQL}
 
-The database creation script outputs the database in SQLite format. There is an
-ongoing effort to also use PostgreSQL. To convert the database from SQLite to
-PostgreSQL there is help script called \texttt{bat-sqlitetopostgresql.py} that
-can help convert the database from SQLite to PostgreSQL. A set of statements to
-create the database in PostgreSQL can be found in the file
-\texttt{maintenance/queries} that can be directly passed to PostgreSQL's
-\texttt{psql} program.
+The database creation script outputs the database in SQLite format. In BAT 21
+it will be possible to use PostgreSQL as well. To convert the database from
+SQLite to PostgreSQL there is helper script called
+\texttt{bat-sqlitetopostgresql.py} that can help convert the database from
+SQLite to PostgreSQL. A set of statements to create the database in PostgreSQL
+can be found in the files \texttt{maintenance/postgresql-table.sql} and
+\texttt{maintenance/postgresql-index.sql} that can be directly passed to
+PostgreSQL's \texttt{psql} program. Configuring PostgreSQL is out of scope of
+this manual.
 
-Please note that this script is still work in progress.
+Please note that a few settings are hardcoded in the table and index
+definitions.
 
 \subsection{Database design}
 
