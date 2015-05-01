@@ -1579,6 +1579,331 @@ create the database in PostgreSQL can be found in the file
 
 Please note that this script is still work in progress.
 
+\subsection{Database design}
+
+The main database currently has 15 tables, 9 of which are Linux kernel specific.
+One other table is optional:
+
+\begin{itemize}
+\item \texttt{processed}
+\item \texttt{processed\_file}
+\item \texttt{extracted\_string}
+\item \texttt{extracted\_function}
+\item \texttt{extracted\_name}
+\item \texttt{kernel\_configuration}
+\item \texttt{kernelmodule\_alias}
+\item \texttt{kernelmodule\_author}
+\item \texttt{kernelmodule\_description}
+\item \texttt{kernelmodule\_firmware}
+\item \texttt{kernelmodule\_license}
+\item \texttt{kernelmodule\_parameter}
+\item \texttt{kernelmodule\_parameter\_description}
+\item \texttt{kernelmodule\_version}
+\end{itemize}
+
+The optional table:
+
+\begin{itemize}
+\item \texttt{hashconversion}
+\end{itemize}
+
+The licenses database has 2 tables:
+
+\begin{itemize}
+\item \texttt{extracted\_copyright}
+\item \texttt{licenses}
+\end{itemize}
+
+During creation an additional table \texttt{ninkacomments} is used, but this
+is only used to cache licensing information determined by the Ninka license
+scanner. It is not used otherwise.
+
+The security database has 1 table:
+
+\begin{itemize}
+\item \texttt{security}
+\end{itemize}
+
+\subsubsection{\texttt{processed} table}
+
+This table is to keep track of which versions of which packages were scanned.
+Its only purpose is to avoid scanning packages multiple times. It is not
+actively used in the ranking code.
+
+It has the following fields:
+
+\begin{itemize}
+\item \texttt{package}: name of the package
+\item \texttt{version}: version of the package
+\item \texttt{filename}: name of the archive
+\item \texttt{origin}: site/origin where the archive was downloaded (optional)
+\item \texttt{checksum}: SHA256 checksum of the archive
+\item \texttt{downloadurl}: download URL of the site (optional)
+\end{itemize}
+
+\subsubsection{\texttt{processed\_file} table}
+This table contains information about of individual source code files that were
+scanned.
+
+It has the following fields:
+
+\begin{itemize}
+\item \texttt{package}: name of the package the file is from (same as in
+\texttt{processed})
+\item \texttt{version}: version of the package the file is from (same as in
+\texttt{processed})
+\item \texttt{pathname}: relative path inside the source code archive
+\item \texttt{checksum}: SHA256 checksum of the file
+\item \texttt{filename}: filename of the file, without path component
+\item \texttt{thirdparty}: boolean (PostgreSQL)/\texttt{tinyint} (SQLite)
+indicating if the file is an obvious copy of a file from another package.
+\end{itemize}
+
+\subsubsection{\texttt{extracted\_string} table}
+This table stores the individual strings that were extracted from files and
+that could possibly end up in binaries.
+
+It has the following fields:
+
+\begin{itemize}
+\item \texttt{stringidentifier}: string constant that was extracted
+\item \texttt{checksum}: SHA256 checksum of file the string constant was
+extracted from
+\item \texttt{language}: language the source code file was written in (mapped
+to a language family, such as C or Java)
+\item \texttt{linenumber}: line number where the string constant can be found
+in the source code file (if determined using using \texttt{xgettext}) or $0$
+(if determined using a regular expression).
+\end{itemize}
+
+\subsubsection{\texttt{extracted\_function} table}
+
+In this table information about C functions and Java methods is stored.
+
+\begin{itemize}
+\item \texttt{checksum}: SHA256 checksum of the file
+\item \texttt{functionname}: function name or method name that was extracted
+\item \texttt{language}: language the source code file was written in (mapped
+to a language family, such as C or Java)
+\item \texttt{linenumber}: line number where the function/method can be found
+in the source code file (if determined using using \texttt{xgettext}) or $0$
+(if determined using a regular expression).
+\end{itemize}
+
+\subsubsection{\texttt{extracted\_name} table}
+This table stores information of various names extracted from source code.
+Included are variable names (C), field names (Java) and class names (Java) and
+Linux kernel variable names.
+
+It has the following fields:
+
+\begin{itemize}
+\item \texttt{checksum}: SHA256 checksum of the file
+\item \texttt{name}: name of variable, field or class name that was extracted
+\item \texttt{type}: type (field, variable, class name, etcetera)
+\item \texttt{language}: language the source code file was written in (mapped
+to a language family, such as C or Java)
+\item \texttt{linenumber}: line number where the function/method can be found
+in the source code file (if determined using using \texttt{xgettext}) or $0$
+(if determined using a regular expression).
+\end{itemize}
+
+\subsubsection{\texttt{extracted\_copyright} table}
+This table stores copyright information that was extracted from files by
+FOSSology.
+
+It has the following fields:
+
+\begin{itemize}
+\item \texttt{checksum}: SHA256 checksum of the file
+\item \texttt{copyright}: copyright information that was extracted
+\item \texttt{type}: type of information that was extracted, currently
+\texttt{url}, \texttt{email} or \texttt{statement}
+\item \texttt{offset}: byte offset in the file where the copyright statement
+can be found
+\end{itemize}
+
+\subsubsection{\texttt{kernel\_configuration} table}
+
+The Makefiles in the Linux kernel configuration contain a lot of information
+about which configuration includes which files. This information can be used to
+reconstruct a possible kernel configuration that was used to create the Linux
+binary image. The table has the following fields:
+
+\begin{itemize}
+\item \texttt{configstring}: configuration directive in Linux kernel
+\item \texttt{filename}: filename/directory name to which the configuration
+directive applies
+\item \texttt{version}: Linux kernel version
+\end{itemize}
+
+\subsubsection{\texttt{kernelmodule\_alias} table}
+
+This table is used to store information about Linux kernel module aliases. This
+information is declared in the Linux kernel source code using the
+\texttt{MODULE\_ALIAS} macro. The table has the following fields:
+
+\begin{itemize}
+\item \texttt{checksum}: SHA256 checksum of the file
+\item \texttt{modulename}: name of the source code file
+\item \texttt{alias}: contents of the \texttt{MODULE\_ALIAS} macro
+\end{itemize}
+
+\subsubsection{\texttt{kernelmodule\_author} table}
+
+This table is used to store information about Linux kernel module author(s).
+This information is declared in the Linux kernel source code using the
+\texttt{MODULE\_AUTHOR} macro. The table has the following fields:
+
+\begin{itemize}
+\item \texttt{checksum}: SHA256 checksum of the file
+\item \texttt{modulename}: name of the source code file
+\item \texttt{author}: contents of the \texttt{MODULE\_AUTHOR} macro
+\end{itemize}
+
+\subsubsection{\texttt{kernelmodule\_description} table}
+
+This table is used to store information about Linux kernel module descriptions.
+This information is declared in the Linux kernel source code using the
+\texttt{MODULE\_DESCRIPTION} macro. The table has the following fields:
+
+\begin{itemize}
+\item \texttt{checksum}: SHA256 checksum of the file
+\item \texttt{modulename}: name of the source code file
+\item \texttt{description}:
+\end{itemize}
+
+\subsubsection{\texttt{kernelmodule\_firmware} table}
+
+This table is used to store information about Linux kernel module firmware.
+This information is declared in the Linux kernel source code using the
+\texttt{MODULE\_FIRMWARE} macro. The table has the following fields:
+
+\begin{itemize}
+\item \texttt{checksum}: SHA256 checksum of the file
+\item \texttt{modulename}: name of the source code file
+\item \texttt{firmware}: contents of the \texttt{MODULE\_FIRMWARE} macro
+\end{itemize}
+
+\subsubsection{\texttt{kernelmodule\_license} table}
+
+This table is used to store information about Linux kernel module licenses.
+This information is declared in the Linux kernel source code using the
+\texttt{MODULE\_LICENSE} macro. The table has the following fields:
+
+\begin{itemize}
+\item \texttt{checksum}: SHA256 checksum of the file
+\item \texttt{modulename}: name of the source code file
+\item \texttt{license}: contents of the \texttt{MODULE\_LICENSE} macro
+\end{itemize}
+
+\subsubsection{\texttt{kernelmodule\_parameter} table}
+
+This table is used to store information about Linux kernel module parameters.
+This information is declared in the Linux kernel source code using the
+\texttt{MODULE\_PARM} and \texttt{module\_param} macros, as well as variations
+of the \texttt{module\_param} macro. These different notations were used for
+different versions of the Linux kernel and both formats have been used in the
+kernel at the same time. The table has the following fields:
+
+\begin{itemize}
+\item \texttt{checksum}: SHA256 checksum of the file
+\item \texttt{modulename}: name of the source code file
+\item \texttt{paramname}: name of the parameter
+\item \texttt{paramtype}: type of the parameter, as specified in the source
+code (various formats have been used)
+\end{itemize}
+
+\subsubsection{\texttt{kernelmodule\_parameter\_description} table}
+
+This table is used to store information about Linux kernel module parameters
+descriptions.  This information is declared in the Linux kernel source code
+using the \texttt{MODULE\_PARM\_DESC} macro. The table has the following fields:
+
+\begin{itemize}
+\item \texttt{checksum}: SHA256 checksum of the file
+\item \texttt{modulename}: name of the source code file
+\item \texttt{paramname}: name of the parameter
+\item \texttt{description}: descriptio of the parameter
+\end{itemize}
+
+\subsubsection{\texttt{kernelmodule\_version} table}
+
+This table is used to store information about Linux kernel module versions.
+This information is declared in the Linux kernel source code using the
+\texttt{MODULE\_VERSION} macro. The table has the following fields:
+
+\begin{itemize}
+\item \texttt{checksum}: SHA256 checksum of the file
+\item \texttt{modulename}: name of the source code file
+\item \texttt{version}: contents of the \texttt{MODULE\_VERSION} macro
+\end{itemize}
+
+\subsubsection{\texttt{hashconversion} table}
+
+The \texttt{hashconversion} table is used as a lookup table to translate
+between different hashes and use these for checks or reporting. The
+table has the following mandatory field:
+
+\begin{itemize}
+\item \texttt{sha256}: SHA256 checksum of the file
+\end{itemize}
+
+Any other hashes (limited to values that Python's hashlib supports, and CRC32)
+listed in \texttt{extrahashes} in the database creation script configuration
+file will be added as columns to this database. Tjaldur Software Governance
+Solutions by default sets MD5, SHA1 and CRC32, which the convertor from SQLite
+to PostgreSQL expects to find as well, in that order.
+
+\subsubsection{\texttt{licenses} table}
+
+This table stores the licenses that were extracted from files using a source
+code scanner, like Ninka or FOSSology. If a file has more than one licenses
+there will be multiple rows for a file. It has these fields:
+
+\begin{itemize}
+\item \texttt{checksum}: SHA256 checksum of the file
+\item \texttt{license}: license as found by the scanner
+\item \texttt{scanner}: scanner name. Currently only Ninka and FOSSology are
+used in BAT, but is not limited to that: the scanner could also be a person
+doing a manual review.
+\item \texttt{version}: version of scanner. This is useful if there is for
+example a bug in a scanner, or to compare results from various versions.
+\end{itemize}
+
+\subsubsection{\texttt{security\_cert} table}
+
+This table stores security information that was extracted from files. It has
+these fields:
+
+\begin{itemize}
+\item \texttt{checksum}: SHA256 checksum of the file
+\item \texttt{securitybug}: identifier for a security bug, for example
+identifiers for the CERT secure coding standard.
+\item \texttt{linenumber}: line number where the security bug can be found
+\item \texttt{whitelist}: boolean value indicating whether or not the bug can
+safely be ignored. The idea is that this can be set by security reviewers if
+the security bug cannot be triggered to lower the amount of false positives.
+\end{itemize}
+
+\subsubsection{\texttt{security\_cve} table}
+
+This table stores information about relations between paths and CVE numbers.
+
+\begin{itemize}
+\item \texttt{checksum}: SHA256 checksum of the file
+\item \texttt{cve}: CVE identifier
+\end{itemize}
+
+\subsubsection{\texttt{security\_password} table}
+
+This table stores information about relations between hashes and derived passwords.
+
+\begin{itemize}
+\item \texttt{hash}: hash value as found in password or shadow file
+\item \texttt{password}: password found with a password cracker
+\end{itemize}
+
 \section{Identifier extraction and ranking scan}
 
 As explained identifying binaries works in two phases: first identifiers are
@@ -1773,306 +2098,6 @@ For example, take the results of a run on a BusyBox binary:
 About 98\% of the total score was for BusyBox, so it is a clear match. In
 programs were two or more packages are embedded percentages will be distributed
 in a different, more uniform, way.
-
-\subsection{Database design}
-
-The main database currently has 14 tables, 9 of which are Linux kernel specific:
-
-\begin{itemize}
-\item \texttt{processed}
-\item \texttt{processed\_file}
-\item \texttt{extracted\_string}
-\item \texttt{extracted\_function}
-\item \texttt{extracted\_name}
-\item \texttt{kernel\_configuration}
-\item \texttt{kernelmodule\_alias}
-\item \texttt{kernelmodule\_author}
-\item \texttt{kernelmodule\_description}
-\item \texttt{kernelmodule\_firmware}
-\item \texttt{kernelmodule\_license}
-\item \texttt{kernelmodule\_parameter}
-\item \texttt{kernelmodule\_parameter\_description}
-\item \texttt{kernelmodule\_version}
-\end{itemize}
-
-The licenses database has 2 tables:
-
-\begin{itemize}
-\item \texttt{extracted\_copyright}
-\item \texttt{licenses}
-\end{itemize}
-
-During creation an additional table \texttt{ninkacomments} is used, but this
-is only used to cache licensing information determined by the Ninka license
-scanner. It is not used otherwise.
-
-The security database has 1 table:
-
-\begin{itemize}
-\item \texttt{security}
-\end{itemize}
-
-\subsubsection{\texttt{processed} table}
-
-This table is to keep track of which versions of which packages were scanned.
-Its only purpose is to avoid scanning packages multiple times. It is not
-actively used in the ranking code.
-
-It has the following fields:
-
-\begin{itemize}
-\item \texttt{package}: name of the package
-\item \texttt{version}: version of the package
-\item \texttt{filename}: name of the archive
-\item \texttt{origin}: site/origin where the archive was downloaded (optional)
-\item \texttt{checksum}: SHA256 checksum of the archive
-\item \texttt{downloadurl}: download URL of the site (optional)
-\end{itemize}
-
-\subsubsection{\texttt{processed\_file} table}
-This table contains information about of individual source code files that were
-scanned.
-
-It has the following fields:
-
-\begin{itemize}
-\item \texttt{package}: name of the package the file is from (same as in
-\texttt{processed})
-\item \texttt{version}: version of the package the file is from (same as in
-\texttt{processed})
-\item \texttt{pathname}: relative path inside the source code archive
-\item \texttt{checksum}: SHA256 checksum of the file
-\item \texttt{filename}: filename of the file, without path component
-\end{itemize}
-
-\subsubsection{\texttt{extracted\_string} table}
-This table stores the individual strings that were extracted from files and
-that could possibly end up in binaries.
-
-It has the following fields:
-
-\begin{itemize}
-\item \texttt{stringidentifier}: string constant that was extracted
-\item \texttt{checksum}: SHA256 checksum of file the string constant was
-extracted from
-\item \texttt{language}: language the source code file was written in (mapped
-to a language family, such as C or Java)
-\item \texttt{linenumber}: line number where the string constant can be found
-in the source code file (if determined using using \texttt{xgettext}) or $0$
-(if determined using a regular expression).
-\end{itemize}
-
-\subsubsection{\texttt{extracted\_function} table}
-
-In this table information about C functions and Java methods is stored.
-
-\begin{itemize}
-\item \texttt{checksum}: SHA256 checksum of the file
-\item \texttt{functionname}: function name or method name that was extracted
-\item \texttt{language}: language the source code file was written in (mapped
-to a language family, such as C or Java)
-\item \texttt{linenumber}: line number where the function/method can be found
-in the source code file (if determined using using \texttt{xgettext}) or $0$
-(if determined using a regular expression).
-\end{itemize}
-
-\subsubsection{\texttt{extracted\_name} table}
-This table stores information of various names extracted from source code.
-Included are variable names (C), field names (Java) and class names (Java) and
-Linux kernel variable names.
-
-It has the following fields:
-
-\begin{itemize}
-\item \texttt{checksum}: SHA256 checksum of the file
-\item \texttt{name}: name of variable, field or class name that was extracted
-\item \texttt{type}: type (field, variable, class name, etcetera)
-\item \texttt{language}: language the source code file was written in (mapped
-to a language family, such as C or Java)
-\item \texttt{linenumber}: line number where the function/method can be found
-in the source code file (if determined using using \texttt{xgettext}) or $0$
-(if determined using a regular expression).
-\end{itemize}
-
-\subsubsection{\texttt{extracted\_copyright} table}
-This table stores copyright information that was extracted from files by
-FOSSology.
-
-It has the following fields:
-
-\begin{itemize}
-\item \texttt{checksum}: SHA256 checksum of the file
-\item \texttt{copyright}: copyright information that was extracted
-\item \texttt{type}: type of information that was extracted, currently
-\texttt{url}, \texttt{email} or \texttt{statement}
-\item \texttt{offset}: byte offset in the file where the copyright statement
-can be found
-\end{itemize}
-
-\subsubsection{\texttt{kernel\_configuration} table}
-
-The Makefiles in the Linux kernel configuration contain a lot of information
-about which configuration includes which files. This information can be used to
-reconstruct a possible kernel configuration that was used to create the Linux
-binary image. The table has the following fields:
-
-\begin{itemize}
-\item \texttt{configstring}: configuration directive in Linux kernel
-\item \texttt{filename}: filename/directory name to which the configuration
-directive applies
-\item \texttt{version}: Linux kernel version
-\end{itemize}
-
-\subsubsection{\texttt{kernelmodule\_alias} table}
-
-This table is used to store information about Linux kernel module aliases. This
-information is declared in the Linux kernel source code using the
-\texttt{MODULE\_ALIAS} macro. The table has the following fields:
-
-\begin{itemize}
-\item \texttt{checksum}: SHA256 checksum of the file
-\item \texttt{modulename}: name of the source code file
-\item \texttt{alias}: contents of the \texttt{MODULE\_ALIAS} macro
-\end{itemize}
-
-\subsubsection{\texttt{kernelmodule\_author} table}
-
-This table is used to store information about Linux kernel module author(s).
-This information is declared in the Linux kernel source code using the
-\texttt{MODULE\_AUTHOR} macro. The table has the following fields:
-
-\begin{itemize}
-\item \texttt{checksum}: SHA256 checksum of the file
-\item \texttt{modulename}: name of the source code file
-\item \texttt{author}: contents of the \texttt{MODULE\_AUTHOR} macro
-\end{itemize}
-
-\subsubsection{\texttt{kernelmodule\_description} table}
-
-This table is used to store information about Linux kernel module descriptions.
-This information is declared in the Linux kernel source code using the
-\texttt{MODULE\_DESCRIPTION} macro. The table has the following fields:
-
-\begin{itemize}
-\item \texttt{checksum}: SHA256 checksum of the file
-\item \texttt{modulename}: name of the source code file
-\item \texttt{description}:
-\end{itemize}
-
-\subsubsection{\texttt{kernelmodule\_firmware} table}
-
-This table is used to store information about Linux kernel module firmware.
-This information is declared in the Linux kernel source code using the
-\texttt{MODULE\_FIRMWARE} macro. The table has the following fields:
-
-\begin{itemize}
-\item \texttt{checksum}: SHA256 checksum of the file
-\item \texttt{modulename}: name of the source code file
-\item \texttt{firmware}: contents of the \texttt{MODULE\_FIRMWARE} macro
-\end{itemize}
-
-\subsubsection{\texttt{kernelmodule\_license} table}
-
-This table is used to store information about Linux kernel module licenses.
-This information is declared in the Linux kernel source code using the
-\texttt{MODULE\_LICENSE} macro. The table has the following fields:
-
-\begin{itemize}
-\item \texttt{checksum}: SHA256 checksum of the file
-\item \texttt{modulename}: name of the source code file
-\item \texttt{license}: contents of the \texttt{MODULE\_LICENSE} macro
-\end{itemize}
-
-\subsubsection{\texttt{kernelmodule\_parameter} table}
-
-This table is used to store information about Linux kernel module parameters.
-This information is declared in the Linux kernel source code using the
-\texttt{MODULE\_PARM} and \texttt{module\_param} macros, as well as variations
-of the \texttt{module\_param} macro. These different notations were used for
-different versions of the Linux kernel and both formats have been used in the
-kernel at the same time. The table has the following fields:
-
-\begin{itemize}
-\item \texttt{checksum}: SHA256 checksum of the file
-\item \texttt{modulename}: name of the source code file
-\item \texttt{paramname}: name of the parameter
-\item \texttt{paramtype}: type of the parameter, as specified in the source
-code (various formats have been used)
-\end{itemize}
-
-\subsubsection{\texttt{kernelmodule\_parameter\_description} table}
-
-This table is used to store information about Linux kernel module parameters
-descriptions.  This information is declared in the Linux kernel source code
-using the \texttt{MODULE\_PARM\_DESC} macro. The table has the following fields:
-
-\begin{itemize}
-\item \texttt{checksum}: SHA256 checksum of the file
-\item \texttt{modulename}: name of the source code file
-\item \texttt{paramname}: name of the parameter
-\item \texttt{description}: descriptio of the parameter
-\end{itemize}
-
-\subsubsection{\texttt{kernelmodule\_version} table}
-
-This table is used to store information about Linux kernel module versions.
-This information is declared in the Linux kernel source code using the
-\texttt{MODULE\_VERSION} macro. The table has the following fields:
-
-\begin{itemize}
-\item \texttt{checksum}: SHA256 checksum of the file
-\item \texttt{modulename}: name of the source code file
-\item \texttt{version}: contents of the \texttt{MODULE\_VERSION} macro
-\end{itemize}
-
-\subsubsection{\texttt{licenses} table}
-
-This table stores the licenses that were extracted from files using a source
-code scanner, like Ninka or FOSSology. If a file has more than one licenses
-there will be multiple rows for a file. It has these fields:
-
-\begin{itemize}
-\item \texttt{checksum}: SHA256 checksum of the file
-\item \texttt{license}: license as found by the scanner
-\item \texttt{scanner}: scanner name. Currently only Ninka and FOSSology are
-used in BAT, but is not limited to that: the scanner could also be a person
-doing a manual review.
-\item \texttt{version}: version of scanner. This is useful if there is for
-example a bug in a scanner, or to compare results from various versions.
-\end{itemize}
-
-\subsubsection{\texttt{security\_cert} table}
-
-This table stores security information that was extracted from files. It has
-these fields:
-
-\begin{itemize}
-\item \texttt{checksum}: SHA256 checksum of the file
-\item \texttt{securitybug}: identifier for a security bug, for example
-identifiers for the CERT secure coding standard.
-\item \texttt{linenumber}: line number where the security bug can be found
-\item \texttt{whitelist}: boolean value indicating whether or not the bug can
-safely be ignored. The idea is that this can be set by security reviewers if
-the security bug cannot be triggered to lower the amount of false positives.
-\end{itemize}
-
-\subsubsection{\texttt{security\_cve} table}
-
-This table stores information about relations between paths and CVE numbers.
-
-\begin{itemize}
-\item \texttt{checksum}: SHA256 checksum of the file
-\item \texttt{cve}: CVE identifier
-\end{itemize}
-
-\subsubsection{\texttt{security\_password} table}
-
-This table stores information about relations between hashes and derived passwords.
-
-\begin{itemize}
-\item \texttt{hash}: hash value as found in password or shadow file
-\item \texttt{password}: password found with a password cracker
-\end{itemize}
 
 \section{BusyBox script internals}
 
