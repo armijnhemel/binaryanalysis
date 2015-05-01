@@ -58,11 +58,8 @@ def main(argv):
 		if not os.path.exists(options.filesqlitedb):
 			print >>sys.stderr, "SQLite file database file specified, but does not exist, exiting"
 			sys.exit(1)
-	## first set up sqlite cursor
-	sqliteconn = sqlite3.connect(options.sqlitedb)
-	sqlitecursor = sqliteconn.cursor()
 
-	## the set up PostgreSQL cursor
+	## set up PostgreSQL cursor
 	## TODO: make configurable
 	postgresqlconn = psycopg2.connect("dbname=bat user=bat password=bat")
 	postgresqlcursor = postgresqlconn.cursor()
