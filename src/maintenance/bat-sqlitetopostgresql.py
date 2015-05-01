@@ -200,7 +200,7 @@ def main(argv):
 		tabletasks.append((options.filesqlitedb,'file',preparedstatement, execquery))
 
 	## create a pool of workers
-	workers = min(len(tabletasks), multiprocessing.cpu_count)
+	workers = min(len(tabletasks), multiprocessing.cpu_count())
 	pool = multiprocessing.Pool(workers)
 
 	pool.map(insertintopostgresql, tabletasks, 1)
