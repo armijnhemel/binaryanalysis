@@ -26,7 +26,10 @@ def filename2package(path, tags, blacklist=[], scanenv={}, scandebug=False, unpa
 	## select the packages that are available. It would be better to also have the directory
 	## name available, so we should get rid of 'path' and use something else that is better
 	## suited
-	c.execute("select distinct package, packageversion, source, distroversion from file where filename = '%s'" % (os.path.basename(path),))
+	query = "select distinct package, packageversion, source, distroversion from file where filename = %s"
+	query = batdb.getQuery(query)
+	c.execute(query, (os.path.basename(path),))
+	#c.execute("select distinct package, packageversion, source, distroversion from file where filename = '%s'" % (os.path.basename(path),))
 	res = c.fetchall()
 	## TODO: filter results, only return files that are not in tons of packages
 	if res != []:

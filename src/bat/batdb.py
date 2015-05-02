@@ -36,3 +36,9 @@ class BatDb():
 				print e
 				return
 		return self.conn
+	def getQuery(self, query):
+		if self.dbbackend == 'sqlite3':
+			query = query.replace('%s', '?')
+			return query
+		else:
+			return query
