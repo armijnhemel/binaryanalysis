@@ -669,8 +669,13 @@ def readconfig(config):
 		except:
 			pass
 		try:
+			scrub = config.get(section, 'scrub')
+			batconf['scrub'] = scrub.split(':')
+		except:
+			batconf['scrub'] = []
+		try:
 			dbbackend = config.get(section, 'dbbackend')
-			if dbbackend in ['sqlite3']:
+			if dbbackend in ['sqlite3', 'postgresql']:
 				batconf['dbbackend'] = dbbackend
 		except:
 			pass
@@ -1066,6 +1071,10 @@ def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=Fa
 	dumpfile = tarfile.open(outputfile, 'w:gz')
 	oldcwd = os.getcwd()
 	os.chdir(tempdir)
+	if scans['batconfig']['scrub'] != []:
+		## TODO pretty print the configuration file, scrubbed of
+		## any of the values in 'scrub'
+		pass
 	shutil.copy(configfile, '.')
 	dumpfile.add('scandata.pickle')
 	## temporary ugly hack for packing scandata.json too, TODO: fix and make more flexible
