@@ -669,6 +669,11 @@ def readconfig(config):
 		except:
 			pass
 		try:
+			extrapack = config.get(section, 'extrapack')
+			batconf['extrapack'] = extrapack.split(':')
+		except:
+			batconf['extrapack'] = []
+		try:
 			scrub = config.get(section, 'scrub')
 			batconf['scrub'] = scrub.split(':')
 		except:
@@ -1077,9 +1082,15 @@ def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=Fa
 		pass
 	shutil.copy(configfile, '.')
 	dumpfile.add('scandata.pickle')
-	## temporary ugly hack for packing scandata.json too, TODO: fix and make more flexible
-	if os.path.exists('scandata.json'):
-		dumpfile.add('scandata.json')
+	if scans['batconfig']['extrapack'] != []:
+		for e in scans['batconfig']['extrapack']:
+			if os.path.isabs(e):
+				continue
+			if os.path.islink(e):
+				continue
+			## TODO: many more checks
+			if os.path.exists(e):
+				dumpfile.add(e)
 	if not lite:
 		dumpfile.add('data')
 	try:
