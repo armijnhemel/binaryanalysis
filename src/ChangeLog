@@ -1,3 +1,15 @@
+2015-05-03:
+* createdb.py: clean up results of extracted copyrights (URLs, e-mail
+addresses). This still needs a lot more work.
+* createdb.py: deduplicate information from Linux kernel modules, as some
+fields (module license, etc.) sometimes occurs multiple times
+* bruteforcescan.py: introduce 'extrapack' parameter that can be used to
+indicate which other files need to be packed. This needs more sanity checks.
+
+2015-05-02:
+* batdb.py: start using PostgreSQL style queries. If sqlite is used as a
+backend rewrite to sqlite notation
+
 2015-04-30:
 * add more database tables for PostgreSQL, rename a few tables
 * identifier.py: fixes for PostgreSQL
