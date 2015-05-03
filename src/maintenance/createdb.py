@@ -1663,7 +1663,7 @@ def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)
 				if "@%s" % em in e:
 					exampleskip = True
 					break
-				if e.endswith('.%s') % em:
+				if e.endswith('.%s' % em):
 					exampleskip = True
 					break
 			if exampleskip:
