@@ -1745,6 +1745,7 @@ def licensefossology((packages)):
 def extractidentifiers((package, version, i, p, language, filehash, ninkaversion, unpackenv, security, authdb, pkgconf)):
 	newlanguage = language
 
+
 	scanidentifiers = True
 	if authdb != None:
 		if not 'alwaysscan' in pkgconf:
@@ -2181,7 +2182,7 @@ def extractsourcestrings(filename, filedir, language, package):
 			if "MODULE_ALIAS" in filecontents:
 				regexres = re.findall("MODULE_ALIAS\s*\(\s*\"([\w\d:,\-\_\s/\[\]\*]+)\"\s*\)\s*;", filecontents, re.MULTILINE)
 				if regexres != []:
-					for p in regexres:
+					for p in set(regexres):
 						aliasres.append(p)
 			moduleres['alias'] = aliasres
 
@@ -2191,7 +2192,7 @@ def extractsourcestrings(filename, filedir, language, package):
 			if "MODULE_AUTHOR" in filecontents:
 				regexres = re.findall("MODULE_AUTHOR\s*\(\s*\"([\w\d/\s,\.\-:<>@\(\)[\]\+&;'~\\\\]+)\"\s*\)\s*;", filecontents, re.MULTILINE)
 				if regexres != []:
-					for p in regexres:
+					for p in set(regexres):
 						authorres.append(p)
 			moduleres['author'] = authorres
 
@@ -2202,7 +2203,7 @@ def extractsourcestrings(filename, filedir, language, package):
 			if "MODULE_DESCRIPTION" in filecontents:
 				regexres = re.findall("MODULE_DESCRIPTION\s*\(\s*\"([\w\d/_\(\)\[\]\\\\\!\?;#$%^\*&<>\{\}\':+=\|\-\.,\s]+)\"\s*\)\s*;", filecontents, re.MULTILINE)
 				if regexres != []:
-					for p in regexres:
+					for p in set(regexres):
 						descriptionres.append(p)
 			moduleres['descriptions'] = descriptionres
 
@@ -2210,7 +2211,7 @@ def extractsourcestrings(filename, filedir, language, package):
 			if "MODULE_FIRMWARE" in filecontents:
 				regexres = re.findall("MODULE_FIRMWARE\s*\(\s*\"([\w\d/_\-\.]+)\"\s*\)\s*;", filecontents, re.MULTILINE)
 				if regexres != []:
-					for p in regexres:
+					for p in set(regexres):
 						firmwareres.append(p)
 			moduleres['firmware'] = firmwareres
 
@@ -2218,7 +2219,7 @@ def extractsourcestrings(filename, filedir, language, package):
 			if "MODULE_LICENSE" in filecontents:
 				regexres = re.findall("MODULE_LICENSE\s*\(\s*\"([\w\d/\s]+)\"\s*\)\s*;", filecontents, re.MULTILINE)
 				if regexres != []:
-					for p in regexres:
+					for p in set(regexres):
 						licenseres.append(p)
 			moduleres['license'] = licenseres
 
@@ -2226,14 +2227,14 @@ def extractsourcestrings(filename, filedir, language, package):
 			if "MODULE_VERSION" in filecontents:
 				regexres = re.findall("MODULE_VERSION\s*\(\s*\"([\w\d/_\-\.\s]+)\"\s*\)\s*;", filecontents, re.MULTILINE)
 				if regexres != []:
-					for p in regexres:
+					for p in set(regexres):
 						versionres.append(p)
 			moduleres['versions'] = versionres
 
 			if "MODULE_PARM_DESC" in filecontents:
 				regexres = re.findall("MODULE_PARM_DESC\s*\(\s*([\w\d]+),\s*\"([\w\d/_\(\)\[\]\\\\\!\?;#$%^\*&<>\{\}\':+=\|\-\.,\s]+)\"\s*\)\s*;", filecontents, re.MULTILINE)
 				if regexres != []:
-					for p in regexres:
+					for p in set(regexres):
 						paramdescriptionres.append(p)
 			moduleres['param_descriptions'] = paramdescriptionres
 
