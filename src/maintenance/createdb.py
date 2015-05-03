@@ -55,7 +55,7 @@ import sys, os, magic, string, re, subprocess, shutil, stat, datetime
 import tempfile, bz2, tarfile, gzip, ConfigParser
 from optparse import OptionParser
 from multiprocessing import Pool
-import sqlite3, hashlib, zlib
+import sqlite3, hashlib, zlib, urlparse
 import batextensions
 
 tarmagic = ['POSIX tar archive (GNU)'
@@ -1651,6 +1651,7 @@ def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)
 	## FOSSology uses lowercase data
 	srcdata = srcdata.lower()
 	copyrightsres = []
+	examples = ["example.org", "example.com", "example.net"]
 	## first the e-mail address results
 	if '@' in srcdata:
 		res = fossologyemailre.findall(srcdata)
@@ -1658,8 +1659,11 @@ def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)
 		for e in res:
 			exampleskip = False
 			## ignore all e-mail addresses from example.com/net/org
-			for em in ["example.org", "example.com", "example.net"]:
+			for em in examples:
 				if "@%s" % em in e:
+					exampleskip = True
+					break
+				if e.endswith('.%s') % em:
 					exampleskip = True
 					break
 			if exampleskip:
@@ -1673,40 +1677,44 @@ def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)
 		offset = 0
 		for urlres in res:
 			e = urlres.groups()[0]
+
 			offset = srcdata.find(e, offset)
+
+			## parse the hostname and see if there is nonsense in there
+			hostname = urlparse.urlparse(e).hostname
+			if hostname == None:
+				## something is going on here, probably some characters preceding
+				## the result. TODO: find out what to do with this
+				continue
+
+			## hostnames should at least have a '.' in the name
+			if not '.' in hostname:
+				continue
+			if hostname == '127.0.0.1':
+				continue
+			if hostname in examples:
+				continue
 			if "example" in e:
 				## filter out anything with example.com/net/org
 				exampleskip = False
-				for em in ["example.org", "example.com", "example.net"]:
-					if "http://%s" % em in e:
-						exampleskip = True
-						break
-					if "https://%s" % em in e:
-						exampleskip = True
-						break
-					if "http://www.%s" % em in e:
-						exampleskip = True
-						break
-					if "https://www.%s" % em in e:
-						exampleskip = True
-						break
-					if "@%s" % em in e:
+				for em in examples:
+					if hostname.endswith(".%s" % em):
 						exampleskip = True
 						break
 				if exampleskip:
 					continue
 			## filter out some more things. This needs to be much expanded
-			elif "ftp://127.0.0.1" in e:
+			## first private addresses
+			if hostname.startswith('192.168.'):
 				continue
-			elif "ftp://localhost/" in e:
+			if hostname.startswith('10.'):
 				continue
-			elif "http://127.0.0.1" in e:
+			#if hostname.startswith('172.'):
+			#	continue
+			## some IPv6 things
+			if hostname == "[::1]":
 				continue
-			elif "http://localhost/" in e:
-				continue
-			elif "https://127.0.0.1" in e:
-				continue
-			elif "https://localhost/" in e:
+			if hostname == "::1":
 				continue
 			copyrightsres.append(('url', e, offset))
 			offset += 1
