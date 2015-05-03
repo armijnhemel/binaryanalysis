@@ -195,7 +195,7 @@ rechar = re.compile("c\d+")
 
 ## from FOSSology
 fossologyurlre = re.compile("((:?ht|f)tps?\\:\\/\\/[^\\s\\<]+[^\\<\\.\\,\\s])")
-fossologyemailre = re.compile("[\\<\\(]?([\\w\\-\\.\\+]{1,100}@[\\w\\-\\.\\+]{1,100}\\.[a-z]{1,4})[\\>\\)]?")
+fossologyemailre = re.compile("[\\<\\(]?([\\w\\-\\.\\+]{1,100}@[\\w\\-\\.\\+]{1,100}\\.[a-z]{1,12})[\\>\\)]?")
 
 extensions = batextensions.extensions
 
@@ -1667,6 +1667,8 @@ def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)
 					exampleskip = True
 					break
 			if exampleskip:
+				continue
+			if '..' in e:
 				continue
 			offset = srcdata.find(e, offset)
 			copyrightsres.append(('email', e, offset))
