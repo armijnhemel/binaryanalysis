@@ -1,3 +1,12 @@
+2015-05-04:
+* add more table and index definitions
+* licenseversion.py: more fixes for PostgreSQL support. Also better prepare
+for future language support
+* createdb.py: don't try to extract URLs from JavaScript right now (too many
+false positives)
+* createdb.py: ignore URLs that are longer than 1000 characters (and this
+probably can go down a lot)
+
 2015-05-03:
 * createdb.py: clean up results of extracted copyrights (URLs, e-mail
 addresses). This still needs a lot more work.
