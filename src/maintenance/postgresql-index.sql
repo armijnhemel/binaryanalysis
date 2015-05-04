@@ -46,5 +46,43 @@ create index security_password_hash_index on security_cve(checksum);
 create index renames_index_originalname on renames (originalname);
 create index renames_index_newname on renames (newname);
 create index file_index on file(filename, directory);
+
 create index linuxkernelfunctionname_index on linuxkernelfunctionnamecache(functionname);
 create index linuxkernelnamecache_index on linuxkernelnamecache(varname);
+create index functionname_c_index on functionnamecache_c(functionname);
+create index varnamecache_c_index on varnamecache_c(varname);
+create index functionname_java_index on functionnamecache_java(functionname);
+create index fieldname_java_cache on fieldcache_java(fieldname);
+create index classname_java_cache on classcache_java(classname);
+
+create index stringidentifier_actionscript_index on stringscache_actionscript(stringidentifier);
+create index scores_actionscript_index on scores_actionscript(stringidentifier);
+create index package_actionscript_index on avgstringscache_actionscript(package);
+
+create index stringidentifier_c_index on stringscache_c(stringidentifier);
+create index scores_c_index on scores_c(stringidentifier);
+create index package_c_index on avgstringscache_c(package);
+
+create index stringidentifier_csharp_index on stringscache_csharp(stringidentifier);
+create index scores_csharp_index on scores_csharp(stringidentifier);
+create index package_csharp_index on avgstringscache_csharp(package);
+
+create index stringidentifier_java_index on stringscache_java(stringidentifier);
+create index scores_java_index on scores_java(stringidentifier);
+create index package_java_index on avgstringscache_java(package);
+
+create index stringidentifier_javascript_index on stringscache_javascript(stringidentifier);
+create index scores_javascript_index on scores_javascript(stringidentifier);
+create index package_javascript_index on avgstringscache_javascript(package);
+
+create index stringidentifier_php_index on stringscache_php(stringidentifier);
+create index scores_php_index on scores_php(stringidentifier);
+create index package_php_index on avgstringscache_php(package);
+
+create index stringidentifier_python_index on stringscache_python(stringidentifier);
+create index scores_python_index on scores_python(stringidentifier);
+create index package_python_index on avgstringscache_python(package);
+
+create index stringidentifier_ruby_index on stringscache_ruby(stringidentifier);
+create index scores_ruby_index on scores_ruby(stringidentifier);
+create index package_ruby_index on avgstringscache_ruby(package);
