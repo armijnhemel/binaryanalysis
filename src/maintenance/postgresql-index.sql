@@ -61,28 +61,28 @@ create index package_actionscript_index on avgstringscache_actionscript(package)
 
 create index stringidentifier_c_index on stringscache_c(stringidentifier);
 create index scores_c_index on scores_c(stringidentifier);
-create index package_c_index on avgstringscache_c(package);
+create index avgpackage_c_index on avgstringscache_c(package);
 
 create index stringidentifier_csharp_index on stringscache_csharp(stringidentifier);
 create index scores_csharp_index on scores_csharp(stringidentifier);
-create index package_csharp_index on avgstringscache_csharp(package);
+create index avgpackage_csharp_index on avgstringscache_csharp(package);
 
 create index stringidentifier_java_index on stringscache_java(stringidentifier);
 create index scores_java_index on scores_java(stringidentifier);
-create index package_java_index on avgstringscache_java(package);
+create index avgpackage_java_index on avgstringscache_java(package);
 
 create index stringidentifier_javascript_index on stringscache_javascript(stringidentifier);
 create index scores_javascript_index on scores_javascript(stringidentifier);
-create index package_javascript_index on avgstringscache_javascript(package);
+create index avgpackage_javascript_index on avgstringscache_javascript(package);
 
 create index stringidentifier_php_index on stringscache_php(stringidentifier);
 create index scores_php_index on scores_php(stringidentifier);
-create index package_php_index on avgstringscache_php(package);
+create index avgpackage_php_index on avgstringscache_php(package);
 
 create index stringidentifier_python_index on stringscache_python(stringidentifier);
 create index scores_python_index on scores_python(stringidentifier);
-create index package_python_index on avgstringscache_python(package);
+create index avgpackage_python_index on avgstringscache_python(package);
 
 create index stringidentifier_ruby_index on stringscache_ruby(stringidentifier);
 create index scores_ruby_index on scores_ruby(stringidentifier);
-create index package_ruby_index on avgstringscache_ruby(package);
+create index avgpackage_ruby_index on avgstringscache_ruby(package);
