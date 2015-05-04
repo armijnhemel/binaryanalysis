@@ -1673,9 +1673,15 @@ def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)
 			offset = srcdata.find(e, offset)
 			copyrightsres.append(('email', e, offset))
 			offset += 1
+
+	## hack for now.
+	if language == 'JavaScript':
+		return (filehash, copyrightsres)
 	## then URLs
 	if '://' in srcdata:
 		res = fossologyurlre.finditer(srcdata)
+		## TODO: make configurable
+		urlcutoff = 1000
 		offset = 0
 		for urlres in res:
 			e = urlres.groups()[0]
@@ -1717,6 +1723,9 @@ def extractcopyrights((package, version, i, p, language, filehash, ninkaversion)
 			if hostname == "[::1]":
 				continue
 			if hostname == "::1":
+				continue
+			## cut off URLs that are larger than a certain limit
+			if len(e) > urlcutoff:
 				continue
 			copyrightsres.append(('url', e, offset))
 			offset += 1
