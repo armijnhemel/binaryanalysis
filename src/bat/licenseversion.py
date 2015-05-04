@@ -72,16 +72,35 @@ namecacheperlanguagetable = { 'C':      'functionnamecache_c'
 
 ## mapping of environment variable names for databases per language
 stringsdbperlanguageenv = { 'C':              'BAT_STRINGSCACHE_C'
-                          , 'Java':           'BAT_STRINGSCACHE_JAVA'
                           , 'C#':             'BAT_STRINGSCACHE_C#'
+                          , 'Java':           'BAT_STRINGSCACHE_JAVA'
+                          , 'JavaScript':     'BAT_STRINGSCACHE_JAVASCRIPT'
+                          , 'PHP':            'BAT_STRINGSCACHE_PHP'
+                          , 'Python':         'BAT_STRINGSCACHE_PYTHON'
+                          , 'Ruby':           'BAT_STRINGSCACHE_Ruby'
                           , 'ActionScript':   'BAT_STRINGSCACHE_ACTIONSCRIPT'
                           }
 
 stringsdbperlanguagetable = { 'C':                'stringscache_c'
-                            , 'Java':             'stringscache_java'
                             , 'C#':               'stringscache_csharp'
+			    , 'Java':             'stringscache_java'
+                            , 'JavaScript':       'stringscache_javascript'
+                            , 'PHP':              'stringscache_php'
+                            , 'Python':           'stringscache_python'
+                            , 'Ruby':             'stringscache_ruby'
                             , 'ActionScript':     'stringscache_actionscript'
                             }
+
+avgstringsdbperlanguagetable = { 'C':                'avgstringscache_c'
+                               , 'C#':               'avgstringscache_csharp'
+                               , 'Java':             'avgstringscache_java'
+                               , 'JavaScript':       'avgstringscache_javascript'
+                               , 'PHP':              'avgstringscache_php'
+                               , 'Python':           'avgstringscache_python'
+                               , 'Ruby':             'avgstringscache_ruby'
+                               , 'ActionScript':     'avgstringscache_actionscript'
+                               }
+
 
 ## mappings from FOSSology to Ninka and vice versa
 ninka_to_fossology = { 'LesserGPLv2+': 'LGPL-2.0+'
@@ -640,8 +659,6 @@ def grab_sha256_varname((batdb, masterdb, language, tasks)):
 	## open the database containing all the strings that were extracted
 	## from source code.
 	conn = batdb.getConnection(masterdb,scanenv)
-	## we have byte strings in our database, not utf-8 characters...I hope
-	conn.text_factory = str
 	c = conn.cursor()
 	for sha256sum in tasks:
 		c.execute("select version, pathname from processed_file where checksum=?", (sha256sum,))
@@ -655,8 +672,6 @@ def grab_sha256_filename((batdb, masterdb, tasks)):
 	## open the database containing all the strings that were extracted
 	## from source code.
 	conn = batdb.getConnection(masterdb,scanenv)
-	## we have byte strings in our database, not utf-8 characters...I hope
-	conn.text_factory = str
 	c = conn.cursor()
 	for sha256sum in tasks:
 		c.execute("select version, pathname from processed_file where checksum=?", (sha256sum,))
@@ -669,7 +684,6 @@ def grab_sha256_filename((batdb, masterdb, tasks)):
 def grab_sha256_copyright((batdb, copyrightdb, tasks)):
 	results = {}
 	conn = batdb.getConnection(copyrightdb,scanenv)
-	conn.text_factory = str
 	c = conn.cursor()
 	for sha256sum in tasks:
 		c.execute("select distinct copyright, type from extracted_copyright where checksum=?", (sha256sum,))
@@ -685,7 +699,6 @@ def grab_sha256_copyright((batdb, copyrightdb, tasks)):
 def grab_sha256_license((batdb, licensedb, tasks)):
 	results = {}
 	conn = batdb.getConnection(licensedb,scanenv)
-	conn.text_factory = str
 	c = conn.cursor()
 	for sha256sum in tasks:
 		c.execute("select distinct license, scanner from licenses where checksum=?", (sha256sum,))
@@ -699,8 +712,6 @@ def grab_sha256_parallel((batdb, masterdb, tasks, language, querytype)):
 	## open the database containing all the strings that were extracted
 	## from source code.
 	conn = batdb.getConnection(masterdb,scanenv)
-	## we have byte strings in our database, not utf-8 characters...I hope
-	conn.text_factory = str
 	c = conn.cursor()
 	for line in tasks:
 		if querytype == "string":
@@ -743,7 +754,6 @@ def extractJavaNames(javameta, scanenv, batdb, clones):
 	funccache = scanenv.get(namecacheperlanguageenv['Java'])
 
 	conn = batdb.getConnection(funccache,scanenv)
-	conn.text_factory = str
 	c = conn.cursor()
 
 	if scanenv.has_key('BAT_METHOD_SCAN'):
@@ -812,7 +822,6 @@ def extractVariablesJava(javameta, scanenv, batdb, clones):
 	funccache = scanenv.get(namecacheperlanguageenv['Java'])
 
 	conn = batdb.getConnection(funccache,scanenv)
-	conn.text_factory = str
 	c = conn.cursor()
 
 	classpvs = {}
@@ -831,11 +840,11 @@ def extractVariablesJava(javameta, scanenv, batdb, clones):
 			## be found and has dots in it split it on '.' and
 			## use the last component only.
 			classname = i
-			classres = c.execute("select package from classcache where classname=?", (classname,)).fetchall()
+			classres = c.execute("select package from classcache_java where classname=?", (classname,)).fetchall()
 			if classres == []:
 				## check just the last component
 				classname = classname.split('.')[-1]
-				classres = c.execute("select package from classcache where classname=?", (classname,)).fetchall()
+				classres = c.execute("select package from classcache_java where classname=?", (classname,)).fetchall()
 			## check the cloning database
 			if classres != []:
 				classres_tmp = []
@@ -862,7 +871,7 @@ def extractVariablesJava(javameta, scanenv, batdb, clones):
 			## first try the name as found in the binary. If it can't
 			## be found and has dots in it split it on '.' and
 			## use the last component only.
-			classres = c.execute("select package from classcache where classname=?", (classname,)).fetchall()
+			classres = c.execute("select package from classcache_java where classname=?", (classname,)).fetchall()
 			## check the cloning database
 			if classres != []:
 				classres_tmp = []
@@ -890,7 +899,7 @@ def extractVariablesJava(javameta, scanenv, batdb, clones):
 				continue
 			pvs = []
 
-			fieldres = c.execute("select package from fieldcache where fieldname=?", (f,)).fetchall()
+			fieldres = c.execute("select package from fieldcache_java where fieldname=?", (f,)).fetchall()
 			if fieldres != []:
 				fieldres_tmp = []
 				for r in fieldres:
@@ -964,7 +973,6 @@ def scanDynamic(scanstr, variables, scanenv, batdb, clones):
 	## from source code.
 	funccache = scanenv.get(namecacheperlanguageenv['C'])
 	conn = batdb.getConnection(funccache,scanenv)
-	## we have byte strings in our database, not utf-8 characters...I hope
 	c = conn.cursor()
 
 	if scanenv.has_key('BAT_FUNCTION_SCAN'):
@@ -1029,7 +1037,7 @@ def scanDynamic(scanstr, variables, scanenv, batdb, clones):
 			if v in ['options', 'debug', 'options', 'verbose', 'optarg', 'optopt', 'optfind', 'optind', 'opterr']:
 				continue
 			pvs = []
-			res = c.execute("select distinct package from varnamecache where varname=?", (v,)).fetchall()
+			res = c.execute("select distinct package from varnamecache_c where varname=?", (v,)).fetchall()
 			if res != []:
 				pvs = map(lambda x: x[0], res)
 
@@ -1519,7 +1527,6 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, sc
 	## open the database containing all the strings that were extracted
 	## from source code.
 	conn = batdb.getConnection(stringscache,scanenv)
-	## we have byte strings in our database, not utf-8 characters...I hope
 	c = conn.cursor()
 
 	linecount = collections.Counter(lines)
@@ -1593,7 +1600,8 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, sc
 	## suck the average string scores database into memory. Even with a few million packages
 	## this will not cost much memory and it prevents many database lookups.
 	avgscores = {}
-	c.execute("select package, avgstrings from avgstringscache")
+	avgquery = "select package, avgstrings from %s" % avgstringsdbperlanguagetable[language]
+	c.execute(avgquery)
 	res = c.fetchall()
 	c.close()
 	conn.close()
@@ -2353,7 +2361,6 @@ def licensesetup_sqlite3(scanenv, debug=False):
 
 			stringscache = scanenv.get(stringsdbperlanguageenv[language])
 			conn = batdb.getConnection(stringscache)
-			conn.text_factory = str
 			c = conn.cursor()
 
 			## TODO: check if the format of the cache database is sane
