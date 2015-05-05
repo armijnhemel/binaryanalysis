@@ -49,6 +49,9 @@ def main(argv):
 				score = len(p[0]) / pow(alpha, (len(filenames) - 1))
 			except Exception, e:
 				score = len(p[0]) / sys.maxint
+			## cut off for for example postgresql
+			if score < 1e-37:
+				score = 0.0
 		c.execute("insert into scores(stringidentifier, packages, score) values (?,?,?)", (p[0], len(packages), float(score)))
 	print "vacuuming"
 	c.execute("vacuum")
