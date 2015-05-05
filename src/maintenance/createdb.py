@@ -2272,6 +2272,7 @@ def extractsourcestrings(filename, filedir, language, package):
 	source = stanout 
 	lines = []
 	linenumbers = []
+	linecutoff = 5000
 
 	## escape just once to speed up extraction of filenumbers
 	filename_escape = re.escape(filename)
@@ -2313,6 +2314,10 @@ def extractsourcestrings(filename, filedir, language, package):
 							## don't store empty strings, they won't show up in binaries
 							## but they do make the database a lot larger
 							if sline == '':
+								continue
+							## don't store strings that are larger or equal to linecutoff
+							## as some database engines have trouble processing them
+							if len(sline) >= linecutoff:
 								continue
 							for i in range(0, len(linenumbers)):
 								stringres.append((sline, linenumbers[i]))
