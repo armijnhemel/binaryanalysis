@@ -26,33 +26,39 @@ def main(argv):
 	c.execute("create table if not exists scores (stringidentifier text, packages int, score real)")
 	c.execute("create index if not exists scoresindex on scores(stringidentifier)")
 	conn.commit()
+	c2 = conn.cursor()
 
 	c.execute("select distinct stringidentifier from stringscache")
-	programstrings = c.fetchall()
-	for p in programstrings:
+	programstrings = c.fetchmany(10000)
+	while programstrings != []:
 		pkgs = {}
 		filenames = {}
+		for p in programstrings:
 
-		pfs = c.execute("select package, filename from stringscache where stringidentifier=?", p).fetchall()
-		packages = set(map(lambda x: x[0], pfs))
+			pfs = c2.execute("select package, filename from stringscache where stringidentifier=?", p).fetchall()
+			packages = set(map(lambda x: x[0], pfs))
 
-		if len(packages) == 1:
-			score = float(len(p[0]))
-		else:
-			for pf in pfs:
-				(package, filename) = pf
-				if not filenames.has_key(filename):
-					filenames[filename] = [package]
-				else:   
-					filenames[filename] = list(set(filenames[filename] + [package]))
-			try:
-				score = len(p[0]) / pow(alpha, (len(filenames) - 1))
-			except Exception, e:
-				score = len(p[0]) / sys.maxint
-			## cut off for for example postgresql
-			if score < 1e-37:
-				score = 0.0
-		c.execute("insert into scores(stringidentifier, packages, score) values (?,?,?)", (p[0], len(packages), float(score)))
+			if len(packages) == 1:
+				score = float(len(p[0]))
+			else:
+				for pf in pfs:
+					(package, filename) = pf
+					if not filenames.has_key(filename):
+						filenames[filename] = [package]
+					else:   
+						filenames[filename] = list(set(filenames[filename] + [package]))
+				try:
+					score = len(p[0]) / pow(alpha, (len(filenames) - 1))
+				except Exception, e:
+					score = len(p[0]) / sys.maxint
+				## cut off for for example postgresql
+				if score < 1e-37:
+					score = 0.0
+			c2.execute("insert into scores(stringidentifier, packages, score) values (?,?,?)", (p[0], len(packages), float(score)))
+		total += len(programstrings)
+		programstrings = c.fetchmany(10000)
+	conn.commit()
+	c2.close()
 	print "vacuuming"
 	c.execute("vacuum")
 	conn.commit()
