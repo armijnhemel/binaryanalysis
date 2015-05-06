@@ -1,3 +1,12 @@
+2015-05-06:
+* scorecaches.py: don't select all string identifiers at once to prevent
+running out of memory
+
+2015-05-05:
+* createdb.py: don't store very long string identifiers, since some database
+engines (PostgreSQL for example) don't like indexing them. They are also
+likely to be bogus (Lorem ipsum, etc.)
+
 2015-05-04:
 * add more table and index definitions
 * licenseversion.py: more fixes for PostgreSQL support. Also better prepare
