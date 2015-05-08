@@ -1,3 +1,15 @@
+2015-05-08:
+* fix error in scorecaches.py that would lead to wrong scores after
+refactoring
+
+2015-05-07:
+* add cleanidentifiers.py to delete string literals from extracted_string that
+are equal to or smaller than a certain minimum cut off value (default 4) or
+equal to or longer than a maximum cut off value (1000). The longer strings
+cannot be properly indexed by PostgreSQL (and are not very relevant anyway)
+and the shorter strings will not be used by the ranking algorithm but take up
+a lot of space in the database.
+
 2015-05-06:
 * scorecaches.py: don't select all string identifiers at once to prevent
 running out of memory
