@@ -31,9 +31,9 @@ def main(argv):
 	c.execute("select distinct stringidentifier from stringscache")
 	programstrings = c.fetchmany(10000)
 	while programstrings != []:
-		pkgs = {}
-		filenames = {}
 		for p in programstrings:
+			pkgs = {}
+			filenames = {}
 
 			pfs = c2.execute("select package, filename from stringscache where stringidentifier=?", p).fetchall()
 			packages = set(map(lambda x: x[0], pfs))
@@ -48,14 +48,13 @@ def main(argv):
 					else:   
 						filenames[filename] = list(set(filenames[filename] + [package]))
 				try:
-					score = len(p[0]) / pow(alpha, (len(filenames) - 1))
+					score = float(len(p[0])) / pow(alpha, (len(filenames) - 1))
 				except Exception, e:
 					score = len(p[0]) / sys.maxint
 				## cut off for for example postgresql
 				if score < 1e-37:
 					score = 0.0
 			c2.execute("insert into scores(stringidentifier, packages, score) values (?,?,?)", (p[0], len(packages), float(score)))
-		total += len(programstrings)
 		programstrings = c.fetchmany(10000)
 	conn.commit()
 	c2.close()
