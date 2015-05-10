@@ -226,7 +226,7 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 	masterdb = scanenv.get('BAT_DB')
 
 	## open database connection to the master database
-	masterconn = batdb.getConnection(masterdb)
+	masterconn = batdb.getConnection(masterdb,scanenv)
 	mastercursor = masterconn.cursor()
 
 	## store names of all files containing Linux kernel images or modules
@@ -287,6 +287,9 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 	## This can change per version
 	symboltotype = {}
 
+	symbolquery = batdb.getQuery('select * from extracted_name where name=%s')
+	versionquery = batdb.getQuery('select package,version from processed_file where checksum=%s')
+
 	for i in symbolres:
 		(filehash, version, remotesymbols, dependencies, declaredlicenses, kernelsymbols, module) = i
 		if filehashtoversions.has_key(filehash):
@@ -322,7 +325,9 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 		for k in scansymbols:
 			if symboltotype[version].has_key(k):
 				continue
-			symres = filter(lambda x: x[2] == 'kernelsymbol' or x[2] == 'gplkernelsymbol', mastercursor.execute('select * from extracted_name where name=?', (k,)).fetchall())
+			mastercursor.execute(symbolquery, (k,))
+			symres = mastercursor.fetchall()
+			symres = filter(lambda x: x[2] == 'kernelsymbol' or x[2] == 'gplkernelsymbol', symres)
 			symlen = len(set(map(lambda x: x[2], symres)))
 			if symlen == 0:
 				## unknown symbol. Perhaps an out of tree module, or a kernel version
@@ -344,7 +349,8 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 			symboltypefinal = None
 			for sy in symres:
 				(syfilehash, symbolname, symboltype, language, linenumber) = sy
-				packageres = mastercursor.execute('select package,version from processed_file where checksum=?', (syfilehash,)).fetchall()
+				mastercursor.execute(versionquery, (syfilehash,))
+				packageres = mastercursor.fetchall()
 				for p in packageres:
 					if p[0] != 'linux':
 						continue
@@ -650,7 +656,18 @@ def kernelsymbolssetup(scanenv, debug=False):
 		return (False, None)
 	if scanenv['DBBACKEND'] == 'sqlite3':
 		return kernelsymbolssetup_sqlite3(scanenv, debug)
+	if scanenv['DBBACKEND'] == 'postgresql':
+		return kernelsymbolssetup_postgresql(scanenv, debug)
 	return (False, None)
+
+def kernelsymbolssetup_postgresql(scanenv, debug=False):
+	newenv = copy.deepcopy(scanenv)
+	batdb = bat.batdb.BatDb('postgresql')
+	conn = batdb.getConnection(None,scanenv)
+	if conn == None:
+		return (False, None)
+	conn.close()
+	return (True, newenv)
 
 def kernelsymbolssetup_sqlite3(scanenv, debug=False):
 	newenv = copy.deepcopy(scanenv)
