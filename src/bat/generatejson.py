@@ -80,6 +80,8 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb, scanenv)):
 
 			if 'reports' in stringidentifiers:
 				jsonreport['ranking']['stringresults']['reports'] = []
+				if outputhash != None and outputhash != 'sha256' and batconnection != None:
+					query = batdb.getQuery("select %s from hashconversion where sha256=" % outputhash + "%s")
 				for u in stringidentifiers['reports']:
 					(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses, packagecopyrights) = u
 					report = {}
@@ -100,7 +102,6 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb, scanenv)):
 									identifierdatareport['filechecksum'] = hashcache[filechecksum]
 									identifierdatareport['filechecksumtype'] = outputhash
 								else:
-									query = batdb.getQuery("select %s from hashconversion where sha256=" % outputhash + "%s")
 									cursor.execute(query, (filechecksum,))
 									convertedhash = cursor.fetchone()
 									if convertedhash != None:
