@@ -660,8 +660,8 @@ def grab_sha256_varname((batdb, masterdb, language, tasks, scanenv)):
 	## from source code.
 	conn = batdb.getConnection(masterdb,scanenv)
 	c = conn.cursor()
+	query = batdb.getQuery("select version, pathname from processed_file where checksum=%s")
 	for sha256sum in tasks:
-		query = batdb.getQuery("select version, pathname from processed_file where checksum=%s")
 		c.execute(query, (sha256sum,))
 		results[sha256sum] = c.fetchall()
 	c.close()
@@ -674,8 +674,8 @@ def grab_sha256_filename((batdb, masterdb, tasks, scanenv)):
 	## from source code.
 	conn = batdb.getConnection(masterdb,scanenv)
 	c = conn.cursor()
+	query = batdb.getQuery("select version, pathname from processed_file where checksum=%s")
 	for sha256sum in tasks:
-		query = batdb.getQuery("select version, pathname from processed_file where checksum=%s")
 		c.execute(query, (sha256sum,))
 		results[sha256sum] = c.fetchall()
 	c.close()
@@ -687,8 +687,8 @@ def grab_sha256_copyright((batdb, copyrightdb, tasks)):
 	results = {}
 	conn = batdb.getConnection(copyrightdb,scanenv)
 	c = conn.cursor()
+	query = batdb.getQuery("select distinct copyright, type from extracted_copyright where checksum=%s")
 	for sha256sum in tasks:
-		query = batdb.getQuery("select distinct copyright, type from extracted_copyright where checksum=%s")
 		c.execute(query, (sha256sum,))
 		res = c.fetchall()
 		## filter out statements for now, possibly include them later
@@ -703,8 +703,8 @@ def grab_sha256_license((batdb, licensedb, tasks, scanenv)):
 	results = {}
 	conn = batdb.getConnection(licensedb,scanenv)
 	c = conn.cursor()
+	query = batdb.getQuery("select distinct license, scanner from licenses where checksum=%s")
 	for sha256sum in tasks:
-		query = batdb.getQuery("select distinct license, scanner from licenses where checksum=%s")
 		c.execute(query, (sha256sum,))
 		results[sha256sum] = c.fetchall()
 	c.close()
@@ -717,23 +717,23 @@ def grab_sha256_parallel((batdb, masterdb, tasks, language, querytype, scanenv))
 	## from source code.
 	conn = batdb.getConnection(masterdb,scanenv)
 	c = conn.cursor()
+	stringquery = batdb.getQuery("select distinct checksum, linenumber, language from extracted_string where stringidentifier=%s and language=%s")
+	functionquery = batdb.getQuery("select distinct checksum, linenumber, language from extracted_function where functionname=%s")
+	variablequery = batdb.getQuery("select distinct checksum, linenumber, language, type from extracted_name where name=%s")
+	kernelvarquery = batdb.getQuery("select distinct checksum, linenumber, language, type from extracted_name where name=%s")
 	for line in tasks:
 		if querytype == "string":
-			query = batdb.getQuery("select distinct checksum, linenumber, language from extracted_string where stringidentifier=%s and language=%s")
-			c.execute(query, (line,language))
+			c.execute(stringquery, (line,language))
 			res = c.fetchall()
 		elif querytype == 'function':
-			query = batdb.getQuery("select distinct checksum, linenumber, language from extracted_function where functionname=%s")
-			c.execute(query, (line,))
+			c.execute(functionquery, (line,))
 			res = c.fetchall()
 		elif querytype == 'variable':
-			query = batdb.getQuery("select distinct checksum, linenumber, language, type from extracted_name where name=%s")
-			c.execute(query, (line,))
+			c.execute(variablequery, (line,))
 			res = c.fetchall()
 			res = filter(lambda x: x[3] == 'variable', res)
 		elif querytype == 'kernelvariable':
-			query = batdb.getQuery("select distinct checksum, linenumber, language, type from extracted_name where name=%s")
-			c.execute(query, (line,))
+			c.execute(kernelvarquery, (line,))
 			res = c.fetchall()
 			res = filter(lambda x: x[3] == 'kernelsymbol', res)
 		if res != None:
@@ -765,10 +765,10 @@ def extractJavaNames(javameta, scanenv, batdb, clones):
 	c = conn.cursor()
 
 	if scanenv.has_key('BAT_METHOD_SCAN'):
+		query = batdb.getQuery("select distinct package from %s where functionname=" % namecacheperlanguagetable['Java'] + "%s")
 		for meth in methods:
 			if meth == 'main':
 				continue
-			query = batdb.getQuery("select distinct package from %s where functionname=" % namecacheperlanguagetable['Java'] + "%s")
 			c.execute(query, (meth,))
 			res = c.fetchall()
 			if res != []:
@@ -842,13 +842,13 @@ def extractVariablesJava(javameta, scanenv, batdb, clones):
 	## uncommon. TODO: merge class name and source file name searching
 	if scanenv.has_key('BAT_CLASSNAME_SCAN'):
 		classes = set(map(lambda x: x.split('$')[0], classes))
+		query = batdb.getQuery("select package from classcache_java where classname=%s")
 		for i in classes:
 			pvs = []
 			## first try the name as found in the binary. If it can't
 			## be found and has dots in it split it on '.' and
 			## use the last component only.
 			classname = i
-			query = batdb.getQuery("select package from classcache_java where classname=%s")
 			c.execute(query, (classname,))
 			classres = c.fetchall()
 			if classres == []:
@@ -882,7 +882,6 @@ def extractVariablesJava(javameta, scanenv, batdb, clones):
 			## first try the name as found in the binary. If it can't
 			## be found and has dots in it split it on '.' and
 			## use the last component only.
-			query = batdb.getQuery("select package from classcache_java where classname=%s")
 			c.execute(query, (classname,))
 			classres = c.fetchall()
 			## check the cloning database
@@ -903,6 +902,7 @@ def extractVariablesJava(javameta, scanenv, batdb, clones):
 	## that often.
 	sha256cache = {}
 	if scanenv.has_key('BAT_FIELDNAME_SCAN'):
+		query = batdb.getQuery("select package from fieldcache_java where fieldname=%s")
 		for f in fields:
 			## a few fields are so common that they will be completely useless
 			## for reporting, but processing them will take a *lot* of time, so
@@ -912,7 +912,6 @@ def extractVariablesJava(javameta, scanenv, batdb, clones):
 				continue
 			pvs = []
 
-			query = batdb.getQuery("select package from fieldcache_java where fieldname=%s")
 			c.execute(query, (f,))
 			fieldres = c.fetchall()
 			if fieldres != []:
@@ -941,9 +940,9 @@ def scankernelsymbols(variables, scanenv, batdb, clones):
 	allvvs = {}
 	uniquevvs = {}
 	variablepvs = {}
+	query = batdb.getQuery("select distinct package from linuxkernelnamecache where varname=%s")
 	for v in variables:
 		pvs = []
-		query = batdb.getQuery("select distinct package from linuxkernelnamecache where varname=%s")
 		c.execute(query, (v,))
 		res = c.fetchall()
 		if res != []:
@@ -1003,8 +1002,8 @@ def scanDynamic(scanstr, variables, scanenv, batdb, clones):
 		## the database made from ctags output only has function names, not the types. Since
 		## C++ functions could be in an executable several times with different types we
 		## deduplicate first
+		query = batdb.getQuery("select package from %s where functionname=" % namecacheperlanguagetable['C'] + "%s")
 		for funcname in scanstr:
-			query = batdb.getQuery("select package from %s where functionname=" % namecacheperlanguagetable['C'] + "%s")
 			c.execute(query, (funcname,))
 			res = c.fetchall()
 			pkgs = []
@@ -1048,13 +1047,13 @@ def scanDynamic(scanstr, variables, scanenv, batdb, clones):
 	if scanenv.get('BAT_VARNAME_SCAN'):
 		uniquevvs = {}
 		allvvs = {}
+		query = batdb.getQuery("select distinct package from varnamecache_c where varname=%s")
 		for v in variables:
 			## These variable names are very generic and would not be useful, so skip.
 			## This is based on research of millions of C files.
 			if v in ['options', 'debug', 'options', 'verbose', 'optarg', 'optopt', 'optfind', 'optind', 'opterr']:
 				continue
 			pvs = []
-			query = batdb.getQuery("select distinct package from varnamecache_c where varname=%s")
 			c.execute(query, (v,))
 			res = c.fetchall()
 			if res != []:
