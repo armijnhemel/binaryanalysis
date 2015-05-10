@@ -937,7 +937,7 @@ def scankernelsymbols(variables, scanenv, batdb, clones):
 	for v in variables:
 		pvs = []
 		query = batdb.getQuery("select distinct package from linuxkernelnamecache where varname=%s")
-		c.execute(query, (v,)).fetchall()
+		c.execute(query, (v,))
 		res = c.fetchall()
 		if res != []:
 			pvs = map(lambda x: x[0], res)
@@ -1210,7 +1210,9 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 			## kernel image could also be function names, not string constants.
 			## There could be false positives here...
 			if scankernelfunctions:
-				kernelres = kernelconn.execute("select package FROM linuxkernelfunctionnamecache WHERE functionname=?", (line,)).fetchall()
+				query = batdb.getQuery("select package FROM linuxkernelfunctionnamecache WHERE functionname=%s")
+				kernelcursor.execute(query, (line,))
+				kernelres = kernelcursor.fetchall()
 				if len(kernelres) != 0:
 					kernelfuncres.append(line)
 					kernelfunctionmatched = True
@@ -2087,7 +2089,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				step = len(functionnames)/processors
 			for v in xrange(0, len(functionnames), step):
 				vtasks_tmp.append(functionnames[v:v+step])
-			vtasks = map(lambda x: (batdb, masterdb, x, 'C', 'function'), vtasks_tmp)
+			vtasks = map(lambda x: (batdb, masterdb, x, 'C', 'function',scanenv), vtasks_tmp)
 
 			vsha256s = pool.map(grab_sha256_parallel, vtasks)
 			vsha256s = reduce(lambda x, y: x + y, filter(lambda x: x != [], vsha256s))
@@ -2177,11 +2179,11 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 					vtasks_tmp.append(uniques[v:v+step])
 				if variablepvs.has_key('type'):
 					if variablepvs['type'] == 'linuxkernel':
-						vtasks = map(lambda x: (batdb, masterdb, x, language, 'kernelvariable'), filter(lambda x: x!= [], vtasks_tmp))
+						vtasks = map(lambda x: (batdb, masterdb, x, language, 'kernelvariable',scanenv), filter(lambda x: x!= [], vtasks_tmp))
 					else:
-						vtasks = map(lambda x: (batdb, masterdb, x, language, 'variable'), filter(lambda x: x!= [], vtasks_tmp))
+						vtasks = map(lambda x: (batdb, masterdb, x, language, 'variable',scanenv), filter(lambda x: x!= [], vtasks_tmp))
 				else:
-						vtasks = map(lambda x: (batdb, masterdb, x, language, 'variable'), filter(lambda x: x!= [], vtasks_tmp))
+						vtasks = map(lambda x: (batdb, masterdb, x, language, 'variable',scanenv), filter(lambda x: x!= [], vtasks_tmp))
 				vsha256s = pool.map(grab_sha256_parallel, vtasks)
 				vsha256s = reduce(lambda x, y: x + y, filter(lambda x: x != [], vsha256s))
 
@@ -2290,6 +2292,7 @@ def licensesetup_postgresql(scanenv, debug=False):
 	newenv['BAT_KERNELSYMBOL_SCAN'] = 1
 	newenv['BAT_VARNAME_SCAN'] = 1
 	newenv['BAT_FUNCTION_SCAN'] = 1
+	newenv['BAT_KERNELFUNCTION_SCAN'] = 1
 
 	return (True, newenv)
 
@@ -2447,7 +2450,7 @@ def licensesetup_sqlite3(scanenv, debug=False):
 			## Sanity check for kernel function names
 			cacheconn = batdb.getConnection(namecache)
 			cachecursor = cacheconn.cursor()
-			cachecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='kernelfunctionnamecache';")
+			cachecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='linuxkernelfunctionnamecache';")
 			kernelfuncs = cachecursor.fetchall()
 			if kernelfuncs == []:
 				if newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
