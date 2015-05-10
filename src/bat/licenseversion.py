@@ -1154,6 +1154,10 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 		## sort the lines first, so it is easy to skip duplicates
 		lines.sort()
 
+	stringquery = batdb.getQuery("select package, filename FROM %s WHERE stringidentifier=" % stringsdbperlanguagetable[language] + "%s")
+	kernelquery = batdb.getQuery("select package FROM linuxkernelfunctionnamecache WHERE functionname=%s LIMIT 1")
+	precomputequery = batdb.getQuery("select score from scores where stringidentifier=%s LIMIT 1")
+
 	for line in lines:
 		#if scandebug:
 		#	print >>sys.stderr, "processing <|%s|>" % line
@@ -1193,7 +1197,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 		## An extra check for lines that score extremely low. This
 		## helps reduce load on databases stored on slower disks
 		if precomputescore:
-			c.execute("select score from scores where stringidentifier=? LIMIT 1", (line,))
+			c.execute(precomputequery, (line,))
 			scoreres = c.fetchone()
 			if scoreres != None:
 				## If the score is so low it will not have any influence on the final
@@ -1217,8 +1221,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 			## kernel image could also be function names, not string constants.
 			## There could be false positives here...
 			if scankernelfunctions:
-				query = batdb.getQuery("select package FROM linuxkernelfunctionnamecache WHERE functionname=%s")
-				kernelcursor.execute(query, (line,))
+				kernelcursor.execute(kernelquery, (line,))
 				kernelres = kernelcursor.fetchall()
 				if len(kernelres) != 0:
 					kernelfuncres.append(line)
@@ -1227,8 +1230,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 					continue
 
 		## then see if there is anything in the cache at all
-		kernelstringquery = batdb.getQuery("select package, filename FROM %s WHERE stringidentifier=" % stringsdbperlanguagetable[language] + "%s")
-		c.execute(kernelstringquery, (line,))
+		c.execute(stringquery, (line,))
 		res = c.fetchall()
 
 		if len(res) == 0 and linuxkernel:
@@ -1246,7 +1248,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 					unmatchedlines += 1
 					linecount[line] = linecount[line] - 1
 					continue
-				c.execute(kernelstringquery, (scanline,))
+				c.execute(stringquery, (scanline,))
 				res = c.fetchall()
 				if len(res) != 0:
 					line = scanline
@@ -1261,7 +1263,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 							unmatchedlines += 1
 							linecount[line] = linecount[line] - 1
 							continue
-						c.execute(kernelstringquery, (scanline,))
+						c.execute(stringquery, (scanline,))
 						res = c.fetchall()
 						if len(res) != 0:
 							if len(scanline) != 0:
@@ -1278,7 +1280,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 						unmatchedlines += 1
 						linecount[line] = linecount[line] - 1
 						continue
-					c.execute(kernelstringquery, (scanline,))
+					c.execute(stringquery, (scanline,))
 					res = c.fetchall()
 					if len(res) != 0:
 						if len(scanline) != 0:
@@ -1295,7 +1297,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 							unmatchedlines += 1
 							linecount[line] = linecount[line] - 1
 							continue
-						c.execute(kernelstringquery, (scanline,))
+						c.execute(stringquery, (scanline,))
 						res = c.fetchall()
 						if len(res) != 0:
 							if len(scanline) != 0:
