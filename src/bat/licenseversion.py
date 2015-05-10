@@ -667,7 +667,7 @@ def grab_sha256_varname((batdb, masterdb, language, tasks)):
 	conn.close()
 	return results
 
-def grab_sha256_filename((batdb, masterdb, tasks)):
+def grab_sha256_filename((batdb, masterdb, tasks, scanenv)):
 	results = {}
 	## open the database containing all the strings that were extracted
 	## from source code.
@@ -696,7 +696,7 @@ def grab_sha256_copyright((batdb, copyrightdb, tasks)):
 	return results
 
 ## grab licenses from the license database
-def grab_sha256_license((batdb, licensedb, tasks)):
+def grab_sha256_license((batdb, licensedb, tasks, scanenv)):
 	results = {}
 	conn = batdb.getConnection(licensedb,scanenv)
 	c = conn.cursor()
@@ -707,7 +707,7 @@ def grab_sha256_license((batdb, licensedb, tasks)):
 	conn.close()
 	return results
 
-def grab_sha256_parallel((batdb, masterdb, tasks, language, querytype)):
+def grab_sha256_parallel((batdb, masterdb, tasks, language, querytype, scanenv)):
 	results = []
 	## open the database containing all the strings that were extracted
 	## from source code.
@@ -1926,7 +1926,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				step = lenuniques/processors
 			for v in xrange(0, lenuniques, step):
 				vtasks_tmp.append(uniques[v:v+step])
-			vtasks = map(lambda x: (batdb, masterdb, x, language, 'string'), filter(lambda x: x!= [], vtasks_tmp))
+			vtasks = map(lambda x: (batdb, masterdb, x, language, 'string',scanenv), filter(lambda x: x!= [], vtasks_tmp))
 			vsha256s = pool.map(grab_sha256_parallel, vtasks)
 			vsha256s = reduce(lambda x, y: x + y, filter(lambda x: x != [], vsha256s))
 
@@ -1952,7 +1952,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				step = len(sha256_scan_versions)/processors
 			for v in xrange(0, len(sha256_scan_versions), step):
 				vtasks_tmp.append(sha256_scan_versions.keys()[v:v+step])
-			vtasks = map(lambda x: (batdb, masterdb, x), filter(lambda x: x!= [], vtasks_tmp))
+			vtasks = map(lambda x: (batdb, masterdb, x, scanenv), filter(lambda x: x!= [], vtasks_tmp))
 
 			## grab version and file information
 			fileres = pool.map(grab_sha256_filename, vtasks)
@@ -2022,7 +2022,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 					step = lenlicensesha256s/processors
 				for v in xrange(0, lenlicensesha256s, step):
 					vtasks_tmp.append(licensesha256s[v:v+step])
-				vtasks = map(lambda x: (batdb, licensedb, x), filter(lambda x: x!= [], vtasks_tmp))
+				vtasks = map(lambda x: (batdb, licensedb, x, scanenv), filter(lambda x: x!= [], vtasks_tmp))
 
 				packagelicenses = pool.map(grab_sha256_license, vtasks)
 				## result is a list of {sha256sum: list of licenses}
@@ -2106,7 +2106,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				step = len(sha256_scan_versions.keys())/processors
 			for v in xrange(0, len(sha256_scan_versions.keys()), step):
 				vtasks_tmp.append(sha256_scan_versions.keys()[v:v+step])
-			vtasks = map(lambda x: (batdb, masterdb, x), vtasks_tmp)
+			vtasks = map(lambda x: (batdb, masterdb, x, scanenv), vtasks_tmp)
 
 			## grab version and file information
 			fileres = pool.map(grab_sha256_filename, vtasks)
@@ -2199,7 +2199,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 					step = len(sha256_scan_versions.keys())/processors
 				for v in xrange(0, len(sha256_scan_versions.keys()), step):
 					vtasks_tmp.append(sha256_scan_versions.keys()[v:v+step])
-				vtasks = map(lambda x: (batdb, masterdb, x), vtasks_tmp)
+				vtasks = map(lambda x: (batdb, masterdb, x, scanenv), vtasks_tmp)
 
 				## grab version and file information
 				fileres = pool.map(grab_sha256_filename, vtasks)
