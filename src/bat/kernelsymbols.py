@@ -261,6 +261,13 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 	symbolres = pool.map(extractfromkernelfile, symboltasks)
 	pool.terminate()
 
+	## check if there actually are modules. If not, there is nothing to do
+	if filter(lambda x: x[-1] == True, symbolres) == []:
+		## close the database cursor and connection
+		mastercursor.close()
+		masterconn.close()
+		return
+
 	filehashtoremotesymbols = {}
 	filehashtokernelsymbols = {}
 
