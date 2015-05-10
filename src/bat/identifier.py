@@ -697,6 +697,7 @@ def extractKernelData(lines, filepath, scanenv, scandebug):
 	if scandebug:
 		print >>sys.stderr, "total extracted strings for %s: %d" %(filepath, lenlines)
 
+	query = batdb.getQuery("select package FROM linuxkernelfunctionnamecache WHERE functionname = %s;")
 	for line in lines:
 		if scandebug:
 			print >>sys.stderr, "processing <|%s|>" % line
@@ -710,7 +711,6 @@ def extractKernelData(lines, filepath, scanenv, scandebug):
 		## This is where things get a bit ugly. The strings in a Linux
 		## kernel image could also be function names, not string constants.
 		## There could be false positives here...
-		query = batdb.getQuery("select package FROM linuxkernelfunctionnamecache WHERE functionname = %s;")
 		kernelcursor.execute(query, (line,))
 		kernelres = kernelcursor.fetchall()
 		if len(kernelres) != 0:
