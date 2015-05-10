@@ -15,10 +15,10 @@ The documentation of the format can be found in the 'doc' directory (subject to 
 import os, sys, re, json, cPickle, multiprocessing, copy, gzip, codecs
 import bat.batdb
 
-def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb)):
+def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb, scanenv)):
 	batconnection = None
 	if batdb != None:
-		batconnection = batdb.getConnection(hashdatabase)
+		batconnection = batdb.getConnection(hashdatabase,scanenv)
 		if batconnection != None:
 			cursor = batconnection.cursor()
 	hashcache = {}
@@ -95,12 +95,14 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb)):
 						for iddata in identifierdata:
 							(filechecksum, linenumber, fileversiondata) = iddata
 							identifierdatareport = {}
-							if outputhash != None and outputhash != 'sha256':
+							if outputhash != None and outputhash != 'sha256' and batconnection != None:
 								if filechecksum in hashcache:
 									identifierdatareport['filechecksum'] = hashcache[filechecksum]
 									identifierdatareport['filechecksumtype'] = outputhash
 								else:
-									convertedhash = cursor.execute("select %s from hashconversion where sha256=?" % outputhash, (filechecksum,)).fetchone()
+									query = batdb.getQuery("select %s from hashconversion where sha256=" % outputhash + "%s")
+									cursor.execute(query, (filechecksum,))
+									convertedhash = cursor.fetchone()
 									if convertedhash != None:
 										hashcache[filechecksum] = convertedhash[0]
 										identifierdatareport['filechecksum'] = convertedhash[0]
@@ -323,7 +325,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 		if os.path.exists(os.path.join(topleveldir, "reports", "%s.json.gz" % filehash)):
 			continue
 		filehashes.add(filehash)
-		jsontasks.append((filehash, topleveldir, outputhash, scanenv['BAT_DB'], batdb))
+		jsontasks.append((filehash, topleveldir, outputhash, scanenv['BAT_DB'], batdb, scanenv))
 
 	pool = multiprocessing.Pool(processes=processors)
 	pool.map(writejson, jsontasks)
