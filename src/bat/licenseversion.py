@@ -936,7 +936,9 @@ def scankernelsymbols(variables, scanenv, batdb, clones):
 	variablepvs = {}
 	for v in variables:
 		pvs = []
-		res = c.execute("select distinct package from linuxkernelnamecache where varname=?", (v,)).fetchall()
+		query = batdb.getQuery("select distinct package from linuxkernelnamecache where varname=%s")
+		c.execute(query, (v,)).fetchall()
+		res = c.fetchall()
 		if res != []:
 			pvs = map(lambda x: x[0], res)
 
@@ -995,7 +997,7 @@ def scanDynamic(scanstr, variables, scanenv, batdb, clones):
 		## C++ functions could be in an executable several times with different types we
 		## deduplicate first
 		for funcname in scanstr:
-			query = "select package from %s where functionname=?" % namecacheperlanguagetable['C']
+			query = batdb.getQuery("select package from %s where functionname=" % namecacheperlanguagetable['C'] + "%s")
 			c.execute(query, (funcname,))
 			res = c.fetchall()
 			pkgs = []
@@ -1045,7 +1047,9 @@ def scanDynamic(scanstr, variables, scanenv, batdb, clones):
 			if v in ['options', 'debug', 'options', 'verbose', 'optarg', 'optopt', 'optfind', 'optind', 'opterr']:
 				continue
 			pvs = []
-			res = c.execute("select distinct package from varnamecache_c where varname=?", (v,)).fetchall()
+			query = batdb.getQuery("select distinct package from varnamecache_c where varname=%s")
+			c.execute(query, (v,))
+			res = c.fetchall()
 			if res != []:
 				pvs = map(lambda x: x[0], res)
 
@@ -2280,6 +2284,13 @@ def licensesetup_postgresql(scanenv, debug=False):
 	if conn == None:
 		return (False, None)
 	conn.close()
+	newenv['BAT_CLASSNAME_SCAN'] = 1
+	newenv['BAT_FIELDNAME_SCAN'] = 1
+	newenv['BAT_METHOD_SCAN'] = 1
+	newenv['BAT_KERNELSYMBOL_SCAN'] = 1
+	newenv['BAT_VARNAME_SCAN'] = 1
+	newenv['BAT_FUNCTION_SCAN'] = 1
+
 	return (True, newenv)
 
 ## method that makes sure that everything is set up properly and modifies
