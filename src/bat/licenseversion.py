@@ -1222,6 +1222,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 		## then see if there is anything in the cache at all
 		kernelstringquery = batdb.getQuery("select package, filename FROM %s WHERE stringidentifier=" % stringsdbperlanguagetable[language] + "%s")
 		c.execute(kernelstringquery, (line,))
+		res = c.fetchall()
 
 		if len(res) == 0 and linuxkernel:
 			origline = line
