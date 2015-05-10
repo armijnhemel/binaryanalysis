@@ -1098,6 +1098,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 	nonUniqueAssignments = {}
 	directAssignedString = {}
 	unmatched = []
+	unmatchedignorecache = set()
 
 	stringscache = scanenv.get(stringsdbperlanguageenv[language])
 	## open the database containing all the strings that were extracted
@@ -1156,8 +1157,6 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 	stringquery = batdb.getQuery("select package, filename FROM %s WHERE stringidentifier=" % stringsdbperlanguagetable[language] + "%s")
 	kernelquery = batdb.getQuery("select package FROM linuxkernelfunctionnamecache WHERE functionname=%s LIMIT 1")
 	precomputequery = batdb.getQuery("select score from scores where stringidentifier=%s LIMIT 1")
-
-	unmatchedignorecache = set()
 
 	for line in lines:
 		#if scandebug:
