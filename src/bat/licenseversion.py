@@ -153,6 +153,7 @@ fossology_to_ninka = { 'No_license_found': 'NONE'
 
 reerrorlevel = re.compile("<[\d+cd]>")
 reparam = re.compile("([\w_]+)\.([\w_]+)")
+rematch = re.compile("\d+")
 
 ## The scanners that are used in BAT are Ninka and FOSSology. These scanners
 ## don't always agree on results, but when they do, it is very reliable.
@@ -1137,7 +1138,6 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 	oldline = None
 	notclones = []
 
-
 	if usesourceorder:
 		## don't use precomputed scores
 		precomputescore = False
@@ -1189,12 +1189,13 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 			matchednotclones = False
 			oldline = line
 
-		## skip empty lines
+		## skip empty lines (only triggered if stringcutoff == 0)
 		if line == "":
 			continue
 
 		## An extra check for lines that score extremely low. This
-		## helps reduce load on databases stored on slower disks
+		## helps reduce load on databases stored on slower disks. Only used if
+		## precomputescore is set and "source order" is False.
 		if precomputescore:
 			c.execute(precomputequery, (line,))
 			scoreres = c.fetchone()
@@ -1271,7 +1272,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 				## In include/linux/kern_levels.h since kernel 3.6 a different format is
 				## used. TODO: actually check in the binary whether or not a match (if any)
 				## is preceded by 0x01
-				matchres = re.match("\d+", line)
+				matchres = rematch.match(line)
 				if matchres != None:
 					scanline = line[1:]
 					if len(scanline) < stringcutoff:
