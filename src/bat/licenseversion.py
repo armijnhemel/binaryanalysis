@@ -654,14 +654,15 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	pool.terminate()
 
 ## grab variable names.
-def grab_sha256_varname((batdb, masterdb, language, tasks)):
+def grab_sha256_varname((batdb, masterdb, language, tasks, scanenv)):
 	results = {}
 	## open the database containing all the strings that were extracted
 	## from source code.
 	conn = batdb.getConnection(masterdb,scanenv)
 	c = conn.cursor()
 	for sha256sum in tasks:
-		c.execute("select version, pathname from processed_file where checksum=?", (sha256sum,))
+		query = batdb.getQuery("select version, pathname from processed_file where checksum=%s")
+		c.execute(query, (sha256sum,))
 		results[sha256sum] = c.fetchall()
 	c.close()
 	conn.close()
@@ -674,7 +675,8 @@ def grab_sha256_filename((batdb, masterdb, tasks, scanenv)):
 	conn = batdb.getConnection(masterdb,scanenv)
 	c = conn.cursor()
 	for sha256sum in tasks:
-		c.execute("select version, pathname from processed_file where checksum=?", (sha256sum,))
+		query = batdb.getQuery("select version, pathname from processed_file where checksum=%s")
+		c.execute(query, (sha256sum,))
 		results[sha256sum] = c.fetchall()
 	c.close()
 	conn.close()
@@ -686,7 +688,8 @@ def grab_sha256_copyright((batdb, copyrightdb, tasks)):
 	conn = batdb.getConnection(copyrightdb,scanenv)
 	c = conn.cursor()
 	for sha256sum in tasks:
-		c.execute("select distinct copyright, type from extracted_copyright where checksum=?", (sha256sum,))
+		query = batdb.getQuery("select distinct copyright, type from extracted_copyright where checksum=%s")
+		c.execute(query, (sha256sum,))
 		res = c.fetchall()
 		## filter out statements for now, possibly include them later
 		res = filter(lambda x: x[1] != 'statement', res)
@@ -701,7 +704,8 @@ def grab_sha256_license((batdb, licensedb, tasks, scanenv)):
 	conn = batdb.getConnection(licensedb,scanenv)
 	c = conn.cursor()
 	for sha256sum in tasks:
-		c.execute("select distinct license, scanner from licenses where checksum=?", (sha256sum,))
+		query = batdb.getQuery("select distinct license, scanner from licenses where checksum=%s")
+		c.execute(query, (sha256sum,))
 		results[sha256sum] = c.fetchall()
 	c.close()
 	conn.close()
@@ -715,17 +719,21 @@ def grab_sha256_parallel((batdb, masterdb, tasks, language, querytype, scanenv))
 	c = conn.cursor()
 	for line in tasks:
 		if querytype == "string":
-			c.execute("select distinct checksum, linenumber, language from extracted_string where stringidentifier=? and language=?", (line,language))
+			query = batdb.getQuery("select distinct checksum, linenumber, language from extracted_string where stringidentifier=%s and language=%s")
+			c.execute(query, (line,language))
 			res = c.fetchall()
 		elif querytype == 'function':
-			c.execute("select distinct checksum, linenumber, language from extracted_function where functionname=?", (line,))
+			query = batdb.getQuery("select distinct checksum, linenumber, language from extracted_function where functionname=%s")
+			c.execute(query, (line,))
 			res = c.fetchall()
 		elif querytype == 'variable':
-			c.execute("select distinct checksum, linenumber, language, type from extracted_name where name=?", (line,))
+			query = batdb.getQuery("select distinct checksum, linenumber, language, type from extracted_name where name=%s")
+			c.execute(query, (line,))
 			res = c.fetchall()
 			res = filter(lambda x: x[3] == 'variable', res)
 		elif querytype == 'kernelvariable':
-			c.execute("select distinct checksum, linenumber, language, type from extracted_name where name=?", (line,))
+			query = batdb.getQuery("select distinct checksum, linenumber, language, type from extracted_name where name=%s")
+			c.execute(query, (line,))
 			res = c.fetchall()
 			res = filter(lambda x: x[3] == 'kernelsymbol', res)
 		if res != None:
