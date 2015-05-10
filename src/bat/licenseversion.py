@@ -768,8 +768,8 @@ def extractJavaNames(javameta, scanenv, batdb, clones):
 		for meth in methods:
 			if meth == 'main':
 				continue
-			query = "select distinct package from %s where functionname=?" % namecacheperlanguagetable['Java']
-			c.execute(query, (meth,)).fetchall()
+			query = batdb.getQuery("select distinct package from %s where functionname=" % namecacheperlanguagetable['Java'] + "%s")
+			c.execute(query, (meth,))
 			res = c.fetchall()
 			if res != []:
 				namesmatched += 1
@@ -848,11 +848,14 @@ def extractVariablesJava(javameta, scanenv, batdb, clones):
 			## be found and has dots in it split it on '.' and
 			## use the last component only.
 			classname = i
-			classres = c.execute("select package from classcache_java where classname=?", (classname,)).fetchall()
+			query = batdb.getQuery("select package from classcache_java where classname=%s")
+			c.execute(query, (classname,))
+			classres = c.fetchall()
 			if classres == []:
 				## check just the last component
 				classname = classname.split('.')[-1]
-				classres = c.execute("select package from classcache_java where classname=?", (classname,)).fetchall()
+				classres = c.execute(query, (classname,))
+				classres = c.fetchall()
 			## check the cloning database
 			if classres != []:
 				classres_tmp = []
@@ -879,7 +882,9 @@ def extractVariablesJava(javameta, scanenv, batdb, clones):
 			## first try the name as found in the binary. If it can't
 			## be found and has dots in it split it on '.' and
 			## use the last component only.
-			classres = c.execute("select package from classcache_java where classname=?", (classname,)).fetchall()
+			query = "select package from classcache_java where classname=%s"
+			c.execute(query, (classname,))
+			classres = c.fetchall()
 			## check the cloning database
 			if classres != []:
 				classres_tmp = []
@@ -907,7 +912,9 @@ def extractVariablesJava(javameta, scanenv, batdb, clones):
 				continue
 			pvs = []
 
-			fieldres = c.execute("select package from fieldcache_java where fieldname=?", (f,)).fetchall()
+			query = "select package from fieldcache_java where fieldname=%s"
+			c.execute(query, (f,))
+			fieldres = c.fetchall()
 			if fieldres != []:
 				fieldres_tmp = []
 				for r in fieldres:
