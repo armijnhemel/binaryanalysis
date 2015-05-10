@@ -882,7 +882,7 @@ def extractVariablesJava(javameta, scanenv, batdb, clones):
 			## first try the name as found in the binary. If it can't
 			## be found and has dots in it split it on '.' and
 			## use the last component only.
-			query = "select package from classcache_java where classname=%s"
+			query = batdb.getQuery("select package from classcache_java where classname=%s")
 			c.execute(query, (classname,))
 			classres = c.fetchall()
 			## check the cloning database
@@ -912,7 +912,7 @@ def extractVariablesJava(javameta, scanenv, batdb, clones):
 				continue
 			pvs = []
 
-			query = "select package from fieldcache_java where fieldname=%s"
+			query = batdb.getQuery("select package from fieldcache_java where fieldname=%s")
 			c.execute(query, (f,))
 			fieldres = c.fetchall()
 			if fieldres != []:
