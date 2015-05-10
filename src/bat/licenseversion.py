@@ -1157,6 +1157,8 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 	kernelquery = batdb.getQuery("select package FROM linuxkernelfunctionnamecache WHERE functionname=%s LIMIT 1")
 	precomputequery = batdb.getQuery("select score from scores where stringidentifier=%s LIMIT 1")
 
+	unmatchedignorecache = set()
+
 	for line in lines:
 		#if scandebug:
 		#	print >>sys.stderr, "processing <|%s|>" % line
@@ -1211,6 +1213,12 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 					linecount[line] = linecount[line] - 1
 					continue
 
+		if line in unmatchedignorecache:
+			unmatched.append(line)
+			unmatchedlines += 1
+			linecount[line] = linecount[line] - 1
+			continue
+
 		## if scoreres is None the line could still be something else like a kernel function, or a
 		## kernel string in a different format, so keep searching.
 		## If the image is a Linux kernel image first try Linux kernel specific matching
@@ -1262,6 +1270,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 							unmatched.append(line)
 							unmatchedlines += 1
 							linecount[line] = linecount[line] - 1
+							unmatchedignorecache.add(origline)
 							continue
 						c.execute(stringquery, (scanline,))
 						res = c.fetchall()
@@ -1279,6 +1288,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 						unmatched.append(line)
 						unmatchedlines += 1
 						linecount[line] = linecount[line] - 1
+						unmatchedignorecache.add(origline)
 						continue
 					c.execute(stringquery, (scanline,))
 					res = c.fetchall()
@@ -1296,6 +1306,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 							unmatched.append(line)
 							unmatchedlines += 1
 							linecount[line] = linecount[line] - 1
+							unmatchedignorecache.add(origline)
 							continue
 						c.execute(stringquery, (scanline,))
 						res = c.fetchall()
@@ -1324,6 +1335,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 			unmatched.append(line)
 			unmatchedlines += 1
 			linecount[line] = linecount[line] - 1
+			unmatchedignorecache.add(origline)
 			continue
 		if len(res) != 0:
 			## Assume:
