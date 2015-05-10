@@ -1335,7 +1335,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 			unmatched.append(line)
 			unmatchedlines += 1
 			linecount[line] = linecount[line] - 1
-			unmatchedignorecache.add(origline)
+			unmatchedignorecache.add(line)
 			continue
 		if len(res) != 0:
 			## Assume:
