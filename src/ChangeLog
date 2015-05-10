@@ -1,3 +1,15 @@
+2015-05-10:
+* identifier.py: only translate query once
+* generatejson.py: only translate query once
+* licenseversion.py: only select one result from the kernel function name
+cache for a string identifier instead of all results
+* licenseversion.py: finish rewriting all queries to work with postgresql and
+translate queries just once
+* kernelsymbols.py: rewrite queries to work with postgresql
+* kernelsymbols.py: don't do anything if there are no modules
+* licenseversion.py: ignore duplicate lines that have already been classified
+as unmatched
+
 2015-05-08:
 * fix error in scorecaches.py that would lead to wrong scores after
 refactoring
