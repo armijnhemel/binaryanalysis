@@ -25,6 +25,7 @@ def readJFFS2Inodes(path, bigendian):
 	## (offset, size, inode, name)
 	nodeentries = []
 	maxoffset = 0
+	jffs2summary = False
 
 	for s in st:
 		if re.match("\s+Dirent", s) != None:
@@ -53,6 +54,11 @@ def readJFFS2Inodes(path, bigendian):
 			if offset > maxoffset:
 				maxoffset = offset
 		elif re.match("\s+Inode", s) != None:
+			if "Inode Sum" in s:
+				jffs2summary = True
+			splitres = s.split(',',7)
+			if len(splitres) == 4 and jffs2summary:
+				continue
 			(inodeent, size, inode, version, inodesize, csize, dsize, decompressedoffset) = s.split(',', 7)
 			res = re.search("\s+dsize\s*(\d+)", dsize)
 			if res != None:
