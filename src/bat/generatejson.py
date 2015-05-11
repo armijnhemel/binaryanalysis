@@ -332,5 +332,5 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 		jsontasks.append((filehash, topleveldir, outputhash, scanenv['BAT_DB'], batdb, scanenv))
 
 	pool = multiprocessing.Pool(processes=processors)
-	pool.map(writejson, jsontasks)
+	pool.map(writejson, jsontasks,1)
 	pool.terminate()
