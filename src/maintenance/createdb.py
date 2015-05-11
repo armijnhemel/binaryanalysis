@@ -1756,6 +1756,11 @@ def licensefossology((packages)):
 def extractidentifiers((package, version, i, p, language, filehash, ninkaversion, extractconfig, unpackenv, security, authdb, pkgconf)):
 	newlanguage = language
 
+	if 'TMPDIR' in unpackenv:
+		unpackdir = unpackenv['TMPDIR']
+	else:
+		unpackdir = None
+
 	scanidentifiers = True
 	if authdb != None:
 		if not 'alwaysscan' in pkgconf:
@@ -1917,14 +1922,14 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 			moduleres = {}
 		else:
 			## TODO: clean up
-			(patchstringres, moduleres) = extractsourcestrings(p, i, language, package)
+			(patchstringres, moduleres) = extractsourcestrings(p, i, language, package, unpackdir)
 			stringres = []
 			for sql in patchstringres:
 				(res, linenumber) = sql
 				if linenumber in addlines:
 					stringres.append(sql)
 	else:
-		(stringres, moduleres) = extractsourcestrings(p, i, language, package)
+		(stringres, moduleres) = extractsourcestrings(p, i, language, package, unpackdir)
 
 	funcvarresults = set()
 
@@ -2076,7 +2081,7 @@ def securityScan(i,p):
 ## The results might not be perfect, but they are acceptable.
 ## TODO: use version from bat/extractor.py
 ## TODO: process more files at once to reduce overhead of calling xgettext
-def extractsourcestrings(filename, filedir, language, package):
+def extractsourcestrings(filename, filedir, language, package, unpackdir):
 	remove_chars = ["\\a", "\\b", "\\v", "\\f", "\\e", "\\0"]
 	stringres = []
 
@@ -2090,11 +2095,14 @@ def extractsourcestrings(filename, filedir, language, package):
 	## strings that might end up in the binary.
 	## Solution: First replace these characters with \n, then run xgettext.
 	## TODO: fix for octal values, like \010
+
+	scanfile = os.path.join(filedir, filename)
+
 	if language == 'C':
 		changed = False
-		scanfile = open(os.path.join(filedir, filename))
-		filecontents = scanfile.read()
-		scanfile.close()
+		openscanfile = open(os.path.join(filedir, filename))
+		filecontents = openscanfile.read()
+		openscanfile.close()
 
 		## suck in the file and look for __ATTR and friends, since the
 		## first parameter is given to stringify(). __ATTR was gradually
@@ -2253,17 +2261,20 @@ def extractsourcestrings(filename, filedir, language, package):
 				changed = True
 				filecontents = filecontents.replace(r, '\\n')
 		if changed:
-			scanfile = open(os.path.join(filedir, filename), 'w')
-			scanfile.write(filecontents)
-			scanfile.close()
+			tmpscanfile = tempfile.mkstemp(dir=unpackdir)
+			os.fdopen(tmpscanfile[0]).close()
+			scanfile = tmpscanfile[1]
+			openscanfile = open(scanfile, 'w')
+			openscanfile.write(filecontents)
+			openscanfile.close()
 
-	p1 = subprocess.Popen(['xgettext', '-a', "--omit-header", "--no-wrap", os.path.join(filedir, filename), '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	p1 = subprocess.Popen(['xgettext', '-a', "--omit-header", "--no-wrap", scanfile, '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	(stanout, stanerr) = p1.communicate()
 	if p1.returncode != 0:
 		## analyze stderr first
 		if "Non-ASCII" in stanerr:
 			## rerun xgettext with a different encoding
-			p2 = subprocess.Popen(['xgettext', '-a', "--omit-header", "--no-wrap", "--from-code=utf-8", os.path.join(filedir, filename), '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+			p2 = subprocess.Popen(['xgettext', '-a', "--omit-header", "--no-wrap", "--from-code=utf-8", scanfile, '-o', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 			## overwrite stanout
 			(stanout, pstanerr) = p2.communicate()
 			if p2.returncode != 0:
@@ -2274,7 +2285,7 @@ def extractsourcestrings(filename, filedir, language, package):
 	linecutoff = 5000
 
 	## escape just once to speed up extraction of filenumbers
-	filename_escape = re.escape(filename)
+	filename_escape = re.escape(os.path.basename(scanfile))
 
 	for l in stanout.split("\n"):
 		## skip comments and hints
@@ -2324,6 +2335,10 @@ def extractsourcestrings(filename, filedir, language, package):
 		## the other strings are added to the list of strings we need to process
 		else:
 			lines.append(l[1:-1])
+
+	if language == 'C':
+		if changed:
+			os.unlink(scanfile)
 	return (stringres, moduleres)
 
 def checkalreadyscanned((filedir, package, version, filename, origin, downloadurl, batarchive, dbpath, checksum, archivechecksums)):
