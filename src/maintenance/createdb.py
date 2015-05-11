@@ -1074,7 +1074,6 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		else:
 			filehashes[filehash] = [(path, filename)]
 
-	## first check licenses, since we do sometimes manipulate some source code files
 	if license:
 		ninkaconn = sqlite3.connect(ninkacomments, check_same_thread = False)
 		ninkacursor = ninkaconn.cursor()
