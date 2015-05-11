@@ -1228,9 +1228,6 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		else:
 			filtered_files = filestoscan
 
-		config = {}
-		config['urlconfig'] = 1000
-
 		if 'patch' in languages:
 			## patch files should not be scanned for copyright information
 			copyrightsres = pool.map(extractcopyrights, filter(lambda x: x[4] != 'patch', filtered_files), 1)
