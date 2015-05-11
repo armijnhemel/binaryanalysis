@@ -25,15 +25,16 @@ def scanEncryptedZip(path, tags, blacklist=[], scanenv={}, scandebug=False, unpa
 	encryptedzip = zipfile.ZipFile(path, 'r')
 	encryptedinfos = encryptedzip.infolist()
 	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
-	c = batdb.getConnection(scanenv['BAT_DB'])
+	c = batdb.getConnection(scanenv['BAT_DB'],scanenv)
 	cursor = c.cursor()
 	plaintexts = set()
+	query = batdb.getQuery("select sha256 from hashconversion where crc32=%s")
 	for e in encryptedinfos:
 		crc = e.CRC
 		## if the CRC is 0 it is a directory entry
 		if crc == 0:
 			continue
-		cursor.execute("select sha256 from hashconversion where crc32=?", (crc,))
+		cursor.execute(query, (crc,))
 		res = cursor.fetchone()
 		if res != None:
 			plaintexts.add(res[0])
