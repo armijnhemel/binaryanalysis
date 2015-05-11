@@ -37,6 +37,9 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb, scanenv)):
 		if i in leafreports:
 			jsonreport[i] = copy.deepcopy(leafreports[i])
 
+	if outputhash != None and outputhash != 'sha256' and batconnection != None:
+		query = batdb.getQuery("select %s from hashconversion where sha256=" % outputhash + "%s")
+
 	## then the 'ranking' scan
 	if 'ranking' in leafreports:
 		jsonreport['ranking'] = {}
@@ -80,8 +83,6 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb, scanenv)):
 
 			if 'reports' in stringidentifiers:
 				jsonreport['ranking']['stringresults']['reports'] = []
-				if outputhash != None and outputhash != 'sha256' and batconnection != None:
-					query = batdb.getQuery("select %s from hashconversion where sha256=" % outputhash + "%s")
 				for u in stringidentifiers['reports']:
 					(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses, packagecopyrights) = u
 					report = {}
@@ -156,7 +157,8 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb, scanenv)):
 								identifierdatareport['filechecksum'] = hashcache[filechecksum]
 								identifierdatareport['filechecksumtype'] = outputhash
 							else:
-								convertedhash = cursor.execute("select %s from hashconversion where sha256=?" % outputhash, (filechecksum,)).fetchone()
+								cursor.execute(query, (filechecksum,))
+								convertedhash = cursor.fetchone()
 								if convertedhash != None:
 									hashcache[filechecksum] = convertedhash[0]
 									identifierdatareport['filechecksum'] = convertedhash[0]
@@ -204,7 +206,8 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb, scanenv)):
 								identifierdatareport['filechecksum'] = hashcache[filechecksum]
 								identifierdatareport['filechecksumtype'] = outputhash
 							else:
-								convertedhash = cursor.execute("select %s from hashconversion where sha256=?" % outputhash, (filechecksum,)).fetchone()
+								cursor.execute(query, (filechecksum,))
+								convertedhash = cursor.fetchone()
 								if convertedhash != None:
 									hashcache[filechecksum] = convertedhash[0]
 									identifierdatareport['filechecksum'] = convertedhash[0]
