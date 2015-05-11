@@ -60,6 +60,7 @@ def encryptedZipSetup_postgresql(scanenv, debug=False):
         if conn == None:
 		return (False, None)
 	conn.close()
+	return (True, newenv)
 
 def encryptedZipSetup_sqlite3(scanenv, debug=False):
 	## first check if there is a database defined
