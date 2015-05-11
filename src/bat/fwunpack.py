@@ -2756,6 +2756,11 @@ def unpackZip(filename, offset, tempdir=None):
 	## which is the only one we are interested in)
 	p = subprocess.Popen(['zipinfo', '-v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0 and p.returncode != 1:
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return (None, None)
 
 	## check if the file is encrypted, if so bail out
 	res = set(re.findall("file security status:\s+(\w*)\sencrypted", stanout))
@@ -2851,6 +2856,10 @@ def unpackZip(filename, offset, tempdir=None):
 			if p.returncode != 0 and p.returncode != 1:
 				os.unlink(tmpfile2[1])
 				os.unlink(tmpfile[1])
+				rmfiles = os.listdir(tmpdir)
+				if rmfiles != []:
+					for rmfile in rmfiles:
+						os.unlink(os.path.join(tmpdir, rmfile))
 				if tempdir == None:
 					os.rmdir(tmpdir)
 				return (None, None)
@@ -2893,6 +2902,10 @@ def unpackZip(filename, offset, tempdir=None):
 				(stanout, stanerr) = p.communicate()
 				if p.returncode != 0 and p.returncode != 1:
 					os.unlink(tmpfile[1])
+					rmfiles = os.listdir(tmpdir)
+					if rmfiles != []:
+						for rmfile in rmfiles:
+							os.unlink(os.path.join(tmpdir, rmfile))
 					if tempdir == None:
 						os.rmdir(tmpdir)
 					return (None, None)
