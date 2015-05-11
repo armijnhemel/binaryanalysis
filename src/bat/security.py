@@ -49,7 +49,17 @@ def encryptedZipSetup(scanenv, debug=False):
 		return (False, None)
 	if scanenv['DBBACKEND'] == 'sqlite3':
 		return encryptedZipSetup_sqlite3(scanenv, debug)
+	elif scanenv['DBBACKEND'] == 'postgresql':
+		return encryptedZipSetup_postgresql(scanenv, debug)
 	return (False, None)
+
+def encryptedZipSetup_postgresql(scanenv, debug=False):
+	newenv = copy.deepcopy(scanenv)
+	batdb = bat.batdb.BatDb('postgresql')
+	conn = batdb.getConnection(None,scanenv)
+        if conn == None:
+		return (False, None)
+	conn.close()
 
 def encryptedZipSetup_sqlite3(scanenv, debug=False):
 	## first check if there is a database defined
@@ -181,7 +191,8 @@ def crackPasswords(unpackreports, scantempdir, topleveldir, processors, scanenv,
 	db = False
 	if "BAT_SECURITY_DB" in newscanenv:
 		db = True
-		conn = sqlite3.connect(newscanenv['BAT_SECURITY_DB'])
+		batdb = batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
+		conn = batdb.getConnection(newscanenv['BAT_SECURITY_DB'],newscanenv)
 		cursor = conn.cursor()
 
 	seenhashes = set()
@@ -189,6 +200,7 @@ def crackPasswords(unpackreports, scantempdir, topleveldir, processors, scanenv,
 	hashestopassword = {}
 	hashestologins = {}
 
+	passwdquery = batdb.getQuery("select password from security_password where hash=%s")
 	for i in passwdfiles:
 		(pwdfilename, pwdfiletype) = i
 		pwdfile = os.path.join(scantempdir, pwdfilename)
@@ -208,7 +220,7 @@ def crackPasswords(unpackreports, scantempdir, topleveldir, processors, scanenv,
 					continue
 				seenhashes.add(pwfields[1])
 				if db:
-					cursor.execute("select password from security_password where hash=?", (pwfields[1],))
+					cursor.execute(passwdquery, (pwfields[1],))
 					res = cursor.fetchone()
 					if res != None:
 						password = res[0]
@@ -278,6 +290,15 @@ def crackPasswords(unpackreports, scantempdir, topleveldir, processors, scanenv,
 		return {'passwords': res}
 			
 def crackPasswordsSetup(scanenv, debug=False):
+	if not 'DBBACKEND' in scanenv:
+		return (False, None)
+	if scanenv['DBBACKEND'] == 'sqlite3':
+		return crackPasswordsSetup_sqlite3(scanenv, debug)
+	#elif scanenv['DBBACKEND'] == 'postgresql':
+	#	return encryptedZipSetup_postgresql(scanenv, debug)
+	return (False, None)
+
+def crackPasswordsSetup_sqlite3(scanenv, debug=False):
 	## first check if there is a database defined
 	if not scanenv.has_key('BAT_SECURITY_DB'):
 		return (False, None)
