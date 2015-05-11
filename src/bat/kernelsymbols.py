@@ -259,10 +259,10 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 	pool = multiprocessing.Pool(processes=processors)
 	symboltasks = map(lambda x: x + (topleveldir, scantempdir), symbolfiles)
 	symbolres = pool.map(extractfromkernelfile, symboltasks)
-	pool.terminate()
 
 	## check if there actually are modules. If not, there is nothing to do
 	if filter(lambda x: x[-1] == True, symbolres) == []:
+		pool.terminate()
 		## close the database cursor and connection
 		mastercursor.close()
 		masterconn.close()
@@ -513,7 +513,6 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 								useddependenciessymbolsperfilename[i][winner].add(r)
 							else:
 								useddependenciessymbolsperfilename[i][winner] = set([r])
-
 	## Write a CSV file with results
 	if generatecsv:
 		csvpath = os.path.join(reportdir, 'kernelsymbols.csv')
@@ -654,7 +653,6 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 		symbolgraphs.add((symbolgraph_data, i, counter, imagedir, generatesvg))
 
 	## write the graphs in parallel in PNG and, optionally, SVG formats
-	pool = multiprocessing.Pool(processes=processors)
 	pool.map(writeGraph, symbolgraphs, 1)
 	pool.terminate()
 
