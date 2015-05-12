@@ -1,3 +1,20 @@
+2015-05-12:
+* kernelsymbols.py: fix return values
+* bat-scan.config: disable mp4 tagging for now
+* fwunpack.py: introduce COMPRESS_MINIMUM_SIZE to deal with compress weirdness
+on Ubuntu
+* bruteforcescan.py: move postgresql connection information outside of envvars
+* bruteforcescan.py: make packing of scan configuration file optional
+(default: do not pack)
+
+2015-05-11:
+* jffs2.py: ignore JFFS2 summary nodes
+* fwunpack.py: better handle ZIP CRC errors
+* security.py: rewrite queries for postgresql
+* createdb.py: make urlcutoff configurable, also start cleaning up the vast
+amount of parameters passed around
+* createdb.py: don't modify files (for xgettext) but copy them instead
+
 2015-05-10:
 * identifier.py: only translate query once
 * generatejson.py: only translate query once
