@@ -384,9 +384,7 @@ specific tools, the \texttt{bat-extratools} package contains the rest.
 
 \appendix
 
-\section{BAT configuration}
-
-\subsection{Inner workings of the analysis process}
+\section{BAT scanning phases}
 
 BAT uses a brute force approach for analysing a binary. It assumes no prior
 knowledge of how a binary is constructed or what is inside the binary. Instead
@@ -411,7 +409,7 @@ that has become available during the scan
 or other applications
 \end{enumerate}
 
-\subsubsection{Identifier search}
+\subsection{Identifier search}
 
 The first action performed is scanning a file for known identifiers of
 compressed files, file systems and media files. The identifers are important
@@ -431,7 +429,7 @@ firmwares tend to be distributed as ZIP-files. By quickly checking if a file
 is a complete ZIP-file time can be saved. This method might be extended to
 other types in the near future.
 
-\subsubsection{Pre-run checks}
+\subsection{Pre-run checks}
 
 Before files are unpacked they are briefly inspected and if possible tagged.
 Tags are used to pass hints to methods that are run later to avoid unnecessarily
@@ -463,7 +461,7 @@ Prerun verifiers can optionally make use of tags that are already present by
 using \texttt{magic} and \texttt{noscan} attributes, which will be explained
 in detail later for the unpackers.
 
-\subsubsection{Unpackers}
+\subsection{Unpackers}
 
 Unpackers can be recognized in the configuration because their type is set
 to \texttt{unpack}, for example:
@@ -522,7 +520,7 @@ available, some meta information to avoid duplicate scanning (blacklisting
 information and tags). The unpacked files are added to the scan queue and
 scanned recursively.
 
-\subsubsection{Leaf scans}
+\subsection{Leaf scans}
 
 Leaf scans are scans that are run on every single file after unpacking,
 including files that contained files that were found and extracted by unpackers.
@@ -568,7 +566,7 @@ only be used to signal that further inspection is necessary. For a thorough
 investigation the advanced search mode should be used. These scans are likely
 to be disabled in the future in the default configuration.
 
-\subsubsection{Aggregators}
+\subsection{Aggregators}
 
 Sometimes it helps to aggregate results of a number of files, or it could be
 useful to perform other actions after all the individual scans have run. The
@@ -606,7 +604,7 @@ as pictures, or text files) using tags.
 \item generating reports of results of a scan
 \end{itemize}
 
-\subsubsection{Post-run methods}
+\subsection{Post-run methods}
 
 In BAT there are methods that are run after all the regular work has been
 performed, or ``post-run''. These methods should not alter the scan results in
@@ -633,20 +631,31 @@ storetype   = -hexdump.gz
 cleanup     = no
 \end{verbatim}
 
-\subsection{Scan configuration}
+\section{Scan configuration}
 
 The analysis process is highly configurable: methods can be simply enabled and
 disabled, based on need: some methods can run for quite a long time, which
 might be undesirable at times. Configuration is done via a simple configuration
 file in Windows INI format.
 
-Most sections are specific to scanning methods, except two sections.
+Most sections are specific to scanning methods, except two sections: a global
+section and one section specific for the viewer tool.
 
-The main configuration directive is \texttt{batconfig}. In this
-section various global settings are defined, such as \texttt{multiprocessing}
-which sets whether or not multiple CPUs (or cores) should be used during
-scanning. The default configuration as shipped in the official BAT distribution
-is to use multiple threads:
+\subsection{Global configuration}
+
+The global configuration section is called \texttt{batconfig}. In this section
+various global settings are defined. The section looks like this:
+
+\begin{verbatim}
+[batconfig]
+\end{verbatim}
+
+\subsubsection{\texttt{multiprocessing} and \texttt{processors}}
+
+The \texttt{multiprocessing} configuration option determines whether or not
+multiple CPUs (or cores) should be used during scanning. The default
+configuration as shipped in the official BAT distribution is to use multiple
+threads:
 
 \begin{verbatim}
 [batconfig]
@@ -666,6 +675,8 @@ processors to use with the \texttt{processors} option:
 processors = 2
 \end{verbatim}
 
+\subsubsection{\texttt{outputlite}}
+
 Another setting in this section is \texttt{outputlite}:
 
 \begin{verbatim}
@@ -675,8 +686,9 @@ outputlite = yes
 It defaults to \texttt{yes}. If set to \texttt{yes} the output archive will omit
 a full copy of the unpacked data, significantly decreasing the size of the
 output archive, but making it harder to do a ``post mortem'' on the unpacked
-data (a new analysis should be run to get it again). In previous versions of BAT
-this setting defaulted to \texttt{no}.
+data (a new analysis should be run to get it again).
+
+\subsubsection{XML pretty printing}
 
 There are two settings that determine where the code of the optional XML pretty
 printer can be found:
@@ -688,6 +700,8 @@ output = prettyprintresxml
 
 These two settings should always be used together.
 
+\subsubsection{\texttt{tempdir}}
+
 There is one setting to set the prefix for creating temporary files or
 directories, namely \texttt{tempdir}. By default the directory for creating
 temporary files and directories is \texttt{/tmp}. There might be situations
@@ -698,6 +712,8 @@ used as follows:
 \begin{verbatim}
 tempdir = /ssd/tmp
 \end{verbatim}
+
+\subsubsection{\texttt{debug} and \texttt{debugphases}}
 
 To assist in debugging and finding errors in scans of BAT there are two
 settings: \texttt{debug} and \texttt{debugphases}. The setting \texttt{debug}
@@ -714,6 +730,8 @@ debug = yes
 debugphases = leaf:aggregate
 \end{verbatim}
 
+\subsubsection{Global environment variables}
+
 Since BAT 20 it is possible to supply global environment variables. These can
 be shared between scans. They can be overridden by individual scans. For example
 to set the environment variable \texttt{BAT\_NAMECACHE\_C} for all scans you
@@ -727,11 +745,13 @@ As a rule of thumb: settings that are shared between all scans (such as the
 location of various databases) should be set in the global sections, while scan
 specific options should be in the scan specific sections.
 
+\subsection{Viewer configuration}
+
 The other global section is \texttt{viewer}. This section is specific for the
 graphical frontend and is not used in any other parts of BAT and might be moved
 to a separate configuration file in a future version of BAT.
 
-\subsubsection{Enabling and disabling scans}
+\subsection{Enabling and disabling scans}
 
 The standard configuration file enables most of the scans and methods
 implemented in BAT by default. Scans can be enabled and disabled by setting the
@@ -741,7 +761,7 @@ Another way to not run a scan is to outcomment the entry in the configuration
 file (by starting the line with the \texttt{\#} character), or by removing the
 section from the configuration file.
 
-\subsubsection{Blacklisting and whitelisting scans}
+\subsection{Blacklisting and whitelisting scans}
 
 Files can be explicitely blacklisted for scanning by using the \texttt{noscan}
 configuration setting. The value of this parameter is a list of tags, separated
@@ -756,7 +776,7 @@ files that are tagged with any of the values in this list (if not empty) will
 be scanned. If there is an overlapping value in \texttt{scanonly} and
 \texttt{noscan} then the file will not be scanned.
 
-\subsubsection{Passing environment variables}
+\subsection{Passing environment variables}
 
 All scans have an optional parameter \texttt{scanenv} defaulting to an empty
 Python dictionary. In the configuration file a colon separated list of
@@ -771,7 +791,7 @@ If the environment of a scan needs to be adapted in the context of a single
 file it is important to first make a copy of the environment or the
 environment might be modified for the scan for all other files that are scanned.
 
-\subsubsection{Scan names}
+\subsection{Scan names}
 
 The name of the scan is used in various places, for example for storing results
 or for determining scan conflicts. The \texttt{name} parameter can be used to
@@ -782,7 +802,7 @@ the scan is used instead.
 name = gzip
 \end{verbatim}
 
-\subsubsection{Scan conflicts}
+\subsection{Scan conflicts}
 
 Possibly scans can conflict with other scans in the same phase and they should
 not be enabled at the same time. To indicate that a scan conflicts with others
@@ -796,7 +816,7 @@ If there is a conflict in the configuration BAT will refuse to run. Currently
 BAT only looks at conflicts in the same unpacking phase and only for scans that
 are enabled.
 
-\subsubsection{Storing results}
+\subsection{Storing results}
 
 Postrun scans and aggregate scans that output data, for example graphics files
 or reports, can specify which files should be added to the output file. There
@@ -831,13 +851,12 @@ output directories. The values of these directories are hardcoded (and match
 values that the GUI expects) but these will be replaced by the value of
 \texttt{storetarget} in a later release.
 
-\subsubsection{Running setup code}
+\subsection{Running setup code}
 
 For some scans it is necessary to run some setup code to ensure that certain
 conditions are met, for example that databases exist, or that locations are
-readable/writeable. If this would be done during running of the scan (default
-in BAT 13 and earlier) the checks would be run each time the scan would be run.
-In reality the checks only need to run once.
+readable/writeable. These checks only need to be run once. Based on the result
+of the setup code the scan might be disabled if certain conditions are not met.
 
 There is a special hook for leaf scans to run setup code for the scan:
 
@@ -1583,6 +1602,9 @@ Please note that a few settings are hardcoded in the table and index
 definitions.
 
 \subsection{Database design}
+
+Depending on if the database is stored in PostgreSQL or SQLite the database
+tables might be in one database (PostgreSQL) or separate files (SQLite).
 
 The main database currently has 15 tables, 9 of which are Linux kernel specific.
 One other table is optional:
@@ -2616,6 +2638,12 @@ The \texttt{COMPRESS\_TMPDIR} parameter is used to let the scan use a different
 location for unpacking temporary files than the standard unpacking directory.
 It was introduced to let the scan unpack onto a tmpfs file system to avoid disk
 I/O and speed up scanning.
+
+The \texttt{COMPRESS\_MINIMUM\_SIZE} parameter instructs the scan to ignore
+output files that are \texttt{COMPRESS\_MINIMUM\_SIZE} bytes in size or less.
+This parameter was introduced because false positives in compress unpacking are
+very common on Debian and Ubuntu, often leading to small sized files that
+contain no useful data and which could interfere with scanning.
 
 \subsection{\texttt{jffs2}}
 
