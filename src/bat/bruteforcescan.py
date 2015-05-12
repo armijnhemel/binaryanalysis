@@ -688,6 +688,14 @@ def readconfig(config):
 		except:
 			pass
 		try:
+			packconfig = config.get(section, 'packconfig')
+			if packconfig == 'yes':
+				batconf['packconfig'] = True
+			else:
+				batconf['packconfig'] = False
+		except:
+			batconf['packconfig'] = False
+		try:
 			extrapack = config.get(section, 'extrapack')
 			batconf['extrapack'] = extrapack.split(':')
 		except:
@@ -1111,11 +1119,15 @@ def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=Fa
 	dumpfile = tarfile.open(outputfile, 'w:gz')
 	oldcwd = os.getcwd()
 	os.chdir(tempdir)
-	if scans['batconfig']['scrub'] != []:
+	scrub = False
+	if scans['batconfig']['packconfig']:
+		shutil.copy(configfile, '.')
+		dumpfile.add(os.path.basename(configfile))
+		scrub = True
+	if scrub and scans['batconfig']['scrub'] != []:
 		## TODO pretty print the configuration file, scrubbed of
 		## any of the values in 'scrub'
 		pass
-	shutil.copy(configfile, '.')
 	dumpfile.add('scandata.pickle')
 	if scans['batconfig']['extrapack'] != []:
 		for e in scans['batconfig']['extrapack']:
