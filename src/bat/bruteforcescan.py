@@ -643,6 +643,25 @@ def readconfig(config):
 		if section != "batconfig":
 			sectionstoprocess.add(section)
 			continue
+
+		## first set the environment
+		newenv = copy.deepcopy(scanenv)
+		try:
+			## global set of environment variables
+			envvars = config.get(section, 'envvars')
+			if envvars == None:
+				pass
+			else:
+				for en in envvars.split(':'):
+					try:
+						(envname, envvalue) = en.split('=')
+						newenv[envname] = envvalue
+					except Exception, e:
+						pass
+		except:
+			pass
+		batconf['environment'] = newenv
+
 		try:
 			mp = config.get(section, 'multiprocessing')
 			if mp == 'yes':
@@ -682,6 +701,16 @@ def readconfig(config):
 			dbbackend = config.get(section, 'dbbackend')
 			if dbbackend in ['sqlite3', 'postgresql']:
 				batconf['dbbackend'] = dbbackend
+			if dbbackend == 'postgresql':
+				try:
+					postgresql_user = config.get(section, 'postgresql_user')
+					postgresql_password = config.get(section, 'postgresql_password')
+					postgresql_db = config.get(section, 'postgresql_db')
+					batconf['environment']['POSTGRESQL_USER'] = postgresql_user
+					batconf['environment']['POSTGRESQL_PASSWORD'] = postgresql_password
+					batconf['environment']['POSTGRESQL_DB'] = postgresql_db
+				except:
+					del batconf['dbbackend']
 		except:
 			pass
 		try:
@@ -726,23 +755,6 @@ def readconfig(config):
 				## to see if the directory is writable
 		except:
 			batconf['tempdir'] = None
-		newenv = copy.deepcopy(scanenv)
-		try:
-			## global set of environment variables
-			envvars = config.get(section, 'envvars')
-			if envvars == None:
-				pass
-			else:
-				for en in envvars.split(':'):
-					try:
-						(envname, envvalue) = en.split('=')
-						newenv[envname] = envvalue
-					except Exception, e:
-						pass
-		except:
-			pass
-
-		batconf['environment'] = newenv
 		try:
 			template = config.get(section, 'template')
 
