@@ -2371,6 +2371,7 @@ def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, scane
 	if offsets['compress'] == []:
 		return ([], blacklist, [], hints)
 
+	compresslimit = int(scanenv.get('COMPRESS_MINIMUM_SIZE', 1))
 	compress_tmpdir = scanenv.get('COMPRESS_TMPDIR', None)
 	if compress_tmpdir != None:
 		if not os.path.exists(compress_tmpdir):
@@ -2402,7 +2403,7 @@ def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, scane
 		if compressbits > 16:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "compress", counter)
-		res = unpackCompress(filename, offset, tmpdir, compress_tmpdir, blacklist)
+		res = unpackCompress(filename, offset, compresslimit, tmpdir, compress_tmpdir, blacklist)
 		if res != None:
 			diroffsets.append((res, offset, 0))
 			counter = counter + 1
@@ -2411,7 +2412,7 @@ def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, scane
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [], hints)
 
-def unpackCompress(filename, offset, tempdir=None, compress_tmpdir=None, blacklist=[]):
+def unpackCompress(filename, offset, compresslimit, tempdir=None, compress_tmpdir=None, blacklist=[]):
 	tmpdir = unpacksetup(tempdir)
 
 	## if COMPRESS_TMPDIR is set to for example a ramdisk use that instead.
@@ -2430,7 +2431,7 @@ def unpackCompress(filename, offset, tempdir=None, compress_tmpdir=None, blackli
 	(stanout, stanerr) = p.communicate()
 	os.fdopen(outtmpfile[0]).close()
 	os.unlink(tmpfile[1])
-	if os.stat(outtmpfile[1]).st_size == 0:
+	if os.stat(outtmpfile[1]).st_size < compresslimit:
 		os.unlink(outtmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
@@ -3168,14 +3169,13 @@ def unpackLZMA(filename, offset, template, tempdir=None, minbytesize=1, lzma_tmp
 		unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
 	p = subprocess.Popen(['lzma', '-cd', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
+	os.fdopen(outtmpfile[0]).close()
+	os.unlink(tmpfile[1])
 	if os.stat(outtmpfile[1]).st_size < minbytesize:
-		os.fdopen(outtmpfile[0]).close()
 		os.unlink(outtmpfile[1])
-		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
-	os.fdopen(outtmpfile[0]).close()
 	if lzma_tmpdir != None:
 		## create the directory and move the LZMA file
 		try:
@@ -3200,7 +3200,6 @@ def unpackLZMA(filename, offset, template, tempdir=None, minbytesize=1, lzma_tmp
 					shutil.move(outtmpfile[1], mvpath)
 				except Exception, e:
 					pass
-	os.unlink(tmpfile[1])
 	return tmpdir
 
 ## Search and unpack Ubi. Since we can't easily determine the length of the
