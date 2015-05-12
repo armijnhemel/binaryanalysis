@@ -679,13 +679,13 @@ def kernelsymbolssetup_sqlite3(scanenv, debug=False):
 
 	## Is the master database defined?
 	if not scanenv.has_key('BAT_DB'):
-		(False, None)
+		return (False, None)
 
 	masterdb = scanenv.get('BAT_DB')
 
 	## Does the master database exist?
 	if not os.path.exists(masterdb):
-		(False, None)
+		return (False, None)
 
 	## TODO: many more checks
 	return (True, newenv)
