@@ -792,11 +792,34 @@ def readconfig(config):
 			## top level configuration has it defined.
 			try:
 				dbbackend = config.get(section, 'dbbackend')
-				if dbbackend in ['sqlite3']:
+				if dbbackend in ['sqlite3', 'postgresql']:
 					conf['dbbackend'] = dbbackend
+					if dbbackend == 'postgresql':
+						try:
+							postgresql_user = config.get(section, 'postgresql_user')
+							postgresql_password = config.get(section, 'postgresql_password')
+							postgresql_db = config.get(section, 'postgresql_db')
+							conf['environment']['POSTGRESQL_USER'] = postgresql_user
+							conf['environment']['POSTGRESQL_PASSWORD'] = postgresql_password
+							conf['environment']['POSTGRESQL_DB'] = postgresql_db
+						except:
+							del conf['dbbackend']
 			except:
 				if 'dbbackend' in batconf:
 					conf['dbbackend'] = copy.deepcopy(batconf['dbbackend'])
+					dbbackend = conf['dbbackend']
+					if dbbackend in ['sqlite3', 'postgresql']:
+						conf['dbbackend'] = dbbackend
+						if dbbackend == 'postgresql':
+							try:
+								postgresql_user = config.get(section, 'postgresql_user')
+								postgresql_password = config.get(section, 'postgresql_password')
+								postgresql_db = config.get(section, 'postgresql_db')
+								conf['environment']['POSTGRESQL_USER'] = postgresql_user
+								conf['environment']['POSTGRESQL_PASSWORD'] = postgresql_password
+								conf['environment']['POSTGRESQL_DB'] = postgresql_db
+							except:
+								del conf['dbbackend']
 			## deal with the environment
 			newenv = copy.deepcopy(scanenv)
 			try:
