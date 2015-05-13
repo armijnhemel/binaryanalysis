@@ -1,3 +1,12 @@
+2015-05-13:
+* createdb.py: extract identifiers before licenses and copyright
+* createdb.py: ignore e-mail addresses starting with .
+* createdb.py: ignore bogus URLs
+* createdb.py: parse Python files using Python's built-in tokenize module.
+Extract comments and strings and write these to temporary files before feeding
+them to FOSSology. This is disabled by for now as the copyright offsets are
+still wrong.
+
 2015-05-12:
 * kernelsymbols.py: fix return values
 * bat-scan.config: disable mp4 tagging for now
