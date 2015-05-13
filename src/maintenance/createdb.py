@@ -1130,6 +1130,19 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 					lineno = configureaclines.count('\n', 0, ac_init_pos) + 1
 					cursor.execute('''insert into extracted_string (stringidentifier, checksum, language, linenumber) values (?,?,?,?)''', (configureresgroups[0], filehash, language, lineno))
 
+	'''
+	if pythonfiles != []:
+		if pythonres != []:
+			filtered_files = []
+			## (package, version, path, filename, language, filehash, ninkaversion, extractconfig)
+			for fil in filestoscan:
+				if ((fil[2], fil[3])) in pythonresdict:
+					filtered_files.append((fil[:2]) + pythonresdict[(fil[2], fil[3])] + fil[4:])
+				else:
+					filtered_files.append(fil)
+			filestoscan = filtered_files
+	'''
+
 	if license:
 		ninkaconn = sqlite3.connect(ninkacomments, check_same_thread = False)
 		ninkacursor = ninkaconn.cursor()
@@ -1282,17 +1295,6 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			filtered_files = filter(lambda x: x[5] not in ignorefiles, filestoscan)
 		else:
 			filtered_files = filestoscan
-
-		if pythonfiles != []:
-			if pythonres != []:
-				newfiltered_files = []
-				## (package, version, path, filename, language, filehash, ninkaversion, extractconfig)
-				for fil in filtered_files:
-					if ((fil[2], fil[3])) in pythonresdict:
-						newfiltered_files.append((fil[:2]) + pythonresdict[(fil[2], fil[3])] + fil[4:])
-					else:
-						newfiltered_files.append(fil)
-				#filtered_files = newfiltered_files
 
 		if 'patch' in languages:
 			## patch files should not be scanned for copyright information
@@ -1530,7 +1532,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	return (scanfile_result)
 
 ## extract comments in parallel
-def extractcomments((package, version, i, p, language, filehash, ninkaversion, brokenninka)):
+def extractcomments((package, version, i, p, language, filehash, ninkaversion, extractconfig, brokenninka)):
 	## first generate a .comments file with Ninka and see if it is already
 	## known. This is because often license headers are identical, and
 	## there is no need to rescan the files if the headers are identical.
@@ -1609,6 +1611,7 @@ def extractcomments((package, version, i, p, language, filehash, ninkaversion, b
 	commentshash = ch.hexdigest()
 	if broken:
 		os.unlink(commentsfile)
+	os.unlink(commentsfile)
 	return (filehash, commentshash)
 
 def runfullninka((i, p, filehash, ninkaversion, brokenninka)):
