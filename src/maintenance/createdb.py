@@ -54,8 +54,7 @@ binary kernel image and modules back to a configuration.
 import sys, os, magic, string, re, subprocess, shutil, stat, datetime
 import tempfile, bz2, tarfile, gzip, ConfigParser
 from optparse import OptionParser
-from multiprocessing import Pool
-import sqlite3, hashlib, zlib, urlparse
+import sqlite3, hashlib, zlib, urlparse, tokenize, multiprocessing
 import batextensions
 
 tarmagic = ['POSIX tar archive (GNU)'
@@ -276,6 +275,28 @@ def splitSpecialChars(s):
 			else:
 				lensplit = len(i)
 	return final_splits
+
+def parsepython((filedir, filepath, unpackdir)):
+	comments = []
+	pathname = os.path.join(filedir, filepath)
+	parseiterator = open(pathname, 'r').readline
+
+	parsetokens = tokenize.generate_tokens(parseiterator)
+
+	for p in parsetokens:
+	        if p[0] == tokenize.COMMENT:
+			comments.append(p[1])
+
+	if comments != []:
+		## there are comments, so print them to a file
+		commentsfile = tempfile.mkstemp(dir=unpackdir)
+		for c in comments:
+			os.write(commentsfile[0], c)
+			os.write(commentsfile[0], "\n")
+		os.fdopen(commentsfile[0]).close()
+		return (filedir, filepath, unpackdir, os.path.basename(commentsfile[1]))
+
+	return None
 
 ## walk the Linux kernel directory and process all the Makefiles
 def extractkernelconfiguration(kerneldir):
@@ -936,7 +957,7 @@ def filterfiles((filedir, filename, pkgconf, allfiles)):
 	resolved_path = os.path.join(filedir, filename)
 	if os.path.islink(resolved_path):
         	return None
-	if pkgconf.has_key('blacklist'):
+	if 'blacklist' in pkgconf:
 		if filename in pkgconf['blacklist']:
 			return None
 	## nothing to determine about an empty file, so skip
@@ -1073,6 +1094,41 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			filehashes[filehash].append((path, filename))
 		else:
 			filehashes[filehash] = [(path, filename)]
+
+	unpackenv = os.environ.copy()
+	if not unpackenv.has_key('TMPDIR'):
+		if unpackdir != None:
+			unpackenv['TMPDIR'] = unpackdir
+
+	filestoscan_extract = map(lambda x: x + (unpackenv, security, authdb, pkgconf), filestoscan)
+	## process the files to scan in parallel, then process the results
+	extracted_results = pool.map(extractidentifiers, filestoscan_extract, 1)
+
+	pythonfiles = filter(lambda x: x[4] == 'Python', filestoscan)
+	if pythonfiles != []:
+		pythonparsefiles = map(lambda x: (x[2], x[3], unpackdir), pythonfiles)
+		pythonres = filter(lambda x: x != None, pool.map(parsepython, pythonparsefiles, 1))
+		pythonresdict = {}
+		for p in pythonres:
+			pythonresdict[(p[0], p[1])] = (p[2], p[3])
+	
+	## extract data from configure.ac instances
+	## TODO: make it less specific for configure.ac
+	if filestoscanextra != []:
+		for f in filestoscanextra:
+			(package, version, path, filename, language, filehash) = f
+			configureac = open(os.path.join(path, filename), 'r')
+			configureaclines = configureac.read()
+			configureac.close()
+			if "AC_INIT" in configureaclines:
+				## name, version, bugreport address, possibly other things like URL
+				## The bugreport address is the most interesting at the moment
+				configureres = re.search("AC_INIT\(\[[\w\s]+\],\s*(?:[\w]+\()?\[?[\w\s/\-\.]+\]?\)?,\s*\[([\w\-@:/\.+]+)\]", configureaclines, re.MULTILINE)
+				if configureres != None:
+					configureresgroups = configureres.groups()
+					ac_init_pos = configureaclines.find('AC_INIT(')
+					lineno = configureaclines.count('\n', 0, ac_init_pos) + 1
+					cursor.execute('''insert into extracted_string (stringidentifier, checksum, language, linenumber) values (?,?,?,?)''', (configureresgroups[0], filehash, language, lineno))
 
 	if license:
 		ninkaconn = sqlite3.connect(ninkacomments, check_same_thread = False)
@@ -1227,6 +1283,17 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		else:
 			filtered_files = filestoscan
 
+		if pythonfiles != []:
+			if pythonres != []:
+				newfiltered_files = []
+				## (package, version, path, filename, language, filehash, ninkaversion, extractconfig)
+				for fil in filtered_files:
+					if ((fil[2], fil[3])) in pythonresdict:
+						newfiltered_files.append((fil[:2]) + pythonresdict[(fil[2], fil[3])] + fil[4:])
+					else:
+						newfiltered_files.append(fil)
+				#filtered_files = newfiltered_files
+
 		if 'patch' in languages:
 			## patch files should not be scanned for copyright information
 			copyrightsres = pool.map(extractcopyrights, filter(lambda x: x[4] != 'patch', filtered_files), 1)
@@ -1245,23 +1312,10 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		licensecursor.close()
 		licenseconn.close()
 
-	## extract data from configure.ac instances
-	## TODO: make it less specific for configure.ac
-	if filestoscanextra != []:
-		for f in filestoscanextra:
-			(package, version, path, filename, language, filehash) = f
-			configureac = open(os.path.join(path, filename), 'r')
-			configureaclines = configureac.read()
-			configureac.close()
-			if "AC_INIT" in configureaclines:
-				## name, version, bugreport address, possibly other things like URL
-				## The bugreport address is the most interesting at the moment
-				configureres = re.search("AC_INIT\(\[[\w\s]+\],\s*(?:[\w]+\()?\[?[\w\s/\-\.]+\]?\)?,\s*\[([\w\-@:/\.+]+)\]", configureaclines, re.MULTILINE)
-				if configureres != None:
-					configureresgroups = configureres.groups()
-					ac_init_pos = configureaclines.find('AC_INIT(')
-					lineno = configureaclines.count('\n', 0, ac_init_pos) + 1
-					cursor.execute('''insert into extracted_string (stringidentifier, checksum, language, linenumber) values (?,?,?,?)''', (configureresgroups[0], filehash, language, lineno))
+	## now clean up the temporary Python files
+	if pythonfiles != []:
+		for p in pythonres:
+			os.unlink(os.path.join(p[2], p[3]))
 
 	## extract configuration from the Linux kernel Makefiles
 	## store two things:
@@ -1286,15 +1340,6 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 					filehashtomodule[filetohash[kernelfilename]['sha256']] = [modulename]
 		conn.commit()
 
-	unpackenv = os.environ.copy()
-	if not unpackenv.has_key('TMPDIR'):
-		if unpackdir != None:
-			unpackenv['TMPDIR'] = unpackdir
-
-	filestoscan = map(lambda x: x + (unpackenv, security, authdb, pkgconf), filestoscan)
-	## process the files to scan in parallel, then process the results
-	extracted_results = pool.map(extractidentifiers, filestoscan, 1)
-	
 	if security:
 		securityconn = sqlite3.connect(securitydb, check_same_thread = False)
 		securityc = securityconn.cursor()
@@ -1688,7 +1733,10 @@ def extractcopyrights((package, version, i, p, language, filehash, ninkaversion,
 			offset = srcdata.find(e, offset)
 
 			## parse the hostname and see if there is nonsense in there
-			hostname = urlparse.urlparse(e).hostname
+			try:
+				hostname = urlparse.urlparse(e).hostname
+			except Exception, ex:
+				continue
 			if hostname == None:
 				## something is going on here, probably some characters preceding
 				## the result. TODO: find out what to do with this
@@ -2903,7 +2951,8 @@ def main(argv):
 	c.close()
 	conn.close()
 
-	pool = Pool()
+	processors = multiprocessing.cpu_count()
+	pool = multiprocessing.Pool(processes=processors)
 
 	pkgmeta = []
 
