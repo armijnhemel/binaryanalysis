@@ -278,7 +278,11 @@ def splitSpecialChars(s):
 
 def parsepython((filedir, filepath, unpackdir)):
 	comments = []
+	strings = []
 	pathname = os.path.join(filedir, filepath)
+
+	returndict = {}
+
 	parseiterator = open(pathname, 'r').readline
 
 	parsetokens = tokenize.generate_tokens(parseiterator)
@@ -286,16 +290,30 @@ def parsepython((filedir, filepath, unpackdir)):
 	for p in parsetokens:
 	        if p[0] == tokenize.COMMENT:
 			comments.append(p[1])
+	        elif p[0] == tokenize.STRING:
+			strings.append(p[1])
 
-	if comments != []:
-		## there are comments, so print them to a file
-		commentsfile = tempfile.mkstemp(dir=unpackdir)
-		for c in comments:
-			os.write(commentsfile[0], c)
-			os.write(commentsfile[0], "\n")
-		os.fdopen(commentsfile[0]).close()
-		return (filedir, filepath, unpackdir, os.path.basename(commentsfile[1]))
-
+	if comments != [] or strings != []:
+		commentsfile = None
+		stringsfile = None
+		if comments != []:
+			## there are comments, so print them to a file
+			commentsfile = tempfile.mkstemp(dir=unpackdir)
+			for c in comments:
+				os.write(commentsfile[0], c)
+				os.write(commentsfile[0], "\n")
+			os.fdopen(commentsfile[0]).close()
+			commentsfile = os.path.basename(commentsfile[1])
+		if strings != []:
+			## there are comments, so print them to a file
+			stringsfile = tempfile.mkstemp(dir=unpackdir)
+			for c in strings:
+				os.write(stringsfile[0], c)
+				os.write(stringsfile[0], "\n")
+			os.fdopen(stringsfile[0]).close()
+			stringsfile = os.path.basename(stringsfile[1])
+		returndict = {'unpackdir': unpackdir, 'commentsfile': commentsfile, 'stringsfile': stringsfile}
+		return (filedir, filepath, returndict)
 	return None
 
 ## walk the Linux kernel directory and process all the Makefiles
@@ -1104,14 +1122,40 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	## process the files to scan in parallel, then process the results
 	extracted_results = pool.map(extractidentifiers, filestoscan_extract, 1)
 
-	pythonfiles = filter(lambda x: x[4] == 'Python', filestoscan)
+	## parse Python files and write comments and identifiers
+	## to temporary files. This is to increase fidelity in FOSSology
+	## TODO: add other languages
+	## TODO: make configurable
+	parsepythonfiles = False
+	pythonfiles = []
+	if parsepythonfiles:
+		pythonfiles = filter(lambda x: x[4] == 'Python', filestoscan)
 	if pythonfiles != []:
 		pythonparsefiles = map(lambda x: (x[2], x[3], unpackdir), pythonfiles)
 		pythonres = filter(lambda x: x != None, pool.map(parsepython, pythonparsefiles, 1))
-		pythonresdict = {}
-		for p in pythonres:
-			pythonresdict[(p[0], p[1])] = (p[2], p[3])
-	
+		if pythonres != []:
+			pythonresdict = {}
+			for p in pythonres:
+				pythonresdict[(p[0], p[1])] = p[2]
+
+			filestoscan_fossology = []
+			for fil in filestoscan:
+				## (fil[2], fil[3]) are (path, filename)
+				if ((fil[2], fil[3])) in pythonresdict:
+					tmpunpackdir = pythonresdict[(fil[2], fil[3])]['unpackdir']
+					commentsfile = pythonresdict[(fil[2], fil[3])]['commentsfile']
+					stringsfile = pythonresdict[(fil[2], fil[3])]['stringsfile']
+					if commentsfile != None:
+						filestoscan_fossology.append((fil[:2]) + (tmpunpackdir, commentsfile) + fil[4:])
+					if stringsfile != None:
+						filestoscan_fossology.append((fil[:2]) + (tmpunpackdir, stringsfile) + fil[4:])
+				else:
+					filestoscan_fossology.append(fil)
+		else:
+			filestoscan_fossology = filestoscan
+	else:
+		filestoscan_fossology = filestoscan
+
 	## extract data from configure.ac instances
 	## TODO: make it less specific for configure.ac
 	if filestoscanextra != []:
@@ -1129,19 +1173,6 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 					ac_init_pos = configureaclines.find('AC_INIT(')
 					lineno = configureaclines.count('\n', 0, ac_init_pos) + 1
 					cursor.execute('''insert into extracted_string (stringidentifier, checksum, language, linenumber) values (?,?,?,?)''', (configureresgroups[0], filehash, language, lineno))
-
-	'''
-	if pythonfiles != []:
-		if pythonres != []:
-			filtered_files = []
-			## (package, version, path, filename, language, filehash, ninkaversion, extractconfig)
-			for fil in filestoscan:
-				if ((fil[2], fil[3])) in pythonresdict:
-					filtered_files.append((fil[:2]) + pythonresdict[(fil[2], fil[3])] + fil[4:])
-				else:
-					filtered_files.append(fil)
-			filestoscan = filtered_files
-	'''
 
 	if license:
 		ninkaconn = sqlite3.connect(ninkacomments, check_same_thread = False)
@@ -1174,8 +1205,10 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 
 		if len(ignorefiles) != 0:
 			filtered_files = filter(lambda x: x[5] not in ignorefiles, filestoscan)
+			filtered_files_fossology = filter(lambda x: x[5] not in ignorefiles, filestoscan_fossology)
 		else:
 			filtered_files = filestoscan
+			filtered_files_fossology = filestoscan_fossology
 
 		if 'patch' in languages:
 			## patch files should not be scanned for license information
@@ -1235,14 +1268,14 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 
 		## TODO: sync names of licenses as found by FOSSology and Ninka
 		nomoschunks = extractconfig['nomoschunks']
-		fossology_filestoscan = []
+		fossology_chunks = []
 		if 'patch' in languages:
-			fossyfiles = filter(lambda x: x[4] != 'patch', filtered_files)
+			fossyfiles = filter(lambda x: x[4] != 'patch', filtered_files_fossology)
 		else:
-			fossyfiles = filtered_files
+			fossyfiles = filtered_files_fossology
 		for i in range(0,len(fossyfiles),nomoschunks):
-			fossology_filestoscan.append((fossyfiles[i:i+nomoschunks]))
-		fossology_res = filter(lambda x: x != None, pool.map(licensefossology, fossology_filestoscan, 1))
+			fossology_chunks.append((fossyfiles[i:i+nomoschunks]))
+		fossology_res = filter(lambda x: x != None, pool.map(licensefossology, fossology_chunks, 1))
 		## this requires FOSSology 2.3.0 or later
 		p2 = subprocess.Popen(["/usr/share/fossology/nomos/agent/nomossa", "-V"], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 		(stanout, stanerr) = p2.communicate()
@@ -1253,13 +1286,24 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			## hack for not working version number in 2.4.0
 			fossology_version = '2.4.0'
 
+		## now combine the results for each file, which might have been obtained from several files
+		filehash_to_license = {}
 		for f in fossology_res:
 			for ff in f:
 				(filehash, fres) = ff
-				for license in fres:
+				if filehash in filehash_to_license:
+					filehash_to_license[filehash].update(fres)
+				else:
+					filehash_to_license[filehash] = fres
 
-					#licensecursor.execute('''delete from licenses where checksum = ? and license = ? and scanner = ? and version = ?''', (filehash, license, "fossology", fossology_version))
-					licensecursor.execute('''insert into licenses (checksum, license, scanner, version) values (?,?,?,?)''', (filehash, license, "fossology", fossology_version))
+
+		for filehash in filehash_to_license:
+			fres = filehash_to_license[filehash]
+			for license in fres:
+				if license == 'No_license_found' and len(fres) > 1:
+					continue
+				#licensecursor.execute('''delete from licenses where checksum = ? and license = ? and scanner = ? and version = ?''', (filehash, license, "fossology", fossology_version))
+				licensecursor.execute('''insert into licenses (checksum, license, scanner, version) values (?,?,?,?)''', (filehash, license, "fossology", fossology_version))
 		licenseconn.commit()
 		licensecursor.close()
 		licenseconn.close()
@@ -1292,9 +1336,9 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			authlicenseconn.close()
 
 		if len(ignorefiles) != 0:
-			filtered_files = filter(lambda x: x[5] not in ignorefiles, filestoscan)
+			filtered_files = filter(lambda x: x[5] not in ignorefiles, filestoscan_fossology)
 		else:
-			filtered_files = filestoscan
+			filtered_files = filestoscan_fossology
 
 		if 'patch' in languages:
 			## patch files should not be scanned for copyright information
@@ -1302,7 +1346,9 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		else:
 			copyrightsres = pool.map(extractcopyrights, filtered_files, 1)
 		if copyrightsres != None:
-
+			if pythonfiles != []:
+				## reconstruct the right
+				pass
 			for c in filter(lambda x: x != None, copyrightsres):
 				(filehash, cres) = c
 				for cr in cres:
@@ -1317,7 +1363,10 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	## now clean up the temporary Python files
 	if pythonfiles != []:
 		for p in pythonres:
-			os.unlink(os.path.join(p[2], p[3]))
+			if p[2]['commentsfile'] != None:
+				os.unlink(os.path.join(p[2]['unpackdir'], p[2]['commentsfile']))
+			if p[2]['stringsfile'] != None:
+				os.unlink(os.path.join(p[2]['unpackdir'], p[2]['stringsfile']))
 
 	## extract configuration from the Linux kernel Makefiles
 	## store two things:
@@ -1701,6 +1750,7 @@ def extractcopyrights((package, version, i, p, language, filehash, ninkaversion,
 	copyrightsres = []
 	examples = ["example.org", "example.com", "example.net"]
 	## first the e-mail address results
+	## TODO: more checks from http://tools.ietf.org/html/rfc5321
 	if '@' in srcdata:
 		res = fossologyemailre.findall(srcdata)
 		offset = 0
@@ -1717,6 +1767,9 @@ def extractcopyrights((package, version, i, p, language, filehash, ninkaversion,
 			if exampleskip:
 				continue
 			if '..' in e:
+				## double dots not allowed in mail addresses
+				continue
+			if e.startswith('.'):
 				continue
 			offset = srcdata.find(e, offset)
 			copyrightsres.append(('email', e, offset))
