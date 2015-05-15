@@ -2744,13 +2744,17 @@ def unpackLRZIP(filename, offset, tempdir=None):
 		lrzipsize += 125
 	return (tmpdir, lrzipsize)
 
-def unpackZip(filename, offset, tempdir=None):
+def unpackZip(filename, offset, cutoff, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 
 	tmpfile = tempfile.mkstemp(dir=tempdir)
 	os.fdopen(tmpfile[0]).close()
 
-	unpackFile(filename, offset, tmpfile[1], tmpdir)
+	if cutoff != 0:
+		ziplen = cutoff - offset
+		unpackFile(filename, offset, tmpfile[1], tmpdir, length=ziplen)
+	else:
+		unpackFile(filename, offset, tmpfile[1], tmpdir)
 
 	## First we do some sanity checks
 	## Use information from zipinfo -v to extract the right offset (or at least the last offset,
@@ -2940,7 +2944,12 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	diroffsets = []
 	counter = 1
 	endofcentraldir_offset = 0
-	for zipend in offsets['zipend']:
+	for zipendindex in xrange(0, len(offsets['zipend'])):
+		zipend = offsets['zipend'][zipendindex]
+		if zipend == offsets['zipend'][-1]:
+			cutoff = 0
+		else:
+			cutoff = offsets['zipend'][zipendindex+1]
 		for offset in offsets['zip']:
 			if offset > zipend:
 				continue
@@ -2958,7 +2967,7 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			if blacklistoffset != None:
 				continue
 			tmpdir = dirsetup(tempdir, filename, "zip", counter)
-			(endofcentraldir, res) = unpackZip(filename, offset, tmpdir)
+			(endofcentraldir, res) = unpackZip(filename, offset, cutoff, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset, 0))
 				counter = counter + 1
