@@ -151,6 +151,10 @@ def tagKnownExtension(filename):
 			endofcentraldir = int(res.groups(0)[0])
 		else:
 			return (tags, offsets)
+		zipends = prerun.genericMarkerSearch(filename, ['zipend'], [])
+		if len(zipends['zipend']) != 1:
+			return (tags, offsets)
+		offsets['zipend'] = zipends['zipend']
 
 		## TODO: determine commentsize
 		commentsize = 0
