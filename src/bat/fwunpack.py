@@ -2930,33 +2930,48 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	hints = []
 	if not offsets.has_key('zip'):
 		return ([], blacklist, [], hints)
+	if not offsets.has_key('zipend'):
+		return ([], blacklist, [], hints)
 	tags = []
 	if offsets['zip'] == []:
+		return ([], blacklist, tags, hints)
+	if offsets['zipend'] == []:
 		return ([], blacklist, tags, hints)
 	diroffsets = []
 	counter = 1
 	endofcentraldir_offset = 0
-	for offset in offsets['zip']:
-		if offset < endofcentraldir_offset:
-			continue
-		blacklistoffset = extractor.inblacklist(offset, blacklist)
-		if blacklistoffset != None:
-			continue
-		tmpdir = dirsetup(tempdir, filename, "zip", counter)
-		(endofcentraldir, res) = unpackZip(filename, offset, tmpdir)
-		if res != None:
-			diroffsets.append((res, offset, 0))
-			counter = counter + 1
-		else:
-			## cleanup
-			os.rmdir(tmpdir)
-		if endofcentraldir != None:
-			endofcentraldir_offset = endofcentraldir
-			## TODO: fix properly for ZIP files with comments
-			if offset == 0 and res != None and offset + endofcentraldir +22 == os.stat(filename).st_size:
-				tags.append('zip')
-				tags.append('compressed')
-			blacklist.append((offset, offset + endofcentraldir + 22))
+	for zipend in offsets['zipend']:
+		for offset in offsets['zip']:
+			if offset > zipend:
+				continue
+			openzipfile = open(filename, 'r')
+			openzipfile.seek(offset+4)
+			versionneededbytes = openzipfile.read(2)
+			openzipfile.close()
+			versionneeded = struct.unpack('<H', versionneededbytes)[0]
+			## current ZIP version is at 15, so plan ahead for the future
+			if versionneeded > 500:
+				continue
+			if offset < endofcentraldir_offset:
+				continue
+			blacklistoffset = extractor.inblacklist(offset, blacklist)
+			if blacklistoffset != None:
+				continue
+			tmpdir = dirsetup(tempdir, filename, "zip", counter)
+			(endofcentraldir, res) = unpackZip(filename, offset, tmpdir)
+			if res != None:
+				diroffsets.append((res, offset, 0))
+				counter = counter + 1
+			else:
+				## cleanup
+				os.rmdir(tmpdir)
+			if endofcentraldir != None:
+				endofcentraldir_offset = endofcentraldir
+				## TODO: fix properly for ZIP files with comments
+				if offset == 0 and res != None and offset + endofcentraldir +22 == os.stat(filename).st_size:
+					tags.append('zip')
+					tags.append('compressed')
+				blacklist.append((offset, offset + endofcentraldir + 22))
 	return (diroffsets, blacklist, tags, hints)
 
 def searchUnpackPack200(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
