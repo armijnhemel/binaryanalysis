@@ -1,3 +1,15 @@
+2015-05-15:
+* fwunpack.py: extract more things from the ZIP header for sanity checks
+* fwunpack.py: check if there is a valid end of central directory in a file.
+If there are more than one don't default to multi-zip ZIP, but first try to see
+if there are multiple ZIP files that simply have been concatenated, since zip
+(unzip, zipinfo, etc.) will try to use the last "end of central directory" in
+the file which is often not correct, and will also possibly blacklist parts of
+the file that should not be blacklisted.
+* bruteforcescan.py: check and record ZIP end of central directory offset
+* bruteforcescan.py: fix setting postgresql credentials and copying them to
+other scans.
+
 2015-05-13:
 * createdb.py: extract identifiers before licenses and copyright
 * createdb.py: ignore e-mail addresses starting with .
