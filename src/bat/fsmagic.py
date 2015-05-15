@@ -27,6 +27,7 @@ fsmagic = {
             'bz2':              'BZh',
             'rar':              'Rar!',
             'zip':              '\x50\x4b\x03\04',
+            'zipend':           '\x50\x4b\x05\06',
             'lrzip':            'LRZI',
             'rzip':             'RZIP',
             'squashfs1':        '\x68\x73\x71\x73', # hsqs
