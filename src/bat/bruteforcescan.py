@@ -800,6 +800,23 @@ def readconfig(config):
 			except:
 				conf['name']   = section
 
+			## deal with the environment
+			newenv = copy.deepcopy(scanenv)
+			try:
+				envvars = config.get(section, 'envvars')
+				if envvars == None:
+					pass
+				else:
+					for en in envvars.split(':'):
+						try:
+							(envname, envvalue) = en.split('=')
+							newenv[envname] = envvalue
+						except Exception, e:
+							print >>sys.stderr, "EXCEPTION", e
+							pass
+			except:
+				pass
+			conf['environment'] = newenv
 			## see if a dbbackend is defined. If not, check if the
 			## top level configuration has it defined.
 			try:
@@ -824,31 +841,15 @@ def readconfig(config):
 						conf['dbbackend'] = dbbackend
 						if dbbackend == 'postgresql':
 							try:
-								postgresql_user = config.get(section, 'postgresql_user')
-								postgresql_password = config.get(section, 'postgresql_password')
-								postgresql_db = config.get(section, 'postgresql_db')
+								postgresql_user = copy.deepcopy(batconf['environment']['POSTGRESQL_USER'])
+								postgresql_password = copy.deepcopy(batconf['environment']['POSTGRESQL_PASSWORD'])
+								postgresql_db = copy.deepcopy(batconf['environment']['POSTGRESQL_DB'])
 								conf['environment']['POSTGRESQL_USER'] = postgresql_user
 								conf['environment']['POSTGRESQL_PASSWORD'] = postgresql_password
 								conf['environment']['POSTGRESQL_DB'] = postgresql_db
-							except:
+							except Exception, e:
+								print 'blebber', e
 								del conf['dbbackend']
-			## deal with the environment
-			newenv = copy.deepcopy(scanenv)
-			try:
-				envvars = config.get(section, 'envvars')
-				if envvars == None:
-					pass
-				else:
-					for en in envvars.split(':'):
-						try:
-							(envname, envvalue) = en.split('=')
-							newenv[envname] = envvalue
-						except Exception, e:
-							print >>sys.stderr, "EXCEPTION", e
-							pass
-			except:
-				pass
-			conf['environment'] = newenv
 			try:
 				conf['magic'] = config.get(section, 'magic')
 			except:
