@@ -293,6 +293,8 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 					continue
 		if "path" in unpackreports[unpackreport]:
 			jsonreport['path'] = copy.deepcopy(unpackreports[unpackreport]['path'])
+		if "realpath" in unpackreports[unpackreport]:
+			jsonreport['realpath'] = copy.deepcopy(unpackreports[unpackreport]['realpath'])
 		if "tags" in unpackreports[unpackreport]:
 			jsonreport['tags'] = list(set(copy.deepcopy(unpackreports[unpackreport]['tags'])))
 		if "magic" in unpackreports[unpackreport]:
