@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 ## Binary Analysis Tool
-## Copyright 2014 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2014-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -25,6 +25,11 @@ import sys, os, magic, string, re, subprocess, shutil, stat
 import tempfile, bz2, tarfile, gzip, hashlib, zlib
 from optparse import OptionParser
 from multiprocessing import Pool
+try:
+	import tlsh
+	tlshscan = True
+except Exception, e:
+	tlshscan = False
 
 tarmagic = ['POSIX tar archive (GNU)'
            , 'tar archive'
@@ -185,16 +190,23 @@ def computehash((path, filename, extrahashes)):
 	h.update(scanfile.read())
 	scanfile.close()
 	filehashes['sha256'] = h.hexdigest()
-	for i in extrahashes:
+	if len(extrahashes) != 0:
 		scanfile = open(resolved_path, 'r')
-		if i == 'crc32':
-			crcdata = scanfile.read()
-			filehashes[i] = zlib.crc32(crcdata) & 0xffffffff
-		else:
-			h = hashlib.new(i)
-			h.update(scanfile.read())
-			filehashes[i] = h.hexdigest()
+		data = scanfile.read()
 		scanfile.close()
+		for i in extrahashes:
+			if i == 'crc32':
+				filehashes[i] = zlib.crc32(data) & 0xffffffff
+			elif i == 'tlsh':
+				if os.stat(resolved_path).st_size >= 512:
+					tlshhash = tlsh.hash(data)
+					filehashes[i] = tlshhash
+				else:
+					filehashes[i] = None
+			else:
+				h = hashlib.new(i)
+				h.update(data)
+				filehashes[i] = h.hexdigest()
 	return (path, filename, filehashes)
 
 def checkalreadyscanned((filedir, filename, checksum)):
@@ -251,6 +263,8 @@ def main(argv):
 			checksums[archivefilename] = archivechecksum
 
 	extrahashes = ['md5', 'sha1', 'crc32']
+	if tlshscan:
+		extrahashes.append('tlsh')
 
 	for unpackfile in filelist:
 		try:

@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2014 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2014-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -11,6 +11,11 @@ for each file, that speeds up database creation.
 
 import os, os.path, sys, hashlib, multiprocessing, zlib
 from optparse import OptionParser
+try:
+	import tlsh
+	tlshscan = True
+except Exception, e:
+	tlshscan = False
 
 def computehash((filedir, filename, extrahashes)):
 	filehashes = {}
@@ -28,10 +33,22 @@ def computehash((filedir, filename, extrahashes)):
 		except:
 			return None
 
+	if 'tlsh' in extrahashes:
+		if os.stat(resolved_path).st_size >= 512:
+			filehashes['tlsh'] = tlsh.hash(filedata)
+		else:
+			filehashes['tlsh'] = None
+
 	## first remove 'crc32' from extrahashes
 	extrahashesset = set(extrahashes)
 	try:
 		extrahashesset.remove('crc32')
+	except KeyError:
+		pass
+
+	## then remove 'tlsh' from extrahashes
+	try:
+		extrahashesset.remove('tlsh')
 	except KeyError:
 		pass
 
@@ -61,6 +78,8 @@ def main(argv):
 		sys.exit(0)
 
 	extrahashes = ['md5', 'sha1', 'crc32']
+	if tlshscan:
+		extrahashes.append('tlsh')
 
 	filetohash = {}
 	if os.path.exists(os.path.join(options.filedir, "SHA256SUM")):
