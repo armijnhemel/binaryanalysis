@@ -17,7 +17,7 @@ create table if not exists kernelmodule_version(checksum text, modulename text, 
 create table if not exists rpm(rpmname text, checksum text, downloadurl text);
 create table if not exists archivealias(checksum text, archivename text, origin text, downloadurl text);
 create table if not exists misc(checksum text, name text);
-create table if not exists hashconversion (sha256 text, md5 text, sha1 text, crc32 text);
+create table if not exists hashconversion (sha256 text, md5 text, sha1 text, crc32 text, tlsh text);
 create table if not exists licenses (checksum text, license text, scanner text, version text);
 create table if not exists extracted_copyright (checksum text, copyright text, type text, byteoffset int);
 create table if not exists security_cert(checksum text, securitybug text, linenumber int, function text, whitelist boolean);

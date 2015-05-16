@@ -40,6 +40,7 @@ create index hashconversion_sha256_index on hashconversion(sha256);
 create index hashconversion_md5_index on hashconversion(md5);
 create index hashconversion_sha1_index on hashconversion(sha1);
 create index hashconversion_crc32_index on hashconversion(crc32);
+create index hashconversion_tlsh_index on hashconversion(tlsh);
 create index license_index on licenses(checksum);
 create index copyright_index on extracted_copyright(checksum);
 create index copyright_type_index on extracted_copyright(copyright, type);
