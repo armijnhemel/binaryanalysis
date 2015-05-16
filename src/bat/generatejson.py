@@ -268,8 +268,8 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 	for unpackreport in unpackreports:
 		jsonreport = {}
 		filehash = None
-		if "sha256" in unpackreports[unpackreport]:
-			filehash = copy.deepcopy(unpackreports[unpackreport]['sha256'])
+		if "checksum" in unpackreports[unpackreport]:
+			filehash = copy.deepcopy(unpackreports[unpackreport]['checksum'])
 			jsonreport['checksum'] = filehash
 			jsonreport['checksumtype'] = 'sha256'
 		if "name" in unpackreports[unpackreport]:
@@ -299,9 +299,9 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 			jsonreport['tags'] = list(set(copy.deepcopy(unpackreports[unpackreport]['tags'])))
 		if "magic" in unpackreports[unpackreport]:
 			jsonreport['magic'] = copy.deepcopy(unpackreports[unpackreport]['magic'])
-		if "sha256" in unpackreports[unpackreport]:
+		if "checksum" in unpackreports[unpackreport]:
 			jsonreport['checksum'] = filehash
-			jsonreport['checksumtype'] = 'sha256'
+			jsonreport['checksumtype'] = 'checksum'
 		if "scans" in unpackreports[unpackreport]:
 			if unpackreports[unpackreport]['scans'] != []:
 				jsonreport['scans'] = copy.deepcopy(unpackreports[unpackreport]['scans'])
@@ -318,9 +318,9 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 	## create tasks for printing results for each of the individual reports
 	for unpackreport in unpackreports:
 		## first see if there is a filehash. If not, continue
-		if not "sha256" in unpackreports[unpackreport]:
+		if not "checksum" in unpackreports[unpackreport]:
 			continue
-		filehash = unpackreports[unpackreport]['sha256']
+		filehash = unpackreports[unpackreport]['checksum']
 		if filehash in filehashes:
 			continue
 		## then check if there is a pickle file. If not, continue

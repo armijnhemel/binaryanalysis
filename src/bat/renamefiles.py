@@ -22,7 +22,7 @@ def renamefiles(unpackreports, scantempdir, topleveldir, processors, scanenv, sc
 	## known compressions for initramfs
 	initramfscompressions = ['gzip']
 	for r in unpackreports.keys():
-		if unpackreports[r].has_key('sha256'):
+		if unpackreports[r].has_key('checksum'):
 			if 'linuxkernel' in unpackreports[r]['tags']:
 				if 'modulekernelversion' in unpackreports[r]['tags']:
 					continue

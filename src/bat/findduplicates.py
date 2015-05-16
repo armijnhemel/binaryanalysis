@@ -14,11 +14,11 @@ files.
 def findduplicates(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
 	filehashes = {}
 	for r in unpackreports.keys():
-		if unpackreports[r].has_key('sha256'):
-			if filehashes.has_key(unpackreports[r]['sha256']):
-				filehashes[unpackreports[r]['sha256']].append(r)
+		if unpackreports[r].has_key('checksum'):
+			if filehashes.has_key(unpackreports[r]['checksum']):
+				filehashes[unpackreports[r]['checksum']].append(r)
 			else:
-				filehashes[unpackreports[r]['sha256']] = [r]
+				filehashes[unpackreports[r]['checksum']] = [r]
 	duplicates = []
 	for h in filehashes:
 		if len(filehashes[h]) > 1:

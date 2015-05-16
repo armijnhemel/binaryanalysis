@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2013-2014 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2013-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -54,16 +54,16 @@ def main(argv):
 			continue
 		if not 'linuxkernel' in unpackreports[u]['tags']:
 			continue
-		if not unpackreports[u].has_key('sha256'):
+		if not unpackreports[u].has_key('checksum'):
 			continue
-		if not os.path.exists(os.path.join(tmpdir, 'filereports', "%s-filereport.pickle.gz" % unpackreports[u]['sha256'])):
+		if not os.path.exists(os.path.join(tmpdir, 'filereports', "%s-filereport.pickle.gz" % unpackreports[u]['checksum'])):
 			continue
 		kernelfiles.add(u)
 
 	## store kernel versions per file, since there might be multiple copies
 	kernelversions = {}
 	for i in kernelfiles:
-		sha256sum = unpackreports[i]['sha256']
+		sha256sum = unpackreports[i]['checksum']
 		picklefile = gzip.open(os.path.join(tmpdir, 'filereports', "%s-filereport.pickle.gz" % sha256sum))
 		leafreports = cPickle.load(picklefile)
 		picklefile.close()

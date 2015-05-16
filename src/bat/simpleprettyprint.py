@@ -98,7 +98,7 @@ def prettyprintresxml(unpackreports, scandate, scans, toplevelfile, topleveldir,
 		return root.toxml()
 
 	## first add a few things for the top level node
-	for i in ["name", "path", "realpath", "magic", "sha256", "size"]:
+	for i in ["name", "path", "realpath", "magic", "checksum", "size"]:
 		if unpackreports[toplevelfile].has_key(i):
 			tmpnode = generateNode(root, i, unpackreports[toplevelfile][i])
                 	topnode.appendChild(tmpnode)
@@ -113,8 +113,8 @@ def prettyprintresxml(unpackreports, scandate, scans, toplevelfile, topleveldir,
 def prettyprintscan(unpackreports, root, scannode, scans, topleveldir):
 	scansnode = None
 	## pretty print the individual results for the top level file.
-	if unpackreports[scannode].has_key('sha256'):
-		filehash = unpackreports[scannode]['sha256']
+	if unpackreports[scannode].has_key('checksum'):
+		filehash = unpackreports[scannode]['checksum']
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			return scansnode
 
@@ -158,7 +158,7 @@ def prettyprintscan(unpackreports, root, scannode, scans, topleveldir):
 				if not unpackreports.has_key(r):
 					continue
 				filenode = root.createElement("file")
-				for i in ["name", "path", "realpath", "magic", "sha256", "size"]:
+				for i in ["name", "path", "realpath", "magic", "checksum", "size"]:
 					if unpackreports[r].has_key(i):
 						tmpnode = generateNode(root, i, unpackreports[r][i])
                 				filenode.appendChild(tmpnode)

@@ -13,7 +13,7 @@ This should be run as a postrun scan
 import os, os.path, sys, cPickle, gzip
 
 def guireport(filename, unpackreport, scantempdir, topleveldir, scanenv, debug=False):
-	if not unpackreport.has_key('sha256'):
+	if not unpackreport.has_key('checksum'):
 		return
 	## this is a placeholder. The GUI should replace this one on the fly
 	imagesdir = "REPLACEME"
@@ -47,7 +47,7 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, scanenv, debug=F
 			## BAT_IMAGEDIR does not exist
 			tmpimagedir = None
 
-	filehash = unpackreport['sha256']
+	filehash = unpackreport['checksum']
 	if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 		return
 

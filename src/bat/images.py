@@ -29,7 +29,7 @@ import os, os.path, sys, subprocess
 from PIL import Image
 
 def generateImages(filename, unpackreport, scantempdir, topleveldir, scanenv={}, debug=False):
-	if not unpackreport.has_key('sha256'):
+	if not unpackreport.has_key('checksum'):
 		return
 
 	imagedir = scanenv.get('BAT_IMAGEDIR', "%s/%s" % (topleveldir, "images"))
@@ -47,7 +47,7 @@ def generateImages(filename, unpackreport, scantempdir, topleveldir, scanenv={},
 	if filesize > maxsize:
 		return
 	## this stuff is easily cached
-	if not os.path.exists("%s/%s.png" % (imagedir, unpackreport['sha256'])):
+	if not os.path.exists("%s/%s.png" % (imagedir, unpackreport['checksum'])):
 		fwfile = open("%s/%s" % (scantempdir, filename))
 
 		## this is very inefficient for large files, but we *really* need all the data :-(
@@ -71,16 +71,16 @@ def generateImages(filename, unpackreport, scantempdir, topleveldir, scanenv={},
 		imgbuffer = buffer(bytearray(fwdata))
 
 		im = Image.frombuffer("L", (height, width), imgbuffer, "raw", "L", 0, 1)
-		im.save("%s/%s.png" % (imagedir, unpackreport['sha256']))
+		im.save("%s/%s.png" % (imagedir, unpackreport['checksum']))
 		'''
 		if width > 100:
 			imthumb = im.thumbnail((height/4, width/4))
-			im.save("%s/%s-thumbnail.png" % (imagedir, unpackreport['sha256']))
+			im.save("%s/%s-thumbnail.png" % (imagedir, unpackreport['checksum']))
 		'''
 
 	'''
 	## generate histogram
-	p = subprocess.Popen(['python', '/home/armijn/gpltool/trunk/bat-extratools/bat-visualisation/bat-generate-histogram.py', '-i', "%s/%s" % (scantempdir, filename), '-o', '%s/%s-histogram.png' % (imagedir, unpackreport['sha256'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['python', '/home/armijn/gpltool/trunk/bat-extratools/bat-visualisation/bat-generate-histogram.py', '-i', "%s/%s" % (scantempdir, filename), '-o', '%s/%s-histogram.png' % (imagedir, unpackreport['checksum'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		print >>sys.stderr, stanerr

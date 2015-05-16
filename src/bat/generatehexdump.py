@@ -20,7 +20,7 @@ This should be run as a postrun scan
 import os, os.path, sys, subprocess, gzip
 
 def generateHexdump(filename, unpackreport, scantempdir, topleveldir, scanenv={}, debug=False):
-	if not unpackreport.has_key('sha256'):
+	if not unpackreport.has_key('checksum'):
 		return
 	reportdir = scanenv.get('BAT_REPORTDIR', '.')
 	try:
@@ -36,10 +36,10 @@ def generateHexdump(filename, unpackreport, scantempdir, topleveldir, scanenv={}
 	filesize = os.stat("%s/%s" % (scantempdir, filename)).st_size
 	if filesize > maxsize:
 		return
-	if not os.path.exists("%s/%s-hexdump.gz" % (reportdir, unpackreport['sha256'])):
+	if not os.path.exists("%s/%s-hexdump.gz" % (reportdir, unpackreport['checksum'])):
 		p = subprocess.Popen(['hexdump', '-Cv', "%s/%s" % (scantempdir, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
 		if stanout != "":
-			gf = gzip.open("%s/%s-hexdump.gz" % (reportdir, unpackreport['sha256']), 'w')
+			gf = gzip.open("%s/%s-hexdump.gz" % (reportdir, unpackreport['checksum']), 'w')
 			gf.write(stanout)
 			gf.close()

@@ -16,7 +16,7 @@ to prevent other scans from (re)scanning (part of) the data.
 '''
 
 import sys, os, subprocess, os.path, shutil, stat, array, struct, binascii
-import tempfile, bz2, re, magic, tarfile, zlib, copy
+import tempfile, bz2, re, magic, tarfile, zlib, copy, uu
 import fsmagic, extractor, ext2, jffs2
 from xml.dom import minidom
 
@@ -144,6 +144,12 @@ def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, scane
 		os.fdopen(tmpfile[0]).close()
 		return ([(tmpdir, 0, os.stat(filename).st_size)], blacklist, [], hints)
 	return ([], blacklist, [], hints)
+
+## unpack UU encoded files
+def searchUnpackUU(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
+	if not offsets.has_key('text'):
+		return ([], blacklist, [], hints)
+	pass
 
 ## unpack base64 files
 def searchUnpackBase64(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):

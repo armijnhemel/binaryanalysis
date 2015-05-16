@@ -24,7 +24,7 @@ def prunefiles(unpackreports, scantempdir, topleveldir, processors, scanenv={}, 
 	for u in unpackreports.keys():
 		if set(unpackreports[u]['tags']).intersection(prunetags) != set():
 			if cleanpickles:
-				filehash = unpackreports[u]['sha256']
+				filehash = unpackreports[u]['checksum']
 				cleanfiles.add(filehash)
 			del unpackreports[u]
 

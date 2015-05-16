@@ -238,9 +238,9 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 
 	## walk all unpackreports and keep track of which are Linux kernel images or modules
 	for i in unpackreports:
-		if not unpackreports[i].has_key('sha256'):
+		if not unpackreports[i].has_key('checksum'):
 			continue
-		filehash = unpackreports[i]['sha256']
+		filehash = unpackreports[i]['checksum']
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue
 		if not 'linuxkernel' in unpackreports[i]['tags']:

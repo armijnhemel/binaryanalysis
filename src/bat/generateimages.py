@@ -286,13 +286,13 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, scanenv,
 
 	## filter out the files which don't have ranking results
 	for i in unpackreports:
-		if not unpackreports[i].has_key('sha256'):
+		if not unpackreports[i].has_key('checksum'):
 			continue
 		if not unpackreports[i].has_key('tags'):
 			continue
 		if not 'ranking' in unpackreports[i]['tags']:
 			continue
-		filehash = unpackreports[i]['sha256']
+		filehash = unpackreports[i]['checksum']
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue
 		filehashes.add(filehash)

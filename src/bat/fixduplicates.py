@@ -29,9 +29,9 @@ def fixduplicates(unpackreports, scantempdir, topleveldir, processors, scanenv, 
 	seendupe = False
 
 	for i in unpackreports:
-		if not unpackreports[i].has_key('sha256'):
+		if not unpackreports[i].has_key('checksum'):
 			continue
-		filehash = unpackreports[i]['sha256']
+		filehash = unpackreports[i]['checksum']
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue
 
@@ -54,14 +54,14 @@ def fixduplicates(unpackreports, scantempdir, topleveldir, processors, scanenv, 
 	if seendupe:
 		dupehashes = {}
 		for i in dupefiles:
-			filehash = unpackreports[i]['sha256']
+			filehash = unpackreports[i]['checksum']
 			if dupehashes.has_key(filehash):
 				dupehashes[filehash].append(i)
 			else:
 				dupehashes[filehash] = [i]
 		dupekeys = dupehashes.keys()
 		for i in elffiles:
-			filehash = unpackreports[i]['sha256']
+			filehash = unpackreports[i]['checksum']
 			if filehash in dupekeys:
 				realpath = unpackreports[i]['realpath']
 				filename = unpackreports[i]['name']

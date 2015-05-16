@@ -226,7 +226,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 	symlinklinks = {}
 	scantempdirlen = len(scantempdir)
 	for i in unpackreports:
-		if not unpackreports[i].has_key('sha256'):
+		if not unpackreports[i].has_key('checksum'):
 			if unpackreports[i].has_key('tags'):
 				store = False
 				if 'symlink' in unpackreports[i]['tags']:
@@ -276,7 +276,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 						else:
 							symlinks[os.path.basename(i)] = [{'original': i, 'target': target, 'absolutetargetpath': linkpath[scantempdirlen+1:]}]
 			continue
-		filehash = unpackreports[i]['sha256']
+		filehash = unpackreports[i]['checksum']
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue
 
@@ -395,7 +395,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 	for i in elffiles:
 		if elftypes[i] == 'kernelmod':
 			continue
-		filehash = unpackreports[i]['sha256']
+		filehash = unpackreports[i]['checksum']
 		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 		leafreports = cPickle.load(leaf_file)
 		leaf_file.close()
@@ -413,7 +413,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 		possiblyused = []
 		plugsinto = []
 
-		filehash = unpackreports[i]['sha256']
+		filehash = unpackreports[i]['checksum']
 
 		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 		leafreports = cPickle.load(leaf_file)
@@ -491,7 +491,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 				## * SHA256 checksums
 				## * equivalent local and remote function names (and in the future localvars and remotevars)
 				if len(filtersquash) > 1:
-					if len(set(map(lambda x: unpackreports[x]['sha256'], filtersquash))) == 1:
+					if len(set(map(lambda x: unpackreports[x]['checksum'], filtersquash))) == 1:
 						filtersquash = [filtersquash[0]]
 						## store duplicates for later reporting of alternatives
 						dupes[filtersquash[0]] = filtersquash
@@ -727,7 +727,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 								## of which the name matches
 								## 3. check if the files that implement the same thing are
 								## libs or executables. Prefer libs.
-								if len(set(map(lambda x: unpackreports[x]['sha256'], funcstolibs[r]))) == 1:
+								if len(set(map(lambda x: unpackreports[x]['checksum'], funcstolibs[r]))) == 1:
 									for l in funcstolibs[r]:
 										if sonames.has_key(os.path.basename(l)):
 											found = True
@@ -833,7 +833,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 
 		## only write the new leafreport if there actually is something to write back
 		if writeback:
-			filehash = unpackreports[i]['sha256']
+			filehash = unpackreports[i]['checksum']
 			leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 			leafreports = cPickle.load(leaf_file)
 			leaf_file.close()
@@ -883,7 +883,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 			continue
 		if not squashedgraph.has_key(i):
 			continue
-		filehash = unpackreports[i]['sha256']
+		filehash = unpackreports[i]['checksum']
 		ppname = os.path.join(unpackreports[i]['path'], unpackreports[i]['name'])
 		seen = set()
 		elfgraph = pydot.Dot(graph_type='digraph')

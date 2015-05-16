@@ -128,14 +128,14 @@ def scanShellInvocations(unpackreports, scantempdir, topleveldir, processors, sc
 		## Limit to ELF binaries for now
 		if not unpackreports[i].has_key('tags'):
 			continue
-		if not unpackreports[i].has_key('sha256'):
+		if not unpackreports[i].has_key('checksum'):
 			continue
 		if not 'elf' in unpackreports[i]['tags']:
 			continue
 		if not 'identifier' in unpackreports[i]['tags']:
 			continue
 
-		filehash = unpackreports[i]['sha256']
+		filehash = unpackreports[i]['checksum']
 
 		## read pickle file
 		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
@@ -339,7 +339,7 @@ def searchLogins(unpackreports, scantempdir, topleveldir, processors, scanenv, s
 	if not "passwords" in unpackreports[toplevelelem]['tags']:
 		return
 
-	filehash = unpackreports[u]['sha256']
+	filehash = unpackreports[u]['checksum']
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 	leafreports = cPickle.load(leaf_file)
 	leaf_file.close()

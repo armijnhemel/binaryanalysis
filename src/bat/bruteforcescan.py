@@ -110,8 +110,10 @@ def filterScans(scans, tags):
 
 ## compute a SHA256 hash. This is done in chunks to prevent a big file from
 ## being read in its entirety at once, slowing down a machine.
-def gethash(path, filename):
+def gethash(path, filename, hashtype="sha256"):
 	scanfile = open(os.path.join(path, filename), 'r')
+	if hashtype == None:
+		hashtype = 'sha256'
 	h = hashlib.new('sha256')
 	scanfile.seek(0)
 	hashdata = scanfile.read(10000000)
@@ -262,7 +264,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 		## Store the hash of the file for identification and for possibly
 		## querying the knowledgebase later on.
 		filehash = gethash(path, filename)
-		unpackreports[relfiletoscan]['sha256'] = filehash
+		unpackreports[relfiletoscan]['checksum'] = filehash
 
 		## scan for markers
 		tagOffsets = tagKnownExtension(filetoscan)
@@ -546,7 +548,7 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, d
 		except NotImplementedError:
 			processors = None
 
-	filehash = unpackreports[scan_binary]['sha256']
+	filehash = unpackreports[scan_binary]['checksum']
 	leaf_file_path = os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)
 
 	## first record what the top level element is. This will be used by other scans
@@ -1039,8 +1041,8 @@ def dumpData(unpackreports, scans, tempdir):
 	## * separate pickles of the data of the ranking scan
 	sha256spack = set([])
 	for p in unpackreports:
-		if unpackreports[p].has_key('sha256'):
-			sha256spack.add(unpackreports[p]['sha256'])
+		if unpackreports[p].has_key('checksum'):
+			sha256spack.add(unpackreports[p]['checksum'])
 	oldstoredir = None
 	oldlistdir = []
 	for i in (scans['postrunscans'] + scans['aggregatescans']):
@@ -1420,7 +1422,7 @@ def runscan(scans, scan_binary):
 
 	for i in dupes:
 		for k in i:
-			dupesha256 = i[k]['sha256']
+			dupesha256 = i[k]['checksum']
 			origname = i[k]['name']
 			origrealpath = i[k]['realpath']
 			origpath = i[k]['path']
@@ -1433,9 +1435,9 @@ def runscan(scans, scan_binary):
 			unpackreports[k] = dupecopy
 
 	for i in unpackreports.keys():
-		if not unpackreports[i].has_key('sha256'):
+		if not unpackreports[i].has_key('checksum'):
 			continue
-		unpacksha256 = unpackreports[i]['sha256']
+		unpacksha256 = unpackreports[i]['checksum']
 		if tagdict.has_key(unpacksha256):
 			if unpackreports[i].has_key('tags'):
 				unpackreports[i]['tags'] = list(set(unpackreports[i]['tags'] + tagdict[unpacksha256]))
@@ -1473,7 +1475,7 @@ def runscan(scans, scan_binary):
 	if scans['postrunscans'] != [] and unpackreports != {}:
 		## if unpackreports != {} since deduplication has already been done
 
-		dedupes = filter(lambda x: 'duplicate' not in unpackreports[x]['tags'], filter(lambda x: unpackreports[x].has_key('tags'), filter(lambda x: unpackreports[x].has_key('sha256'), unpackreports.keys())))
+		dedupes = filter(lambda x: 'duplicate' not in unpackreports[x]['tags'], filter(lambda x: unpackreports[x].has_key('tags'), filter(lambda x: unpackreports[x].has_key('checksum'), unpackreports.keys())))
 		postrunscans = []
 		for i in dedupes:
 			## results might have been changed by aggregate scans, so check if it still exists

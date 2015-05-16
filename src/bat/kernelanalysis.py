@@ -204,13 +204,13 @@ def kernelmodulecheck(unpackreports, scantempdir, topleveldir, processors, scane
 		## sanity checks
 		if not unpackreports[i].has_key('tags'):
 			continue
-		if not unpackreports[i].has_key('sha256'):
+		if not unpackreports[i].has_key('checksum'):
 			continue
 
 		if not ('linuxkernel' in unpackreports[i]['tags'] or 'kernelchecks' in unpackreports[i]['tags']):
 			continue
 
-		filehash = unpackreports[i]['sha256']
+		filehash = unpackreports[i]['checksum']
 
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue

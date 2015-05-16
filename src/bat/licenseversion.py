@@ -194,10 +194,10 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, pool, scanenv, scande
 	sha256seen = []
 	alljarfiles = []
 	for i in unpackreports:
-		if not unpackreports[i].has_key('sha256'):
+		if not unpackreports[i].has_key('checksum'):
 			continue
 		else:
-			filehash = unpackreports[i]['sha256']
+			filehash = unpackreports[i]['checksum']
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue
 		if cleanclasses:
@@ -248,7 +248,7 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, pool, scanenv, scande
 		for i in res:
 			(jarfile, rankres) = i
 			if rankres:
-				for j in sha256stofiles[unpackreports[jarfile]['sha256']]:
+				for j in sha256stofiles[unpackreports[jarfile]['checksum']]:
 					ranked.add(j)
 
 	for i in ranked:
@@ -268,7 +268,7 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, pool, scanenv, scande
 					continue
 			classfiles = filter(lambda x: x.endswith('.class'), unpackreports[i]['scans'][0]['scanreports'])
 			for c in classfiles:
-				filehash = unpackreports[c]['sha256']
+				filehash = unpackreports[c]['checksum']
 				if len(sha256stofiles[filehash]) == 1:
 					try:
 						os.unlink(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash))
@@ -322,7 +322,7 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 			continue
 		if not 'ranking' in c['tags']:
 			continue
-		filehash = c['sha256']
+		filehash = c['checksum']
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue
 
@@ -467,7 +467,7 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 
 	## now write the new result
 	## TODO: only do this if there actually is an aggregate result
-	filehash = jarreport['sha256']
+	filehash = jarreport['checksum']
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 	leafreports = cPickle.load(leaf_file)
 	leaf_file.close()
@@ -597,13 +597,13 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	filehashseen = set()
 	hashtoname = {}
 	for i in unpackreports:
-		if not unpackreports[i].has_key('sha256'):
+		if not unpackreports[i].has_key('checksum'):
 			continue
 		if not unpackreports[i].has_key('tags'):
 			continue
 		if not 'identifier' in unpackreports[i]['tags']:
 			continue
-		filehash = unpackreports[i]['sha256']
+		filehash = unpackreports[i]['checksum']
 		if hashtoname.has_key(filehash):
 			hashtoname[filehash].append(i)
 		else:
@@ -618,7 +618,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	pool = multiprocessing.Pool(processes=processors)
 
 	lookup_tasks = []
-	lookup_tasks = map(lambda x: (scanenv, unpackreports[x]['sha256'], os.path.join(unpackreports[x]['realpath'], unpackreports[x]['name']), topleveldir, clones, batdb, scandebug), rankingfiles)
+	lookup_tasks = map(lambda x: (scanenv, unpackreports[x]['checksum'], os.path.join(unpackreports[x]['realpath'], unpackreports[x]['name']), topleveldir, clones, batdb, scandebug), rankingfiles)
 
 	res = pool.map(lookup_identifier, lookup_tasks,1)
 
@@ -635,13 +635,13 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	rankingfiles = set()
 	filehashseen = set()
 	for i in unpackreports:
-		if not unpackreports[i].has_key('sha256'):
+		if not unpackreports[i].has_key('checksum'):
 			continue
 		if not unpackreports[i].has_key('tags'):
 			continue
 		if not 'ranking' in unpackreports[i]['tags']:
 			continue
-		filehash = unpackreports[i]['sha256']
+		filehash = unpackreports[i]['checksum']
 		if filehash in filehashseen:
 			continue
 		filehashseen.add(filehash)
@@ -1900,7 +1900,7 @@ def lookup_identifier((scanenv, filehash, filename, topleveldir, clones, batdb, 
 ## are also extracted.
 def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determinelicense, determinecopyright, batdb):
 	## read the pickle
-	filehash = unpackreport['sha256']
+	filehash = unpackreport['checksum']
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 	leafreports = cPickle.load(leaf_file)
 	leaf_file.close()

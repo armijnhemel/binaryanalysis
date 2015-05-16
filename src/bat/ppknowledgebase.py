@@ -113,11 +113,11 @@ def prettyprintresxmlsnippet(res, root, unpackscans, leafscans):
                 				topnode.appendChild(tmpnode)
 					else:
                 				tmpnode = root.createElement("file")
-						tmpnodes = generateNodes(elem, root, ["name", "path", "realpath", "magic", "sha256", "size"])
+						tmpnodes = generateNodes(elem, root, ["name", "path", "realpath", "magic", "schecksum", "size"])
 						for tmpnode2 in tmpnodes:
                 					tmpnode.appendChild(tmpnode2)
 
-						vendornode = getVendorInfo(res['sha256'], c, root)
+						vendornode = getVendorInfo(res['checksum'], c, root)
 						if vendornode != None:
 							tmpnode.appendChild(vendornode)
 
@@ -153,10 +153,10 @@ def prettyprintresxml(res, scandate, scans, scanenv={}):
 	c = conn.cursor()
 
 	## there are a few things we always want to know about the top level node
-	tmpnodes = generateNodes(res, root, ["name", "path", "realpath", "magic", "sha256", "size"])
+	tmpnodes = generateNodes(res, root, ["name", "path", "realpath", "magic", "checksum", "size"])
 	for tmpnode in tmpnodes:
                 topnode.appendChild(tmpnode)
-	vendornode = getVendorInfo(res['sha256'], c, root)
+	vendornode = getVendorInfo(res['checksum'], c, root)
 	if vendornode != None:
 		topnode.appendChild(vendornode)
 
