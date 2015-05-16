@@ -465,8 +465,8 @@ class BatFrame(wx.Frame):
 		if self.unpackreports.has_key(self.selectedfile):
 			sha256sum = ''
 			tag = ''
-			if self.unpackreports[self.selectedfile].has_key('sha256'):
-				sha256sum = self.unpackreports[self.selectedfile]['sha256']
+			if self.unpackreports[self.selectedfile].has_key('checksum'):
+				sha256sum = self.unpackreports[self.selectedfile]['checksum']
 			else:
 				## no checksum, so it is a 'special' file
 				name = self.unpackreports[self.selectedfile]['name']
