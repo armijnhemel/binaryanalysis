@@ -56,6 +56,11 @@ import tempfile, bz2, tarfile, gzip, ConfigParser
 from optparse import OptionParser
 import sqlite3, hashlib, zlib, urlparse, tokenize, multiprocessing
 import batextensions
+try:
+        import tlsh
+	tlshscan = True
+except Exception, e:
+	tlshscan = False
 
 tarmagic = ['POSIX tar archive (GNU)'
            , 'tar archive'
@@ -782,7 +787,10 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 		## first line is always a list of supported hashes.
 		process = True
 		if set(checksumsused).intersection(set(extrahashes)) != set(extrahashes):
+			## if the checksums recorded in the file are not the same
+			## as in the hashes wanted, then don't process the manifest file
 			process = False
+			print >>sys.stderr, "something is wrong, please regenerate your manifest files with the right hashes"
 		if process:
 			for i in manifestlines[1:]:
 				i = i.strip().replace('\t\t', '\t')
@@ -1002,16 +1010,24 @@ def computehash((filedir, filename, extension, language, extrahashes)):
 	h.update(scanfile.read())
 	scanfile.close()
 	filehashes['sha256'] = h.hexdigest()
-	for i in extrahashes:
+	if len(extrahashes) != 0:
 		scanfile = open(resolved_path, 'r')
-		if i == 'crc32':
-			crcdata = scanfile.read()
-			filehashes[i] = zlib.crc32(crcdata) & 0xffffffff
-		else:
-			h = hashlib.new(i)
-			h.update(scanfile.read())
-			filehashes[i] = h.hexdigest()
+		data = scanfile.read()
 		scanfile.close()
+		for i in extrahashes:
+			if i == 'crc32':
+				crcdata = scanfile.read()
+				filehashes[i] = zlib.crc32(data) & 0xffffffff
+			elif i == 'tlsh':
+				if os.stat(resolved_path).st_size >= 512:
+					tlshhash = tlsh.hash(data)
+					filehashes[i] = tlshhash
+				else:
+					filehashes[i] = None
+			else:
+				h = hashlib.new(i)
+				h.update(data)
+				filehashes[i] = h.hexdigest()
 		
 	return (filedir, filename, filehashes, extension, language)
 
@@ -2682,6 +2698,9 @@ def main(argv):
 						extrahashes.append(h)
 					elif h == 'crc32':
 						extrahashes.append(h)
+					elif h == 'tlsh':
+						if tlshscan:
+							extrahashes.append(h)
 			except:
 				extrahashes = []
 		else:
