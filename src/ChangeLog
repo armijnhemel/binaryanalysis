@@ -1,3 +1,9 @@
+2015-05-16:
+* generatejson.py: add realpath to JSON file
+* use 'checksum' in unpackreports instead of 'sha256' so in the future also
+other checksum types can be used
+* createdb.py + friends: use tlsh, if available. This is for future BAT.
+
 2015-05-15:
 * fwunpack.py: extract more things from the ZIP header for sanity checks
 * fwunpack.py: check if there is a valid end of central directory in a file.
