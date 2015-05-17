@@ -57,7 +57,7 @@ def unpack(directory, filename, unpackdir):
 		## for some reason the tar.bz2 unpacking from python doesn't always work, like
 		## aeneas-1.0.tar.bz2 from GNU, so use a subprocess instead of using the
 		## Python tar functionality.
- 		p = subprocess.Popen(['tar', 'jxf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+ 		p = subprocess.Popen(['tar', 'jxf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
 			shutil.rmtree(tmpdir)
@@ -68,7 +68,7 @@ def unpack(directory, filename, unpackdir):
        			tmpdir = tempfile.mkdtemp(dir=unpackdir)
 		else:
        			tmpdir = tempfile.mkdtemp()
-		p = subprocess.Popen(['tar', 'ixf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+		p = subprocess.Popen(['tar', 'ixf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
 			shutil.rmtree(tmpdir)
@@ -79,7 +79,7 @@ def unpack(directory, filename, unpackdir):
        			tmpdir = tempfile.mkdtemp(dir=unpackdir)
 		else:
        			tmpdir = tempfile.mkdtemp()
- 		p = subprocess.Popen(['tar', 'Jxf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+ 		p = subprocess.Popen(['tar', 'Jxf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
 			shutil.rmtree(tmpdir)
@@ -90,7 +90,7 @@ def unpack(directory, filename, unpackdir):
        			tmpdir = tempfile.mkdtemp(dir=unpackdir)
 		else:
        			tmpdir = tempfile.mkdtemp()
- 		p = subprocess.Popen(['tar', 'zxf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+ 		p = subprocess.Popen(['tar', 'zxf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
 			shutil.rmtree(tmpdir)
@@ -102,7 +102,7 @@ def unpack(directory, filename, unpackdir):
        				tmpdir = tempfile.mkdtemp(dir=unpackdir)
 			else:
        				tmpdir = tempfile.mkdtemp()
-			p = subprocess.Popen(['unzip', "-B", os.path.join(directory, filename), '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			p = subprocess.Popen(['unzip', "-B", os.path.join(directory, filename), '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 			(stanout, stanerr) = p.communicate()
 			if p.returncode != 0 and p.returncode != 1:
 				print >>sys.stderr, "unpacking ZIP failed for", filename, stanerr
