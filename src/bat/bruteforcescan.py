@@ -1278,7 +1278,6 @@ def runscan(scans, scan_binary):
 		print >>sys.stderr, "PRERUN UNPACK BEGIN", datetime.datetime.utcnow().isoformat()
 
 	outputhash = scans['batconfig'].get('reporthash', None)
-	print outputhash
 	lock = Lock()
 	scanmanager = multiprocessing.Manager()
 	scanqueue = multiprocessing.JoinableQueue(maxsize=0)
