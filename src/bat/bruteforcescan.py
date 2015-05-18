@@ -111,10 +111,20 @@ def filterScans(scans, tags):
 ## compute a SHA256 hash. This is done in chunks to prevent a big file from
 ## being read in its entirety at once, slowing down a machine.
 def gethash(path, filename, hashtype="sha256"):
-	scanfile = open(os.path.join(path, filename), 'r')
 	if hashtype == None:
 		hashtype = 'sha256'
-	h = hashlib.new('sha256')
+		h = hashlib.new(hashtype)
+	## CRC32 and TLSH are not yet supported
+	elif hashtype == 'crc32':
+		hashtype = 'sha256'
+		h = hashlib.new(hashtype)
+	elif hashtype == 'tlsh':
+		hashtype = 'sha256'
+		h = hashlib.new(hashtype)
+	else:
+		h = hashlib.new(hashtype)
+
+	scanfile = open(os.path.join(path, filename), 'r')
 	scanfile.seek(0)
 	hashdata = scanfile.read(10000000)
 	while hashdata != '':
@@ -175,7 +185,7 @@ def tagKnownExtension(filename):
 	return (tags, offsets)
 
 ## scan a single file, possibly unpack and recurse
-def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optmagicscans, processid, hashdict, llock, template, unpacktempdir):
+def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optmagicscans, processid, hashdict, llock, template, unpacktempdir, outputhash):
 	prerunignore = {}
 	prerunmagic = {}
 	for prerunscan in prerunscans:
@@ -263,7 +273,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 
 		## Store the hash of the file for identification and for possibly
 		## querying the knowledgebase later on.
-		filehash = gethash(path, filename)
+		filehash = gethash(path, filename, outputhash)
 		unpackreports[relfiletoscan]['checksum'] = filehash
 
 		## scan for markers
@@ -1267,6 +1277,8 @@ def runscan(scans, scan_binary):
 	if debug:
 		print >>sys.stderr, "PRERUN UNPACK BEGIN", datetime.datetime.utcnow().isoformat()
 
+	outputhash = scans['batconfig'].get('reporthash', None)
+	print outputhash
 	lock = Lock()
 	scanmanager = multiprocessing.Manager()
 	scanqueue = multiprocessing.JoinableQueue(maxsize=0)
@@ -1276,7 +1288,7 @@ def runscan(scans, scan_binary):
 	hashdict = scanmanager.dict()
 	map(lambda x: scanqueue.put(x), scantasks)
 	for i in range(0,processamount):
-		p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], magicscans, optmagicscans, i, hashdict, lock, template, unpacktempdir))
+		p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], magicscans, optmagicscans, i, hashdict, lock, template, unpacktempdir, outputhash))
 		processpool.append(p)
 		p.start()
 
