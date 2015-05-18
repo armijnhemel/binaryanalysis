@@ -557,31 +557,29 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 
 	## the environment might have changed and been cleaned up,
 	## so overwrite the old one
-	scanenv = newenv
-
 	determineversion = False
-	if scanenv.get('BAT_RANKING_VERSION', 0) == '1':
+	if newenv.get('BAT_RANKING_VERSION', 0) == '1':
 		determineversion = True
 
 	determinelicense = False
-	if scanenv.get('BAT_RANKING_LICENSE', 0) == '1':
+	if newenv.get('BAT_RANKING_LICENSE', 0) == '1':
 		determinelicense = True
 
 	determinecopyright = False
-	if scanenv.get('BAT_RANKING_COPYRIGHT', 0) == '1':
+	if newenv.get('BAT_RANKING_COPYRIGHT', 0) == '1':
 		determinecopyright = True
 
 	## only continue if there actually is a need
 	if not determinelicense and not determineversion and not determinecopyright:
 		return None
 
-	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
+	batdb = bat.batdb.BatDb(newenv['DBBACKEND'])
 
 	## Some methods use a database to lookup renamed packages.
-	clonedb = scanenv.get('BAT_CLONE_DB')
+	clonedb = newenv.get('BAT_CLONE_DB')
 	clones = {}
 	if clonedb != None:
-		conn = batdb.getConnection(clonedb,scanenv)
+		conn = batdb.getConnection(clonedb,newenv)
 		c = conn.cursor()
 		c.execute("SELECT originalname,newname from renames")
 		clonestmp = c.fetchall()
@@ -618,7 +616,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	pool = multiprocessing.Pool(processes=processors)
 
 	lookup_tasks = []
-	lookup_tasks = map(lambda x: (scanenv, unpackreports[x]['checksum'], os.path.join(unpackreports[x]['realpath'], unpackreports[x]['name']), topleveldir, clones, batdb, scandebug), rankingfiles)
+	lookup_tasks = map(lambda x: (newenv, unpackreports[x]['checksum'], os.path.join(unpackreports[x]['realpath'], unpackreports[x]['name']), topleveldir, clones, batdb, scandebug), rankingfiles)
 
 	res = pool.map(lookup_identifier, lookup_tasks,1)
 
@@ -629,7 +627,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 					unpackreports[w]['tags'].append('ranking')
 
 	## aggregate the JAR files
-	aggregatejars(unpackreports, scantempdir, topleveldir, pool, scanenv, scandebug=False, unpacktempdir=None)
+	aggregatejars(unpackreports, scantempdir, topleveldir, pool, newenv, scandebug=False, unpacktempdir=None)
 
 	## .class files might have been removed at this point, so sanity check first
 	rankingfiles = set()
@@ -651,7 +649,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 
 	## and determine versions, etc.
 	for i in rankingfiles:
-		compute_version(pool, processors, scanenv, unpackreports[i], topleveldir, determinelicense, determinecopyright, batdb)
+		compute_version(pool, processors, newenv, unpackreports[i], topleveldir, determinelicense, determinecopyright, batdb)
 	pool.terminate()
 
 ## grab variable names.
