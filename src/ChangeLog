@@ -2,6 +2,10 @@
 * bruteforcescan.py: use reporthash for naming files as well. Currently this
 is restricted to SHA256 (default), MD5 and SHA1. In the future CRC32 and TLSH
 might be supported as well.
+* security.py: fix parameter type of query
+* bruteforcescan.py/fwunpack.py: add more ZIP sanity checks in case there turn
+out to be multiple "end of central directory" markers in a ZIP file
+* licenseversion.py: close database connection that wasn't closed.
 
 2015-05-16:
 * generatejson.py: add realpath to JSON file
