@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2012-2013 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2012-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -27,6 +27,6 @@ def generateImages(picklefile, pickledir, filehash, imagedir, pietype):
 
 	pylab.pie(piedata, labels=pielabels)
 
-	pylab.savefig('%s/%s-%s.png' % (imagedir, filehash, pietype))
+	pylab.savefig(os.path.join(imagedir, '%s-%s.png' % (filehash, pietype)))
 	pylab.gcf().clear()
 	os.unlink(os.path.join(pickledir, picklefile))
