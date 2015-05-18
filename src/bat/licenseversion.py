@@ -1526,6 +1526,9 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 
 			## for statistics it's nice to see how many lines were matched
 			matchedlines += 1
+	if scankernelfunctions:
+		kernelcursor.close()
+		kernelconn.close()
 	c.close()
 	conn.close()
 
