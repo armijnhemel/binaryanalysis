@@ -34,7 +34,7 @@ def scanEncryptedZip(path, tags, blacklist=[], scanenv={}, scandebug=False, unpa
 		## if the CRC is 0 it is a directory entry
 		if crc == 0:
 			continue
-		cursor.execute(query, (crc,))
+		cursor.execute(query, (str(crc),))
 		res = cursor.fetchone()
 		if res != None:
 			plaintexts.add(res[0])
