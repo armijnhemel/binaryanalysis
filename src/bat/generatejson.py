@@ -16,6 +16,8 @@ import os, sys, re, json, cPickle, multiprocessing, copy, gzip, codecs
 import bat.batdb
 
 def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb, scanenv)):
+	if outputhash == None:
+		outputhash = 'sha256'
 	batconnection = None
 	if batdb != None:
 		batconnection = batdb.getConnection(hashdatabase,scanenv)
@@ -37,7 +39,7 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb, scanenv)):
 		if i in leafreports:
 			jsonreport[i] = copy.deepcopy(leafreports[i])
 
-	if outputhash != None and outputhash != 'sha256' and batconnection != None:
+	if outputhash != 'sha256' and batconnection != None:
 		query = batdb.getQuery("select %s from hashconversion where sha256=" % outputhash + "%s")
 
 	## then the 'ranking' scan
@@ -98,7 +100,7 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb, scanenv)):
 						for iddata in identifierdata:
 							(filechecksum, linenumber, fileversiondata) = iddata
 							identifierdatareport = {}
-							if outputhash != None and outputhash != 'sha256' and batconnection != None:
+							if outputhash != 'sha256' and batconnection != None:
 								if filechecksum in hashcache:
 									identifierdatareport['filechecksum'] = hashcache[filechecksum]
 									identifierdatareport['filechecksumtype'] = outputhash
@@ -152,7 +154,7 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb, scanenv)):
 					for iddata in identifierdata:
 						(filechecksum, linenumber, fileversiondata) = iddata
 						identifierdatareport = {}
-						if outputhash != None and outputhash != 'sha256':
+						if outputhash != 'sha256':
 							if filechecksum in hashcache:
 								identifierdatareport['filechecksum'] = hashcache[filechecksum]
 								identifierdatareport['filechecksumtype'] = outputhash
@@ -201,7 +203,7 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb, scanenv)):
 					for iddata in identifierdata:
 						(filechecksum, linenumber, fileversiondata) = iddata
 						identifierdatareport = {}
-						if outputhash != None and outputhash != 'sha256':
+						if outputhash != 'sha256':
 							if filechecksum in hashcache:
 								identifierdatareport['filechecksum'] = hashcache[filechecksum]
 								identifierdatareport['filechecksumtype'] = outputhash
@@ -254,9 +256,9 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 	if "OUTPUTHASH" in scanenv:
 		outputhash = scanenv['OUTPUTHASH']
 	else:
-		outputhash = None
+		outputhash = 'sha256'
 
-	if outputhash != None and outputhash != 'sha256':
+	if outputhash != 'sha256':
 		if not 'DBBACKEND' in scanenv:
 			return
 		batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
@@ -271,7 +273,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 		if "checksum" in unpackreports[unpackreport]:
 			filehash = copy.deepcopy(unpackreports[unpackreport]['checksum'])
 			jsonreport['checksum'] = filehash
-			jsonreport['checksumtype'] = 'sha256'
+			jsonreport['checksumtype'] = outputhash
 		if "name" in unpackreports[unpackreport]:
 			name = copy.deepcopy(unpackreports[unpackreport]['name'])
 			## check whether or not the name of the file does not contain any weird
@@ -301,7 +303,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 			jsonreport['magic'] = copy.deepcopy(unpackreports[unpackreport]['magic'])
 		if "checksum" in unpackreports[unpackreport]:
 			jsonreport['checksum'] = filehash
-			jsonreport['checksumtype'] = 'sha256'
+			jsonreport['checksumtype'] = outputhash
 		if "scans" in unpackreports[unpackreport]:
 			if unpackreports[unpackreport]['scans'] != []:
 				jsonreport['scans'] = copy.deepcopy(unpackreports[unpackreport]['scans'])
