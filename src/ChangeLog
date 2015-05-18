@@ -6,6 +6,10 @@ might be supported as well.
 * bruteforcescan.py/fwunpack.py: add more ZIP sanity checks in case there turn
 out to be multiple "end of central directory" markers in a ZIP file
 * licenseversion.py: close database connection that wasn't closed.
+* generatejson.py: convert more file names and path names to UTF-8 first
+* generateimages.py: deepcopy() values of dictionaries first before passing
+them on to a multiprocessing.Pool(). In some older versions of Python this
+apparently caused some issues.
 
 2015-05-16:
 * generatejson.py: add realpath to JSON file
