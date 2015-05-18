@@ -41,7 +41,7 @@ are packed in a tar file.
 
 import sys, os, os.path, magic, hashlib, subprocess, tempfile, shutil, stat, multiprocessing, cPickle, glob, tarfile, copy, gzip, Queue
 from optparse import OptionParser
-import datetime, re
+import datetime, re, struct
 import extractor
 import prerun, fsmagic
 from multiprocessing import Process, Lock
@@ -163,10 +163,29 @@ def tagKnownExtension(filename):
 			endofcentraldir = int(res.groups(0)[0])
 		else:
 			return (tags, offsets)
-		zipends = prerun.genericMarkerSearch(filename, ['zipend'], [])
-		if len(zipends['zipend']) != 1:
-			return (tags, offsets)
-		offsets['zipend'] = zipends['zipend']
+		zipends = prerun.genericMarkerSearch(filename, ['zipend'], [])['zipend']
+		if len(zipends) != 1:
+			zipfile = open(filename, 'rb')
+			## maybe not all the zip ends are valid, so check them
+			newzipends = []
+			for z in zipends:
+				zipendoffset = z+4+12
+				zipfile.seek(zipendoffset)
+				zipendbytes = zipfile.read(4)
+				offsetofcentraldirectory = struct.unpack('<I', zipendbytes)[0]
+				if offsetofcentraldirectory > os.stat(filename).st_size:
+					continue
+				zipfile.seek(offsetofcentraldirectory)
+				centraldirheader = zipfile.read(4)
+				if centraldirheader != "PK\x01\x02":
+					continue
+				newzipends.append(z)
+			zipfile.close()
+			if len(newzipends) != 1:
+				return (tags, offsets)
+			else:
+				zipends = newzipends
+		offsets['zipend'] = zipends
 
 		## TODO: determine commentsize
 		commentsize = 0

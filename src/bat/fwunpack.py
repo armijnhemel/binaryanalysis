@@ -2950,6 +2950,7 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	diroffsets = []
 	counter = 1
 	endofcentraldir_offset = 0
+	zipfile = open(filename, 'rb')
 	for zipendindex in xrange(0, len(offsets['zipend'])):
 		zipend = offsets['zipend'][zipendindex]
 		if zipend == offsets['zipend'][-1]:
@@ -2959,6 +2960,22 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		blacklistoffset = extractor.inblacklist(zipend, blacklist)
 		if blacklistoffset != None:
 			continue
+
+		## first check a few things in the ZIP file
+		zipfile.seek(zipend+4)
+		numberofthisdisk = struct.unpack('<H', zipfile.read(2))[0]
+		diskwithcentraldirectory = struct.unpack('<H', zipfile.read(2))[0]
+		numberofentriesincentraldirectorythisdisk = struct.unpack('<H', zipfile.read(2))[0]
+		numberofentriesincentraldirectory = struct.unpack('<H', zipfile.read(2))[0]
+		sizeofcentraldirectory = struct.unpack('<I', zipfile.read(4))[0]
+		offsetofcentraldirectory = struct.unpack('<I', zipfile.read(4))[0]
+		if offsetofcentraldirectory > os.stat(filename).st_size:
+			continue
+		zipfile.seek(offsetofcentraldirectory)
+		centraldirheader = zipfile.read(4)
+		if centraldirheader != "PK\x01\x02":
+			continue
+
 		for offset in offsets['zip']:
 			if offset > zipend:
 				continue
@@ -2990,6 +3007,7 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 					tags.append('zip')
 					tags.append('compressed')
 				blacklist.append((offset, offset + endofcentraldir + 22))
+	zipfile.close()
 	return (diroffsets, blacklist, tags, hints)
 
 def searchUnpackPack200(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
