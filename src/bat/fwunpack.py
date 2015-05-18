@@ -2956,6 +2956,9 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			cutoff = 0
 		else:
 			cutoff = offsets['zipend'][zipendindex+1]
+		blacklistoffset = extractor.inblacklist(zipend, blacklist)
+		if blacklistoffset != None:
+			continue
 		for offset in offsets['zip']:
 			if offset > zipend:
 				continue
