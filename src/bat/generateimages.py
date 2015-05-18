@@ -421,7 +421,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, scanenv,
 	pool = multiprocessing.Pool(processes=processors)
 
 	if piepicklespackages != []:
-		pietasks = set(map(lambda x: (picklehashes[x[0]], pickledir, x[0], imagedir), piepicklespackages))
+		pietasks = set(map(lambda x: (copy.deepcopy(picklehashes[x[0]]), pickledir, x[0], imagedir), piepicklespackages))
 		results = pool.map(generatepiecharts, pietasks, 1)
 		## first copy the file for every package that needs it
 		for p in piepicklespackages:
@@ -438,7 +438,7 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, scanenv,
 				#print >>sys.stderr, "ERR", e
 				pass
 	if statpiepicklespackages != []:
-		pietasks = set(map(lambda x: (picklehashes[x[0]], pickledir, x[0], imagedir), statpiepicklespackages))
+		pietasks = set(map(lambda x: (copy.deepcopy(picklehashes[x[0]]), pickledir, x[0], imagedir), statpiepicklespackages))
 		results = pool.map(generatepiecharts, pietasks, 1)
 		## first copy the file for every package that needs it
 		for p in statpiepicklespackages:
