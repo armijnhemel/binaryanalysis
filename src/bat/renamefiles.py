@@ -85,23 +85,25 @@ def renamefiles(unpackreports, scantempdir, topleveldir, processors, scanenv, sc
 
 				while len(renamefiles) != 0:
 					newrenamefiles = set()
-					for r in renamefiles:
+					for re in renamefiles:
 						origcpio = '/%s' % os.path.basename(origcpio)
 						targetcpio = '/%s' % os.path.basename(targetcpio)
-						newr = r.replace(origcpio, targetcpio)
+						newr = re.replace(origcpio, targetcpio)
 
-						realpath = copy.deepcopy(unpackreports[r]['realpath'])
+						realpath = copy.deepcopy(unpackreports[re]['realpath'])
 						newrealpath = realpath.replace(origcpio, targetcpio)
-						unpackreports[r]['realpath'] = newrealpath
-						for sc in unpackreports[r]['scans']:
-							if 'scanreports' in sc:
-								newrenamefiles.update(sc['scanreports'])
-								newscanreports = []
-								for scr in sc['scanreports']:
-									newscanreports.append(scr.replace(origcpio, targetcpio))
-									sc['scanreports'] = newscanreports
+						unpackreports[re]['realpath'] = newrealpath
+						## recurse into files, if any
+						if 'scans' in unpackreports[re]:
+							for sc in unpackreports[re]['scans']:
+								if 'scanreports' in sc:
+									newrenamefiles.update(sc['scanreports'])
+									newscanreports = []
+									for scr in sc['scanreports']:
+										newscanreports.append(scr.replace(origcpio, targetcpio))
+										sc['scanreports'] = newscanreports
 
 						## then rename and delete the old value
-						unpackreports[newr] = copy.deepcopy(unpackreports[r])
-						del unpackreports[r]
+						unpackreports[newr] = copy.deepcopy(unpackreports[re])
+						del unpackreports[re]
 					renamefiles = newrenamefiles
