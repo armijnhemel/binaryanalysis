@@ -95,6 +95,7 @@ fsmagic = {
             'otf':		'OTTO',
             'mp4':		'ftyp',
             'sqlite3':		'SQLite format 3\x00',
+            'u-boot':		'\x27\x05\x19\x56',
           }
 
 ## some offsets can be found after a certain number of bytes, but

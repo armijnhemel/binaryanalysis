@@ -683,23 +683,48 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 	diroffsets = []
 	if blacklist != []:
 		return (diroffsets, blacklist, [], hints)
+
+	scanfile = filename
+	havetmpfile = False
 	tmpdir = dirsetup(tempdir, filename, "yaffs2", 1)
-	p = subprocess.Popen(['bat-unyaffs', '-b', filename, '-d', tmpdir], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+
+	offset = 0
+	if 'u-boot' in offsets:
+		if not offsets['u-boot'] == []:
+			if len(offsets['u-boot']) == 1 and offsets['u-boot'][0] == 0:
+				## delete the first 64 bytes
+				tmpfile = tempfile.mkstemp(dir=tempdir)
+				os.fdopen(tmpfile[0]).close()
+				offset = 64
+				unpackFile(filename, offset, tmpfile[1], tmpdir)
+				scanfile = tmpfile[1]
+				havetmpfile = True
+
+	p = subprocess.Popen(['bat-unyaffs', '-b', scanfile, '-d', tmpdir], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
+		if havetmpfile:
+			os.unlink(tmpfile[1])
 		os.rmdir(tmpdir)
 		return (diroffsets, blacklist, [], hints)
 	## unfortunately unyaffs also returns 0 when it fails
 	if len(stanerr) != 0:
+		if havetmpfile:
+			os.unlink(tmpfile[1])
 		os.rmdir(tmpdir)
 		return (diroffsets, blacklist, [], hints)
 	## check if there was actually any data unpacked.
 	if os.listdir(tmpdir) == []:
+		if havetmpfile:
+			os.unlink(tmpfile[1])
 		os.rmdir(tmpdir)
 		return (diroffsets, blacklist, [], hints)
 	blacklist.append((0, os.stat(filename).st_size))
-	diroffsets.append((tmpdir, 0, os.stat(filename).st_size))
-	return (diroffsets, blacklist, [], hints)
+	diroffsets.append((tmpdir, offset, os.stat(filename).st_size))
+	newtags = ['yaffs2', 'filesystem']
+	if havetmpfile:
+		os.unlink(tmpfile[1])
+	return (diroffsets, blacklist, newtags, hints)
 
 ## Windows executables can be unpacked in many ways.
 ## We should try various methods:
