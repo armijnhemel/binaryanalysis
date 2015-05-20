@@ -192,15 +192,17 @@ def tagKnownExtension(filename):
 		if endofcentraldir + 22 + commentsize == os.stat(filename).st_size:
 			offsets['zip'] = [0]
 			tags.append('zip')
+		else:
+			return ([], {})
 
 		## check if the file is encrypted, if so bail out
 		res = re.search("file security status:\s+(\w*)\sencrypted", stanout)
 		if res == None:
-			return ([], offsets)
+			return ([], {})
 
 		if res.groups(0)[0] != 'not':
 			tags.append('encrypted')
-			return (tags, offsets)
+			return (tags, {})
 	return (tags, offsets)
 
 ## scan a single file, possibly unpack and recurse
