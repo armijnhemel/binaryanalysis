@@ -1,3 +1,18 @@
+2015-05-20:
+* bat-scan.config: add zipend marker to configuration
+* fsmagic.py: add U-Boot marker
+* bat-scan.config: add U-Boot marker as option for YAFFS2 file systems, as
+U-Boot + YAFFS2 is a common combination for older Android file systems
+* bat-unyaffs: add more combinations of chunks and spares as seen in real life
+YAFFS2 file systems (searching for mkyaffs2image.c on the Internet revealed a
+few combinations)
+* fwunpack.py: unpack YAFFS2 file systems of certain older Android devices if
+they are preceded by a U-Boot header
+
+2015-05-19:
+* renamefiles.py: fix for renaming symbolic links, which don't have results of
+'scans' as only 'real' files have those
+
 2015-05-18:
 * bruteforcescan.py: use reporthash for naming files as well. Currently this
 is restricted to SHA256 (default), MD5 and SHA1. In the future CRC32 and TLSH
