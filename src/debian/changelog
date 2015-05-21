@@ -1,3 +1,13 @@
+bat (21.0) unstable; urgency=high
+
+  * add support for PostgreSQL
+  * unpack more YAFFS2 file systems and older Android images
+  * improvements to Squashfs, JFFS2, ELF, GIF, ZIP unpacking
+  * export of results to JSON
+  * more (see ChangeLog)
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Thu, 21 May 2015 11:34:31 +0200
+
 bat (20.0) unstable; urgency=medium
 
   * better handle encrypted ZIP files
