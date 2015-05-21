@@ -2,35 +2,41 @@
 
 import sys, os, os.path, hashlib, subprocess, tempfile, magic, multiprocessing
 from optparse import OptionParser
+try:
+	import tlsh
+	tlshscanning = True
+except:
+	tlshscanning = False
 
 ## Binary Analysis Tool
-## Copyright 2013 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2013-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
-This program compares two firmwares and is intended for seeing if a fresh build
-of a firmware matches an old firmware close enough for license compliance.
+This program compares two binaries (firmwares, files, etc.) in various ways to
+see how close they are.
 
-There are two scenarios where this program can be used:
+There are a few scenarios where this program can be used:
 
 1. comparing an old firmware (that is already known and which has been verified)
 to a new firmware (update) and see if there are any big differences.
 2. comparing a firmware to a rebuild of a firmware as part of compliance
 engineering
+3. comparing two binaries to see if a certain security bug might be present
 
 A few assumptions are made:
 
 1. both firmwares were unpacked using the Binary Analysis Tool
 2. files that are in the original firmware, but not in the new firmware, are
-not reported (example: removed binaries). This will change in a future version.
+not reported (example: removed binaries). This might change in a future version.
 3. files that are in the new firmware but not not in the original firmware are
 reported, since this would mean additions to the firmware, possibly with
-license conditions.
+license conditions or security concerns.
 4. files that appear in both firmwares but which are not identical are checked
-using bsdiff.
+using bsdiff and, if available, tlsh.
 
 With just checksums it is easy to find the files that are different. Using BSDIFF
-it becomes easier to see how big the difference really is.
+and tlsh it becomes easier to see how big the difference really is.
 
 Low values are probably not interesting at all:
 * time stamps (BusyBox, Linux kernel, etc. record a time stamp in the binary)
@@ -75,30 +81,30 @@ def comparebinaries(path1, path2):
 
 def main(argv):
 	parser = OptionParser()
-	parser.add_option("-b", "--newbuild", action="store", dest="newbuilddir", help="path ", metavar="DIR")
-	parser.add_option("-f", "--firmware", action="store", dest="fwdir", help="path to configuration file", metavar="DIR")
+	parser.add_option("-n", "--new", action="store", dest="newdir", help="path to BAT results of new binary", metavar="DIR")
+	parser.add_option("-o", "--original", action="store", dest="olddir", help="path to BAT results of original binary", metavar="DIR")
 	(options, args) = parser.parse_args()
-	if options.fwdir == None or options.newbuilddir == None:
+	if options.olddir == None or options.newdir == None:
 		parser.error("Supply paths to both directories")
 
-	if not os.path.exists(options.fwdir):
-		parser.error("Directory \"%s\" does not exist" % (options.fwdir,))
+	if not os.path.exists(options.olddir):
+		parser.error("Directory \"%s\" does not exist" % (options.olddir,))
 
-	if not os.path.exists(options.newbuilddir):
-		parser.error("Directory \"%s\" does not exist" % (options.newbuilddir,))
+	if not os.path.exists(options.newdir):
+		parser.error("Directory \"%s\" does not exist" % (options.newdir,))
 
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
 
-	## The goal is to check the files from the newly firmware and
-	## compare them with files from the old firmware.
-	## First build a list of files in the original firmware
-	## Then do the same for the new firmware and check:
-	## * does a file with the same name exist in the original firmware
+	## The goal is to check the files from the new binary and
+	## compare them with files from the old binary
+	## First build a list of files in the original binary
+	## Then do the same for the new binary and check:
+	## * does a file with the same name exist in the original binary
 	## * do the files differ
 	## and report about it
 	checkfiles = {}
-	osgen = os.walk(options.fwdir)
+	osgen = os.walk(options.olddir)
 	try:
 		while True:
 			i = osgen.next()
@@ -115,8 +121,8 @@ def main(argv):
 		pass
 	notfoundnewdir = []
 	notfoundorigdir = []
-	## now loop over the new firmware
-	osgen = os.walk(options.newbuilddir)
+	## now loop over the new binary
+	osgen = os.walk(options.newdir)
 	try:
 		while True:
 			i = osgen.next()
@@ -125,7 +131,7 @@ def main(argv):
 					continue
 				if not os.path.isfile(os.path.join(i[0], p)):
 					continue
-				## name of the binary can't be found in old firmware, so report
+				## name of this file can't be found in old scan tree, so report
 				if not checkfiles.has_key(p):
 					notfoundnewdir.append(p)
 				else:
@@ -140,14 +146,14 @@ def main(argv):
 		pass
 
 	if notfoundnewdir != []:
-		print "\nThe following files from the new firmware were not found in the original firmware:"
+		print "\nThe following files from the new binary were not found in the original binary:"
 		for i in notfoundnewdir:
 			print "* %s" % i
 
 	## TODO: check for files in the original directory as well, although
 	## removal of files might not be as interesting
 	if notfoundorigdir != []:
-		print "\nThe following files from the original firmware were not found in the new firmware:"
+		print "\nThe following files from the original binary were not found in the new binary:"
 		for i in notfoundorigdir:
 			print "* %s" % i
 
