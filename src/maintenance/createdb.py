@@ -2536,15 +2536,15 @@ def main(argv):
 
 	if options.cfg == None:
 		parser.error("Specify configuration file")
-	else:
-		if not os.path.exists(options.cfg):
-			parser.error("Configuration file does not exist")
-		try:
-			configfile = open(options.cfg, 'r')
-		except:
-			parser.error("Configuration file not readable")
-		config.readfp(configfile)
-		configfile.close()
+
+	if not os.path.exists(options.cfg):
+		parser.error("Configuration file does not exist")
+	try:
+		configfile = open(options.cfg, 'r')
+	except:
+		parser.error("Configuration file not readable")
+	config.readfp(configfile)
+	configfile.close()
 
 	update = False
 	if options.newlist != None:
