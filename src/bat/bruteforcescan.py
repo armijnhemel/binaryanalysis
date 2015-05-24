@@ -565,7 +565,7 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, 
 		picklefile.close()
 	return (filehash, list(set(newtags)))
 
-def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, debug, unpacktempdir):
+def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, scandate, debug, unpacktempdir):
 	## aggregate scans look at the entire result and possibly modify it.
 	## The best example is JAR files: individual .class files will not be
 	## very significant (or even insignificant), but combined results are.
@@ -588,6 +588,7 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, d
 	leaf_file.close()
 
 	unpackreports[scan_binary]['tags'].append('toplevel')
+	unpackreports[scan_binary]['scandate'] = scandate
 	leafreports['tags'].append('toplevel')
 
 	leaf_file = open(leaf_file_path, 'wb')
@@ -1212,7 +1213,7 @@ def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=Fa
 	dumpfile.close()
 	os.chdir(oldcwd)
 
-def runscan(scans, scan_binary):
+def runscan(scans, scan_binary, scandate):
 	unpacktempdir = scans['batconfig']['tempdir']
 	if unpacktempdir != None:
 		if not os.path.exists(unpacktempdir):
@@ -1487,7 +1488,7 @@ def runscan(scans, scan_binary):
 			if debugphases != []:
 				if not 'aggregate' in debugphases:
 					tmpdebug = False
-		aggregatescan(unpackreports, scans, scantempdir, topleveldir, os.path.basename(scan_binary), tmpdebug, unpacktempdir)
+		aggregatescan(unpackreports, scans, scantempdir, topleveldir, os.path.basename(scan_binary), scandate, tmpdebug, unpacktempdir)
 	if debug:
 		print >>sys.stderr, "AGGREGATE END", datetime.datetime.utcnow().isoformat()
 	if scans['batconfig']['reportendofphase']:

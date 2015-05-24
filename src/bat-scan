@@ -117,7 +117,7 @@ def main(argv):
 		## restored in the code that had to change cwd for some reason.
 		os.chdir(origcwd)
 
-		(tempdir, unpackreports) = bat.bruteforcescan.runscan(scans, scanfile)
+		(tempdir, unpackreports) = bat.bruteforcescan.runscan(scans, scanfile, scandate)
 
 		if not scans['batconfig'].has_key('output'):
 			## no printing?
