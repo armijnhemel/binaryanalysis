@@ -162,11 +162,14 @@ kernelexprs.append(re.compile("NETSTAT_ENTRY\(\s*(\w+)\)", re.MULTILINE))
 kernelexprs.append(re.compile("KERNEL_ATTR_RO\(\s*(\w+)\)", re.MULTILINE))
 kernelexprs.append(re.compile("GENERIC_EVENT_ATTR\(([\w\-\.]+),\s*", re.MULTILINE))
 kernelexprs.append(re.compile("PAGE_0_ATTR\(([\w\-\.]+),\s*", re.MULTILINE))
+kernelexprs.append(re.compile("scsi_driverbyte_name\s*\((\w+)", re.MULTILINE))
+kernelexprs.append(re.compile("scsi_hostbyte_name\s*\((\w+)", re.MULTILINE))
 kernelexprs.append(re.compile("scsi_msgbyte_name\s*\((\w+)", re.MULTILINE))
 kernelexprs.append(re.compile("scsi_opcode_name\s*\((\w+)", re.MULTILINE))
 kernelexprs.append(re.compile("scsi_statusbyte_name\s*\((\w+)", re.MULTILINE))
 kernelexprs.append(re.compile("VMCOREINFO_LENGTH\s*\((\w+)", re.MULTILINE))
 kernelexprs.append(re.compile("VMCOREINFO_NUMBER\s*\((\w+)", re.MULTILINE))
+kernelexprs.append(re.compile("WIRELESS_SHOW\s*\((\w+)", re.MULTILINE))
 #SYSCALL_DEFINE + friends go here
 #COMPAT_SYSCALL_DEFINE
 
