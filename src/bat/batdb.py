@@ -31,7 +31,7 @@ class BatDb():
 			if not 'POSTGRESQL_DB' in scanenv:
 				return
 			try:
-				self.conn = psycopg2.connect(database=scanenv['POSTGRESQL_DB'], user=scanenv['POSTGRESQL_USER'], password=scanenv['POSTGRESQL_PASSWORD'], host=scanenv.get('POSTGRESQL_HOST', None), port=scanenv.get('POSTGRESQL_PORT', None))
+				self.conn = psycopg2.connect(database=scanenv['POSTGRESQL_DB'], user=scanenv['POSTGRESQL_USER'], password=scanenv['POSTGRESQL_PASSWORD'], host=scanenv.get('POSTGRESQL_HOST', None), port=scanenv.get('POSTGRESQL_PORT', None), hostaddr=scanenv.get('POSTGRESQL_HOSTADDR', None))
 			except Exception, e:
 				print e
 				return

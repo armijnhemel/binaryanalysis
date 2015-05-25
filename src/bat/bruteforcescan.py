@@ -757,6 +757,10 @@ def readconfig(config):
 					except:
 						postgresql_host = None
 					try:
+						postgresql_hostaddr = config.get(section, 'postgresql_hostaddr')
+					except:
+						postgresql_hostaddr = None
+					try:
 						postgresql_port = config.get(section, 'postgresql_port')
 					except:
 						postgresql_port = None
@@ -767,6 +771,8 @@ def readconfig(config):
 						batconf['environment']['POSTGRESQL_PORT'] = postgresql_port
 					if postgresql_host != None:
 						batconf['environment']['POSTGRESQL_HOST'] = postgresql_host
+					if postgresql_hostaddr != None:
+						batconf['environment']['POSTGRESQL_HOSTADDR'] = postgresql_hostaddr
 				except:
 					del batconf['dbbackend']
 		except:
@@ -889,6 +895,8 @@ def readconfig(config):
 								batconf['environment']['POSTGRESQL_PORT'] = postgresql_port
 							if postgresql_host != None:
 								batconf['environment']['POSTGRESQL_HOST'] = postgresql_host
+							if postgresql_hostaddr != None:
+								batconf['environment']['POSTGRESQL_HOSTADDR'] = postgresql_hostaddr
 						except:
 							del conf['dbbackend']
 			except:
@@ -906,6 +914,8 @@ def readconfig(config):
 									batconf['environment']['POSTGRESQL_PORT'] = copy.deepcopy(batconf['environment']['POSTGRESQL_PORT'])
 								if 'POSTGRESQL_HOST' in batconf['environment']:
 									batconf['environment']['POSTGRESQL_HOST'] = copy.deepcopy(batconf['environment']['POSTGRESQL_HOST'])
+								if 'POSTGRESQL_HOSTADDR' in batconf['environment']:
+									batconf['environment']['POSTGRESQL_HOSTADDR'] = copy.deepcopy(batconf['environment']['POSTGRESQL_HOSTADDR'])
 								conf['environment']['POSTGRESQL_USER'] = postgresql_user
 								conf['environment']['POSTGRESQL_PASSWORD'] = postgresql_password
 								conf['environment']['POSTGRESQL_DB'] = postgresql_db
