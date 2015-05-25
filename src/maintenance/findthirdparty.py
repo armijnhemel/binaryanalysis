@@ -56,21 +56,21 @@ def main(argv):
 				if p[2] != None:
 					continue
 				## check if specific markers are in in the path
-				for t in thirdparty:
-					if t in os.path.dirname(p[1]):
+				if i[0] in os.path.dirname(p[1]):
+					for t in thirdparty:
+						if t in os.path.dirname(p[1]):
+							if options.dryrun:
+								print i[0], i[1], checksum, p[:-1]
+							else:
+								cursor.execute("update processed_file set thirdparty=? where package=? and pathname=? and checksum=?", (True, p[0], p[1], checksum))
+					if 'external' in os.path.dirname(p[1]):
 						if options.dryrun:
-							print s, p
+							print i[0], i[1], checksum, p[:-1]
 						else:
 							cursor.execute("update processed_file set thirdparty=? where package=? and pathname=? and checksum=?", (True, p[0], p[1], checksum))
-				if 'external' in os.path.dirname(p[1]):
-					if options.dryrun:
-						print s, p
 					else:
-						cursor.execute("update processed_file set thirdparty=? where package=? and pathname=? and checksum=?", (True, p[0], p[1], checksum))
-				else:
-					if i[0] in os.path.dirname(p[1]):
 						if options.dryrun:
-							print s, p
+							print i[0], i[1], checksum, p[:-1]
 						else:
 							pass
 			conn.commit()
