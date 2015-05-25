@@ -752,9 +752,21 @@ def readconfig(config):
 					postgresql_user = config.get(section, 'postgresql_user')
 					postgresql_password = config.get(section, 'postgresql_password')
 					postgresql_db = config.get(section, 'postgresql_db')
+					try:
+						postgresql_host = config.get(section, 'postgresql_host')
+					except:
+						postgresql_host = None
+					try:
+						postgresql_port = config.get(section, 'postgresql_port')
+					except:
+						postgresql_port = None
 					batconf['environment']['POSTGRESQL_USER'] = postgresql_user
 					batconf['environment']['POSTGRESQL_PASSWORD'] = postgresql_password
 					batconf['environment']['POSTGRESQL_DB'] = postgresql_db
+					if postgresql_port != None:
+						batconf['environment']['POSTGRESQL_PORT'] = postgresql_port
+					if postgresql_host != None:
+						batconf['environment']['POSTGRESQL_HOST'] = postgresql_host
 				except:
 					del batconf['dbbackend']
 		except:
@@ -862,9 +874,21 @@ def readconfig(config):
 							postgresql_user = config.get(section, 'postgresql_user')
 							postgresql_password = config.get(section, 'postgresql_password')
 							postgresql_db = config.get(section, 'postgresql_db')
+							try:
+								postgresql_host = config.get(section, 'postgresql_user')
+							except:
+								postgresql_host = None
+							try:
+								postgresql_port = config.get(section, 'postgresql_port')
+							except:
+								postgresql_port = None
 							conf['environment']['POSTGRESQL_USER'] = postgresql_user
 							conf['environment']['POSTGRESQL_PASSWORD'] = postgresql_password
 							conf['environment']['POSTGRESQL_DB'] = postgresql_db
+							if postgresql_port != None:
+								batconf['environment']['POSTGRESQL_PORT'] = postgresql_port
+							if postgresql_host != None:
+								batconf['environment']['POSTGRESQL_HOST'] = postgresql_host
 						except:
 							del conf['dbbackend']
 			except:
@@ -878,6 +902,10 @@ def readconfig(config):
 								postgresql_user = copy.deepcopy(batconf['environment']['POSTGRESQL_USER'])
 								postgresql_password = copy.deepcopy(batconf['environment']['POSTGRESQL_PASSWORD'])
 								postgresql_db = copy.deepcopy(batconf['environment']['POSTGRESQL_DB'])
+								if 'POSTGRESQL_PORT' in batconf['environment']:
+									batconf['environment']['POSTGRESQL_PORT'] = copy.deepcopy(batconf['environment']['POSTGRESQL_PORT'])
+								if 'POSTGRESQL_HOST' in batconf['environment']:
+									batconf['environment']['POSTGRESQL_HOST'] = copy.deepcopy(batconf['environment']['POSTGRESQL_HOST'])
 								conf['environment']['POSTGRESQL_USER'] = postgresql_user
 								conf['environment']['POSTGRESQL_PASSWORD'] = postgresql_password
 								conf['environment']['POSTGRESQL_DB'] = postgresql_db
