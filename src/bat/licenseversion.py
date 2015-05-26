@@ -5,8 +5,13 @@
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 import os, os.path, sys, subprocess, copy, cPickle
-import multiprocessing, re, collections, datetime
+import multiprocessing, re, datetime
 import bat.batdb
+if sys.version_info[1] == 7:
+	import collections
+	have_counter = True
+else:
+	have_counter = False
 
 '''
 This file contains the ranking algorithm as described in the paper
@@ -480,7 +485,8 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 	return (jarfile, aggregated)
 
 def prune(scanenv, uniques, package):
-	uniqueversions = collections.Counter()
+	if have_counter:
+		uniqueversions = collections.Counter()
 
 	linesperversion = {}
 
@@ -495,7 +501,8 @@ def prune(scanenv, uniques, package):
 				linesperversion[version].add(line)
 			else:
 				linesperversion[version] = set([line])
-		uniqueversions.update(versions)
+		if have_counter:
+			uniqueversions.update(versions)
 
 	## there is only one version, so no need to continue
 	if len(uniqueversions.keys()) == 1:
@@ -1457,6 +1464,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 						## For now exclude them, but in the future they could be included for
 						## completeness.
 						stringsLeft['%s\t%s' % (line, fn)] = {'string': line, 'score': score, 'filename': fn, 'pkgs' : filenames[fn]}
+						## lookup
 
 			else:
 				## the string is unique to this package and this package only
