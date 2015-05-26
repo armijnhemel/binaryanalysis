@@ -487,6 +487,8 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 def prune(scanenv, uniques, package):
 	if have_counter:
 		uniqueversions = collections.Counter()
+	else:
+		uniqueversions = {}
 
 	linesperversion = {}
 
@@ -503,6 +505,13 @@ def prune(scanenv, uniques, package):
 				linesperversion[version] = set([line])
 		if have_counter:
 			uniqueversions.update(versions)
+		else:
+			for version in versions:
+				if version in uniqueversions:
+					uniqueversions[version] += 1
+				else:
+					uniqueversions[version] = 1
+				
 
 	## there is only one version, so no need to continue
 	if len(uniqueversions.keys()) == 1:
@@ -1567,7 +1576,15 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, sc
 	conn = batdb.getConnection(stringscache,scanenv)
 	c = conn.cursor()
 
-	linecount = collections.Counter(lines)
+	if have_counter:
+		linecount = collections.Counter(lines)
+	else:
+		linecount = {}
+		for l in lines:
+			if l in linecount:
+				linecount[l] += 1
+			else:
+				linecount[l] = 1
 
 	scankernelfunctions = False
 
