@@ -1170,6 +1170,17 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 		return ([], blacklist, [], hints)
 	if offsets['xztrailer'] == []:
 		return ([], blacklist, [], hints)
+
+	dotest = True
+	## check version of XZ, as older versions do not support -l
+	p = subprocess.Popen(['xz', '-V'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		return ([], blacklist, [], hints)
+
+	if '4.999.9beta' in stanout:
+		dotest = False
+
 	diroffsets = []
 	counter = 1
 	datafile = open(filename, 'rb')
@@ -1202,7 +1213,7 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 				if data[trail-2:trail] != streamflags:
 					continue
 				tmpdir = dirsetup(tempdir, filename, "xz", counter)
-				res = unpackXZ(data, offset, trail, template, tmpdir)
+				res = unpackXZ(data, offset, trail, template, dotest, tmpdir)
 				if res != None:
 					diroffsets.append((res, offset, 0))
 					blacklist.append((offset, trail))
@@ -1213,7 +1224,7 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 					os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [], hints)
 
-def unpackXZ(data, offset, trailer, template, tempdir=None):
+def unpackXZ(data, offset, trailer, template, dotest, tempdir=None):
 	## first unpack the data, write things to a file and return
 	## the directory if the file is not empty
 	## Assumes (for now) that xz is in the path
@@ -1224,12 +1235,13 @@ def unpackXZ(data, offset, trailer, template, tempdir=None):
 	os.write(tmpfile[0], data[offset:trailer+2])
 	os.fdopen(tmpfile[0]).close()
 
-	## test integrity of the file
-	p = subprocess.Popen(['xz', '-l', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		os.unlink(tmpfile[1])
-		return None
+	if dotest:
+		## test integrity of the file
+		p = subprocess.Popen(['xz', '-l', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			os.unlink(tmpfile[1])
+			return None
 	## unpack
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
 	p = subprocess.Popen(['xzcat', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
