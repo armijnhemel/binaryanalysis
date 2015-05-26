@@ -610,7 +610,11 @@ def extractDynamicFromELF(scanfile):
  	p = subprocess.Popen(['readelf', '-W', '--dyn-syms', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		return (set(), set())
+		## perhaps an older readelf that does not support --dyn-syms
+ 		p = subprocess.Popen(['readelf', '-W', '-s', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			return (set(), set())
 
 	st = stanout.strip().split("\n")
 
@@ -734,6 +738,7 @@ def extractidentifiersetup(scanenv, debug=False):
 	return (False, None)
 
 def extractidentifiersetup_postgresql(scanenv, debug=False):
+	## TODO: DEX checks
 	newenv = copy.deepcopy(scanenv)
 	batdb = bat.batdb.BatDb('postgresql')
 	conn = batdb.getConnection(None,scanenv)

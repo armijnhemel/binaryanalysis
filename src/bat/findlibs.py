@@ -92,7 +92,11 @@ def extractfromelf((path, filename)):
 	p = subprocess.Popen(['readelf', '-W', '--dyn-syms', os.path.join(path, filename)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		return
+		## perhaps an older version that does not support --dyn-syms
+		p = subprocess.Popen(['readelf', '-W', '-s', os.path.join(path, filename)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			return
 
 	## a list of variable names to ignore.
 	varignores = ['__dl_ldso__']
