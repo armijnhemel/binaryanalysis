@@ -2196,12 +2196,22 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 			newresults[package] = newuniques
 			uniqueversions = {}
 			functionRes['packages'][package] = []
-			vs = collections.Counter()
+			if have_counter:
+				vs = collections.Counter()
+			else:
+				vs = {}
 			for u in newuniques:
 				versionsha256s = u[1]
 				for s in versionsha256s:
 					(checksum, linenumber, versionfilenames) = s
-					vs.update(set(map(lambda x: x[0], versionfilenames)))
+					if have_counter:
+						vs.update(set(map(lambda x: x[0], versionfilenames)))
+					else:
+						for v in set(map(lambda x: x[0], versionfilenames)):
+							if v in vs:
+								vs[v] += 1
+							else:
+								vs[v] = 1
 
 			for v in vs:
 				functionRes['packages'][package].append((v, vs[v]))
@@ -2290,12 +2300,22 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				newresults[package] = newuniques
 				uniqueversions = {}
 				variablepvs['packages'][package] = []
-				vs = collections.Counter()
+				if have_counter:
+					vs = collections.Counter()
+				else:
+					vs = {}
 				for u in newuniques:
 					versionsha256s = u[1]
 					for s in versionsha256s:
 						(checksum, linenumber, versionfilenames) = s
-						vs.update(set(map(lambda x: x[0], versionfilenames)))
+						if have_counter:
+							vs.update(set(map(lambda x: x[0], versionfilenames)))
+						else:
+							for v in set(map(lambda x: x[0], versionfilenames)):
+								if v in vs:
+									vs[v] += 1
+								else:
+									vs[v] = 1
 
 				for v in vs:
 					variablepvs['packages'][package].append((v, vs[v]))
