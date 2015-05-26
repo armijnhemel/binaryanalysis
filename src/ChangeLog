@@ -5,6 +5,8 @@
 have --dyn-syms
 * licenseversion.py/kernelsymbols.py: workaround for older Python versions
 that do not have collections.Counter
+* kernelsymbols.py: checks for older versions of PyDot
+* bat-scan.config: enable USE_SOURCE_ORDER by default
 
 2015-05-25:
 * bruteforcescan.py/batdb.py: allow setting host, and port for postgresql
