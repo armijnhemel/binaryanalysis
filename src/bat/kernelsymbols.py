@@ -5,8 +5,13 @@
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 import os, os.path, sys, subprocess, copy, cPickle, multiprocessing
-import pydot, collections, csv, tempfile, shutil
+import pydot, csv, tempfile, shutil
 import bat.batdb
+if sys.version_info[1] == 7:
+	import collections
+	have_counter = True
+else:
+	have_counter = False
 
 '''
 This plugin for the Binary Analysis Tool can be used to check how the symbols
@@ -524,7 +529,10 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 	## store how often each file hash is processed. There could be multiple graphs per file hash.
 	## The difference would be the label. Example: a firmware that contains multiple (near) identical
 	## file systems or collections of Linux kernel and modules under different paths.
-	uniqueversions = collections.Counter()
+	if have_counter:
+		uniqueversions = collections.Counter()
+	else:
+		uniqueversions = {}
 
 	## for each of the files loop through the recorded dependencies, find
 	## out the type of the symbols (predetermined) and create
@@ -537,7 +545,13 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 		symbolgraph = pydot.Dot(graph_type='digraph')
 
 		i = nametofilehash[filename]
-		uniqueversions.update([i])
+		if have_counter:
+			uniqueversions.update([i])
+		else:
+			if i in uniqueversions:
+				uniqueversions[i]+=1
+			else:
+				uniqueversions[i] = 1
 		counter = uniqueversions[i]
 
 		## first create the root node
