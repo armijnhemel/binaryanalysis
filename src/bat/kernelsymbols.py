@@ -178,6 +178,11 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 	if not envresult:
 		return None
 
+	generategraphs = True
+	## crude check for broken PyDot
+	if pydot.__version__ == '1.0.3' or pydot.__version__ == '1.0.2':
+		generategraphs = False
+
 	## if KERNELSYMBOL_SVG is set in the configuration then the graph will
 	## also be generated in SVG format by writeGraph()
 	generatesvg = False
@@ -187,6 +192,9 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 		generatecsv = True
 	else:
 		generatecsv = False
+
+	if not (generategraphs or generatecsv):
+		return
 
 	## if KERNELSYMBOL_DEPENDENCIES is set in the configuration then the graph
 	## will display information about dependencies as declared in the module
@@ -522,6 +530,9 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 	if generatecsv:
 		csvpath = os.path.join(reportdir, 'kernelsymbols.csv')
 		writeCSV(csvpath, useddependenciesperfilename, useddependenciessymbolsperfilename, nametofilehash, filehashtodeclaredlicenses, filehashtokernelsymbols, filehashtoversions, symboltotype, unresolvedsymbols)
+
+	if not generategraphs:
+		return
 
 	## store the graphs
 	symbolgraphs = set()
