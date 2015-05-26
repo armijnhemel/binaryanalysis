@@ -44,6 +44,9 @@ def main(argv):
 		if not os.path.exists(options.fw):
         		parser.error("No file to scan found")
 
+		if os.path.isdir(options.fw):
+			parser.error("File to scan is a directory. Did you mean -d ?")
+
 		if options.outputfile == None:
         		parser.error("Path to output file needed")
 		try:
