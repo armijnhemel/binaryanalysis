@@ -1,3 +1,24 @@
+2015-05-26:
+* bat-scan: sanity check for supplied parameters
+* fwunpack.py: workaround for old XZ versions that do not have -l
+* identifier.py/findlibs.py: workaround for older readelf versions that do not
+have --dyn-syms
+* licenseversion.py/kernelsymbols.py: workaround for older Python versions
+that do not have collections.Counter
+
+2015-05-25:
+* bruteforcescan.py/batdb.py: allow setting host, and port for postgresql
+connections
+* update depenencies: add psycopg2 as dependency and remove dependency on
+mtd-utils-ubi
+* add configuration for report generation in JSON
+
+2015-05-24:
+* bruteforcescan.py: store scandate in the pickle
+
+2015-05-21:
+* release BAT 21
+
 2015-05-20:
 * bat-scan.config: add zipend marker to configuration
 * fsmagic.py: add U-Boot marker
@@ -8,6 +29,7 @@ YAFFS2 file systems (searching for mkyaffs2image.c on the Internet revealed a
 few combinations)
 * fwunpack.py: unpack YAFFS2 file systems of certain older Android devices if
 they are preceded by a U-Boot header
+* bruteforcescan.py: fix knownmarker scan for ZIP files with comments
 
 2015-05-19:
 * renamefiles.py: fix for renaming symbolic links, which don't have results of
