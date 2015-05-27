@@ -7,7 +7,7 @@
 \setlength{\parskip}{4pt}
 
 \author{Armijn Hemel -- Tjaldur Software Governance Solutions}
-\title{Binary Analysis Tool User and Developer Manual - describing version 21}
+\title{Binary Analysis Tool User and Developer Manual - describing version 22}
 
 \begin{document}
 
@@ -47,9 +47,13 @@ Analysis Tool will vastly benefit from this.
 \subsection{Software requirements}
 
 To run BAT a recent Linux distribution is needed. Development is (currently)
-done on Fedora 19, 20 and 21 and Ubuntu 14.04, so those platforms are likely to
+done on Fedora 20 and 21 and Ubuntu 14.04, so those platforms are likely to
 work best. Ubuntu versions older than 14.04, will not work due to a broken
 version of the PyDot package. Debian versions older than 7 are unsupported.
+
+Versions older than Fedora 20 might not work if a database is used when
+scanning a whole directory of files instead of a single binary because of a bug
+in the version of matplotlib shipped on those distributions.
 
 If the latest version from version control is used it is important to look at
 the file \texttt{setup.cfg} to get a list of the dependencies that should be
@@ -59,8 +63,8 @@ the host system is Ubuntu or Debian this information will be in
 
 \subsubsection{Installation on Fedora}
 
-To install on Fedora four packages are needed:
-\texttt{bat-extratools}, \texttt{bat-extratools-java}, \texttt{ubi\_reader}
+To install on Fedora three packages are needed:
+\texttt{bat-extratools}, \texttt{bat-extratools-java} %, \texttt{ubi\_reader}
 and \texttt{bat}. These can be downloaded from the BAT website in both prebuilt
 versions and as source RPM files. When installing the three files there should
 be a list of dependencies that should be installed to let BAT work successfully.
@@ -70,12 +74,24 @@ through external repositories, such as RPMfusion.
 \subsubsection{Installation on Debian and Ubuntu}
 
 To install on Debian and Ubuntu three packages are needed:
-\texttt{bat-extratools}, \texttt{bat-extratools-java}, \texttt{ubi\_reader}
+\texttt{bat-extratools}, \texttt{bat-extratools-java} %, \texttt{ubi\_reader}
 and \texttt{bat}. These can be downloaded from the BAT website as binary DEB
 files When installing the three files there should be a list of dependencies
 that should be installed to let BAT work successfully. Some of these packages
 are not in Debian by default but need to be installed by enabling extra
 repositories such as Debian \texttt{non-free}.
+
+\subsubsection{Installation on CentOS}
+
+In some cases it is possible to run BAT on CentOS (6.6 or 7 has been tested
+with) but some functionality will not be available, such as UBI/UBIFS
+unpacking and the scans creating graphs with PyDot (ELF linking, kernel module
+linking).
+
+It might be necessary to enable the EPEL repository (
+\url{https://fedoraproject.org/wiki/EPEL} ) as well as RepoForge. A few
+packages might have to be installed manually. To rebuild
+\texttt{bat-extratools-java} a newer version of Java might be required.
 
 \section{Analysing binaries with the Binary Analysis Tool}
 
@@ -137,13 +153,37 @@ original file with the suffix \texttt{.tar.gz}.
 There are two formats in which \texttt{bat-scan} can output its results:
 
 \begin{enumerate}
-\item dump file containing program state, complete unpacked directory tree
+\item archive file containing program state, complete unpacked directory tree
 containing all unpacked data (unless \texttt{outputlite} was set to
 \texttt{yes}), plus possibly some extra generated data, such as pictures and
 more reporting. These dumps are meant to be used by \texttt{batgui}. This is
-the preferred format.
-\item XML file (optional/configurable)
+the default format.
+\item XML file (optional/configurable). This format is deprecated and will
+likely be removed in the near future.
 \end{enumerate}
+
+\subsubsection{Output archive}
+
+The output archive contains a few files and directories (depending on scan
+configuration):
+
+\begin{itemize}
+\item \texttt{scandata.pickle} - Python pickle containing information about the
+structure of the binary, including offsets, paths, tags, and so on. It does not
+contain any of the actual scan results.
+\item \texttt{scandata.json} - JSON file containing a subset of
+the information in \texttt{scandata.pickle}. This file is only generated if the
+\texttt{generatejson} scan is enabled.
+\item \texttt{data} - directory containing the full unpacked directory tree.
+If \texttt{outputlite} is set to \texttt{yes} this directory will be omitted.
+\item \texttt{filereports} - directory containing Python pickle files (gzip
+compressed) with scan results. Since identical files might be present the
+results are stored per checksum, not file name.
+\item \texttt{images} - directory containing various images with results of
+scans (depending on which scans are enabled), per checksum
+\item \texttt{reports} - directory containing HTML and (optionally) JSON
+reports, per checksum
+\end{itemize}
 
 \subsubsection{XML output}
 
@@ -478,14 +518,14 @@ description = Unpack JFFS2 file systems
 enabled     = yes
 \end{verbatim}
 
-In BAT 21 the following file systems, compressed files and media files can be
+In BAT 22 the following file systems, compressed files and media files can be
 unpacked or extracted:
 
 \begin{itemize}
 \item file systems: Android sparse files, cramfs, ext2/ext3/ext4, ISO9660,
 JFFS2, Minix (specific variant of v1 often found on older embedded Linux
 systems), SquashFS (several variants), romfs, YAFFS2 (specific variants),
-ubifs
+ubifs (not on all systems)
 \item compressed files and executable formats: 7z, ar, ARJ, BASE64, BZIP2,
 compressed Flash, CAB, compress, CPIO, EXE (specific compression methods only),
 GZIP, InstallShield (old versions), LRZIP, LZIP, LZMA, LZO, pack200, RAR, RPM,
@@ -857,7 +897,7 @@ cleanup     = yes
 The \texttt{cleanup} setting should be set to \texttt{yes} unless the results
 do not change in between subsequent runs of BAT.
 
-Currently (BAT 21) if \texttt{cleanup} is set the files are written directly to
+Currently (BAT 22) if \texttt{cleanup} is set the files are written directly to
 output directories. The values of these directories are hardcoded (and match
 values that the GUI expects) but these will be replaced by the value of
 \texttt{storetarget} in a later release.
@@ -878,6 +918,48 @@ setup     = nameOfSetupMethod
 In the standard distribution of BAT the files \texttt{bat/identifier.py} and
 \texttt{bat/licenseversion.py} contain very extensive examples of setup hooks.
 
+\subsection{Database configuration}
+
+Currently two database engines are supported by BAT: SQLite and PostgreSQL.
+Various scans can use a database backend. Depending on the scan or set up the
+databases can be in SQLite format, or PostgreSQL format and these can be freely
+mixed but it is advised to use one database backend.
+
+The database backend can be chosen either per scan, or defined as a global
+environment variable.
+
+To select SQLite as a backend set \texttt{dbbackend} as follows:
+
+\begin{verbatim}
+dbbackend = sqlite
+\end{verbatim}
+
+or for PostgreSQL:
+
+\begin{verbatim}
+dbbackend = postgresql
+\end{verbatim}
+
+If PostgreSQL is chosen a few other variables have to be set (username,
+password, database):
+
+\begin{verbatim}
+postgresql_user     = bat
+postgresql_password = bat
+postgresql_db       = bat
+\end{verbatim}
+
+Optionally a port and host can be set too:
+
+\begin{verbatim}
+postgresql_host     = 127.0.0.1
+postgresql_port     = 5432
+\end{verbatim}
+
+Depending on the version of \texttt{python-psycopg2} it could be that
+\texttt{postgresql\_host} and \texttt{postgresql\_port} both have to be
+specified.
+
 \section{Analyser internals}
 
 The analyser was written with extensibility in mind: new file systems or
@@ -891,9 +973,12 @@ the list of scans, the binary/binaries to scan and where to write the output
 file(s).
 
 The meaty bits of the analyser can be found in files in the \texttt{bat}
-subdirectory:
+subdirectory (note that this directory currently contains more files than are
+actually used by BAT at the moment):
 
 \begin{itemize}
+\item \texttt{batdb.py} contains the BAT database abstraction code, as well
+as a query rewriting method.
 \item \texttt{batxor.py} contains experimental code to deal with files that
 have been obfuscated with XOR.
 \item \texttt{bruteforcescan.py} contains the main logic of the program: it
@@ -1599,18 +1684,21 @@ and change one hardcoded path that points to the main Ninka script in
 
 \subsection{Converting the SQLite database to PostgreSQL}
 
-The database creation script outputs the database in SQLite format. In BAT 21
-it will be possible to use PostgreSQL as well. To convert the database from
-SQLite to PostgreSQL there is helper script called
-\texttt{bat-sqlitetopostgresql.py} that can help convert the database from
-SQLite to PostgreSQL. A set of statements to create the database in PostgreSQL
-can be found in the files \texttt{maintenance/postgresql-table.sql} and
+The database creation script outputs the database in SQLite format. It is
+possible to use PostgreSQL as well. To convert the database from SQLite to
+PostgreSQL there is helper script called \texttt{bat-sqlitetopostgresql.py}
+that can help convert the database from SQLite to PostgreSQL.
+
+A set of statements to create the database in PostgreSQL can be found in the
+files \texttt{maintenance/postgresql-table.sql} and
 \texttt{maintenance/postgresql-index.sql} that can be directly passed to
 PostgreSQL's \texttt{psql} program. Configuring PostgreSQL is out of scope of
 this manual.
 
-Please note that a few settings are hardcoded in the table and index
-definitions.
+At the moment some of the settings in the conversion script, table and index
+definitions are hardcoded and specific to Tjaldur Software Governance
+Solutions. This will be changed in the future. Please note that a few settings
+are hardcoded in the table and index definitions.
 
 \subsection{Database design}
 
@@ -1978,7 +2066,10 @@ The three parameters are:
 \item \texttt{BAT\_NAMECACHE\_C} - in case the binary is a Linux kernel image
 or Linux kernel module the identifier extraction scan needs to be able to look
 up kernel function names to filter these out and assign to the function
-results. For this a caching database with function names is needed.
+results. For this a caching database with function names is needed. If the
+database backend is configured to be PostgreSQL, then the value of this
+parameter will be ignored, but it is (at the moment) still required to set this
+parameter.
 \item \texttt{BAT\_STRING\_CUTOFF} - this value is the mimimal length of the
 string that is matched (default value is 5). If extracted strings are shorter
 than this value they will be ignored. It is important to keep this parameter in
@@ -1995,16 +2086,24 @@ method looks up strings in the database, optionally aggregates results for
 Java class files at the JAR level, determines versions and licenses while also
 removing unlikely versions from the result set.
 
-The ranking method uses a few databases. For the first part (determining which
-package a string belongs to) it uses specialised caching databases for string
-constants, function names, variable names and so on. These caching databases
-contain a subset of information to vastly speed up scanning. There is no script
-in the standard distribution of BAT to create these caching databases.
+The ranking method uses a few tables. Depending on the database backend the
+tables will either be in a single database (PostgreSQL) or possibly in multiple
+files (sqlite).
 
-The second part (determining versions and licenses) the full database is used.
+For the first part (determining which package a string belongs to) it uses
+tables with caching information for string constants, function names, variable
+names and so on. These caching tables contain a subset of information to vastly
+speed up scanning. There is no script in the standard distribution of BAT to
+create these caching tables. The second part (determining versions and licenses)
+other tables are used.
 
-The location of the databases can be set in the configuration file in
-the \texttt{envvars} option:
+When the database backend is set to sqlite the configuration will be checked to
+see what the locations of the database files are. When the database backend is
+set to PostgreSQL the parameters for the database files will be ignored, but
+they still need to be supplied (for now).
+
+The location of the SQLite database files can be set in the configuration file
+in the \texttt{envvars} option:
 
 \begin{verbatim}
 [versionlicensecopyright]
@@ -2027,9 +2126,9 @@ enabled     = yes
 priority    = 3
 \end{verbatim}
 
-The entire database with all other information except license information is
+The main database with all information except license information is set using
 \texttt{BAT\_DB}. This option is mandatory. If it is not supplied scanning with
-the determining versions and licenses will fail.
+the determining versions and licenses will be disabled.
 
 In the database the strings, averages, function names, variable names, etcetera
 are split per language family (C, Java, C\#, and so on). The reason for this is
