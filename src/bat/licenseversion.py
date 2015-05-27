@@ -634,7 +634,10 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	lookup_tasks = []
 	lookup_tasks = map(lambda x: (newenv, unpackreports[x]['checksum'], os.path.join(unpackreports[x]['realpath'], unpackreports[x]['name']), topleveldir, clones, batdb, scandebug), rankingfiles)
 
-	res = pool.map(lookup_identifier, lookup_tasks,1)
+	if lookup_tasks != []:
+		res = pool.map(lookup_identifier, lookup_tasks,1)
+	else:
+		res = []
 
 	for filehash in res:
 		if filehash != None:
@@ -1982,7 +1985,10 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 			for v in xrange(0, lenuniques, step):
 				vtasks_tmp.append(uniques[v:v+step])
 			vtasks = map(lambda x: (batdb, masterdb, x, language, 'string',scanenv), filter(lambda x: x!= [], vtasks_tmp))
-			vsha256s = pool.map(grab_sha256_parallel, vtasks)
+			if vtasks != []:
+				vsha256s = pool.map(grab_sha256_parallel, vtasks)
+			else:
+				vsha256s = []
 			vsha256s = reduce(lambda x, y: x + y, filter(lambda x: x != [], vsha256s))
 
 			## for each combination (line,sha256,linenumber) store per checksum
@@ -2010,7 +2016,10 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 			vtasks = map(lambda x: (batdb, masterdb, x, scanenv), filter(lambda x: x!= [], vtasks_tmp))
 
 			## grab version and file information
-			fileres = pool.map(grab_sha256_filename, vtasks)
+			if vtasks != []:
+				fileres = pool.map(grab_sha256_filename, vtasks)
+			else:
+				fileres = []
 			resdict = {}
 			map(lambda x: resdict.update(x), fileres)
 
@@ -2079,7 +2088,10 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 					vtasks_tmp.append(licensesha256s[v:v+step])
 				vtasks = map(lambda x: (batdb, licensedb, x, scanenv), filter(lambda x: x!= [], vtasks_tmp))
 
-				packagelicenses = pool.map(grab_sha256_license, vtasks)
+				if vtasks != []:
+					packagelicenses = pool.map(grab_sha256_license, vtasks)
+				else:
+					packagelicenses = []
 				## result is a list of {sha256sum: list of licenses}
 				packagelicenses_tmp = []
 				for p in packagelicenses:
@@ -2102,7 +2114,10 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 					vtasks_tmp.append(copyrightsha256s[v:v+step])
 				vtasks = map(lambda x: (licensedb, x), filter(lambda x: x!= [], vtasks_tmp))
 
-				packagecopyrights = pool.map(grab_sha256_copyright, vtasks)
+				if vtasks != []:
+					packagecopyrights = pool.map(grab_sha256_copyright, vtasks)
+				else:
+					packagecopyrights = []
 				## result is a list of {sha256sum: list of copyright statements}
 				packagecopyrights_tmp = []
 				for p in packagecopyrights:
@@ -2132,7 +2147,10 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				vtasks_tmp.append(functionnames[v:v+step])
 			vtasks = map(lambda x: (batdb, masterdb, x, 'C', 'function',scanenv), vtasks_tmp)
 
-			vsha256s = pool.map(grab_sha256_parallel, vtasks)
+			if vtasks != []:
+				vsha256s = pool.map(grab_sha256_parallel, vtasks)
+			else:
+				vsha256s = []
 			vsha256s = reduce(lambda x, y: x + y, filter(lambda x: x != [], vsha256s))
 
 			sha256_scan_versions = {}
@@ -2164,7 +2182,10 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 			vtasks = map(lambda x: (batdb, masterdb, x, scanenv), vtasks_tmp)
 
 			## grab version and file information
-			fileres = pool.map(grab_sha256_filename, vtasks)
+			if vtasks != []:
+				fileres = pool.map(grab_sha256_filename, vtasks)
+			else:
+				fileres = []
 			resdict = {}
 			map(lambda x: resdict.update(x), fileres)
 
@@ -2235,7 +2256,10 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 						vtasks = map(lambda x: (batdb, masterdb, x, language, 'variable',scanenv), filter(lambda x: x!= [], vtasks_tmp))
 				else:
 						vtasks = map(lambda x: (batdb, masterdb, x, language, 'variable',scanenv), filter(lambda x: x!= [], vtasks_tmp))
-				vsha256s = pool.map(grab_sha256_parallel, vtasks)
+				if vtasks != []:
+					vsha256s = pool.map(grab_sha256_parallel, vtasks)
+				else:
+					vsha256s = []
 				vsha256s = reduce(lambda x, y: x + y, filter(lambda x: x != [], vsha256s))
 
                         	sha256_scan_versions = {}
@@ -2267,7 +2291,10 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				vtasks = map(lambda x: (batdb, masterdb, x, scanenv), vtasks_tmp)
 
 				## grab version and file information
-				fileres = pool.map(grab_sha256_filename, vtasks)
+				if vtasks != []:
+					fileres = pool.map(grab_sha256_filename, vtasks)
+				else:
+					fileres = []
 				resdict = {}
 				map(lambda x: resdict.update(x), fileres)
 
