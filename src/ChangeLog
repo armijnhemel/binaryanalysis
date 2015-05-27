@@ -1,3 +1,7 @@
+2015-05-27:
+* workarounds for http://bugs.python.org/issue6433 that is causing trouble on
+systems with Python 2.6 (like CentOS 6.6)
+
 2015-05-26:
 * bat-scan: sanity check for supplied parameters
 * fwunpack.py: workaround for old XZ versions that do not have -l
