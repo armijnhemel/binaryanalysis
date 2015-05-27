@@ -265,6 +265,9 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 			filehashtoname[filehash] = [i]
 		nametofilehash[i] = filehash
 
+	if len(symbolfiles) == 0:
+		return
+
 	## now check each file in symbolfiles and return:
 	## 1. version
 	## 2. symbols that are defined and symbols that are needed (empty for main Linux kernel)
@@ -678,7 +681,8 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 		symbolgraphs.add((symbolgraph_data, i, counter, imagedir, generatesvg))
 
 	## write the graphs in parallel in PNG and, optionally, SVG formats
-	pool.map(writeGraph, symbolgraphs, 1)
+	if len(symbolgraphs) != 0:
+		pool.map(writeGraph, symbolgraphs, 1)
 	pool.terminate()
 
 def kernelsymbolssetup(scanenv, debug=False):

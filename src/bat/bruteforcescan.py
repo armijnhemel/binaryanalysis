@@ -1226,7 +1226,8 @@ def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=Fa
 		else:
 			pool = multiprocessing.Pool()
 		fnames = map(lambda x: os.path.join(tempdir, "filereports", x), filereports)
-		pool.map(compressPickle, fnames, 1)
+		if fnames != []:
+			pool.map(compressPickle, fnames, 1)
 		pool.terminate()
 		dumpfile.add('filereports')
 	except Exception,e:
@@ -1470,7 +1471,10 @@ def runscan(scans, scan_binary, scandate):
 		if not os.path.exists(os.path.join(topleveldir, 'filereports')):
 			os.mkdir(os.path.join(topleveldir, 'filereports'))
 
-		poolresult = pool.map(leafScan, leaftasks_tmp, 1)
+		if len(leaftasks_tmp) == 0:
+			poolresult = []
+		else:
+			poolresult = pool.map(leafScan, leaftasks_tmp, 1)
 		pool.terminate()
 
 		## filter the results for the leafscans. These are the ones that
@@ -1579,7 +1583,10 @@ def runscan(scans, scan_binary, scandate):
 		else:
 			pool = multiprocessing.Pool(processes=1)
 
-		postrunresults = pool.map(postrunscan, postrunscans, 1)
+		if len(postrunscans) == 0:
+			postrunresults = []
+		else:
+			postrunresults = pool.map(postrunscan, postrunscans, 1)
 		pool.terminate()
 	if debug:
 		print >>sys.stderr, "POSTRUN END", datetime.datetime.utcnow().isoformat()

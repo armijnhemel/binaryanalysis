@@ -300,6 +300,9 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, scand
 			squashedelffiles[os.path.basename(i)].append(i)
 		elffiles.add(i)
 
+	if len(elffiles) == 0:
+		return
+
 	## there are some symlinks that point to symlinks
 	if len(symlinklinks) != 0:
 		resolving = True
