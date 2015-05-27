@@ -1973,11 +1973,11 @@ table has the following mandatory field:
 \item \texttt{sha256}: SHA256 checksum of the file
 \end{itemize}
 
-Any other hashes (limited to values that Python's hashlib supports, and CRC32)
-listed in \texttt{extrahashes} in the database creation script configuration
-file will be added as columns to this database. Tjaldur Software Governance
-Solutions by default sets MD5, SHA1 and CRC32, which the convertor from SQLite
-to PostgreSQL expects to find as well, in that order.
+Any other hashes (limited to values that Python's hashlib supports, as well as
+CRC32 and TLSH) listed in \texttt{extrahashes} in the database creation script
+configuration file will be added as columns to this database. Tjaldur Software
+Governance Solutions by default sets MD5, SHA1, CRC32 and TLSH, which the
+convertor from SQLite to PostgreSQL expects to find as well, in that order.
 
 \subsubsection{\texttt{licenses} table}
 
