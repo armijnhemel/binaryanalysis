@@ -1705,7 +1705,7 @@ are hardcoded in the table and index definitions.
 Depending on if the database is stored in PostgreSQL or SQLite the database
 tables might be in one database (PostgreSQL) or separate files (SQLite).
 
-The main database currently has 15 tables, 9 of which are Linux kernel specific.
+The main database currently has 16 tables, 9 of which are Linux kernel specific.
 One other table is optional:
 
 \begin{itemize}
@@ -1723,6 +1723,7 @@ One other table is optional:
 \item \texttt{kernelmodule\_parameter}
 \item \texttt{kernelmodule\_parameter\_description}
 \item \texttt{kernelmodule\_version}
+\item \texttt{renames}
 \end{itemize}
 
 The optional table:
@@ -1847,6 +1848,22 @@ It has the following fields:
 can be found
 \end{itemize}
 
+\subsubsection{\texttt{hashconversion} table}
+
+The \texttt{hashconversion} table is used as a lookup table to translate
+between different hashes and use these for checks or reporting. The
+table has the following mandatory field:
+
+\begin{itemize}
+\item \texttt{sha256}: SHA256 checksum of the file
+\end{itemize}
+
+Any other hashes (limited to values that Python's hashlib supports, as well as
+CRC32 and TLSH) listed in \texttt{extrahashes} in the database creation script
+configuration file will be added as columns to this database. Tjaldur Software
+Governance Solutions by default sets MD5, SHA1, CRC32 and TLSH, which the
+convertor from SQLite to PostgreSQL expects to find as well, in that order.
+
 \subsubsection{\texttt{kernel\_configuration} table}
 
 The Makefiles in the Linux kernel configuration contain a lot of information
@@ -1963,22 +1980,6 @@ This information is declared in the Linux kernel source code using the
 \item \texttt{version}: contents of the \texttt{MODULE\_VERSION} macro
 \end{itemize}
 
-\subsubsection{\texttt{hashconversion} table}
-
-The \texttt{hashconversion} table is used as a lookup table to translate
-between different hashes and use these for checks or reporting. The
-table has the following mandatory field:
-
-\begin{itemize}
-\item \texttt{sha256}: SHA256 checksum of the file
-\end{itemize}
-
-Any other hashes (limited to values that Python's hashlib supports, as well as
-CRC32 and TLSH) listed in \texttt{extrahashes} in the database creation script
-configuration file will be added as columns to this database. Tjaldur Software
-Governance Solutions by default sets MD5, SHA1, CRC32 and TLSH, which the
-convertor from SQLite to PostgreSQL expects to find as well, in that order.
-
 \subsubsection{\texttt{licenses} table}
 
 This table stores the licenses that were extracted from files using a source
@@ -1994,6 +1995,22 @@ doing a manual review.
 \item \texttt{version}: version of scanner. This is useful if there is for
 example a bug in a scanner, or to compare results from various versions.
 \end{itemize}
+
+\subsubsection{\texttt{renames} table}
+
+This is a lookup table to deal with packages that have been cloned or renamed
+and should be treated as another package when scanning. Examples are packages
+in Debian that have been renamed for trademark reasons (Firefox is called
+Iceweasel), forks (KOffice versus Calligra), and so on.
+
+\begin{itemize}
+\item \texttt{originalname}: name the package was published under
+\item \texttt{newname}: name that the package name should be translated to
+\end{itemize}
+
+The script \texttt{clonedbinit.py} in the \texttt{maintenance} directory
+generates a minimal translation database. In several scans this database can
+be used by setting the \texttt{BAT\_CLONE\_DB} parameter.
 
 \subsubsection{\texttt{security\_cert} table}
 
