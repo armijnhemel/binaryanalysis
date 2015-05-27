@@ -457,7 +457,8 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, scanenv,
 
 	generatetasks = map(lambda x: (picklehashes[x[0]], x[0], imagedir, pickledir), funcpicklespackages) + map(lambda x: (picklehashes[x[0]], x[0], imagedir, pickledir), versionpicklespackages)
 
-	results = pool.map(generateversionchart, set(generatetasks), 1)
+	if generatetasks != []:
+		results = pool.map(generateversionchart, set(generatetasks), 1)
 	pool.terminate()
 
 	results = filter(lambda x: x != None, results)
