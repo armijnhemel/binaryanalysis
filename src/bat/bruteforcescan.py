@@ -579,21 +579,22 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, s
 		except NotImplementedError:
 			processors = None
 
-	filehash = unpackreports[scan_binary]['checksum']
-	leaf_file_path = os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)
+	if 'checksum' in unpackreports[scan_binary]:
+		filehash = unpackreports[scan_binary]['checksum']
+		leaf_file_path = os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)
 
-	## first record what the top level element is. This will be used by other scans
-	leaf_file = open(leaf_file_path, 'rb')
-	leafreports = cPickle.load(leaf_file)
-	leaf_file.close()
+		## first record what the top level element is. This will be used by other scans
+		leaf_file = open(leaf_file_path, 'rb')
+		leafreports = cPickle.load(leaf_file)
+		leaf_file.close()
 
-	unpackreports[scan_binary]['tags'].append('toplevel')
-	unpackreports[scan_binary]['scandate'] = scandate
-	leafreports['tags'].append('toplevel')
+		unpackreports[scan_binary]['tags'].append('toplevel')
+		unpackreports[scan_binary]['scandate'] = scandate
+		leafreports['tags'].append('toplevel')
 
-	leaf_file = open(leaf_file_path, 'wb')
-	leafreports = cPickle.dump(leafreports, leaf_file)
-	leaf_file.close()
+		leaf_file = open(leaf_file_path, 'wb')
+		leafreports = cPickle.dump(leafreports, leaf_file)
+		leaf_file.close()
 
 	for aggregatescan in scans['aggregatescans']:
 		module = aggregatescan['module']
