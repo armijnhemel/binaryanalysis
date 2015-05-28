@@ -2762,7 +2762,7 @@ def unpackLRZIP(filename, offset, tempdir=None):
 		rmfiles = os.listdir(tmpdir)
 		if rmfiles != []:
 			for rmfile in rmfiles:
-				os.unlink("%s/%s" % (tmpdir, rmfile))
+				os.unlink(os.path.join(tmpdir, rmfile))
 		if os.path.exists(tmpfile[1]):
 			os.unlink(tmpfile[1])
 		if tempdir == None:
@@ -2907,7 +2907,11 @@ def unpackZip(filename, offset, cutoff, tempdir=None):
 				rmfiles = os.listdir(tmpdir)
 				if rmfiles != []:
 					for rmfile in rmfiles:
-						os.unlink(os.path.join(tmpdir, rmfile))
+						rmpath = os.path.join(tmpdir, rmfile)
+						if os.path.isdir(rmpath):
+							shutil.rmtree(rmpath)
+						else:
+							os.unlink(rmpath)
 				if tempdir == None:
 					os.rmdir(tmpdir)
 				return (None, None)
@@ -2953,7 +2957,11 @@ def unpackZip(filename, offset, cutoff, tempdir=None):
 					rmfiles = os.listdir(tmpdir)
 					if rmfiles != []:
 						for rmfile in rmfiles:
-							os.unlink(os.path.join(tmpdir, rmfile))
+							rmpath = os.path.join(tmpdir, rmfile)
+							if os.path.isdir(rmpath):
+								shutil.rmtree(rmpath)
+							else:
+								os.unlink(rmpath)
 					if tempdir == None:
 						os.rmdir(tmpdir)
 					return (None, None)
