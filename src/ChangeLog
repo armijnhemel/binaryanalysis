@@ -1,3 +1,11 @@
+2015-05-28:
+* more workarounds for http://bugs.python.org/issue6433
+* allow subdirectories when scanning in "directory mode"
+* bat-scan.config: enable BAT_KERNELSYMBOL_SCAN and BAT_KERNELFUNCTION_SCAN by
+default
+* images.py: remove unused code
+* prerun.py/fwunpack.py: stricter check for GIF unpacking
+
 2015-05-27:
 * workarounds for http://bugs.python.org/issue6433 that is causing trouble on
 systems with Python 2.6 (like CentOS 6.6)
