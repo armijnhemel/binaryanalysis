@@ -118,3 +118,5 @@ BOTTLENECKS/HIGH PRIORITY:
 51. createdb.py: if Python files are used correct offsets for extracted copyright info
 52. fwunpack.py: better handle files that have weird Zip data, such as maven-pldoc-plugin-2.8-sources.jar from Maven
 53. bruteforcescan.py: pass tags or hints from prerun scan to unpack scans, for example to flag that a ZIP file has already been verified and several checks can be skipped
+54. add source code scanner for several files that are clearly source code files (for example: .java or .py files) and replace with a simple lookup in the database before running the binary scanner
+55. bruteforcescan.py: move certain checks/setup code from runscan() to a setup method as these will not change in between invocations in directory mode
