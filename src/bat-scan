@@ -95,20 +95,33 @@ def main(argv):
 		scanfiles.append((options.fw, options.outputfile))
 
 	if options.fwdir != None:
-		scanls = os.listdir(options.fwdir)
-		for s in scanls:
-			## first filter out symlinks, empty files, etc.
-			scanpath = os.path.join(options.fwdir, s)
-			if os.stat(scanpath).st_size == 0:
-				continue
-			if os.path.islink(scanpath):
-				continue
-			## template: "%s.tar.gz"
-			outpath = os.path.join(options.outdir, "%s.tar.gz" % s)
-			if not os.path.exists(outpath):
-				scanfiles.append((scanpath, outpath))
-			else:
-				print >>sys.stderr, "output file for %s exists, skipping scan" % s
+		dirlen = len(os.path.normpath(options.fwdir)) + 1
+		scanls = set()
+		osgen = os.walk(options.fwdir)
+		try:
+			while True:
+				i = osgen.next()
+				for s in i[2]:
+					scanpath = os.path.join(i[0], s)
+					if os.stat(scanpath).st_size == 0:
+						continue
+					if os.path.islink(scanpath):
+						continue
+					newoutdir = os.path.join(options.outdir, i[0][dirlen:])
+					if not os.path.exists(newoutdir):
+						os.mkdir(newoutdir)
+					else:
+						if not os.path.isdir(newoutdir):
+							print >>sys.stderr, "output directory %s cannot be made, skipping %s" % (newoutdir, s)
+							continue
+					## template: "%s.tar.gz"
+					outpath = os.path.join(options.outdir, newoutdir, "%s.tar.gz" % s)
+					if not os.path.exists(outpath):
+						scanfiles.append((scanpath, outpath))
+					else:
+						print >>sys.stderr, "output file for %s exists, skipping scan" % os.path.join(i[0][dirlen:], s)
+		except StopIteration:
+			pass
 
 	origcwd = os.getcwd()
 	for so in scanfiles:
