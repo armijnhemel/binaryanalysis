@@ -3639,16 +3639,15 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	## search, since it is very generic character. It would cost too many resources to also
 	## look for these in all cases.
 	traileroffsets = []
-	trailer = data.find(';')
+	trailer = data.find('\x00;')
 	while(trailer != -1):
 		## check if the byte before the trailer is the so called "block terminator"
 		## from the GIF specification. If not, then skip.
-		if data[trailer-1] == '\x00':
-			## check if the trailer is not blacklisted
-			blacklistoffset = extractor.inblacklist(trailer, blacklist)
-			if blacklistoffset == None:
-				traileroffsets.append(trailer + gifoffsets[0])
-		trailer = data.find(';',trailer+1)
+		## check if the trailer is not blacklisted
+		blacklistoffset = extractor.inblacklist(trailer, blacklist)
+		if blacklistoffset == None:
+			traileroffsets.append(trailer + gifoffsets[0])
+		trailer = data.find('\x00;',trailer+2)
 
 	if traileroffsets == []:
 		return ([], blacklist, [], hints)
@@ -3678,7 +3677,7 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			## check if the trailer is not blacklisted
 			tmpdir = dirsetup(tempdir, filename, "gif", counter)
 			tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".gif", dir=tmpdir)
-			os.write(tmpfile[0], data[offset-gifoffsets[0]:trail+1-gifoffsets[0]])
+			os.write(tmpfile[0], data[offset-gifoffsets[0]:trail+2-gifoffsets[0]])
 			os.fdopen(tmpfile[0]).close()
 			p = subprocess.Popen(['gifinfo', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 			(stanout, stanerr) = p.communicate()
