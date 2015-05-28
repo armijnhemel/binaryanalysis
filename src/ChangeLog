@@ -5,6 +5,12 @@
 default
 * images.py: remove unused code
 * prerun.py/fwunpack.py: stricter check for GIF unpacking
+* bruteforcescan.py: fix if the top level binary to be scanned is an empty
+file
+* bat-scan: sanity checks if the top level file is not a regular file, but a
+pipe, socket, etc.
+* fwunpack.py: better handle removing data that was already unpacked from ZIP
+files
 
 2015-05-27:
 * workarounds for http://bugs.python.org/issue6433 that is causing trouble on

@@ -116,3 +116,5 @@ BOTTLENECKS/HIGH PRIORITY:
 49. try to detect 'third party' copies in other packages and tag them in the database
 50. kernelsymbols.py: combine information from ranking with license field to see if the license field has been changed
 51. createdb.py: if Python files are used correct offsets for extracted copyright info
+52. fwunpack.py: better handle files that have weird Zip data, such as maven-pldoc-plugin-2.8-sources.jar from Maven
+53. bruteforcescan.py: pass tags or hints from prerun scan to unpack scans, for example to flag that a ZIP file has already been verified and several checks can be skipped
