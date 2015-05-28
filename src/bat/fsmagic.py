@@ -49,7 +49,6 @@ fsmagic = {
             'cramfs_le':        '\x45\x3d\xcd\x28',
             'cramfs_be':        '\x28\xcd\x3d\x45',
             'romfs':            '-rom1fs-',
-            #'lzma_alone':       '\x5d\x00\x00\x80',
             'jffs2_le':         '\x85\x19',
             'jffs2_be':         '\x19\x85',
             'ubifs':            '\x31\x18\x10\x06',
