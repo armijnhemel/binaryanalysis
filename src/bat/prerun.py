@@ -152,11 +152,11 @@ def verifyGIF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		return newtags
 	filesize = os.stat(filename).st_size
 	giffile = open(filename)
-	giffile.seek(filesize - 1)
+	giffile.seek(filesize - 2)
 	## read last byte, it should be ';' according to GIF specifications
-	lastbyte = giffile.read(1)
+	lastbytes = giffile.read(2)
 	giffile.close()
-	if lastbyte != ';':
+	if lastbytes != '\x00;':
 		return newtags
 	## Now we have a good chance that the file is indeed a GIF file, but
 	## we need to be more sure. gifinfo will happily classify files as GIF,
@@ -173,8 +173,8 @@ def verifyGIF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	giffile = open(filename)
 	gifdata = giffile.read()
 	giffile.close()
-	trailer = gifdata.find(';')
-	if trailer != filesize - 1:
+	trailer = gifdata.find('\x00;')
+	if trailer != filesize - 2:
 		return newtags
 
 	p = subprocess.Popen(['gifinfo', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
