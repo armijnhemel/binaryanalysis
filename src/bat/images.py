@@ -10,11 +10,6 @@ full files and thumbnails. The files can be used for informational purposes, suc
 as detecting roughly where offsets can be found, if data is compressed or encrypted,
 etc.
 
-It also generates histograms, which show how different byte values are distributed.
-This can provide another visual clue about how files are constructed. Binaries from
-the same type (like ELF binaries) are actually quite similar, so binaries that
-significantly deviate from this could mean something interesting.
-
 This should be run as a postrun scan
 
 Parameters for configuration file:
@@ -77,11 +72,3 @@ def generateImages(filename, unpackreport, scantempdir, topleveldir, scanenv={},
 			imthumb = im.thumbnail((height/4, width/4))
 			im.save("%s/%s-thumbnail.png" % (imagedir, unpackreport['checksum']))
 		'''
-
-	'''
-	## generate histogram
-	p = subprocess.Popen(['python', '/home/armijn/gpltool/trunk/bat-extratools/bat-visualisation/bat-generate-histogram.py', '-i', "%s/%s" % (scantempdir, filename), '-o', '%s/%s-histogram.png' % (imagedir, unpackreport['checksum'])], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		print >>sys.stderr, stanerr
-	'''
