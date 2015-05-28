@@ -422,7 +422,10 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, scanenv,
 
 	if piepicklespackages != []:
 		pietasks = set(map(lambda x: (copy.deepcopy(picklehashes[x[0]]), pickledir, x[0], imagedir), piepicklespackages))
-		results = pool.map(generatepiecharts, pietasks, 1)
+		if len(pietasks) != 0:
+			results = pool.map(generatepiecharts, pietasks, 1)
+		else:
+			results = []
 		## first copy the file for every package that needs it
 		for p in piepicklespackages:
 			oldfilename = "%s-%s" % (p[0], "piechart.png")
@@ -439,7 +442,10 @@ def generateimages(unpackreports, scantempdir, topleveldir, processors, scanenv,
 				pass
 	if statpiepicklespackages != []:
 		pietasks = set(map(lambda x: (copy.deepcopy(picklehashes[x[0]]), pickledir, x[0], imagedir), statpiepicklespackages))
-		results = pool.map(generatepiecharts, pietasks, 1)
+		if len(pietasks) != 0:
+			results = pool.map(generatepiecharts, pietasks, 1)
+		else:
+			results = []
 		## first copy the file for every package that needs it
 		for p in statpiepicklespackages:
 			oldfilename = "%s-%s" % (p[0], "piechart.png")
