@@ -41,11 +41,14 @@ def main(argv):
         	parser.error("Don't supply binary file and directory at the same time")
 
 	if options.fw != None:
+		if os.path.isdir(options.fw):
+			parser.error("File to scan is a directory. Did you mean -d ?")
+
 		if not os.path.exists(options.fw):
         		parser.error("No file to scan found")
 
-		if os.path.isdir(options.fw):
-			parser.error("File to scan is a directory. Did you mean -d ?")
+		if not os.path.isfile(options.fw):
+        		parser.error("%s is not a file" % options.fw)
 
 		if options.outputfile == None:
         		parser.error("Path to output file needed")
@@ -106,6 +109,8 @@ def main(argv):
 					if os.stat(scanpath).st_size == 0:
 						continue
 					if os.path.islink(scanpath):
+						continue
+					if not os.path.isfile(scanpath):
 						continue
 					newoutdir = os.path.join(options.outdir, i[0][dirlen:])
 					if not os.path.exists(newoutdir):
