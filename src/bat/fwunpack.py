@@ -3538,9 +3538,15 @@ def searchUnpackPDF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		## first check whether or not the file has a valid PDF version
 		pdffile = open(filename)
 		pdffile.seek(offset+5)
-		pdfbytes = pdffile.read(1)
+		pdfbytes = pdffile.read(3)
 		pdffile.close()
 		if pdfbytes[0] != '1':
+			continue
+		if pdfbytes[1] != '.':
+			continue
+		try:
+			int(pdfbytes[2])
+		except:
 			continue
 		for trailer in offsets['pdftrailer']:
 			if offset > trailer:
