@@ -1960,6 +1960,8 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 	## indicate whether or not the pickle should be written back to disk.
 	## If uniquematches is empty and if functionRes is also empty, then nothing needs to be written back.
 	changed = False
+
+	minstep = max(1, processors)
 	
 	if res != None:
 		newreports = []
@@ -1982,6 +1984,8 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				step = max(1,lenuniques)
 			else:
 				step = lenuniques/processors
+				if step <= minstep:
+					step = max(minstep,lenuniques)
 			for v in xrange(0, lenuniques, step):
 				vtasks_tmp.append(uniques[v:v+step])
 			vtasks = map(lambda x: (batdb, masterdb, x, language, 'string',scanenv), filter(lambda x: x!= [], vtasks_tmp))
@@ -2011,6 +2015,8 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				step = max(1,len(sha256_scan_versions))
 			else:
 				step = len(sha256_scan_versions)/processors
+				if step <= minstep:
+					step = max(minstep,len(sha256_scan_versions))
 			for v in xrange(0, len(sha256_scan_versions), step):
 				vtasks_tmp.append(sha256_scan_versions.keys()[v:v+step])
 			vtasks = map(lambda x: (batdb, masterdb, x, scanenv), filter(lambda x: x!= [], vtasks_tmp))
@@ -2084,6 +2090,8 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 					step = max(1,lenlicensesha256s)
 				else:
 					step = lenlicensesha256s/processors
+					if step <= minstep:
+						step = max(minstep,lenlicensesha256s)
 				for v in xrange(0, lenlicensesha256s, step):
 					vtasks_tmp.append(licensesha256s[v:v+step])
 				vtasks = map(lambda x: (batdb, licensedb, x, scanenv), filter(lambda x: x!= [], vtasks_tmp))
@@ -2110,6 +2118,8 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 					step = max(1,lencopyrightsha256s)
 				else:
 					step = lencopyrightsha256s/processors
+					if step <= minstep:
+						step = max(minstep,lencopyrightsha256s)
 				for v in xrange(0, lencopyrightsha256s, step):
 					vtasks_tmp.append(copyrightsha256s[v:v+step])
 				vtasks = map(lambda x: (licensedb, x), filter(lambda x: x!= [], vtasks_tmp))
@@ -2143,6 +2153,8 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				step = max(1,len(functionnames))
 			else:
 				step = len(functionnames)/processors
+				if step <= minstep:
+					step = max(minstep,len(functionnames))
 			for v in xrange(0, len(functionnames), step):
 				vtasks_tmp.append(functionnames[v:v+step])
 			vtasks = map(lambda x: (batdb, masterdb, x, 'C', 'function',scanenv), vtasks_tmp)
@@ -2177,6 +2189,8 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				step = max(1,len(sha256_scan_versions.keys()))
 			else:
 				step = len(sha256_scan_versions.keys())/processors
+				if step <= minstep:
+					step = max(minstep,len(sha256_scan_versions.keys()))
 			for v in xrange(0, len(sha256_scan_versions.keys()), step):
 				vtasks_tmp.append(sha256_scan_versions.keys()[v:v+step])
 			vtasks = map(lambda x: (batdb, masterdb, x, scanenv), vtasks_tmp)
@@ -2247,6 +2261,8 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 					step = max(1,len(uniques))
 				else:
 					step = len(uniques)/processors
+					if step <= minstep:
+						step = max(minstep,len(uniques))
 				for v in xrange(0, len(uniques), step):
 					vtasks_tmp.append(uniques[v:v+step])
 				if variablepvs.has_key('type'):
@@ -2286,6 +2302,8 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 					step = max(1,len(sha256_scan_versions.keys()))
 				else:
 					step = len(sha256_scan_versions.keys())/processors
+					if step <= minstep:
+						step = max(minstep,len(sha256_scan_versions.keys()))
 				for v in xrange(0, len(sha256_scan_versions.keys()), step):
 					vtasks_tmp.append(sha256_scan_versions.keys()[v:v+step])
 				vtasks = map(lambda x: (batdb, masterdb, x, scanenv), vtasks_tmp)
