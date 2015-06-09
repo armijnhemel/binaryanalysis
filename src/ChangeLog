@@ -1,3 +1,17 @@
+2015-06-09:
+* fwunpack.py: remove useless check for cpio, that would potentially involve a
+lot of I/O but which added no value at all
+* fwunpack.py: store less data for ext2 file systems for temporary unpacking
+files (might still need quite a bit of space initially though)
+* fwunpack.py: more sanity checks for Android sparse file systems
+* licenseversion.py: prevent too many connections being opened for PostgreSQL
+connections. Since sockets could stay open for a bit longer after the
+connection is closed it is possible to run out of sockets on the system when
+firmwares with many small files are scanned.
+
+2015-06-08:
+* fwunpack.py: more sanity checks for PDF
+
 2015-05-28:
 * more workarounds for http://bugs.python.org/issue6433
 * allow subdirectories when scanning in "directory mode"
