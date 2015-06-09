@@ -2677,6 +2677,13 @@ def searchUnpackAndroidSparse(filename, tempdir=None, blacklist=[], offsets={}, 
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
+		## first see if the major version is correct
+		sparsefile = open(filename)
+		sparsefile.seek(offset+4)
+		sparsedata = sparsefile.read(2)
+		sparsefile.close()
+		if not struct.unpack('<H', sparsedata)[0] == 1:
+			continue
 		tmpdir = dirsetup(tempdir, filename, "android-sparse", counter)
 		res = unpackAndroidSparse(filename, offset, tmpdir)
 		if res != None:
@@ -2691,14 +2698,6 @@ def searchUnpackAndroidSparse(filename, tempdir=None, blacklist=[], offsets={}, 
 	return (diroffsets, blacklist, tags, hints)
 
 def unpackAndroidSparse(filename, offset, tempdir=None):
-	## first see if the major version is correct
-	sparsefile = open(filename)
-	sparsefile.seek(offset+4)
-	sparsedata = sparsefile.read(2)
-	sparsefile.close()
-	if not struct.unpack('<H', sparsedata)[0] == 1:
-		return
-
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
