@@ -2054,35 +2054,103 @@ def unpackSquashfsRealtekLZMA(filename, offset, tmpdir):
 '''
 def searchUnpackFAT(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = []
-	if offsets['fat12'] == []:
+	if not 'fat12' in offsets and not 'fat16' in offsets:
 		return ([], blacklist, [], hints)
-	## right now just allow file systems that are only FAT12
-	if not 54 in offsets['fat12']:
+	if offsets['fat12'] == [] and offsets['fat16'] == []:
 		return ([], blacklist, [], hints)
+
+	fattypes = []
+	if offsets['fat12'] != []:
+		fattypes.append('fat12')
+	if offsets['fat16'] != []:
+		fattypes.append('fat16')
+	sys.stdout.flush()
 	diroffsets = []
 	counter = 1
-	for offset in offsets['fat12']:
-		## according to /usr/share/magic the magic header starts at 0x438
-		if offset < 54:
-			continue
-		## check if the offset we find is in a blacklist
-		blacklistoffset = extractor.inblacklist(offset, blacklist)
-		if blacklistoffset != None:
-			continue
-		tmpdir = dirsetup(tempdir, filename, "fat", counter)
-		## we should actually scan the data starting from offset - 0x438
-		res = unpackFAT(filename, offset - 54, tmpdir)
-		if res != None:
-			(fattmpdir, fatsize) = res
-			diroffsets.append((fattmpdir, offset - 54, fatsize))
-			blacklist.append((offset - 54, offset - 54 + fatsize))
-			counter = counter + 1
-		else:
-			os.rmdir(tmpdir)
+	for t in fattypes:
+		for offset in offsets[t]:
+			## FAT12 and FAT16 headers have at least 54 bytes
+			if offset < 54:
+				continue
+			## check if the offset we find is in a blacklist
+			blacklistoffset = extractor.inblacklist(offset, blacklist)
+			if blacklistoffset != None:
+				continue
+			tmpdir = dirsetup(tempdir, filename, "fat", counter)
+			## we should actually scan the data starting from offset - 54
+			res = unpackFAT(filename, offset - 54, t, tmpdir)
+			if res != None:
+				(fattmpdir, fatsize) = res
+				diroffsets.append((fattmpdir, offset - 54, fatsize))
+				blacklist.append((offset - 54, offset - 54 + fatsize))
+				counter = counter + 1
+			else:
+				os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [], hints)
 
-def unpackFAT(filename, offset, tempdir=None, unpackenv={}):
-	return None
+## http://www.win.tue.nl/~aeb/linux/fs/fat/fat-1.html
+def unpackFAT(filename, offset, fattype, tempdir=None, unpackenv={}):
+	## first analyse the data a bit
+	fatfile = open(filename, 'rb')
+	fatfile.seek(offset)
+	fatbytes = fatfile.read(3)
+	## first some sanity checks
+	if fatbytes[0] != '\xeb':
+		fatfile.close()
+		return None
+	if fatbytes[2] != '\x90':
+		fatfile.close()
+		return None
+	## the OEM identifier
+	oemidentifier = fatfile.read(8)
+	## on to "bytes per sector"
+	fatbytes = fatfile.read(2)
+	bytespersector = struct.unpack('<H', fatbytes)[0]
+	## then "sectors per cluster"
+	fatbytes = fatfile.read(1)
+	sectorspercluster = ord(fatbytes)
+	## then reserved sectors
+	fatbytes = fatfile.read(2)
+	reservedsectors = struct.unpack('<H', fatbytes)[0]
+	## then "number of fat tables"
+	fatbytes = fatfile.read(1)
+	fattables = ord(fatbytes)
+	## then number of directory entries
+	fatbytes = fatfile.read(2)
+	directoryentries = struct.unpack('<H', fatbytes)[0]
+	## then sectors in logical volume. If this is 0 then it has special meaning
+	fatbytes = fatfile.read(2)
+	sectorsinlogicalvolume = struct.unpack('<H', fatbytes)[0]
+	## then media descriptor type
+	fatbytes = fatfile.read(1)
+	mediadescriptortype = ord(fatbytes)
+	## then sectors per FAT
+	fatbytes = fatfile.read(2)
+	sectorsperfat = struct.unpack('<H', fatbytes)[0]
+	## then sectors per track
+	fatbytes = fatfile.read(2)
+	sectorspertrack = struct.unpack('<H', fatbytes)[0]
+	## then number of heads
+	fatbytes = fatfile.read(2)
+	numberofheads = struct.unpack('<H', fatbytes)[0]
+
+	if fattype == 'fat16':
+		## then number of hidden sectors
+		fatbytes = fatfile.read(4)
+		hiddensectors = struct.unpack('<I', fatbytes)[0]
+		if sectorsinlogicalvolume == 0:
+			fatbytes = fatfile.read(4)
+			totalnumberofsectors = struct.unpack('<I', fatbytes)[0]
+		else:
+			totalnumberofsectors = sectorsinlogicalvolume
+	fatfile.close()
+	totalsize = totalnumberofsectors * bytespersector
+	tmpdir = unpacksetup(tempdir)
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.fdopen(tmpfile[0]).close()
+
+	unpackFile(filename, offset, tmpfile[1], tmpdir, length=totalsize)
+	return (tmpdir, totalsize)
 '''
 
 def searchUnpackMinix(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
@@ -2176,10 +2244,11 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 		## we should actually scan the data starting from offset - 0x438
 		datafile.seek(offset - 0x438)
 		ext2checkdata = datafile.read(8192)
-		if not checkExt2fs(ext2checkdata, 0, tmpdir):
+		(ext2checkres, ext2checksize) = checkExt2fs(ext2checkdata, 0, tmpdir)
+		if not ext2checkres:
 			os.rmdir(tmpdir)
 			continue
-		res = unpackExt2fs(filename, offset - 0x438, tmpdir, unpackenv=unpackenv, blacklist=blacklist)
+		res = unpackExt2fs(filename, offset - 0x438, ext2checksize, tmpdir, unpackenv=unpackenv, blacklist=blacklist)
 		if res != None:
 			(ext2tmpdir, ext2size) = res
 			diroffsets.append((ext2tmpdir, offset - 0x438, ext2size))
@@ -2207,20 +2276,32 @@ def checkExt2fs(data, offset, tempdir=None):
 	if p.returncode != 0:
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
-		return False
+		return (False, 0)
+	if len(stanerr) == 0:
+		blockcount = 0
+		blocksize = 0
+		## we want block count and block size
+		for line in stanout.split("\n"):
+			if 'Block count' in line:
+				blockcount = int(line.split(":")[1].strip())
+			if 'Block size' in line:
+				blocksize = int(line.split(":")[1].strip())
+		ext2size = blockcount * blocksize
+	else:
+		ext2size = 0
 	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
-	return True
+	return (True, ext2size)
 
 ## Unpack an ext2 file system using e2tools and some custom written code from our own ext2 module
-def unpackExt2fs(filename, offset, tempdir=None, unpackenv={}, blacklist=[]):
+def unpackExt2fs(filename, offset, ext2length, tempdir=None, unpackenv={}, blacklist=[]):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
+	unpackFile(filename, offset, tmpfile[1], tmpdir,length=ext2length, blacklist=blacklist)
 
 	res = ext2.copyext2fs(tmpfile[1], tmpdir)
 	if res == None:
