@@ -1317,29 +1317,14 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 ## This one needs to stay separate, since it is also used by RPM unpacking
 def unpackCpio(data, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
-	## write data to a temporary location first so we can check the magic.
-	## Also use cpio -t to test if we actually have a valid archive
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(tmpfile[0], data[offset:])
-
-	ms = magic.open(magic.MAGIC_NONE)
-	ms.load()
-	mstype = ms.file(tmpfile[1])
-	ms.close()
-	os.fdopen(tmpfile[0]).close()
-	os.unlink(tmpfile[1])
-	if 'cpio' not in mstype:
-		if tempdir == None:
-			os.rmdir(tmpdir)
-		return
-	p = subprocess.Popen(['cpio', '-t'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	p = subprocess.Popen(['cpio', '-t'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate(data[offset:])
 	if p.returncode != 0:
 		## we don't have a valid archive according to cpio -t
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return
-	p = subprocess.Popen(['cpio', '-i', '-d', '--no-absolute-filenames'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	p = subprocess.Popen(['cpio', '-i', '-d', '--no-absolute-filenames'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate(data[offset:])
 	return tmpdir
 
