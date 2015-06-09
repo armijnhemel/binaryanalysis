@@ -2691,6 +2691,14 @@ def searchUnpackAndroidSparse(filename, tempdir=None, blacklist=[], offsets={}, 
 	return (diroffsets, blacklist, tags, hints)
 
 def unpackAndroidSparse(filename, offset, tempdir=None):
+	## first see if the major version is correct
+	sparsefile = open(filename)
+	sparsefile.seek(offset+4)
+	sparsedata = sparsefile.read(2)
+	sparsefile.close()
+	if not struct.unpack('<H', sparsedata)[0] == 1:
+		return
+
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
@@ -2711,14 +2719,14 @@ def unpackAndroidSparse(filename, offset, tempdir=None):
 	## checks to find the right size
 	## First check the size of the header. If it has some
 	## bizarre value (like bigger than the file it can unpack)
-	## it is not a valid romfs file system
+	## it is not a valid android sparse file file system
 	sparsefile = open(tmpfile[1])
 	sparsedata = sparsefile.read(28)
 	sparsefile.close()
 
 	## from sparse_format.h, everything little endian
 	## 0 - 3 : magic
-	## 4 - 5 : major version (TODO: add sanity check earlier)
+	## 4 - 5 : major version
 	## 6 - 7 : minor version
 	## 8 - 9 : file header size
 	## 10 - 11: chunk header size (should be 12 bytes)
@@ -2769,10 +2777,14 @@ def unpackAndroidSparse(filename, offset, tempdir=None):
 	## set path for Debian
 	unpackenv = os.environ.copy()
 	unpackenv['PATH'] = unpackenv['PATH'] + ":/sbin"
-	res = unpackExt2fs(outtmpfile[1], 0, tmpdir, unpackenv=unpackenv)
+	ext2checksize = 0
+	res = unpackExt2fs(outtmpfile[1], 0, ext2checksize, tmpdir, unpackenv=unpackenv)
 	if res == None:
-		## TODO: clean up in case there is a screw up
-		pass
+		## TODO: more sanity checks
+		os.unlink(outtmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
 	os.unlink(outtmpfile[1])
 	return (seekctr, tmpdir)
 
