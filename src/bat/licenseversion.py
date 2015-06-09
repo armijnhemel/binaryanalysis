@@ -1979,7 +1979,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 			## these are unique strings they will only be present in the package (or clones of the package).
 			vtasks_tmp = []
 			if lenuniques < processors:
-				step = 1
+				step = max(1,lenuniques)
 			else:
 				step = lenuniques/processors
 			for v in xrange(0, lenuniques, step):
@@ -2008,7 +2008,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 
 			vtasks_tmp = []
 			if len(sha256_scan_versions) < processors:
-				step = 1
+				step = max(1,len(sha256_scan_versions))
 			else:
 				step = len(sha256_scan_versions)/processors
 			for v in xrange(0, len(sha256_scan_versions), step):
@@ -2081,7 +2081,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				licensesha256s = list(set(licensesha256s))
 				lenlicensesha256s = len(licensesha256s)
 				if lenlicensesha256s < processors:
-					step = 1
+					step = max(1,lenlicensesha256s)
 				else:
 					step = lenlicensesha256s/processors
 				for v in xrange(0, lenlicensesha256s, step):
@@ -2107,7 +2107,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				copyrightsha256s = list(set(copyrightsha256s))
 				lencopyrightsha256s = len(copyrightsha256s)
 				if lencopyrightsha256s < processors:
-					step = 1
+					step = max(1,lencopyrightsha256s)
 				else:
 					step = lencopyrightsha256s/processors
 				for v in xrange(0, lencopyrightsha256s, step):
@@ -2140,7 +2140,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 			## right now only C is supported. TODO: fix this for other languages such as Java.
 			vtasks_tmp = []
 			if len(functionnames) < processors:
-				step = 1
+				step = max(1,len(functionnames))
 			else:
 				step = len(functionnames)/processors
 			for v in xrange(0, len(functionnames), step):
@@ -2174,7 +2174,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 
 			vtasks_tmp = []
 			if len(sha256_scan_versions.keys()) < processors:
-				step = 1
+				step = max(1,len(sha256_scan_versions.keys()))
 			else:
 				step = len(sha256_scan_versions.keys())/processors
 			for v in xrange(0, len(sha256_scan_versions.keys()), step):
@@ -2244,7 +2244,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				vtasks_tmp = []
 				uniques = variablepvs['uniquepackages'][package]
 				if len(uniques) < processors:
-					step = 1
+					step = max(1,len(uniques))
 				else:
 					step = len(uniques)/processors
 				for v in xrange(0, len(uniques), step):
@@ -2283,7 +2283,7 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 
 				vtasks_tmp = []
 				if len(sha256_scan_versions.keys()) < processors:
-					step = 1
+					step = max(1,len(sha256_scan_versions.keys()))
 				else:
 					step = len(sha256_scan_versions.keys())/processors
 				for v in xrange(0, len(sha256_scan_versions.keys()), step):
