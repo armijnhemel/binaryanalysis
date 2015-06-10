@@ -798,10 +798,10 @@ def extractJavaNames(javameta, scanenv, batdb, clones):
 
 	funccache = scanenv.get(namecacheperlanguageenv['Java'])
 
-	conn = batdb.getConnection(funccache,scanenv)
-	c = conn.cursor()
-
 	if scanenv.has_key('BAT_METHOD_SCAN'):
+		conn = batdb.getConnection(funccache,scanenv)
+		c = conn.cursor()
+
 		query = batdb.getQuery("select distinct package from %s where functionname=" % namecacheperlanguagetable['Java'] + "%s")
 		for meth in methods:
 			if meth == 'main':
@@ -826,8 +826,8 @@ def extractJavaNames(javameta, scanenv, batdb, clones):
 						uniquepackages[packages_tmp[0]].append(meth)
 					else:
 						uniquepackages[packages_tmp[0]] = [meth]
-	c.close()
-	conn.close()
+		c.close()
+		conn.close()
 
 	dynamicRes['namesmatched'] = namesmatched
 	dynamicRes['totalnames'] = len(set(methods))
@@ -1020,6 +1020,9 @@ def scanDynamic(scanstr, variables, scanenv, batdb, clones):
 	variablepvs = {}
 
 	if not scanenv.has_key(namecacheperlanguageenv['C']):
+		return (dynamicRes, variablepvs)
+
+	if not ('BAT_FUNCTION_SCAN' in scanenv or 'BAT_VARNAME_SCAN' in scanenv):
 		return (dynamicRes, variablepvs)
 
 	## open the database containing function names that were extracted
