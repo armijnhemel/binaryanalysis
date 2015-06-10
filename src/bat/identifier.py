@@ -272,13 +272,13 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 		## first determine the size and offset of .data and .rodata sections,
 		## carve these sections from the ELF file, then run 'strings'
        		try:
-			p = subprocess.Popen(['readelf', '-SW', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			p = subprocess.Popen(['readelf', '-SW', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 			(stanout, stanerr) = p.communicate()
 			## check if there actually are sections. On some systems the
 			## binary is somewhat corrupted and does not have section headers
 			## TODO: localisation fixes
 			if "There are no sections in this file." in stanout:
-				p = subprocess.Popen(['strings', '-a', '-n', str(stringcutoff), scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+				p = subprocess.Popen(['strings', '-a', '-n', str(stringcutoff), scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 				(stanout, stanerr) = p.communicate()
 				if p.returncode != 0:
 					if createdtempfile:
@@ -322,7 +322,7 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 
 				for i in elfscanfiles:
 					## TODO: check if -Tbinary is needed or not
-       					p = subprocess.Popen(['strings', '-a', '-n', str(stringcutoff), i], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+       					p = subprocess.Popen(['strings', '-a', '-n', str(stringcutoff), i], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
        					(stanout, stanerr) = p.communicate()
 
        					st = stanout.split("\n")
@@ -353,7 +353,7 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 		## configurable through "stringcutoff" although the gain will be relatively
 		## low by also scanning strings < stringcutoff
 		try:
-			p = subprocess.Popen(['strings', '-a', '-n', str(stringcutoff), scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			p = subprocess.Popen(['strings', '-a', '-n', str(stringcutoff), scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 			(stanout, stanerr) = p.communicate()
 			if p.returncode != 0:
 				if createdtempfile:
@@ -421,7 +421,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 		fields = []
 		methods = []
 
-		p = subprocess.Popen(['jcf-dump', '--print-constants', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		p = subprocess.Popen(['jcf-dump', '--print-constants', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
 			return None
@@ -497,7 +497,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 			dalvikdir = tempfile.mkdtemp(dir=dex_tmpdir)
 		else:
 			dalvikdir = tempfile.mkdtemp(dir=unpacktempdir)
-		p = subprocess.Popen(['java', '-jar', '/usr/share/java/bat-ddx.jar', '-d', dalvikdir, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		p = subprocess.Popen(['java', '-jar', '/usr/share/java/bat-ddx.jar', '-d', dalvikdir, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode == 0:
 			osgen = os.walk(dalvikdir)
@@ -567,7 +567,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 ## that are exported by the kernel using the EXPORT_SYMBOL* macros in the Linux
 ## kernel source tree.
 def extractkernelsymbols(scanfile, scanenv, unpacktempdir):
-	p = subprocess.Popen(['readelf', '-SW', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['readelf', '-SW', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	(stanout, stanerr) = p.communicate()
 	st = stanout.strip().split("\n")
 
@@ -591,8 +591,8 @@ def extractkernelsymbols(scanfile, scanenv, unpacktempdir):
 		return {}
 
 	variables = set()
-        #p = subprocess.Popen(['strings', '-a', '-n', str(stringcutoff), elftmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-        p = subprocess.Popen(['strings', '-a', elftmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+        #p = subprocess.Popen(['strings', '-a', '-n', str(stringcutoff), elftmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(['strings', '-a', elftmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (stanout, stanerr) = p.communicate()
 	st = stanout.split("\n")
 	for s in st:
@@ -607,11 +607,11 @@ def extractkernelsymbols(scanfile, scanenv, unpacktempdir):
 ## 1. function names
 ## 2. variable names
 def extractDynamicFromELF(scanfile):
- 	p = subprocess.Popen(['readelf', '-W', '--dyn-syms', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+ 	p = subprocess.Popen(['readelf', '-W', '--dyn-syms', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		## perhaps an older readelf that does not support --dyn-syms
- 		p = subprocess.Popen(['readelf', '-W', '-s', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+ 		p = subprocess.Popen(['readelf', '-W', '-s', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
 			return (set(), set())
@@ -664,7 +664,7 @@ def extractDynamicFromELF(scanfile):
 			offset = i
 			args = ['c++filt'] + mangles[offset:offset+step]
 			offset = offset + step
-			p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 			(stanout, stanerr) = p.communicate()
 			if p.returncode != 0:
 				continue
@@ -721,11 +721,12 @@ def extractKernelData(lines, filepath, scanenv, scandebug):
 			kernelfuncres.append(line)
 			continue
 
+	kernelcursor.close()
+	kernelconn.close()
+
 	returnres = {}
 	if kernelfuncres != []:
 		returnres['kernelfunctions'] = kernelfuncres
-	kernelcursor.close()
-	kernelconn.close()
 	return returnres
 
 def extractidentifiersetup(scanenv, debug=False):
