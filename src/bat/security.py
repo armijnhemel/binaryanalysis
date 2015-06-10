@@ -83,13 +83,10 @@ def encryptedZipSetup_sqlite3(scanenv, debug=False):
 
 	## then check if there is a column 'crc32'
 	res = c.execute("pragma table_info('hashconversion')").fetchall()
-	if res == []:
-		cursor.close()
-		c.close()
-		return (False, None)
-
 	cursor.close()
 	c.close()
+	if res == []:
+		return (False, None)
 
 	process = False
 
