@@ -5,6 +5,7 @@ firmwares this can save many database queries and creation of new database
 connections.
 * various fixes related to closing database connections earlier, small
 cleanups and sanity checks
+* fwunpack.py: extra sanity checks for 'new' CPIO formats
 
 2015-06-09:
 * fwunpack.py: remove useless check for cpio, that would potentially involve a
@@ -19,6 +20,9 @@ small files are scanned.
 
 2015-06-08:
 * fwunpack.py: more sanity checks for PDF
+
+2015-05-29:
+* release BAT 22
 
 2015-05-28:
 * more workarounds for http://bugs.python.org/issue6433
