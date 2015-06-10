@@ -31,6 +31,8 @@ def filename2package(path, tags, blacklist=[], scanenv={}, scandebug=False, unpa
 	c.execute(query, (os.path.basename(path),))
 	#c.execute("select distinct package, packageversion, source, distroversion from file where filename = '%s'" % (os.path.basename(path),))
 	res = c.fetchall()
+	c.close()
+	conn.close()
 	## TODO: filter results, only return files that are not in tons of packages
 	if res != []:
 		returnres = []
@@ -42,11 +44,7 @@ def filename2package(path, tags, blacklist=[], scanenv={}, scandebug=False, unpa
 			distrores['distribution'] = distribution
 			distrores['distributionversion'] = distroversion
 			returnres.append(distrores)
-		c.close()
-		conn.close()
 		return (['file2package'], returnres)
-	c.close()
-	conn.close()
 	return None
 
 def xmlprettyprint(res, root, scanenv={}):
@@ -100,9 +98,9 @@ def file2packagesetup_sqlite3(scanenv, debug=False):
 	conn = sqlite3.connect(packagedb)
 	c = conn.cursor()
 	res = c.execute("select * from sqlite_master where type='table' and name='file'").fetchall()
+	c.close()
+	conn.close()
 	if res == []:
-		c.close()
-		conn.close()
 		return (False, None)
 
 	## TODO: more sanity checks
