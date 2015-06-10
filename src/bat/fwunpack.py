@@ -1281,19 +1281,38 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 
 	diroffsets = []
 	counter = 1
-	## TODO: big file fixes
-	datafile = open(filename, 'rb')
-	data = datafile.read()
-	datafile.close()
+	newcpiooffsets = []
 	for offset in cpiooffsets:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
+		## first some sanity checks for the different CPIO flavours
+		datafile = open(filename, 'rb')
+		datafile.seek(offset)
+		cpiomagic = datafile.read(6)
+		## man 5 cpio
+		if cpiomagic == '070701' or cpiomagic == '070702':
+			datafile.seek(offset)
+			cpiodata = datafile.read(110)
+			## all characters in cpiodata need to be digits
+			cpiores = re.match('\d{110}', cpiodata)
+			if cpiores != None:
+				newcpiooffsets.append(offset)
+		else:
+			newcpiooffsets.append(offset)
+		datafile.close()
+
+	## TODO: big file fixes
+	datafile = open(filename, 'rb')
+	datafile.seek(0)
+	data = datafile.read()
+	datafile.close()
+	for offset in newcpiooffsets:
 		for trailer in offsets['cpiotrailer']:
+			if trailer < offset:
+				continue
 			blacklistoffset = extractor.inblacklist(trailer, blacklist)
 			if blacklistoffset != None:
-				continue
-			if trailer < offset:
 				continue
 			tmpdir = dirsetup(tempdir, filename, "cpio", counter)
 			## length of 'TRAILER!!!' plus 1 to include the whole trailer
