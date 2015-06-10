@@ -629,10 +629,29 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 			continue
 		rankingfiles.add(i)
 
+	## suck the average string scores database into memory. Even with a few million packages
+	## this will not cost much memory and it prevents many database lookups.
+	avgscores = {}
+	for language in avgstringsdbperlanguagetable:
+		stringscache = scanenv.get(stringsdbperlanguageenv[language])
+		## open the database containing all the strings that were extracted
+		## from source code.
+		conn = batdb.getConnection(stringscache,scanenv)
+		c = conn.cursor()
+		avgscores[language] = {}
+		avgquery = "select package, avgstrings from %s" % avgstringsdbperlanguagetable[language]
+		c.execute(avgquery)
+		res = c.fetchall()
+
+		for r in filter(lambda x: x[1] != 0, res):
+			avgscores[language][r[0]] = r[1]
+		c.close()
+		conn.close()
+
 	pool = multiprocessing.Pool(processes=processors)
 
 	lookup_tasks = []
-	lookup_tasks = map(lambda x: (newenv, unpackreports[x]['checksum'], os.path.join(unpackreports[x]['realpath'], unpackreports[x]['name']), topleveldir, clones, batdb, scandebug), rankingfiles)
+	lookup_tasks = map(lambda x: (newenv, unpackreports[x]['checksum'], os.path.join(unpackreports[x]['realpath'], unpackreports[x]['name']), topleveldir, clones, batdb, scandebug, avgscores), rankingfiles)
 
 	if lookup_tasks != []:
 		res = pool.map(lookup_identifier, lookup_tasks,1)
@@ -1557,7 +1576,7 @@ def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfun
 
 	return (unmatched, uniqueMatches, nonUniqueMatches, nonUniqueMatchLines, directAssignedString, nonUniqueAssignments, stringsLeft, notclones, nonUniqueScore, sameFileScore, matchednonassigned, matchedlines, unmatchedlines, matchednotclonelines, matcheddirectassignedlines, matchednonassignedlines, nrUniqueMatches, kernelfuncres)
 
-def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, scandebug, batdb, language='C'):
+def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, scandebug, batdb, avgscores, language='C'):
 	if len(lines) == 0:
 		return None
 	## setup code guarantees that this database exists and that sanity
@@ -1572,12 +1591,6 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, sc
 	packageversions = {}
 	packagelicenses = {}
 	packagecopyrights = {}
-
-	stringscache = scanenv.get(stringsdbperlanguageenv[language])
-	## open the database containing all the strings that were extracted
-	## from source code.
-	conn = batdb.getConnection(stringscache,scanenv)
-	c = conn.cursor()
 
 	if have_counter:
 		linecount = collections.Counter(lines)
@@ -1654,18 +1667,6 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, sc
 			if uniqueScore.get(pkgSort, 0) == uniqueScore.get(pkgsSorted[0], 0):
 				pkgs2.append(pkgSort)
 		pkgsScorePerString[stri] = pkgs2
-
-	## suck the average string scores database into memory. Even with a few million packages
-	## this will not cost much memory and it prevents many database lookups.
-	avgscores = {}
-	avgquery = "select package, avgstrings from %s" % avgstringsdbperlanguagetable[language]
-	c.execute(avgquery)
-	res = c.fetchall()
-	c.close()
-	conn.close()
-
-	for r in filter(lambda x: x[1] != 0, res):
-		avgscores[r[0]] = r[1]
 
 	newgain = {}
 	for stri in stringsLeft:
@@ -1861,7 +1862,7 @@ def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, sc
 	return returnres
 
 ## match identifiers with data in the database
-def lookup_identifier((scanenv, filehash, filename, topleveldir, clones, batdb, scandebug)):
+def lookup_identifier((scanenv, filehash, filename, topleveldir, clones, batdb, scandebug, avgscores)):
 	## read the pickle
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 	leafreports = cPickle.load(leaf_file)
@@ -1893,7 +1894,7 @@ def lookup_identifier((scanenv, filehash, filename, topleveldir, clones, batdb, 
 
 	## first compute the score for the lines
 	if len(lines) != 0:
-		res = computeScore(lines, filename, scanenv, clones, linuxkernel, stringcutoff, scandebug, batdb, language)
+		res = computeScore(lines, filename, scanenv, clones, linuxkernel, stringcutoff, scandebug, batdb, avgscores[language], language)
 	else:
 		res = None
 
