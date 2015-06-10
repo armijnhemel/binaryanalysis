@@ -599,12 +599,12 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		c = conn.cursor()
 		c.execute("SELECT originalname,newname from renames")
 		clonestmp = c.fetchall()
+		c.close() 
+		conn.close()
 		for cl in clonestmp:
 			(originalname,newname) = cl
 			if not clones.has_key(originalname):
 				clones[originalname] = newname
-		c.close() 
-		conn.close()
 
 	## ignore files which don't have ranking results
 	rankingfiles = set()
@@ -642,11 +642,11 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		avgquery = "select package, avgstrings from %s" % avgstringsdbperlanguagetable[language]
 		c.execute(avgquery)
 		res = c.fetchall()
+		c.close()
+		conn.close()
 
 		for r in filter(lambda x: x[1] != 0, res):
 			avgscores[language][r[0]] = r[1]
-		c.close()
-		conn.close()
 
 	pool = multiprocessing.Pool(processes=processors)
 
@@ -963,11 +963,12 @@ def extractVariablesJava(javameta, scanenv, batdb, clones):
 				fieldres = map(lambda x: (x, 0), fieldres_tmp)
 				fieldspvs[f] = fieldres
 
+	c.close()
+	conn.close()
+
 	variablepvs['fields'] = fieldspvs
 	variablepvs['sources'] = sourcepvs
 	variablepvs['classes'] = classpvs
-	c.close()
-	conn.close()
 	return variablepvs
 
 def scankernelsymbols(variables, scanenv, batdb, clones):
@@ -997,6 +998,7 @@ def scankernelsymbols(variables, scanenv, batdb, clones):
 			else:
 				uniquevvs[pvs_tmp[0]] = [v]
 		allvvs[v] = pvs_tmp
+
 	c.close()
 	conn.close()
 
