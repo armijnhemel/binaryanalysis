@@ -224,6 +224,14 @@ def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={},
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
+		## extra sanity check to see if STREAM_VERSION is set to 5
+		serialized_file = open(filename, 'rb')
+		serialized_file.seek(offset+2)
+		serialized_bytes = serialized_file.read(2)
+		serialized_file.close()
+		stream_version = struct.unpack('>H', serialized_bytes)[0]
+		if stream_version != 5:
+			continue
 		tmpdir = dirsetup(tempdir, filename, "java_serialized", counter)
 		res = unpackJavaSerialized(filename, offset, tmpdir, blacklist)
 		if res != None:
@@ -2258,6 +2266,8 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 	unpackenv = os.environ.copy()
 	unpackenv['PATH'] = unpackenv['PATH'] + ":/sbin"
 
+	filesize = os.stat(filename).st_size
+
 	for offset in offsets['ext2']:
 		## according to /usr/share/magic the magic header starts at 0x438
 		if offset < 0x438:
@@ -2272,6 +2282,9 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 		ext2checkdata = datafile.read(8192)
 		(ext2checkres, ext2checksize) = checkExt2fs(ext2checkdata, 0, tmpdir)
 		if not ext2checkres:
+			os.rmdir(tmpdir)
+			continue
+		if ext2checksize > filesize:
 			os.rmdir(tmpdir)
 			continue
 		res = unpackExt2fs(filename, offset - 0x438, ext2checksize, tmpdir, unpackenv=unpackenv, blacklist=blacklist)
