@@ -3671,6 +3671,13 @@ def searchUnpackPDF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			pdffile.close()
 			if not "startxref" in pdfbytes:
 				continue
+
+			## startxref is followed by whitespace and then a number indicating
+			## the byte offset for a possible xreft able.
+			xrefres = re.search('startxref\s+(\d+)\s+', pdfbytes)
+			if xrefres == None:
+				continue
+			
 			tmpdir = dirsetup(tempdir, filename, "pdf", counter)
 			res = unpackPDF(filename, offset, trailer, tmpdir)
 			if res != None:
@@ -3736,6 +3743,8 @@ def unpackPDF(filename, offset, trailer, tempdir=None):
 	else:
 		pdflines = stanout.rstrip().split("\n")
 		for pdfline in pdflines:
+			if not ':' in pdfline:
+				continue
 			(tag, value) = pdfline.split(":", 1)
 			if tag == "File size":
 				size = int(value.strip().split()[0])
