@@ -352,6 +352,29 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
+		## first a simple sanity check. Read bytes 4-8 from the inode, which
+		## represent the total node of the inode. If the total length of the
+		## inode is bigger than the total size of the file it is not a valid
+		## JFFS2 file system, so return.
+		## If offset + size of the JFFS2 inode is blacklisted it is also not
+		## a valid JFFS2 file system
+		jffs2file = open(filename, 'r')
+		jffs2file.seek(offset+4)
+		jffs2buffer = jffs2file.read(4)
+		jffs2file.close()
+
+		if len(jffs2buffer) < 4:
+			continue
+		if not bigendian:
+			jffs2inodesize = struct.unpack('<I', jffs2buffer)[0]
+		else:
+			jffs2inodesize = struct.unpack('>I', jffs2buffer)[0]
+		if (offset + jffs2inodesize) > filesize:
+			continue
+		blacklistoffset = extractor.inblacklist(offset + jffs2inodesize, blacklist)
+		if blacklistoffset != None:
+			continue
+
 		tmpdir = dirsetup(tempdir, filename, "jffs2", counter)
 		res = unpackJffs2(filename, offset, filesize, tmpdir, bigendian, jffs2_tmpdir, blacklist)
 		if res != None:
@@ -364,29 +387,6 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 	return (diroffsets, blacklist, [], hints)
 
 def unpackJffs2(filename, offset, filesize, tempdir=None, bigendian=False, jffs2_tmpdir=None, blacklist=[]):
-	## first a simple sanity check. Read bytes 4-8 from the inode, which
-	## represent the total node of the inode. If the total length of the
-	## inode is bigger than the total size of the file it is not a valid
-	## JFFS2 file system, so return.
-	## If offset + size of the JFFS2 inode is blacklisted it is also not
-	## a valid JFFS2 file system
-	jffs2file = open(filename, 'r')
-	jffs2file.seek(offset+4)
-	jffs2buffer = jffs2file.read(4)
-
-	if len(jffs2buffer) < 4:
-		return
-	if not bigendian:
-		jffs2inodesize = struct.unpack('<I', jffs2buffer)[0]
-	else:
-		jffs2inodesize = struct.unpack('>I', jffs2buffer)[0]
-	jffs2file.close()
-	if (offset + jffs2inodesize) > filesize:
-		return
-	blacklistoffset = extractor.inblacklist(offset + jffs2inodesize, blacklist)
-	if blacklistoffset != None:
-		return
-
 	tmpdir = unpacksetup(tempdir)
 
 	if jffs2_tmpdir != None:
