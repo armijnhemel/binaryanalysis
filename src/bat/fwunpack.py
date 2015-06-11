@@ -3660,6 +3660,17 @@ def searchUnpackPDF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			blacklistoffset = extractor.inblacklist(trailer, blacklist)
 			if blacklistoffset != None:
 				break
+
+			## first do some sanity checks for the trailer. According to the
+			## PDF specification the word "startxref" should.
+			## Read 100 bytes and see if 'startxref' is in those bytes. If not
+			## it cannot be a valid PDF file.
+			pdffile = open(filename)
+			pdffile.seek(trailer-100)
+			pdfbytes = pdffile.read(100)
+			pdffile.close()
+			if not "startxref" in pdfbytes:
+				continue
 			tmpdir = dirsetup(tempdir, filename, "pdf", counter)
 			res = unpackPDF(filename, offset, trailer, tmpdir)
 			if res != None:
