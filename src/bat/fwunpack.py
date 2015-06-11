@@ -1459,6 +1459,13 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
+		cramfsfile = open(filename)
+		cramfsfile.seek(offset)
+		tmpbytes = cramfsfile.read(64)
+		cramfsfile.close()
+		if not "Compressed ROMFS" in tmpbytes:
+			continue
+
 		tmpdir = dirsetup(tempdir, filename, "cramfs", counter)
 		retval = unpackCramfs(filename, offset, tmpdir, bigendian=bigendian, blacklist=blacklist)
 		if retval != None:
