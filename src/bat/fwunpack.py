@@ -2272,21 +2272,45 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 		## according to /usr/share/magic the magic header starts at 0x438
 		if offset < 0x438:
 			continue
-		## check if the offset we find is in a blacklist
+		## check if the offset is in a blacklist
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
-		tmpdir = dirsetup(tempdir, filename, "ext2", counter)
-		## we should actually scan the data starting from offset - 0x438
+
+		## for a quick sanity check only a tiny bit of data is needed
 		datafile.seek(offset - 0x438)
 		ext2checkdata = datafile.read(8192)
-		(ext2checkres, ext2checksize) = checkExt2fs(ext2checkdata, 0, tmpdir)
-		if not ext2checkres:
-			os.rmdir(tmpdir)
+
+		tmpfile = tempfile.mkstemp()
+		os.write(tmpfile[0], ext2checkdata)
+		p = subprocess.Popen(['tune2fs', '-l', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, env=unpackenv)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			os.fdopen(tmpfile[0]).close()
+			os.unlink(tmpfile[1])
 			continue
+		if len(stanerr) == 0:
+			blockcount = 0
+			blocksize = 0
+			## block count and block size are needed to compute the length
+			for line in stanout.split("\n"):
+				if 'Block count' in line:
+					blockcount = int(line.split(":")[1].strip())
+				if 'Block size' in line:
+					blocksize = int(line.split(":")[1].strip())
+			ext2checksize = blockcount * blocksize
+		else:
+			ext2checksize = 0
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+
+		## it doesn't make sense if  the size of the file system is
+		## larger than the actual file size
 		if ext2checksize > filesize:
 			os.rmdir(tmpdir)
 			continue
+
+		tmpdir = dirsetup(tempdir, filename, "ext2", counter)
 		res = unpackExt2fs(filename, offset - 0x438, ext2checksize, tmpdir, unpackenv=unpackenv, blacklist=blacklist)
 		if res != None:
 			(ext2tmpdir, ext2size) = res
@@ -2298,43 +2322,9 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 	datafile.close()
 	return (diroffsets, blacklist, [], hints)
 
-def checkExt2fs(data, offset, tempdir=None):
-	## set path for Debian
-	unpackenv = os.environ.copy()
-	unpackenv['PATH'] = unpackenv['PATH'] + ":/sbin"
-
-	tmpdir = unpacksetup(tempdir)
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	## for a quick sanity check we only need a tiny bit of data
-	if len(data[offset:]) >= 8192:
-		os.write(tmpfile[0], data[offset:offset+8192])
-	else:
-		os.write(tmpfile[0], data[offset:])
-	p = subprocess.Popen(['tune2fs', '-l', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, env=unpackenv)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		os.fdopen(tmpfile[0]).close()
-		os.unlink(tmpfile[1])
-		return (False, 0)
-	if len(stanerr) == 0:
-		blockcount = 0
-		blocksize = 0
-		## we want block count and block size
-		for line in stanout.split("\n"):
-			if 'Block count' in line:
-				blockcount = int(line.split(":")[1].strip())
-			if 'Block size' in line:
-				blocksize = int(line.split(":")[1].strip())
-		ext2size = blockcount * blocksize
-	else:
-		ext2size = 0
-	os.fdopen(tmpfile[0]).close()
-	os.unlink(tmpfile[1])
-	return (True, ext2size)
-
-## Unpack an ext2 file system using e2tools and some custom written code from our own ext2 module
+## Unpack an ext2 file system using e2tools and some custom written code from BAT's own ext2 module
 def unpackExt2fs(filename, offset, ext2length, tempdir=None, unpackenv={}, blacklist=[]):
-	## first unpack things, write things to a file and return
+	## first unpack things, write data to a file and return
 	## the directory if the file is not empty
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
@@ -2347,7 +2337,7 @@ def unpackExt2fs(filename, offset, ext2length, tempdir=None, unpackenv={}, black
 		os.unlink(tmpfile[1])
 		return
 
-	## determine size
+	## determine size, this should be the same as ext2length. TODO: check
 	ext2size = 0
 	p = subprocess.Popen(['tune2fs', '-l', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, env=unpackenv)
 	(stanout, stanerr) = p.communicate()
