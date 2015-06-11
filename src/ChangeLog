@@ -1,3 +1,13 @@
+2015-06-11:
+* fwunpack.py: extra sanity checks for cramfs
+* fwunpack.py: better checking of Java serialized files
+* fwunpack.py: check PDF trailer more thoroughly to see if it is valid
+* fwunpack.py: inline ext2 checks into main ext2 unpacking method to avoid
+possibly creating many directories
+* fwunpack.py: fix for output of pdfinfo
+* fwunpack.py: inline JFFS2 checks into main JFFS2 unpacking method to avoid
+possibly creating many directories
+
 2015-06-10:
 * licenseversion.py: don't query the database for avgscores for every file
 that is processed, but just once for each language. In the case of large

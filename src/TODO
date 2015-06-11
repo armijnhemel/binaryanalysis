@@ -120,3 +120,4 @@ BOTTLENECKS/HIGH PRIORITY:
 53. bruteforcescan.py: pass tags or hints from prerun scan to unpack scans, for example to flag that a ZIP file has already been verified and several checks can be skipped
 54. add source code scanner for several files that are clearly source code files (for example: .java or .py files) and replace with a simple lookup in the database before running the binary scanner
 55. bruteforcescan.py: move certain checks/setup code from runscan() to a setup method as these will not change in between invocations in directory mode
+56. fwunpack.py: deal with dd size limits
