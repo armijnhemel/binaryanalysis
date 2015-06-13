@@ -108,30 +108,38 @@ def filterScans(scans, tags):
 			filteredscans.append(scan)
 	return filteredscans
 
-## compute a SHA256 hash. This is done in chunks to prevent a big file from
-## being read in its entirety at once, slowing down a machine.
+## compute a SHA256, and possibly other hashes as well. This is done in chunks
+## to prevent a big file from being read in its entirety at once, slowing down
+## the machine.
 def gethash(path, filename, hashtype="sha256"):
+	hashresults = {}
 	if hashtype == None:
 		hashtype = 'sha256'
-		h = hashlib.new(hashtype)
 	## CRC32 and TLSH are not yet supported
 	elif hashtype == 'crc32':
 		hashtype = 'sha256'
-		h = hashlib.new(hashtype)
 	elif hashtype == 'tlsh':
 		hashtype = 'sha256'
-		h = hashlib.new(hashtype)
-	else:
-		h = hashlib.new(hashtype)
+
+	hashtypes = set()
+	hashtypes.add(hashtype)
+	hashtypes.add('sha256')
+
+	hashdict = {}
+	for hasht in hashtypes:
+		hashdict[hasht] = hashlib.new(hashtype)
 
 	scanfile = open(os.path.join(path, filename), 'r')
 	scanfile.seek(0)
 	hashdata = scanfile.read(10000000)
 	while hashdata != '':
-		h.update(hashdata)
+		for h in hashtypes:
+			hashdict[h].update(hashdata)
 		hashdata = scanfile.read(10000000)
 	scanfile.close()
-	return h.hexdigest()
+	for h in hashtypes:
+		hashresults[h] = hashdict[h].hexdigest()
+	return hashresults
 
 ## tag files based on extension and a few simple tests and possibly skip
 ## the generic marker search based on the results. This is to prevent
@@ -294,8 +302,10 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 
 		## Store the hash of the file for identification and for possibly
 		## querying the knowledgebase later on.
-		filehash = gethash(path, filename, outputhash)
-		unpackreports[relfiletoscan]['checksum'] = filehash
+		filehashresults = gethash(path, filename, outputhash)
+		unpackreports[relfiletoscan]['checksum'] = filehashresults[outputhash]
+		unpackreports[relfiletoscan]['sha256'] = filehashresults['sha256']
+		filehash = filehashresults[outputhash]
 
 		## scan for markers
 		tagOffsets = tagKnownExtension(filetoscan)
@@ -1339,7 +1349,9 @@ def runscan(scans, scan_binary, scandate):
 	if debug:
 		print >>sys.stderr, "PRERUN UNPACK BEGIN", datetime.datetime.utcnow().isoformat()
 
-	outputhash = scans['batconfig'].get('reporthash', None)
+	outputhash = scans['batconfig'].get('reporthash', 'sha256')
+	if outputhash == 'crc32' or outputhash == 'tlsh':
+		outputhash = 'sha256'
 	lock = Lock()
 	scanmanager = multiprocessing.Manager()
 	scanqueue = multiprocessing.JoinableQueue(maxsize=0)
