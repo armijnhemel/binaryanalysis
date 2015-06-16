@@ -634,6 +634,8 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	avgscores = {}
 	for language in avgstringsdbperlanguagetable:
 		stringscache = scanenv.get(stringsdbperlanguageenv[language])
+		if stringscache == None:
+			continue
 		## open the database containing all the strings that were extracted
 		## from source code.
 		conn = batdb.getConnection(stringscache,scanenv)
