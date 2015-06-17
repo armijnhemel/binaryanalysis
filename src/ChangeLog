@@ -1,3 +1,14 @@
+2015-06-17:
+* fwunpack.py: add JFFS2 header crc sanity checks
+* fwunpack.py: add bzip2 compression block size checks
+* fwunpack.py: add gzip flag checks
+
+2015-06-16:
+* licenseversion.py: ignore undefined caches
+
+2015-06-13:
+* bruteforcescan.py: always compute SHA256 and store it
+
 2015-06-11:
 * fwunpack.py: extra sanity checks for cramfs
 * fwunpack.py: better checking of Java serialized files
