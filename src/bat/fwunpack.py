@@ -375,6 +375,33 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 		if blacklistoffset != None:
 			continue
 
+		## another sanity check, this time for the header_crc
+		## The first 8 bytes of a node are used to compute a CRC32 checksum that
+		## is then compared with a CRC32 checksum stored in bytes 9-12
+		## The checksum varies slightly from the one in the zlib/binascii modules
+		## as explained here:
+		##
+		## http://www.infradead.org/pipermail/linux-mtd/2003-February/006910.html
+		jffs2file = open(filename, 'r')
+		jffs2file.seek(offset)
+		jffs2buffer = jffs2file.read(12)
+		jffs2file.close()
+		if len(jffs2buffer) < 12:
+			continue
+		if not bigendian:
+			jffs2_hdr_crc = struct.unpack('<I', jffs2buffer[-4:])[0]
+		else:
+			jffs2_hdr_crc = struct.unpack('>I', jffs2buffer[-4:])[0]
+
+		## specific implementation for computing checksum grabbed from MIT licensed script found
+		## at:
+		## https://github.com/sviehb/jefferson/blob/master/src/scripts/jefferson
+		## It follows the algorithm explained at:
+		##
+		## http://www.infradead.org/pipermail/linux-mtd/2003-February/006910.html
+		if not jffs2_hdr_crc == (binascii.crc32(jffs2buffer[:-4], -1) ^ -1) & 0xffffffff:
+			continue
+
 		tmpdir = dirsetup(tempdir, filename, "jffs2", counter)
 		res = unpackJffs2(filename, offset, filesize, tmpdir, bigendian, jffs2_tmpdir, blacklist)
 		if res != None:
@@ -2713,6 +2740,7 @@ def searchUnpackAndroidSparse(filename, tempdir=None, blacklist=[], offsets={}, 
 		sparsefile.close()
 		if not struct.unpack('<H', sparsedata)[0] == 1:
 			continue
+
 		tmpdir = dirsetup(tempdir, filename, "android-sparse", counter)
 		res = unpackAndroidSparse(filename, offset, tmpdir)
 		if res != None:
