@@ -2650,6 +2650,17 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
+		## sanity check: block size is byte number 4 in the header
+		bzfile = open(filename, 'rb')
+		bzfile.seek(offset + 3)
+		blockbyte = bzfile.read(1)
+		bzfile.close()
+		try:
+			blockbyte = int(blockbyte)
+		except:
+			continue
+		if blockbyte == 0:
+			continue
 		tmpdir = dirsetup(tempdir, filename, "bzip2", counter)
 		res = unpackBzip2(filename, offset, tmpdir, blacklist)
 		if res != None:
