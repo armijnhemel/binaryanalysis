@@ -40,6 +40,7 @@ def unpacksetup(tempdir):
 		tmpdir = tempdir
 	return tmpdir
 
+## Carve a file from a larger file, or copy a file.
 def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpacktempdir=None, blacklist=[]):
 	if blacklist != []:
 		if length == 0:
@@ -49,6 +50,10 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 				## the first entry in the blacklist following offset,
 				## but relative to offset
 				length=lowest-offset
+
+	## If the while file needs to be scanned, then either copy it, or hardlink it.
+	## Hardlinking is only possible if the file resides on the same file system
+	## and if the file is not modified in a way.
 	if offset == 0 and length == 0:
 		## use copy if we intend to *modify* tmpfile, or we end up
 		## modifying the orginal
@@ -69,8 +74,9 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 	else:
 		filesize = os.stat(filename).st_size
 		if length == 0:
-			## if the offset is small, the blocksize of dd will be small, so it will be slow. In that case using
-			## tail is faster, especially for big files.
+			## The tail end of the file is needed an the first bytes (indicated by 'offset') need
+			## to be ignored, while the rest needs to be copied. If the offset is small, it is
+			## faster to use 'tail' instead of 'dd', especially for big files.
 			if offset < 128:
 				tmptmpfile = open(tmpfile, 'wb')
 				p = subprocess.Popen(['tail', filename, '-c', "%d" % (filesize - offset)], stdout=tmptmpfile, stderr=subprocess.PIPE, close_fds=True)
@@ -81,9 +87,11 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 				(stanout, stanerr) = p.communicate()
 		else:
 			if offset == 0:
+				## bytes need be removed only from the end of the file
 				p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile,), 'bs=%s' % (length,), 'count=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 			else:
+				## bytes need to be removed on both sides of the file, so possibly
 				## use a two way pass
 				tmptmpfile = tempfile.mkstemp(dir=tmpdir)
 				os.fdopen(tmptmpfile[0]).close()
@@ -96,8 +104,10 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 					p = subprocess.Popen(['dd', 'if=%s' % (tmptmpfile[1],), 'of=%s' % (tmpfile,), 'bs=%s' % (length,), 'count=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 					(stanout, stanerr) = p.communicate()
 				else:
+					## first copy bytes from the front of the file up to a certain length
 					p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmptmpfile[1],), 'bs=%s' % (length+offset,), 'count=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 					(stanout, stanerr) = p.communicate()
+					## then copy bytes from the temporary file, but skip 'offset' bytes at the front
 					p = subprocess.Popen(['dd', 'if=%s' % (tmptmpfile[1],), 'of=%s' % (tmpfile,), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 					(stanout, stanerr) = p.communicate()
 				os.unlink(tmptmpfile[1])
