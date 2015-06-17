@@ -2524,6 +2524,21 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
+
+		## some sanity checks for gzip flags:
+		## encrypted files are not supported
+		## flags 6 and 7 (see gzip.h in gzip sources)
+		gzipfile = open(filename)
+		gzipfile.seek(offset+3)
+		gzipbyte = gzipfile.read(1)
+		gzipfile.close()
+		if (ord(gzipbyte) >> 5 & 1) == 1:
+			continue
+		if (ord(gzipbyte) >> 6 & 1) == 1:
+			continue
+		if (ord(gzipbyte) >> 7 & 1) == 1:
+			continue
+
 		tmpdir = dirsetup(tempdir, filename, "gzip", counter)
 		res = unpackGzip(filename, offset, template, tmpdir, blacklist)
 		if res != None:
