@@ -615,8 +615,6 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, s
 			scandebug = True
 			debug = True
 
-		print >>sys.stderr, "AGGREGATE BEGIN", method, datetime.datetime.utcnow().isoformat()
-		sys.stderr.flush()
 		if debug:
 			print >>sys.stderr, "AGGREGATE BEGIN", method, datetime.datetime.utcnow().isoformat()
 			sys.stderr.flush()
