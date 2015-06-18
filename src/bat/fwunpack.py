@@ -3404,7 +3404,7 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		##
 		## The dictionary size can be any 32 bit integer, but again only a handful of values are widely
 		## used. LZMA utils uses 2^n, with 16 <= n <= 25 (default 23). XZ utils uses 2^n or 2^n+2^(n-1).
-		## For ## XZ utils n seems to be be 12 <= n <= 30 (default 23). Setting these requires tweaking
+		## For XZ utils n seems to be be 12 <= n <= 30 (default 23). Setting these requires tweaking
 		## command line parameters which is unlikely to happen very often.
 		##
 		## The following checks are based on some real life data, plus some theoretical values
@@ -3415,6 +3415,21 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			lzmacheckbyte = lzma_file.read(2)
 			if lzmacheckbyte not in ['\x01\x00', '\x02\x00', '\x03\x00', '\x04\x00', '\x06\x00', '\x08\x00', '\x10\x00', '\x20\x00', '\x30\x00', '\x40\x00', '\x60\x00', '\x80\x00', '\x80\x01', '\x0c\x00', '\x18\x00', '\x00\x00', '\x00\x01', '\x00\x02', '\x00\x03', '\x00\x04', '\xc0\x00']:
 				continue
+
+		## sanity checks if the size is set.
+		lzmafile = open(filename, 'rb')
+		lzmafile.seek(offset+5)
+		lzmasizebytes = lzmafile.read(8)
+		lzmafile.close()
+		if lzmasizebytes != '\xff\xff\xff\xff\xff\xff\xff\xff':
+			lzmasize = struct.unpack('<Q', lzmasizebytes)[0]
+			## XZ Utils rejects files with uncompressed size of 256 GiB
+			if lzmasize > 274877906944:
+				continue
+			## if the size is 0, why even bother?
+			if lzmasize == 0:
+				continue
+
 		tmpdir = dirsetup(tempdir, filename, "lzma", counter)
 		res = unpackLZMA(filename, offset, template, tmpdir, lzmalimit, lzma_tmpdir, blacklist)
 		if res != None:
@@ -3449,11 +3464,30 @@ def unpackLZMA(filename, offset, template, tempdir=None, minbytesize=1, lzma_tmp
 	(stanout, stanerr) = p.communicate()
 	os.fdopen(outtmpfile[0]).close()
 	os.unlink(tmpfile[1])
-	if os.stat(outtmpfile[1]).st_size < minbytesize:
-		os.unlink(outtmpfile[1])
-		if tempdir == None:
-			os.rmdir(tmpdir)
-		return None
+
+	## sanity checks if the size is set
+	lzmafile = open(filename, 'rb')
+	lzmafile.seek(offset+5)
+	lzmasizebytes = lzmafile.read(8)
+	lzmafile.close()
+
+	## check if the size of the uncompressed data is recorded
+	## in the binary
+	if lzmasizebytes != '\xff\xff\xff\xff\xff\xff\xff\xff':
+		lzmasize = struct.unpack('<Q', lzmasizebytes)[0]
+		if os.stat(outtmpfile[1]).st_size != lzmasize:
+			os.unlink(outtmpfile[1])
+			if tempdir == None:
+				os.rmdir(tmpdir)
+			return None
+
+	else:
+		if os.stat(outtmpfile[1]).st_size < minbytesize:
+			os.unlink(outtmpfile[1])
+			if tempdir == None:
+				os.rmdir(tmpdir)
+			return None
+
 	if lzma_tmpdir != None:
 		## create the directory and move the LZMA file
 		try:

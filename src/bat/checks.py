@@ -12,7 +12,7 @@ it with your own more robust checks.
 '''
 
 import string, re, os, magic, subprocess, sys, tempfile, copy
-import extractor
+import extractor, batdb
 import xml.dom.minidom
 
 ## generic searcher for certain marker strings
