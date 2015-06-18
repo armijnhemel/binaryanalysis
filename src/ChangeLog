@@ -1,3 +1,12 @@
+2015-06-18:
+* fwunpack.py: avoid extra call to dd by using truncate() in some cases, which
+is a lot faster
+* fwunpack.py: copy file instead of using dd in some cases if the file exceeds
+a certain size limit, to avoid it being truncated by the operating system
+* fwunpack.py: LZMA header checks. This might miss some malformed LZMA files,
+but it is likely that those were missed anyway.
+* fwunpack.py: more bzip2 header checks
+
 2015-06-17:
 * fwunpack.py: add JFFS2 header crc sanity checks
 * fwunpack.py: add bzip2 compression block size checks
