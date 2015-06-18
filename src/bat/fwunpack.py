@@ -2698,6 +2698,28 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 			continue
 		if blockbyte == 0:
 			continue
+
+		## some more sanity checks based on bzip2's decompress.c
+		bzfile = open(filename, 'rb')
+		bzfile.seek(offset + 4)
+		blockbytes = bzfile.read(6)
+		bzfile.close()
+
+		## first check if this is a stream or a regular file
+		if blockbytes[0] != '\x17':
+			## not a stream, so do some more checks
+			if blockbytes[0] != '\x31':
+				continue
+			if blockbytes[1] != '\x41':
+				continue
+			if blockbytes[2] != '\x59':
+				continue
+			if blockbytes[3] != '\x26':
+				continue
+			if blockbytes[4] != '\x53':
+				continue
+			if blockbytes[5] != '\x59':
+				continue
 		tmpdir = dirsetup(tempdir, filename, "bzip2", counter)
 		res = unpackBzip2(filename, offset, tmpdir, blacklist)
 		if res != None:
