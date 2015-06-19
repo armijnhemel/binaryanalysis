@@ -36,34 +36,33 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, debug=False):
 	offsets = {}
 	offset = 0
 	datafile.seek(offset)
-	databuffer = datafile.read(100000)
+	databuffer = datafile.read(2000000)
 	marker_keys = magicscans + optmagicscans
+	bufkeys = []
 	for key in marker_keys:
 		## use a set to have automatic deduplication. Each offset
 		## should be in the list only once.
 		offsets[key] = set()
+		if not fsmagic.fsmagic.has_key(key):
+			continue
+		bufkeys.append((key,fsmagic.fsmagic[key]))
 	while databuffer != '':
-		for key in marker_keys:
-			if not fsmagic.fsmagic.has_key(key):
+		for bkey in bufkeys:
+			(key, bufkey) = bkey
+			if not bufkey in databuffer:
 				continue
-			if not key in databuffer:
-				continue
-			bufkey = fsmagic.fsmagic[key]
 			res = databuffer.find(bufkey)
-			if res == -1:
-				continue
-			else:
-				while res != -1:
-					offsets[key].add(offset + res)
-					res = databuffer.find(bufkey, res+1)
-		## move the offset 99950
-		datafile.seek(offset + 99950)
-		## read 100000 bytes with a 50 bytes overlap with the previous
+			while res != -1:
+				offsets[key].add(offset + res)
+				res = databuffer.find(bufkey, res+1)
+		## move the offset 1999950
+		datafile.seek(offset + 1999950)
+		## read 2000000 bytes with a 50 bytes overlap with the previous
 		## read so we don't miss any pattern. This needs to be updated
 		## as soon as patterns >= 50 are used.
-		databuffer = datafile.read(100000)
+		databuffer = datafile.read(2000000)
 		if len(databuffer) >= 50:
-			offset = offset + 99950
+			offset = offset + 1999950
 		else:
 			offset = offset + len(databuffer)
 	datafile.close()
