@@ -46,6 +46,8 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, debug=False):
 		for key in marker_keys:
 			if not fsmagic.fsmagic.has_key(key):
 				continue
+			if not key in databuffer:
+				continue
 			bufkey = fsmagic.fsmagic[key]
 			res = databuffer.find(bufkey)
 			if res == -1:
