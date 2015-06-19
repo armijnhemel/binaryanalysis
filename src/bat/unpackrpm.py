@@ -9,7 +9,7 @@ This module contains only code specific to RPM unpacking. This is so we don't ge
 failures on systems that don't have the Python RPM bindings installed.
 '''
 
-import sys, os, subprocess, os.path
+import sys, os, subprocess, os.path, struct
 import tempfile, magic, rpm
 import extractor, fwunpack
 
@@ -52,6 +52,12 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	for offset in offsets['rpm']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
+			continue
+		rpmfile = open(filename, 'rb')
+		rpmfile.seek(offset+4)
+		rpmversionbyte = rpmfile.read(1)
+		rpmfile.close()
+		if struct.unpack('<B', rpmversionbyte)[0] > 3:
 			continue
 		tmpdir = fwunpack.dirsetup(tempdir, filename, "rpm", rpmcounter)
 		res = unpackRPM(filename, offset, tmpdir)
