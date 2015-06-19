@@ -1,3 +1,8 @@
+2015-06-19:
+* unpackrpm.py: extra sanity check for RPM header
+* prerun.py: avoid lots of dictionary lookups, read more data for marker
+search
+
 2015-06-18:
 * fwunpack.py: avoid extra call to dd by using truncate() in some cases, which
 is a lot faster
