@@ -2402,31 +2402,34 @@ def unpackExt2fs(filename, offset, ext2length, tempdir=None, unpackenv={}, black
 		os.unlink(tmpfile[1])
 		return
 
-	## determine size, this should be the same as ext2length. TODO: check
-	ext2size = 0
-	p = subprocess.Popen(['tune2fs', '-l', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, env=unpackenv)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode == 0:
-		if len(stanerr) == 0:
-			blockcount = 0
-			blocksize = 0
-			## we want block count and block size
-			for line in stanout.split("\n"):
-				if 'Block count' in line:
-					blockcount = int(line.split(":")[1].strip())
-				if 'Block size' in line:
-					blocksize = int(line.split(":")[1].strip())
-			ext2size = blockcount * blocksize
+	## determine size, if ext2length is set to 0 (only Android sparse files),
+	## else just return ext2length
+	if ext2length == 0:
+		p = subprocess.Popen(['tune2fs', '-l', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, env=unpackenv)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode == 0:
+			if len(stanerr) == 0:
+				blockcount = 0
+				blocksize = 0
+				## get block count and block size
+				for line in stanout.split("\n"):
+					if 'Block count' in line:
+						blockcount = int(line.split(":")[1].strip())
+					if 'Block size' in line:
+						blocksize = int(line.split(":")[1].strip())
+				ext2size = blockcount * blocksize
+			else:
+				## do something here
+				pass
 		else:
 			## do something here
 			pass
 	else:
-		## do something here
-		pass
+		ext2size = ext2length
 	os.unlink(tmpfile[1])
 	return (tmpdir, ext2size)
 
-## tries to unpack stuff using zcat. If it is successful, it will
+## tries to unpack the file using zcat. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
 def unpackGzip(filename, offset, template, tempdir=None, blacklist=[]):
 	## Assumes (for now) that zcat is in the path
