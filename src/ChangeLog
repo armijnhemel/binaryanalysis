@@ -1,3 +1,9 @@
+2015-06-20:
+* fwunpack.py: fix and expand CPIO checks
+* fwunpack.py: extra sanity check for ar format
+* fwunpack.py: don't unpack multi-part gzip files
+* fwunpack.py: fix LZIP unpacking, add sanity check for LZIP version
+
 2015-06-19:
 * unpackrpm.py: extra sanity check for RPM header
 * prerun.py: avoid lots of dictionary lookups, read more data for marker
