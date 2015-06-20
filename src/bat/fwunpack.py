@@ -2557,17 +2557,25 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			continue
 
 		## some sanity checks for gzip flags:
+		## multi-part gzip (continuation) is not supported
 		## encrypted files are not supported
-		## flags 6 and 7 (see gzip.h in gzip sources)
+		## flags 6 and 7 are reserved and should not be set
+		## (see gzip.h in gzip sources and RFC 1952)
 		gzipfile = open(filename)
 		gzipfile.seek(offset+3)
 		gzipbyte = gzipfile.read(1)
 		gzipfile.close()
+		if (ord(gzipbyte) >> 2 & 1) == 1:
+			## continuation
+			continue
 		if (ord(gzipbyte) >> 5 & 1) == 1:
+			## encrypted
 			continue
 		if (ord(gzipbyte) >> 6 & 1) == 1:
+			## reserved
 			continue
 		if (ord(gzipbyte) >> 7 & 1) == 1:
+			## reserved
 			continue
 
 		tmpdir = dirsetup(tempdir, filename, "gzip", counter)
