@@ -1105,12 +1105,21 @@ def searchUnpackLzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		return ([], blacklist, [], hints)
 	if offsets['lzip'] == []:
 		return ([], blacklist, [], hints)
+	if os.stat(filename).st_size < 5:
+		return ([], blacklist, [], hints)
 	diroffsets = []
 	tags = []
 	counter = 1
 	for offset in offsets['lzip']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
+			continue
+		## sanity check, only versions 0 or 1 are supported
+		lzipfile = open(filename, 'rb')
+		lzipfile.seek(offset+4)
+		lzipversion = lzipfile.read(1)
+		lzipfile.close()
+		if struct.unpack('<B', lzipversion)[0] > 1:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "lzip", counter)
 		(res, lzipsize) = unpackLzip(filename, offset, tmpdir)
@@ -1149,7 +1158,7 @@ def unpackLzip(filename, offset, tempdir=None):
 			os.rmdir(tmpdir)
 		return (None, None)
 	## determine the size of the archive we unpacked, so we can skip a lot
-	p = subprocess.Popen(['lzip', '-vvvt', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['lzip', '-vvvvt', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		## something weird happened here: we can unpack, but not test the archive?
