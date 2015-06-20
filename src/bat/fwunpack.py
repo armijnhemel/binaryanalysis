@@ -466,6 +466,13 @@ def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
+		## extra sanity check, the byte following the magic is always '\x0a'
+		arfile = open(filename, 'rb')
+		arfile.seek(offset+7)
+		archeckbyte = arfile.read(1)
+		arfile.close()
+		if archeckbyte != '\x0a':
+			continue
 		tmpdir = dirsetup(tempdir, filename, "ar", counter)
 		res = unpackAr(filename, offset, tmpdir, blacklist)
 		if res != None:
