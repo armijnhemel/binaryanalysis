@@ -140,7 +140,7 @@ def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, scane
 	## look for "Uncompressing Linux..."
 	while databuffer != '':
 		datafile.seek(offset + 99950)
-		if databuffer.find("nUocpmerssni giLun.x..") != -1:
+		if "nUocpmerssni giLun.x.." in databuffer:
 			swapped = True
 			break
 		databuffer = datafile.read(100000)
@@ -154,13 +154,13 @@ def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, scane
 		tmpfile = tempfile.mkstemp(dir=tmpdir)
 		## reset pointer into file
 		datafile.seek(0)
-		databuffer = datafile.read(100000)
+		databuffer = datafile.read(1000000)
 		while databuffer != '':
 			tmparray = array.array('H')
 			tmparray.fromstring(databuffer)
 			tmparray.byteswap()
 			os.write(tmpfile[0], tmparray.tostring())
-			databuffer = datafile.read(100000)
+			databuffer = datafile.read(1000000)
 		blacklist.append((0, os.stat(filename).st_size))
 		datafile.close()
 		os.fdopen(tmpfile[0]).close()
@@ -1347,18 +1347,28 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		datafile = open(filename, 'rb')
 		datafile.seek(offset)
 		cpiomagic = datafile.read(6)
-		## man 5 cpio
+		## man 5 cpio. At the moment only the ASCII cpio archive
+		## formats are supported, not the old obsolete binary format
 		if cpiomagic == '070701' or cpiomagic == '070702':
 			datafile.seek(offset)
 			cpiodata = datafile.read(110)
 			## all characters in cpiodata need to be digits
-			cpiores = re.match('\d{110}', cpiodata)
+			cpiores = re.match('[\w\d]{110}', cpiodata)
+			if cpiores != None:
+				newcpiooffsets.append(offset)
+		elif cpiomagic == '070707':
+			datafile.seek(offset)
+			cpiodata = datafile.read(76)
+			## all characters in cpiodata need to be digits
+			cpiores = re.match('[\w\d]{76}', cpiodata)
 			if cpiores != None:
 				newcpiooffsets.append(offset)
 		else:
 			newcpiooffsets.append(offset)
 		datafile.close()
 
+	if newcpiooffsets == []:
+		return ([], blacklist, [], hints)
 	## TODO: big file fixes
 	datafile = open(filename, 'rb')
 	datafile.seek(0)
@@ -2332,10 +2342,10 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 
 		tmpfile = tempfile.mkstemp()
 		os.write(tmpfile[0], ext2checkdata)
+		os.fdopen(tmpfile[0]).close()
 		p = subprocess.Popen(['tune2fs', '-l', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, env=unpackenv)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
-			os.fdopen(tmpfile[0]).close()
 			os.unlink(tmpfile[1])
 			continue
 		if len(stanerr) == 0:
@@ -2350,10 +2360,9 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 			ext2checksize = blockcount * blocksize
 		else:
 			ext2checksize = 0
-		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 
-		## it doesn't make sense if  the size of the file system is
+		## it doesn't make sense if the size of the file system is
 		## larger than the actual file size
 		if ext2checksize > filesize:
 			os.rmdir(tmpdir)
