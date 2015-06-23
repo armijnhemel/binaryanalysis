@@ -1,3 +1,8 @@
+2015-06-23:
+* fwunpack.py: extra sanity check for LZMA
+* fwunpack.py: unpack some YAFFS2 file systems if they occur in the middle of
+a file. This does not work perfectly yet.
+
 2015-06-20:
 * fwunpack.py: fix and expand CPIO checks
 * fwunpack.py: extra sanity check for ar format
