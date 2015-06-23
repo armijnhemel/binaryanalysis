@@ -739,56 +739,120 @@ def unpackTar(filename, offset, tempdir=None, tar_tmpdir=None):
 ## yaffs2 is used frequently in Android and various mediaplayers based on
 ## Realtek chipsets (RTD1261/1262/1073/etc.)
 ## yaffs2 does not have a magic header, so it is really hard to recognize.
-## This is why, for now, we will only try to unpack at offset 0.
-## For this you will need the unyaffs program from
-## http://code.google.com/p/unyaffs/
+## However, there are a few standard patterns that occur frequently
 def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = []
 	diroffsets = []
+	scanoffsets = []
+	wholefile = True
+	newtags = []
 	if blacklist != []:
-		return (diroffsets, blacklist, [], hints)
+		if 'yaffs2' in offsets:
+			if offsets['yaffs2'] == 0:
+				return (diroffsets, blacklist, [], hints)
+			candidates = {}
+			chunksandspares = [(512,16),(1024,32),(2048,64),(4096,128),(8192,256)]
+			yaffs2file = open(filename, 'rb')
+			for cs in chunksandspares:
+				(chunks, spares) = cs
+				for offset in offsets['yaffs2']:
+					yaffs2file.seek(offset+chunks+12)
+					sparebytes = yaffs2file.read(4)
+					byteCount = struct.unpack('<L', sparebytes)[0]
+					## "new nodes" only for now
+					if byteCount == 0xffff:
+						if cs in candidates:
+							candidates[cs].append(offset)
+						else:
+							candidates[cs] = [offset]
+						wholefile = False
+			yaffs2file.close()
+	if wholefile:
+		scanfile = filename
+		havetmpfile = False
+		tmpdir = dirsetup(tempdir, filename, "yaffs2", 1)
 
-	scanfile = filename
-	havetmpfile = False
-	tmpdir = dirsetup(tempdir, filename, "yaffs2", 1)
-
-	offset = 0
-	if 'u-boot' in offsets:
-		if not offsets['u-boot'] == []:
-			if len(offsets['u-boot']) == 1 and offsets['u-boot'][0] == 0:
-				## delete the first 64 bytes
+		offset = 0
+		if 'u-boot' in offsets:
+			if not offsets['u-boot'] == []:
+				if len(offsets['u-boot']) == 1 and offsets['u-boot'][0] == 0:
+					## delete the first 64 bytes
+					tmpfile = tempfile.mkstemp(dir=tempdir)
+					os.fdopen(tmpfile[0]).close()
+					offset = 64
+					unpackFile(filename, offset, tmpfile[1], tmpdir)
+					scanfile = tmpfile[1]
+					havetmpfile = True
+		res = unpackYaffs(scanfile, tmpdir)
+		if res != None:
+			blacklist.append((0, os.stat(filename).st_size))
+			diroffsets.append((tmpdir, offset, os.stat(filename).st_size))
+			newtags = ['yaffs2', 'filesystem']
+			if havetmpfile:
+				os.unlink(tmpfile[1])
+		else:
+			if havetmpfile:
+				os.unlink(tmpfile[1])
+			os.rmdir(tmpdir)
+		return (diroffsets, blacklist, newtags, hints)
+	else:
+		counter = 1
+		for cs in candidates:
+			## there could be several file systems in a file, so first try to
+			## find the start and end of a file system, then carve it out
+			## from the file and try to unpack.
+			(chunks, spares) = cs
+			inodesize = chunks+spares
+			offsets = candidates[cs]
+			startoffset = offsets[0]
+			prevoffset = None
+			lastoffset = offsets[-1]
+			for offset in offsets:
+				difference = offset - startoffset
+				if difference % inodesize == 0:
+					if offset != lastoffset:
+						prevoffset = offset
+						continue
+				if offset != lastoffset:
+					if prevoffset == None:
+						prevoffset = offset
+						continue
+					fslength = prevoffset - startoffset + inodesize
+				else:
+					fslength = lastoffset - startoffset + inodesize
+				tmpdir = dirsetup(tempdir, filename, "yaffs2", counter)
 				tmpfile = tempfile.mkstemp(dir=tempdir)
 				os.fdopen(tmpfile[0]).close()
-				offset = 64
-				unpackFile(filename, offset, tmpfile[1], tmpdir)
+				unpackFile(filename, startoffset, tmpfile[1], tmpdir, length=fslength)
 				scanfile = tmpfile[1]
-				havetmpfile = True
+				res = unpackYaffs(scanfile, tmpdir)
+				if res != None:
+					blacklist.append((startoffset, startoffset+fslength))
+					diroffsets.append((tmpdir, startoffset, fslength))
+					os.unlink(tmpfile[1])
+					counter += 1
+				else:
+					os.unlink(tmpfile[1])
+					os.rmdir(tmpdir)
+				startoffset = offset
+				prevoffset = offset
+		return (diroffsets, blacklist, [], hints)
+
+def unpackYaffs(scanfile, tempdir=None):
+	tmpdir = unpacksetup(tempdir)
 
 	p = subprocess.Popen(['bat-unyaffs', '-b', scanfile, '-d', tmpdir], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		if havetmpfile:
-			os.unlink(tmpfile[1])
-		os.rmdir(tmpdir)
-		return (diroffsets, blacklist, [], hints)
+		return
+
 	## unfortunately unyaffs also returns 0 when it fails
 	if len(stanerr) != 0:
-		if havetmpfile:
-			os.unlink(tmpfile[1])
-		os.rmdir(tmpdir)
-		return (diroffsets, blacklist, [], hints)
+		return
 	## check if there was actually any data unpacked.
 	if os.listdir(tmpdir) == []:
-		if havetmpfile:
-			os.unlink(tmpfile[1])
-		os.rmdir(tmpdir)
-		return (diroffsets, blacklist, [], hints)
-	blacklist.append((0, os.stat(filename).st_size))
-	diroffsets.append((tmpdir, offset, os.stat(filename).st_size))
-	newtags = ['yaffs2', 'filesystem']
-	if havetmpfile:
-		os.unlink(tmpfile[1])
-	return (diroffsets, blacklist, newtags, hints)
+		return
+	return tmpdir
 
 ## Windows executables can be unpacked in many ways.
 ## We should try various methods:
@@ -3479,6 +3543,8 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		lzmafile.seek(offset+5)
 		lzmasizebytes = lzmafile.read(8)
 		lzmafile.close()
+		if len(lzmasizebytes) != 8:
+			continue
 		if lzmasizebytes != '\xff\xff\xff\xff\xff\xff\xff\xff':
 			lzmasize = struct.unpack('<Q', lzmasizebytes)[0]
 			## XZ Utils rejects files with uncompressed size of 256 GiB
