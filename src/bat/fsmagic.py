@@ -96,6 +96,7 @@ fsmagic = {
             'sqlite3':		'SQLite format 3\x00',
             'u-boot':		'\x27\x05\x19\x56',
             'yaffs2':		'\x03\x00\x00\x00\x01\x00\x00\x00\xff\xff', ## this is not a an official signature, just occuring frequently
+            'plf':		'\x50\x4c\x46\x21',
           }
 
 ## some offsets can be found after a certain number of bytes, but
