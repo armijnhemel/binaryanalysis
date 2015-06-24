@@ -1455,6 +1455,9 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 	data = datafile.read()
 	datafile.close()
 	for offset in newcpiooffsets:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
 		for trailer in offsets['cpiotrailer']:
 			if trailer < offset:
 				continue
