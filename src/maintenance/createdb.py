@@ -1019,7 +1019,6 @@ def computehash((filedir, filename, extension, language, extrahashes)):
 		scanfile.close()
 		for i in extrahashes:
 			if i == 'crc32':
-				crcdata = scanfile.read()
 				filehashes[i] = zlib.crc32(data) & 0xffffffff
 			elif i == 'tlsh':
 				if os.stat(resolved_path).st_size >= 512:
