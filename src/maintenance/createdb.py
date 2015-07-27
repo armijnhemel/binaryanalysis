@@ -2911,7 +2911,7 @@ def main(argv):
 		## The field 'language' denotes what 'language' (family) the file the string is extracted from
 		## is in. Possible values: extensions.values()
 		c.execute('''create table if not exists extracted_string (stringidentifier text, checksum text, language text, linenumber int)''')
-		c.execute('''create index if not exists stringidentifier_index on extracted_string(stringidentifier,language)''')
+		c.execute('''create index if not exists stringidentifier_index_language on extracted_string(stringidentifier,language)''')
 		c.execute('''create index if not exists extracted_hash_index on extracted_string(checksum)''')
 		c.execute('''create index if not exists extracted_language_index on extracted_string(language);''')
 
@@ -3092,6 +3092,8 @@ def main(argv):
 		except Exception, e:
 			# oops, something went wrong
 			print >>sys.stderr, e
+	print "Checking %d packages to see if they have already been scanned" % len(pkgmeta)
+	sys.stdout.flush()
 	res = filter(lambda x: x != None, pool.map(checkalreadyscanned, pkgmeta, 1))
 
 	oldpackage = ""
@@ -3144,4 +3146,4 @@ def main(argv):
 	pool.close()
 
 if __name__ == "__main__":
-    main(sys.argv)
+	main(sys.argv)
