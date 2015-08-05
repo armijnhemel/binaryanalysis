@@ -1077,7 +1077,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	miscfiles = filter(lambda x: x[4] == None, scanfile_result)
 	scanfile_result = filter(lambda x: x[4] != None, scanfile_result)
 
-	ninkaversion = "1.3rc1"
+	ninkaversion = "1.3"
 	brokenninka = True
 	#brokenninka = False
 	insertfiles = []
