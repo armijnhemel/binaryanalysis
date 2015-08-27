@@ -246,9 +246,10 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb, scanenv)):
 def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, scandebug=False, unpacktempdir=None):
 	toplevelelem = None
 	for u in unpackreports:
-		if "toplevel" in unpackreports[u]['tags']:
-			toplevelelem = u
-			break
+		if "tags" in unpackreports[u]:
+			if "toplevel" in unpackreports[u]['tags']:
+				toplevelelem = u
+				break
 
 	## first the data needs to be a bit mangled
 	jsondumps = []
