@@ -327,9 +327,10 @@ def crackPasswordsSetup_sqlite3(scanenv, debug=False):
 def searchLogins(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
 	toplevelelem = None
 	for u in unpackreports.keys():
-		if 'toplevel' in unpackreports[u]['tags']:
-			toplevelelem = u
-			break
+		if 'tags' in unpackreports[u]:
+			if 'toplevel' in unpackreports[u]['tags']:
+				toplevelelem = u
+				break
 	if toplevelelem == None:
 		return
 
