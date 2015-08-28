@@ -297,6 +297,8 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 			jsonreport['tags'] = list(set(copy.deepcopy(unpackreports[unpackreport]['tags'])))
 		if "magic" in unpackreports[unpackreport]:
 			jsonreport['magic'] = copy.deepcopy(unpackreports[unpackreport]['magic'])
+		if "size" in unpackreports[unpackreport]:
+			jsonreport['size'] = copy.deepcopy(unpackreports[unpackreport]['size'])
 		if "checksum" in unpackreports[unpackreport]:
 			jsonreport['checksum'] = filehash
 			jsonreport['checksumtype'] = outputhash
