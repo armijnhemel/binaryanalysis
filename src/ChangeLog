@@ -1,3 +1,10 @@
+2015-07-27:
+* createdb.py: fix index name
+* createdb.py: don't read from a closed file
+
+2015-06-24:
+* fwunpack.py: fix CPIO blacklisting
+
 2015-06-23:
 * fwunpack.py: extra sanity check for LZMA
 * fwunpack.py: unpack some YAFFS2 file systems if they occur in the middle of
