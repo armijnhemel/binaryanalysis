@@ -808,6 +808,10 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 			prevoffset = None
 			lastoffset = offsets[-1]
 			for offset in offsets:
+				blacklistoffset = extractor.inblacklist(offset, blacklist)
+				if blacklistoffset != None:
+					continue
+
 				difference = offset - startoffset
 				if difference % inodesize == 0:
 					if offset != lastoffset:
