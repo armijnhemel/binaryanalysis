@@ -418,7 +418,8 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 			return None
 
 		classname = javares['classname']
-		sourcefile = [javares['sourcefile']]
+		if javares['sourcefile'] != None:
+			sourcefile = [javares['sourcefile']]
 		fields = javares['fields']
 		methods = javares['methods']
 		javalines = javares['strings']
