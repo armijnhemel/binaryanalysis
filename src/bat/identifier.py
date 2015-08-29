@@ -27,6 +27,9 @@ namecacheperlanguage = { 'C':       'BAT_NAMECACHE_C'
                        , 'Java':    'BAT_NAMECACHE_JAVA'
                        }
 
+## some regular expressions for Java, precompiled
+reconststring = re.compile("\s+const-string\s+v\d+")
+
 splitcharacters = map(lambda x: chr(x), range(0,9) + range(14,32) + [127])
 
 ## Main part of the scan
@@ -686,10 +689,26 @@ def extractKernelData(lines, filepath, scanenv, scandebug):
 def extractidentifiersetup(scanenv, debug=False):
 	if not 'DBBACKEND' in scanenv:
 		return (False, None)
+
+	newenv = copy.deepcopy(scanenv)
+
+	if scanenv.has_key('DEX_TMPDIR'):
+		dex_tmpdir = scanenv['DEX_TMPDIR']
+		if os.path.exists(dex_tmpdir):
+			## TODO: make sure this check is only done once through a setup scan
+			try:
+				tmpfile = tempfile.mkstemp(dir=dex_tmpdir)
+				os.fdopen(tmpfile[0]).close()
+				os.unlink(tmpfile[1])
+			except OSError, e:
+				del newenv['DEX_TMPDIR']
+		else:
+			del newenv['DEX_TMPDIR']
+
 	if scanenv['DBBACKEND'] == 'sqlite3':
-		return extractidentifiersetup_sqlite3(scanenv, debug)
+		return extractidentifiersetup_sqlite3(newenv, debug)
 	if scanenv['DBBACKEND'] == 'postgresql':
-		return extractidentifiersetup_postgresql(scanenv, debug)
+		return extractidentifiersetup_postgresql(newenv, debug)
 	return (False, None)
 
 def extractidentifiersetup_postgresql(scanenv, debug=False):
@@ -717,19 +736,6 @@ def extractidentifiersetup_sqlite3(scanenv, debug=False):
 	## * c++filt
 
 	newenv = copy.deepcopy(scanenv)
-
-	if scanenv.has_key('DEX_TMPDIR'):
-		dex_tmpdir = scanenv['DEX_TMPDIR']
-		if os.path.exists(dex_tmpdir):
-			## TODO: make sure this check is only done once through a setup scan
-			try:
-				tmpfile = tempfile.mkstemp(dir=dex_tmpdir)
-				os.fdopen(tmpfile[0]).close()
-				os.unlink(tmpfile[1])
-			except OSError, e:
-				del newenv['DEX_TMPDIR']
-		else:
-			del newenv['DEX_TMPDIR']
 
 	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
 
