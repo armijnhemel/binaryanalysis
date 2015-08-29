@@ -1,6 +1,9 @@
 2015-08-29:
 * remove gcc-java (for jcf-dump) as a dependency
 * generatejson.py: decode weird characters
+* identifier.py: also check DEX_TMPDIR when using PostgreSQL
+* prerun.py: avoid calling xmllint for files that are guaranteed to be not XML
+files
 
 2015-08-28:
 * generatejson.py: include size
