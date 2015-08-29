@@ -1,5 +1,6 @@
 2015-08-29:
 * remove gcc-java (for jcf-dump) as a dependency
+* generatejson.py: decode weird characters
 
 2015-08-28:
 * generatejson.py: include size
