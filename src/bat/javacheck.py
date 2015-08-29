@@ -32,16 +32,20 @@ def parseJava(filename):
 
 	classfile.seek(0)
 
+	## first read the magic bytes. If these are not present it is not a class file
 	javamagic = classfile.read(4)
 	if javamagic != '\xca\xfe\xba\xbe':
-		return False
+		return None
 
+	## The minor and major version of the Java class file format. These are not yet
+	## used for checks
 	classbytes = classfile.read(2)
 	minorversion = struct.unpack('>H', classbytes)
 
 	classbytes = classfile.read(2)
 	majorversion = struct.unpack('>H', classbytes)
 
+	## The amount of entries in the so called "constant pool", +1
 	classbytes = classfile.read(2)
 	constant_pool_count = struct.unpack('>H', classbytes)[0]
 
@@ -51,6 +55,7 @@ def parseJava(filename):
 
 	class_lookup_table = {}
 
+	## parse the constant pool and split data accordingly
 	skip = False
 	for i in range(1, constant_pool_count):
 		if skip:
@@ -98,7 +103,11 @@ def parseJava(filename):
 	accessflags = struct.unpack('>H', classbytes)[0]
 	classbytes = classfile.read(2)
 	thisclass = struct.unpack('>H', classbytes)[0]
-	classname = lookup_table[class_lookup_table[thisclass]]
+	try:
+		classname = lookup_table[class_lookup_table[thisclass]]
+	except:
+		classfile.close()
+		return None
 
 	classbytes = classfile.read(2)
 	superclass = struct.unpack('>H', classbytes)[0]
@@ -118,7 +127,11 @@ def parseJava(filename):
 		## name_index
 		classbytes = classfile.read(2)
 		name_index = struct.unpack('>H', classbytes)[0]
-		fieldname = lookup_table[name_index]
+		try:
+			fieldname = lookup_table[name_index]
+		except:
+			classfile.close()
+			return None
 		if not '$' in fieldname:
 			if fieldname != 'serialVersionUID':
 				fieldnames.append(fieldname)
@@ -145,7 +158,11 @@ def parseJava(filename):
 		## name_index
 		classbytes = classfile.read(2)
 		name_index = struct.unpack('>H', classbytes)[0]
-		method_name = lookup_table[name_index]
+		try:
+			method_name = lookup_table[name_index]
+		except:
+			classfile.close()
+			return None
 		if not method_name.startswith('access$'):
 			if not method_name.startswith('<'):
 				if not '$' in method_name:
@@ -174,10 +191,18 @@ def parseJava(filename):
 		classbytes = classfile.read(attribute_length)
 		if lookup_table[attribute_name_index] == 'SourceFile':
 			sourcefile_index = struct.unpack('>H', classbytes)[0]
-			sourcefile = lookup_table[sourcefile_index]
+			try:
+				sourcefile = lookup_table[sourcefile_index]
+			except:
+				classfile.close()
+				return None
 
+	## final sanity check: the amount of bytes read should
+	## be the same as the file size
 	if not classfile.tell() == os.stat(filename).st_size:
-		return False
+		classfile.close()
+		return None
+
 	classfile.close()
 
 	stringidentifiers = []
