@@ -60,7 +60,21 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb, scanenv)):
 		jsonreport['ranking']['stringresults']['reports'] = []
 		if stringidentifiers != None:
 			if 'unmatched' in stringidentifiers:
-				jsonreport['ranking']['stringresults']['unmatched'] = stringidentifiers['unmatched']
+				newunmatched = []
+				for u in stringidentifiers['unmatched']:
+					decoded = False
+					for i in ['utf-8','ascii','latin-1','euc_jp', 'euc_jis_2004', 'jisx0213', 'iso2022_jp', 'iso2022_jp_1', 'iso2022_jp_2', 'iso2022_jp_2004', 'iso2022_jp_3', 'iso2022_jp_ext', 'iso2022_kr','shift_jis','shift_jis_2004','shift_jisx0213']:
+						try:
+							unmatchedline = u.decode(i)
+							decoded = True
+							break
+						except Exception, e:
+							pass
+					if decoded:
+						newunmatched.append(unmatchedline)
+					else:
+						pass
+				jsonreport['ranking']['stringresults']['unmatched'] = newunmatched
 
 			if 'matchednonassignedlines' in stringidentifiers:
 				jsonreport['ranking']['stringresults']['matchednonassignedlines'] = stringidentifiers['matchednonassignedlines']
