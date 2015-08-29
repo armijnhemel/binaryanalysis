@@ -77,6 +77,15 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, debug=False):
 ## to deal with unresolved entities) to avoid launching another process
 def searchXML(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
+	datafile = open(filename, 'rb')
+	offset = 0
+	datafile.seek(offset)
+	firstchar = datafile.read(1)
+	datafile.close()
+	## xmllint expects a file to start either with whitespace,
+	## or a < character
+	if firstchar not in ['\n', '\r', '\t', ' ', '\v', '<']:
+		return newtags
 	p = subprocess.Popen(['xmllint','--noout', "--nonet", filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode == 0:
