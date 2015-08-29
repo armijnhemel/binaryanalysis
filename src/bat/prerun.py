@@ -25,7 +25,7 @@ spent, plus there might be false positives (mostly LZMA).
 
 import sys, os, subprocess, os.path, shutil, stat, array, struct
 import tempfile, re, magic
-import fsmagic, extractor
+import fsmagic, extractor, javacheck
 
 ## method to search for all the markers in magicscans
 ## Although it is in this method it is actually not a pre-run scan, so perhaps
@@ -949,20 +949,16 @@ def verifyJavaClass(filename, tempdir=None, tags=[], offsets={}, scanenv={}, deb
 		return newtags
 	if not filename.lower().endswith('.class'):
 		return newtags
-	## there could be multiple class files included. jcf-dump (used later) will not
-	## be able to tell them apart. However, there are situations where there are multiple
-	## Java class headers in a file and the file *is* valid. These are files from Java
-	## compilers that need to read or write Java class files.
-	## TODO: check by cutting at each offset > 0 and see if jcf-dump barfs. If jcf-dump barfs
-	## then the offset is part of the class file. If not, then there are multiple class files
-	## in the file.
+	## There could be multiple class files included. There are situations where there are
+	## multiple Java class headers in a file and the file *is* valid. These are files
+	## from Java compilers that need to read or write Java class files.
 	if len(offsets['java']) > 1:
 		tmpfile = tempfile.mkstemp()
 		os.fdopen(tmpfile[0]).close()
 
-		## test for each offset found. If jcf-dump thinks it's a valid class file there
-		## are multiple class files embedded in this file. Else do a final test and tag
-		## as 'java'.
+		## test for each offset found. If the Java class parser thinks it's a valid class
+		## file there are multiple class files embedded in this file and then this file
+		## cannot be tagged as an individual Java class file.
 		origclassfile = open(filename)
 		for i in offsets['java']:
 			tmpclassfile = open(tmpfile[1], 'wb')
@@ -970,17 +966,16 @@ def verifyJavaClass(filename, tempdir=None, tags=[], offsets={}, scanenv={}, deb
 			data = origclassfile.read()
 			tmpclassfile.write(data)
 			tmpclassfile.close()
-			p = subprocess.Popen(['jcf-dump', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-			if p.returncode == 0:
+			javares = javacheck.parseJava(filename)
+			if javares != None:
 				origclassfile.close()
 				os.unlink(tmpfile[1])
 				return newtags
 
 		origclassfile.close()
 		os.unlink(tmpfile[1])
-		p = subprocess.Popen(['jcf-dump', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-		if p.returncode != 0:
+		javares = javacheck.parseJava(filename)
+		if javares == None:
 			return newtags
 		newtags.append('java')
 	else:
@@ -989,9 +984,8 @@ def verifyJavaClass(filename, tempdir=None, tags=[], offsets={}, scanenv={}, deb
 		## class files followed by random garbage, but no partial class file.
 		## The only case that might slip through here is if there is a class file with random
 		## garbage following the class file
-		p = subprocess.Popen(['jcf-dump', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-		if p.returncode != 0:
+		javares = javacheck.parseJava(filename)
+		if javares == None:
 			return newtags
 		## TODO: add more checks
 		newtags.append('java')
