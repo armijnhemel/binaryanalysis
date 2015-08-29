@@ -20,20 +20,12 @@ BAT_NAMECACHE_$LANGUAGE :: location of database containing cached
 import string, re, os, os.path, sys, tempfile, shutil, copy
 import bat.batdb
 import subprocess
-import extractor
+import extractor, javacheck
 
 ## mapping of names for databases per language
 namecacheperlanguage = { 'C':       'BAT_NAMECACHE_C'
                        , 'Java':    'BAT_NAMECACHE_JAVA'
                        }
-
-## some regular expressions for Java, precompiled
-rejavaclass = re.compile("This class: \d+=([\w\.$]+), super")
-rejavaattribute = re.compile("Attribute \"SourceFile\", length:\d+, #\d+=\"([\w\.]+)\"")
-rejavafield = re.compile("Field name:\"([\w$]+)\"")
-rejavamethod= re.compile("Method name:\"([\w$]+)\"")
-rejavastring = re.compile("#\d+: String \d+=\"")
-reconststring = re.compile("\s+const-string\s+v\d+")
 
 splitcharacters = map(lambda x: chr(x), range(0,9) + range(14,32) + [127])
 
@@ -421,63 +413,24 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 		fields = []
 		methods = []
 
-		p = subprocess.Popen(['jcf-dump', '--print-constants', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-		(stanout, stanerr) = p.communicate()
-		if p.returncode != 0:
+		javares = javacheck.parseJava(scanfile)
+		if javares == None:
 			return None
-		javalines = stanout.splitlines()
+
+		classname = javares['classname']
+		sourcefile = [javares['sourcefile']]
+		fields = javares['fields']
+		methods = javares['methods']
+		javalines = javares['strings']
+
 		for i in javalines:
-			## extract the classname
-			## TODO: deal with inner classes properly
-			if i.startswith("This class: "):
-				res = rejavaclass.match(i)
-				if res != None:
-					classname = [res.groups()[0]]
-			## extract the SourceFile attribute, if available
-			if i.startswith("Attribute \"SourceFile\","):
-				res = rejavaattribute.match(i)
-				if res != None:
-					attribute = res.groups()[0]
-					sourcefile = [attribute]
-			## extract fields
-			if i.startswith("Field name:\""):
-				res = rejavafield.match(i)
-				if res != None:
-					fieldname = res.groups()[0]
-					if '$' in fieldname:
-						continue
-					if fieldname != 'serialVersionUID':
-						fields.append(fieldname)
-			## extract methods
-			if i.startswith("Method name:\""):
-				res = rejavamethod.match(i)
-				if res != None:
-					method = res.groups()[0]
-					## ignore synthetic methods that are inserted by the Java compiler
-					if not method.startswith('access$'):
-						methods.append(method)
-			## process each line of stanout, looking for lines that look like this:
-			## #13: String 45="/"
-			if rejavastring.match(i) != None:
-				printstring = i.split("=", 1)[1][1:-1]
-				printstring = printstring.decode('string-escape')
-				## now remove characthers like '\n' and '\r'
-				## first the easy case
-				printstring = printstring.strip('\0\n\r')
-        			if len(printstring) < stringcutoff:
-					continue
-				## then split mid string
-				splitchars = filter(lambda x: x in printstring, splitcharacters)
-				if splitchars == []:
-					lines.append(printstring)
-				#else:
-				#	for cc in splitchars:
-				#		splitlines = printstring.split(cc)
-				#		for sl in splitlines:
-        			#			if len(printstring) < stringcutoff:
-				#				continue
-				#			## TODO: now check for the other splitchars
-				#			lines.append(sl)
+			printstring = i.strip('\0\n\r')
+        		if len(printstring) < stringcutoff:
+				continue
+			## then split mid string
+			splitchars = filter(lambda x: x in printstring, splitcharacters)
+			if splitchars == []:
+				lines.append(printstring)
 		javameta = {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile, 'javatype': javatype, 'strings': lines}
 	elif javatype == 'dalvik':
 		## Using dedexer http://dedexer.sourceforge.net/ extract information from Dalvik
@@ -758,7 +711,6 @@ def extractidentifiersetup_postgresql(scanenv, debug=False):
 def extractidentifiersetup_sqlite3(scanenv, debug=False):
 	## TODO: verify if the following programs are available and work:
 	## * strings
-	## * jcf-dump
 	## * java
 	## * readelf
 	## * c++filt

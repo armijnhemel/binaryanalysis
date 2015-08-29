@@ -27,7 +27,6 @@ METHODREFERENCE = 10
 INTERFACEMETHODREFERENCE = 11
 NAMEANDTYPE = 12
 
-
 def parseJava(filename):
 	classfile = open(filename, 'rb')
 
@@ -99,6 +98,7 @@ def parseJava(filename):
 	accessflags = struct.unpack('>H', classbytes)[0]
 	classbytes = classfile.read(2)
 	thisclass = struct.unpack('>H', classbytes)[0]
+	classname = lookup_table[class_lookup_table[thisclass]]
 
 	classbytes = classfile.read(2)
 	superclass = struct.unpack('>H', classbytes)[0]
@@ -163,6 +163,7 @@ def parseJava(filename):
 			attribute_length = struct.unpack('>I', classbytes)[0]
 			classbytes = classfile.read(attribute_length)
 
+	sourcefile = None
 	classbytes = classfile.read(2)
 	attributes_count = struct.unpack('>H', classbytes)[0]
 	for a in range(0, attributes_count):
@@ -171,9 +172,16 @@ def parseJava(filename):
 		classbytes = classfile.read(4)
 		attribute_length = struct.unpack('>I', classbytes)[0]
 		classbytes = classfile.read(attribute_length)
+		if lookup_table[attribute_name_index] == 'SourceFile':
+			sourcefile_index = struct.unpack('>H', classbytes)[0]
+			sourcefile = lookup_table[sourcefile_index]
 
 	if not classfile.tell() == os.stat(filename).st_size:
 		return False
-
 	classfile.close()
-	return {'methods': methodnames, 'fields': fieldnames}
+
+	stringidentifiers = []
+	for s in string_lookups:
+		stringidentifiers.append(lookup_table[s])
+
+	return {'methods': methodnames, 'fields': fieldnames, 'classname': classname, 'strings': stringidentifiers, 'sourcefile': sourcefile}
