@@ -3527,7 +3527,7 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		## 13 bytes of the LZMA file are the header. It consists of properties (1 byte), dictionary
 		## size (4 bytes), and a field to store the size of the uncompressed data (8 bytes).
 		##
-		## The properties foeld is not fixed, but computed during compression and could be any value
+		## The properties field is not fixed, but computed during compression and could be any value
 		## between 0x00 and 0xe0. In practice only a handful of values are really used, 0x5d being the most
 		## common one, because it is the default :-)
 		##
