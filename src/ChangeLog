@@ -1,3 +1,14 @@
+2015-08-29:
+* remove gcc-java (for jcf-dump) as a dependency
+
+2015-08-28:
+* generatejson.py: include size
+* fwunpack.py: fix yaffs2 blacklisting check
+
+2015-08-27:
+* generatejson.py: sanity check
+* security.py: sanity check
+
 2015-07-27:
 * createdb.py: fix index name
 * createdb.py: don't read from a closed file
