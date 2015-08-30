@@ -2423,6 +2423,12 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 		if blacklistoffset != None:
 			continue
 
+		## only revisions 0 and 1 have ever been made, so ignore the rest
+		datafile.seek(offset - 0x438 + 0x44c)
+		revision = datafile.read(1)
+		if not (revision == '\x01' or revision == '\x00'):
+			continue
+
 		## for a quick sanity check only a tiny bit of data is needed
 		datafile.seek(offset - 0x438)
 		ext2checkdata = datafile.read(8192)
@@ -2511,7 +2517,7 @@ def unpackExt2fs(filename, offset, ext2length, tempdir=None, unpackenv={}, black
 
 ## tries to unpack the file using zcat. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
-def unpackGzip(filename, offset, template, tempdir=None, blacklist=[]):
+def unpackGzip(filename, offset, template, hasnameset, renamename, tempdir=None, blacklist=[]):
 	## Assumes (for now) that zcat is in the path
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
@@ -2580,20 +2586,10 @@ def unpackGzip(filename, offset, template, tempdir=None, blacklist=[]):
 	gzipfile = open(tmpfile[1])
 	gzipfile.seek(2)
 	gzipbyte = gzipfile.read(1)
-	if (ord(gzipbyte) >> 2 & 1) == 1:
-		gzipfile.close()
-	else:
-		gzipfile.seek(3)
-		gzipbyte = gzipfile.read(1)
-		if ord(gzipbyte) >> 3 & 1 == 1:
+	if (ord(gzipbyte) >> 2 & 1) != 1:
+		if hasnameset and renamename != None:
 			rename = True
-			renamename = ''
-			gzipfile.seek(10)
-			gzipbyte = gzipfile.read(1)
-			while gzipbyte != '\0':
-				renamename += gzipbyte
-				gzipbyte = gzipfile.read(1)
-		gzipfile.close()
+	gzipfile.close()
 
 	os.unlink(tmpfile[1])
 
@@ -2645,9 +2641,19 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		gzipfile.seek(offset+3)
 		gzipbyte = gzipfile.read(1)
 		gzipfile.close()
+		hasnameset = False
+		hascrc16 = False
+		hascomment = False
+		if (ord(gzipbyte) >> 1 & 1) == 1:
+			hascrc16 = True
 		if (ord(gzipbyte) >> 2 & 1) == 1:
 			## continuation
+			## TODO: extra fields, deal with this properly
 			continue
+		if (ord(gzipbyte) >> 3 & 1) == 1:
+			hasnameset = True
+		if (ord(gzipbyte) >> 4 & 1) == 1:
+			hascomment = True
 		if (ord(gzipbyte) >> 5 & 1) == 1:
 			## encrypted
 			continue
@@ -2658,8 +2664,44 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			## reserved
 			continue
 
+		gzipfile = open(filename)
+		localoffset = offset+10
+		renamename = None
+		comment = None
+		if hasnameset:
+			renamename = ''
+			gzipfile.seek(localoffset)
+			gzipbyte = gzipfile.read(1)
+			localoffset += 1
+			while gzipbyte != '\0':
+				renamename += gzipbyte
+				gzipbyte = gzipfile.read(1)
+				localoffset += 1
+		if hascomment:
+			comment = ''
+			gzipfile.seek(localoffset)
+			gzipbyte = gzipfile.read(1)
+			localoffset += 1
+			while gzipbyte != '\0':
+				comment += gzipbyte
+				gzipbyte = gzipfile.read(1)
+				localoffset += 1
+		if hascrc16:
+			localoffset += 2
+		gzipfile.seek(localoffset)
+		compresseddataheader = gzipfile.read(1)
+		gzipfile.close()
+
+		## simple check for deflate
+		bfinal = (ord(compresseddataheader) >> 0 & 1)
+		btype1 = (ord(compresseddataheader) >> 1 & 1)
+		btype2 = (ord(compresseddataheader) >> 2 & 1)
+		if btype1 == 1 and btype2 == 1:
+			## according to RFC 1951 this is an error
+			continue
+
 		tmpdir = dirsetup(tempdir, filename, "gzip", counter)
-		res = unpackGzip(filename, offset, template, tmpdir, blacklist)
+		res = unpackGzip(filename, offset, template, hasnameset, renamename, tmpdir, blacklist)
 		if res != None:
 			(gzipres, gzipsize) = res
 			diroffsets.append((gzipres, offset, gzipsize))
