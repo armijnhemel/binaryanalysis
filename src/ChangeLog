@@ -1,3 +1,7 @@
+2015-08-30:
+* fwunpack.py: add extra sanity checks for gzip (deflate header checks)
+* fwunpack.py: add revision check for ext2/3/4 file systems
+
 2015-08-29:
 * remove gcc-java (for jcf-dump) as a dependency
 * generatejson.py: decode weird characters
