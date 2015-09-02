@@ -2561,6 +2561,7 @@ def unpackGzip(filename, offset, template, hasnameset, renamename, gzipsize, tem
 
 	## find the crc32 in the original compressed data
 	datafile = open(filename, 'rb')
+	datafile.seek(offset)
 	data = datafile.read()
 	datafile.close()
 	crcoffset = data.find(struct.pack('<I', crc32))
