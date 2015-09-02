@@ -74,7 +74,7 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 	else:
 		filesize = os.stat(filename).st_size
 		if length == 0:
-			## The tail end of the file is needed an the first bytes (indicated by 'offset') need
+			## The tail end of the file is needed and the first bytes (indicated by 'offset') need
 			## to be ignored, while the rest needs to be copied. If the offset is small, it is
 			## faster to use 'tail' instead of 'dd', especially for big files.
 			if offset < 128:
@@ -1252,6 +1252,15 @@ def searchUnpackLzo(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	for offset in offsets['lzo']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
+			continue
+
+		## do a quick check for the version, which is either
+		## 0, 1 or 2 right now.
+		lzopfile = open(filename, 'rb')
+		lzopfile.seek(offset+9)
+		lzopversionbyte = ord(lzopfile.read(1)) & 0xf0
+		lzopfile.close()
+		if not lzopversionbyte in [0x00, 0x10, 0x20]:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "lzo", counter)
 		(res, lzosize) = unpackLzo(filename, offset, tmpdir)
@@ -2517,13 +2526,13 @@ def unpackExt2fs(filename, offset, ext2length, tempdir=None, unpackenv={}, black
 
 ## tries to unpack the file using zcat. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
-def unpackGzip(filename, offset, template, hasnameset, renamename, tempdir=None, blacklist=[]):
+def unpackGzip(filename, offset, template, hasnameset, renamename, gzipsize, tempdir=None, blacklist=[]):
 	## Assumes (for now) that zcat is in the path
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
+	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist, length=gzipsize)
 
 	outtmpfile = tempfile.mkstemp(dir=tmpdir)
 	p = subprocess.Popen(['zcat', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
@@ -2690,7 +2699,6 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			localoffset += 2
 		gzipfile.seek(localoffset)
 		compresseddataheader = gzipfile.read(1)
-		gzipfile.close()
 
 		## simple check for deflate
 		bfinal = (ord(compresseddataheader) >> 0 & 1)
@@ -2698,10 +2706,28 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		btype2 = (ord(compresseddataheader) >> 2 & 1)
 		if btype1 == 1 and btype2 == 1:
 			## according to RFC 1951 this is an error
+			gzipfile.close()
 			continue
 
+		## try to uncompress raw deflate data, but just one block of
+		## a bit less than 10 meg
+		## http://www.zlib.net/manual.html#Advanced
+		gzipfile.seek(localoffset)
+		deflatedata = gzipfile.read(10000000)
+		deflateobj = zlib.decompressobj(-zlib.MAX_WBITS)
+		gzipsize = 0
+		try:
+			deflateobj.decompress(deflatedata)
+			if deflateobj.unused_data != "":
+				gzipsize = len(deflatedata) - len(deflateobj.unused_data)
+		except:
+			gzipfile.close()
+			continue
+		deflateobj.flush()
+		gzipfile.close()
+
 		tmpdir = dirsetup(tempdir, filename, "gzip", counter)
-		res = unpackGzip(filename, offset, template, hasnameset, renamename, tmpdir, blacklist)
+		res = unpackGzip(filename, offset, template, hasnameset, renamename, gzipsize, tmpdir, blacklist)
 		if res != None:
 			(gzipres, gzipsize) = res
 			diroffsets.append((gzipres, offset, gzipsize))
