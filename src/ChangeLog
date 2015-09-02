@@ -1,3 +1,10 @@
+2015-09-02:
+* fwunpack.py: sanity check for LZO version number
+* fwunpack.py: extra sanity check for gzip by trying to uncompress a block of
+deflate data using zlib
+* fwunpack.py: don't read data unnecessarily in gzip crc data check, but first
+seek to offset
+
 2015-08-30:
 * fwunpack.py: add extra sanity checks for gzip (deflate header checks)
 * fwunpack.py: add revision check for ext2/3/4 file systems
