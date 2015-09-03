@@ -1,3 +1,9 @@
+2015-09-03:
+* fwunpack.py: don't carve gzip compressed data out of a file if the deflate
+test already uncompressed all data. Instead, write it out to a file directly,
+possibly avoiding a lot of I/O.
+* fwunpack.py: clean up SWF unpacking, tag successfully unpacked SWF files.
+
 2015-09-02:
 * fwunpack.py: sanity check for LZO version number
 * fwunpack.py: extra sanity check for gzip by trying to uncompress a block of
