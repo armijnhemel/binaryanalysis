@@ -245,13 +245,16 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, scanenv, debug=F
 	path = unpackreport['path']
 	realpath = unpackreport['realpath']
 	magic = unpackreport['magic']
-	if not "symbolic link" in magic:
-		if unpackreport.has_key('size'):
-			size = unpackreport['size']
+	if magic == None:
+		size = 0
+	else:
+		if not "symbolic link" in magic:
+			if unpackreport.has_key('size'):
+				size = unpackreport['size']
+			else:
+				size = 0
 		else:
 			size = 0
-	else:
-		size = 0
 	overviewstring = overviewstring % (name, path, realpath, size, magic)
 	hreflist = ''
 	if matchesrows != '' or functionmatches != '':
