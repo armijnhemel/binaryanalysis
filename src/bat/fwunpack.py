@@ -490,7 +490,7 @@ def unpackAr(filename, offset, tempdir=None, blacklist=[]):
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
-	## ar only works on complete files, so we can set the size to file length
+	## ar only works on complete files, so the size can be set to length of the file
 	p = subprocess.Popen(['ar', 'x', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
@@ -862,7 +862,7 @@ def unpackYaffs(scanfile, tempdir=None):
 ## Some Windows executables can only be unpacked interactively using Wine :-(
 def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = []
-	## first determine if we are dealing with a MS Windows executable
+	## first determine if this is a MS Windows executable
 	## TODO: replace this with a better check for PE checking and use tags
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
@@ -873,7 +873,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	if not 'PE32 executable for MS Windows' in mstype and not "PE32+ executable for MS Windows" in mstype and not "PE32 executable (GUI) Intel 80386, for MS Windows" in mstype:
 		return ([], blacklist, newtags, hints)
 
-	## apparently we have a MS Windows executable, so continue
+	## apparently it is a MS Windows executable, so continue
 	diroffsets = []
 	counter = 1
 	assembly = extractor.searchAssemblyAttrs(filename)
@@ -1221,7 +1221,7 @@ def unpackLzip(filename, offset, tempdir=None):
 	p = subprocess.Popen(['lzip', '-vvvvt', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		## something weird happened here: we can unpack, but not test the archive?
+		## something weird happened here: unpacking is possible, but the test fails
 		os.unlink(outtmpfile[1])
 		os.unlink(tmpfile[1])
 		if tempdir == None:
@@ -1298,7 +1298,7 @@ def unpackLzo(filename, offset, tempdir=None):
 	os.unlink(tmpfile[1])
 	return (tmpdir, lzopsize)
 
-## To unpack XZ we need to find a header and a footer.
+## To unpack XZ a header and a footer and footer need to be found
 ## The trailer is actually very generic and a lot more common than the header,
 ## so it is likely that we need to search for the trailer a lot more than
 ## for the header.
