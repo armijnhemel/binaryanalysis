@@ -2727,6 +2727,11 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		deflateobj.flush()
 		gzipfile.close()
 
+		if gzipsize != 0:
+			## the size of the *raw* deflate data is gzipsize, so
+			## add the size of the header, and 8 for the crc and the length
+			gzipsize += 8 + (localoffset - offset)
+
 		tmpdir = dirsetup(tempdir, filename, "gzip", counter)
 		res = unpackGzip(filename, offset, template, hasnameset, renamename, gzipsize, tmpdir, blacklist)
 		if res != None:
