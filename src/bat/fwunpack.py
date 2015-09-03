@@ -55,8 +55,9 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 	## Hardlinking is only possible if the file resides on the same file system
 	## and if the file is not modified in a way.
 	if offset == 0 and length == 0:
-		## use copy if we intend to *modify* tmpfile, or we end up
-		## modifying the orginal
+		## use copy if tmpfile is expected to be *modified*. If not
+		## the original could be modified, which would confuse other
+		## scans.
 		## just use mkstemp() to get the name of a temporary file
 		templink = tempfile.mkstemp(dir=tmpdir)
 		os.fdopen(templink[0]).close()
@@ -294,45 +295,36 @@ def unpackJavaSerialized(filename, offset, tempdir=None, blacklist=[]):
 	return (tmpdir, serialized_size)
 
 
-## unpacking SWF files is easy, but for later processing we definitely would
-## need to give some hints to other scanners about what file we have unpacked,
-## so we can search more effectively.
-## We are assuming that the whole file is an SWF file.
+## Unpack SWF files that are zlib compressed. Not all SWF files
+## are compressed but some are. For now it is assumed that the whole
+## file is a complete  SWF file.
 def searchUnpackSwf(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = []
 	if not offsets.has_key('swf'):
 		return ([], blacklist, [], hints)
 	if offsets['swf'] == []:
 		return ([], blacklist, [], hints)
-	## right now we are dealing only with entire files. This might change in
-	## the future.
+
 	if offsets['swf'][0] != 0:
 		return ([], blacklist, [], hints)
+	newtags = []
 	counter = 1
 	diroffsets = []
 	data = open(filename).read()
-	tmpdir = dirsetup(tempdir, filename, "swf", counter)
-	res = unpackSwf(data, tmpdir)
-	if res != None:
-		diroffsets.append((res, 0, os.stat(filename).st_size))
-		blacklist.append((0, os.stat(filename).st_size))
-	else:
-		os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [], hints)
-
-def unpackSwf(data, tempdir=None):
-	## skip first 8 bytes, then decompress with zlib
-	tmpdir = unpacksetup(tempdir)
 	try:
 		unzswf = zlib.decompress(data[8:])
 	except Exception, e:
-		if tempdir == None:
-			os.rmdir(tmpdir)
-		return None
+		return (diroffsets, blacklist, newtags, hints)
+
+	tmpdir = dirsetup(tempdir, filename, "swf", counter)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.write(tmpfile[0], unzswf)
 	os.fdopen(tmpfile[0]).close()
-	return tmpdir
+
+	diroffsets.append((tmpdir, 0, os.stat(filename).st_size))
+	blacklist.append((0, os.stat(filename).st_size))
+	newtags.append('swf')
+	return (diroffsets, blacklist, newtags, hints)
 
 def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = []
@@ -3776,8 +3768,6 @@ def unpackLZMA(filename, offset, template, tempdir=None, minbytesize=1, lzma_tmp
 ## file system by using ubi we will have to use a different measurement to
 ## measure the size of ubi. A good start is the sum of the size of the
 ## volumes that were unpacked.
-## TODO: replace with a different implementation since a unubi that can unpack
-## has been removed from Fedora and was never present in Debian or Ubuntu.
 def searchUnpackUbi(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = []
 	if not offsets.has_key('ubi'):
@@ -3862,12 +3852,12 @@ def unpackUbi(data, offset, tempdir=None):
 
 ## unpacking for ARJ. The file format is described at:
 ## http://www.fileformat.info/format/arj/corion.htm
-## Although there is no trailer we can use the arj program to at least give
-## us some information about the uncompressed size of the archive.
+## Although there is no trailer the arj program can be used to at least give
+## some information about the uncompressed size of the archive.
 ## Please note: these files can also be unpacked with 7z, which could be
-## a little bit faster. Since 7z is "smart" and looks ahead we would lose
-## useful information like the actual offset that is used for reporting and
-## blacklisting.
+## a little bit faster. Since 7z is "smart" and looks ahead useful information
+## like the actual offset that is used for reporting and blacklisting could
+## be lost.
 ## WARNING: this method is very costly. Since ARJ is not used on many Unix
 ## systems it is advised to not enable it when scanning binaries intended for
 ## these systems.
