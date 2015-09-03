@@ -4,8 +4,10 @@
 ## Copyright 2011-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
-import os, os.path, sys, subprocess, copy, cPickle
+import os, os.path, sys, subprocess, copy, cPickle, Queue
 import multiprocessing, re, datetime
+from multiprocessing import Process, Lock
+from multiprocessing.sharedctypes import Value, Array
 import bat.batdb
 if sys.version_info[1] == 7:
 	import collections
