@@ -2625,8 +2625,8 @@ def unpackGzip(filename, offset, template, hasnameset, renamename, tempdir=None,
 					pass
 		pass
 
-	## to calculate the size, subtract the offset
-	return (tmpdir, filesizeoffset + 4 - offset)
+	## return directory and the size of the gzip data (filesizeoffset + 4)
+	return (tmpdir, filesizeoffset + 4)
 
 def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = []
@@ -2773,8 +2773,9 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 				continue
 
 			## the size of the gzip data is the size of the deflate data,
-			## plus 4 bytes for crc32 and 4 bytes for file size.
-			gzipsize = deflatesize + 8
+			## plus 4 bytes for crc32 and 4 bytes for file size, plus
+			## the gzip header.
+			gzipsize = deflatesize + 8 + (localoffset - offset)
 			diroffsets.append((tmpdir, offset, gzipsize))
 			blacklist.append((offset, offset + gzipsize))
 			counter = counter + 1
