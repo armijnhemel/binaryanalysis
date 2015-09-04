@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2009-2013 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2009-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -10,7 +10,7 @@ CLI front end for running the scans in bat/bruteforcescan.py
 See documentation in that file to see how it works.
 '''
 
-import sys, os, os.path, tempfile
+import sys, os, os.path, tempfile, shutil
 from optparse import OptionParser
 import ConfigParser
 import bat.bruteforcescan
@@ -148,6 +148,12 @@ def main(argv):
 			print output
 
 		bat.bruteforcescan.writeDumpfile(unpackreports, scans, outputfile, os.path.realpath(options.cfg), tempdir, scans['batconfig']['outputlite'], scans['batconfig']['debug'])
+
+		if scans['batconfig']['cleanup']:
+			try:
+				shutil.rmtree(tempdir)
+			except Exception, e:
+				pass
 
 if __name__ == "__main__":
         main(sys.argv)
