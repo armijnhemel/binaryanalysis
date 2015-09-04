@@ -10,6 +10,11 @@ This file contains methods to parse a Java class file
 Documentation on how to parse class files can be found here:
 
 http://docs.oracle.com/javase/specs/jvms/se6/html/ClassFile.doc.html
+https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-4.html
+
+Extra documentation:
+
+https://tomcat.apache.org/tomcat-8.0-doc/api/constant-values.html
 '''
 
 import os, sys, struct
@@ -26,6 +31,9 @@ FIELDREFERENCE = 9
 METHODREFERENCE = 10
 INTERFACEMETHODREFERENCE = 11
 NAMEANDTYPE = 12
+METHODHANDLE = 15
+METHODTYPE = 16
+INVOKEDYNAMIC = 18
 
 def parseJava(filename):
 	classfile = open(filename, 'rb')
@@ -98,6 +106,19 @@ def parseJava(filename):
 			stringlength = struct.unpack('>H', classbytes)[0]
 			utf8string = classfile.read(stringlength)
 			lookup_table[i] = utf8string
+		elif constanttag == METHODHANDLE:
+			## reference kind
+			classbytes = classfile.read(1)
+			## reference index
+			classbytes = classfile.read(2)
+		elif constanttag == METHODTYPE:
+			## descriptor index
+			classbytes = classfile.read(2)
+		elif constanttag == INVOKEDYNAMIC:
+			## bootstrap_method_attr_index
+			classbytes = classfile.read(2)
+			## name_and_type_index
+			classbytes = classfile.read(2)
 
 	classbytes = classfile.read(2)
 	accessflags = struct.unpack('>H', classbytes)[0]
