@@ -1,3 +1,17 @@
+2015-09-04:
+* fwunpack.py/bruteforcescan.py: fix around encoding issues in python-magic
+* prerun.py: record more ELF types
+* bat-scan/bruteforcescan.py: introduce 'cleanup' for cleaning scanning
+directories. This is useful when scanning a directory with lots of files that
+all need to be scanned and you don't want the unpacking directory to overflow
+with result directories
+* fwunpack.py: version checks for LRZIP
+* licenseversion.py: first check if there are any files for which there
+actually are identifiers before creating database connections and fetching
+data from the database
+* javacheck.py: also support class file format used in Java SE7 and SE8
+* fwunpack.py: fix GIF length check
+
 2015-09-03:
 * fwunpack.py: don't carve gzip compressed data out of a file if the deflate
 test already uncompressed all data. Instead, write it out to a file directly,
