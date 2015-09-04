@@ -766,7 +766,9 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		elftypebyte = struct.unpack('<H', elfbytes[0x10:0x10+2])[0]
 	else:
 		elftypebyte = struct.unpack('>H', elfbytes[0x10:0x10+2])[0]
-	if elftypebyte == 1:
+	if elftypebyte == 0:
+		elftype = 'elfnone'
+	elif elftypebyte == 1:
 		elftype = 'elfrelocatable'
 	elif elftypebyte == 2:
 		elftype = 'elfexecutable'
