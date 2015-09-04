@@ -756,6 +756,14 @@ def readconfig(config):
 		except:
 			batconf['packconfig'] = False
 		try:
+			packconfig = config.get(section, 'cleanup')
+			if packconfig == 'yes':
+				batconf['cleanup'] = True
+			else:
+				batconf['cleanup'] = False
+		except:
+			batconf['cleanup'] = False
+		try:
 			extrapack = config.get(section, 'extrapack')
 			batconf['extrapack'] = extrapack.split(':')
 		except:
