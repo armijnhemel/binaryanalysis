@@ -866,7 +866,15 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	## TODO: replace this with a better check for PE checking and use tags
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
-	mstype = ms.file(filename)
+	try:
+		mstype = ms.file(filename)
+	except:
+		## first copy the file to a temporary location
+		tmpmagic = tempfile.mkstemp()
+		os.fdopen(tmpmagic[0]).close()
+		shutil.copy(filename, tmpmagic[1])
+		mstype = ms.file(tmpmagic[1])
+		os.unlink(tmpmagic[1])
 	ms.close()
 	newtags = []
 

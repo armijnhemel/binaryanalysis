@@ -255,7 +255,18 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 		unpackreports[relfiletoscan] = {}
 		unpackreports[relfiletoscan]['name'] = filename
 
-		magic = ms.file(filetoscan)
+		## use libmagic to find out the 'magic' of the file for reporting
+		## It cannot properly handle file names with 'exotic' encodings,
+		## so wrap it in a try statement.
+		try:
+			magic = ms.file(filetoscan)
+		except:
+			## first copy the file to a temporary location
+			tmpmagic = tempfile.mkstemp()
+			os.fdopen(tmpmagic[0]).close()
+			shutil.copy(filetoscan, tmpmagic[1])
+			magic = ms.file(tmpmagic[1])
+			os.unlink(tmpmagic[1])
 		unpackreports[relfiletoscan]['magic'] = magic
 
 		## Add both the path to indicate the position inside the file sytem
