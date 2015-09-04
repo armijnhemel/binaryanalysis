@@ -4212,7 +4212,7 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 				os.rmdir(tmpdir)
 			else:
 				## basically this is copy of the original image so why bother?
-				if offset == 0 and trail == lendata - 1:
+				if offset == 0 and trail == lendata - 2:
 					os.unlink(tmpfile[1])
 					os.rmdir(tmpdir)
 					blacklist.append((0, os.stat(filename).st_size))
