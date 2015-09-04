@@ -4134,6 +4134,11 @@ def unpackPDF(filename, offset, trailer, tempdir=None):
 ## 1. search for a GIF header
 ## 2. search for a GIF trailer
 ## 3. check the data with gifinfo
+##
+## gifinfo will not recognize if there is trailing data for
+## a GIF file, so all data needs to be looked at, until a
+## valid GIF file has been carved out (part of the file, or
+## the whole file), or stop if no valid GIF file can be found.
 def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = []
 	gifoffsets = []
@@ -4149,6 +4154,8 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 
 	gifoffsets.sort()
 
+	## TODO: don't read all data in advance. Instead take a more lazy approach
+	## and carve out on demand to reduce memory usage and I/O
 	datafile = open(filename, 'rb')
 	datafile.seek(gifoffsets[0])
 	data = datafile.read()
