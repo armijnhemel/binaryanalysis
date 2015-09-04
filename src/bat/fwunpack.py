@@ -3158,9 +3158,22 @@ def searchUnpackLRZIP(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 	diroffsets = []
 	counter = 1
 	tags = []
+	lrzipmajorversions = [0]
+	lrzipminorversions = [0,1,2,3,4,5,6,7,8]
+
 	for offset in offsets['lrzip']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
+			continue
+		lrzipfile = open(filename, 'rb')
+		lrzipfile.seek(offset+4)
+		lrzipversionbytes = lrzipfile.read(2)
+		lrzipfile.close()
+		lrzipmajorversion = ord(lrzipversionbytes[0])
+		if lrzipmajorversion not in lrzipmajorversions:
+			continue
+		lrzipminorversion = ord(lrzipversionbytes[1])
+		if lrzipminorversion not in lrzipminorversions:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "lrzip", counter)
 		res = unpackLRZIP(filename, offset, tmpdir)
