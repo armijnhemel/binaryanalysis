@@ -591,23 +591,6 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	if not determinelicense and not determineversion and not determinecopyright:
 		return None
 
-	batdb = bat.batdb.BatDb(newenv['DBBACKEND'])
-
-	## Some methods use a database to lookup renamed packages.
-	clonedb = newenv.get('BAT_CLONE_DB')
-	clones = {}
-	if clonedb != None:
-		conn = batdb.getConnection(clonedb,newenv)
-		c = conn.cursor()
-		c.execute("SELECT originalname,newname from renames")
-		clonestmp = c.fetchall()
-		c.close() 
-		conn.close()
-		for cl in clonestmp:
-			(originalname,newname) = cl
-			if not clones.has_key(originalname):
-				clones[originalname] = newname
-
 	## ignore files which don't have ranking results
 	rankingfiles = set()
 	filehashseen = set()
@@ -630,6 +613,26 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue
 		rankingfiles.add(i)
+
+	if len(rankingfiles) == 0:
+		return None
+
+	batdb = bat.batdb.BatDb(newenv['DBBACKEND'])
+
+	## Some methods use a database to lookup renamed packages.
+	clonedb = newenv.get('BAT_CLONE_DB')
+	clones = {}
+	if clonedb != None:
+		conn = batdb.getConnection(clonedb,newenv)
+		c = conn.cursor()
+		c.execute("SELECT originalname,newname from renames")
+		clonestmp = c.fetchall()
+		c.close() 
+		conn.close()
+		for cl in clonestmp:
+			(originalname,newname) = cl
+			if not clones.has_key(originalname):
+				clones[originalname] = newname
 
 	## suck the average string scores database into memory. Even with a few million packages
 	## this will not cost much memory and it prevents many database lookups.
