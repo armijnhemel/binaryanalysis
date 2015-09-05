@@ -4267,14 +4267,17 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	traileroffsets = offsets['pngtrailer']
 	counter = 1
 	datafile = open(filename, 'rb')
+	datafile.seek(headeroffsets[0])
 	data = datafile.read()
 	datafile.close()
+	orig_offset = headeroffsets[0]
+	lendata = os.stat(filename).st_size
 	for i in range (0,len(headeroffsets)):
 		offset = headeroffsets[i]
 		if i < len(headeroffsets) - 1:
 			nextoffset = headeroffsets[i+1]
 		else:
-			nextoffset = len(data)
+			nextoffset = lendata
 		## first check if we're not blacklisted for the offset
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
@@ -4290,7 +4293,7 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 				continue
 			tmpdir = dirsetup(tempdir, filename, "png", counter)
 			tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".png", dir=tmpdir)
-			os.write(tmpfile[0], data[offset:trail+8])
+			os.write(tmpfile[0], data[offset-orig_offset:trail+8-orig_offset])
 			os.fdopen(tmpfile[0]).close()
 			p = subprocess.Popen(['webpng', '-d', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 			(stanout, stanerr) = p.communicate()
@@ -4300,10 +4303,10 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			else:
 				## basically we have a copy of the original
 				## image here, so why bother?
-				if offset == 0 and trail == len(data) - 8:
+				if offset == 0 and trail == lendata - 8:
 					os.unlink(tmpfile[1])
 					os.rmdir(tmpdir)
-					blacklist.append((0,len(data)))
+					blacklist.append((0,lendata))
 					return (diroffsets, blacklist, ['graphics', 'png'], hints)
 				else:
 					blacklist.append((offset,trail+8))
