@@ -24,7 +24,7 @@ spent, plus there might be false positives (mostly LZMA).
 '''
 
 import sys, os, subprocess, os.path, shutil, stat, array, struct
-import tempfile, re, magic
+import tempfile, re, magic, hashlib
 import fsmagic, extractor, javacheck
 
 ## method to search for all the markers in magicscans
@@ -1108,4 +1108,19 @@ def verifyTZ(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fals
 			## timezone files without any extra checks.
 			newtags.append('timezone')
 			newtags.append('resource')
+	return newtags
+
+## simple check for Verisign certificates that you can find in many
+## Windows installations and that could lead to false positives later in
+## the scanning process.
+def verifyCertificate(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+	newtags = []
+	if os.path.basename(filename) == 'CERTIFICATE':
+		if os.stat(filename).st_size == 5688:
+			certfile = open(filename, 'rb')
+			h = hashlib.new('sha256')
+			h.update(certfile.read())
+			certfile.close()
+			if h.hexdigest() == '042f81e050c384566c1d10dd329712013e1265181196d976b6c75eb244b7f334':
+				newtags.append('certificate')
 	return newtags
