@@ -83,6 +83,7 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
         			fdno = os.open(tmprpm[1], os.O_RDONLY)
         			header = tset.hdrFromFdno(fdno)
         			os.close(fdno)
+				os.unlink(tmprpm[1])
 			else:
         			fdno = os.open(filename, os.O_RDONLY)
         			header = tset.hdrFromFdno(fdno)
