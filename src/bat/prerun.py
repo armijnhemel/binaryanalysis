@@ -1110,17 +1110,26 @@ def verifyTZ(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fals
 			newtags.append('resource')
 	return newtags
 
-## simple check for Verisign certificates that you can find in many
-## Windows installations and that could lead to false positives later in
-## the scanning process.
+## simple check for certificates that you can find in Windows software
+## and that could lead to false positives later in the scanning process.
 def verifyCertificate(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
+
+	## a list of known certificates observed in the wild
+	## These certificates are likely some certificates in DER format
+	## but it is hard to find out which flavour so they can be verified
+	## with openssl
+	knowncerts = ['042f81e050c384566c1d10dd329712013e1265181196d976b6c75eb244b7f334',
+		      'b2ae0c8d9885670d40dae35edc286b6617f1836053e42ffb1d83281f8a6354e6',
+		      'dde6c511b2798af5a89fdeeaf176204df3f2c562c79a843d80b68f32a0fbccae',
+		      'fdb72f2b5e7cbc57f196e37a7c96f71529124e1c1a7477c63df8e28dc2910c8b',
+		     ]
+
 	if os.path.basename(filename) == 'CERTIFICATE':
-		if os.stat(filename).st_size == 5688:
-			certfile = open(filename, 'rb')
-			h = hashlib.new('sha256')
-			h.update(certfile.read())
-			certfile.close()
-			if h.hexdigest() == '042f81e050c384566c1d10dd329712013e1265181196d976b6c75eb244b7f334':
-				newtags.append('certificate')
+		certfile = open(filename, 'rb')
+		h = hashlib.new('sha256')
+		h.update(certfile.read())
+		certfile.close()
+		if h.hexdigest() in knowncerts:
+			newtags.append('certificate')
 	return newtags
