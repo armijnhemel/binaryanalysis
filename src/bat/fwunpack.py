@@ -3999,7 +3999,7 @@ def unpackIco(filename, offset, template, tempdir=None):
 ## Windows HtmlHelp
 def searchUnpackCHM(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = []
-	if not filename.endswith('.chm'):
+	if not filename.lower().endswith('.chm'):
 		return ([], blacklist, [], hints)
 	if not "chm" in offsets:
 		return ([], blacklist, [], hints)
@@ -4008,7 +4008,6 @@ def searchUnpackCHM(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	diroffsets = []
 	newtags = []
 	counter = 1
-	filesize = os.stat(filename).st_size
 
 	for offset in offsets['chm']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
