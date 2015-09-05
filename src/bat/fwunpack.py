@@ -4211,16 +4211,20 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		traileroffsets = []
 		trailer = data.find('\x00;')
 		while trailer != -1:
-			## check if the trailer is not blacklisted
+			## check if the trailer is not blacklisted. If so, then
+			## the trailer and any trailer following it can never be
+			## part of this GIF file.
 			blacklistoffset = extractor.inblacklist(trailer, blacklist)
 			if blacklistoffset == None:
 				traileroffsets.append(trailer)
+			else:
+				break
 			trailer = data.find('\x00;',trailer+2)
 
 		for trail in traileroffsets:
 			tmpdir = dirsetup(tempdir, filename, "gif", counter)
-			## TODO: use templates here to make name more predictable which
-			## helps with analysis.
+			## TODO: use templates here to make the name of the file more predictable
+			## which helps with result interpretation
 			tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".gif", dir=tmpdir)
 			os.write(tmpfile[0], data[:trail+2])
 			os.fdopen(tmpfile[0]).close()
