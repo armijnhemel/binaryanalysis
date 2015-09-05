@@ -2467,7 +2467,6 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 		## it doesn't make sense if the size of the file system is
 		## larger than the actual file size
 		if ext2checksize > filesize:
-			os.rmdir(tmpdir)
 			continue
 
 		tmpdir = dirsetup(tempdir, filename, "ext2", counter)
@@ -3995,7 +3994,6 @@ def unpackIco(filename, offset, template, tempdir=None):
 	os.unlink(icofile)
 	return tmpdir
 
-
 ## Windows HtmlHelp
 def searchUnpackCHM(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = []
@@ -4278,7 +4276,7 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			nextoffset = headeroffsets[i+1]
 		else:
 			nextoffset = lendata
-		## first check if we're not blacklisted for the offset
+		## first check if the offset is not blacklisted
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
@@ -4287,10 +4285,12 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 				continue
 			if trail >= nextoffset:
 				break
-			## check if we're not blacklisted for the trailer
+			## then check if the trailer is not blacklisted. If it
+			## is, then the next trailers can never be valid for this
+			## PNG file either.
 			blacklistoffset = extractor.inblacklist(trail, blacklist)
 			if blacklistoffset != None:
-				continue
+				break
 			tmpdir = dirsetup(tempdir, filename, "png", counter)
 			tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".png", dir=tmpdir)
 			os.write(tmpfile[0], data[offset-orig_offset:trail+8-orig_offset])
