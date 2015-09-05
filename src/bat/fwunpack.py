@@ -3995,6 +3995,35 @@ def unpackIco(filename, offset, template, tempdir=None):
 	os.unlink(icofile)
 	return tmpdir
 
+
+## Windows HtmlHelp
+def searchUnpackCHM(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
+	hints = []
+	if not filename.endswith('.chm'):
+		return ([], blacklist, [], hints)
+	if not "chm" in offsets:
+		return ([], blacklist, [], hints)
+	if not 0 in offsets['chm']:
+		return ([], blacklist, [], hints)
+	diroffsets = []
+	newtags = []
+	counter = 1
+	filesize = os.stat(filename).st_size
+
+	for offset in offsets['chm']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			return (diroffsets, blacklist, newtags, hints)
+		tmpdir = dirsetup(tempdir, filename, "chm", counter)
+		tmpres = unpack7z(filename, 0, tmpdir, blacklist)
+		if tmpres != None:
+			(size7z, res) = tmpres
+			diroffsets.append((res, 0, size7z))
+			blacklist.append((0, size7z))
+			newtags.append('chm')
+			return (diroffsets, blacklist, newtags, hints)
+	return (diroffsets, blacklist, newtags, hints)
+
 ###
 ## The scans below are scans that are used to extract files from bigger binary
 ## blobs, but they should not be recursively applied to their own results,
