@@ -1,3 +1,13 @@
+2015-09-05:
+* unpackrpm.py: fix verification of RPM files if the RPM is embedded into
+another file and RPM offset does not start at 0
+* fwunpack.py: unpack Windows help files (.chm)
+* prerun.py: recognize and tag a few known certificate files so they can be
+ignored by other scans
+* fwunpack.py: extract and process GIF files in a slightly lazier way, reading
+less data and (possibly) reducing memory usage
+* fwunpack.py: read less data when extracting PNG files
+
 2015-09-04:
 * fwunpack.py/bruteforcescan.py: fix around encoding issues in python-magic
 * prerun.py: record more ELF types
