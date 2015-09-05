@@ -7,6 +7,8 @@ ignored by other scans
 * fwunpack.py: extract and process GIF files in a slightly lazier way, reading
 less data and (possibly) reducing memory usage
 * fwunpack.py: read less data when extracting PNG files
+* fwunpack.py: fix ext2 unpacking (don't try to remove directory that was
+never made in the first place)
 
 2015-09-04:
 * fwunpack.py/bruteforcescan.py: fix around encoding issues in python-magic
