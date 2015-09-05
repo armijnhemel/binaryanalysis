@@ -7,7 +7,7 @@
 \setlength{\parskip}{4pt}
 
 \author{Armijn Hemel -- Tjaldur Software Governance Solutions}
-\title{Binary Analysis Tool User and Developer Manual - describing version 22}
+\title{Binary Analysis Tool User and Developer Manual - describing version 23}
 
 \begin{document}
 
@@ -60,6 +60,13 @@ the file \texttt{setup.cfg} to get a list of the dependencies that should be
 met on the host system before installing BAT if the host system is Fedora. If
 the host system is Ubuntu or Debian this information will be in
 \texttt{debian/control}.
+
+\subsubsection{Security warning}
+
+Do not install BAT on a machine that is performing any critical functions for
+your organisation. There are certain pieces of code in BAT that have known
+security issues, such as some of the Squashfs unpacking programs in
+\texttt{bat-extratools} that have been lifted from vendor SDKs.
 
 \subsubsection{Installation on Fedora}
 
@@ -518,7 +525,7 @@ description = Unpack JFFS2 file systems
 enabled     = yes
 \end{verbatim}
 
-In BAT 22 the following file systems, compressed files and media files can be
+In BAT 23 the following file systems, compressed files and media files can be
 unpacked or extracted:
 
 \begin{itemize}
@@ -530,7 +537,7 @@ ubifs (not on all systems)
 compressed Flash, CAB, compress, CPIO, EXE (specific compression methods only),
 GZIP, InstallShield (old versions), LRZIP, LZIP, LZMA, LZO, pack200, RAR, RPM,
 RZIP, serialized Java, TAR, UPX, XZ, ZIP
-\item media files: GIF, ICO, PDF, PNG, WOFF
+\item media files: GIF, ICO, PDF, PNG, WOFF, CHM
 \end{itemize}
 
 Most of the unpackers for these file systems, compressed files and media files
@@ -2942,7 +2949,7 @@ Finally there are some scans that unpack text files (\texttt{base64}) or media
 files. The \texttt{lzma} unpack scan also has the lowest priority because of
 possibly many false positives.
 
-The order of the unpack scans as defined in BAT 21 is:
+The order of the unpack scans as defined in BAT 23 is:
 
 \begin{enumerate}
 \item \texttt{byteSwap}
@@ -2955,7 +2962,7 @@ The order of the unpack scans as defined in BAT 21 is:
 \item \texttt{7z}, \texttt{arj}, \texttt{bzip2}, \texttt{cab},
 \texttt{compress}, \texttt{gzip}, \texttt{installshield}, \texttt{lrzip},
 \texttt{lzip}, \texttt{lzo}, \texttt{pack200}, \texttt{rar}, \texttt{rzip},
-\texttt{xz}, \texttt{zip}
+\texttt{xz}, \texttt{zip}, \texttt{chm}
 \item \texttt{base64}, \texttt{gif}, \texttt{ico}, \texttt{png}, \texttt{swf},
 \texttt{lzma}
 \end{enumerate}
