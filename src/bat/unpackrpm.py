@@ -69,9 +69,24 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			## RPM examples.
 			tset = rpm.TransactionSet()
 			tset.setVSFlags(rpm._RPMVSF_NOSIGNATURES)
-        		fdno = os.open(filename, os.O_RDONLY)
-        		header = tset.hdrFromFdno(fdno)
-        		os.close(fdno)
+			## if offset != 0 first write to temporary file and carve out
+			## the RPM
+			if offset != 0:
+				tmprpm = tempfile.mkstemp()
+				rpmfile = open(filename, 'rb')
+				rpmfile.seek(offset)
+				rpmdata = rpmfile.read()
+				rpmfile.close()
+				os.write(tmprpm[0], rpmdata)
+				os.fsync(tmprpm[0])
+				os.close(tmprpm[0])
+        			fdno = os.open(tmprpm[1], os.O_RDONLY)
+        			header = tset.hdrFromFdno(fdno)
+        			os.close(fdno)
+			else:
+        			fdno = os.open(filename, os.O_RDONLY)
+        			header = tset.hdrFromFdno(fdno)
+        			os.close(fdno)
 			## first some sanity checks. payload format should
 			## always be 'cpio' according to LSB 3
 			if header[rpm.RPMTAG_PAYLOADFORMAT] == 'cpio':
