@@ -4182,34 +4182,13 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 
 	gifoffsets.sort()
 
-	## TODO: don't read all data in advance. Instead take a more lazy approach
-	## and carve out on demand to reduce memory usage and I/O
-	datafile = open(filename, 'rb')
-	datafile.seek(gifoffsets[0])
-	data = datafile.read()
-	datafile.close()
-
-	## GIF files have a trailer. Search for them here instead of in the top level identifier
-	## search, since it is very generic character. It would cost too many resources to also
-	## look for these in all cases.
-	traileroffsets = []
-	trailer = data.find('\x00;')
-	while(trailer != -1):
-		## check if the byte before the trailer is the so called "block terminator"
-		## from the GIF specification. If not, then skip.
-		## check if the trailer is not blacklisted
-		blacklistoffset = extractor.inblacklist(trailer, blacklist)
-		if blacklistoffset == None:
-			traileroffsets.append(trailer + gifoffsets[0])
-		trailer = data.find('\x00;',trailer+2)
-
-	if traileroffsets == []:
-		return ([], blacklist, [], hints)
-
 	diroffsets = []
 	counter = 1
 
-	lendata = len(data) + gifoffsets[0]
+	datafile = open(filename, 'rb')
+	datafile.seek(gifoffsets[0])
+
+	lendata = os.stat(filename).st_size
 	for i in range (0,len(gifoffsets)):
 		offset = gifoffsets[i]
 		if i < len(gifoffsets) - 1:
@@ -4220,18 +4199,30 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
-		## only consider the trailers that are bigger than the offset
-		traileroffsets = filter(lambda x: x>=offset, traileroffsets)
-		for trail in traileroffsets:
-			## There is no trailer before the next header, so this can't be correct.
-			## This breaks apart if by any chance one of the identifiers is in the 
-			## file as normal data. Chances for that are very very low.
-			if trail >= nextoffset:
-				break
+
+		## Now read data from the current offset until the next offset
+		## and search for trailer bytes. If these cannot be found, then
+		## move onto the next GIF offset.
+		## GIF files have a trailer which according to the GIF specification
+		## consists of a "block terminator" and a semi-colon. Since the trailer
+		## is very generic it is best to search for it here instead of in the
+		## top level identifier search which would be quite costly.
+		data = datafile.read(nextoffset - offset)
+		traileroffsets = []
+		trailer = data.find('\x00;')
+		while trailer != -1:
 			## check if the trailer is not blacklisted
+			blacklistoffset = extractor.inblacklist(trailer, blacklist)
+			if blacklistoffset == None:
+				traileroffsets.append(trailer)
+			trailer = data.find('\x00;',trailer+2)
+
+		for trail in traileroffsets:
 			tmpdir = dirsetup(tempdir, filename, "gif", counter)
+			## TODO: use templates here to make name more predictable which
+			## helps with analysis.
 			tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".gif", dir=tmpdir)
-			os.write(tmpfile[0], data[offset-gifoffsets[0]:trail+2-gifoffsets[0]])
+			os.write(tmpfile[0], data[:trail+2])
 			os.fdopen(tmpfile[0]).close()
 			p = subprocess.Popen(['gifinfo', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 			(stanout, stanerr) = p.communicate()
@@ -4243,14 +4234,16 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 				if offset == 0 and trail == lendata - 2:
 					os.unlink(tmpfile[1])
 					os.rmdir(tmpdir)
-					blacklist.append((0, os.stat(filename).st_size))
+					blacklist.append((0, lendata))
+					datafile.close()
 					return (diroffsets, blacklist, ['graphics', 'gif'], hints)
 				else:
 					diroffsets.append((tmpdir, offset, 0))
 					counter = counter + 1
-					blacklist.append((offset, trail))
+					blacklist.append((offset, offset+trail+2))
 					## go to the next header
 					break
+	datafile.close()
 	return (diroffsets, blacklist, [], hints)
 
 ## PNG extraction is similar to GIF extraction, except there is a way better
