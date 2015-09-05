@@ -24,7 +24,7 @@ spent, plus there might be false positives (mostly LZMA).
 '''
 
 import sys, os, subprocess, os.path, shutil, stat, array, struct
-import tempfile, re, magic, hashlib
+import tempfile, re, magic, hashlib, HTMLParser
 import fsmagic, extractor, javacheck
 
 ## method to search for all the markers in magicscans
@@ -1115,9 +1115,10 @@ def verifyTZ(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fals
 def verifyCertificate(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 
-	## a list of known certificates observed in the wild
-	## These certificates are likely some certificates in DER format
-	## but it is hard to find out which flavour so they can be verified
+	## a list of known certificates observed in the wild in various
+	## installers for Windows software.
+	## These certificates are likely in DER format but it is
+	## a bit hard to find out which flavour so they can be verified
 	## with openssl
 	knowncerts = ['042f81e050c384566c1d10dd329712013e1265181196d976b6c75eb244b7f334',
 		      'b2ae0c8d9885670d40dae35edc286b6617f1836053e42ffb1d83281f8a6354e6',
@@ -1133,3 +1134,23 @@ def verifyCertificate(filename, tempdir=None, tags=[], offsets={}, scanenv={}, d
 		if h.hexdigest() in knowncerts:
 			newtags.append('certificate')
 	return newtags
+
+'''
+## stubs for very crude check for HTML files
+def verifyHTML(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+	newtags = []
+	extensions = ['htm', 'html']
+	if not os.path.basename(filename).lower().rsplit('.', 1)[-1] in extensions:
+		return newtags
+	htmlfile = open(filename, 'rb')
+	htmldata = htmlfile.read()
+	htmlfile.close()
+	htmlparser = HTMLParser.HTMLParser()
+	try:
+		htmlparser.feed(htmldata)
+	except:
+		htmlparser.close()
+		return newtags
+	htmlparser.close()
+	return newtags
+'''
