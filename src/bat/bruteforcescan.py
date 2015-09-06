@@ -46,6 +46,7 @@ import extractor
 import prerun, fsmagic
 from multiprocessing import Process, Lock
 from multiprocessing.sharedctypes import Value, Array
+import bat.batdb
 
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
@@ -214,7 +215,7 @@ def tagKnownExtension(filename):
 	return (tags, offsets)
 
 ## scan a single file, possibly unpack and recurse
-def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optmagicscans, processid, hashdict, llock, template, unpacktempdir, outputhash):
+def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optmagicscans, processid, hashdict, llock, template, unpacktempdir, outputhash, cursor, sourcecodequery):
 	prerunignore = {}
 	prerunmagic = {}
 	for prerunscan in prerunscans:
@@ -333,13 +334,18 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 			hashdict[filehash] = relfiletoscan
 			llock.release()
 
+		if cursor != None:
+			if cursor.execute(sourcecodequery, (filehash,)).fetchone() != None:
+				tags.append('inbatdb')
+				tags.append('sourcecode')
+
 		## first see if a shortcut can be taken to unpack the file
 		## directly based on its extension.
 		knownfile = False
 		processdiroffsets = []
 		for unpackscan in scans:
 			if 'knownfilemethod' in unpackscan:
-				fileextensions = filename.rsplit('.', 1)
+				fileextensions = filename.lower().rsplit('.', 1)
 				if len(fileextensions) != 2:
 					continue
 				fileextension = fileextensions[1]
@@ -785,6 +791,14 @@ def readconfig(config):
 		except:
 			batconf['packconfig'] = False
 		try:
+			scansourcecode = config.get(section, 'scansourcecode')
+			if scansourcecode == 'yes':
+				batconf['scansourcecode'] = True
+			else:
+				batconf['scansourcecode'] = False
+		except:
+			batconf['scansourcecode'] = False
+		try:
 			packconfig = config.get(section, 'cleanup')
 			if packconfig == 'yes':
 				batconf['cleanup'] = True
@@ -806,6 +820,7 @@ def readconfig(config):
 			dbbackend = config.get(section, 'dbbackend')
 			if dbbackend in ['sqlite3', 'postgresql']:
 				batconf['dbbackend'] = dbbackend
+				batconf['environment']['DBBACKEND'] = dbbackend
 			if dbbackend == 'postgresql':
 				try:
 					postgresql_user = config.get(section, 'postgresql_user')
@@ -832,6 +847,7 @@ def readconfig(config):
 						batconf['environment']['POSTGRESQL_HOST'] = postgresql_host
 					if postgresql_hostaddr != None:
 						batconf['environment']['POSTGRESQL_HOSTADDR'] = postgresql_hostaddr
+					batconf['environment']['DBBACKEND'] = dbbackend
 				except:
 					del batconf['dbbackend']
 		except:
@@ -1339,6 +1355,7 @@ def runscan(scans, scan_binary, scandate):
 	except:
 		unpacktempdir = None
 		topleveldir = tempfile.mkdtemp(dir=unpacktempdir)
+	scanenv = copy.deepcopy(scans['batconfig']['environment'])
 	os.makedirs("%s/data" % (topleveldir,))
 	scantempdir = "%s/data" % (topleveldir,)
 	shutil.copy(scan_binary, scantempdir)
@@ -1423,10 +1440,26 @@ def runscan(scans, scan_binary, scandate):
 	reportqueue = scanmanager.Queue(maxsize=0)
 	leafqueue = scanmanager.Queue(maxsize=0)
 	processpool = []
+
+	scansourcecode = False
+	if scans['batconfig']['scansourcecode']:
+		scansourcecode = True
+
 	hashdict = scanmanager.dict()
 	map(lambda x: scanqueue.put(x), scantasks)
+	batcons = []
 	for i in range(0,processamount):
-		p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], magicscans, optmagicscans, i, hashdict, lock, template, unpacktempdir, outputhash))
+		if 'DBBACKEND' in scanenv:
+			batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
+			c = batdb.getConnection(scanenv['BAT_DB'],scanenv)
+			cursor = c.cursor()
+			batcons.append(c)
+			sourcecodequery = batdb.getQuery("select checksum from processed_file where checksum=%s limit 1")
+		else:
+			cursor = None
+			sourcecodequery = None
+			scansourcecode = False
+		p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], magicscans, optmagicscans, i, hashdict, lock, template, unpacktempdir, outputhash, cursor, sourcecodequery))
 		processpool.append(p)
 		p.start()
 
@@ -1453,6 +1486,10 @@ def runscan(scans, scan_binary, scandate):
 	
 	for p in processpool:
 		p.terminate()
+
+	if scansourcecode:
+		for c in batcons:
+			c.close()
 	if debug:
 		print >>sys.stderr, "PRERUN UNPACK END", datetime.datetime.utcnow().isoformat()
 	if scans['batconfig']['reportendofphase']:
