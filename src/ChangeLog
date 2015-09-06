@@ -1,3 +1,12 @@
+2015-09-06:
+* bruteforcescan.py: add hooks for methods that can unpack files based on
+extension, circumventing most of the 'brute force' scanning approach
+* fwunpack.py: add method to scan gzip files based on extension
+* bruteforcescan.py: if configured lookup the SHA256 of the file in the BAT
+database to see if it is a known source code file. If so, tag it.
+* bat-scan.config: ignore files that have been identified as source code files
+that are in the BAT database.
+
 2015-09-05:
 * unpackrpm.py: fix verification of RPM files if the RPM is embedded into
 another file and RPM offset does not start at 0
