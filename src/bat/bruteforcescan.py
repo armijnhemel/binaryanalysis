@@ -318,38 +318,11 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 		unpackreports[relfiletoscan]['sha256'] = filehashresults['sha256']
 		filehash = filehashresults[outputhash]
 
-		## scan for markers
-		tagOffsets = tagKnownExtension(filetoscan)
-		(newtags, offsets) = tagOffsets
-		tags = tags + newtags
-		if offsets == {}:
-			offsets =  prerun.genericMarkerSearch(filetoscan, magicscans, optmagicscans)
-
-		if "encrypted" in tags:
-			leaftasks.append((filetoscan, magic, tags, blacklist, filehash, filesize))
-			for l in leaftasks:
-				leafqueue.put(l)
-			unpackreports[relfiletoscan]['tags'] = tags
-			for u in unpackreports:
-				reportqueue.put({u: unpackreports[u]})
-			scanqueue.task_done()
-		## we have all offsets with markers here, so sscans that are not needed
-		## can be filtered out.
-		## Also keep track of the "most promising" scans (offset 0) to try
-		## them first.
-		filterscans = set()
-		zerooffsets = set()
-		for magictype in offsets:
-			if offsets[magictype] != []:
-				filterscans.add(magictype)
-				if offsets[magictype][0] - fsmagic.correction.get(magictype, 0) == 0:
-					zerooffsets.add(magictype)
-
 		## acquire the lock for the shared dictionary to see if this file was already
 		## scanned, or is in the process of being scanned.
 		llock.acquire()
 		if hashdict.has_key(filehash):
-			## if the hash is alreay there, return
+			## if the hash is already there, return
 			unpackreports[relfiletoscan]['tags'] = ['duplicate']
 			for u in unpackreports:
 				reportqueue.put({u: unpackreports[u]})
@@ -360,132 +333,188 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 			hashdict[filehash] = relfiletoscan
 			llock.release()
 
-		## prerun scans should be run before any of the other scans
-		for prerunscan in prerunscans:
-			ignore = False
-			if prerunscan.has_key('extensionsignore'):
-				extensionsignore = prerunscan['extensionsignore'].split(':')
-				for e in extensionsignore:
-					if filetoscan.endswith(e):
-						ignore = True
+		## first see if a shortcut can be taken to unpack the file
+		## directly based on its extension.
+		knownfile = False
+		processdiroffsets = []
+		for unpackscan in scans:
+			if 'knownfilemethod' in unpackscan:
+				fileextensions = filename.rsplit('.', 1)
+				if len(fileextensions) != 2:
+					continue
+				fileextension = fileextensions[1]
+				if fileextension in unpackscan['extensions']:
+					module = unpackscan['module']
+					method = unpackscan['knownfilemethod']
+					if debug:
+						print >>sys.stderr, module, method, filetoscan, datetime.datetime.utcnow().isoformat()
+						sys.stderr.flush()
+
+					## make a copy before changing the environment
+					newenv = copy.deepcopy(unpackscan['environment'])
+
+					if template != None:
+						templen = len(re.findall('%s', template))
+						if templen == 2:
+							newenv['TEMPLATE'] = template % (os.path.basename(filetoscan), unpackscan['name'])
+						elif templen == 1:
+							newenv['TEMPLATE'] = template % unpackscan['name']
+						else:
+							newenv['TEMPLATE'] = template
+
+					exec "from %s import %s as bat_%s" % (module, method, method)
+					scanres = eval("bat_%s(filetoscan, tempdir, newenv, debug=debug)" % (method))
+					if scanres != ([], [], [], []):
+						(diroffsets, blacklist, scantags, hints) = scanres
+						tags = list(set(tags + scantags))
+						knownfile = True
+						processdiroffsets.append(diroffsets)
+						unpacked = True
+						unpackreports[relfiletoscan]['scans'] = []
 						break
-			if ignore:
-				continue
-			if prerunignore.has_key(prerunscan['name']):
-				if set(tags).intersection(set(prerunignore[prerunscan['name']])) != set():
+
+		if not knownfile:
+			## scan for markers.
+			tagOffsets = tagKnownExtension(filetoscan)
+			(newtags, offsets) = tagOffsets
+			tags = tags + newtags
+			if offsets == {}:
+				offsets =  prerun.genericMarkerSearch(filetoscan, magicscans, optmagicscans)
+
+		if "encrypted" in tags:
+			leaftasks.append((filetoscan, magic, tags, blacklist, filehash, filesize))
+			for l in leaftasks:
+				leafqueue.put(l)
+			unpackreports[relfiletoscan]['tags'] = tags
+			for u in unpackreports:
+				reportqueue.put({u: unpackreports[u]})
+			scanqueue.task_done()
+
+		if not knownfile:
+			## all offsets are known now, so scans that are not needed can
+			## be filtered out. Also keep track of the "most promising" scans
+			## (offset 0) to try them first.
+			filterscans = set()
+			zerooffsets = set()
+			for magictype in offsets:
+				if offsets[magictype] != []:
+					filterscans.add(magictype)
+					if offsets[magictype][0] - fsmagic.correction.get(magictype, 0) == 0:
+						zerooffsets.add(magictype)
+
+			## prerun scans should be run before any of the other scans
+			for prerunscan in prerunscans:
+				ignore = False
+				if prerunscan.has_key('extensionsignore'):
+					extensionsignore = prerunscan['extensionsignore'].split(':')
+					for e in extensionsignore:
+						if filetoscan.endswith(e):
+							ignore = True
+							break
+				if ignore:
 					continue
-			if prerunmagic.has_key(prerunscan['name']):
-				if set(prerunmagic[prerunscan['name']]).intersection(filterscans) == set():
-					continue
-			module = prerunscan['module']
-			method = prerunscan['method']
-			if debug:
-				print >>sys.stderr, module, method, filetoscan, datetime.datetime.utcnow().isoformat()
-				sys.stderr.flush()
-			exec "from %s import %s as bat_%s" % (module, method, method)
-			scantags = eval("bat_%s(filetoscan, tempdir, tags, offsets, prerunscan['environment'], debug=debug, unpacktempdir=unpacktempdir)" % (method))
-			## append the tag results. These will be used later to be able to specifically filter
-			## out files
-			if scantags != []:
-				tags = tags + scantags
+				if prerunignore.has_key(prerunscan['name']):
+					if set(tags).intersection(set(prerunignore[prerunscan['name']])) != set():
+						continue
+				if prerunmagic.has_key(prerunscan['name']):
+					if set(prerunmagic[prerunscan['name']]).intersection(filterscans) == set():
+						continue
+				module = prerunscan['module']
+				method = prerunscan['method']
+				if debug:
+					print >>sys.stderr, module, method, filetoscan, datetime.datetime.utcnow().isoformat()
+					sys.stderr.flush()
+				exec "from %s import %s as bat_%s" % (module, method, method)
+				scantags = eval("bat_%s(filetoscan, tempdir, tags, offsets, prerunscan['environment'], debug=debug, unpacktempdir=unpacktempdir)" % (method))
+				## append the tag results. These will be used later to be able to specifically filter
+				## out files
+				if scantags != []:
+					tags = tags + scantags
 
-		## Reorder the scans based on information about offsets. If one scan has a
-		## match for offset 0 (after correction of the offset, like for tar, gzip,
-		## iso9660, etc.) make sure it is run first.
-		unpackscans = []
-		scanfirst = []
+			## Reorder the scans based on information about offsets. If one scan has a
+			## match for offset 0 (after correction of the offset, like for tar, gzip,
+			## iso9660, etc.) make sure it is run first.
+			unpackscans = []
+			scanfirst = []
 
-		## Filter scans
-		filteredscans = filterScans(scans, tags)
-		for unpackscan in filteredscans:
-			if unpackscan['magic'] != None:
-				scanmagic = unpackscan['magic'].split(':')
-				if set(scanmagic).intersection(filterscans) != set():
-					if set(scanmagic).intersection(zerooffsets) != set():
-						scanfirst.append(unpackscan)
-					else:
-						unpackscans.append(unpackscan)
-			else:
-				unpackscans.append(unpackscan)
-
-		## sort 'unpackscans' in decreasing priority, so highest
-		## priority scans are run first.
-		## TODO: sort per priority per offset for scans that are the most promising
-		## but only for files that are fairly big, otherwise it has no use at all
-		## since scanning smaller files is very fast.
-		unpackscans = sorted(unpackscans, key=lambda x: x['priority'], reverse=True)
-		'''
-		if unpackscans != [] and filesize > 10000000:
-			## first determine the priorities
-			prios = map(lambda x: x['priority'], unpackscans)
-
-			## sort them in reverse order
-			prios = sorted(prios, reverse=True)
-
-			## sort per priority based on first offset for each scan
-			for p in prios:
-				sortprios = filter(lambda x: x['priority'] == p, unpackscans)
-				## now sort sortprios based on value of the first offset
-		'''
-
-		## prepend the most promising scans at offset 0 (if any)
-		scanfirst = sorted(scanfirst, key=lambda x: x['priority'], reverse=True)
-		unpackscans = scanfirst + unpackscans
-
-		unpackreports[relfiletoscan]['scans'] = []
-
-		unpacked = False
-		for unpackscan in unpackscans:
-			## the whole file has already been scanned by other scans, so
-			## continue with the leaf scans.
-			if extractor.inblacklist(0, blacklist) == filesize:
-				break
-
-			if unpackscan['noscan'] != None:
-				noscans = unpackscan['noscan'].split(':')
-				if list(set(tags).intersection(set(noscans))) != []:
-					continue
-		
-			ignore = False
-			if unpackscan.has_key('extensionsignore'):
-				extensionsignore = unpackscan['extensionsignore'].split(':')
-				for e in extensionsignore:
-					if filetoscan.endswith(e):
-						ignore = True
-						break
-			if ignore:
-				continue
-			module = unpackscan['module']
-			method = unpackscan['method']
-			if debug:
-				print >>sys.stderr, module, method, filetoscan, datetime.datetime.utcnow().isoformat()
-				sys.stderr.flush()
-
-			## make a copy before changing the environment
-			newenv = copy.deepcopy(unpackscan['environment'])
-			newenv['BAT_UNPACKED'] = unpacked
-
-			if template != None:
-				templen = len(re.findall('%s', template))
-				if templen == 2:
-					newenv['TEMPLATE'] = template % (os.path.basename(filetoscan), unpackscan['name'])
-				elif templen == 1:
-					newenv['TEMPLATE'] = template % unpackscan['name']
+			## Filter scans
+			filteredscans = filterScans(scans, tags)
+			for unpackscan in filteredscans:
+				if unpackscan['magic'] != None:
+					scanmagic = unpackscan['magic'].split(':')
+					if set(scanmagic).intersection(filterscans) != set():
+						if set(scanmagic).intersection(zerooffsets) != set():
+							scanfirst.append(unpackscan)
+						else:
+							unpackscans.append(unpackscan)
 				else:
-					newenv['TEMPLATE'] = template
+					unpackscans.append(unpackscan)
 
-			## return value is the temporary dir, plus offset in the parent file
-			## plus a blacklist containing blacklisted ranges for the *original*
-			## file and a hash with offsets for each marker.
-			exec "from %s import %s as bat_%s" % (module, method, method)
-			scanres = eval("bat_%s(filetoscan, tempdir, blacklist, offsets, newenv, debug=debug)" % (method))
-			## result is either empty, or contains offsets, tags and hints
-			if len(scanres) == 4:
-				(diroffsets, blacklist, scantags, hints) = scanres
-				tags = list(set(tags + scantags))
-			if len(diroffsets) == 0:
-				continue
-			#blacklist = mergeBlacklist(blacklist)
+			## sort 'unpackscans' in decreasing priority, so highest
+			## priority scans are run first.
+			unpackscans = sorted(unpackscans, key=lambda x: x['priority'], reverse=True)
+
+			## prepend the most promising scans at offset 0 (if any)
+			scanfirst = sorted(scanfirst, key=lambda x: x['priority'], reverse=True)
+			unpackscans = scanfirst + unpackscans
+
+			unpackreports[relfiletoscan]['scans'] = []
+
+			unpacked = False
+			for unpackscan in unpackscans:
+				## the whole file has already been scanned by other scans, so
+				## continue with the leaf scans.
+				if extractor.inblacklist(0, blacklist) == filesize:
+					break
+
+				if unpackscan['noscan'] != None:
+					noscans = unpackscan['noscan'].split(':')
+					if list(set(tags).intersection(set(noscans))) != []:
+						continue
+		
+				ignore = False
+				if unpackscan.has_key('extensionsignore'):
+					extensionsignore = unpackscan['extensionsignore'].split(':')
+					for e in extensionsignore:
+						if filetoscan.endswith(e):
+							ignore = True
+						break
+				if ignore:
+					continue
+				module = unpackscan['module']
+				method = unpackscan['method']
+				if debug:
+					print >>sys.stderr, module, method, filetoscan, datetime.datetime.utcnow().isoformat()
+					sys.stderr.flush()
+
+				## make a copy before changing the environment
+				newenv = copy.deepcopy(unpackscan['environment'])
+				newenv['BAT_UNPACKED'] = unpacked
+
+				if template != None:
+					templen = len(re.findall('%s', template))
+					if templen == 2:
+						newenv['TEMPLATE'] = template % (os.path.basename(filetoscan), unpackscan['name'])
+					elif templen == 1:
+						newenv['TEMPLATE'] = template % unpackscan['name']
+					else:
+						newenv['TEMPLATE'] = template
+
+				## return value is the temporary dir, plus offset in the parent file
+				## plus a blacklist containing blacklisted ranges for the *original*
+				## file and a hash with offsets for each marker.
+				exec "from %s import %s as bat_%s" % (module, method, method)
+				scanres = eval("bat_%s(filetoscan, tempdir, blacklist, offsets, newenv, debug=debug)" % (method))
+				## result is either empty, or contains offsets, tags and hints
+				if len(scanres) == 4:
+					(diroffsets, blacklist, scantags, hints) = scanres
+					tags = list(set(tags + scantags))
+					processdiroffsets.append(diroffsets)
+					#blacklist = mergeBlacklist(blacklist)
+				if len(diroffsets) == 0:
+					continue
+
+		for diroffsets in processdiroffsets:
 			## each diroffset is a (path, offset) tuple
 			for diroffset in diroffsets:
 				report = {}
@@ -1015,10 +1044,6 @@ def readconfig(config):
 			except:
 				pass
 			try:
-				conf['offsets'] = map(lambda x: int(x), config.get(section, 'offsets').split(':'))
-			except:
-				pass
-			try:
 				conf['knownfilemethod'] = config.get(section, 'knownfilemethod')
 			except:
 				pass
@@ -1090,6 +1115,12 @@ def readconfig(config):
 					s['environment'][e] = copy.deepcopy(batconf['environment'][e])
 		if 'dbbackend' in s:
 			s['environment']['DBBACKEND'] = s['dbbackend']
+		## sanity checks for known file method scans
+		if not 'extensions' in s:
+			try:
+				del s['knownfilemethod']
+			except:
+				pass
 
 	## set and/or amend environment for leaf scans
 	for s in leafscans:
@@ -1325,10 +1356,10 @@ def runscan(scans, scan_binary, scandate):
 	magicscans = list(set(magicscans))
 	optmagicscans = list(set(optmagicscans))
 
-	## Per binary scanned we get a list with results.
-	## Each file system or compressed file we can unpack gives a list with
-	## reports back as its result, so we have a list of lists
-	## within the inner list there is a result tuple, which could contain
+	## Per binary scanned a list with results is returned.
+	## Each file system or compressed file inside the binary returns a list
+	## with reports back as its result, so we have a list of lists.
+	## Within the inner list there is a result tuple, which could contain
 	## more lists in some fields, like libraries, or more result lists if
 	## the file inside a file system we looked at was in fact a file system.
 	leaftasks = []

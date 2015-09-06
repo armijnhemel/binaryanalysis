@@ -2627,6 +2627,41 @@ def unpackGzip(filename, offset, template, hasnameset, renamename, tempdir=None,
 	## return directory and the size of the gzip data (filesizeoffset + 4)
 	return (tmpdir, filesizeoffset + 4)
 
+def searchUnpackKnownGzip(filename, tempdir=None, scanenv={}, debug=False):
+	## first check if the file actually could be a valid gzip file
+	gzipfile = open(filename, 'rb')
+	gzipfile.seek(0)
+	gzipheader = gzipfile.read(3)
+	gzipfile.close()
+	if gzipheader != fsmagic.fsmagic['gzip']:
+		return ([], [], [], [])
+
+	## then try unpacking it.
+	res = searchUnpackGzip(filename, tempdir, [], {'gzip': [0]}, scanenv, debug)
+	(diroffsets, blacklist, newtags, hints) = res
+
+	failed = False
+	## there were results, so check if they were successful
+	if diroffsets != []:
+		if len(diroffsets) != 1:
+			failed = True
+		else:
+			(dirpath, startoffset, endoffset) = diroffsets[0]
+			if startoffset != 0 or endoffset != os.stat(filename).st_size:
+				failed = True
+
+		if failed:
+			for i in diroffsets:
+				(dirpath, startoffset, endoffset) = i
+				try:
+					shutil.rmtree(dirpath)
+				except:
+					pass
+			return ([], [], [], [])
+		else:
+			return (diroffsets, blacklist, newtags, hints)
+	return ([], [], [], [])
+
 def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = []
 	if not offsets.has_key('gzip'):
