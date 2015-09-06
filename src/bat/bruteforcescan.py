@@ -873,8 +873,12 @@ def readconfig(config):
 			if config.get(section, 'enabled') == 'no':
 				continue
 			conf = {}
-			conf['module'] = config.get(section, 'module')
-			conf['method'] = config.get(section, 'method')
+
+			try:
+				conf['module'] = config.get(section, 'module')
+				conf['method'] = config.get(section, 'method')
+			except:
+				continue
 
 			## some scans might, or might not, have these defined
 			try:
@@ -950,7 +954,6 @@ def readconfig(config):
 								conf['environment']['POSTGRESQL_PASSWORD'] = postgresql_password
 								conf['environment']['POSTGRESQL_DB'] = postgresql_db
 							except Exception, e:
-								print 'blebber', e
 								del conf['dbbackend']
 			try:
 				conf['magic'] = config.get(section, 'magic')
@@ -1003,9 +1006,20 @@ def readconfig(config):
 				conf['setup'] = config.get(section, 'setup')
 			except:
 				pass
-
 			try:
 				conf['conflicts'] = config.get(section, 'conflicts').split(':')
+			except:
+				pass
+			try:
+				conf['extensions'] = config.get(section, 'extensions').split(':')
+			except:
+				pass
+			try:
+				conf['offsets'] = map(lambda x: int(x), config.get(section, 'offsets').split(':'))
+			except:
+				pass
+			try:
+				conf['knownfilemethod'] = config.get(section, 'knownfilemethod')
 			except:
 				pass
 
@@ -1030,6 +1044,7 @@ def readconfig(config):
 					conf['storetype'] = None
 					conf['cleanup'] = False
 
+			## finally add the configurations to the right list
 			if config.get(section, 'type') == 'leaf':
 				leafscans.append(conf)
 				if debug:
