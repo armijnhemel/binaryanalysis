@@ -3,8 +3,6 @@
 
 \pagestyle{empty}
 
-\setlength{\parskip}{4pt}
-
 \author{Armijn Hemel -- Tjaldur Software Governance Solutions}
 \title{Binary Analysis Tool User and Developer Manual - describing version 23}
 
@@ -46,7 +44,7 @@ Analysis Tool will vastly benefit from this.
 \subsection{Software requirements}
 
 To run BAT a recent Linux distribution is needed. Development is (currently)
-done on Fedora 20 and 21 and Ubuntu 14.04, so those platforms are likely to
+done on Fedora 21 and 22 and Ubuntu 14.04, so those platforms are likely to
 work best. Ubuntu versions older than 14.04, will not work due to a broken
 version of the PyDot package. Debian versions older than 7 are unsupported.
 
@@ -131,8 +129,10 @@ configuration can be found in the appendix.
 
 A typical invocation looks like this:
 
-\texttt{python bat-scan -c /path/to/configuration -b /path/to/binary -o
-/path/to/outputfile}
+\begin{verbatim}
+python bat-scan -c /path/to/configuration -b /path/to/binary -o
+/path/to/outputfile
+\end{verbatim}
 
 XML output, if enabled in the configuration file, will be written to standard
 output. Any debugging messages or error messages will appear on standard error.
@@ -148,8 +148,10 @@ To scan a directory you will need to supply three parameters to
 
 For example:
 
-\texttt{python bat-scan -c /path/to/configuration -d /path/to/dirwithbinaries
--u /path/to/dirwithoutputfiles}
+\begin{verbatim}
+python bat-scan -c /path/to/configuration -d /path/to/dirwithbinaries
+-u /path/to/dirwithoutputfiles
+\end{verbatim}
 
 The format of output files in ``directory scan'' mode will be the name of the
 original file with the suffix \texttt{.tar.gz}.
@@ -464,16 +466,26 @@ are also used frequently throughout the code for verification and speeding up
 unpacking. If a scan depends on a specific identifier being present it can be
 set using the \texttt{magic} attribute in the configuration. If an identifier
 is not defined anywhere in the configuration file as needed it will be skipped
-during the identifier search to speed up the identifier search.
+during the identifier search to speed up the identifier search. Some scans
+define an additional magic header in \texttt{optmagic}. The values defined in
+\texttt{optmagic} are not authoritive, but should be treated as hints. A good
+example is the YAFFS2 scan.
 
 The marker search cannot be enabled or disabled via the configuration file. The
 markers that are searched for are found in \url{bat/fsmagic.py}.
 
-As an optimization there is one method that is run for ZIP-files (including
-Android APK files and Java JAR) before the generic marker search: large
-firmwares tend to be distributed as ZIP-files. By quickly checking if a file
-is a complete ZIP-file time can be saved. This method might be extended to
-other types in the near future.
+As an optimization the marker search can be skipped for some files if they
+have an extension which gives a possible hint about what kind of file it might
+be. For example, for gzip compressed files files with the extension \texttt{gz}
+a special method (configured in the configuration for the gzip unpacker) is
+first run to see if the file is actually a gzip file, without looking at any
+other markers, or trying other scans first.
+
+As a further optimization there is one method that is run for ZIP-files
+(including Android APK files and Java JAR) before the generic marker search:
+large firmwares tend to be distributed as ZIP-files. By quickly checking if a
+file is a complete ZIP-file time can be saved. This method will be removed in
+the near future and rewritten to a similar method as is used for gzip.
 
 \subsection{Pre-run checks}
 
@@ -1381,7 +1393,11 @@ Building the \texttt{bat} package is fairly straightforward.
 
 This will create an RPM file and an SRPM file. If you need to install BAT on
 other versions of Fedora or on other RPM based distributions you can simply
-rebuild the SRPM using \texttt{rpmbuild --rebuild}.
+rebuild the SRPM using:
+
+\begin{verbatim}
+rpmbuild --rebuild
+\end{verbatim}
 
 \subsubsection{Building \texttt{bat-extratools} and
 \texttt{bat-extratools-java}}
@@ -1395,9 +1411,16 @@ is unfortunately a bit more elaborate.
 \texttt{bat-extratools-java} directories to contain the version name of the
 release (for example \texttt{bat-extratools-14.0}). Make a \texttt{tar.gz}
 archive of the directory:
-\texttt{tar zcf bat-extratools-14.0.tar.gz bat-extratools-14.0}
+
+\begin{verbatim}
+tar zcf bat-extratools-14.0.tar.gz bat-extratools-14.0
+\end{verbatim}
+
 \item run \texttt{rpmbuild} to create binary packages:
-\texttt{rpmbuild -ta bat-extratools-14.0.tar.gz}
+
+\begin{verbatim}
+rpmbuild -ta bat-extratools-14.0.tar.gz
+\end{verbatim}
 \end{enumerate}
 
 \subsection{Building packages for DEB based systems from releases}
