@@ -383,7 +383,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 						(diroffsets, blacklist, scantags, hints) = scanres
 						tags = list(set(tags + scantags))
 						knownfile = True
-						processdiroffsets.append(diroffsets)
+						processdiroffsets.append((unpackscan['name'], diroffsets))
 						unpacked = True
 						unpackreports[relfiletoscan]['scans'] = []
 						break
@@ -530,12 +530,15 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 				if len(scanres) == 4:
 					(diroffsets, blacklist, scantags, hints) = scanres
 					tags = list(set(tags + scantags))
-					processdiroffsets.append(diroffsets)
+					processdiroffsets.append((unpackscan['name'], diroffsets))
 					#blacklist = mergeBlacklist(blacklist)
 				if len(diroffsets) == 0:
 					continue
 
-		for diroffsets in processdiroffsets:
+		print processdiroffsets
+		sys.stdout.flush()
+		for unpacknamediroffsets in processdiroffsets:
+			(unpackscanname, diroffsets) = unpacknamediroffsets
 			## each diroffset is a (path, offset) tuple
 			for diroffset in diroffsets:
 				report = {}
@@ -573,7 +576,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 				except StopIteration:
         				for s in scantasks:
 						scanqueue.put(s)
-				unpackreports[relfiletoscan]['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
+				unpackreports[relfiletoscan]['scans'].append({'scanname': unpackscanname, 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
 
 		unpackreports[relfiletoscan]['tags'] = tags
 		if not unpacked and 'temporary' in tags:
