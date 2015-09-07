@@ -161,7 +161,8 @@ def tagKnownExtension(filename):
 		return (tags, offsets)
 
 	extension = extensions[-1].lower()
-	if extension == 'zip' or extension == 'jar' or extension == 'apk':
+	zipextensions = ['zip', 'jar', 'ear', 'war', 'apk']
+	if extension in zipextensions:
 		datafile = open(filename, 'rb')
 		databuffer = datafile.read(10)
 		datafile.close()
