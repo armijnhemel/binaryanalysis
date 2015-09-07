@@ -276,6 +276,7 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 			nameshtmlfile.write("<html><body>%s</body></html>" % html)
 			nameshtmlfile.close()
 
+	footer = "</body></html>"
 	if variablepvs != {}:
 		squashed_versions = {}
 		if language == 'Java':
@@ -435,7 +436,6 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 							html += "%s<br>\n" % cgi.escape(v)
 						html += "</p>\n"
 
-		footer = "</body></html>"
 		if html != "":
 			nameshtmlfile = gzip.open("%s/%s-names.html.gz" % (reportdir, filehash), 'wb')
 			nameshtmlfile.write(header)
