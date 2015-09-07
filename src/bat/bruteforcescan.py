@@ -85,7 +85,10 @@ def runSetup(setupscan, debug=False):
 		print >>sys.stderr, module, method
 		sys.stderr.flush()
 
-	exec "from %s import %s as bat_%s" % (module, method, method)
+	try:
+		exec "from %s import %s as bat_%s" % (module, method, method)
+	except:
+		return (False, {})
 	scanres = eval("bat_%s(setupscan['environment'], debug=debug)" % (method))
 	return scanres
 
@@ -367,8 +370,11 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 							newenv['TEMPLATE'] = template % unpackscan['name']
 						else:
 							newenv['TEMPLATE'] = template
+					try:
 
-					exec "from %s import %s as bat_%s" % (module, method, method)
+						exec "from %s import %s as bat_%s" % (module, method, method)
+					except:
+						continue
 					scanres = eval("bat_%s(filetoscan, tempdir, newenv, debug=debug)" % (method))
 					if scanres != ([], [], [], []):
 						(diroffsets, blacklist, scantags, hints) = scanres
@@ -430,7 +436,10 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 				if debug:
 					print >>sys.stderr, module, method, filetoscan, datetime.datetime.utcnow().isoformat()
 					sys.stderr.flush()
-				exec "from %s import %s as bat_%s" % (module, method, method)
+				try:
+					exec "from %s import %s as bat_%s" % (module, method, method)
+				except:
+					continue
 				scantags = eval("bat_%s(filetoscan, tempdir, tags, offsets, prerunscan['environment'], debug=debug, unpacktempdir=unpacktempdir)" % (method))
 				## append the tag results. These will be used later to be able to specifically filter
 				## out files
@@ -509,7 +518,10 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 				## return value is the temporary dir, plus offset in the parent file
 				## plus a blacklist containing blacklisted ranges for the *original*
 				## file and a hash with offsets for each marker.
-				exec "from %s import %s as bat_%s" % (module, method, method)
+				try:
+					exec "from %s import %s as bat_%s" % (module, method, method)
+				except:
+					continue
 				scanres = eval("bat_%s(filetoscan, tempdir, blacklist, offsets, newenv, debug=debug)" % (method))
 				## result is either empty, or contains offsets, tags and hints
 				if len(scanres) == 4:
@@ -603,7 +615,10 @@ def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, 
 			sys.stderr.flush()
 			scandebug = True
 
-		exec "from %s import %s as bat_%s" % (module, method, method)
+		try:
+			exec "from %s import %s as bat_%s" % (module, method, method)
+		except:
+			continue
 		res = eval("bat_%s(filetoscan, tags, blacklist, leafscan['environment'], scandebug=scandebug, unpacktempdir=unpacktempdir)" % (method))
 		if res != None:
 			(nt, leafres) = res
@@ -666,7 +681,10 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, s
 			sys.stderr.flush()
 			scandebug = True
 
-		exec "from %s import %s as bat_%s" % (module, method, method)
+		try:
+			exec "from %s import %s as bat_%s" % (module, method, method)
+		except:
+			continue
 
 		res = eval("bat_%s(unpackreports, scantempdir, topleveldir, processors, aggregatescan['environment'], scandebug=scandebug, unpacktempdir=unpacktempdir)" % (method))
 		if res != None:
@@ -702,7 +720,10 @@ def postrunscan((filetoscan, unpackreports, scans, scantempdir, topleveldir, deb
 		if debug:
 			print >>sys.stderr, module, method, filetoscan, datetime.datetime.utcnow().isoformat()
 			sys.stderr.flush()
-		exec "from %s import %s as bat_%s" % (module, method, method)
+		try:
+			exec "from %s import %s as bat_%s" % (module, method, method)
+		except:
+			continue
 
 		res = eval("bat_%s(filetoscan, unpackreports, scantempdir, topleveldir, postrunscan['environment'], debug=debug)" % (method))
 		## TODO: find out what to do with this
