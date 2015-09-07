@@ -1,3 +1,7 @@
+2015-09-07:
+* bruteforcescan.py: several bug fixes and sanity checks related to database
+connectivity
+
 2015-09-06:
 * bruteforcescan.py: add hooks for methods that can unpack files based on
 extension, circumventing most of the 'brute force' scanning approach
