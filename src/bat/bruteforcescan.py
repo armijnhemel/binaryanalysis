@@ -339,7 +339,9 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 			llock.release()
 
 		if cursor != None:
-			if cursor.execute(sourcecodequery, (filehash,)).fetchone() != None:
+			cursor.execute(sourcecodequery, (filehash,))
+			fetchres = cursor.fetchone()
+			if fetchres != None:
 				tags.append('inbatdb')
 				tags.append('sourcecode')
 
