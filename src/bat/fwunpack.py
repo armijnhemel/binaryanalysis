@@ -2814,8 +2814,14 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			blacklist.append((offset, offset + gzipsize))
 			counter = counter + 1
 			if offset == 0 and (gzipsize == os.stat(filename).st_size):
+				## if the gzip file is the entire file, then tag it
+				## as a compressed file and as gzip. Also check if the
+				## file might be a tar file and pass that as a hint
+				## to downstream unpackers.
 				newtags.append('compressed')
 				newtags.append('gzip')
+				if filename.endswith('tar.gz'):
+					pass
 		else:
 			tmpdir = dirsetup(tempdir, filename, "gzip", counter)
 			res = unpackGzip(filename, offset, template, hasnameset, renamename, tmpdir, blacklist)
@@ -2825,8 +2831,14 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 				blacklist.append((offset, offset + gzipsize))
 				counter = counter + 1
 				if offset == 0 and (gzipsize == os.stat(filename).st_size):
+					## if the gzip file is the entire file, then tag it
+					## as a compressed file and as gzip. Also check if the
+					## file might be a tar file and pass that as a hint
+					## to downstream unpackers.
 					newtags.append('compressed')
 					newtags.append('gzip')
+					if filename.endswith('tar.gz'):
+						pass
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
