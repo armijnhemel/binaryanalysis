@@ -535,8 +535,6 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 				if len(diroffsets) == 0:
 					continue
 
-		print processdiroffsets
-		sys.stdout.flush()
 		for unpacknamediroffsets in processdiroffsets:
 			(unpackscanname, diroffsets) = unpacknamediroffsets
 			## each diroffset is a (path, offset) tuple
