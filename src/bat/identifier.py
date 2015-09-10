@@ -98,11 +98,12 @@ def searchGeneric(filepath, tags, blacklist=[], scanenv={}, offsets={}, scandebu
 		if empty:
 			return None
 		if linuxkernel:
-			res = extractKernelData(cmeta['strings'], filepath, scanenv, scandebug)
-			if res != None:
-				if res.has_key('kernelfunctions'):
-					if res['kernelfunctions'] != []:
-						cmeta['kernelfunctions'] = copy.deepcopy(res['kernelfunctions'])
+			if len(cmeta['strings']) != 0:
+				res = extractKernelData(cmeta['strings'], filepath, scanenv, scandebug)
+				if res != None:
+					if res.has_key('kernelfunctions'):
+						if res['kernelfunctions'] != []:
+							cmeta['kernelfunctions'] = copy.deepcopy(res['kernelfunctions'])
 		cmeta['language'] = language
 		return (['identifier'], cmeta)
 	elif language == 'Java':
@@ -634,9 +635,6 @@ def extractDynamicFromELF(scanfile):
 
 ## extract Linux kernel data from a binary file. False positives could exist.
 def extractKernelData(lines, filepath, scanenv, scandebug):
-	if len(lines) == 0:
-		return None
-
 	## setup code guarantees that this database exists and that sanity
 	## checks were done.
 	if scanenv.get('BAT_KERNELFUNCTION_SCAN') == '1':
