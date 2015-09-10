@@ -670,11 +670,36 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 
 	map(lambda x: scanqueue.put(x), lookup_tasks)
 
+	stringcacheconns = []
+	namecacheconns = []
+
 	for i in range(0,processamount):
-		c = batdb.getConnection(scanenv['BAT_DB'],newenv)
-		cursor = c.cursor()
-		batcons.append(c)
-		p = multiprocessing.Process(target=lookup_identifier, args=(scanqueue,reportqueue,cursor,batdb,newenv,topleveldir,avgscores,clones,scandebug))
+		## first a cursor for the cache of each supported language
+		stringcachecursors = {}
+		namecachecursors = {}
+		for language in stringsdbperlanguagetable:
+			stringscache = newenv.get(stringsdbperlanguageenv[language])
+			if stringscache == None:
+				continue
+			conn = batdb.getConnection(stringscache,newenv)
+			c = conn.cursor()
+			stringcacheconns.append(conn)
+			stringcachecursors[language] = c
+		## then for namecaches
+		for language in namecacheperlanguagetable:
+			#stringscache = newenv.get(stringsdbperlanguageenv[language])
+			namecache = newenv.get(namecacheperlanguageenv[language])
+			if namecache == None:
+				continue
+			conn = batdb.getConnection(namecache,newenv)
+			c = conn.cursor()
+			namecacheconns.append(conn)
+			namecachecursors[language] = c
+		## then a cursor for the main database
+		conn = batdb.getConnection(scanenv['BAT_DB'],newenv)
+		cursor = conn.cursor()
+		batcons.append(conn)
+		p = multiprocessing.Process(target=lookup_identifier, args=(scanqueue,reportqueue,cursor,stringcachecursors,namecachecursors,batdb,newenv,topleveldir,avgscores,clones,scandebug))
 		processpool.append(p)
 		p.start()
 
@@ -693,6 +718,10 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	for p in processpool:
 		p.terminate()
 	for c in batcons:
+		c.close()
+	for c in stringcacheconns:
+		c.close()
+	for c in namecacheconns:
 		c.close()
 
 	for filehash in res:
@@ -800,7 +829,7 @@ def grab_sha256_parallel(scanqueue, reportqueue, cursor, batdb, language, queryt
 			reportqueue.put((line, res))
 		scanqueue.task_done()
 
-def extractJava(javameta, scanenv, batdb, clones):
+def extractJava(javameta, scanenv, funccursor, batdb, clones):
 	dynamicRes = {}  # {'namesmatched': 0, 'totalnames': int, 'uniquematches': int, 'packages': {} }
 	namesmatched = 0
 	uniquematches = 0
@@ -825,18 +854,14 @@ def extractJava(javameta, scanenv, batdb, clones):
 	fields = javameta['fields']
 	sourcefile = javameta['sourcefiles']
 
-	funccache = scanenv.get(namecacheperlanguageenv['Java'])
-
-	conn = batdb.getConnection(funccache,scanenv)
-	c = conn.cursor()
 	if scanenv.has_key('BAT_METHOD_SCAN'):
 
 		query = batdb.getQuery("select distinct package from %s where functionname=" % namecacheperlanguagetable['Java'] + "%s")
 		for meth in methods:
 			if meth == 'main':
 				continue
-			c.execute(query, (meth,))
-			res = c.fetchall()
+			funccursor.execute(query, (meth,))
+			res = funccursor.fetchall()
 			if res != []:
 				namesmatched += 1
 				packages_tmp = []
@@ -883,13 +908,13 @@ def extractJava(javameta, scanenv, batdb, clones):
 			## be found and has dots in it split it on '.' and
 			## use the last component only.
 			classname = i
-			c.execute(query, (classname,))
-			classres = c.fetchall()
+			funccursor.execute(query, (classname,))
+			classres = funccursor.fetchall()
 			if classres == []:
 				## check just the last component
 				classname = classname.split('.')[-1]
-				classres = c.execute(query, (classname,))
-				classres = c.fetchall()
+				classres = funccursor.execute(query, (classname,))
+				classres = funccursor.fetchall()
 			## check the cloning database
 			if classres != []:
 				classres_tmp = []
@@ -916,8 +941,8 @@ def extractJava(javameta, scanenv, batdb, clones):
 			## first try the name as found in the binary. If it can't
 			## be found and has dots in it split it on '.' and
 			## use the last component only.
-			c.execute(query, (classname,))
-			classres = c.fetchall()
+			funccursor.execute(query, (classname,))
+			classres = funccursor.fetchall()
 			## check the cloning database
 			if classres != []:
 				classres_tmp = []
@@ -946,8 +971,8 @@ def extractJava(javameta, scanenv, batdb, clones):
 				continue
 			pvs = []
 
-			c.execute(query, (f,))
-			fieldres = c.fetchall()
+			funccursor.execute(query, (f,))
+			fieldres = funccursor.fetchall()
 			if fieldres != []:
 				fieldres_tmp = []
 				for r in fieldres:
@@ -959,8 +984,6 @@ def extractJava(javameta, scanenv, batdb, clones):
 				fieldres_tmp = set(fieldres_tmp)
 				fieldres = map(lambda x: (x, 0), fieldres_tmp)
 				fieldspvs[f] = fieldres
-	c.close()
-	conn.close()
 
 	variablepvs['fields'] = fieldspvs
 	variablepvs['sources'] = sourcepvs
@@ -1110,7 +1133,7 @@ def scanDynamic(scanstr, variables, scanenv, funccursor, batdb, clones):
 
 ## match identifiers with data in the database
 ## First match string literals, then function names and variable names for various languages
-def lookup_identifier(scanqueue, reportqueue, cursor, batdb, scanenv, topleveldir, avgscores, clones, scandebug):
+def lookup_identifier(scanqueue, reportqueue, cursor, stringcachecursors, namecachecursors, batdb, scanenv, topleveldir, avgscores, clones, scandebug):
 	## first some things that are shared between all scans
 	if scanenv.has_key('BAT_STRING_CUTOFF'):
 		try:
@@ -1176,10 +1199,7 @@ def lookup_identifier(scanqueue, reportqueue, cursor, batdb, scanenv, topleveldi
 			linuxkernel = True
 			if scanenv.get('BAT_KERNELFUNCTION_SCAN') == 1 and language == 'C':
 				scankernelfunctions = True
-		if language == 'C':
-			funccache = scanenv.get(namecacheperlanguageenv['C'])
-			funcconn = batdb.getConnection(funccache,scanenv)
-			funccursor = funcconn.cursor()
+		funccursor = namecachecursors[language]
 
 		## first compute the score for the lines
 		if lenlines != 0 and scanlines:
@@ -1214,11 +1234,7 @@ def lookup_identifier(scanqueue, reportqueue, cursor, batdb, scanenv, topleveldi
 			unmatched = []
 			unmatchedignorecache = set()
 
-			stringscache = scanenv.get(stringsdbperlanguageenv[language])
-			## open the database containing all the strings that were extracted
-			## from source code.
-			conn = batdb.getConnection(stringscache,scanenv)
-			c = conn.cursor()
+			c = stringcachecursors[language]
 
 			kernelfuncres = []
 			kernelparamres = []
@@ -1629,8 +1645,6 @@ def lookup_identifier(scanqueue, reportqueue, cursor, batdb, scanenv, topleveldi
 
 					## for statistics it's nice to see how many lines were matched
 					matchedlines += 1
-			c.close()
-			conn.close()
 
 			## clean up stringsLeft first
 			for l in stringsLeft.keys():
@@ -1888,14 +1902,12 @@ def lookup_identifier(scanqueue, reportqueue, cursor, batdb, scanenv, topleveldi
 						functionRes['kernelfunctions'] = copy.deepcopy(leafreports['identifier']['kernelfunctions'])
 			else:
 				(functionRes, variablepvs) = scanDynamic(leafreports['identifier']['functionnames'], leafreports['identifier']['variablenames'], scanenv, funccursor, batdb, clones)
-			funccursor.close()
-			funcconn.close()
 		elif language == 'Java':
 			if not scanenv.has_key(namecacheperlanguageenv['Java']):
 				variablepvs = {}
 				functionRes = {}
 			else:
-				(functionRes, variablepvs) = extractJava(leafreports['identifier'], scanenv, batdb, clones)
+				(functionRes, variablepvs) = extractJava(leafreports['identifier'], scanenv, funccursor, batdb, clones)
 		else:
 			variablepvs = {}
 			functionRes = {}
