@@ -1,4 +1,3 @@
-#!/usr/bin/python
 
 ## Binary Analysis Tool
 ## Copyright 2011-2015 Armijn Hemel for Tjaldur Software Governance Solutions
@@ -514,7 +513,6 @@ def prune(scanenv, uniques, package):
 				else:
 					uniqueversions[version] = 1
 				
-
 	## there is only one version, so no need to continue
 	if len(uniqueversions.keys()) == 1:
 		return uniques
@@ -638,12 +636,12 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	## this will not cost much memory and it prevents many database lookups.
 	avgscores = {}
 	for language in avgstringsdbperlanguagetable:
-		stringscache = scanenv.get(stringsdbperlanguageenv[language])
+		stringscache = newenv.get(stringsdbperlanguageenv[language])
 		if stringscache == None:
 			continue
 		## open the database containing all the strings that were extracted
 		## from source code.
-		conn = batdb.getConnection(stringscache,scanenv)
+		conn = batdb.getConnection(stringscache,newenv)
 		c = conn.cursor()
 		avgscores[language] = {}
 		avgquery = "select package, avgstrings from %s" % avgstringsdbperlanguagetable[language]
@@ -655,15 +653,47 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		for r in filter(lambda x: x[1] != 0, res):
 			avgscores[language][r[0]] = r[1]
 
-	pool = multiprocessing.Pool(processes=processors)
+	lookup_tasks = map(lambda x: (unpackreports[x]['checksum'], os.path.join(unpackreports[x]['realpath'], unpackreports[x]['name'])),rankingfiles)
 
-	lookup_tasks = []
-	lookup_tasks = map(lambda x: (newenv, unpackreports[x]['checksum'], os.path.join(unpackreports[x]['realpath'], unpackreports[x]['name']), topleveldir, clones, batdb, scandebug, avgscores), rankingfiles)
-
-	if lookup_tasks != []:
-		res = pool.map(lookup_identifier, lookup_tasks,1)
+	if processors == None:
+		processamount = 1
 	else:
-		res = []
+		processamount = processors
+	## create a queue for tasks, with a few threads reading from the queue
+	## and looking up results and putting them in a result queue
+	scanmanager = multiprocessing.Manager()
+	scanqueue = multiprocessing.JoinableQueue(maxsize=0)
+	reportqueue = scanmanager.Queue(maxsize=0)
+	processpool = []
+	res = []
+	batcons = []
+
+	map(lambda x: scanqueue.put(x), lookup_tasks)
+
+	for i in range(0,processamount):
+		c = batdb.getConnection(scanenv['BAT_DB'],newenv)
+		cursor = c.cursor()
+		batcons.append(c)
+		p = multiprocessing.Process(target=lookup_identifier, args=(scanqueue,reportqueue,cursor,batdb,newenv,topleveldir,avgscores,clones,scandebug))
+		processpool.append(p)
+		p.start()
+
+        scanqueue.join()
+
+	while True:
+		try:
+			val = reportqueue.get_nowait()
+			res.append(val)
+			reportqueue.task_done()
+		except Queue.Empty, e:
+			## Queue is empty
+			break
+	reportqueue.join()
+
+	for p in processpool:
+		p.terminate()
+	for c in batcons:
+		c.close()
 
 	for filehash in res:
 		if filehash != None:
@@ -671,8 +701,10 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 				for w in hashtoname[filehash]:
 					unpackreports[w]['tags'].append('ranking')
 
+	pool = multiprocessing.Pool(processes=processors)
 	## aggregate the JAR files
 	aggregatejars(unpackreports, scantempdir, topleveldir, pool, newenv, scandebug=False, unpacktempdir=None)
+	pool.terminate()
 
 	## .class files might have been removed at this point, so sanity check first
 	rankingfiles = set()
@@ -692,6 +724,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 			continue
 		rankingfiles.add(i)
 
+	pool = multiprocessing.Pool(processes=processors)
 	## and determine versions, etc.
 	for i in rankingfiles:
 		compute_version(pool, processors, newenv, unpackreports[i], topleveldir, determinelicense, determinecopyright, batdb)
@@ -1133,769 +1166,10 @@ def scanDynamic(scanstr, variables, scanenv, batdb, clones):
 	conn.close()
 	return (dynamicRes, variablepvs)
 
-## Look up strings in the database and assign strings to packages.
-def lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfunctions, stringcutoff, precomputescore, usesourceorder, linecount, language, batdb, scandebug):
-	uniqueMatches = {}
-	nonUniqueScore = {}
-	stringsLeft = {}
-	sameFileScore = {}
-	alpha = 5.0
-	scorecutoff = 1.0e-20
-	nonUniqueMatches = {}
-	nonUniqueMatchLines = []
-	nonUniqueAssignments = {}
-	directAssignedString = {}
-	unmatched = []
-	unmatchedignorecache = set()
-
-	stringscache = scanenv.get(stringsdbperlanguageenv[language])
-	## open the database containing all the strings that were extracted
-	## from source code.
-	conn = batdb.getConnection(stringscache,scanenv)
-	c = conn.cursor()
-
-	scankernelfunctions = False
-	kernelfuncres = []
-	kernelparamres = []
-	if linuxkernel:
-		if scanenv.get('BAT_KERNELFUNCTION_SCAN') == 1 and language == 'C':
-			scankernelfunctions = True
-			funccache = scanenv.get(namecacheperlanguageenv['C'])
-			kernelconn = batdb.getConnection(funccache,scanenv)
-			kernelcursor = kernelconn.cursor()
-
-	lenlines = len(lines)
-	
-	if scandebug:
-		print >>sys.stderr, "total extracted strings for %s: %d" % (filepath, lenlines)
-
-	## some counters for keeping track of how many matches there are
-	matchedlines = 0
-	unmatchedlines = 0
-	matchednotclonelines = 0
-	matchednonassignedlines = 0
-	matcheddirectassignedlines = 0
-	nrUniqueMatches = 0
-
-	## start values for some state variables that are used
-	## most of these are only used if 'usesourceorder' == False
-	matched = False
-	matchednonassigned = False
-	matchednotclones = False
-	kernelfunctionmatched = False
-	uniquematch = False
-	oldline = None
-	notclones = []
-
-	if usesourceorder:
-		## don't use precomputed scores
-		precomputescore = False
-
-		## keep track of which package was the most uniquely matched package
-		uniquepackage_tmp = None
-		uniquefilenames_tmp = []
-
-		## keep a backlog for strings that could possibly be assigned later
-		backlog = []
-		notclonesbacklog = []
-	else:
-		## sort the lines first, so it is easy to skip duplicates
-		lines.sort()
-
-	stringquery = batdb.getQuery("select package, filename FROM %s WHERE stringidentifier=" % stringsdbperlanguagetable[language] + "%s")
-	kernelquery = batdb.getQuery("select package FROM linuxkernelfunctionnamecache WHERE functionname=%s LIMIT 1")
-	precomputequery = batdb.getQuery("select score from scores where stringidentifier=%s LIMIT 1")
-
-	for line in lines:
-		#if scandebug:
-		#	print >>sys.stderr, "processing <|%s|>" % line
-		kernelfunctionmatched = False
-
-		if not usesourceorder:
-			## speedup if the line happens to be the same as the old one
-			## This does *not* alter the score in any way, but perhaps
-			## it should: having a very significant string a few times
-			## is a strong indication.
-			if line == oldline:
-				if matched:
-					matchedlines += 1
-					if uniquematch:
-						nrUniqueMatches += 1
-						#uniqueMatches[package].append((line, []))
-				elif matchednonassigned:
-					linecount[line] = linecount[line] - 1
-					matchednonassignedlines += 1
-				elif matchednotclones:
-					linecount[line] = linecount[line] - 1
-					matchednotclonelines += 1
-				else:
-					unmatchedlines += 1
-					linecount[line] = linecount[line] - 1
-				continue
-			uniquematch = False
-			matched = False
-			matchednonassigned = False
-			matchednotclones = False
-			oldline = line
-
-		## skip empty lines (only triggered if stringcutoff == 0)
-		if line == "":
-			continue
-
-		## An extra check for lines that score extremely low. This
-		## helps reduce load on databases stored on slower disks. Only used if
-		## precomputescore is set and "source order" is False.
-		if precomputescore:
-			c.execute(precomputequery, (line,))
-			scoreres = c.fetchone()
-			if scoreres != None:
-				## If the score is so low it will not have any influence on the final
-				## score, why even bother hitting the disk?
-				## Since there might be package rewrites this should be a bit less than the
-				## cut off value that was defined.
-				if scoreres[0] < scorecutoff/100:
-					nonUniqueMatchLines.append(line)
-					matchednonassignedlines += 1
-					matchednonassigned = True
-					linecount[line] = linecount[line] - 1
-					continue
-
-		if line in unmatchedignorecache:
-			unmatched.append(line)
-			unmatchedlines += 1
-			linecount[line] = linecount[line] - 1
-			continue
-
-		## if scoreres is None the line could still be something else like a kernel function, or a
-		## kernel string in a different format, so keep searching.
-		## If the image is a Linux kernel image first try Linux kernel specific matching
-		## like function names, then continue as normal.
-
-		if linuxkernel:
-			## This is where things get a bit ugly. The strings in a Linux
-			## kernel image could also be function names, not string constants.
-			## There could be false positives here...
-			if scankernelfunctions:
-				kernelcursor.execute(kernelquery, (line,))
-				kernelres = kernelcursor.fetchall()
-				if len(kernelres) != 0:
-					kernelfuncres.append(line)
-					kernelfunctionmatched = True
-					linecount[line] = linecount[line] - 1
-					continue
-
-		## then see if there is anything in the cache at all
-		c.execute(stringquery, (line,))
-		res = c.fetchall()
-
-		if len(res) == 0 and linuxkernel:
-			origline = line
-			## try a few variants that could occur in the Linux kernel
-			## The values of KERN_ERR and friends have changed in the years.
-			## In 2.6 it used to be for example <3> (defined in include/linux/kernel.h
-			## or include/linux/printk.h )
-			## In later kernels this was changed.
-			matchres = reerrorlevel.match(line)
-			if matchres != None:
-				scanline = line.split('>', 1)[1]
-				if len(scanline) < stringcutoff:
-					unmatched.append(line)
-					unmatchedlines += 1
-					linecount[line] = linecount[line] - 1
-					continue
-				c.execute(stringquery, (scanline,))
-				res = c.fetchall()
-				if len(res) != 0:
-					line = scanline
-				else:
-					scanline = scanline.split(':', 1)
-					if len(scanline) > 1:
-						scanline = scanline[1]
-						if scanline.startswith(" "):
-							scanline = scanline[1:]
-						if len(scanline) < stringcutoff:
-							unmatched.append(line)
-							unmatchedlines += 1
-							linecount[line] = linecount[line] - 1
-							unmatchedignorecache.add(origline)
-							continue
-						c.execute(stringquery, (scanline,))
-						res = c.fetchall()
-						if len(res) != 0:
-							if len(scanline) != 0:
-								line = scanline
-			else:
-				## In include/linux/kern_levels.h since kernel 3.6 a different format is
-				## used. TODO: actually check in the binary whether or not a match (if any)
-				## is preceded by 0x01
-				matchres = rematch.match(line)
-				if matchres != None:
-					scanline = line[1:]
-					if len(scanline) < stringcutoff:
-						unmatched.append(line)
-						unmatchedlines += 1
-						linecount[line] = linecount[line] - 1
-						unmatchedignorecache.add(origline)
-						continue
-					c.execute(stringquery, (scanline,))
-					res = c.fetchall()
-					if len(res) != 0:
-						if len(scanline) != 0:
-							line = scanline
-
-				if len(res) == 0:
-					scanline = line.split(':', 1)
-					if len(scanline) > 1:
-						scanline = scanline[1]
-						if scanline.startswith(" "):
-							scanline = scanline[1:]
-						if len(scanline) < stringcutoff:
-							unmatched.append(line)
-							unmatchedlines += 1
-							linecount[line] = linecount[line] - 1
-							unmatchedignorecache.add(origline)
-							continue
-						c.execute(stringquery, (scanline,))
-						res = c.fetchall()
-						if len(res) != 0:
-							if len(scanline) != 0:
-								line = scanline
-
-			## result is still empty, perhaps it is a module parameter. TODO
-			if len(res) == 0:
-				if '.' in line:
-					if line.count('.') == 1:
-						paramres = reparam.match(line)
-						if paramres != None:
-							pass
-
-			## if 'line' has been changed, then linecount should be changed accordingly
-			if line != origline:
-				linecount[origline] = linecount[origline] - 1
-				if linecount.has_key(line):
-					linecount[line] = linecount[line] + 1
-				else:
-					linecount[line] = 1
-
-		## nothing in the cache
-		if len(res) == 0:
-			unmatched.append(line)
-			unmatchedlines += 1
-			linecount[line] = linecount[line] - 1
-			unmatchedignorecache.add(line)
-			continue
-		if len(res) != 0:
-			## Assume:
-			## * database has no duplicates
-			## * filenames in the database have been processed using os.path.basename()
-
-			if scandebug:
-				print >>sys.stderr, "\n%d matches found for <(|%s|)> in %s" % (len(res), line, filepath)
-
-			pkgs = {}    ## {package name: set([filenames without path])}
-	
-			filenames = {}
-
-			## For each string determine in how many packages (without version) the string
-			## is found.
-			## If the string is only found in one package the string is unique to the package
-			## so record it as such and add its length to a score.
-			for result in res:
-				(package, filename) = result
-				if clones.has_key(package):
-					package = clones[package]
-				if not pkgs.has_key(package):
-					pkgs[package] = set([filename])
-				else:
-					pkgs[package].add(filename)
-				if not filenames.has_key(filename):
-					filenames[filename] = [package]
-				else:
-					filenames[filename] = list(set(filenames[filename] + [package]))
-
-			if len(pkgs) != 1:
-				nonUniqueMatchLines.append(line)
-				## The string found is not unique to a package, but is it 
-				## unique to a filename?
-				## This method assumes that files that are named the same
-				## also contain the same or similar content. This could lead
-				## to incorrect results.
-
-				## now determine the score for the string
-				try:
-					score = len(line) / pow(alpha, (len(filenames) - 1))
-				except Exception, e:
-					## pow(alpha, (len(filenames) - 1)) is overflowing here
-					## so the score would be very close to 0. The largest value
-					## is sys.maxint, so use that one. The score will be
-					## smaller than almost any value of scorecutoff...
-					if usesourceorder:
-						score = len(line) / sys.maxint
-					else:
-						matchednonassigned = True
-						matchednonassignedlines += 1
-						linecount[line] = linecount[line] - 1
-						continue
-
-				## if it is assumed that the compiler puts string constants in the
-				## same order in the generated code then strings can be assigned
-				## to the package directly
-				if usesourceorder:
-					if uniquepackage_tmp in pkgs:
-						assign_string = False
-						assign_filename = None
-						for pf in uniquefilenames_tmp:
-							if pf in pkgs[uniquepackage_tmp]:
-								assign_string = True
-								assign_filename = pf
-								break
-						if assign_string:
-							if not nonUniqueMatches.has_key(uniquepackage_tmp):
-								nonUniqueMatches[uniquepackage_tmp] = [line]
-							else:
-								nonUniqueMatches[uniquepackage_tmp].append(line)
-							if directAssignedString.has_key(uniquepackage_tmp):
-								directAssignedString[uniquepackage_tmp].append((line, assign_filename, score))
-							else:
-								directAssignedString[uniquepackage_tmp] = [(line, assign_filename, score)]
-							matcheddirectassignedlines += 1
-							nonUniqueAssignments[uniquepackage_tmp] = nonUniqueAssignments.get(uniquepackage_tmp,0) + 1
-
-							matchedlines += 1
-							linecount[line] = linecount[line] - 1
-							continue
-						else:
-							## store pkgs and line for backward lookups
-							backlog.append((line, pkgs[uniquepackage_tmp], score))
-
-				if not score > scorecutoff:
-					matchednonassigned = True
-					matchednonassignedlines += 1
-					if not usesourceorder:
-						linecount[line] = linecount[line] - 1
-					continue
-
-				## After having computed a score determine if the files
-				## the string was found in in are all called the same.
-				## filenames {name of file: { name of package: 1} }
-				if filter(lambda x: len(filenames[x]) != 1, filenames.keys()) == []:
-					matchednotclonelines += 1
-					for fn in filenames:
-						## The filename fn containing the matched string can only
-						## be found in one package.
-						## For example: string 'foobar' is present in 'foo.c' in package 'foo'
-						## and 'bar.c' in package 'bar', but not in 'foo.c' in package 'bar'
-						## or 'bar.c' in foo (if any).
-						fnkey = filenames[fn][0]
-						nonUniqueScore[fnkey] = nonUniqueScore.get(fnkey,0) + score
-					matchednotclones = True
-					if not usesourceorder:
-						linecount[line] = linecount[line] - 1
-						notclones.append((line, filenames))
-					else:
-						notclonesbacklog.append((line, filenames))
-					continue
-				else:
-					for fn in filenames:
-						## There are multiple packages in which the same
-						## filename contains this string, for example 'foo.c'
-						## in packages 'foo' and 'bar. This is likely to be
-						## internal cloning in the repo.  This string is
-						## assigned to a single package in the loop below.
-						## Some strings will not signficantly contribute to the score, so they
-						## could be ignored and not added to the list.
-						## For now exclude them, but in the future they could be included for
-						## completeness.
-						stringsLeft['%s\t%s' % (line, fn)] = {'string': line, 'score': score, 'filename': fn, 'pkgs' : filenames[fn]}
-						## lookup
-
-			else:
-				## the string is unique to this package and this package only
-				uniquematch = True
-				## store the uniqueMatches without any information about checksums
-				if not uniqueMatches.has_key(package):
-					uniqueMatches[package] = [(line, [])]
-				else:
-					uniqueMatches[package].append((line, []))
-				linecount[line] = linecount[line] - 1
-				if usesourceorder:
-					uniquepackage_tmp = package
-					uniquefilenames_tmp = pkgs[package]
-					## process backlog
-					for b in xrange(len(backlog), 0, -1):
-						assign_string = False
-						assign_filename = None
-						(backlogline, backlogfilenames, backlogscore) = backlog[b-1]
-						for pf in uniquefilenames_tmp:
-							if pf in backlogfilenames:
-								assign_string = True
-								assign_filename = pf
-								break
-						if assign_string:
-							## keep track of the old score in case it is changed/recomputed here
-							oldbacklogscore = backlogscore
-							if not nonUniqueMatches.has_key(uniquepackage_tmp):
-								nonUniqueMatches[uniquepackage_tmp] = [backlogline]
-							else:
-								nonUniqueMatches[uniquepackage_tmp].append(backlogline)
-							if directAssignedString.has_key(uniquepackage_tmp):
-								directAssignedString[uniquepackage_tmp].append((backlogline, assign_filename, backlogscore))
-							else:
-								directAssignedString[uniquepackage_tmp] = [(backlogline, assign_filename, backlogscore)]
-							matcheddirectassignedlines += 1
-							nonUniqueAssignments[uniquepackage_tmp] = nonUniqueAssignments.get(uniquepackage_tmp,0) + 1
-							## remove the directly assigned string from stringsLeft,
-							## at least for *this* package
-							try:
-								for pf in backlogfilenames:
-									del stringsLeft['%s\t%s' % (backlogline, pf)]
-							except KeyError, e:
-								pass
-							## decrease matchednonassigned if the originally computed score
-							## is too low
-							if not oldbacklogscore > scorecutoff:
-								matchednonassigned = matchednonassigned - 1
-							linecount[backlogline] = linecount[backlogline] - 1
-							for cl in notclonesbacklog:
-								(notclone, filenames) = cl
-								if notclone == backlogline:
-									matchednotclonelines -= 1
-									for fn in filenames:
-										fnkey = filenames[fn][0]
-										nonUniqueScore[fnkey] = nonUniqueScore.get(fnkey) - backlogscore
-									notclonesbacklog.remove(cl)
-									break
-						else:
-							break
-					## store notclones for later use
-					notclones += notclonesbacklog
-					backlog = []
-					notclonesbacklog = []
-			matched = True
-
-			## for statistics it's nice to see how many lines were matched
-			matchedlines += 1
-	if scankernelfunctions:
-		kernelcursor.close()
-		kernelconn.close()
-	c.close()
-	conn.close()
-
-	## clean up stringsLeft first
-	for l in stringsLeft.keys():
-		if linecount[stringsLeft[l]['string']] == 0:
-			del stringsLeft[l]
-
-	return (unmatched, uniqueMatches, nonUniqueMatches, nonUniqueMatchLines, directAssignedString, nonUniqueAssignments, stringsLeft, notclones, nonUniqueScore, sameFileScore, matchednonassigned, matchedlines, unmatchedlines, matchednotclonelines, matcheddirectassignedlines, matchednonassignedlines, nrUniqueMatches, kernelfuncres)
-
-def computeScore(lines, filepath, scanenv, clones, linuxkernel, stringcutoff, scandebug, batdb, avgscores, language='C'):
-	if len(lines) == 0:
-		return None
-	## setup code guarantees that this database exists and that sanity
-	## checks were done.
-	if not scanenv.has_key(stringsdbperlanguageenv[language]):
-		return None
-
-	lenlines = len(lines)
-
-	gaincutoff = 1
-	## keep a dict of versions, license and copyright statements per package. TODO: remove these.
-	packageversions = {}
-	packagelicenses = {}
-	packagecopyrights = {}
-
-	if have_counter:
-		linecount = collections.Counter(lines)
-	else:
-		linecount = {}
-		for l in lines:
-			if l in linecount:
-				linecount[l] += 1
-			else:
-				linecount[l] = 1
-
-	scankernelfunctions = False
-
-	if linuxkernel:
-		if scanenv.get('BAT_KERNELFUNCTION_SCAN') == 1 and language == 'C':
-			scankernelfunctions = True
-
-	## TODO: this should be done per language
-	if scanenv.has_key('BAT_SCORE_CACHE'):
-		precomputescore = True
-	else:
-		precomputescore = False
-
-	## try to use the same order of strings in the binary as in the source code
-	usesourceorder = False
-	if scanenv.has_key('USE_SOURCE_ORDER'):
-		usesourceorder = True
-
-	## first look up and assign strings for as far as possible.
-	## strings that have not been assigned will be assigned later based
-	## on their score.
-	res = lookupAndAssign(lines, filepath, scanenv, clones, linuxkernel, scankernelfunctions, stringcutoff, precomputescore, usesourceorder, linecount, language, batdb, scandebug)
-	(unmatched, uniqueMatches, nonUniqueMatches, nonUniqueMatchLines, directAssignedString, nonUniqueAssignments, stringsLeft, notclones, nonUniqueScore, sameFileScore, matchednonassigned, matchedlines, unmatchedlines, matchednotclonelines, matcheddirectassignedlines, matchednonassignedlines, nrUniqueMatches, kernelfuncres) = res
-
-	uniqueScore = {}
-	for package in uniqueMatches:
-		if not uniqueScore.has_key(package):
-			uniqueScore[package] = 0
-		for line in uniqueMatches[package]:
-			uniqueScore[package] += len(line[0])
-
-	directAssignedScore = {}
-	for package in directAssignedString:
-		if not directAssignedScore.has_key(package):
-			directAssignedScore[package] = 0
-		for line in directAssignedString[package]:
-			directAssignedScore[package] += line[2]
-
-	## If the string is not unique, do a little bit more work to determine which
-	## file is the most likely, so also record the filename.
-	##
-	## 1. determine whether the string is unique to a package
-	## 2. if not, determine which filenames the string is in
-	## 3. for each filename, determine whether or not this file (containing the string)
-	##    is unique to a package
-	## 4. if not, try to determine the most likely package the string was found in
-
-	## For each string that occurs in the same filename in multiple
-	## packages (e.g., "debugXML.c", a cloned file of libxml2 in several
-	## packages), assign it to one package.  We do this by picking the
-	## package that would gain the highest score increment across all
-	## strings that are left.  This is repeated until no strings are left.
-	pkgsScorePerString = {}
-	for stri in stringsLeft:
-		pkgsSortedTmp = map(lambda x: {'package': x, 'uniquescore': uniqueScore.get(x, 0)}, stringsLeft[stri]['pkgs'])
-
-		## get the unique score per package and sort in reverse order
-		pkgsSorted = sorted(pkgsSortedTmp, key=lambda x: x['uniquescore'], reverse=True)
-		## and get rid of the unique scores again. Now it's sorted.
-		pkgsSorted = map(lambda x: x['package'], pkgsSorted)
-		pkgs2 = []
-
-		for pkgSort in pkgsSorted:
-			if uniqueScore.get(pkgSort, 0) == uniqueScore.get(pkgsSorted[0], 0):
-				pkgs2.append(pkgSort)
-		pkgsScorePerString[stri] = pkgs2
-
-	newgain = {}
-	for stri in stringsLeft:
-		for p2 in pkgsScorePerString[stri]:
-			newgain[p2] = newgain.get(p2, 0) + stringsLeft[stri]['score']
-
-	useless_packages = set()
-	for p in newgain.keys():
-		## check if packages could ever contribute usefully.
-		if newgain[p] < gaincutoff:
-			useless_packages.add(p)
-
-	## walk through the data again, filter out useless stuff
-	new_stringsleft = {}
-
-	string_split = {}
-
-	for stri in stringsLeft:
-		## filter out the strings that only occur in packages that will contribute
-		## to the score. Ignore the rest.
-		if filter(lambda x: x not in useless_packages, pkgsScorePerString[stri]) != []:
-			new_stringsleft[stri] = stringsLeft[stri]
-			strsplit = stri.rsplit('\t', 1)[0]
-			if string_split.has_key(strsplit):
-				string_split[strsplit].add(stri)
-			else:
-				string_split[strsplit] = set([stri])
-
-	## the difference between stringsLeft and new_stringsleft is matched
-	## but unassigned if the strings *only* occur in stringsLeft
-	oldstrleft = set()
-	for i in stringsLeft:
-		oldstrleft.add(stringsLeft[i]['string'])
-	for i in oldstrleft.difference(set(string_split.keys())):
-		matchednonassignedlines += linecount[i]
-		matchedlines -= linecount[i]
-
-	stringsLeft = new_stringsleft
-
-	roundNr = 0
-	strleft = len(stringsLeft)
-
-	## keep track of which strings were already found. This is because each string
-	## is only considered once anyway.
-	while strleft > 0:
-		roundNr = roundNr + 1
-		#if scandebug:
-		#	print >>sys.stderr, "\nround %d: %d strings left" % (roundNr, strleft)
-		gain = {}
-		stringsPerPkg = {}
-
-		## cleanup
-		if roundNr != 0:
-			todelete = set()
-			for stri in stringsLeft:
-				if linecount[stringsLeft[stri]['string']] == 0:
-					todelete.add(stri)
-
-			for a in todelete:
-				del stringsLeft[a]
-
-		oldstrleft = set()
-		for i in stringsLeft:
-			oldstrleft.add(stringsLeft[i]['string'])
-
-		## Determine to which packages the remaining strings belong.
-		newstrleft = set()
-		for stri in stringsLeft:
-			for p2 in pkgsScorePerString[stri]:
-				if p2 in useless_packages:
-					continue
-				gain[p2] = gain.get(p2, 0) + stringsLeft[stri]['score']
-				if not stringsPerPkg.has_key(p2):
-					stringsPerPkg[p2] = []
-				stringsPerPkg[p2].append(stri)
-				newstrleft.add(stringsLeft[stri]['string'])
-
-		for i in oldstrleft.difference(newstrleft):
-			if linecount[i] == 0:
-				continue
-			matchednonassignedlines += 1
-			matchedlines -= 1
-			linecount[i] -= 1
-
-		for p2 in gain.keys():
-			## check if packages could ever contribute usefully.
-			if gain[p2] < gaincutoff:
-				useless_packages.add(p2)
-
-		## gain_sorted contains the sort order, gain contains the actual data
-		gain_sorted = sorted(gain, key = lambda x: gain.__getitem__(x), reverse=True)
-		if gain_sorted == []:
-			break
-
-		## so far value is the best, but that might change
-		best = gain_sorted[0]
-
-		## Possible optimisation: skip the last step if the gain is not high enough
-		if filter(lambda x: x[1] > gaincutoff, gain.items()) == []:
-			break
-
-		## if multiple packages have a big enough gain, add them to 'close'
-		## and 'fight' to see which package is the most likely hit.
-		close = filter(lambda x: gain[x] > (gain[best] * 0.9), gain_sorted)
-
-       		## Let's hope "sort" terminates on a comparison function that
-       		## may not actually be a proper ordering.	
-		if len(close) > 1:
-			#if scandebug:
-			#	print >>sys.stderr, "  doing battle royale between", close
-			## reverse sort close, then best = close_sorted[0][0]
-			close_sorted = map(lambda x: (x, avgscores[x]), close)
-			close_sorted = sorted(close_sorted, key = lambda x: x[1], reverse=True)
-			## If we don't have a unique score *at all* it is likely that everything
-			## is cloned. There could be a few reasons:
-			## 1. there are duplicates in the database due to renaming
-			## 2. package A is completely contained in package B (bundling).
-			## If there are no hits for package B, it is more likely we are
-			## actually seeing package A.
-			if uniqueScore == {}:
-				best = close_sorted[-1][0]
-			else:
-				best = close_sorted[0][0]
-			#if scandebug:
-			#	print >>sys.stderr, "  %s won" % best
-		best_score = 0
-		## for each string in the package with the best gain add the score
-		## to the package and move on to the next package.
-		todelete = set()
-		for xy in stringsPerPkg[best]:
-			x = stringsLeft[xy]
-			strsplit = xy.rsplit('\t', 1)[0]
-			if linecount[strsplit] == 0:
-				## is this correct here? There are situations where one
-				## string appears multiple times in a single source file
-				## and also the binary (eapol_sm.c in hostapd 0.3.9 contains
-				## the string "%s    state=%s" several times and binaries
-				## do too.
-				todelete.add(strsplit)
-				continue
-			sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
-			best_score += 1
-			linecount[strsplit] = linecount[strsplit] - 1
-			if nonUniqueMatches.has_key(best):
-				nonUniqueMatches[best].append(strsplit)
-			else:
-				nonUniqueMatches[best]  = [strsplit]
-
-		for a in todelete:
-			for st in string_split[a]:
-				del stringsLeft[st]
-		## store how many non unique strings were assigned per package
-		nonUniqueAssignments[best] = nonUniqueAssignments.get(best,0) + best_score
-		if gain[best] < gaincutoff:
-			break
-		strleft = len(stringsLeft)
-
-	for i in stringsLeft:
-		strsplit = i.rsplit('\t', 1)[0]
-		if linecount[strsplit] == 0:
-			continue
-		matchednonassignedlines += 1
-		matchedlines -= 1
-		linecount[strsplit] -= 1
-
-	scores = {}
-	for k in set(uniqueScore.keys() + sameFileScore.keys()):
-		scores[k] = uniqueScore.get(k, 0) + sameFileScore.get(k, 0) + nonUniqueScore.get(k,0) + directAssignedScore.get(k,0)
-	scores_sorted = sorted(scores, key = lambda x: scores.__getitem__(x), reverse=True)
-
-	rank = 1
-	reports = []
-	if scores == {}:
-		totalscore = 0.0
-	else:
-		totalscore = float(reduce(lambda x, y: x + y, scores.values()))
-
-	for s in scores_sorted:
-		try:
-			percentage = (scores[s]/totalscore)*100.0
-		except:
-			percentage = 0.0
-		reports.append((rank, s, uniqueMatches.get(s,[]), len(uniqueMatches.get(s,[])), percentage, packageversions.get(s, {}), packagelicenses.get(s, []), packagecopyrights.get(s,[])))
-		rank = rank+1
-
-	if matchedlines == 0 and unmatched == []:
-		return
-
-	if scankernelfunctions:
-		matchedlines = matchedlines - len(kernelfuncres)
-		lenlines = lenlines - len(kernelfuncres)
-	returnres = {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched, 'scores': scores, 'unmatchedlines': unmatchedlines, 'matchednonassignedlines': matchednonassignedlines, 'matchednotclonelines': matchednotclonelines, 'matcheddirectassignedlines': matcheddirectassignedlines}
-	return returnres
-
 ## match identifiers with data in the database
-def lookup_identifier((scanenv, filehash, filename, topleveldir, clones, batdb, scandebug, avgscores)):
-	## read the pickle
-	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
-	leafreports = cPickle.load(leaf_file)
-	leaf_file.close()
-	if not leafreports.has_key('identifier'):
-		return
-
-	if leafreports['identifier'] == {}:
-		return
-
-	lines = leafreports['identifier']['strings']
-
-	if lines == None:
-		return
-
-	language = leafreports['identifier']['language']
-
-	linuxkernel = False
-	if 'linuxkernel' in leafreports['tags']:
-		linuxkernel = True
-
+## First match string literals, then function names and variable names for various languages
+def lookup_identifier(scanqueue, reportqueue, cursor, batdb, scanenv, topleveldir, avgscores, clones, scandebug):
+	## first some things that are shared between all scans
 	if scanenv.has_key('BAT_STRING_CUTOFF'):
 		try:
 			stringcutoff = int(scanenv['BAT_STRING_CUTOFF'])
@@ -1904,37 +1178,792 @@ def lookup_identifier((scanenv, filehash, filename, topleveldir, clones, batdb, 
 	else:
 		stringcutoff = 5
 
-	## first compute the score for the lines
-	if len(lines) != 0:
-		res = computeScore(lines, filename, scanenv, clones, linuxkernel, stringcutoff, scandebug, batdb, avgscores[language], language)
+	## TODO: this should be done per language
+	if scanenv.has_key('BAT_SCORE_CACHE'):
+		precomputescore = True
 	else:
-		res = None
+		precomputescore = False
 
-	## then look up results for function names, variable names, and so on.
-	if language == 'C':
-		if linuxkernel:
-			functionRes = {}
-			if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
-				variablepvs = scankernelsymbols(leafreports['identifier']['kernelsymbols'], scanenv, batdb, clones)
-			## TODO: clean up
-			if leafreports['identifier'].has_key('kernelfunctions'):
-				if leafreports['identifier']['kernelfunctions'] != []:
-					functionRes['kernelfunctions'] = copy.deepcopy(leafreports['identifier']['kernelfunctions'])
+	usesourceorder = False
+	if scanenv.has_key('USE_SOURCE_ORDER'):
+		usesourceorder = True
+		## don't use precomputed scores when using source order
+		precomputescore = False
+
+	## default parameters for scoring
+	alpha = 5.0
+	scorecutoff = 1.0e-20
+
+	while True:
+		## get a new task from the queue
+		(filehash, filename) = scanqueue.get()
+
+		## read the pickle with the data
+		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+		leafreports = cPickle.load(leaf_file)
+		leaf_file.close()
+		if not leafreports.has_key('identifier'):
+			## If there is no relevant data to scan continue to the next file
+			scanqueue.task_done()
+			continue
+
+		if leafreports['identifier'] == {}:
+			## If there is no relevant data to scan continue to the next file
+			scanqueue.task_done()
+			continue
+
+		## grab the lines extracted earlier
+		lines = leafreports['identifier']['strings']
+
+		language = leafreports['identifier']['language']
+
+		## this should of course not happen, but hey...
+		scanlines = True
+		if not scanenv.has_key(stringsdbperlanguageenv[language]):
+			scanlines = False
+
+		if lines == None:
+			lenlines = 0
+			scanlines = False
 		else:
-			(functionRes, variablepvs) = scanDynamic(leafreports['identifier']['functionnames'], leafreports['identifier']['variablenames'], scanenv, batdb, clones)
-	elif language == 'Java':
-		variablepvs = {}
-		variablepvs = extractVariablesJava(leafreports['identifier'], scanenv, batdb, clones)
-		functionRes = extractJavaNames(leafreports['identifier'], scanenv, batdb, clones)
+			lenlines = len(lines)
 
-	## then write results back to disk. This needs to be done because results for
-	## Java might need to be aggregated first.
-	leafreports['ranking'] = (res, functionRes, variablepvs, language)
-	leafreports['tags'].append('ranking')
-	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
-	leafreports = cPickle.dump(leafreports, leaf_file)
-	leaf_file.close()
-	return filehash
+		linuxkernel = False
+		scankernelfunctions = False
+		if 'linuxkernel' in leafreports['tags']:
+			linuxkernel = True
+			if scanenv.get('BAT_KERNELFUNCTION_SCAN') == 1 and language == 'C':
+				scankernelfunctions = True
+
+		## first compute the score for the lines
+		if lenlines != 0 and scanlines:
+			gaincutoff = 1
+			## keep a dict of versions, license and copyright statements per package. TODO: remove these.
+			packageversions = {}
+			packagelicenses = {}
+			packagecopyrights = {}
+
+			if have_counter:
+				linecount = collections.Counter(lines)
+			else:
+				linecount = {}
+				for l in lines:
+					if l in linecount:
+						linecount[l] += 1
+					else:
+						linecount[l] = 1
+
+			## first look up and assign strings for as far as possible.
+			## strings that have not been assigned will be assigned later based
+			## on their score.
+			## Look up strings in the database and assign strings to packages.
+			uniqueMatches = {}
+			nonUniqueScore = {}
+			stringsLeft = {}
+			sameFileScore = {}
+			nonUniqueMatches = {}
+			nonUniqueMatchLines = []
+			nonUniqueAssignments = {}
+			directAssignedString = {}
+			unmatched = []
+			unmatchedignorecache = set()
+
+			stringscache = scanenv.get(stringsdbperlanguageenv[language])
+			## open the database containing all the strings that were extracted
+			## from source code.
+			conn = batdb.getConnection(stringscache,scanenv)
+			c = conn.cursor()
+
+			kernelfuncres = []
+			kernelparamres = []
+			if linuxkernel:
+				funccache = scanenv.get(namecacheperlanguageenv['C'])
+				kernelconn = batdb.getConnection(funccache,scanenv)
+				kernelcursor = kernelconn.cursor()
+
+			if scandebug:
+				print >>sys.stderr, "total extracted strings for %s: %d" % (filepath, lenlines)
+
+			## some counters for keeping track of how many matches there are
+			matchedlines = 0
+			unmatchedlines = 0
+			matchednotclonelines = 0
+			matchednonassignedlines = 0
+			matcheddirectassignedlines = 0
+			nrUniqueMatches = 0
+
+			## start values for some state variables that are used
+			## most of these are only used if 'usesourceorder' == False
+			matched = False
+			matchednonassigned = False
+			matchednotclones = False
+			kernelfunctionmatched = False
+			uniquematch = False
+			oldline = None
+			notclones = []
+
+			if usesourceorder:
+				## keep track of which package was the most uniquely matched package
+				uniquepackage_tmp = None
+				uniquefilenames_tmp = []
+
+				## keep a backlog for strings that could possibly be assigned later
+				backlog = []
+				notclonesbacklog = []
+			else:
+				## sort the lines first, so it is easy to skip duplicates
+				lines.sort()
+
+			stringquery = batdb.getQuery("select package, filename FROM %s WHERE stringidentifier=" % stringsdbperlanguagetable[language] + "%s")
+			kernelquery = batdb.getQuery("select package FROM linuxkernelfunctionnamecache WHERE functionname=%s LIMIT 1")
+			precomputequery = batdb.getQuery("select score from scores where stringidentifier=%s LIMIT 1")
+
+			for line in lines:
+				#if scandebug:
+				#	print >>sys.stderr, "processing <|%s|>" % line
+				kernelfunctionmatched = False
+
+				if not usesourceorder:
+					## speedup if the line happens to be the same as the old one
+					## This does *not* alter the score in any way, but perhaps
+					## it should: having a very significant string a few times
+					## is a strong indication.
+					if line == oldline:
+						if matched:
+							matchedlines += 1
+							if uniquematch:
+								nrUniqueMatches += 1
+								#uniqueMatches[package].append((line, []))
+						elif matchednonassigned:
+							linecount[line] = linecount[line] - 1
+							matchednonassignedlines += 1
+						elif matchednotclones:
+							linecount[line] = linecount[line] - 1
+							matchednotclonelines += 1
+						else:
+							unmatchedlines += 1
+							linecount[line] = linecount[line] - 1
+						continue
+					uniquematch = False
+					matched = False
+					matchednonassigned = False
+					matchednotclones = False
+					oldline = line
+
+				## skip empty lines (only triggered if stringcutoff == 0)
+				if line == "":
+					continue
+
+				## An extra check for lines that score extremely low. This
+				## helps reduce load on databases stored on slower disks. Only used if
+				## precomputescore is set and "source order" is False.
+				if precomputescore:
+					c.execute(precomputequery, (line,))
+					scoreres = c.fetchone()
+					if scoreres != None:
+						## If the score is so low it will not have any influence on the final
+						## score, why even bother hitting the disk?
+						## Since there might be package rewrites this should be a bit less than the
+						## cut off value that was defined.
+						if scoreres[0] < scorecutoff/100:
+							nonUniqueMatchLines.append(line)
+							matchednonassignedlines += 1
+							matchednonassigned = True
+							linecount[line] = linecount[line] - 1
+							continue
+
+				if line in unmatchedignorecache:
+					unmatched.append(line)
+					unmatchedlines += 1
+					linecount[line] = linecount[line] - 1
+					continue
+
+				## if scoreres is None the line could still be something else like a kernel function, or a
+				## kernel string in a different format, so keep searching.
+				## If the image is a Linux kernel image first try Linux kernel specific matching
+				## like function names, then continue as normal.
+
+				if linuxkernel:
+					## This is where things get a bit ugly. The strings in a Linux
+					## kernel image could also be function names, not string constants.
+					## There could be false positives here...
+					if scankernelfunctions:
+						kernelcursor.execute(kernelquery, (line,))
+						kernelres = kernelcursor.fetchall()
+						if len(kernelres) != 0:
+							kernelfuncres.append(line)
+							kernelfunctionmatched = True
+							linecount[line] = linecount[line] - 1
+							continue
+
+				## then see if there is anything in the cache at all
+				c.execute(stringquery, (line,))
+				res = c.fetchall()
+
+				if len(res) == 0 and linuxkernel:
+					origline = line
+					## try a few variants that could occur in the Linux kernel
+					## The values of KERN_ERR and friends have changed in the years.
+					## In 2.6 it used to be for example <3> (defined in include/linux/kernel.h
+					## or include/linux/printk.h )
+					## In later kernels this was changed.
+					matchres = reerrorlevel.match(line)
+					if matchres != None:
+						scanline = line.split('>', 1)[1]
+						if len(scanline) < stringcutoff:
+							unmatched.append(line)
+							unmatchedlines += 1
+							linecount[line] = linecount[line] - 1
+							continue
+						c.execute(stringquery, (scanline,))
+						res = c.fetchall()
+						if len(res) != 0:
+							line = scanline
+						else:
+							scanline = scanline.split(':', 1)
+							if len(scanline) > 1:
+								scanline = scanline[1]
+								if scanline.startswith(" "):
+									scanline = scanline[1:]
+								if len(scanline) < stringcutoff:
+									unmatched.append(line)
+									unmatchedlines += 1
+									linecount[line] = linecount[line] - 1
+									unmatchedignorecache.add(origline)
+									continue
+								c.execute(stringquery, (scanline,))
+								res = c.fetchall()
+								if len(res) != 0:
+									if len(scanline) != 0:
+										line = scanline
+					else:
+						## In include/linux/kern_levels.h since kernel 3.6 a different format is
+						## used. TODO: actually check in the binary whether or not a match (if any)
+						## is preceded by 0x01
+						matchres = rematch.match(line)
+						if matchres != None:
+							scanline = line[1:]
+							if len(scanline) < stringcutoff:
+								unmatched.append(line)
+								unmatchedlines += 1
+								linecount[line] = linecount[line] - 1
+								unmatchedignorecache.add(origline)
+								continue
+							c.execute(stringquery, (scanline,))
+							res = c.fetchall()
+							if len(res) != 0:
+								if len(scanline) != 0:
+									line = scanline
+
+						if len(res) == 0:
+							scanline = line.split(':', 1)
+							if len(scanline) > 1:
+								scanline = scanline[1]
+								if scanline.startswith(" "):
+									scanline = scanline[1:]
+								if len(scanline) < stringcutoff:
+									unmatched.append(line)
+									unmatchedlines += 1
+									linecount[line] = linecount[line] - 1
+									unmatchedignorecache.add(origline)
+									continue
+								c.execute(stringquery, (scanline,))
+								res = c.fetchall()
+								if len(res) != 0:
+									if len(scanline) != 0:
+										line = scanline
+
+					## result is still empty, perhaps it is a module parameter. TODO
+					if len(res) == 0:
+						if '.' in line:
+							if line.count('.') == 1:
+								paramres = reparam.match(line)
+								if paramres != None:
+									pass
+
+					## if 'line' has been changed, then linecount should be changed accordingly
+					if line != origline:
+						linecount[origline] = linecount[origline] - 1
+						if linecount.has_key(line):
+							linecount[line] = linecount[line] + 1
+						else:
+							linecount[line] = 1
+
+				## nothing in the cache
+				if len(res) == 0:
+					unmatched.append(line)
+					unmatchedlines += 1
+					linecount[line] = linecount[line] - 1
+					unmatchedignorecache.add(line)
+					continue
+				if len(res) != 0:
+					## Assume:
+					## * database has no duplicates
+					## * filenames in the database have been processed using os.path.basename()
+
+					if scandebug:
+						print >>sys.stderr, "\n%d matches found for <(|%s|)> in %s" % (len(res), line, filepath)
+
+					pkgs = {}    ## {package name: set([filenames without path])}
+	
+					filenames = {}
+
+					## For each string determine in how many packages (without version) the string
+					## is found.
+					## If the string is only found in one package the string is unique to the package
+					## so record it as such and add its length to a score.
+					for result in res:
+						(package, sourcefilename) = result
+						if clones.has_key(package):
+							package = clones[package]
+						if not pkgs.has_key(package):
+							pkgs[package] = set([sourcefilename])
+						else:
+							pkgs[package].add(sourcefilename)
+						if not filenames.has_key(sourcefilename):
+							filenames[sourcefilename] = [package]
+						else:
+							filenames[sourcefilename] = list(set(filenames[sourcefilename] + [package]))
+
+					if len(pkgs) != 1:
+						nonUniqueMatchLines.append(line)
+						## The string found is not unique to a package, but is it 
+						## unique to a filename?
+						## This method assumes that files that are named the same
+						## also contain the same or similar content. This could lead
+						## to incorrect results.
+
+						## now determine the score for the string
+						try:
+							score = len(line) / pow(alpha, (len(filenames) - 1))
+						except Exception, e:
+							## pow(alpha, (len(filenames) - 1)) is overflowing here
+							## so the score would be very close to 0. The largest value
+							## is sys.maxint, so use that one. The score will be
+							## smaller than almost any value of scorecutoff...
+							if usesourceorder:
+								score = len(line) / sys.maxint
+							else:
+								matchednonassigned = True
+								matchednonassignedlines += 1
+								linecount[line] = linecount[line] - 1
+								continue
+
+						## if it is assumed that the compiler puts string constants in the
+						## same order in the generated code then strings can be assigned
+						## to the package directly
+						if usesourceorder:
+							if uniquepackage_tmp in pkgs:
+								assign_string = False
+								assign_filename = None
+								for pf in uniquefilenames_tmp:
+									if pf in pkgs[uniquepackage_tmp]:
+										assign_string = True
+										assign_filename = pf
+										break
+								if assign_string:
+									if not nonUniqueMatches.has_key(uniquepackage_tmp):
+										nonUniqueMatches[uniquepackage_tmp] = [line]
+									else:
+										nonUniqueMatches[uniquepackage_tmp].append(line)
+									if directAssignedString.has_key(uniquepackage_tmp):
+										directAssignedString[uniquepackage_tmp].append((line, assign_filename, score))
+									else:
+										directAssignedString[uniquepackage_tmp] = [(line, assign_filename, score)]
+									matcheddirectassignedlines += 1
+									nonUniqueAssignments[uniquepackage_tmp] = nonUniqueAssignments.get(uniquepackage_tmp,0) + 1
+
+									matchedlines += 1
+									linecount[line] = linecount[line] - 1
+									continue
+								else:
+									## store pkgs and line for backward lookups
+									backlog.append((line, pkgs[uniquepackage_tmp], score))
+
+						if not score > scorecutoff:
+							matchednonassigned = True
+							matchednonassignedlines += 1
+							if not usesourceorder:
+								linecount[line] = linecount[line] - 1
+							continue
+
+						## After having computed a score determine if the files
+						## the string was found in in are all called the same.
+						## filenames {name of file: { name of package: 1} }
+						if filter(lambda x: len(filenames[x]) != 1, filenames.keys()) == []:
+							matchednotclonelines += 1
+							for fn in filenames:
+								## The filename fn containing the matched string can only
+								## be found in one package.
+								## For example: string 'foobar' is present in 'foo.c' in package 'foo'
+								## and 'bar.c' in package 'bar', but not in 'foo.c' in package 'bar'
+								## or 'bar.c' in foo (if any).
+								fnkey = filenames[fn][0]
+								nonUniqueScore[fnkey] = nonUniqueScore.get(fnkey,0) + score
+							matchednotclones = True
+							if not usesourceorder:
+								linecount[line] = linecount[line] - 1
+								notclones.append((line, filenames))
+							else:
+								notclonesbacklog.append((line, filenames))
+							continue
+						else:
+							for fn in filenames:
+								## There are multiple packages in which the same
+								## filename contains this string, for example 'foo.c'
+								## in packages 'foo' and 'bar. This is likely to be
+								## internal cloning in the repo.  This string is
+								## assigned to a single package in the loop below.
+								## Some strings will not signficantly contribute to the score, so they
+								## could be ignored and not added to the list.
+								## For now exclude them, but in the future they could be included for
+								## completeness.
+								stringsLeft['%s\t%s' % (line, fn)] = {'string': line, 'score': score, 'filename': fn, 'pkgs' : filenames[fn]}
+								## lookup
+
+					else:
+						## the string is unique to this package and this package only
+						uniquematch = True
+						## store the uniqueMatches without any information about checksums
+						if not uniqueMatches.has_key(package):
+							uniqueMatches[package] = [(line, [])]
+						else:
+							uniqueMatches[package].append((line, []))
+						linecount[line] = linecount[line] - 1
+						if usesourceorder:
+							uniquepackage_tmp = package
+							uniquefilenames_tmp = pkgs[package]
+							## process backlog
+							for b in xrange(len(backlog), 0, -1):
+								assign_string = False
+								assign_filename = None
+								(backlogline, backlogfilenames, backlogscore) = backlog[b-1]
+								for pf in uniquefilenames_tmp:
+									if pf in backlogfilenames:
+										assign_string = True
+										assign_filename = pf
+										break
+								if assign_string:
+									## keep track of the old score in case it is changed/recomputed here
+									oldbacklogscore = backlogscore
+									if not nonUniqueMatches.has_key(uniquepackage_tmp):
+										nonUniqueMatches[uniquepackage_tmp] = [backlogline]
+									else:
+										nonUniqueMatches[uniquepackage_tmp].append(backlogline)
+									if directAssignedString.has_key(uniquepackage_tmp):
+										directAssignedString[uniquepackage_tmp].append((backlogline, assign_filename, backlogscore))
+									else:
+										directAssignedString[uniquepackage_tmp] = [(backlogline, assign_filename, backlogscore)]
+									matcheddirectassignedlines += 1
+									nonUniqueAssignments[uniquepackage_tmp] = nonUniqueAssignments.get(uniquepackage_tmp,0) + 1
+									## remove the directly assigned string from stringsLeft,
+									## at least for *this* package
+									try:
+										for pf in backlogfilenames:
+											del stringsLeft['%s\t%s' % (backlogline, pf)]
+									except KeyError, e:
+										pass
+									## decrease matchednonassigned if the originally computed score
+									## is too low
+									if not oldbacklogscore > scorecutoff:
+										matchednonassigned = matchednonassigned - 1
+									linecount[backlogline] = linecount[backlogline] - 1
+									for cl in notclonesbacklog:
+										(notclone, filenames) = cl
+										if notclone == backlogline:
+											matchednotclonelines -= 1
+											for fn in filenames:
+												fnkey = filenames[fn][0]
+												nonUniqueScore[fnkey] = nonUniqueScore.get(fnkey) - backlogscore
+											notclonesbacklog.remove(cl)
+											break
+								else:
+									break
+							## store notclones for later use
+							notclones += notclonesbacklog
+							backlog = []
+							notclonesbacklog = []
+					matched = True
+
+					## for statistics it's nice to see how many lines were matched
+					matchedlines += 1
+			if scankernelfunctions:
+				kernelcursor.close()
+				kernelconn.close()
+			c.close()
+			conn.close()
+
+			## clean up stringsLeft first
+			for l in stringsLeft.keys():
+				if linecount[stringsLeft[l]['string']] == 0:
+					del stringsLeft[l]
+			## done looking up and assigning all the strings
+
+			uniqueScore = {}
+			for package in uniqueMatches:
+				if not uniqueScore.has_key(package):
+					uniqueScore[package] = 0
+				for line in uniqueMatches[package]:
+					uniqueScore[package] += len(line[0])
+
+			directAssignedScore = {}
+			for package in directAssignedString:
+				if not directAssignedScore.has_key(package):
+					directAssignedScore[package] = 0
+				for line in directAssignedString[package]:
+					directAssignedScore[package] += line[2]
+
+			## If the string is not unique, do a little bit more work to determine which
+			## file is the most likely, so also record the filename.
+			##
+			## 1. determine whether the string is unique to a package
+			## 2. if not, determine which filenames the string is in
+			## 3. for each filename, determine whether or not this file (containing the string)
+			##    is unique to a package
+			## 4. if not, try to determine the most likely package the string was found in
+
+			## For each string that occurs in the same filename in multiple
+			## packages (e.g., "debugXML.c", a cloned file of libxml2 in several
+			## packages), assign it to one package.  We do this by picking the
+			## package that would gain the highest score increment across all
+			## strings that are left.  This is repeated until no strings are left.
+			pkgsScorePerString = {}
+			for stri in stringsLeft:
+				pkgsSortedTmp = map(lambda x: {'package': x, 'uniquescore': uniqueScore.get(x, 0)}, stringsLeft[stri]['pkgs'])
+
+				## get the unique score per package and sort in reverse order
+				pkgsSorted = sorted(pkgsSortedTmp, key=lambda x: x['uniquescore'], reverse=True)
+				## and get rid of the unique scores again. Now it's sorted.
+				pkgsSorted = map(lambda x: x['package'], pkgsSorted)
+				pkgs2 = []
+
+				for pkgSort in pkgsSorted:
+					if uniqueScore.get(pkgSort, 0) == uniqueScore.get(pkgsSorted[0], 0):
+						pkgs2.append(pkgSort)
+				pkgsScorePerString[stri] = pkgs2
+
+			newgain = {}
+			for stri in stringsLeft:
+				for p2 in pkgsScorePerString[stri]:
+					newgain[p2] = newgain.get(p2, 0) + stringsLeft[stri]['score']
+
+			useless_packages = set()
+			for p in newgain.keys():
+				## check if packages could ever contribute usefully.
+				if newgain[p] < gaincutoff:
+					useless_packages.add(p)
+
+			## walk through the data again, filter out useless stuff
+			new_stringsleft = {}
+
+			string_split = {}
+
+			for stri in stringsLeft:
+				## filter out the strings that only occur in packages that will contribute
+				## to the score. Ignore the rest.
+				if filter(lambda x: x not in useless_packages, pkgsScorePerString[stri]) != []:
+					new_stringsleft[stri] = stringsLeft[stri]
+					strsplit = stri.rsplit('\t', 1)[0]
+					if string_split.has_key(strsplit):
+						string_split[strsplit].add(stri)
+					else:
+						string_split[strsplit] = set([stri])
+
+			## the difference between stringsLeft and new_stringsleft is matched
+			## but unassigned if the strings *only* occur in stringsLeft
+			oldstrleft = set()
+			for i in stringsLeft:
+				oldstrleft.add(stringsLeft[i]['string'])
+			for i in oldstrleft.difference(set(string_split.keys())):
+				matchednonassignedlines += linecount[i]
+				matchedlines -= linecount[i]
+
+			stringsLeft = new_stringsleft
+
+			roundNr = 0
+			strleft = len(stringsLeft)
+
+			## keep track of which strings were already found. This is because each string
+			## is only considered once anyway.
+			while strleft > 0:
+				roundNr = roundNr + 1
+				#if scandebug:
+				#	print >>sys.stderr, "\nround %d: %d strings left" % (roundNr, strleft)
+				gain = {}
+				stringsPerPkg = {}
+
+				## cleanup
+				if roundNr != 0:
+					todelete = set()
+					for stri in stringsLeft:
+						if linecount[stringsLeft[stri]['string']] == 0:
+							todelete.add(stri)
+
+					for a in todelete:
+						del stringsLeft[a]
+
+				oldstrleft = set()
+				for i in stringsLeft:
+					oldstrleft.add(stringsLeft[i]['string'])
+
+				## Determine to which packages the remaining strings belong.
+				newstrleft = set()
+				for stri in stringsLeft:
+					for p2 in pkgsScorePerString[stri]:
+						if p2 in useless_packages:
+							continue
+						gain[p2] = gain.get(p2, 0) + stringsLeft[stri]['score']
+						if not stringsPerPkg.has_key(p2):
+							stringsPerPkg[p2] = []
+						stringsPerPkg[p2].append(stri)
+						newstrleft.add(stringsLeft[stri]['string'])
+
+				for i in oldstrleft.difference(newstrleft):
+					if linecount[i] == 0:
+						continue
+					matchednonassignedlines += 1
+					matchedlines -= 1
+					linecount[i] -= 1
+
+				for p2 in gain.keys():
+					## check if packages could ever contribute usefully.
+					if gain[p2] < gaincutoff:
+						useless_packages.add(p2)
+
+				## gain_sorted contains the sort order, gain contains the actual data
+				gain_sorted = sorted(gain, key = lambda x: gain.__getitem__(x), reverse=True)
+				if gain_sorted == []:
+					break
+
+				## so far value is the best, but that might change
+				best = gain_sorted[0]
+
+				## Possible optimisation: skip the last step if the gain is not high enough
+				if filter(lambda x: x[1] > gaincutoff, gain.items()) == []:
+					break
+
+				## if multiple packages have a big enough gain, add them to 'close'
+				## and 'fight' to see which package is the most likely hit.
+				close = filter(lambda x: gain[x] > (gain[best] * 0.9), gain_sorted)
+
+       				## Let's hope "sort" terminates on a comparison function that
+       				## may not actually be a proper ordering.	
+				if len(close) > 1:
+					#if scandebug:
+					#	print >>sys.stderr, "  doing battle royale between", close
+					## reverse sort close, then best = close_sorted[0][0]
+					close_sorted = map(lambda x: (x, avgscores[language][x]), close)
+					close_sorted = sorted(close_sorted, key = lambda x: x[1], reverse=True)
+					## If we don't have a unique score *at all* it is likely that everything
+					## is cloned. There could be a few reasons:
+					## 1. there are duplicates in the database due to renaming
+					## 2. package A is completely contained in package B (bundling).
+					## If there are no hits for package B, it is more likely we are
+					## actually seeing package A.
+					if uniqueScore == {}:
+						best = close_sorted[-1][0]
+					else:
+						best = close_sorted[0][0]
+					#if scandebug:
+					#	print >>sys.stderr, "  %s won" % best
+				best_score = 0
+				## for each string in the package with the best gain add the score
+				## to the package and move on to the next package.
+				todelete = set()
+				for xy in stringsPerPkg[best]:
+					x = stringsLeft[xy]
+					strsplit = xy.rsplit('\t', 1)[0]
+					if linecount[strsplit] == 0:
+						## is this correct here? There are situations where one
+						## string appears multiple times in a single source file
+						## and also the binary (eapol_sm.c in hostapd 0.3.9 contains
+						## the string "%s    state=%s" several times and binaries
+						## do too.
+						todelete.add(strsplit)
+						continue
+					sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
+					best_score += 1
+					linecount[strsplit] = linecount[strsplit] - 1
+					if nonUniqueMatches.has_key(best):
+						nonUniqueMatches[best].append(strsplit)
+					else:
+						nonUniqueMatches[best]  = [strsplit]
+
+				for a in todelete:
+					for st in string_split[a]:
+						del stringsLeft[st]
+				## store how many non unique strings were assigned per package
+				nonUniqueAssignments[best] = nonUniqueAssignments.get(best,0) + best_score
+				if gain[best] < gaincutoff:
+					break
+				strleft = len(stringsLeft)
+
+			for i in stringsLeft:
+				strsplit = i.rsplit('\t', 1)[0]
+				if linecount[strsplit] == 0:
+					continue
+				matchednonassignedlines += 1
+				matchedlines -= 1
+				linecount[strsplit] -= 1
+
+			scores = {}
+			for k in set(uniqueScore.keys() + sameFileScore.keys()):
+				scores[k] = uniqueScore.get(k, 0) + sameFileScore.get(k, 0) + nonUniqueScore.get(k,0) + directAssignedScore.get(k,0)
+			scores_sorted = sorted(scores, key = lambda x: scores.__getitem__(x), reverse=True)
+
+			rank = 1
+			reports = []
+			if scores == {}:
+				totalscore = 0.0
+			else:
+				totalscore = float(reduce(lambda x, y: x + y, scores.values()))
+
+			for s in scores_sorted:
+				try:
+					percentage = (scores[s]/totalscore)*100.0
+				except:
+					percentage = 0.0
+				reports.append((rank, s, uniqueMatches.get(s,[]), len(uniqueMatches.get(s,[])), percentage, packageversions.get(s, {}), packagelicenses.get(s, []), packagecopyrights.get(s,[])))
+				rank = rank+1
+
+			if matchedlines == 0 and unmatched == []:
+				res = None
+			else:
+				if scankernelfunctions:
+					matchedlines = matchedlines - len(kernelfuncres)
+					lenlines = lenlines - len(kernelfuncres)
+				res = {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched, 'scores': scores, 'unmatchedlines': unmatchedlines, 'matchednonassignedlines': matchednonassignedlines, 'matchednotclonelines': matchednotclonelines, 'matcheddirectassignedlines': matcheddirectassignedlines}
+		else:
+			res = None
+
+		variablepvs = {}
+
+		## then look up results for function names, variable names, and so on.
+		if language == 'C':
+			if linuxkernel:
+				functionRes = {}
+				if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
+					variablepvs = scankernelsymbols(leafreports['identifier']['kernelsymbols'], scanenv, batdb, clones)
+				## TODO: clean up
+				if leafreports['identifier'].has_key('kernelfunctions'):
+					if leafreports['identifier']['kernelfunctions'] != []:
+						functionRes['kernelfunctions'] = copy.deepcopy(leafreports['identifier']['kernelfunctions'])
+			else:
+				(functionRes, variablepvs) = scanDynamic(leafreports['identifier']['functionnames'], leafreports['identifier']['variablenames'], scanenv, batdb, clones)
+		elif language == 'Java':
+			variablepvs = {}
+			variablepvs = extractVariablesJava(leafreports['identifier'], scanenv, batdb, clones)
+			functionRes = extractJavaNames(leafreports['identifier'], scanenv, batdb, clones)
+
+		## then write results back to disk. This needs to be done because results for
+		## Java might need to be aggregated first.
+		leafreports['ranking'] = (res, functionRes, variablepvs, language)
+		leafreports['tags'].append('ranking')
+		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
+		leafreports = cPickle.dump(leafreports, leaf_file)
+		leaf_file.close()
+		reportqueue.put(filehash)
+		scanqueue.task_done()
 
 ## determine the most likely versions for each of the scanned binaries
 ## Currently finding the version is based on unique matches that were found.
