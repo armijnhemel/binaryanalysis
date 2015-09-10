@@ -800,14 +800,25 @@ def grab_sha256_parallel(scanqueue, reportqueue, cursor, batdb, language, queryt
 			reportqueue.put((line, res))
 		scanqueue.task_done()
 
-def extractJavaNames(javameta, scanenv, batdb, clones):
-	if not scanenv.has_key(namecacheperlanguageenv['Java']):
-		return {}
-
+def extractJava(javameta, scanenv, batdb, clones):
 	dynamicRes = {}  # {'namesmatched': 0, 'totalnames': int, 'uniquematches': int, 'packages': {} }
 	namesmatched = 0
 	uniquematches = 0
 	uniquepackages = {}
+
+	variablepvs = {}
+	if javameta.has_key('fields'):
+		fields = javameta['fields']
+	else:
+		fields = []
+	if javameta.has_key('classes'):
+		classes = javameta['classes']
+	else:
+		classes = []
+	if javameta.has_key('sourcefiles'):
+		sourcefiles = javameta['sourcefiles']
+	else:
+		sourcefiles = []
 
 	classname = javameta['classes']
 	methods = javameta['methods']
@@ -816,9 +827,9 @@ def extractJavaNames(javameta, scanenv, batdb, clones):
 
 	funccache = scanenv.get(namecacheperlanguageenv['Java'])
 
+	conn = batdb.getConnection(funccache,scanenv)
+	c = conn.cursor()
 	if scanenv.has_key('BAT_METHOD_SCAN'):
-		conn = batdb.getConnection(funccache,scanenv)
-		c = conn.cursor()
 
 		query = batdb.getQuery("select distinct package from %s where functionname=" % namecacheperlanguagetable['Java'] + "%s")
 		for meth in methods:
@@ -844,8 +855,6 @@ def extractJavaNames(javameta, scanenv, batdb, clones):
 						uniquepackages[packages_tmp[0]].append(meth)
 					else:
 						uniquepackages[packages_tmp[0]] = [meth]
-		c.close()
-		conn.close()
 
 	dynamicRes['namesmatched'] = namesmatched
 	dynamicRes['totalnames'] = len(set(methods))
@@ -855,38 +864,8 @@ def extractJavaNames(javameta, scanenv, batdb, clones):
 	## unique matches found. 
 	if uniquematches != 0:
 		dynamicRes['packages'] = {}
-	## these are the unique function names only, just add some stubs here
-	for i in uniquepackages:
-		versions = []
-		dynamicRes['packages'][i] = []
-	return dynamicRes
 
-def extractVariablesJava(javameta, scanenv, batdb, clones):
-	if not scanenv.has_key(namecacheperlanguageenv['Java']):
-		return {}
-
-	variablepvs = {}
-	if javameta.has_key('fields'):
-		fields = javameta['fields']
-	else:
-		fields = []
-	if javameta.has_key('classes'):
-		classes = javameta['classes']
-	else:
-		classes = []
-	if javameta.has_key('sourcefiles'):
-		sourcefiles = javameta['sourcefiles']
-	else:
-		sourcefiles = []
-
-	## open the database containing function names that were extracted
-	## from source code.
-
-	funccache = scanenv.get(namecacheperlanguageenv['Java'])
-
-	conn = batdb.getConnection(funccache,scanenv)
-	c = conn.cursor()
-
+	## Now variable names
 	classpvs = {}
 	sourcepvs = {}
 	fieldspvs = {}
@@ -980,14 +959,17 @@ def extractVariablesJava(javameta, scanenv, batdb, clones):
 				fieldres_tmp = set(fieldres_tmp)
 				fieldres = map(lambda x: (x, 0), fieldres_tmp)
 				fieldspvs[f] = fieldres
-
 	c.close()
 	conn.close()
 
 	variablepvs['fields'] = fieldspvs
 	variablepvs['sources'] = sourcepvs
 	variablepvs['classes'] = classpvs
-	return variablepvs
+	## these are the unique function names only, just add some stubs here
+	for i in uniquepackages:
+		versions = []
+		dynamicRes['packages'][i] = []
+	return (dynamicRes, variablepvs)
 
 def scankernelsymbols(variables, scanenv, batdb, clones):
 	kernelcache = scanenv.get(namecacheperlanguageenv['C'])
@@ -1914,8 +1896,6 @@ def lookup_identifier(scanqueue, reportqueue, cursor, batdb, scanenv, topleveldi
 		else:
 			res = None
 
-		variablepvs = {}
-
 		## then look up results for function names, variable names, and so on.
 		if language == 'C':
 			if linuxkernel:
@@ -1929,9 +1909,14 @@ def lookup_identifier(scanqueue, reportqueue, cursor, batdb, scanenv, topleveldi
 			else:
 				(functionRes, variablepvs) = scanDynamic(leafreports['identifier']['functionnames'], leafreports['identifier']['variablenames'], scanenv, batdb, clones)
 		elif language == 'Java':
+			if not scanenv.has_key(namecacheperlanguageenv['Java']):
+				variablepvs = {}
+				functionRes = {}
+			else:
+				(functionRes, variablepvs) = extractJava(leafreports['identifier'], scanenv, batdb, clones)
+		else:
 			variablepvs = {}
-			variablepvs = extractVariablesJava(leafreports['identifier'], scanenv, batdb, clones)
-			functionRes = extractJavaNames(leafreports['identifier'], scanenv, batdb, clones)
+			functionRes = {}
 
 		## then write results back to disk. This needs to be done because results for
 		## Java might need to be aggregated first.
