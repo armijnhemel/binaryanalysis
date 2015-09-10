@@ -971,18 +971,14 @@ def extractJava(javameta, scanenv, batdb, clones):
 		dynamicRes['packages'][i] = []
 	return (dynamicRes, variablepvs)
 
-def scankernelsymbols(variables, scanenv, batdb, clones):
-	kernelcache = scanenv.get(namecacheperlanguageenv['C'])
-	conn = batdb.getConnection(kernelcache,scanenv)
-	c = conn.cursor()
+def scankernelsymbols(variables, scanenv, kernelquery, funccursor, clones):
 	allvvs = {}
 	uniquevvs = {}
 	variablepvs = {}
-	query = batdb.getQuery("select distinct package from linuxkernelnamecache where varname=%s")
 	for v in variables:
 		pvs = []
-		c.execute(query, (v,))
-		res = c.fetchall()
+		funccursor.execute(kernelquery, (v,))
+		res = funccursor.fetchall()
 		if res != []:
 			pvs = map(lambda x: x[0], res)
 
@@ -999,9 +995,6 @@ def scankernelsymbols(variables, scanenv, batdb, clones):
 				uniquevvs[pvs_tmp[0]] = [v]
 		allvvs[v] = pvs_tmp
 
-	c.close()
-	conn.close()
-
 	variablepvs = {'uniquepackages': uniquevvs, 'allvariables': allvvs}
 	variablepvs['packages'] = {}
 	variablepvs['versionresults'] = {}
@@ -1017,21 +1010,12 @@ def scankernelsymbols(variables, scanenv, batdb, clones):
 ## By searching a database that contains which function names and variable names
 ## can be found in which packages it is possible to identify which package was
 ## used.
-def scanDynamic(scanstr, variables, scanenv, batdb, clones):
+def scanDynamic(scanstr, variables, scanenv, funccursor, batdb, clones):
 	dynamicRes = {}
 	variablepvs = {}
 
-	if not scanenv.has_key(namecacheperlanguageenv['C']):
-		return (dynamicRes, variablepvs)
-
 	if not ('BAT_FUNCTION_SCAN' in scanenv or 'BAT_VARNAME_SCAN' in scanenv):
 		return (dynamicRes, variablepvs)
-
-	## open the database containing function names that were extracted
-	## from source code.
-	funccache = scanenv.get(namecacheperlanguageenv['C'])
-	conn = batdb.getConnection(funccache,scanenv)
-	c = conn.cursor()
 
 	if scanenv.has_key('BAT_FUNCTION_SCAN'):
 		uniquepackages = {}
@@ -1046,8 +1030,8 @@ def scanDynamic(scanstr, variables, scanenv, batdb, clones):
 		## deduplicate first
 		query = batdb.getQuery("select package from %s where functionname=" % namecacheperlanguagetable['C'] + "%s")
 		for funcname in scanstr:
-			c.execute(query, (funcname,))
-			res = c.fetchall()
+			funccursor.execute(query, (funcname,))
+			res = funccursor.fetchall()
 			pkgs = []
 			if res != []:
 				packages_tmp = []
@@ -1096,8 +1080,8 @@ def scanDynamic(scanstr, variables, scanenv, batdb, clones):
 			if v in ['options', 'debug', 'options', 'verbose', 'optarg', 'optopt', 'optfind', 'optind', 'opterr']:
 				continue
 			pvs = []
-			c.execute(query, (v,))
-			res = c.fetchall()
+			funccursor.execute(query, (v,))
+			res = funccursor.fetchall()
 			if res != []:
 				pvs = map(lambda x: x[0], res)
 
@@ -1122,8 +1106,6 @@ def scanDynamic(scanstr, variables, scanenv, batdb, clones):
 
 			variablepvs['packages'][package] = []
 
-	c.close()
-	conn.close()
 	return (dynamicRes, variablepvs)
 
 ## match identifiers with data in the database
@@ -1194,6 +1176,10 @@ def lookup_identifier(scanqueue, reportqueue, cursor, batdb, scanenv, topleveldi
 			linuxkernel = True
 			if scanenv.get('BAT_KERNELFUNCTION_SCAN') == 1 and language == 'C':
 				scankernelfunctions = True
+		if language == 'C':
+			funccache = scanenv.get(namecacheperlanguageenv['C'])
+			funcconn = batdb.getConnection(funccache,scanenv)
+			funccursor = funcconn.cursor()
 
 		## first compute the score for the lines
 		if lenlines != 0 and scanlines:
@@ -1236,10 +1222,6 @@ def lookup_identifier(scanqueue, reportqueue, cursor, batdb, scanenv, topleveldi
 
 			kernelfuncres = []
 			kernelparamres = []
-			if linuxkernel:
-				funccache = scanenv.get(namecacheperlanguageenv['C'])
-				kernelconn = batdb.getConnection(funccache,scanenv)
-				kernelcursor = kernelconn.cursor()
 
 			if scandebug:
 				print >>sys.stderr, "total extracted strings for %s: %d" % (filepath, lenlines)
@@ -1348,8 +1330,8 @@ def lookup_identifier(scanqueue, reportqueue, cursor, batdb, scanenv, topleveldi
 					## kernel image could also be function names, not string constants.
 					## There could be false positives here...
 					if scankernelfunctions:
-						kernelcursor.execute(kernelquery, (line,))
-						kernelres = kernelcursor.fetchall()
+						funccursor.execute(kernelquery, (line,))
+						kernelres = funccursor.fetchall()
 						if len(kernelres) != 0:
 							kernelfuncres.append(line)
 							kernelfunctionmatched = True
@@ -1647,9 +1629,6 @@ def lookup_identifier(scanqueue, reportqueue, cursor, batdb, scanenv, topleveldi
 
 					## for statistics it's nice to see how many lines were matched
 					matchedlines += 1
-			if scankernelfunctions:
-				kernelcursor.close()
-				kernelconn.close()
 			c.close()
 			conn.close()
 
@@ -1901,13 +1880,16 @@ def lookup_identifier(scanqueue, reportqueue, cursor, batdb, scanenv, topleveldi
 			if linuxkernel:
 				functionRes = {}
 				if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
-					variablepvs = scankernelsymbols(leafreports['identifier']['kernelsymbols'], scanenv, batdb, clones)
+					kernelquery = batdb.getQuery("select distinct package from linuxkernelnamecache where varname=%s")
+					variablepvs = scankernelsymbols(leafreports['identifier']['kernelsymbols'], scanenv, kernelquery, funccursor, clones)
 				## TODO: clean up
 				if leafreports['identifier'].has_key('kernelfunctions'):
 					if leafreports['identifier']['kernelfunctions'] != []:
 						functionRes['kernelfunctions'] = copy.deepcopy(leafreports['identifier']['kernelfunctions'])
 			else:
-				(functionRes, variablepvs) = scanDynamic(leafreports['identifier']['functionnames'], leafreports['identifier']['variablenames'], scanenv, batdb, clones)
+				(functionRes, variablepvs) = scanDynamic(leafreports['identifier']['functionnames'], leafreports['identifier']['variablenames'], scanenv, funccursor, batdb, clones)
+			funccursor.close()
+			funcconn.close()
 		elif language == 'Java':
 			if not scanenv.has_key(namecacheperlanguageenv['Java']):
 				variablepvs = {}
