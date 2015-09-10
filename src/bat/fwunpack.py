@@ -957,6 +957,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 				blacklist.append((0, os.stat(filename).st_size))
 				counter = counter + 1
 				newtags.append('exe')
+				newtags.append('winrar')
 				return (diroffsets, blacklist, newtags, hints)
 			else:
 				os.rmdir(tmpdir)
@@ -970,6 +971,7 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		(size7z, res) = tmpres
 		diroffsets.append((res, 0, size7z))
 		blacklist.append((0, size7z))
+		## TODO: research if size7z == filesize
 		newtags.append('exe')
 		return (diroffsets, blacklist, newtags, hints)
 	else:
@@ -4040,6 +4042,33 @@ def unpackIco(filename, offset, template, tempdir=None):
 	## clean up the temporary files
 	os.unlink(icofile)
 	return tmpdir
+
+## Windows MSI
+def searchUnpackMSI(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
+	hints = []
+	if not filename.lower().endswith('.msi'):
+		return ([], blacklist, [], hints)
+	if not "msi" in offsets:
+		return ([], blacklist, [], hints)
+	if not 0 in offsets['msi']:
+		return ([], blacklist, [], hints)
+	diroffsets = []
+	newtags = []
+	counter = 1
+
+	for offset in offsets['msi']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			return (diroffsets, blacklist, newtags, hints)
+		tmpdir = dirsetup(tempdir, filename, "msi", counter)
+		tmpres = unpack7z(filename, 0, tmpdir, blacklist)
+		if tmpres != None:
+			(size7z, res) = tmpres
+			diroffsets.append((res, 0, size7z))
+			blacklist.append((0, size7z))
+			newtags.append('msi')
+			return (diroffsets, blacklist, newtags, hints)
+	return (diroffsets, blacklist, newtags, hints)
 
 ## Windows HtmlHelp
 def searchUnpackCHM(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):

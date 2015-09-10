@@ -98,6 +98,7 @@ fsmagic = {
             'yaffs2':		'\x03\x00\x00\x00\x01\x00\x00\x00\xff\xff', ## this is not a an official signature, just occuring frequently
             'plf':		'\x50\x4c\x46\x21',
             'chm':		'ITSF\x03\x00\x00\x00\x60\x00\x00\x00\x01\x00\x00\x00',
+            'msi':		'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1', ## not sure this is a correct signature
           }
 
 ## some offsets can be found after a certain number of bytes, but
