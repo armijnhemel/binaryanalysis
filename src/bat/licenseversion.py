@@ -724,40 +724,26 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 			continue
 		rankingfiles.add(i)
 
-	pool = multiprocessing.Pool(processes=processors)
 	## and determine versions, etc.
-	for i in rankingfiles:
-		compute_version(pool, processors, newenv, unpackreports[i], topleveldir, determinelicense, determinecopyright, batdb)
-	pool.terminate()
+	compute_version(processors, newenv, unpackreports, rankingfiles, topleveldir, determinelicense, determinecopyright, batdb)
 
 ## grab variable names.
-def grab_sha256_varname((batdb, masterdb, language, tasks, scanenv)):
-	results = {}
-	## open the database containing all the strings that were extracted
-	## from source code.
-	conn = batdb.getConnection(masterdb,scanenv)
-	c = conn.cursor()
-	query = batdb.getQuery("select version, pathname from processed_file where checksum=%s")
-	for sha256sum in tasks:
+def grab_sha256_varname(scanqueue, reportqueue, cursor, query):
+	#query = batdb.getQuery("select version, pathname from processed_file where checksum=%s")
+	while True:
+		sha256sum = scanqueue.get()
 		c.execute(query, (sha256sum,))
-		results[sha256sum] = c.fetchall()
-	c.close()
-	conn.close()
-	return results
+		results = c.fetchall()
+		reportqueue.put({sha256sum: results})
+		scanqueue.task_done()
 
-def grab_sha256_filename((batdb, masterdb, tasks, scanenv)):
-	results = {}
-	## open the database containing all the strings that were extracted
-	## from source code.
-	conn = batdb.getConnection(masterdb,scanenv)
-	c = conn.cursor()
-	query = batdb.getQuery("select version, pathname from processed_file where checksum=%s")
-	for sha256sum in tasks:
-		c.execute(query, (sha256sum,))
-		results[sha256sum] = c.fetchall()
-	c.close()
-	conn.close()
-	return results
+def grab_sha256_filename(scanqueue, reportqueue, cursor, query):
+	while True:
+		sha256sum = scanqueue.get()
+		cursor.execute(query, (sha256sum,))
+		results = cursor.fetchall()
+		reportqueue.put({sha256sum: results})
+		scanqueue.task_done()
 
 ## grab copyright statements from the license database
 def grab_sha256_copyright((batdb, copyrightdb, tasks)):
@@ -788,39 +774,34 @@ def grab_sha256_license((batdb, licensedb, tasks, scanenv)):
 	conn.close()
 	return results
 
-def grab_sha256_parallel((batdb, masterdb, tasks, language, querytype, scanenv)):
-	results = []
-	## open the database containing all the strings that were extracted
-	## from source code.
-	conn = batdb.getConnection(masterdb,scanenv)
-	c = conn.cursor()
+def grab_sha256_parallel(scanqueue, reportqueue, cursor, batdb, language, querytype):
 	stringquery = batdb.getQuery("select distinct checksum, linenumber, language from extracted_string where stringidentifier=%s and language=%s")
 	functionquery = batdb.getQuery("select distinct checksum, linenumber, language from extracted_function where functionname=%s")
 	variablequery = batdb.getQuery("select distinct checksum, linenumber, language, type from extracted_name where name=%s")
 	kernelvarquery = batdb.getQuery("select distinct checksum, linenumber, language, type from extracted_name where name=%s")
-	for line in tasks:
+	while True:
+		res = None
+		line = scanqueue.get()
 		if querytype == "string":
-			c.execute(stringquery, (line,language))
-			res = c.fetchall()
+			cursor.execute(stringquery, (line,language))
+			res = cursor.fetchall()
 		elif querytype == 'function':
-			c.execute(functionquery, (line,))
-			res = c.fetchall()
+			cursor.execute(functionquery, (line,))
+			res = cursor.fetchall()
 		elif querytype == 'variable':
-			c.execute(variablequery, (line,))
-			res = c.fetchall()
+			cursor.execute(variablequery, (line,))
+			res = cursor.fetchall()
 			res = filter(lambda x: x[3] == 'variable', res)
 		elif querytype == 'kernelvariable':
-			c.execute(kernelvarquery, (line,))
-			res = c.fetchall()
+			cursor.execute(kernelvarquery, (line,))
+			res = cursor.fetchall()
 			res = filter(lambda x: x[3] == 'kernelsymbol', res)
 		if res != None:
 			res = filter(lambda x: x[2] == language, res)
 			## TODO: make a list of line numbers
 			res = map(lambda x: (x[0], x[1]), res)
-		results.append((line, res))
-	c.close()
-	conn.close()
-	return results
+			reportqueue.put((line, res))
+		scanqueue.task_done()
 
 def extractJavaNames(javameta, scanenv, batdb, clones):
 	if not scanenv.has_key(namecacheperlanguageenv['Java']):
@@ -1969,17 +1950,7 @@ def lookup_identifier(scanqueue, reportqueue, cursor, batdb, scanenv, topleveldi
 ## Currently finding the version is based on unique matches that were found.
 ## If determinelicense or determinecopyright are set licenses and copyright statements
 ## are also extracted.
-def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determinelicense, determinecopyright, batdb):
-	## read the pickle
-	filehash = unpackreport['checksum']
-	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
-	leafreports = cPickle.load(leaf_file)
-	leaf_file.close()
-	if not leafreports.has_key('ranking'):
-		return
-
-	(res, functionRes, variablepvs, language) = leafreports['ranking']
-
+def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldir, determinelicense, determinecopyright, batdb):
 	masterdb = scanenv.get('BAT_DB')
 	if determinelicense or determinecopyright:
 		licensedb = scanenv.get('BAT_LICENSE_DB')
@@ -1994,367 +1965,334 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				minimumunique = int(scanenv.get('BAT_MINIMUM_UNIQUE', 0))
 				if minimumunique > 0:
 					pruning = True
-
 	if processors == None:
 		processors = multiprocessing.cpu_count()
-	## keep a list of versions per sha256, since source files often are in more than one version
-	sha256_versions = {}
-	## indicate whether or not the pickle should be written back to disk.
-	## If uniquematches is empty and if functionRes is also empty, then nothing needs to be written back.
-	changed = False
+
+	if processors == None:
+		processamount = 1
+	else:
+		processamount = processors
+
+	batcons = []
+	batcursors = []
+	for i in range(0,processamount):
+		c = batdb.getConnection(scanenv['BAT_DB'],scanenv)
+		cursor = c.cursor()
+		batcursors.append(cursor)
+		batcons.append(c)
+
+	scanmanager = multiprocessing.Manager()
+
+	sha256_filename_query = batdb.getQuery("select version, pathname from processed_file where checksum=%s")
 
 	minstep = max(1, processors)
-	
-	if res != None:
-		newreports = []
-		for r in res['reports']:
-			(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses, packagecopyrights) = r
-			if unique == []:
-				newreports.append(r)
-				continue
-			changed = True
-			newuniques = []
-			newpackageversions = {}
-			packagecopyrights = []
-			uniques = list(set(map(lambda x: x[0], unique)))
-			lenuniques = len(uniques)
+	pool = multiprocessing.Pool(processes=processors)
+	for rankingfile in rankingfiles:
+		unpackreport = unpackreports[rankingfile]
+		## read the pickle
+		filehash = unpackreport['checksum']
+		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+		leafreports = cPickle.load(leaf_file)
+		leaf_file.close()
+		if not leafreports.has_key('ranking'):
+			continue
 
-			## first grab all possible checksums, plus associated line numbers for this string. Since
-			## these are unique strings they will only be present in the package (or clones of the package).
-			vtasks_tmp = []
-			if lenuniques < processors:
-				step = max(1,lenuniques)
-			else:
-				step = lenuniques/processors
-				if step <= minstep:
-					step = max(minstep,lenuniques)
-			for v in xrange(0, lenuniques, step):
-				vtasks_tmp.append(uniques[v:v+step])
-			vtasks = map(lambda x: (batdb, masterdb, x, language, 'string',scanenv), filter(lambda x: x!= [], vtasks_tmp))
-			if vtasks != []:
-				vsha256s = pool.map(grab_sha256_parallel, vtasks)
-			else:
-				vsha256s = []
-			vsha256s = reduce(lambda x, y: x + y, filter(lambda x: x != [], vsha256s))
+		(res, functionRes, variablepvs, language) = leafreports['ranking']
 
-			## for each combination (line,sha256,linenumber) store per checksum
-			## the line and linenumber(s). The checksums are used to look up version
-			## and filename information.
-			sha256_scan_versions = {}
+		## keep a list of versions per sha256, since source files often are in more than one version
+		sha256_versions = {}
+		## indicate whether or not the pickle should be written back to disk.
+		## If uniquematches is empty and if functionRes is also empty, then nothing needs to be written back.
+		changed = False
 
-			for l in vsha256s:
-				(line, versionsha256s) = l
-				for s in versionsha256s:
-					(checksum, linenumber) = s
-					if not sha256_versions.has_key(checksum):
-						if sha256_scan_versions.has_key(checksum):
-							sha256_scan_versions[checksum].add((line, linenumber))
-						else:
-							sha256_scan_versions[checksum] = set([(line, linenumber)])
+		if res == None and functionRes == {} and variablepvs == {}:
+			continue
 
-			vtasks_tmp = []
-			if len(sha256_scan_versions) < processors:
-				step = max(1,len(sha256_scan_versions))
-			else:
-				step = len(sha256_scan_versions)/processors
-				if step <= minstep:
-					step = max(minstep,len(sha256_scan_versions))
-			for v in xrange(0, len(sha256_scan_versions), step):
-				vtasks_tmp.append(sha256_scan_versions.keys()[v:v+step])
-			vtasks = map(lambda x: (batdb, masterdb, x, scanenv), filter(lambda x: x!= [], vtasks_tmp))
-
-			## grab version and file information
-			if vtasks != []:
-				fileres = pool.map(grab_sha256_filename, vtasks)
-			else:
-				fileres = []
-			resdict = {}
-			map(lambda x: resdict.update(x), fileres)
-
-			tmplines = {}
-			## construct the full information needed by other scans
-			for checksum in resdict:
-				versres = resdict[checksum]
-				for l in sha256_scan_versions[checksum]:
-					(line, linenumber) = l
-					if not tmplines.has_key(line):
-						tmplines[line] = []
-					## TODO: store (checksum, linenumber(s), versres)
-					tmplines[line].append((checksum, linenumber, versres))
-				for v in versres:
-					(version, filename) = v
-					if sha256_versions.has_key(checksum):
-						sha256_versions[checksum].append((version, filename))
-					else:
-						sha256_versions[checksum] = [(version, filename)]
-			for l in tmplines.keys():
-				newuniques.append((l, tmplines[l]))
-
-			## optionally prune version information
-			if pruning:
-				if len(newuniques) > minimumunique:
-					newuniques = prune(scanenv, newuniques, package)
-
-			## optionally fill two lists with sha256 for license schanning and copyright scanning
-			licensesha256s = []
-			copyrightsha256s = []
-
-			for u in newuniques:
-				versionsha256s = u[1]
-				vseen = set()
-				if determinelicense:
-					licensesha256s += map(lambda x: x[0], versionsha256s)
-				if determinecopyright:
-					copyrightsha256s += map(lambda x: x[0], versionsha256s)
-				for s in versionsha256s:
-					(checksum, linenumber, versionfilenames) = s
-					for v in versionfilenames:
-						(version, filename) = v
-						if version in vseen:
-							continue
-						if newpackageversions.has_key(version):
-							newpackageversions[version] = newpackageversions[version] + 1
-						else:   
-							newpackageversions[version] = 1
-						vseen.add(version)
-
-			## Ideally the version number should be stored with the license.
-			## There are good reasons for this: files are sometimes collectively
-			## relicensed when there is a new release (example: Samba 3.2 relicensed
-			## to GPLv3+) so the version number can be very significant for licensing.
-			## determinelicense and determinecopyright *always* imply determineversion
-			## TODO: store license with version number.
-			if determinelicense:
-				vtasks_tmp = []
-				licensesha256s = list(set(licensesha256s))
-				lenlicensesha256s = len(licensesha256s)
-				if lenlicensesha256s < processors:
-					step = max(1,lenlicensesha256s)
-				else:
-					step = lenlicensesha256s/processors
-					if step <= minstep:
-						step = max(minstep,lenlicensesha256s)
-				for v in xrange(0, lenlicensesha256s, step):
-					vtasks_tmp.append(licensesha256s[v:v+step])
-				vtasks = map(lambda x: (batdb, licensedb, x, scanenv), filter(lambda x: x!= [], vtasks_tmp))
-
-				if vtasks != []:
-					packagelicenses = pool.map(grab_sha256_license, vtasks)
-				else:
-					packagelicenses = []
-				## result is a list of {sha256sum: list of licenses}
-				packagelicenses_tmp = []
-				for p in packagelicenses:
-					packagelicenses_tmp += reduce(lambda x,y: x + y, p.values(), [])
-				packagelicenses = list(set(packagelicenses_tmp))
-			else:
-				packagelicenses = []
-
-			## extract copyrights. 'statements' are not very accurate so ignore those for now in favour of URL
-			## and e-mail
-			if determinecopyright:
-				vtasks_tmp = []
-				copyrightsha256s = list(set(copyrightsha256s))
-				lencopyrightsha256s = len(copyrightsha256s)
-				if lencopyrightsha256s < processors:
-					step = max(1,lencopyrightsha256s)
-				else:
-					step = lencopyrightsha256s/processors
-					if step <= minstep:
-						step = max(minstep,lencopyrightsha256s)
-				for v in xrange(0, lencopyrightsha256s, step):
-					vtasks_tmp.append(copyrightsha256s[v:v+step])
-				vtasks = map(lambda x: (licensedb, x), filter(lambda x: x!= [], vtasks_tmp))
-
-				if vtasks != []:
-					packagecopyrights = pool.map(grab_sha256_copyright, vtasks)
-				else:
-					packagecopyrights = []
-				## result is a list of {sha256sum: list of copyright statements}
-				packagecopyrights_tmp = []
-				for p in packagecopyrights:
-					packagecopyrights_tmp += reduce(lambda x,y: x + y, p.values(), [])
-				packagecopyrights = list(set(packagecopyrights_tmp))
-			else:
+		if res != None:
+			newreports = []
+			for r in res['reports']:
+				(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses, packagecopyrights) = r
+				if unique == []:
+					newreports.append(r)
+					continue
+				changed = True
+				newuniques = []
+				newpackageversions = {}
 				packagecopyrights = []
-			newreports.append((rank, package, newuniques, uniquematcheslen, percentage, newpackageversions, packagelicenses, packagecopyrights))
-		res['reports'] = newreports
+				uniques = list(set(map(lambda x: x[0], unique)))
+				lenuniques = len(uniques)
 
-	if functionRes.has_key('versionresults'):
-
-		for package in functionRes['versionresults'].keys():
-			if not functionRes.has_key('uniquepackages'):
-				continue
-			if not functionRes['uniquepackages'].has_key(package):
-				continue
-			changed = True
-			functionnames = functionRes['uniquepackages'][package]
-			## right now only C is supported. TODO: fix this for other languages such as Java.
-			vtasks_tmp = []
-			if len(functionnames) < processors:
-				step = max(1,len(functionnames))
-			else:
-				step = len(functionnames)/processors
-				if step <= minstep:
-					step = max(minstep,len(functionnames))
-			for v in xrange(0, len(functionnames), step):
-				vtasks_tmp.append(functionnames[v:v+step])
-			vtasks = map(lambda x: (batdb, masterdb, x, 'C', 'function',scanenv), vtasks_tmp)
-
-			if vtasks != []:
-				vsha256s = pool.map(grab_sha256_parallel, vtasks)
-			else:
+				## first grab all possible checksums, plus associated line numbers for this string. Since
+				## these are unique strings they will only be present in the package (or clones of the package).
+				processpool = []
 				vsha256s = []
-			vsha256s = reduce(lambda x, y: x + y, filter(lambda x: x != [], vsha256s))
 
-			sha256_scan_versions = {}
-			tmplines = {}
+				scanqueue = multiprocessing.JoinableQueue(maxsize=0)
+				reportqueue = scanmanager.Queue(maxsize=0)
 
-			for p in vsha256s:
-				(functionname, vres) = p
-				for s in vres:
-					(checksum, linenumber) = s
-					if not sha256_versions.has_key(checksum):
-						if sha256_scan_versions.has_key(checksum):
-							sha256_scan_versions[checksum].add((functionname, linenumber))
-						else:
-							sha256_scan_versions[checksum] = set([(functionname, linenumber)])
-					else:
-						for v in sha256_versions[checksum]:
-							(version, filename) = v
-							if not tmplines.has_key(functionname):
-								tmplines[functionname] = []
-						tmplines[functionname].append((checksum, linenumber, sha256_versions[checksum]))
+				map(lambda x: scanqueue.put(x), uniques)
 
-			vtasks_tmp = []
-			if len(sha256_scan_versions.keys()) < processors:
-				step = max(1,len(sha256_scan_versions.keys()))
-			else:
-				step = len(sha256_scan_versions.keys())/processors
-				if step <= minstep:
-					step = max(minstep,len(sha256_scan_versions.keys()))
-			for v in xrange(0, len(sha256_scan_versions.keys()), step):
-				vtasks_tmp.append(sha256_scan_versions.keys()[v:v+step])
-			vtasks = map(lambda x: (batdb, masterdb, x, scanenv), vtasks_tmp)
+				for i in range(0,processamount):
+					p = multiprocessing.Process(target=grab_sha256_parallel, args=(scanqueue,reportqueue,batcursors[i], batdb, language, 'string'))
+					processpool.append(p)
+					p.start()
 
-			## grab version and file information
-			if vtasks != []:
-				fileres = pool.map(grab_sha256_filename, vtasks)
-			else:
-				fileres = []
-			resdict = {}
-			map(lambda x: resdict.update(x), fileres)
+        			scanqueue.join()
 
-			## construct the full information needed by other scans
-			for checksum in resdict:
-				versres = resdict[checksum]
-				for l in sha256_scan_versions[checksum]:
-					(functionname, linenumber) = l
-					if not tmplines.has_key(functionname):
-						tmplines[functionname] = []
-					## TODO: store (checksum, linenumber(s), versres)
-					tmplines[functionname].append((checksum, linenumber, versres))
-				for v in versres:
-					if sha256_versions.has_key(checksum):
-						sha256_versions[checksum].append((v[0], v[1]))
-					else:
-						sha256_versions[checksum] = [(v[0], v[1])]
-			for l in tmplines.keys():
-				functionRes['versionresults'][package].append((l, tmplines[l]))
+				while True:
+					try:
+						val = reportqueue.get_nowait()
+						vsha256s.append(val)
+						reportqueue.task_done()
+					except Queue.Empty, e:
+						## Queue is empty
+						break
+				reportqueue.join()
 
-		newresults = {}
-		for package in functionRes['versionresults'].keys():
-			newuniques = functionRes['versionresults'][package]
-			## optionally prune version information
-			if pruning:
-				if len(newuniques) > minimumunique:
-					newuniques = prune(scanenv, newuniques, package)
+				for p in processpool:
+					p.terminate()
 
-			newresults[package] = newuniques
-			uniqueversions = {}
-			functionRes['packages'][package] = []
-			if have_counter:
-				vs = collections.Counter()
-			else:
-				vs = {}
-			for u in newuniques:
-				versionsha256s = u[1]
-				for s in versionsha256s:
-					(checksum, linenumber, versionfilenames) = s
-					if have_counter:
-						vs.update(set(map(lambda x: x[0], versionfilenames)))
-					else:
-						for v in set(map(lambda x: x[0], versionfilenames)):
-							if v in vs:
-								vs[v] += 1
-							else:
-								vs[v] = 1
+				## for each combination (line,sha256,linenumber) store per checksum
+				## the line and linenumber(s). The checksums are used to look up version
+				## and filename information.
+				sha256_scan_versions = {}
 
-			for v in vs:
-				functionRes['packages'][package].append((v, vs[v]))
-		functionRes['versionresults'] = newresults
-
-	if variablepvs != {}:
-		if variablepvs.has_key('uniquepackages'):
-			for package in variablepvs['uniquepackages']:
-				vtasks_tmp = []
-				uniques = variablepvs['uniquepackages'][package]
-				if len(uniques) < processors:
-					step = max(1,len(uniques))
-				else:
-					step = len(uniques)/processors
-					if step <= minstep:
-						step = max(minstep,len(uniques))
-				for v in xrange(0, len(uniques), step):
-					vtasks_tmp.append(uniques[v:v+step])
-				if variablepvs.has_key('type'):
-					if variablepvs['type'] == 'linuxkernel':
-						vtasks = map(lambda x: (batdb, masterdb, x, language, 'kernelvariable',scanenv), filter(lambda x: x!= [], vtasks_tmp))
-					else:
-						vtasks = map(lambda x: (batdb, masterdb, x, language, 'variable',scanenv), filter(lambda x: x!= [], vtasks_tmp))
-				else:
-						vtasks = map(lambda x: (batdb, masterdb, x, language, 'variable',scanenv), filter(lambda x: x!= [], vtasks_tmp))
-				if vtasks != []:
-					vsha256s = pool.map(grab_sha256_parallel, vtasks)
-				else:
-					vsha256s = []
-				vsha256s = reduce(lambda x, y: x + y, filter(lambda x: x != [], vsha256s))
-
-                        	sha256_scan_versions = {}
-                        	tmplines = {}
-
-				for p in vsha256s:
-					(variablename, varres) = p
-					for s in varres:
+				for l in vsha256s:
+					(line, versionsha256s) = l
+					for s in versionsha256s:
 						(checksum, linenumber) = s
 						if not sha256_versions.has_key(checksum):
 							if sha256_scan_versions.has_key(checksum):
-								sha256_scan_versions[checksum].add((variablename, linenumber))
+								sha256_scan_versions[checksum].add((line, linenumber))
 							else:
-								sha256_scan_versions[checksum] = set([(variablename, linenumber)])
+								sha256_scan_versions[checksum] = set([(line, linenumber)])
+
+				processpool = []
+				fileres = []
+
+				scanqueue = multiprocessing.JoinableQueue(maxsize=0)
+				reportqueue = scanmanager.Queue(maxsize=0)
+
+				map(lambda x: scanqueue.put(x), sha256_scan_versions.keys())
+
+				for i in range(0,processamount):
+					p = multiprocessing.Process(target=grab_sha256_filename, args=(scanqueue,reportqueue,batcursors[i], sha256_filename_query))
+					processpool.append(p)
+					p.start()
+
+        			scanqueue.join()
+
+				while True:
+					try:
+						val = reportqueue.get_nowait()
+						fileres.append(val)
+						reportqueue.task_done()
+					except Queue.Empty, e:
+						## Queue is empty
+						break
+				reportqueue.join()
+
+				for p in processpool:
+					p.terminate()
+
+				resdict = {}
+				map(lambda x: resdict.update(x), fileres)
+
+				tmplines = {}
+				## construct the full information needed by other scans
+				for checksum in resdict:
+					versres = resdict[checksum]
+					for l in sha256_scan_versions[checksum]:
+						(line, linenumber) = l
+						if not tmplines.has_key(line):
+							tmplines[line] = []
+						## TODO: store (checksum, linenumber(s), versres)
+						tmplines[line].append((checksum, linenumber, versres))
+					for v in versres:
+						(version, filename) = v
+						if sha256_versions.has_key(checksum):
+							sha256_versions[checksum].append((version, filename))
+						else:
+							sha256_versions[checksum] = [(version, filename)]
+				for l in tmplines.keys():
+					newuniques.append((l, tmplines[l]))
+
+				## optionally prune version information
+				if pruning:
+					if len(newuniques) > minimumunique:
+						newuniques = prune(scanenv, newuniques, package)
+
+				## optionally fill two lists with sha256 for license schanning and copyright scanning
+				licensesha256s = []
+				copyrightsha256s = []
+
+				for u in newuniques:
+					versionsha256s = u[1]
+					vseen = set()
+					if determinelicense:
+						licensesha256s += map(lambda x: x[0], versionsha256s)
+					if determinecopyright:
+						copyrightsha256s += map(lambda x: x[0], versionsha256s)
+					for s in versionsha256s:
+						(checksum, linenumber, versionfilenames) = s
+						for v in versionfilenames:
+							(version, filename) = v
+							if version in vseen:
+								continue
+							if newpackageversions.has_key(version):
+								newpackageversions[version] = newpackageversions[version] + 1
+							else:   
+								newpackageversions[version] = 1
+							vseen.add(version)
+
+				## Ideally the version number should be stored with the license.
+				## There are good reasons for this: files are sometimes collectively
+				## relicensed when there is a new release (example: Samba 3.2 relicensed
+				## to GPLv3+) so the version number can be very significant for licensing.
+				## determinelicense and determinecopyright *always* imply determineversion
+				## TODO: store license with version number.
+				if determinelicense:
+					vtasks_tmp = []
+					licensesha256s = list(set(licensesha256s))
+					lenlicensesha256s = len(licensesha256s)
+					if lenlicensesha256s < processors:
+						step = max(1,lenlicensesha256s)
+					else:
+						step = lenlicensesha256s/processors
+						if step <= minstep:
+							step = max(minstep,lenlicensesha256s)
+					for v in xrange(0, lenlicensesha256s, step):
+						vtasks_tmp.append(licensesha256s[v:v+step])
+					vtasks = map(lambda x: (batdb, licensedb, x, scanenv), filter(lambda x: x!= [], vtasks_tmp))
+
+					if vtasks != []:
+						packagelicenses = pool.map(grab_sha256_license, vtasks)
+					else:
+						packagelicenses = []
+					## result is a list of {sha256sum: list of licenses}
+					packagelicenses_tmp = []
+					for p in packagelicenses:
+						packagelicenses_tmp += reduce(lambda x,y: x + y, p.values(), [])
+					packagelicenses = list(set(packagelicenses_tmp))
+				else:
+					packagelicenses = []
+
+				## extract copyrights. 'statements' are not very accurate so ignore those for now in favour of URL
+				## and e-mail
+				if determinecopyright:
+					vtasks_tmp = []
+					copyrightsha256s = list(set(copyrightsha256s))
+					lencopyrightsha256s = len(copyrightsha256s)
+					if lencopyrightsha256s < processors:
+						step = max(1,lencopyrightsha256s)
+					else:
+						step = lencopyrightsha256s/processors
+						if step <= minstep:
+							step = max(minstep,lencopyrightsha256s)
+					for v in xrange(0, lencopyrightsha256s, step):
+						vtasks_tmp.append(copyrightsha256s[v:v+step])
+					vtasks = map(lambda x: (licensedb, x), filter(lambda x: x!= [], vtasks_tmp))
+
+					if vtasks != []:
+						packagecopyrights = pool.map(grab_sha256_copyright, vtasks)
+					else:
+						packagecopyrights = []
+					## result is a list of {sha256sum: list of copyright statements}
+					packagecopyrights_tmp = []
+					for p in packagecopyrights:
+						packagecopyrights_tmp += reduce(lambda x,y: x + y, p.values(), [])
+					packagecopyrights = list(set(packagecopyrights_tmp))
+				else:
+					packagecopyrights = []
+				newreports.append((rank, package, newuniques, uniquematcheslen, percentage, newpackageversions, packagelicenses, packagecopyrights))
+			res['reports'] = newreports
+
+		if functionRes.has_key('versionresults'):
+
+			for package in functionRes['versionresults'].keys():
+				if not functionRes.has_key('uniquepackages'):
+					continue
+				if not functionRes['uniquepackages'].has_key(package):
+					continue
+				changed = True
+				functionnames = functionRes['uniquepackages'][package]
+
+				## right now only C is supported. TODO: fix this for other languages such as Java.
+				processpool = []
+				vsha256s = []
+
+				scanqueue = multiprocessing.JoinableQueue(maxsize=0)
+				reportqueue = scanmanager.Queue(maxsize=0)
+
+				map(lambda x: scanqueue.put(x), functionnames)
+
+				for i in range(0,processamount):
+					p = multiprocessing.Process(target=grab_sha256_parallel, args=(scanqueue,reportqueue,batcursors[i], batdb, 'C', 'function'))
+					processpool.append(p)
+					p.start()
+
+        			scanqueue.join()
+
+				while True:
+					try:
+						val = reportqueue.get_nowait()
+						vsha256s.append(val)
+						reportqueue.task_done()
+					except Queue.Empty, e:
+						## Queue is empty
+						break
+				reportqueue.join()
+
+				for p in processpool:
+					p.terminate()
+
+				sha256_scan_versions = {}
+				tmplines = {}
+
+				for p in vsha256s:
+					(functionname, vres) = p
+					for s in vres:
+						(checksum, linenumber) = s
+						if not sha256_versions.has_key(checksum):
+							if sha256_scan_versions.has_key(checksum):
+								sha256_scan_versions[checksum].add((functionname, linenumber))
+							else:
+								sha256_scan_versions[checksum] = set([(functionname, linenumber)])
 						else:
 							for v in sha256_versions[checksum]:
 								(version, filename) = v
-								if not tmplines.has_key(variablename):
-									tmplines[variablename] = []
-							tmplines[variablename].append((checksum, linenumber, sha256_versions[checksum]))
+								if not tmplines.has_key(functionname):
+									tmplines[functionname] = []
+							tmplines[functionname].append((checksum, linenumber, sha256_versions[checksum]))
+				fileres = []
+				if len(sha256_scan_versions.keys()) != 0:
+					processpool = []
 
-				vtasks_tmp = []
-				if len(sha256_scan_versions.keys()) < processors:
-					step = max(1,len(sha256_scan_versions.keys()))
-				else:
-					step = len(sha256_scan_versions.keys())/processors
-					if step <= minstep:
-						step = max(minstep,len(sha256_scan_versions.keys()))
-				for v in xrange(0, len(sha256_scan_versions.keys()), step):
-					vtasks_tmp.append(sha256_scan_versions.keys()[v:v+step])
-				vtasks = map(lambda x: (batdb, masterdb, x, scanenv), vtasks_tmp)
+					scanqueue = multiprocessing.JoinableQueue(maxsize=0)
+					reportqueue = scanmanager.Queue(maxsize=0)
 
-				## grab version and file information
-				if vtasks != []:
-					fileres = pool.map(grab_sha256_filename, vtasks)
-				else:
-					fileres = []
+					map(lambda x: scanqueue.put(x), sha256_scan_versions.keys())
+
+					for i in range(0,processamount):
+						p = multiprocessing.Process(target=grab_sha256_filename, args=(scanqueue,reportqueue,batcursors[i], sha256_filename_query))
+						processpool.append(p)
+						p.start()
+
+        				scanqueue.join()
+
+					while True:
+						try:
+							val = reportqueue.get_nowait()
+							fileres.append(val)
+							reportqueue.task_done()
+						except Queue.Empty, e:
+							## Queue is empty
+							break
+					reportqueue.join()
+
+					for p in processpool:
+						p.terminate()
+
 				resdict = {}
 				map(lambda x: resdict.update(x), fileres)
 
@@ -2362,31 +2300,30 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 				for checksum in resdict:
 					versres = resdict[checksum]
 					for l in sha256_scan_versions[checksum]:
-						(variablename, linenumber) = l
-						if not tmplines.has_key(variablename):
-							tmplines[variablename] = []
+						(functionname, linenumber) = l
+						if not tmplines.has_key(functionname):
+							tmplines[functionname] = []
 						## TODO: store (checksum, linenumber(s), versres)
-						tmplines[variablename].append((checksum, linenumber, versres))
+						tmplines[functionname].append((checksum, linenumber, versres))
 					for v in versres:
 						if sha256_versions.has_key(checksum):
 							sha256_versions[checksum].append((v[0], v[1]))
 						else:
 							sha256_versions[checksum] = [(v[0], v[1])]
 				for l in tmplines.keys():
-					variablepvs['versionresults'][package].append((l, tmplines[l]))
+					functionRes['versionresults'][package].append((l, tmplines[l]))
 
 			newresults = {}
-			for package in variablepvs['versionresults'].keys():
-				newuniques = variablepvs['versionresults'][package]
+			for package in functionRes['versionresults'].keys():
+				newuniques = functionRes['versionresults'][package]
 				## optionally prune version information
-
 				if pruning:
 					if len(newuniques) > minimumunique:
 						newuniques = prune(scanenv, newuniques, package)
 
 				newresults[package] = newuniques
 				uniqueversions = {}
-				variablepvs['packages'][package] = []
+				functionRes['packages'][package] = []
 				if have_counter:
 					vs = collections.Counter()
 				else:
@@ -2405,18 +2342,160 @@ def compute_version(pool, processors, scanenv, unpackreport, topleveldir, determ
 									vs[v] = 1
 
 				for v in vs:
-					variablepvs['packages'][package].append((v, vs[v]))
-			variablepvs['versionresults'] = newresults
-			changed = True
+					functionRes['packages'][package].append((v, vs[v]))
+			functionRes['versionresults'] = newresults
 
-	if changed:
-		leafreports['ranking'] = (res, functionRes, variablepvs, language)
-		leafreports['tags'] = list(set(leafreports['tags'] + ['ranking']))
-		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
-		leafreports = cPickle.dump(leafreports, leaf_file)
-		leaf_file.close()
-		unpackreport['tags'].append('ranking')
+		if variablepvs != {}:
+			if variablepvs.has_key('uniquepackages'):
+				for package in variablepvs['uniquepackages']:
+					vartype = 'variable'
+					if 'type' in variablepvs:
+						vartype = 'variable'
+						if variablepvs['type'] == 'linuxkernel':
+							vartype = 'kernelvariable'
+					uniques = variablepvs['uniquepackages'][package]
 
+					processpool = []
+					vsha256s = []
+
+					scanqueue = multiprocessing.JoinableQueue(maxsize=0)
+					reportqueue = scanmanager.Queue(maxsize=0)
+
+					map(lambda x: scanqueue.put(x), uniques)
+
+					for i in range(0,processamount):
+						p = multiprocessing.Process(target=grab_sha256_parallel, args=(scanqueue,reportqueue,batcursors[i], batdb, language, vartype))
+						processpool.append(p)
+						p.start()
+
+        				scanqueue.join()
+
+					while True:
+						try:
+							val = reportqueue.get_nowait()
+							vsha256s.append(val)
+							reportqueue.task_done()
+						except Queue.Empty, e:
+							## Queue is empty
+							break
+					reportqueue.join()
+
+					for p in processpool:
+						p.terminate()
+
+                        			sha256_scan_versions = {}
+                        			tmplines = {}
+
+					for p in vsha256s:
+						(variablename, varres) = p
+						for s in varres:
+							(checksum, linenumber) = s
+							if not sha256_versions.has_key(checksum):
+								if sha256_scan_versions.has_key(checksum):
+									sha256_scan_versions[checksum].add((variablename, linenumber))
+								else:
+									sha256_scan_versions[checksum] = set([(variablename, linenumber)])
+							else:
+								for v in sha256_versions[checksum]:
+									(version, filename) = v
+									if not tmplines.has_key(variablename):
+										tmplines[variablename] = []
+								tmplines[variablename].append((checksum, linenumber, sha256_versions[checksum]))
+
+					resdict = {}
+					if len(sha256_scan_versions.keys()) != 0:
+						processpool = []
+						fileres = []
+
+						scanqueue = multiprocessing.JoinableQueue(maxsize=0)
+						reportqueue = scanmanager.Queue(maxsize=0)
+
+						map(lambda x: scanqueue.put(x), sha256_scan_versions.keys())
+
+						for i in range(0,processamount):
+							p = multiprocessing.Process(target=grab_sha256_filename, args=(scanqueue,reportqueue,batcursors[i], sha256_filename_query))
+							processpool.append(p)
+							p.start()
+
+        					scanqueue.join()
+
+						while True:
+							try:
+								val = reportqueue.get_nowait()
+								fileres.append(val)
+								reportqueue.task_done()
+							except Queue.Empty, e:
+								## Queue is empty
+								break
+						reportqueue.join()
+
+						for p in processpool:
+							p.terminate()
+
+						map(lambda x: resdict.update(x), fileres)
+
+					## construct the full information needed by other scans
+					for checksum in resdict:
+						versres = resdict[checksum]
+						for l in sha256_scan_versions[checksum]:
+							(variablename, linenumber) = l
+							if not tmplines.has_key(variablename):
+								tmplines[variablename] = []
+							## TODO: store (checksum, linenumber(s), versres)
+							tmplines[variablename].append((checksum, linenumber, versres))
+						for v in versres:
+							if sha256_versions.has_key(checksum):
+								sha256_versions[checksum].append((v[0], v[1]))
+							else:
+								sha256_versions[checksum] = [(v[0], v[1])]
+					for l in tmplines.keys():
+						variablepvs['versionresults'][package].append((l, tmplines[l]))
+
+				newresults = {}
+				for package in variablepvs['versionresults'].keys():
+					newuniques = variablepvs['versionresults'][package]
+					## optionally prune version information
+
+					if pruning:
+						if len(newuniques) > minimumunique:
+							newuniques = prune(scanenv, newuniques, package)
+
+					newresults[package] = newuniques
+					uniqueversions = {}
+					variablepvs['packages'][package] = []
+					if have_counter:
+						vs = collections.Counter()
+					else:
+						vs = {}
+					for u in newuniques:
+						versionsha256s = u[1]
+						for s in versionsha256s:
+							(checksum, linenumber, versionfilenames) = s
+							if have_counter:
+								vs.update(set(map(lambda x: x[0], versionfilenames)))
+							else:
+								for v in set(map(lambda x: x[0], versionfilenames)):
+									if v in vs:
+										vs[v] += 1
+									else:
+										vs[v] = 1
+
+					for v in vs:
+						variablepvs['packages'][package].append((v, vs[v]))
+				variablepvs['versionresults'] = newresults
+				changed = True
+
+		if changed:
+			leafreports['ranking'] = (res, functionRes, variablepvs, language)
+			leafreports['tags'] = list(set(leafreports['tags'] + ['ranking']))
+			leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
+			leafreports = cPickle.dump(leafreports, leaf_file)
+			leaf_file.close()
+			unpackreport['tags'].append('ranking')
+	pool.terminate()
+
+	for c in batcons:
+		c.close()
 
 def licensesetup(scanenv, debug=False):
 	if not 'DBBACKEND' in scanenv:
