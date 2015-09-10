@@ -1,3 +1,13 @@
+2015-09-10:
+* fwunpack.py: add unpacking for some MSI files
+* licenseversion.py: reduce database connections when using PostgreSQL,
+because under certain conditions it is possible to run out of network
+connections as sockets still stay open for a little while after closing the
+connection to the database.
+* generatereports.py: fix reporting for certain packages
+* licenseversion.py: combine extractJavaNames and extractVariablesJava to save
+on database connections
+
 2015-09-07:
 * bruteforcescan.py: several bug fixes and sanity checks related to database
 connectivity
