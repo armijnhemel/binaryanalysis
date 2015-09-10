@@ -223,6 +223,11 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 											sh[checksum].add((fp, version, linenumber))
 										else:
 											sh[checksum] = set([(fp, version, linenumber)])
+									else:
+										if sh.has_key(checksum):
+											sh[checksum].add((filename, version, linenumber))
+										else:
+											sh[checksum] = set([(filename, version, linenumber)])
 								else:
 									if sh.has_key(checksum):
 										sh[checksum].add((filename, version, linenumber))
