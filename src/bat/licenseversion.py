@@ -761,18 +761,15 @@ def grab_sha256_copyright((batdb, copyrightdb, tasks)):
 	conn.close()
 	return results
 
+#def grab_sha256_filename(scanqueue, reportqueue, cursor, query):
 ## grab licenses from the license database
-def grab_sha256_license((batdb, licensedb, tasks, scanenv)):
-	results = {}
-	conn = batdb.getConnection(licensedb,scanenv)
-	c = conn.cursor()
-	query = batdb.getQuery("select distinct license, scanner from licenses where checksum=%s")
-	for sha256sum in tasks:
-		c.execute(query, (sha256sum,))
-		results[sha256sum] = c.fetchall()
-	c.close()
-	conn.close()
-	return results
+def grab_sha256_license(scanqueue, reportqueue, cursor, query):
+	while True:
+		sha256sum = scanqueue.get()
+		cursor.execute(query, (sha256sum,))
+		results = cursor.fetchall()
+		reportqueue.put(results)
+		scanqueue.task_done()
 
 def grab_sha256_parallel(scanqueue, reportqueue, cursor, batdb, language, querytype):
 	stringquery = batdb.getQuery("select distinct checksum, linenumber, language from extracted_string where stringidentifier=%s and language=%s")
@@ -1984,6 +1981,7 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 	scanmanager = multiprocessing.Manager()
 
 	sha256_filename_query = batdb.getQuery("select version, pathname from processed_file where checksum=%s")
+	sha256_license_query = batdb.getQuery("select distinct license, scanner from licenses where checksum=%s")
 
 	minstep = max(1, processors)
 	pool = multiprocessing.Pool(processes=processors)
@@ -2152,28 +2150,40 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 				## determinelicense and determinecopyright *always* imply determineversion
 				## TODO: store license with version number.
 				if determinelicense:
-					vtasks_tmp = []
-					licensesha256s = list(set(licensesha256s))
-					lenlicensesha256s = len(licensesha256s)
-					if lenlicensesha256s < processors:
-						step = max(1,lenlicensesha256s)
-					else:
-						step = lenlicensesha256s/processors
-						if step <= minstep:
-							step = max(minstep,lenlicensesha256s)
-					for v in xrange(0, lenlicensesha256s, step):
-						vtasks_tmp.append(licensesha256s[v:v+step])
-					vtasks = map(lambda x: (batdb, licensedb, x, scanenv), filter(lambda x: x!= [], vtasks_tmp))
 
-					if vtasks != []:
-						packagelicenses = pool.map(grab_sha256_license, vtasks)
-					else:
-						packagelicenses = []
-					## result is a list of {sha256sum: list of licenses}
+					licensesha256s = set(licensesha256s)
+					processpool = []
+					packagelicenses = []
+
+					scanqueue = multiprocessing.JoinableQueue(maxsize=0)
+					reportqueue = scanmanager.Queue(maxsize=0)
+
+					map(lambda x: scanqueue.put(x), licensesha256s)
+
+					for i in range(0,processamount):
+						p = multiprocessing.Process(target=grab_sha256_license, args=(scanqueue,reportqueue,batcursors[i], sha256_license_query))
+						processpool.append(p)
+						p.start()
+
+        				scanqueue.join()
+
+					while True:
+						try:
+							val = reportqueue.get_nowait()
+							packagelicenses.append(val)
+							reportqueue.task_done()
+						except Queue.Empty, e:
+							## Queue is empty
+							break
+					reportqueue.join()
+
+					for p in processpool:
+						p.terminate()
+
 					packagelicenses_tmp = []
 					for p in packagelicenses:
-						packagelicenses_tmp += reduce(lambda x,y: x + y, p.values(), [])
-					packagelicenses = list(set(packagelicenses_tmp))
+						packagelicenses_tmp += reduce(lambda x,y: x + y, p, [])
+					packagelicenses = packagelicenses_tmp
 				else:
 					packagelicenses = []
 
