@@ -230,13 +230,13 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 		except Exception, e:
 			return
 
-	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
-
 	## Is the master database defined?
 	if not scanenv.has_key('BAT_DB'):
 		return
 
 	masterdb = scanenv.get('BAT_DB')
+
+	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
 
 	## open database connection to the master database
 	masterconn = batdb.getConnection(masterdb,scanenv)
