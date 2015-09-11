@@ -12,101 +12,153 @@ including the ranking algorithm.
 The documentation of the format can be found in the 'doc' directory (subject to change)
 '''
 
-import os, sys, re, json, cPickle, multiprocessing, copy, gzip, codecs
+import os, sys, re, json, cPickle, multiprocessing, copy, gzip, codecs, Queue
 import bat.batdb
+from multiprocessing import Process, Lock
+from multiprocessing.sharedctypes import Value, Array
 
-def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb, scanenv)):
-	if outputhash == None:
-		outputhash = 'sha256'
-	batconnection = None
-	if batdb != None:
-		batconnection = batdb.getConnection(hashdatabase,scanenv)
-		if batconnection != None:
-			cursor = batconnection.cursor()
+#def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb, scanenv)):
+def writejson(scanqueue, topleveldir, outputhash, cursor, batdb, scanenv, converthash):
 	hashcache = {}
-	## read the data from the pickle file
-	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
-	leafreports = cPickle.load(leaf_file)
-	leaf_file.close()
-	## then mangle the data and dump it into a JSON file
-	jsonreport = {}
+	while True:
+		filehash = scanqueue.get()
+		## read the data from the pickle file
+		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+		leafreports = cPickle.load(leaf_file)
+		leaf_file.close()
+		## then mangle the data and dump it into a JSON file
+		jsonreport = {}
 
-	if "tags" in leafreports:
-		jsonreport['tags'] = list(set(copy.deepcopy(leafreports['tags'])))
-	## now go through all of the scans that are there. This is hardcoded.
-	## TODO: make more generic based on configuration.
-	for i in ['busybox-version', 'forges', 'licenses']:
-		if i in leafreports:
-			jsonreport[i] = copy.deepcopy(leafreports[i])
+		if "tags" in leafreports:
+			jsonreport['tags'] = list(set(copy.deepcopy(leafreports['tags'])))
+		## now go through all of the scans that are there. This is hardcoded.
+		## TODO: make more generic based on configuration.
+		for i in ['busybox-version', 'forges', 'licenses']:
+			if i in leafreports:
+				jsonreport[i] = copy.deepcopy(leafreports[i])
 
-	if outputhash != 'sha256' and batconnection != None:
-		query = batdb.getQuery("select %s from hashconversion where sha256=" % outputhash + "%s")
+		if converthash:
+			query = batdb.getQuery("select %s from hashconversion where sha256=" % outputhash + "%s")
 
-	## then the 'ranking' scan
-	if 'ranking' in leafreports:
-		jsonreport['ranking'] = {}
-		(stringidentifiers, functionnameresults, variablenameresults, language) = leafreports['ranking']
+		## then the 'ranking' scan
+		if 'ranking' in leafreports:
+			jsonreport['ranking'] = {}
+			(stringidentifiers, functionnameresults, variablenameresults, language) = leafreports['ranking']
 
-		## first the language
-		jsonreport['ranking']['language'] = language
+			## first the language
+			jsonreport['ranking']['language'] = language
 
-		## then the string identifier results
-		jsonreport['ranking']['stringresults'] = {}
-		jsonreport['ranking']['stringresults']['unmatched'] = []
-		jsonreport['ranking']['stringresults']['matchednonassignedlines'] = 0
-		jsonreport['ranking']['stringresults']['matchednotclonelines'] = 0
-		jsonreport['ranking']['stringresults']['nonUniqueMatches'] = []
-		jsonreport['ranking']['stringresults']['scores'] = []
-		jsonreport['ranking']['stringresults']['reports'] = []
-		if stringidentifiers != None:
-			if 'unmatched' in stringidentifiers:
-				newunmatched = []
-				for u in stringidentifiers['unmatched']:
-					decoded = False
-					for i in ['utf-8','ascii','latin-1','euc_jp', 'euc_jis_2004', 'jisx0213', 'iso2022_jp', 'iso2022_jp_1', 'iso2022_jp_2', 'iso2022_jp_2004', 'iso2022_jp_3', 'iso2022_jp_ext', 'iso2022_kr','shift_jis','shift_jis_2004','shift_jisx0213']:
-						try:
-							unmatchedline = u.decode(i)
-							decoded = True
-							break
-						except Exception, e:
+			## then the string identifier results
+			jsonreport['ranking']['stringresults'] = {}
+			jsonreport['ranking']['stringresults']['unmatched'] = []
+			jsonreport['ranking']['stringresults']['matchednonassignedlines'] = 0
+			jsonreport['ranking']['stringresults']['matchednotclonelines'] = 0
+			jsonreport['ranking']['stringresults']['nonUniqueMatches'] = []
+			jsonreport['ranking']['stringresults']['scores'] = []
+			jsonreport['ranking']['stringresults']['reports'] = []
+			if stringidentifiers != None:
+				if 'unmatched' in stringidentifiers:
+					newunmatched = []
+					for u in stringidentifiers['unmatched']:
+						decoded = False
+						for i in ['utf-8','ascii','latin-1','euc_jp', 'euc_jis_2004', 'jisx0213', 'iso2022_jp', 'iso2022_jp_1', 'iso2022_jp_2', 'iso2022_jp_2004', 'iso2022_jp_3', 'iso2022_jp_ext', 'iso2022_kr','shift_jis','shift_jis_2004','shift_jisx0213']:
+							try:
+								unmatchedline = u.decode(i)
+								decoded = True
+								break
+							except Exception, e:
+								pass
+						if decoded:
+							newunmatched.append(unmatchedline)
+						else:
 							pass
-					if decoded:
-						newunmatched.append(unmatchedline)
-					else:
-						pass
-				jsonreport['ranking']['stringresults']['unmatched'] = newunmatched
+					jsonreport['ranking']['stringresults']['unmatched'] = newunmatched
 
-			if 'matchednonassignedlines' in stringidentifiers:
-				jsonreport['ranking']['stringresults']['matchednonassignedlines'] = stringidentifiers['matchednonassignedlines']
-			if 'matchednotclonelines' in stringidentifiers:
-				jsonreport['ranking']['stringresults']['matchednotclonelines'] = stringidentifiers['matchednotclonelines']
+				if 'matchednonassignedlines' in stringidentifiers:
+					jsonreport['ranking']['stringresults']['matchednonassignedlines'] = stringidentifiers['matchednonassignedlines']
+				if 'matchednotclonelines' in stringidentifiers:
+					jsonreport['ranking']['stringresults']['matchednotclonelines'] = stringidentifiers['matchednotclonelines']
 
-			if 'nonUniqueMatches' in stringidentifiers:
-				jsonreport['ranking']['stringresults']['nonUniqueMatches'] = []
-				for u in stringidentifiers['nonUniqueMatches']:
-					nonuniquereport = {}
-					nonuniquereport['packagename'] = u
-					nonuniquereport['nonuniquelines'] = stringidentifiers['nonUniqueMatches'][u]
-					jsonreport['ranking']['stringresults']['nonUniqueMatches'].append(nonuniquereport)
+				if 'nonUniqueMatches' in stringidentifiers:
+					jsonreport['ranking']['stringresults']['nonUniqueMatches'] = []
+					for u in stringidentifiers['nonUniqueMatches']:
+						nonuniquereport = {}
+						nonuniquereport['packagename'] = u
+						nonuniquereport['nonuniquelines'] = stringidentifiers['nonUniqueMatches'][u]
+						jsonreport['ranking']['stringresults']['nonUniqueMatches'].append(nonuniquereport)
 
-			if 'scores' in stringidentifiers:
-				jsonreport['ranking']['stringresults']['scores'] = []
-				for u in stringidentifiers['scores']:
-					scorereport = {}
-					scorereport['packagename'] = u
-					scorereport['computedscore'] = stringidentifiers['scores'][u]
-					jsonreport['ranking']['stringresults']['scores'].append(scorereport)
+				if 'scores' in stringidentifiers:
+					jsonreport['ranking']['stringresults']['scores'] = []
+					for u in stringidentifiers['scores']:
+						scorereport = {}
+						scorereport['packagename'] = u
+						scorereport['computedscore'] = stringidentifiers['scores'][u]
+						jsonreport['ranking']['stringresults']['scores'].append(scorereport)
 
-			if 'reports' in stringidentifiers:
-				jsonreport['ranking']['stringresults']['reports'] = []
-				for u in stringidentifiers['reports']:
-					(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses, packagecopyrights) = u
-					report = {}
-					report['packagename'] = package
-					report['rank'] = rank
-					report['percentage'] = percentage
-					report['unique'] = []
-					for un in unique:
+				if 'reports' in stringidentifiers:
+					jsonreport['ranking']['stringresults']['reports'] = []
+					for u in stringidentifiers['reports']:
+						(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses, packagecopyrights) = u
+						report = {}
+						report['packagename'] = package
+						report['rank'] = rank
+						report['percentage'] = percentage
+						report['unique'] = []
+						for un in unique:
+							(identifier, identifierdata) = un
+							uniquereport = {}
+							uniquereport['identifier'] = identifier
+							uniquereport['identifierdata'] = []
+							for iddata in identifierdata:
+								(filechecksum, linenumber, fileversiondata) = iddata
+								identifierdatareport = {}
+								if converthash:
+									if filechecksum in hashcache:
+										identifierdatareport['filechecksum'] = hashcache[filechecksum]
+										identifierdatareport['filechecksumtype'] = outputhash
+									else:
+										cursor.execute(query, (filechecksum,))
+										convertedhash = cursor.fetchone()
+										if convertedhash != None:
+											hashcache[filechecksum] = convertedhash[0]
+											identifierdatareport['filechecksum'] = convertedhash[0]
+											identifierdatareport['filechecksumtype'] = outputhash
+										else:
+											identifierdatareport['filechecksum'] = filechecksum
+											identifierdatareport['filechecksumtype'] = 'sha256'
+								else:
+									identifierdatareport['filechecksum'] = filechecksum
+									identifierdatareport['filechecksumtype'] = 'sha256'
+								identifierdatareport['linenumber'] = linenumber
+								identifierdatareport['packagedata'] = []
+								for pack in fileversiondata:
+									(packageversion, sourcefilename) = pack
+									fileversionreport = {}
+									fileversionreport['packageversion'] = packageversion
+									fileversionreport['sourcefilename'] = sourcefilename
+									identifierdatareport['packagedata'].append(fileversionreport)
+								uniquereport['identifierdata'].append(identifierdatareport)
+							report['unique'].append(uniquereport)
+						report['packageversions'] = []
+						for p in packageversions:
+							packagereport = {}
+							packagereport['packageversion'] = p
+							packagereport['packagehits'] = packageversions[p]
+							report['packageversions'].append(packagereport)
+						jsonreport['ranking']['stringresults']['reports'].append(report)
+
+			## then the functionname results
+			jsonreport['ranking']['functionnameresults'] = {}
+			jsonreport['ranking']['functionnameresults']['totalfunctionnames'] = 0
+			jsonreport['ranking']['functionnameresults']['versionresults'] = []
+			if 'totalnames' in functionnameresults:
+				jsonreport['ranking']['functionnameresults']['totalfunctionnames'] = functionnameresults['totalnames']
+			if 'versionresults' in functionnameresults:
+				for packagename in functionnameresults['versionresults']:
+					packagereport = {}
+					packagereport['packagename'] = packagename
+					packagereport['unique'] = []
+					for un in functionnameresults['versionresults'][packagename]:
 						(identifier, identifierdata) = un
 						uniquereport = {}
 						uniquereport['identifier'] = identifier
@@ -114,7 +166,7 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb, scanenv)):
 						for iddata in identifierdata:
 							(filechecksum, linenumber, fileversiondata) = iddata
 							identifierdatareport = {}
-							if outputhash != 'sha256' and batconnection != None:
+							if outputhash != 'sha256':
 								if filechecksum in hashcache:
 									identifierdatareport['filechecksum'] = hashcache[filechecksum]
 									identifierdatareport['filechecksumtype'] = outputhash
@@ -140,122 +192,66 @@ def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb, scanenv)):
 								fileversionreport['sourcefilename'] = sourcefilename
 								identifierdatareport['packagedata'].append(fileversionreport)
 							uniquereport['identifierdata'].append(identifierdatareport)
-						report['unique'].append(uniquereport)
-					report['packageversions'] = []
-					for p in packageversions:
-						packagereport = {}
-						packagereport['packageversion'] = p
-						packagereport['packagehits'] = packageversions[p]
-						report['packageversions'].append(packagereport)
-					jsonreport['ranking']['stringresults']['reports'].append(report)
+						packagereport['unique'].append(uniquereport)
+					jsonreport['ranking']['functionnameresults']['versionresults'].append(packagereport)
 
-		## then the functionname results
-		jsonreport['ranking']['functionnameresults'] = {}
-		jsonreport['ranking']['functionnameresults']['totalfunctionnames'] = 0
-		jsonreport['ranking']['functionnameresults']['versionresults'] = []
-		if 'totalnames' in functionnameresults:
-			jsonreport['ranking']['functionnameresults']['totalfunctionnames'] = functionnameresults['totalnames']
-		if 'versionresults' in functionnameresults:
-			for packagename in functionnameresults['versionresults']:
-				packagereport = {}
-				packagereport['packagename'] = packagename
-				packagereport['unique'] = []
-				for un in functionnameresults['versionresults'][packagename]:
-					(identifier, identifierdata) = un
-					uniquereport = {}
-					uniquereport['identifier'] = identifier
-					uniquereport['identifierdata'] = []
-					for iddata in identifierdata:
-						(filechecksum, linenumber, fileversiondata) = iddata
-						identifierdatareport = {}
-						if outputhash != 'sha256':
-							if filechecksum in hashcache:
-								identifierdatareport['filechecksum'] = hashcache[filechecksum]
-								identifierdatareport['filechecksumtype'] = outputhash
-							else:
-								cursor.execute(query, (filechecksum,))
-								convertedhash = cursor.fetchone()
-								if convertedhash != None:
-									hashcache[filechecksum] = convertedhash[0]
-									identifierdatareport['filechecksum'] = convertedhash[0]
+			## then the variablename results
+			jsonreport['ranking']['variablenameresults'] = {}
+			jsonreport['ranking']['variablenameresults'] = {}
+			jsonreport['ranking']['variablenameresults']['totalvariablenames'] = 0
+			jsonreport['ranking']['variablenameresults']['versionresults'] = []
+			if 'totalnames' in variablenameresults:
+				jsonreport['ranking']['variablenameresults']['totalvariablenames'] = variablenameresults['totalnames']
+			if 'versionresults' in variablenameresults:
+				for packagename in variablenameresults['versionresults']:
+					packagereport = {}
+					packagereport['packagename'] = packagename
+					packagereport['unique'] = []
+					for un in variablenameresults['versionresults'][packagename]:
+						(identifier, identifierdata) = un
+						uniquereport = {}
+						uniquereport['identifier'] = identifier
+						uniquereport['identifierdata'] = []
+						for iddata in identifierdata:
+							(filechecksum, linenumber, fileversiondata) = iddata
+							identifierdatareport = {}
+							if outputhash != 'sha256':
+								if filechecksum in hashcache:
+									identifierdatareport['filechecksum'] = hashcache[filechecksum]
 									identifierdatareport['filechecksumtype'] = outputhash
 								else:
-									identifierdatareport['filechecksum'] = filechecksum
-									identifierdatareport['filechecksumtype'] = 'sha256'
-						else:
-							identifierdatareport['filechecksum'] = filechecksum
-							identifierdatareport['filechecksumtype'] = 'sha256'
-						identifierdatareport['linenumber'] = linenumber
-						identifierdatareport['packagedata'] = []
-						for pack in fileversiondata:
-							(packageversion, sourcefilename) = pack
-							fileversionreport = {}
-							fileversionreport['packageversion'] = packageversion
-							fileversionreport['sourcefilename'] = sourcefilename
-							identifierdatareport['packagedata'].append(fileversionreport)
-						uniquereport['identifierdata'].append(identifierdatareport)
-					packagereport['unique'].append(uniquereport)
-				jsonreport['ranking']['functionnameresults']['versionresults'].append(packagereport)
-
-		## then the variablename results
-		jsonreport['ranking']['variablenameresults'] = {}
-		jsonreport['ranking']['variablenameresults'] = {}
-		jsonreport['ranking']['variablenameresults']['totalvariablenames'] = 0
-		jsonreport['ranking']['variablenameresults']['versionresults'] = []
-		if 'totalnames' in variablenameresults:
-			jsonreport['ranking']['variablenameresults']['totalvariablenames'] = variablenameresults['totalnames']
-		if 'versionresults' in variablenameresults:
-			for packagename in variablenameresults['versionresults']:
-				packagereport = {}
-				packagereport['packagename'] = packagename
-				packagereport['unique'] = []
-				for un in variablenameresults['versionresults'][packagename]:
-					(identifier, identifierdata) = un
-					uniquereport = {}
-					uniquereport['identifier'] = identifier
-					uniquereport['identifierdata'] = []
-					for iddata in identifierdata:
-						(filechecksum, linenumber, fileversiondata) = iddata
-						identifierdatareport = {}
-						if outputhash != 'sha256':
-							if filechecksum in hashcache:
-								identifierdatareport['filechecksum'] = hashcache[filechecksum]
-								identifierdatareport['filechecksumtype'] = outputhash
+									cursor.execute(query, (filechecksum,))
+									convertedhash = cursor.fetchone()
+									if convertedhash != None:
+										hashcache[filechecksum] = convertedhash[0]
+										identifierdatareport['filechecksum'] = convertedhash[0]
+										identifierdatareport['filechecksumtype'] = outputhash
+									else:
+										identifierdatareport['filechecksum'] = filechecksum
+										identifierdatareport['filechecksumtype'] = 'sha256'
 							else:
-								cursor.execute(query, (filechecksum,))
-								convertedhash = cursor.fetchone()
-								if convertedhash != None:
-									hashcache[filechecksum] = convertedhash[0]
-									identifierdatareport['filechecksum'] = convertedhash[0]
-									identifierdatareport['filechecksumtype'] = outputhash
-								else:
-									identifierdatareport['filechecksum'] = filechecksum
-									identifierdatareport['filechecksumtype'] = 'sha256'
-						else:
-							identifierdatareport['filechecksum'] = filechecksum
-							identifierdatareport['filechecksumtype'] = 'sha256'
-						identifierdatareport['linenumber'] = linenumber
-						identifierdatareport['packagedata'] = []
-						for pack in fileversiondata:
-							(packageversion, sourcefilename) = pack
-							fileversionreport = {}
-							fileversionreport['packageversion'] = packageversion
-							fileversionreport['sourcefilename'] = sourcefilename
-							identifierdatareport['packagedata'].append(fileversionreport)
-						uniquereport['identifierdata'].append(identifierdatareport)
-					packagereport['unique'].append(uniquereport)
-				jsonreport['ranking']['variablenameresults']['versionresults'].append(packagereport)
+								identifierdatareport['filechecksum'] = filechecksum
+								identifierdatareport['filechecksumtype'] = 'sha256'
+							identifierdatareport['linenumber'] = linenumber
+							identifierdatareport['packagedata'] = []
+							for pack in fileversiondata:
+								(packageversion, sourcefilename) = pack
+								fileversionreport = {}
+								fileversionreport['packageversion'] = packageversion
+								fileversionreport['sourcefilename'] = sourcefilename
+								identifierdatareport['packagedata'].append(fileversionreport)
+							uniquereport['identifierdata'].append(identifierdatareport)
+						packagereport['unique'].append(uniquereport)
+					jsonreport['ranking']['variablenameresults']['versionresults'].append(packagereport)
 
-	## then security information
-	## TODO
-	if batconnection != None:
-		cursor.close()
-		batconnection.close()
+		## then security information
+		## TODO
 
-	## dump the JSON to a file
-	jsonfile = gzip.open(os.path.join(topleveldir, "reports", "%s.json.gz" % filehash), 'w')
-	jsonfile.write(json.dumps(jsonreport, indent=4))
-	jsonfile.close()
+		## dump the JSON to a file
+		jsonfile = gzip.open(os.path.join(topleveldir, "reports", "%s.json.gz" % filehash), 'w')
+		jsonfile.write(json.dumps(jsonreport, indent=4))
+		jsonfile.close()
+		scanqueue.task_done()
 
 def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, scandebug=False, unpacktempdir=None):
 	toplevelelem = None
@@ -272,15 +268,6 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 		outputhash = scanenv['OUTPUTHASH']
 	else:
 		outputhash = 'sha256'
-
-	if outputhash != 'sha256':
-		if not 'DBBACKEND' in scanenv:
-			return
-		batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
-		if not scanenv.has_key('BAT_DB'):
-			return
-	else:
-		batdb = None
 
 	decodingneeded = ['utf-8','ascii','latin-1','euc_jp', 'euc_jis_2004', 'jisx0213', 'iso2022_jp', 'iso2022_jp_1', 'iso2022_jp_2', 'iso2022_jp_2004', 'iso2022_jp_3', 'iso2022_jp_ext', 'iso2022_kr','shift_jis','shift_jis_2004','shift_jisx0213']
 	for unpackreport in unpackreports:
@@ -365,9 +352,51 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 		if os.path.exists(os.path.join(topleveldir, "reports", "%s.json.gz" % filehash)):
 			continue
 		filehashes.add(filehash)
-		jsontasks.append((filehash, topleveldir, outputhash, scanenv['BAT_DB'], batdb, scanenv))
+		jsontasks.append(filehash)
 
 	if len(jsontasks) != 0:
-		pool = multiprocessing.Pool(processes=processors)
-		pool.map(writejson, jsontasks,1)
-		pool.terminate()
+		converthash = False
+		if outputhash != 'sha256':
+			converthash = True
+
+		if processors == None:
+			processamount = 1
+		else:
+			processamount = processors
+		processamount = min(processamount, jsontasks)
+		scanmanager = multiprocessing.Manager()
+		processpool = []
+		scanqueue = multiprocessing.JoinableQueue(maxsize=0)
+		map(lambda x: scanqueue.put(x), jsontasks)
+
+		batconns = []
+		batcursors = []
+
+		batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
+		if not scanenv.has_key('BAT_DB'):
+			batdb = None
+		else:
+			hashdatabase = scanenv['BAT_DB']
+		for i in range(0,processamount):
+			cursor = None
+			if batdb != None:
+				conn = batdb.getConnection(hashdatabase,scanenv)
+				if conn != None:
+					batconns.append(conn)
+					cursor = conn.cursor()
+				else:
+					converthash = False
+			else:
+				converthash = False
+			batcursors.append(cursor)
+			p = multiprocessing.Process(target=writejson, args=(scanqueue,topleveldir,outputhash,batcursors[i], batdb, scanenv, converthash))
+			processpool.append(p)
+			p.start()
+
+			scanqueue.join()
+
+		for p in processpool:
+			p.terminate()
+
+		for c in batconns:
+			c.close()
