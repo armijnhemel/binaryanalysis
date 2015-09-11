@@ -1164,6 +1164,7 @@ def lookup_identifier(scanqueue, reportqueue, cursor, stringcachecursors, nameca
 	## default parameters for scoring
 	alpha = 5.0
 	scorecutoff = 1.0e-20
+	gaincutoff = 1
 
 	kernelquery = batdb.getQuery("select package FROM linuxkernelfunctionnamecache WHERE functionname=%s LIMIT 1")
 	precomputequery = batdb.getQuery("select score from scores where stringidentifier=%s LIMIT 1")
@@ -1212,7 +1213,6 @@ def lookup_identifier(scanqueue, reportqueue, cursor, stringcachecursors, nameca
 
 		## first compute the score for the lines
 		if lenlines != 0 and scanlines:
-			gaincutoff = 1
 			## keep a dict of versions, license and copyright statements per package. TODO: remove these.
 			packageversions = {}
 			packagelicenses = {}
