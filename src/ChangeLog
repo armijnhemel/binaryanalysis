@@ -1,3 +1,12 @@
+2015-09-11:
+* licenseversion.py: fix license scanning for sqlite databases, make use of
+queues for copyright lookup
+* licenseversion.py: avoid starting processes unnecessarily
+* generatejson.py: use queues instead of pool.map() to avoid making lots of
+database connections
+* bruteforcescan.py: add stubs for blacklisting files that should not be
+scanned, also close database connections that are not needed
+
 2015-09-10:
 * fwunpack.py: add unpacking for some MSI files
 * licenseversion.py: reduce database connections when using PostgreSQL,
