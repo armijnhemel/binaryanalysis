@@ -234,14 +234,6 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 	if not scanenv.has_key('BAT_DB'):
 		return
 
-	masterdb = scanenv.get('BAT_DB')
-
-	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
-
-	## open database connection to the master database
-	masterconn = batdb.getConnection(masterdb,scanenv)
-	mastercursor = masterconn.cursor()
-
 	## store names of all files containing Linux kernel images or modules
 	symbolfiles = set()
 
@@ -279,9 +271,6 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 	## check if there actually are modules. If not, there is nothing to do
 	if filter(lambda x: x[-1] == True, symbolres) == []:
 		pool.terminate()
-		## close the database cursor and connection
-		mastercursor.close()
-		masterconn.close()
 		return
 
 	filehashtoremotesymbols = {}
@@ -301,6 +290,14 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 
 	filehashtomodules = set()
 	nametomodules = set()
+
+	masterdb = scanenv.get('BAT_DB')
+
+	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
+
+	## open database connection to the master database
+	masterconn = batdb.getConnection(masterdb,scanenv)
+	mastercursor = masterconn.cursor()
 
 	## store which type each symbol has in a dictionary:
 	## * gplkernel (EXPORT_SYMBOL_GPL)
@@ -535,6 +532,7 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 		writeCSV(csvpath, useddependenciesperfilename, useddependenciessymbolsperfilename, nametofilehash, filehashtodeclaredlicenses, filehashtokernelsymbols, filehashtoversions, symboltotype, unresolvedsymbols)
 
 	if not generategraphs:
+		pool.terminate()
 		return
 
 	## store the graphs
