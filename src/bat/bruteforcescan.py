@@ -219,7 +219,7 @@ def tagKnownExtension(filename):
 	return (tags, offsets)
 
 ## scan a single file, possibly unpack and recurse
-def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optmagicscans, processid, hashdict, llock, template, unpacktempdir, outputhash, cursor, sourcecodequery):
+def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optmagicscans, processid, hashdict, blacklistedfiles, llock, template, unpacktempdir, outputhash, cursor, sourcecodequery):
 	prerunignore = {}
 	prerunmagic = {}
 	for prerunscan in prerunscans:
@@ -322,6 +322,17 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 		unpackreports[relfiletoscan]['checksum'] = filehashresults[outputhash]
 		unpackreports[relfiletoscan]['sha256'] = filehashresults['sha256']
 		filehash = filehashresults[outputhash]
+
+		## blacklisted file, not interested in further scanning
+		if filehash in blacklistedfiles:
+			tags.append('blacklisted')
+			unpackreports[relfiletoscan]['tags'] = tags
+			for l in leaftasks:
+				leafqueue.put(l)
+			for u in unpackreports:
+				reportqueue.put({u: unpackreports[u]})
+			scanqueue.task_done()
+			continue
 
 		## acquire the lock for the shared dictionary to see if this file was already
 		## scanned, or is in the process of being scanned.
@@ -1471,6 +1482,7 @@ def runscan(scans, scan_binary, scandate):
 		scansourcecode = True
 
 	hashdict = scanmanager.dict()
+	blacklistedfiles = []
 	map(lambda x: scanqueue.put(x), scantasks)
 	batcons = []
 	cursor = None
@@ -1483,13 +1495,14 @@ def runscan(scans, scan_binary, scandate):
 				cursor = c.cursor()
 				batcons.append(c)
 				sourcecodequery = batdb.getQuery("select checksum from processed_file where checksum=%s limit 1")
+				scansourcecode = True
 			else:
 				scansourcecode = False
 		else:
 			cursor = None
 			sourcecodequery = None
 			scansourcecode = False
-		p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], magicscans, optmagicscans, i, hashdict, lock, template, unpacktempdir, outputhash, cursor, sourcecodequery))
+		p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], magicscans, optmagicscans, i, hashdict, blacklistedfiles, lock, template, unpacktempdir, outputhash, cursor, sourcecodequery))
 		processpool.append(p)
 		p.start()
 
