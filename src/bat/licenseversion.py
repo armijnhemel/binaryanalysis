@@ -771,7 +771,6 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 
 ## grab variable names.
 def grab_sha256_varname(scanqueue, reportqueue, cursor, query):
-	#query = batdb.getQuery("select version, pathname from processed_file where checksum=%s")
 	while True:
 		sha256sum = scanqueue.get()
 		c.execute(query, (sha256sum,))
@@ -788,17 +787,16 @@ def grab_sha256_filename(scanqueue, reportqueue, cursor, query):
 		scanqueue.task_done()
 
 ## grab copyright statements from the license database
-#def grab_sha256_copyright((batdb, copyrightdb, tasks)):
 def grab_sha256_copyright(scanqueue, reportqueue, cursor, query):
 	while True:
 		sha256sum = scanqueue.get()
 		cursor.execute(query, (sha256sum,))
 		results = cursor.fetchall()
+		## 'statements' are not very accurate so ignore those
 		results = filter(lambda x: x[1] != 'statement', results)
 		reportqueue.put({sha256sum: results})
 		scanqueue.task_done()
 
-#def grab_sha256_filename(scanqueue, reportqueue, cursor, query):
 ## grab licenses from the license database
 def grab_sha256_license(scanqueue, reportqueue, cursor, query):
 	while True:
@@ -1167,6 +1165,9 @@ def lookup_identifier(scanqueue, reportqueue, cursor, stringcachecursors, nameca
 	alpha = 5.0
 	scorecutoff = 1.0e-20
 
+	kernelquery = batdb.getQuery("select package FROM linuxkernelfunctionnamecache WHERE functionname=%s LIMIT 1")
+	precomputequery = batdb.getQuery("select score from scores where stringidentifier=%s LIMIT 1")
+
 	while True:
 		## get a new task from the queue
 		(filehash, filename) = scanqueue.get()
@@ -1281,8 +1282,6 @@ def lookup_identifier(scanqueue, reportqueue, cursor, stringcachecursors, nameca
 				lines.sort()
 
 			stringquery = batdb.getQuery("select package, filename FROM %s WHERE stringidentifier=" % stringsdbperlanguagetable[language] + "%s")
-			kernelquery = batdb.getQuery("select package FROM linuxkernelfunctionnamecache WHERE functionname=%s LIMIT 1")
-			precomputequery = batdb.getQuery("select score from scores where stringidentifier=%s LIMIT 1")
 
 			for line in lines:
 				#if scandebug:
@@ -2014,7 +2013,8 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 				newuniques = []
 				newpackageversions = {}
 				packagecopyrights = []
-				uniques = list(set(map(lambda x: x[0], unique)))
+				packagelicenses = []
+				uniques = set(map(lambda x: x[0], unique))
 				lenuniques = len(uniques)
 
 				## first grab all possible checksums, plus associated line numbers for this string. Since
@@ -2147,45 +2147,40 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 				## determinelicense and determinecopyright *always* imply determineversion
 				## TODO: store license with version number.
 				if determinelicense:
+					if len(licensesha256s) != 0:
+						licensesha256s = set(licensesha256s)
+						processpool = []
 
-					licensesha256s = set(licensesha256s)
-					processpool = []
-					packagelicenses = []
+						scanqueue = multiprocessing.JoinableQueue(maxsize=0)
+						reportqueue = scanmanager.Queue(maxsize=0)
 
-					scanqueue = multiprocessing.JoinableQueue(maxsize=0)
-					reportqueue = scanmanager.Queue(maxsize=0)
+						map(lambda x: scanqueue.put(x), licensesha256s)
 
-					map(lambda x: scanqueue.put(x), licensesha256s)
+						for i in range(0,processamount):
+							p = multiprocessing.Process(target=grab_sha256_license, args=(scanqueue,reportqueue,licensecursors[i], sha256_license_query))
+							processpool.append(p)
+							p.start()
 
-					for i in range(0,processamount):
-						p = multiprocessing.Process(target=grab_sha256_license, args=(scanqueue,reportqueue,licensecursors[i], sha256_license_query))
-						processpool.append(p)
-						p.start()
+        					scanqueue.join()
 
-        				scanqueue.join()
+						while True:
+							try:
+								val = reportqueue.get_nowait()
+								packagelicenses.append(val)
+								reportqueue.task_done()
+							except Queue.Empty, e:
+								## Queue is empty
+								break
+						reportqueue.join()
 
-					while True:
-						try:
-							val = reportqueue.get_nowait()
-							packagelicenses.append(val)
-							reportqueue.task_done()
-						except Queue.Empty, e:
-							## Queue is empty
-							break
-					reportqueue.join()
+						for p in processpool:
+							p.terminate()
 
-					for p in processpool:
-						p.terminate()
+						packagelicenses_tmp = []
+						for p in packagelicenses:
+							packagelicenses_tmp += reduce(lambda x,y: x + y, p.values(), [])
+						packagelicenses = list(set(packagelicenses_tmp))
 
-					packagelicenses_tmp = []
-					for p in packagelicenses:
-						packagelicenses_tmp += reduce(lambda x,y: x + y, p.values(), [])
-					packagelicenses = list(set(packagelicenses_tmp))
-				else:
-					packagelicenses = []
-
-				## extract copyrights. 'statements' are not very accurate so ignore those for now in favour of URL
-				## and e-mail
 				if determinecopyright:
 					if len(copyrightsha256s) != 0:
 						processpool = []
