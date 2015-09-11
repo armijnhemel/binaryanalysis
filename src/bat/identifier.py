@@ -710,7 +710,6 @@ def extractidentifiersetup(scanenv, debug=False):
 	return (False, None)
 
 def extractidentifiersetup_postgresql(scanenv, debug=False):
-	## TODO: DEX checks
 	newenv = copy.deepcopy(scanenv)
 	batdb = bat.batdb.BatDb('postgresql')
 	conn = batdb.getConnection(None,scanenv)
