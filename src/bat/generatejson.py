@@ -282,6 +282,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 	else:
 		batdb = None
 
+	decodingneeded = ['utf-8','ascii','latin-1','euc_jp', 'euc_jis_2004', 'jisx0213', 'iso2022_jp', 'iso2022_jp_1', 'iso2022_jp_2', 'iso2022_jp_2004', 'iso2022_jp_3', 'iso2022_jp_ext', 'iso2022_kr','shift_jis','shift_jis_2004','shift_jisx0213']
 	for unpackreport in unpackreports:
 		jsonreport = {}
 		filehash = None
@@ -295,7 +296,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 				## check whether or not the name of the file does not contain any weird
 				## characters by decoding it to UTF-8
 				decoded = False
-				for i in ['utf-8','ascii','latin-1','euc_jp', 'euc_jis_2004', 'jisx0213', 'iso2022_jp', 'iso2022_jp_1', 'iso2022_jp_2', 'iso2022_jp_2004', 'iso2022_jp_3', 'iso2022_jp_ext', 'iso2022_kr','shift_jis','shift_jis_2004','shift_jisx0213']:
+				for i in decodingneeded:
 					try:
 						nodename = nodename.decode(i)
 						decoded = True
@@ -324,7 +325,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 						newscanreports = []
 						for s in r['scanreports']:
 							decoded = False
-							for i in ['utf-8','ascii','latin-1','euc_jp', 'euc_jis_2004', 'jisx0213', 'iso2022_jp', 'iso2022_jp_1', 'iso2022_jp_2', 'iso2022_jp_2004', 'iso2022_jp_3', 'iso2022_jp_ext', 'iso2022_kr','shift_jis','shift_jis_2004','shift_jisx0213']:
+							for i in decodingneeded:
 								try:
 									s = s.decode(i)
 									decoded = True
