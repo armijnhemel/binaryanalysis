@@ -593,6 +593,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	rankingfiles = set()
 	filehashseen = set()
 	hashtoname = {}
+	languages = set()
 	for i in unpackreports:
 		if not unpackreports[i].has_key('checksum'):
 			continue
@@ -610,6 +611,13 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		filehashseen.add(filehash)
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 			continue
+		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+		leafreports = cPickle.load(leaf_file)
+		leaf_file.close()
+		if not 'identifier' in leafreports:
+			continue
+		language = leafreports['identifier']['language']
+		languages.add(language)
 		rankingfiles.add(i)
 
 	if len(rankingfiles) == 0:
@@ -636,6 +644,8 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	## this will not cost much memory and it prevents many database lookups.
 	avgscores = {}
 	for language in avgstringsdbperlanguagetable:
+		if not language in languages:
+			continue
 		stringscache = newenv.get(stringsdbperlanguageenv[language])
 		if stringscache == None:
 			continue
@@ -678,6 +688,8 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		stringcachecursors = {}
 		namecachecursors = {}
 		for language in stringsdbperlanguagetable:
+			if not language in languages:
+				continue
 			stringscache = newenv.get(stringsdbperlanguageenv[language])
 			if stringscache == None:
 				continue
@@ -687,7 +699,8 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 			stringcachecursors[language] = c
 		## then for namecaches
 		for language in namecacheperlanguagetable:
-			#stringscache = newenv.get(stringsdbperlanguageenv[language])
+			if not language in languages:
+				continue
 			namecache = newenv.get(namecacheperlanguageenv[language])
 			if namecache == None:
 				continue
@@ -696,7 +709,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 			namecacheconns.append(conn)
 			namecachecursors[language] = c
 		## then a cursor for the main database
-		conn = batdb.getConnection(scanenv['BAT_DB'],newenv)
+		conn = batdb.getConnection(newenv['BAT_DB'],newenv)
 		cursor = conn.cursor()
 		batcons.append(conn)
 		p = multiprocessing.Process(target=lookup_identifier, args=(scanqueue,reportqueue,cursor,stringcachecursors,namecachecursors,batdb,newenv,topleveldir,avgscores,clones,scandebug))
@@ -775,20 +788,15 @@ def grab_sha256_filename(scanqueue, reportqueue, cursor, query):
 		scanqueue.task_done()
 
 ## grab copyright statements from the license database
-def grab_sha256_copyright((batdb, copyrightdb, tasks)):
-	results = {}
-	conn = batdb.getConnection(copyrightdb,scanenv)
-	c = conn.cursor()
-	query = batdb.getQuery("select distinct copyright, type from extracted_copyright where checksum=%s")
-	for sha256sum in tasks:
-		c.execute(query, (sha256sum,))
-		res = c.fetchall()
-		## filter out statements for now, possibly include them later
-		res = filter(lambda x: x[1] != 'statement', res)
-		results[sha256sum] = res
-	c.close()
-	conn.close()
-	return results
+#def grab_sha256_copyright((batdb, copyrightdb, tasks)):
+def grab_sha256_copyright(scanqueue, reportqueue, cursor, query):
+	while True:
+		sha256sum = scanqueue.get()
+		cursor.execute(query, (sha256sum,))
+		results = cursor.fetchall()
+		results = filter(lambda x: x[1] != 'statement', results)
+		reportqueue.put({sha256sum: results})
+		scanqueue.task_done()
 
 #def grab_sha256_filename(scanqueue, reportqueue, cursor, query):
 ## grab licenses from the license database
@@ -797,7 +805,7 @@ def grab_sha256_license(scanqueue, reportqueue, cursor, query):
 		sha256sum = scanqueue.get()
 		cursor.execute(query, (sha256sum,))
 		results = cursor.fetchall()
-		reportqueue.put(results)
+		reportqueue.put({sha256sum: results})
 		scanqueue.task_done()
 
 def grab_sha256_parallel(scanqueue, reportqueue, cursor, batdb, language, querytype):
@@ -1951,19 +1959,29 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 
 	batcons = []
 	batcursors = []
+
+	licensecons = []
+	licensecursors = []
+
 	for i in range(0,processamount):
 		c = batdb.getConnection(scanenv['BAT_DB'],scanenv)
 		cursor = c.cursor()
 		batcursors.append(cursor)
 		batcons.append(c)
 
+	if determinelicense or determinecopyright:
+		for i in range(0,processamount):
+			c = batdb.getConnection(licensedb,scanenv)
+			cursor = c.cursor()
+			licensecursors.append(cursor)
+			licensecons.append(c)
+
 	scanmanager = multiprocessing.Manager()
 
 	sha256_filename_query = batdb.getQuery("select version, pathname from processed_file where checksum=%s")
 	sha256_license_query = batdb.getQuery("select distinct license, scanner from licenses where checksum=%s")
+	sha256_copyright_query = batdb.getQuery("select distinct copyright, type from extracted_copyright where checksum=%s")
 
-	minstep = max(1, processors)
-	pool = multiprocessing.Pool(processes=processors)
 	for rankingfile in rankingfiles:
 		unpackreport = unpackreports[rankingfile]
 		## read the pickle
@@ -2140,7 +2158,7 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 					map(lambda x: scanqueue.put(x), licensesha256s)
 
 					for i in range(0,processamount):
-						p = multiprocessing.Process(target=grab_sha256_license, args=(scanqueue,reportqueue,batcursors[i], sha256_license_query))
+						p = multiprocessing.Process(target=grab_sha256_license, args=(scanqueue,reportqueue,licensecursors[i], sha256_license_query))
 						processpool.append(p)
 						p.start()
 
@@ -2161,38 +2179,47 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 
 					packagelicenses_tmp = []
 					for p in packagelicenses:
-						packagelicenses_tmp += reduce(lambda x,y: x + y, p, [])
-					packagelicenses = packagelicenses_tmp
+						packagelicenses_tmp += reduce(lambda x,y: x + y, p.values(), [])
+					packagelicenses = list(set(packagelicenses_tmp))
 				else:
 					packagelicenses = []
 
 				## extract copyrights. 'statements' are not very accurate so ignore those for now in favour of URL
 				## and e-mail
 				if determinecopyright:
-					vtasks_tmp = []
-					copyrightsha256s = list(set(copyrightsha256s))
-					lencopyrightsha256s = len(copyrightsha256s)
-					if lencopyrightsha256s < processors:
-						step = max(1,lencopyrightsha256s)
-					else:
-						step = lencopyrightsha256s/processors
-						if step <= minstep:
-							step = max(minstep,lencopyrightsha256s)
-					for v in xrange(0, lencopyrightsha256s, step):
-						vtasks_tmp.append(copyrightsha256s[v:v+step])
-					vtasks = map(lambda x: (licensedb, x), filter(lambda x: x!= [], vtasks_tmp))
+					if len(copyrightsha256s) != 0:
+						processpool = []
 
-					if vtasks != []:
-						packagecopyrights = pool.map(grab_sha256_copyright, vtasks)
-					else:
-						packagecopyrights = []
-					## result is a list of {sha256sum: list of copyright statements}
-					packagecopyrights_tmp = []
-					for p in packagecopyrights:
-						packagecopyrights_tmp += reduce(lambda x,y: x + y, p.values(), [])
-					packagecopyrights = list(set(packagecopyrights_tmp))
-				else:
-					packagecopyrights = []
+						scanqueue = multiprocessing.JoinableQueue(maxsize=0)
+						reportqueue = scanmanager.Queue(maxsize=0)
+
+						map(lambda x: scanqueue.put(x), copyrightsha256s)
+
+						for i in range(0,processamount):
+							p = multiprocessing.Process(target=grab_sha256_copyright, args=(scanqueue,reportqueue,licensecursors[i], sha256_copyright_query))
+							processpool.append(p)
+							p.start()
+
+        					scanqueue.join()
+
+						while True:
+							try:
+								val = reportqueue.get_nowait()
+								packagecopyrights.append(val)
+								reportqueue.task_done()
+							except Queue.Empty, e:
+								## Queue is empty
+								break
+						reportqueue.join()
+
+						for p in processpool:
+							p.terminate()
+
+						## result is a list of {sha256sum: list of copyright statements}
+						packagecopyrights_tmp = []
+						for p in packagecopyrights:
+							packagecopyrights_tmp += reduce(lambda x,y: x + y, p.values(), [])
+						packagecopyrights = list(set(packagecopyrights_tmp))
 				newreports.append((rank, package, newuniques, uniquematcheslen, percentage, newpackageversions, packagelicenses, packagecopyrights))
 			res['reports'] = newreports
 
@@ -2481,9 +2508,10 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 			leafreports = cPickle.dump(leafreports, leaf_file)
 			leaf_file.close()
 			unpackreport['tags'].append('ranking')
-	pool.terminate()
 
 	for c in batcons:
+		c.close()
+	for c in licensecons:
 		c.close()
 
 def licensesetup(scanenv, debug=False):
