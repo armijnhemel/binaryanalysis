@@ -6,6 +6,8 @@ queues for copyright lookup
 database connections
 * bruteforcescan.py: add stubs for blacklisting files that should not be
 scanned, also close database connections that are not needed
+* kernelsymbols.py: correctly close pool of workers, do not make database
+connections if not needed
 
 2015-09-10:
 * fwunpack.py: add unpacking for some MSI files
