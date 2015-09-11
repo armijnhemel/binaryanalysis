@@ -17,7 +17,6 @@ import bat.batdb
 from multiprocessing import Process, Lock
 from multiprocessing.sharedctypes import Value, Array
 
-#def writejson((filehash,topleveldir, outputhash, hashdatabase, batdb, scanenv)):
 def writejson(scanqueue, topleveldir, outputhash, cursor, batdb, scanenv, converthash):
 	hashcache = {}
 	while True:
@@ -372,10 +371,10 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 		batconns = []
 		batcursors = []
 
-		batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
 		if not scanenv.has_key('BAT_DB'):
 			batdb = None
 		else:
+			batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
 			hashdatabase = scanenv['BAT_DB']
 		for i in range(0,processamount):
 			cursor = None
