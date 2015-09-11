@@ -1488,16 +1488,17 @@ def runscan(scans, scan_binary, scandate):
 	cursor = None
 	sourcecodequery = ''
 	for i in range(0,processamount):
-		if 'DBBACKEND' in scanenv:
-			batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
-			c = batdb.getConnection(scanenv['BAT_DB'],scanenv)
-			if c != None:
-				cursor = c.cursor()
-				batcons.append(c)
-				sourcecodequery = batdb.getQuery("select checksum from processed_file where checksum=%s limit 1")
-				scansourcecode = True
-			else:
-				scansourcecode = False
+		if scansourcecode:
+			if 'DBBACKEND' in scanenv:
+				batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
+				c = batdb.getConnection(scanenv['BAT_DB'],scanenv)
+				if c != None:
+					cursor = c.cursor()
+					batcons.append(c)
+					sourcecodequery = batdb.getQuery("select checksum from processed_file where checksum=%s limit 1")
+					scansourcecode = True
+				else:
+					scansourcecode = False
 		else:
 			cursor = None
 			sourcecodequery = None
