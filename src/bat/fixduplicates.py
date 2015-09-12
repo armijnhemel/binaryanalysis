@@ -5,7 +5,7 @@
 ## Copyright 2014-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
-import os, os.path, sys, subprocess, copy, cPickle, multiprocessing
+import os, os.path, sys, subprocess, copy, cPickle
 
 '''
 During scanning BAT tags duplicate files (same checksums) and only processes a
@@ -67,7 +67,7 @@ def fixduplicates(unpackreports, scantempdir, topleveldir, processors, scanenv, 
 				filename = unpackreports[i]['name']
 
 				## extract dynamic section
-				p = subprocess.Popen(['readelf', '-Wd', "%s" % os.path.join(realpath, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+				p = subprocess.Popen(['readelf', '-Wd', "%s" % os.path.join(realpath, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 				(stanout, stanerr) = p.communicate()
 				if p.returncode != 0:
 					continue
