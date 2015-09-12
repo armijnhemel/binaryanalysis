@@ -1,3 +1,12 @@
+2015-09-12:
+* fwunpack.py: use the BZ2Decompressor object from Python's bz2 module and tag
+bzip2 files as 'bzip2' and 'compressed' if possible. Fix blacklisting and
+remove the unpackBzip2() method.
+* fwunpack.py: create searchUnpackKnownBzip2() method to short cut unpacking
+of files ending in .bz2 extension
+* file2package.py: rewrite file2package to an aggregate scan to get rid of
+lots of database connections
+
 2015-09-11:
 * licenseversion.py: fix license scanning for sqlite databases, make use of
 queues for copyright lookup
