@@ -19,17 +19,43 @@ We are mostly interested in regular files and directories:
 '''
 
 def copydir(source, fspath, target):
-	(scandirs, scanfiles) = readfiles(source, fspath)
+	scanfiles = []
+	scandirs = []
+	p = subprocess.Popen(['e2ls', '-l', source + ":" + fspath], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (stanout, stanerr) = p.communicate()
+        if p.returncode != 0:
+		return None
+	if stanout.strip() == "No files found!":
+		return None
+	for i in stanout.strip().split("\n"):
+		if i.startswith(">"):
+			continue
+		isplits = i.split()
+		if len(isplits[1]) < 5:
+			## bogus file system, so continue
+			return None
+		modeflag = int(isplits[1][0:-3])
+		if len(isplits) < 8:
+			continue
+		else:
+			filename = isplits[7]
+		if modeflag == 40:
+			scandirs.append(filename)
+		## also take sticky bit, suid, sgid, etc. into account
+		elif modeflag >= 100 and modeflag < 120:
+			scanfiles.append(filename)
 	if scandirs == [] and scanfiles == []:
 		return None
 	for scandir in scandirs:
 		os.mkdir(target + "/" + scandir)
 		copydir(source, fspath + "/" + scandir, target + "/" + scandir)
-	for scanfile in scanfiles:
-		p = subprocess.Popen(['e2cp', source + ":" + fspath + "/" + scanfile, "-d", target], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-        	(stanout, stanerr) = p.communicate()
-        	if p.returncode != 0:
-			continue
+	if len(scanfiles) != 0:
+		copypaths = map(lambda x: source + ":" + fspath + "/" + x, scanfiles)
+		for scanfile in copypaths:
+			p = subprocess.Popen(['e2cp', scanfile, "-d", target], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        		(stanout, stanerr) = p.communicate()
+        		if p.returncode != 0:
+				continue
 	return target
 
 def copyext2fs(source, target=None):
@@ -41,30 +67,3 @@ def copyext2fs(source, target=None):
 	if res != None:
 		return targetdir
 
-def readfiles(source, fspath):
-	files = []
-	dirs = []
-	p = subprocess.Popen(['e2ls', '-l', source + ":" + fspath], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-        (stanout, stanerr) = p.communicate()
-        if p.returncode != 0:
-		return (dirs, files)
-	if stanout.strip() == "No files found!":
-		return (dirs, files)
-	for i in stanout.strip().split("\n"):
-		if i.startswith(">"):
-			continue
-		isplits = i.split()
-		if len(isplits[1]) < 5:
-			## bogus file system, so continue
-			return ([], [])
-		modeflag = int(isplits[1][0:-3])
-		if len(isplits) < 8:
-			continue
-		else:
-			filename = isplits[7]
-		if modeflag == 40:
-			dirs.append(filename)
-		## also take sticky bit, suid, sgid, etc. into account
-		elif modeflag >= 100 and modeflag < 120:
-			files.append(filename)
-	return (dirs, files)
