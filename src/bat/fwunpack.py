@@ -2928,33 +2928,7 @@ def unpackCompress(filename, offset, compresslimit, tempdir=None, compress_tmpdi
 		shutil.move(outtmpfile[1], tmpdir)
 	return tmpdir
 
-## tries to unpack stuff using bzcat. If it is successful, it will
-## return a directory for further processing, otherwise it will return None.
-## We use bzcat instead of the bz2 module because that can't handle trailing
-## data very well.
-def unpackBzip2(filename, offset, tempdir=None, blacklist=[]):
-	## first unpack things, write things to a file and return
-	## the directory if the file is not empty
-	## Assumes (for now) that bzcat is in the path
-	tmpdir = unpacksetup(tempdir)
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.fdopen(tmpfile[0]).close()
-
-	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
-
-	outtmpfile = tempfile.mkstemp(dir=tmpdir)
-	p = subprocess.Popen(['bzcat', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	os.fdopen(outtmpfile[0]).close()
-	if os.stat(outtmpfile[1]).st_size == 0:
-		os.unlink(outtmpfile[1])
-		os.unlink(tmpfile[1])
-		if tempdir == None:
-			os.rmdir(tmpdir)
-		return None
-	os.unlink(tmpfile[1])
-	return tmpdir
-
+## search and unpack bzip2 compressed files
 def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = []
 	if not offsets.has_key('bz2'):
@@ -2965,6 +2939,7 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 	diroffsets = []
 	counter = 1
 	newtags = []
+	bzip2datasize = 10000000
 	for offset in offsets['bz2']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
@@ -3006,7 +2981,7 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 		## extra sanity check: try to uncompress a few blocks of data
 		bzfile = open(filename, 'rb')
 		bzfile.seek(offset)
-		bzip2data = bzfile.read(1000000)
+		bzip2data = bzfile.read(bzip2datasize)
 		bzfile.close()
 		bzip2decompressobj = bz2.BZ2Decompressor()
 		bzip2size = 0
@@ -3037,12 +3012,53 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 				newtags.append('bzip2')
 			counter = counter + 1
 		else:
-			res = unpackBzip2(filename, offset, tmpdir, blacklist)
-			if res != None:
-				diroffsets.append((res, offset, 0))
+			## try to load more data into the bzip2 decompression object
+			localoffset = offset + bzip2datasize
+			bzfile = open(filename, 'rb')
+			bzfile.seek(localoffset)
+			bzip2data = bzfile.read(bzip2datasize)
+			unpackingerror = False
+			bytesread = bzip2datasize
+			unpackedbytessize = len(uncompresseddata)
+
+			tmpfile = tempfile.mkstemp(dir=tmpdir)
+			os.fdopen(tmpfile[0]).close()
+
+			outbzip2file = open(tmpfile[1], 'wb')
+			outbzip2file.write(uncompresseddata)
+			outbzip2file.flush()
+			while bzip2data != "":
+				try:
+					uncompresseddata = bzip2decompressobj.decompress(bzip2data)
+					outbzip2file.write(uncompresseddata)
+					outbzip2file.flush()
+					unpackedbytessize += len(uncompresseddata)
+				except Exception, e:
+					unpackingerror = True
+					break
+
+				## end of the bzip2 compressed data is reached
+				if bzip2decompressobj.unused_data != "":
+					bytesread += len(bzip2data) - len(bzip2decompressobj.unused_data)
+					break
+				bytesread += len(bzip2data)
+				bzip2data = bzfile.read(bzip2datasize)
+			bzfile.close()
+			outbzip2file.close()
+			if unpackingerror:
+				## cleanup
+				os.unlink(tmpfile[1])
+				os.rmdir(tmpdir)
+			if unpackedbytessize != 0:
+				diroffsets.append((tmpdir, offset, bytesread))
+				blacklist.append((offset, offset + bytesread))
+				if offset == 0 and (bytesread == os.stat(filename).st_size):
+					newtags.append('compressed')
+					newtags.append('bzip2')
 				counter = counter + 1
 			else:
 				## cleanup
+				os.unlink(tmpfile[1])
 				os.rmdir(tmpdir)
 	return (diroffsets, blacklist, newtags, hints)
 
