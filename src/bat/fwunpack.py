@@ -2766,6 +2766,7 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			continue
 		deflateobj.flush()
 
+		tmpdir = dirsetup(tempdir, filename, "gzip", counter)
 		if deflatesize != 0:
 			## Clearly all the compressed data that is available
 			## was already decompressed during the test, so no
@@ -2777,7 +2778,6 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			## The size of the *raw* deflate data is gzipsize,
 			## followed by the crc32 of the uncompresed data
 			## and the size
-			tmpdir = dirsetup(tempdir, filename, "gzip", counter)
 			tmpfile = tempfile.mkstemp(dir=tmpdir)
 			os.fdopen(tmpfile[0]).close()
 
@@ -2825,7 +2825,6 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 				if filename.endswith('tar.gz'):
 					pass
 		else:
-			tmpdir = dirsetup(tempdir, filename, "gzip", counter)
 			res = unpackGzip(filename, offset, template, hasnameset, renamename, tmpdir, blacklist)
 			if res != None:
 				(gzipres, gzipsize) = res
@@ -2965,6 +2964,7 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 
 	diroffsets = []
 	counter = 1
+	newtags = []
 	for offset in offsets['bz2']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
@@ -3002,15 +3002,45 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 				continue
 			if blockbytes[5] != '\x59':
 				continue
+
+		## extra sanity check: try to uncompress a few blocks of data
+		bzfile = open(filename, 'rb')
+		bzfile.seek(offset)
+		bzip2data = bzfile.read(10000000)
+		bzfile.close()
+		deflateobj = bz2.BZ2Decompressor()
+		bzip2size = 0
+		uncompresseddata = deflateobj.decompress(bzip2data)
+		if deflateobj.unused_data != "":
+			bzip2size = len(bzip2data) - len(deflateobj.unused_data)
+		else:
+			if len(uncompresseddata) != 0:
+				bzip2size = len(bzip2data)
+
 		tmpdir = dirsetup(tempdir, filename, "bzip2", counter)
-		res = unpackBzip2(filename, offset, tmpdir, blacklist)
-		if res != None:
-			diroffsets.append((res, offset, 0))
+		if bzip2size != 0:
+			tmpfile = tempfile.mkstemp(dir=tmpdir)
+			os.fdopen(tmpfile[0]).close()
+
+			outbzip2file = open(tmpfile[1], 'wb')
+			outbzip2file.write(uncompresseddata)
+			outbzip2file.flush()
+			outbzip2file.close()
+			diroffsets.append((tmpdir, offset, bzip2size))
+			blacklist.append((offset, offset + bzip2size))
+			if offset == 0 and (bzip2size == os.stat(filename).st_size):
+				newtags.append('compressed')
+				newtags.append('bzip2')
 			counter = counter + 1
 		else:
-			## cleanup
-			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [], hints)
+			res = unpackBzip2(filename, offset, tmpdir, blacklist)
+			if res != None:
+				diroffsets.append((res, offset, 0))
+				counter = counter + 1
+			else:
+				## cleanup
+				os.rmdir(tmpdir)
+	return (diroffsets, blacklist, newtags, hints)
 
 def searchUnpackRZIP(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = []
