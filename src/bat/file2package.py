@@ -8,12 +8,9 @@
 This is a plugin for the Binary Analysis Tool. Its purpose is to determine the
 package a file belongs to based on the name of a package. This information is
 mined from distributions like Fedora and Debian.
-
-This scan should be run as a leaf scan.
 '''
 
 import os, os.path, sqlite3, sys, subprocess, copy
-import xml.dom.minidom
 import bat.batdb
 
 def filename2package(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
@@ -46,21 +43,6 @@ def filename2package(path, tags, blacklist=[], scanenv={}, scandebug=False, unpa
 			returnres.append(distrores)
 		return (['file2package'], returnres)
 	return None
-
-def xmlprettyprint(res, root, scanenv={}):
-	topnode = root.createElement("filelist")
-	#tags = ['packagename', 'version', 'distribution']
-	tags = ['packagename', 'distribution']
-	for i in res:
-		tmpnode = root.createElement('packageguess')
-		for j in range(0,len(tags)):
-			tagnode = root.createElement(tags[j])
-			tagnodetext = xml.dom.minidom.Text()
-			tagnodetext.data = i[j]
-			tagnode.appendChild(tagnodetext)
-			tmpnode.appendChild(tagnode)
-		topnode.appendChild(tmpnode)
-	return topnode
 
 def file2packagesetup(scanenv, debug=False):
 	if not 'DBBACKEND' in scanenv:
