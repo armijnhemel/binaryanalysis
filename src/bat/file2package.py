@@ -10,7 +10,7 @@ package a file belongs to based on the name of a package. This information is
 mined from distributions like Fedora and Debian.
 '''
 
-import os, os.path, sqlite3, sys, subprocess, copy, Queue
+import os, os.path, sqlite3, sys, subprocess, copy, Queue, cPickle
 import bat.batdb
 import multiprocessing
 from multiprocessing import Process, Lock
@@ -51,7 +51,7 @@ def filename2package(unpackreports, scantempdir, topleveldir, processors, scanen
 
 	processtasks = []
 	for i in unpackreports:
-		if not unpackreports[i].has_key('checksum'):
+		if not 'checksum' in unpackreports[i]:
 			continue
 		processtasks.append(i)
 
@@ -94,15 +94,30 @@ def filename2package(unpackreports, scantempdir, topleveldir, processors, scanen
 			break
 			reportqueue.join()
 
-	## TODO: mangle return results
-
 	for p in processpool:
 		p.terminate()
 
 	for c in batcons:
 		c.close()
+
+	for r in res:
+		filename = r.keys()[0]
+		filehash = unpackreports[filename]['checksum']
+
+                ## read pickle file
+		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+		leafreports = cPickle.load(leaf_file)
+		leaf_file.close()
+
+		## write pickle file
+		leafreports['file2package'] = r[filename]
+		leafreports['tags'].append('file2package')
+		unpackreports[filename]['tags'].append('file2package')
+		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
+		cPickle.dump(leafreports, leaf_file)
+		leaf_file.close()
+
 	returnres = res
-	return {'file2package': returnres}
 
 def file2packagesetup(scanenv, debug=False):
 	if not 'DBBACKEND' in scanenv:
