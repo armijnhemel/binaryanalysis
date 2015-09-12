@@ -2928,6 +2928,40 @@ def unpackCompress(filename, offset, compresslimit, tempdir=None, compress_tmpdi
 		shutil.move(outtmpfile[1], tmpdir)
 	return tmpdir
 
+def searchUnpackKnownBzip2(filename, tempdir=None, scanenv={}, debug=False):
+	## first check if the file actually could be a valid gzip file
+	bzip2file = open(filename, 'rb')
+	bzip2file.seek(0)
+	bzip2header = bzip2file.read(3)
+	bzip2file.close()
+	if bzip2header != fsmagic.fsmagic['bz2']:
+		return ([], [], [], [])
+
+	## then try unpacking it.
+	res = searchUnpackBzip2(filename, tempdir, [], {'bz2': [0]}, scanenv, debug)
+	(diroffsets, blacklist, newtags, hints) = res
+
+	failed = False
+	## there were results, so check if they were successful
+	if diroffsets != []:
+		if len(diroffsets) != 1:
+			failed = True
+		else:
+			(dirpath, startoffset, endoffset) = diroffsets[0]
+			if startoffset != 0 or endoffset != os.stat(filename).st_size:
+				failed = True
+
+		if failed:
+			for i in diroffsets:
+				(dirpath, startoffset, endoffset) = i
+				try:
+					shutil.rmtree(dirpath)
+				except:
+					pass
+			return ([], [], [], [])
+		else:
+			return (diroffsets, blacklist, newtags, hints)
+	return ([], [], [], [])
 ## search and unpack bzip2 compressed files
 def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = []
