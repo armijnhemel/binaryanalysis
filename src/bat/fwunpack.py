@@ -2972,13 +2972,13 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 		## sanity check: block size is byte number 4 in the header
 		bzfile = open(filename, 'rb')
 		bzfile.seek(offset + 3)
-		blockbyte = bzfile.read(1)
+		blocksizebyte = bzfile.read(1)
 		bzfile.close()
 		try:
-			blockbyte = int(blockbyte)
+			blocksizebyte = int(blocksizebyte)
 		except:
 			continue
-		if blockbyte == 0:
+		if blocksizebyte == 0:
 			continue
 
 		## some more sanity checks based on bzip2's decompress.c
@@ -3006,7 +3006,7 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 		## extra sanity check: try to uncompress a few blocks of data
 		bzfile = open(filename, 'rb')
 		bzfile.seek(offset)
-		bzip2data = bzfile.read(10000000)
+		bzip2data = bzfile.read(1000000)
 		bzfile.close()
 		bzip2decompressobj = bz2.BZ2Decompressor()
 		bzip2size = 0
@@ -3018,7 +3018,8 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 			bzip2size = len(bzip2data) - len(bzip2decompressobj.unused_data)
 		else:
 			if len(uncompresseddata) != 0:
-				bzip2size = len(bzip2data)
+				if len(bzip2data) == os.stat(filename).st_size:
+					bzip2size = len(bzip2data)
 
 		tmpdir = dirsetup(tempdir, filename, "bzip2", counter)
 		if bzip2size != 0:
