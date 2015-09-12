@@ -3008,11 +3008,14 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 		bzfile.seek(offset)
 		bzip2data = bzfile.read(10000000)
 		bzfile.close()
-		deflateobj = bz2.BZ2Decompressor()
+		bzip2decompressobj = bz2.BZ2Decompressor()
 		bzip2size = 0
-		uncompresseddata = deflateobj.decompress(bzip2data)
-		if deflateobj.unused_data != "":
-			bzip2size = len(bzip2data) - len(deflateobj.unused_data)
+		try:
+			uncompresseddata = bzip2decompressobj.decompress(bzip2data)
+		except Exception, e:
+			continue
+		if bzip2decompressobj.unused_data != "":
+			bzip2size = len(bzip2data) - len(bzip2decompressobj.unused_data)
 		else:
 			if len(uncompresseddata) != 0:
 				bzip2size = len(bzip2data)
