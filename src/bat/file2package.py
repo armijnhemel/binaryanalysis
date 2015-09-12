@@ -10,39 +10,99 @@ package a file belongs to based on the name of a package. This information is
 mined from distributions like Fedora and Debian.
 '''
 
-import os, os.path, sqlite3, sys, subprocess, copy
+import os, os.path, sqlite3, sys, subprocess, copy, Queue
 import bat.batdb
+import multiprocessing
+from multiprocessing import Process, Lock
+from multiprocessing.sharedctypes import Value, Array
 
-def filename2package(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
-	if not scanenv.has_key('BAT_PACKAGE_DB'):
-		return
-	## open the database containing the mapping of filenames to package
-	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
-	conn = batdb.getConnection(scanenv['BAT_PACKAGE_DB'],scanenv)
-	c = conn.cursor()
+def grabpackage(scanqueue, resultqueue, cursor, query):
 	## select the packages that are available. It would be better to also have the directory
 	## name available, so we should get rid of 'path' and use something else that is better
 	## suited
-	query = "select distinct package, packageversion, source, distroversion from file where filename = %s"
-	query = batdb.getQuery(query)
-	c.execute(query, (os.path.basename(path),))
-	#c.execute("select distinct package, packageversion, source, distroversion from file where filename = '%s'" % (os.path.basename(path),))
-	res = c.fetchall()
-	c.close()
-	conn.close()
-	## TODO: filter results, only return files that are not in tons of packages
-	if res != []:
-		returnres = []
-		for r in res:
-			(package, packageversion, distribution, distroversion) = r
-			distrores = {}
-			distrores['package'] = package
-			distrores['packageversion'] = packageversion
-			distrores['distribution'] = distribution
-			distrores['distributionversion'] = distroversion
-			returnres.append(distrores)
-		return (['file2package'], returnres)
-	return None
+	while True:
+		filename = scanqueue.get()
+		cursor.execute(query, (os.path.basename(filename),))
+		res = cursor.fetchall()
+		if res != []:
+			returnres = []
+			## TODO: filter results, only return files that are not in tons of packages
+			for r in res:
+				(package, packageversion, distribution, distroversion) = r
+				distrores = {}
+				distrores['package'] = package
+				distrores['packageversion'] = packageversion
+				distrores['distribution'] = distribution
+				distrores['distributionversion'] = distroversion
+				returnres.append(distrores)
+			reportqueue.put((filename, distrores))
+		scanqueue.task_done()
+
+def filename2package(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
+	(envresult, newenv) = file2packagesetup(scanenv, scandebug)
+	if not envresult:
+		return None
+
+	if not scanenv.has_key('BAT_PACKAGE_DB'):
+		return
+
+	## open the database containing the mapping of filenames to package
+	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
+
+	processtasks = []
+	for i in unpackreports:
+		if not unpackreports[i].has_key('checksum'):
+			continue
+		processtasks.append(i)
+
+	if processors == None:
+		processamount = 1
+	else:
+		processamount = processors
+	## create a queue for tasks, with a few threads reading from the queue
+	## and looking up results and putting them in a result queue
+	query = batdb.getQuery("select distinct package, packageversion, source, distroversion from file where filename = %s")
+	scanmanager = multiprocessing.Manager()
+	scanqueue = multiprocessing.JoinableQueue(maxsize=0)
+	reportqueue = scanmanager.Queue(maxsize=0)
+	processpool = []
+        batcons = []
+        batcursors = []
+
+        map(lambda x: scanqueue.put(x), processtasks)
+        minprocessamount = min(len(processtasks), processamount)
+	res = []
+
+	for i in range(0,minprocessamount):
+		conn = batdb.getConnection(scanenv['BAT_PACKAGE_DB'],scanenv)
+		c = conn.cursor()
+		batcursors.append(c)
+		batcons.append(conn)
+		p = multiprocessing.Process(target=grabpackage, args=(scanqueue,reportqueue,batcursors[i],query))
+		processpool.append(p)
+		p.start()
+
+		scanqueue.join()
+
+	while True:
+		try:
+			val = reportqueue.get_nowait()
+			res.append(val)
+			reportqueue.task_done()
+		except Queue.Empty, e:
+			## Queue is empty
+			break
+			reportqueue.join()
+
+	## TODO: mangle return results
+
+	for p in processpool:
+		p.terminate()
+
+	for c in batcons:
+		c.close()
+	returnres = res
+	return {'file2package': returnres}
 
 def file2packagesetup(scanenv, debug=False):
 	if not 'DBBACKEND' in scanenv:
