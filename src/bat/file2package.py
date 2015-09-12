@@ -16,7 +16,7 @@ import multiprocessing
 from multiprocessing import Process, Lock
 from multiprocessing.sharedctypes import Value, Array
 
-def grabpackage(scanqueue, resultqueue, cursor, query):
+def grabpackage(scanqueue, reportqueue, cursor, query):
 	## select the packages that are available. It would be better to also have the directory
 	## name available, so we should get rid of 'path' and use something else that is better
 	## suited
@@ -35,7 +35,7 @@ def grabpackage(scanqueue, resultqueue, cursor, query):
 				distrores['distribution'] = distribution
 				distrores['distributionversion'] = distroversion
 				returnres.append(distrores)
-			reportqueue.put((filename, distrores))
+			reportqueue.put({filename: returnres})
 		scanqueue.task_done()
 
 def filename2package(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
