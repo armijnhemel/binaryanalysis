@@ -18,7 +18,6 @@ to prevent other scans from (re)scanning (part of) the data.
 import sys, os, subprocess, os.path, shutil, stat, array, struct, binascii
 import tempfile, bz2, re, magic, tarfile, zlib, copy, uu
 import fsmagic, extractor, ext2, jffs2
-from xml.dom import minidom
 
 ## generic method to create temporary directories, with the correct filenames
 ## which is used throughout the code.
@@ -4188,6 +4187,7 @@ def searchUnpackCHM(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 ###
 
 ## PDFs end with %%EOF, sometimes followed by one or two extra characters
+## See http://www.adobe.com/devnet/pdf/pdf_reference.html
 def searchUnpackPDF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = []
 	if not offsets.has_key('pdf'):
@@ -4207,7 +4207,7 @@ def searchUnpackPDF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		if blacklistoffset != None:
 			continue
 		## first check whether or not the file has a valid PDF version
-		pdffile = open(filename)
+		pdffile = open(filename, 'rb')
 		pdffile.seek(offset+5)
 		pdfbytes = pdffile.read(3)
 		pdffile.close()
@@ -4230,7 +4230,7 @@ def searchUnpackPDF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			## PDF specification the word "startxref" should.
 			## Read 100 bytes and see if 'startxref' is in those bytes. If not
 			## it cannot be a valid PDF file.
-			pdffile = open(filename)
+			pdffile = open(filename, 'rb')
 			pdffile.seek(trailer-100)
 			pdfbytes = pdffile.read(100)
 			pdffile.close()
@@ -4238,11 +4238,20 @@ def searchUnpackPDF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 				continue
 
 			## startxref is followed by whitespace and then a number indicating
-			## the byte offset for a possible xreft able.
+			## the byte offset for a possible xref table.
 			xrefres = re.search('startxref\s+(\d+)\s+', pdfbytes)
 			if xrefres == None:
 				continue
-			
+
+			xrefoffset = int(xrefres.groups()[0])
+
+			pdffile = open(filename, 'rb')
+			pdffile.seek(xrefoffset)
+			pdfbytes = pdffile.read(4)
+			pdffile.close()
+			if pdfbytes != 'xref':
+				continue
+
 			tmpdir = dirsetup(tempdir, filename, "pdf", counter)
 			res = unpackPDF(filename, offset, trailer, tmpdir)
 			if res != None:
@@ -4306,14 +4315,9 @@ def unpackPDF(filename, offset, trailer, tempdir=None):
 		os.unlink(tmpfile[1])
 		return None
 	else:
-		pdflines = stanout.rstrip().split("\n")
-		for pdfline in pdflines:
-			if not ':' in pdfline:
-				continue
-			(tag, value) = pdfline.split(":", 1)
-			if tag == "File size":
-				size = int(value.strip().split()[0])
-				break
+		## Is this accurate? Using "File size" from pdfinfo's output
+		## surely is not.
+		size = os.stat(tmpfile[1]).st_size
 		return (tmpdir, size)
 
 ## http://en.wikipedia.org/wiki/Graphics_Interchange_Format
