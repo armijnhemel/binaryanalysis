@@ -1,3 +1,17 @@
+2015-09-13:
+* prerun.py: allow setting offset for genericMarkerSearch
+* fwunpack.py: remove useless check (output from pdfinfo), add extra sanity
+checks for PDF unpacking
+* prerun.py: remove verifyBZ2, as it was broken and unused
+* fwunpack.py: big file fixes for XZ unpacking
+* fwunpack.py: mimic behaviour of unxz in XZ unpacking if filename ends in .xz
+* bruteforcescan.py: pass hints from a scan about its children.
+* bruteforcescan.py: only compute which files to ignore by prerun scans once
+instead of per thread
+* bruteforcescan.py: fix putting tasks in scanning queue
+* bruteforcescan.py: add offsets to scan tasks. This might come in handy for
+for example precomputing offsets
+
 2015-09-12:
 * fwunpack.py: use the BZ2Decompressor object from Python's bz2 module and tag
 bzip2 files as 'bzip2' and 'compressed' if possible. Fix blacklisting and
