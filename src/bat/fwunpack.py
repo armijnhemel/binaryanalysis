@@ -4252,6 +4252,47 @@ def searchUnpackPDF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			if pdfbytes != 'xref':
 				continue
 
+			## as a sanity check walk the xref table
+			## After the line "xref" there is a line that
+			## tells how many entries follow and how they are numbered
+			## according to the PDF specification each xref entry is
+			## 20 bytes long
+			## set offset to just after 'xref\n'
+			xrefoffset += 5
+			pdffile = open(filename, 'rb')
+			pdffile.seek(xrefoffset)
+			## just read a bunch of bytes to find the first line
+			bytesread = 10
+			pdfbytes = pdffile.read(bytesread)
+			nloffset = pdfbytes.find('\n')
+			totalbytesread = bytesread
+			while nloffset == -1:
+				pdfbytes = pdffile.read(bytesread)
+				nloffset = pdfbytes.find('\n')
+				if nloffset != -1:
+					nloffset += totalbytesread
+				totalbytesread += bytesread
+
+			## reset the file pointer
+			pdffile.seek(xrefoffset)
+			subsectionline = pdffile.read(nloffset)
+			try:
+				subsectionlinelems = map(lambda x: int(x), subsectionline.split())
+			except:
+				pdffile.close()
+				continue
+
+			if len(subsectionlinelems) != 2:
+				pdffile.close()
+				continue
+
+			#(subsection, subsectionelemcount)
+
+			## adjust offset to length of subsection line plus newline
+			xrefoffset += nloffset + 1
+
+			pdffile.close()
+
 			tmpdir = dirsetup(tempdir, filename, "pdf", counter)
 			res = unpackPDF(filename, offset, trailer, tmpdir)
 			if res != None:
