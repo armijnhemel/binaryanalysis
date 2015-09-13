@@ -246,7 +246,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 		leaftasks = []
 		unpackreports = {}
 		blacklist = []
-		(path, filename, lenscandir, tempdir, debug, tags) = scanqueue.get()
+		(path, filename, lenscandir, tempdir, debug, tags, hints) = scanqueue.get()
 		lentempdir = len(tempdir)
 
 		## absolute path of the file in the file system (so including temporary dir)
@@ -541,13 +541,13 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 				if len(scanres) == 4:
 					(diroffsets, blacklist, scantags, hints) = scanres
 					tags = list(set(tags + scantags))
-					processdiroffsets.append((unpackscan['name'], diroffsets))
+					processdiroffsets.append((unpackscan['name'], diroffsets, hints))
 					#blacklist = mergeBlacklist(blacklist)
 				if len(diroffsets) == 0:
 					continue
 
 		for unpacknamediroffsets in processdiroffsets:
-			(unpackscanname, diroffsets) = unpacknamediroffsets
+			(unpackscanname, diroffsets, hints) = unpacknamediroffsets
 			## each diroffset is a (path, offset) tuple
 			for diroffset in diroffsets:
 				report = {}
@@ -573,9 +573,9 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optm
 								if not os.path.islink("%s/%s" % (i[0], p)):
 									os.chmod("%s/%s" % (i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 								if "temporary" in tags and diroffset[1] == 0 and diroffset[2] == filesize:
-									scantasks.append((i[0], p, len(scandir), tempdir, debug, ['temporary']))
+									scantasks.append((i[0], p, len(scandir), tempdir, debug, ['temporary'], hints))
 								else:
-									scantasks.append((i[0], p, len(scandir), tempdir, debug, []))
+									scantasks.append((i[0], p, len(scandir), tempdir, debug, [], hints))
 								relscanpath = "%s/%s" % (i[0][lentempdir:], p)
 								if relscanpath.startswith('/'):
 									relscanpath = relscanpath[1:]
@@ -1426,7 +1426,8 @@ def runscan(scans, scan_binary, scandate):
 			if not ('prerun' in debugphases or 'unpack' in debugphases):
 				tmpdebug = False
 	tags = []
-	scantasks = [(scantempdir, os.path.basename(scan_binary), len(scantempdir), scantempdir, tmpdebug, tags)]
+	hints = []
+	scantasks = [(scantempdir, os.path.basename(scan_binary), len(scantempdir), scantempdir, tmpdebug, tags, hints)]
 
 	## Use multithreading to speed up scanning. Sometimes we hit http://bugs.python.org/issue9207
 	## Threading can be configured in the configuration file, but
