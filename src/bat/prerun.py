@@ -30,11 +30,10 @@ import fsmagic, extractor, javacheck
 ## method to search for all the markers in magicscans
 ## Although it is in this method it is actually not a pre-run scan, so perhaps
 ## it should be moved to bruteforcescan.py instead.
-def genericMarkerSearch(filename, magicscans, optmagicscans, debug=False):
+def genericMarkerSearch(filename, magicscans, optmagicscans, offset=0, debug=False):
 	datafile = open(filename, 'rb')
 	databuffer = []
 	offsets = {}
-	offset = 0
 	datafile.seek(offset)
 	databuffer = datafile.read(2000000)
 	marker_keys = magicscans + optmagicscans
