@@ -266,43 +266,6 @@ def verifyGzip(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fa
 	newtags.append("compressed")
 	return newtags
 
-def verifyBZ2(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
-	newtags = []
-	if "text" in tags or "graphics" in tags or "compressed" in tags:
-		return newtags
-	if not offsets.has_key('bz2'):
-		return newtags
-	if not 0 in offsets['bz2']:
-		return newtags
-	p = subprocess.Popen(['bunzip2', '-tvv', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		return newtags
-	## possibly multiple bzip2 in this file, or bzip2 with trailing data
-	if len(stanerr.strip().split("\n")) > 1:
-		if "trailing garbage after EOF ignored" in stanerr:
-			return newtags
-		else:
-			## output would look like:
-			## $ bunzip2 -tvv foo.bz2 
-			##  foo.bz2: 
-			##    [1: huff+mtf rt+rld]
-			##    ok
-			## so splitting it on "\n" would give us a list of length 3 in this case
-			## perhaps more in other cases. More bzip2 files concatenated would mean
-			## that the length of stanerr would be significantly more than the number
-			## of the last block that it reports.
-			stanerrlines = stanerr.strip().split("\n")
-			try:
-				blocks = int(stanerrlines[-2].split(':')[0][5:])
-				if blocks != (len(stanerrlines) - 2):
-					return newtags
-			except:
-				return newtags
-	newtags.append("bz2")
-	newtags.append("compressed")
-	return newtags
-
 ## Verify if this is an Android resources file. These files can be found in
 ## Android APK archives and are always called "resources.arsc".
 ## There are various valid types of resource files, which are documented here:
