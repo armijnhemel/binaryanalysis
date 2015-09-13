@@ -219,28 +219,7 @@ def tagKnownExtension(filename):
 	return (tags, offsets)
 
 ## scan a single file, possibly unpack and recurse
-def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, magicscans, optmagicscans, processid, hashdict, blacklistedfiles, llock, template, unpacktempdir, outputhash, cursor, sourcecodequery):
-	prerunignore = {}
-	prerunmagic = {}
-	for prerunscan in prerunscans:
-		if prerunscan.has_key('noscan'):
-			if not prerunscan['noscan'] == None:
-				noscans = prerunscan['noscan'].split(':')
-				prerunignore[prerunscan['name']] = noscans
-		if prerunscan.has_key('magic'):
-			if not prerunscan['magic'] == None:
-				magics = prerunscan['magic'].split(':')
-				if not prerunmagic.has_key(prerunscan['name']):
-					prerunmagic[prerunscan['name']] = magics
-				else:
-					prerunmagic[prerunscan['name']] = prerunmagic[prerunscan['name']] + magics
-		if prerunscan.has_key('optmagic'):
-			if not prerunscan['optmagic'] == None:
-				magics = prerunscan['optmagic'].split(':')
-				if not prerunmagic.has_key(prerunscan['name']):
-					prerunmagic[prerunscan['name']] = magics
-				else:
-					prerunmagic[prerunscan['name']] = prerunmagic[prerunscan['name']] + magics
+def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, prerunmagic, magicscans, optmagicscans, processid, hashdict, blacklistedfiles, llock, template, unpacktempdir, outputhash, cursor, sourcecodequery):
 	while True:
 		## reset the reports, blacklist, offsets and tags for each new scan
 		leaftasks = []
@@ -1406,6 +1385,28 @@ def runscan(scans, scan_binary, scandate):
 				magicscans = magicscans + s['magic'].split(':')
 			if s['optmagic'] != None:
 				optmagicscans = optmagicscans + s['optmagic'].split(':')
+	prerunignore = {}
+	prerunmagic = {}
+	for prerunscan in scans['prerunscans']:
+		if prerunscan.has_key('noscan'):
+			if not prerunscan['noscan'] == None:
+				noscans = prerunscan['noscan'].split(':')
+				prerunignore[prerunscan['name']] = noscans
+		if prerunscan.has_key('magic'):
+			if not prerunscan['magic'] == None:
+				magics = prerunscan['magic'].split(':')
+				if not prerunmagic.has_key(prerunscan['name']):
+					prerunmagic[prerunscan['name']] = magics
+				else:
+					prerunmagic[prerunscan['name']] = prerunmagic[prerunscan['name']] + magics
+		if prerunscan.has_key('optmagic'):
+			if not prerunscan['optmagic'] == None:
+				magics = prerunscan['optmagic'].split(':')
+				if not prerunmagic.has_key(prerunscan['name']):
+					prerunmagic[prerunscan['name']] = magics
+				else:
+					prerunmagic[prerunscan['name']] = prerunmagic[prerunscan['name']] + magics
+
 	magicscans = list(set(magicscans))
 	optmagicscans = list(set(optmagicscans))
 
@@ -1504,7 +1505,7 @@ def runscan(scans, scan_binary, scandate):
 			cursor = None
 			sourcecodequery = None
 			scansourcecode = False
-		p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], magicscans, optmagicscans, i, hashdict, blacklistedfiles, lock, template, unpacktempdir, outputhash, cursor, sourcecodequery))
+		p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, blacklistedfiles, lock, template, unpacktempdir, outputhash, cursor, sourcecodequery))
 		processpool.append(p)
 		p.start()
 
