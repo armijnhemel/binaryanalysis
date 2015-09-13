@@ -1308,9 +1308,7 @@ def unpackLzo(filename, offset, tempdir=None):
 	return (tmpdir, lzopsize)
 
 ## To unpack XZ a header and a footer and footer need to be found
-## The trailer is actually very generic and a lot more common than the header,
-## so it is likely that we need to search for the trailer a lot more than
-## for the header.
+## http://tukaani.org/xz/xz-file-format.txt
 def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = []
 	if not offsets.has_key('xz'):
@@ -1335,8 +1333,6 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 	diroffsets = []
 	counter = 1
 	datafile = open(filename, 'rb')
-	data = datafile.read()
-	datafile.close()
 	template = None
 	if 'TEMPLATE' in scanenv:
 		template = scanenv['TEMPLATE']
@@ -1350,7 +1346,9 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 			continue
 		else:
 			## bytes 7 and 8 in the stream are "streamflags"
-			streamflags = data[offset+6:offset+8]
+			datafile.seek(offset)
+			data = datafile.read(8)
+			streamflags = data[6:8]
 			for trail in offsets['xztrailer']:
 				## check if the trailer is in the blacklist
 				blacklistoffset = extractor.inblacklist(trail, blacklist)
@@ -1361,18 +1359,27 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 					continue
 				## The "streamflag" bytes should also be present just before the
 				## trailer according to the XZ file format documentation.
-				if data[trail-2:trail] != streamflags:
+				datafile.seek(trail-2)
+				data = datafile.read(2)
+				if data != streamflags:
 					continue
+
+				xzsize = trail+2 - offset
+				datafile.seek(offset)
+				data = datafile.read(xzsize)
+				## The two bytes before that are the so called "backward size"
+
 				tmpdir = dirsetup(tempdir, filename, "xz", counter)
 				res = unpackXZ(data, offset, trail, template, dotest, tmpdir)
 				if res != None:
-					diroffsets.append((res, offset, 0))
-					blacklist.append((offset, trail))
+					diroffsets.append((res, offset, xzsize))
+					blacklist.append((offset, trail+2))
 					counter = counter + 1
 					break
 				else:
 					## cleanup
 					os.rmdir(tmpdir)
+	datafile.close()
 	return (diroffsets, blacklist, [], hints)
 
 def unpackXZ(data, offset, trailer, template, dotest, tempdir=None):
