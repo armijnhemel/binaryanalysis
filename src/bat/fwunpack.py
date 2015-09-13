@@ -1331,6 +1331,7 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 		dotest = False
 
 	diroffsets = []
+	newtags = []
 	counter = 1
 	datafile = open(filename, 'rb')
 	template = None
@@ -1369,20 +1370,28 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 				data = datafile.read(xzsize)
 				## The two bytes before that are the so called "backward size"
 
+				wholefile = False
+				if offset == 0 and trail+2 == os.stat(filename).st_size:
+					wholefile = True
 				tmpdir = dirsetup(tempdir, filename, "xz", counter)
-				res = unpackXZ(data, offset, trail, template, dotest, tmpdir)
+				res = unpackXZ(filename, offset, xzsize, template, dotest, wholefile, tmpdir)
 				if res != None:
 					diroffsets.append((res, offset, xzsize))
 					blacklist.append((offset, trail+2))
+					if wholefile:
+						datafile.close()
+						newtags.append('compressed')
+						newtags.append('xz')
+						return (diroffsets, blacklist, newtags, hints)
 					counter = counter + 1
 					break
 				else:
 					## cleanup
 					os.rmdir(tmpdir)
 	datafile.close()
-	return (diroffsets, blacklist, [], hints)
+	return (diroffsets, blacklist, newtags, hints)
 
-def unpackXZ(data, offset, trailer, template, dotest, tempdir=None):
+def unpackXZ(filename, offset, trailer, template, dotest, wholefile, tempdir=None):
 	## first unpack the data, write things to a file and return
 	## the directory if the file is not empty
 	## Assumes (for now) that xz is in the path
@@ -1390,8 +1399,9 @@ def unpackXZ(data, offset, trailer, template, dotest, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	### trailer has size of 2. Add 1 because [lower, upper)
-	os.write(tmpfile[0], data)
 	os.fdopen(tmpfile[0]).close()
+
+	unpackFile(filename, offset, tmpfile[1], tmpdir, length=trailer)
 
 	if dotest:
 		## test integrity of the file
