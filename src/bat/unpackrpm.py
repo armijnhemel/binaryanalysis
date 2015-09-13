@@ -5,8 +5,8 @@
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
-This module contains only code specific to RPM unpacking. This is so we don't get
-failures on systems that don't have the Python RPM bindings installed.
+This module contains only code specific to RPM unpacking. This is so it can be
+disabled on systems that don't have the Python RPM bindings installed.
 '''
 
 import sys, os, subprocess, os.path, struct
