@@ -1372,7 +1372,8 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 
 				wholefile = False
 				if offset == 0 and trail+2 == os.stat(filename).st_size:
-					wholefile = True
+					if filename.lower().endswith('.xz'):
+						wholefile = True
 				tmpdir = dirsetup(tempdir, filename, "xz", counter)
 				res = unpackXZ(filename, offset, xzsize, template, dotest, wholefile, tmpdir)
 				if res != None:
@@ -1423,12 +1424,22 @@ def unpackXZ(filename, offset, trailer, template, dotest, wholefile, tempdir=Non
 			os.rmdir(tmpdir)
 		return None
 	os.unlink(tmpfile[1])
-	if template != None:
-		if not os.path.exists(os.path.join(tmpdir, template)):
-			try:
-				shutil.move(outtmpfile[1], os.path.join(tmpdir, template))
-			except Exception, e:
-				pass
+
+	if wholefile:
+		filenamenoext = os.path.basename(filename)[:-3]
+		if len(filenamenoext) > 0:
+			if not os.path.exists(os.path.join(tmpdir, filenamenoext)):
+				try:
+					shutil.move(outtmpfile[1], os.path.join(tmpdir, filenamenoext))
+				except Exception, e:
+					pass
+	else:
+		if template != None:
+			if not os.path.exists(os.path.join(tmpdir, template)):
+				try:
+					shutil.move(outtmpfile[1], os.path.join(tmpdir, template))
+				except Exception, e:
+					pass
 	return tmpdir
 
 ## Not sure how cpio works if we have a cpio archive within a cpio archive
