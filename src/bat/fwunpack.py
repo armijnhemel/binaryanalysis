@@ -1390,7 +1390,7 @@ def unpackXZ(data, offset, trailer, template, dotest, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	### trailer has size of 2. Add 1 because [lower, upper)
-	os.write(tmpfile[0], data[offset:trailer+2])
+	os.write(tmpfile[0], data)
 	os.fdopen(tmpfile[0]).close()
 
 	if dotest:
