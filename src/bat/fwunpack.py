@@ -3069,6 +3069,18 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 			diroffsets.append((tmpdir, offset, bzip2size))
 			blacklist.append((offset, offset + bzip2size))
 			if offset == 0 and (bzip2size == os.stat(filename).st_size):
+				## rename the file, like bunzip does
+				if filename.lower().endswith('.bz2'):
+					filenamenoext = os.path.basename(filename)[:-4]
+					bz2path = os.path.join(tmpdir, filenamenoext)
+					if not os.path.exists(bz2path):
+						shutil.move(tmpfile[1], bz2path)
+				## slightly different for tbz2
+				elif filename.lower().endswith('.tbz2'):
+					filenamenoext = os.path.basename(filename)[:-5] + ".tar"
+					bz2path = os.path.join(tmpdir, filenamenoext)
+					if not os.path.exists(bz2path):
+						shutil.move(tmpfile[1], bz2path)
 				newtags.append('compressed')
 				newtags.append('bzip2')
 			counter = counter + 1
@@ -3114,6 +3126,18 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 				diroffsets.append((tmpdir, offset, bytesread))
 				blacklist.append((offset, offset + bytesread))
 				if offset == 0 and (bytesread == os.stat(filename).st_size):
+					## rename the file, like bunzip does
+					if filename.lower().endswith('.bz2'):
+						filenamenoext = os.path.basename(filename)[:-4]
+						bz2path = os.path.join(tmpdir, filenamenoext)
+						if not os.path.exists(bz2path):
+							shutil.move(tmpfile[1], bz2path)
+					## slightly different for tbz2
+					elif filename.lower().endswith('.tbz2'):
+						filenamenoext = os.path.basename(filename)[:-5] + ".tar"
+						bz2path = os.path.join(tmpdir, filenamenoext)
+						if not os.path.exists(bz2path):
+							shutil.move(tmpfile[1], bz2path)
 					newtags.append('compressed')
 					newtags.append('bzip2')
 				counter = counter + 1
