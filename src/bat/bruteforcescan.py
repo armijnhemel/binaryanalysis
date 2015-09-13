@@ -225,7 +225,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 		leaftasks = []
 		unpackreports = {}
 		blacklist = []
-		(path, filename, lenscandir, tempdir, debug, tags, hints) = scanqueue.get()
+		(path, filename, lenscandir, tempdir, debug, tags, hints, offsets) = scanqueue.get()
 		lentempdir = len(tempdir)
 
 		## absolute path of the file in the file system (so including temporary dir)
@@ -373,9 +373,48 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 						(diroffsets, blacklist, scantags, hints) = scanres
 						tags = list(set(tags + scantags))
 						knownfile = True
-						processdiroffsets.append((unpackscan['name'], diroffsets))
 						unpacked = True
 						unpackreports[relfiletoscan]['scans'] = []
+						## Add all the files found to the scan queue
+						## each diroffset is a (path, offset) tuple
+						for diroffset in diroffsets:
+							if diroffset == None:
+								continue
+							report = {}
+							unpacked = True
+							scandir = diroffset[0]
+
+							## recursively scan all files in the directory
+							osgen = os.walk(scandir)
+							scanreports = []
+							scantasks = []
+							try:
+       								while True:
+                							i = osgen.next()
+									## make sure all directories can be accessed
+									for d in i[1]:
+										directoryname = os.path.join(i[0], d)
+										if not os.path.islink(directoryname):
+											os.chmod(directoryname, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+                							for p in i[2]:
+										filepathname = os.path.join(i[0], p)
+										try:
+											if not os.path.islink(filepathname):
+												os.chmod(filepathname, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+											if "temporary" in tags and diroffset[1] == 0 and diroffset[2] == filesize:
+												scantasks.append((i[0], p, len(scandir), tempdir, debug, ['temporary'], hints, {}))
+											else:
+												scantasks.append((i[0], p, len(scandir), tempdir, debug, [], hints, {}))
+											relscanpath = "%s/%s" % (i[0][lentempdir:], p)
+											if relscanpath.startswith('/'):
+												relscanpath = relscanpath[1:]
+											scanreports.append(relscanpath)
+										except Exception, e:
+											pass
+							except StopIteration:
+        							for s in scantasks:
+									scanqueue.put(s)
+							unpackreports[relfiletoscan]['scans'].append({'scanname': unpackscan, 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
 						break
 
 		if not knownfile:
@@ -516,55 +555,51 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 				except:
 					continue
 				scanres = eval("bat_%s(filetoscan, tempdir, blacklist, offsets, newenv, debug=debug)" % (method))
-				## result is either empty, or contains offsets, tags and hints
+				## result is either empty, or contains offsets, blacklist, tags and hints
+				if len(scanres) == 0:
+					continue
 				if len(scanres) == 4:
 					(diroffsets, blacklist, scantags, hints) = scanres
 					tags = list(set(tags + scantags))
-					processdiroffsets.append((unpackscan['name'], diroffsets, hints))
 					#blacklist = mergeBlacklist(blacklist)
-				if len(diroffsets) == 0:
-					continue
+					for diroffset in diroffsets:
+						if diroffset == None:
+							continue
+						unpacked = True
+						report = {}
+						scandir = diroffset[0]
 
-		for unpacknamediroffsets in processdiroffsets:
-			(unpackscanname, diroffsets, hints) = unpacknamediroffsets
-			## each diroffset is a (path, offset) tuple
-			for diroffset in diroffsets:
-				report = {}
-				if diroffset == None:
-					continue
-				unpacked = True
-				scandir = diroffset[0]
-
-				## recursively scan all files in the directory
-				osgen = os.walk(scandir)
-				scanreports = []
-				scantasks = []
-				try:
-       					while True:
-                				i = osgen.next()
-						## make sure all directories can be accessed
-						for d in i[1]:
-							directoryname = os.path.join(i[0], d)
-							if not os.path.islink(directoryname):
-								os.chmod(directoryname, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-                				for p in i[2]:
-							try:
-								if not os.path.islink("%s/%s" % (i[0], p)):
-									os.chmod("%s/%s" % (i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-								if "temporary" in tags and diroffset[1] == 0 and diroffset[2] == filesize:
-									scantasks.append((i[0], p, len(scandir), tempdir, debug, ['temporary'], hints))
-								else:
-									scantasks.append((i[0], p, len(scandir), tempdir, debug, [], hints))
-								relscanpath = "%s/%s" % (i[0][lentempdir:], p)
-								if relscanpath.startswith('/'):
-									relscanpath = relscanpath[1:]
-								scanreports.append(relscanpath)
-							except Exception, e:
-								pass
-				except StopIteration:
-        				for s in scantasks:
-						scanqueue.put(s)
-				unpackreports[relfiletoscan]['scans'].append({'scanname': unpackscanname, 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
+						## recursively scan all files in the directory
+						osgen = os.walk(scandir)
+						scanreports = []
+						scantasks = []
+						try:
+       							while True:
+                						i = osgen.next()
+								## make sure all directories can be accessed
+								for d in i[1]:
+									directoryname = os.path.join(i[0], d)
+									if not os.path.islink(directoryname):
+										os.chmod(directoryname, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+                						for p in i[2]:
+									filepathname = os.path.join(i[0], p)
+									try:
+										if not os.path.islink(filepathname):
+											os.chmod(filepathname, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+										if "temporary" in tags and diroffset[1] == 0 and diroffset[2] == filesize:
+											scantasks.append((i[0], p, len(scandir), tempdir, debug, ['temporary'], hints, {}))
+										else:
+											scantasks.append((i[0], p, len(scandir), tempdir, debug, [], hints, {}))
+										relscanpath = "%s/%s" % (i[0][lentempdir:], p)
+										if relscanpath.startswith('/'):
+											relscanpath = relscanpath[1:]
+										scanreports.append(relscanpath)
+									except Exception, e:
+										pass
+						except StopIteration:
+        						for s in scantasks:
+								scanqueue.put(s)
+						unpackreports[relfiletoscan]['scans'].append({'scanname': unpackscan, 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
 
 		unpackreports[relfiletoscan]['tags'] = tags
 		if not unpacked and 'temporary' in tags:
@@ -1371,9 +1406,7 @@ def runscan(scans, scan_binary, scandate):
 		unpacktempdir = None
 		topleveldir = tempfile.mkdtemp(dir=unpacktempdir)
 	scanenv = copy.deepcopy(scans['batconfig']['environment'])
-	os.makedirs("%s/data" % (topleveldir,))
-	scantempdir = "%s/data" % (topleveldir,)
-	shutil.copy(scan_binary, scantempdir)
+
 	debug = scans['batconfig']['debug']
 	debugphases = scans['batconfig']['debugphases']
 
@@ -1410,26 +1443,6 @@ def runscan(scans, scan_binary, scandate):
 	magicscans = list(set(magicscans))
 	optmagicscans = list(set(optmagicscans))
 
-	## Per binary scanned a list with results is returned.
-	## Each file system or compressed file inside the binary returns a list
-	## with reports back as its result, so we have a list of lists.
-	## Within the inner list there is a result tuple, which could contain
-	## more lists in some fields, like libraries, or more result lists if
-	## the file inside a file system we looked at was in fact a file system.
-	leaftasks = []
-	unpackreports_tmp = []
-	unpackreports = {}
-
-	tmpdebug = False
-	if debug:
-		tmpdebug = True
-		if debugphases != []:
-			if not ('prerun' in debugphases or 'unpack' in debugphases):
-				tmpdebug = False
-	tags = []
-	hints = []
-	scantasks = [(scantempdir, os.path.basename(scan_binary), len(scantempdir), scantempdir, tmpdebug, tags, hints)]
-
 	## Use multithreading to speed up scanning. Sometimes we hit http://bugs.python.org/issue9207
 	## Threading can be configured in the configuration file, but
 	## often it is wise to have it set to 'no'. This is because ranking writes
@@ -1462,16 +1475,54 @@ def runscan(scans, scan_binary, scandate):
 	else:
 		processamount = 1
 
+	## Per binary scanned a list with results is returned.
+	## Each file system or compressed file inside the binary returns a list
+	## with reports back as its result, so we have a list of lists.
+	## Within the inner list there is a result tuple, which could contain
+	## more lists in some fields, like libraries, or more result lists if
+	## the file inside a file system we looked at was in fact a file system.
+	leaftasks = []
+	unpackreports_tmp = []
+	unpackreports = {}
+
+	tmpdebug = False
+	if debug:
+		tmpdebug = True
+		if debugphases != []:
+			if not ('prerun' in debugphases or 'unpack' in debugphases):
+				tmpdebug = False
+
+	## copy the binary
+	os.makedirs("%s/data" % (topleveldir,))
+	scantempdir = "%s/data" % (topleveldir,)
+	if debug:
+		print >>sys.stderr, "COPYING BEGIN", datetime.datetime.utcnow().isoformat()
+		sys.stderr.flush()
+
+	shutil.copy(scan_binary, scantempdir)
+
+	if debug:
+		print >>sys.stderr, "COPYING END", datetime.datetime.utcnow().isoformat()
+		sys.stderr.flush()
+
+	tags = []
+	hints = []
+	offsets = {}
+
+	scantasks = [(scantempdir, os.path.basename(scan_binary), len(scantempdir), scantempdir, tmpdebug, tags, hints, offsets)]
+
 	template = scans['batconfig']['template']
 
-	## use a queue made with a manager to avoid some issues, see:
-	## http://docs.python.org/2/library/multiprocessing.html#pipes-and-queues
 	if debug:
 		print >>sys.stderr, "PRERUN UNPACK BEGIN", datetime.datetime.utcnow().isoformat()
+		sys.stderr.flush()
 
 	outputhash = scans['batconfig'].get('reporthash', 'sha256')
 	if outputhash == 'crc32' or outputhash == 'tlsh':
 		outputhash = 'sha256'
+
+	## use a queue made with a manager to avoid some issues, see:
+	## http://docs.python.org/2/library/multiprocessing.html#pipes-and-queues
 	lock = Lock()
 	scanmanager = multiprocessing.Manager()
 	scanqueue = multiprocessing.JoinableQueue(maxsize=0)
