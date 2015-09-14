@@ -8,6 +8,7 @@ lot of disk I/O when carving gzip compressed data from large files
 .tgz or .gz in the same way as gunzip does, unless the file had a name
 recorded in the gzip file
 * fwunpack.py: extra sanity check for LZO compressed data. Needs more work.
+* fwunpack.py: make PNG and GIF unpacking a lot more efficient
 
 2015-09-13:
 * prerun.py: allow setting offset for genericMarkerSearch
