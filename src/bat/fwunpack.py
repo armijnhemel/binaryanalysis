@@ -2565,97 +2565,6 @@ def gzipcrc32(filename):
 	crc32 = crc32 & 0xffffffff
 	return crc32
 
-## tries to unpack the file using zcat. If it is successful, it will
-## return a directory for further processing, otherwise it will return None.
-def unpackGzip(filename, offset, template, hasnameset, renamename, tempdir=None, blacklist=[]):
-	## Assumes (for now) that zcat is in the path
-	tmpdir = unpacksetup(tempdir)
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.fdopen(tmpfile[0]).close()
-
-	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
-
-	outtmpfile = tempfile.mkstemp(dir=tmpdir)
-	p = subprocess.Popen(['zcat', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if os.stat(outtmpfile[1]).st_size == 0:
-		os.fdopen(outtmpfile[0]).close()
-		os.unlink(outtmpfile[1])
-		os.unlink(tmpfile[1])
-		if tempdir == None:
-			os.rmdir(tmpdir)
-		return None
-	os.fdopen(outtmpfile[0]).close()
-
-	## The trailer of a valid gzip file is the CRC32 followed by file
-	## size of uncompressed data
-	crc32 = gzipcrc32(outtmpfile[1])
-
-	## find the crc32 in the original compressed data
-	datafile = open(filename, 'rb')
-	datafile.seek(offset)
-	data = datafile.read()
-	datafile.close()
-	crcoffset = data.find(struct.pack('<I', crc32))
-	if crcoffset == -1:
-		## something is wrong here, so just set the size to 2 (first
-		## two bytes of the gzip header)
-		os.unlink(tmpfile[1])
-		return (tmpdir, 2)
-
-	## find the offset of the filesize in the data, starting from the crcoffset
-	filesize = os.stat(outtmpfile[1]).st_size
-
-	## sanity check first: the crcoffset
-	filesizeoffset = data.find(struct.pack('<I', filesize), crcoffset)
-	if filesizeoffset == -1:
-		## something is wrong here
-		os.unlink(tmpfile[1])
-		return (tmpdir, 2)
-	## these two should be following eachother immediately, if not, something is
-	## wrong.
-	if filesizeoffset - crcoffset != 4:
-		os.unlink(tmpfile[1])
-		return (tmpdir, 2)
-
-	## now check the temporary file to see if gzip set a name in the file and
-	## rename outtmpfile, if possible.
-	## The format for gzip is described in RFC 1952.
-	## 1. check if "FEXTRA" is set. If so, don't continue searching for the name
-	## 2. check if "FNAME" is set. If so, it follows immediately after MTIME
-	## TODO: also process if FEXTRA is set
-	rename = False
-	gzipfile = open(tmpfile[1])
-	gzipfile.seek(2)
-	gzipbyte = gzipfile.read(1)
-	if (ord(gzipbyte) >> 2 & 1) != 1:
-		if hasnameset and renamename != None:
-			rename = True
-	gzipfile.close()
-
-	os.unlink(tmpfile[1])
-
-	if rename:
-		mvname = os.path.basename(renamename)
-		if not os.path.exists(os.path.join(tmpdir, mvname)):
-			try:
-				shutil.move(outtmpfile[1], os.path.join(tmpdir, mvname))
-			except Exception, e:
-				## if there is an exception don't rename
-				pass
-	else:
-		if template != None:
-			if not os.path.exists(os.path.join(tmpdir, template)):
-				try:
-					shutil.move(outtmpfile[1], os.path.join(tmpdir, template))
-				except Exception, e:
-					## if there is an exception don't rename
-					pass
-		pass
-
-	## return directory and the size of the gzip data (filesizeoffset + 4)
-	return (tmpdir, filesizeoffset + 4)
-
 def searchUnpackKnownGzip(filename, tempdir=None, scanenv={}, debug=False):
 	## first check if the file actually could be a valid gzip file
 	gzipfile = open(filename, 'rb')
@@ -2714,6 +2623,9 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		## encrypted files are not supported
 		## flags 6 and 7 are reserved and should not be set
 		## (see gzip.h in gzip sources and RFC 1952)
+		## 1. check if "FEXTRA" is set. If so, don't continue searching for the name
+		## 2. check if "FNAME" is set. If so, it follows immediately after MTIME
+		## TODO: also process if FEXTRA is set
 		gzipfile = open(filename)
 		gzipfile.seek(offset+3)
 		gzipbyte = gzipfile.read(1)
@@ -2777,15 +2689,23 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			gzipfile.close()
 			continue
 
-		## try to uncompress raw deflate data, but just one block of
+		## Because gzip is a header followed by deflate data it is
+		## possible to do some sanity checking by first decompressing
+		## some data.
+		## try to uncompress raw deflate data, first one block of
 		## a bit less than 10 meg
 		## http://www.zlib.net/manual.html#Advanced
 		gzipfile.seek(localoffset)
-		deflatedata = gzipfile.read(10000000)
+		readsize = 10000000
+		deflatedata = gzipfile.read(readsize)
 		deflateobj = zlib.decompressobj(-zlib.MAX_WBITS)
 		deflatesize = 0
 		try:
 			uncompresseddata = deflateobj.decompress(deflatedata)
+			## check if there is some uncompressed data left. For a completely
+			## uncompressed ## file there should be some data left (8 bytes, namely
+			## CRC32 and file size). If there is no data left, then it means that
+			## decompression is not yet complete.
 			if deflateobj.unused_data != "":
 				deflatesize = len(deflatedata) - len(deflateobj.unused_data)
 		except:
@@ -2794,91 +2714,83 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		deflateobj.flush()
 
 		tmpdir = dirsetup(tempdir, filename, "gzip", counter)
-		if deflatesize != 0:
-			## Clearly all the compressed data that is available
-			## was already decompressed during the test, so no
-			## need to first carve the compressed data from the
-			## larger file, since the uncompressed data is already
-			## known! Simply write it to a file, perform some
-			## sanity checks and move on.
+		tmpfile = tempfile.mkstemp(dir=tmpdir)
+		os.fdopen(tmpfile[0]).close()
 
-			## The size of the *raw* deflate data is gzipsize,
-			## followed by the crc32 of the uncompresed data
-			## and the size
-			tmpfile = tempfile.mkstemp(dir=tmpdir)
-			os.fdopen(tmpfile[0]).close()
+		outgzipfile = open(tmpfile[1], 'wb')
+		outgzipfile.write(uncompresseddata)
+		outgzipfile.flush()
+		## The size of the *raw* deflate data is gzipsize,
+		## followed by the crc32 of the uncompresed data
+		## and the size
+		unpackfailure = False
+		if deflatesize == 0:
+			while deflateobj.unused_data == "":
+				localoffset += readsize
+				deflatedata = gzipfile.read(readsize)
+				try:
+					uncompresseddata = deflateobj.decompress(deflatedata)
+					outgzipfile.write(uncompresseddata)
+					outgzipfile.flush()
+				except:
+					## something weird is going on
+					unpackfailure = True
+					break
+			deflatesize = len(deflatedata) - len(deflateobj.unused_data)
+		outgzipfile.close()
 
-			outgzipfile = open(tmpfile[1], 'wb')
-			outgzipfile.write(uncompresseddata)
-			outgzipfile.flush()
-			outgzipfile.close()
+		if unpackfailure:
+			gzipfile.close()
+			os.unlink(tmpfile[1])
+			continue
 
-			## The trailer of a valid gzip file is the CRC32 followed by file
-			## size of uncompressed data
-			crc32 = gzipcrc32(tmpfile[1])
+		## The trailer of a valid gzip file is the CRC32 followed by file
+		## size of uncompressed data
+		crc32 = gzipcrc32(tmpfile[1])
 
-			gzipfile.seek(localoffset + deflatesize)
-			gzipcrc32andsize = gzipfile.read(8)
+		gzipfile.seek(localoffset + deflatesize)
+		gzipcrc32andsize = gzipfile.read(8)
 
-			if len(gzipcrc32andsize) != 8:
-				gzipfile.close()
-				os.unlink(tmpfile[1])
-				continue
+		if len(gzipcrc32andsize) != 8:
+			gzipfile.close()
+			os.unlink(tmpfile[1])
+			continue
 
-			if gzipcrc32andsize[0:4] != struct.pack('<I', crc32):
-				gzipfile.close()
-				os.unlink(tmpfile[1])
-				continue
-			filesize = os.stat(tmpfile[1]).st_size
-			if gzipcrc32andsize[4:8] != struct.pack('<I', filesize):
-				gzipfile.close()
-				os.unlink(tmpfile[1])
-				continue
+		if gzipcrc32andsize[0:4] != struct.pack('<I', crc32):
+			gzipfile.close()
+			os.unlink(tmpfile[1])
+			continue
+		filesize = os.stat(tmpfile[1]).st_size
+		if gzipcrc32andsize[4:8] != struct.pack('<I', filesize):
+			gzipfile.close()
+			os.unlink(tmpfile[1])
+			continue
 
-			## the size of the gzip data is the size of the deflate data,
-			## plus 4 bytes for crc32 and 4 bytes for file size, plus
-			## the gzip header.
-			gzipsize = deflatesize + 8 + (localoffset - offset)
-			diroffsets.append((tmpdir, offset, gzipsize))
-			blacklist.append((offset, offset + gzipsize))
-			counter = counter + 1
-			if offset == 0 and (gzipsize == os.stat(filename).st_size):
-				## if the gzip file is the entire file, then tag it
-				## as a compressed file and as gzip. Also check if the
-				## file might be a tar file and pass that as a hint
-				## to downstream unpackers.
-				newtags.append('compressed')
-				newtags.append('gzip')
-				if hasnameset and renamename != None:
-					mvname = os.path.basename(renamename)
-					if not os.path.exists(os.path.join(tmpdir, mvname)):
-						try:
-							shutil.move(tmpfile[1], os.path.join(tmpdir, mvname))
-						except Exception, e:
-							## if there is an exception don't rename
-							pass
-				else:
-					if filename.endswith('tar.gz'):
-						pass
-		else:
-			res = unpackGzip(filename, offset, template, hasnameset, renamename, tmpdir, blacklist)
-			if res != None:
-				(gzipres, gzipsize) = res
-				diroffsets.append((gzipres, offset, gzipsize))
-				blacklist.append((offset, offset + gzipsize))
-				counter = counter + 1
-				if offset == 0 and (gzipsize == os.stat(filename).st_size):
-					## if the gzip file is the entire file, then tag it
-					## as a compressed file and as gzip. Also check if the
-					## file might be a tar file and pass that as a hint
-					## to downstream unpackers.
-					newtags.append('compressed')
-					newtags.append('gzip')
-					if filename.endswith('tar.gz'):
+		## the size of the gzip data is the size of the deflate data,
+		## plus 4 bytes for crc32 and 4 bytes for file size, plus
+		## the gzip header.
+		gzipsize = deflatesize + 8 + (localoffset - offset)
+		diroffsets.append((tmpdir, offset, gzipsize))
+		blacklist.append((offset, offset + gzipsize))
+		counter = counter + 1
+		if offset == 0 and (gzipsize == os.stat(filename).st_size):
+			## if the gzip file is the entire file, then tag it
+			## as a compressed file and as gzip. Also check if the
+			## file might be a tar file and pass that as a hint
+			## to downstream unpackers.
+			newtags.append('compressed')
+			newtags.append('gzip')
+			if hasnameset and renamename != None:
+				mvname = os.path.basename(renamename)
+				if not os.path.exists(os.path.join(tmpdir, mvname)):
+					try:
+						shutil.move(tmpfile[1], os.path.join(tmpdir, mvname))
+					except Exception, e:
+						## if there is an exception don't rename
 						pass
 			else:
-				## cleanup
-				os.rmdir(tmpdir)
+				if filename.endswith('tar.gz'):
+					pass
 		gzipfile.close()
 
 	return (diroffsets, blacklist, newtags, hints)
