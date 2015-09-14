@@ -1,3 +1,14 @@
+2015-09-14:
+* bruteforcescan.py: remove superfluous parameter to leafScan(), fix scanname
+in scan()
+* fwunpack.py: replace unpackGzip() by raw deflate unpacking. It can save a
+lot of disk I/O when carving gzip compressed data from large files
+* fwunpack.py: do not try to unpack a romfs that has 0 bytes
+* fwunpack.py: rename unpacked files that are gzip compressed and end with
+.tgz or .gz in the same way as gunzip does, unless the file had a name
+recorded in the gzip file
+* fwunpack.py: extra sanity check for LZO compressed data. Needs more work.
+
 2015-09-13:
 * prerun.py: allow setting offset for genericMarkerSearch
 * fwunpack.py: remove useless check (output from pdfinfo), add extra sanity
