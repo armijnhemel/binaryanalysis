@@ -2849,8 +2849,17 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 				## to downstream unpackers.
 				newtags.append('compressed')
 				newtags.append('gzip')
-				if filename.endswith('tar.gz'):
-					pass
+				if hasnameset and renamename != None:
+					mvname = os.path.basename(renamename)
+					if not os.path.exists(os.path.join(tmpdir, mvname)):
+						try:
+							shutil.move(tmpfile[1], os.path.join(tmpdir, mvname))
+						except Exception, e:
+							## if there is an exception don't rename
+							pass
+				else:
+					if filename.endswith('tar.gz'):
+						pass
 		else:
 			res = unpackGzip(filename, offset, template, hasnameset, renamename, tmpdir, blacklist)
 			if res != None:
