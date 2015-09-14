@@ -2792,8 +2792,17 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 						## if there is an exception don't rename
 						pass
 			else:
-				if filename.endswith('tar.gz'):
-					pass
+				## rename the file, like gunzip does
+				if filename.lower().endswith('.gz'):
+					filenamenoext = os.path.basename(filename)[:-3]
+					gzpath = os.path.join(tmpdir, filenamenoext)
+					if not os.path.exists(gzpath):
+						shutil.move(tmpfile[1], gzpath)
+				elif filename.lower().endswith('.tgz'):
+					filenamenoext = os.path.basename(filename)[:-4] + ".tar"
+					gzpath = os.path.join(tmpdir, filenamenoext)
+					if not os.path.exists(gzpath):
+						shutil.move(tmpfile[1], gzpath)
 		gzipfile.close()
 
 	return (diroffsets, blacklist, newtags, hints)
