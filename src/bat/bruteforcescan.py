@@ -414,7 +414,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 							except StopIteration:
         							for s in scantasks:
 									scanqueue.put(s)
-							unpackreports[relfiletoscan]['scans'].append({'scanname': unpackscan, 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
+							unpackreports[relfiletoscan]['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
 						break
 
 		if not knownfile:
@@ -426,7 +426,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 				offsets =  prerun.genericMarkerSearch(filetoscan, magicscans, optmagicscans)
 
 		if "encrypted" in tags:
-			leaftasks.append((filetoscan, magic, tags, blacklist, filehash, filesize))
+			leaftasks.append((filetoscan, tags, blacklist, filehash, filesize))
 			for l in leaftasks:
 				leafqueue.put(l)
 			unpackreports[relfiletoscan]['tags'] = tags
@@ -552,7 +552,8 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 				## file and a hash with offsets for each marker.
 				try:
 					exec "from %s import %s as bat_%s" % (module, method, method)
-				except:
+				except Exception, e:
+					print e
 					continue
 				scanres = eval("bat_%s(filetoscan, tempdir, blacklist, offsets, newenv, debug=debug)" % (method))
 				## result is either empty, or contains offsets, blacklist, tags and hints
@@ -599,7 +600,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 						except StopIteration:
         						for s in scantasks:
 								scanqueue.put(s)
-						unpackreports[relfiletoscan]['scans'].append({'scanname': unpackscan, 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
+						unpackreports[relfiletoscan]['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
 
 		unpackreports[relfiletoscan]['tags'] = tags
 		if not unpacked and 'temporary' in tags:
@@ -609,14 +610,14 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 			for u in unpackreports:
 				reportqueue.put({u: unpackreports[u]})
 		else:
-			leaftasks.append((filetoscan, magic, tags, blacklist, filehash, filesize))
+			leaftasks.append((filetoscan, tags, blacklist, filehash, filesize))
 			for l in leaftasks:
 				leafqueue.put(l)
 			for u in unpackreports:
 				reportqueue.put({u: unpackreports[u]})
 		scanqueue.task_done()
 
-def leafScan((filetoscan, magic, scans, tags, blacklist, filehash, topleveldir, debug, unpacktempdir)):
+def leafScan((filetoscan, scans, tags, blacklist, filehash, topleveldir, debug, unpacktempdir)):
 	reports = {}
 	newtags = []
 
@@ -1658,7 +1659,7 @@ def runscan(scans, scan_binary, scandate):
 
 		## reverse sort on size: scan largest files first
 		leaftasks_tmp.sort(key=lambda x: x[-1], reverse=True)
-		leaftasks_tmp = map(lambda x: x[:2] + (filterScans(finalscans, x[2]),) + x[2:-1] + (topleveldir, tmpdebug, unpacktempdir), leaftasks_tmp)
+		leaftasks_tmp = map(lambda x: x[:1] + (filterScans(finalscans, x[1]),) + x[1:-1] + (topleveldir, tmpdebug, unpacktempdir), leaftasks_tmp)
 
 		if scans['batconfig']['multiprocessing']:
 			if False in map(lambda x: x['parallel'], finalscans):
