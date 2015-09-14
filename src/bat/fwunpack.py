@@ -1576,6 +1576,9 @@ def unpackRomfs(filename, offset, tempdir=None, unpacktempdir=None, blacklist=[]
 
 	if romfssize > os.stat(filename).st_size:
 		return None
+	## a valid romfs cannot be empty
+	if romfssize == 0:
+		return None
 
 	## It could be a valid romfs, so unpack
 	tmpdir = unpacksetup(tempdir)
