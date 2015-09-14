@@ -4387,8 +4387,6 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	counter = 1
 
 	datafile = open(filename, 'rb')
-	datafile.seek(gifoffsets[0])
-
 	lendata = os.stat(filename).st_size
 	for i in range (0,len(gifoffsets)):
 		offset = gifoffsets[i]
@@ -4401,6 +4399,19 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		if blacklistoffset != None:
 			continue
 
+		## sanity check first for the logical screen descriptor
+		datafile.seek(offset+6)
+		## first logical screen width
+		databytes = datafile.read(2)
+		logicalwidth = struct.unpack('<H', databytes)[0]
+		if logicalwidth == 0:
+			continue
+		## then the logical screen height
+		databytes = datafile.read(2)
+		logicalheight = struct.unpack('<H', databytes)[0]
+		if logicalheight == 0:
+			continue
+
 		## Now read data from the current offset until the next offset
 		## and search for trailer bytes. If these cannot be found, then
 		## move onto the next GIF offset.
@@ -4408,46 +4419,63 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		## consists of a "block terminator" and a semi-colon. Since the trailer
 		## is very generic it is best to search for it here instead of in the
 		## top level identifier search which would be quite costly.
-		data = datafile.read(nextoffset - offset)
-		traileroffsets = []
-		trailer = data.find('\x00;')
-		while trailer != -1:
-			## check if the trailer is not blacklisted. If so, then
-			## the trailer and any trailer following it can never be
-			## part of this GIF file.
-			blacklistoffset = extractor.inblacklist(trailer, blacklist)
-			if blacklistoffset == None:
-				traileroffsets.append(trailer)
-			else:
-				break
-			trailer = data.find('\x00;',trailer+2)
+		datafile.seek(offset)
 
-		for trail in traileroffsets:
-			tmpdir = dirsetup(tempdir, filename, "gif", counter)
-			## TODO: use templates here to make the name of the file more predictable
-			## which helps with result interpretation
-			tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".gif", dir=tmpdir)
-			os.write(tmpfile[0], data[:trail+2])
-			os.fdopen(tmpfile[0]).close()
-			p = subprocess.Popen(['gifinfo', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-			(stanout, stanerr) = p.communicate()
-			if p.returncode != 0:
-				os.unlink(tmpfile[1])
-				os.rmdir(tmpdir)
-			else:
-				## basically this is copy of the original image so why bother?
-				if offset == 0 and trail == lendata - 2:
-					os.unlink(tmpfile[1])
-					os.rmdir(tmpdir)
-					blacklist.append((0, lendata))
-					datafile.close()
-					return (diroffsets, blacklist, ['graphics', 'gif'], hints)
-				else:
-					diroffsets.append((tmpdir, offset, 0))
-					counter = counter + 1
-					blacklist.append((offset, offset+trail+2))
-					## go to the next header
+		## read around 10 meg of data
+		gifchunkread = 100000000
+		bytesread = 0
+		giffound = False
+		data = ""
+		trailersearchoffset = 0
+		while bytesread <= nextoffset-offset and not giffound:
+			## concatenation of data is expensive :-(
+			data += datafile.read(gifchunkread)
+			bytesread += gifchunkread
+			traileroffsets = []
+			trailer = data.find('\x00;', trailersearchoffset)
+			while trailer != -1:
+				## see if the trailer is actually after the next offset
+				if trailer > nextoffset-offset:
 					break
+				## check if the trailer is not blacklisted. If so, then
+				## the trailer and any trailer following it can never be
+				## part of this GIF file.
+				blacklistoffset = extractor.inblacklist(trailer+offset, blacklist)
+				if blacklistoffset == None:
+					traileroffsets.append(trailer)
+				else:
+					break
+				trailersearchoffset = trailer + 2
+				trailer = data.find('\x00;', trailersearchoffset)
+
+			tmpdir = dirsetup(tempdir, filename, "gif", counter)
+			for trail in traileroffsets:
+				## TODO: use templates here to make the name of the file more predictable
+				## which helps with result interpretation
+				p = subprocess.Popen(['gifinfo'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+				(stanout, stanerr) = p.communicate(data[:trail+2])
+				if p.returncode != 0:
+					continue
+				else:
+					giffound = True
+					## basically this is copy of the original image so why bother?
+					if offset == 0 and trail == lendata - 2:
+						blacklist.append((0, lendata))
+						datafile.close()
+						shutil.rmtree(tmpdir)
+						return (diroffsets, blacklist, ['graphics', 'gif'], hints)
+					else:
+						tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".gif", dir=tmpdir)
+						os.write(tmpfile[0], data[:trail+2])
+						os.fdopen(tmpfile[0]).close()
+						diroffsets.append((tmpdir, offset, trail+2))
+						counter = counter + 1
+						blacklist.append((offset, offset+trail+2))
+						## go to the next header
+						## TODO: add hints to prevent rescanning of all GIF files again
+						break
+			if not giffound:
+				shutil.rmtree(tmpdir)
 	datafile.close()
 	return (diroffsets, blacklist, [], hints)
 
@@ -4468,9 +4496,7 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	traileroffsets = offsets['pngtrailer']
 	counter = 1
 	datafile = open(filename, 'rb')
-	datafile.seek(headeroffsets[0])
 	data = datafile.read()
-	datafile.close()
 	orig_offset = headeroffsets[0]
 	lendata = os.stat(filename).st_size
 	for i in range (0,len(headeroffsets)):
@@ -4483,6 +4509,7 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
+		datafile.seek(offset)
 		for trail in traileroffsets:
 			if trail <= offset:
 				continue
@@ -4494,11 +4521,12 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			blacklistoffset = extractor.inblacklist(trail, blacklist)
 			if blacklistoffset != None:
 				break
+			data = datafile.read(trail+8-offset)
 			tmpdir = dirsetup(tempdir, filename, "png", counter)
 			tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".png", dir=tmpdir)
-			os.write(tmpfile[0], data[offset-orig_offset:trail+8-orig_offset])
+			os.write(tmpfile[0], data)
 			os.fdopen(tmpfile[0]).close()
-			p = subprocess.Popen(['webpng', '-d', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			p = subprocess.Popen(['webpng', '-d', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 			(stanout, stanerr) = p.communicate()
 			if p.returncode != 0:
 				os.unlink(tmpfile[1])
@@ -4510,12 +4538,14 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 					os.unlink(tmpfile[1])
 					os.rmdir(tmpdir)
 					blacklist.append((0,lendata))
+					datafile.close()
 					return (diroffsets, blacklist, ['graphics', 'png'], hints)
 				else:
 					blacklist.append((offset,trail+8))
 					diroffsets.append((tmpdir, offset, 0))
 					counter = counter + 1
 					break
+	datafile.close()
 	return (diroffsets, blacklist, [], hints)
 
 ## EXIF is (often) prepended to the actual image data
