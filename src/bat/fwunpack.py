@@ -1260,9 +1260,18 @@ def searchUnpackLzo(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		lzopfile = open(filename, 'rb')
 		lzopfile.seek(offset+9)
 		lzopversionbyte = ord(lzopfile.read(1)) & 0xf0
-		lzopfile.close()
 		if not lzopversionbyte in [0x00, 0x10, 0x20]:
+			lzopfile.close()
 			continue
+
+		## extra sanity check: according to /usr/share/magic
+		## byte 15 has to be 1, 2 or 3
+		lzopfile.seek(offset+15)
+		lzopversionbyte = lzopfile.read(1)
+		lzopfile.close()
+		if not ord(lzopversionbyte) in [1,2,3]:
+			continue
+		
 		tmpdir = dirsetup(tempdir, filename, "lzo", counter)
 		(res, lzosize) = unpackLzo(filename, offset, tmpdir)
 		if res != None:
@@ -2795,14 +2804,16 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 				## rename the file, like gunzip does
 				if filename.lower().endswith('.gz'):
 					filenamenoext = os.path.basename(filename)[:-3]
-					gzpath = os.path.join(tmpdir, filenamenoext)
-					if not os.path.exists(gzpath):
-						shutil.move(tmpfile[1], gzpath)
+					if len(filenamenoext) > 0:
+						gzpath = os.path.join(tmpdir, filenamenoext)
+						if not os.path.exists(gzpath):
+							shutil.move(tmpfile[1], gzpath)
 				elif filename.lower().endswith('.tgz'):
 					filenamenoext = os.path.basename(filename)[:-4] + ".tar"
-					gzpath = os.path.join(tmpdir, filenamenoext)
-					if not os.path.exists(gzpath):
-						shutil.move(tmpfile[1], gzpath)
+					if len(filenamenoext) > 4:
+						gzpath = os.path.join(tmpdir, filenamenoext)
+						if not os.path.exists(gzpath):
+							shutil.move(tmpfile[1], gzpath)
 		gzipfile.close()
 
 	return (diroffsets, blacklist, newtags, hints)
@@ -3005,15 +3016,17 @@ def searchUnpackBzip2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 				## rename the file, like bunzip does
 				if filename.lower().endswith('.bz2'):
 					filenamenoext = os.path.basename(filename)[:-4]
-					bz2path = os.path.join(tmpdir, filenamenoext)
-					if not os.path.exists(bz2path):
-						shutil.move(tmpfile[1], bz2path)
+					if len(filenamenoext) > 0:
+						bz2path = os.path.join(tmpdir, filenamenoext)
+						if not os.path.exists(bz2path):
+							shutil.move(tmpfile[1], bz2path)
 				## slightly different for tbz2
 				elif filename.lower().endswith('.tbz2'):
 					filenamenoext = os.path.basename(filename)[:-5] + ".tar"
-					bz2path = os.path.join(tmpdir, filenamenoext)
-					if not os.path.exists(bz2path):
-						shutil.move(tmpfile[1], bz2path)
+					if len(filenamenoext) > 4:
+						bz2path = os.path.join(tmpdir, filenamenoext)
+						if not os.path.exists(bz2path):
+							shutil.move(tmpfile[1], bz2path)
 				newtags.append('compressed')
 				newtags.append('bzip2')
 			counter = counter + 1
