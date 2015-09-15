@@ -4,6 +4,8 @@ old code that should have been deleted), also let webpng read from stdin to
 avoid hitting disk unnecessarily.
 * disable verifyMP4 for now as mp4dump is no longer packaged in Fedora's
 libmp4v2 package it seems
+* fwunpack.py: don't read the whole file for CPIO unpacking, but only the
+CPIO data
 * fwunpack.py: fix gzip file renaming if a filename was recorded in the gzip
 file
 * fwunpack.py: if length parameter given to unpackFile() is the same as the
@@ -20,6 +22,8 @@ need to be scanned at all, saving memory, disk I/O and CPU time by skipping
 the marker search and any other scans as well
 * prerun.py: remove verifyPNG() as it is no longer needed, ignore files tagged
 as 'graphics' in verifyGraphics()
+* prerun.py/bat-scan.config: don't run verifyText() for files that have
+already been tagged as binary or text
 
 2015-09-14:
 * bruteforcescan.py: remove superfluous parameter to leafScan(), fix scanname
