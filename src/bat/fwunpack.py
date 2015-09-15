@@ -4475,7 +4475,7 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 						## TODO: add hints to prevent rescanning of all GIF files again
 						break
 			if not giffound:
-				shutil.rmtree(tmpdir)
+				os.rmdir(tmpdir)
 	datafile.close()
 	return (diroffsets, blacklist, [], hints)
 
@@ -4496,7 +4496,6 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	traileroffsets = offsets['pngtrailer']
 	counter = 1
 	datafile = open(filename, 'rb')
-	data = datafile.read()
 	orig_offset = headeroffsets[0]
 	lendata = os.stat(filename).st_size
 	for i in range (0,len(headeroffsets)):
@@ -4510,6 +4509,8 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		if blacklistoffset != None:
 			continue
 		datafile.seek(offset)
+		tmpdir = dirsetup(tempdir, filename, "png", counter)
+		pngfound = False
 		for trail in traileroffsets:
 			if trail <= offset:
 				continue
@@ -4522,29 +4523,29 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			if blacklistoffset != None:
 				break
 			data = datafile.read(trail+8-offset)
-			tmpdir = dirsetup(tempdir, filename, "png", counter)
-			tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".png", dir=tmpdir)
-			os.write(tmpfile[0], data)
-			os.fdopen(tmpfile[0]).close()
-			p = subprocess.Popen(['webpng', '-d', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-			(stanout, stanerr) = p.communicate()
+			p = subprocess.Popen(['webpng', '-d', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+			(stanout, stanerr) = p.communicate(data)
 			if p.returncode != 0:
-				os.unlink(tmpfile[1])
-				os.rmdir(tmpdir)
+				continue
 			else:
+				pngfound = True
 				## basically we have a copy of the original
 				## image here, so why bother?
 				if offset == 0 and trail == lendata - 8:
-					os.unlink(tmpfile[1])
 					os.rmdir(tmpdir)
 					blacklist.append((0,lendata))
 					datafile.close()
 					return (diroffsets, blacklist, ['graphics', 'png'], hints)
 				else:
+					tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".png", dir=tmpdir)
+					os.write(tmpfile[0], data)
+					os.fdopen(tmpfile[0]).close()
 					blacklist.append((offset,trail+8))
 					diroffsets.append((tmpdir, offset, 0))
 					counter = counter + 1
 					break
+		if not pngfound:
+			os.rmdir(tmpdir)
 	datafile.close()
 	return (diroffsets, blacklist, [], hints)
 
