@@ -50,6 +50,9 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 				## but relative to offset
 				length=lowest-offset
 
+	if os.stat(filename).st_size == length:
+		length = 0
+
 	## If the while file needs to be scanned, then either copy it, or hardlink it.
 	## Hardlinking is only possible if the file resides on the same file system
 	## and if the file is not modified in a way.
