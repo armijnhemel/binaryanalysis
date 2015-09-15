@@ -10,7 +10,7 @@ file
 file size set the length to 0 instead, so the file can be copied or
 hardlinked.
 * fwunpack.py: if length given to unpackFile() is larger than dd's maximum
-limit
+limit: copy first, then truncate
 
 2015-09-14:
 * bruteforcescan.py: remove superfluous parameter to leafScan(), fix scanname
