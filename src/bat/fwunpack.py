@@ -2735,7 +2735,6 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		except:
 			gzipfile.close()
 			continue
-		deflateobj.flush()
 
 		tmpdir = dirsetup(tempdir, filename, "gzip", counter)
 		tmpfile = tempfile.mkstemp(dir=tmpdir)
@@ -2761,6 +2760,7 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 					unpackfailure = True
 					break
 			deflatesize = len(deflatedata) - len(deflateobj.unused_data)
+		deflateobj.flush()
 		outgzipfile.close()
 
 		if unpackfailure:
