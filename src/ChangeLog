@@ -11,6 +11,15 @@ file size set the length to 0 instead, so the file can be copied or
 hardlinked.
 * fwunpack.py: if length given to unpackFile() is larger than dd's maximum
 limit: copy first, then truncate
+* fwunpack.py: tag jffs2 files if the whole file is a file system
+* fwunpack.py: correct offset reporting for PNG files
+* bruteforcescan.py: allow scans to pass contextual information about unpacked
+files to its children. This is useful for example to tell that files that were
+unpacked, such as PNG or GIF files are already complete files and no longer
+need to be scanned at all, saving memory, disk I/O and CPU time by skipping
+the marker search and any other scans as well
+* prerun.py: remove verifyPNG() as it is no longer needed, ignore files tagged
+as 'graphics' in verifyGraphics()
 
 2015-09-14:
 * bruteforcescan.py: remove superfluous parameter to leafScan(), fix scanname
