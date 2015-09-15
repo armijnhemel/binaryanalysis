@@ -1500,15 +1500,12 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 
 	if newcpiooffsets == []:
 		return ([], blacklist, [], hints)
-	## TODO: big file fixes
 	datafile = open(filename, 'rb')
-	datafile.seek(0)
-	data = datafile.read()
-	datafile.close()
 	for offset in newcpiooffsets:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
+		datafile.seek(offset)
 		for trailer in offsets['cpiotrailer']:
 			if trailer < offset:
 				continue
@@ -1518,8 +1515,10 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			tmpdir = dirsetup(tempdir, filename, "cpio", counter)
 			## length of 'TRAILER!!!' plus 1 to include the whole trailer
 			## Also, cpio archives are always rounded to blocks of 512 bytes
-			trailercorrection = (512 - len(data[offset:trailer+10])%512)
-			res = unpackCpio(data[offset:trailer+10 + trailercorrection], 0, tmpdir)
+			data = datafile.read(trailer + 10 - offset)
+			trailercorrection = 512 - len(data)%512
+			data += datafile.read(trailercorrection)
+			res = unpackCpio(data, 0, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset, 0))
 				blacklist.append((offset, trailer + 10 + trailercorrection))
@@ -1530,6 +1529,7 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
+	datafile.close()
 	return (diroffsets, blacklist, [], hints)
 
 ## tries to unpack stuff using cpio. If it is successful, it will
