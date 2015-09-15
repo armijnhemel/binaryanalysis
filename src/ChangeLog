@@ -1,3 +1,17 @@
+2015-09-15:
+* fwunpack.py: don't read all data from a file in PNG unpacking (leftover from
+old code that should have been deleted), also let webpng read from stdin to
+avoid hitting disk unnecessarily.
+* disable verifyMP4 for now as mp4dump is no longer packaged in Fedora's
+libmp4v2 package it seems
+* fwunpack.py: fix gzip file renaming if a filename was recorded in the gzip
+file
+* fwunpack.py: if length parameter given to unpackFile() is the same as the
+file size set the length to 0 instead, so the file can be copied or
+hardlinked.
+* fwunpack.py: if length given to unpackFile() is larger than dd's maximum
+limit
+
 2015-09-14:
 * bruteforcescan.py: remove superfluous parameter to leafScan(), fix scanname
 in scan()
