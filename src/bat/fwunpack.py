@@ -50,7 +50,8 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 				## but relative to offset
 				length=lowest-offset
 
-	if os.stat(filename).st_size == length:
+	filesize = os.stat(filename).st_size
+	if filesize == length:
 		length = 0
 
 	## If the while file needs to be scanned, then either copy it, or hardlink it.
@@ -75,7 +76,6 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 			shutil.copy(filename, templink[1])
 		shutil.move(templink[1], tmpfile)
 	else:
-		filesize = os.stat(filename).st_size
 		if length == 0:
 			## The tail end of the file is needed and the first bytes (indicated by 'offset') need
 			## to be ignored, while the rest needs to be copied. If the offset is small, it is
@@ -360,6 +360,7 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 	counter = 1
 	jffs2offsets = copy.deepcopy(offsets['jffs2_le']) + copy.deepcopy(offsets['jffs2_be'])
 	diroffsets = []
+	newtags = []
 	jffs2offsets.sort()
 
 	filesize = os.stat(filename).st_size
@@ -431,12 +432,18 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 		res = unpackJffs2(filename, offset, filesize, tmpdir, bigendian, jffs2_tmpdir, blacklist)
 		if res != None:
 			(jffs2dir, jffs2size) = res
+			## jffs2 nodes are all 4 byte aligned according to
+			## http://www.sourceware.org/jffs2/jffs2-html/node3.html
+			jffs2rest = 4 - jffs2size%4
+			if jffs2size + jffs2rest == filesize:
+				newtags.append('jffs2')
+			jffs2size = filesize
 			diroffsets.append((jffs2dir, offset, jffs2size))
 			blacklist.append((offset, offset + jffs2size))
 			counter = counter + 1
 		else:
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [], hints)
+	return (diroffsets, blacklist, newtags, hints)
 
 def unpackJffs2(filename, offset, filesize, tempdir=None, bigendian=False, jffs2_tmpdir=None, blacklist=[]):
 	tmpdir = unpacksetup(tempdir)
@@ -2458,8 +2465,7 @@ def unpackMinix(filename, offset, tempdir=None, unpackenv={}, unpacktempdir=None
 	os.unlink(tmpfile[1])
 	return (tmpdir, minixsize)
 
-## We use tune2fs to get the size of the file system so we know what to
-## blacklist.
+## Search and unpack ext2/3/4
 def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = []
 	if not offsets.has_key('ext2'):
@@ -2492,6 +2498,8 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 			continue
 
 		## for a quick sanity check only a tiny bit of data is needed
+		## Also use tune2fs to get the size of the file system
+		## TODO: needs language portability fixes
 		datafile.seek(offset - 0x438)
 		ext2checkdata = datafile.read(8192)
 
