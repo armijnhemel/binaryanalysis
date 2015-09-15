@@ -2785,6 +2785,14 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		diroffsets.append((tmpdir, offset, gzipsize))
 		blacklist.append((offset, offset + gzipsize))
 		counter = counter + 1
+		if hasnameset and renamename != None:
+			mvname = os.path.basename(renamename)
+			if not os.path.exists(os.path.join(tmpdir, mvname)):
+				try:
+					shutil.move(tmpfile[1], os.path.join(tmpdir, mvname))
+				except Exception, e:
+					## if there is an exception don't rename
+					pass
 		if offset == 0 and (gzipsize == os.stat(filename).st_size):
 			## if the gzip file is the entire file, then tag it
 			## as a compressed file and as gzip. Also check if the
@@ -2792,15 +2800,10 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			## to downstream unpackers.
 			newtags.append('compressed')
 			newtags.append('gzip')
-			if hasnameset and renamename != None:
-				mvname = os.path.basename(renamename)
-				if not os.path.exists(os.path.join(tmpdir, mvname)):
-					try:
-						shutil.move(tmpfile[1], os.path.join(tmpdir, mvname))
-					except Exception, e:
-						## if there is an exception don't rename
-						pass
-			else:
+
+			## if the file has not been renamed already try to see
+			## if it needs to be renamed.
+			if not(hasnameset and renamename != None):
 				## rename the file, like gunzip does
 				if filename.lower().endswith('.gz'):
 					filenamenoext = os.path.basename(filename)[:-3]
