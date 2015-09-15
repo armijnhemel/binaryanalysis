@@ -30,7 +30,7 @@ def unpackRPM(filename, offset, tempdir=None):
 		if tempdir == None:
                 	os.rmdir(tmpdir)
 		## then use unpackCpio() to unpack the RPM
-		return fwunpack.unpackCpio(stanout, 0, tempdir)
+		return fwunpack.unpackCpio(stanout, tempdir)
 	else:
                 os.unlink(tmpfile[1])
 		if tempdir == None:

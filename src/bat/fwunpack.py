@@ -1518,7 +1518,7 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			data = datafile.read(trailer + 10 - offset)
 			trailercorrection = 512 - len(data)%512
 			data += datafile.read(trailercorrection)
-			res = unpackCpio(data, 0, tmpdir)
+			res = unpackCpio(data, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset, 0))
 				blacklist.append((offset, trailer + 10 + trailercorrection))
@@ -1535,17 +1535,17 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 ## tries to unpack stuff using cpio. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
 ## This one needs to stay separate, since it is also used by RPM unpacking
-def unpackCpio(data, offset, tempdir=None):
+def unpackCpio(data, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	p = subprocess.Popen(['cpio', '-t'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=tmpdir)
-	(stanout, stanerr) = p.communicate(data[offset:])
+	(stanout, stanerr) = p.communicate(data)
 	if p.returncode != 0:
 		## we don't have a valid archive according to cpio -t
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return
 	p = subprocess.Popen(['cpio', '-i', '-d', '--no-absolute-filenames'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=tmpdir)
-	(stanout, stanerr) = p.communicate(data[offset:])
+	(stanout, stanerr) = p.communicate(data)
 	return tmpdir
 
 def searchUnpackRomfs(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
