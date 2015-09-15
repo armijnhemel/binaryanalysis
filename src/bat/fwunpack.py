@@ -4483,7 +4483,7 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 						blacklist.append((0, lendata))
 						datafile.close()
 						shutil.rmtree(tmpdir)
-						return (diroffsets, blacklist, ['graphics', 'gif'], hints)
+						return (diroffsets, blacklist, ['graphics', 'gif', 'binary'], hints)
 					else:
 						tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".gif", dir=tmpdir)
 						os.write(tmpfile[0], data[:trail+2])
@@ -4558,7 +4558,7 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 					os.rmdir(tmpdir)
 					blacklist.append((0,lendata))
 					datafile.close()
-					return (diroffsets, blacklist, ['graphics', 'png'], hints)
+					return (diroffsets, blacklist, ['graphics', 'png', 'binary'], hints)
 				else:
 					tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".png", dir=tmpdir)
 					os.write(tmpfile[0], data)
