@@ -437,7 +437,7 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 			jffs2rest = 4 - jffs2size%4
 			if jffs2size + jffs2rest == filesize:
 				newtags.append('jffs2')
-			jffs2size = filesize
+				jffs2size = filesize
 			diroffsets.append((jffs2dir, offset, jffs2size))
 			blacklist.append((offset, offset + jffs2size))
 			counter = counter + 1
