@@ -90,9 +90,18 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 				(stanout, stanerr) = p.communicate()
 		else:
 			if offset == 0:
-				## bytes need be removed only from the end of the file
-				p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile,), 'bs=%s' % (length,), 'count=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-				(stanout, stanerr) = p.communicate()
+				## sometimes there are some issues with dd and maximum file size
+				## see for example https://bugzilla.redhat.com/show_bug.cgi?id=612839
+				if (length+offset) >= 2147479552:
+					shutil.copy(filename, tmpfile)
+					truncfile = open(tmpfile, 'a+b')
+					truncfile.seek(length+offset)
+					truncfile.truncate()
+					truncfile.close()
+				else:
+					## bytes need be removed only from the end of the file
+					p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile,), 'bs=%s' % (length,), 'count=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+					(stanout, stanerr) = p.communicate()
 			else:
 				## bytes need to be removed on both sides of the file, so possibly
 				## use a two way pass
