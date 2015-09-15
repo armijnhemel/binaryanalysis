@@ -1422,13 +1422,8 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 	return (diroffsets, blacklist, newtags, hints)
 
 def unpackXZ(filename, offset, trailer, template, dotest, wholefile, tempdir=None):
-	## first unpack the data, write things to a file and return
-	## the directory if the file is not empty
-	## Assumes (for now) that xz is in the path
-
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	### trailer has size of 2. Add 1 because [lower, upper)
 	os.fdopen(tmpfile[0]).close()
 
 	unpackFile(filename, offset, tmpfile[1], tmpdir, length=trailer)
