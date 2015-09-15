@@ -24,6 +24,8 @@ def copydir(source, fspath, target):
 	p = subprocess.Popen(['e2ls', '-l', source + ":" + fspath], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (stanout, stanerr) = p.communicate()
         if p.returncode != 0:
+		## This could happen is for example the file system is corrupted
+		## and inodes are damaged
 		return None
 	if stanout.strip() == "No files found!":
 		return None
