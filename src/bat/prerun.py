@@ -123,11 +123,9 @@ def verifyText(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fa
 ## Quick check to verify if a file is a graphics file.
 def verifyGraphics(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
-	if "text" in tags or "compressed" in tags or "audio" in tags:
+	if "text" in tags or "compressed" in tags or "audio" in tags or "graphics" in tags:
 		return newtags
 	newtags = verifyJPEG(filename, tempdir, tags, offsets, scanenv)
-	if newtags == []:
-		newtags = verifyPNG(filename, tempdir, tags, offsets, scanenv)
 	if newtags == []:
 		newtags = verifyGIF(filename, tempdir, tags, offsets, scanenv)
 	if newtags == []:
@@ -211,29 +209,6 @@ def verifyJPEG(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fa
 	if len(stanerr.strip().split("\n")) > 1:
 		return newtags
 	newtags.append("jpeg")
-	newtags.append("graphics")
-	return newtags
-
-def verifyPNG(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
-	newtags = []
-	if not offsets.has_key('png'):
-		return newtags
-	if offsets['png'] == []:
-		return newtags
-	if not offsets.has_key('pngtrailer'):
-		return newtags
-	if offsets['pngtrailer'] == []:
-		return newtags
-	if not 0 in offsets['png']:
-		return newtags
-	if (offsets['pngtrailer'][0] + 8) != os.stat(filename).st_size:
-		return newtags
-	## now we have a good chance that we have a PNG image, so verify
-	p = subprocess.Popen(['webpng', '-d', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		return newtags
-	newtags.append("png")
 	newtags.append("graphics")
 	return newtags
 

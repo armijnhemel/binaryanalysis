@@ -225,11 +225,11 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 		leaftasks = []
 		unpackreports = {}
 		blacklist = []
-		(path, filename, lenscandir, tempdir, debug, tags, hints, offsets) = scanqueue.get()
+		(dirname, filename, lenscandir, tempdir, debug, tags, scanhints, offsets) = scanqueue.get()
 		lentempdir = len(tempdir)
 
 		## absolute path of the file in the file system (so including temporary dir)
-		filetoscan = os.path.join(path, filename)
+		filetoscan = os.path.join(dirname, filename)
 
 		## relative path of the file in the temporary dir
 		relfiletoscan = filetoscan[lentempdir:]
@@ -259,9 +259,9 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 		## In case of squashfs remove the "squashfs-root" part of the temporary
 		## directory too, if it is present (not always).
 		## TODO: validate if this is stil needed
-		storepath = path[lenscandir:].replace("/squashfs-root", "")
+		storepath = dirname[lenscandir:].replace("/squashfs-root", "")
 		unpackreports[relfiletoscan]['path'] = storepath
-		unpackreports[relfiletoscan]['realpath'] = path
+		unpackreports[relfiletoscan]['realpath'] = dirname
 
 		if os.path.islink(filetoscan):
 			tags.append('symlink')
@@ -272,6 +272,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 				reportqueue.put({u: unpackreports[u]})
 			scanqueue.task_done()
 			continue
+
 		## no use checking pipes, sockets, device files, etcetera
 		if not os.path.isfile(filetoscan) and not os.path.isdir(filetoscan):
 			for l in leaftasks:
@@ -297,7 +298,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 
 		## Store the hash of the file for identification and for possibly
 		## querying the knowledgebase later on.
-		filehashresults = gethash(path, filename, outputhash)
+		filehashresults = gethash(dirname, filename, outputhash)
 		unpackreports[relfiletoscan]['checksum'] = filehashresults[outputhash]
 		unpackreports[relfiletoscan]['sha256'] = filehashresults['sha256']
 		filehash = filehashresults[outputhash]
@@ -338,6 +339,10 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 		## first see if a shortcut can be taken to unpack the file
 		## directly based on its extension.
 		knownfile = False
+		if 'knownfile' in scanhints:
+			knownfile = scanhints['knownfile']
+			unpacked = True
+
 		processdiroffsets = []
 		for unpackscan in scans:
 			if 'knownfilemethod' in unpackscan:
@@ -366,7 +371,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 					try:
 
 						exec "from %s import %s as bat_%s" % (module, method, method)
-					except:
+					except Exception, e:
 						continue
 					scanres = eval("bat_%s(filetoscan, tempdir, newenv, debug=debug)" % (method))
 					if scanres != ([], [], [], []):
@@ -397,14 +402,19 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 										if not os.path.islink(directoryname):
 											os.chmod(directoryname, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
                 							for p in i[2]:
+										leaftags = []
 										filepathname = os.path.join(i[0], p)
 										try:
 											if not os.path.islink(filepathname):
 												os.chmod(filepathname, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+											scannerhints = {}
+											if filepathname in hints:
+												if 'tags' in hints[filepathname]:
+													leaftags = list(set(leaftags + hints[filepathname]['tags']))
+													scannerhints['knownfile'] = True
 											if "temporary" in tags and diroffset[1] == 0 and diroffset[2] == filesize:
-												scantasks.append((i[0], p, len(scandir), tempdir, debug, ['temporary'], hints, {}))
-											else:
-												scantasks.append((i[0], p, len(scandir), tempdir, debug, [], hints, {}))
+												leaftags.append('temporary')
+											scantasks.append((i[0], p, len(scandir), tempdir, debug, leaftags, scannerhints, {}))
 											relscanpath = "%s/%s" % (i[0][lentempdir:], p)
 											if relscanpath.startswith('/'):
 												relscanpath = relscanpath[1:]
@@ -553,7 +563,6 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 				try:
 					exec "from %s import %s as bat_%s" % (module, method, method)
 				except Exception, e:
-					print e
 					continue
 				scanres = eval("bat_%s(filetoscan, tempdir, blacklist, offsets, newenv, debug=debug)" % (method))
 				## result is either empty, or contains offsets, blacklist, tags and hints
@@ -585,12 +594,17 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
                 						for p in i[2]:
 									filepathname = os.path.join(i[0], p)
 									try:
+										leaftags = []
+										scannerhints = {}
 										if not os.path.islink(filepathname):
 											os.chmod(filepathname, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+										if filepathname in hints:
+											if 'tags' in hints[filepathname]:
+												leaftags = list(set(leaftags + hints[filepathname]['tags']))
+												scannerhints['knownfile'] = True
 										if "temporary" in tags and diroffset[1] == 0 and diroffset[2] == filesize:
-											scantasks.append((i[0], p, len(scandir), tempdir, debug, ['temporary'], hints, {}))
-										else:
-											scantasks.append((i[0], p, len(scandir), tempdir, debug, [], hints, {}))
+											leaftags.append('temporary')
+										scantasks.append((i[0], p, len(scandir), tempdir, debug, leaftags, scannerhints, {}))
 										relscanpath = "%s/%s" % (i[0][lentempdir:], p)
 										if relscanpath.startswith('/'):
 											relscanpath = relscanpath[1:]
@@ -1507,8 +1521,8 @@ def runscan(scans, scan_binary, scandate):
 		sys.stderr.flush()
 
 	tags = []
-	hints = []
 	offsets = {}
+	hints = {}
 
 	scantasks = [(scantempdir, os.path.basename(scan_binary), len(scantempdir), scantempdir, tmpdebug, tags, hints, offsets)]
 
