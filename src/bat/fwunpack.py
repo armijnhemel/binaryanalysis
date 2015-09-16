@@ -586,15 +586,23 @@ def unpackISO9660(filename, offset, tempdir=None, unpacktempdir=None):
 		return None
 	## first create *another* temporary directory, because of the behaviour of shutil.copytree()
 	tmpdir2 = tempfile.mkdtemp(dir=unpacktempdir)
-	## then copy the contents to a subdir
-	shutil.copytree(mountdir, tmpdir2 + "/bla")
+	## then copy the contents to a subdir, and don't follow symlinks
+	shutil.copytree(mountdir, tmpdir2 + "/bla", symlinks=True)
 	## then change all the permissions
 	osgen = os.walk(tmpdir2 + "/bla")
 	try:
 		while True:
 			i = osgen.next()
 			os.chmod(i[0], stat.S_IRWXU)
+			if os.path.islink(i[0]):
+				continue
+			if not os.path.isdir(i[0]):
+				continue
 			for p in i[2]:
+				if os.path.islink(os.path.join(i[0], p)):
+					continue
+				if os.path.isfile(os.path.join(i[0], p)):
+					continue
 				os.chmod("%s/%s" % (i[0], p), stat.S_IRWXU)
 	except Exception, e:
 		pass
