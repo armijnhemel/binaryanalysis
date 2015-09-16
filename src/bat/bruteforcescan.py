@@ -411,7 +411,9 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 											if filepathname in hints:
 												if 'tags' in hints[filepathname]:
 													leaftags = list(set(leaftags + hints[filepathname]['tags']))
-													scannerhints['knownfile'] = True
+												if 'scanned' in hints[filepathname]:
+													if hints[filepathname]['scanned']:
+														scannerhints['knownfile'] = True
 											if "temporary" in tags and diroffset[1] == 0 and diroffset[2] == filesize:
 												leaftags.append('temporary')
 											scantasks.append((i[0], p, len(scandir), tempdir, debug, leaftags, scannerhints, {}))
@@ -601,7 +603,9 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 										if filepathname in hints:
 											if 'tags' in hints[filepathname]:
 												leaftags = list(set(leaftags + hints[filepathname]['tags']))
-												scannerhints['knownfile'] = True
+											if 'scanned' in hints[filepathname]:
+												if hints[filepathname]['scanned']:
+													scannerhints['knownfile'] = True
 										if "temporary" in tags and diroffset[1] == 0 and diroffset[2] == filesize:
 											leaftags.append('temporary')
 										scantasks.append((i[0], p, len(scandir), tempdir, debug, leaftags, scannerhints, {}))

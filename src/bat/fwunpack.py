@@ -4490,11 +4490,11 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 						os.fdopen(tmpfile[0]).close()
 						diroffsets.append((tmpdir, offset, trail+2))
 						hints[tmpfile[1]] = {}
-						hints[tmpfile[1]]['tags'] = ['graphics', 'gif']
+						hints[tmpfile[1]]['tags'] = ['graphics', 'gif', 'binary']
+						hints[tmpfile[1]]['scanned'] = True
 						counter = counter + 1
 						blacklist.append((offset, offset+trail+2))
 						## go to the next header
-						## TODO: add hints to prevent rescanning of all GIF files again
 						break
 			if not giffound:
 				os.rmdir(tmpdir)
@@ -4563,7 +4563,8 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 					tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".png", dir=tmpdir)
 					os.write(tmpfile[0], data)
 					hints[tmpfile[1]] = {}
-					hints[tmpfile[1]]['tags'] = ['graphics', 'png']
+					hints[tmpfile[1]]['tags'] = ['graphics', 'png', 'binary']
+					hints[tmpfile[1]]['scanned'] = True
 					os.fdopen(tmpfile[0]).close()
 					blacklist.append((offset,trail+8))
 					diroffsets.append((tmpdir, offset, offset+trail+8))
