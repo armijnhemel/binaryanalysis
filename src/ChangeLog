@@ -1,3 +1,12 @@
+2015-09-16:
+* bruteforcescan.py: allow tagging for files that have not been completely
+scanned yet and pass tags as hints to unpacked files
+* prerun.py: remove verifyGIF() as it is no longer needed, ignore files tagged
+* fwunpack.py: filter out LZMA false positives by decompressing a small amount
+of data. Also add some more sanity checks to filter out more false positives.
+* fwunpack.py: don't follow symlinks in iso9660 files when copying the data.
+* fwunpack.py: extra ar header sanity check
+
 2015-09-15:
 * fwunpack.py: don't read all data from a file in PNG unpacking (leftover from
 old code that should have been deleted), also let webpng read from stdin to
