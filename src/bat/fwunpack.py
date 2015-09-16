@@ -478,12 +478,25 @@ def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 		if blacklistoffset != None:
 			continue
 		## extra sanity check, the byte following the magic is always '\x0a'
+		localoffset = offset + 7
 		arfile = open(filename, 'rb')
-		arfile.seek(offset+7)
+		arfile.seek(localoffset)
 		archeckbyte = arfile.read(1)
-		arfile.close()
+		localoffset += 1
 		if archeckbyte != '\x0a':
+			arfile.close()
 			continue
+
+		## the magic bytes are followed by a header which has 0x60 0x0a
+		## at the end.
+		## see, for example, https://en.wikipedia.org/wiki/Ar_%28Unix%29
+		localoffset += 58
+		arfile.seek(localoffset)
+		archeckbytes = arfile.read(2)
+		arfile.close()
+		if not archeckbytes == '\x60\x0a':
+			continue
+
 		tmpdir = dirsetup(tempdir, filename, "ar", counter)
 		res = unpackAr(filename, offset, tmpdir, blacklist)
 		if res != None:
