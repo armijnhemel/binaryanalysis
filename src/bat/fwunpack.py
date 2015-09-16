@@ -3771,8 +3771,9 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		lzmaoffsets = lzmaoffsets + offsets[marker]
 	if lzmaoffsets == []:
 		return ([], blacklist, [], hints)
+	filesize = os.stat(filename).st_size
 	## LZMA files should at least have a full header
-	if os.stat(filename).st_size < 13:
+	if filesize < 13:
 		return ([], blacklist, [], hints)
 	lzmaoffsets.sort()
 	diroffsets = []
@@ -3793,7 +3794,6 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		lzma_try_all = True
 	else:
 		lzma_try_all = False
-
 
 	lzma_tmpdir = scanenv.get('LZMA_TMPDIR', None)
 	if lzma_tmpdir != None:
@@ -3841,6 +3841,15 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		lzmafile.close()
 		if len(lzmasizebytes) != 8:
 			continue
+
+		## A few more sanity checks: first check if the file is a stream
+		## of unknown size, or if it has a file set.
+		## If it has a file size set, then check if the value of the size
+		## actually makes sense.
+		## Then read some data and try to decompress it. Because LZMA is a
+		## stream it will uncompress some data. If no data can be decompressed
+		## at all, it is not a valid LZMA stream.
+		lzmasizeknown = False
 		if lzmasizebytes != '\xff\xff\xff\xff\xff\xff\xff\xff':
 			lzmasize = struct.unpack('<Q', lzmasizebytes)[0]
 			## XZ Utils rejects files with uncompressed size of 256 GiB
@@ -3849,6 +3858,41 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			## if the size is 0, why even bother?
 			if lzmasize == 0:
 				continue
+			lzmasizeknown = True
+
+		## either read all bytes that are left in the file or a minimum
+		## amount of bytes, whichever is the smallest
+		minlzmadatatoread = 1000000
+		lzmabytestoread = min(filesize-offset, minlzmadatatoread)
+
+		lzmafile = open(filename, 'rb')
+		lzmafile.seek(offset)
+		lzmadata = lzmafile.read(lzmabytestoread)
+		lzmafile.close()
+		if len(lzmadata) == filesize-offset:
+			## all data is there
+			pass
+		p = subprocess.Popen(['lzma', '-cd', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate(lzmadata)
+		if p.returncode == 0:
+			# whole file successfully unpacked. TODO: deal with this
+			pass
+		if len(stanout) == 0:
+			continue
+
+		## If there is a very big difference (thousandfold) between
+		## the unpacked data and the declared size it is a false positive
+		## for sure
+		## TODO: make lzmacutoff configurable
+		lzmacutoff = 1000
+		if lzmasizeknown:
+			if len(stanout) != lzmasize:
+				if len(stanout) < lzmacutoff:
+					if lzmasize/len(stanout) > 1000:
+						continue
+
+		## TODO: check if the output consists of a single character that
+		## has been repeated
 
 		tmpdir = dirsetup(tempdir, filename, "lzma", counter)
 		res = unpackLZMA(filename, offset, template, tmpdir, lzmalimit, lzma_tmpdir, blacklist)
