@@ -1,3 +1,6 @@
+2015-09-17:
+* fwunpack.py: more sanity checks for GIF files
+
 2015-09-16:
 * bruteforcescan.py: allow tagging for files that have not been completely
 scanned yet and pass tags as hints to unpacked files
