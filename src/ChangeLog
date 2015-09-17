@@ -7,6 +7,9 @@ unsucessful unpacking
 * fwunpack.py: add a (crude) way to avoid using "dd" in unpackFile() when
 carving data up to a certain length. This is useful in case the data has to be
 carved from really big files
+* prerun.py: do not tag files as "elf" if the size does not correspond with
+the file size. Test case: a firmware that starts with a valid ELF file. More
+research is needed.
 
 2015-09-16:
 * bruteforcescan.py: allow tagging for files that have not been completely
