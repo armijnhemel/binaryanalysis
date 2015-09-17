@@ -4471,6 +4471,10 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	diroffsets = []
 	counter = 1
 
+	## magic header for XMP https://en.wikipedia.org/wiki/Extensible_Metadata_Platform
+	xmpmagicheaderbytes = ['\x01'] + map(lambda x: chr(x), range(255,-1,-1)) + ['\x00']
+	xmpmagic = "".join(xmpmagicheaderbytes)
+
 	datafile = open(filename, 'rb')
 	lendata = os.stat(filename).st_size
 	for i in range (0,len(gifoffsets)):
@@ -4484,10 +4488,14 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		if blacklistoffset != None:
 			continue
 
-		## sanity check first for the logical screen descriptor
+		localoffset = offset
+
+		## sanity check for the logical screen descriptor
 		datafile.seek(offset+6)
+		localoffset += 6
 		## first logical screen width
 		databytes = datafile.read(2)
+		localoffset += 2
 		logicalwidth = struct.unpack('<H', databytes)[0]
 		if logicalwidth == 0:
 			continue
@@ -4495,6 +4503,79 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		databytes = datafile.read(2)
 		logicalheight = struct.unpack('<H', databytes)[0]
 		if logicalheight == 0:
+			continue
+		localoffset += 2
+
+		## Then check to see if there is an image control block (for a valid
+		## GIF stream with actual image content there has to be at least one
+		## image control block). Depending on the image there might be all kinds
+		## of information in between the logical screen descriptor and the first
+		## information control block, such as a global color table and XMP
+		## extensions or other application specific extensions.
+		packedfields = datafile.read(1)
+		localoffset += 1
+		globalcolortablesize = 0
+		if (ord(packedfields) >> 7 & 1) == 1:
+			globalcolortablesize = pow(2,(ord(packedfields)%8) + 1) * 3
+		localoffset += 2
+		localoffset += globalcolortablesize
+		databytes = datafile.seek(localoffset)
+		## then read the next byte to see if it is an extension (0x21)
+		## or an image control block
+		databytes = datafile.read(1)
+		localoffset += 1
+
+		while databytes == '\x21':
+			## depending on the extension label a number of bytes
+			## need to be skipped
+			databytes = datafile.read(1)
+			localoffset += 1
+			if databytes == '\xf9':
+				## graphic control extension, 8 bytes in total counting
+				## label and extension identifier
+				localoffset += 6
+				datafile.seek(localoffset)
+			elif databytes == '\xfe':
+				#length of the comment
+				databytes = datafile.read(1)
+				localoffset += 1
+				commentsize = ord(databytes)
+				localoffset += commentsize
+				datafile.seek(localoffset)
+			elif databytes == '\xff':
+				## application extension with all other data is 14 bytes
+				## unless it is XMP, in which case it is variable
+				## for details see XMP Specification part 3
+				## TODO: add support for other extensions such
+				## as ICC profiles
+				databytes = datafile.read(1)
+				if databytes != '\x0b':
+					break
+				localoffset += 1
+				databytes = datafile.read(8)
+				if databytes == 'XMP Data':
+					localoffset += 8
+					databytes = datafile.read(1000)
+					magicoffset = databytes.find(xmpmagic)
+					while magicoffset == -1:
+						databytes += datafile.read(1000)
+						magicoffset = databytes.find(xmpmagic)
+					localoffset += magicoffset + 258
+					datafile.seek(localoffset)
+				else:
+					localoffset += 11
+					datafile.seek(localoffset)
+					databytes = datafile.read(1)
+					localoffset += 1
+					blocksize = ord(databytes)
+					localoffset += blocksize
+					datafile.seek(localoffset)
+			databytes = datafile.read(1)
+			if databytes == '\x00':
+				localoffset += 1
+				databytes = datafile.read(1)
+				localoffset += 1
+		if databytes != '\x2c':
 			continue
 
 		## Now read data from the current offset until the next offset
@@ -4512,6 +4593,7 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		giffound = False
 		data = ""
 		trailersearchoffset = 0
+		tmpdir = dirsetup(tempdir, filename, "gif", counter)
 		while bytesread <= nextoffset-offset and not giffound:
 			## concatenation of data is expensive :-(
 			data += datafile.read(gifchunkread)
@@ -4533,7 +4615,6 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 				trailersearchoffset = trailer + 2
 				trailer = data.find('\x00;', trailersearchoffset)
 
-			tmpdir = dirsetup(tempdir, filename, "gif", counter)
 			for trail in traileroffsets:
 				## TODO: use templates here to make the name of the file more predictable
 				## which helps with result interpretation
@@ -4547,7 +4628,7 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 					if offset == 0 and trail == lendata - 2:
 						blacklist.append((0, lendata))
 						datafile.close()
-						shutil.rmtree(tmpdir)
+						os.rmdir(tmpdir)
 						return (diroffsets, blacklist, ['graphics', 'gif', 'binary'], hints)
 					else:
 						tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".gif", dir=tmpdir)
@@ -4561,8 +4642,8 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 						blacklist.append((offset, offset+trail+2))
 						## go to the next header
 						break
-			if not giffound:
-				os.rmdir(tmpdir)
+		if not giffound:
+			os.rmdir(tmpdir)
 	datafile.close()
 	return (diroffsets, blacklist, [], hints)
 
