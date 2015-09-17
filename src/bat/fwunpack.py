@@ -4525,6 +4525,8 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		databytes = datafile.read(1)
 		localoffset += 1
 
+		## there could be various extensions before there is an image
+		## control block
 		while databytes == '\x21':
 			## depending on the extension label a number of bytes
 			## need to be skipped
@@ -4536,7 +4538,7 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 				localoffset += 6
 				datafile.seek(localoffset)
 			elif databytes == '\xfe':
-				#length of the comment
+				## length of the comment
 				databytes = datafile.read(1)
 				localoffset += 1
 				commentsize = ord(databytes)
