@@ -818,12 +818,15 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 				totalsize = int(spl[2], 16) + int(spl[3], 16)
 				if totalsize == os.stat(filename).st_size:
 					newtags.append("elf")
+	## TODO: better research this
+	if not "elf" in newtags:
+		return []
 	if not dynamic:
 		newtags.append("static")
 	else:
 		newtags.append("dynamic")
-	if not "elf" in newtags:
-		newtags.append("elf")
+	#if not "elf" in newtags:
+		#newtags.append("elf")
 
 	## check whether or not it might be a Linux kernel file or module
 	p = subprocess.Popen(['readelf', '-SW', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
