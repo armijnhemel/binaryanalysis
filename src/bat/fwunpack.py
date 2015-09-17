@@ -3798,6 +3798,7 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		return ([], blacklist, [], hints)
 	lzmaoffsets.sort()
 	diroffsets = []
+	newtags = []
 	counter = 1
 
 	template = None
@@ -3896,8 +3897,15 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		p = subprocess.Popen(['lzma', '-cd', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate(lzmadata)
 		if p.returncode == 0:
-			# whole file successfully unpacked. TODO: deal with this
-			pass
+			# whole file successfully unpacked.
+			tmpdir = dirsetup(tempdir, filename, "lzma", counter)
+			tmpfile = tempfile.mkstemp(dir=tmpdir)
+			os.write(tmpfile[0], stanout)
+			os.fdopen(tmpfile[0]).close()
+			diroffsets.append((tmpdir, offset, len(lzmadata)))
+			blacklist.append((offset, offset+len(lzmadata)))
+			counter += 1
+			continue
 		if len(stanout) == 0:
 			continue
 
@@ -3911,6 +3919,15 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 				if len(stanout) < lzmacutoff:
 					if lzmasize/len(stanout) > 1000:
 						continue
+			else:
+				## all data has been unpacked
+				tmpdir = dirsetup(tempdir, filename, "lzma", counter)
+				tmpfile = tempfile.mkstemp(dir=tmpdir)
+				os.write(tmpfile[0], stanout)
+				os.fdopen(tmpfile[0]).close()
+				diroffsets.append((tmpdir, offset, 0))
+				counter += 1
+				continue
 
 		## TODO: check if the output consists of a single character that
 		## has been repeated
@@ -3918,13 +3935,23 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		tmpdir = dirsetup(tempdir, filename, "lzma", counter)
 		res = unpackLZMA(filename, offset, template, tmpdir, lzmalimit, lzma_tmpdir, blacklist)
 		if res != None:
-			diroffsets.append((res, offset, 0))
+			(diroffset, wholefile) = res
+			if wholefile:
+				lzmasize = os.stat(filename).st_size - offset
+				diroffsets.append((diroffset, offset, lzmasize))
+				blacklist.append((offset, os.stat(filename).st_size))
+				if offset == 0:
+					newtags.append('compressed')
+					newtags.append('lzma')
+			else:
+				diroffsets.append((diroffset, offset, 0))
+			blacklist.append((offset, offset+len(lzmadata)))
 			counter = counter + 1
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
 	lzma_file.close()
-	return (diroffsets, blacklist, [], hints)
+	return (diroffsets, blacklist, newtags, hints)
 
 ## tries to unpack stuff using lzma -cd. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
@@ -3947,6 +3974,9 @@ def unpackLZMA(filename, offset, template, tempdir=None, minbytesize=1, lzma_tmp
 		unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
 	p = subprocess.Popen(['lzma', '-cd', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
+	wholefile = False
+	if p.returncode == 0:
+		wholefile = True
 	os.fdopen(outtmpfile[0]).close()
 	os.unlink(tmpfile[1])
 
@@ -3997,7 +4027,7 @@ def unpackLZMA(filename, offset, template, tempdir=None, minbytesize=1, lzma_tmp
 					shutil.move(outtmpfile[1], mvpath)
 				except Exception, e:
 					pass
-	return tmpdir
+	return (tmpdir, wholefile)
 
 ## Search and unpack Ubi. Since we can't easily determine the length of the
 ## file system by using ubi we will have to use a different measurement to
