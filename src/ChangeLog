@@ -1,5 +1,12 @@
 2015-09-17:
 * fwunpack.py: more sanity checks for GIF files
+* fwunpack.py: write out unpacked LZMA data earlier, tag and blacklist LZMA
+data whenever possible
+* fwunpack.py: don't forget to remove temporary gzip directories after
+unsucessful unpacking
+* fwunpack.py: add a (crude) way to avoid using "dd" in unpackFile() when
+carving data up to a certain length. This is useful in case the data has to be
+carved from really big files
 
 2015-09-16:
 * bruteforcescan.py: allow tagging for files that have not been completely
