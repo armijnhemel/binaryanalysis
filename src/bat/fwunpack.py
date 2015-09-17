@@ -54,6 +54,10 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 	if filesize == length:
 		length = 0
 
+	## don't use dd for stuff that is less than 50 million bytes
+	## TODO: make configurable
+	unpackcutoff = 50000000
+
 	## If the while file needs to be scanned, then either copy it, or hardlink it.
 	## Hardlinking is only possible if the file resides on the same file system
 	## and if the file is not modified in a way.
@@ -77,6 +81,15 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 		shutil.move(templink[1], tmpfile)
 	else:
 		if length == 0:
+			if  unpackcutoff < filesize and (filesize - offset) < unpackcutoff:
+				srcfile = open(filename, 'rb')
+				dstfile = open(tmpfile, 'wb')
+				srcfile.seek(offset)
+				dstfile.write(srcfile.read(length))
+				dstfile.flush()
+				dstfile.close()
+				srcfile.close()
+				return
 			## The tail end of the file is needed and the first bytes (indicated by 'offset') need
 			## to be ignored, while the rest needs to be copied. If the offset is small, it is
 			## faster to use 'tail' instead of 'dd', especially for big files.
@@ -89,6 +102,15 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 				p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile,), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 		else:
+			if  unpackcutoff < filesize and length < unpackcutoff:
+				srcfile = open(filename, 'rb')
+				dstfile = open(tmpfile, 'wb')
+				srcfile.seek(offset)
+				dstfile.write(srcfile.read(length))
+				dstfile.flush()
+				dstfile.close()
+				srcfile.close()
+				return
 			if offset == 0:
 				## sometimes there are some issues with dd and maximum file size
 				## see for example https://bugzilla.redhat.com/show_bug.cgi?id=612839
@@ -366,6 +388,7 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 
 	filesize = os.stat(filename).st_size
 
+	jffs2file = open(filename, 'rb')
 	for offset in jffs2offsets:
 		## at least 8 bytes are needed for a JFFS2 file system
 		if filesize - offset < 8:
@@ -385,10 +408,8 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 		## JFFS2 file system, so return.
 		## If offset + size of the JFFS2 inode is blacklisted it is also not
 		## a valid JFFS2 file system
-		jffs2file = open(filename, 'r')
 		jffs2file.seek(offset+4)
 		jffs2buffer = jffs2file.read(4)
-		jffs2file.close()
 
 		if len(jffs2buffer) < 4:
 			continue
@@ -409,10 +430,8 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 		## as explained here:
 		##
 		## http://www.infradead.org/pipermail/linux-mtd/2003-February/006910.html
-		jffs2file = open(filename, 'r')
 		jffs2file.seek(offset)
 		jffs2buffer = jffs2file.read(12)
-		jffs2file.close()
 		if len(jffs2buffer) < 12:
 			continue
 		if not bigendian:
@@ -444,6 +463,7 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 			counter = counter + 1
 		else:
 			os.rmdir(tmpdir)
+	jffs2file.close()
 	return (diroffsets, blacklist, newtags, hints)
 
 def unpackJffs2(filename, offset, filesize, tempdir=None, bigendian=False, jffs2_tmpdir=None, blacklist=[]):
@@ -2791,6 +2811,7 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		if unpackfailure:
 			gzipfile.close()
 			os.unlink(tmpfile[1])
+			os.rmdir(tmpdir)
 			continue
 
 		## The trailer of a valid gzip file is the CRC32 followed by file
@@ -2803,16 +2824,19 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		if len(gzipcrc32andsize) != 8:
 			gzipfile.close()
 			os.unlink(tmpfile[1])
+			os.rmdir(tmpdir)
 			continue
 
 		if gzipcrc32andsize[0:4] != struct.pack('<I', crc32):
 			gzipfile.close()
 			os.unlink(tmpfile[1])
+			os.rmdir(tmpdir)
 			continue
 		filesize = os.stat(tmpfile[1]).st_size
 		if gzipcrc32andsize[4:8] != struct.pack('<I', filesize):
 			gzipfile.close()
 			os.unlink(tmpfile[1])
+			os.rmdir(tmpdir)
 			continue
 
 		## the size of the gzip data is the size of the deflate data,
