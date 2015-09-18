@@ -16,7 +16,7 @@ to prevent other scans from (re)scanning (part of) the data.
 '''
 
 import sys, os, subprocess, os.path, shutil, stat, array, struct, binascii
-import tempfile, bz2, re, magic, tarfile, zlib, copy, uu
+import tempfile, bz2, re, magic, tarfile, zlib, copy, uu, hashlib
 import fsmagic, extractor, ext2, jffs2
 
 ## generic method to create temporary directories, with the correct filenames
@@ -3359,24 +3359,51 @@ def searchUnpackLRZIP(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
+
+		## read the lrzip header, which is 24 bytes
 		lrzipfile = open(filename, 'rb')
-		lrzipfile.seek(offset+4)
-		lrzipversionbytes = lrzipfile.read(2)
+		lrzipfile.seek(offset)
+		lrzipheader = lrzipfile.read(24)
 		lrzipfile.close()
+
+		lrzipversionbytes = lrzipheader[4:6]
 		lrzipmajorversion = ord(lrzipversionbytes[0])
 		if lrzipmajorversion not in lrzipmajorversions:
 			continue
 		lrzipminorversion = ord(lrzipversionbytes[1])
 		if lrzipminorversion not in lrzipminorversions:
 			continue
+
+		## read the uncompressed size from the header
+		lrzipsize = struct.unpack('<Q', lrzipheader[6:14])[0]
+		encrypted = False
+		hasmd5 = False
+		if lrzipminorversion == 6:
+			if lrzipheader[-3] == '\x01':
+				hasmd5 = True
+			if lrzipheader[-2] == '\x01':
+				encrypted = True
+				continue
+		if lrzipminorversion == 5:
+			if lrzipheader[-3] == '\x01':
+				hasmd5 = True
+
+		lrzipmd5 = None
+		if hasmd5:
+			lrzipfile = open(filename, 'rb')
+			lrzipfile.seek(-16, os.SEEK_END)
+			lrzipmd5bytes = lrzipfile.read(16)
+			lrzipfile.close()
+			lrzipmd5 = lrzipmd5bytes.encode('hex')
+
 		tmpdir = dirsetup(tempdir, filename, "lrzip", counter)
-		res = unpackLRZIP(filename, offset, tmpdir)
+		res = unpackLRZIP(filename, offset, hasmd5, lrzipmd5, lrzipsize, tmpdir)
 		if res != None:
-			(lrzipdir, lrzipsize) = res
+			(lrzipdir, md5match) = res
 			diroffsets.append((lrzipdir, offset, lrzipsize))
 			blacklist.append((offset, offset + lrzipsize))
 			counter = counter + 1
-			if lrzipsize == os.stat(filename).st_size:
+			if offset == 0 and md5match:
 				tags.append("compressed")
 				tags.append("lrzip")
 		else:
@@ -3384,7 +3411,7 @@ def searchUnpackLRZIP(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, tags, hints)
 
-def unpackLRZIP(filename, offset, tempdir=None):
+def unpackLRZIP(filename, offset, hasmd5, lrzipmd5, lrzipsize, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 
 	tmpfile = tempfile.mkstemp(dir=tempdir, suffix='.lrz')
@@ -3392,18 +3419,11 @@ def unpackLRZIP(filename, offset, tempdir=None):
 
 	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
-	## from unpacking stdout we can get some information
-	## for blacklists. A few experiments show that there
-	## are 125 bytes of overhead, so if the size of
-	## uncompressed bytes + 125 == filesize we can blacklist
-	## the entire file and tag it as 'compressed'
-
 	p = subprocess.Popen(['lrunzip', '-vvv', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		## if lrzip failed it might have left some things behind and
-		## removed the original file we tried to unpack with the .lrz
-		## extension.
+		## removed the original file, so remove any droppings
 		rmfiles = os.listdir(tmpdir)
 		if rmfiles != []:
 			for rmfile in rmfiles:
@@ -3413,24 +3433,33 @@ def unpackLRZIP(filename, offset, tempdir=None):
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
-	
-	## lrzip unpacks to a single file, so we can just check that one.
+
+	unpackedfile = tmpfile[1][:-4]
+	## The result of lrzip is a single file (never multiple files)
 	## If an empty file was unpacked it is a false positive.
-	if os.stat(tmpfile[1][:-4]).st_size == 0:
-		os.unlink(tmpfile[1][:-4])
+	unpackedfilesize = os.stat(unpackedfile).st_size
+	if unpackedfilesize == 0:
+		os.unlink(unpackedfile)
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
 
-	lrzipsize = 0
-	for i in stanout.strip().split("\n"):
-		if i.startswith("Starting thread"):
-			lrzipsize += int(re.search("to decompress (\d+) bytes from stream", i).groups()[0])
-	os.unlink(tmpfile[1])
-	if (os.stat(filename).st_size - lrzipsize) == 125:
-		lrzipsize += 125
-	return (tmpdir, lrzipsize)
+	## If it is a valid lrzip file, then the file size should match
+	## if not, it is a false positive
+	if not unpackedfilesize == lrzipsize:
+		return None
+
+	h = hashlib.new('md5')
+	lrzipfile = open(unpackedfile, 'rb')
+	h.update(lrzipfile.read())
+	lrzipfile.close()
+
+	md5match = False
+	if h.hexdigest() == lrzipmd5:
+		md5match = True
+
+	return (tmpdir, md5match)
 
 def unpackZip(filename, offset, cutoff, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
