@@ -3355,12 +3355,15 @@ def searchUnpackLRZIP(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 	lrzipmajorversions = [0]
 	lrzipminorversions = [0,1,2,3,4,5,6,7,8]
 
+	filesize = os.stat(filename).st_size
+
 	for offset in offsets['lrzip']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
 
 		## read the lrzip header, which is 24 bytes
+		## https://github.com/ckolivas/lrzip/blob/master/doc/magic.header.txt
 		lrzipfile = open(filename, 'rb')
 		lrzipfile.seek(offset)
 		lrzipheader = lrzipfile.read(24)
@@ -3399,11 +3402,11 @@ def searchUnpackLRZIP(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 		tmpdir = dirsetup(tempdir, filename, "lrzip", counter)
 		res = unpackLRZIP(filename, offset, hasmd5, lrzipmd5, lrzipsize, tmpdir)
 		if res != None:
-			(lrzipdir, md5match) = res
-			diroffsets.append((lrzipdir, offset, lrzipsize))
-			blacklist.append((offset, offset + lrzipsize))
+			(lrzipdir, md5match, endoflrzip) = res
+			diroffsets.append((lrzipdir, offset, endoflrzip))
+			blacklist.append((offset, offset + endoflrzip))
 			counter = counter + 1
-			if offset == 0 and md5match:
+			if offset == 0 and md5match and endoflrzip == filesize:
 				tags.append("compressed")
 				tags.append("lrzip")
 		else:
@@ -3414,32 +3417,67 @@ def searchUnpackLRZIP(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 def unpackLRZIP(filename, offset, hasmd5, lrzipmd5, lrzipsize, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 
-	tmpfile = tempfile.mkstemp(dir=tempdir, suffix='.lrz')
+	tmpfile = tempfile.mkstemp(dir=tempdir)
 	os.fdopen(tmpfile[0]).close()
+
+	outtmpfile = tempfile.mkstemp(dir=tempdir)
 
 	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
-	p = subprocess.Popen(['lrunzip', '-vvv', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['lrzcat', tmpfile[1]], stdout=outtmpfile[0], stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
+	os.fsync(outtmpfile[0])
+	os.fdopen(outtmpfile[0]).close()
 	if p.returncode != 0:
-		## if lrzip failed it might have left some things behind and
-		## removed the original file, so remove any droppings
-		rmfiles = os.listdir(tmpdir)
-		if rmfiles != []:
-			for rmfile in rmfiles:
-				os.unlink(os.path.join(tmpdir, rmfile))
-		if os.path.exists(tmpfile[1]):
-			os.unlink(tmpfile[1])
-		if tempdir == None:
-			os.rmdir(tmpdir)
-		return None
+		## depending on the output of lrzcat it might still be
+		## valid data, that might be followed by other data
+		unpackedfilesize = os.stat(outtmpfile[1]).st_size
 
-	unpackedfile = tmpfile[1][:-4]
+		if not unpackedfilesize == lrzipsize:
+			## if lrzip failed it might have left some things behind and
+			## removed the original file, so remove any droppings
+			os.unlink(outtmpfile[1])
+			rmfiles = os.listdir(tmpdir)
+			if rmfiles != []:
+				for rmfile in rmfiles:
+					os.unlink(os.path.join(tmpdir, rmfile))
+			if os.path.exists(tmpfile[1]):
+				os.unlink(tmpfile[1])
+			if tempdir == None:
+				os.rmdir(tmpdir)
+			return None
+		h = hashlib.new('md5')
+		lrzipfile = open(outtmpfile[1], 'rb')
+		h.update(lrzipfile.read())
+		lrzipfile.close()
+
+		tmpmd5 = h.hexdigest()
+		searchmd5 = tmpmd5.decode('hex')
+		## now open the file to see if the md5 sum can be
+		## found somewhere in it and then test it again
+		## TODO: big file fixes, as this can be horribly inefficient
+		## TODO: continue searching for checksums if the first
+		## one does not match
+		lrzipfile = open(filename, 'rb')
+		lrzipfile.seek(offset)
+		lrzipbytes = lrzipfile.read()
+		res = lrzipbytes.find(searchmd5)
+		lrzipfile.close()
+		if res == -1:
+			return None
+		p = subprocess.Popen(['lrzcat'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate(lrzipbytes[:res+16])
+		if p.returncode != 0:
+			return
+		md5match = True
+		endoflrzip = offset + res + 16
+		return (tmpdir, md5match, endoflrzip)
+
 	## The result of lrzip is a single file (never multiple files)
 	## If an empty file was unpacked it is a false positive.
-	unpackedfilesize = os.stat(unpackedfile).st_size
+	unpackedfilesize = os.stat(outtmpfile[1]).st_size
 	if unpackedfilesize == 0:
-		os.unlink(unpackedfile)
+		os.unlink(outtmpfile[1])
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
@@ -3451,7 +3489,7 @@ def unpackLRZIP(filename, offset, hasmd5, lrzipmd5, lrzipsize, tempdir=None):
 		return None
 
 	h = hashlib.new('md5')
-	lrzipfile = open(unpackedfile, 'rb')
+	lrzipfile = open(outtmpfile[1], 'rb')
 	h.update(lrzipfile.read())
 	lrzipfile.close()
 
@@ -3459,7 +3497,7 @@ def unpackLRZIP(filename, offset, hasmd5, lrzipmd5, lrzipsize, tempdir=None):
 	if h.hexdigest() == lrzipmd5:
 		md5match = True
 
-	return (tmpdir, md5match)
+	return (tmpdir, md5match, os.stat(filename).st_size)
 
 def unpackZip(filename, offset, cutoff, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
