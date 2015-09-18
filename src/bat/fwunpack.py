@@ -3455,13 +3455,29 @@ def unpackLRZIP(filename, offset, hasmd5, lrzipmd5, lrzipsize, tempdir=None):
 		searchmd5 = tmpmd5.decode('hex')
 		## now open the file to see if the md5 sum can be
 		## found somewhere in it and then test it again
-		## TODO: big file fixes, as this can be horribly inefficient
-		## TODO: continue searching for checksums if the first
-		## one does not match
 		lrzipfile = open(filename, 'rb')
 		lrzipfile.seek(offset)
-		lrzipbytes = lrzipfile.read()
-		res = lrzipbytes.find(searchmd5)
+		## read 1 million bytes
+		lrzipdataread = 1000000
+		lrzipbytes = lrzipfile.read(lrzipdataread)
+		lrzipmd5offset = 0
+		totalread = lrzipdataread
+		lrzdata = ''
+		while lrzipbytes != '':
+			lrzdata += lrzipbytes
+			res = lrzdata.find(searchmd5, lrzipmd5offset)
+			if res != -1:
+				p = subprocess.Popen(['lrzcat'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+				(stanout, stanerr) = p.communicate(lrzdata[:res+16])
+				if p.returncode != 0:
+					continue
+				md5match = True
+				endoflrzip = offset + res + 16
+				lrzipfile.close()
+				return (tmpdir, md5match, endoflrzip)
+			lrzipbytes = lrzipfile.read(lrzipdataread)
+			lrzipmd5offset = totalread - 50
+			totalread += lrzipdataread
 		lrzipfile.close()
 		if res == -1:
 			return None
