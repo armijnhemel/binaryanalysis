@@ -1,3 +1,9 @@
+2015-09-19:
+* prerun.py: allow marker search to work on a chunk of a file
+* bruteforcescan.py: allow the marker search to be run in parallel for the top
+level file, if it is larger than a certain size (hardcoded for now) and it
+does not have a known extension
+
 2015-09-18:
 * fwunpack.py: rework LRZIP unpacking, with more sanity checks (size + MD5),
 allow uncarving from a bigger blob and remove a dependency on processing
