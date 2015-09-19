@@ -92,6 +92,9 @@ def runSetup(setupscan, debug=False):
 	scanres = eval("bat_%s(setupscan['environment'], debug=debug)" % (method))
 	return scanres
 
+def paralleloffsetsearch((filedir, filename, magicscans, optmagicscans, offset, length)):
+	return prerun.genericMarkerSearch(os.path.join(filedir, filename), magicscans, optmagicscans, offset, length)
+
 ## method to filter scans, based on the tags that were found for a
 ## file, plus a list of tags that the scan should skip.
 ## This is done to avoid scans running unnecessarily.
@@ -431,9 +434,10 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 
 		if not knownfile:
 			## scan for markers.
-			tagOffsets = tagKnownExtension(filetoscan)
-			(newtags, offsets) = tagOffsets
-			tags = tags + newtags
+			if offsets == {}:
+				tagOffsets = tagKnownExtension(filetoscan)
+				(newtags, offsets) = tagOffsets
+				tags = tags + newtags
 			if offsets == {}:
 				offsets =  prerun.genericMarkerSearch(filetoscan, magicscans, optmagicscans)
 
@@ -1527,6 +1531,36 @@ def runscan(scans, scan_binary, scandate):
 	tags = []
 	offsets = {}
 	hints = {}
+
+	knownextension = False
+	fileextensions = scan_binary.lower().rsplit('.', 1)
+	if len(fileextensions) == 2:
+		fileextension = fileextensions[1]
+		for unpackscan in scans['unpackscans']:
+			if 'knownfilemethod' in unpackscan:
+				if fileextension in unpackscan['extensions']:
+					knownextension = True
+					break
+
+	if not knownextension:
+		## 20 million bytes. TODO: make configurable
+		offsetcutoff = 20000000
+		if os.stat(scan_binary).st_size > offsetcutoff:
+			offsettasks = []
+			for i in range(0, os.stat(scan_binary).st_size, 100000):
+				offsettasks.append((scantempdir, os.path.basename(scan_binary), magicscans, optmagicscans, max(i-50, 0), 100000+50))
+			pool = multiprocessing.Pool(processes=processamount)
+			res = pool.map(paralleloffsetsearch, offsettasks)
+			pool.terminate()
+
+			for i in res:
+				for j in i:
+					if j in offsets:
+						offsets[j] += i[j]
+					else:
+						offsets[j] = copy.deepcopy(i[j])
+			for i in offsets:
+				offsets[i] = sorted(list(set(offsets[i])))
 
 	scantasks = [(scantempdir, os.path.basename(scan_binary), len(scantempdir), scantempdir, tmpdebug, tags, hints, offsets)]
 
