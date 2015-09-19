@@ -395,7 +395,6 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 							## recursively scan all files in the directory
 							osgen = os.walk(scandir)
 							scanreports = []
-							scantasks = []
 							try:
        								while True:
                 							i = osgen.next()
@@ -419,7 +418,8 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 														scannerhints['knownfile'] = True
 											if "temporary" in tags and diroffset[1] == 0 and diroffset[2] == filesize:
 												leaftags.append('temporary')
-											scantasks.append((i[0], p, len(scandir), tempdir, debug, leaftags, scannerhints, {}))
+											scantask = (i[0], p, len(scandir), tempdir, debug, leaftags, scannerhints, {})
+											scanqueue.put(scantask)
 											relscanpath = "%s/%s" % (i[0][lentempdir:], p)
 											if relscanpath.startswith('/'):
 												relscanpath = relscanpath[1:]
@@ -427,8 +427,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 										except Exception, e:
 											pass
 							except StopIteration:
-        							for s in scantasks:
-									scanqueue.put(s)
+								pass
 							unpackreports[relfiletoscan]['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
 						break
 
@@ -588,7 +587,6 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 						## recursively scan all files in the directory
 						osgen = os.walk(scandir)
 						scanreports = []
-						scantasks = []
 						try:
        							while True:
                 						i = osgen.next()
@@ -612,7 +610,8 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 													scannerhints['knownfile'] = True
 										if "temporary" in tags and diroffset[1] == 0 and diroffset[2] == filesize:
 											leaftags.append('temporary')
-										scantasks.append((i[0], p, len(scandir), tempdir, debug, leaftags, scannerhints, {}))
+										scantask = (i[0], p, len(scandir), tempdir, debug, leaftags, scannerhints, {})
+										scanqueue.put(scantask)
 										relscanpath = "%s/%s" % (i[0][lentempdir:], p)
 										if relscanpath.startswith('/'):
 											relscanpath = relscanpath[1:]
@@ -620,8 +619,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 									except Exception, e:
 										pass
 						except StopIteration:
-        						for s in scantasks:
-								scanqueue.put(s)
+							pass
 						unpackreports[relfiletoscan]['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
 
 		unpackreports[relfiletoscan]['tags'] = tags
