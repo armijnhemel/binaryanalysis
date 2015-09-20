@@ -438,7 +438,9 @@ BAT uses a brute force approach for analysing a binary. It assumes no prior
 knowledge of how a binary is constructed or what is inside the binary. Instead
 it tries to determine what is inside by applying a wide range of methods, such
 as looking for known identifiers of file systems and compressed files and
-running external tools to find contents in the binary.
+running external tools to find contents in the binary. It should be noted that
+there are possibilities to add more information to the system to speed up
+scanning.
 
 During scanning of a file the following steps are taken:
 
@@ -482,10 +484,16 @@ first run to see if the file is actually a gzip file, without looking at any
 other markers, or trying other scans first.
 
 As a further optimization there is one method that is run for ZIP-files
-(including Android APK files and Java JAR) before the generic marker search:
-large firmwares tend to be distributed as ZIP-files. By quickly checking if a
-file is a complete ZIP-file time can be saved. This method will be removed in
-the near future and rewritten to a similar method as is used for gzip.
+(including Android APK files and Java JAR, EAR and WAR files) before the
+generic marker search: large firmwares tend to be distributed as ZIP-files. By
+quickly checking if a file is a complete ZIP-file time can be saved. This
+method will be removed in the near future and rewritten to a similar method as
+is used for gzip.
+
+If multiple CPUs are available and the top level file is larger than a certain
+limit (currently hardcoded to 20 million bytes) and does not have a known
+extension as described above the marker search will be done in parallel as a
+speed up.
 
 \subsection{Pre-run checks}
 
@@ -546,8 +554,8 @@ systems), SquashFS (several variants), romfs, YAFFS2 (specific variants),
 ubifs (not on all systems)
 \item compressed files and executable formats: 7z, ar, ARJ, BASE64, BZIP2,
 compressed Flash, CAB, compress, CPIO, EXE (specific compression methods only),
-GZIP, InstallShield (old versions), LRZIP, LZIP, LZMA, LZO, pack200, RAR, RPM,
-RZIP, serialized Java, TAR, UPX, XZ, ZIP
+GZIP, InstallShield (old versions), LRZIP, LZIP, LZMA, LZO, MSI, pack200, RAR,
+RPM, RZIP, serialized Java, TAR, UPX, XZ, ZIP (including APK, EAR, JAR and WAR)
 \item media files: GIF, ICO, PDF, PNG, WOFF, CHM
 \end{itemize}
 
@@ -595,9 +603,6 @@ noscan      = text:xml:graphics:pdf:compressed:audio:video
 description = Determine presence of iptables
 enabled     = yes
 \end{verbatim}
-
-In earlier versions of BAT (16 and earlier) the term \texttt{program} was used
-instead of \texttt{leaf}.
 
 The current leaf scans that are available in BAT are:
 
@@ -647,6 +652,7 @@ Aggregators take all results of the entire scan as input.
 Currently the following aggregators are available:
 
 \begin{itemize}
+\item advanced identifier search and classification
 \item aggregating result of individual Java class files in case they come from
 the same JAR file.
 \item cleaning up/fixing results of duplicate files: often firmwares contain
