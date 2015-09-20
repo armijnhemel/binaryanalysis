@@ -455,7 +455,7 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 			## jffs2 nodes are all 4 byte aligned according to
 			## http://www.sourceware.org/jffs2/jffs2-html/node3.html
 			jffs2rest = 4 - jffs2size%4
-			if jffs2size + jffs2rest == filesize:
+			if offset == 0 and jffs2size + jffs2rest == filesize:
 				newtags.append('jffs2')
 				jffs2size = filesize
 			diroffsets.append((jffs2dir, offset, jffs2size))
