@@ -3,6 +3,9 @@
 * bruteforcescan.py: allow the marker search to be run in parallel for the top
 level file, if it is larger than a certain size (hardcoded for now) and it
 does not have a known extension
+* bruteforcescan.py: don't build a list of scan tasks first, but put tasks
+into the scanning queue immediately, saving memory and making results
+available a very very tiny bit earlier
 
 2015-09-18:
 * fwunpack.py: rework LRZIP unpacking, with more sanity checks (size + MD5),
