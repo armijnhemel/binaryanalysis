@@ -1475,6 +1475,7 @@ def runscan(scans, scan_binary, scandate):
 	## not be run in parallel (which will be for the whole category of scans) it is
 	## possible to have partial parallel scanning.
 
+	## first see if unpacking should be done in parallel
 	parallel = True
 	if scans['batconfig']['multiprocessing']:
 		if False in map(lambda x: x['parallel'], scans['unpackscans'] + scans['prerunscans']):
@@ -1648,10 +1649,11 @@ def runscan(scans, scan_binary, scandate):
 	poolresult = []
 	tagdict = {}
 	finalscans = []
+
+	## determine whether or not the leaf scans should be run in parallel
+	parallel = True
 	if scans['leafscans'] != []:
-		if scans['batconfig']['multiprocessing']:
-			parallel = True
-		else:
+		if not scans['batconfig']['multiprocessing']:
 			parallel = False
 
 		tmpdebug=False
@@ -1711,11 +1713,9 @@ def runscan(scans, scan_binary, scandate):
 		leaftasks_tmp.sort(key=lambda x: x[-1], reverse=True)
 		leaftasks_tmp = map(lambda x: x[:1] + (filterScans(finalscans, x[1]),) + x[1:-1] + (topleveldir, tmpdebug, unpacktempdir), leaftasks_tmp)
 
-		if scans['batconfig']['multiprocessing']:
+		if parallel:
 			if False in map(lambda x: x['parallel'], finalscans):
 				parallel = False
-		else:
-			parallel = False
 		if debug:
 			if debugphases == []:
 				parallel = False
