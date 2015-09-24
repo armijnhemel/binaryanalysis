@@ -798,10 +798,6 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	if dynamiccount == 1:
 		dynamic = True
 
-	## This does not work well, for example for Linux kernel modules
-	#if thisheadersize != startprogramheader:
-	#	return newtags
-
 	## This does not work well for some Linux kernel modules as well as other files
 	## (architecture dependent?)
 	## One architecture where this sometimes seems to happen is ARM.
@@ -813,9 +809,28 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		elffile = open(filename, 'rb')
 		elffile.seek(-28, os.SEEK_END)
 		elfbytes = elffile.read()
-		elffile.close()
 		if elfbytes == "~Module signature appended~\n":
-			pass
+			## The metadata of the signing data can be found in 12 bytes
+			## preceding the 'magic'
+			## According to 'scripts/sign-file' in the Linux kernel
+			## the last 4 bytes are the size of the signature data
+			## three bytes before that are 0x00
+			## The byte before that is the length of the key identifier
+			## The byte before that is the length of the "signer's name"
+			elffile.seek(-40, os.SEEK_END)
+			totalsiglength = 40
+			elfbytes = elffile.read(12)
+			signaturelength = struct.unpack('>I', elfbytes[-4:])[0]
+			totalsiglength += signaturelength
+			keyidentifierlen = ord(elfbytes[4])
+			signernamelen = ord(elfbytes[3])
+			totalsiglength += keyidentifierlen
+			totalsiglength += signernamelen
+			if totalsiglength + totalsize == os.stat(filename).st_size:
+				newtags.append("elf")
+		elffile.close()
+
+	if not "elf" in newtags:
 		## on some architectures we can probably look at the starting point
 		## of the last section, then use the offset value there and see if the offset
 		## of the last section, plus the size of the last section == file size
