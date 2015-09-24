@@ -3166,39 +3166,39 @@ def searchUnpackRZIP(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		return ([], blacklist, [], hints)
 	if offsets['rzip'][0] != 0:
 		return ([], blacklist, [], hints)
+	if os.stat(filename).st_size < 10:
+		return ([], blacklist, [], hints)
 	diroffsets = []
 	tags = []
 	offset = 0
+
+	rzipfile = open(filename, 'rb')
+	rzipfile.seek(0)
+	rzipdata = rzipfile.read(10)
+	rzipfile.close()
+
+	rzipsize = struct.unpack('>L', rzipdata[6:10])[0]
 
 	blacklistoffset = extractor.inblacklist(offset, blacklist)
 	if blacklistoffset != None:
 		return (diroffsets, blacklist, tags, hints)
 
 	tmpdir = dirsetup(tempdir, filename, "rzip", 1)
-	res = unpackRZIP(filename, offset, tmpdir)
+	res = unpackRZIP(filename, offset, rzipsize, tmpdir)
 	if res != None:
-		(rzipdir, rzipsize) = res
-		diroffsets.append((rzipdir, offset, rzipsize))
-		blacklist.append((offset, offset + rzipsize))
-		tags.append("compressed")
-		tags.append("rzip")
+		rzipdir = res
+		diroffsets.append((rzipdir, offset, 0))
+		#blacklist.append((offset, offset + unpackrzipsize))
+		#if offset == 0:
+		#	tags.append("compressed")
+		#	tags.append("rzip")
 	else:
 		## cleanup
 		os.rmdir(tmpdir)
 
 	return (diroffsets, blacklist, tags, hints)
 
-def unpackRZIP(filename, offset, tempdir=None):
-	## sanity check
-	rzipfile = open(filename, 'rb')
-	rzipfile.seek(0)
-	rzipdata = rzipfile.read(10)
-	rzipfile.close()
-
-	if len(rzipdata) < 10:
-		return
-	rzipsize = struct.unpack('>L', rzipdata[6:10])[0]
-
+def unpackRZIP(filename, offset, rzipsize, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 
 	tmpfile = tempfile.mkstemp(dir=tempdir, suffix='.rz')
@@ -3212,7 +3212,7 @@ def unpackRZIP(filename, offset, tempdir=None):
 		os.unlink(tmpfile[1])
 		return None
 	if os.stat(tmpfile[1][:-3]).st_size == rzipsize:
-		return (tmpdir, os.stat(filename).st_size)
+		return os.stat(filename).st_size
 	else:
 		os.unlink(tmpfile[1][:-3])
 		return None
