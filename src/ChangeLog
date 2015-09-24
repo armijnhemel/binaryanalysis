@@ -1,3 +1,10 @@
+2015-09-24:
+* bat-scan.py: add --version option
+* prerun.py: correctly tag Linux kernel modules that have a signature
+* prerun.py: remove verifyGzip as it is no longer needed since gzip unpacking
+has become a lot more efficient. Also removes another instance of processing
+English language output of an external command.
+
 2015-09-19:
 * prerun.py: allow marker search to work on a chunk of a file
 * bruteforcescan.py: allow the marker search to be run in parallel for the top
