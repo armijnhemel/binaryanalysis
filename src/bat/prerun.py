@@ -809,6 +809,13 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	if totalsize == os.stat(filename).st_size:
 		newtags.append("elf")
 	else:
+		## If it is a signed kernel module then the key is appended to the ELF data
+		elffile = open(filename, 'rb')
+		elffile.seek(-28, os.SEEK_END)
+		elfbytes = elffile.read()
+		elffile.close()
+		if elfbytes == "~Module signature appended~\n":
+			pass
 		## on some architectures we can probably look at the starting point
 		## of the last section, then use the offset value there and see if the offset
 		## of the last section, plus the size of the last section == file size
