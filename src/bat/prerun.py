@@ -169,35 +169,6 @@ def verifyJPEG(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fa
 	newtags.append("graphics")
 	return newtags
 
-## Check to verify if a file is a gzip compressed file. This requires
-## launching an external process, possibly for a big file, so first run a
-## few checks to make sure to only do that in promising cases.
-def verifyGzip(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
-	newtags = []
-	if "text" in tags or "graphics" in tags or "compressed" in tags or "audio" in tags:
-		return newtags
-	if not offsets.has_key('gzip'):
-		return newtags
-	## if gzip identifier 0x1f 0x8b 0x08 happens to be in there multiple times
-	## it might be that there are several gzip files that are concatenated, without
-	## padding or extra data and it can't easily be seen without full unpacking,
-	## so move on for now.
-	if len(offsets['gzip']) != 1:
-		return newtags
-	if offsets['gzip'][0] != 0:
-		return newtags
-	p = subprocess.Popen(['gunzip', '-t', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		return newtags
-	## possibly multiple gzips in this file, or gzip with trailing data
-	if "trailing garbage ignored" in stanerr:
-		return newtags
-	## the file contains one or more gzip archives
-	newtags.append("gzip")
-	newtags.append("compressed")
-	return newtags
-
 ## Verify if this is an Android resources file. These files can be found in
 ## Android APK archives and are always called "resources.arsc".
 ## There are various valid types of resource files, which are documented here:
