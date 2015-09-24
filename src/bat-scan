@@ -17,6 +17,7 @@ import bat.bruteforcescan
 import datetime
 
 def main(argv):
+	batversion = 23
 	config = ConfigParser.ConfigParser()
         parser = OptionParser()
 	parser.add_option("-b", "--binary", action="store", dest="fw", help="path to binary file", metavar="FILE")
@@ -24,8 +25,12 @@ def main(argv):
 	parser.add_option("-o", "--outputfile", action="store", dest="outputfile", help="path to output file", metavar="FILE")
 	parser.add_option("-d", "--directory", action="store", dest="fwdir", help="path to directory with files to be scanned", metavar="DIR")
 	parser.add_option("-u", "--outputdir", action="store", dest="outdir", help="path to directory to write results to", metavar="DIR")
+	parser.add_option("-v", "--version", action="store_true", dest="version", help="print version of BAT", metavar="VERSION")
 
 	(options, args) = parser.parse_args()
+	if options.version:
+		print "Binary Analysis Tool %d" % batversion
+		sys.exit(0)
 	if options.cfg != None:
 		try:
         		configfile = open(options.cfg, 'r')
@@ -154,6 +159,8 @@ def main(argv):
 				shutil.rmtree(tempdir)
 			except Exception, e:
 				pass
+		print "done", scanfile, datetime.datetime.utcnow().isoformat()
+		sys.stdout.flush()
 
 if __name__ == "__main__":
         main(sys.argv)
