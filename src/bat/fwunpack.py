@@ -3212,7 +3212,7 @@ def unpackRZIP(filename, offset, rzipsize, tempdir=None):
 		os.unlink(tmpfile[1])
 		return None
 	if os.stat(tmpfile[1][:-3]).st_size == rzipsize:
-		return os.stat(filename).st_size
+		return tmpdir
 	else:
 		os.unlink(tmpfile[1][:-3])
 		return None
