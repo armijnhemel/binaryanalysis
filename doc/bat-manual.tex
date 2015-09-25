@@ -189,6 +189,11 @@ compressed) with scan results. Since identical files might be present the
 results are stored per checksum, not file name.
 \item \texttt{images} - directory containing various images with results of
 scans (depending on which scans are enabled), per checksum
+\item \texttt{offsets} - directory with gzip compressed Python pickle files
+containing the offsets of possible file systems, compressed files and media
+files found in the file. This directory as well as its files will only be
+created if \texttt{dumpoffsets} is set to \texttt{yes} in the global
+configuration.
 \item \texttt{reports} - directory containing HTML and (optionally) JSON
 reports, per checksum
 \end{itemize}
@@ -491,9 +496,10 @@ method will be removed in the near future and rewritten to a similar method as
 is used for gzip.
 
 If multiple CPUs are available and the top level file is larger than a certain
-limit (currently hardcoded to 20 million bytes) and does not have a known
-extension as described above the marker search will be done in parallel as a
-speed up.
+limit and does not have a known extension as described above the marker search
+will be done in parallel as a speed up. The limit can be set in the global
+configuration using the variable \texttt{markersearchminimum}. The default
+value for this variable is 20 million bytes.
 
 \subsection{Pre-run checks}
 
@@ -595,39 +601,40 @@ Leaf scans can be recognized in the configuration because their type is set to
 \texttt{leaf}, for example:
 
 \begin{verbatim}
-[iptables]
+[markers]
 type        = leaf
 module      = bat.checks
-method      = searchIptables
+method      = searchMarker
 noscan      = text:xml:graphics:pdf:compressed:audio:video
-description = Determine presence of iptables
+description = Determine presence of markers of several open source programs
 enabled     = yes
 \end{verbatim}
 
 The current leaf scans that are available in BAT are:
 
 \begin{itemize}
-\item fast string searches: dproxy, ez-ipupdate, iptables, iproute, libusb,
-Linux kernel, loadlin, RedBoot, U-Boot, vsftpd, wireless-tools, wpa-supplicant
+\item marker scan searching for signature scans of a few open source programs
+(dproxy, ez-ipupdate, hostapd, iptables, iproute, libusb, loadlin, RedBoot,
+U-Boot, vsftpd, wireless-tools, wpa-supplicant)
 \item advanced search mode using ranking of strings, function names, variable
 names, field names and Java class names using a database (for ELF and Java,
 both regular JVM and Dalvik)
 \item BusyBox version number
 \item dynamic library dependencies (ELF files only)
+\item file architecture (ELF files only)
 \item Linux kernel module license (Linux kernel modules only)
 \item Linux kernel version number, plus detection for several subsystems
 \item PDF meta data extraction
-\item architecture
 \item presence of URLs indicating an open source license
 \item presence of URLs indicating forges/collaborative software development
 sites (SourceForge, GitHub, etcetera)
 \end{itemize}
 
 The fast string searches are meant for quick sweep scanning only. They have
-their limits, can report false positives or not identify a binary. They should
-only be used to signal that further inspection is necessary. For a thorough
-investigation the advanced search mode should be used. These scans are likely
-to be disabled in the future in the default configuration.
+their limits, can report false positives or fail to identify a binary. They
+should only be used to signal that further inspection is necessary. For a
+thorough investigation the advanced search mode should be used. These scans are
+likely to be disabled in the future in the default configuration.
 
 \subsection{Aggregators}
 
@@ -939,8 +946,8 @@ There is a special hook for leaf scans to run setup code for the scan:
 setup     = nameOfSetupMethod
 \end{verbatim}
 
-In the standard distribution of BAT the files \texttt{bat/identifier.py} and
-\texttt{bat/licenseversion.py} contain very extensive examples of setup hooks.
+The files \texttt{bat/identifier.py} and \texttt{bat/licenseversion.py} contain
+very extensive examples of setup hooks.
 
 \subsection{Database configuration}
 
@@ -982,7 +989,7 @@ postgresql_port     = 5432
 
 Depending on the version of \texttt{python-psycopg2} it could be that
 \texttt{postgresql\_host} and \texttt{postgresql\_port} both have to be
-specified.
+specified. On CentOS 6.x both have to be set.
 
 \section{Analyser internals}
 
@@ -1048,11 +1055,12 @@ Linux kernel images and Linux kernel modules.
 \item \texttt{kernelsymbols.py} is used for generating dependency graphs for
 Linux kernel modules and indicating any possible license issues of exported
 symbols and declared licenses.
-\item \texttt{licenseversion.py} is responsible for getting version and
-license information for uniquely identified strings and function names (and in
-the future variable names too), as well as optionally pruning the result set
-to only include relevant versions. It also contains code to aggregate results
-of Java class files from a JAR file and assign results to the JAR file.
+\item \texttt{licenseversion.py} gets version and licensing information for
+uniquely identified strings and function names (and in the future variable names
+too) from the database. It can optionally prune the result set to only include
+relevant versions. It also contains code to aggregate results of Java class
+files from a JAR file and assign results to the JAR file instead of the
+individual class files.
 \item \texttt{prerun.py} contains scans that are run in the pre-run phase for
 correctly tagging files as early in the process as possible.
 \item \texttt{prunefiles.py} can be used to remove files with a certain tag
@@ -1063,7 +1071,7 @@ example: detect an initramfs in the Linux kernel and rename the temporary file
 to \texttt{initramfs}.
 \item \texttt{security.py} contains several security scans.
 \item \texttt{simpleprettyprint.py} has the default XML prettyprinter.
-\item \texttt{unpackrpm.py} has code specific to handling RPM archives.
+\item \texttt{unpackrpm.py} has code specifically for unpacking RPM archives.
 \end{itemize}
 
 \subsection{Pre-run methods}
