@@ -372,7 +372,6 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 						else:
 							newenv['TEMPLATE'] = template
 					try:
-
 						exec "from %s import %s as bat_%s" % (module, method, method)
 					except Exception, e:
 						continue
