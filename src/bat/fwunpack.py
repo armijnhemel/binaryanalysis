@@ -798,11 +798,11 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 	scanoffsets = []
 	wholefile = True
 	newtags = []
+	candidates = {}
 	if blacklist != []:
 		if 'yaffs2' in offsets:
 			if offsets['yaffs2'] == 0:
 				return (diroffsets, blacklist, [], hints)
-			candidates = {}
 			chunksandspares = [(512,16),(1024,32),(2048,64),(4096,128),(8192,256)]
 			yaffs2file = open(filename, 'rb')
 			for cs in chunksandspares:
@@ -893,6 +893,7 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 				startoffset = offset
 				prevoffset = offset
 		return (diroffsets, blacklist, [], hints)
+	return (diroffsets, blacklist, [], hints)
 
 def unpackYaffs(scanfile, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
