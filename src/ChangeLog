@@ -7,6 +7,8 @@ configured
 scan for the top level file configurable
 * bat-scan: add sanity check for configuration file
 * fwunpack.py: fixes for end of line marker in the PDF xref section
+* bruteforcescan.py: import (most) prerun scans and unpack scans once per
+thread instead of once per file
 
 2015-09-24:
 * bat-scan.py: add --version option
