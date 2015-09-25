@@ -222,14 +222,14 @@ def tagKnownExtension(filename):
 	return (tags, offsets)
 
 ## scan a single file, possibly unpack and recurse
-def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, prerunmagic, magicscans, optmagicscans, processid, hashdict, blacklistedfiles, llock, template, unpacktempdir, outputhash, cursor, sourcecodequery):
+def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, prerunmagic, magicscans, optmagicscans, processid, hashdict, blacklistedfiles, llock, template, unpacktempdir, tempdir, outputhash, cursor, sourcecodequery, dumpoffsets, offsetdir):
+	lentempdir = len(tempdir)
 	while True:
 		## reset the reports, blacklist, offsets and tags for each new scan
 		leaftasks = []
 		unpackreports = {}
 		blacklist = []
-		(dirname, filename, lenscandir, tempdir, debug, tags, scanhints, offsets) = scanqueue.get()
-		lentempdir = len(tempdir)
+		(dirname, filename, lenscandir, debug, tags, scanhints, offsets) = scanqueue.get()
 
 		## absolute path of the file in the file system (so including temporary dir)
 		filetoscan = os.path.join(dirname, filename)
@@ -418,7 +418,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 														scannerhints['knownfile'] = True
 											if "temporary" in tags and diroffset[1] == 0 and diroffset[2] == filesize:
 												leaftags.append('temporary')
-											scantask = (i[0], p, len(scandir), tempdir, debug, leaftags, scannerhints, {})
+											scantask = (i[0], p, len(scandir), debug, leaftags, scannerhints, {})
 											scanqueue.put(scantask)
 											relscanpath = "%s/%s" % (i[0][lentempdir:], p)
 											if relscanpath.startswith('/'):
@@ -439,6 +439,16 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 				tags = tags + newtags
 			if offsets == {}:
 				offsets =  prerun.genericMarkerSearch(filetoscan, magicscans, optmagicscans)
+
+		if dumpoffsets:
+			## write pickles with offsets to disk
+			offsetpicklename = os.path.join(offsetdir, '%s-offsets.pickle.gz' % filehash)
+			try:
+				os.stat(offsetpicklename)
+			except:
+				picklefile = gzip.open(offsetpicklename, 'wb')
+				cPickle.dump(offsets, picklefile)
+				picklefile.close()
 
 		if "encrypted" in tags:
 			leaftasks.append((filetoscan, tags, blacklist, filehash, filesize))
@@ -610,7 +620,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 													scannerhints['knownfile'] = True
 										if "temporary" in tags and diroffset[1] == 0 and diroffset[2] == filesize:
 											leaftags.append('temporary')
-										scantask = (i[0], p, len(scandir), tempdir, debug, leaftags, scannerhints, {})
+										scantask = (i[0], p, len(scandir), debug, leaftags, scannerhints, {})
 										scanqueue.put(scantask)
 										relscanpath = "%s/%s" % (i[0][lentempdir:], p)
 										if relscanpath.startswith('/'):
@@ -869,6 +879,14 @@ def readconfig(config):
 				batconf['scansourcecode'] = False
 		except:
 			batconf['scansourcecode'] = False
+		try:
+			dumpoffsets = config.get(section, 'dumpoffsets')
+			if dumpoffsets == 'yes':
+				batconf['dumpoffsets'] = True
+			else:
+				batconf['dumpoffsets'] = False
+		except:
+			batconf['dumpoffsets'] = False
 		try:
 			packconfig = config.get(section, 'cleanup')
 			if packconfig == 'yes':
@@ -1561,7 +1579,7 @@ def runscan(scans, scan_binary, scandate):
 			for i in offsets:
 				offsets[i] = sorted(list(set(offsets[i])))
 
-	scantasks = [(scantempdir, os.path.basename(scan_binary), len(scantempdir), scantempdir, tmpdebug, tags, hints, offsets)]
+	scantasks = [(scantempdir, os.path.basename(scan_binary), len(scantempdir), tmpdebug, tags, hints, offsets)]
 
 	template = scans['batconfig']['template']
 
@@ -1572,6 +1590,10 @@ def runscan(scans, scan_binary, scandate):
 	outputhash = scans['batconfig'].get('reporthash', 'sha256')
 	if outputhash == 'crc32' or outputhash == 'tlsh':
 		outputhash = 'sha256'
+
+	offsetdir = os.path.join(topleveldir, "offsets")
+	if scans['batconfig']['dumpoffsets']:
+		os.makedirs(offsetdir)
 
 	## use a queue made with a manager to avoid some issues, see:
 	## http://docs.python.org/2/library/multiprocessing.html#pipes-and-queues
@@ -1608,7 +1630,7 @@ def runscan(scans, scan_binary, scandate):
 			cursor = None
 			sourcecodequery = None
 			scansourcecode = False
-		p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, blacklistedfiles, lock, template, unpacktempdir, outputhash, cursor, sourcecodequery))
+		p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, blacklistedfiles, lock, template, unpacktempdir, scantempdir, outputhash, cursor, sourcecodequery, scans['batconfig']['dumpoffsets'], offsetdir))
 		processpool.append(p)
 		p.start()
 
