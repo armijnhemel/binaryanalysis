@@ -17,16 +17,16 @@ import xml.dom.minidom
 
 ## generic searcher for certain marker strings
 ## TODO: implement overlap between subsequent buffer reads
-def genericSearch(path, markerDict, blacklist=[], unpacktempdir=None):
+def genericSearch(filename, markerDict, blacklist=[], unpacktempdir=None):
 	results = []
         try:
 		## first see if the entire file has been blacklisted
-		filesize = os.stat(path).st_size
+		filesize = os.stat(filename).st_size
 		carved = False
 		if blacklist != []:
 			if extractor.inblacklist(0, blacklist) == filesize:
 				return None
-			datafile = open(path, 'rb')
+			datafile = open(filename, 'rb')
 			lastindex = 0
 			databytes = ""
 			datafile.seek(lastindex)
@@ -55,9 +55,9 @@ def genericSearch(path, markerDict, blacklist=[], unpacktempdir=None):
 			os.fdopen(tmpfile[0]).close()
 			scanfile = tmpfile[1]
 			carved = True
-			path = tmpfile[1]
+			filename = tmpfile[1]
 
-		datafile = open(path, 'rb')
+		datafile = open(filename, 'rb')
 		databuffer = []
 		offset = 0
 		datafile.seek(offset)
@@ -74,7 +74,7 @@ def genericSearch(path, markerDict, blacklist=[], unpacktempdir=None):
 			offset = offset + len(databuffer)
 		datafile.close()
 		if carved:
-			os.unlink(path)
+			os.unlink(filename)
         except Exception, e:
 		print >>sys.stderr, e
                 return None
@@ -88,11 +88,11 @@ def genericSearch(path, markerDict, blacklist=[], unpacktempdir=None):
 ## the dynamic linker configuration on the device. With some mixing and matching it is
 ## nearly always to determine which library in which path is used, since most installations
 ## don't change the default search paths.
-def searchDynamicLibs(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+def searchDynamicLibs(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	if not 'elf' in tags:
 		return
 	libs = []
-	p = subprocess.Popen(['readelf', '-d', "%s" % (path,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['readelf', '-d', "%s" % (filename,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
                	return
@@ -116,10 +116,10 @@ def dynamicLibsPrettyPrint(res, root, scanenv={}):
 ## This method uses readelf to determine the architecture of the executable file.
 ## This is necessary because sometimes leftovers from different products (and
 ## different architectures) can be found in one firmware.
-def scanArchitecture(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+def scanArchitecture(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	if not 'elf' in tags:
 		return
-	p = subprocess.Popen(['readelf', '-h', "%s" % (path,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['readelf', '-h', "%s" % (filename,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		return
@@ -127,128 +127,68 @@ def scanArchitecture(path, tags, blacklist=[], scanenv={}, scandebug=False, unpa
 		if "Machine:" in line:
 			return (['architecture'], line.split(':')[1].strip())
 
-def searchLoadLin(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
-	markerStrings = {'loadlin': [ 'Ooops..., size of "setup.S" has become too long for LOADLIN,'
+## search markers for various open source programs
+## This search is not accurate, but might come in handy in some situations
+def searchMarker(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+	markerStrings = {
+             'loadlin': [ 'Ooops..., size of "setup.S" has become too long for LOADLIN,'
 			, 'LOADLIN started from $'
-			]}
-	res = genericSearch(path, markerStrings, blacklist)
-	if res != None:
-		return (['loadlin'], True)
-
-def searchIptables(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
-	markerStrings = {'iptables':[ 'iptables who? (do you need to insmod?)'
+			],
+	     'iptables':[ 'iptables who? (do you need to insmod?)'
 			, 'Will be implemented real soon.  I promise ;)'
 			, 'can\'t initialize iptables table `%s\': %s'
-			]}
-	res = genericSearch(path, markerStrings, blacklist)
-	if res != None:
-		return (['iptables'], True)
-
-def searchDproxy(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
-	markerStrings = {'dproxy': [ '# dproxy monitors this file to determine when the machine is'
+			],
+	     'dproxy':  [ '# dproxy monitors this file to determine when the machine is'
 			, '# If you want dproxy to log debug info specify a file here.'
-			]}
-	res = genericSearch(path, markerStrings, blacklist)
-	if res != None:
-		return (['dproxy'], True)
-
-def searchEzIpupdate(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
-	markerStrings = {'ez-ipupdate': [ 'ez-ipupdate Version %s, Copyright (C) 1998-'
+			],
+	     'ez-ipupdate': [ 'ez-ipupdate Version %s, Copyright (C) 1998-'
 			, '%s says that your IP address has not changed since the last update'
 			, 'you must provide either an interface or an address'
-			]}
-	res = genericSearch(path, markerStrings, blacklist)
-	if res != None:
-		return (['ez-ipupdate'], True)
-
-def searchLibusb(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
-	markerStrings = {'libusb': [ 'Check that you have permissions to write to %s/%s and, if you don\'t, that you set up hotplug (http://linux-hotplug.sourceforge.net/) correctly.'
+			],
+	     'libusb':  [ 'Check that you have permissions to write to %s/%s and, if you don\'t, that you set up hotplug (http://linux-hotplug.sourceforge.net/) correctly.'
 			, 'usb_os_find_busses: Skipping non bus directory %s'
 			, 'usb_os_init: couldn\'t find USB VFS in USB_DEVFS_PATH'
-			]}
-	res = genericSearch(path, markerStrings, blacklist)
-	if res != None:
-		return (['libusb'], True)
-
-def searchVsftpd(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
-	markerStrings = {'vsftpd': [ 'vsftpd: version'
+			],
+	     'vsftpd':  [ 'vsftpd: version'
 			, '(vsFTPd '
 			, 'VSFTPD_LOAD_CONF'
 			, 'run two copies of vsftpd for IPv4 and IPv6'
-			]}
-
-	res = genericSearch(path, markerStrings, blacklist)
-	if res != None:
-		return (['vsftpd'], True)
-
-def searchHostapd(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
-	markerStrings = {'hostapd': [ 'hostapd v'
-			]}
-
-	res = genericSearch(path, markerStrings, blacklist)
-	if res != None:
-		return (['hostapd'], True)
-
-def searchWpaSupplicant(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
-	markerStrings = {'wpasupplicant': [ 'wpa_supplicant v'
-			]}
-
-	res = genericSearch(path, markerStrings, blacklist)
-	if res != None:
-		return (['wpasupplicant'], True)
-
-def searchIproute(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
-	markerStrings = {'iproute2':[ 'Usage: tc [ OPTIONS ] OBJECT { COMMAND | help }'
+			],
+	     'hostapd': [ 'hostapd v'],
+	     'wpasupplicant': [ 'wpa_supplicant v'],
+	     'iproute2':[ 'Usage: tc [ OPTIONS ] OBJECT { COMMAND | help }'
 			, 'tc utility, iproute2-ss%s'
 			, 'Option "%s" is unknown, try "tc -help".'
-			]}
-
-	res = genericSearch(path, markerStrings, blacklist)
-	if res != None:
-		return (['iproute2'], True)
-
-def searchWirelessTools(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
-	markerStrings = {'wireless-tools': [ "Driver has no Wireless Extension version information."
+			],
+	     'wireless-tools': [ "Driver has no Wireless Extension version information."
 			, "Wireless Extension version too old."
 			, "Wireless-Tools version"
 			, "Wireless Extension, while we are using version %d."
 			, "Currently compiled with Wireless Extension v%d."
-       	                ]}
-
-	res = genericSearch(path, markerStrings, blacklist)
-	if res != None:
-		return (['wireless-tools'], True)
-
-def searchRedBoot(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
-	markerStrings = {'redboot': ["Display RedBoot version information"]}
-
-	res = genericSearch(path, markerStrings, blacklist)
-	if res != None:
-		return (['redboot'], True)
-
-def searchUBoot(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
-        markerStrings = {'uboot': [ "run script starting at addr"
+       	                ],
+	     'redboot': ["Display RedBoot version information"],
+             'uboot': [ "run script starting at addr"
 			, "Hit any key to stop autoboot: %2d"
 			, "## Binary (kermit) download aborted"
 			, "## Ready for binary (ymodem) download "
 			]}
 
-	res = genericSearch(path, markerStrings, blacklist)
+	res = genericSearch(filename, markerStrings, blacklist)
 	if res != None:
-		return (['uboot'], True)
+		return (res, True)
 
 ## What actually do these dependencies mean?
 ## Are they dependencies of the installer itself, or of the programs that are
 ## installed by the installer?
-def searchWindowsDependencies(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+def searchWindowsDependencies(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	## first determine if we are dealing with a MS Windows executable
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
-	mstype = ms.file(path)
+	mstype = ms.file(filename)
 	ms.close()
 	if not 'PE32 executable for MS Windows' in mstype and not "PE32+ executable for MS Windows" in mstype:
                 return None
-	deps = extractor.searchAssemblyDeps(path)
+	deps = extractor.searchAssemblyDeps(filename)
 	if deps == None:
 		return None
 	if deps == []:
@@ -260,14 +200,14 @@ def xmlPrettyPrintWindowsDeps(res, root, scanenv={}):
 	pass
 
 ## method to extract meta information from PDF files
-def scanPDF(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+def scanPDF(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	## Only consider whole PDF files. If anything has been carved from
 	## it, skip it. Blacklists are a good indicator.
 	if blacklist != []:
 		return None
 	if not 'pdf' in tags:
 		return None
-	p = subprocess.Popen(['pdfinfo', "%s" % (path,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['pdfinfo', "%s" % (filename,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
                	return
@@ -318,7 +258,7 @@ def pdfPrettyPrint(res, root, scanenv={}):
 ######################################
 ## This should only be used as an indicator for further investigation,
 ## never as proof that a binary is actually licensed under a license!
-def scanLicenses(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+def scanLicenses(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	licenseidentifiers = {}
 
 	## identifiers for any GNU license (could apply to multiple licenses)
@@ -374,7 +314,7 @@ def scanLicenses(path, tags, blacklist=[], scanenv={}, scandebug=False, unpackte
 	## identifiers specifically for ICU
 	licenseidentifiers['ICU'] = ["http://source.icu-project.org/repos/icu/icu/trunk/license.html"]
 
-	licenseresults = genericSearch(path, licenseidentifiers, blacklist)
+	licenseresults = genericSearch(filename, licenseidentifiers, blacklist)
 
 	if licenseresults != None:
 		return (['licenses'], licenseresults)
@@ -391,7 +331,7 @@ def licensesPrettyPrint(res, root, scanenv={}):
 ## scan for mentions of several forges
 ## Some of the URLs of the forges no longer work or are redirected, but they
 ## might still pop up in binaries.
-def scanForges(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+def scanForges(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	forgeidentifiers = {}
 
 	forgeidentifiers['sourceforge.net'] = ["sourceforge.net"]
@@ -414,7 +354,7 @@ def scanForges(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktemp
 	## http://git.fedoraproject.org/git/
 	## https://fedorahosted.org/
 
-	forgeresults = genericSearch(path, forgeidentifiers, blacklist)
+	forgeresults = genericSearch(filename, forgeidentifiers, blacklist)
 
 	if forgeresults != None:
 		return (['forges'], forgeresults)
