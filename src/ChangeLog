@@ -1,3 +1,13 @@
+2015-09-25:
+* checks.py: merge all marker searches for specific programs into one method
+to avoid reading a file X times
+* bruteforcescan.py: allow dumping of offsets into a Python pickle if
+configured
+* bruteforcescan.py: make minimum threshold of parallel generic marker search
+scan for the top level file configurable
+* bat-scan: add sanity check for configuration file
+* fwunpack.py: fixes for end of line marker in the PDF xref section
+
 2015-09-24:
 * bat-scan.py: add --version option
 * prerun.py: correctly tag Linux kernel modules that have a signature
