@@ -411,8 +411,6 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 		jffs2file.seek(offset+4)
 		jffs2buffer = jffs2file.read(4)
 
-		if len(jffs2buffer) < 4:
-			continue
 		if not bigendian:
 			jffs2inodesize = struct.unpack('<I', jffs2buffer)[0]
 		else:
