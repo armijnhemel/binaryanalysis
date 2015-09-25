@@ -224,6 +224,25 @@ def tagKnownExtension(filename):
 ## scan a single file, possibly unpack and recurse
 def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, prerunmagic, magicscans, optmagicscans, processid, hashdict, blacklistedfiles, llock, template, unpacktempdir, tempdir, outputhash, cursor, sourcecodequery, dumpoffsets, offsetdir):
 	lentempdir = len(tempdir)
+
+	## import all methods defined in the scans
+	blacklistscans = set()
+	for prerunscan in prerunscans:
+		module = prerunscan['module']
+		method = prerunscan['method']
+		try:
+			exec "from %s import %s as bat_%s" % (module, method, method)
+		except Exception, e:
+			blacklistscans.add((module, method))
+			continue
+	for unpackscan in scans:
+		module = unpackscan['module']
+		method = unpackscan['method']
+		try:
+			exec "from %s import %s as bat_%s" % (module, method, method)
+		except Exception, e:
+			blacklistscans.add((module, method))
+			continue
 	while True:
 		## reset the reports, blacklist, offsets and tags for each new scan
 		leaftasks = []
@@ -489,13 +508,12 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 						continue
 				module = prerunscan['module']
 				method = prerunscan['method']
+				if (module, method) in blacklistscans:
+					continue
 				if debug:
 					print >>sys.stderr, module, method, filetoscan, datetime.datetime.utcnow().isoformat()
 					sys.stderr.flush()
-				try:
-					exec "from %s import %s as bat_%s" % (module, method, method)
-				except:
-					continue
+
 				scantags = eval("bat_%s(filetoscan, tempdir, tags, offsets, prerunscan['environment'], debug=debug, unpacktempdir=unpacktempdir)" % (method))
 				## append the tag results. These will be used later to be able to specifically filter
 				## out files
@@ -554,6 +572,8 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 					continue
 				module = unpackscan['module']
 				method = unpackscan['method']
+				if (module, method) in blacklistscans:
+					continue
 				if debug:
 					print >>sys.stderr, module, method, filetoscan, datetime.datetime.utcnow().isoformat()
 					sys.stderr.flush()
@@ -574,10 +594,6 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 				## return value is the temporary dir, plus offset in the parent file
 				## plus a blacklist containing blacklisted ranges for the *original*
 				## file and a hash with offsets for each marker.
-				try:
-					exec "from %s import %s as bat_%s" % (module, method, method)
-				except Exception, e:
-					continue
 				scanres = eval("bat_%s(filetoscan, tempdir, blacklist, offsets, newenv, debug=debug)" % (method))
 				## result is either empty, or contains offsets, blacklist, tags and hints
 				if len(scanres) == 0:
