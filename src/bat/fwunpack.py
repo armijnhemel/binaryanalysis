@@ -3709,6 +3709,13 @@ def unpackZip(filename, offset, cutoff, tempdir=None):
 	os.unlink(tmpfile[1])
 	return (endofcentraldir, tmpdir)
 
+def searchUnpackKnownZip(filename, tempdir=None, scanenv={}, debug=False):
+	datafile = open(filename, 'rb')
+	databuffer = datafile.read(4)
+	datafile.close()
+	if databuffer != fsmagic.fsmagic['zip']:
+		return ([], [], [], {})
+
 def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	if not offsets.has_key('zip'):
@@ -4408,6 +4415,7 @@ def searchUnpackCHM(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 
 ## PDFs end with %%EOF, sometimes followed by one or two extra characters
 ## See http://www.adobe.com/devnet/pdf/pdf_reference.html
+## The structure is described in section 7.5
 def searchUnpackPDF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	if not offsets.has_key('pdf'):
@@ -4484,14 +4492,29 @@ def searchUnpackPDF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			## just read a bunch of bytes to find the first line
 			bytesread = 10
 			pdfbytes = pdffile.read(bytesread)
-			nloffset = pdfbytes.find('\n')
+
+			## end of line marker can be either
+			## * space followed by newline
+			## * space followed by carriage return
+			## * carriage return followed by newline
+			nloffset = pdfbytes.find(' \n')
+			if nloffset == -1:
+				nloffset = pdfbytes.find(' \r')
+				if nloffset == -1:
+					nloffset = pdfbytes.find('\r\n')
 			totalbytesread = bytesread
 			while nloffset == -1:
 				pdfbytes = pdffile.read(bytesread)
-				nloffset = pdfbytes.find('\n')
+				nloffset = pdfbytes.find(' \n')
+				if nloffset == -1:
+					nloffset = pdfbytes.find(' \r')
+					if nloffset == -1:
+						nloffset = pdfbytes.find('\r\n')
 				if nloffset != -1:
 					nloffset += totalbytesread
 				totalbytesread += bytesread
+				if totalbytesread > filesize:
+					break
 
 			## reset the file pointer
 			pdffile.seek(xrefoffset)
