@@ -80,9 +80,14 @@ def main(argv):
 			if not os.path.isdir(options.outdir):
         			parser.error("output path is not a directory")
 
-	config.readfp(configfile)
-	scans = bat.bruteforcescan.readconfig(config)
-	configfile.close()
+	try:
+		config.readfp(configfile)
+		scans = bat.bruteforcescan.readconfig(config)
+		configfile.close()
+	except:
+		print >>sys.stderr, "Malformed configuration file. Exiting"
+		configfile.close()
+		sys.exit(1)
 
 	## check if there are any conflicts in the configuration file
 	## conflicts are determined per phase
