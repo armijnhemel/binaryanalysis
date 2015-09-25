@@ -906,6 +906,12 @@ def readconfig(config):
 		except:
 			batconf['scrub'] = []
 		try:
+			markersearchminimum = int(config.get(section, 'markersearchminimum'))
+			batconf['markersearchminimum'] = markersearchminimum
+		except:
+			## set a default minimum threshold of 20 million bytes
+			batconf['markersearchminimum'] = 20000000
+		try:
 			dbbackend = config.get(section, 'dbbackend')
 			if dbbackend in ['sqlite3', 'postgresql']:
 				batconf['dbbackend'] = dbbackend
@@ -1560,8 +1566,7 @@ def runscan(scans, scan_binary, scandate):
 					break
 
 	if not knownextension:
-		## 20 million bytes. TODO: make configurable
-		offsetcutoff = 20000000
+		offsetcutoff = scans['batconfig']['markersearchminimum']
 		if os.stat(scan_binary).st_size > offsetcutoff:
 			offsettasks = []
 			for i in range(0, os.stat(scan_binary).st_size, 100000):
