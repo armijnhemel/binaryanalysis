@@ -802,20 +802,24 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		elffile.close()
 
 	if not "elf" in newtags:
-		## on some architectures we can probably look at the starting point
-		## of the last section, then use the offset value there and see if the offset
-		## of the last section, plus the size of the last section == file size
+		## on some architectures we need to look at the maximum of the starting
+		## address of all sections, plus the size of the section to see if
+		## (offset of section + size of section) == file size
 		p = subprocess.Popen(['readelf', '-t', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
 			return newtags
 		st = stanout.strip().split("\n")
-		for s in st[-3:]:
+		for s in st:
+			if "Addr" in s:
+				continue
 			spl = s.split()
 			if len(spl) == 8:
 				totalsize = int(spl[2], 16) + int(spl[3], 16)
 				if totalsize == os.stat(filename).st_size:
 					newtags.append("elf")
+					break
+
 	## TODO: better research this
 	if not "elf" in newtags:
 		return []
