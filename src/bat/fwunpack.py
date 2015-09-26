@@ -372,6 +372,11 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 		if not os.path.exists(jffs2_tmpdir):
 			jffs2_tmpdir = None
 
+	if not 'jffs2_be' in offsets:
+		be_offsets = set()
+	else:
+		be_offsets = set(offsets['jffs2_be'])
+
 	## TODO: make sure this check is only done once through a setup scan
 	try:
 		tmpfile = tempfile.mkstemp(dir=jffs2_tmpdir)
@@ -396,10 +401,8 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 		if filesize - offset < 8:
 			break
 		bigendian = False
-		## sanity check to make sure jffs2_be actually exists
-		if offsets.has_key('jffs2_be'):
-			if offset in offsets['jffs2_be']:
-				bigendian = True
+		if offset in be_offsets:
+			bigendian = True
 		## check if the offset found is in a blacklist
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
