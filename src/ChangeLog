@@ -1,3 +1,11 @@
+2015-09-26:
+* kernelanalysis.py/other files: remove calls to "modinfo" and replace by
+"readelf" instead
+* prerun.py: fix tagging of some ELF files
+* checks.py/guireport.py: fix reporting of names of applications found in the
+'marker' search
+* fwunpack.py: check if PNG has a valid IHDR chunk
+
 2015-09-25:
 * checks.py: merge all marker searches for specific programs into one method
 to avoid reading a file X times
