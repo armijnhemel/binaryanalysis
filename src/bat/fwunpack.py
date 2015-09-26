@@ -388,6 +388,8 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 
 	filesize = os.stat(filename).st_size
 
+	crccache = {}
+
 	jffs2file = open(filename, 'rb')
 	for offset in jffs2offsets:
 		## at least 8 bytes are needed for a JFFS2 file system
@@ -443,7 +445,12 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 		## It follows the algorithm explained at:
 		##
 		## http://www.infradead.org/pipermail/linux-mtd/2003-February/006910.html
-		if not jffs2_hdr_crc == (binascii.crc32(jffs2buffer[:-4], -1) ^ -1) & 0xffffffff:
+		if jffs2buffer[:-4] in crccache:
+			jffs2crc = crccache[jffs2buffer[:-4]]
+		else:
+			jffs2crc = (binascii.crc32(jffs2buffer[:-4], -1) ^ -1) & 0xffffffff
+			crccache[jffs2buffer[:-4]] = jffs2crc
+		if not jffs2_hdr_crc == jffs2crc:
 			continue
 
 		tmpdir = dirsetup(tempdir, filename, "jffs2", counter)
