@@ -1719,12 +1719,15 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 	diroffsets = []
 	cramfsoffsets.sort()
 
+	if not 'cramfs_be' in offsets:
+		be_offsets = set()
+	else:
+		be_offsets = set(offsets['cramfs_be'])
+
 	for offset in cramfsoffsets:
 		bigendian = False
-		## sanity check to make sure cramfs_be actually exists
-		if offsets.has_key('cramfs_be'):
-			if offset in offsets['cramfs_be']:
-				bigendian = True
+		if offset in be_offsets:
+			bigendian = True
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
@@ -4650,7 +4653,7 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 
 	datafile = open(filename, 'rb')
 	lendata = os.stat(filename).st_size
-	for i in range (0,len(gifoffsets)):
+	for i in range(0,len(gifoffsets)):
 		offset = gifoffsets[i]
 		if i < len(gifoffsets) - 1:
 			nextoffset = gifoffsets[i+1]
@@ -4841,7 +4844,7 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	datafile = open(filename, 'rb')
 	orig_offset = headeroffsets[0]
 	lendata = os.stat(filename).st_size
-	for i in range (0,len(headeroffsets)):
+	for i in range(0,len(headeroffsets)):
 		offset = headeroffsets[i]
 		if i < len(headeroffsets) - 1:
 			nextoffset = headeroffsets[i+1]
