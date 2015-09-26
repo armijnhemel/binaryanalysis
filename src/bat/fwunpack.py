@@ -4011,13 +4011,11 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		lzmafile.seek(offset)
 		lzmadata = lzmafile.read(lzmabytestoread)
 		lzmafile.close()
-		if len(lzmadata) == filesize-offset:
-			## all data is there
-			pass
+
 		p = subprocess.Popen(['lzma', '-cd', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate(lzmadata)
 		if p.returncode == 0:
-			# whole file successfully unpacked.
+			# whole stream successfully unpacked.
 			tmpdir = dirsetup(tempdir, filename, "lzma", counter)
 			tmpfile = tempfile.mkstemp(dir=tmpdir)
 			os.write(tmpfile[0], stanout)
@@ -4026,8 +4024,14 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			blacklist.append((offset, offset+len(lzmadata)))
 			counter += 1
 			continue
+
 		if len(stanout) == 0:
+			## no data was successfully unpacked, so this is not
+			## a valid LZMA stream
 			continue
+
+		## The data seems to be a valid LZMA stream, but not all LZMA
+		## data was unpacked.
 
 		## If there is a very big difference (thousandfold) between
 		## the unpacked data and the declared size it is a false positive
