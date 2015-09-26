@@ -81,7 +81,7 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 		shutil.move(templink[1], tmpfile)
 	else:
 		if length == 0:
-			if  unpackcutoff < filesize and (filesize - offset) < unpackcutoff:
+			if unpackcutoff < filesize and (filesize - offset) < unpackcutoff:
 				srcfile = open(filename, 'rb')
 				dstfile = open(tmpfile, 'wb')
 				srcfile.seek(offset)
@@ -102,7 +102,7 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 				p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile,), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
 		else:
-			if  unpackcutoff < filesize and length < unpackcutoff:
+			if unpackcutoff < filesize and length < unpackcutoff:
 				srcfile = open(filename, 'rb')
 				dstfile = open(tmpfile, 'wb')
 				srcfile.seek(offset)
