@@ -104,8 +104,11 @@ def extractfromkernelfile((filehash, filename, topleveldir, scantempdir)):
 	else:
 		kernelsymbols = set()
 
-	if leafreports.has_key('kernelmodulelicense'):
-		declaredlicenses = leafreports['kernelmodulelicense']
+	if leafreports.has_key('kernelmodule'):
+		if 'license' in leafreports['kernelmodule']:
+			declaredlicenses = leafreports['kernelmodule']['license']
+		else:
+			declaredlicenses = set()
 	else:
 		declaredlicenses = set()
 
@@ -126,8 +129,14 @@ def extractfromkernelfile((filehash, filename, topleveldir, scantempdir)):
 			return (filehash, version, remotesymbols, dependencies, declaredlicenses, kernelsymbols, module)
 		else:
 			## module, so continue
-			version = leafreports['kernelmoduleversion']
-			module = True
+			if 'version' in leafreports['kernelmodule']:
+				versions = copy.deepcopy(leafreports['kernelmodule']['version'])
+				if len(versions) == 1:
+					version = versions.pop()
+				module = True
+			else:
+				## need to find out what to do with this
+				return (filehash, version, remotesymbols, dependencies, declaredlicenses, kernelsymbols, module)
 
 	## for modules read the symbol table and extract the right symbols
 	p = subprocess.Popen(['readelf', '-W', '--syms', os.path.join(scantempdir, filename)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -147,27 +156,8 @@ def extractfromkernelfile((filehash, filename, topleveldir, scantempdir)):
 			funcname = functionstrings[7]
 			remotesymbols.add(funcname)
 
-	## now extract the defined dependencies using modinfo
-	if 'misnamedkernelmodule' in leafreports['tags']:
-		tmpfile = tempfile.mkstemp(suffix='.ko')
-		os.fdopen(tmpfile[0]).close()
-		shutil.copy(os.path.join(scantempdir, filename), tmpfile[1])
-		p = subprocess.Popen(['/sbin/modinfo', "-F", "depends", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-		os.unlink(tmpfile[1])
-		if p.returncode != 0:
-			return
-	else:
-		p = subprocess.Popen(['/sbin/modinfo', "-F", "depends", os.path.join(scantempdir, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-		if p.returncode != 0:
-			return
-
-	## dependencies are separated by ','
-	if stanout.strip() != '':
-		depsplits = stanout.strip().split(',')
-		for i in depsplits:
-			dependencies.add(i)
+	if 'depends' in leafreports['kernelmodule']:
+		dependencies = copy.deepcopy(leafreports['kernelmodule']['depends'])
 
 	return (filehash, version, remotesymbols, dependencies, declaredlicenses, kernelsymbols, module)
 
@@ -202,7 +192,6 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 	displaydependencies = False
 	if scanenv.get("KERNELSYMBOL_DEPENDENCIES", 0) == '1':
 		displaydependencies = True
-
 
 	if scanenv.has_key('overridedir'):
 		try:
@@ -342,6 +331,7 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 		scansymbols = set()
 		scansymbols.update(kernelsymbols)
 		scansymbols.update(remotesymbols)
+
 		for k in scansymbols:
 			if symboltotype[version].has_key(k):
 				continue

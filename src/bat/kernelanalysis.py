@@ -32,6 +32,7 @@ def kernelChecks(path, tags, blacklist=[], scanenv={}, scandebug=False, unpackte
 		results['version'] = res
 	else:
 		return None
+
 	if findALSA(kernel_lines) != -1:
 		results['alsa'] = True
 	if findMtd(kernel_lines) != -1:
@@ -123,70 +124,50 @@ def findSysfs(lines):
 def findRedBoot(lines):
 	return lines.find("No RedBoot partition table detected in %s")
 
-## extract the kernel version from the module
-def analyseModuleVersion(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
-	if not 'elfrelocatable' in tags:
-		return
-	license = None
-	modulekernelversion = ''
-	## 2.6 and later Linux kernel
-	newtags = []
-	p = subprocess.Popen(['/sbin/modinfo', "-F", "vermagic", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		if path.endswith('.ko'):
-			return None
-		tmpfile = tempfile.mkstemp(dir=unpacktempdir, suffix='.ko')
-		os.fdopen(tmpfile[0]).close()
-		shutil.copy(path, tmpfile[1])
-		p2 = subprocess.Popen(['/sbin/modinfo', "-F", "vermagic", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout2, stanerr2) = p2.communicate()
-		if p2.returncode != 0:
-			os.unlink(tmpfile[1])
-			return None
-		os.unlink(tmpfile[1])
-		stanout = stanout2
-		newtags.append('misnamedkernelmodule')
-	if stanout == "":
-		## 2.4 kernel
-		p = subprocess.Popen(['/sbin/modinfo', "-F", "kernel_version", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-		if p.returncode != 0:
-			return None
-		if stanout != "":
-			modulekernelversion = stanout.split()[0]
-	else:
-		modulekernelversion = stanout.split()[0]
-	newtags.append('linuxkernel')
-	newtags.append('modulekernelversion')
-	return (newtags, modulekernelversion)
-
-## analyse a kernel module. Requires that the modinfo program from module-init-tools has been installed
-def analyseModuleLicense(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+## analyse a kernel module by analysing output from readelf
+def analyseKernelModule(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	if not "elfrelocatable" in tags:
 		return None
 	newtags = []
-	p = subprocess.Popen(['/sbin/modinfo', "-F", "license", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['readelf', "-p", ".modinfo", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         (stanout, stanerr) = p.communicate()
         if p.returncode != 0:
-		if path.endswith('.ko'):
-			return None
-		tmpfile = tempfile.mkstemp(dir=unpacktempdir, suffix='.ko')
-		os.fdopen(tmpfile[0]).close()
-		shutil.copy(path, tmpfile[1])
-		p2 = subprocess.Popen(['/sbin/modinfo', "-F", "license", tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout2, stanerr2) = p2.communicate()
-		if p2.returncode != 0:
-			os.unlink(tmpfile[1])
-			return None
-		os.unlink(tmpfile[1])
-		stanout = stanout2
-		newtags.append('misnamedkernelmodule')
-	if stanout == "":
 		return None
-	licenses = set(stanout.strip().split('\n'))
-	newtags.append('modulelicense')
-	return (newtags, licenses)
+
+	kernelfields = {}
+	## now process the output from readelf
+	for s in stanout.split('\n'):
+		if not '[' in s:
+			continue
+		try:
+			(field, vals) = s.split(']',1)[-1].lstrip().split('=', 1)
+			if len(vals) != 0:
+				if len(vals.strip()) != 0:
+					if not field in ['license', 'vermagic', 'depends']:
+						## deal with parm types later
+						continue
+					if field == 'vermagic':
+						field = 'version'
+						vals = vals.split()[0]
+					if field in kernelfields:
+						kernelfields[field].add(vals)
+					else:
+						kernelfields[field] = set([vals])
+		except:
+			continue
+
+	if len(kernelfields) == 0:
+		return
+
+	if not path.endswith('.ko'):
+		newtags.append('misnamedkernelmodule')
+	if 'license' in kernelfields:
+		newtags.append('modulelicense')
+	if 'version' in kernelfields:
+		newtags.append('modulekernelversion')
+	newtags.append('linuxkernel')
+
+	return (newtags, kernelfields)
 
 ## match versions of kernel modules and linux kernels inside a firmware
 ## This is not a fool proof method. There are situations possible where the kernel
@@ -221,8 +202,9 @@ def kernelmodulecheck(unpackreports, scantempdir, topleveldir, processors, scane
 		leaf_file.close()
 
 		## record versions of Linux kernel images and modules
-		if leafreports.has_key('kernelmoduleversion'):
-			moduleversions[filehash] = leafreports['kernelmoduleversion']
+		if leafreports.has_key('kernelmodule'):
+			if 'version' in leafreports['kernelmodule']:
+				moduleversions[filehash] = leafreports['kernelmodule']['version']
 		elif leafreports.has_key('kernelchecks'):
 			if leafreports['kernelchecks'].has_key('version'):
 				kernelversions.add(leafreports['kernelchecks']['version'])

@@ -96,9 +96,9 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, scanenv, debug=F
 		tablerows = tablerows + tablerowtemplate % ("BusyBox version", leafreports['busybox-version'])
 	if leafreports.has_key('architecture'):
 		tablerows = tablerows + tablerowtemplate % ("Architecture", leafreports['architecture'])
-	if leafreports.has_key('kernelmodulelicense'):
-		if leafreports['kernelmodulelicense'] != set([]):
-			licenses = reduce(lambda x, y: x + ", " + y, leafreports['kernelmodulelicense'])
+	if leafreports.has_key('kernelmodule'):
+		if 'license' in leafreports['kernelmodule']:
+			licenses = reduce(lambda x, y: x + ", " + y, leafreports['kernelmodule']['license'])
 			tablerows = tablerows + tablerowtemplate % ("Kernel module license", licenses)
 	if leafreports.has_key('libs'):
 		if leafreports['libs'] != []:

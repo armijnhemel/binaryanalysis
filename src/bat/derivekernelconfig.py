@@ -75,11 +75,12 @@ def main(argv):
 					kernelversions[leafreports['kernelchecks']['version']].append(sha256sum)
 				else:
 					kernelversions[leafreports['kernelchecks']['version']] = [sha256sum]
-		if leafreports.has_key('kernelmoduleversion'):
-			if kernelversions.has_key(leafreports['kernelmoduleversion']):
-				kernelversions[leafreports['kernelmoduleversion']].append(sha256sum)
-			else:
-				kernelversions[leafreports['kernelmoduleversion']] = [sha256sum]
+		if leafreports.has_key('kernelmodule'):
+			if 'version' in leafreports['kernelmodule']:
+				if kernelversions.has_key(leafreports['kernelmodule']['version']):
+					kernelversions[leafreports['kernelmodule']['version']].append(sha256sum)
+				else:
+					kernelversions[leafreports['kernelmodule']['version']] = [sha256sum]
 
 	## Kernel version might need some clean up first.
 	## TODO: integrate in loop above
