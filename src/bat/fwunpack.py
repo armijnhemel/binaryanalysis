@@ -4844,9 +4844,10 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	datafile = open(filename, 'rb')
 	orig_offset = headeroffsets[0]
 	lendata = os.stat(filename).st_size
+	lenheaderoffsets = len(headeroffsets)
 	for i in range(0,len(headeroffsets)):
 		offset = headeroffsets[i]
-		if i < len(headeroffsets) - 1:
+		if i < lenheaderoffsets - 1:
 			nextoffset = headeroffsets[i+1]
 		else:
 			nextoffset = lendata
