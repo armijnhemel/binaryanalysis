@@ -122,9 +122,10 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, scanenv, debug=F
 			tablerows = tablerows + tablerowtemplate % ("Forges", reduce(lambda x, y: "%s, %s" % (x,y), leafreports['forges']))
 	if leafreports.has_key('redboot'):
 		tablerows = tablerows + tablerowtemplate % ("Bootloader", "RedBoot")
-	for j in ['dproxy', 'ez-ipupdate', 'iproute', 'iptables', 'libusb', 'loadlin', 'vsftpd', 'wireless-tools', 'wpa-supplicant']:
-		if leafreports.has_key(j):
-			applications.append(j)
+	if 'marker' in leafreports:
+		for j in ['dproxy', 'ez-ipupdate', 'iproute', 'iptables', 'libusb', 'loadlin', 'vsftpd', 'wireless-tools', 'wpa-supplicant']:
+			if j in leafreports['marker']:
+				applications.append(j)
 	if leafreports.has_key('kernelchecks'):
 		for j in leafreports['kernelchecks']:
 			if j == 'version':

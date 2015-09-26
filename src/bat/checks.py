@@ -156,7 +156,7 @@ def searchMarker(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpa
 			],
 	     'hostapd': [ 'hostapd v'],
 	     'wpasupplicant': [ 'wpa_supplicant v'],
-	     'iproute2':[ 'Usage: tc [ OPTIONS ] OBJECT { COMMAND | help }'
+	     'iproute': [ 'Usage: tc [ OPTIONS ] OBJECT { COMMAND | help }'
 			, 'tc utility, iproute2-ss%s'
 			, 'Option "%s" is unknown, try "tc -help".'
 			],
@@ -175,7 +175,7 @@ def searchMarker(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpa
 
 	res = genericSearch(filename, markerStrings, blacklist)
 	if res != None:
-		return (res, True)
+		return (res, res)
 
 ## What actually do these dependencies mean?
 ## Are they dependencies of the installer itself, or of the programs that are
