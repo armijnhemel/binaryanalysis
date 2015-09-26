@@ -4850,6 +4850,22 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			continue
 
 		datafile.seek(offset)
+
+		## some sanity checks. According to http://www.w3.org/TR/PNG/
+		## the first chunk in a PNG following the PNG signature is always IHDR.
+		## The PNG signature is 8 bytes
+		datafile.seek(offset+8)
+		chunkbytes = datafile.read(4)
+		chunksize = struct.unpack('>I', chunkbytes)[0]
+		## IHDR chunk is always 13 bytes
+		if chunksize != 13:
+			continue
+		chunkbytes = datafile.read(4)
+		if chunkbytes != 'IHDR':
+			continue
+
+		datafile.seek(offset)
+
 		tmpdir = dirsetup(tempdir, filename, "png", counter)
 		pngfound = False
 		for trail in traileroffsets:
