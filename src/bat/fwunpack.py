@@ -339,41 +339,40 @@ def searchUnpackSwf(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	if offsets['swf'] == []:
 		return ([], blacklist, [], hints)
 
-	if offsets['swf'][0] != 0:
-		return ([], blacklist, [], hints)
-
 	newtags = []
 	counter = 1
 	diroffsets = []
-	unzswfobj = zlib.decompressobj()
-	swffile = open(filename, 'rb')
-	swffile.seek(8)
 	readsize = 1000000
-	unzswfdata = swffile.read(readsize)
-	unzswf = ''
-	bytesread = 8
-	try:
-		while unzswfdata != '':
-			unzswf += unzswfobj.decompress(unzswfdata)
-			deflatesize = len(unzswfdata) - len(unzswfobj.unused_data)
-			bytesread += len(unzswfdata) - len(unzswfobj.unused_data)
-			if len(unzswfobj.unused_data) != 0:
-				break
-			unzswfdata = swffile.read(readsize)
-	except Exception, e:
+	for offset in offsets['swf']:
+		unzswfobj = zlib.decompressobj()
+		swffile = open(filename, 'rb')
+		swffile.seek(offset+8)
+		unzswfdata = swffile.read(readsize)
+		unzswf = ''
+		bytesread = 8
+		try:
+			while unzswfdata != '':
+				unzswf += unzswfobj.decompress(unzswfdata)
+				deflatesize = len(unzswfdata) - len(unzswfobj.unused_data)
+				bytesread += len(unzswfdata) - len(unzswfobj.unused_data)
+				if len(unzswfobj.unused_data) != 0:
+					break
+				unzswfdata = swffile.read(readsize)
+		except Exception, e:
+			swffile.close()
+			continue
 		swffile.close()
-		return (diroffsets, blacklist, newtags, hints)
-	swffile.close()
 
-	tmpdir = dirsetup(tempdir, filename, "swf", counter)
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.write(tmpfile[0], unzswf)
-	os.fdopen(tmpfile[0]).close()
+		tmpdir = dirsetup(tempdir, filename, "swf", counter)
+		tmpfile = tempfile.mkstemp(dir=tmpdir)
+		os.write(tmpfile[0], unzswf)
+		os.fdopen(tmpfile[0]).close()
 
-	diroffsets.append((tmpdir, 0, bytesread))
-	blacklist.append((0, bytesread))
-	if bytesread == os.stat(filename).st_size:
-		newtags.append('swf')
+		diroffsets.append((tmpdir, offset, bytesread))
+		blacklist.append((offset, offset + bytesread))
+		if offset == 0 and bytesread == os.stat(filename).st_size:
+			newtags.append('swf')
+		counter += 1
 	return (diroffsets, blacklist, newtags, hints)
 
 def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
