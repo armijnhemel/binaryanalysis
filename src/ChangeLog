@@ -1,3 +1,10 @@
+2015-09-27:
+* fwunpack.py: allow carving of SWF files from the middle of a file.
+* fwunpack.py: don't use struct.unpack() for PNG IHDR check as it will always
+be the same anyway
+* fwunpack.py: add first version of JPEG unpacker
+* prerun.py: remove verifyJPEG() as it is no longer needed
+
 2015-09-26:
 * kernelanalysis.py/other files: remove calls to "modinfo" and replace by
 "readelf" instead
