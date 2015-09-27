@@ -4880,7 +4880,7 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		chunkbytes = datafile.read(4)
 		## IHDR chunk is always 13 bytes
 		#chunksize = struct.unpack('>I', chunkbytes)[0]
-		if chunksize != '\x00\x00\x00\x0d':
+		if chunkbytes != '\x00\x00\x00\x0d':
 			continue
 		chunkbytes = datafile.read(4)
 		if chunkbytes != 'IHDR':
