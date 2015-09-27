@@ -4931,11 +4931,153 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	datafile.close()
 	return (diroffsets, blacklist, [], hints)
 
-## EXIF is (often) prepended to the actual image data
-## Having access to EXIF data can also (perhaps) get us useful data
-def searchUnpackEXIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
+## JFIF is the most common JPEG format
+## Specifications can be found at http://www.w3.org/Graphics/JPEG/
+def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
-	return ([],blacklist, [], hints)
+	if not 'jpeg' in offsets:
+		return ([],blacklist, [], hints)
+	if not 'jpegtrailer' in offsets:
+		return ([],blacklist, [], hints)
+
+	if len(offsets['jpeg']) == 0:
+		return ([],blacklist, [], hints)
+	if len(offsets['jpegtrailer']) == 0:
+		return ([],blacklist, [], hints)
+
+	hints = {}
+	counter = 1
+	diroffsets = []
+	newtags = []
+
+	lendata = os.stat(filename).st_size
+
+	datafile = open(filename, 'rb')
+	## Start verifying the JFIF image.
+	for offset in offsets['jpeg']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		localoffset = offset
+		datafile.seek(offset+2)
+		localoffset += 2
+		jpegdata = datafile.read(2)
+		localoffset += 2
+		## following the JPEG "start of image" there is
+		## either a APP0 (JFIF) or APP1 (Exif and XMP)
+		if not (jpegdata == '\xff\xe0' or jpegdata == '\xff\xe1'):
+			continue
+		validpng = True
+		while jpegdata in ['\xff\xe0', '\xff\xe1']:
+			if not validpng:
+				break
+			if jpegdata == '\xff\xe0':
+				## JFIF data
+				## first the size of the app marker
+				jpegdata = datafile.read(2)
+				sizeheader = struct.unpack('>H', jpegdata)[0]
+				if sizeheader > lendata:
+					continue
+				jpegdata = datafile.read(sizeheader - 2)
+				localoffset += sizeheader
+				if len(jpegdata) != sizeheader - 2:
+					validpng = False
+					break
+				## check if the rest of the header starts with either
+				## JFIF or JFXX
+				if not (jpegdata.startswith('JFIF\x00') or jpegdata.startswith('JFXX\x00')):
+					validpng = False
+					break
+				if jpegdata.startswith('JFIF\x00'):
+					if not (jpegdata[5:7] == '\x01\x01' or jpegdata[5:7] == '\x01\x02'):
+						validpng = False
+						break
+				jpegdata = datafile.read(2)
+				localoffset += 2
+			else:
+				## EXIF data
+				## first the size of the app marker
+				jpegdata = datafile.read(2)
+				sizeheader = struct.unpack('>H', jpegdata)[0]
+				if sizeheader > lendata:
+					continue
+				jpegdata = datafile.read(sizeheader - 2)
+				localoffset += sizeheader
+				if len(jpegdata) != sizeheader - 2:
+					validpng = False
+					break
+				if not (jpegdata.startswith('Exif\x00') or jpegdata.startswith('http://ns.adobe.com/xap/1.0/\x00')):
+					validpng = False
+					break
+				jpegdata = datafile.read(2)
+				localoffset += 2
+		if not validpng:
+			continue
+
+		if jpegdata[0] != '\xff':
+			## catch all for non-compliant data
+			continue
+
+		'''
+		## TODO: better parse the data to see if it is correct. Right now
+		## it is possible that some JPEG files are not correctly unpacked
+		while jpegdata[0] == '\xff':
+			## individual checks to see if JPEG is valid
+			if jpegdata[1] in ['\xc0', '\xc1', '\xc2', '\xc3', '\xc4', '\xd4','\xda', '\xdb']:
+				jpegdata = datafile.read(2)
+				localoffset += 2
+				markerlength = struct.unpack('>H', jpegdata)[0]
+				if markerlength > lendata:
+					continue
+				jpegdata = datafile.read(markerlength-2)
+				localoffset += markerlength-2
+				jpegdata = datafile.read(2)
+				localoffset += 2
+		'''
+
+		## find the closest jpeg trailer
+		for trail in offsets['jpegtrailer']:
+			if trail < offset:
+				continue
+			if trail < localoffset:
+				continue
+			blacklistoffset = extractor.inblacklist(trail, blacklist)
+			if blacklistoffset != None:
+				break
+			if offset == 0 and trail+2 == lendata:
+				p = subprocess.Popen(['jpegtopnm', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+				(stanout, stanerr) = p.communicate()
+				if p.returncode != 0:
+					validpng = False
+					break
+				blacklist.append((0,lendata))
+				datafile.close()
+				return (diroffsets, blacklist, ['graphics', 'jpeg', 'binary'], hints)
+			else:
+				tmpdir = dirsetup(tempdir, filename, "jpeg", counter)
+				datafile.seek(offset)
+				jpegtestdata = datafile.read(trail+2 - offset)
+				p = subprocess.Popen(['jpegtopnm'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+				(stanout, stanerr) = p.communicate(jpegtestdata)
+				if p.returncode != 0:
+					os.rmdir(tmpdir)
+					## break or continue? break will skip to the next
+					## offset, so possible a correct file is not unpacked
+					## correctly.
+					#continue
+					break
+				tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".jpg", dir=tmpdir)
+				os.write(tmpfile[0], jpegtestdata)
+				hints[tmpfile[1]] = {}
+				hints[tmpfile[1]]['tags'] = ['graphics', 'jpeg', 'binary']
+				hints[tmpfile[1]]['scanned'] = True
+				os.fdopen(tmpfile[0]).close()
+				blacklist.append((offset,trail+2))
+				diroffsets.append((tmpdir, offset, offset+trail+2))
+				counter = counter + 1
+				break
+	datafile.close()
+	return (diroffsets, blacklist, newtags, hints)
 
 ## sometimes Ogg audio files are embedded into binary blobs
 def searchUnpackOgg(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
