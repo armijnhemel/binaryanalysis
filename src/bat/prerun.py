@@ -874,68 +874,6 @@ def verifyJavaClass(filename, tempdir=None, tags=[], offsets={}, scanenv={}, deb
 		newtags.append('java')
 	return newtags
 
-## Method to verify if a ZIP file is actually a JAR and tag it as such.
-def verifyJAR(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
-	newtags = []
-	## assume JAR files have a naming convention
-	if not filename.lower().endswith('.jar'):
-		return newtags
-	## if the file is not a ZIP file it can never be a JAR
-	if not offsets.has_key('zip'):
-		return newtags
-	## TODO: do a much much better sanity check here, share with ZIP unpacking if possible
-	#if len(offsets['zip']) != 1:
-	#	return newtags
-	if offsets['zip'][0] != 0:
-		return newtags
-	## Unpack the directory to a temporary directory
-	jardir = tempfile.mkdtemp(dir=unpacktempdir)
-	p = subprocess.Popen(['unzip', '-o', filename, '-d', jardir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0 and p.returncode != 1:
-		shutil.rmtree(jardir)
-		return newtags
-
-	bytecodefound = False
-	## Now traverse the directory and check if there is at least one Java bytecode file
-	osgen = os.walk(jardir)
-	try:
-		while not bytecodefound:
-			i = osgen.next()
-			for p in i[2]:
-				scanfile = "%s/%s" % (i[0], p)
-				if scanfile.lower().endswith('.class'):
-					res = verifyJavaClass(scanfile)
-					if res:
-						bytecodefound = True
-						break
-	except StopIteration:
-		pass
-
-	## if there is no Java bytecode file stop
-	if not bytecodefound:
-		shutil.rmtree(jardir)
-		return newtags
-
-	## check if there is a directory 'META-INF' inside the archive
-	## if so, extract 'MANIFEST.MF' and parse it
-	## mflines = open('META-INF/MANIFEST.MF').readlines()
-	## manifestfound = False
-	## for m in mflines:
-	##	splits = m.split(':')
-	##	if splits[0] == 'Manifest-Version' and splits[1] == '1.0':
-	##		## valid manifest file
-	##		manifestfound = True
-	##		break
-	## if not manifestfound:
-	##	return newtags
-
-	## Remove the directory
-	shutil.rmtree(jardir)
-	newtags.append('jar')
-	newtags.append('zip')
-	return newtags
-
 ## Method to verify if a Windows executable is a valid 7z file
 def verifyExe(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
