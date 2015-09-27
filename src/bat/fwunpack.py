@@ -4933,6 +4933,8 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 
 ## JFIF is the most common JPEG format
 ## Specifications can be found at http://www.w3.org/Graphics/JPEG/
+## Extra information:
+## http://www.media.mit.edu/pia/Research/deepview/exif.html
 def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	if not 'jpeg' in offsets:
