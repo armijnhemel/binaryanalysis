@@ -4878,9 +4878,9 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		## The PNG signature is 8 bytes
 		datafile.seek(offset+8)
 		chunkbytes = datafile.read(4)
-		chunksize = struct.unpack('>I', chunkbytes)[0]
 		## IHDR chunk is always 13 bytes
-		if chunksize != 13:
+		#chunksize = struct.unpack('>I', chunkbytes)[0]
+		if chunksize != '\x00\x00\x00\x0d':
 			continue
 		chunkbytes = datafile.read(4)
 		if chunkbytes != 'IHDR':
