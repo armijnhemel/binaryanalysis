@@ -130,9 +130,7 @@ def verifyGraphics(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debu
 	newtags = []
 	if "text" in tags or "compressed" in tags or "audio" in tags or "graphics" in tags:
 		return newtags
-	newtags = verifyJPEG(filename, tempdir, tags, offsets, scanenv)
-	if newtags == []:
-		newtags = verifyBMP(filename, tempdir, tags, offsets, scanenv)
+	newtags = verifyBMP(filename, tempdir, tags, offsets, scanenv)
 	return newtags
 
 def verifyBMP(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
@@ -146,26 +144,6 @@ def verifyBMP(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	if p.returncode != 0 or "warning" in stanerr:
 		return newtags
 	newtags.append("bmp")
-	newtags.append("graphics")
-	return newtags
-
-def verifyJPEG(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
-	newtags = []
-	if not offsets.has_key('jpeg') or not offsets.has_key('jpegtrailer'):
-		return newtags
-	if not 0 in offsets['jpeg']:
-		return newtags
-	filesize = os.stat(filename).st_size
-	if offsets['jpegtrailer'][-1] != filesize -2:
-		return newtags
-	p = subprocess.Popen(['jpegtopnm', '-multiple', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		return newtags
-	## multiple jpegs in this file, so we need to unpack, which we don't do here
-	if len(stanerr.strip().split("\n")) > 1:
-		return newtags
-	newtags.append("jpeg")
 	newtags.append("graphics")
 	return newtags
 
