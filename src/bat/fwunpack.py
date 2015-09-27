@@ -3801,16 +3801,18 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 				continue
 			tmpdir = dirsetup(tempdir, filename, "zip", counter)
 			(endofcentraldir, res) = unpackZip(filename, offset, cutoff, tmpdir)
+			zipunpacked = False
 			if res != None:
 				diroffsets.append((res, offset, 0))
 				counter = counter + 1
+				zipunpacked = True
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
 			if endofcentraldir != None:
 				endofcentraldir_offset = endofcentraldir
 				## TODO: fix properly for ZIP files with comments
-				if offset == 0 and res != None and offset + endofcentraldir +22 == os.stat(filename).st_size:
+				if offset == 0 and zipunpacked and offset + endofcentraldir +22 == os.stat(filename).st_size:
 					tags.append('zip')
 					tags.append('compressed')
 				blacklist.append((offset, offset + endofcentraldir + 22))
