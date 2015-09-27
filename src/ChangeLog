@@ -4,6 +4,8 @@
 be the same anyway
 * fwunpack.py: add first version of JPEG unpacker
 * prerun.py: remove verifyJPEG() as it is no longer needed
+* prerun.py: remove verifyJAR(), as it was not used and not working properly
+anyway.
 
 2015-09-26:
 * kernelanalysis.py/other files: remove calls to "modinfo" and replace by
