@@ -1250,7 +1250,7 @@ def lookup_identifier(scanqueue, reportqueue, cursor, stringcachecursors, nameca
 			kernelparamres = []
 
 			if scandebug:
-				print >>sys.stderr, "total extracted strings for %s: %d" % (filepath, lenlines)
+				print >>sys.stderr, "total extracted strings for %s: %d" % (filename, lenlines)
 
 			## some counters for keeping track of how many matches there are
 			matchedlines = 0
@@ -1468,7 +1468,7 @@ def lookup_identifier(scanqueue, reportqueue, cursor, stringcachecursors, nameca
 					## * filenames in the database have been processed using os.path.basename()
 
 					if scandebug:
-						print >>sys.stderr, "\n%d matches found for <(|%s|)> in %s" % (len(res), line, filepath)
+						print >>sys.stderr, "\n%d matches found for <(|%s|)> in %s" % (len(res), line, filename)
 
 					pkgs = {}    ## {package name: set([filenames without path])}
 	
