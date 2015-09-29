@@ -771,43 +771,47 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	compute_version(processors, newenv, unpackreports, rankingfiles, topleveldir, determinelicense, determinecopyright, batdb)
 
 ## grab variable names.
-def grab_sha256_varname(scanqueue, reportqueue, cursor, query):
+def grab_sha256_varname(scanqueue, reportqueue, cursor, conn, query):
 	while True:
 		sha256sum = scanqueue.get()
 		c.execute(query, (sha256sum,))
 		results = c.fetchall()
+		conn.commit()
 		reportqueue.put({sha256sum: results})
 		scanqueue.task_done()
 
-def grab_sha256_filename(scanqueue, reportqueue, cursor, query):
+def grab_sha256_filename(scanqueue, reportqueue, cursor, conn, query):
 	while True:
 		sha256sum = scanqueue.get()
 		cursor.execute(query, (sha256sum,))
 		results = cursor.fetchall()
+		conn.commit()
 		reportqueue.put({sha256sum: results})
 		scanqueue.task_done()
 
 ## grab copyright statements from the license database
-def grab_sha256_copyright(scanqueue, reportqueue, cursor, query):
+def grab_sha256_copyright(scanqueue, reportqueue, cursor, conn, query):
 	while True:
 		sha256sum = scanqueue.get()
 		cursor.execute(query, (sha256sum,))
 		results = cursor.fetchall()
+		conn.commit()
 		## 'statements' are not very accurate so ignore those
 		results = filter(lambda x: x[1] != 'statement', results)
 		reportqueue.put({sha256sum: results})
 		scanqueue.task_done()
 
 ## grab licenses from the license database
-def grab_sha256_license(scanqueue, reportqueue, cursor, query):
+def grab_sha256_license(scanqueue, reportqueue, cursor, conn, query):
 	while True:
 		sha256sum = scanqueue.get()
 		cursor.execute(query, (sha256sum,))
 		results = cursor.fetchall()
+		conn.commit()
 		reportqueue.put({sha256sum: results})
 		scanqueue.task_done()
 
-def grab_sha256_parallel(scanqueue, reportqueue, cursor, batdb, language, querytype):
+def grab_sha256_parallel(scanqueue, reportqueue, cursor, conn, batdb, language, querytype):
 	stringquery = batdb.getQuery("select distinct checksum, linenumber, language from extracted_string where stringidentifier=%s and language=%s")
 	functionquery = batdb.getQuery("select distinct checksum, linenumber, language from extracted_function where functionname=%s")
 	variablequery = batdb.getQuery("select distinct checksum, linenumber, language, type from extracted_name where name=%s")
@@ -829,6 +833,7 @@ def grab_sha256_parallel(scanqueue, reportqueue, cursor, batdb, language, queryt
 			cursor.execute(kernelvarquery, (line,))
 			res = cursor.fetchall()
 			res = filter(lambda x: x[3] == 'kernelsymbol', res)
+		conn.commit()
 		if res != None:
 			res = filter(lambda x: x[2] == language, res)
 			## TODO: make a list of line numbers
@@ -2031,7 +2036,7 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 				minprocessamount = min(len(uniques), processamount)
 
 				for i in range(0,minprocessamount):
-					p = multiprocessing.Process(target=grab_sha256_parallel, args=(scanqueue,reportqueue,batcursors[i], batdb, language, 'string'))
+					p = multiprocessing.Process(target=grab_sha256_parallel, args=(scanqueue,reportqueue,batcursors[i], batcons[i], batdb, language, 'string'))
 					processpool.append(p)
 					p.start()
 
@@ -2076,7 +2081,7 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 				minprocessamount = min(len(sha256_scan_versions.keys()), processamount)
 
 				for i in range(0,minprocessamount):
-					p = multiprocessing.Process(target=grab_sha256_filename, args=(scanqueue,reportqueue,batcursors[i], sha256_filename_query))
+					p = multiprocessing.Process(target=grab_sha256_filename, args=(scanqueue,reportqueue,batcursors[i], batcons[i], sha256_filename_query))
 					processpool.append(p)
 					p.start()
 
@@ -2163,7 +2168,7 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 						minprocessamount = min(len(licensesha256s), processamount)
 
 						for i in range(0,minprocessamount):
-							p = multiprocessing.Process(target=grab_sha256_license, args=(scanqueue,reportqueue,licensecursors[i], sha256_license_query))
+							p = multiprocessing.Process(target=grab_sha256_license, args=(scanqueue,reportqueue,licensecursors[i], licensecons[i], sha256_license_query))
 							processpool.append(p)
 							p.start()
 
@@ -2198,7 +2203,7 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 						minprocessamount = min(len(copyrightsha256s), processamount)
 
 						for i in range(0,minprocessamount):
-							p = multiprocessing.Process(target=grab_sha256_copyright, args=(scanqueue,reportqueue,licensecursors[i], sha256_copyright_query))
+							p = multiprocessing.Process(target=grab_sha256_copyright, args=(scanqueue,reportqueue,licensecursors[i], licensecons[i], sha256_copyright_query))
 							processpool.append(p)
 							p.start()
 
@@ -2246,7 +2251,7 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 				minprocessamount = min(len(functionnames), processamount)
 
 				for i in range(0,minprocessamount):
-					p = multiprocessing.Process(target=grab_sha256_parallel, args=(scanqueue,reportqueue,batcursors[i], batdb, 'C', 'function'))
+					p = multiprocessing.Process(target=grab_sha256_parallel, args=(scanqueue,reportqueue,batcursors[i], batcons[i], batdb, 'C', 'function'))
 					processpool.append(p)
 					p.start()
 
@@ -2294,7 +2299,7 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 					minprocessamount = min(len(sha256_scan_versions.keys()), processamount)
 
 					for i in range(0,minprocessamount):
-						p = multiprocessing.Process(target=grab_sha256_filename, args=(scanqueue,reportqueue,batcursors[i], sha256_filename_query))
+						p = multiprocessing.Process(target=grab_sha256_filename, args=(scanqueue,reportqueue,batcursors[i], batcons[i], sha256_filename_query))
 						processpool.append(p)
 						p.start()
 
@@ -2385,7 +2390,7 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 					minprocessamount = min(len(uniques), processamount)
 
 					for i in range(0,minprocessamount):
-						p = multiprocessing.Process(target=grab_sha256_parallel, args=(scanqueue,reportqueue,batcursors[i], batdb, language, vartype))
+						p = multiprocessing.Process(target=grab_sha256_parallel, args=(scanqueue,reportqueue,batcursors[i], batcons[i], batdb, language, vartype))
 						processpool.append(p)
 						p.start()
 
@@ -2435,7 +2440,7 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 						minprocessamount = min(len(sha256_scan_versions.keys()), processamount)
 
 						for i in range(0,minprocessamount):
-							p = multiprocessing.Process(target=grab_sha256_filename, args=(scanqueue,reportqueue,batcursors[i], sha256_filename_query))
+							p = multiprocessing.Process(target=grab_sha256_filename, args=(scanqueue,reportqueue,batcursors[i], batcons[i], sha256_filename_query))
 							processpool.append(p)
 							p.start()
 
