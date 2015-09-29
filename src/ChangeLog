@@ -1,6 +1,9 @@
 2015-09-29:
 * licenseversion.py: explicitely call commit() on database connections to
 avoid lots of warning messages in the PostgreSQL log
+* release BAT 23
+* fwunpack.py: some more sanity checks for YAFFS2 unpacking (files need to be
+at least 512+16 bytes)
 
 2015-09-28:
 * generatejson.py: avoid running out of memory when dumping data to a json
