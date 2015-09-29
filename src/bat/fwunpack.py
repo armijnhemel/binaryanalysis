@@ -842,6 +842,8 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 							candidates[cs] = [offset]
 						wholefile = False
 			yaffs2file.close()
+
+	filesize = os.stat(filename).st_size
 	if wholefile:
 		scanfile = filename
 		havetmpfile = False
@@ -858,10 +860,18 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 					unpackFile(filename, offset, tmpfile[1], tmpdir)
 					scanfile = tmpfile[1]
 					havetmpfile = True
+
+		## smallest possible file system supported by unpacker is 512 + 16 bytes
+		if os.stat(scanfile).st_size < 528:
+			if havetmpfile:
+				os.unlink(tmpfile[1])
+			os.rmdir(tmpdir)
+			return (diroffsets, blacklist, newtags, hints)
+			
 		res = unpackYaffs(scanfile, tmpdir)
 		if res != None:
-			blacklist.append((0, os.stat(filename).st_size))
-			diroffsets.append((tmpdir, offset, os.stat(filename).st_size))
+			blacklist.append((0, filesize))
+			diroffsets.append((tmpdir, offset, filesize))
 			newtags = ['yaffs2', 'filesystem']
 			if havetmpfile:
 				os.unlink(tmpfile[1])
@@ -878,6 +888,8 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 			## from the file and try to unpack.
 			(chunks, spares) = cs
 			inodesize = chunks+spares
+			if inodesize > filesize:
+				continue
 			offsets = candidates[cs]
 			startoffset = offsets[0]
 			prevoffset = None
