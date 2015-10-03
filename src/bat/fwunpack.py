@@ -1141,6 +1141,8 @@ def searchUnpackCab(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			diroffsets.append((cabdir, offset, cabsize))
 			blacklist.append((offset, offset + cabsize))
 			counter = counter + 1
+			if offset == 0 and cabsize == os.stat(filename).st_size:
+				newtags.append('cab')
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
@@ -1150,24 +1152,26 @@ def searchUnpackCab(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 ## a MINIX file system. We need to use more data from the metadata and perhaps
 ## adjust for certificates.
 def unpackCab(filename, offset, tempdir=None, blacklist=[]):
-	ms = magic.open(magic.MAGIC_NONE)
-	ms.load()
-
 	cab = file(filename, "r")
 	cab.seek(offset)
-	buffer = cab.read(100)
+	cabbuffer = cab.read(12)
 	cab.close()
 
-	mstype = ms.buffer(buffer)
-	if "Microsoft Cabinet archive data" not in mstype:
-		ms.close()
-		return None
+	if len(cabbuffer) != 12:
+		return
+
+	cabsize = struct.unpack('<I', cabbuffer[8:])[0]
+	if os.stat(filename).st_size < cabsize:
+		return
+
+	if os.stat(filename).st_size < cabsize + offset:
+		return
 
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
+	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist, length=cabsize)
 
 	p = subprocess.Popen(['cabextract', '-d', tmpdir, tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
@@ -1186,13 +1190,9 @@ def unpackCab(filename, offset, tempdir=None, blacklist=[]):
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
-	else:
-		## The size of the CAB archive can be determined from the
-		## output from magic, which we already have.
-		## We should do more sanity checks here
-		cabsize = re.search("(\d+) bytes", mstype)
-		os.unlink(tmpfile[1])
-		return (tmpdir, int(cabsize.groups()[0]))
+
+	os.unlink(tmpfile[1])
+	return (tmpdir, cabsize)
 
 def searchUnpack7z(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
