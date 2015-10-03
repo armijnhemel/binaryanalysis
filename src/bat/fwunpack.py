@@ -980,42 +980,47 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	## apparently it is a MS Windows executable, so continue
 	diroffsets = []
 	counter = 1
-	assembly = extractor.searchAssemblyAttrs(filename)
+	assemblies = []
+	if 'windowsassemblyheader' in offsets and 'windowsassemblytrailer' in offsets:
+		if len(offsets['windowsassemblyheader']) != 0:
+			if len(offsets['windowsassemblytrailer']) != 0:
+				assemblies = extractor.searchAssemblyAttrs(filename, offsets['windowsassemblyheader'], offsets['windowsassemblytrailer'])
 	## if we were able to extract the assembly XML file we could get some useful
 	## information from it. Although there are some vanity entries that we can
 	## easily skip (and just bruteforce) there are a few that we really need to
 	## recognize. TODO: refactor
-	if assembly != {}:
-		## we are pretty much out of luck with this one.
-		if assembly['name'] == "NOSMicrosystems.iNOSSO":
-			return ([], blacklist, [], hints)
-		## if we see this we can probably directly go to unrar
-		elif assembly['name'] == "WinRAR SFX":
-			pass
-		elif assembly['name'] == "WinZipComputing.WinZip.WZSEPE32":
-			pass
-		elif assembly['name'] == "WinZipComputing.WinZip.WZSFX":
-			pass
-		elif assembly['name'] == "JR.Inno.Setup":
-			pass
-		elif assembly['name'] == "Nullsoft.NSIS.exehead":
-			pass
-		elif assembly['name'] == "7zS.sfx.exe":
-			pass
-		## IExpress WExtract
-		elif assembly['name'] == "wextract":
-			pass
-		elif assembly['name'] == "InstallShield.Setup":
-			pass
-		## self extracting cab, use either cabextract or 7z
-		elif assembly['name'] == "sfxcab":
-			pass
-		## Setup Factory
-		elif assembly['name'] == "setup.exe":
-			pass
-		## dunno this one, seems to be misspelled
-		elif assembly['name'] == "Squeez-SFX":
-			pass
+	if assemblies != []:
+		for assembly in assemblies:
+			## we are pretty much out of luck with this one.
+			if assembly['name'] == "NOSMicrosystems.iNOSSO":
+				return ([], blacklist, [], hints)
+			## if we see this we can probably directly go to unrar
+			elif assembly['name'] == "WinRAR SFX":
+				pass
+			elif assembly['name'] == "WinZipComputing.WinZip.WZSEPE32":
+				pass
+			elif assembly['name'] == "WinZipComputing.WinZip.WZSFX":
+				pass
+			elif assembly['name'] == "JR.Inno.Setup":
+				pass
+			elif assembly['name'] == "Nullsoft.NSIS.exehead":
+				pass
+			elif assembly['name'] == "7zS.sfx.exe":
+				pass
+			## IExpress WExtract
+			elif assembly['name'] == "wextract":
+				pass
+			elif assembly['name'] == "InstallShield.Setup":
+				pass
+			## self extracting cab, use either cabextract or 7z
+			elif assembly['name'] == "sfxcab":
+				pass
+			## Setup Factory
+			elif assembly['name'] == "setup.exe":
+				pass
+			## dunno this one, seems to be misspelled
+			elif assembly['name'] == "Squeez-SFX":
+				pass
 	## after all the special cases we can just bruteforce our way through
 	## like before, although if we find some strings we could already skip
 	## some checks. Needs refactoring.

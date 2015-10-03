@@ -69,58 +69,58 @@ def lowestnextblacklist(offset, blacklist):
 ## * hash with name, version, architecture, platform
 ## * list of dependencies
 
-def searchAssembly(filename):
-	exefile = open(filename)
-	data = exefile.read()
+def searchAssembly(filename, offsets, traileroffsets):
+	exefile = open(filename, 'rb')
+	assemblies = []
+	lastsuccesstrailer = 0
+	for offset in offsets:
+		if offset < lastsuccesstrailer:
+			continue
+		for traileroffset in traileroffsets:
+			if traileroffset < offset:
+				continue
+			exefile.seek(offset)
+			assemblydata = exefile.read(traileroffset + 11 - offset)
+			try:
+				dom = minidom.parseString(assemblydata)
+				assemblyNodes = dom.getElementsByTagName('assembly')
+				if len(assemblyNodes) != 1:
+					continue
+				else:
+					deps = []
+					assemblyattrs = {}
+					for ch in assemblyNodes[0].childNodes:
+						if ch.localName == "assemblyIdentity":
+							for attr in xrange(0, ch.attributes.length):
+								assemblyattrs[ch.attributes.item(attr).name] = ch.attributes.item(attr).value
+						if ch.localName == "dependency":
+							assemblyId = ch.getElementsByTagName('assemblyIdentity')
+							for assembly in assemblyId:
+								depsattrs = {}
+								for attr in xrange(0, assembly.attributes.length):
+									depsattrs[assembly.attributes.item(attr).name] = assembly.attributes.item(attr).value
+								deps.append(depsattrs)
+					assemblies.append((assemblyattrs, deps))
+					lastsuccesstrailer = traileroffset
+					break
+			except Exception, e:
+				pass
 	exefile.close()
-	xmloffset = data.find('<?xml')
-	if xmloffset == -1:
-		return None
-	offset = data.find('<assembly', xmloffset)
-	if offset == -1:
-		return None
-	traileroffset = data.find('</assembly>', offset)
-	if traileroffset == -1:
-		return None
-	assembly = data[xmloffset:traileroffset + 11]
-	try:
-		dom = minidom.parseString(assembly)
-		assemblyNodes = dom.getElementsByTagName('assembly')
-		if len(assemblyNodes) != 1:
-			return None
-		else:
-			deps = []
-			assemblyattrs = {}
-			for ch in assemblyNodes[0].childNodes:
-				if ch.localName == "assemblyIdentity":
-					for attr in xrange(0, ch.attributes.length):
-						assemblyattrs[ch.attributes.item(attr).name] = ch.attributes.item(attr).value
-				if ch.localName == "dependency":
-					assemblyId = ch.getElementsByTagName('assemblyIdentity')
-					for assembly in assemblyId:
-						depsattrs = {}
-						for attr in xrange(0, assembly.attributes.length):
-							depsattrs[assembly.attributes.item(attr).name] = assembly.attributes.item(attr).value
-						deps.append(depsattrs)
-
-			return (assemblyattrs, deps)
-	except Exception, e:
-		return None
-	return None
+	return assemblies
 
 ## used in unpack scans
-def searchAssemblyAttrs(filename):
-	res = searchAssembly(filename)
+def searchAssemblyAttrs(filename, headeroffsets, traileroffsets):
+	res = searchAssembly(filename, headeroffsets, traileroffsets)
 	if res != None:
-		return res[0]
-	return {}
+		return map(lambda x: x[0], filter(lambda x: x[0] != {}, res))
+	return []
 
 
 ## used in leaf scans
-def searchAssemblyDeps(filename):
-	res = searchAssembly(filename)
+def searchAssemblyDeps(filename, headeroffsets, traileroffsets):
+	res = searchAssembly(filename, headeroffsets, traileroffsets)
 	if res != None:
-		return res[1]
+		return map(lambda x: x[1], res)
 	return {}
 
 ## Extract strings using xgettext. Apparently this does not always work correctly. For example for busybox 1.6.1:
