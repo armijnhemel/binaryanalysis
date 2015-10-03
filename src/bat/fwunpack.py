@@ -4772,7 +4772,10 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 					databytes = datafile.read(1000)
 					magicoffset = databytes.find(xmpmagic)
 					while magicoffset == -1:
-						databytes += datafile.read(1000)
+						databuf = datafile.read(1000)
+						if databuf == '':
+							break
+						databytes += databuf
 						magicoffset = databytes.find(xmpmagic)
 					localoffset += magicoffset + 258
 					datafile.seek(localoffset)
