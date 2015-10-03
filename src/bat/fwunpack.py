@@ -3423,6 +3423,8 @@ def searchUnpackLRZIP(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 
 		## read the uncompressed size from the header
 		lrzipsize = struct.unpack('<Q', lrzipheader[6:14])[0]
+		if lrzipsize == 0:
+			continue
 		encrypted = False
 		hasmd5 = False
 		if lrzipminorversion == 6:
