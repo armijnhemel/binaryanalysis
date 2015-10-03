@@ -134,9 +134,6 @@ python bat-scan -c /path/to/configuration -b /path/to/binary -o
 /path/to/outputfile
 \end{verbatim}
 
-XML output, if enabled in the configuration file, will be written to standard
-output. Any debugging messages or error messages will appear on standard error.
-
 To scan a directory you will need to supply three parameters to
 \texttt{bat-scan}:
 
@@ -158,17 +155,11 @@ original file with the suffix \texttt{.tar.gz}.
 
 \subsection{Interpreting the results}
 
-There are two formats in which \texttt{bat-scan} can output its results:
-
-\begin{enumerate}
-\item archive file containing program state, complete unpacked directory tree
-containing all unpacked data (unless \texttt{outputlite} was set to
-\texttt{yes}), plus possibly some extra generated data, such as pictures and
-more reporting. These dumps are meant to be used by \texttt{batgui}. This is
-the default format.
-\item XML file (optional/configurable). This format is deprecated and will
-likely be removed in the near future.
-\end{enumerate}
+\texttt{bat-scan} will output an rchive file containing program state, complete
+unpacked directory tree containing all unpacked data (unless \texttt{outputlite}
+was set to \texttt{yes}), plus possibly some extra generated data, such as
+pictures and more reporting. These dumps are meant to be used by
+\texttt{batgui} or processed by other programs.
 
 \subsubsection{Output archive}
 
@@ -198,57 +189,17 @@ configuration.
 reports, per checksum
 \end{itemize}
 
-\subsubsection{XML output}
-
-If configured \texttt{bat-scan} outputs its results in XML format on
-standard output. After redirecting the output to a file it is possible to look
-at this file with a commandline tool such as \texttt{xml\_pp} or a webbrowser
-such as Mozilla Firefox.
-
-This XML file is not meant for human consumption, but for use by for example
-reporting tools. A word of warning is needed: the XML format is not very well
-designed and not well maintained and it will likely be removed in the future.
-If you want to programmatically process information from BAT it is recommended
-to use the Python pickles (or optionally JSON output) to extract information
-instead. In the BAT source code repository a file documenting these pickles
-can be found.
-
-The default XML pretty printer as shipped by BAT outputs an XML file that starts
-with metadata, such as:
-
-\begin{itemize}
-\item date, plus time of the scan (local time of the computer, in UTC)
-\item name of the file
-\item SHA256 cryptographic checksum of the file, uniquely identifying it
-\item size of the file
-\item filetype as determined by \texttt{file} on a Linux system
-\item relative path inside the unpacked system, plus the absolute path inside
-the file system, which is useful for later analysis
-\end{itemize}
-
-If any of the scans were successful the results of the these scans can
-be found in the element \texttt{scans}.
-
-For each successful unpack action the following attributes are reported:
-
-\begin{itemize}
-\item name of the scan (corresponding to the name of the scan in the
-configuration file)
-\item offset in the parent file of the compressed file, file system or media
-file
-\end{itemize}
-
 \subsubsection{Viewing results with \texttt{batgui}}
 
 The \texttt{batgui} program was made to view the results of the analysis
-process easily, without having to dig through XML. The viewer has two modes:
-simple and advanced. In simple mode a tree of the unpack results will be shown,
-and each file in the tree can be clicked to display more information. Depending
-on which scans were run the tree will be decorated with more information, such
-as the type of the file (based on tags), or if matches were found with the
-ranking method. Using a filtering system (available from the menu) files that
-are typically uninteresting for license compliance engineering (empty
-files/directories, symbolic links, graphics files and so on) can be ignored.
+process easily. The viewer has two modes: simple and advanced. In simple mode
+a tree of the unpack results will be shown, and each file in the tree can be
+clicked to display more information. Depending on which scans were run the tree
+will be decorated with more information, such as the type of the file (based on
+tags), or if matches were found with the ranking method. Using a filtering
+system (available from the menu) files that are typically uninteresting for
+license compliance engineering (empty files/directories, symbolic links,
+graphics files and so on) can be ignored.
 
 Information that is shown per file depends on the scans that were run and the
 type of file. For most files information like size, type, path (both relative
@@ -759,18 +710,6 @@ a full copy of the unpacked data, significantly decreasing the size of the
 output archive, but making it harder to do a ``post mortem'' on the unpacked
 data (a new analysis should be run to get it again).
 
-\subsubsection{XML pretty printing}
-
-There are two settings that determine where the code of the optional XML pretty
-printer can be found:
-
-\begin{verbatim}
-module = bat.simpleprettyprint
-output = prettyprintresxml
-\end{verbatim}
-
-These two settings should always be used together.
-
 \subsubsection{\texttt{tempdir}}
 
 There is one setting to set the prefix for creating temporary files or
@@ -1070,7 +1009,6 @@ name after more contextual information from the scan has become available. For
 example: detect an initramfs in the Linux kernel and rename the temporary file
 to \texttt{initramfs}.
 \item \texttt{security.py} contains several security scans.
-\item \texttt{simpleprettyprint.py} has the default XML prettyprinter.
 \item \texttt{unpackrpm.py} has code specifically for unpacking RPM archives.
 \end{itemize}
 
@@ -1291,24 +1229,6 @@ inspection of the binary is needed. A much better method is the ranking method
 that is also available in BAT, but which requires a special setup with a
 database.
 
-\subsubsection{Pretty printing for leaf scans}
-
-Pretty printing for unpackers is standardized but for leaf scans there is
-more flexibility. This is needed because in some cases the result as returned
-by the leaf scan needs post processing due to use of custom data structures.
-
-A pretty printer can be defined in the configuration by setting
-\texttt{ppoutput}. The pretty printer can be in the same module as the scanning
-method defined in the same section, but does not need to be. If it resides in
-another module it can be set using \texttt{ppmodule}. The pretty printer has two
-parameters: a Python datastructure as returned by the scanner (this differs
-per scan) and a XML root element, needed to create new XML nodes. The method is
-expected to return a XML node in case of success, or \texttt{None} in case of
-failure.
-
-If no pretty printer is defined the value as returned by the scan will be used
-as the content of result tag.
-
 \subsection{Aggregators}
 
 Aggregators take all information from the entire scan process and possibly
@@ -1349,8 +1269,7 @@ names of files which are duplicates in an archive or firmware.
 
 Post-run methods don't change the result of the whole scanning process, but
 only use the data from the process. For example prettyprinting a fancy report
-(more advanced than the standard XML report) would be a typical post-run
-method.
+would be a typical post-run method.
 
 \subsubsection{Writing a post-run method}
 
@@ -2249,8 +2168,7 @@ and so on.
 \subsubsection{Interpreting the results}
 
 There are two ways to interpret the results. The recommended way is to load the
-result file into the graphical user interface. The other way is to have BAT
-pretty print the result in XML and further process the XML file.
+result file into the graphical user interface.
 
 The results of the scan can be found in the element \texttt{<ranking>}. This
 element contains:
@@ -2733,23 +2651,6 @@ is highly recommended:
 
 \begin{verbatim}
 outputlite = yes
-\end{verbatim}
-
-\subsection{Do not output results in XML}
-
-By default BAT will output the results of a scan in XML. The information in
-here more or less matches the information that is packed in the report. If the
-XML file is not used for analysing resuts disabling pretty printing of the
-results as XML can save time, especially if there are many scanned files with
-many results.
-
-Disabling the XML pretty printing can be disabled my outcommenting two
-directives: \texttt{module} and \texttt{output}. In the default configuration
-they have the following values:
-
-\begin{verbatim}
-module = bat.simpleprettyprint
-output = prettyprintresxml
 \end{verbatim}
 
 \subsection{Use \texttt{AGGREGATE\_CLEAN} when scanning Java JAR files}
