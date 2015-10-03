@@ -1297,13 +1297,6 @@ def readconfig(config):
 	aggregatescans = sorted(aggregatescans, key=lambda x: x['priority'], reverse=True)
 	return {'batconfig': batconf, 'unpackscans': unpackscans, 'leafscans': leafscans, 'prerunscans': prerunscans, 'postrunscans': postrunscans, 'aggregatescans': aggregatescans}
 
-def prettyprint(batconf, res, scandate, scans, toplevelfile, topleveldir):
-	module = batconf['module']
-	method = batconf['output']
-	exec "from %s import %s as bat_%s" % (module, method, method)
-	output = eval("bat_%s(res, scandate, scans, toplevelfile, topleveldir, batconf['environment'])" % (method))
-	return output
-
 def dumpData(unpackreports, scans, tempdir):
 	## a dump of all the result contains:
 	## * a copy of all the unpacked data

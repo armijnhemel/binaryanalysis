@@ -13,7 +13,6 @@ it with your own more robust checks.
 
 import string, re, os, magic, subprocess, sys, tempfile, copy
 import extractor, batdb
-import xml.dom.minidom
 
 ## generic searcher for certain marker strings
 ## TODO: implement overlap between subsequent buffer reads
@@ -103,16 +102,6 @@ def searchDynamicLibs(filename, tags, blacklist=[], scanenv={}, scandebug=False,
 		return None
 	return (['libs'], libs)
 
-def dynamicLibsPrettyPrint(res, root, scanenv={}):
-	tmpnode = root.createElement('libs')
-	for lib in res:
-		tmpnode2 = root.createElement('lib')
-		tmpnodetext = xml.dom.minidom.Text()
-		tmpnodetext.data = lib
-		tmpnode2.appendChild(tmpnodetext)
-		tmpnode.appendChild(tmpnode2)
-	return tmpnode
-
 ## This method uses readelf to determine the architecture of the executable file.
 ## This is necessary because sometimes leftovers from different products (and
 ## different architectures) can be found in one firmware.
@@ -196,9 +185,6 @@ def searchWindowsDependencies(filename, tags, blacklist=[], scanenv={}, scandebu
 	else:
 		return (['windowsdependencies'], deps)
 
-def xmlPrettyPrintWindowsDeps(res, root, scanenv={}):
-	pass
-
 ## method to extract meta information from PDF files
 def scanPDF(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	## Only consider whole PDF files. If anything has been carved from
@@ -241,16 +227,6 @@ def scanPDF(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpacktem
 		if tag == "PDF version":
 			pdfinfo['version'] = value.strip()
 	return (['pdfinfo'], pdfinfo)
-
-def pdfPrettyPrint(res, root, scanenv={}):
-	tmpnode = root.createElement('pdfinfo')
-	for key in res:
-		tmpnode2 = root.createElement(key)
-		tmpnodetext = xml.dom.minidom.Text()
-		tmpnodetext.data = str(res[key])
-		tmpnode2.appendChild(tmpnodetext)
-		tmpnode.appendChild(tmpnode2)
-	return tmpnode
 
 ## scan for mentions of licenses
 ######################################
@@ -321,13 +297,6 @@ def scanLicenses(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpa
 	else:
 		return None
 
-def licensesPrettyPrint(res, root, scanenv={}):
-	tmpnode = root.createElement('licenses')
-	for key in res:
-		tmpnode2 = root.createElement(key)
-		tmpnode.appendChild(tmpnode2)
-	return tmpnode
-
 ## scan for mentions of several forges
 ## Some of the URLs of the forges no longer work or are redirected, but they
 ## might still pop up in binaries.
@@ -360,10 +329,3 @@ def scanForges(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpack
 		return (['forges'], forgeresults)
 	else:
 		return None
-
-def forgesPrettyPrint(res, root, scanenv={}):
-	tmpnode = root.createElement('forges')
-	for key in res:
-		tmpnode2 = root.createElement(key)
-		tmpnode.appendChild(tmpnode2)
-	return tmpnode

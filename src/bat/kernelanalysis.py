@@ -6,18 +6,6 @@
 
 import os, sys, string, re, subprocess, cPickle, tempfile, shutil
 import extractor
-import xml.dom.minidom
-
-def xmlprettyprint(res, root, scanenv={}):
-	topnode = root.createElement("kernelchecks")
-	for i in res.keys():
-		tmpnode = root.createElement(i)
-		if i == 'version':
-			tmpnodetext = xml.dom.minidom.Text()
-			tmpnodetext.data = res[i]
-			tmpnode.appendChild(tmpnodetext)
-		topnode.appendChild(tmpnode)
-	return topnode
 
 def kernelChecks(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	results = {}
