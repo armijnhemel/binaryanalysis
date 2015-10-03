@@ -4773,6 +4773,10 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 					magicoffset = databytes.find(xmpmagic)
 					while magicoffset == -1:
 						databuf = datafile.read(1000)
+						## files with a broken XMP trailer
+						## exist, so check if the end of the
+						## file is reached at some point
+						## TODO: check blacklists as well
 						if databuf == '':
 							break
 						databytes += databuf
