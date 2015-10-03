@@ -6,7 +6,6 @@
 
 '''
 This script tries to analyse binary blobs, using a "brute force" approach
-and pretty print the analysis in a simple XML format.
 
 The script has a few separate scanning phases:
 
@@ -29,13 +28,10 @@ were unpacked.
 4. individual file scanning phase. Here each file will be inspected individually. Based on
 the configuration that was given this could be basically anything.
 
-5. output phase. Using a pretty printer a report is pretty printed. The pretty printer is
-set in the configuration file and is optional.
-
-6. postrun phase. In this phase methods that are not necessary for generating output, but
+5. postrun phase. In this phase methods that are not necessary for generating output, but
 which should be run anyway, are run. Examples are generating pictures or running statistics.
 
-7. packing phase. In this phase several datafiles, plus the state of the running program,
+6. packing phase. In this phase several datafiles, plus the state of the running program,
 are packed in a tar file.
 '''
 
@@ -1301,8 +1297,7 @@ def dumpData(unpackreports, scans, tempdir):
 	## a dump of all the result contains:
 	## * a copy of all the unpacked data
 	## * whatever results from postrunscans that should be stored (defined in the config file)
-	## * a pickle of all data, it saves parsing the XML report (or any other format for that matter),
-	##   minus the data from the ranking scan
+	## * a pickle of all data
 	## * separate pickles of the data of the ranking scan
 	sha256spack = set([])
 	for p in unpackreports:
