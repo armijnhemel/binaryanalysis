@@ -1,3 +1,8 @@
+2015-10-03:
+* remove pretty printing option, as it was unmaintained
+* fwunpack.py: no longer rely on 'magic' to unpack cab files, better tag cab
+files where the whole file is a cab archive
+
 2015-09-29:
 * licenseversion.py: explicitely call commit() on database connections to
 avoid lots of warning messages in the PostgreSQL log
