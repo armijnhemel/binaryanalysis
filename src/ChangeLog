@@ -2,6 +2,11 @@
 * remove pretty printing option, as it was unmaintained
 * fwunpack.py: no longer rely on 'magic' to unpack cab files, better tag cab
 files where the whole file is a cab archive
+* fwunpack.py/extractor.py: rework extraction of Windows executable assembly
+information
+* fwunpack.py: extra sanity check for LRZIP
+* prerun.py: sanity check for processing readelf output
+* fwunpack.py: extra sanity check for XMP data in GIF
 
 2015-09-29:
 * licenseversion.py: explicitely call commit() on database connections to
