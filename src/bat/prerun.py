@@ -791,6 +791,8 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		for s in st:
 			if "Addr" in s:
 				continue
+			if ':' in s:
+				continue
 			spl = s.split()
 			if len(spl) == 8:
 				totalsize = int(spl[2], 16) + int(spl[3], 16)
