@@ -166,6 +166,7 @@ def searchMarker(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpa
 	if res != None:
 		return (res, res)
 
+'''
 ## What actually do these dependencies mean?
 ## Are they dependencies of the installer itself, or of the programs that are
 ## installed by the installer?
@@ -184,6 +185,7 @@ def searchWindowsDependencies(filename, tags, blacklist=[], scanenv={}, scandebu
 		return None
 	else:
 		return (['windowsdependencies'], deps)
+'''
 
 ## method to extract meta information from PDF files
 def scanPDF(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
