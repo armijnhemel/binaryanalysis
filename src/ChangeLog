@@ -1,3 +1,8 @@
+2015-10-08:
+* fwunpack.py: extra sanity check for broken gzip data
+* bruteforcescan.py: deal with broken symbolic links when python-magic does not
+like it because of encoding issues
+
 2015-10-03:
 * remove pretty printing option, as it was unmaintained
 * fwunpack.py: no longer rely on 'magic' to unpack cab files, better tag cab
