@@ -2840,6 +2840,8 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			while deflateobj.unused_data == "":
 				localoffset += readsize
 				deflatedata = gzipfile.read(readsize)
+				if deflatedata == '':
+					break
 				try:
 					uncompresseddata = deflateobj.decompress(deflatedata)
 					outgzipfile.write(uncompresseddata)
