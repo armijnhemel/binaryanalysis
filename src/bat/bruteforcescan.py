@@ -262,13 +262,17 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 		## so wrap it in a try statement.
 		try:
 			magic = ms.file(filetoscan)
-		except:
-			## first copy the file to a temporary location
-			tmpmagic = tempfile.mkstemp()
-			os.fdopen(tmpmagic[0]).close()
-			shutil.copy(filetoscan, tmpmagic[1])
-			magic = ms.file(tmpmagic[1])
-			os.unlink(tmpmagic[1])
+		except Exception, e:
+			if not os.path.islink(filetoscan):
+				## first copy the file to a temporary location
+				tmpmagic = tempfile.mkstemp()
+				os.fdopen(tmpmagic[0]).close()
+				shutil.copy(filetoscan, tmpmagic[1])
+				magic = ms.file(tmpmagic[1])
+				os.unlink(tmpmagic[1])
+			else:
+				## TODO: create a better value for 'magic'
+				magic = 'symbolic link'
 		unpackreports[relfiletoscan]['magic'] = magic
 
 		## Add both the path to indicate the position inside the file sytem
