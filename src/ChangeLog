@@ -1,3 +1,9 @@
+2015-10-13:
+* fwunpack.py: unsquashfs can change permissions of directory it unpacks data
+into so permissions need to be changed back.
+* fwunpack.py: detect segfaults of certain squashfs unpackers and work around
+them
+
 2015-10-12:
 * prerun.py: extra sanity check for verifyELF
 
