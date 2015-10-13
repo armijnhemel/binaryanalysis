@@ -779,8 +779,6 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 				newtags.append("elf")
 		elffile.close()
 
-	print newtags
-
 	if not "elf" in newtags:
 		## on some architectures we need to look at the maximum of the starting
 		## address of all sections, plus the size of the section to see if
