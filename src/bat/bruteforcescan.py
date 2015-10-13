@@ -44,7 +44,7 @@ from multiprocessing import Process, Lock
 from multiprocessing.sharedctypes import Value, Array
 import bat.batdb
 
-ms = magic.open(magic.MAGIC_NONE)
+ms = magic.open(magic.MAGIC_NO_CHECK_CDF|magic.MAGIC_NONE)
 ms.load()
 
 ## convenience method to merge ranges that overlap in a blacklist
