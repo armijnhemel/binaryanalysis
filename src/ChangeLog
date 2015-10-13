@@ -3,6 +3,7 @@
 into so permissions need to be changed back.
 * fwunpack.py: detect segfaults of certain squashfs unpackers and work around
 them
+* bruteforcescan.py: disable CDF scanning when determining 'magic'
 
 2015-10-12:
 * prerun.py: extra sanity check for verifyELF
