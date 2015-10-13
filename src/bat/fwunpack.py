@@ -1988,6 +1988,7 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 	if squashtype == 'squashfs1' or squashtype == 'squashfs2':
 		retval = unpackSquashfs(tmpfile[1], offset, tmpdir)
 		if retval != None:
+			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 			os.unlink(tmpfile[1])
 			return retval
 
@@ -1995,30 +1996,35 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 	## first SquashFS 4.2
 	retval = unpackSquashfs42(tmpfile[1],offset,tmpdir)
 	if retval != None:
+		os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 		os.unlink(tmpfile[1])
 		return retval
 
 	### Atheros2 variant
 	retval = unpackSquashfsAtheros2LZMA(tmpfile[1],offset,tmpdir)
 	if retval != None:
+		os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 		os.unlink(tmpfile[1])
 		return retval
 
 	## OpenWrt variant
 	retval = unpackSquashfsOpenWrtLZMA(tmpfile[1],offset,tmpdir)
 	if retval != None:
+		os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 		os.unlink(tmpfile[1])
 		return retval
 
 	## Realtek variant
 	retval = unpackSquashfsRealtekLZMA(tmpfile[1],offset,tmpdir)
 	if retval != None:
+		os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 		os.unlink(tmpfile[1])
 		return retval
 
 	## Broadcom variant
 	retval = unpackSquashfsBroadcom(tmpfile[1],offset,tmpdir)
 	if retval != None:
+		os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 		os.unlink(tmpfile[1])
 		return retval
 
@@ -2026,12 +2032,14 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 	if not sevenzipcompression:
 		retval = unpackSquashfsAtherosLZMA(tmpfile[1],offset,tmpdir)
 		if retval != None:
+			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 			os.unlink(tmpfile[1])
 			return retval
 
 	## another Atheros variant
 	retval = unpackSquashfsAtheros40LZMA(tmpfile[1],offset,tmpdir)
 	if retval != None:
+		os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 		os.unlink(tmpfile[1])
 		return retval
 
@@ -2039,6 +2047,7 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 	if not sevenzipcompression:
 		retval = unpackSquashfsRalinkLZMA(tmpfile[1],offset,tmpdir)
 		if retval != None:
+			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 			os.unlink(tmpfile[1])
 			return retval
 
