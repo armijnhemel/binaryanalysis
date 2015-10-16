@@ -4,7 +4,7 @@
 \pagestyle{empty}
 
 \author{Armijn Hemel -- Tjaldur Software Governance Solutions}
-\title{Binary Analysis Tool User and Developer Manual - describing version 23}
+\title{Binary Analysis Tool User and Developer Manual - describing version 24}
 
 \begin{document}
 
@@ -501,7 +501,7 @@ description = Unpack JFFS2 file systems
 enabled     = yes
 \end{verbatim}
 
-In BAT 23 the following file systems, compressed files and media files can be
+In BAT 24 the following file systems, compressed files and media files can be
 unpacked or extracted:
 
 \begin{itemize}
@@ -753,10 +753,10 @@ reporthash = sha256
 
 \subsubsection{Global environment variables}
 
-Since BAT 20 it is possible to supply global environment variables. These can
-be shared between scans. They can be overridden by individual scans. For example
-to set the environment variable \texttt{BAT\_NAMECACHE\_C} for all scans you
-would put something like this in the global configuration:
+Global environment variables are shared between scans. They can be overridden
+by individual scans. For example to set the environment variable
+\texttt{BAT\_NAMECACHE\_C} for all scans you would put something like this in
+the global configuration:
 
 \begin{verbatim}
 envvars     = BAT_NAMECACHE_C=/home/bat/db/functioncache_c
@@ -867,7 +867,7 @@ cleanup     = yes
 The \texttt{cleanup} setting should be set to \texttt{yes} unless the results
 do not change in between subsequent runs of BAT.
 
-Currently (BAT 22) if \texttt{cleanup} is set the files are written directly to
+Currently (BAT 24) if \texttt{cleanup} is set the files are written directly to
 output directories. The values of these directories are hardcoded (and match
 values that the GUI expects) but these will be replaced by the value of
 \texttt{storetarget} in a later release.
@@ -2170,14 +2170,14 @@ and so on.
 There are two ways to interpret the results. The recommended way is to load the
 result file into the graphical user interface.
 
-The results of the scan can be found in the element \texttt{<ranking>}. This
-element contains:
+If there are any matches the report contains the following:
 
 \begin{itemize}
 \item number of lines that were extracted from the binary
 \item number of lines that could be matched exactly with an entry in the
-database
-\item result per package which are a possible match
+database (unique matches)
+\item number of lines that were assigned to a package (assigned matches)
+\item number of lines which could not be matched (unmatched lines)
 \end{itemize}
 
 Per package the following is reported:
@@ -2189,28 +2189,7 @@ Per package the following is reported:
 \item percentage of the total score
 \end{itemize}
 
-For example, take the results of a run on a BusyBox binary:
-
-\begin{verbatim}
-<ranking>
-  <matchedlines>1314</matchedlines>
-  <extractedlines>3147</extractedlines>
-  <package>
-    <name>busybox</name>
-    <uniquematches>
-        <unique>%d heads, %d sectors/track, %d cylinders</unique>
-        ...
-    </uniquematches>
-    <rank>1</rank>
-    <percentage>98.3386895181</percentage>
-  </package>
-  ...
-</ranking>
-\end{verbatim}
-
-About 98\% of the total score was for BusyBox, so it is a clear match. In
-programs were two or more packages are embedded percentages will be distributed
-in a different, more uniform, way.
+Finally piecharts are also generated providing a visual representation of these results.
 
 \section{BusyBox script internals}
 
@@ -2885,7 +2864,7 @@ Finally there are some scans that unpack text files (\texttt{base64}) or media
 files. The \texttt{lzma} unpack scan also has the lowest priority because of
 possibly many false positives.
 
-The order of the unpack scans as defined in BAT 23 is:
+The order of the unpack scans as defined in BAT 24 is:
 
 \begin{enumerate}
 \item \texttt{byteSwap}
