@@ -1676,8 +1676,6 @@ def extractcomments((package, version, i, p, language, filehash, ninkaversion, e
 	ch.update(scanfile.read())
 	scanfile.close()
 	commentshash = ch.hexdigest()
-	if broken:
-		os.unlink(commentsfile)
 	os.unlink(commentsfile)
 	return (filehash, commentshash)
 
