@@ -873,7 +873,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 			while True:
 				i = osgen.next()
 				for p in i[2]:
-					scanfiles.append((i[0], p, pkgconf))
+					scanfiles.append((i[0], p, pkgconf, allfiles))
 		except Exception, e:
 			if str(e) != "":
 				print >>sys.stderr, package, version, e
