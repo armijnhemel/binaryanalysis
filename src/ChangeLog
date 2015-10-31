@@ -1,3 +1,13 @@
+2015-10-31:
+* busybox.py: fix finding version number
+* fwunpack.py: fix GIF unpacking
+* guireport.py: correctly report size of files even if no magic is set because
+libmagic barfed
+
+2015-10-18:
+* createdb.py: fix invocation of filterfiles()
+* createdb.py: don't try to delete the Ninka comments file twice
+
 2015-10-13:
 * fwunpack.py: unsquashfs can change permissions of directory it unpacks data
 into so permissions need to be changed back.
