@@ -344,6 +344,9 @@ def searchUnpackSwf(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	diroffsets = []
 	readsize = 1000000
 	for offset in offsets['swf']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
 		unzswfobj = zlib.decompressobj()
 		swffile = open(filename, 'rb')
 		swffile.seek(offset+8)
