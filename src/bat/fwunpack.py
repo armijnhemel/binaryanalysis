@@ -4787,8 +4787,8 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 					break
 				localoffset += 1
 				databytes = datafile.read(8)
+				localoffset += 8
 				if databytes == 'XMP Data':
-					localoffset += 8
 					databytes = datafile.read(1000)
 					magicoffset = databytes.find(xmpmagic)
 					while magicoffset == -1:
@@ -4804,7 +4804,7 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 					localoffset += magicoffset + 258
 					datafile.seek(localoffset)
 				else:
-					localoffset += 11
+					localoffset += 3
 					datafile.seek(localoffset)
 					databytes = datafile.read(1)
 					localoffset += 1
@@ -4812,8 +4812,8 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 					localoffset += blocksize
 					datafile.seek(localoffset)
 			databytes = datafile.read(1)
+			localoffset += 1
 			if databytes == '\x00':
-				localoffset += 1
 				databytes = datafile.read(1)
 				localoffset += 1
 		if databytes != '\x2c':
