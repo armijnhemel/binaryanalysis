@@ -247,7 +247,10 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, scanenv, debug=F
 	realpath = unpackreport['realpath']
 	magic = unpackreport['magic']
 	if magic == None:
-		size = 0
+		if not 'size' in unpackreport:
+			size = 0
+		else:
+			size = unpackreport['size']
 	else:
 		if not "symbolic link" in magic:
 			if unpackreport.has_key('size'):

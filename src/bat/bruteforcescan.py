@@ -260,6 +260,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 		## use libmagic to find out the 'magic' of the file for reporting
 		## It cannot properly handle file names with 'exotic' encodings,
 		## so wrap it in a try statement.
+		magic = None
 		try:
 			magic = ms.file(filetoscan)
 		except Exception, e:
