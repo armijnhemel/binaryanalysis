@@ -54,7 +54,6 @@ def busybox_version(filename, tags, blacklist=[], scanenv={}, scandebug=False, u
 			return (['busybox'], bbres)
 	except Exception, e:
 		return None
-	
 
 def main(argv):
 	parser = OptionParser()
