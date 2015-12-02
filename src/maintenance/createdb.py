@@ -814,13 +814,15 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 						filetohash[fileentry][c] = entries[counter+1]
 					counter += 1
 		pkgconf = packageconfig.get(package,{})
-		processstatus = set()
+		processstatus = False
 		for f in filetohash.keys():
 			if filetohash[f]['sha256'] in oldsha256:
 				continue
-			processstatus.add(filterfilename(f, pkgconf)[0])
+			if filterfilename(f, pkgconf)[0]:
+				processstatus = True
+				break
 
-		if True in processstatus:
+		if processstatus:
 			temporarydir = unpack(filedir, filename, unpackdir)
 			if temporarydir == None:
 				return None
