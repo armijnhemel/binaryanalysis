@@ -670,7 +670,7 @@ def unpack(directory, filename, unpackdir):
 		if p.returncode != 0:
 			shutil.rmtree(tmpdir)
 			return
-	elif 'Zip archive data' in filemagic:
+	elif 'Zip archive data' in filemagic or 'Java archive data (JAR)' in filemagic:
 		try:
 			if unpackdir != None:
        				tmpdir = tempfile.mkdtemp(dir=unpackdir)
