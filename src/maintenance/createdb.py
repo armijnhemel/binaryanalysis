@@ -783,17 +783,20 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 				has_manifest = True
 
 	if has_manifest:
+		## Read the entries in the manifest file
 		manifest = bz2.BZ2File(manifestfile, 'r')
 		manifestlines = manifest.readlines()
 		manifest.close()
-		checksumsused = manifestlines[0].strip().split()
+
 		## first line is always a list of supported hashes.
+		checksumsused = manifestlines[0].strip().split()
 		process = True
 		if set(checksumsused).intersection(set(extrahashes)) != set(extrahashes):
 			## if the checksums recorded in the file are not the same
 			## as in the hashes wanted, then don't process the manifest file
 			process = False
 			print >>sys.stderr, "something is wrong, please regenerate your manifest files with the right hashes"
+
 		if process:
 			for i in manifestlines[1:]:
 				i = i.strip().replace('\t\t', '\t')
@@ -813,12 +816,22 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 					if c in extrahashes:
 						filetohash[fileentry][c] = entries[counter+1]
 					counter += 1
+
+		## read any configuration data specific for the package
+		## if it exists
 		pkgconf = packageconfig.get(package,{})
+
+		## check if there are actually any files to process. Record if
+		## there are any new files to process as well, as that would mean
+		## that the archive has to be unpacked.
 		processstatus = False
+		havenewfile = False
 		for f in filetohash.keys():
 			if filetohash[f]['sha256'] in oldsha256:
+				processstatus = True
 				continue
 			if filterfilename(f, pkgconf)[0]:
+				havenewfile = True
 				processstatus = True
 				break
 
@@ -1002,7 +1015,7 @@ def filterfiles((filedir, filename, pkgconf, allfiles)):
 	elif not process and allfiles:
 		language = None
 
-	filemagic = ms.file(os.path.realpath(resolved_path))
+	filemagic = ms.file(os.path.realpath(resolved_path).decode('utf-8'))
 	if filemagic == "AppleDouble encoded Macintosh file":
 		return None
 	return (filedir, filename, extension, language)
