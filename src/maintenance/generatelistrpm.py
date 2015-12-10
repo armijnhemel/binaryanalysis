@@ -21,8 +21,13 @@ from optparse import OptionParser
 import multiprocessing, ConfigParser
 import hashlib, zlib, urllib
 import rpm
+try:
+	import tlsh
+	tlshscan = True
+except Exception, e:
+	tlshscan = False
 
-## backup method that uses the RPM module's built in functionality to expamd
+## backup method that uses the RPM module's built in functionality to expand
 ## macros
 ## WARNING WARNING WARNING: this is dangerous as commands from the RPM spec file
 ## that could invoke external commands will run!
@@ -244,23 +249,24 @@ def scanspec(specfile, specdir, insecurerpm):
 
 	if insecurerpm and userpmmodule:
 		scanres2 = scanspec2(specfile, specdir)
-		if 'patches' in scanres2:
-			for patch2 in scanres2['patches']:
-				if os.path.exists(os.path.join(specdir, patch2)):
-					appliedpatches.add(patch2)
-				else:
-					missingpatches.add(patch2)
-		if 'sources' in scanres2:
-			if len(scanres2['sources']) != 0:
-				result['sources'] = scanres2['sources']
-		if 'name' in scanres2:
-			result['name'] = scanres2['name']
-		if 'version' in scanres2:
-			result['version'] = scanres2['version']
-		if 'url' in scanres2:
-			result['url'] = scanres2['url']
-		if 'license' in scanres2:
-			result['license'] = scanres2['license']
+		if scanres2 != None:
+			if 'patches' in scanres2:
+				for patch2 in scanres2['patches']:
+					if os.path.exists(os.path.join(specdir, patch2)):
+						appliedpatches.add(patch2)
+					else:
+						missingpatches.add(patch2)
+			if 'sources' in scanres2:
+				if len(scanres2['sources']) != 0:
+					result['sources'] = scanres2['sources']
+			if 'name' in scanres2:
+				result['name'] = scanres2['name']
+			if 'version' in scanres2:
+				result['version'] = scanres2['version']
+			if 'url' in scanres2:
+				result['url'] = scanres2['url']
+			if 'license' in scanres2:
+				result['license'] = scanres2['license']
 
 	if len(missingpatches) != 0:
 		result['missingpatches'] = missingpatches
@@ -303,7 +309,7 @@ def parallel_unpack((rpmfile, target, copyfiles, unpacktmpdir, insecurerpm, cuto
 	specres = scanspec(f,cpiodir,insecurerpm)
 	specres['rpmname'] = os.path.basename(rpmfile)
 	specres['filechecksums'] = filechecksums
-	'''
+	#'''
 	## copy the source code files
 	for f in copyfiles:
 		shutil.copy(os.path.join(cpiodir, f), target)
@@ -312,7 +318,7 @@ def parallel_unpack((rpmfile, target, copyfiles, unpacktmpdir, insecurerpm, cuto
 	for f in copyfiles:
 		shutil.copy(os.path.join(cpiodir, f), target)
 		os.chmod(os.path.join(target, f), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-	'''
+	#'''
 	shutil.rmtree(cpiodir)
 	return specres
 
@@ -374,12 +380,18 @@ def scanhashes(resolved_path, extrahashes):
 	## TODO: sanity checks for crc32 for really big files
 	for i in extrahashes:
 		scanfile = open(resolved_path, 'r')
+		data = scanfile.read()
 		if i == 'crc32':
-			crcdata = scanfile.read()
-			filehashes[i] = zlib.crc32(crcdata) & 0xffffffff
+			filehashes[i] = zlib.crc32(data) & 0xffffffff
+		elif i == 'tlsh':
+			if os.stat(resolved_path).st_size >= 512:
+				tlshhash = tlsh.hash(data)
+				filehashes[i] = tlshhash
+			else:
+				filehashes[i] = None
 		else:
 			h = hashlib.new(i)
-			h.update(scanfile.read())
+			h.update(data)
 			filehashes[i] = h.hexdigest()
 		scanfile.close()
 	return filehashes
@@ -610,11 +622,11 @@ def unpacksrpm(filedir, target, unpacktmpdir, origin, rpmdatabase, extrahashes, 
 						filetype = 'patch'
 			cursor.execute("insert into rpm_contents(filename, type, checksum, rpmchecksum) values (?,?,?,?)", (f, filetype, filechecksums[f]['sha256'], rpmchecksum))
 
-		'''
-		for f in rpm2copyfiles[n]:
+		#'''
+		for f in rpm2copyfiles[rpmfile]:
 			shutil.copy(os.path.join(cpiodir, f), target)
 			os.chmod(os.path.join(target, f), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-		'''
+		#'''
 		shutil.rmtree(cpiodir)
 
 	## finally add everything about the RPM file itself to the database
