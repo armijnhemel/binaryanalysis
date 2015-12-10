@@ -55,7 +55,7 @@ def main(argv):
 					continue
 				if p[2] != None:
 					continue
-				## check if specific markers are in in the path
+				## check if specific markers are in the path
 				if i[0] in os.path.dirname(p[1]):
 					for t in thirdparty:
 						if t in os.path.dirname(p[1]):
