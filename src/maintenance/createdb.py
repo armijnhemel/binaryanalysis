@@ -52,7 +52,7 @@ binary kernel image and modules back to a configuration.
 '''
 
 import sys, os, magic, string, re, subprocess, shutil, stat, datetime
-import tempfile, bz2, tarfile, gzip, ConfigParser
+import tempfile, bz2, tarfile, gzip, ConfigParser, zipfile
 from optparse import OptionParser
 import sqlite3, hashlib, zlib, urlparse, tokenize, multiprocessing
 import batextensions
@@ -620,7 +620,14 @@ def unpack(directory, filename, unpackdir):
 		print >>sys.stderr, "Can't find %s" % filename
 		return None
 
-        filemagic = ms.file(os.path.realpath(os.path.join(directory, filename)))
+	filepath = os.path.realpath(os.path.join(directory, filename))
+
+	iszip = False
+	if zipfile.is_zipfile(filepath):
+		iszip = True
+		filemagic = ""
+        else:
+		filemagic = ms.file(filepath)
 
         ## Assume if the files are bz2 or gzip compressed they are compressed tar files
         if 'bzip2 compressed data' in filemagic:
@@ -631,7 +638,7 @@ def unpack(directory, filename, unpackdir):
 		## for some reason the tar.bz2 unpacking from python doesn't always work, like
 		## aeneas-1.0.tar.bz2 from GNU, so use a subprocess instead of using the
 		## Python tar functionality.
- 		p = subprocess.Popen(['tar', 'jxf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+ 		p = subprocess.Popen(['tar', 'jxf', filepath], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
 			print >>sys.stderr, "corrupt bz2 archive %s/%s" % (directory, filename)
@@ -645,7 +652,7 @@ def unpack(directory, filename, unpackdir):
        			tmpdir = tempfile.mkdtemp(dir=unpackdir)
 		else:
        			tmpdir = tempfile.mkdtemp()
- 		p = subprocess.Popen(['tar', 'ixf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+ 		p = subprocess.Popen(['tar', 'ixf', filepath], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
 			shutil.rmtree(tmpdir)
@@ -655,7 +662,7 @@ def unpack(directory, filename, unpackdir):
        			tmpdir = tempfile.mkdtemp(dir=unpackdir)
 		else:
        			tmpdir = tempfile.mkdtemp()
- 		p = subprocess.Popen(['tar', 'ixf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+ 		p = subprocess.Popen(['tar', 'ixf', filepath], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
 			shutil.rmtree(tmpdir)
@@ -665,24 +672,21 @@ def unpack(directory, filename, unpackdir):
        			tmpdir = tempfile.mkdtemp(dir=unpackdir)
 		else:
        			tmpdir = tempfile.mkdtemp()
- 		p = subprocess.Popen(['tar', 'zxf', os.path.join(directory, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+ 		p = subprocess.Popen(['tar', 'zxf', filepath], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
 			shutil.rmtree(tmpdir)
 			return
-	elif 'Zip archive data' in filemagic or 'Java archive data (JAR)' in filemagic:
+	elif iszip:
+		if unpackdir != None:
+       			tmpdir = tempfile.mkdtemp(dir=unpackdir)
+		else:
+       			tmpdir = tempfile.mkdtemp()
 		try:
-			if unpackdir != None:
-       				tmpdir = tempfile.mkdtemp(dir=unpackdir)
-			else:
-       				tmpdir = tempfile.mkdtemp()
-			p = subprocess.Popen(['unzip', "-B", os.path.join(directory, filename), '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-			(stanout, stanerr) = p.communicate()
-			if p.returncode != 0 and p.returncode != 1:
-				print >>sys.stderr, "unpacking ZIP failed for", filename, stanerr
-				shutil.rmtree(tmpdir)
-				return None
+			batzip = zipfile.ZipFile(filepath, 'r')
+			batzip.extractall(path=tmpdir)
 		except Exception, e:
+			shutil.rmtree(tmpdir)
 			print >>sys.stderr, "unpacking ZIP failed", e
 			return None
 	osgen = os.walk(tmpdir)
