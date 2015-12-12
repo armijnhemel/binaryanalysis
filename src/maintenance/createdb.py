@@ -937,6 +937,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 			return
 
 	extractionresults = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, security, pool, extractconfig, licensedb, authlicensedb, authdb, authcopy, securitydb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles)
+
 	if extractionresults != None:
 		if extractionresults != []:
 			## Add the file to the database: name of archive, sha256, packagename and version
@@ -1059,12 +1060,11 @@ def computehash((filedir, filename, extension, language, extrahashes)):
 
 def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, security, pool, extractconfig, licensedb, authlicensedb, authdb, authcopy, securitydb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
 
-	osgen = os.walk(srcdir)
-
 	pkgconf = packageconfig.get(package,{})
 
 	srcdirlen = len(srcdir)+1
 	scanfiles = []
+	osgen = os.walk(srcdir)
 	try:
 		while True:
 			i = osgen.next()
@@ -1169,6 +1169,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			unpackenv['TMPDIR'] = unpackdir
 
 	filestoscan_extract = map(lambda x: x + (unpackenv, security, authdb, pkgconf), filestoscan)
+
 	## process the files to scan in parallel, then process the results
 	extracted_results = pool.map(extractidentifiers, filestoscan_extract, 1)
 
@@ -1447,6 +1448,8 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		securityc.execute('PRAGMA synchronous=off')
 
 	for extractres in extracted_results:
+		if extractres == None:
+			continue
 		(filehash, language, origlanguage, stringres, moduleres, results, securityresults) = extractres
 		if security:
 			for res in securityresults:
@@ -2092,8 +2095,9 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 	## section called __ksymtab__strings
 	# (name, linenumber, type)
 
-	if (newlanguage in ['C', 'C#', 'Java', 'PHP', 'Python', 'Ruby']):
+	javatagtypes = ['method', 'class', 'field']
 
+	if (newlanguage in ['C', 'C#', 'Java', 'PHP', 'Python', 'Ruby']):
 		p2 = subprocess.Popen(["ctags", "-f", "-", "-x", '--language-force=%s' % newlanguage, filepath], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE, env=unpackenv)
 		(stanout2, stanerr2) = p2.communicate()
 		if p2.returncode != 0:
@@ -2109,7 +2113,7 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 				identifier = csplit[0]
 				tagtype = csplit[1]
 				if newlanguage == 'Java':
-					if tagtype not in ['method', 'class', 'field']:
+					if tagtype not in javatagtypes:
 						continue
 				elif newlanguage == 'C#':
 					if tagtype not in ['method']:
@@ -2158,21 +2162,24 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 									funcvarresults.add((identifier, linenumber, 'variable'))
 						elif tagtype == 'function':
 							funcvarresults.add((identifier, linenumber, 'function'))
-				if newlanguage == 'C#':
+				elif newlanguage == 'C#':
 					for i in ['method']:
 						if tagtype == i:
 							funcvarresults.add((identifier, linenumber, i))
-				if newlanguage == 'Java':
+							break
+				elif newlanguage == 'Java':
 					for i in ['method', 'class', 'field']:
 						if tagtype == i:
 							funcvarresults.add((identifier, linenumber, i))
-				if newlanguage == 'PHP':
+							break
+				elif newlanguage == 'PHP':
 					## ctags does not nicely handle comments, so sometimes there are
 					## false positives.
 					for i in ['variable', 'function', 'class']:
 						if tagtype == i:
 							funcvarresults.add((identifier, linenumber, i))
-				if newlanguage == 'Python':
+							break
+				elif newlanguage == 'Python':
 					## TODO: would be nice to store members with its surrounding class
 					for i in ['variable', 'member', 'function', 'class']:
 						if identifier == '__init__':
@@ -2180,10 +2187,11 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 						if tagtype == i:
 							funcvarresults.add((identifier, linenumber, i))
 							break
-				if newlanguage == 'Ruby':
+				elif newlanguage == 'Ruby':
 					for i in ['module', 'method', 'class']:
 						if tagtype == i:
 							funcvarresults.add((identifier, linenumber, i))
+							break
 
 	## return all results, as well as the original language, which is important in the case of 'patch'
 	return (filehash, newlanguage, language, stringres, moduleres, funcvarresults, securityresults)
