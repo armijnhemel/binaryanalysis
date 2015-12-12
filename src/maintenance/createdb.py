@@ -691,11 +691,13 @@ def unpack(directory, filename, unpackdir):
 			i = osgen.next()
 			## make sure all directories and files can be accessed
 			for d in i[1]:
-				if not os.path.islink(os.path.join(i[0], d)):
-					os.chmod(os.path.join(i[0], d), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+				dirpath = os.path.join(i[0], d)
+				if not os.path.islink(dirpath):
+					os.chmod(dirpath, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 			for p in i[2]:
-				if not os.path.islink(os.path.join(i[0], p)):
-					os.chmod(os.path.join(i[0], p), stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+				filenamepath = os.path.join(i[0], p)
+				if not os.path.islink(filenamepath):
+					os.chmod(filenamepath, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 		except StopIteration:
 			break
 		except Exception, e:
@@ -863,7 +865,6 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 						package = rewrites[filehash]['newpackage']
 						version = rewrites[filehash]['newversion']
 
-	allchmod = False
 	## Then check if version exists in the database.
 	c.execute('''select checksum from processed where package=? and version=? LIMIT 1''', (package, version))
 	checkres = c.fetchall()
@@ -988,7 +989,7 @@ def filterfilename(filename, pkgconf):
 		language = 'C'
 	if not process:
 		## now check the package specific extensions
-		if pkgconf.has_key('extensions'):
+		if 'extensions' in pkgconf:
 			for extlang in pkgconf['extensions']:
 				(extension, language) = extlang
 				if (p_nocase.endswith(extension)) and not p_nocase == extension:
@@ -1072,6 +1073,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 
 	## first filter out the uninteresting files
 	scanfiles = filter(lambda x: x != None, pool.map(filterfiles, scanfiles, 1))
+
 	## compute the hashes in parallel, or if available, use precomputed SHA256 from the MANIFEST file
 	if filetohash != {}:
 		scanfile_result = []
@@ -1113,11 +1115,14 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		addtofiletohash = True
 	filestoscanextra = []
 	for s in scanfile_result:
-		(path, filename, extractedfilehashes, extension, language) = s
+		(filedir, filename, extractedfilehashes, extension, language) = s
 		filehash = extractedfilehashes['sha256']
-		insertfiles.append((os.path.join(path[srcdirlen:],filename), extractedfilehashes))
+
+		## files should be inserted into the database regardless of whether or not
+		## they are actually scanned
+		insertfiles.append((os.path.join(filedir[srcdirlen:],filename), extractedfilehashes))
 		if addtofiletohash:
-			filetohash[os.path.join(path[srcdirlen:],filename)] = filehash
+			filetohash[os.path.join(filedir[srcdirlen:],filename)] = filehash
 
 		## if many versions of a single package are processed there is likely going to be
 		## overlap. Avoid hitting the disk by remembering the SHA256 from a previous run.
@@ -1138,16 +1143,16 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			#print >>sys.stderr, "duplicate %s %s: %s/%s" % (package, version, i[0], p)
 			continue
 		if filename == 'configure.ac':
-			filestoscanextra.append((package, version, path, filename, language, filehash))
+			filestoscanextra.append((package, version, filedir, filename, language, filehash))
 		else:
-			filestoscan.append((package, version, path, filename, language, filehash, ninkaversion, extractconfig))
-		if filehashes.has_key(filehash):
-			filehashes[filehash].append((path, filename))
+			filestoscan.append((package, version, filedir, filename, language, filehash, ninkaversion, extractconfig))
+		if filehash in filehashes:
+			filehashes[filehash].append((filedir, filename))
 		else:
-			filehashes[filehash] = [(path, filename)]
+			filehashes[filehash] = [(filedir, filename)]
 
 	unpackenv = os.environ.copy()
-	if not unpackenv.has_key('TMPDIR'):
+	if not 'TMPDIR' in unpackenv:
 		if unpackdir != None:
 			unpackenv['TMPDIR'] = unpackdir
 
@@ -1895,6 +1900,8 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 	else:
 		unpackdir = None
 
+	filepath = os.path.join(i,p)
+
 	scanidentifiers = True
 	if authdb != None:
 		if not 'alwaysscan' in pkgconf:
@@ -1940,7 +1947,7 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 	securityresults = []
 	if security:
 		if language == 'C':
-			securityresults = securityScan(i,p)
+			securityresults = securityScan(filepath)
 
 	if not scanidentifiers:
 		## no scanning is needed, so just pass the results that were extracted from the database instead
@@ -1953,7 +1960,7 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 		## 3. find out which files these manipulate and if these would have been processed
 		## 4. find out which lines are added to the files
 		## 5. set newlanguage to the orginal language of the patched file, if possible
-		patchfile = open(os.path.join(i,p))
+		patchfile = open(filepath, 'r')
 		patchcontent = patchfile.read()
 		patchfile.close()
 		patchlines = patchcontent.split('\n')
@@ -2056,14 +2063,14 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 			moduleres = {}
 		else:
 			## TODO: clean up
-			(patchstringres, moduleres) = extractsourcestrings(p, i, language, package, unpackdir)
+			(patchstringres, moduleres) = extractsourcestrings(filepath, language, package, unpackdir)
 			stringres = []
 			for sql in patchstringres:
 				(res, linenumber) = sql
 				if linenumber in addlines:
 					stringres.append(sql)
 	else:
-		(stringres, moduleres) = extractsourcestrings(p, i, language, package, unpackdir)
+		(stringres, moduleres) = extractsourcestrings(filepath, language, package, unpackdir)
 
 	funcvarresults = set()
 
@@ -2075,7 +2082,7 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 
 	if (newlanguage in ['C', 'C#', 'Java', 'PHP', 'Python', 'Ruby']):
 
-		p2 = subprocess.Popen(["ctags", "-f", "-", "-x", '--language-force=%s' % newlanguage, os.path.join(i, p)], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE, env=unpackenv)
+		p2 = subprocess.Popen(["ctags", "-f", "-", "-x", '--language-force=%s' % newlanguage, filepath], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE, env=unpackenv)
 		(stanout2, stanerr2) = p2.communicate()
 		if p2.returncode != 0:
 			pass
@@ -2171,9 +2178,9 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 
 ## Scan the file for possible security bugs, try to classify them according to the
 ## CERT secure coding standard and possibly some other standards.
-def securityScan(i,p):
+def securityScan(filepath):
 	## first slurp in the file
-	fc = open(os.path.join(i,p), 'r')
+	fc = open(filepath, 'r')
 	filecontent = fc.read()
 	fc.close()
 	smells = []
@@ -2215,7 +2222,7 @@ def securityScan(i,p):
 ## The results might not be perfect, but they are acceptable.
 ## TODO: use version from bat/extractor.py
 ## TODO: process more files at once to reduce overhead of calling xgettext
-def extractsourcestrings(filename, filedir, language, package, unpackdir):
+def extractsourcestrings(filepath, language, package, unpackdir):
 	remove_chars = ["\\a", "\\b", "\\v", "\\f", "\\e", "\\0"]
 	stringres = []
 
@@ -2230,11 +2237,12 @@ def extractsourcestrings(filename, filedir, language, package, unpackdir):
 	## Solution: First replace these characters with \n, then run xgettext.
 	## TODO: fix for octal values, like \010
 
-	scanfile = os.path.join(filedir, filename)
+	## store the original
+	scanfile = filepath
 
 	if language == 'C':
 		changed = False
-		openscanfile = open(os.path.join(filedir, filename))
+		openscanfile = open(filepath, 'r')
 		filecontents = openscanfile.read()
 		openscanfile.close()
 
@@ -3041,9 +3049,6 @@ def main(argv):
 	c.close()
 	conn.close()
 
-	processors = multiprocessing.cpu_count()
-	pool = multiprocessing.Pool(processes=processors)
-
 	pkgmeta = []
 
 	checksums = {}
@@ -3103,7 +3108,11 @@ def main(argv):
 				pkgmeta.append((options.filedir, package, version, filename, origin, downloadurls, batarchive, masterdatabase, checksums.get(filename, None), archivechecksums))
 		except Exception, e:
 			# oops, something went wrong
+
 			print >>sys.stderr, e
+	processors = multiprocessing.cpu_count()
+	pool = multiprocessing.Pool(processes=processors)
+
 	print "Checking %d packages to see if they have already been scanned" % len(pkgmeta)
 	sys.stdout.flush()
 	res = filter(lambda x: x != None, pool.map(checkalreadyscanned, pkgmeta, 1))
