@@ -1059,33 +1059,28 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 
 	pkgconf = packageconfig.get(package,{})
 
+	srcdirlen = len(srcdir)+1
 	scanfiles = []
 	try:
 		while True:
 			i = osgen.next()
 			for p in i[2]:
+				scanmagic = True
 				if batarchive:
 					if p == 'MANIFEST.BAT':
 						continue
-				scanfiles.append((i[0], p, pkgconf, allfiles))
+				if os.path.join(i[0][srcdirlen:], p) in filetohash:
+					if filetohash[os.path.join(i[0][srcdirlen:], p)]['sha256'] in oldsha256:
+						scanmagic = False
+				scanfiles.append((i[0], p, pkgconf, allfiles, scanmagic))
 	except Exception, e:
 		if str(e) != "":
 			print >>sys.stderr, package, version, e
 			return
 		pass
 
-	srcdirlen = len(srcdir)+1
-
 	## first filter out the uninteresting files
-	newscanfiles = []
-	for scanfile in scanfiles:
-		scanmagic = True
-		(scanfilesdir, scanfilesfile, scanfileextension, language) = scanfile
-		if filetohash.has_key(os.path.join(scanfilesdir[srcdirlen:], scanfilesfile)):
-			if filetohash[os.path.join(scanfilesdir[srcdirlen:], scanfilesfile)]['sha256'] in oldsha256:
-				scanmagic = False
-		newscanfiles.append(scanfile + (scanmagic,))
-	scanfiles = filter(lambda x: x != None, pool.map(filterfiles, newscanfiles, 1))
+	scanfiles = filter(lambda x: x != None, pool.map(filterfiles, scanfiles, 1))
 
 	## compute the hashes in parallel, or if available, use precomputed SHA256 from the MANIFEST file
 	if filetohash != {}:
