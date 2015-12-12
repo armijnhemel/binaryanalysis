@@ -824,7 +824,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 		pkgconf = packageconfig.get(package,{})
 
 		## check if there are actually any files to process. Record if
-		## there are any new files to process as well, as that would mean
+		## there are any new files to process as well, as that means
 		## that the archive has to be unpacked.
 		processstatus = False
 		havenewfile = False
@@ -833,6 +833,8 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 				processstatus = True
 				continue
 			if filterfilename(f, pkgconf)[0]:
+				## There is at least one new file so
+				## no need to look any further.
 				havenewfile = True
 				processstatus = True
 				break
@@ -884,12 +886,13 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 		osgen = os.walk(temporarydir)
 		pkgconf = packageconfig.get(package,{})
 
+		scanfiles = []
+		scanmagic = True
 		try:
-			scanfiles = []
 			while True:
 				i = osgen.next()
 				for p in i[2]:
-					scanfiles.append((i[0], p, pkgconf, allfiles))
+					scanfiles.append((i[0], p, pkgconf, allfiles, scanmagic))
 		except Exception, e:
 			if str(e) != "":
 				print >>sys.stderr, package, version, e
@@ -998,7 +1001,7 @@ def filterfilename(filename, pkgconf):
 	return (process, extension, language)
 
 ## Compute the SHA256 for a single file.
-def filterfiles((filedir, filename, pkgconf, allfiles)):
+def filterfiles((filedir, filename, pkgconf, allfiles, scanmagic)):
 	resolved_path = os.path.join(filedir, filename)
 	if os.path.islink(resolved_path):
         	return None
@@ -1016,9 +1019,10 @@ def filterfiles((filedir, filename, pkgconf, allfiles)):
 	elif not process and allfiles:
 		language = None
 
-	filemagic = ms.file(os.path.realpath(resolved_path).decode('utf-8'))
-	if filemagic == "AppleDouble encoded Macintosh file":
-		return None
+	if scanmagic:
+		filemagic = ms.file(os.path.realpath(resolved_path).decode('utf-8'))
+		if filemagic == "AppleDouble encoded Macintosh file":
+			return None
 	return (filedir, filename, extension, language)
 
 def computehash((filedir, filename, extension, language, extrahashes)):
@@ -1050,12 +1054,13 @@ def computehash((filedir, filename, extension, language, extrahashes)):
 	return (filedir, filename, filehashes, extension, language)
 
 def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, security, pool, extractconfig, licensedb, authlicensedb, authdb, authcopy, securitydb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
+
 	osgen = os.walk(srcdir)
 
 	pkgconf = packageconfig.get(package,{})
 
+	scanfiles = []
 	try:
-		scanfiles = []
 		while True:
 			i = osgen.next()
 			for p in i[2]:
@@ -1072,7 +1077,15 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	srcdirlen = len(srcdir)+1
 
 	## first filter out the uninteresting files
-	scanfiles = filter(lambda x: x != None, pool.map(filterfiles, scanfiles, 1))
+	newscanfiles = []
+	for scanfile in scanfiles:
+		scanmagic = True
+		(scanfilesdir, scanfilesfile, scanfileextension, language) = scanfile
+		if filetohash.has_key(os.path.join(scanfilesdir[srcdirlen:], scanfilesfile)):
+			if filetohash[os.path.join(scanfilesdir[srcdirlen:], scanfilesfile)]['sha256'] in oldsha256:
+				scanmagic = False
+		newscanfiles.append(scanfile + (scanmagic,))
+	scanfiles = filter(lambda x: x != None, pool.map(filterfiles, newscanfiles, 1))
 
 	## compute the hashes in parallel, or if available, use precomputed SHA256 from the MANIFEST file
 	if filetohash != {}:
