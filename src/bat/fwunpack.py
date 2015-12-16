@@ -827,7 +827,7 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 	candidates = {}
 	if blacklist != []:
 		if 'yaffs2' in offsets:
-			if offsets['yaffs2'] == 0:
+			if len(offsets['yaffs2']) == 0:
 				return (diroffsets, blacklist, [], hints)
 			chunksandspares = [(512,16),(1024,32),(2048,64),(4096,128),(8192,256)]
 			yaffs2file = open(filename, 'rb')
@@ -848,6 +848,8 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 
 	filesize = os.stat(filename).st_size
 	if wholefile:
+		## Assume that the whole file needs to be scanned for now. Of course,
+		## there could be data appended to it that has not yet been unpacked
 		scanfile = filename
 		havetmpfile = False
 		tmpdir = dirsetup(tempdir, filename, "yaffs2", 1)
@@ -936,7 +938,7 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 def unpackYaffs(scanfile, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 
-	p = subprocess.Popen(['bat-unyaffs', '-b', scanfile, '-d', tmpdir], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	p = subprocess.Popen(['bat-unyaffs', '-b', scanfile, '-d', tmpdir], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		return
