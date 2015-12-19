@@ -1,3 +1,9 @@
+2015-12-19:
+* fwunpack.py: extra LZMA check
+* fwunpack.py: replace dependency on output of tune2fs by checking ext2 file
+directly
+* bruteforcescan.py: older versions of python-magic don't have CDF flags
+
 2015-10-31:
 * busybox.py: fix finding version number
 * fwunpack.py: fix GIF unpacking
