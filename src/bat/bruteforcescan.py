@@ -343,7 +343,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 		## acquire the lock for the shared dictionary to see if this file was already
 		## scanned, or is in the process of being scanned.
 		llock.acquire()
-		if hashdict.has_key(filehash):
+		if filehash in hashdict:
 			## if the hash is already there, return
 			unpackreports[relfiletoscan]['tags'] = ['duplicate']
 			for u in unpackreports:
@@ -685,7 +685,7 @@ def leafScan((filetoscan, scans, tags, blacklist, filehash, topleveldir, debug, 
 		method = leafscan['method']
 
 		scandebug = False
-		if leafscan.has_key('debug'):
+		if 'debug' in leafscan:
 			scandebug = True
 			debug = True
 
@@ -751,7 +751,7 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, s
 		method = aggregatescan['method']
 
 		scandebug = False
-		if aggregatescan.has_key('debug'):
+		if 'debug' in aggregatescan:
 			scandebug = True
 			debug = True
 
@@ -1309,7 +1309,7 @@ def dumpData(unpackreports, scans, tempdir):
 	## * separate pickles of the data of the ranking scan
 	sha256spack = set([])
 	for p in unpackreports:
-		if unpackreports[p].has_key('checksum'):
+		if 'checksum' in unpackreports[p]:
 			sha256spack.add(unpackreports[p]['checksum'])
 	oldstoredir = None
 	oldlistdir = []
@@ -1525,7 +1525,7 @@ def runscan(scans, scan_binary, scandate):
 				parallel = False
 
 	if parallel:
-		if scans['batconfig'].has_key('processors'):
+		if 'processors' in scans['batconfig']:
 			processamount = min(multiprocessing.cpu_count(),scans['batconfig']['processors'])
 		else:
 			processamount = multiprocessing.cpu_count()
@@ -1705,7 +1705,7 @@ def runscan(scans, scan_binary, scandate):
 		## results via the environment. This should keep the
 		## code cleaner.
 		for sscan in scans['leafscans']:
-			if not sscan.has_key('setup'):
+			if not 'setup' in sscan:
 				finalscans.append(sscan)
 				continue
 			setupres = runSetup(sscan, tmpdebug)
@@ -1715,7 +1715,7 @@ def runscan(scans, scan_binary, scandate):
 			## 'parallel' can be used to modify whether or not the
 			## scans should be run in parallel. This is right now
 			## the only 'special' keyword.
-			if newenv.has_key('parallel'):
+			if 'parallel' in newenv:
 				if newenv['parallel'] == False:
 					parallel = False
 			sscan['environment'] = newenv
@@ -1756,7 +1756,7 @@ def runscan(scans, scan_binary, scandate):
 					parallel = False
 
 		if parallel:
-			if scans['batconfig'].has_key('processors'):
+			if 'processors' in scans['batconfig']:
 				pool = multiprocessing.Pool(scans['batconfig']['processors'])
 			else:
 				pool = multiprocessing.Pool()
@@ -1783,7 +1783,7 @@ def runscan(scans, scan_binary, scandate):
 	## the result is a list of dicts which needs to be turned into one dict
 	for i in unpackreports_tmp:
 		for k in i:
-			if i[k].has_key('tags'):
+			if 'tags' in i[k]:
 				## the file is a duplicate, store for later 
 				if 'duplicate' in i[k]['tags']:
 					dupes.append(i)
@@ -1805,11 +1805,11 @@ def runscan(scans, scan_binary, scandate):
 			unpackreports[k] = dupecopy
 
 	for i in unpackreports.keys():
-		if not unpackreports[i].has_key('checksum'):
+		if not 'checksum' in unpackreports[i]:
 			continue
 		unpacksha256 = unpackreports[i]['checksum']
-		if tagdict.has_key(unpacksha256):
-			if unpackreports[i].has_key('tags'):
+		if unpacksha256 in tagdict:
+			if 'tags' in unpackreports[i]:
 				unpackreports[i]['tags'] = list(set(unpackreports[i]['tags'] + tagdict[unpacksha256]))
 	if debug:
 		print >>sys.stderr, "LEAF END", datetime.datetime.utcnow().isoformat()
@@ -1832,7 +1832,7 @@ def runscan(scans, scan_binary, scandate):
 		print "AGGREGATE END %s" % os.path.basename(scan_binary), datetime.datetime.utcnow().isoformat()
 
 	for i in unpackreports:
-		if unpackreports[i].has_key('tags'):
+		if 'tags' in unpackreports[i]:
 			unpackreports[i]['tags'] = list(set(unpackreports[i]['tags']))
 
 	if debug:
@@ -1845,11 +1845,11 @@ def runscan(scans, scan_binary, scandate):
 	if scans['postrunscans'] != [] and unpackreports != {}:
 		## if unpackreports != {} since deduplication has already been done
 
-		dedupes = filter(lambda x: 'duplicate' not in unpackreports[x]['tags'], filter(lambda x: unpackreports[x].has_key('tags'), filter(lambda x: unpackreports[x].has_key('checksum'), unpackreports.keys())))
+		dedupes = filter(lambda x: 'duplicate' not in unpackreports[x]['tags'], filter(lambda x: 'tags' in unpackreports[x], filter(lambda x: 'checksum' in unpackreports[x], unpackreports.keys())))
 		postrunscans = []
 		for i in dedupes:
 			## results might have been changed by aggregate scans, so check if it still exists
-			if unpackreports.has_key(i):
+			if i in unpackreports:
 				tmpdebug = False
 				if debug:
 					tmpdebug = True
@@ -1871,7 +1871,7 @@ def runscan(scans, scan_binary, scandate):
 				if 'postrun' in debugphases:
 					parallel = False
 		if parallel:
-			if scans['batconfig'].has_key('processors'):
+			if 'processors' in scans['batconfig']:
 				pool = multiprocessing.Pool(scans['batconfig']['processors'])
 			else:
 				pool = multiprocessing.Pool()
