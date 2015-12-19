@@ -2598,29 +2598,27 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 		if not (revision == '\x01' or revision == '\x00'):
 			continue
 
-		## for a quick sanity check only a tiny bit of data is needed
-		## Also use tune2fs to get the size of the file system
-		## TODO: needs language portability fixes
+		## for a quick sanity check only a tiny bit of data is needed.
+		## Use tune2fs for this.
 		datafile.seek(offset - 0x438)
 		ext2checkdata = datafile.read(8192)
 
 		tmpfile = tempfile.mkstemp()
 		os.write(tmpfile[0], ext2checkdata)
 		os.fdopen(tmpfile[0]).close()
+		## perform a sanity check
 		p = subprocess.Popen(['tune2fs', '-l', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, env=unpackenv)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
 			os.unlink(tmpfile[1])
 			continue
 		if len(stanerr) == 0:
-			blockcount = 0
-			blocksize = 0
-			## block count and block size are needed to compute the length
-			for line in stanout.split("\n"):
-				if 'Block count' in line:
-					blockcount = int(line.split(":")[1].strip())
-				if 'Block size' in line:
-					blocksize = int(line.split(":")[1].strip())
+			## grab the superblock, which starts at offset + 1024
+			## the block count will be at bytes 4 - 8
+			## the block size can be computed using the data at bytes 24 - 28
+			## http://www.nongnu.org/ext2-doc/ext2.html
+			blockcount = struct.unpack('<I', ext2checkdata[1028:1032])[0]
+			blocksize = 1024 << struct.unpack('<I', ext2checkdata[1048:1052])[0]
 			ext2checksize = blockcount * blocksize
 		else:
 			ext2checksize = 0
@@ -2664,19 +2662,20 @@ def unpackExt2fs(filename, offset, ext2length, tempdir=None, unpackenv={}, black
 		p = subprocess.Popen(['tune2fs', '-l', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, env=unpackenv)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode == 0:
-			if len(stanerr) == 0:
-				blockcount = 0
-				blocksize = 0
-				## get block count and block size
-				for line in stanout.split("\n"):
-					if 'Block count' in line:
-						blockcount = int(line.split(":")[1].strip())
-					if 'Block size' in line:
-						blocksize = int(line.split(":")[1].strip())
-				ext2size = blockcount * blocksize
-			else:
+			if len(stanerr) != 0:
 				## do something here
 				pass
+			else:
+				datafile = open(tmpfile[1], 'rb')
+				datafile.seek(0)
+				ext2checkdata = datafile.read(8192)
+				## grab the superblock, which starts at offset + 1024
+				## the block count will be at bytes 4 - 8
+				## the block size can be computed using the data at bytes 24 - 28
+				## http://www.nongnu.org/ext2-doc/ext2.html
+				blockcount = struct.unpack('<I', ext2checkdata[1028:1032])[0]
+				blocksize = 1024 << struct.unpack('<I', ext2checkdata[1048:1052])[0]
+				ext2size = blockcount * blocksize
 		else:
 			## do something here
 			pass
@@ -4107,6 +4106,10 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 				if len(stanout) < lzmacutoff:
 					if lzmasize/len(stanout) > 1000:
 						continue
+					else:
+						## there is a very big chance that it actually
+						## is a false positive
+						pass
 			else:
 				## all data has been unpacked
 				tmpdir = dirsetup(tempdir, filename, "lzma", counter)
@@ -4116,6 +4119,10 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 				diroffsets.append((tmpdir, offset, 0))
 				counter += 1
 				continue
+		else:
+			if len(stanout) < lzmacutoff:
+				if lzmabytestoread/len(stanout) > 1000:
+					continue
 
 		## TODO: check if the output consists of a single character that
 		## has been repeated
