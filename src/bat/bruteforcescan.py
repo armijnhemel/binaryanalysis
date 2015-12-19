@@ -44,7 +44,10 @@ from multiprocessing import Process, Lock
 from multiprocessing.sharedctypes import Value, Array
 import bat.batdb
 
-ms = magic.open(magic.MAGIC_NO_CHECK_CDF|magic.MAGIC_NONE)
+try:
+	ms = magic.open(magic.MAGIC_NO_CHECK_CDF|magic.MAGIC_NONE)
+except:
+	ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
 ## convenience method to merge ranges that overlap in a blacklist
@@ -1729,19 +1732,13 @@ def runscan(scans, scan_binary, scandate):
 		## * filter out the checksums
 		## * for each sha256 scan once
 		## * copy results in case there are duplicates
+		## 
+		## each entry in leaftasks: (filetoscan, tags, blacklist, filehash, filesize)
 		sha256leaf = {}
-		for i in leaftasks:
-			if sha256leaf.has_key(i[-2]):
-				sha256leaf[i[-2]].append(i[0])
-			else:
-				sha256leaf[i[-2]] = [i[0]]
-		sha256_tmp = {}
-		for i in sha256leaf:
-			if len(sha256leaf[i]) > 0:
-				sha256_tmp[i] = sha256leaf[i][0]
 		leaftasks_tmp = []
 		for i in leaftasks:
-			if sha256_tmp[i[-2]] == i[0]:
+			if not i[-2] in sha256leaf:
+				sha256leaf[i[-2]] = 1
 				leaftasks_tmp.append(i)
 
 		## reverse sort on size: scan largest files first
