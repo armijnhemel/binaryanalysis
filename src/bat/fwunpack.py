@@ -5017,12 +5017,12 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 					datafile.close()
 					return (diroffsets, blacklist, ['graphics', 'png', 'binary'], hints)
 				else:
-					tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".png", dir=tmpdir)
-					os.write(tmpfile[0], data)
-					hints[tmpfile[1]] = {}
-					hints[tmpfile[1]]['tags'] = ['graphics', 'png', 'binary']
-					hints[tmpfile[1]]['scanned'] = True
-					os.fdopen(tmpfile[0]).close()
+					tmpfile = open(os.path.join(tmpdir, 'unpack-%d.png' % counter), 'wb')
+					tmpfile.write(data)
+					hints[tmpfile] = {}
+					hints[tmpfile]['tags'] = ['graphics', 'png', 'binary']
+					hints[tmpfile]['scanned'] = True
+					tmpfile.close()
 					blacklist.append((offset,trail+8))
 					diroffsets.append((tmpdir, offset, offset+trail+8))
 					counter = counter + 1
