@@ -4917,13 +4917,14 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 						os.rmdir(tmpdir)
 						return (diroffsets, blacklist, ['graphics', 'gif', 'binary'], hints)
 					else:
-						tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".gif", dir=tmpdir)
-						os.write(tmpfile[0], data[:trail+2])
-						os.fdopen(tmpfile[0]).close()
+						tmpfilename = os.path.join(tmpdir, 'unpack-%d.gif' % counter)
+						tmpfile = open(tmpfilename, 'wb')
+						tmpfile.write(data[:trail+2])
+						tmpfile.close()
 						diroffsets.append((tmpdir, offset, trail+2))
-						hints[tmpfile[1]] = {}
-						hints[tmpfile[1]]['tags'] = ['graphics', 'gif', 'binary']
-						hints[tmpfile[1]]['scanned'] = True
+						hints[tmpfilename] = {}
+						hints[tmpfilename]['tags'] = ['graphics', 'gif', 'binary']
+						hints[tmpfilename]['scanned'] = True
 						counter = counter + 1
 						blacklist.append((offset, offset+trail+2))
 						## go to the next header
@@ -5020,10 +5021,10 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 					tmpfilename = os.path.join(tmpdir, 'unpack-%d.png' % counter)
 					tmpfile = open(tmpfilename, 'wb')
 					tmpfile.write(data)
+					tmpfile.close()
 					hints[tmpfilename] = {}
 					hints[tmpfilename]['tags'] = ['graphics', 'png', 'binary']
 					hints[tmpfilename]['scanned'] = True
-					tmpfile.close()
 					blacklist.append((offset,trail+8))
 					diroffsets.append((tmpdir, offset, offset+trail+8))
 					counter = counter + 1
@@ -5170,12 +5171,13 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 					## correctly.
 					#continue
 					break
-				tmpfile = tempfile.mkstemp(prefix='unpack-', suffix=".jpg", dir=tmpdir)
-				os.write(tmpfile[0], jpegtestdata)
-				hints[tmpfile[1]] = {}
-				hints[tmpfile[1]]['tags'] = ['graphics', 'jpeg', 'binary']
-				hints[tmpfile[1]]['scanned'] = True
-				os.fdopen(tmpfile[0]).close()
+				tmpfilename = os.path.join(tmpdir, 'unpack-%d.jpg' % counter)
+				tmpfile = open(tmpfilename, 'wb')
+				tmpfile.write(jpegtestdata)
+				tmpfile.close()
+				hints[tmpfilename] = {}
+				hints[tmpfilename]['tags'] = ['graphics', 'jpeg', 'binary']
+				hints[tmpfilename]['scanned'] = True
 				blacklist.append((offset,trail+2))
 				diroffsets.append((tmpdir, offset, offset+trail+2))
 				counter = counter + 1
