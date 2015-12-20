@@ -1274,7 +1274,6 @@ def unpack7z(filename, offset, tempdir=None, blacklist=[]):
 	return (size7s, tmpdir)
 
 ## unpack lzip archives.
-## This method returns a blacklist.
 def searchUnpackLzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	if not offsets.has_key('lzip'):
@@ -1333,17 +1332,54 @@ def unpackLzip(filename, offset, tempdir=None):
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return (None, None)
-	## determine the size of the archive we unpacked, so we can skip a lot
-	p = subprocess.Popen(['lzip', '-vvvvt', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		## something weird happened here: unpacking is possible, but the test fails
-		os.unlink(outtmpfile[1])
-		os.unlink(tmpfile[1])
-		if tempdir == None:
-			os.rmdir(tmpdir)
-		return (None, None)
-	lzipsize = int(re.search("member size\s+(\d+)", stanerr).groups()[0])
+
+	## Sanity checks
+	## http://www.nongnu.org/lzip/manual/lzip_manual.html
+	## * first compute the CRC32 value of the file that was unpacked.
+	## * search the original file for the CRC32 value followed by the size
+	##  of the unpacked data
+	## * verify using lzip that it is actually the right offset
+	## * report the size of the compressed data
+
+	## compute the crc32 of the unpacked data and pack it
+	crc32 = struct.pack('<I', gzipcrc32(outtmpfile[1]))
+	## pack the size of the unpacked data into a string
+	packedsize = struct.pack('<Q', os.stat(outtmpfile[1]).st_size)
+	## concatenate crc32 and packedsize so it can be searched
+	crc32packedsize = crc32+packedsize
+
+	## search the compressed data for the crc32 and uncompressed data size
+	datafile = open(tmpfile[1], 'rb')
+	datafile.seek(0)
+	## read 1 million bytes
+	lzipdataread = 1000000
+	lzipbytes = datafile.read(lzipdataread)
+	lzipcrc32offset = 0
+	totalread = lzipdataread
+	lzdata = ''
+
+	lzipsize = 0
+	while lzipbytes != '':
+		lzdata += lzipbytes
+		res = lzdata.find(crc32packedsize, lzipcrc32offset)
+		if res != -1:
+			devnull = open(os.devnull, 'w')
+			p = subprocess.Popen(['lzip'], stdin=subprocess.PIPE, stdout=devnull, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate(lzdata[:res+20])
+			devnull.close()
+			if p.returncode != 0:
+				continue
+			crc32match = True
+			endoflzip = res + 12
+			datafile.close()
+			lzipsize = struct.unpack('<Q', lzdata[res+12:res+20])[0]
+			break
+		lzipbytes = datafile.read(lzipdataread)
+		lzipcrc32offset = totalread - 50
+		totalread += lzipdataread
+	datafile.close()
+
+	## clean up
 	os.unlink(tmpfile[1])
 	return (tmpdir, lzipsize)
 
@@ -4917,6 +4953,9 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	orig_offset = headeroffsets[0]
 	lendata = os.stat(filename).st_size
 	lenheaderoffsets = len(headeroffsets)
+
+	lastseentrailer = 0
+
 	for i in range(0,len(headeroffsets)):
 		offset = headeroffsets[i]
 		if i < lenheaderoffsets - 1:
@@ -4945,10 +4984,15 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 
 		datafile.seek(offset)
 
+		traileroffsets = traileroffsets[lastseentrailer:]
+
+		lastseentrailer = 0
+
 		tmpdir = dirsetup(tempdir, filename, "png", counter)
 		pngfound = False
 		for trail in traileroffsets:
 			if trail <= offset:
+				lastseentrailer += 1
 				continue
 			if trail >= nextoffset:
 				break
