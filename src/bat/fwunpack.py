@@ -1643,13 +1643,13 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
-		datafile.seek(offset)
 		for trailer in offsets['cpiotrailer']:
 			if trailer < offset:
 				continue
 			blacklistoffset = extractor.inblacklist(trailer, blacklist)
 			if blacklistoffset != None:
 				continue
+			datafile.seek(offset)
 			tmpdir = dirsetup(tempdir, filename, "cpio", counter)
 			## length of 'TRAILER!!!' plus 1 to include the whole trailer
 			## Also, cpio archives are always rounded to blocks of 512 bytes
@@ -3976,6 +3976,8 @@ def unpackRar(filename, offset, tempdir=None):
 
 	# inspect the rar archive, and retrieve the end of archive
 	# this way we won't waste too many resources when we don't need to
+	## TODO: unrar needs vvt now to work correctly?
+	#p = subprocess.Popen(['unrar', 'vvt', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	p = subprocess.Popen(['unrar', 'vt', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
