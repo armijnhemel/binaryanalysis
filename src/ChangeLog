@@ -1,8 +1,17 @@
+2015-12-22:
+* fwunpack.py: reset offset in cpio file for each trailer
+
+2015-12-20:
+* fwunpack.py: extra sanity checks for lzip, no longer depend on processing
+(English) output of lzip for file size verification
+* fwunpack.py: make names of anonymous PNG, JPEG and GIF files more predictable
+
 2015-12-19:
 * fwunpack.py: extra LZMA check
 * fwunpack.py: replace dependency on output of tune2fs by checking ext2 file
 directly
 * bruteforcescan.py: older versions of python-magic don't have CDF flags
+* bruteforcescan.py: don't build intermediate data structures unnecessarily
 
 2015-10-31:
 * busybox.py: fix finding version number
