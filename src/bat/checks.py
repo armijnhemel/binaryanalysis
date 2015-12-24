@@ -18,44 +18,38 @@ import extractor, batdb
 ## TODO: implement overlap between subsequent buffer reads
 def genericSearch(filename, markerDict, blacklist=[], unpacktempdir=None):
 	results = []
-        try:
-		## first see if the entire file has been blacklisted
-		filesize = os.stat(filename).st_size
-		carved = False
-		if blacklist != []:
-			if extractor.inblacklist(0, blacklist) == filesize:
-				return None
-			datafile = open(filename, 'rb')
-			lastindex = 0
-			databytes = ""
-			datafile.seek(lastindex)
-			## make a copy and add a bogus value for the last
-			## byte to a temporary blacklist to make the loop work
-			## well.
-			blacklist_tmp = copy.deepcopy(blacklist)
-			blacklist_tmp.append((filesize,filesize))
-			for i in blacklist_tmp:
-				if i[0] == lastindex:
-					lastindex = i[1] - 1
-					datafile.seek(lastindex)
-					continue
-				if i[0] > lastindex:
-					## just concatenate the bytes
-					data = datafile.read(i[0] - lastindex)
-					databytes = databytes + data
-					## set lastindex to the next
-					lastindex = i[1] - 1
-					datafile.seek(lastindex)
-			datafile.close()
-			if len(databytes) == 0:
-				return None
-			tmpfile = tempfile.mkstemp(dir=unpacktempdir)
-			os.write(tmpfile[0], databytes)
-			os.fdopen(tmpfile[0]).close()
-			scanfile = tmpfile[1]
-			carved = True
-			filename = tmpfile[1]
-
+	## first see if the entire file has been blacklisted
+	filesize = os.stat(filename).st_size
+	carved = False
+	if blacklist != []:
+		if extractor.inblacklist(0, blacklist) == filesize:
+			return None
+		datafile = open(filename, 'rb')
+		lastindex = 0
+		datafile.seek(lastindex)
+		## make a copy and add a bogus value for the last
+		## byte to a temporary blacklist to make the loop work
+		## well.
+		blacklist_tmp = copy.deepcopy(blacklist)
+		blacklist_tmp.append((filesize,filesize))
+		for i in blacklist_tmp:
+			if i[0] == lastindex:
+				lastindex = i[1] - 1
+				datafile.seek(lastindex)
+				continue
+			if i[0] > lastindex:
+				## just concatenate the bytes
+				data = datafile.read(i[0] - lastindex)
+				## set lastindex to the next
+				lastindex = i[1] - 1
+				for marker in markerDict.keys():
+					for markerstring in markerDict[marker]:
+						markeroffset = data.find(markerstring)
+						if markeroffset != -1:
+							results.append(marker)
+				datafile.seek(lastindex)
+		datafile.close()
+	else:
 		datafile = open(filename, 'rb')
 		databuffer = []
 		offset = 0
@@ -72,11 +66,6 @@ def genericSearch(filename, markerDict, blacklist=[], unpacktempdir=None):
 			databuffer = datafile.read(100000)
 			offset = offset + len(databuffer)
 		datafile.close()
-		if carved:
-			os.unlink(filename)
-        except Exception, e:
-		print >>sys.stderr, e
-                return None
 	if results != []:
 		return list(set(results))
 	return None
