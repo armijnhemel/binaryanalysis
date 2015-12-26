@@ -3935,14 +3935,15 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		offsetofcentraldirectory = struct.unpack('<I', zipfile.read(4))[0]
 		if offsetofcentraldirectory > os.stat(filename).st_size:
 			continue
-		zipfile.seek(offsetofcentraldirectory)
-		centraldirheader = zipfile.read(4)
-		if centraldirheader != "PK\x01\x02":
-			continue
 
 		for offset in offsets['zip']:
 			if offset > zipend:
 				continue
+			zipfile.seek(offsetofcentraldirectory+offset)
+			centraldirheader = zipfile.read(4)
+			if centraldirheader != "PK\x01\x02":
+				continue
+
 			openzipfile = open(filename, 'r')
 			openzipfile.seek(offset+4)
 			versionneededbytes = openzipfile.read(2)
