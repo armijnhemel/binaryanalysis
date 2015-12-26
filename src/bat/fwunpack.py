@@ -2392,15 +2392,38 @@ def unpackSquashfsAtherosLZMA(filename, offset, tmpdir):
 	if p.returncode != 0:
 		return None
 	else:
-		## it is possible to get a rough size estimate using the -s option	
-		p = subprocess.Popen(["bat-unsquashfs-atheros", '-s', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-		if p.returncode != 0:
-			squashsize = 1
+		## determine the size of the file for the blacklist. The size can be extracted
+		## from the header, but it depends on the endianness and the version of squashfs
+		## used.
+		sqshfile = open(filename, 'rb')
+		sqshfile.seek(offset)
+		sqshheader = sqshfile.read(4)
+		bigendian = False
+
+		## get the version from the header
+		sqshfile.seek(offset+28)
+		versionbytes = sqshfile.read(2)
+		if bigendian:
+			version = struct.unpack('>H', versionbytes)[0]
 		else:
-			for s in stanout.splitlines():
-				if s.startswith('Filesystem size '):
-					squashsize = int(s.split(" ")[2].split('.')[0]) * 1024
+			version = struct.unpack('<H', versionbytes)[0]
+
+		## prepare for the future
+		if version > 5:
+			return None
+
+		squashsize = 0
+
+		if version == 3:
+			sqshfile.seek(offset+63)
+			squashdata = sqshfile.read(8)
+			if bigendian:
+				squashsize = struct.unpack('>Q', squashdata)[0]
+			else:
+				squashsize = struct.unpack('<Q', squashdata)[0]
+		else:
+			squashsize = 1
+		sqshfile.close()
 		return (tmpdir, squashsize)
 
 ## squashfs variant from Ralink, with LZMA
