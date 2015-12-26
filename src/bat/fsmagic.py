@@ -30,10 +30,10 @@ fsmagic = {
             'zipend':           '\x50\x4b\x05\06',
             'lrzip':            'LRZI',
             'rzip':             'RZIP',
-            'squashfs1':        '\x68\x73\x71\x73', # hsqs
-            'squashfs2':        '\x73\x71\x73\x68', # sqsh
-            'squashfs3':        '\x71\x73\x68\x73', # qshs
-            'squashfs4':        '\x73\x68\x73\x71', # shsq
+            'squashfs1':        '\x68\x73\x71\x73', # hsqs -- little endian
+            'squashfs2':        '\x73\x71\x73\x68', # sqsh -- big endian
+            'squashfs3':        '\x71\x73\x68\x73', # qshs -- little endian
+            'squashfs4':        '\x73\x68\x73\x71', # shsq -- big endian
             'squashfs5':        '\x74\x71\x73\x68', # tqsh - used in DD-WRT
             'squashfs6':        '\x68\x73\x71\x74', # hsqt - used in DD-WRT
             'squashfs7':        '\x73\x71\x6c\x7a', # sqlz
