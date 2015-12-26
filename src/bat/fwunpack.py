@@ -2270,7 +2270,7 @@ def unpackSquashfsAtheros2LZMA(filename, offset, tmpdir, unpacktempdir=None):
 ## squashfs variant from OpenWrt, with LZMA
 def unpackSquashfsOpenWrtLZMA(filename, offset, tmpdir, unpacktempdir=None):
 	## squashfs 1.0 with lzma from OpenWrt can't unpack to an existing directory
-	## so we use a workaround using an extra temporary directory
+	## so use a workaround using an extra temporary directory
 	tmpdir2 = tempfile.mkdtemp(dir=unpacktempdir)
 
 	p = subprocess.Popen(['bat-unsquashfs-openwrt', '-dest', tmpdir2 + "/squashfs-root", '-f', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -2280,10 +2280,11 @@ def unpackSquashfsOpenWrtLZMA(filename, offset, tmpdir, unpacktempdir=None):
 	if p.returncode == -11:
 		## core dump, seen in Trendnet TEW-639GR_672GR_mixed_v1.0.9.161.bin
 		return None
-	## Return code is not reliable enough, since even after successful unpacking the return code could be 16 (related to creating inodes as non-root)
-	## we need to filter out messages about creating inodes. Right now we do that by counting how many
-	## error lines we have for creating inodes and comparing them with the total number of lines in stderr
-	## If they match we know all errors are for creating inodes, so we can safely ignore them.
+	## Return code is not reliable enough, since even after successful unpacking the return code
+	## could be 16 (related to creating inodes as non-root) so filter out messages about creating
+	## inodes. Right now this is done by counting how many error lines for creating inodes there are
+	## and comparing them with the total number of lines in stderr
+	## If they match all errors are for creating inodes, so they can be safely ignored.
 	stanerrlines = stanerr.strip().split("\n")
 	inode_error = 0
 	for stline in stanerrlines:
@@ -2304,7 +2305,7 @@ def unpackSquashfsOpenWrtLZMA(filename, offset, tmpdir, unpacktempdir=None):
 				shutil.move(mvpath, tmpdir)
 			except Exception, e:
 				pass
-		## then we cleanup the temporary dir
+		## then cleanup the temporary dir
 		shutil.rmtree(tmpdir2)
 		## like with 'normal' squashfs we can use 'file' to determine the size
 		squashsize = 0
