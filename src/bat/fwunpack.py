@@ -1902,6 +1902,7 @@ def unpackCramfs(filename, offset, tempdir=None, unpacktempdir=None, bigendian=F
 ## blacklist.
 def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
+	newtags = []
 	squashoffsets = []
 	for marker in fsmagic.squashtypes:
 		if offsets.has_key(marker):
@@ -1909,9 +1910,9 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, scane
 	if squashoffsets == []:
 		if offsets.has_key('squashfs7'):
 			if offsets['squashfs7'] == []:
-				return ([], blacklist, [], hints)
+				return ([], blacklist, newtags, hints)
 		else:
-			return ([], blacklist, [], hints)
+			return ([], blacklist, newtags, hints)
 
 	squashoffsets.sort()
 
@@ -1932,10 +1933,11 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, scane
 		tmpdir = dirsetup(tempdir, filename, "squashfs", counter)
 		retval = unpackSquashfsWrapper(filename, offset, squashes[0], tmpdir)
 		if retval != None:
-			(res, squashsize) = retval
+			(res, squashsize, squashtype) = retval
 			diroffsets.append((res, offset, squashsize))
 			blacklist.append((offset,offset+squashsize))
 			counter = counter + 1
+			newtags.append(squashtype)
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
@@ -1987,13 +1989,14 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, scane
 				retval = unpackSquashfsRealtekLZMA(tmpfile[1], offset, tmpdir)
 				os.unlink(tmpfile[1])
 				if retval != None:
-					(res, squashsize) = retval
+					(res, squashsize, squashtype) = retval
 					diroffsets.append((res, offset, squashsize))
 					blacklist.append((offset,offset+squashsize))
 					counter = counter + 1
+					newtags.append(squashtype)
 				else:
 					os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [], hints)
+	return (diroffsets, blacklist, newtags, hints)
 
 ## wrapper around all the different squashfs types
 def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
@@ -2012,7 +2015,7 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 		retval = unpackSquashfsDDWRTLZMA(tmpfile[1],tmpoffset,tmpdir)
 		if retval != None:
 			os.unlink(tmpfile[1])
-			return retval
+			return retval + ('squashfs-ddwrt',)
 
 	## first read the first 80 bytes from the file system to see if
 	## the string '7zip' can be found. If so, then the inodes have been
@@ -2033,7 +2036,7 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 		if retval != None:
 			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 			os.unlink(tmpfile[1])
-			return retval
+			return retval + ('squashfs',)
 
 	## then try other flavours
 	## first SquashFS 4.2
@@ -2041,35 +2044,35 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 	if retval != None:
 		os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 		os.unlink(tmpfile[1])
-		return retval
+		return retval + ('squashfs42',)
 
 	### Atheros2 variant
 	retval = unpackSquashfsAtheros2LZMA(tmpfile[1],tmpoffset,tmpdir)
 	if retval != None:
 		os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 		os.unlink(tmpfile[1])
-		return retval
+		return retval + ('squashfsatheros2lzma',)
 
 	## OpenWrt variant
 	retval = unpackSquashfsOpenWrtLZMA(tmpfile[1],tmpoffset,tmpdir)
 	if retval != None:
 		os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 		os.unlink(tmpfile[1])
-		return retval
+		return retval + ('squashfsopenwrtlzma',)
 
 	## Realtek variant
 	retval = unpackSquashfsRealtekLZMA(tmpfile[1],tmpoffset,tmpdir)
 	if retval != None:
 		os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 		os.unlink(tmpfile[1])
-		return retval
+		return retval + ('squashfsrealteklzma',)
 
 	## Broadcom variant
 	retval = unpackSquashfsBroadcom(tmpfile[1],tmpoffset,tmpdir)
 	if retval != None:
 		os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 		os.unlink(tmpfile[1])
-		return retval
+		return retval + ('squashfsbroadcomlzma',)
 
 	## Atheros variant
 	if not sevenzipcompression:
@@ -2077,14 +2080,14 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 		if retval != None:
 			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 			os.unlink(tmpfile[1])
-			return retval
+			return retval + ('squashfsatheroslzma',)
 
 	## another Atheros variant
 	retval = unpackSquashfsAtheros40LZMA(tmpfile[1],tmpoffset,tmpdir)
 	if retval != None:
 		os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 		os.unlink(tmpfile[1])
-		return retval
+		return retval + ('squashfsatheros40lzma',)
 
 	## Ralink variant
 	if not sevenzipcompression:
@@ -2092,7 +2095,7 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 		if retval != None:
 			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 			os.unlink(tmpfile[1])
-			return retval
+			return retval + ('squashfsralinklzma',)
 
 	os.unlink(tmpfile[1])
 	if tempdir == None:
