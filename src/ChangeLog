@@ -1,3 +1,9 @@
+2015-12-26:
+* fwunpack.py: version check fixes for squashfs, grab size from some squashfs
+file systems directly from the file
+* fwunpack.py: check for validity of ZIP files would fail if ZIP file did not
+start at offset 0
+
 2015-12-24:
 * checks.py: when data in a file is blacklisted don't first write all the
 non-blacklisted data to a file and then search for identifiers, but search the
