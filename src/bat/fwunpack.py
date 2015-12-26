@@ -2032,7 +2032,7 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 		retval = unpackSquashfs(tmpfile[1], tmpoffset, tmpdir)
 		if retval != None:
 			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-			#os.unlink(tmpfile[1])
+			os.unlink(tmpfile[1])
 			return retval
 
 	## then try other flavours
