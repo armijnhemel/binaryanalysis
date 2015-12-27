@@ -25,7 +25,7 @@ fsmagic = {
             'gzip':             '\x1f\x8b\x08',     # x08 is the only compression method according to RFC 1952
             'compress':         '\x1f\x9d',
             'bz2':              'BZh',
-            'rar':              'Rar!',
+            'rar':              'Rar!\x1a\x07',
             'zip':              '\x50\x4b\x03\04',
             'zipend':           '\x50\x4b\x05\06',
             'lrzip':            'LRZI',
