@@ -2016,6 +2016,9 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 		if retval != None:
 			os.unlink(tmpfile[1])
 			return retval + ('squashfs-ddwrt',)
+		## since no other squashfs unpacker uses the same squash header
+		## it is safe to return here
+		return None
 
 	## first read the first 80 bytes from the file system to see if
 	## the string '7zip' can be found. If so, then the inodes have been
@@ -2030,21 +2033,60 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 	if "7zip" in sqshbuffer:
 		sevenzipcompression = True
 
-	## try normal Squashfs unpacking
+	## determine the size of the file for the blacklist. The size can sometimes be extracted
+	## from the header, but it depends on the endianness and the version of squashfs
+	## used. In some of the cases this data might not be relevant.
+	sqshfile = open(filename, 'rb')
+	sqshfile.seek(offset)
+	sqshheader = sqshfile.read(4)
+	bigendian = False
+	if sqshheader == 'sqsh':
+		bigendian = True
+	## get the version from the header
+	sqshfile.seek(offset+28)
+	versionbytes = sqshfile.read(2)
+	if bigendian:
+		version = struct.unpack('>H', versionbytes)[0]
+	else:
+		version = struct.unpack('<H', versionbytes)[0]
+
+	squashsize = 0
+
+	if version == 4:
+		sqshfile.seek(offset+40)
+		squashdata = sqshfile.read(8)
+		if bigendian:
+			squashsize = struct.unpack('>Q', squashdata)[0]
+		else:
+			squashsize = struct.unpack('<Q', squashdata)[0]
+	elif version == 3:
+		sqshfile.seek(offset+63)
+		squashdata = sqshfile.read(8)
+		if bigendian:
+			squashsize = struct.unpack('>Q', squashdata)[0]
+		else:
+			squashsize = struct.unpack('<Q', squashdata)[0]
+	else:
+		squashsize = 1
+	sqshfile.close()
+
+	## try normal Squashfs unpacking first
 	if squashtype == 'squashfs1' or squashtype == 'squashfs2':
-		retval = unpackSquashfs(tmpfile[1], tmpoffset, tmpdir)
-		if retval != None:
-			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-			os.unlink(tmpfile[1])
-			return retval + ('squashfs',)
+		if version <= 5:
+			retval = unpackSquashfs(tmpfile[1], tmpoffset, tmpdir)
+			if retval != None:
+				os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+				os.unlink(tmpfile[1])
+				return retval + (squashsize, 'squashfs')
 
 	## then try other flavours
 	## first SquashFS 4.2
-	retval = unpackSquashfs42(tmpfile[1],tmpoffset,tmpdir)
-	if retval != None:
-		os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-		os.unlink(tmpfile[1])
-		return retval + ('squashfs42',)
+	if version <= 5:
+		retval = unpackSquashfs42(tmpfile[1],tmpoffset,tmpdir)
+		if retval != None:
+			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+			os.unlink(tmpfile[1])
+			return retval + (squashsize, 'squashfs42')
 
 	### Atheros2 variant
 	retval = unpackSquashfsAtheros2LZMA(tmpfile[1],tmpoffset,tmpdir)
@@ -2076,11 +2118,12 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 
 	## Atheros variant
 	if not sevenzipcompression:
-		retval = unpackSquashfsAtherosLZMA(tmpfile[1],tmpoffset,tmpdir)
-		if retval != None:
-			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-			os.unlink(tmpfile[1])
-			return retval + ('squashfsatheroslzma',)
+		if version <= 5:
+			retval = unpackSquashfsAtherosLZMA(tmpfile[1],tmpoffset,tmpdir)
+			if retval != None:
+				os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+				os.unlink(tmpfile[1])
+				return retval + (squashsize, 'squashfsatheroslzma')
 
 	## another Atheros variant
 	retval = unpackSquashfsAtheros40LZMA(tmpfile[1],tmpoffset,tmpdir)
@@ -2105,47 +2148,6 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 ## tries to unpack stuff using 'normal' unsquashfs. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
 def unpackSquashfs(filename, offset, tmpdir):
-	## determine the size of the file for the blacklist. The size can be extracted
-	## from the header, but it depends on the endianness and the version of squashfs
-	## used.
-	sqshfile = open(filename, 'rb')
-	sqshfile.seek(offset)
-	sqshheader = sqshfile.read(4)
-	bigendian = False
-	if sqshheader == 'sqsh':
-		bigendian = True
-	## get the version from the header
-	sqshfile.seek(offset+28)
-	versionbytes = sqshfile.read(2)
-	if bigendian:
-		version = struct.unpack('>H', versionbytes)[0]
-	else:
-		version = struct.unpack('<H', versionbytes)[0]
-
-	## prepare for the future
-	if version > 5:
-		return None
-
-	squashsize = 0
-
-	if version == 4:
-		sqshfile.seek(offset+40)
-		squashdata = sqshfile.read(8)
-		if bigendian:
-			squashsize = struct.unpack('>Q', squashdata)[0]
-		else:
-			squashsize = struct.unpack('<Q', squashdata)[0]
-	elif version == 3:
-		sqshfile.seek(offset+63)
-		squashdata = sqshfile.read(8)
-		if bigendian:
-			squashsize = struct.unpack('>Q', squashdata)[0]
-		else:
-			squashsize = struct.unpack('<Q', squashdata)[0]
-	else:
-		squashsize = 1
-	sqshfile.close()
-
 	## squashfs is not always in the same path:
 	## Fedora uses /usr/sbin, Ubuntu uses /usr/bin
 	## Just to be sure we add /usr/sbin to the path and set the environment
@@ -2160,7 +2162,7 @@ def unpackSquashfs(filename, offset, tmpdir):
 	else:
 		if "gzip uncompress failed with error code " in stanerr:
 			return None
-		return (tmpdir, squashsize)
+		return (tmpdir,)
 
 ## squashfs variant from DD-WRT, with LZMA
 def unpackSquashfsDDWRTLZMA(filename, offset, tmpdir, unpacktempdir=None):
@@ -2326,50 +2328,7 @@ def unpackSquashfs42(filename, offset, tmpdir):
 	else:
 		if "gzip uncompress failed with error code " in stanerr:
 			return None
-
-		## determine the size of the file for the blacklist. The size can be extracted
-		## from the header, but it depends on the endianness and the version of squashfs
-		## used.
-		sqshfile = open(filename, 'rb')
-		sqshfile.seek(offset)
-		sqshheader = sqshfile.read(4)
-		bigendian = False
-		if sqshheader == 'sqsh':
-			bigendian = True
-
-		## get the version from the header
-		sqshfile.seek(offset+28)
-		versionbytes = sqshfile.read(2)
-		if bigendian:
-			version = struct.unpack('>H', versionbytes)[0]
-		else:
-			version = struct.unpack('<H', versionbytes)[0]
-
-		## prepare for the future
-		if version > 5:
-			return None
-
-		squashsize = 0
-
-		if version == 4:
-			sqshfile.seek(offset+40)
-			squashdata = sqshfile.read(8)
-			if bigendian:
-				squashsize = struct.unpack('>Q', squashdata)[0]
-			else:
-				squashsize = struct.unpack('<Q', squashdata)[0]
-		elif version == 3:
-			sqshfile.seek(offset+63)
-			squashdata = sqshfile.read(8)
-			if bigendian:
-				squashsize = struct.unpack('>Q', squashdata)[0]
-			else:
-				squashsize = struct.unpack('<Q', squashdata)[0]
-		else:
-			squashsize = 1
-		sqshfile.close()
-		
-		return (tmpdir, squashsize)
+		return (tmpdir,)
 
 ## generic function for all kinds of squashfs+lzma variants that were copied
 ## from slax.org and then adapted and that are slightly different, but not that
@@ -2393,39 +2352,7 @@ def unpackSquashfsAtherosLZMA(filename, offset, tmpdir):
 	if p.returncode != 0:
 		return None
 	else:
-		## determine the size of the file for the blacklist. The size can be extracted
-		## from the header, but it depends on the endianness and the version of squashfs
-		## used.
-		sqshfile = open(filename, 'rb')
-		sqshfile.seek(offset)
-		sqshheader = sqshfile.read(4)
-		bigendian = False
-
-		## get the version from the header
-		sqshfile.seek(offset+28)
-		versionbytes = sqshfile.read(2)
-		if bigendian:
-			version = struct.unpack('>H', versionbytes)[0]
-		else:
-			version = struct.unpack('<H', versionbytes)[0]
-
-		## prepare for the future
-		if version > 5:
-			return None
-
-		squashsize = 0
-
-		if version == 3:
-			sqshfile.seek(offset+63)
-			squashdata = sqshfile.read(8)
-			if bigendian:
-				squashsize = struct.unpack('>Q', squashdata)[0]
-			else:
-				squashsize = struct.unpack('<Q', squashdata)[0]
-		else:
-			squashsize = 1
-		sqshfile.close()
-		return (tmpdir, squashsize)
+		return (tmpdir,)
 
 ## squashfs variant from Ralink, with LZMA
 def unpackSquashfsRalinkLZMA(filename, offset, tmpdir):
