@@ -1902,8 +1902,6 @@ def unpackCramfs(filename, offset, tempdir=None, unpacktempdir=None, bigendian=F
 ## Search and unpack a squashfs file system. Since there are so many flavours
 ## of squashfs available we have to do some extra work here, and possibly have
 ## some extra tools (squashfs variants) installed.
-## Use the output of 'file' to determine the size of squashfs and use it for the
-## blacklist.
 def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	newtags = []
@@ -2010,20 +2008,7 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	unpackFile(filename, offset, tmpfile[1], tmpdir)
-
 	tmpoffset = 0
-
-	## DD-WRT variant uses special magic
-	if squashtype == 'squashfs5' or squashtype == 'squashfs6':
-		retval = unpackSquashfsDDWRTLZMA(tmpfile[1],tmpoffset,tmpdir)
-		if retval != None:
-			os.unlink(tmpfile[1])
-			return retval + ('squashfs-ddwrt',)
-		## since no other squashfs unpacker uses the same squash header
-		## it is safe to return here
-		os.unlink(tmpfile[1])
-		return None
 
 	## first read the first 80 bytes from the file system to see if
 	## the string '7zip' can be found. If so, then the inodes have been
@@ -2074,6 +2059,22 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 	else:
 		squashsize = 1
 	sqshfile.close()
+
+	## DD-WRT variant uses special magic
+	if squashtype == 'squashfs5' or squashtype == 'squashfs6':
+		if version <= 5:
+			unpackFile(filename, offset, tmpfile[1], tmpdir)
+
+			retval = unpackSquashfsDDWRTLZMA(tmpfile[1],tmpoffset,tmpdir)
+			if retval != None:
+				os.unlink(tmpfile[1])
+				return retval + (squashsize, 'squashfs-ddwrt',)
+			## since no other squashfs unpacker uses the same squash header
+			## it is safe to return here
+			os.unlink(tmpfile[1])
+			return None
+
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
 	## try normal Squashfs unpacking first
 	if squashtype == 'squashfs1' or squashtype == 'squashfs2':
@@ -2203,9 +2204,7 @@ def unpackSquashfsDDWRTLZMA(filename, offset, tmpdir, unpacktempdir=None):
 				pass
 		## then cleanup the temporary dir
 		shutil.rmtree(tmpdir2)
-		## unlike with 'normal' squashfs 'file' cannot be used to determine the size
-		squashsize = 1
-		return (tmpdir, squashsize)
+		return (tmpdir,)
 
 ## squashfs variant from Atheros, with LZMA, looks a lot like OpenWrt variant
 ## TODO: merge with OpenWrt variant
