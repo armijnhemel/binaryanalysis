@@ -1,3 +1,8 @@
+2015-12-27:
+* fsmagic.py: make RAR header checking a bit more robust
+* fwunpack.py: refactor some squashfs checks
+* fwunpack.py: do yaffs2 sanity check earlier
+
 2015-12-26:
 * fwunpack.py: version check fixes for squashfs, grab size from some squashfs
 file systems directly from the file
