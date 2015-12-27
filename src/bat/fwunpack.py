@@ -2102,11 +2102,12 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 		return retval + ('squashfsatheros2lzma',)
 
 	## OpenWrt variant
-	retval = unpackSquashfsOpenWrtLZMA(tmpfile[1],tmpoffset,tmpdir)
-	if retval != None:
-		os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-		os.unlink(tmpfile[1])
-		return retval + ('squashfsopenwrtlzma',)
+	if version <= 5:
+		retval = unpackSquashfsOpenWrtLZMA(tmpfile[1],tmpoffset,tmpdir)
+		if retval != None:
+			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+			os.unlink(tmpfile[1])
+			return retval + (squashsize, 'squashfsopenwrtlzma')
 
 	## Realtek variant
 	retval = unpackSquashfsRealtekLZMA(tmpfile[1],tmpoffset,tmpdir)
@@ -2313,15 +2314,7 @@ def unpackSquashfsOpenWrtLZMA(filename, offset, tmpdir, unpacktempdir=None):
 				pass
 		## then cleanup the temporary dir
 		shutil.rmtree(tmpdir2)
-		## like with 'normal' squashfs we can use 'file' to determine the size
-		squashsize = 0
-		p = subprocess.Popen(['file', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
-		(stanout, stanerr) = p.communicate()
-		if p.returncode != 0:
-			return None
-		else:
-			squashsize = int(re.search(", (\d+) bytes", stanout).groups()[0])
-		return (tmpdir, squashsize)
+		return (tmpdir,)
 
 ## squashfs 4.2, various compression methods
 def unpackSquashfs42(filename, offset, tmpdir):
