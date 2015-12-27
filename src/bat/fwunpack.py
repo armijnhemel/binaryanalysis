@@ -2018,6 +2018,7 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 			return retval + ('squashfs-ddwrt',)
 		## since no other squashfs unpacker uses the same squash header
 		## it is safe to return here
+		os.unlink(tmpfile[1])
 		return None
 
 	## first read the first 80 bytes from the file system to see if
