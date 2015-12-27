@@ -983,6 +983,8 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	ms.close()
 	newtags = []
 
+	if mstype == None:
+		return ([], blacklist, newtags, hints)
 	if not 'PE32 executable for MS Windows' in mstype and not "PE32+ executable for MS Windows" in mstype and not "PE32 executable (GUI) Intel 80386, for MS Windows" in mstype:
 		return ([], blacklist, newtags, hints)
 
@@ -1991,11 +1993,11 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, scane
 				retval = unpackSquashfsRealtekLZMA(tmpfile[1], offset, tmpdir)
 				os.unlink(tmpfile[1])
 				if retval != None:
-					(res, squashsize, squashtype) = retval
+					(res, squashsize) = retval
 					diroffsets.append((res, offset, squashsize))
 					blacklist.append((offset,offset+squashsize))
 					counter = counter + 1
-					newtags.append(squashtype)
+					newtags.append('squashfsrealteklzma')
 				else:
 					os.rmdir(tmpdir)
 	return (diroffsets, blacklist, newtags, hints)
@@ -2078,56 +2080,53 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 	## unpack the file once to avoid unpacking it several times
 	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
-	## try normal Squashfs unpacking first
-	if squashtype == 'squashfs1' or squashtype == 'squashfs2':
-		if majorversion <= 5:
+	if majorversion <= 5:
+		## try normal Squashfs unpacking first
+		if squashtype == 'squashfs1' or squashtype == 'squashfs2':
 			retval = unpackSquashfs(tmpfile[1], tmpoffset, tmpdir)
 			if retval != None:
 				os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 				os.unlink(tmpfile[1])
 				return retval + (squashsize, 'squashfs')
 
-	## then try other flavours
-	## first SquashFS 4.2
-	if majorversion <= 5:
+		## then try other flavours
+		## first SquashFS 4.2
 		retval = unpackSquashfs42(tmpfile[1],tmpoffset,tmpdir)
 		if retval != None:
 			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 			os.unlink(tmpfile[1])
 			return retval + (squashsize, 'squashfs42')
 
-	### Atheros2 variant
-	retval = unpackSquashfsAtheros2LZMA(tmpfile[1],tmpoffset,tmpdir)
-	if retval != None:
-		os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-		os.unlink(tmpfile[1])
-		return retval + ('squashfsatheros2lzma',)
+		### Atheros2 variant
+		if squashtype == 'squashfs1' or squashtype == 'squashfs2':
+			retval = unpackSquashfsAtheros2LZMA(tmpfile[1],tmpoffset,tmpdir)
+			if retval != None:
+				os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+				os.unlink(tmpfile[1])
+				return retval + (squashsize, 'squashfsatheros2lzma')
 
-	## OpenWrt variant
-	if majorversion <= 5:
+		## OpenWrt variant
 		retval = unpackSquashfsOpenWrtLZMA(tmpfile[1],tmpoffset,tmpdir)
 		if retval != None:
 			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 			os.unlink(tmpfile[1])
 			return retval + (squashsize, 'squashfsopenwrtlzma')
 
-	## Realtek variant
-	retval = unpackSquashfsRealtekLZMA(tmpfile[1],tmpoffset,tmpdir)
-	if retval != None:
-		os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-		os.unlink(tmpfile[1])
-		return retval + ('squashfsrealteklzma',)
+		## Realtek variant
+		retval = unpackSquashfsRealtekLZMA(tmpfile[1],tmpoffset,tmpdir)
+		if retval != None:
+			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+			os.unlink(tmpfile[1])
+			return retval + ('squashfsrealteklzma',)
 
-	## Broadcom variant
-	retval = unpackSquashfsBroadcom(tmpfile[1],tmpoffset,tmpdir)
-	if retval != None:
-		os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-		os.unlink(tmpfile[1])
-		return retval + ('squashfsbroadcomlzma',)
+		## Broadcom variant
+		retval = unpackSquashfsBroadcom(tmpfile[1],tmpoffset,tmpdir)
+		if retval != None:
+			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+			os.unlink(tmpfile[1])
+			return retval + (squashsize, 'squashfsbroadcomlzma')
 
-	## Atheros variant
-	if not sevenzipcompression:
-		if majorversion <= 5:
+		if not sevenzipcompression:
 			retval = unpackSquashfsAtherosLZMA(tmpfile[1],tmpoffset,tmpdir)
 			if retval != None:
 				os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
@@ -2265,16 +2264,7 @@ def unpackSquashfsAtheros2LZMA(filename, offset, tmpdir, unpacktempdir=None):
 			pass
 	## then we cleanup the temporary dir
 	shutil.rmtree(tmpdir2)
-	## like with 'normal' squashfs we can use 'file' to determine the size
-	squashsize = 0
-	p = subprocess.Popen(['file', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
-	(stanout, stanerr) = p.communicate()
-
-	if p.returncode != 0:
-		return None
-	else:
-		squashsize = int(re.search(", (\d+) bytes", stanout).groups()[0])
-	return (tmpdir, squashsize)
+	return (tmpdir,)
 
 ## squashfs variant from OpenWrt, with LZMA
 def unpackSquashfsOpenWrtLZMA(filename, offset, tmpdir, unpacktempdir=None):
@@ -2345,6 +2335,8 @@ def unpackSquashfsWithLZMA(filename, offset, command, tmpdir):
 		return (tmpdir, squashsize)
 
 ## squashfs variant from Atheros, with LZMA
+## This one can unpack squashfs file systems with regular magic,
+## as well as with 'lzma magic' (see bat-extratools source code)
 def unpackSquashfsAtherosLZMA(filename, offset, tmpdir):
 	p = subprocess.Popen(["bat-unsquashfs-atheros", '-d', tmpdir, '-f', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
@@ -2402,32 +2394,7 @@ def unpackSquashfsBroadcom(filename, offset, tmpdir):
 			return None
 		if "zlib::uncompress failed, unknown error -3" in stanerr:
 			return None
-		## unlike with 'normal' squashfs 'file' can't be used to determine the size, so the header has
-		## to be looked at for information about the size of the archive which is stored in the squashfs
-		## superblock. A definition of the fields can be found in the headers of the squashfs sources.
-		## First, extract the major version. If it is not 3, then set squashsize to 1 and return (at
-		## least for now).
-		squashfile = open(filename, 'r')
-		squashfile.seek(offset+28)
-		squashdata = squashfile.read(2)
-		major = struct.unpack('<H', squashdata)[0]
-		if major != 3:
-			squashfile.close()
-			squashsize = 1
-			return (tmpdir, squashsize)
-
-		## extract the "bytes used" field from the header
-		squashfile.seek(offset+63)
-		squashdata = squashfile.read(8)
-		squashfile.close()
-
-		squashbytes = struct.unpack('<Q', squashdata)[0]
-		if squashbytes > os.stat(filename).st_size:
-			squashsize = 1
-			return (tmpdir, squashsize)
-		else:
-			squashsize = squashbytes
-		return (tmpdir, squashsize)
+		return (tmpdir,)
 
 ## squashfs variant from Realtek, with LZMA
 ## explicitely use only one processor, because otherwise unpacking
