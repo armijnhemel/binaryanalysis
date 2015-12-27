@@ -2,6 +2,8 @@
 * fsmagic.py: make RAR header checking a bit more robust
 * fwunpack.py: refactor some squashfs checks
 * fwunpack.py: do yaffs2 sanity check earlier
+* fwunpack.py: sanity checks for other variants of squashfs (dd-wrt, openwrt)
+* fwunpack.py: work around libmagic barf in exe unpacking
 
 2015-12-26:
 * fwunpack.py: version check fixes for squashfs, grab size from some squashfs
