@@ -2218,9 +2218,11 @@ def unpackSquashfsAtheros2LZMA(filename, offset, tmpdir, unpacktempdir=None):
 	p = subprocess.Popen(['bat-unsquashfs-atheros2', '-dest', tmpdir2 + "/squashfs-root", '-f', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if "gzip uncompress failed with error code " in stanerr:
+		shutil.rmtree(tmpdir2)
 		return None
 	if p.returncode == -11:
 		## core dump, seen in Trendnet TEW-639GR_672GR_mixed_v1.0.9.161.bin
+		shutil.rmtree(tmpdir2)
 		return None
 	## Return code is not reliable enough, since even after successful unpacking the return code could be 16 (related to creating inodes as non-root)
 	## we need to filter out messages about creating inodes. Right now we do that by counting how many
@@ -2275,9 +2277,11 @@ def unpackSquashfsOpenWrtLZMA(filename, offset, tmpdir, unpacktempdir=None):
 	p = subprocess.Popen(['bat-unsquashfs-openwrt', '-dest', tmpdir2 + "/squashfs-root", '-f', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if "gzip uncompress failed with error code " in stanerr:
+		shutil.rmtree(tmpdir2)
 		return None
 	if p.returncode == -11:
 		## core dump, seen in Trendnet TEW-639GR_672GR_mixed_v1.0.9.161.bin
+		shutil.rmtree(tmpdir2)
 		return None
 	## Return code is not reliable enough, since even after successful unpacking the return code
 	## could be 16 (related to creating inodes as non-root) so filter out messages about creating
