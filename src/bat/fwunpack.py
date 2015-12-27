@@ -2002,14 +2002,6 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, scane
 
 ## wrapper around all the different squashfs types
 def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
-	## since unsquashfs can't deal with data via stdin first write it to
-	## a temporary location
-	tmpdir = unpacksetup(tempdir)
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.fdopen(tmpfile[0]).close()
-
-	tmpoffset = 0
-
 	## first read the first 80 bytes from the file system to see if
 	## the string '7zip' can be found. If so, then the inodes have been
 	## compressed with a variant of squashfs that uses 7zip compression
@@ -2024,7 +2016,7 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 		sevenzipcompression = True
 
 	## determine the size of the file for the blacklist. The size can sometimes be extracted
-	## from the header, but it depends on the endianness and the version of squashfs
+	## from the header, but it depends on the endianness and the major version of squashfs
 	## used. In some of the cases this data might not be relevant.
 	sqshfile = open(filename, 'rb')
 	sqshfile.seek(offset)
@@ -2036,20 +2028,20 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 	sqshfile.seek(offset+28)
 	versionbytes = sqshfile.read(2)
 	if bigendian:
-		version = struct.unpack('>H', versionbytes)[0]
+		majorversion = struct.unpack('>H', versionbytes)[0]
 	else:
-		version = struct.unpack('<H', versionbytes)[0]
+		majorversion = struct.unpack('<H', versionbytes)[0]
 
 	squashsize = 0
 
-	if version == 4:
+	if majorversion == 4:
 		sqshfile.seek(offset+40)
 		squashdata = sqshfile.read(8)
 		if bigendian:
 			squashsize = struct.unpack('>Q', squashdata)[0]
 		else:
 			squashsize = struct.unpack('<Q', squashdata)[0]
-	elif version == 3:
+	elif majorversion == 3:
 		sqshfile.seek(offset+63)
 		squashdata = sqshfile.read(8)
 		if bigendian:
@@ -2060,9 +2052,18 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 		squashsize = 1
 	sqshfile.close()
 
+	## since unsquashfs can't deal with data via stdin first write it to
+	## a temporary location
+	tmpdir = unpacksetup(tempdir)
+
+	tmpoffset = 0
+
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.fdopen(tmpfile[0]).close()
+
 	## DD-WRT variant uses special magic
 	if squashtype == 'squashfs5' or squashtype == 'squashfs6':
-		if version <= 5:
+		if majorversion <= 5:
 			unpackFile(filename, offset, tmpfile[1], tmpdir)
 
 			retval = unpackSquashfsDDWRTLZMA(tmpfile[1],tmpoffset,tmpdir)
@@ -2074,11 +2075,12 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 			os.unlink(tmpfile[1])
 			return None
 
+	## unpack the file once to avoid unpacking it several times
 	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
 	## try normal Squashfs unpacking first
 	if squashtype == 'squashfs1' or squashtype == 'squashfs2':
-		if version <= 5:
+		if majorversion <= 5:
 			retval = unpackSquashfs(tmpfile[1], tmpoffset, tmpdir)
 			if retval != None:
 				os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
@@ -2087,7 +2089,7 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 
 	## then try other flavours
 	## first SquashFS 4.2
-	if version <= 5:
+	if majorversion <= 5:
 		retval = unpackSquashfs42(tmpfile[1],tmpoffset,tmpdir)
 		if retval != None:
 			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
@@ -2102,7 +2104,7 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 		return retval + ('squashfsatheros2lzma',)
 
 	## OpenWrt variant
-	if version <= 5:
+	if majorversion <= 5:
 		retval = unpackSquashfsOpenWrtLZMA(tmpfile[1],tmpoffset,tmpdir)
 		if retval != None:
 			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
@@ -2125,7 +2127,7 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 
 	## Atheros variant
 	if not sevenzipcompression:
-		if version <= 5:
+		if majorversion <= 5:
 			retval = unpackSquashfsAtherosLZMA(tmpfile[1],tmpoffset,tmpdir)
 			if retval != None:
 				os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
