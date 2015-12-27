@@ -825,6 +825,11 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 	wholefile = True
 	newtags = []
 	candidates = {}
+
+	## smallest possible file system supported by unpacker is 512 + 16 bytes
+	filesize = os.stat(filename).st_size
+	if filesize < 528:
+		return (diroffsets, blacklist, newtags, hints)
 	if blacklist != []:
 		if 'yaffs2' in offsets:
 			if len(offsets['yaffs2']) == 0:
@@ -846,7 +851,6 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 						wholefile = False
 			yaffs2file.close()
 
-	filesize = os.stat(filename).st_size
 	if wholefile:
 		## Assume that the whole file needs to be scanned for now. Of course,
 		## there could be data appended to it that has not yet been unpacked
