@@ -3933,10 +3933,14 @@ def unpackPack200(filename, tempdir=None):
 
 def searchUnpackRar(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
-	if not offsets.has_key('rar'):
+	if not 'rar' in offsets:
 		return ([], blacklist, [], hints)
 	if offsets['rar'] == []:
 		return ([], blacklist, [], hints)
+	havefooter = False
+	if 'rarfooter' in offsets:
+		if offsets['rarfooter'] != []:
+			havefooter = True
 	diroffsets = []
 	counter = 1
 	for offset in offsets['rar']:
@@ -3957,6 +3961,20 @@ def searchUnpackRar(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	return (diroffsets, blacklist, [], hints)
 
 def unpackRar(filename, offset, tempdir=None):
+	## according to various sites the marker header is
+	## followed by an archive header, of which the block type is 0x73
+	## http://forensicswiki.org/wiki/RAR
+	## http://acritum.com/winrar/rar-format
+
+	rarfile = open(filename, 'rb')
+	rarfile.seek(offset)
+
+	## TODO: for now assume version is 4 or lower, but fix for RAR 5
+	rarbytes = rarfile.read(10)
+	rarfile.close()
+	if rarbytes[-1] != '\x73':
+		return
+
 	## Assumes (for now) that unrar is in the path
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
