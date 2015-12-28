@@ -26,6 +26,7 @@ fsmagic = {
             'compress':         '\x1f\x9d',
             'bz2':              'BZh',
             'rar':              'Rar!\x1a\x07',
+            'rarfooter':        '\xc4\x3d\x7b\x00\x40\x07\x00', # http://forensicswiki.org/wiki/RAR#Terminator_.28terminator.29
             'zip':              '\x50\x4b\x03\04',
             'zipend':           '\x50\x4b\x05\06',
             'lrzip':            'LRZI',
