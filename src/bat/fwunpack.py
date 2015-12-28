@@ -1934,8 +1934,41 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, scane
 			continue
 		if squashes[0] not in fsmagic.squashtypes:
 			continue
+		## determine the size of the file for the blacklist. The size can sometimes be extracted
+		## from the header, but it depends on the endianness and the major version of squashfs
+		## used. In some of the cases this data might not be relevant.
+		sqshfile = open(filename, 'rb')
+		sqshfile.seek(offset)
+		sqshheader = sqshfile.read(4)
+		bigendian = False
+		if sqshheader in ['sqsh', 'qshs', 'tqsh']:
+			bigendian = True
+		## get the version from the header
+		sqshfile.seek(offset+28)
+		versionbytes = sqshfile.read(2)
+		if bigendian:
+			majorversion = struct.unpack('>H', versionbytes)[0]
+		else:
+			majorversion = struct.unpack('<H', versionbytes)[0]
+
+		if majorversion > 5 or majorversion == 0:
+			continue
+
+		## first read the first 80 bytes from the file system to see if
+		## the string '7zip' can be found. If so, then the inodes have been
+		## compressed with a variant of squashfs that uses 7zip compression
+		## and might cause crashes in some of the variants below.
+		sqshfile = open(filename)
+		sqshfile.seek(offset)
+		sqshbuffer = sqshfile.read(80)
+		sqshfile.close()
+
+		sevenzipcompression = False
+		if "7zip" in sqshbuffer:
+			sevenzipcompression = True
+
 		tmpdir = dirsetup(tempdir, filename, "squashfs", counter)
-		retval = unpackSquashfsWrapper(filename, offset, squashes[0], tmpdir)
+		retval = unpackSquashfsWrapper(filename, offset, squashes[0], sevenzipcompression, majorversion, bigendian, tmpdir)
 		if retval != None:
 			(res, squashsize, squashtype) = retval
 			diroffsets.append((res, offset, squashsize))
@@ -2003,36 +2036,12 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, scane
 	return (diroffsets, blacklist, newtags, hints)
 
 ## wrapper around all the different squashfs types
-def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
-	## first read the first 80 bytes from the file system to see if
-	## the string '7zip' can be found. If so, then the inodes have been
-	## compressed with a variant of squashfs that uses 7zip compression
-	## and might cause crashes in some of the variants below.
-	sqshfile = open(filename)
-	sqshfile.seek(offset)
-	sqshbuffer = sqshfile.read(80)
-	sqshfile.close()
-
-	sevenzipcompression = False
-	if "7zip" in sqshbuffer:
-		sevenzipcompression = True
-
+def unpackSquashfsWrapper(filename, offset, squashtype, sevenzipcompression, majorversion, bigendian, tempdir=None):
 	## determine the size of the file for the blacklist. The size can sometimes be extracted
 	## from the header, but it depends on the endianness and the major version of squashfs
 	## used. In some of the cases this data might not be relevant.
 	sqshfile = open(filename, 'rb')
 	sqshfile.seek(offset)
-	sqshheader = sqshfile.read(4)
-	bigendian = False
-	if sqshheader == 'sqsh':
-		bigendian = True
-	## get the version from the header
-	sqshfile.seek(offset+28)
-	versionbytes = sqshfile.read(2)
-	if bigendian:
-		majorversion = struct.unpack('>H', versionbytes)[0]
-	else:
-		majorversion = struct.unpack('<H', versionbytes)[0]
 
 	squashsize = 0
 
@@ -2050,6 +2059,13 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 			squashsize = struct.unpack('>Q', squashdata)[0]
 		else:
 			squashsize = struct.unpack('<Q', squashdata)[0]
+	elif majorversion == 2:
+		sqshfile.seek(offset+8)
+		squashdata = sqshfile.read(4)
+		if bigendian:
+			squashsize = struct.unpack('>I', squashdata)[0]
+		else:
+			squashsize = struct.unpack('<I', squashdata)[0]
 	else:
 		squashsize = 1
 	sqshfile.close()
@@ -2063,75 +2079,74 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	## DD-WRT variant uses special magic
-	if squashtype == 'squashfs5' or squashtype == 'squashfs6':
-		if majorversion <= 5:
-			unpackFile(filename, offset, tmpfile[1], tmpdir)
-
-			retval = unpackSquashfsDDWRTLZMA(tmpfile[1],tmpoffset,tmpdir)
-			if retval != None:
-				os.unlink(tmpfile[1])
-				return retval + (squashsize, 'squashfs-ddwrt',)
-			## since no other squashfs unpacker uses the same squash header
-			## it is safe to return here
-			os.unlink(tmpfile[1])
-			return None
-
 	## unpack the file once to avoid unpacking it several times
 	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
-	if majorversion <= 5:
-		## try normal Squashfs unpacking first
-		if squashtype == 'squashfs1' or squashtype == 'squashfs2':
-			retval = unpackSquashfs(tmpfile[1], tmpoffset, tmpdir)
-			if retval != None:
-				os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-				os.unlink(tmpfile[1])
-				return retval + (squashsize, 'squashfs')
+	## DD-WRT variant uses special magic
+	if squashtype == 'squashfs5' or squashtype == 'squashfs6':
+		retval = unpackSquashfsDDWRTLZMA(tmpfile[1],tmpoffset,tmpdir)
+		if retval != None:
+			os.unlink(tmpfile[1])
+			return retval + (squashsize, 'squashfs-ddwrt',)
+		## since no other squashfs unpacker uses the same squash header
+		## it is safe to return here
+		os.unlink(tmpfile[1])
+		return None
 
-		## then try other flavours
-		## first SquashFS 4.2
-		retval = unpackSquashfs42(tmpfile[1],tmpoffset,tmpdir)
+	## try normal Squashfs unpacking first
+	if squashtype == 'squashfs1' or squashtype == 'squashfs2':
+		retval = unpackSquashfs(tmpfile[1], tmpoffset, tmpdir)
 		if retval != None:
 			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 			os.unlink(tmpfile[1])
-			return retval + (squashsize, 'squashfs42')
+			return retval + (squashsize, 'squashfs')
 
-		### Atheros2 variant
-		if squashtype == 'squashfs1' or squashtype == 'squashfs2':
+	## then try other flavours
+	## first SquashFS 4.2
+	retval = unpackSquashfs42(tmpfile[1],tmpoffset,tmpdir)
+	if retval != None:
+		os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+		os.unlink(tmpfile[1])
+		return retval + (squashsize, 'squashfs42')
+
+	### Atheros2 variant
+	if squashtype == 'squashfs1' or squashtype == 'squashfs2':
+		if majorversion == 3:
 			retval = unpackSquashfsAtheros2LZMA(tmpfile[1],tmpoffset,tmpdir)
 			if retval != None:
 				os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 				os.unlink(tmpfile[1])
 				return retval + (squashsize, 'squashfsatheros2lzma')
 
-		## OpenWrt variant
+	## OpenWrt variant
+	if majorversion == 3:
 		retval = unpackSquashfsOpenWrtLZMA(tmpfile[1],tmpoffset,tmpdir)
 		if retval != None:
 			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 			os.unlink(tmpfile[1])
 			return retval + (squashsize, 'squashfsopenwrtlzma')
 
-		## Realtek variant
-		retval = unpackSquashfsRealtekLZMA(tmpfile[1],tmpoffset,tmpdir)
-		if retval != None:
-			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-			os.unlink(tmpfile[1])
-			return retval + ('squashfsrealteklzma',)
+	## Realtek variant
+	retval = unpackSquashfsRealtekLZMA(tmpfile[1],tmpoffset,tmpdir)
+	if retval != None:
+		os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+		os.unlink(tmpfile[1])
+		return retval + ('squashfsrealteklzma',)
 
-		## Broadcom variant
+	## Broadcom variant
+	if majorversion == 2 or majorversion == 3:
 		retval = unpackSquashfsBroadcom(tmpfile[1],tmpoffset,tmpdir)
 		if retval != None:
 			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 			os.unlink(tmpfile[1])
 			return retval + (squashsize, 'squashfsbroadcomlzma')
 
-		if not sevenzipcompression:
-			retval = unpackSquashfsAtherosLZMA(tmpfile[1],tmpoffset,tmpdir)
-			if retval != None:
-				os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-				os.unlink(tmpfile[1])
-				return retval + (squashsize, 'squashfsatheroslzma')
+	if not sevenzipcompression:
+		retval = unpackSquashfsAtherosLZMA(tmpfile[1],tmpoffset,tmpdir)
+		if retval != None:
+			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+			os.unlink(tmpfile[1])
+			return retval + (squashsize, 'squashfsatheroslzma')
 
 	## another Atheros variant
 	retval = unpackSquashfsAtheros40LZMA(tmpfile[1],tmpoffset,tmpdir)
@@ -2142,11 +2157,12 @@ def unpackSquashfsWrapper(filename, offset, squashtype, tempdir=None):
 
 	## Ralink variant
 	if not sevenzipcompression:
-		retval = unpackSquashfsRalinkLZMA(tmpfile[1],tmpoffset,tmpdir)
-		if retval != None:
-			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-			os.unlink(tmpfile[1])
-			return retval + ('squashfsralinklzma',)
+		if majorversion == 2 or majorversion == 3:
+			retval = unpackSquashfsRalinkLZMA(tmpfile[1],tmpoffset,tmpdir)
+			if retval != None:
+				os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+				os.unlink(tmpfile[1])
+				return retval + (squashsize, 'squashfsralinklzma',)
 
 	os.unlink(tmpfile[1])
 	if tempdir == None:
@@ -2331,12 +2347,7 @@ def unpackSquashfsWithLZMA(filename, offset, command, tmpdir):
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		return None
-	else:
-		## unlike with 'normal' squashfs we can't use 'file' to determine the size
-		## This could lead to duplicate scanning with LZMA, so we might need to implement
-		## a top level "pruning" script :-(
-		squashsize = 1
-		return (tmpdir, squashsize)
+	return (tmpdir,)
 
 ## squashfs variant from Atheros, with LZMA
 ## This one can unpack squashfs file systems with regular magic,
