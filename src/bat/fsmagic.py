@@ -57,7 +57,7 @@ fsmagic = {
             'ext2':             '\x53\xef',        # little endian
             'minix':            '\x8f\x13',        # specific version of Minix v1 file system
             'arj':              '\x60\xea',
-            'cab':              'MSCF',
+            'cab':              'MSCF\x00\x00\x00\x00',    # first four bytes following header are always 0
             'installshield':    'ISc(',
             'pkbac':            'PKBAC',
             'winrar':           'WinRAR',
