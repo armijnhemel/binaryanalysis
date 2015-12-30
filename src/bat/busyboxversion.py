@@ -33,21 +33,19 @@ def busybox_version(filename, tags, blacklist=[], scanenv={}, scandebug=False, u
 					datafile.seek(lastindex)
 					continue
 				if i[0] > lastindex:
-					## just concatenate the bytes
 					data = datafile.read(i[0] - lastindex)
-					databytes = databytes + data
+					tmpfile = tempfile.mkstemp()
+					os.write(tmpfile[0], data)
+					os.fdopen(tmpfile[0]).close()
+					scanfile = tmpfile[1]
+					bbres = busybox.extract_version(scanfile)
+					os.unlink(tmpfile[1])
 					## set lastindex to the next
 					lastindex = i[1] - 1
 					datafile.seek(lastindex)
+					if bbres != None:
+						break
 			datafile.close()
-			if len(databytes) == 0:
-				return None
-			tmpfile = tempfile.mkstemp()
-			os.write(tmpfile[0], databytes)
-			os.fdopen(tmpfile[0]).close()
-			scanfile = tmpfile[1]
-			bbres = busybox.extract_version(scanfile)
-			os.unlink(tmpfile[1])
 		else:
 			bbres = busybox.extract_version(filename)
 		if bbres != None:
