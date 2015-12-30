@@ -38,15 +38,15 @@ def genericSearch(filename, markerDict, blacklist=[], unpacktempdir=None):
 				datafile.seek(lastindex)
 				continue
 			if i[0] > lastindex:
-				## just concatenate the bytes
+				## read the data, then search for markers
 				data = datafile.read(i[0] - lastindex)
-				## set lastindex to the next
-				lastindex = i[1] - 1
 				for marker in markerDict.keys():
 					for markerstring in markerDict[marker]:
 						markeroffset = data.find(markerstring)
 						if markeroffset != -1:
 							results.append(marker)
+				## set lastindex to the next
+				lastindex = i[1] - 1
 				datafile.seek(lastindex)
 		datafile.close()
 	else:
