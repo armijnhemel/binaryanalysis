@@ -1,3 +1,8 @@
+2015-12-30:
+* busyboxversion.py: like checks.py don't first write all non-blacklisted data
+to a file to search for the version string, but write each chunk of
+non-blacklisted data to a temporary file and then search that temporary file
+
 2015-12-28:
 * fwunpack.py: rework squashfs unpacking: filter out false positives earlier
 and report file size for more flavours
