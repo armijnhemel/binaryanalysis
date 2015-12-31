@@ -3607,7 +3607,7 @@ def unpackLRZIP(filename, offset, hasmd5, lrzipmd5, lrzipsize, tempdir=None):
 
 	return (tmpdir, md5match, os.stat(filename).st_size)
 
-def unpackZip(filename, offset, cutoff, tempdir=None):
+def unpackZip(filename, offset, cutoff, endofcentraldir, commentsize, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 
 	tmpfile = tempfile.mkstemp(dir=tempdir)
@@ -3619,7 +3619,7 @@ def unpackZip(filename, offset, cutoff, tempdir=None):
 	else:
 		unpackFile(filename, offset, tmpfile[1], tmpdir)
 
-	## First we do some sanity checks
+	## First do some sanity checks
 	## Use information from zipinfo -v to extract the right offset (or at least the last offset,
 	## which is the only one we are interested in)
 	p = subprocess.Popen(['zipinfo', '-v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -3639,16 +3639,6 @@ def unpackZip(filename, offset, cutoff, tempdir=None):
 		return (None, None)
 
 	if '' in res:
-		os.unlink(tmpfile[1])
-		if tempdir == None:
-			os.rmdir(tmpdir)
-		return (None, None)
-
-	## non-encrypted file, so continue processing it
-	res = re.search("Actual[\w\s]*end-(?:of-)?cent(?:ral)?-dir record[\w\s]*:\s*(\d+) \(", stanout)
-	if res != None:
-		endofcentraldir = int(res.groups(0)[0])
-	else:
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
@@ -3706,23 +3696,42 @@ def unpackZip(filename, offset, cutoff, tempdir=None):
 			os.unlink(multitmpfile[1])
 			multicounter = multicounter + 1
 	else:
-		## find out the size of the comment field
-		centralfile = open(tmpfile[1])
-		centralfile.seek(endofcentraldir + 20)
-		centraldata = centralfile.read(2)
-		centralfile.close()
-		commentsize = struct.unpack('<H', centraldata)[0]
-		## We have a single zip file, but there is trailing data, which unzip does not like
-		## Cut the trailing data, unpack the resulting file.
-		if endofcentraldir + 22 + commentsize != os.stat(tmpfile[1]).st_size:
-			tmpfile2 = tempfile.mkstemp(dir=tempdir)
-			os.fdopen(tmpfile2[0]).close()
+		## first check whether or not the file can be unpacked. There are situations
+		## where ZIP files are packed in a weird format that unzip does not like:
+		## https://bugzilla.redhat.com/show_bug.cgi?id=907442
+		p = subprocess.Popen(['zipinfo', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			os.unlink(tmpfile[1])
+			if tempdir == None:
+				os.rmdir(tmpdir)
+			return (None, None)
 
-			unpackFile(tmpfile[1], 0, tmpfile2[1], tmpdir, endofcentraldir + 22 + commentsize)
-			p = subprocess.Popen(['unzip', '-o', tmpfile2[1], '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		stanoutlines = stanout.strip().split('\n')
+		zipentries = []
+		zipdirs = []
+		weirdzip = False
+		for s in stanoutlines[2:]:
+			zipname = s.strip().rsplit()[-1]
+			if s.strip().startswith('d'):
+				if not s.strip().endswith('/'):
+					weirdzip = True
+				zipdirs.append(zipname)
+			else:
+				zipentries.append(zipname)
+
+		if not weirdzip:
+			p = subprocess.Popen(['unzip', '-t', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 			(stanout, stanerr) = p.communicate()
 			if p.returncode != 0 and p.returncode != 1:
-				os.unlink(tmpfile2[1])
+				os.unlink(tmpfile[1])
+				if tempdir == None:
+					os.rmdir(tmpdir)
+				return (None, None)
+
+			p = subprocess.Popen(['unzip', '-o', tmpfile[1], '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			(stanout, stanerr) = p.communicate()
+			if p.returncode != 0 and p.returncode != 1:
 				os.unlink(tmpfile[1])
 				rmfiles = os.listdir(tmpdir)
 				if rmfiles != []:
@@ -3735,71 +3744,20 @@ def unpackZip(filename, offset, cutoff, tempdir=None):
 				if tempdir == None:
 					os.rmdir(tmpdir)
 				return (None, None)
-			os.unlink(tmpfile2[1])
 		else:
-			## first check whether or not the file can be unpacked. There are situations
-			## where ZIP files are packed in a weird format that unzip does not like:
-			## https://bugzilla.redhat.com/show_bug.cgi?id=907442
-			p = subprocess.Popen(['zipinfo', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-			(stanout, stanerr) = p.communicate()
-			if p.returncode != 0:
-				os.unlink(tmpfile[1])
-				if tempdir == None:
-					os.rmdir(tmpdir)
-				return (None, None)
-
-			stanoutlines = stanout.strip().split('\n')
-			zipentries = []
-			zipdirs = []
-			weirdzip = False
-			for s in stanoutlines[2:]:
-				zipname = s.strip().rsplit()[-1]
-				if s.strip().startswith('d'):
-					if not s.strip().endswith('/'):
-						weirdzip = True
-					zipdirs.append(zipname)
-				else:
-					zipentries.append(zipname)
-
-			if not weirdzip:
-				p = subprocess.Popen(['unzip', '-t', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+			## first create the ZIP directories
+			for z in zipdirs:
+				try:
+					os.makedirs(os.path.join(tmpdir, z))
+				except:
+					pass
+			## then unpack each individual file
+			for z in zipentries:
+				p = subprocess.Popen(['unzip', '-o', tmpfile[1], '-d', tmpdir, z], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
-				if p.returncode != 0 and p.returncode != 1:
-					os.unlink(tmpfile[1])
-					if tempdir == None:
-						os.rmdir(tmpdir)
-					return (None, None)
-
-				p = subprocess.Popen(['unzip', '-o', tmpfile[1], '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-				(stanout, stanerr) = p.communicate()
-				if p.returncode != 0 and p.returncode != 1:
-					os.unlink(tmpfile[1])
-					rmfiles = os.listdir(tmpdir)
-					if rmfiles != []:
-						for rmfile in rmfiles:
-							rmpath = os.path.join(tmpdir, rmfile)
-							if os.path.isdir(rmpath):
-								shutil.rmtree(rmpath)
-							else:
-								os.unlink(rmpath)
-					if tempdir == None:
-						os.rmdir(tmpdir)
-					return (None, None)
-			else:
-				## first create the ZIP directories
-				for z in zipdirs:
-					try:
-						os.makedirs(os.path.join(tmpdir, z))
-					except:
-						pass
-				## then unpack each individual file
-				for z in zipentries:
-					p = subprocess.Popen(['unzip', '-o', tmpfile[1], '-d', tmpdir, z], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-					(stanout, stanerr) = p.communicate()
-					## TODO: check for errors
-			endofcentraldir = endofcentraldir + commentsize
+				## TODO: check for errors
 	os.unlink(tmpfile[1])
-	return (endofcentraldir, tmpdir)
+	return tmpdir
 
 def searchUnpackKnownZip(filename, tempdir=None, scanenv={}, debug=False):
 	datafile = open(filename, 'rb')
@@ -3821,67 +3779,95 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		return ([], blacklist, tags, hints)
 	diroffsets = []
 	counter = 1
-	endofcentraldir_offset = 0
+	filesize = os.stat(filename).st_size
 	zipfile = open(filename, 'rb')
+
+	## then check all the potential end of central dir offsets in the file
+	## The 
 	for zipendindex in xrange(0, len(offsets['zipend'])):
 		zipend = offsets['zipend'][zipendindex]
-		if zipend == offsets['zipend'][-1]:
-			cutoff = 0
-		else:
-			cutoff = offsets['zipend'][zipendindex+1]
 		blacklistoffset = extractor.inblacklist(zipend, blacklist)
 		if blacklistoffset != None:
 			continue
 
-		## first check a few things in the ZIP file
+		## first check a few things in the ZIP file, as they have to make sense
 		zipfile.seek(zipend+4)
 		numberofthisdisk = struct.unpack('<H', zipfile.read(2))[0]
 		diskwithcentraldirectory = struct.unpack('<H', zipfile.read(2))[0]
 		numberofentriesincentraldirectorythisdisk = struct.unpack('<H', zipfile.read(2))[0]
 		numberofentriesincentraldirectory = struct.unpack('<H', zipfile.read(2))[0]
+
+		## the size of the central directory entries. This cannot be larger than
+		## the file itself
 		sizeofcentraldirectory = struct.unpack('<I', zipfile.read(4))[0]
-		offsetofcentraldirectory = struct.unpack('<I', zipfile.read(4))[0]
-		if offsetofcentraldirectory > os.stat(filename).st_size:
+		if sizeofcentraldirectory > filesize:
 			continue
+
+		## the start of the central directory entries in the ZIP file (relative
+		## to the start of the file)
+		offsetofcentraldirectory = struct.unpack('<I', zipfile.read(4))[0]
+
+		## These cannot be outside of the file (relative)
+		if offsetofcentraldirectory > filesize:
+			continue
+		## central directory (relative) cannot follow end of central directory
+		if offsetofcentraldirectory > zipend:
+			continue
+
+		## check if there is any ZIP file comment
+		zipfile.seek(zipend + 20)
+		commentdata = zipfile.read(2)
+		commentsize = struct.unpack('<H', commentdata)[0]
+
+		## comment cannot extend beyond the file
+		if zipend + 22 + commentsize > filesize:
+			continue
+
+		cutoff = zipend + 22 + commentsize
 
 		for offset in offsets['zip']:
 			if offset > zipend:
+				continue
+			blacklistoffset = extractor.inblacklist(offset, blacklist)
+			if blacklistoffset != None:
 				continue
 			zipfile.seek(offsetofcentraldirectory+offset)
 			centraldirheader = zipfile.read(4)
 			if centraldirheader != "PK\x01\x02":
 				continue
 
-			openzipfile = open(filename, 'r')
-			openzipfile.seek(offset+4)
-			versionneededbytes = openzipfile.read(2)
-			openzipfile.close()
+			## some more sanity checks
+			zipfile.seek(offset+4)
+			versionneededbytes = zipfile.read(2)
 			versionneeded = struct.unpack('<H', versionneededbytes)[0]
-			## current ZIP version is at 15, so plan ahead for the future
-			if versionneeded > 500:
+
+			## https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT
+			## section 4.4.3.2
+			## According to the specification this can go up to 62
+			if versionneeded > 100 or versionneeded < 10:
 				continue
-			if offset < endofcentraldir_offset:
+
+			## central directory (absolute) cannot be more than the filesize
+			if offset + offsetofcentraldirectory > filesize:
 				continue
-			blacklistoffset = extractor.inblacklist(offset, blacklist)
-			if blacklistoffset != None:
+			## central directory (absolute) cannot follow end of central directory
+			if offset + offsetofcentraldirectory > zipend:
 				continue
+
 			tmpdir = dirsetup(tempdir, filename, "zip", counter)
-			(endofcentraldir, res) = unpackZip(filename, offset, cutoff, tmpdir)
+			endofcentraldir = zipend - offset
+			res = unpackZip(filename, offset, cutoff, endofcentraldir, commentsize, tmpdir)
 			zipunpacked = False
 			if res != None:
-				diroffsets.append((res, offset, 0))
+				diroffsets.append((res, offset, (zipend - offset) + commentsize + 22))
 				counter = counter + 1
-				zipunpacked = True
+				if offset == 0 and zipend + commentsize + 22 == filesize:
+					tags.append('zip')
+					tags.append('compressed')
+				blacklist.append((offset, zipend + 22 + commentsize))
 			else:
 				## cleanup
 				os.rmdir(tmpdir)
-			if endofcentraldir != None:
-				endofcentraldir_offset = endofcentraldir
-				## TODO: fix properly for ZIP files with comments
-				if offset == 0 and zipunpacked and offset + endofcentraldir +22 == os.stat(filename).st_size:
-					tags.append('zip')
-					tags.append('compressed')
-				blacklist.append((offset, offset + endofcentraldir + 22))
 	zipfile.close()
 	return (diroffsets, blacklist, tags, hints)
 
