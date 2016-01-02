@@ -16,7 +16,7 @@ to prevent other scans from (re)scanning (part of) the data.
 '''
 
 import sys, os, subprocess, os.path, shutil, stat, array, struct, binascii
-import tempfile, bz2, re, magic, tarfile, zlib, copy, uu, hashlib
+import tempfile, bz2, re, magic, tarfile, zlib, copy, uu, hashlib, StringIO, zipfile
 import fsmagic, extractor, ext2, jffs2
 
 ## generic method to create temporary directories, with the correct filenames
@@ -129,7 +129,6 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 				## use a two way pass
 				## First determine which side to cut first before cutting
 				if offset > (filesize - length):
-
 					p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile,), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 					(stanout, stanerr) = p.communicate()
 					tmptmpfile = open(tmpfile, 'a+b')
@@ -150,7 +149,7 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 						truncfile.close()
 					else:
 						## first copy bytes from the front of the file up to a certain length
-						p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmptmpfile[1],), 'bs=%s' % (length+offset,), 'count=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+						p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmptmpfile[1],), 'bs=%s' % (length+offset,), 'count=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 						(stanout, stanerr) = p.communicate()
 
 					## then copy bytes from the temporary file, but skip 'offset' bytes at the front
@@ -1503,50 +1502,50 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
-		else:
-			## bytes 7 and 8 in the stream are "streamflags"
+		## bytes 7 and 8 in the stream are "streamflags"
+		datafile.seek(offset)
+		data = datafile.read(8)
+		streamflags = data[6:8]
+		for trail in offsets['xztrailer']:
+			## check if the trailer is in the blacklist
+			blacklistoffset = extractor.inblacklist(trail, blacklist)
+			if blacklistoffset != None:
+				continue
+			## only check offsets that make sense
+			if trail < offset:
+				continue
+			## The "streamflag" bytes should also be present just before the
+			## trailer according to the XZ file format documentation.
+			datafile.seek(trail-2)
+			data = datafile.read(2)
+			if data != streamflags:
+				continue
+
+			xzsize = trail+2 - offset
 			datafile.seek(offset)
-			data = datafile.read(8)
-			streamflags = data[6:8]
-			for trail in offsets['xztrailer']:
-				## check if the trailer is in the blacklist
-				blacklistoffset = extractor.inblacklist(trail, blacklist)
-				if blacklistoffset != None:
-					continue
-				## only check offsets that make sense
-				if trail < offset:
-					continue
-				## The "streamflag" bytes should also be present just before the
-				## trailer according to the XZ file format documentation.
-				datafile.seek(trail-2)
-				data = datafile.read(2)
-				if data != streamflags:
-					continue
+			data = datafile.read(xzsize)
+			## The two bytes before that are the so called "backward size"
 
-				xzsize = trail+2 - offset
-				datafile.seek(offset)
-				data = datafile.read(xzsize)
-				## The two bytes before that are the so called "backward size"
-
-				wholefile = False
-				if offset == 0 and trail+2 == os.stat(filename).st_size:
-					if filename.lower().endswith('.xz'):
-						wholefile = True
-				tmpdir = dirsetup(tempdir, filename, "xz", counter)
-				res = unpackXZ(filename, offset, xzsize, template, dotest, wholefile, tmpdir)
-				if res != None:
-					diroffsets.append((res, offset, xzsize))
-					blacklist.append((offset, trail+2))
-					if wholefile:
-						datafile.close()
-						newtags.append('compressed')
-						newtags.append('xz')
-						return (diroffsets, blacklist, newtags, hints)
-					counter = counter + 1
-					break
-				else:
-					## cleanup
-					os.rmdir(tmpdir)
+			wholefile = False
+			if offset == 0 and trail+2 == os.stat(filename).st_size:
+				if filename.lower().endswith('.xz'):
+					wholefile = True
+			sys.stdout.flush()
+			tmpdir = dirsetup(tempdir, filename, "xz", counter)
+			res = unpackXZ(filename, offset, xzsize, template, dotest, wholefile, tmpdir)
+			if res != None:
+				diroffsets.append((res, offset, xzsize))
+				blacklist.append((offset, trail+2))
+				if wholefile:
+					datafile.close()
+					newtags.append('compressed')
+					newtags.append('xz')
+					return (diroffsets, blacklist, newtags, hints)
+				counter = counter + 1
+				break
+			else:
+				## cleanup
+				os.rmdir(tmpdir)
 	datafile.close()
 	return (diroffsets, blacklist, newtags, hints)
 
@@ -3608,156 +3607,90 @@ def unpackLRZIP(filename, offset, hasmd5, lrzipmd5, lrzipsize, tempdir=None):
 	return (tmpdir, md5match, os.stat(filename).st_size)
 
 def unpackZip(filename, offset, cutoff, endofcentraldir, commentsize, tempdir=None):
-	tmpdir = unpacksetup(tempdir)
+	filesize = os.stat(filename).st_size
 
-	tmpfile = tempfile.mkstemp(dir=tempdir)
-	os.fdopen(tmpfile[0]).close()
+	inmemory = False
+	havetmpfile = False
+	if offset != 0 or cutoff != filesize:
+		inmemory = True
 
-	if cutoff != 0:
-		ziplen = cutoff - offset
-		unpackFile(filename, offset, tmpfile[1], tmpdir, length=ziplen)
+	## process everything in memory if the size of the ZIP file is below
+	## a certain threshold and is not a complete ZIP file (in which case
+	## using 'unzip' might be faster).
+	## TODO: make threshold configurable
+	if not inmemory:
+		memfile = filename
 	else:
-		unpackFile(filename, offset, tmpfile[1], tmpdir)
+		if min(filesize, cutoff) < 50000000:
+			openzipfile = open(filename, 'rb')
+			openzipfile.seek(offset)
+			zipdata = openzipfile.read(cutoff - offset)
+			openzipfile.close()
+			memfile = StringIO.StringIO(zipdata)
+		else:
+			tmpdir = unpacksetup(tempdir)
 
-	## First do some sanity checks
-	## Use information from zipinfo -v to extract the right offset (or at least the last offset,
-	## which is the only one we are interested in)
-	p = subprocess.Popen(['zipinfo', '-v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0 and p.returncode != 1:
-		os.unlink(tmpfile[1])
-		if tempdir == None:
-			os.rmdir(tmpdir)
-		return (None, None)
+			tmpfile = tempfile.mkstemp(dir=tempdir)
+			os.fdopen(tmpfile[0]).close()
 
-	## check if the file is encrypted, if so bail out
-	res = set(re.findall("file security status:\s+(\w*)\sencrypted", stanout))
-	if len(res) == 0:
-		os.unlink(tmpfile[1])
-		if tempdir == None:
-			os.rmdir(tmpdir)
-		return (None, None)
-
-	if '' in res:
-		os.unlink(tmpfile[1])
-		if tempdir == None:
-			os.rmdir(tmpdir)
-		return (None, None)
-
-	if "extra bytes at beginning or within zipfile" in stanerr:
-		datafile = open(filename)
-		data = datafile.read()
-		datafile.close()
-		multidata = data[offset:]
-		multicounter = 1
-		## first unpack the original file.
-		multitmpdir = "/%s/%s-multi-%s" % (tmpdir, os.path.basename(filename), multicounter)
-		os.makedirs(multitmpdir)
-		p = subprocess.Popen(['unzip', '-o', tmpfile[1], '-d', multitmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanoutzip, stanerrzip) = p.communicate()
-		if p.returncode != 0 and p.returncode != 1:
-			## this is just weird! We were told that we have a zip file by zipinfo, but we can't unzip?
-			#shutil.rmtree(multitmpdir)
-			pass
-		multicounter = multicounter + 1
-		zipoffset = int(re.search("(\d+) extra bytes at beginning or within zipfile", stanerr).groups()[0])
-		while zipoffset != 0:
-			multitmpdir = "/%s/%s-multi-%s" % (tmpdir, os.path.basename(filename), multicounter)
-			os.makedirs(multitmpdir)
-			multitmpfile = tempfile.mkstemp(dir=tmpdir)
-			os.write(multitmpfile[0], multidata[:zipoffset])
-			os.fdopen(multitmpfile[0]).close()
-			p = subprocess.Popen(['unzip', '-o', multitmpfile[1], '-d', multitmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-			(stanoutzip, stanerrzip) = p.communicate()
-			if p.returncode != 0 and p.returncode != 1:
-				## this is just weird! We were told that we have a zip file by zipinfo, but we can't unzip?
-				## hackish workaround: get 'end of central dir', add 100 bytes, and try to unpack. Actually
-				## we should do this in a loop until we can either successfully unpack or reach the end of
-				## the file.
-				p2 = subprocess.Popen(['zipinfo', '-v', multitmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-				(stanoutzip, stanerrzip) = p2.communicate()
-				res = re.search("Actual[\w\s]*end-(?:of-)?cent(?:ral)?-dir record[\w\s]*:\s*(\d+) \(", stanoutzip)
-				if res != None:
-					tmpendofcentraldir = int(res.groups(0)[0])
-					newtmpfile = open(multitmpfile[1], 'w')
-					newtmpfile.write(multidata[:tmpendofcentraldir+100])
-					newtmpfile.close()
-					p3 = subprocess.Popen(['unzip', '-o', newtmpfile.name, '-d', multitmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-					(stanoutzip, stanerrzip) = p3.communicate()
-				else:
-					## need to do something here, unsure yet what
-					pass
-			p = subprocess.Popen(['zipinfo', '-v', multitmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-			(stanoutzip, stanerrzip) = p.communicate()
-			if not "extra bytes at beginning or within zipfile" in stanerrzip:
-				os.unlink(multitmpfile[1])
-				break
-			zipoffset = int(re.search("(\d+) extra bytes at beginning or within zipfile", stanerrzip).groups()[0])
-			os.unlink(multitmpfile[1])
-			multicounter = multicounter + 1
-	else:
+			if cutoff != 0:
+				ziplen = cutoff - offset
+				unpackFile(filename, offset, tmpfile[1], tmpdir, length=ziplen)
+			else:
+				unpackFile(filename, offset, tmpfile[1], tmpdir)
+			havetmpfile = True
+			memfile = tmpfile[1]
+	try:
+		memzipfile = zipfile.ZipFile(memfile, 'r')
+		infolist = memzipfile.infolist()
 		## first check whether or not the file can be unpacked. There are situations
 		## where ZIP files are packed in a weird format that unzip does not like:
 		## https://bugzilla.redhat.com/show_bug.cgi?id=907442
-		p = subprocess.Popen(['zipinfo', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-		if p.returncode != 0:
-			os.unlink(tmpfile[1])
-			if tempdir == None:
-				os.rmdir(tmpdir)
-			return (None, None)
-
-		stanoutlines = stanout.strip().split('\n')
-		zipentries = []
-		zipdirs = []
+		## Also check if the file contains encrypted entries.
 		weirdzip = False
-		for s in stanoutlines[2:]:
-			zipname = s.strip().rsplit()[-1]
-			if s.strip().startswith('d'):
-				if not s.strip().endswith('/'):
+		for i in infolist:
+			if i.file_size == 0 and not weirdzip:
+				if not i.filename.endswith('/'):
 					weirdzip = True
-				zipdirs.append(zipname)
+			if i.flag_bits & 0x01 == 1:
+				memzipfile.close()
+				if inmemory:
+					if not havetmpfile:
+						memfile.close()
+				if not havetmpfile:
+					## write out the data if it is not already there
+					tmpdir = unpacksetup(tempdir)
+					tmpfile = tempfile.mkstemp(dir=tempdir)
+					os.fdopen(tmpfile[0]).close()
+
+					datafile = open(tmpfile[1], 'wb')
+					datafile.write(zipdata)
+					datafile.close()
+
+				return (tmpdir, ['encrypted'])
+		if not havetmpfile:
+			tmpdir = unpacksetup(tempdir)
+		for i in infolist:
+			if weirdzip and i.file_size == 0:
+				if not i.filename.endswith('/'):
+					## TODO: sanity checks
+					os.mkdir(os.path.join(tmpdir, i.filename))
 			else:
-				zipentries.append(zipname)
-
-		if not weirdzip:
-			p = subprocess.Popen(['unzip', '-t', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-			(stanout, stanerr) = p.communicate()
-			if p.returncode != 0 and p.returncode != 1:
+				memzipfile.extract(i, tmpdir)
+		memzipfile.close()
+		if havetmpfile:
+			os.unlink(tmpfile[1])
+	except Exception, e:
+		if inmemory:
+			if havetmpfile:
 				os.unlink(tmpfile[1])
-				if tempdir == None:
-					os.rmdir(tmpdir)
-				return (None, None)
-
-			p = subprocess.Popen(['unzip', '-o', tmpfile[1], '-d', tmpdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-			(stanout, stanerr) = p.communicate()
-			if p.returncode != 0 and p.returncode != 1:
-				os.unlink(tmpfile[1])
-				rmfiles = os.listdir(tmpdir)
-				if rmfiles != []:
-					for rmfile in rmfiles:
-						rmpath = os.path.join(tmpdir, rmfile)
-						if os.path.isdir(rmpath):
-							shutil.rmtree(rmpath)
-						else:
-							os.unlink(rmpath)
-				if tempdir == None:
-					os.rmdir(tmpdir)
-				return (None, None)
-		else:
-			## first create the ZIP directories
-			for z in zipdirs:
-				try:
-					os.makedirs(os.path.join(tmpdir, z))
-				except:
-					pass
-			## then unpack each individual file
-			for z in zipentries:
-				p = subprocess.Popen(['unzip', '-o', tmpfile[1], '-d', tmpdir, z], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-				(stanout, stanerr) = p.communicate()
-				## TODO: check for errors
-	os.unlink(tmpfile[1])
-	return tmpdir
+			else:
+				memfile.close()
+		return (None, [])
+	if inmemory:
+		if not havetmpfile:
+			memfile.close()
+	return (tmpdir, [])
 
 def searchUnpackKnownZip(filename, tempdir=None, scanenv={}, debug=False):
 	datafile = open(filename, 'rb')
@@ -3856,7 +3789,7 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 
 			tmpdir = dirsetup(tempdir, filename, "zip", counter)
 			endofcentraldir = zipend - offset
-			res = unpackZip(filename, offset, cutoff, endofcentraldir, commentsize, tmpdir)
+			(res, tmptags) = unpackZip(filename, offset, cutoff, endofcentraldir, commentsize, tmpdir)
 			zipunpacked = False
 			if res != None:
 				diroffsets.append((res, offset, (zipend - offset) + commentsize + 22))
@@ -3864,9 +3797,13 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 				if offset == 0 and zipend + commentsize + 22 == filesize:
 					tags.append('zip')
 					tags.append('compressed')
+				if 'encrypted' in tmptags:
+					tmpfilename = os.path.join(res, os.listdir(res)[0])
+					hints[tmpfilename] = {}
+					hints[tmpfilename]['tags'] = ['zip', 'encrypted']
+					sys.stdout.flush()
 				blacklist.append((offset, zipend + 22 + commentsize))
 			else:
-				## cleanup
 				os.rmdir(tmpdir)
 	zipfile.close()
 	return (diroffsets, blacklist, tags, hints)
