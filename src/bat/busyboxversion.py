@@ -25,7 +25,6 @@ def busybox_version(filename, tags, blacklist=[], scanenv={}, scandebug=False, u
 			blacklist_tmp.append((filesize,filesize))
 			datafile = open(filename, 'rb')
 			lastindex = 0
-			databytes = ""
 			datafile.seek(lastindex)
 			for i in blacklist_tmp:
 				if i[0] == lastindex:
