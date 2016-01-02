@@ -3651,7 +3651,8 @@ def unpackZip(filename, offset, cutoff, endofcentraldir, commentsize, tempdir=No
 		for i in infolist:
 			if i.file_size == 0 and not weirdzip:
 				if not i.filename.endswith('/'):
-					weirdzip = True
+					if filter(lambda x: x.filename.startswith(i.filename) and not x.filename == i.filename, infolist) != []:
+						weirdzip = True
 			if i.flag_bits & 0x01 == 1:
 				memzipfile.close()
 				if inmemory:
@@ -3686,6 +3687,12 @@ def unpackZip(filename, offset, cutoff, endofcentraldir, commentsize, tempdir=No
 				os.unlink(tmpfile[1])
 			else:
 				memfile.close()
+		for i in os.listdir(tmpdir):
+			try:
+				os.unlink(os.path.join(tmpdir, i))
+				continue
+			except:
+				shutil.rmtree(os.path.join(tmpdir, i))
 		return (None, [])
 	if inmemory:
 		if not havetmpfile:
