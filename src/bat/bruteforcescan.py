@@ -364,6 +364,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 
 		## first see if a shortcut can be taken to unpack the file
 		## directly based on its extension.
+		unpacked = False
 		knownfile = False
 		if 'knownfile' in scanhints:
 			knownfile = scanhints['knownfile']
@@ -411,7 +412,6 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 							if diroffset == None:
 								continue
 							report = {}
-							unpacked = True
 							scandir = diroffset[0]
 
 							## recursively scan all files in the directory
@@ -473,13 +473,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 				picklefile.close()
 
 		if "encrypted" in tags:
-			leaftasks.append((filetoscan, tags, blacklist, filehash, filesize))
-			for l in leaftasks:
-				leafqueue.put(l)
-			unpackreports[relfiletoscan]['tags'] = tags
-			for u in unpackreports:
-				reportqueue.put({u: unpackreports[u]})
-			scanqueue.task_done()
+			knownfile = True
 
 		if not knownfile:
 			## all offsets are known now, so scans that are not needed can
