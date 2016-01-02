@@ -1,3 +1,6 @@
+2016-01-02:
+* fwunpack.py: vastly simplify ZIP unpacking
+
 2015-12-31:
 * fwunpack.py: carve ZIP archives from larger files in a different way, add
 many more sanity checks for ZIP unpacking
