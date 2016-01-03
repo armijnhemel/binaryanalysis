@@ -32,12 +32,17 @@ def busybox_version(filename, tags, blacklist=[], scanenv={}, scandebug=False, u
 					datafile.seek(lastindex)
 					continue
 				if i[0] > lastindex:
+					## check if there actually is enough data to do a search first
+					## "BusyBox v" has length 9, has at least 2 digits and a dot
+					if (i[0] - lastindex) < 12:
+						lastindex = i[1] - 1
+						datafile.seek(lastindex)
+						continue
 					data = datafile.read(i[0] - lastindex)
 					tmpfile = tempfile.mkstemp()
 					os.write(tmpfile[0], data)
 					os.fdopen(tmpfile[0]).close()
-					scanfile = tmpfile[1]
-					bbres = busybox.extract_version(scanfile)
+					bbres = busybox.extract_version(tmpfile[1])
 					os.unlink(tmpfile[1])
 					## set lastindex to the next
 					lastindex = i[1] - 1
