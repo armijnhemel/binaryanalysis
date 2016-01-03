@@ -3720,6 +3720,9 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	diroffsets = []
 	counter = 1
 	filesize = os.stat(filename).st_size
+
+	## read the parameter for the maximum file size that should be read into
+	## memory from the configuration. Default: 50 million bytes.
 	try:
 		memorycutoff = int(scanenv.get('ZIP_MEMORY_CUTOFF', 50000000))
 	except:
@@ -3786,7 +3789,7 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 
 			## https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT
 			## section 4.4.3.2
-			## According to the specification this can go up to 62
+			## According to the specification this can go up to 62 right now
 			if versionneeded > 100 or versionneeded < 10:
 				continue
 
