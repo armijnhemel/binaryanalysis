@@ -400,7 +400,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 					except Exception, e:
 						continue
 					scanres = eval("bat_%s(filetoscan, tempdir, newenv, debug=debug)" % (method))
-					if scanres != ([], [], [], []):
+					if scanres != ([], [], [], {}):
 						(diroffsets, blacklist, scantags, hints) = scanres
 						tags = list(set(tags + scantags))
 						knownfile = True
