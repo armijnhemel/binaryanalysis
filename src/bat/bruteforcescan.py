@@ -147,79 +147,6 @@ def gethash(path, filename, hashtype="sha256"):
 		hashresults[h] = hashdict[h].hexdigest()
 	return hashresults
 
-## tag files based on extension and a few simple tests and possibly skip
-## the generic marker search based on the results. This is to prevent
-## a lot of I/O for large files.
-## Example: ZIP files and JAR files often have a known extension. With
-## a few simple tests it is easy to see if the entire file is a ZIP file
-## or not.
-## returns a dictionary with offsets
-## TODO: refactor so code can be shared with fwunpack.py
-def tagKnownExtension(filename):
-	offsets = {}
-	tags = []
-	extensions = filename.rsplit('.', 1)
-	if len(extensions) == 1:
-		return (tags, offsets)
-
-	extension = extensions[-1].lower()
-	zipextensions = ['zip', 'jar', 'ear', 'war', 'apk']
-	if extension in zipextensions:
-		datafile = open(filename, 'rb')
-		databuffer = datafile.read(10)
-		datafile.close()
-		if databuffer.find(fsmagic.fsmagic['zip']) != 0:
-			return (tags, offsets)
-		p = subprocess.Popen(['zipinfo', '-v', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-
-		res = re.search("Actual[\w\s]*end-(?:of-)?cent(?:ral)?-dir record[\w\s]*:\s*(\d+) \(", stanout)
-		if res != None:
-			endofcentraldir = int(res.groups(0)[0])
-		else:
-			return (tags, offsets)
-		zipends = prerun.genericMarkerSearch(filename, ['zipend'], [])['zipend']
-		if len(zipends) != 1:
-			zipfile = open(filename, 'rb')
-			## maybe not all the zip ends are valid, so check them
-			newzipends = []
-			for z in zipends:
-				zipendoffset = z+4+12
-				zipfile.seek(zipendoffset)
-				zipendbytes = zipfile.read(4)
-				offsetofcentraldirectory = struct.unpack('<I', zipendbytes)[0]
-				if offsetofcentraldirectory > os.stat(filename).st_size:
-					continue
-				zipfile.seek(offsetofcentraldirectory)
-				centraldirheader = zipfile.read(4)
-				if centraldirheader != "PK\x01\x02":
-					continue
-				newzipends.append(z)
-			zipfile.close()
-			if len(newzipends) != 1:
-				return (tags, offsets)
-			else:
-				zipends = newzipends
-		offsets['zipend'] = zipends
-
-		## TODO: determine commentsize
-		commentsize = 0
-		if endofcentraldir + 22 + commentsize == os.stat(filename).st_size:
-			offsets['zip'] = [0]
-			tags.append('zip')
-		else:
-			return ([], {})
-
-		## check if the file is encrypted, if so bail out
-		res = re.search("file security status:\s+(\w*)\sencrypted", stanout)
-		if res == None:
-			return ([], {})
-
-		if res.groups(0)[0] != 'not':
-			tags.append('encrypted')
-			return (tags, {})
-	return (tags, offsets)
-
 ## scan a single file, possibly unpack and recurse
 def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, prerunmagic, magicscans, optmagicscans, processid, hashdict, blacklistedfiles, llock, template, unpacktempdir, tempdir, outputhash, cursor, sourcecodequery, dumpoffsets, offsetdir):
 	lentempdir = len(tempdir)
@@ -455,10 +382,6 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 
 		if not knownfile:
 			## scan for markers.
-			if offsets == {}:
-				tagOffsets = tagKnownExtension(filetoscan)
-				(newtags, offsets) = tagOffsets
-				tags = tags + newtags
 			if offsets == {}:
 				offsets =  prerun.genericMarkerSearch(filetoscan, magicscans, optmagicscans)
 
