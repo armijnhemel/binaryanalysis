@@ -1,3 +1,8 @@
+2016-01-03:
+* fwunpack.py: tagging fixes for XZ files
+* fwunpack.py: introduce ZIP_MEMORY_CUTOFF environment variable
+* fwunpack.py: fix diroffsets for PNG
+
 2016-01-02:
 * fwunpack.py: vastly simplify ZIP unpacking
 
