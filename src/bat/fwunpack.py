@@ -4946,7 +4946,8 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			blacklistoffset = extractor.inblacklist(trail, blacklist)
 			if blacklistoffset != None:
 				break
-			data = datafile.read(trail+8-offset)
+			pngsize = trail+8-offset
+			data = datafile.read(pngsize)
 			p = subprocess.Popen(['webpng', '-d', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 			(stanout, stanerr) = p.communicate(data)
 			if p.returncode != 0:
@@ -4969,7 +4970,7 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 					hints[tmpfilename]['tags'] = ['graphics', 'png', 'binary']
 					hints[tmpfilename]['scanned'] = True
 					blacklist.append((offset,trail+8))
-					diroffsets.append((tmpdir, offset, offset+trail+8))
+					diroffsets.append((tmpdir, offset, pngsize))
 					counter = counter + 1
 					break
 		if not pngfound:
