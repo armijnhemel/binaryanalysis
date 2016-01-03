@@ -21,6 +21,7 @@ def genericSearch(filename, markerDict, blacklist=[], unpacktempdir=None):
 	## first see if the entire file has been blacklisted
 	filesize = os.stat(filename).st_size
 	carved = False
+	foundmarkers = set()
 	if blacklist != []:
 		if extractor.inblacklist(0, blacklist) == filesize:
 			return None
@@ -46,10 +47,14 @@ def genericSearch(filename, markerDict, blacklist=[], unpacktempdir=None):
 					datafile.seek(lastindex)
 					continue
 				for marker in markerDict.keys():
+					if marker in foundmarkers:
+						continue
 					for markerstring in markerDict[marker]:
 						markeroffset = data.find(markerstring)
 						if markeroffset != -1:
 							results.append(marker)
+							foundmarkers.add(marker)
+							break
 				## set lastindex to the next
 				lastindex = i[1] - 1
 				datafile.seek(lastindex)
@@ -62,10 +67,14 @@ def genericSearch(filename, markerDict, blacklist=[], unpacktempdir=None):
 		databuffer = datafile.read(100000)
 		while databuffer != '':
 			for marker in markerDict.keys():
+				if marker in foundmarkers:
+					continue
 				for markerstring in markerDict[marker]:
 					markeroffset = databuffer.find(markerstring)
 					if markeroffset != -1:
 						results.append(marker)
+						foundmarkers.add(marker)
+						break
 			## move the offset 100000
 			datafile.seek(offset + 100000)
 			databuffer = datafile.read(100000)
