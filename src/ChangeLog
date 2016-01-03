@@ -2,6 +2,19 @@
 * fwunpack.py: tagging fixes for XZ files
 * fwunpack.py: introduce ZIP_MEMORY_CUTOFF environment variable
 * fwunpack.py: fix diroffsets for PNG
+* checks.py: if there is blacklisted data skip checks that won't succeed
+because there is too little data
+* busyboxversion.py: if there is blacklisted data skip tests that won't
+succeed because there is too little data
+* busybox.py: don't read a file to search for the busybox version number if no
+busybox marker is present
+* busybox.py: try to match version numbers earlier, read a lot less data
+* fwunpack.py: fix encrypted ZIP reporting
+* fwunpack.py: add searchUnpackKnownZip() to bypass checks for files with
+known ZIP extensions. If unpacking the file this way is unsuccessful the file
+will be unpacked using the regular scanning process. Most files with known ZIP
+extensions will very likely be ZIP files.
+* bruteforcescan.py: remove tagKnownExtension() as it is no longer needed
 
 2016-01-02:
 * fwunpack.py: vastly simplify ZIP unpacking
