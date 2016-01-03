@@ -223,7 +223,7 @@ def extract_version(filename):
 	bboffset = 0
 
 	databuffer = []
-	datafile = open(filename)
+	datafile = open(filename, 'rb')
 	datafile.seek(offset)
 	databuffer = datafile.read(100000)
 	bboffsets = []
@@ -242,6 +242,9 @@ def extract_version(filename):
 		else:
 			offset = offset + len(databuffer)
 	datafile.close()
+	if bboffsets == []:
+		return
+
 	busybox = open(filename, 'rb')
 	lines = busybox.read()
 	busybox.close()
