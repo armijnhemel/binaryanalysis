@@ -653,6 +653,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 			for u in unpackreports:
 				reportqueue.put({u: unpackreports[u]})
 		else:
+			blacklist.sort()
 			leaftasks.append((filetoscan, tags, blacklist, filehash, filesize))
 			for l in leaftasks:
 				leafqueue.put(l)
