@@ -3606,7 +3606,7 @@ def unpackLRZIP(filename, offset, hasmd5, lrzipmd5, lrzipsize, tempdir=None):
 
 	return (tmpdir, md5match, os.stat(filename).st_size)
 
-def unpackZip(filename, offset, cutoff, endofcentraldir, commentsize, tempdir=None):
+def unpackZip(filename, offset, cutoff, endofcentraldir, commentsize, memorycutoff, tempdir=None):
 	filesize = os.stat(filename).st_size
 
 	inmemory = False
@@ -3617,11 +3617,10 @@ def unpackZip(filename, offset, cutoff, endofcentraldir, commentsize, tempdir=No
 	## process everything in memory if the size of the ZIP file is below
 	## a certain threshold and is not a complete ZIP file (in which case
 	## using 'unzip' might be faster).
-	## TODO: make threshold configurable
 	if not inmemory:
 		memfile = filename
 	else:
-		if min(filesize, cutoff) < 50000000:
+		if min(filesize, cutoff) < memorycutoff:
 			openzipfile = open(filename, 'rb')
 			openzipfile.seek(offset)
 			zipdata = openzipfile.read(cutoff - offset)
@@ -3706,6 +3705,7 @@ def searchUnpackKnownZip(filename, tempdir=None, scanenv={}, debug=False):
 	if databuffer != fsmagic.fsmagic['zip']:
 		return ([], [], [], {})
 
+## Carve and unpack ZIP files
 def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	if not offsets.has_key('zip'):
@@ -3720,10 +3720,13 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	diroffsets = []
 	counter = 1
 	filesize = os.stat(filename).st_size
+	try:
+		memorycutoff = int(scanenv.get('ZIP_MEMORY_CUTOFF', 50000000))
+	except:
+		memorycutoff = 50000000
 	zipfile = open(filename, 'rb')
 
 	## then check all the potential end of central dir offsets in the file
-	## The 
 	for zipendindex in xrange(0, len(offsets['zipend'])):
 		zipend = offsets['zipend'][zipendindex]
 		blacklistoffset = extractor.inblacklist(zipend, blacklist)
@@ -3796,20 +3799,20 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 
 			tmpdir = dirsetup(tempdir, filename, "zip", counter)
 			endofcentraldir = zipend - offset
-			(res, tmptags) = unpackZip(filename, offset, cutoff, endofcentraldir, commentsize, tmpdir)
+			(res, tmptags) = unpackZip(filename, offset, cutoff, endofcentraldir, commentsize, memorycutoff, tmpdir)
 			zipunpacked = False
 			if res != None:
 				diroffsets.append((res, offset, (zipend - offset) + commentsize + 22))
-				counter = counter + 1
-				if offset == 0 and zipend + commentsize + 22 == filesize:
-					tags.append('zip')
-					tags.append('compressed')
+				blacklist.append((offset, zipend + 22 + commentsize))
 				if 'encrypted' in tmptags:
 					tmpfilename = os.path.join(res, os.listdir(res)[0])
 					hints[tmpfilename] = {}
 					hints[tmpfilename]['tags'] = ['zip', 'encrypted']
-					sys.stdout.flush()
-				blacklist.append((offset, zipend + 22 + commentsize))
+				if offset == 0 and zipend + commentsize + 22 == filesize:
+					tags.append('zip')
+					tags.append('compressed')
+					break
+				counter = counter + 1
 			else:
 				os.rmdir(tmpdir)
 	zipfile.close()
