@@ -234,6 +234,10 @@ def extract_version(filename):
 			bboffset = offset + markeroffset
 			bboffsets.append(bboffset)
 			markeroffset = databuffer.find("BusyBox v", markeroffset+1)
+			res = re.search("BusyBox v([\d\.\d\w-]+) \(", databuffer)
+			if res != None:
+				datafile.close()
+				return res.groups(0)[0]
 		## move the offset 99950, allowing some overlap
 		datafile.seek(offset + 99950)
 		databuffer = datafile.read(100000)
@@ -246,14 +250,16 @@ def extract_version(filename):
 		return
 
 	busybox = open(filename, 'rb')
-	lines = busybox.read()
-	busybox.close()
 
 	for bboffset in bboffsets:
+		busybox.seek(bboffset)
+		lines = busybox.read(1000)
 		bracket_offset = lines.find("(", bboffset)
-		res = re.search("BusyBox v([\d\.\d\w-]+) \(", lines[bboffset:bracket_offset+1])
+		res = re.search("BusyBox v([\d\.\d\w-]+) \(", lines)
 		if res != None:
+			busybox.close()
 			return res.groups(0)[0]
+	busybox.close()
 	return
 
 def main(argv):
