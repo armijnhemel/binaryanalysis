@@ -3710,7 +3710,7 @@ def searchUnpackKnownZip(filename, tempdir=None, scanenv={}, debug=False):
 	## characters long, so at maximum 65535 + 22 characters should be read,
 	## perhaps a few more just in case
 	datafile = open(filename, 'rb')
-	datafile.seek(min(filesize, filesize-(65535+30)))
+	datafile.seek(max(0,min(filesize, filesize-(65535+30))))
 	offset = datafile.tell()
 	databuffer = datafile.read()
 	datafile.close()
