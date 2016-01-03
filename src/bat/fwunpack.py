@@ -3614,6 +3614,8 @@ def unpackZip(filename, offset, cutoff, endofcentraldir, commentsize, memorycuto
 	if offset != 0 or cutoff != filesize:
 		inmemory = True
 
+	tmpdir = unpacksetup(tempdir)
+
 	## process everything in memory if the size of the ZIP file is below
 	## a certain threshold and is not a complete ZIP file (in which case
 	## using 'unzip' might be faster).
@@ -3627,8 +3629,6 @@ def unpackZip(filename, offset, cutoff, endofcentraldir, commentsize, memorycuto
 			openzipfile.close()
 			memfile = StringIO.StringIO(zipdata)
 		else:
-			tmpdir = unpacksetup(tempdir)
-
 			tmpfile = tempfile.mkstemp(dir=tempdir)
 			os.fdopen(tmpfile[0]).close()
 
@@ -3657,15 +3657,15 @@ def unpackZip(filename, offset, cutoff, endofcentraldir, commentsize, memorycuto
 				if inmemory:
 					if not havetmpfile:
 						memfile.close()
-				if not havetmpfile:
-					## write out the data if it is not already there
-					tmpdir = unpacksetup(tempdir)
-					tmpfile = tempfile.mkstemp(dir=tempdir)
-					os.fdopen(tmpfile[0]).close()
+					if not havetmpfile:
+						## write out the data if it is not already there
+						tmpdir = unpacksetup(tempdir)
+						tmpfile = tempfile.mkstemp(dir=tempdir)
+						os.fdopen(tmpfile[0]).close()
 
-					datafile = open(tmpfile[1], 'wb')
-					datafile.write(zipdata)
-					datafile.close()
+						datafile = open(tmpfile[1], 'wb')
+						datafile.write(zipdata)
+						datafile.close()
 
 				return (tmpdir, ['encrypted'])
 		if not havetmpfile:
@@ -3704,6 +3704,46 @@ def searchUnpackKnownZip(filename, tempdir=None, scanenv={}, debug=False):
 	datafile.close()
 	if databuffer != fsmagic.fsmagic['zip']:
 		return ([], [], [], {})
+	filesize = os.stat(filename).st_size
+
+	## try to find an end of central dir. A ZIP file comment can be 65535
+	## characters long, so at maximum 65535 + 22 characters should be read,
+	## perhaps a few more just in case
+	datafile = open(filename, 'rb')
+	datafile.seek(min(filesize, filesize-(65535+30)))
+	offset = datafile.tell()
+	databuffer = datafile.read()
+	datafile.close()
+	zipend = databuffer.find(fsmagic.fsmagic['zipend']) + offset
+	if zipend == -1:
+		return ([], [], [], {})
+	## then try unpacking it.
+	res = searchUnpackZip(filename, tempdir, [], {'zip': [0], 'zipend': [zipend]}, scanenv, debug)
+	(diroffsets, blacklist, newtags, hints) = res
+
+	failed = False
+	## there were results, so check if they were successful
+	if diroffsets != []:
+		if len(diroffsets) != 1:
+			failed = True
+		else:
+			(dirpath, startoffset, endoffset) = diroffsets[0]
+			if startoffset != 0 or endoffset != os.stat(filename).st_size:
+				failed = True
+		if failed:
+			for i in diroffsets:
+				(dirpath, startoffset, endoffset) = i
+				try:
+					shutil.rmtree(dirpath)
+				except:
+					pass
+			return ([], [], [], {})
+		else:
+			return (diroffsets, blacklist, newtags, hints)
+	else:
+		if 'encrypted' in newtags:
+			return (diroffsets, blacklist, newtags, hints)
+	return ([], [], [], {})
 
 ## Carve and unpack ZIP files
 def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
@@ -3805,16 +3845,21 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			(res, tmptags) = unpackZip(filename, offset, cutoff, endofcentraldir, commentsize, memorycutoff, tmpdir)
 			zipunpacked = False
 			if res != None:
-				diroffsets.append((res, offset, (zipend - offset) + commentsize + 22))
 				blacklist.append((offset, zipend + 22 + commentsize))
+				if offset == 0 and zipend + commentsize + 22 == filesize:
+					tags.append('zip')
+					tags.append('compressed')
+					if 'encrypted' in tmptags:
+						tags.append('encrypted')
+						os.rmdir(tmpdir)
+					else:
+						diroffsets.append((res, offset, (zipend - offset) + commentsize + 22))
+					break
+				diroffsets.append((res, offset, (zipend - offset) + commentsize + 22))
 				if 'encrypted' in tmptags:
 					tmpfilename = os.path.join(res, os.listdir(res)[0])
 					hints[tmpfilename] = {}
 					hints[tmpfilename]['tags'] = ['zip', 'encrypted']
-				if offset == 0 and zipend + commentsize + 22 == filesize:
-					tags.append('zip')
-					tags.append('compressed')
-					break
 				counter = counter + 1
 			else:
 				os.rmdir(tmpdir)
