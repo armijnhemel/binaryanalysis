@@ -1524,19 +1524,14 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 			xzsize = trail+2 - offset
 			datafile.seek(offset)
 			data = datafile.read(xzsize)
-			## The two bytes before that are the so called "backward size"
+			## TODO: the two bytes before that are the so called "backward size"
 
-			wholefile = False
-			if offset == 0 and trail+2 == os.stat(filename).st_size:
-				if filename.lower().endswith('.xz'):
-					wholefile = True
-			sys.stdout.flush()
 			tmpdir = dirsetup(tempdir, filename, "xz", counter)
-			res = unpackXZ(filename, offset, xzsize, template, dotest, wholefile, tmpdir)
+			res = unpackXZ(filename, offset, xzsize, template, dotest, tmpdir)
 			if res != None:
 				diroffsets.append((res, offset, xzsize))
 				blacklist.append((offset, trail+2))
-				if wholefile:
+				if offset == 0 and trail+2 == os.stat(filename).st_size:
 					datafile.close()
 					newtags.append('compressed')
 					newtags.append('xz')
@@ -1549,12 +1544,12 @@ def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 	datafile.close()
 	return (diroffsets, blacklist, newtags, hints)
 
-def unpackXZ(filename, offset, trailer, template, dotest, wholefile, tempdir=None):
+def unpackXZ(filename, offset, xzsize, template, dotest, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	unpackFile(filename, offset, tmpfile[1], tmpdir, length=trailer)
+	unpackFile(filename, offset, tmpfile[1], tmpdir, length=xzsize)
 
 	if dotest:
 		## test integrity of the file
@@ -1576,6 +1571,11 @@ def unpackXZ(filename, offset, trailer, template, dotest, wholefile, tempdir=Non
 			os.rmdir(tmpdir)
 		return None
 	os.unlink(tmpfile[1])
+
+	wholefile = False
+	if offset == 0 and offset+xzsize == os.stat(filename).st_size:
+		if filename.lower().endswith('.xz'):
+			wholefile = True
 
 	if wholefile:
 		filenamenoext = os.path.basename(filename)[:-3]
