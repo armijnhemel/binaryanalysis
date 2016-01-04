@@ -3649,7 +3649,7 @@ def unpackZip(filename, offset, cutoff, endofcentraldir, commentsize, memorycuto
 		weirdzip = False
 		weirdzipnames = set()
 		for i in infolist:
-			if i.file_size == 0 and not weirdzip:
+			if i.file_size == 0:
 				if not i.filename.endswith('/'):
 					if filter(lambda x: x.filename.startswith(i.filename) and not x.filename == i.filename, infolist) != []:
 						weirdzip = True
