@@ -3675,8 +3675,7 @@ def unpackZip(filename, offset, cutoff, endofcentraldir, commentsize, memorycuto
 			tmpdir = unpacksetup(tempdir)
 		for i in infolist:
 			if weirdzip and i.filename in weirdzipnames:
-				if not i.filename.endswith('/'):
-					os.mkdir(os.path.join(tmpdir, i.filename))
+				os.mkdir(os.path.join(tmpdir, i.filename))
 			else:
 				memzipfile.extract(i, tmpdir)
 		memzipfile.close()
