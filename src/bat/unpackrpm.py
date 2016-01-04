@@ -55,7 +55,8 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		rpmfile.seek(offset+4)
 		rpmversionbyte = rpmfile.read(1)
 		rpmfile.close()
-		if struct.unpack('<B', rpmversionbyte)[0] > 3:
+		rpmmajorversion = struct.unpack('<B', rpmversionbyte)[0]
+		if rpmmajorversion > 3 or rpmmajorversion == 0:
 			continue
 
 		## now first check the header
@@ -88,7 +89,9 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 					sizeofheader = compressoroffset - offset
 					break
 				except Exception, e:
-					pass
+					if os.path.exists(tmprpm[1]):
+						os.close(fdno)
+						os.unlink(tmprpm[1])
 			if headervalid:
 				break
 
