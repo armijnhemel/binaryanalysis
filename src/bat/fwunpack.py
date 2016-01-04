@@ -3647,12 +3647,15 @@ def unpackZip(filename, offset, cutoff, endofcentraldir, commentsize, memorycuto
 		## https://bugzilla.redhat.com/show_bug.cgi?id=907442
 		## Also check if the file contains encrypted entries.
 		weirdzip = False
+		weirdzipnames = set()
 		for i in infolist:
 			if i.file_size == 0 and not weirdzip:
 				if not i.filename.endswith('/'):
 					if filter(lambda x: x.filename.startswith(i.filename) and not x.filename == i.filename, infolist) != []:
 						weirdzip = True
+						weirdzipnames.add(i.filename)
 			if i.flag_bits & 0x01 == 1:
+				## data is encrypted
 				memzipfile.close()
 				if inmemory:
 					if not havetmpfile:
@@ -3671,9 +3674,8 @@ def unpackZip(filename, offset, cutoff, endofcentraldir, commentsize, memorycuto
 		if not havetmpfile:
 			tmpdir = unpacksetup(tempdir)
 		for i in infolist:
-			if weirdzip and i.file_size == 0:
+			if weirdzip and i.filename in weirdzipnames:
 				if not i.filename.endswith('/'):
-					## TODO: sanity checks
 					os.mkdir(os.path.join(tmpdir, i.filename))
 			else:
 				memzipfile.extract(i, tmpdir)
