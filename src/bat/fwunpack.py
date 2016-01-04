@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2009-2015 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2009-2016 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -3616,16 +3616,17 @@ def unpackZip(filename, offset, cutoff, endofcentraldir, commentsize, memorycuto
 
 	tmpdir = unpacksetup(tempdir)
 
+	ziplen = cutoff - offset
 	## process everything in memory if the size of the ZIP file is below
 	## a certain threshold and is not a complete ZIP file (in which case
 	## using 'unzip' might be faster).
 	if not inmemory:
 		memfile = filename
 	else:
-		if min(filesize, cutoff) < memorycutoff:
+		if ziplen < memorycutoff:
 			openzipfile = open(filename, 'rb')
 			openzipfile.seek(offset)
-			zipdata = openzipfile.read(cutoff - offset)
+			zipdata = openzipfile.read(ziplen)
 			openzipfile.close()
 			memfile = StringIO.StringIO(zipdata)
 		else:
@@ -3633,7 +3634,6 @@ def unpackZip(filename, offset, cutoff, endofcentraldir, commentsize, memorycuto
 			os.fdopen(tmpfile[0]).close()
 
 			if cutoff != 0:
-				ziplen = cutoff - offset
 				unpackFile(filename, offset, tmpfile[1], tmpdir, length=ziplen)
 			else:
 				unpackFile(filename, offset, tmpfile[1], tmpdir)
