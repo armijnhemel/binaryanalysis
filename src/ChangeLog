@@ -1,6 +1,11 @@
 2016-01-04:
 * unpackrpm.py: read a bit less data in RPM unpacking, add more sanity checks,
 add support for more payloads (depends on support in rpm2cpio though)
+* fwunpack.py: fix incorrect check in ZIP unpacking so a lot of data was still
+written to disk instead of directly into memory.
+* fwunpack.py: rewrite ZIP unpacking again, to correctly work around ZIP files
+just being stored (so not deflated again) inside other ZIP files, inside a
+file system that cannot be easily unpacked (like some flavours of YAFFS2)
 
 2016-01-03:
 * fwunpack.py: tagging fixes for XZ files
