@@ -3770,7 +3770,9 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		memorycutoff = 50000000
 	zipfile = open(filename, 'rb')
 
-	## then check all the potential end of central dir offsets in the file
+	zipends = []
+	## first check all the potential end of central dir offsets in the file and filter
+	## out the bogus ones
 	for zipendindex in xrange(0, len(offsets['zipend'])):
 		zipend = offsets['zipend'][zipendindex]
 		blacklistoffset = extractor.inblacklist(zipend, blacklist)
@@ -3781,8 +3783,8 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		zipfile.seek(zipend+4)
 		numberofthisdisk = struct.unpack('<H', zipfile.read(2))[0]
 		diskwithcentraldirectory = struct.unpack('<H', zipfile.read(2))[0]
-		numberofentriesincentraldirectorythisdisk = struct.unpack('<H', zipfile.read(2))[0]
-		numberofentriesincentraldirectory = struct.unpack('<H', zipfile.read(2))[0]
+		entriesincentraldirectorythisdisk = struct.unpack('<H', zipfile.read(2))[0]
+		entriesincentraldirectory = struct.unpack('<H', zipfile.read(2))[0]
 
 		## the size of the central directory entries. This cannot be larger than
 		## the file itself
@@ -3811,28 +3813,42 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			continue
 
 		cutoff = zipend + 22 + commentsize
+		zipends.append((zipend, cutoff, offsetofcentraldirectory))
 
-		for offset in offsets['zip']:
+	## then walk all the ZIP offsets and see if anything can be unpacked
+	for offset in offsets['zip']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		## some more sanity checks
+		zipfile.seek(offset+4)
+		versionneededbytes = zipfile.read(2)
+		versionneeded = struct.unpack('<H', versionneededbytes)[0]
+
+		## https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT
+		## section 4.4.3.2
+		## According to the specification this can go up to 62 right now
+		if versionneeded > 100 or versionneeded < 10:
+			continue
+
+		## extra sanity checks: read the name of the first local file header
+		## and match it with the name of the first entry of the central
+		## directory.
+		zipfile.seek(offset+26)
+		namesize = struct.unpack('<H', zipfile.read(2))[0]
+		zipfile.seek(offset+30)
+		firstfilename = zipfile.read(namesize)
+
+		for z in zipends:
+			(zipend, cutoff, offsetofcentraldirectory) = z
 			if offset > zipend:
 				continue
-			blacklistoffset = extractor.inblacklist(offset, blacklist)
+
+			blacklistoffset = extractor.inblacklist(zipend, blacklist)
 			if blacklistoffset != None:
-				continue
-			zipfile.seek(offsetofcentraldirectory+offset)
-			centraldirheader = zipfile.read(4)
-			if centraldirheader != "PK\x01\x02":
-				continue
-
-			## some more sanity checks
-			zipfile.seek(offset+4)
-			versionneededbytes = zipfile.read(2)
-			versionneeded = struct.unpack('<H', versionneededbytes)[0]
-
-			## https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT
-			## section 4.4.3.2
-			## According to the specification this can go up to 62 right now
-			if versionneeded > 100 or versionneeded < 10:
-				continue
+				## continue to the next offset as this data cannot be
+				## part of the ZIP file
+				break
 
 			## central directory (absolute) cannot be more than the filesize
 			if offset + offsetofcentraldirectory > filesize:
@@ -3841,10 +3857,30 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			if offset + offsetofcentraldirectory > zipend:
 				continue
 
+			## sanity check: the central directory entry should be valid
+			zipfile.seek(offset+offsetofcentraldirectory)
+			centraldirheader = zipfile.read(4)
+			if centraldirheader != "PK\x01\x02":
+				continue
+
+			## the name of the first entry in the central directory should match
+			## the name of the first entry in the local file header
+			zipfile.seek(offset+offsetofcentraldirectory+28)
+			filenamelengthdir = struct.unpack('<H', zipfile.read(2))[0]
+			zipfile.seek(offset+offsetofcentraldirectory+46)
+			if not firstfilename == zipfile.read(filenamelengthdir):
+				continue
+
+			## relative offset: assume it is 0 but not sure if this is
+			## correct. TODO: find out and if needed fix.
+			zipfile.seek(offset+offsetofcentraldirectory+42)
+			reloffset = struct.unpack('<I', zipfile.read(4))[0]
+			if reloffset != 0:
+				continue
+
 			tmpdir = dirsetup(tempdir, filename, "zip", counter)
 			endofcentraldir = zipend - offset
 			(res, tmptags) = unpackZip(filename, offset, cutoff, endofcentraldir, commentsize, memorycutoff, tmpdir)
-			zipunpacked = False
 			if res != None:
 				blacklist.append((offset, zipend + 22 + commentsize))
 				if offset == 0 and zipend + commentsize + 22 == filesize:
@@ -3862,6 +3898,9 @@ def searchUnpackZip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 					hints[tmpfilename] = {}
 					hints[tmpfilename]['tags'] = ['zip', 'encrypted']
 				counter = counter + 1
+
+				## move to next offset
+				break
 			else:
 				os.rmdir(tmpdir)
 	zipfile.close()
