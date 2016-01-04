@@ -1,3 +1,7 @@
+2016-01-04:
+* unpackrpm.py: read a bit less data in RPM unpacking, add more sanity checks,
+add support for more payloads (depends on support in rpm2cpio though)
+
 2016-01-03:
 * fwunpack.py: tagging fixes for XZ files
 * fwunpack.py: introduce ZIP_MEMORY_CUTOFF environment variable
