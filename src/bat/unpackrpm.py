@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2009-2015 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2009-2016 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -13,40 +13,38 @@ import sys, os, subprocess, os.path, struct
 import tempfile, magic, rpm
 import extractor, fwunpack
 
-def unpackRPM(filename, offset, tempdir=None):
-	## Assumes (for now) that rpm2cpio is in the path
-	tmpdir = fwunpack.unpacksetup(tempdir)
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.fdopen(tmpfile[0]).close()
-
-	fwunpack.unpackFile(filename, offset, tmpfile[1], tempdir)
-
-	## first use rpm2cpio to unpack the rpm data
-	p = subprocess.Popen(['rpm2cpio', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if len(stanout) != 0:
-		## cleanup first
-                os.unlink(tmpfile[1])
-		if tempdir == None:
-                	os.rmdir(tmpdir)
-		## then use unpackCpio() to unpack the RPM
-		return fwunpack.unpackCpio(stanout, tempdir)
-	else:
-                os.unlink(tmpfile[1])
-		if tempdir == None:
-                	os.rmdir(tmpdir)
-		return None
-
 ## RPM is basically a header, plus some compressed files, so we might get
 ## duplicates at the moment. We can defeat this easily by setting the blacklist
 ## upperbound to the start of compression + 1. This is ugly and should actually
 ## be fixed.
 def searchUnpackRPM(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
-	if not offsets.has_key('rpm'):
+	if not 'rpm' in offsets:
 		return ([], blacklist, [], hints)
 	if offsets['rpm'] == []:
 		return ([], blacklist, [], hints)
+
+	## sanity checks for payload compressors before even trying to process headers
+	## TODO: LZMA
+	compressorfound = False
+	compressors = ['gzip', 'xz', 'bz2', 'lzip']
+	for compressor in compressors:
+		if compressor in offsets:
+			compressorfound = True
+			break
+
+	if not compressorfound:
+		return ([], blacklist, [], hints)
+
+	offsetsfound = False
+	for compressor in compressors:
+		if offsets[compressor] != []:
+			offsetsfound = True
+			break
+
+	if not offsetsfound:
+		return ([], blacklist, [], hints)
+
 	diroffsets = []
 	rpmcounter = 1
 	for offset in offsets['rpm']:
@@ -59,80 +57,101 @@ def searchUnpackRPM(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		rpmfile.close()
 		if struct.unpack('<B', rpmversionbyte)[0] > 3:
 			continue
-		tmpdir = fwunpack.dirsetup(tempdir, filename, "rpm", rpmcounter)
-		res = unpackRPM(filename, offset, tmpdir)
-		if res != None:
-			diroffsets.append((res, offset, 0))
-			rpmcounter = rpmcounter + 1
-			## determine which compression is used, so we can
-			## find the right offset for the blacklist. Code from the
-			## RPM examples.
-			tset = rpm.TransactionSet()
-			tset.setVSFlags(rpm._RPMVSF_NOSIGNATURES)
-			## if offset != 0 first write to temporary file and carve out
-			## the RPM
-			if offset != 0:
-				tmprpm = tempfile.mkstemp()
-				rpmfile = open(filename, 'rb')
-				rpmfile.seek(offset)
-				rpmdata = rpmfile.read()
-				rpmfile.close()
-				os.write(tmprpm[0], rpmdata)
-				os.fsync(tmprpm[0])
-				os.close(tmprpm[0])
-        			fdno = os.open(tmprpm[1], os.O_RDONLY)
-        			header = tset.hdrFromFdno(fdno)
-        			os.close(fdno)
-				os.unlink(tmprpm[1])
-			else:
-        			fdno = os.open(filename, os.O_RDONLY)
-        			header = tset.hdrFromFdno(fdno)
-        			os.close(fdno)
-			## first some sanity checks. payload format should
-			## always be 'cpio' according to LSB 3
-			if header[rpm.RPMTAG_PAYLOADFORMAT] == 'cpio':
-				## compression should always be 'gzip' according to LSB 3
-				## but can also be 'xz' on Fedora 15 and later
-				## We actually can get payloadoffset from offsets
-				## This will only work if offsets actually contains values
-				## for these compressions, so they should be added as 'magic'
-				## to the configuration for RPM.
-				compressor = header[rpm.RPMTAG_PAYLOADCOMPRESSOR]
-				if compressor == 'gzip':
-					## this should not happen
-					if not offsets.has_key('gzip'):
-						pass
-					else:
-						for o in offsets['gzip']:
-							if offset > o:
-								continue
-							else:
-								payloadoffset = o
-								break
-				elif compressor == 'xz':
-					## this should not happen
-					if not offsets.has_key('xz') and not offsets.has_key('xztrailer'):
-						pass
-					else:
-						for o in offsets['xz']:
-							if offset > o:
-								continue
-							else:
-								payloadoffset = o
-								break
+
+		## now first check the header
+		headervalid = False
+		tset = rpm.TransactionSet()
+		tset.setVSFlags(rpm._RPMVSF_NOSIGNATURES)
+		sizeofheader = 0
+		## search all compressors, sorted by prevalence
+		#for compressor in ['gzip', 'xz', 'bz2', 'lzip', 'lzma']:
+		for compressor in ['gzip', 'xz', 'bz2', 'lzip']:
+			if not compressor in offsets:
+				continue
+			for compressoroffset in offsets[compressor]:
+				if compressoroffset < offset:
+					continue
 				try:
-					## this header describes the size of headers +
-					## compressed payload size. It might be a few bytes off
-					## with the actual size of the file.
-					bl = header[rpm.RPMTAG_SIGSIZE]
-					filesize = os.stat(filename).st_size
-					## sanity check. It should not happen with a properly
-					## formatted RPM file, but you never know.
-					if bl > filesize:
-						bl = payloadoffset + 1
-				except:
+					tmprpm = tempfile.mkstemp()
+					rpmfile = open(filename, 'rb')
+					rpmfile.seek(offset)
+					rpmdata = rpmfile.read(compressoroffset - offset)
+					rpmfile.close()
+					os.write(tmprpm[0], rpmdata)
+					os.fsync(tmprpm[0])
+					os.close(tmprpm[0])
+        				fdno = os.open(tmprpm[1], os.O_RDONLY)
+        				header = tset.hdrFromFdno(fdno)
+        				os.close(fdno)
+					os.unlink(tmprpm[1])
+					headervalid = True
+					sizeofheader = compressoroffset - offset
+					break
+				except Exception, e:
+					pass
+			if headervalid:
+				break
+
+		if not headervalid:
+			## no valid header was found so continue with the next RPM file
+			continue
+
+		## The RPM file format is heavily underdocumented, so scrape bits and pieces
+		## of docs from various sources.
+		## http://www.rpm.org/max-rpm/s1-rpm-file-format-rpm-file-format.html
+		## https://docs.fedoraproject.org/ro/Fedora_Draft_Documentation/0.1/html/RPM_Guide/ch-package-structure.html
+
+		## payload format always has to be cpio
+		if header[rpm.RPMTAG_PAYLOADFORMAT] != 'cpio':
+			continue
+
+		## possibly good statistic to have
+		#compressor = header[rpm.RPMTAG_PAYLOADCOMPRESSOR]
+
+		## the size of the headers and payload, but not of the lead and any signatures
+		bl = header[rpm.RPMTAG_SIGSIZE]
+		filesize = os.stat(filename).st_size
+
+		## after the header checks are done carve the possible RPM file from
+		## the bigger archive (right now just removing all leading bytes) and
+		## use rpm2cpio to unpack the RPM file.
+		tmpdir = fwunpack.dirsetup(tempdir, filename, "rpm", rpmcounter)
+		tmpfile = tempfile.mkstemp(dir=tmpdir)
+		os.fdopen(tmpfile[0]).close()
+
+		fwunpack.unpackFile(filename, offset, tmpfile[1], tmpdir)
+
+		## first use rpm2cpio to unpack the rpm data
+		p = subprocess.Popen(['rpm2cpio', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate()
+		if len(stanout) != 0:
+			## cleanup first
+                	os.unlink(tmpfile[1])
+			if tempdir == None:
+                		os.rmdir(tmpdir)
+			## then use unpackCpio() to unpack the RPM
+			res = fwunpack.unpackCpio(stanout, tmpdir)
+		else:
+                	os.unlink(tmpfile[1])
+			if tempdir == None:
+                		os.rmdir(tmpdir)
+
+		if res != None:
+			rpmcounter = rpmcounter + 1
+			try:
+				## this header describes the size of headers +
+				## compressed payload size. It might be a few bytes off
+				## with the actual size of the file.
+				bl = header[rpm.RPMTAG_SIGSIZE]
+				filesize = os.stat(filename).st_size
+				## sanity check. It should not happen with a properly
+				## formatted RPM file, but you never know.
+				if bl > filesize:
 					bl = payloadoffset + 1
-				blacklist.append((offset, bl))
+			except Exception, e:
+				bl = payloadoffset + 1
+			diroffsets.append((res, offset, bl))
+			blacklist.append((offset, bl))
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
