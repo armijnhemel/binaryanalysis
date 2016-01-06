@@ -734,7 +734,6 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [], hints)
 
-
 def unpackTar(filename, offset, tempdir=None, tar_tmpdir=None):
 	tmpdir = unpacksetup(tempdir)
 	if tar_tmpdir != None:
@@ -830,121 +829,56 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 	filesize = os.stat(filename).st_size
 	if filesize < 512:
 		return (diroffsets, blacklist, newtags, hints)
-	if blacklist != []:
-		if 'yaffs2' in offsets:
-			if len(offsets['yaffs2']) == 0:
-				return (diroffsets, blacklist, [], hints)
-			chunksandspares = [(512,16),(1024,32),(2048,64),(4096,128),(8192,256)]
-			yaffs2file = open(filename, 'rb')
-			for cs in chunksandspares:
-				(chunks, spares) = cs
-				for offset in offsets['yaffs2']:
-					yaffs2file.seek(offset+chunks+12)
-					sparebytes = yaffs2file.read(4)
-					byteCount = struct.unpack('<L', sparebytes)[0]
-					## "new nodes" only for now
-					if byteCount == 0xffff:
-						if cs in candidates:
-							candidates[cs].append(offset)
-						else:
-							candidates[cs] = [offset]
-						wholefile = False
-			yaffs2file.close()
 
-	if wholefile:
-		## Assume that the whole file needs to be scanned for now. Of course,
-		## there could be data appended to it that has not yet been unpacked
-		scanfile = filename
-		havetmpfile = False
-		tmpdir = dirsetup(tempdir, filename, "yaffs2", 1)
+	## A file could have various YAFFS2 file systems, without padding.
+	## The 'magic' that is searched for is not necessarily accurate
+	## but present in most cases.
 
+	haveyaffsoffsets = False
+	if 'yaffs2' in offsets:
+		if offsets['yaffs2'] != []:
+			haveyaffsoffsets = True
+	
+	counter = 1
+	if not haveyaffsoffsets:
 		offset = 0
 		if 'u-boot' in offsets:
 			if not offsets['u-boot'] == []:
 				if len(offsets['u-boot']) == 1 and offsets['u-boot'][0] == 0:
-					## delete the first 64 bytes
-					tmpfile = tempfile.mkstemp(dir=tempdir)
-					os.fdopen(tmpfile[0]).close()
 					offset = 64
-					unpackFile(filename, offset, tmpfile[1], tmpdir)
-					scanfile = tmpfile[1]
-					havetmpfile = True
-
-		## smallest possible file system supported by unpacker is 512 bytes
-		if os.stat(scanfile).st_size < 512:
-			if havetmpfile:
-				os.unlink(tmpfile[1])
-			os.rmdir(tmpdir)
-			return (diroffsets, blacklist, newtags, hints)
-			
-		yaffsres = unpackYaffs(scanfile, 0, tmpdir)
+					## smallest possible file system supported by unpacker is 512 bytes
+					if os.stat(filename).st_size < 578:
+						return (diroffsets, blacklist, newtags, hints)
+		
+		tmpdir = dirsetup(tempdir, filename, "yaffs2", counter)
+		yaffsres = unpackYaffs(filename, offset, tmpdir)
 		if yaffsres != None:
 			(res, bytesread) = yaffsres
 			blacklist.append((offset, offset + bytesread))
 			diroffsets.append((tmpdir, offset, bytesread))
 			newtags = ['yaffs2', 'filesystem']
-			if havetmpfile:
-				os.unlink(tmpfile[1])
 		else:
-			if havetmpfile:
-				os.unlink(tmpfile[1])
 			os.rmdir(tmpdir)
-		return (diroffsets, blacklist, newtags, hints)
 	else:
-		counter = 1
-		for cs in candidates:
-			## there could be several file systems in a file, so first try to
-			## find the start and end of a file system, then carve it out
-			## from the file and try to unpack.
-			(chunks, spares) = cs
-			inodesize = chunks+spares
-			if inodesize > filesize:
+		for offset in offsets['yaffs2']:
+			blacklistoffset = extractor.inblacklist(offset, blacklist)
+			if blacklistoffset != None:
 				continue
-			offsets = candidates[cs]
-			startoffset = offsets[0]
-			prevoffset = None
-			lastoffset = offsets[-1]
-			for offset in offsets:
-				blacklistoffset = extractor.inblacklist(offset, blacklist)
-				if blacklistoffset != None:
-					continue
+			tmpdir = dirsetup(tempdir, filename, "yaffs2", counter)
+			yaffsres = unpackYaffs(filename, offset, tmpdir)
+			if yaffsres != None:
+				(res, bytesread) = yaffsres
+				blacklist.append((offset, offset+bytesread))
+				diroffsets.append((tmpdir, offset, bytesread))
+				counter += 1
+			else:
+				os.rmdir(tmpdir)
+	return (diroffsets, blacklist, newtags, hints)
 
-				difference = offset - startoffset
-				if difference % inodesize == 0:
-					if offset != lastoffset:
-						prevoffset = offset
-						continue
-				if offset != lastoffset:
-					if prevoffset == None:
-						prevoffset = offset
-						continue
-					fslength = prevoffset - startoffset + inodesize
-				else:
-					fslength = lastoffset - startoffset + inodesize
-				tmpdir = dirsetup(tempdir, filename, "yaffs2", counter)
-				tmpfile = tempfile.mkstemp(dir=tempdir)
-				os.fdopen(tmpfile[0]).close()
-				unpackFile(filename, startoffset, tmpfile[1], tmpdir, length=fslength)
-				scanfile = tmpfile[1]
-				yaffsres = unpackYaffs(scanfile, tmpdir)
-				if yaffsres != None:
-					(res, bytesread) = yaffsres
-					blacklist.append((startoffset, startoffset+fslength))
-					diroffsets.append((tmpdir, startoffset, fslength))
-					os.unlink(tmpfile[1])
-					counter += 1
-				else:
-					os.unlink(tmpfile[1])
-					os.rmdir(tmpdir)
-				startoffset = offset
-				prevoffset = offset
-		return (diroffsets, blacklist, [], hints)
-	return (diroffsets, blacklist, [], hints)
-
-def unpackYaffs(scanfile, offset, tempdir=None):
+def unpackYaffs(filename, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 
-	p = subprocess.Popen(['bat-unyaffs', '-b', scanfile, '-d', tmpdir, '-j', '-n', '%d' % offset], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	p = subprocess.Popen(['bat-unyaffs', '-b', filename, '-d', tmpdir, '-j', '-n', '%d' % offset], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		return
