@@ -15,7 +15,7 @@ Optionally return a range of bytes that should be excluded in same cases
 to prevent other scans from (re)scanning (part of) the data.
 '''
 
-import sys, os, subprocess, os.path, shutil, stat, array, struct, binascii
+import sys, os, subprocess, os.path, shutil, stat, array, struct, binascii, json
 import tempfile, bz2, re, magic, tarfile, zlib, copy, uu, hashlib, StringIO, zipfile
 import fsmagic, extractor, ext2, jffs2
 
@@ -825,9 +825,10 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 	newtags = []
 	candidates = {}
 
-	## smallest possible file system supported by unpacker is 512 + 16 bytes
+	## smallest possible file system supported by unpacker is 512 bytes if taking inband
+	## tags into account
 	filesize = os.stat(filename).st_size
-	if filesize < 528:
+	if filesize < 512:
 		return (diroffsets, blacklist, newtags, hints)
 	if blacklist != []:
 		if 'yaffs2' in offsets:
@@ -869,17 +870,18 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 					scanfile = tmpfile[1]
 					havetmpfile = True
 
-		## smallest possible file system supported by unpacker is 512 + 16 bytes
-		if os.stat(scanfile).st_size < 528:
+		## smallest possible file system supported by unpacker is 512 bytes
+		if os.stat(scanfile).st_size < 512:
 			if havetmpfile:
 				os.unlink(tmpfile[1])
 			os.rmdir(tmpdir)
 			return (diroffsets, blacklist, newtags, hints)
 			
-		res = unpackYaffs(scanfile, tmpdir)
-		if res != None:
-			blacklist.append((0, filesize))
-			diroffsets.append((tmpdir, offset, filesize))
+		yaffsres = unpackYaffs(scanfile, 0, tmpdir)
+		if yaffsres != None:
+			(res, bytesread) = yaffsres
+			blacklist.append((offset, offset + bytesread))
+			diroffsets.append((tmpdir, offset, bytesread))
 			newtags = ['yaffs2', 'filesystem']
 			if havetmpfile:
 				os.unlink(tmpfile[1])
@@ -924,8 +926,9 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 				os.fdopen(tmpfile[0]).close()
 				unpackFile(filename, startoffset, tmpfile[1], tmpdir, length=fslength)
 				scanfile = tmpfile[1]
-				res = unpackYaffs(scanfile, tmpdir)
-				if res != None:
+				yaffsres = unpackYaffs(scanfile, tmpdir)
+				if yaffsres != None:
+					(res, bytesread) = yaffsres
 					blacklist.append((startoffset, startoffset+fslength))
 					diroffsets.append((tmpdir, startoffset, fslength))
 					os.unlink(tmpfile[1])
@@ -938,21 +941,26 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 		return (diroffsets, blacklist, [], hints)
 	return (diroffsets, blacklist, [], hints)
 
-def unpackYaffs(scanfile, tempdir=None):
+def unpackYaffs(scanfile, offset, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 
-	p = subprocess.Popen(['bat-unyaffs', '-b', scanfile, '-d', tmpdir], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	p = subprocess.Popen(['bat-unyaffs', '-b', scanfile, '-d', tmpdir, '-j', '-n', '%d' % offset], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		return
 
-	## unfortunately unyaffs also returns 0 when it fails
-	if len(stanerr) != 0:
-		return
+	bytesread = 0
+	try:
+		res = json.loads(stanout)
+		if 'bytesread' in res:
+			bytesread = res['bytesread']
+	except:
+		pass
+
 	## check if there was actually any data unpacked.
 	if os.listdir(tmpdir) == []:
 		return
-	return tmpdir
+	return (tmpdir, bytesread)
 
 ## Windows executables can be unpacked in many ways.
 ## We should try various methods:
