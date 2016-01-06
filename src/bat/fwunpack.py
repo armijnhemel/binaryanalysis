@@ -5153,7 +5153,7 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 				hints[tmpfilename]['tags'] = ['graphics', 'jpeg', 'binary']
 				hints[tmpfilename]['scanned'] = True
 				blacklist.append((offset,trail+2))
-				diroffsets.append((tmpdir, offset, offset+trail+2))
+				diroffsets.append((tmpdir, offset, trail-offset+2))
 				counter = counter + 1
 				break
 	datafile.close()
