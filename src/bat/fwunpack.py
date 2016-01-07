@@ -5045,6 +5045,9 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 
 	lendata = os.stat(filename).st_size
 
+	traileroffsets = offsets['jpegtrailer']
+	lastseentrailer = 0
+
 	datafile = open(filename, 'rb')
 	## Start verifying the JFIF image.
 	for offset in offsets['jpeg']:
@@ -5128,9 +5131,13 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 				localoffset += 2
 		'''
 
+		traileroffsets = traileroffsets[lastseentrailer:]
+
+		lastseentrailer = 0
 		## find the closest jpeg trailer
-		for trail in offsets['jpegtrailer']:
-			if trail < offset:
+		for trail in traileroffsets:
+			if trail <= offset:
+				lastseentrailer += 1
 				continue
 			if trail < localoffset:
 				continue
