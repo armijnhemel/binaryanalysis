@@ -413,7 +413,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 			## prerun scans should be run before any of the other scans
 			for prerunscan in prerunscans:
 				ignore = False
-				if prerunscan.has_key('extensionsignore'):
+				if 'extensionsignore' in prerunscan:
 					extensionsignore = prerunscan['extensionsignore'].split(':')
 					for e in extensionsignore:
 						if filetoscan.endswith(e):
@@ -483,7 +483,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 						continue
 		
 				ignore = False
-				if unpackscan.has_key('extensionsignore'):
+				if 'extensionsignore' in unpackscan:
 					extensionsignore = unpackscan['extensionsignore'].split(':')
 					for e in extensionsignore:
 						if filetoscan.endswith(e):
@@ -590,7 +590,7 @@ def leafScan((filetoscan, scans, tags, blacklist, filehash, topleveldir, debug, 
 
 	for leafscan in scans:
 		ignore = False
-		if leafscan.has_key('extensionsignore'):
+		if extensionsignore in leafscan:
 			extensionsignore = leafscan['extensionsignore'].split(':')
 			for e in extensionsignore:
 				if filetoscan.endswith(e):
@@ -704,7 +704,7 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, s
 def postrunscan((filetoscan, unpackreports, scans, scantempdir, topleveldir, debug)):
 	for postrunscan in scans:
 		ignore = False
-		if postrunscan.has_key('extensionsignore'):
+		if 'extensionsignore' in postrunscan:
 			extensionsignore = postrunscan['extensionsignore'].split(':')
 			for e in extensionsignore:
 				if filetoscan.endswith(e):
