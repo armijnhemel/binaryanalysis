@@ -2595,6 +2595,11 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 		if ext2checksize > filesize:
 			continue
 
+		## it also does not make sense if the declared size of the file system
+		## extends beyond the file
+		if ext2checksize + offset > filesize:
+			continue
+
 		tmpdir = dirsetup(tempdir, filename, "ext2", counter)
 		res = unpackExt2fs(filename, offset - 0x438, ext2checksize, tmpdir, unpackenv=unpackenv, blacklist=blacklist)
 		if res != None:
