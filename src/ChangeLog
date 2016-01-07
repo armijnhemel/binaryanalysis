@@ -2,6 +2,10 @@
 * bat-scan.config: don't test text files for Ogg
 * fwunpack.py: ext2 image cannot extend beyond the filesize. For this check
 also take the offset into account.
+* bruteforcescan.py: introduce minimumsize for unpackscans, so unpackscans can
+skip files that are too small
+* bat-scan.config: set minimumsize for yaffs2 as an example
+* fwunpack.py: don't unnecessarily loop over JPEG trailers
 
 2016-01-06:
 * bat-unyaffs (bat-extratools): support inband tags
