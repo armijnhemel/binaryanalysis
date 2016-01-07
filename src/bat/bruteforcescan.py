@@ -307,6 +307,9 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 				if fileextension in unpackscan['extensions']:
 					module = unpackscan['module']
 					method = unpackscan['knownfilemethod']
+					if 'minimumsize' in unpackscan:
+						if filesize < unpackscan['minimumsize']:
+							continue
 					if debug:
 						print >>sys.stderr, module, method, filetoscan, datetime.datetime.utcnow().isoformat()
 						sys.stderr.flush()
@@ -476,6 +479,10 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 				## continue with the leaf scans.
 				if extractor.inblacklist(0, blacklist) == filesize:
 					break
+
+				if 'minimumsize' in unpackscan:
+					if filesize < unpackscan['minimumsize']:
+						continue
 
 				if unpackscan['noscan'] != None:
 					noscans = unpackscan['noscan'].split(':')
@@ -1053,7 +1060,7 @@ def readconfig(config):
 			except:
 				pass
 			try:
-				conf['minimumsize'] = min(0, int(config.get(section, 'minimumsize')))
+				conf['minimumsize'] = max(0, int(config.get(section, 'minimumsize')))
 			except:
 				pass
 			try:
