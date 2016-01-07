@@ -163,7 +163,8 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	## can't byteswap if there is not an even amount of bytes in the file
-	if os.stat(filename).st_size % 2 != 0:
+	filesize = os.stat(filename).st_size
+	if filesize % 2 != 0:
 		return ([], blacklist, [], hints)
 	datafile = open(filename, 'rb')
 	offset = 0
@@ -194,10 +195,10 @@ def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, scane
 			tmparray.byteswap()
 			os.write(tmpfile[0], tmparray.tostring())
 			databuffer = datafile.read(1000000)
-		blacklist.append((0, os.stat(filename).st_size))
+		blacklist.append((0, filesize))
 		datafile.close()
 		os.fdopen(tmpfile[0]).close()
-		return ([(tmpdir, 0, os.stat(filename).st_size)], blacklist, [], hints)
+		return ([(tmpdir, 0, filesize)], blacklist, [], hints)
 	return ([], blacklist, [], hints)
 
 ## unpack UU encoded files
@@ -233,8 +234,9 @@ def searchUnpackBase64(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 				except:
 					pass
 		## the whole file is blacklisted
-		blacklist.append((0, os.stat(filename).st_size))
-		diroffsets.append((tmpdir, 0, os.stat(filename).st_size))
+		filesize = os.stat(filename).st_size
+		blacklist.append((0, filesize))
+		diroffsets.append((tmpdir, 0, filesize))
 		return (diroffsets, blacklist, [], hints)
 
 ## decompress executables that have been compressed with UPX.
@@ -259,10 +261,11 @@ def searchUnpackUPX(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		return ([], blacklist, tags, hints)
 	else:
 		## the whole file is blacklisted
-		blacklist.append((0, os.stat(filename).st_size))
+		filesize = os.stat(filename).st_size
+		blacklist.append((0, filesize))
 		tags.append("compressed")
 		tags.append("upx")
-		diroffsets.append((tmpdir, 0, os.stat(filename).st_size))
+		diroffsets.append((tmpdir, 0, filesize))
 	return (diroffsets, blacklist, tags, hints)
 
 ## unpack Java serialized data
@@ -847,7 +850,7 @@ def searchUnpackYaffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 				if len(offsets['u-boot']) == 1 and offsets['u-boot'][0] == 0:
 					offset = 64
 					## smallest possible file system supported by unpacker is 512 bytes
-					if os.stat(filename).st_size < 578:
+					if filesize < 578:
 						return (diroffsets, blacklist, newtags, hints)
 		
 		tmpdir = dirsetup(tempdir, filename, "yaffs2", counter)
@@ -1005,9 +1008,10 @@ def searchUnpackExe(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			res = unpackRar(filename, 0, tmpdir)
 			if res != None:
 				(endofarchive, rardir) = res
-				diroffsets.append((rardir, 0, os.stat(filename).st_size))
+				filesize = os.stat(filename).st_size
+				diroffsets.append((rardir, 0, filesize))
 				## add the whole binary to the blacklist
-				blacklist.append((0, os.stat(filename).st_size))
+				blacklist.append((0, filesize))
 				counter = counter + 1
 				newtags.append('exe')
 				newtags.append('winrar')
@@ -1117,11 +1121,13 @@ def unpackCab(filename, offset, tempdir=None, blacklist=[]):
 	if len(cabbuffer) != 12:
 		return
 
+	filesize = os.stat(filename).st_size
+
 	cabsize = struct.unpack('<I', cabbuffer[8:])[0]
-	if os.stat(filename).st_size < cabsize:
+	if filesize < cabsize:
 		return
 
-	if os.stat(filename).st_size < cabsize + offset:
+	if filesize < cabsize + offset:
 		return
 
 	tmpdir = unpacksetup(tempdir)
@@ -1227,7 +1233,8 @@ def searchUnpackLzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		return ([], blacklist, [], hints)
 	if offsets['lzip'] == []:
 		return ([], blacklist, [], hints)
-	if os.stat(filename).st_size < 5:
+	filesize = os.stat(filename).st_size
+	if filesize < 5:
 		return ([], blacklist, [], hints)
 	diroffsets = []
 	tags = []
@@ -1249,7 +1256,7 @@ def searchUnpackLzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			diroffsets.append((res, offset, lzipsize))
 			blacklist.append((offset, offset+lzipsize))
 			counter = counter + 1
-			if offset == 0 and lzipsize == os.stat(filename).st_size:
+			if offset == 0 and lzipsize == filesize:
 				tags.append("compressed")
 				tags.append("lzip")
 		else:
@@ -3255,7 +3262,7 @@ def unpackRZIP(filename, offset, rzipsize, tempdir=None):
 	
 def searchUnpackAndroidSparse(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
-	if not offsets.has_key('android-sparse'):
+	if not 'android-sparse' in offsets:
 		return ([], blacklist, [], hints)
 	if offsets['android-sparse'] == []:
 		return ([], blacklist, [], hints)
@@ -3272,7 +3279,8 @@ def searchUnpackAndroidSparse(filename, tempdir=None, blacklist=[], offsets={}, 
 		sparsefile.seek(offset+4)
 		sparsedata = sparsefile.read(2)
 		sparsefile.close()
-		if not struct.unpack('<H', sparsedata)[0] == 1:
+		majorversion = struct.unpack('<H', sparsedata)[0]
+		if not majorversion == 1:
 			continue
 
 		tmpdir = dirsetup(tempdir, filename, "android-sparse", counter)
@@ -3676,7 +3684,7 @@ def searchUnpackKnownZip(filename, tempdir=None, scanenv={}, debug=False):
 			failed = True
 		else:
 			(dirpath, startoffset, endoffset) = diroffsets[0]
-			if startoffset != 0 or endoffset != os.stat(filename).st_size:
+			if startoffset != 0 or endoffset != filesize:
 				failed = True
 		if failed:
 			for i in diroffsets:
@@ -3870,8 +3878,9 @@ def searchUnpackPack200(filename, tempdir=None, blacklist=[], offsets={}, scanen
 	tmpdir = dirsetup(tempdir, filename, "pack200", 1)
 	res = unpackPack200(filename, tmpdir)
 	if res != None:
-		diroffsets.append((res, 0, os.stat(filename).st_size))
-		blacklist.append((0, os.stat(filename).st_size))
+		filesize = os.stat(filename).st_size
+		diroffsets.append((res, 0, filesize))
+		blacklist.append((0, filesize))
 	else:
 		## cleanup
 		os.rmdir(tmpdir)
@@ -4146,9 +4155,9 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		if res != None:
 			(diroffset, wholefile) = res
 			if wholefile:
-				lzmasize = os.stat(filename).st_size - offset
+				lzmasize = filesize - offset
 				diroffsets.append((diroffset, offset, lzmasize))
-				blacklist.append((offset, os.stat(filename).st_size))
+				blacklist.append((offset, filesize))
 				if offset == 0:
 					newtags.append('compressed')
 					newtags.append('lzma')
