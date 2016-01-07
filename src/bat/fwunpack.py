@@ -597,7 +597,7 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 	diroffsets = []
 	counter = 1
 	for offset in offsets['iso9660']:
-		## according to /usr/share/magic the magic header starts at 0x438
+		## according to /usr/share/magic the magic header starts at 0x8001
 		if offset < 32769:
 			continue
 		## check if the offset found is in a blacklist
@@ -2488,7 +2488,7 @@ def searchUnpackMinix(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 	diroffsets = []
 	counter = 1
 	for offset in offsets['minix']:
-		## according to /usr/share/magic the magic header starts at 0x438
+		## according to /usr/share/magic the magic header starts at 0x410
 		if offset < 0x410:
 			continue
 		## check if the offset we find is in a blacklist
@@ -2496,7 +2496,7 @@ def searchUnpackMinix(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "minix", counter)
-		## we should actually scan the data starting from offset - 0x438
+		## we should actually scan the data starting from offset - 0x410
 		res = unpackMinix(filename, offset - 0x410, tmpdir)
 		if res != None:
 			(minixtmpdir, minixsize) = res
