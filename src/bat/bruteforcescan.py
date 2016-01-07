@@ -590,7 +590,7 @@ def leafScan((filetoscan, scans, tags, blacklist, filehash, topleveldir, debug, 
 
 	for leafscan in scans:
 		ignore = False
-		if extensionsignore in leafscan:
+		if 'extensionsignore' in leafscan:
 			extensionsignore = leafscan['extensionsignore'].split(':')
 			for e in extensionsignore:
 				if filetoscan.endswith(e):
@@ -1050,6 +1050,10 @@ def readconfig(config):
 				conf['scanonly'] = None
 			try:
 				conf['extensionsignore'] = config.get(section, 'extensionsignore')
+			except:
+				pass
+			try:
+				conf['minimumsize'] = min(0, int(config.get(section, 'minimumsize')))
 			except:
 				pass
 			try:
