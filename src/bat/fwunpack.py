@@ -17,7 +17,7 @@ to prevent other scans from (re)scanning (part of) the data.
 
 import sys, os, subprocess, os.path, shutil, stat, array, struct, binascii, json
 import tempfile, bz2, re, magic, tarfile, zlib, copy, uu, hashlib, StringIO, zipfile
-import fsmagic, extractor, ext2, jffs2
+import fsmagic, extractor, ext2, jffs2, prerun
 
 ## generic method to create temporary directories, with the correct filenames
 ## which is used throughout the code.
@@ -3361,7 +3361,7 @@ def unpackAndroidSparse(filename, offset, tempdir=None):
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	unpackFile(filename, offset, tmpfile[1], tmpdir)
+	unpackFile(filename, offset, tmpfile[1], tmpdir, length=seekctr)
 
 	## write the data out to a temporary file
 	outtmpfile = tempfile.mkstemp(dir=tempdir)
@@ -3377,17 +3377,35 @@ def unpackAndroidSparse(filename, offset, tempdir=None):
 		return None
 
 	os.unlink(tmpfile[1])
+
+	## sanity check first, some vendors add another header with a signature
+	datafile = open(outtmpfile[1], 'rb')
+	datafile.seek(0x438)
+	databuffer = datafile.read()
+	datafile.close()
+
+	if databuffer != fsmagic.fsmagic['ext2']:
+		## no expected marker found
+		ext2offsets = prerun.genericMarkerSearch(outtmpfile[1], ['ext2'], [])['ext2']
+	else:
+		ext2offsets = [0]
+
 	## set path for Debian
 	unpackenv = os.environ.copy()
 	unpackenv['PATH'] = unpackenv['PATH'] + ":/sbin"
-	ext2checksize = 0
-	res = unpackExt2fs(outtmpfile[1], 0, ext2checksize, tmpdir, unpackenv=unpackenv)
-	if res == None:
-		## TODO: more sanity checks
-		os.unlink(outtmpfile[1])
-		if tempdir == None:
-			os.rmdir(tmpdir)
-		return None
+
+	## walk the offsets that can be found. TODO: many more sanity checks in case
+	## there are multiple ext4 file systems hidden in the Android sparse file system
+	for ext2offset in ext2offsets:
+		ext2checksize = 0
+		res = unpackExt2fs(outtmpfile[1], ext2offset - 0x438, ext2checksize, tmpdir, unpackenv=unpackenv)
+		if res == None:
+			## TODO: more sanity checks
+			os.unlink(outtmpfile[1])
+			if tempdir == None:
+				os.rmdir(tmpdir)
+			return None
+		break
 	os.unlink(outtmpfile[1])
 	return (seekctr, tmpdir)
 
