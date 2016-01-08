@@ -1,3 +1,8 @@
+2016-01-08:
+* fwunpack.py: extra sanity checks for Squashfs unpacking
+* fwunpack.py: simplify squashfs unpacking for weird squashfs
+* fwunpack.py: first check integrity of Android sparse file before unpacking
+
 2016-01-07:
 * bat-scan.config: don't test text files for Ogg
 * fwunpack.py: ext2 image cannot extend beyond the filesize. For this check
