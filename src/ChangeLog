@@ -2,6 +2,11 @@
 * fwunpack.py: extra sanity checks for Squashfs unpacking
 * fwunpack.py: simplify squashfs unpacking for weird squashfs
 * fwunpack.py: first check integrity of Android sparse file before unpacking
+* fsmagic.py: add magic for AppleDouble
+* prerun.py: tag AppleDouble encoded files (resource forks)
+* bat-scan.config: ignore resource forks in many scans
+* fwunpack.py: update Android sparse file unpacker for images that have an
+extra header in front of the ext4 file system. Needs many more sanity checks.
 
 2016-01-07:
 * bat-scan.config: don't test text files for Ogg
