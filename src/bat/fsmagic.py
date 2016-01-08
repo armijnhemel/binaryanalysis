@@ -102,6 +102,7 @@ fsmagic = {
             'msi':		'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1', ## not sure this is a correct signature
             'windowsassemblyheader':		'<assembly',
             'windowsassemblytrailer':		'</assembly>',
+            'appledouble':	'\x00\x05\x16\x07',
           }
 
 ## some offsets can be found after a certain number of bytes, but
