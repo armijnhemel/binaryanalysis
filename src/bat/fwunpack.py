@@ -3300,17 +3300,12 @@ def searchUnpackAndroidSparse(filename, tempdir=None, blacklist=[], offsets={}, 
 	return (diroffsets, blacklist, tags, hints)
 
 def unpackAndroidSparse(filename, offset, tempdir=None):
-	tmpdir = unpacksetup(tempdir)
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.fdopen(tmpfile[0]).close()
-
-	unpackFile(filename, offset, tmpfile[1], tmpdir)
-
 	## checks to find the right size
 	## First check the size of the header. If it has some
 	## bizarre value (like bigger than the file it can unpack)
 	## it is not a valid android sparse file file system
-	sparsefile = open(tmpfile[1])
+	sparsefile = open(filename, 'rb')
+	sparsefile.seek(offset)
 	sparsedata = sparsefile.read(28)
 	sparsefile.close()
 
@@ -3328,9 +3323,11 @@ def unpackAndroidSparse(filename, offset, tempdir=None):
 	chunkcount = struct.unpack('<L', sparsedata[20:24])[0]
 
 	## now reopen the file and read each chunk header.
-	sparsefile = open(tmpfile[1])
-	## skip the header
-	seekctr = 28
+	sparsefile = open(filename, 'rb')
+
+	## keep a counter to see how many bytes were read. After unpacking
+	## this will indicate the size of the sparse file
+	seekctr = offset + 28
 	for i in xrange(0,chunkcount):
 		sparsefile.seek(seekctr)
 		## read the chunk header
@@ -3356,12 +3353,15 @@ def unpackAndroidSparse(filename, offset, tempdir=None):
 		else:
 			## dunno what's happening here, so exit
 			sparsefile.close()
-			os.unlink(tmpfile[1])
-			if tempdir == None:
-				os.rmdir(tmpdir)
 			return None
 		seekctr = seekctr + 12 + datasize
 	sparsefile.close()
+
+	tmpdir = unpacksetup(tempdir)
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.fdopen(tmpfile[0]).close()
+
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
 	## write the data out to a temporary file
 	outtmpfile = tempfile.mkstemp(dir=tempdir)
