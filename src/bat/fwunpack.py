@@ -3306,17 +3306,6 @@ def unpackAndroidSparse(filename, offset, tempdir=None):
 
 	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
-	outtmpfile = tempfile.mkstemp(dir=tempdir)
-	os.fdopen(outtmpfile[0]).close()
-
-	p = subprocess.Popen(['bat-simg2img', tmpfile[1], outtmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		os.unlink(outtmpfile[1])
-		os.unlink(tmpfile[1])
-		if tempdir == None:
-			os.rmdir(tmpdir)
-		return None
 	## checks to find the right size
 	## First check the size of the header. If it has some
 	## bizarre value (like bigger than the file it can unpack)
@@ -3367,13 +3356,26 @@ def unpackAndroidSparse(filename, offset, tempdir=None):
 		else:
 			## dunno what's happening here, so exit
 			sparsefile.close()
-			os.unlink(outtmpfile[1])
 			os.unlink(tmpfile[1])
 			if tempdir == None:
 				os.rmdir(tmpdir)
 			return None
 		seekctr = seekctr + 12 + datasize
 	sparsefile.close()
+
+	## write the data out to a temporary file
+	outtmpfile = tempfile.mkstemp(dir=tempdir)
+	os.fdopen(outtmpfile[0]).close()
+
+	p = subprocess.Popen(['bat-simg2img', tmpfile[1], outtmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode != 0:
+		os.unlink(outtmpfile[1])
+		os.unlink(tmpfile[1])
+		if tempdir == None:
+			os.rmdir(tmpdir)
+		return None
+
 	os.unlink(tmpfile[1])
 	## set path for Debian
 	unpackenv = os.environ.copy()
