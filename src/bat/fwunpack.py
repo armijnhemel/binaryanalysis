@@ -1943,33 +1943,14 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, scane
 				tmpfile = tempfile.mkstemp(dir=sqshtmpdir)
 				os.fdopen(tmpfile[0]).close()
 
-				## set unpacktempdir to None as ugly temporary hack
-				unpacktempdir = None
-				sqshtmpfile = tempfile.mkstemp(dir=unpacktempdir)
-				os.fdopen(sqshtmpfile[0]).close()
+				## unpack the file
+				unpackFile(filename, offset, tmpfile[1], tmpdir)
 
-				## suck in the bytes up until the offset
-				sqshf = open(filename)
+				## open the file and replace the header
+				sqshf = open(tmpfile[1], 'r+b')
 				sqshf.seek(0)
-				sqshbytes = sqshf.read(offset)
-
-				## write out al the bytes until the offset
-				## then write 'sqsh'
-				sqshtmp = open(sqshtmpfile[1], 'w')
-				sqshtmp.write(sqshbytes + 'sqsh')
-
-				## read the rest of the bytes from offset + 4
-				sqshf.seek(offset + 4)
-				sqshbytes = sqshf.read()
+				sqshf.write('sqsh')
 				sqshf.close()
-
-				## write them out
-				sqshtmp.write(sqshbytes)
-				sqshtmp.close()
-
-				## unpack, clean up, etc.
-				unpackFile(sqshtmpfile[1], offset, tmpfile[1], sqshtmpdir)
-				os.unlink(sqshtmpfile[1])
 
 				retval = unpackSquashfsRealtekLZMA(tmpfile[1], offset, tmpdir)
 				os.unlink(tmpfile[1])
