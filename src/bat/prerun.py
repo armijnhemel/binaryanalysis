@@ -931,20 +931,17 @@ def verifyResourceFork(filename, tempdir=None, tags=[], offsets={}, scanenv={}, 
 	newtags = []
 	if not 'binary' in tags:
 		return newtags
-	datafile = open(filename, 'rb')
-	datafile.seek(0)
-	databuffer = datafile.read(4)
-
-	## check the magic of an AppleDouble file
-	if databuffer != '\x00\x05\x16\x07':
-		datafile.close()
+	if not 'appledouble' in offsets:
 		return newtags
+	if not 0 in offsets['appledouble']:
+		return newtags
+
 	filesize = os.stat(filename).st_size
 	## files are always a multiple of 4
 	if filesize%4 != 0:
-		datafile.close()
 		return newtags
 
+	datafile = open(filename, 'rb')
 	## 4 bytes magic, 4 bytes verson, 16 bytes filler
 	datafile.seek(24)
 	databuffer = datafile.read(2)
