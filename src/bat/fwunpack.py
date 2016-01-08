@@ -1991,6 +1991,8 @@ def unpackSquashfsWrapper(filename, offset, squashtype, sevenzipcompression, maj
 	sqshfile = open(filename, 'rb')
 	sqshfile.seek(offset)
 
+	filesize = os.stat(filename).st_size
+
 	squashsize = 0
 
 	if majorversion == 4:
@@ -2027,11 +2029,12 @@ def unpackSquashfsWrapper(filename, offset, squashtype, sevenzipcompression, maj
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	## unpack the file once to avoid unpacking it several times
-	unpackFile(filename, offset, tmpfile[1], tmpdir)
-
 	## DD-WRT variant uses special magic
 	if squashtype == 'squashfs5' or squashtype == 'squashfs6':
+		if squashsize > filesize:
+			os.unlink(tmpfile[1])
+			return None
+		unpackFile(filename, offset, tmpfile[1], tmpdir, length=squashsize)
 		retval = unpackSquashfsDDWRTLZMA(tmpfile[1],tmpoffset,tmpdir)
 		if retval != None:
 			os.unlink(tmpfile[1])
@@ -2043,22 +2046,25 @@ def unpackSquashfsWrapper(filename, offset, squashtype, sevenzipcompression, maj
 
 	## try normal Squashfs unpacking first
 	if squashtype == 'squashfs1' or squashtype == 'squashfs2':
+		if squashsize > filesize:
+			os.unlink(tmpfile[1])
+			return None
+		unpackFile(filename, offset, tmpfile[1], tmpdir, length=squashsize)
 		retval = unpackSquashfs(tmpfile[1], tmpoffset, tmpdir)
 		if retval != None:
 			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 			os.unlink(tmpfile[1])
 			return retval + (squashsize, 'squashfs')
 
-	## then try other flavours
-	## first SquashFS 4.2
-	retval = unpackSquashfs42(tmpfile[1],tmpoffset,tmpdir)
-	if retval != None:
-		os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-		os.unlink(tmpfile[1])
-		return retval + (squashsize, 'squashfs42')
+		## then try other flavours
+		## first SquashFS 4.2
+		retval = unpackSquashfs42(tmpfile[1],tmpoffset,tmpdir)
+		if retval != None:
+			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+			os.unlink(tmpfile[1])
+			return retval + (squashsize, 'squashfs42')
 
-	### Atheros2 variant
-	if squashtype == 'squashfs1' or squashtype == 'squashfs2':
+		### Atheros2 variant
 		if majorversion == 3:
 			retval = unpackSquashfsAtheros2LZMA(tmpfile[1],tmpoffset,tmpdir)
 			if retval != None:
@@ -2068,11 +2074,18 @@ def unpackSquashfsWrapper(filename, offset, squashtype, sevenzipcompression, maj
 
 	## OpenWrt variant
 	if majorversion == 3:
+		if squashsize > filesize:
+			os.unlink(tmpfile[1])
+			return None
+		unpackFile(filename, offset, tmpfile[1], tmpdir, length=squashsize)
 		retval = unpackSquashfsOpenWrtLZMA(tmpfile[1],tmpoffset,tmpdir)
 		if retval != None:
 			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
 			os.unlink(tmpfile[1])
 			return retval + (squashsize, 'squashfsopenwrtlzma')
+
+	## unpack the file once (again)
+	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
 	## Realtek variant
 	retval = unpackSquashfsRealtekLZMA(tmpfile[1],tmpoffset,tmpdir)
@@ -2083,6 +2096,9 @@ def unpackSquashfsWrapper(filename, offset, squashtype, sevenzipcompression, maj
 
 	## Broadcom variant
 	if majorversion == 2 or majorversion == 3:
+		if squashsize > filesize:
+			os.unlink(tmpfile[1])
+			return None
 		retval = unpackSquashfsBroadcom(tmpfile[1],tmpoffset,tmpdir)
 		if retval != None:
 			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
@@ -2090,6 +2106,9 @@ def unpackSquashfsWrapper(filename, offset, squashtype, sevenzipcompression, maj
 			return retval + (squashsize, 'squashfsbroadcomlzma')
 
 	if not sevenzipcompression:
+		if squashsize > filesize:
+			os.unlink(tmpfile[1])
+			return None
 		retval = unpackSquashfsAtherosLZMA(tmpfile[1],tmpoffset,tmpdir)
 		if retval != None:
 			os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
@@ -2106,6 +2125,9 @@ def unpackSquashfsWrapper(filename, offset, squashtype, sevenzipcompression, maj
 	## Ralink variant
 	if not sevenzipcompression:
 		if majorversion == 2 or majorversion == 3:
+			if squashsize > filesize:
+				os.unlink(tmpfile[1])
+				return None
 			retval = unpackSquashfsRalinkLZMA(tmpfile[1],tmpoffset,tmpdir)
 			if retval != None:
 				os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
