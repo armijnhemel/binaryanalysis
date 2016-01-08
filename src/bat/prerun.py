@@ -925,6 +925,61 @@ def verifyTZ(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fals
 			newtags.append('resource')
 	return newtags
 
+## verify Apple's AppleDouble encoded files (resource forks)
+## http://tools.ietf.org/html/rfc1740 -- Appendix A & B -- Appendix A & B -- Appendix A & B -- Appendix A & B -- Appendix A & B
+def verifyResourceFork(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+	newtags = []
+	if not 'binary' in tags:
+		return newtags
+	datafile = open(filename, 'rb')
+	datafile.seek(0)
+	databuffer = datafile.read(4)
+
+	## check the magic of an AppleDouble file
+	if databuffer != '\x00\x05\x16\x07':
+		datafile.close()
+		return newtags
+	filesize = os.stat(filename).st_size
+	## files are always a multiple of 4
+	if filesize%4 != 0:
+		datafile.close()
+		return newtags
+
+	## 4 bytes magic, 4 bytes verson, 16 bytes filler
+	datafile.seek(24)
+	databuffer = datafile.read(2)
+	numberofentries = struct.unpack('>H', databuffer)[0]
+	if numberofentries == 0:
+		datafile.close()
+		return newtags
+
+	## walk all the entries to see if they are valid
+	validsize = False
+	for i in range(0, numberofentries):
+		databuffer = datafile.read(4)
+		entry = struct.unpack('>I', databuffer)[0]
+		if entry == 0:
+			datafile.close()
+			return newtags
+		databuffer = datafile.read(4)
+		offset = struct.unpack('>I', databuffer)[0]
+		databuffer = datafile.read(4)
+		length = struct.unpack('>I', databuffer)[0]
+		if offset + length > filesize:
+			datafile.close()
+			return newtags
+		if offset + length == filesize:
+			validsize = True
+	datafile.close()
+
+	if not validsize:
+		return newtags
+
+	newtags.append('appledouble')
+	newtags.append('resourcefork')
+
+	return newtags
+
 ## simple check for certificates that you can find in Windows software
 ## and that could lead to false positives later in the scanning process.
 def verifyCertificate(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
