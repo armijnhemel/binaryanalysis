@@ -974,6 +974,7 @@ def verifyResourceFork(filename, tempdir=None, tags=[], offsets={}, scanenv={}, 
 
 	newtags.append('appledouble')
 	newtags.append('resourcefork')
+	newtags.append('resource')
 
 	return newtags
 
