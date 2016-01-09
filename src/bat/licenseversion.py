@@ -744,10 +744,11 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 				for w in hashtoname[filehash]:
 					unpackreports[w]['tags'].append('ranking')
 
-	pool = multiprocessing.Pool(processes=processors)
-	## aggregate the JAR files
-	aggregatejars(unpackreports, scantempdir, topleveldir, pool, newenv, scandebug=False, unpacktempdir=None)
-	pool.terminate()
+	if 'Java' in languages:
+		pool = multiprocessing.Pool(processes=processors)
+		## aggregate the JAR files
+		aggregatejars(unpackreports, scantempdir, topleveldir, pool, newenv, scandebug=False, unpacktempdir=None)
+		pool.terminate()
 
 	## .class files might have been removed at this point, so sanity check first
 	rankingfiles = set()
@@ -1987,6 +1988,23 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 	sha256_license_query = batdb.getQuery("select distinct license, scanner from licenses where checksum=%s")
 	sha256_copyright_query = batdb.getQuery("select distinct copyright, type from extracted_copyright where checksum=%s")
 
+	rankingfilesperlanguage = {}
+	for rankingfile in rankingfiles:
+		unpackreport = unpackreports[rankingfile]
+		## read the pickle
+		filehash = unpackreport['checksum']
+		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+		leafreports = cPickle.load(leaf_file)
+		leaf_file.close()
+		if not 'ranking' in leafreports:
+			continue
+
+		(res, functionRes, variablepvs, language) = leafreports['ranking']
+		if not language in rankingfilesperlanguage:
+			rankingfilesperlanguage[language] = set([rankingfile])
+		else:
+			rankingfilesperlanguage[language].add(rankingfile)
+
 	for rankingfile in rankingfiles:
 		unpackreport = unpackreports[rankingfile]
 		## read the pickle
@@ -1998,7 +2016,6 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 			continue
 
 		(res, functionRes, variablepvs, language) = leafreports['ranking']
-
 		## keep a list of versions per sha256, since source files often are in more than one version
 		sha256_versions = {}
 		## indicate whether or not the pickle should be written back to disk.
