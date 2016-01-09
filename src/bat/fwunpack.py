@@ -3381,7 +3381,7 @@ def unpackAndroidSparse(filename, offset, tempdir=None):
 	## sanity check first, some vendors add another header with a signature
 	datafile = open(outtmpfile[1], 'rb')
 	datafile.seek(0x438)
-	databuffer = datafile.read()
+	databuffer = datafile.read(2)
 	datafile.close()
 
 	if databuffer != fsmagic.fsmagic['ext2']:
