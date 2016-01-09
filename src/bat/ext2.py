@@ -18,36 +18,6 @@ We are mostly interested in regular files and directories:
 #define LINUX_S_IFDIR  0040000
 '''
 
-def copydir(source, fspath):
-	scanfiles = []
-	scandirs = []
-	p = subprocess.Popen(['e2ls', '-l', source + ":" + fspath], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        (stanout, stanerr) = p.communicate()
-        if p.returncode != 0:
-		## This could happen is for example the file system is corrupted
-		## and inodes are damaged
-		return None
-	if stanout.strip() == "No files found!":
-		return None
-	for i in stanout.strip().split("\n"):
-		if i.startswith(">"):
-			continue
-		isplits = i.split()
-		if len(isplits[1]) < 5:
-			## bogus file system, so continue
-			return None
-		modeflag = int(isplits[1][0:-3])
-		if len(isplits) < 8:
-			continue
-		else:
-			filename = isplits[7]
-		if modeflag == 40:
-			scandirs.append(fspath + "/" + filename)
-		## also take sticky bit, suid, sgid, etc. into account
-		elif modeflag >= 100 and modeflag < 120:
-			scanfiles.append((fspath, fspath + "/" + filename))
-	return (scandirs, scanfiles)
-
 def copyext2fs(source, target=None):
 	if target == None:
 		targetdir = tempfile.mkdtemp()
@@ -58,20 +28,36 @@ def copyext2fs(source, target=None):
 	scandirs = [""]
 	while len(scandirs) != 0:
 		newscandirs = set()
-		for i in scandirs:
-			copyres = copydir(source, i)
-			if copyres == None:
+		for scandir in scandirs:
+			p = subprocess.Popen(['e2ls', '-l', source + ":" + scandir], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        		(stanout, stanerr) = p.communicate()
+        		if p.returncode != 0:
+				## This could happen is for example the file system is corrupted
+				## and inodes are damaged
 				continue
-			(resscandirs, scanfiles) = copyres
-			newscandirs.update(resscandirs)
-			for scandir in resscandirs:
-				os.mkdir(target + "/" + scandir)
-			for scanfile in scanfiles:
-				(reltargetdir, sourcefile) = scanfile
-				copypath = source + ":" + sourcefile
-				p = subprocess.Popen(['e2cp', copypath, "-d", os.path.normpath(target + "/" + reltargetdir)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        			(stanout, stanerr) = p.communicate()
-        			if p.returncode != 0:
+			if stanout.strip() == "No files found!":
+				continue
+			for i in stanout.strip().split("\n"):
+				if i.startswith(">"):
 					continue
+				isplits = i.split()
+				if len(isplits[1]) < 5:
+					## bogus file system, so continue
+					return None
+				modeflag = int(isplits[1][0:-3])
+				if len(isplits) < 8:
+					continue
+				else:
+					filename = isplits[7]
+				if modeflag == 40:
+					newscandirs.add(scandir + "/" + filename)
+					os.mkdir(target + "/" + scandir + "/" + filename)
+				## also take sticky bit, suid, sgid, etc. into account
+				elif modeflag >= 100 and modeflag < 120:
+					copypath = source + ":" + scandir + "/" + filename
+					p = subprocess.Popen(['e2cp', copypath, "-d", os.path.normpath(target + "/" + scandir)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        				(stanout, stanerr) = p.communicate()
+        				if p.returncode != 0:
+						continue
 		scandirs = newscandirs
 	return targetdir
