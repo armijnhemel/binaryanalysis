@@ -26,6 +26,7 @@ def copyext2fs(source, target=None):
 
 	## now walk each directory and copy files
 	scandirs = [""]
+	unpackfail = False
 	while len(scandirs) != 0:
 		newscandirs = set()
 		for scandir in scandirs:
@@ -34,7 +35,8 @@ def copyext2fs(source, target=None):
         		if p.returncode != 0:
 				## This could happen is for example the file system is corrupted
 				## and inodes are damaged
-				continue
+				unpackfail = True
+				break
 			if stanout.strip() == "No files found!":
 				continue
 			for i in stanout.strip().split("\n"):
@@ -60,4 +62,6 @@ def copyext2fs(source, target=None):
         				if p.returncode != 0:
 						continue
 		scandirs = newscandirs
+		if unpackfail:
+			return None
 	return targetdir
