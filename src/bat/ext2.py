@@ -1,5 +1,5 @@
 ## Binary Analysis Tool
-## Copyright 2009-2015 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2009-2016 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 import sys, os, subprocess, tempfile
@@ -18,7 +18,7 @@ We are mostly interested in regular files and directories:
 #define LINUX_S_IFDIR  0040000
 '''
 
-def copydir(source, fspath, target):
+def copydir(source, fspath):
 	scanfiles = []
 	scandirs = []
 	p = subprocess.Popen(['e2ls', '-l', source + ":" + fspath], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -42,29 +42,36 @@ def copydir(source, fspath, target):
 		else:
 			filename = isplits[7]
 		if modeflag == 40:
-			scandirs.append(filename)
+			scandirs.append(fspath + "/" + filename)
 		## also take sticky bit, suid, sgid, etc. into account
 		elif modeflag >= 100 and modeflag < 120:
-			scanfiles.append(filename)
-	if scandirs == [] and scanfiles == []:
-		return None
-	for scandir in scandirs:
-		os.mkdir(target + "/" + scandir)
-		copydir(source, fspath + "/" + scandir, target + "/" + scandir)
-	if len(scanfiles) != 0:
-		copypaths = map(lambda x: source + ":" + fspath + "/" + x, scanfiles)
-		for scanfile in copypaths:
-			p = subprocess.Popen(['e2cp', scanfile, "-d", target], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        		(stanout, stanerr) = p.communicate()
-        		if p.returncode != 0:
-				continue
-	return target
+			scanfiles.append((fspath, fspath + "/" + filename))
+	return (scandirs, scanfiles)
 
 def copyext2fs(source, target=None):
 	if target == None:
 		targetdir = tempfile.mkdtemp()
 	else:
 		targetdir = target
-	res = copydir(source, "", targetdir)
-	if res != None:
-		return targetdir
+
+	## now walk each directory and copy files
+	scandirs = [""]
+	while len(scandirs) != 0:
+		newscandirs = set()
+		for i in scandirs:
+			copyres = copydir(source, i)
+			if copyres == None:
+				continue
+			(resscandirs, scanfiles) = copyres
+			newscandirs.update(resscandirs)
+			for scandir in resscandirs:
+				os.mkdir(target + "/" + scandir)
+			for scanfile in scanfiles:
+				(reltargetdir, sourcefile) = scanfile
+				copypath = source + ":" + sourcefile
+				p = subprocess.Popen(['e2cp', copypath, "-d", os.path.normpath(target + "/" + reltargetdir)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        			(stanout, stanerr) = p.communicate()
+        			if p.returncode != 0:
+					continue
+		scandirs = newscandirs
+	return targetdir
