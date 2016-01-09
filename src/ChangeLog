@@ -1,3 +1,8 @@
+2016-01-09:
+* fwunpack.py: only read two bytes for the ext4 sanity check in android sparse
+image files instead of the entire file. D'oh!
+* ext2.py: simplify ext2 unpacking
+
 2016-01-08:
 * fwunpack.py: extra sanity checks for Squashfs unpacking
 * fwunpack.py: simplify squashfs unpacking for weird squashfs
