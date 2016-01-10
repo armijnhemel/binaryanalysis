@@ -302,6 +302,7 @@ def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, de
 ## The main reason for this check is to bring down false positives for lzma unpacking
 ## The specification of the header can be found at:
 ## https://android.googlesource.com/platform/dalvik.git/+/master/libdex/DexFile.h
+## in the struct DexOptHeader
 def verifyAndroidOdex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not 'binary' in tags:
