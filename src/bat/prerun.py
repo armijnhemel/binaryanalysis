@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2011-2015 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2011-2016 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -77,7 +77,7 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, offset=0, length=0,
 	return offsets
 
 ## Verify a file is an XML file using xmllint.
-## Actually we *could* do this with xml.dom.minidom (although some parser settings should be set
+## Actually this *could* be done with xml.dom.minidom (although some parser settings should be set
 ## to deal with unresolved entities) to avoid launching another process
 def searchXML(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
@@ -195,7 +195,7 @@ def verifyAndroidResource(filename, tempdir=None, tags=[], offsets={}, scanenv={
 		return newtags
 	return newtags
 
-## Verify if this is an Android "binary XML" file. We check if the name of the
+## Verify if this is an Android "binary XML" file. First check if the name of the
 ## file ends in '.xml', plus check the first four bytes of the file
 ## If it is an Android XML file, mark it as a 'resource' file
 ## TODO: have a better check here to increase fidelity
@@ -362,7 +362,7 @@ def verifyAndroidOdex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, d
 	newtags.append('odex')
 	return newtags
 
-## verify if this is a GNU message catalog. We check if the name of the
+## verify if this is a GNU message catalog. First check if the name of the
 ## file ends in '.po', plus check the first few bytes of the file
 ## If it is a GNU message catalog, mark it as a 'resource' file
 def verifyMessageCatalog(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
@@ -826,7 +826,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		elffile.close()
 
 	if not "elf" in newtags:
-		## on some architectures we need to look at the maximum of the starting
+		## on some architectures it is necessary to look at the maximum of the starting
 		## address of all sections, plus the size of the section to see if
 		## (offset of section + size of section) == file size
 		p = subprocess.Popen(['readelf', '-t', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
