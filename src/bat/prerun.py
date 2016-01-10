@@ -23,7 +23,7 @@ files will be scanned and tagged properly later on, but more time might be
 spent, plus there might be false positives (mostly LZMA).
 '''
 
-import sys, os, subprocess, os.path, shutil, stat, array, struct
+import sys, os, subprocess, os.path, shutil, stat, array, struct, zlib
 import tempfile, re, magic, hashlib, HTMLParser
 import fsmagic, extractor, javacheck
 
@@ -230,24 +230,52 @@ def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, de
 		return newtags
 	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags:
 		return newtags
-	## now read the first 36 bytes
-	## The last 4 bytes of this header contains the size of the entire
-	## file according to struct DexHeader in:
-	##
-	## https://android.googlesource.com/platform/dalvik.git/+/master/libdex/DexFile.h
-	##
-	## u4  fileSize;           /* length of entire file */
+
+	## Dex header is 112 bytes
+	dexsize = os.stat(filename).st_size
+	if dexsize < 112:
+		return newtags
+
+	byteswapped = False
+	## Parse the Dalvik header.
 	androidfile = open(filename, 'rb')
-	androidbytes = androidfile.read(36)
+	androidfile.seek(0)
+	dexmagicbytes = androidfile.read(8)
+
+	dexchecksumbytes = androidfile.read(4)
+	dexsignaturebytes = androidfile.read(20)
+	dexfilesizebytes = androidfile.read(4)
+	dexheadersizebytes = androidfile.read(4)
+	dexendianbytes = androidfile.read(4)
+	## check if the file is big endian or little endian
+	if struct.unpack('<I', dexendianbytes)[0] != 0x12345678:
+		byteswapped = True
 	androidfile.close()
 
-	if len(androidbytes) != 36:
+	if byteswapped:
+		declared_size = struct.unpack('>I', dexfilesizebytes)[0]
+		dexheadersize = struct.unpack('>I', dexheadersizebytes)[0]
+		dexchecksum = struct.unpack('>I', dexchecksumbytes)[0]
+	else:
+		declared_size = struct.unpack('<I', dexfilesizebytes)[0]
+		dexheadersize = struct.unpack('<I', dexheadersizebytes)[0]
+		dexchecksum = struct.unpack('<I', dexchecksumbytes)[0]
+
+	## The size field in the header should be 0x70
+	if dexheadersize != 0x70:
 		return newtags
-	dexarray = array.array('I')
-	dexarray.fromstring(androidbytes[-4:])
-	dexsize = os.stat(filename).st_size
-	if dexarray.pop() == dexsize:
-		newtags.append('dalvik')
+	if declared_size != dexsize:
+		return newtags
+
+	## now compute the Adler32 checksum for the file
+	androidfile = open(filename, 'rb')
+	androidfile.seek(12)
+	## TODO: not very efficient
+	checksumdata = androidfile.read()
+	androidfile.close()
+	if zlib.adler32(checksumdata) & 0xffffffff != dexchecksum:
+		return newtags
+	newtags.append('dalvik')
 	return newtags
 
 ## Verify if this is an optimised Android/Dalvik file. Check if the name of
