@@ -216,13 +216,12 @@ def verifyAndroidXML(filename, tempdir=None, tags=[], offsets={}, scanenv={}, de
 		newtags.append('resource')
 	return newtags
 
-## Verify if this is an Android/Dalvik classes file. We check if the name of
-## the file is 'classes.dex', plus check the first four bytes of the file, plus
-## verify a length checksum in the header.
-## The main reason for this check is to bring down false positives for lzma unpacking
+## Verify if this is an Android/Dalvik classes file. First check if the name of
+## the file is 'classes.dex', then check the header and the checksum.
+## Header information from https://source.android.com/devices/tech/dalvik/dex-format.html
 def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
-	if not offsets.has_key('dex'):
+	if not 'dex' in offsets:
 		return newtags
 	if not os.path.basename(filename) == 'classes.dex':
 		return newtags
@@ -240,26 +239,38 @@ def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, de
 	## Parse the Dalvik header.
 	androidfile = open(filename, 'rb')
 	androidfile.seek(0)
-	dexmagicbytes = androidfile.read(8)
 
-	dexchecksumbytes = androidfile.read(4)
-	dexsignaturebytes = androidfile.read(20)
-	dexfilesizebytes = androidfile.read(4)
-	dexheadersizebytes = androidfile.read(4)
-	dexendianbytes = androidfile.read(4)
-	## check if the file is big endian or little endian
-	if struct.unpack('<I', dexendianbytes)[0] != 0x12345678:
-		byteswapped = True
+	## magic header, already checked
+	magic_bytes = androidfile.read(8)
+
+	## Adler32 checksum
+	checksum_bytes = androidfile.read(4)
+
+	## SHA1 checksum
+	signature_bytes = androidfile.read(20)
+
+	## file size
+	filesize_bytes = androidfile.read(4)
+
+	## header size (should be 112)
+	headersize_bytes = androidfile.read(4)
+
+	## endianness (almost guaranteed to be little endian)
+	endian_bytes = androidfile.read(4)
 	androidfile.close()
 
+	## check if the file is big endian or little endian
+	if struct.unpack('<I', endian_bytes)[0] != 0x12345678:
+		byteswapped = True
+
 	if byteswapped:
-		declared_size = struct.unpack('>I', dexfilesizebytes)[0]
-		dexheadersize = struct.unpack('>I', dexheadersizebytes)[0]
-		dexchecksum = struct.unpack('>I', dexchecksumbytes)[0]
+		declared_size = struct.unpack('>I', filesize_bytes)[0]
+		dexheadersize = struct.unpack('>I', headersize_bytes)[0]
+		dexchecksum = struct.unpack('>I', checksum_bytes)[0]
 	else:
-		declared_size = struct.unpack('<I', dexfilesizebytes)[0]
-		dexheadersize = struct.unpack('<I', dexheadersizebytes)[0]
-		dexchecksum = struct.unpack('<I', dexchecksumbytes)[0]
+		declared_size = struct.unpack('<I', filesize_bytes)[0]
+		dexheadersize = struct.unpack('<I', headersize_bytes)[0]
+		dexchecksum = struct.unpack('<I', checksum_bytes)[0]
 
 	## The size field in the header should be 0x70
 	if dexheadersize != 0x70:
@@ -270,10 +281,17 @@ def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, de
 	## now compute the Adler32 checksum for the file
 	androidfile = open(filename, 'rb')
 	androidfile.seek(12)
+
 	## TODO: not very efficient
 	checksumdata = androidfile.read()
 	androidfile.close()
 	if zlib.adler32(checksumdata) & 0xffffffff != dexchecksum:
+		return newtags
+
+	## Then compute the SHA-1 checksum. Reuse the data from the previous check
+	h = hashlib.new('sha1')
+	h.update(checksumdata[20:])
+	if h.hexdigest().decode('hex') != signature_bytes:
 		return newtags
 	newtags.append('dalvik')
 	return newtags
