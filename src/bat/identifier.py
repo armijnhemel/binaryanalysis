@@ -2,7 +2,7 @@
 #-*- coding: utf-8 -*-
 
 ## Binary Analysis Tool
-## Copyright 2011-2015 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2011-2016 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -50,7 +50,7 @@ def searchGeneric(filepath, tags, blacklist=[], scanenv={}, offsets={}, scandebu
 	## Only consider strings that are len(stringcutoff) or larger
 	## it is *very* important to keep this value in sync with the
 	## database creation scripts!
-	if scanenv.has_key('BAT_STRING_CUTOFF'):
+	if 'BAT_STRING_CUTOFF' in scanenv:
 		try:
 			stringcutoff = int(scanenv['BAT_STRING_CUTOFF'])
 			if stringcutoff < 1:
@@ -101,7 +101,7 @@ def searchGeneric(filepath, tags, blacklist=[], scanenv={}, offsets={}, scandebu
 			if len(cmeta['strings']) != 0:
 				res = extractKernelData(cmeta['strings'], filepath, scanenv, scandebug)
 				if res != None:
-					if res.has_key('kernelfunctions'):
+					if 'kernelfunctions' in res:
 						if res['kernelfunctions'] != []:
 							cmeta['kernelfunctions'] = copy.deepcopy(res['kernelfunctions'])
 		cmeta['language'] = language
@@ -331,7 +331,7 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 			if linuxkernel:
 				## no functions can be extracted from a Linux kernel ELF image
 				functionnames = set()
-				if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
+				if 'BAT_KERNELSYMBOL_SCAN' in scanenv:
 					kernelsymbols = extractkernelsymbols(scanfile, scanenv, unpacktempdir)
 			else:
 				dynres = extractDynamicFromELF(filepath)
@@ -379,8 +379,10 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 	return cmeta
 
 def extractJava(scanfile, tags, scanenv, filesize, stringcutoff, blacklist=[], scandebug=False, unpacktempdir=None):
-	if 'dalvik' in tags:
-		javatype = 'dalvik'
+	if 'dex' in tags:
+		javatype = 'dex'
+	elif 'odex' in tags:
+		javatype = 'odex'
 	else:
 		javatype = 'java'
 	if blacklist == []:
@@ -437,7 +439,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 			if splitchars == []:
 				lines.append(printstring)
 		javameta = {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile, 'javatype': javatype, 'strings': lines}
-	elif javatype == 'dalvik':
+	elif javatype == 'dex' or javatype == 'odex':
 		## Using dedexer http://dedexer.sourceforge.net/ extract information from Dalvik
 		## files, then process each file in $tmpdir and search file for lines containing
 		## "const-string" and other things as well.
@@ -449,7 +451,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 		methods = set()
 		fields = set()
 		dex_tmpdir = None
-		if scanenv.has_key('DEX_TMPDIR'):
+		if 'DEX_TMPDIR' in scanenv:
 			dex_tmpdir = scanenv['DEX_TMPDIR']
 		if dex_tmpdir != None:
 			dalvikdir = tempfile.mkdtemp(dir=dex_tmpdir)
@@ -690,7 +692,7 @@ def extractidentifiersetup(scanenv, debug=False):
 
 	newenv = copy.deepcopy(scanenv)
 
-	if scanenv.has_key('DEX_TMPDIR'):
+	if 'DEX_TMPDIR' in scanenv:
 		dex_tmpdir = scanenv['DEX_TMPDIR']
 		if os.path.exists(dex_tmpdir):
 			## TODO: make sure this check is only done once through a setup scan
