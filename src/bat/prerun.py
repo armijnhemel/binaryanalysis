@@ -294,6 +294,7 @@ def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, de
 	if h.hexdigest().decode('hex') != signature_bytes:
 		return newtags
 	newtags.append('dalvik')
+	newtags.append('dex')
 	return newtags
 
 ## Verify if this is an optimised Android/Dalvik file. Check if the name of
@@ -307,9 +308,9 @@ def verifyAndroidOdex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, d
 		return newtags
 	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags:
 		return newtags
-	if not offsets.has_key('odex'):
+	if not 'odex' in offsets:
 		return newtags
-	if not offsets.has_key('dex'):
+	if not 'dex' in offsets:
 		return newtags
 	if len(offsets['dex']) == 0 or len(offsets['odex']) == 0:
 		return newtags
