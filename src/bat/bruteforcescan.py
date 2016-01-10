@@ -1606,6 +1606,44 @@ def runscan(scans, scan_binary, scandate):
 	if scansourcecode:
 		for c in batcons:
 			c.close()
+
+	## Sometimes there are identical files inside a blob.
+	## To minimize time spent on scanning these should only be
+	## scanned once. Since the results are independent anyway (the
+	## unpacking phase is where unique paths are determined after all)
+	## each sha256 can be scanned only once. If there are more files
+	## with the same sha256 the result can simply be copied.
+	##
+	## * keep a list of which sha256 have duplicates.
+	## * filter out the checksums
+	## * for each sha256 scan once
+	## * copy results in case there are duplicates
+	dupes = []
+
+	## the result is a list of dicts which needs to be turned into one dict
+	for i in unpackreports_tmp:
+		for k in i:
+			if 'tags' in i[k]:
+				## the file is a duplicate, store for later 
+				if 'duplicate' in i[k]['tags']:
+					dupes.append(i)
+					continue
+			unpackreports[k] = i[k]
+
+	for i in dupes:
+		for k in i:
+			dupesha256 = i[k]['checksum']
+			origname = i[k]['name']
+			origrealpath = i[k]['realpath']
+			origpath = i[k]['path']
+			## keep: name, realpath, path, copy the rest of the original
+			dupecopy = copy.deepcopy(unpackreports[hashdict[dupesha256]])
+			dupecopy['name'] = origname
+			dupecopy['path'] = origpath
+			dupecopy['realpath'] = origrealpath
+			dupecopy['tags'].append('duplicate')
+			unpackreports[k] = dupecopy
+
 	if debug:
 		print >>sys.stderr, "PRERUN UNPACK END", datetime.datetime.utcnow().isoformat()
 	if scans['batconfig']['reportendofphase']:
@@ -1650,18 +1688,6 @@ def runscan(scans, scan_binary, scandate):
 			sscan['environment'] = newenv
 			finalscans.append(sscan)
 
-		## Sometimes there are identical files inside a blob.
-		## To minimize time spent on scanning these should only be
-		## scanned once. Since the results are independent anyway (the
-		## unpacking phase is where unique paths are determined after all)
-		## each sha256 can be scanned only once. If there are more files
-		## with the same sha256 the result can simply be copied.
-		##
-		## * keep a list of which sha256 have duplicates.
-		## * filter out the checksums
-		## * for each sha256 scan once
-		## * copy results in case there are duplicates
-		## 
 		## each entry in leaftasks: (filetoscan, tags, blacklist, filehash, filesize)
 		sha256leaf = {}
 		leaftasks_tmp = []
@@ -1706,32 +1732,6 @@ def runscan(scans, scan_binary, scandate):
 		mergetags = filter(lambda x: x[1] != [], poolresult)
 		for m in mergetags:
 			tagdict[m[0]] = m[1]
-
-	dupes = []
-
-	## the result is a list of dicts which needs to be turned into one dict
-	for i in unpackreports_tmp:
-		for k in i:
-			if 'tags' in i[k]:
-				## the file is a duplicate, store for later 
-				if 'duplicate' in i[k]['tags']:
-					dupes.append(i)
-					continue
-			unpackreports[k] = i[k]
-
-	for i in dupes:
-		for k in i:
-			dupesha256 = i[k]['checksum']
-			origname = i[k]['name']
-			origrealpath = i[k]['realpath']
-			origpath = i[k]['path']
-			## keep: name, realpath, path, copy the rest of the original
-			dupecopy = copy.deepcopy(unpackreports[hashdict[dupesha256]])
-			dupecopy['name'] = origname
-			dupecopy['path'] = origpath
-			dupecopy['realpath'] = origrealpath
-			dupecopy['tags'].append('duplicate')
-			unpackreports[k] = dupecopy
 
 	for i in unpackreports.keys():
 		if not 'checksum' in unpackreports[i]:
