@@ -1,3 +1,9 @@
+2016-01-10:
+* bruteforcescan.py: move some code and comments related to unpack scans from
+leaf scans to unpack scans
+* prerun.py: thorough sanity checks for Android's Dex format
+* bat-scan.config: set minimumsize for iso9660 files
+
 2016-01-09:
 * fwunpack.py: only read two bytes for the ext4 sanity check in android sparse
 image files instead of the entire file. D'oh!
