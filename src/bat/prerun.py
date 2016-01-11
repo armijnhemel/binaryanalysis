@@ -135,7 +135,7 @@ def verifyGraphics(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debu
 
 def verifyBMP(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
-	if not offsets.has_key('bmp'):
+	if not 'bmp' in offsets:
 		return newtags
 	if not 0 in offsets['bmp']:
 		return newtags
@@ -564,7 +564,7 @@ def verifyOTF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 ## https://en.wikipedia.org/wiki/ICO_%28file_format%29
 def verifyIco(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
-	if not filename.lower().endswith('.ico'):
+	if not (filename.lower().endswith('.ico') or filename.lower().endswith('.cur')):
 		return newtags
 	if not 'binary' in tags:
 		return newtags
@@ -574,8 +574,12 @@ def verifyIco(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	icofile = open(filename, 'rb')
 	icobytes = icofile.read(4)
 	icofile.close()
-	if icobytes != '\x00\x00\x01\x00':
-		## only allow icon files, not cursor files
+	## only allow icon files and cursor files
+	if icobytes == '\x00\x00\x01\x00':
+		filetype = 'ico'
+	elif icobytes == '\x00\x00\x02\x00':
+		filetype = 'cur'
+	else:
 		return newtags
 	## now check how many images there are in the file
 	## actually unpack the ico files
@@ -598,7 +602,9 @@ def verifyIco(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 			return newtags
 		## now parse the header
 		## fourth byte should be 0 according to specification
-		if icoheader[3] != '\x00':
+		## although according to wikipedia a value of '\xff' is
+		## written by .NET
+		if not (icoheader[3] == '\x00' or icoheader[3] == '\xff'):
 			icofile.close()
 			return newtags
 		icosize = struct.unpack('<I', icoheader[8:12])[0]
@@ -612,7 +618,11 @@ def verifyIco(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		if icooffset + icosize > icofilesize:
 			icofile.close()
 			return newtags
-		icofile.seek(icosize + icooffset)
+		## TODO: extra sanity check to see if each image is either PNG or BMP
+		#oldoffset = icofile.tell()
+		#icofile.seek(icooffset)
+		#icobytes = icofile.read(icosize)
+		#icofile.seek(oldoffset)
 	icofile.close()
 
 	## then check each individual image in the file
@@ -623,7 +633,11 @@ def verifyIco(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	if p.returncode != 0 or "no images matched" in stanerr:
 		pass
 	else:
-		newtags.append('ico')
+		if filetype == 'ico':
+			newtags.append('ico')
+		else:
+			newtags.append('cursor')
+		newtags.append('resource')
 	shutil.rmtree(icodir)
 	return newtags
 
