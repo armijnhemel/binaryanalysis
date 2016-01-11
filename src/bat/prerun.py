@@ -561,9 +561,10 @@ def verifyOTF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	return newtags
 
 ## very simplistic verifier for some Windows icon files
+## https://en.wikipedia.org/wiki/ICO_%28file_format%29
 def verifyIco(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
-	if not filename.endswith('.ico'):
+	if not filename.lower().endswith('.ico'):
 		return newtags
 	if not 'binary' in tags:
 		return newtags
@@ -574,8 +575,47 @@ def verifyIco(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	icobytes = icofile.read(4)
 	icofile.close()
 	if icobytes != '\x00\x00\x01\x00':
+		## only allow icon files, not cursor files
 		return newtags
+	## now check how many images there are in the file
 	## actually unpack the ico files
+	icofile = open(filename, 'rb')
+	icofile.seek(4)
+	icobytes = icofile.read(2)
+	icocount = struct.unpack('<H', icobytes)[0]
+	icofile.close()
+
+	if icocount == 0:
+		return newtags
+
+	icofilesize = os.stat(filename).st_size
+	icofile = open(filename, 'rb')
+	icofile.seek(6)
+	for i in xrange(0,icocount):
+		icoheader = icofile.read(16)
+		if len(icoheader) != 16:
+			icofile.close()
+			return newtags
+		## now parse the header
+		## fourth byte should be 0 according to specification
+		if icoheader[3] != '\x00':
+			icofile.close()
+			return newtags
+		icosize = struct.unpack('<I', icoheader[8:12])[0]
+		icooffset = struct.unpack('<I', icoheader[12:16])[0]
+		if icosize > icofilesize:
+			icofile.close()
+			return newtags
+		if icooffset > icofilesize:
+			icofile.close()
+			return newtags
+		if icooffset + icosize > icofilesize:
+			icofile.close()
+			return newtags
+		icofile.seek(icosize + icooffset)
+	icofile.close()
+
+	## then check each individual image in the file
 	icodir = tempfile.mkdtemp(dir=unpacktempdir)
 	p = subprocess.Popen(['icotool', '-x', '-o', icodir, filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
