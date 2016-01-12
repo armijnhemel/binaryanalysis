@@ -1,3 +1,11 @@
+2016-01-12:
+* prerun.py: add simple verifier for RSA certificates which can often be found
+in Android APK files
+
+2016-01-11:
+* prerun.py: start working on better sanity checks for MS Windows icons and
+cursor icon files
+
 2016-01-10:
 * bruteforcescan.py: move some code and comments related to unpack scans from
 leaf scans to unpack scans
