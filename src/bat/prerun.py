@@ -1089,6 +1089,7 @@ def verifyRSACertificate(filename, tempdir=None, tags=[], offsets={}, scanenv={}
 	if p.returncode == 0:
 		newtags.append("rsa")
 		newtags.append("certificate")
+		newtags.append('resource')
 	return newtags
 
 ## simple check for certificates that you can find in Windows software
