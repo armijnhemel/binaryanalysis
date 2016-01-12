@@ -1080,6 +1080,17 @@ def verifyResourceFork(filename, tempdir=None, tags=[], offsets={}, scanenv={}, 
 
 	return newtags
 
+def verifyRSACertificate(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+	newtags = []
+	if not os.path.basename(filename) == 'CERT.RSA':
+		return newtags
+	p = subprocess.Popen(["openssl", "asn1parse", "-inform", "DER", "-in", filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+	(stanout, stanerr) = p.communicate()
+	if p.returncode == 0:
+		newtags.append("rsa")
+		newtags.append("certificate")
+	return newtags
+
 ## simple check for certificates that you can find in Windows software
 ## and that could lead to false positives later in the scanning process.
 def verifyCertificate(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
