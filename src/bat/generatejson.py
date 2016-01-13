@@ -373,7 +373,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 		batconns = []
 		batcursors = []
 
-		if not scanenv.has_key('BAT_DB'):
+		if not 'BAT_DB' in scanenv:
 			batdb = None
 		else:
 			batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
