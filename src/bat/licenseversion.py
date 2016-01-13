@@ -2006,9 +2006,8 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 			rankingfilesperlanguage[language].add(rankingfile)
 
 	for l in rankingfilesperlanguage:
-		if language == 'Java':
-			## keep a list of versions per sha256, since source files often are in more than one version
-			sha256_versions = {}
+		## keep a list of versions per sha256, since source files often are in more than one version
+		sha256_versions = {}
 		for rankingfile in rankingfilesperlanguage[l]:
 			unpackreport = unpackreports[rankingfile]
 			## read the pickle
@@ -2020,9 +2019,6 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 				continue
 
 			(res, functionRes, variablepvs, language) = leafreports['ranking']
-			## keep a list of versions per sha256, since source files often are in more than one version
-			if language != 'Java':
-				sha256_versions = {}
 			## indicate whether or not the pickle should be written back to disk.
 			## If uniquematches is empty and if functionRes is also empty, then nothing needs to be written back.
 			changed = False
