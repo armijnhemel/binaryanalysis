@@ -395,7 +395,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 			processpool.append(p)
 			p.start()
 
-			scanqueue.join()
+		scanqueue.join()
 
 		for p in processpool:
 			p.terminate()
