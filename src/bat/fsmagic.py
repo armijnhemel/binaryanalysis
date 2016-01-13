@@ -90,8 +90,9 @@ fsmagic = {
             'upx':  		'UPX',
             'java': 		'\xca\xfe\xba\xbe',
             'pack200':		'\xca\xfe\xd0\x0d',
-            'dex':		'dex\n',
-            'odex':		'dey\n',
+            'dex':		'dex\n', ## Android Dex
+            'odex':		'dey\n', ## Android Odex
+            'oat':		'oat\n', ## Android OAT
             'otf':		'OTTO',
             'mp4':		'ftyp',
             'sqlite3':		'SQLite format 3\x00',
