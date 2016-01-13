@@ -4441,17 +4441,6 @@ def searchUnpackIco(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	if blacklistoffset != None:
 		return (diroffsets, blacklist, [], hints)
 	tmpdir = dirsetup(tempdir, filename, "ico", counter)
-	res = unpackIco(filename, offset, template, tmpdir)
-	if res != None:
-		icotmpdir = res
-		diroffsets.append((icotmpdir, offset, 0))
-	else:
-		## cleanup
-		os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [], hints)
-
-def unpackIco(filename, offset, template, tempdir=None):
-	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
@@ -4473,12 +4462,12 @@ def unpackIco(filename, offset, template, tempdir=None):
 
 	if p.returncode != 0 or "no images matched" in stanerr:
 		os.unlink(icofile)
-		if tempdir == None:
-			os.rmdir(tmpdir)
-		return None
+		os.rmdir(tmpdir)
+		return (diroffsets, blacklist, [], hints)
 	## clean up the temporary files
 	os.unlink(icofile)
-	return tmpdir
+	diroffsets.append((tmpdir, offset, 0))
+	return (diroffsets, blacklist, [], hints)
 
 ## Windows MSI
 def searchUnpackMSI(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
@@ -5182,24 +5171,19 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 				jpegtestdata = datafile.read(trail+2 - offset)
 				p = subprocess.Popen(['jpegtopnm'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 				(stanout, stanerr) = p.communicate(jpegtestdata)
-				if p.returncode != 0:
-					os.rmdir(tmpdir)
-					## break or continue? break will skip to the next
-					## offset, so possible a correct file is not unpacked
-					## correctly.
-					#continue
+				if p.returncode == 0:
+					tmpfilename = os.path.join(tmpdir, 'unpack-%d.jpg' % counter)
+					tmpfile = open(tmpfilename, 'wb')
+					tmpfile.write(jpegtestdata)
+					tmpfile.close()
+					hints[tmpfilename] = {}
+					hints[tmpfilename]['tags'] = ['graphics', 'jpeg', 'binary']
+					hints[tmpfilename]['scanned'] = True
+					blacklist.append((offset,trail+2))
+					diroffsets.append((tmpdir, offset, trail-offset+2))
+					counter = counter + 1
 					break
-				tmpfilename = os.path.join(tmpdir, 'unpack-%d.jpg' % counter)
-				tmpfile = open(tmpfilename, 'wb')
-				tmpfile.write(jpegtestdata)
-				tmpfile.close()
-				hints[tmpfilename] = {}
-				hints[tmpfilename]['tags'] = ['graphics', 'jpeg', 'binary']
-				hints[tmpfilename]['scanned'] = True
-				blacklist.append((offset,trail+2))
-				diroffsets.append((tmpdir, offset, trail-offset+2))
-				counter = counter + 1
-				break
+				os.rmdir(tmpdir)
 	datafile.close()
 	return (diroffsets, blacklist, newtags, hints)
 
