@@ -2,6 +2,11 @@
 * bat-scan.config: ignore sqlite3 files in the ranking scan
 * generatejson.py: use the length of jsontasks to determine the minimum of
 processes needed instead of the jsontasks list
+* generatejson.py: don't join the queue with just one thread, as that
+effectively makes generating the json files single threaded
+* fwunpack.py: merge unpackIco into searchUnpackIco
+* fwunpack.py: fix multiframe JPEG unpacking
+* fsmagic.py: add magic for Android oat packages
 
 2016-01-12:
 * prerun.py: add simple verifier for RSA certificates which can often be found
