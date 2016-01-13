@@ -2006,8 +2006,6 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 			rankingfilesperlanguage[language].add(rankingfile)
 
 	for l in rankingfilesperlanguage:
-		## keep a list of versions per sha256, since source files often are in more than one version
-		sha256_versions = {}
 		for rankingfile in rankingfilesperlanguage[l]:
 			unpackreport = unpackreports[rankingfile]
 			## read the pickle
@@ -2019,12 +2017,16 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 				continue
 
 			(res, functionRes, variablepvs, language) = leafreports['ranking']
+
 			## indicate whether or not the pickle should be written back to disk.
 			## If uniquematches is empty and if functionRes is also empty, then nothing needs to be written back.
 			changed = False
 
 			if res == None and functionRes == {} and variablepvs == {}:
 				continue
+
+			## keep a list of versions per sha256, since source files often are in more than one version
+			sha256_versions = {}
 
 			if res != None:
 				newreports = []
@@ -2082,8 +2084,8 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 						(line, versionsha256s) = l
 						for s in versionsha256s:
 							(checksum, linenumber) = s
-							if not sha256_versions.has_key(checksum):
-								if sha256_scan_versions.has_key(checksum):
+							if not checksum in sha256_versions:
+								if checksum in sha256_scan_versions:
 									sha256_scan_versions[checksum].add((line, linenumber))
 								else:
 									sha256_scan_versions[checksum] = set([(line, linenumber)])
@@ -2133,7 +2135,7 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 							tmplines[line].append((checksum, linenumber, versres))
 						for v in versres:
 							(version, filename) = v
-							if sha256_versions.has_key(checksum):
+							if checksum in sha256_versions:
 								sha256_versions[checksum].append((version, filename))
 							else:
 								sha256_versions[checksum] = [(version, filename)]
@@ -2295,15 +2297,15 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 						(functionname, vres) = p
 						for s in vres:
 							(checksum, linenumber) = s
-							if not sha256_versions.has_key(checksum):
-								if sha256_scan_versions.has_key(checksum):
+							if not checksum in sha256_versions:
+								if checksum in sha256_scan_versions:
 									sha256_scan_versions[checksum].add((functionname, linenumber))
 								else:
 									sha256_scan_versions[checksum] = set([(functionname, linenumber)])
 							else:
 								for v in sha256_versions[checksum]:
 									(version, filename) = v
-									if not tmplines.has_key(functionname):
+									if not functionname in tmplines:
 										tmplines[functionname] = []
 								tmplines[functionname].append((checksum, linenumber, sha256_versions[checksum]))
 					fileres = []
