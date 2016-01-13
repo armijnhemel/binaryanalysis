@@ -364,7 +364,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 			processamount = 1
 		else:
 			processamount = processors
-		processamount = min(processamount, jsontasks)
+		processamount = min(processamount, len(jsontasks))
 		scanmanager = multiprocessing.Manager()
 		processpool = []
 		scanqueue = multiprocessing.JoinableQueue(maxsize=0)
