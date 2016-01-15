@@ -21,7 +21,7 @@ def grabpackage(scanqueue, reportqueue, cursor, query):
 	## name available, so we should get rid of 'path' and use something else that is better
 	## suited
 	while True:
-		filename = scanqueue.get()
+		filename = scanqueue.get(timeout=2592000)
 		cursor.execute(query, (os.path.basename(filename),))
 		res = cursor.fetchall()
 		if res != []:
