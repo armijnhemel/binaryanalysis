@@ -234,11 +234,15 @@ def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, de
 	dexsize = os.stat(filename).st_size
 	if dexsize < 112:
 		return newtags
+	newtags = verifyAndroidDexGeneric(filename, dexsize, 0)
+	return newtags
 
+def verifyAndroidDexGeneric(filename, dexsize, offset):
+	newtags = []
 	byteswapped = False
 	## Parse the Dalvik header.
 	androidfile = open(filename, 'rb')
-	androidfile.seek(0)
+	androidfile.seek(offset)
 
 	## magic header, already checked
 	magic_bytes = androidfile.read(8)
