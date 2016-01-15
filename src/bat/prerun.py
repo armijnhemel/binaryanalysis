@@ -962,6 +962,11 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 			if "__ksymtab_strings" in s:
 				newtags.append('linuxkernel')
 				break
+			if "oat_patches" in s:
+				## Android
+				newtags.append('oat')
+				newtags.append('android')
+				break
 	return newtags
 
 ## simple helper method to verify if a file is a valid Java class file
