@@ -104,6 +104,7 @@ fsmagic = {
             'windowsassemblyheader':		'<assembly',
             'windowsassemblytrailer':		'</assembly>',
             'appledouble':	'\x00\x05\x16\x07',
+            'certificate':	'-----BEGIN',
           }
 
 ## some offsets can be found after a certain number of bytes, but
