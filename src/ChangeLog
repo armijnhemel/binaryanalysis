@@ -1,3 +1,9 @@
+2016-01-15:
+* prerun.py: better checks for Android Dex/Odex
+* prerun.py: tag Android oat files as "oat"
+* identifier.py: start parsing Dex files
+* security.py: tag openssh private keys
+
 2016-01-13:
 * bat-scan.config: ignore sqlite3 files in the ranking scan
 * generatejson.py: use the length of jsontasks to determine the minimum of
