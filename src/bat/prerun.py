@@ -234,10 +234,10 @@ def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, de
 	dexsize = os.stat(filename).st_size
 	if dexsize < 112:
 		return newtags
-	newtags = verifyAndroidDexGeneric(filename, dexsize, 0)
+	newtags = verifyAndroidDexGeneric(filename, dexsize, 0, verifychecksum=True)
 	return newtags
 
-def verifyAndroidDexGeneric(filename, dexsize, offset):
+def verifyAndroidDexGeneric(filename, dexsize, offset, verifychecksum=True):
 	newtags = []
 	byteswapped = False
 	## Parse the Dalvik header.
@@ -282,21 +282,23 @@ def verifyAndroidDexGeneric(filename, dexsize, offset):
 	if declared_size != dexsize:
 		return newtags
 
-	## now compute the Adler32 checksum for the file
-	androidfile = open(filename, 'rb')
-	androidfile.seek(12)
+	if verifychecksum:
+		## now compute the Adler32 checksum for the file
+		androidfile = open(filename, 'rb')
+		androidfile.seek(12)
 
-	## TODO: not very efficient
-	checksumdata = androidfile.read(dexsize)
-	androidfile.close()
-	if zlib.adler32(checksumdata) & 0xffffffff != dexchecksum:
-		return newtags
+		## TODO: not very efficient
+		checksumdata = androidfile.read(dexsize)
+		androidfile.close()
+		if zlib.adler32(checksumdata) & 0xffffffff != dexchecksum:
+			return newtags
 
-	## Then compute the SHA-1 checksum. Reuse the data from the previous check
-	h = hashlib.new('sha1')
-	h.update(checksumdata[20:])
-	if h.hexdigest().decode('hex') != signature_bytes:
-		return newtags
+		## Then compute the SHA-1 checksum. Reuse the data from the previous check
+		h = hashlib.new('sha1')
+		h.update(checksumdata[20:])
+		if h.hexdigest().decode('hex') != signature_bytes:
+			return newtags
+
 	newtags.append('dalvik')
 	newtags.append('dex')
 	return newtags
@@ -382,6 +384,7 @@ def verifyAndroidOdex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, d
 	if not (datatableoffset + datatablesize) == os.stat(filename).st_size:
 		return newtags
 
+	## check the Adler32 checksum for opts + deps
 	androidfile = open(filename, 'rb')
 	androidfile.seek(dependencytableoffset)
 	checksumdata = androidfile.read()
@@ -390,10 +393,11 @@ def verifyAndroidOdex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, d
 	if zlib.adler32(checksumdata) & 0xffffffff != optdepschecksum:
 		return newtags
 
-	androidfile.close()
-
-	newtags.append('dalvik')
-	newtags.append('odex')
+	## Then perform a few checks on the Dex file included in the Odex file, but
+	## disable checksum verification.
+	if verifyAndroidDexGeneric(filename, dexlength, dexoffset, verifychecksum=False) != []:
+		newtags.append('dalvik')
+		newtags.append('odex')
 	return newtags
 
 ## verify if this is a GNU message catalog. First check if the name of the
