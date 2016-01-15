@@ -16,7 +16,10 @@ import bat.batdb
 ## attack is possible to decrypt the archive and extract the key. The return value will be the files
 ## or checksums in the database for which there is a plaintext version available.
 def scanEncryptedZip(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
-	if not 'zip' in tags and not 'encrypted' in tags:
+	if not 'encrypted' in tags:
+		return
+
+	if not 'zip' in tags:
 		return
 
 	if not scanenv.has_key('BAT_DB'):
@@ -156,6 +159,23 @@ def scanShellInvocations(unpackreports, scantempdir, topleveldir, processors, sc
 			leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
 			cPickle.dump(leafreports, leaf_file)
 			leaf_file.close()
+
+## method to check if a file is an OpenSSH public or private key
+## uses openssl to check
+def checkOpenSSHKeys(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+	if not 'text' in tags:
+		return
+
+	opensshfile = open(filename, 'rb')
+	opensshdata = opensshfile.readline()
+	opensshfile.close()
+	if "PRIVATE KEY" in opensshdata:
+		## now run openssl
+		p = subprocess.Popen(["openssl", "asn1parse", "-inform", "PEM", "-in", filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			return
+		return (['privatekey'], None)
 
 ## stubs for cracking passwords with "John the Ripper"
 ## 1. look for files called 'passwd' and 'shadow'
