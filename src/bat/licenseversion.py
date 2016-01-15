@@ -774,7 +774,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 ## grab variable names.
 def grab_sha256_varname(scanqueue, reportqueue, cursor, conn, query):
 	while True:
-		sha256sum = scanqueue.get()
+		sha256sum = scanqueue.get(timeout=2592000)
 		c.execute(query, (sha256sum,))
 		results = c.fetchall()
 		conn.commit()
@@ -783,7 +783,7 @@ def grab_sha256_varname(scanqueue, reportqueue, cursor, conn, query):
 
 def grab_sha256_filename(scanqueue, reportqueue, cursor, conn, query):
 	while True:
-		sha256sum = scanqueue.get()
+		sha256sum = scanqueue.get(timeout=2592000)
 		cursor.execute(query, (sha256sum,))
 		results = cursor.fetchall()
 		conn.commit()
@@ -793,7 +793,7 @@ def grab_sha256_filename(scanqueue, reportqueue, cursor, conn, query):
 ## grab copyright statements from the license database
 def grab_sha256_copyright(scanqueue, reportqueue, cursor, conn, query):
 	while True:
-		sha256sum = scanqueue.get()
+		sha256sum = scanqueue.get(timeout=2592000)
 		cursor.execute(query, (sha256sum,))
 		results = cursor.fetchall()
 		conn.commit()
@@ -805,7 +805,7 @@ def grab_sha256_copyright(scanqueue, reportqueue, cursor, conn, query):
 ## grab licenses from the license database
 def grab_sha256_license(scanqueue, reportqueue, cursor, conn, query):
 	while True:
-		sha256sum = scanqueue.get()
+		sha256sum = scanqueue.get(timeout=2592000)
 		cursor.execute(query, (sha256sum,))
 		results = cursor.fetchall()
 		conn.commit()
@@ -819,7 +819,7 @@ def grab_sha256_parallel(scanqueue, reportqueue, cursor, conn, batdb, language, 
 	kernelvarquery = batdb.getQuery("select distinct checksum, linenumber, language, type from extracted_name where name=%s")
 	while True:
 		res = None
-		line = scanqueue.get()
+		line = scanqueue.get(timeout=2592000)
 		if querytype == "string":
 			cursor.execute(stringquery, (line,language))
 			res = cursor.fetchall()
@@ -1178,7 +1178,7 @@ def lookup_identifier(scanqueue, reportqueue, cursor, stringcachecursors, nameca
 
 	while True:
 		## get a new task from the queue
-		(filehash, filename) = scanqueue.get()
+		(filehash, filename) = scanqueue.get(timeout=2592000)
 
 		## read the pickle with the data
 		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')

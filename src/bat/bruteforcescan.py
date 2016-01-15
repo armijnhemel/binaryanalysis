@@ -174,7 +174,8 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 		leaftasks = []
 		unpackreports = {}
 		blacklist = []
-		(dirname, filename, lenscandir, debug, tags, scanhints, offsets) = scanqueue.get()
+		## set timeout to a month
+		(dirname, filename, lenscandir, debug, tags, scanhints, offsets) = scanqueue.get(timeout=2592000)
 
 		## absolute path of the file in the file system (so including temporary dir)
 		filetoscan = os.path.join(dirname, filename)

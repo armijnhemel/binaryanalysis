@@ -20,7 +20,7 @@ from multiprocessing.sharedctypes import Value, Array
 def writejson(scanqueue, topleveldir, outputhash, cursor, batdb, scanenv, converthash):
 	hashcache = {}
 	while True:
-		filehash = scanqueue.get()
+		filehash = scanqueue.get(timeout=2592000)
 		## read the data from the pickle file
 		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 		leafreports = cPickle.load(leaf_file)
