@@ -36,6 +36,7 @@ class BatDb():
 				## TODO: come up with an elegant solution for this
 				#self.conn = psycopg2.connect(database=scanenv['POSTGRESQL_DB'], user=scanenv['POSTGRESQL_USER'], password=scanenv['POSTGRESQL_PASSWORD'], host=scanenv.get('POSTGRESQL_HOST', None), port=scanenv.get('POSTGRESQL_PORT', None), hostaddr=scanenv.get('POSTGRESQL_HOSTADDR', None))
 				self.conn = psycopg2.connect(database=scanenv['POSTGRESQL_DB'], user=scanenv['POSTGRESQL_USER'], password=scanenv['POSTGRESQL_PASSWORD'], host=scanenv.get('POSTGRESQL_HOST', None), port=scanenv.get('POSTGRESQL_PORT', None))
+				self.conn.autocommit = True
 			except Exception, e:
 				print e
 				return
