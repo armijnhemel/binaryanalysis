@@ -17,7 +17,7 @@ BAT_NAMECACHE_$LANGUAGE :: location of database containing cached
                            This is only used to look up Linux kernel functions.
 '''
 
-import string, re, os, os.path, sys, tempfile, shutil, copy
+import string, re, os, os.path, sys, tempfile, shutil, copy, struct
 import bat.batdb
 import subprocess
 import extractor, javacheck
@@ -68,8 +68,10 @@ def searchGeneric(filepath, tags, blacklist=[], scanenv={}, offsets={}, scandebu
 	## * Mono/.NET files
 	## * Flash/ActionScript
 
-	if 'elf' in tags:
+	if 'elf' in tags and not 'dalvik' in tags:
 		language = 'C'
+	#elif 'elf' in tags and 'oat' in tags:
+	#	language = 'Java'
 	elif "java" in tags:
 		language = 'Java'
 	elif "dalvik" in tags:
@@ -383,6 +385,8 @@ def extractJava(scanfile, tags, scanenv, filesize, stringcutoff, blacklist=[], s
 		javatype = 'dex'
 	elif 'odex' in tags:
 		javatype = 'odex'
+	elif 'oat' in tags:
+		javatype = 'oat'
 	else:
 		javatype = 'java'
 	if blacklist == []:
@@ -440,6 +444,57 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 				lines.append(printstring)
 		javameta = {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile, 'javatype': javatype, 'strings': lines}
 	elif javatype == 'dex' or javatype == 'odex':
+		if javatype == 'dex':
+			## Further parse the Dex file
+			## https://source.android.com/devices/tech/dalvik/dex-format.html
+
+			## assume little endian for now
+			dexfile = open(scanfile, 'rb')
+
+			## skip most of the header, as it has already been parsed
+			## by the prerun scan
+			dexfile.seek(56)
+
+			## get the length of the string identifiers and the offset
+			string_ids_size = struct.unpack('<I', dexfile.read(4))[0]
+			string_ids_offset = struct.unpack('<I', dexfile.read(4))[0]
+
+			## get the length of the type identifiers and the offset
+			type_ids_size = struct.unpack('<I', dexfile.read(4))[0]
+			type_ids_offset = struct.unpack('<I', dexfile.read(4))[0]
+
+			## get the length of the prototype identifiers and the offset
+			proto_ids_size = struct.unpack('<I', dexfile.read(4))[0]
+			proto_ids_offset = struct.unpack('<I', dexfile.read(4))[0]
+
+			## get the length of the field identifiers and the offset
+			field_ids_size = struct.unpack('<I', dexfile.read(4))[0]
+			field_ids_offset = struct.unpack('<I', dexfile.read(4))[0]
+
+			## get the length of the class definitions and the offset
+			class_defs_size = struct.unpack('<I', dexfile.read(4))[0]
+			class_defs_offset = struct.unpack('<I', dexfile.read(4))[0]
+
+			## get the length of the data section and the offset
+			data_size = struct.unpack('<I', dexfile.read(4))[0]
+			data_offset = struct.unpack('<I', dexfile.read(4))[0]
+
+			if string_ids_offset != 0:
+				dexfile.seek(string_ids_offset)
+				string_id_to_value = {}
+				for dr in range(1, string_ids_size+1):
+					string_id_offset = struct.unpack('<I', dexfile.read(4))[0]
+					oldoffset = dexfile.tell()
+					dexfile.seek(string_id_offset)
+					dexdata = ''
+					dexread = dexfile.read(1)
+					while dexread != '\x00':
+						dexdata += dexread
+						dexread = dexfile.read(1)
+					dexfile.seek(oldoffset)
+					string_id_to_value[dr] = dexdata
+			dexfile.close()
+
 		## Using dedexer http://dedexer.sourceforge.net/ extract information from Dalvik
 		## files, then process each file in $tmpdir and search file for lines containing
 		## "const-string" and other things as well.
