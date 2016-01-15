@@ -287,7 +287,7 @@ def verifyAndroidDexGeneric(filename, dexsize, offset):
 	androidfile.seek(12)
 
 	## TODO: not very efficient
-	checksumdata = androidfile.read()
+	checksumdata = androidfile.read(dexsize)
 	androidfile.close()
 	if zlib.adler32(checksumdata) & 0xffffffff != dexchecksum:
 		return newtags
@@ -338,13 +338,12 @@ def verifyAndroidOdex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, d
 
 	seekoffset += 4
 
-	## There are five values in the Odex header that
-	## are interesting.
+	## There are a few interesting values in the Odex header
 	androidfile.seek(seekoffset)
 
-	## 1. length of Odex header
+	## 1. length of Dex file
 	androidbytes = androidfile.read(4)
-	odexheaderlength = struct.unpack('<I', androidbytes)[0]
+	dexlength = struct.unpack('<I', androidbytes)[0]
 
 	## 2. offset of optimised DEX dependency table
 	androidbytes = androidfile.read(4)
@@ -361,11 +360,19 @@ def verifyAndroidOdex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, d
 	## 5. length of optimised data table
 	androidbytes = androidfile.read(4)
 	datatablesize = struct.unpack('<I', androidbytes)[0]
+
+	## 6. flags
+	androidbytes = androidfile.read(4)
+	flags = struct.unpack('<I', androidbytes)[0]
+
+	## 7. adler checksum of opt and deps
+	androidbytes = androidfile.read(4)
+	optdepschecksum = struct.unpack('<I', androidbytes)[0]
 	androidfile.close()
 
 	## sanity checks for the ODEX header
 	## 1. header offset + length of Dex should be < offset of dependency table
-	if (dexoffset + odexheaderlength) > dependencytableoffset:
+	if (dexoffset + dexlength) > dependencytableoffset:
 		return newtags
 
 	## 2. offset of dependency table + size of dependency table should be < offset of optimised data table
@@ -374,6 +381,17 @@ def verifyAndroidOdex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, d
 	## 3. offset of data table + length of data table == length of ODEX file
 	if not (datatableoffset + datatablesize) == os.stat(filename).st_size:
 		return newtags
+
+	androidfile = open(filename, 'rb')
+	androidfile.seek(dependencytableoffset)
+	checksumdata = androidfile.read()
+	androidfile.close()
+
+	if zlib.adler32(checksumdata) & 0xffffffff != optdepschecksum:
+		return newtags
+
+	androidfile.close()
+
 	newtags.append('dalvik')
 	newtags.append('odex')
 	return newtags
