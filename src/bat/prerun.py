@@ -23,7 +23,7 @@ files will be scanned and tagged properly later on, but more time might be
 spent, plus there might be false positives (mostly LZMA).
 '''
 
-import sys, os, subprocess, os.path, shutil, stat, array, struct, zlib
+import sys, os, subprocess, os.path, shutil, stat, struct, zlib
 import tempfile, re, magic, hashlib, HTMLParser
 import fsmagic, extractor, javacheck
 
@@ -330,39 +330,49 @@ def verifyAndroidOdex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, d
 	androidfile.seek(seekoffset)
 	androidbytes = androidfile.read(4)
 
-	## the dex identifier should be at this location
-	dexarray = array.array('I')
-	dexarray.fromstring(androidbytes)
-	dexoffset = dexarray.pop()
+	## the dex identifier should be defined at this location
+	dexoffset = struct.unpack('<I', androidbytes)[0]
 	if dexoffset != offsets['dex'][0]:
 		androidfile.close()
 		return newtags
 
 	seekoffset += 4
-	## 1. length of Dex header
-	## 2. offset of optimised DEX dependency table
-	## 3. length of optimised DEX dependency table
-	## 4. offset of optimised data table
-	## 5. length of optimised data table
+
+	## There are five values in the Odex header that
+	## are interesting.
 	androidfile.seek(seekoffset)
-	headerres = []
-	for i in range(0,5):
-		androidbytes = androidfile.read(4)
-		dexarray = array.array('I')
-		dexarray.fromstring(androidbytes)
-		headerres.append(dexarray.pop())
+
+	## 1. length of Odex header
+	androidbytes = androidfile.read(4)
+	odexheaderlength = struct.unpack('<I', androidbytes)[0]
+
+	## 2. offset of optimised DEX dependency table
+	androidbytes = androidfile.read(4)
+	dependencytableoffset = struct.unpack('<I', androidbytes)[0]
+
+	## 3. length of optimised DEX dependency table
+	androidbytes = androidfile.read(4)
+	dependencytablesize = struct.unpack('<I', androidbytes)[0]
+
+	## 4. offset of optimised data table
+	androidbytes = androidfile.read(4)
+	datatableoffset = struct.unpack('<I', androidbytes)[0]
+
+	## 5. length of optimised data table
+	androidbytes = androidfile.read(4)
+	datatablesize = struct.unpack('<I', androidbytes)[0]
 	androidfile.close()
 
 	## sanity checks for the ODEX header
 	## 1. header offset + length of Dex should be < offset of dependency table
-	if (dexoffset + headerres[0]) > headerres[1]:
+	if (dexoffset + odexheaderlength) > dependencytableoffset:
 		return newtags
 
 	## 2. offset of dependency table + size of dependency table should be < offset of optimised data table
-	if (headerres[1] + headerres[2]) > headerres[3]:
+	if (dependencytableoffset + dependencytablesize) > datatableoffset:
 		return newtags
 	## 3. offset of data table + length of data table == length of ODEX file
-	if not (headerres[3] + headerres[4]) == os.stat(filename).st_size:
+	if not (datatableoffset + datatablesize) == os.stat(filename).st_size:
 		return newtags
 	newtags.append('dalvik')
 	newtags.append('odex')
