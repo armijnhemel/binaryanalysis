@@ -3,6 +3,9 @@
 * prerun.py: tag Android oat files as "oat"
 * identifier.py: start parsing Dex files
 * security.py: tag openssh private keys
+* batdb.py: set autocommit for PostgreSQL
+* bruteforcescan.py/generatjson.py/licenseversion.py: set a time out for the
+queues to avoid PostgreSQL "idle in transaction" errors
 
 2016-01-13:
 * bat-scan.config: ignore sqlite3 files in the ranking scan
