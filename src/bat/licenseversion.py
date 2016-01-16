@@ -485,7 +485,7 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 	leaf_file.close()
 	return (jarfile, aggregated)
 
-def prune(scanenv, uniques, package):
+def prune(uniques, package):
 	if have_counter:
 		uniqueversions = collections.Counter()
 	else:
@@ -2145,7 +2145,7 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 					## optionally prune version information
 					if pruning:
 						if len(newuniques) > minimumunique:
-							newuniques = prune(scanenv, newuniques, package)
+							newuniques = prune(newuniques, package)
 
 					## optionally fill two lists with sha256 for license schanning and copyright scanning
 					licensesha256s = []
@@ -2364,7 +2364,7 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 					## optionally prune version information
 					if pruning:
 						if len(newuniques) > minimumunique:
-							newuniques = prune(scanenv, newuniques, package)
+							newuniques = prune(newuniques, package)
 
 					newresults[package] = newuniques
 					uniqueversions = {}
@@ -2505,7 +2505,7 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 
 						if pruning:
 							if len(newuniques) > minimumunique:
-								newuniques = prune(scanenv, newuniques, package)
+								newuniques = prune(newuniques, package)
 
 						newresults[package] = newuniques
 						uniqueversions = {}
