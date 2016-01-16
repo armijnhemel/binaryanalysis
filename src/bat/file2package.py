@@ -82,7 +82,7 @@ def filename2package(unpackreports, scantempdir, topleveldir, processors, scanen
 		processpool.append(p)
 		p.start()
 
-		scanqueue.join()
+	scanqueue.join()
 
 	while True:
 		try:
