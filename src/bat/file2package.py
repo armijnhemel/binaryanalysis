@@ -92,7 +92,7 @@ def filename2package(unpackreports, scantempdir, topleveldir, processors, scanen
 		except Queue.Empty, e:
 			## Queue is empty
 			break
-			reportqueue.join()
+	reportqueue.join()
 
 	for p in processpool:
 		p.terminate()
