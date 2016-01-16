@@ -1,3 +1,9 @@
+2016-01-16:
+* licenseversion.py: remove unused parameter from prune()
+* licenseversion.py: create cursors per language and process per language.
+This can save quite a few open sockets when using PostgreSQL.
+* file2package.py: fix multiprocessing
+
 2016-01-15:
 * prerun.py: better checks for Android Dex/Odex
 * prerun.py: tag Android oat files as "oat"
