@@ -622,7 +622,7 @@ def leafScan((filetoscan, scans, tags, blacklist, filehash, topleveldir, debug, 
 
 		try:
 			exec "from %s import %s as bat_%s" % (module, method, method)
-		except:
+		except Exception, e:
 			continue
 		res = eval("bat_%s(filetoscan, tags, blacklist, leafscan['environment'], scandebug=scandebug, unpacktempdir=unpacktempdir)" % (method))
 		if res != None:
@@ -688,7 +688,7 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, s
 
 		try:
 			exec "from %s import %s as bat_%s" % (module, method, method)
-		except:
+		except Exception, e:
 			continue
 
 		res = eval("bat_%s(unpackreports, scantempdir, topleveldir, processors, aggregatescan['environment'], scandebug=scandebug, unpacktempdir=unpacktempdir)" % (method))
@@ -727,7 +727,7 @@ def postrunscan((filetoscan, unpackreports, scans, scantempdir, topleveldir, deb
 			sys.stderr.flush()
 		try:
 			exec "from %s import %s as bat_%s" % (module, method, method)
-		except:
+		except Exception, e:
 			continue
 
 		res = eval("bat_%s(filetoscan, unpackreports, scantempdir, topleveldir, postrunscan['environment'], debug=debug)" % (method))
