@@ -593,7 +593,8 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	rankingfiles = set()
 	filehashseen = set()
 	hashtoname = {}
-	languages = set()
+
+	rankingfilesperlanguage = {}
 	for i in unpackreports:
 		if not 'checksum' in unpackreports[i]:
 			continue
@@ -617,10 +618,12 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		if not 'identifier' in leafreports:
 			continue
 		language = leafreports['identifier']['language']
-		languages.add(language)
-		rankingfiles.add(i)
+		if language in rankingfilesperlanguage:
+			rankingfilesperlanguage[language].add(i)
+		else:
+			rankingfilesperlanguage[language] = set([i])
 
-	if len(rankingfiles) == 0:
+	if len(rankingfilesperlanguage) == 0:
 		return None
 
 	batdb = bat.batdb.BatDb(newenv['DBBACKEND'])
@@ -644,7 +647,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	## this will not cost much memory and it prevents many database lookups.
 	avgscores = {}
 	for language in avgstringsdbperlanguagetable:
-		if not language in languages:
+		if not language in rankingfilesperlanguage:
 			continue
 		stringscache = newenv.get(stringsdbperlanguageenv[language])
 		if stringscache == None:
@@ -663,88 +666,96 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		for r in filter(lambda x: x[1] != 0, res):
 			avgscores[language][r[0]] = r[1]
 
-	lookup_tasks = map(lambda x: (unpackreports[x]['checksum'], os.path.join(unpackreports[x]['realpath'], unpackreports[x]['name'])),rankingfiles)
+	## create a queue for tasks, with a few threads reading from the queue
+	## and looking up results and putting them in a result queue
+	scanmanager = multiprocessing.Manager()
+	res = []
+	batcons = []
+	batcursors = []
 
 	if processors == None:
 		processamount = 1
 	else:
 		processamount = processors
-	## create a queue for tasks, with a few threads reading from the queue
-	## and looking up results and putting them in a result queue
-	scanmanager = multiprocessing.Manager()
-	scanqueue = multiprocessing.JoinableQueue(maxsize=0)
-	reportqueue = scanmanager.Queue(maxsize=0)
-	processpool = []
-	res = []
-	batcons = []
-
-	map(lambda x: scanqueue.put(x), lookup_tasks)
-	minprocessamount = min(len(lookup_tasks), processamount)
-
-	stringcacheconns = []
-	namecacheconns = []
+	minprocessamount = min(max(map(lambda x: len(rankingfilesperlanguage[x]), rankingfilesperlanguage)), processamount)
 
 	for i in range(0,minprocessamount):
-		## first a cursor for the cache of each supported language
-		stringcachecursors = {}
-		namecachecursors = {}
-		for language in stringsdbperlanguagetable:
-			if not language in languages:
-				continue
-			stringscache = newenv.get(stringsdbperlanguageenv[language])
-			if stringscache == None:
-				continue
-			conn = batdb.getConnection(stringscache,newenv)
-			c = conn.cursor()
-			stringcacheconns.append(conn)
-			stringcachecursors[language] = c
-		## then for namecaches
-		for language in namecacheperlanguagetable:
-			if not language in languages:
-				continue
-			namecache = newenv.get(namecacheperlanguageenv[language])
-			if namecache == None:
-				continue
-			conn = batdb.getConnection(namecache,newenv)
-			c = conn.cursor()
-			namecacheconns.append(conn)
-			namecachecursors[language] = c
 		## then a cursor for the main database
 		conn = batdb.getConnection(newenv['BAT_DB'],newenv)
 		cursor = conn.cursor()
+		batcursors.append(cursor)
 		batcons.append(conn)
-		p = multiprocessing.Process(target=lookup_identifier, args=(scanqueue,reportqueue,cursor,stringcachecursors,namecachecursors,batdb,newenv,topleveldir,avgscores,clones,scandebug))
-		processpool.append(p)
-		p.start()
 
-        scanqueue.join()
+	## now per language
+	for language in rankingfilesperlanguage:
+		## creating new queues
+		scanqueue = multiprocessing.JoinableQueue(maxsize=0)
+		reportqueue = scanmanager.Queue(maxsize=0)
 
-	while True:
-		try:
-			val = reportqueue.get_nowait()
-			res.append(val)
-			reportqueue.task_done()
-		except Queue.Empty, e:
-			## Queue is empty
-			break
-	reportqueue.join()
+		lookup_tasks = map(lambda x: (unpackreports[x]['checksum'], os.path.join(unpackreports[x]['realpath'], unpackreports[x]['name'])),rankingfilesperlanguage[language])
+		map(lambda x: scanqueue.put(x), lookup_tasks)
 
-	for p in processpool:
-		p.terminate()
+		stringcacheconns = []
+		namecacheconns = []
+		processpool = []
+
+		## first a cursor for the cache of each supported language
+		stringcachecursors = {}
+		namecachecursors = {}
+		for i in range(0,minprocessamount):
+			if language in stringsdbperlanguagetable:
+				stringscache = newenv.get(stringsdbperlanguageenv[language])
+				if stringscache == None:
+					continue
+				conn = batdb.getConnection(stringscache,newenv)
+				c = conn.cursor()
+				stringcacheconns.append(conn)
+				stringcachecursors[language] = c
+			## then for namecaches
+			if language in namecacheperlanguagetable:
+				namecache = newenv.get(namecacheperlanguageenv[language])
+				if namecache == None:
+					continue
+				conn = batdb.getConnection(namecache,newenv)
+				c = conn.cursor()
+				namecacheconns.append(conn)
+				namecachecursors[language] = c
+
+			p = multiprocessing.Process(target=lookup_identifier, args=(scanqueue,reportqueue,batcursors[i],stringcachecursors,namecachecursors,batdb,newenv,topleveldir,avgscores,clones,scandebug))
+			processpool.append(p)
+			p.start()
+
+        	scanqueue.join()
+
+		while True:
+			try:
+				val = reportqueue.get_nowait()
+				res.append(val)
+				reportqueue.task_done()
+			except Queue.Empty, e:
+				## Queue is empty
+				break
+		reportqueue.join()
+
+		for p in processpool:
+			p.terminate()
+		for c in stringcacheconns:
+			c.close()
+		for c in namecacheconns:
+			c.close()
+
+	for c in batcursors:
+		c.close()
 	for c in batcons:
-		c.close()
-	for c in stringcacheconns:
-		c.close()
-	for c in namecacheconns:
 		c.close()
 
 	for filehash in res:
 		if filehash != None:
-			if hashtoname.has_key(filehash):
+			if filehash in hashtoname:
 				for w in hashtoname[filehash]:
 					unpackreports[w]['tags'].append('ranking')
 
-	if 'Java' in languages:
+	if 'Java' in rankingfilesperlanguage:
 		pool = multiprocessing.Pool(processes=processors)
 		## aggregate the JAR files
 		aggregatejars(unpackreports, scantempdir, topleveldir, pool, newenv, scandebug=False, unpacktempdir=None)
@@ -754,9 +765,9 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	rankingfiles = set()
 	filehashseen = set()
 	for i in unpackreports:
-		if not unpackreports[i].has_key('checksum'):
+		if not 'checksum' in unpackreports[i]:
 			continue
-		if not unpackreports[i].has_key('tags'):
+		if not 'tags' in unpackreports[i]:
 			continue
 		if not 'ranking' in unpackreports[i]['tags']:
 			continue
@@ -2013,8 +2024,6 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 			leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 			leafreports = cPickle.load(leaf_file)
 			leaf_file.close()
-			if not 'ranking' in leafreports:
-				continue
 
 			(res, functionRes, variablepvs, language) = leafreports['ranking']
 
