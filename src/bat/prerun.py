@@ -125,6 +125,41 @@ def verifyText(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fa
 	datafile.close()
 	return newtags
 
+def verifyWebP(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+	newtags = []
+	if "text" in tags or "compressed" in tags or "audio" in tags or "graphics" in tags:
+		return newtags
+	if not 'riff' in offsets:
+		return newtags
+	if not 0 in offsets['riff']:
+		return newtags
+	filesize = os.stat(filename).st_size
+
+	## there should at least be a WebP header
+	if filesize < 12:
+		return newtags
+	webpfile = open(filename, 'rb')
+	webpfile.seek(4)
+	## size of bytes following the size field
+	webpfilesize = struct.unpack('<I', webpfile.read(4))[0]
+
+	if not webfilesize + 8 == filesize:
+		webpfile.close()
+		return newtags
+	fourcc = webpfile.read(4)
+
+	## the next four characters should be 'WEBP'
+	if fourcc != 'WEBP':
+		webpfile.close()
+		return newtags
+
+	## then depending on the file format different
+	## content will follow: TODO
+	webpfile.close()
+	# newtags.append('webp')
+	# newtags.append('graphics')
+	return newtags
+
 ## Quick check to verify if a file is a graphics file.
 def verifyGraphics(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
