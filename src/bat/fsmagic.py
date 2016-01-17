@@ -72,6 +72,7 @@ fsmagic = {
             'gif87':            'GIF87a',
             'gif89':            'GIF89a',
             'ico':              '\x00\x00\x01\x00',
+            'riff':             'RIFF',
             'cpio1':            '070701',
             'cpio2':            '070702',
             'cpio3':            '070707',
@@ -83,7 +84,6 @@ fsmagic = {
             'tar1':             'ustar\x00',
             'tar2':             'ustar\x20',
             'java_serialized':  '\xac\xed\x00',
-            'ogg':  		'OggS',
             'fat12':  		'FAT12',
             'fat16':  		'FAT16',
             'pe':  		'MZ',
@@ -95,6 +95,7 @@ fsmagic = {
             'oat':		'oat\n', ## Android OAT
             'otf':		'OTTO',
             'mp4':		'ftyp',
+            'ogg':  		'OggS',
             'sqlite3':		'SQLite format 3\x00',
             'u-boot':		'\x27\x05\x19\x56',
             'yaffs2':		'\x03\x00\x00\x00\x01\x00\x00\x00\xff\xff', ## this is not a an official signature, just occuring frequently
