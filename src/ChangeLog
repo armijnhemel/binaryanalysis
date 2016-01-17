@@ -1,3 +1,7 @@
+2016-01-17:
+* prerun.py: tag Chrome .pak files
+* prerun.py: tag more RSA certificate files
+
 2016-01-16:
 * licenseversion.py: remove unused parameter from prune()
 * licenseversion.py: create cursors per language and process per language.
