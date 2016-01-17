@@ -1183,9 +1183,10 @@ def verifyResourceFork(filename, tempdir=None, tags=[], offsets={}, scanenv={}, 
 
 	return newtags
 
+## Tag and check some RSA certificates as found for example on Android
 def verifyRSACertificate(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
-	if not os.path.basename(filename) == 'CERT.RSA':
+	if not os.path.basename(filename).endswith('.RSA'):
 		return newtags
 	p = subprocess.Popen(["openssl", "asn1parse", "-inform", "DER", "-in", filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
