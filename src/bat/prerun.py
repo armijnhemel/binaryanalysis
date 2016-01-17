@@ -524,7 +524,9 @@ def verifySqlite3(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug
 
 ## Extremely simple verifier for Ogg files.
 ## This will not tag all Ogg files, but it will be good enough
-## for the common cases
+## for the common cases.
+## Note: some Ogg files on some Android devices are "created by a
+## buggy encoder" according to ogginfo
 def verifyOgg(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not filename.endswith('.ogg'):
@@ -533,7 +535,7 @@ def verifyOgg(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		return newtags
 	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags:
 		return newtags
-	if not offsets.has_key('ogg'):
+	if not 'ogg' in offsets:
 		return newtags
 	if not 0 in offsets['ogg']:
 		return newtags
