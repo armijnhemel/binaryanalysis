@@ -195,6 +195,66 @@ def verifyAndroidResource(filename, tempdir=None, tags=[], offsets={}, scanenv={
 		return newtags
 	return newtags
 
+## Verify and tag Chrome/Chromium/WebView .pak files
+## http://dev.chromium.org/developers/design-documents/linuxresourcesandlocalizedstrings
+def verifyChromePak(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+	newtags = []
+	if not 'binary' in tags:
+		return newtags
+	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags:
+		return newtags
+	if not filename.endswith('.pak'):
+		return newtags
+
+	filesize = os.stat(filename).st_size
+	## needs header, number of entries and encoding at the minimum
+	if filesize < 9:
+		return newtags
+
+	## now read the first four bytes
+	pakfile = open(filename, 'rb')
+	header = struct.unpack('<I', pakfile.read(4))[0]
+	if header != 4:
+		pakfile.close()
+		return newtags
+	numberofentries = struct.unpack('<I', pakfile.read(4))[0]
+	encoding = struct.unpack('<B', pakfile.read(1))[0]
+	if not encoding in [1,2,3]:
+		pakfile.close()
+		return newtags
+
+	for i in range(0,numberofentries):
+		try:
+			resourceid = struct.unpack('<H', pakfile.read(2))[0]
+			resourceoffset = struct.unpack('<I', pakfile.read(4))[0]
+			if resourceoffset > filesize:
+				pakfile.close()
+				return newtags
+		except:
+			pakfile.close()
+			return newtags
+
+	## Then two zero bytes
+	try:
+		if struct.unpack('<H', pakfile.read(2))[0] != 0:
+			pakfile.close()
+			return newtags
+	except:
+		pakfile.close()
+		return newtags
+	## followed by the end of the last resource. This should be the same
+	## as the file size
+	try:
+		endoflastresource = struct.unpack('<I', pakfile.read(4))[0]
+	except:
+		pakfile.close()
+		return newtags
+	pakfile.close()
+	if endoflastresource == filesize:
+		newtags.append("resource")
+		newtags.append("pak")
+	return newtags
+
 ## Verify if this is an Android "binary XML" file. First check if the name of the
 ## file ends in '.xml', plus check the first four bytes of the file
 ## If it is an Android XML file, mark it as a 'resource' file
