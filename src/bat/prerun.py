@@ -723,7 +723,13 @@ def verifyOTF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 ## https://en.wikipedia.org/wiki/ICO_%28file_format%29
 def verifyIco(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
-	if not (filename.lower().endswith('.ico') or filename.lower().endswith('.cur')):
+	knownicoextensions = ['cur', 'ico', 'hdb']
+	filesplit = filename.lower().rsplit('.', 1)
+	if len(filesplit) != 2:
+		return newtags
+
+	extension = filesplit[1]
+	if not extension in knownicoextensions:
 		return newtags
 	if not 'binary' in tags:
 		return newtags
