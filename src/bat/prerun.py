@@ -131,6 +131,8 @@ def verifyText(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fa
 	datafile.close()
 	return newtags
 
+## verify WebP files
+## https://developers.google.com/speed/webp/docs/riff_container
 def verifyWebP(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if "text" in tags or "compressed" in tags or "audio" in tags or "graphics" in tags:
