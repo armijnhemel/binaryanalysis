@@ -143,21 +143,47 @@ def verifyWebP(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fa
 	## size of bytes following the size field
 	webpfilesize = struct.unpack('<I', webpfile.read(4))[0]
 
-	if not webfilesize + 8 == filesize:
+	if not webpfilesize + 8 == filesize:
 		webpfile.close()
 		return newtags
 	fourcc = webpfile.read(4)
 
+	validchunks = ['VP8 ', 'VP8L', 'VP8X', 'ANIM', 'ANMF', 'ALPH', 'ICCP', 'EXIF', 'XMP ']
 	## the next four characters should be 'WEBP'
 	if fourcc != 'WEBP':
 		webpfile.close()
 		return newtags
 
 	## then depending on the file format different
-	## content will follow: TODO
+	## content will follow.
+	## There are different chunks that can follow eachother
+	## in the file.
+	while webpfile.tell() != filesize:
+		chunkheaderbytes = webpfile.read(4)
+		if len(chunkheaderbytes) != 4:
+			webpfile.close()
+			return newtags
+		## recognized chunk headers are:
+		## 'VP8 ', 'VP8L', 'VP8X'
+		if not chunkheaderbytes in validchunks:
+			webpfile.close()
+			return newtags
+
+		## then read the size of the chunk
+		chunksizebytes = webpfile.read(4)
+		if len(chunksizebytes) != 4:
+			webpfile.close()
+			return newtags
+		chunksizebytes = struct.unpack('<I', chunksizebytes)[0]
+		curoffset = webpfile.tell()
+		if curoffset + chunksizebytes > filesize:
+			webpfile.close()
+			return newtags
+		webpfile.seek(curoffset + chunksizebytes)
+
 	webpfile.close()
-	# newtags.append('webp')
-	# newtags.append('graphics')
+	newtags.append('webp')
+	newtags.append('graphics')
 	return newtags
 
 ## Quick check to verify if a file is a graphics file.
