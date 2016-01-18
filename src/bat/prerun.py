@@ -82,12 +82,18 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, offset=0, length=0,
 def searchXML(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	datafile = open(filename, 'rb')
+
+	## first check if the file starts with a byte order mark for a UTF-8 file
+	## https://en.wikipedia.org/wiki/Byte_order_mark
 	offset = 0
+	bommarks = datafile.read(3)
+	if bommarks == '\xef\xbb\xbf':
+		offset = 3
 	datafile.seek(offset)
 	firstchar = datafile.read(1)
 	datafile.close()
 	## xmllint expects a file to start either with whitespace,
-	## or a < character
+	## or a < character.
 	if firstchar not in ['\n', '\r', '\t', ' ', '\v', '<']:
 		return newtags
 	p = subprocess.Popen(['xmllint','--noout', "--nonet", filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
