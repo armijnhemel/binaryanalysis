@@ -285,6 +285,7 @@ def aggregatejars(unpackreports, scantempdir, topleveldir, pool, scanenv, scande
 				else:
 					sha256stofiles[filehash].remove(c)
 				del unpackreports[c]
+	return ranked
 
 ## aggregate results for a single JAR file
 def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
@@ -764,8 +765,10 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	if 'Java' in rankingfilesperlanguage:
 		pool = multiprocessing.Pool(processes=processors)
 		## aggregate the JAR files
-		aggregatejars(unpackreports, scantempdir, topleveldir, pool, newenv, scandebug=False, unpacktempdir=None)
+		rankedjars = aggregatejars(unpackreports, scantempdir, topleveldir, pool, newenv, scandebug=False, unpacktempdir=None)
 		pool.terminate()
+		for r in rankedjars:
+			rankingfilesperlanguage['Java'].add(r)
 
 	## .class files might have been removed at this point, so sanity check first
 	rankingfiles = set()
@@ -773,10 +776,10 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	
 	## sanity check to see if all the ranking files are still there
 	for l in rankingfilesperlanguage:
-		newrankingfiles = []
+		newrankingfiles = set()
 		for i in rankingfilesperlanguage[l]:
 			if i in unpackreports:
-				newrankingfiles.append(i)
+				newrankingfiles.add(i)
 		rankingfilesperlanguage[l] = newrankingfiles
 
 	## and determine versions, etc.
@@ -2015,8 +2018,8 @@ def compute_version(processors, scanenv, unpackreports, rankingfilesperlanguage,
 	sha256_license_query = batdb.getQuery("select distinct license, scanner from licenses where checksum=%s")
 	sha256_copyright_query = batdb.getQuery("select distinct copyright, type from extracted_copyright where checksum=%s")
 
-	for l in rankingfilesperlanguage:
-		for rankingfile in rankingfilesperlanguage[l]:
+	for language in rankingfilesperlanguage:
+		for rankingfile in rankingfilesperlanguage[language]:
 			unpackreport = unpackreports[rankingfile]
 			## read the pickle
 			filehash = unpackreport['checksum']
