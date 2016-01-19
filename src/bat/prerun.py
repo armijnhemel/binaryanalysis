@@ -1217,9 +1217,6 @@ def verifyResourceFork(filename, tempdir=None, tags=[], offsets={}, scanenv={}, 
 		return newtags
 
 	filesize = os.stat(filename).st_size
-	## files are always a multiple of 4
-	if filesize%4 != 0:
-		return newtags
 
 	datafile = open(filename, 'rb')
 	## 4 bytes magic, 4 bytes verson, 16 bytes filler
