@@ -729,9 +729,9 @@ def extractKernelData(lines, filepath, scanenv, scandebug):
 		## There could be false positives here...
 		kernelcursor.execute(query, (line,))
 		kernelres = kernelcursor.fetchall()
+		kernelconn.commit()
 		if len(kernelres) != 0:
 			kernelfuncres.append(line)
-			continue
 
 	kernelcursor.close()
 	kernelconn.close()
