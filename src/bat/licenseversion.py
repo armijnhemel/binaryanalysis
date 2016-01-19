@@ -500,7 +500,7 @@ def prune(uniques, package):
 			(checksum, linenumber, versionfilenames) = r
 			map(lambda x: versions.add(x[0]), versionfilenames)
 		for version in versions:
-			if linesperversion.has_key(version):
+			if version in linesperversion:
 				linesperversion[version].add(line)
 			else:
 				linesperversion[version] = set([line])
@@ -641,7 +641,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		conn.close()
 		for cl in clonestmp:
 			(originalname,newname) = cl
-			if not clones.has_key(originalname):
+			if not originalname in clones:
 				clones[originalname] = newname
 
 	## suck the average string scores database into memory. Even with a few million packages
@@ -866,15 +866,15 @@ def extractJava(javameta, scanenv, funccursor, funcconn, batdb, clones):
 	uniquepackages = {}
 
 	variablepvs = {}
-	if javameta.has_key('fields'):
+	if 'fields' in javameta:
 		fields = javameta['fields']
 	else:
 		fields = []
-	if javameta.has_key('classes'):
+	if 'classes' in javameta:
 		classes = javameta['classes']
 	else:
 		classes = []
-	if javameta.has_key('sourcefiles'):
+	if 'sourcefiles' in javameta:
 		sourcefiles = javameta['sourcefiles']
 	else:
 		sourcefiles = []
@@ -897,7 +897,7 @@ def extractJava(javameta, scanenv, funccursor, funcconn, batdb, clones):
 				namesmatched += 1
 				packages_tmp = []
 				for r in res:
-					if clones.has_key(r[0]):
+					if r[0] in clones:
 						package_tmp = clones[r[0]]
 						packages_tmp.append(package_tmp)
 					else:
@@ -952,7 +952,7 @@ def extractJava(javameta, scanenv, funccursor, funcconn, batdb, clones):
 			if classres != []:
 				classres_tmp = []
 				for r in classres:
-					if clones.has_key(r[0]):
+					if r[0] in clones:
 						class_tmp = clones[r[0]]
 						classres_tmp.append(class_tmp)
 					else:   
@@ -981,7 +981,7 @@ def extractJava(javameta, scanenv, funccursor, funcconn, batdb, clones):
 			if classres != []:
 				classres_tmp = []
 				for r in classres:
-					if clones.has_key(r[0]):
+					if r[0] in clones:
 						class_tmp = clones[r[0]]
 						classres_tmp.append(class_tmp)
 					else:   
@@ -1011,7 +1011,7 @@ def extractJava(javameta, scanenv, funccursor, funcconn, batdb, clones):
 			if fieldres != []:
 				fieldres_tmp = []
 				for r in fieldres:
-					if clones.has_key(r[0]):
+					if r[0] in clones:
 						field_tmp = clones[r[0]]
 						fieldres_tmp.append(field_tmp)
 					else:   
@@ -1043,7 +1043,7 @@ def scankernelsymbols(variables, scanenv, kernelquery, funccursor, funcconn, clo
 
 		pvs_tmp = []
 		for r in pvs:
-			if clones.has_key(r):
+			if r in clones:
 				pvs_tmp.append(clones[r])
 			else:
 				pvs_tmp.append(r)
@@ -1076,7 +1076,7 @@ def scanDynamic(scanstr, variables, scanenv, funccursor, funcconn, batdb, clones
 	if not ('BAT_FUNCTION_SCAN' in scanenv or 'BAT_VARNAME_SCAN' in scanenv):
 		return (dynamicRes, variablepvs)
 
-	if scanenv.has_key('BAT_FUNCTION_SCAN'):
+	if 'BAT_FUNCTION_SCAN' in scanenv:
 		uniquepackages = {}
 		namesmatched = 0
 		uniquematches = 0
@@ -1096,7 +1096,7 @@ def scanDynamic(scanstr, variables, scanenv, funccursor, funcconn, batdb, clones
 			if res != []:
 				packages_tmp = []
 				for r in res:
-					if clones.has_key(r[0]):
+					if r[0] in clones:
 						package_tmp = clones[r[0]]
 						packages_tmp.append(package_tmp)
 					else:
@@ -1148,7 +1148,7 @@ def scanDynamic(scanstr, variables, scanenv, funccursor, funcconn, batdb, clones
 
 			pvs_tmp = []
 			for r in pvs:
-				if clones.has_key(r):
+				if r in clones:
 					pvs_tmp.append(clones[r])
 				else:
 					pvs_tmp.append(r)
@@ -1209,7 +1209,7 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 		leafreports = cPickle.load(leaf_file)
 		leaf_file.close()
-		if not leafreports.has_key('identifier'):
+		if not 'identifier' in leafreports:
 			## If there is no relevant data to scan continue to the next file
 			scanqueue.task_done()
 			continue
@@ -1485,7 +1485,7 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 					## if 'line' has been changed, then linecount should be changed accordingly
 					if line != origline:
 						linecount[origline] = linecount[origline] - 1
-						if linecount.has_key(line):
+						if line in linecount:
 							linecount[line] = linecount[line] + 1
 						else:
 							linecount[line] = 1
@@ -1515,13 +1515,13 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 					## so record it as such and add its length to a score.
 					for result in res:
 						(package, sourcefilename) = result
-						if clones.has_key(package):
+						if package in clones:
 							package = clones[package]
-						if not pkgs.has_key(package):
+						if not package in pkgs:
 							pkgs[package] = set([sourcefilename])
 						else:
 							pkgs[package].add(sourcefilename)
-						if not filenames.has_key(sourcefilename):
+						if not sourcefilename in filenames:
 							filenames[sourcefilename] = [package]
 						else:
 							filenames[sourcefilename] = list(set(filenames[sourcefilename] + [package]))
@@ -1626,7 +1626,7 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 						## the string is unique to this package and this package only
 						uniquematch = True
 						## store the uniqueMatches without any information about checksums
-						if not uniqueMatches.has_key(package):
+						if not package in uniqueMatches:
 							uniqueMatches[package] = [(line, [])]
 						else:
 							uniqueMatches[package].append((line, []))
@@ -1697,14 +1697,14 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 
 			uniqueScore = {}
 			for package in uniqueMatches:
-				if not uniqueScore.has_key(package):
+				if not package in uniqueScore:
 					uniqueScore[package] = 0
 				for line in uniqueMatches[package]:
 					uniqueScore[package] += len(line[0])
 
 			directAssignedScore = {}
 			for package in directAssignedString:
-				if not directAssignedScore.has_key(package):
+				if not package in directAssignedScore:
 					directAssignedScore[package] = 0
 				for line in directAssignedString[package]:
 					directAssignedScore[package] += line[2]
@@ -1760,7 +1760,7 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 				if filter(lambda x: x not in useless_packages, pkgsScorePerString[stri]) != []:
 					new_stringsleft[stri] = stringsLeft[stri]
 					strsplit = stri.rsplit('\t', 1)[0]
-					if string_split.has_key(strsplit):
+					if strsplit in string_split:
 						string_split[strsplit].add(stri)
 					else:
 						string_split[strsplit] = set([stri])
@@ -1809,7 +1809,7 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 						if p2 in useless_packages:
 							continue
 						gain[p2] = gain.get(p2, 0) + stringsLeft[stri]['score']
-						if not stringsPerPkg.has_key(p2):
+						if not p2 in stringsPerPkg:
 							stringsPerPkg[p2] = []
 						stringsPerPkg[p2].append(stri)
 						newstrleft.add(stringsLeft[stri]['string'])
@@ -1880,7 +1880,7 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 					sameFileScore[best] = sameFileScore.get(best, 0) + x['score']
 					best_score += 1
 					linecount[strsplit] = linecount[strsplit] - 1
-					if nonUniqueMatches.has_key(best):
+					if best in nonUniqueMatches:
 						nonUniqueMatches[best].append(strsplit)
 					else:
 						nonUniqueMatches[best]  = [strsplit]
@@ -2156,7 +2156,7 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 						versres = resdict[checksum]
 						for l in sha256_scan_versions[checksum]:
 							(line, linenumber) = l
-							if not tmplines.has_key(line):
+							if not line in tmplines:
 								tmplines[line] = []
 							## TODO: store (checksum, linenumber(s), versres)
 							tmplines[line].append((checksum, linenumber, versres))
@@ -2191,7 +2191,7 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 								(version, filename) = v
 								if version in vseen:
 									continue
-								if newpackageversions.has_key(version):
+								if version in newpackageversions:
 									newpackageversions[version] = newpackageversions[version] + 1
 								else:   
 									newpackageversions[version] = 1
@@ -2373,12 +2373,12 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 						versres = resdict[checksum]
 						for l in sha256_scan_versions[checksum]:
 							(functionname, linenumber) = l
-							if not tmplines.has_key(functionname):
+							if not functionname in tmplines:
 								tmplines[functionname] = []
 							## TODO: store (checksum, linenumber(s), versres)
 							tmplines[functionname].append((checksum, linenumber, versres))
 						for v in versres:
-							if sha256_versions.has_key(checksum):
+							if checksum in sha256_versions:
 								sha256_versions[checksum].append((v[0], v[1]))
 							else:
 								sha256_versions[checksum] = [(v[0], v[1])]
@@ -2463,15 +2463,15 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 							(variablename, varres) = p
 							for s in varres:
 								(checksum, linenumber) = s
-								if not sha256_versions.has_key(checksum):
-									if sha256_scan_versions.has_key(checksum):
+								if not checksum in sha256_versions:
+									if checksum in sha256_scan_versions:
 										sha256_scan_versions[checksum].add((variablename, linenumber))
 									else:
 										sha256_scan_versions[checksum] = set([(variablename, linenumber)])
 								else:
 									for v in sha256_versions[checksum]:
 										(version, filename) = v
-										if not tmplines.has_key(variablename):
+										if not variablename in tmplines:
 											tmplines[variablename] = []
 									tmplines[variablename].append((checksum, linenumber, sha256_versions[checksum]))
 
@@ -2513,12 +2513,12 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 							versres = resdict[checksum]
 							for l in sha256_scan_versions[checksum]:
 								(variablename, linenumber) = l
-								if not tmplines.has_key(variablename):
+								if not variablename in tmplines:
 									tmplines[variablename] = []
 								## TODO: store (checksum, linenumber(s), versres)
 								tmplines[variablename].append((checksum, linenumber, versres))
 							for v in versres:
-								if sha256_versions.has_key(checksum):
+								if checksum in sha256_versions:
 									sha256_versions[checksum].append((v[0], v[1]))
 								else:
 									sha256_versions[checksum] = [(v[0], v[1])]
