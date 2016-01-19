@@ -770,23 +770,17 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	## .class files might have been removed at this point, so sanity check first
 	rankingfiles = set()
 	filehashseen = set()
-	for i in unpackreports:
-		if not 'checksum' in unpackreports[i]:
-			continue
-		if not 'tags' in unpackreports[i]:
-			continue
-		if not 'ranking' in unpackreports[i]['tags']:
-			continue
-		filehash = unpackreports[i]['checksum']
-		if filehash in filehashseen:
-			continue
-		filehashseen.add(filehash)
-		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
-			continue
-		rankingfiles.add(i)
+	
+	## sanity check to see if all the ranking files are still there
+	for l in rankingfilesperlanguage:
+		newrankingfiles = []
+		for i in rankingfilesperlanguage[l]:
+			if i in unpackreports:
+				newrankingfiles.append(i)
+		rankingfilesperlanguage[l] = newrankingfiles
 
 	## and determine versions, etc.
-	compute_version(processors, newenv, unpackreports, rankingfiles, topleveldir, determinelicense, determinecopyright, batdb)
+	compute_version(processors, newenv, unpackreports, rankingfilesperlanguage, topleveldir, determinelicense, determinecopyright, batdb)
 
 ## grab variable names.
 def grab_sha256_varname(scanqueue, reportqueue, cursor, conn, query):
@@ -1973,7 +1967,7 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 ## Currently finding the version is based on unique matches that were found.
 ## If determinelicense or determinecopyright are set licenses and copyright statements
 ## are also extracted.
-def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldir, determinelicense, determinecopyright, batdb):
+def compute_version(processors, scanenv, unpackreports, rankingfilesperlanguage, topleveldir, determinelicense, determinecopyright, batdb):
 	masterdb = scanenv.get('BAT_DB')
 	if determinelicense or determinecopyright:
 		licensedb = scanenv.get('BAT_LICENSE_DB')
@@ -2020,23 +2014,6 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 	sha256_filename_query = batdb.getQuery("select version, pathname from processed_file where checksum=%s")
 	sha256_license_query = batdb.getQuery("select distinct license, scanner from licenses where checksum=%s")
 	sha256_copyright_query = batdb.getQuery("select distinct copyright, type from extracted_copyright where checksum=%s")
-
-	rankingfilesperlanguage = {}
-	for rankingfile in rankingfiles:
-		unpackreport = unpackreports[rankingfile]
-		## read the pickle
-		filehash = unpackreport['checksum']
-		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
-		leafreports = cPickle.load(leaf_file)
-		leaf_file.close()
-		if not 'ranking' in leafreports:
-			continue
-
-		(res, functionRes, variablepvs, language) = leafreports['ranking']
-		if not language in rankingfilesperlanguage:
-			rankingfilesperlanguage[language] = set([rankingfile])
-		else:
-			rankingfilesperlanguage[language].add(rankingfile)
 
 	for l in rankingfilesperlanguage:
 		for rankingfile in rankingfilesperlanguage[l]:
