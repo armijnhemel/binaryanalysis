@@ -2587,6 +2587,7 @@ def licensesetup_postgresql(scanenv, debug=False):
 	conn = batdb.getConnection(None,scanenv)
 	if conn == None:
 		return (False, None)
+	conn.commit()
 	conn.close()
 	newenv['BAT_CLASSNAME_SCAN'] = 1
 	newenv['BAT_FIELDNAME_SCAN'] = 1
