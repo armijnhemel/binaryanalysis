@@ -17,7 +17,7 @@ import bat.batdb
 from multiprocessing import Process, Lock
 from multiprocessing.sharedctypes import Value, Array
 
-def writejson(scanqueue, topleveldir, outputhash, cursor, batdb, scanenv, converthash):
+def writejson(scanqueue, topleveldir, outputhash, cursor, conn, batdb, scanenv, converthash):
 	hashcache = {}
 	while True:
 		filehash = scanqueue.get(timeout=2592000)
@@ -118,6 +118,7 @@ def writejson(scanqueue, topleveldir, outputhash, cursor, batdb, scanenv, conver
 									else:
 										cursor.execute(query, (filechecksum,))
 										convertedhash = cursor.fetchone()
+										conn.commit()
 										if convertedhash != None:
 											hashcache[filechecksum] = convertedhash[0]
 											identifierdatareport['filechecksum'] = convertedhash[0]
@@ -172,6 +173,7 @@ def writejson(scanqueue, topleveldir, outputhash, cursor, batdb, scanenv, conver
 								else:
 									cursor.execute(query, (filechecksum,))
 									convertedhash = cursor.fetchone()
+									conn.commit()
 									if convertedhash != None:
 										hashcache[filechecksum] = convertedhash[0]
 										identifierdatareport['filechecksum'] = convertedhash[0]
@@ -221,6 +223,7 @@ def writejson(scanqueue, topleveldir, outputhash, cursor, batdb, scanenv, conver
 								else:
 									cursor.execute(query, (filechecksum,))
 									convertedhash = cursor.fetchone()
+									conn.commit()
 									if convertedhash != None:
 										hashcache[filechecksum] = convertedhash[0]
 										identifierdatareport['filechecksum'] = convertedhash[0]
@@ -391,7 +394,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 				else:
 					converthash = False
 			batcursors.append(cursor)
-			p = multiprocessing.Process(target=writejson, args=(scanqueue,topleveldir,outputhash,batcursors[i], batdb, scanenv, converthash))
+			p = multiprocessing.Process(target=writejson, args=(scanqueue,topleveldir,outputhash,batcursors[i], batconns[i], batdb, scanenv, converthash))
 			processpool.append(p)
 			p.start()
 
@@ -400,5 +403,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 		for p in processpool:
 			p.terminate()
 
+		for c in batcursors:
+			c.close()
 		for c in batconns:
 			c.close()
