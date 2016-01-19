@@ -292,36 +292,40 @@ def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={},
 		if stream_version != 5:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "java_serialized", counter)
-		res = unpackJavaSerialized(filename, offset, tmpdir, blacklist)
+		tempname = "deserialize"
+		res = unpackJavaSerialized(filename, offset, tempname, tmpdir, blacklist)
 		if res != None:
 			(serdir, size) = res
 			diroffsets.append((serdir, offset, size))
 			blacklist.append((offset, offset + size))
+			tmpfilename = os.path.join(tmpdir, tempname)
+			hints[tmpfilename] = {}
+			hints[tmpfilename]['tags'] = ['serializedjava']
 			counter = counter + 1
 		else:
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, tags, hints)
 
-def unpackJavaSerialized(filename, offset, tempdir=None, blacklist=[]):
+def unpackJavaSerialized(filename, offset, tempname, tempdir=None, blacklist=[]):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
 	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
 
-	p = subprocess.Popen(['java', '-jar', '/usr/share/java/bat-jdeserialize.jar', '-blockdata', 'deserialize', tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	p = subprocess.Popen(['java', '-jar', '/usr/share/java/bat-jdeserialize.jar', '-blockdata', tempname, tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
         (stanout, stanerr) = p.communicate()
         if p.returncode != 0 or 'file version mismatch!' in stanerr or "error while attempting to decode file" in stanerr:
 		try:
-			os.unlink("%s/%s" % (tmpdir, "deserialize"))
+			os.unlink("%s/%s" % (tmpdir, tempname))
 		except OSError, e:
 			pass
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
-	if os.stat("%s/%s" % (tmpdir, "deserialize")).st_size == 0:
-		os.unlink("%s/%s" % (tmpdir, "deserialize"))
+	if os.stat("%s/%s" % (tmpdir, tempname)).st_size == 0:
+		os.unlink("%s/%s" % (tmpdir, tempname))
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
