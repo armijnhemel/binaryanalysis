@@ -636,6 +636,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		c = conn.cursor()
 		c.execute("SELECT originalname,newname from renames")
 		clonestmp = c.fetchall()
+		conn.commit()
 		c.close() 
 		conn.close()
 		for cl in clonestmp:
@@ -660,6 +661,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		avgquery = "select package, avgstrings from %s" % avgstringsdbperlanguagetable[language]
 		c.execute(avgquery)
 		res = c.fetchall()
+		conn.commit()
 		c.close()
 		conn.close()
 
@@ -700,8 +702,8 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		processpool = []
 
 		## first a cursor for the cache of each supported language
-		stringcachecursors = {}
-		namecachecursors = {}
+		stringcachecursors = []
+		namecachecursors = []
 		for i in range(0,minprocessamount):
 			if language in stringsdbperlanguagetable:
 				stringscache = newenv.get(stringsdbperlanguageenv[language])
@@ -710,7 +712,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 				conn = batdb.getConnection(stringscache,newenv)
 				c = conn.cursor()
 				stringcacheconns.append(conn)
-				stringcachecursors[language] = c
+				stringcachecursors.append(c)
 			## then for namecaches
 			if language in namecacheperlanguagetable:
 				namecache = newenv.get(namecacheperlanguageenv[language])
@@ -719,9 +721,9 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 				conn = batdb.getConnection(namecache,newenv)
 				c = conn.cursor()
 				namecacheconns.append(conn)
-				namecachecursors[language] = c
+				namecachecursors.append(c)
 
-			p = multiprocessing.Process(target=lookup_identifier, args=(scanqueue,reportqueue,batcursors[i],stringcachecursors,namecachecursors,batdb,newenv,topleveldir,avgscores,clones,scandebug))
+			p = multiprocessing.Process(target=lookup_identifier, args=(scanqueue,reportqueue, stringcachecursors[i], stringcacheconns[i],namecachecursors[i],namecacheconns[i],batdb,newenv,topleveldir,avgscores,clones,scandebug))
 			processpool.append(p)
 			p.start()
 
@@ -739,7 +741,11 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 
 		for p in processpool:
 			p.terminate()
+		for c in stringcachecursors:
+			c.close()
 		for c in stringcacheconns:
+			c.close()
+		for c in namecachecursors:
 			c.close()
 		for c in namecacheconns:
 			c.close()
@@ -780,7 +786,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		rankingfiles.add(i)
 
 	## and determine versions, etc.
-	compute_version(processors, newenv, unpackreports, rankingfiles, topleveldir, determinelicense, determinecopyright, batdb)
+	#compute_version(processors, newenv, unpackreports, rankingfiles, topleveldir, determinelicense, determinecopyright, batdb)
 
 ## grab variable names.
 def grab_sha256_varname(scanqueue, reportqueue, cursor, conn, query):
@@ -853,7 +859,7 @@ def grab_sha256_parallel(scanqueue, reportqueue, cursor, conn, batdb, language, 
 			reportqueue.put((line, res))
 		scanqueue.task_done()
 
-def extractJava(javameta, scanenv, funccursor, batdb, clones):
+def extractJava(javameta, scanenv, funccursor, funcconn, batdb, clones):
 	dynamicRes = {}  # {'namesmatched': 0, 'totalnames': int, 'uniquematches': int, 'packages': {} }
 	namesmatched = 0
 	uniquematches = 0
@@ -878,7 +884,7 @@ def extractJava(javameta, scanenv, funccursor, batdb, clones):
 	fields = javameta['fields']
 	sourcefile = javameta['sourcefiles']
 
-	if scanenv.has_key('BAT_METHOD_SCAN'):
+	if 'BAT_METHOD_SCAN' in scanenv:
 
 		query = batdb.getQuery("select distinct package from %s where functionname=" % namecacheperlanguagetable['Java'] + "%s")
 		for meth in methods:
@@ -886,6 +892,7 @@ def extractJava(javameta, scanenv, funccursor, batdb, clones):
 				continue
 			funccursor.execute(query, (meth,))
 			res = funccursor.fetchall()
+			funcconn.commit()
 			if res != []:
 				namesmatched += 1
 				packages_tmp = []
@@ -923,7 +930,7 @@ def extractJava(javameta, scanenv, funccursor, batdb, clones):
 	## Of course, it could be that the source file is different from the
 	## class file (apart from the extension of course) but this is very
 	## uncommon. TODO: merge class name and source file name searching
-	if scanenv.has_key('BAT_CLASSNAME_SCAN'):
+	if 'BAT_CLASSNAME_SCAN' in scanenv:
 		classes = set(map(lambda x: x.split('$')[0], classes))
 		query = batdb.getQuery("select package from classcache_java where classname=%s")
 		for i in classes:
@@ -934,11 +941,13 @@ def extractJava(javameta, scanenv, funccursor, batdb, clones):
 			classname = i
 			funccursor.execute(query, (classname,))
 			classres = funccursor.fetchall()
+			funcconn.commit()	
 			if classres == []:
 				## check just the last component
 				classname = classname.split('.')[-1]
 				classres = funccursor.execute(query, (classname,))
 				classres = funccursor.fetchall()
+				funcconn.commit()	
 			## check the cloning database
 			if classres != []:
 				classres_tmp = []
@@ -967,6 +976,7 @@ def extractJava(javameta, scanenv, funccursor, batdb, clones):
 			## use the last component only.
 			funccursor.execute(query, (classname,))
 			classres = funccursor.fetchall()
+			funcconn.commit()	
 			## check the cloning database
 			if classres != []:
 				classres_tmp = []
@@ -984,7 +994,7 @@ def extractJava(javameta, scanenv, funccursor, batdb, clones):
 	## likely only coming from a few packages there is no need to hit the database
 	## that often.
 	sha256cache = {}
-	if scanenv.has_key('BAT_FIELDNAME_SCAN'):
+	if 'BAT_FIELDNAME_SCAN' in scanenv:
 		query = batdb.getQuery("select package from fieldcache_java where fieldname=%s")
 		for f in fields:
 			## a few fields are so common that they will be completely useless
@@ -997,6 +1007,7 @@ def extractJava(javameta, scanenv, funccursor, batdb, clones):
 
 			funccursor.execute(query, (f,))
 			fieldres = funccursor.fetchall()
+			funcconn.commit()	
 			if fieldres != []:
 				fieldres_tmp = []
 				for r in fieldres:
@@ -1018,7 +1029,7 @@ def extractJava(javameta, scanenv, funccursor, batdb, clones):
 		dynamicRes['packages'][i] = []
 	return (dynamicRes, variablepvs)
 
-def scankernelsymbols(variables, scanenv, kernelquery, funccursor, clones):
+def scankernelsymbols(variables, scanenv, kernelquery, funccursor, funcconn, clones):
 	allvvs = {}
 	uniquevvs = {}
 	variablepvs = {}
@@ -1026,6 +1037,7 @@ def scankernelsymbols(variables, scanenv, kernelquery, funccursor, clones):
 		pvs = []
 		funccursor.execute(kernelquery, (v,))
 		res = funccursor.fetchall()
+		funcconn.commit()
 		if res != []:
 			pvs = map(lambda x: x[0], res)
 
@@ -1057,7 +1069,7 @@ def scankernelsymbols(variables, scanenv, kernelquery, funccursor, clones):
 ## By searching a database that contains which function names and variable names
 ## can be found in which packages it is possible to identify which package was
 ## used.
-def scanDynamic(scanstr, variables, scanenv, funccursor, batdb, clones):
+def scanDynamic(scanstr, variables, scanenv, funccursor, funcconn, batdb, clones):
 	dynamicRes = {}
 	variablepvs = {}
 
@@ -1079,6 +1091,7 @@ def scanDynamic(scanstr, variables, scanenv, funccursor, batdb, clones):
 		for funcname in scanstr:
 			funccursor.execute(query, (funcname,))
 			res = funccursor.fetchall()
+			funcconn.commit()
 			pkgs = []
 			if res != []:
 				packages_tmp = []
@@ -1129,6 +1142,7 @@ def scanDynamic(scanstr, variables, scanenv, funccursor, batdb, clones):
 			pvs = []
 			funccursor.execute(query, (v,))
 			res = funccursor.fetchall()
+			funcconn.commit()
 			if res != []:
 				pvs = map(lambda x: x[0], res)
 
@@ -1157,7 +1171,7 @@ def scanDynamic(scanstr, variables, scanenv, funccursor, batdb, clones):
 
 ## match identifiers with data in the database
 ## First match string literals, then function names and variable names for various languages
-def lookup_identifier(scanqueue, reportqueue, cursor, stringcachecursors, namecachecursors, batdb, scanenv, topleveldir, avgscores, clones, scandebug):
+def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccursor, funcconn, batdb, scanenv, topleveldir, avgscores, clones, scandebug):
 	## first some things that are shared between all scans
 	if 'BAT_STRING_CUTOFF' in scanenv:
 		try:
@@ -1227,7 +1241,6 @@ def lookup_identifier(scanqueue, reportqueue, cursor, stringcachecursors, nameca
 			linuxkernel = True
 			if scanenv.get('BAT_KERNELFUNCTION_SCAN') == 1 and language == 'C':
 				scankernelfunctions = True
-		funccursor = namecachecursors[language]
 
 		## first compute the score for the lines
 		if lenlines != 0 and scanlines:
@@ -1260,8 +1273,6 @@ def lookup_identifier(scanqueue, reportqueue, cursor, stringcachecursors, nameca
 			directAssignedString = {}
 			unmatched = []
 			unmatchedignorecache = set()
-
-			c = stringcachecursors[language]
 
 			kernelfuncres = []
 			kernelparamres = []
@@ -1341,8 +1352,9 @@ def lookup_identifier(scanqueue, reportqueue, cursor, stringcachecursors, nameca
 				## helps reduce load on databases stored on slower disks. Only used if
 				## precomputescore is set and "source order" is False.
 				if precomputescore:
-					c.execute(precomputequery, (line,))
-					scoreres = c.fetchone()
+					stringcursor.execute(precomputequery, (line,))
+					scoreres = stringcursor.fetchone()
+					stringconn.commit()
 					if scoreres != None:
 						## If the score is so low it will not have any influence on the final
 						## score, why even bother hitting the disk?
@@ -1373,6 +1385,7 @@ def lookup_identifier(scanqueue, reportqueue, cursor, stringcachecursors, nameca
 					if scankernelfunctions:
 						funccursor.execute(kernelquery, (line,))
 						kernelres = funccursor.fetchall()
+						funcconn.commit()
 						if len(kernelres) != 0:
 							kernelfuncres.append(line)
 							kernelfunctionmatched = True
@@ -1380,8 +1393,9 @@ def lookup_identifier(scanqueue, reportqueue, cursor, stringcachecursors, nameca
 							continue
 
 				## then see if there is anything in the cache at all
-				c.execute(stringquery, (line,))
-				res = c.fetchall()
+				stringcursor.execute(stringquery, (line,))
+				res = stringcursor.fetchall()
+				stringconn.commit()
 
 				if len(res) == 0 and linuxkernel:
 					origline = line
@@ -1398,8 +1412,9 @@ def lookup_identifier(scanqueue, reportqueue, cursor, stringcachecursors, nameca
 							unmatchedlines += 1
 							linecount[line] = linecount[line] - 1
 							continue
-						c.execute(stringquery, (scanline,))
-						res = c.fetchall()
+						stringcursor.execute(stringquery, (scanline,))
+						res = stringcursor.fetchall()
+						stringconn.commit()
 						if len(res) != 0:
 							line = scanline
 						else:
@@ -1414,8 +1429,9 @@ def lookup_identifier(scanqueue, reportqueue, cursor, stringcachecursors, nameca
 									linecount[line] = linecount[line] - 1
 									unmatchedignorecache.add(origline)
 									continue
-								c.execute(stringquery, (scanline,))
-								res = c.fetchall()
+								stringcursor.execute(stringquery, (scanline,))
+								res = stringcursor.fetchall()
+								stringconn.commit()
 								if len(res) != 0:
 									if len(scanline) != 0:
 										line = scanline
@@ -1432,8 +1448,9 @@ def lookup_identifier(scanqueue, reportqueue, cursor, stringcachecursors, nameca
 								linecount[line] = linecount[line] - 1
 								unmatchedignorecache.add(origline)
 								continue
-							c.execute(stringquery, (scanline,))
-							res = c.fetchall()
+							stringcursor.execute(stringquery, (scanline,))
+							res = stringcursor.fetchall()
+							stringconn.commit()
 							if len(res) != 0:
 								if len(scanline) != 0:
 									line = scanline
@@ -1450,8 +1467,9 @@ def lookup_identifier(scanqueue, reportqueue, cursor, stringcachecursors, nameca
 									linecount[line] = linecount[line] - 1
 									unmatchedignorecache.add(origline)
 									continue
-								c.execute(stringquery, (scanline,))
-								res = c.fetchall()
+								stringcursor.execute(stringquery, (scanline,))
+								res = stringcursor.fetchall()
+								stringconn.commit()
 								if len(res) != 0:
 									if len(scanline) != 0:
 										line = scanline
@@ -1920,19 +1938,19 @@ def lookup_identifier(scanqueue, reportqueue, cursor, stringcachecursors, nameca
 				functionRes = {}
 				if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
 					kernelquery = batdb.getQuery("select distinct package from linuxkernelnamecache where varname=%s")
-					variablepvs = scankernelsymbols(leafreports['identifier']['kernelsymbols'], scanenv, kernelquery, funccursor, clones)
+					variablepvs = scankernelsymbols(leafreports['identifier']['kernelsymbols'], scanenv, kernelquery, funccursor, funcconn, clones)
 				## TODO: clean up
 				if leafreports['identifier'].has_key('kernelfunctions'):
 					if leafreports['identifier']['kernelfunctions'] != []:
 						functionRes['kernelfunctions'] = copy.deepcopy(leafreports['identifier']['kernelfunctions'])
 			else:
-				(functionRes, variablepvs) = scanDynamic(leafreports['identifier']['functionnames'], leafreports['identifier']['variablenames'], scanenv, funccursor, batdb, clones)
+				(functionRes, variablepvs) = scanDynamic(leafreports['identifier']['functionnames'], leafreports['identifier']['variablenames'], scanenv, funccursor, funcconn, batdb, clones)
 		elif language == 'Java':
 			if not scanenv.has_key(namecacheperlanguageenv['Java']):
 				variablepvs = {}
 				functionRes = {}
 			else:
-				(functionRes, variablepvs) = extractJava(leafreports['identifier'], scanenv, funccursor, batdb, clones)
+				(functionRes, variablepvs) = extractJava(leafreports['identifier'], scanenv, funccursor, funcconn, batdb, clones)
 		else:
 			variablepvs = {}
 			functionRes = {}
