@@ -1131,6 +1131,10 @@ def scanDynamic(scanstr, variables, scanenv, funccursor, funcconn, batdb, clones
 
 	## Scan C variables extracted from dynamically linked files.
 	if scanenv.get('BAT_VARNAME_SCAN'):
+
+		## keep two mappings:
+		## 1. unique variable names per package
+		## 2. package per variable name
 		uniquevvs = {}
 		allvvs = {}
 		query = batdb.getQuery("select distinct package from varnamecache_c where varname=%s")
@@ -2046,8 +2050,8 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 			(res, functionRes, variablepvs, language) = leafreports['ranking']
 
 			## indicate whether or not the pickle should be written back to disk.
-			## If uniquematches is empty and if functionRes is also empty,
-			## then nothing needs to be written back.
+			## If uniquematches is empty, functionRes is empty, and variablepvs
+			## is also empty, then nothing needs to be written.
 			changed = False
 
 			if res == None and functionRes == {} and variablepvs == {}:
@@ -2286,7 +2290,7 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 				res['reports'] = newreports
 
 			## Then process the results for the function names
-			if functionRes.has_key('versionresults'):
+			if 'versionresults' in functionRes:
 
 				for package in functionRes['versionresults'].keys():
 					if not functionRes.has_key('uniquepackages'):
@@ -2428,76 +2432,29 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 
 			## Then process the results for the variable names
 			if variablepvs != {}:
-				if variablepvs.has_key('uniquepackages'):
-					for package in variablepvs['uniquepackages']:
-						vartype = 'variable'
-						if 'type' in variablepvs:
+				if language == 'C':
+					if 'uniquepackages' in variablepvs:
+						if variablepvs['uniquepackages'] != {}:
+							changed = True
+						for package in variablepvs['uniquepackages']:
 							vartype = 'variable'
-							if variablepvs['type'] == 'linuxkernel':
-								vartype = 'kernelvariable'
-						uniques = variablepvs['uniquepackages'][package]
+							if 'type' in variablepvs:
+								vartype = 'variable'
+								if variablepvs['type'] == 'linuxkernel':
+									vartype = 'kernelvariable'
+							uniques = variablepvs['uniquepackages'][package]
 
-						processpool = []
-						vsha256s = []
-
-						scanqueue = multiprocessing.JoinableQueue(maxsize=0)
-						reportqueue = scanmanager.Queue(maxsize=0)
-
-						map(lambda x: scanqueue.put(x), uniques)
-						minprocessamount = min(len(uniques), processamount)
-
-						for i in range(0,minprocessamount):
-							p = multiprocessing.Process(target=grab_sha256_parallel, args=(scanqueue,reportqueue,batcursors[i], batcons[i], batdb, language, vartype))
-							processpool.append(p)
-							p.start()
-
-        					scanqueue.join()
-
-						while True:
-							try:
-								val = reportqueue.get_nowait()
-								vsha256s.append(val)
-								reportqueue.task_done()
-							except Queue.Empty, e:
-								## Queue is empty
-								break
-						reportqueue.join()
-
-						for p in processpool:
-							p.terminate()
-
-                        				sha256_scan_versions = {}
-                        				tmplines = {}
-
-						for p in vsha256s:
-							(variablename, varres) = p
-							for s in varres:
-								(checksum, linenumber) = s
-								if not checksum in sha256_versions:
-									if checksum in sha256_scan_versions:
-										sha256_scan_versions[checksum].add((variablename, linenumber))
-									else:
-										sha256_scan_versions[checksum] = set([(variablename, linenumber)])
-								else:
-									for v in sha256_versions[checksum]:
-										(version, filename) = v
-										if not variablename in tmplines:
-											tmplines[variablename] = []
-									tmplines[variablename].append((checksum, linenumber, sha256_versions[checksum]))
-
-						resdict = {}
-						if len(sha256_scan_versions.keys()) != 0:
 							processpool = []
-							fileres = []
+							vsha256s = []
 
 							scanqueue = multiprocessing.JoinableQueue(maxsize=0)
 							reportqueue = scanmanager.Queue(maxsize=0)
 
-							map(lambda x: scanqueue.put(x), sha256_scan_versions.keys())
-							minprocessamount = min(len(sha256_scan_versions.keys()), processamount)
+							map(lambda x: scanqueue.put(x), uniques)
+							minprocessamount = min(len(uniques), processamount)
 
 							for i in range(0,minprocessamount):
-								p = multiprocessing.Process(target=grab_sha256_filename, args=(scanqueue,reportqueue,batcursors[i], batcons[i], sha256_filename_query))
+								p = multiprocessing.Process(target=grab_sha256_parallel, args=(scanqueue,reportqueue,batcursors[i], batcons[i], batdb, language, vartype))
 								processpool.append(p)
 								p.start()
 
@@ -2506,7 +2463,7 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 							while True:
 								try:
 									val = reportqueue.get_nowait()
-									fileres.append(val)
+									vsha256s.append(val)
 									reportqueue.task_done()
 								except Queue.Empty, e:
 									## Queue is empty
@@ -2516,58 +2473,107 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 							for p in processpool:
 								p.terminate()
 
-							map(lambda x: resdict.update(x), fileres)
+                        					sha256_scan_versions = {}
+                        					tmplines = {}
 
-						## construct the full information needed by other scans
-						for checksum in resdict:
-							versres = resdict[checksum]
-							for l in sha256_scan_versions[checksum]:
-								(variablename, linenumber) = l
-								if not variablename in tmplines:
-									tmplines[variablename] = []
-								## TODO: store (checksum, linenumber(s), versres)
-								tmplines[variablename].append((checksum, linenumber, versres))
-							for v in versres:
-								if checksum in sha256_versions:
-									sha256_versions[checksum].append((v[0], v[1]))
-								else:
-									sha256_versions[checksum] = [(v[0], v[1])]
-						for l in tmplines.keys():
-							variablepvs['versionresults'][package].append((l, tmplines[l]))
-
-					newresults = {}
-					for package in variablepvs['versionresults'].keys():
-						newuniques = variablepvs['versionresults'][package]
-						## optionally prune version information
-
-						if pruning:
-							if len(newuniques) > minimumunique:
-								newuniques = prune(newuniques, package)
-
-						newresults[package] = newuniques
-						uniqueversions = {}
-						variablepvs['packages'][package] = []
-						if have_counter:
-							vs = collections.Counter()
-						else:
-							vs = {}
-						for u in newuniques:
-							versionsha256s = u[1]
-							for s in versionsha256s:
-								(checksum, linenumber, versionfilenames) = s
-								if have_counter:
-									vs.update(set(map(lambda x: x[0], versionfilenames)))
-								else:
-									for v in set(map(lambda x: x[0], versionfilenames)):
-										if v in vs:
-											vs[v] += 1
+							for p in vsha256s:
+								(variablename, varres) = p
+								for s in varres:
+									(checksum, linenumber) = s
+									if not checksum in sha256_versions:
+										if checksum in sha256_scan_versions:
+											sha256_scan_versions[checksum].add((variablename, linenumber))
 										else:
-											vs[v] = 1
+											sha256_scan_versions[checksum] = set([(variablename, linenumber)])
+									else:
+										for v in sha256_versions[checksum]:
+											(version, filename) = v
+											if not variablename in tmplines:
+												tmplines[variablename] = []
+										tmplines[variablename].append((checksum, linenumber, sha256_versions[checksum]))
 
-						for v in vs:
-							variablepvs['packages'][package].append((v, vs[v]))
-					variablepvs['versionresults'] = newresults
-					changed = True
+							resdict = {}
+							if len(sha256_scan_versions.keys()) != 0:
+								processpool = []
+								fileres = []
+
+								scanqueue = multiprocessing.JoinableQueue(maxsize=0)
+								reportqueue = scanmanager.Queue(maxsize=0)
+
+								map(lambda x: scanqueue.put(x), sha256_scan_versions.keys())
+								minprocessamount = min(len(sha256_scan_versions.keys()), processamount)
+
+								for i in range(0,minprocessamount):
+									p = multiprocessing.Process(target=grab_sha256_filename, args=(scanqueue,reportqueue,batcursors[i], batcons[i], sha256_filename_query))
+									processpool.append(p)
+									p.start()
+
+        							scanqueue.join()
+
+								while True:
+									try:
+										val = reportqueue.get_nowait()
+										fileres.append(val)
+										reportqueue.task_done()
+									except Queue.Empty, e:
+										## Queue is empty
+										break
+								reportqueue.join()
+
+								for p in processpool:
+									p.terminate()
+
+								map(lambda x: resdict.update(x), fileres)
+
+							## construct the full information needed by other scans
+							for checksum in resdict:
+								versres = resdict[checksum]
+								for l in sha256_scan_versions[checksum]:
+									(variablename, linenumber) = l
+									if not variablename in tmplines:
+										tmplines[variablename] = []
+									## TODO: store (checksum, linenumber(s), versres)
+									tmplines[variablename].append((checksum, linenumber, versres))
+								for v in versres:
+									if checksum in sha256_versions:
+										sha256_versions[checksum].append((v[0], v[1]))
+									else:
+										sha256_versions[checksum] = [(v[0], v[1])]
+							for l in tmplines.keys():
+								variablepvs['versionresults'][package].append((l, tmplines[l]))
+
+						newresults = {}
+						for package in variablepvs['versionresults'].keys():
+							newuniques = variablepvs['versionresults'][package]
+							## optionally prune version information
+
+							if pruning:
+								if len(newuniques) > minimumunique:
+									newuniques = prune(newuniques, package)
+
+							newresults[package] = newuniques
+							uniqueversions = {}
+							variablepvs['packages'][package] = []
+							if have_counter:
+								vs = collections.Counter()
+							else:
+								vs = {}
+							for u in newuniques:
+								versionsha256s = u[1]
+								for s in versionsha256s:
+									(checksum, linenumber, versionfilenames) = s
+									if have_counter:
+										vs.update(set(map(lambda x: x[0], versionfilenames)))
+									else:
+										for v in set(map(lambda x: x[0], versionfilenames)):
+											if v in vs:
+												vs[v] += 1
+											else:
+												vs[v] = 1
+
+							for v in vs:
+								variablepvs['packages'][package].append((v, vs[v]))
+						variablepvs['versionresults'] = newresults
 
 			if changed:
 				leafreports['ranking'] = (res, functionRes, variablepvs, language)
