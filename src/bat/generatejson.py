@@ -383,6 +383,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 			hashdatabase = scanenv['BAT_DB']
 		for i in range(0,processamount):
 			cursor = None
+			conn = None
 			if converthash:
 				if batdb != None:
 					conn = batdb.getConnection(hashdatabase,scanenv)
@@ -394,6 +395,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 				else:
 					converthash = False
 			batcursors.append(cursor)
+			batconns.append(conn)
 			p = multiprocessing.Process(target=writejson, args=(scanqueue,topleveldir,outputhash,batcursors[i], batconns[i], batdb, scanenv, converthash))
 			processpool.append(p)
 			p.start()
@@ -403,7 +405,8 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 		for p in processpool:
 			p.terminate()
 
-		for c in batcursors:
-			c.close()
-		for c in batconns:
-			c.close()
+		if converthash:
+			for c in batcursors:
+				c.close()
+			for c in batconns:
+				c.close()
