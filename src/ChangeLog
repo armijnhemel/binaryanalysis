@@ -1,3 +1,17 @@
+2016-01-19:
+* fwunpack.py: tag Java deserialized data
+* licenseversion.py: explicitely call commit()
+* generatejson.py: explicitely call commit()
+* identifier.py: explicitely call commit()
+* security.py: add code to check for certificates
+* bat-scan.config: add configuration for tagging certificates
+* identifier.py: treat Java serialized files as Java
+* licenseversion.py: explicitely do variable names processing just for C files
+now
+* licenseversion.py: don't unnecessarily read pickle files
+* prerun.py: remove bogus check for appledouble files
+* identifier.py: tag oat files as Java and ignore for now.
+
 2016-01-18:
 * prerun.py: finish code to tag WebP files
 * prerun.py: add another known extension for ICO files
