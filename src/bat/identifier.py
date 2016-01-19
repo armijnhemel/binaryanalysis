@@ -68,10 +68,11 @@ def searchGeneric(filepath, tags, blacklist=[], scanenv={}, offsets={}, scandebu
 	## * Mono/.NET files
 	## * Flash/ActionScript
 
-	if 'elf' in tags and not 'dalvik' in tags:
-		language = 'C'
-	elif 'elf' in tags and 'oat' in tags:
-		language = 'Java'
+	if 'elf' in tags:
+		if 'oat' in tags:
+			language = 'Java'
+		else:
+			language = 'C'
 	elif "java" in tags:
 		language = 'Java'
 	elif "dalvik" in tags:
