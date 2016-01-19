@@ -76,6 +76,8 @@ def searchGeneric(filepath, tags, blacklist=[], scanenv={}, offsets={}, scandebu
 		language = 'Java'
 	elif "dalvik" in tags:
 		language = 'Java'
+	elif 'serializedjava' in tags:
+		language = 'Java'
 	else:
 		## Treat everything else as C
 		## TODO check for Javascript, .NET and others
@@ -387,6 +389,10 @@ def extractJava(scanfile, tags, scanenv, filesize, stringcutoff, blacklist=[], s
 		javatype = 'odex'
 	elif 'oat' in tags:
 		javatype = 'oat'
+	elif 'serializedjava' in tags:
+		javatype = 'serializedjava'
+		## TODO: find out what to do with this
+		return None
 	else:
 		javatype = 'java'
 	if blacklist == []:
