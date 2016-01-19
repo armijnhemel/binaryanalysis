@@ -2046,7 +2046,8 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 			(res, functionRes, variablepvs, language) = leafreports['ranking']
 
 			## indicate whether or not the pickle should be written back to disk.
-			## If uniquematches is empty and if functionRes is also empty, then nothing needs to be written back.
+			## If uniquematches is empty and if functionRes is also empty,
+			## then nothing needs to be written back.
 			changed = False
 
 			if res == None and functionRes == {} and variablepvs == {}:
@@ -2055,13 +2056,19 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 			## keep a list of versions per sha256, since source files often are in more than one version
 			sha256_versions = {}
 
+			## First process all the string identifiers
 			if res != None:
 				newreports = []
+
 				for r in res['reports']:
 					(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses, packagecopyrights) = r
 					if unique == []:
+						## Continue to the next item if there are no unique matches
 						newreports.append(r)
 						continue
+
+					## There are unique matches, so results should
+					## be written back to disk
 					changed = True
 					newuniques = []
 					newpackageversions = {}
@@ -2070,8 +2077,9 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 					uniques = set(map(lambda x: x[0], unique))
 					lenuniques = len(uniques)
 
-					## first grab all possible checksums, plus associated line numbers for this string. Since
-					## these are unique strings they will only be present in the package (or clones of the package).
+					## first grab all possible checksums, plus associated line numbers
+					## for this string. Since these are unique strings they will only be
+					## present in the package (or clones of the package).
 					processpool = []
 					vsha256s = []
 
@@ -2277,6 +2285,7 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 					newreports.append((rank, package, newuniques, uniquematcheslen, percentage, newpackageversions, packagelicenses, packagecopyrights))
 				res['reports'] = newreports
 
+			## Then process the results for the function names
 			if functionRes.has_key('versionresults'):
 
 				for package in functionRes['versionresults'].keys():
@@ -2417,6 +2426,7 @@ def compute_version(processors, scanenv, unpackreports, rankingfiles, topleveldi
 						functionRes['packages'][package].append((v, vs[v]))
 				functionRes['versionresults'] = newresults
 
+			## Then process the results for the variable names
 			if variablepvs != {}:
 				if variablepvs.has_key('uniquepackages'):
 					for package in variablepvs['uniquepackages']:
