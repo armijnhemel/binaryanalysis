@@ -177,6 +177,22 @@ def checkOpenSSHKeys(filename, tags, blacklist=[], scanenv={}, scandebug=False, 
 			return
 		return (['privatekey'], None)
 
+## method to check if a file is a certificate
+def checkCertificate(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+	if not 'text' in tags:
+		return
+
+	certfile = open(filename, 'rb')
+	certdata = certfile.readline()
+	certfile.close()
+	if "-----BEGIN" in certdata:
+		## now run openssl
+		p = subprocess.Popen(["openssl", "asn1parse", "-inform", "PEM", "-in", filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			return
+		return (['certificate'], None)
+
 ## stubs for cracking passwords with "John the Ripper"
 ## 1. look for files called 'passwd' and 'shadow'
 ## 2. search for individual entries in the database
