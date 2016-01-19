@@ -786,7 +786,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		rankingfiles.add(i)
 
 	## and determine versions, etc.
-	#compute_version(processors, newenv, unpackreports, rankingfiles, topleveldir, determinelicense, determinecopyright, batdb)
+	compute_version(processors, newenv, unpackreports, rankingfiles, topleveldir, determinelicense, determinecopyright, batdb)
 
 ## grab variable names.
 def grab_sha256_varname(scanqueue, reportqueue, cursor, conn, query):
