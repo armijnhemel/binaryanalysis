@@ -1,3 +1,11 @@
+2016-01-20:
+* bat-scan: extra sanity check to make sure that file dir and output dir are
+not the same
+* prerun.py: add simple verifier for WAV files
+* fwunpack.py: extra sanity check for compress: first unpack some data and try
+to uncompress it. Because it is a stream this will succeed, even if the file
+is not complete. False positives can be filtered out easily this way.
+
 2016-01-19:
 * fwunpack.py: tag Java deserialized data
 * licenseversion.py: explicitely call commit()
