@@ -131,6 +131,20 @@ def verifyText(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fa
 	datafile.close()
 	return newtags
 
+## verify WAV files
+## http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html
+## https://sites.google.com/site/musicgapi/technical-documents/wav-file-format
+def verifyWav(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+	## some chunks observed in the wild. 'LGWV' and 'bext' seem to be extensions
+	validchunks = ['fmt ', 'fact', 'data', 'cue ', 'list', 'plst', 'labl', 'ltxt', 'note', 'smpl', 'inst', 'bext', 'LGWV']
+	## the next four characters should be 'WEBP'
+	fourcc = 'WAVE'
+	newtags = verifyRiff(filename, validchunks, fourcc, tempdir, tags, offsets, scanenv, debug, unpacktempdir)
+	if newtags != []:
+		newtags.append('wav')
+		newtags.append('audio')
+	return newtags
+
 ## verify WebP files
 ## https://developers.google.com/speed/webp/docs/riff_container
 def verifyWebP(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
