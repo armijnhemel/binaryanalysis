@@ -2970,11 +2970,34 @@ def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, scane
 			continue
 		if compressbits > 16:
 			continue
+
+		## since compress expects a stream it will decompress some
+		## data, so as a first test read 1 MiB of data and then
+		## try to decompress it.
+		## If no data could be impressed
+		compressfile = open(filename, 'rb')
+		compressfile.seek(offset)
+		compressdata = compressfile.read(1048576)
+		compressfile.close()
+
+		p = subprocess.Popen(['uncompress'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		(stanout, stanerr) = p.communicate(compressdata)
+		if len(stanout) == 0:
+			continue
+
 		tmpdir = dirsetup(tempdir, filename, "compress", counter)
 		res = unpackCompress(filename, offset, compresslimit, tmpdir, compress_tmpdir, blacklist)
 		if res != None:
-			diroffsets.append((res, offset, 0))
+			## TODO: find out how to find the length of the compressed
+			## data that was uncompressed so the right offsets for the
+			## blacklist can be computed
+			compresssize = 0
+			diroffsets.append((res, offset, compresssize))
+			#blacklist.append((offset, offset + compresssize))
 			counter = counter + 1
+			if offset == 0 and compresssize == os.stat(filename).st_size:
+				newtags.append('compressed')
+				newtags.append('compress')
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
