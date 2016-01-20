@@ -79,6 +79,8 @@ def main(argv):
         			parser.error("output directory does not exist")
 			if not os.path.isdir(options.outdir):
         			parser.error("output path is not a directory")
+		if os.path.normpath(options.fwdir) == os.path.normpath(options.outdir):
+        		parser.error("firmware directory and output directory cannot be the same")
 
 	try:
 		config.readfp(configfile)
