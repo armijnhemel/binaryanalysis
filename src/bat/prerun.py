@@ -134,6 +134,17 @@ def verifyText(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fa
 ## verify WebP files
 ## https://developers.google.com/speed/webp/docs/riff_container
 def verifyWebP(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+	validchunks = ['VP8 ', 'VP8L', 'VP8X', 'ANIM', 'ANMF', 'ALPH', 'ICCP', 'EXIF', 'XMP ']
+	## the next four characters should be 'WEBP'
+	fourcc = 'WEBP'
+	newtags = verifyRiff(filename, validchunks, fourcc, tempdir, tags, offsets, scanenv, debug, unpacktempdir)
+	if newtags != []:
+		newtags.append('webp')
+		newtags.append('graphics')
+	return newtags
+
+## generic method to verify RIFF files, such as WebP or WAV
+def verifyRiff(filename, validchunks, fourcc, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if "text" in tags or "compressed" in tags or "audio" in tags or "graphics" in tags:
 		return newtags
@@ -146,52 +157,47 @@ def verifyWebP(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fa
 	## there should at least be a WebP header
 	if filesize < 12:
 		return newtags
-	webpfile = open(filename, 'rb')
-	webpfile.seek(4)
+	rifffile = open(filename, 'rb')
+	rifffile.seek(4)
 	## size of bytes following the size field
-	webpfilesize = struct.unpack('<I', webpfile.read(4))[0]
+	rifffilesize = struct.unpack('<I', rifffile.read(4))[0]
 
-	if not webpfilesize + 8 == filesize:
-		webpfile.close()
+	if not rifffilesize + 8 == filesize:
+		rifffile.close()
 		return newtags
-	fourcc = webpfile.read(4)
+	fourcc_read = rifffile.read(4)
 
-	validchunks = ['VP8 ', 'VP8L', 'VP8X', 'ANIM', 'ANMF', 'ALPH', 'ICCP', 'EXIF', 'XMP ']
-	## the next four characters should be 'WEBP'
-	if fourcc != 'WEBP':
-		webpfile.close()
+	if fourcc_read != fourcc:
+		rifffile.close()
 		return newtags
 
 	## then depending on the file format different
 	## content will follow.
 	## There are different chunks that can follow eachother
 	## in the file.
-	while webpfile.tell() != filesize:
-		chunkheaderbytes = webpfile.read(4)
+	while rifffile.tell() != filesize:
+		chunkheaderbytes = rifffile.read(4)
 		if len(chunkheaderbytes) != 4:
-			webpfile.close()
+			rifffile.close()
 			return newtags
-		## recognized chunk headers are:
-		## 'VP8 ', 'VP8L', 'VP8X'
 		if not chunkheaderbytes in validchunks:
-			webpfile.close()
+			rifffile.close()
 			return newtags
 
 		## then read the size of the chunk
-		chunksizebytes = webpfile.read(4)
+		chunksizebytes = rifffile.read(4)
 		if len(chunksizebytes) != 4:
-			webpfile.close()
+			rifffile.close()
 			return newtags
 		chunksizebytes = struct.unpack('<I', chunksizebytes)[0]
-		curoffset = webpfile.tell()
+		curoffset = rifffile.tell()
 		if curoffset + chunksizebytes > filesize:
-			webpfile.close()
+			rifffile.close()
 			return newtags
-		webpfile.seek(curoffset + chunksizebytes)
+		rifffile.seek(curoffset + chunksizebytes)
 
-	webpfile.close()
-	newtags.append('webp')
-	newtags.append('graphics')
+	rifffile.close()
+	newtags.append('riff')
 	return newtags
 
 ## Quick check to verify if a file is a graphics file.
