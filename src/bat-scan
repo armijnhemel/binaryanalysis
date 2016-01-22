@@ -118,6 +118,8 @@ def main(argv):
 				i = osgen.next()
 				for s in i[2]:
 					scanpath = os.path.join(i[0], s)
+					if not os.path.exists(scanpath):
+						continue
 					if os.stat(scanpath).st_size == 0:
 						continue
 					if os.path.islink(scanpath):
@@ -126,7 +128,7 @@ def main(argv):
 						continue
 					newoutdir = os.path.join(options.outdir, i[0][dirlen:])
 					if not os.path.exists(newoutdir):
-						os.mkdir(newoutdir)
+						os.makedirs(newoutdir)
 					else:
 						if not os.path.isdir(newoutdir):
 							print >>sys.stderr, "output directory %s cannot be made, skipping %s" % (newoutdir, s)
