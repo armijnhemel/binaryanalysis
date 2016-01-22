@@ -1380,19 +1380,9 @@ def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=Fa
 	dumpfile.close()
 	os.chdir(oldcwd)
 
-def runscan(scans, scan_binary, scandate):
-	unpacktempdir = scans['batconfig']['tempdir']
-	if unpacktempdir != None:
-		if not os.path.exists(unpacktempdir):
-			unpacktempdir = None
-	try:
-		## test if unpacktempdir is actually writable
-		topleveldir = tempfile.mkdtemp(dir=unpacktempdir)
-	except:
-		unpacktempdir = None
-		topleveldir = tempfile.mkdtemp(dir=unpacktempdir)
-	scanenv = copy.deepcopy(scans['batconfig']['environment'])
-
+def runscan(scans, binaries):
+	## first some initialization code that is the same for
+	## every binary that is scanned.
 	debug = scans['batconfig']['debug']
 	debugphases = scans['batconfig']['debugphases']
 
@@ -1462,16 +1452,6 @@ def runscan(scans, scan_binary, scandate):
 	else:
 		processamount = 1
 
-	## Per binary scanned a list with results is returned.
-	## Each file system or compressed file inside the binary returns a list
-	## with reports back as its result, so we have a list of lists.
-	## Within the inner list there is a result tuple, which could contain
-	## more lists in some fields, like libraries, or more result lists if
-	## the file inside a file system we looked at was in fact a file system.
-	leaftasks = []
-	unpackreports_tmp = []
-	unpackreports = {}
-
 	tmpdebug = False
 	if debug:
 		tmpdebug = True
@@ -1479,186 +1459,10 @@ def runscan(scans, scan_binary, scandate):
 			if not ('prerun' in debugphases or 'unpack' in debugphases):
 				tmpdebug = False
 
-	## copy the binary
-	os.makedirs("%s/data" % (topleveldir,))
-	scantempdir = "%s/data" % (topleveldir,)
-	if debug:
-		print >>sys.stderr, "COPYING BEGIN", datetime.datetime.utcnow().isoformat()
-		sys.stderr.flush()
-
-	shutil.copy(scan_binary, scantempdir)
-
-	if debug:
-		print >>sys.stderr, "COPYING END", datetime.datetime.utcnow().isoformat()
-		sys.stderr.flush()
-
-	tags = []
-	offsets = {}
-	hints = {}
-
-	knownextension = False
-	fileextensions = scan_binary.lower().rsplit('.', 1)
-	if len(fileextensions) == 2:
-		fileextension = fileextensions[1]
-		for unpackscan in scans['unpackscans']:
-			if 'knownfilemethod' in unpackscan:
-				if fileextension in unpackscan['extensions']:
-					knownextension = True
-					break
-
-	if not knownextension:
-		offsetcutoff = scans['batconfig']['markersearchminimum']
-		if os.stat(scan_binary).st_size > offsetcutoff:
-			offsettasks = []
-			for i in range(0, os.stat(scan_binary).st_size, 100000):
-				offsettasks.append((scantempdir, os.path.basename(scan_binary), magicscans, optmagicscans, max(i-50, 0), 100000+50))
-			pool = multiprocessing.Pool(processes=processamount)
-			res = pool.map(paralleloffsetsearch, offsettasks)
-			pool.terminate()
-
-			for i in res:
-				for j in i:
-					if j in offsets:
-						offsets[j] += i[j]
-					else:
-						offsets[j] = copy.deepcopy(i[j])
-			for i in offsets:
-				offsets[i] = sorted(list(set(offsets[i])))
-
-	scantasks = [(scantempdir, os.path.basename(scan_binary), len(scantempdir), tmpdebug, tags, hints, offsets)]
-
-	template = scans['batconfig']['template']
-
-	if debug:
-		print >>sys.stderr, "PRERUN UNPACK BEGIN", datetime.datetime.utcnow().isoformat()
-		sys.stderr.flush()
-
-	outputhash = scans['batconfig'].get('reporthash', 'sha256')
-	if outputhash == 'crc32' or outputhash == 'tlsh':
-		outputhash = 'sha256'
-
-	offsetdir = os.path.join(topleveldir, "offsets")
-	if scans['batconfig']['dumpoffsets']:
-		os.makedirs(offsetdir)
-
-	## use a queue made with a manager to avoid some issues, see:
-	## http://docs.python.org/2/library/multiprocessing.html#pipes-and-queues
-	lock = Lock()
-	scanmanager = multiprocessing.Manager()
-	scanqueue = multiprocessing.JoinableQueue(maxsize=0)
-	reportqueue = scanmanager.Queue(maxsize=0)
-	leafqueue = scanmanager.Queue(maxsize=0)
-	processpool = []
-
-	scansourcecode = False
-	if scans['batconfig']['scansourcecode']:
-		scansourcecode = True
-
-	hashdict = scanmanager.dict()
-	blacklistedfiles = []
-	map(lambda x: scanqueue.put(x), scantasks)
-	batcons = []
-	cursor = None
-	sourcecodequery = ''
-	for i in range(0,processamount):
-		if scansourcecode:
-			if 'DBBACKEND' in scanenv:
-				batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
-				c = batdb.getConnection(scanenv['BAT_DB'],scanenv)
-				if c != None:
-					cursor = c.cursor()
-					batcons.append(c)
-					sourcecodequery = batdb.getQuery("select checksum from processed_file where checksum=%s limit 1")
-					scansourcecode = True
-				else:
-					scansourcecode = False
-		else:
-			cursor = None
-			sourcecodequery = None
-			scansourcecode = False
-		p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, blacklistedfiles, lock, template, unpacktempdir, scantempdir, outputhash, cursor, sourcecodequery, scans['batconfig']['dumpoffsets'], offsetdir))
-		processpool.append(p)
-		p.start()
-
-	scanqueue.join()
-
-	while True:
-		try:
-			val = reportqueue.get_nowait()
-			unpackreports_tmp.append(val)
-			reportqueue.task_done()
-		except Queue.Empty, e:
-			## Queue is empty
-			break
-	while True:
-		try:
-			val = leafqueue.get_nowait()
-			leaftasks.append(val)
-			leafqueue.task_done()
-		except Queue.Empty, e:
-			## Queue is empty
-			break
-	leafqueue.join()
-	reportqueue.join()
-	
-	for p in processpool:
-		p.terminate()
-
-	if scansourcecode:
-		for c in batcons:
-			c.close()
-
-	## Sometimes there are identical files inside a blob.
-	## To minimize time spent on scanning these should only be
-	## scanned once. Since the results are independent anyway (the
-	## unpacking phase is where unique paths are determined after all)
-	## each sha256 can be scanned only once. If there are more files
-	## with the same sha256 the result can simply be copied.
-	##
-	## * keep a list of which sha256 have duplicates.
-	## * filter out the checksums
-	## * for each sha256 scan once
-	## * copy results in case there are duplicates
-	dupes = []
-
-	## the result is a list of dicts which needs to be turned into one dict
-	for i in unpackreports_tmp:
-		for k in i:
-			if 'tags' in i[k]:
-				## the file is a duplicate, store for later 
-				if 'duplicate' in i[k]['tags']:
-					dupes.append(i)
-					continue
-			unpackreports[k] = i[k]
-
-	for i in dupes:
-		for k in i:
-			dupesha256 = i[k]['checksum']
-			origname = i[k]['name']
-			origrealpath = i[k]['realpath']
-			origpath = i[k]['path']
-			## keep: name, realpath, path, copy the rest of the original
-			dupecopy = copy.deepcopy(unpackreports[hashdict[dupesha256]])
-			dupecopy['name'] = origname
-			dupecopy['path'] = origpath
-			dupecopy['realpath'] = origrealpath
-			dupecopy['tags'].append('duplicate')
-			unpackreports[k] = dupecopy
-
-	if debug:
-		print >>sys.stderr, "PRERUN UNPACK END", datetime.datetime.utcnow().isoformat()
-	if scans['batconfig']['reportendofphase']:
-		print "PRERUN UNPACK END %s" % os.path.basename(scan_binary), datetime.datetime.utcnow().isoformat()
-
-	if debug:
-		print >>sys.stderr, "LEAF BEGIN", datetime.datetime.utcnow().isoformat()
-	poolresult = []
-	tagdict = {}
-	finalscans = []
-
 	## determine whether or not the leaf scans should be run in parallel
 	parallel = True
 	if scans['leafscans'] != []:
+		finalscans = []
 		if not scans['batconfig']['multiprocessing']:
 			parallel = False
 
@@ -1689,133 +1493,354 @@ def runscan(scans, scan_binary, scandate):
 			sscan['environment'] = newenv
 			finalscans.append(sscan)
 
-		## each entry in leaftasks: (filetoscan, tags, blacklist, filehash, filesize)
-		sha256leaf = {}
-		leaftasks_tmp = []
-		for i in leaftasks:
-			if not i[-2] in sha256leaf:
-				sha256leaf[i[-2]] = 1
-				leaftasks_tmp.append(i)
+	origcwd = os.getcwd()
+	for bins in binaries:
+		(scan_binary, writeconfig) = bins
+		## force the cwd to a known value. This is to prevent mysterious
+		## errors in case some old results are cleaned up and the cwd is not
+		## restored in the code that had to change cwd for some reason.
+		os.chdir(origcwd)
+		scandate = datetime.datetime.utcnow()
 
-		## reverse sort on size: scan largest files first
-		leaftasks_tmp.sort(key=lambda x: x[-1], reverse=True)
-		leaftasks_tmp = map(lambda x: x[:1] + (filterScans(finalscans, x[1]),) + x[1:-1] + (topleveldir, tmpdebug, unpacktempdir), leaftasks_tmp)
+		## Per binary scanned a list with results is returned.
+		## Each file system or compressed file inside the binary returns a list
+		## with reports back as its result, so we have a list of lists.
+		## Within the inner list there is a result tuple, which could contain
+		## more lists in some fields, like libraries, or more result lists if
+		## the file inside a file system we looked at was in fact a file system.
+		leaftasks = []
+		unpackreports_tmp = []
+		unpackreports = {}
 
-		if parallel:
-			if False in map(lambda x: x['parallel'], finalscans):
-				parallel = False
+		unpacktempdir = scans['batconfig']['tempdir']
+		if unpacktempdir != None:
+			if not os.path.exists(unpacktempdir):
+				unpacktempdir = None
+		try:
+			## test if unpacktempdir is actually writable
+			topleveldir = tempfile.mkdtemp(dir=unpacktempdir)
+		except:
+			unpacktempdir = None
+			topleveldir = tempfile.mkdtemp(dir=unpacktempdir)
+
+		## copy the binary
+		scanenv = copy.deepcopy(scans['batconfig']['environment'])
+
+		os.makedirs("%s/data" % (topleveldir,))
+		scantempdir = "%s/data" % (topleveldir,)
 		if debug:
-			if debugphases == []:
-				parallel = False
-			else:
-				if 'leaf' in debugphases:
-					parallel = False
+			print >>sys.stderr, "COPYING BEGIN", datetime.datetime.utcnow().isoformat()
+			sys.stderr.flush()
 
-		if parallel:
-			if 'processors' in scans['batconfig']:
-				pool = multiprocessing.Pool(scans['batconfig']['processors'])
-			else:
-				pool = multiprocessing.Pool()
-		else:
-			pool = multiprocessing.Pool(processes=1)
+		shutil.copy(scan_binary, scantempdir)
 
-		if not os.path.exists(os.path.join(topleveldir, 'filereports')):
-			os.mkdir(os.path.join(topleveldir, 'filereports'))
-
-		if len(leaftasks_tmp) == 0:
-			poolresult = []
-		else:
-			poolresult = pool.map(leafScan, leaftasks_tmp, 1)
-		pool.terminate()
-
-		## filter the results for the leafscans. These are the ones that
-		## returned tags so need to be merged into unpackreports.
-		mergetags = filter(lambda x: x[1] != [], poolresult)
-		for m in mergetags:
-			tagdict[m[0]] = m[1]
-
-	for i in unpackreports.keys():
-		if not 'checksum' in unpackreports[i]:
-			continue
-		unpacksha256 = unpackreports[i]['checksum']
-		if unpacksha256 in tagdict:
-			if 'tags' in unpackreports[i]:
-				unpackreports[i]['tags'] = list(set(unpackreports[i]['tags'] + tagdict[unpacksha256]))
-	if debug:
-		print >>sys.stderr, "LEAF END", datetime.datetime.utcnow().isoformat()
-	if scans['batconfig']['reportendofphase']:
-		print "LEAF END %s" % os.path.basename(scan_binary), datetime.datetime.utcnow().isoformat()
-
-	if debug:
-		print >>sys.stderr, "AGGREGATE BEGIN", datetime.datetime.utcnow().isoformat()
-	if scans['aggregatescans'] != []:
-		tmpdebug=False
 		if debug:
-			tmpdebug = True
-			if debugphases != []:
-				if not 'aggregate' in debugphases:
-					tmpdebug = False
-		aggregatescan(unpackreports, scans, scantempdir, topleveldir, os.path.basename(scan_binary), scandate, tmpdebug, unpacktempdir)
-	if debug:
-		print >>sys.stderr, "AGGREGATE END", datetime.datetime.utcnow().isoformat()
-	if scans['batconfig']['reportendofphase']:
-		print "AGGREGATE END %s" % os.path.basename(scan_binary), datetime.datetime.utcnow().isoformat()
+			print >>sys.stderr, "COPYING END", datetime.datetime.utcnow().isoformat()
+			sys.stderr.flush()
 
-	for i in unpackreports:
-		if 'tags' in unpackreports[i]:
-			unpackreports[i]['tags'] = list(set(unpackreports[i]['tags']))
+		tags = []
+		offsets = {}
+		hints = {}
 
-	if debug:
-		print >>sys.stderr, "POSTRUN BEGIN", datetime.datetime.utcnow().isoformat()
-	## run postrunscans here, again in parallel, if needed/wanted
-	## These scans typically only have a few side effects, but don't change
-	## the reporting/scanning, just process the results. Examples: generate
-	## fancier reports, use microblogging to post scan results, etc.
-	## Duplicates that are tagged as 'duplicate' are not processed.
-	if scans['postrunscans'] != [] and unpackreports != {}:
-		## if unpackreports != {} since deduplication has already been done
+		knownextension = False
+		fileextensions = scan_binary.lower().rsplit('.', 1)
+		if len(fileextensions) == 2:
+			fileextension = fileextensions[1]
+			for unpackscan in scans['unpackscans']:
+				if 'knownfilemethod' in unpackscan:
+					if fileextension in unpackscan['extensions']:
+						knownextension = True
+						break
 
-		dedupes = filter(lambda x: 'duplicate' not in unpackreports[x]['tags'], filter(lambda x: 'tags' in unpackreports[x], filter(lambda x: 'checksum' in unpackreports[x], unpackreports.keys())))
-		postrunscans = []
-		for i in dedupes:
-			## results might have been changed by aggregate scans, so check if it still exists
-			if i in unpackreports:
-				tmpdebug = False
-				if debug:
-					tmpdebug = True
-					if debugphases != []:
-						if not 'postrun' in debugphases:
-							tmpdebug = False
-				postrunscans.append((i, unpackreports[i], scans['postrunscans'], scantempdir, topleveldir, tmpdebug))
+		if not knownextension:
+			offsetcutoff = scans['batconfig']['markersearchminimum']
+			if os.stat(scan_binary).st_size > offsetcutoff:
+				offsettasks = []
+				for i in range(0, os.stat(scan_binary).st_size, 100000):
+					offsettasks.append((scantempdir, os.path.basename(scan_binary), magicscans, optmagicscans, max(i-50, 0), 100000+50))
+				pool = multiprocessing.Pool(processes=processamount)
+				res = pool.map(paralleloffsetsearch, offsettasks)
+				pool.terminate()
 
+				for i in res:
+					for j in i:
+						if j in offsets:
+							offsets[j] += i[j]
+						else:
+							offsets[j] = copy.deepcopy(i[j])
+				for i in offsets:
+					offsets[i] = sorted(list(set(offsets[i])))
+
+		scantasks = [(scantempdir, os.path.basename(scan_binary), len(scantempdir), tmpdebug, tags, hints, offsets)]
+
+		template = scans['batconfig']['template']
+
+		if debug:
+			print >>sys.stderr, "PRERUN UNPACK BEGIN", datetime.datetime.utcnow().isoformat()
+			sys.stderr.flush()
+
+		outputhash = scans['batconfig'].get('reporthash', 'sha256')
+		if outputhash == 'crc32' or outputhash == 'tlsh':
+			outputhash = 'sha256'
+
+		offsetdir = os.path.join(topleveldir, "offsets")
+		if scans['batconfig']['dumpoffsets']:
+			os.makedirs(offsetdir)
+
+		## use a queue made with a manager to avoid some issues, see:
+		## http://docs.python.org/2/library/multiprocessing.html#pipes-and-queues
+		lock = Lock()
+		scanmanager = multiprocessing.Manager()
+		scanqueue = multiprocessing.JoinableQueue(maxsize=0)
+		reportqueue = scanmanager.Queue(maxsize=0)
+		leafqueue = scanmanager.Queue(maxsize=0)
+		processpool = []
+
+		scansourcecode = False
+		if scans['batconfig']['scansourcecode']:
+			scansourcecode = True
+
+		hashdict = scanmanager.dict()
+		blacklistedfiles = []
+		map(lambda x: scanqueue.put(x), scantasks)
+		batcons = []
+		cursor = None
+		sourcecodequery = ''
+		for i in range(0,processamount):
+			if scansourcecode:
+				if 'DBBACKEND' in scanenv:
+					batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
+					c = batdb.getConnection(scanenv['BAT_DB'],scanenv)
+					if c != None:
+						cursor = c.cursor()
+						batcons.append(c)
+						sourcecodequery = batdb.getQuery("select checksum from processed_file where checksum=%s limit 1")
+						scansourcecode = True
+					else:
+						scansourcecode = False
+			else:
+				cursor = None
+				sourcecodequery = None
+				scansourcecode = False
+			p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, blacklistedfiles, lock, template, unpacktempdir, scantempdir, outputhash, cursor, sourcecodequery, scans['batconfig']['dumpoffsets'], offsetdir))
+			processpool.append(p)
+			p.start()
+
+		scanqueue.join()
+
+		while True:
+			try:
+				val = reportqueue.get_nowait()
+				unpackreports_tmp.append(val)
+				reportqueue.task_done()
+			except Queue.Empty, e:
+				## Queue is empty
+				break
+		while True:
+			try:
+				val = leafqueue.get_nowait()
+				leaftasks.append(val)
+				leafqueue.task_done()
+			except Queue.Empty, e:
+				## Queue is empty
+				break
+		leafqueue.join()
+		reportqueue.join()
+	
+		for p in processpool:
+			p.terminate()
+
+		if scansourcecode:
+			for c in batcons:
+				c.close()
+
+		## Sometimes there are identical files inside a blob.
+		## To minimize time spent on scanning these should only be
+		## scanned once. Since the results are independent anyway (the
+		## unpacking phase is where unique paths are determined after all)
+		## each sha256 can be scanned only once. If there are more files
+		## with the same sha256 the result can simply be copied.
+		##
+		## * keep a list of which sha256 have duplicates.
+		## * filter out the checksums
+		## * for each sha256 scan once
+		## * copy results in case there are duplicates
+		dupes = []
+
+		## the result is a list of dicts which needs to be turned into one dict
+		for i in unpackreports_tmp:
+			for k in i:
+				if 'tags' in i[k]:
+					## the file is a duplicate, store for later 
+					if 'duplicate' in i[k]['tags']:
+						dupes.append(i)
+						continue
+				unpackreports[k] = i[k]
+
+		for i in dupes:
+			for k in i:
+				dupesha256 = i[k]['checksum']
+				origname = i[k]['name']
+				origrealpath = i[k]['realpath']
+				origpath = i[k]['path']
+				## keep: name, realpath, path, copy the rest of the original
+				dupecopy = copy.deepcopy(unpackreports[hashdict[dupesha256]])
+				dupecopy['name'] = origname
+				dupecopy['path'] = origpath
+				dupecopy['realpath'] = origrealpath
+				dupecopy['tags'].append('duplicate')
+				unpackreports[k] = dupecopy
+
+		if debug:
+			print >>sys.stderr, "PRERUN UNPACK END", datetime.datetime.utcnow().isoformat()
+		if scans['batconfig']['reportendofphase']:
+			print "PRERUN UNPACK END %s" % os.path.basename(scan_binary), datetime.datetime.utcnow().isoformat()
+
+		if debug:
+			print >>sys.stderr, "LEAF BEGIN", datetime.datetime.utcnow().isoformat()
+		poolresult = []
+		tagdict = {}
+
+		## determine whether or not the leaf scans should be run in parallel
 		parallel = True
-		if scans['batconfig']['multiprocessing']:
-			if False in map(lambda x: x['parallel'], scans['postrunscans']):
-				parallel = False
-		else:
-			parallel = False
-		if debug:
-			if debugphases == []:
-				parallel = False
-			else:
-				if 'postrun' in debugphases:
+		if scans['leafscans'] != []:
+
+			## each entry in leaftasks: (filetoscan, tags, blacklist, filehash, filesize)
+			sha256leaf = {}
+			leaftasks_tmp = []
+			for i in leaftasks:
+				if not i[-2] in sha256leaf:
+					sha256leaf[i[-2]] = 1
+					leaftasks_tmp.append(i)
+
+			## reverse sort on size: scan largest files first
+			leaftasks_tmp.sort(key=lambda x: x[-1], reverse=True)
+			leaftasks_tmp = map(lambda x: x[:1] + (filterScans(finalscans, x[1]),) + x[1:-1] + (topleveldir, tmpdebug, unpacktempdir), leaftasks_tmp)
+
+			if parallel:
+				if False in map(lambda x: x['parallel'], finalscans):
 					parallel = False
-		if parallel:
-			if 'processors' in scans['batconfig']:
-				pool = multiprocessing.Pool(scans['batconfig']['processors'])
+			if debug:
+				if debugphases == []:
+					parallel = False
+				else:
+					if 'leaf' in debugphases:
+						parallel = False
+
+			if parallel:
+				if 'processors' in scans['batconfig']:
+					pool = multiprocessing.Pool(scans['batconfig']['processors'])
+				else:
+					pool = multiprocessing.Pool()
 			else:
-				pool = multiprocessing.Pool()
-		else:
-			pool = multiprocessing.Pool(processes=1)
+				pool = multiprocessing.Pool(processes=1)
 
-		if len(postrunscans) == 0:
-			postrunresults = []
-		else:
-			postrunresults = pool.map(postrunscan, postrunscans, 1)
-		pool.terminate()
-	if debug:
-		print >>sys.stderr, "POSTRUN END", datetime.datetime.utcnow().isoformat()
-	if scans['batconfig']['reportendofphase']:
-		print "POSTRUN END %s" % os.path.basename(scan_binary), datetime.datetime.utcnow().isoformat()
+			if not os.path.exists(os.path.join(topleveldir, 'filereports')):
+				os.mkdir(os.path.join(topleveldir, 'filereports'))
 
-	return (topleveldir, unpackreports)
+			if len(leaftasks_tmp) == 0:
+				poolresult = []
+			else:
+				poolresult = pool.map(leafScan, leaftasks_tmp, 1)
+			pool.terminate()
+
+			## filter the results for the leafscans. These are the ones that
+			## returned tags so need to be merged into unpackreports.
+			mergetags = filter(lambda x: x[1] != [], poolresult)
+			for m in mergetags:
+				tagdict[m[0]] = m[1]
+
+		for i in unpackreports.keys():
+			if not 'checksum' in unpackreports[i]:
+				continue
+			unpacksha256 = unpackreports[i]['checksum']
+			if unpacksha256 in tagdict:
+				if 'tags' in unpackreports[i]:
+					unpackreports[i]['tags'] = list(set(unpackreports[i]['tags'] + tagdict[unpacksha256]))
+		if debug:
+			print >>sys.stderr, "LEAF END", datetime.datetime.utcnow().isoformat()
+		if scans['batconfig']['reportendofphase']:
+			print "LEAF END %s" % os.path.basename(scan_binary), datetime.datetime.utcnow().isoformat()
+
+		if debug:
+			print >>sys.stderr, "AGGREGATE BEGIN", datetime.datetime.utcnow().isoformat()
+		if scans['aggregatescans'] != []:
+			tmpdebug=False
+			if debug:
+				tmpdebug = True
+				if debugphases != []:
+					if not 'aggregate' in debugphases:
+						tmpdebug = False
+			aggregatescan(unpackreports, scans, scantempdir, topleveldir, os.path.basename(scan_binary), scandate, tmpdebug, unpacktempdir)
+		if debug:
+			print >>sys.stderr, "AGGREGATE END", datetime.datetime.utcnow().isoformat()
+		if scans['batconfig']['reportendofphase']:
+			print "AGGREGATE END %s" % os.path.basename(scan_binary), datetime.datetime.utcnow().isoformat()
+
+		for i in unpackreports:
+			if 'tags' in unpackreports[i]:
+				unpackreports[i]['tags'] = list(set(unpackreports[i]['tags']))
+
+		if debug:
+			print >>sys.stderr, "POSTRUN BEGIN", datetime.datetime.utcnow().isoformat()
+		## run postrunscans here, again in parallel, if needed/wanted
+		## These scans typically only have a few side effects, but don't change
+		## the reporting/scanning, just process the results. Examples: generate
+		## fancier reports, use microblogging to post scan results, etc.
+		## Duplicates that are tagged as 'duplicate' are not processed.
+		if scans['postrunscans'] != [] and unpackreports != {}:
+			## if unpackreports != {} since deduplication has already been done
+
+			dedupes = filter(lambda x: 'duplicate' not in unpackreports[x]['tags'], filter(lambda x: 'tags' in unpackreports[x], filter(lambda x: 'checksum' in unpackreports[x], unpackreports.keys())))
+			postrunscans = []
+			for i in dedupes:
+				## results might have been changed by aggregate scans, so check if it still exists
+				if i in unpackreports:
+					tmpdebug = False
+					if debug:
+						tmpdebug = True
+						if debugphases != []:
+							if not 'postrun' in debugphases:
+								tmpdebug = False
+					postrunscans.append((i, unpackreports[i], scans['postrunscans'], scantempdir, topleveldir, tmpdebug))
+
+			parallel = True
+			if scans['batconfig']['multiprocessing']:
+				if False in map(lambda x: x['parallel'], scans['postrunscans']):
+					parallel = False
+			else:
+				parallel = False
+			if debug:
+				if debugphases == []:
+					parallel = False
+				else:
+					if 'postrun' in debugphases:
+						parallel = False
+			if parallel:
+				if 'processors' in scans['batconfig']:
+					pool = multiprocessing.Pool(scans['batconfig']['processors'])
+				else:
+					pool = multiprocessing.Pool()
+			else:
+				pool = multiprocessing.Pool(processes=1)
+
+			if len(postrunscans) == 0:
+				postrunresults = []
+			else:
+				postrunresults = pool.map(postrunscan, postrunscans, 1)
+			pool.terminate()
+		if debug:
+			print >>sys.stderr, "POSTRUN END", datetime.datetime.utcnow().isoformat()
+		if scans['batconfig']['reportendofphase']:
+			print "POSTRUN END %s" % os.path.basename(scan_binary), datetime.datetime.utcnow().isoformat()
+
+		if writeconfig['writeoutput']:
+			writeDumpfile(unpackreports, scans, writeconfig['outputfile'], writeconfig['config'], topleveldir, scans['batconfig']['outputlite'], scans['batconfig']['debug'])
+		if scans['batconfig']['cleanup']:
+			try:
+				shutil.rmtree(topleveldir)
+			except Exception, e:
+				pass
+		if scans['batconfig']['reportendofphase']:
+			print "done", scan_binary, datetime.datetime.utcnow().isoformat()
+			sys.stdout.flush()
