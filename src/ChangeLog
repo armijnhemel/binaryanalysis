@@ -1,3 +1,14 @@
+2016-01-23:
+* generatejson.py: avoid creating database connections unnecessarily
+* bruteforcescan.py: fix debugging logic after rearranging scans
+* bruteforcescan.py: reintroduce setup methods for aggregate scans
+* licenseversion.py: use setup method
+* kernelsymbols.py: use setup method
+* bat-scan.config: configure setup methods
+* bruteforcescan.py: cleanups, don't create pools when not needed
+* licenseversion.py: inline compute_version()
+* licenseversion.py: more aggressively cache results
+
 2016-01-22:
 * bat-scan: extra sanity check for broken symbolic links, plus properly create
 subdirectories in 'directory scanning mode'.
