@@ -340,6 +340,8 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 	filehashes = set()
 	jsontasks = []
 
+	converthash = False
+
 	## create tasks for printing results for each of the individual reports
 	for unpackreport in unpackreports:
 		## first see if there is a filehash. If not, continue
@@ -355,14 +357,14 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 		## happen). If so, continue.
 		if os.path.exists(os.path.join(topleveldir, "reports", "%s.json.gz" % filehash)):
 			continue
+
+		if 'ranking' in unpackreports[unpackreport]['tags']:
+			if outputhash != 'sha256':
+				converthash = True
 		filehashes.add(filehash)
 		jsontasks.append(filehash)
 
 	if len(jsontasks) != 0:
-		converthash = False
-		if outputhash != 'sha256':
-			converthash = True
-
 		if processors == None:
 			processamount = 1
 		else:
