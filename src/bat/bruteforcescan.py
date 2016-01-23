@@ -1514,6 +1514,15 @@ def runscan(scans, binaries):
 			sscan['environment'] = newenv
 			finalaggregatescans.append(sscan)
 
+	unpacktempdir = scans['batconfig']['tempdir']
+	if unpacktempdir != None:
+		if not os.path.exists(unpacktempdir):
+			unpacktempdir = None
+
+	outputhash = scans['batconfig'].get('reporthash', 'sha256')
+	if outputhash == 'crc32' or outputhash == 'tlsh':
+		outputhash = 'sha256'
+
 	origcwd = os.getcwd()
 	for bins in binaries:
 		(scan_binary, writeconfig) = bins
@@ -1533,10 +1542,6 @@ def runscan(scans, binaries):
 		unpackreports_tmp = []
 		unpackreports = {}
 
-		unpacktempdir = scans['batconfig']['tempdir']
-		if unpacktempdir != None:
-			if not os.path.exists(unpacktempdir):
-				unpacktempdir = None
 		try:
 			## test if unpacktempdir is actually writable
 			topleveldir = tempfile.mkdtemp(dir=unpacktempdir)
@@ -1599,10 +1604,6 @@ def runscan(scans, binaries):
 		if debug:
 			print >>sys.stderr, "PRERUN UNPACK BEGIN", datetime.datetime.utcnow().isoformat()
 			sys.stderr.flush()
-
-		outputhash = scans['batconfig'].get('reporthash', 'sha256')
-		if outputhash == 'crc32' or outputhash == 'tlsh':
-			outputhash = 'sha256'
 
 		offsetdir = os.path.join(topleveldir, "offsets")
 		if scans['batconfig']['dumpoffsets']:
@@ -1748,10 +1749,7 @@ def runscan(scans, binaries):
 						parallel = False
 
 			if parallel:
-				if 'processors' in scans['batconfig']:
-					pool = multiprocessing.Pool(scans['batconfig']['processors'])
-				else:
-					pool = multiprocessing.Pool()
+				pool = multiprocessing.Pool(processes=processamount)
 			else:
 				pool = multiprocessing.Pool(processes=1)
 
@@ -1831,10 +1829,7 @@ def runscan(scans, binaries):
 					if 'postrun' in debugphases:
 						parallel = False
 			if parallel:
-				if 'processors' in scans['batconfig']:
-					pool = multiprocessing.Pool(scans['batconfig']['processors'])
-				else:
-					pool = multiprocessing.Pool()
+				pool = multiprocessing.Pool(processes=processamount)
 			else:
 				pool = multiprocessing.Pool(processes=1)
 
