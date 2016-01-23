@@ -566,24 +566,18 @@ def prune(uniques, package):
 	return newuniques
 
 def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
-
-	(envresult, newenv) = licensesetup(scanenv, scandebug)
-
-	if not envresult:
-		return None
-
 	## the environment might have changed and been cleaned up,
 	## so overwrite the old one
 	determineversion = False
-	if newenv.get('BAT_RANKING_VERSION', 0) == '1':
+	if scanenv.get('BAT_RANKING_VERSION', 0) == '1':
 		determineversion = True
 
 	determinelicense = False
-	if newenv.get('BAT_RANKING_LICENSE', 0) == '1':
+	if scanenv.get('BAT_RANKING_LICENSE', 0) == '1':
 		determinelicense = True
 
 	determinecopyright = False
-	if newenv.get('BAT_RANKING_COPYRIGHT', 0) == '1':
+	if scanenv.get('BAT_RANKING_COPYRIGHT', 0) == '1':
 		determinecopyright = True
 
 	## only continue if there actually is a need
@@ -627,13 +621,13 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	if len(rankingfilesperlanguage) == 0:
 		return None
 
-	batdb = bat.batdb.BatDb(newenv['DBBACKEND'])
+	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
 
 	## Some methods use a database to lookup renamed packages.
-	clonedb = newenv.get('BAT_CLONE_DB')
+	clonedb = scanenv.get('BAT_CLONE_DB')
 	clones = {}
 	if clonedb != None:
-		conn = batdb.getConnection(clonedb,newenv)
+		conn = batdb.getConnection(clonedb,scanenv)
 		c = conn.cursor()
 		c.execute("SELECT originalname,newname from renames")
 		clonestmp = c.fetchall()
@@ -651,12 +645,12 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	for language in avgstringsdbperlanguagetable:
 		if not language in rankingfilesperlanguage:
 			continue
-		stringscache = newenv.get(stringsdbperlanguageenv[language])
+		stringscache = scanenv.get(stringsdbperlanguageenv[language])
 		if stringscache == None:
 			continue
 		## open the database containing all the strings that were extracted
 		## from source code.
-		conn = batdb.getConnection(stringscache,newenv)
+		conn = batdb.getConnection(stringscache,scanenv)
 		c = conn.cursor()
 		avgscores[language] = {}
 		avgquery = "select package, avgstrings from %s" % avgstringsdbperlanguagetable[language]
@@ -684,7 +678,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 
 	for i in range(0,minprocessamount):
 		## then a cursor for the main database
-		conn = batdb.getConnection(newenv['BAT_DB'],newenv)
+		conn = batdb.getConnection(scanenv['BAT_DB'],scanenv)
 		cursor = conn.cursor()
 		batcursors.append(cursor)
 		batcons.append(conn)
@@ -707,24 +701,24 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		namecachecursors = []
 		for i in range(0,minprocessamount):
 			if language in stringsdbperlanguagetable:
-				stringscache = newenv.get(stringsdbperlanguageenv[language])
+				stringscache = scanenv.get(stringsdbperlanguageenv[language])
 				if stringscache == None:
 					continue
-				conn = batdb.getConnection(stringscache,newenv)
+				conn = batdb.getConnection(stringscache,scanenv)
 				c = conn.cursor()
 				stringcacheconns.append(conn)
 				stringcachecursors.append(c)
 			## then for namecaches
 			if language in namecacheperlanguagetable:
-				namecache = newenv.get(namecacheperlanguageenv[language])
+				namecache = scanenv.get(namecacheperlanguageenv[language])
 				if namecache == None:
 					continue
-				conn = batdb.getConnection(namecache,newenv)
+				conn = batdb.getConnection(namecache,scanenv)
 				c = conn.cursor()
 				namecacheconns.append(conn)
 				namecachecursors.append(c)
 
-			p = multiprocessing.Process(target=lookup_identifier, args=(scanqueue,reportqueue, stringcachecursors[i], stringcacheconns[i],namecachecursors[i],namecacheconns[i],batdb,newenv,topleveldir,avgscores,clones,scandebug))
+			p = multiprocessing.Process(target=lookup_identifier, args=(scanqueue,reportqueue, stringcachecursors[i], stringcacheconns[i],namecachecursors[i],namecacheconns[i],batdb,scanenv,topleveldir,avgscores,clones,scandebug))
 			processpool.append(p)
 			p.start()
 
@@ -765,7 +759,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	if 'Java' in rankingfilesperlanguage:
 		pool = multiprocessing.Pool(processes=processors)
 		## aggregate the JAR files
-		rankedjars = aggregatejars(unpackreports, scantempdir, topleveldir, pool, newenv, scandebug=False, unpacktempdir=None)
+		rankedjars = aggregatejars(unpackreports, scantempdir, topleveldir, pool, scanenv, scandebug=False, unpacktempdir=None)
 		pool.terminate()
 		for r in rankedjars:
 			rankingfilesperlanguage['Java'].add(r)
@@ -783,7 +777,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		rankingfilesperlanguage[l] = newrankingfiles
 
 	## and determine versions, etc.
-	compute_version(processors, newenv, unpackreports, rankingfilesperlanguage, topleveldir, determinelicense, determinecopyright, batdb)
+	compute_version(processors, scanenv, unpackreports, rankingfilesperlanguage, topleveldir, determinelicense, determinecopyright, batdb)
 
 ## grab variable names.
 def grab_sha256_varname(scanqueue, reportqueue, cursor, conn, query):
