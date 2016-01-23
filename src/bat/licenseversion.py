@@ -685,6 +685,8 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		## creating new queues
 		scanqueue = multiprocessing.JoinableQueue(maxsize=0)
 		reportqueue = scanmanager.Queue(maxsize=0)
+		lock = Lock()
+		ignorecache = scanmanager.dict()
 
 		lookup_tasks = map(lambda x: (unpackreports[x]['checksum'], os.path.join(unpackreports[x]['realpath'], unpackreports[x]['name'])),rankingfilesperlanguage[language])
 		map(lambda x: scanqueue.put(x), lookup_tasks)
@@ -715,7 +717,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 				namecacheconns.append(conn)
 				namecachecursors.append(c)
 
-			p = multiprocessing.Process(target=lookup_identifier, args=(scanqueue,reportqueue, stringcachecursors[i], stringcacheconns[i],namecachecursors[i],namecacheconns[i],batdb,scanenv,topleveldir,avgscores,clones,scandebug))
+			p = multiprocessing.Process(target=lookup_identifier, args=(scanqueue,reportqueue, stringcachecursors[i], stringcacheconns[i],namecachecursors[i],namecacheconns[i],batdb,scanenv,topleveldir,avgscores,clones,scandebug,ignorecache, lock))
 			processpool.append(p)
 			p.start()
 
@@ -1765,7 +1767,7 @@ def scanDynamic(scanstr, variables, scanenv, funccursor, funcconn, batdb, clones
 
 ## match identifiers with data in the database
 ## First match string literals, then function names and variable names for various languages
-def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccursor, funcconn, batdb, scanenv, topleveldir, avgscores, clones, scandebug):
+def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccursor, funcconn, batdb, scanenv, topleveldir, avgscores, clones, scandebug, unmatchedignorecache, lock):
 	## first some things that are shared between all scans
 	if 'BAT_STRING_CUTOFF' in scanenv:
 		try:
@@ -1866,7 +1868,7 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 			nonUniqueAssignments = {}
 			directAssignedString = {}
 			unmatched = []
-			unmatchedignorecache = set()
+			#unmatchedignorecache = set()
 
 			kernelfuncres = []
 			kernelparamres = []
@@ -1942,6 +1944,15 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 				if line == "":
 					continue
 
+				lock.acquire()
+				if line in unmatchedignorecache:
+					lock.release()
+					unmatched.append(line)
+					unmatchedlines += 1
+					linecount[line] = linecount[line] - 1
+					continue
+				lock.release()
+
 				## An extra check for lines that score extremely low. This
 				## helps reduce load on databases stored on slower disks. Only used if
 				## precomputescore is set and "source order" is False.
@@ -1960,12 +1971,6 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 							matchednonassigned = True
 							linecount[line] = linecount[line] - 1
 							continue
-
-				if line in unmatchedignorecache:
-					unmatched.append(line)
-					unmatchedlines += 1
-					linecount[line] = linecount[line] - 1
-					continue
 
 				## if scoreres is None the line could still be something else like a kernel function, or a
 				## kernel string in a different format, so keep searching.
@@ -1992,6 +1997,7 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 				stringconn.commit()
 
 				if len(res) == 0 and linuxkernel:
+					## make a copy of the original line
 					origline = line
 					## try a few variants that could occur in the Linux kernel
 					## The values of KERN_ERR and friends have changed in the years.
@@ -2005,6 +2011,9 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 							unmatched.append(line)
 							unmatchedlines += 1
 							linecount[line] = linecount[line] - 1
+							lock.acquire()
+							unmatchedignorecache[origline] = 1
+							lock.release()
 							continue
 						stringcursor.execute(stringquery, (scanline,))
 						res = stringcursor.fetchall()
@@ -2021,7 +2030,9 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 									unmatched.append(line)
 									unmatchedlines += 1
 									linecount[line] = linecount[line] - 1
-									unmatchedignorecache.add(origline)
+									lock.acquire()
+									unmatchedignorecache[origline] = 1
+									lock.release()
 									continue
 								stringcursor.execute(stringquery, (scanline,))
 								res = stringcursor.fetchall()
@@ -2040,7 +2051,9 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 								unmatched.append(line)
 								unmatchedlines += 1
 								linecount[line] = linecount[line] - 1
-								unmatchedignorecache.add(origline)
+								lock.acquire()
+								unmatchedignorecache[origline] = 1
+								lock.release()
 								continue
 							stringcursor.execute(stringquery, (scanline,))
 							res = stringcursor.fetchall()
@@ -2059,7 +2072,9 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 									unmatched.append(line)
 									unmatchedlines += 1
 									linecount[line] = linecount[line] - 1
-									unmatchedignorecache.add(origline)
+									lock.acquire()
+									unmatchedignorecache[origline] = 1
+									lock.release()
 									continue
 								stringcursor.execute(stringquery, (scanline,))
 								res = stringcursor.fetchall()
@@ -2089,7 +2104,9 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 					unmatched.append(line)
 					unmatchedlines += 1
 					linecount[line] = linecount[line] - 1
-					unmatchedignorecache.add(line)
+					lock.acquire()
+					unmatchedignorecache[line] = 1
+					lock.release()
 					continue
 				if len(res) != 0:
 					## Assume:
