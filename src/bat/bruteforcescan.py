@@ -641,19 +641,12 @@ def leafScan((filetoscan, scans, tags, blacklist, filehash, topleveldir, debug, 
 		picklefile.close()
 	return (filehash, list(set(newtags)))
 
-def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, scandate, debug, unpacktempdir):
+def aggregatescan(unpackreports, aggregatescans, processors, scantempdir, topleveldir, scan_binary, scandate, debug, unpacktempdir):
 	## aggregate scans look at the entire result and possibly modify it.
 	## The best example is JAR files: individual .class files will not be
 	## very significant (or even insignificant), but combined results are.
 	## Because aggregate scans have to look at everything as a whole, these
 	## cannot be run in parallel.
-	if scans['batconfig'].has_key('processors'):
-		processors = scans['batconfig']['processors']
-	else:
-		try:
-			processors = multiprocessing.cpu_count()
-		except NotImplementedError:
-			processors = None
 
 	if 'checksum' in unpackreports[scan_binary]:
 		filehash = unpackreports[scan_binary]['checksum']
@@ -672,7 +665,7 @@ def aggregatescan(unpackreports, scans, scantempdir, topleveldir, scan_binary, s
 		leafreports = cPickle.dump(leafreports, leaf_file)
 		leaf_file.close()
 
-	for aggregatescan in scans['aggregatescans']:
+	for aggregatescan in aggregatescans:
 		module = aggregatescan['module']
 		method = aggregatescan['method']
 
@@ -1462,25 +1455,25 @@ def runscan(scans, binaries):
 	## determine whether or not the leaf scans should be run in parallel
 	parallel = True
 	if scans['leafscans'] != []:
-		finalscans = []
+		finalleafscans = []
 		if not scans['batconfig']['multiprocessing']:
 			parallel = False
 
-		leaftmpdebug=False
+		leafdebug=False
 		if debug:
-			leaftmpdebug = True
+			leafdebug = True
 			if debugphases != []:
 				if not 'leaf' in debugphases:
-					leaftmpdebug = False
+					leafdebug = False
 
 		## First run the 'setup' hooks for the scans and pass
 		## results via the environment. This should keep the
 		## code cleaner.
 		for sscan in scans['leafscans']:
 			if not 'setup' in sscan:
-				finalscans.append(sscan)
+				finalleafscans.append(sscan)
 				continue
-			setupres = runSetup(sscan, leaftmpdebug)
+			setupres = runSetup(sscan, leafdebug)
 			(setuprun, newenv) = setupres
 			if not setuprun:
 				continue
@@ -1491,7 +1484,35 @@ def runscan(scans, binaries):
 				if newenv['parallel'] == False:
 					parallel = False
 			sscan['environment'] = newenv
-			finalscans.append(sscan)
+			finalleafscans.append(sscan)
+
+	if scans['aggregatescans'] != []:
+		aggregatedebug=False
+		finalaggregatescans = []
+		if debug:
+			aggregatedebug = True
+			if debugphases != []:
+				if not 'aggregate' in debugphases:
+					aggregatedebug = False
+		## First run the 'setup' hooks for the scans and pass
+		## results via the environment. This should keep the
+		## code cleaner.
+		for sscan in scans['aggregatescans']:
+			if not 'setup' in sscan:
+				finalaggregatescans.append(sscan)
+				continue
+			setupres = runSetup(sscan, leafdebug)
+			(setuprun, newenv) = setupres
+			if not setuprun:
+				continue
+			## 'parallel' can be used to modify whether or not the
+			## scans should be run in parallel. This is right now
+			## the only 'special' keyword.
+			if 'parallel' in newenv:
+				if newenv['parallel'] == False:
+					parallel = False
+			sscan['environment'] = newenv
+			finalaggregatescans.append(sscan)
 
 	origcwd = os.getcwd()
 	for bins in binaries:
@@ -1704,13 +1725,6 @@ def runscan(scans, binaries):
 		## determine whether or not the leaf scans should be run in parallel
 		parallel = True
 		if scans['leafscans'] != []:
-			tmpdebug=False
-			if debug:
-				tmpdebug = True
-				if debugphases != []:
-					if not 'leaf' in debugphases:
-						tmpdebug = False
-
 			## each entry in leaftasks: (filetoscan, tags, blacklist, filehash, filesize)
 			sha256leaf = {}
 			leaftasks_tmp = []
@@ -1721,10 +1735,10 @@ def runscan(scans, binaries):
 
 			## reverse sort on size: scan largest files first
 			leaftasks_tmp.sort(key=lambda x: x[-1], reverse=True)
-			leaftasks_tmp = map(lambda x: x[:1] + (filterScans(finalscans, x[1]),) + x[1:-1] + (topleveldir, tmpdebug, unpacktempdir), leaftasks_tmp)
+			leaftasks_tmp = map(lambda x: x[:1] + (filterScans(finalleafscans, x[1]),) + x[1:-1] + (topleveldir, leafdebug, unpacktempdir), leaftasks_tmp)
 
 			if parallel:
-				if False in map(lambda x: x['parallel'], finalscans):
+				if False in map(lambda x: x['parallel'], finalleafscans):
 					parallel = False
 			if debug:
 				if debugphases == []:
@@ -1771,13 +1785,7 @@ def runscan(scans, binaries):
 		if debug:
 			print >>sys.stderr, "AGGREGATE BEGIN", datetime.datetime.utcnow().isoformat()
 		if scans['aggregatescans'] != []:
-			aggregatedebug=False
-			if debug:
-				aggregatedebug = True
-				if debugphases != []:
-					if not 'aggregate' in debugphases:
-						aggregatedebug = False
-			aggregatescan(unpackreports, scans, scantempdir, topleveldir, os.path.basename(scan_binary), scandate, aggregatedebug, unpacktempdir)
+			aggregatescan(unpackreports, finalaggregatescans, processamount, scantempdir, topleveldir, os.path.basename(scan_binary), scandate, aggregatedebug, unpacktempdir)
 		if debug:
 			print >>sys.stderr, "AGGREGATE END", datetime.datetime.utcnow().isoformat()
 		if scans['batconfig']['reportendofphase']:
