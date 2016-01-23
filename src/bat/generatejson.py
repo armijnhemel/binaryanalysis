@@ -250,10 +250,17 @@ def writejson(scanqueue, topleveldir, outputhash, cursor, conn, batdb, scanenv, 
 		## TODO
 
 		## dump the JSON to a file
-		jsonfile = gzip.open(os.path.join(topleveldir, "reports", "%s.json.gz" % filehash), 'w')
+		jsonfilename = os.path.join(topleveldir, "reports", "%s.json" % filehash)
+		jsonfile = open(jsonfilename, 'w')
 		for chunk in json.JSONEncoder(indent=4).iterencode(jsonreport):
 			jsonfile.write(chunk)
 		jsonfile.close()
+		fin = open(jsonfilename, 'rb')
+		fout = gzip.open("%s.gz" % jsonfilename, 'wb')
+		fout.write(fin.read())
+		fout.close()
+		fin.close()
+		os.unlink(fin.name)
 		scanqueue.task_done()
 
 def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, scandebug=False, unpacktempdir=None):
