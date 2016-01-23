@@ -8,6 +8,10 @@
 * bruteforcescan.py: cleanups, don't create pools when not needed
 * licenseversion.py: inline compute_version()
 * licenseversion.py: more aggressively cache results
+* generatejson.py: first dump JSON results, then compress with gzip
+* licenseversion.py: don't create database connections if not needed. This
+helps in 'directory scanning mode' to keep the amount of database connections
+and sockets down.
 
 2016-01-22:
 * bat-scan: extra sanity check for broken symbolic links, plus properly create
