@@ -805,6 +805,55 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	licensecons = []
 	licensecursors = []
 
+	## first determine whether or not there are any unique links at all and
+	## if there should be database queries
+	#alluniques = set()
+	connectdb = False
+	for language in rankingfilesperlanguage:
+		if connectdb:
+			break
+		## keep a list of versions per sha256, since source files often are in more than one version
+		for rankingfile in rankingfilesperlanguage[language]:
+			if connectdb:
+				break
+			unpackreport = unpackreports[rankingfile]
+			## read the pickle
+			filehash = unpackreport['checksum']
+			leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+			leafreports = cPickle.load(leaf_file)
+			leaf_file.close()
+
+			(res, functionRes, variablepvs, language) = leafreports['ranking']
+
+			if res == None and functionRes == {} and variablepvs == {}:
+				continue
+
+			## First process all the string identifiers
+			if res != None:
+				newreports = []
+
+				for r in res['reports']:
+					(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses, packagecopyrights) = r
+					uniques = set(map(lambda x: x[0], unique))
+					#alluniques.update(uniques)
+					if unique != []:
+						connectdb = True
+
+			if 'versionresults' in functionRes:
+
+				for package in functionRes['versionresults'].keys():
+					if not functionRes.has_key('uniquepackages'):
+						continue
+					connectdb = True
+			if variablepvs != {}:
+				if language == 'C':
+					if 'uniquepackages' in variablepvs:
+						if variablepvs['uniquepackages'] != {}:
+							connectdb = True
+
+	if not connectdb:
+		return
+
 	for i in range(0,processamount):
 		c = batdb.getConnection(masterdb,scanenv)
 		cursor = c.cursor()
