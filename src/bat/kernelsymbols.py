@@ -163,11 +163,6 @@ def extractfromkernelfile((filehash, filename, topleveldir, scantempdir)):
 
 ## the main method called by BAT
 def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={}, scandebug=False, unpacktempdir=None):
-	(envresult, newenv) = kernelsymbolssetup(scanenv, scandebug)
-
-	if not envresult:
-		return None
-
 	generategraphs = True
 	## crude check for broken PyDot
 	if pydot.__version__ == '1.0.3' or pydot.__version__ == '1.0.2':
@@ -220,7 +215,7 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 			return
 
 	## Is the master database defined?
-	if not scanenv.has_key('BAT_DB'):
+	if not 'BAT_DB' in scanenv:
 		return
 
 	## store names of all files containing Linux kernel images or modules
@@ -232,7 +227,7 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 
 	## walk all unpackreports and keep track of which are Linux kernel images or modules
 	for i in unpackreports:
-		if not unpackreports[i].has_key('checksum'):
+		if not 'checksum' in unpackreports[i]:
 			continue
 		filehash = unpackreports[i]['checksum']
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
@@ -240,7 +235,7 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 		if not 'linuxkernel' in unpackreports[i]['tags']:
 			continue
 		symbolfiles.add((filehash, i))
-		if filehashtoname.has_key(filehash):
+		if filehash in filehashtoname:
 			filehashtoname[filehash].append(i)
 		else:
 			filehashtoname[filehash] = [i]
@@ -301,7 +296,7 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 
 	for i in symbolres:
 		(filehash, version, remotesymbols, dependencies, declaredlicenses, kernelsymbols, module) = i
-		if filehashtoversions.has_key(filehash):
+		if filehash in filehashtoversions:
 			continue
 		if module:
 			filehashtomodules.add(filehash)
@@ -310,15 +305,15 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 		filehashtoversions[filehash] = version
 		filehashtodeclaredlicenses[filehash] = declaredlicenses
 		filehashtokernelsymbols[filehash] = kernelsymbols
-		if not kernelsymboltofilehash.has_key(version):
+		if not version in kernelsymboltofilehash:
 			kernelsymboltofilehash[version] = {}
 		for k in kernelsymbols:
-			if kernelsymboltofilehash[version].has_key(k):
+			if k in kernelsymboltofilehash[version]:
 				kernelsymboltofilehash[version][k].append(filehash)
 			else:
 				kernelsymboltofilehash[version][k] = [filehash]
 		for d in dependencies:
-			if filehashtodependencies.has_key(filehash):
+			if filehash in filehashtodependencies:
 				filehashtodependencies[filehash].append(d)
 			else:
 				filehashtodependencies[filehash] = [d]
@@ -326,14 +321,14 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 			filehashtoremotesymbols[filehash] = remotesymbols
 
 		## now determine the types of each symbol, per found version
-		if not symboltotype.has_key(version):
+		if not version in symboltotype:
 			symboltotype[version] = {}
 		scansymbols = set()
 		scansymbols.update(kernelsymbols)
 		scansymbols.update(remotesymbols)
 
 		for k in scansymbols:
-			if symboltotype[version].has_key(k):
+			if k in symboltotype[version]:
 				continue
 			mastercursor.execute(symbolquery, (k,))
 			symres = mastercursor.fetchall()
