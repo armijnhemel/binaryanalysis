@@ -823,6 +823,8 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	sha256_copyright_query = batdb.getQuery("select distinct copyright, type from extracted_copyright where checksum=%s")
 
 	for language in rankingfilesperlanguage:
+		## keep a list of versions per sha256, since source files often are in more than one version
+		sha256_versions = {}
 		for rankingfile in rankingfilesperlanguage[language]:
 			unpackreport = unpackreports[rankingfile]
 			## read the pickle
@@ -840,9 +842,6 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 
 			if res == None and functionRes == {} and variablepvs == {}:
 				continue
-
-			## keep a list of versions per sha256, since source files often are in more than one version
-			sha256_versions = {}
 
 			## First process all the string identifiers
 			if res != None:
@@ -903,6 +902,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 					## and filename information.
 					sha256_scan_versions = {}
 
+					tmplines = {}
 					for l in vsha256s:
 						(line, versionsha256s) = l
 						for s in versionsha256s:
@@ -912,6 +912,13 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 									sha256_scan_versions[checksum].add((line, linenumber))
 								else:
 									sha256_scan_versions[checksum] = set([(line, linenumber)])
+							else:
+								## results are already know, so copy
+								for v in sha256_versions[checksum]:
+									(version, filename) = v
+									if not line in tmplines:
+										tmplines[line] = []
+								tmplines[line].append((checksum, linenumber, sha256_versions[checksum]))
 
 					processpool = []
 					fileres = []
@@ -946,7 +953,6 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 					resdict = {}
 					map(lambda x: resdict.update(x), fileres)
 
-					tmplines = {}
 					## construct the full information needed by other scans
 					for checksum in resdict:
 						versres = resdict[checksum]
