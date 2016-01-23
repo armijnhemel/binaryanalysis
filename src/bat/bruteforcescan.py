@@ -1466,12 +1466,12 @@ def runscan(scans, binaries):
 		if not scans['batconfig']['multiprocessing']:
 			parallel = False
 
-		tmpdebug=False
+		leaftmpdebug=False
 		if debug:
-			tmpdebug = True
+			leaftmpdebug = True
 			if debugphases != []:
 				if not 'leaf' in debugphases:
-					tmpdebug = False
+					leaftmpdebug = False
 
 		## First run the 'setup' hooks for the scans and pass
 		## results via the environment. This should keep the
@@ -1480,7 +1480,7 @@ def runscan(scans, binaries):
 			if not 'setup' in sscan:
 				finalscans.append(sscan)
 				continue
-			setupres = runSetup(sscan, tmpdebug)
+			setupres = runSetup(sscan, leaftmpdebug)
 			(setuprun, newenv) = setupres
 			if not setuprun:
 				continue
@@ -1704,6 +1704,12 @@ def runscan(scans, binaries):
 		## determine whether or not the leaf scans should be run in parallel
 		parallel = True
 		if scans['leafscans'] != []:
+			tmpdebug=False
+			if debug:
+				tmpdebug = True
+				if debugphases != []:
+					if not 'leaf' in debugphases:
+						tmpdebug = False
 
 			## each entry in leaftasks: (filetoscan, tags, blacklist, filehash, filesize)
 			sha256leaf = {}
@@ -1765,13 +1771,13 @@ def runscan(scans, binaries):
 		if debug:
 			print >>sys.stderr, "AGGREGATE BEGIN", datetime.datetime.utcnow().isoformat()
 		if scans['aggregatescans'] != []:
-			tmpdebug=False
+			aggregatedebug=False
 			if debug:
-				tmpdebug = True
+				aggregatedebug = True
 				if debugphases != []:
 					if not 'aggregate' in debugphases:
-						tmpdebug = False
-			aggregatescan(unpackreports, scans, scantempdir, topleveldir, os.path.basename(scan_binary), scandate, tmpdebug, unpacktempdir)
+						aggregatedebug = False
+			aggregatescan(unpackreports, scans, scantempdir, topleveldir, os.path.basename(scan_binary), scandate, aggregatedebug, unpacktempdir)
 		if debug:
 			print >>sys.stderr, "AGGREGATE END", datetime.datetime.utcnow().isoformat()
 		if scans['batconfig']['reportendofphase']:
