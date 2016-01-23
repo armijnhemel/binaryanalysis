@@ -1312,7 +1312,7 @@ def compressPickle((infile)):
 ## packed are hardcoded, the other files are determined from the configuration.
 ## The configuration option 'lite' allows to leave out the extracted data, to
 ## speed up extraction of data in the GUI.
-def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=False, debug=False):
+def writeDumpfile(unpackreports, scans, processamount, outputfile, configfile, tempdir, lite=False, debug=False):
 	dumpData(unpackreports, scans, tempdir)
 	dumpfile = tarfile.open(outputfile, 'w:gz')
 	oldcwd = os.getcwd()
@@ -1342,14 +1342,11 @@ def writeDumpfile(unpackreports, scans, outputfile, configfile, tempdir, lite=Fa
 		os.stat('filereports')
 		## compress pickle files in parallel
 		filereports = os.listdir('filereports')
-		if scans['batconfig'].has_key('processors'):
-			pool = multiprocessing.Pool(processes=scans['batconfig']['processors'])
-		else:
-			pool = multiprocessing.Pool()
 		fnames = map(lambda x: os.path.join(tempdir, "filereports", x), filereports)
 		if fnames != []:
+			pool = multiprocessing.Pool(processes=processamount)
 			pool.map(compressPickle, fnames, 1)
-		pool.terminate()
+			pool.terminate()
 		dumpfile.add('filereports')
 	except Exception,e:
 		if debug:
@@ -1748,19 +1745,19 @@ def runscan(scans, binaries):
 					if 'leaf' in debugphases:
 						parallel = False
 
-			if parallel:
-				pool = multiprocessing.Pool(processes=processamount)
-			else:
-				pool = multiprocessing.Pool(processes=1)
-
 			if not os.path.exists(os.path.join(topleveldir, 'filereports')):
 				os.mkdir(os.path.join(topleveldir, 'filereports'))
 
 			if len(leaftasks_tmp) == 0:
 				poolresult = []
 			else:
+				if parallel:
+					pool = multiprocessing.Pool(processes=processamount)
+				else:
+					pool = multiprocessing.Pool(processes=1)
+
 				poolresult = pool.map(leafScan, leaftasks_tmp, 1)
-			pool.terminate()
+				pool.terminate()
 
 			## filter the results for the leafscans. These are the ones that
 			## returned tags so need to be merged into unpackreports.
@@ -1828,23 +1825,24 @@ def runscan(scans, binaries):
 				else:
 					if 'postrun' in debugphases:
 						parallel = False
-			if parallel:
-				pool = multiprocessing.Pool(processes=processamount)
-			else:
-				pool = multiprocessing.Pool(processes=1)
 
 			if len(postrunscans) == 0:
 				postrunresults = []
 			else:
+				if parallel:
+					pool = multiprocessing.Pool(processes=processamount)
+				else:
+					pool = multiprocessing.Pool(processes=1)
+
 				postrunresults = pool.map(postrunscan, postrunscans, 1)
-			pool.terminate()
+				pool.terminate()
 		if debug:
 			print >>sys.stderr, "POSTRUN END", datetime.datetime.utcnow().isoformat()
 		if scans['batconfig']['reportendofphase']:
 			print "POSTRUN END %s" % os.path.basename(scan_binary), datetime.datetime.utcnow().isoformat()
 
 		if writeconfig['writeoutput']:
-			writeDumpfile(unpackreports, scans, writeconfig['outputfile'], writeconfig['config'], topleveldir, scans['batconfig']['outputlite'], scans['batconfig']['debug'])
+			writeDumpfile(unpackreports, scans, processamount, writeconfig['outputfile'], writeconfig['config'], topleveldir, scans['batconfig']['outputlite'], scans['batconfig']['debug'])
 		if scans['batconfig']['cleanup']:
 			try:
 				shutil.rmtree(topleveldir)
