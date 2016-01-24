@@ -5065,6 +5065,7 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 ## Specifications can be found at http://www.w3.org/Graphics/JPEG/
 ## Extra information:
 ## http://www.media.mit.edu/pia/Research/deepview/exif.html
+## http://www.sno.phy.queensu.ca/~phil/exiftool/TagNames/JPEG.html
 def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	if not 'jpeg' in offsets:
