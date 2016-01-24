@@ -5100,10 +5100,13 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		localoffset += 2
 		## following the JPEG "start of image" there is
 		## either a APP0 (JFIF) or APP1 (Exif and XMP)
-		if not (jpegdata == '\xff\xe0' or jpegdata == '\xff\xe1'):
+		## or APP13 (PSIR/IPTC)
+		if not  jpegdata in ['\xff\xe0', '\xff\xe1', '\xff\xed']:
 			continue
 		validpng = True
-		while jpegdata in ['\xff\xe0', '\xff\xe1']:
+		havexmp = False
+		xmp = None
+		while jpegdata in ['\xff\xe0', '\xff\xe1', '\xff\xed']:
 			if not validpng:
 				break
 			if jpegdata == '\xff\xe0':
@@ -5130,8 +5133,8 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 						break
 				jpegdata = datafile.read(2)
 				localoffset += 2
-			else:
-				## EXIF data
+			elif jpegdata == '\xff\xe1':
+				## EXIF, XMP
 				## first the size of the app marker
 				jpegdata = datafile.read(2)
 				sizeheader = struct.unpack('>H', jpegdata)[0]
@@ -5144,6 +5147,26 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 					validpng = False
 					break
 				if not (jpegdata.startswith('Exif\x00') or jpegdata.startswith('http://ns.adobe.com/xap/1.0/\x00')):
+					validpng = False
+					break
+				if jpegdata.startswith('http://ns.adobe.com/xap/1.0/\x00'):
+					xmp = jpegdata.split('\x00', 1)[1]
+					havexmp = True
+				jpegdata = datafile.read(2)
+				localoffset += 2
+			elif jpegdata == '\xff\xed':
+				## PSIR/IPTC
+				jpegdata = datafile.read(2)
+				sizeheader = struct.unpack('>H', jpegdata)[0]
+				if sizeheader > lendata:
+					validpng = False
+					break
+				jpegdata = datafile.read(sizeheader - 2)
+				localoffset += sizeheader
+				if len(jpegdata) != sizeheader - 2:
+					validpng = False
+					break
+				if not jpegdata.startswith('Photoshop 3.0\x00'):
 					validpng = False
 					break
 				jpegdata = datafile.read(2)
