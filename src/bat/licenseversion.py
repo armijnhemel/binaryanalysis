@@ -721,7 +721,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 			processpool.append(p)
 			p.start()
 
-        	scanqueue.join()
+		scanqueue.join()
 
 		while True:
 			try:
@@ -933,7 +933,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 						processpool.append(p)
 						p.start()
 
-        				scanqueue.join()
+					scanqueue.join()
 
 					while True:
 						try:
@@ -986,7 +986,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 						processpool.append(p)
 						p.start()
 
-        				scanqueue.join()
+					scanqueue.join()
 
 					while True:
 						try:
@@ -1072,7 +1072,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 								processpool.append(p)
 								p.start()
 
-        						scanqueue.join()
+							scanqueue.join()
 
 							while True:
 								try:
@@ -1107,7 +1107,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 								processpool.append(p)
 								p.start()
 
-        						scanqueue.join()
+							scanqueue.join()
 
 							while True:
 								try:
@@ -1156,7 +1156,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 						processpool.append(p)
 						p.start()
 
-        				scanqueue.join()
+					scanqueue.join()
 
 					while True:
 						try:
@@ -1204,7 +1204,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 							processpool.append(p)
 							p.start()
 
-        					scanqueue.join()
+						scanqueue.join()
 
 						while True:
 							try:
@@ -1299,7 +1299,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 								processpool.append(p)
 								p.start()
 
-        						scanqueue.join()
+							scanqueue.join()
 
 							while True:
 								try:
@@ -1349,7 +1349,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 									processpool.append(p)
 									p.start()
 
-        							scanqueue.join()
+								scanqueue.join()
 
 								while True:
 									try:
