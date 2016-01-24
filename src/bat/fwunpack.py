@@ -5112,7 +5112,8 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 				jpegdata = datafile.read(2)
 				sizeheader = struct.unpack('>H', jpegdata)[0]
 				if sizeheader > lendata:
-					continue
+					validpng = False
+					break
 				jpegdata = datafile.read(sizeheader - 2)
 				localoffset += sizeheader
 				if len(jpegdata) != sizeheader - 2:
@@ -5135,7 +5136,8 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 				jpegdata = datafile.read(2)
 				sizeheader = struct.unpack('>H', jpegdata)[0]
 				if sizeheader > lendata:
-					continue
+					validpng = False
+					break
 				jpegdata = datafile.read(sizeheader - 2)
 				localoffset += sizeheader
 				if len(jpegdata) != sizeheader - 2:
