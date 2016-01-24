@@ -1,3 +1,7 @@
+2016-01-24:
+* fwunpack.py: fix sanity check in jpeg unpacking, extract (some) XMP data
+from JPEG files
+
 2016-01-23:
 * generatejson.py: avoid creating database connections unnecessarily
 * bruteforcescan.py: fix debugging logic after rearranging scans
