@@ -5,7 +5,7 @@
 * fwunpack.py: use unpackFile() in ISO9660 unpacking
 * fwunpack.py: unpack MS WIM files with 7z
 * bat-scan.config: enable MS WIM unpacking
-* fwunpack.py: unshield can leave partial results
+* fwunpack.py: unshield can leave partial results, so clean up
 
 2016-01-24:
 * fwunpack.py: fix sanity check in jpeg unpacking, extract (some) XMP data
