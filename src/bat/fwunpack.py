@@ -615,7 +615,7 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 		if blacklistoffset != None:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "iso9660", counter)
-		res = unpackISO9660(filename, offset, tmpdir)
+		res = unpackISO9660(filename, offset - 32769, blacklist, tmpdir)
 		if res != None:
 			(isooffset, size) = res
 			diroffsets.append((isooffset, offset - 32769, size))
@@ -625,25 +625,12 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, [], hints)
 
-def unpackISO9660(filename, offset, tempdir=None, unpacktempdir=None):
+def unpackISO9660(filename, offset, blacklist, tempdir=None, unpacktempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	if offset != 32769:
-		p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile[1],), 'bs=%s' % (offset - 32769,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-	else:
-		templink = tempfile.mkstemp(dir=tmpdir)
-		os.fdopen(templink[0]).close()
-		os.unlink(templink[1])
-		try:
-			os.link(filename, templink[1])
-		except OSError, e:
-			## if filename and tmpdir are on different devices it is
-			## not possible to use hardlinks
-			shutil.copy(filename, templink[1])
-		shutil.move(templink[1], tmpfile[1])
+	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
 
 	## create a mountpoint
 	mountdir = tempfile.mkdtemp(dir=unpacktempdir)
