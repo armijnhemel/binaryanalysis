@@ -5233,6 +5233,33 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 	datafile.close()
 	return (diroffsets, blacklist, newtags, hints)
 
+## unpack Windows Imaging files
+## Assume for now that the whole image is a WIM file
+def searchUnpackWIM(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
+	hints = {}
+	diroffsets = []
+	newtags = []
+	if not 'mswim' in offsets:
+		return (diroffsets, blacklist, newtags, hints)
+	if offsets['mswim'] == []:
+		return (diroffsets, blacklist, newtags, hints)
+	if not 0 in offsets['mswim']:
+		return (diroffsets, blacklist, newtags, hints)
+	counter = 1
+	for offset in offsets['mswim']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			return (diroffsets, blacklist, newtags, hints)
+		tmpdir = dirsetup(tempdir, filename, "wim", counter)
+		tmpres = unpack7z(filename, 0, tmpdir, blacklist)
+		if tmpres != None:
+			(size7z, res) = tmpres
+			diroffsets.append((res, 0, size7z))
+			blacklist.append((0, size7z))
+			newtags.append('wim')
+			return (diroffsets, blacklist, newtags, hints)
+	return (diroffsets, blacklist, newtags, hints)
+
 ## sometimes Ogg audio files are embedded into binary blobs
 def searchUnpackOgg(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
