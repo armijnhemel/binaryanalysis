@@ -1071,7 +1071,7 @@ def searchUnpackInstallShield(filename, tempdir=None, blacklist=[], offsets={}, 
 	p = subprocess.Popen(['unshield', 'x', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
-		os.rmdir(tmpdir)
+		shutil.rmtree(tmpdir)
 	else:
 		## Ideally we add data1.cab, data1.hdr and (if present) data2.cab to the blacklist.
 		## For this we need to be able to supply more information to the parent process
