@@ -1556,6 +1556,7 @@ def runscan(scans, binaries):
 			sys.stderr.flush()
 
 		shutil.copy(scan_binary, scantempdir)
+		os.chmod(os.path.join(scantempdir, os.path.basename(scan_binary)), stat.S_IRWXU)
 
 		if debug:
 			print >>sys.stderr, "COPYING END", datetime.datetime.utcnow().isoformat()
