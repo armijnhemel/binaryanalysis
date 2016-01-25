@@ -1,3 +1,9 @@
+2016-01-25:
+* fsmagic.py: add marker for MS WIM files
+* fwunpack.py: dd copies permissions of original file, so chmod after dd
+* bruteforcescan.py: chmod after copying the binary to scan
+* fwunpack.py: use unpackFile() in ISO9660 unpacking
+
 2016-01-24:
 * fwunpack.py: fix sanity check in jpeg unpacking, extract (some) XMP data
 from JPEG files
