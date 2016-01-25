@@ -3,6 +3,9 @@
 * fwunpack.py: dd copies permissions of original file, so chmod after dd
 * bruteforcescan.py: chmod after copying the binary to scan
 * fwunpack.py: use unpackFile() in ISO9660 unpacking
+* fwunpack.py: unpack MS WIM files with 7z
+* bat-scan.config: enable MS WIM unpacking
+* fwunpack.py: unshield can leave partial results
 
 2016-01-24:
 * fwunpack.py: fix sanity check in jpeg unpacking, extract (some) XMP data
