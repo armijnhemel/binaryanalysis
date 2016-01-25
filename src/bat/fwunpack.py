@@ -101,6 +101,7 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 			else:
 				p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile,), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 				(stanout, stanerr) = p.communicate()
+				os.chmod(tmpfile, stat.S_IRWXU)
 		else:
 			if unpackcutoff < filesize and length < unpackcutoff:
 				srcfile = open(filename, 'rb')
@@ -124,6 +125,7 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 					## bytes need be removed only from the end of the file
 					p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile,), 'bs=%s' % (length,), 'count=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 					(stanout, stanerr) = p.communicate()
+					os.chmod(tmpfile, stat.S_IRWXU)
 			else:
 				## bytes need to be removed on both sides of the file, so possibly
 				## use a two way pass
@@ -131,6 +133,7 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 				if offset > (filesize - length):
 					p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmpfile,), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 					(stanout, stanerr) = p.communicate()
+					os.chmod(tmpfile, stat.S_IRWXU)
 					tmptmpfile = open(tmpfile, 'a+b')
 					tmptmpfile.seek(length)
 					tmptmpfile.truncate()
@@ -143,6 +146,7 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 					## see for example https://bugzilla.redhat.com/show_bug.cgi?id=612839
 					if (length+offset) >= 2147479552:
 						shutil.copy(filename, tmptmpfile[1])
+						os.chmod(tmptmpfile[1], stat.S_IRWXU)
 						truncfile = open(tmptmpfile[1], 'a+b')
 						truncfile.seek(length+offset)
 						truncfile.truncate()
@@ -151,10 +155,12 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 						## first copy bytes from the front of the file up to a certain length
 						p = subprocess.Popen(['dd', 'if=%s' % (filename,), 'of=%s' % (tmptmpfile[1],), 'bs=%s' % (length+offset,), 'count=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 						(stanout, stanerr) = p.communicate()
+						os.chmod(tmptmpfile[1], stat.S_IRWXU)
 
 					## then copy bytes from the temporary file, but skip 'offset' bytes at the front
 					p = subprocess.Popen(['dd', 'if=%s' % (tmptmpfile[1],), 'of=%s' % (tmpfile,), 'bs=%s' % (offset,), 'skip=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 					(stanout, stanerr) = p.communicate()
+					os.chmod(tmpfile, stat.S_IRWXU)
 					os.unlink(tmptmpfile[1])
 
 ## There are certain routers that have all bytes swapped, because they use 16
