@@ -105,6 +105,7 @@ fsmagic = {
             'windowsassemblyheader':		'<assembly',
             'windowsassemblytrailer':		'</assembly>',
             'appledouble':	'\x00\x05\x16\x07',
+            'mswim':	        'MSWIM\x00\x00\x00',
             'certificate':	'-----BEGIN',
           }
 
