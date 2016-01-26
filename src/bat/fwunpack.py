@@ -2958,6 +2958,8 @@ def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, scane
 		compressfile.seek(offset+2)
 		compressdata = compressfile.read(1)
 		compressfile.close()
+		if len(compressdata) != 1:
+			break
 		compressbits = ord(compressdata) & 0x1f
 		if compressbits < 9:
 			continue
