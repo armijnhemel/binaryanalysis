@@ -1,3 +1,18 @@
+bat (24.0) unstable; urgency=high
+
+  * many performance fixes for lots of file systems
+  * crasher bug fixes
+  * tagging more files
+  * reduced database connections (PostgreSQL) when scanning in directory mode
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Wed, 27 Jan 2015 17:21:51 +0100
+
+bat (23.0) unstable; urgency=high
+
+  * many performance and crash fixes (see ChangeLog)
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Wed, 27 Jan 2015 17:28:31 +0100
+
 bat (22.0) unstable; urgency=medium
 
   * fixes to work with older versions of Python, readelf, xz
