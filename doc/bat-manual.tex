@@ -87,7 +87,7 @@ repositories such as Debian \texttt{non-free}.
 
 \subsubsection{Installation on CentOS}
 
-In some cases it is possible to run BAT on CentOS (6.6 or 7 has been tested
+In some cases it is possible to run BAT on CentOS (6.7 or 7 has been tested
 with) but some functionality will not be available, such as UBI/UBIFS
 unpacking and the scans creating graphs with PyDot (ELF linking, kernel module
 linking).
@@ -378,8 +378,8 @@ sparse files to ext4 file system images.
 systems.
 \item modified version of \texttt{cramfsck} that enables unpacking cramfs
 file systems.
-\item unmodified version of \texttt{unyaffs} that enables unpacking for some
-(but not all) YAFFS2 file systems.
+\item reimplementation of \texttt{unyaffs} that enables unpacking for various
+YAFFS2 file systems.
 \item various versions of \texttt{unsquashfs} that enable unpacking variants
 of SquashFS. These versions have either been lifted from vendor SDKs, the
 OpenWrt project, DD-WRT, or upstream SquashFS project.
@@ -448,13 +448,6 @@ a special method (configured in the configuration for the gzip unpacker) is
 first run to see if the file is actually a gzip file, without looking at any
 other markers, or trying other scans first.
 
-As a further optimization there is one method that is run for ZIP-files
-(including Android APK files and Java JAR, EAR and WAR files) before the
-generic marker search: large firmwares tend to be distributed as ZIP-files. By
-quickly checking if a file is a complete ZIP-file time can be saved. This
-method will be removed in the near future and rewritten to a similar method as
-is used for gzip.
-
 If multiple CPUs are available and the top level file is larger than a certain
 limit and does not have a known extension as described above the marker search
 will be done in parallel as a speed up. The limit can be set in the global
@@ -522,7 +515,7 @@ ubifs (not on all systems)
 compressed Flash, CAB, compress, CPIO, EXE (specific compression methods only),
 GZIP, InstallShield (old versions), LRZIP, LZIP, LZMA, LZO, MSI, pack200, RAR,
 RPM, RZIP, serialized Java, TAR, UPX, XZ, ZIP (including APK, EAR, JAR and WAR)
-\item media files: GIF, ICO, PDF, PNG, WOFF, CHM
+\item media files: GIF, ICO, PDF, PNG, WOFF, CHM, WIM
 \end{itemize}
 
 Most of the unpackers for these file systems, compressed files and media files
@@ -2885,7 +2878,7 @@ The order of the unpack scans as defined in BAT 24 is:
 \begin{enumerate}
 \item \texttt{byteSwap}
 \item \texttt{tar}
-\item \texttt{pdf\_unpack}, \texttt{iso9660}
+\item \texttt{pdf\_unpack}, \texttt{iso9660}, \texttt{wim}
 \item \texttt{cramfs}, \texttt{ext2fs}, \texttt{ubi}
 \item \texttt{ar}, \texttt{cpio}, \texttt{java\_serialized}, \texttt{romfs},
 \texttt{rpm}, \texttt{upx}, \texttt{yaffs}
