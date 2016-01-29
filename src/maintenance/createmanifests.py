@@ -198,7 +198,7 @@ def computehash((path, filename, extrahashes)):
 			if i == 'crc32':
 				filehashes[i] = zlib.crc32(data) & 0xffffffff
 			elif i == 'tlsh':
-				if os.stat(resolved_path).st_size >= 512:
+				if os.stat(resolved_path).st_size >= 256:
 					tlshhash = tlsh.hash(data)
 					filehashes[i] = tlshhash
 				else:
