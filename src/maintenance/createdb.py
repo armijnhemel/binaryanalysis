@@ -1025,6 +1025,15 @@ def filterfiles((filedir, filename, pkgconf, allfiles, scanmagic)):
 		language = None
 
 	if scanmagic:
+		## Check for some Apple encodings
+		## byte values copied from /usr/share/magic
+		#scanfile = open(resolved_path, 'r')
+		#scanfile.seek(0)
+		#scanbytes = scanfile.read(4)
+		#if scanbytes == '\x00\x05\x16\x07':
+		#	return None
+		#scanfile.close()
+		
 		filemagic = ms.file(os.path.realpath(resolved_path).decode('utf-8'))
 		if filemagic == "AppleDouble encoded Macintosh file":
 			return None
@@ -1046,7 +1055,7 @@ def computehash((filedir, filename, extension, language, extrahashes)):
 			if i == 'crc32':
 				filehashes[i] = zlib.crc32(data) & 0xffffffff
 			elif i == 'tlsh':
-				if os.stat(resolved_path).st_size >= 512:
+				if os.stat(resolved_path).st_size >= 256:
 					tlshhash = tlsh.hash(data)
 					filehashes[i] = tlshhash
 				else:

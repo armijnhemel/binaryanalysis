@@ -34,7 +34,7 @@ def computehash((filedir, filename, extrahashes)):
 			return None
 
 	if 'tlsh' in extrahashes:
-		if os.stat(resolved_path).st_size >= 512:
+		if os.stat(resolved_path).st_size >= 256:
 			filehashes['tlsh'] = tlsh.hash(filedata)
 		else:
 			filehashes['tlsh'] = None
