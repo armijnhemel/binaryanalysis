@@ -22,6 +22,8 @@ extensions = {'.c'      : 'C',
               '.s'      : 'C',
               '.txx'    : 'C',
               '.y'      : 'C',
+              '.dts'    : 'C', # specific to Linux kernel
+              '.dtsi'   : 'C', # specific to Linux kernel
               '.cs'     : 'C#',
               '.groovy' : 'Java',
               '.java'   : 'Java',
