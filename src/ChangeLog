@@ -1,3 +1,10 @@
+2016-01-30:
+* batextensions.py: also look at .dts and .dtsi files (Linux kernel specific)
+
+2016-01-29:
+* updatesha256sum.py/generatelistrpm.py/createdb.py/createmanifests.py: newer
+TLSH implementations can handle files 256 bytes in size
+
 2016-01-27:
 * generatejson.py: extra sanity check
 * tag BAT 24
