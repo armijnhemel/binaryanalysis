@@ -275,6 +275,8 @@ def searchUnpackUPX(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	return (diroffsets, blacklist, tags, hints)
 
 ## unpack Java serialized data
+## A specification can be found here:
+## https://docs.oracle.com/javase/7/docs/platform/serialization/spec/protocol.html
 def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	if not 'java_serialized' in offsets:
@@ -284,6 +286,7 @@ def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={},
 	tags = []
 	counter = 1
 	diroffsets = []
+	tc_bytes = ['\x70', '\x71', '\x72', '\x73', '\x74', '\x75', '\x76', '\x77', '\x78', '\x79', '\x7a', '\x7b', '\x7c', '\x7d', '\x7e']
 	for offset in offsets['java_serialized']:
 		## check if the offset found is in a blacklist
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
@@ -293,9 +296,15 @@ def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={},
 		serialized_file = open(filename, 'rb')
 		serialized_file.seek(offset+2)
 		serialized_bytes = serialized_file.read(2)
-		serialized_file.close()
 		stream_version = struct.unpack('>H', serialized_bytes)[0]
 		if stream_version != 5:
+			serialized_file.close()
+			continue
+
+		## The next bytes always have to be in range 0x70 - 0x7e
+		tc_byte = serialized_file.read(1)
+		serialized_file.close()
+		if tc_byte not in tc_bytes:
 			continue
 		tmpdir = dirsetup(tempdir, filename, "java_serialized", counter)
 		tempname = "deserialize"
