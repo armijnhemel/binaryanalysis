@@ -5271,6 +5271,65 @@ def searchUnpackWIM(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			return (diroffsets, blacklist, newtags, hints)
 	return (diroffsets, blacklist, newtags, hints)
 
+## Unpack Android backup files. These are zlib compressed files.
+## Unpacking is almost identical to SWF, but has a few extra sanity
+## checks.
+def searchUnpackAndroidBackup(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
+	hints = {}
+	if not 'androidbackup' in offsets:
+		return ([], blacklist, [], hints)
+	if offsets['androidbackup'] == []:
+		return ([], blacklist, [], hints)
+
+	newtags = []
+	counter = 1
+	diroffsets = []
+	readsize = 1000000
+	
+	backupfile = open(filename, 'rb')
+	for offset in offsets['androidbackup']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		## first some sanity checks
+		unzobj = zlib.decompressobj()
+		backupfile.seek(offset+15)
+		versiondata = backupfile.read(2)
+		if versiondata != "1\n":
+			continue
+		compressiondata = backupfile.read(2)
+		if compressiondata != "1\n":
+			continue
+		encryptiondata = backupfile.read(5)
+		if encryptiondata != "none\n":
+			continue
+		unzswfdata = backupfile.read(readsize)
+		unz = ''
+		bytesread = 22 # 15 + 2 + 2 + 5
+		try:
+			while unzswfdata != '':
+				unz += unzobj.decompress(unzswfdata)
+				deflatesize = len(unzswfdata) - len(unzobj.unused_data)
+				bytesread += len(unzswfdata) - len(unzobj.unused_data)
+				if len(unzobj.unused_data) != 0:
+					break
+				unzswfdata = backupfile.read(readsize)
+		except Exception, e:
+			continue
+
+		tmpdir = dirsetup(tempdir, filename, "androidbackup", counter)
+		tmpfile = tempfile.mkstemp(dir=tmpdir)
+		os.write(tmpfile[0], unz)
+		os.fdopen(tmpfile[0]).close()
+
+		diroffsets.append((tmpdir, offset, bytesread))
+		blacklist.append((offset, offset + bytesread))
+		if offset == 0 and bytesread == os.stat(filename).st_size:
+			newtags.append('androidbackup')
+		counter += 1
+	backupfile.close()
+	return (diroffsets, blacklist, newtags, hints)
+
 ## sometimes Ogg audio files are embedded into binary blobs
 def searchUnpackOgg(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}

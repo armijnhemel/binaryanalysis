@@ -107,6 +107,7 @@ fsmagic = {
             'appledouble':	'\x00\x05\x16\x07',
             'mswim':	        'MSWIM\x00\x00\x00',
             'certificate':	'-----BEGIN',
+            'androidbackup':	'ANDROID BACKUP\n',
           }
 
 ## some offsets can be found after a certain number of bytes, but
