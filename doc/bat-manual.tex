@@ -1533,7 +1533,6 @@ database = /home/bat/db/master.sqlite3
 scanlicense = yes
 licensedb = /home/bat/db/licenses.sqlite3
 nomoschunks = 10
-ninkacommentsdb = /home/bat/db/ninkacomments.sqlite3
 scancopyright = yes
 scansecurity = yes
 securitydb = /home/bat/db/security.sqlite3
@@ -1554,10 +1553,6 @@ FOSSology) how many files should be scanned at once. The default value set in
 the database creation script is 10. Nomos can scan multiple files at once, but
 it has concurrency problems (see
 \url{https://github.com/fossology/fossology/issues/396} for an explanation).
-
-The parameter \texttt{ninkacommentsdb} can be used for setting a caching
-database for mapping comments to licenses, as used by Ninka. This setting is
-mandatory if license scanning is enabled.
 
 The setting \texttt{scansecurity} enables extraction of security information
 from source code. The parameter \texttt{securitydb} points to the database file
@@ -1702,10 +1697,6 @@ The licenses database has 2 tables:
 \item \texttt{extracted\_copyright}
 \item \texttt{licenses}
 \end{itemize}
-
-During creation an additional table \texttt{ninkacomments} is used, but this
-is only used to cache licensing information determined by the Ninka license
-scanner. It is not used otherwise.
 
 The security database has 1 table:
 
