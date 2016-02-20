@@ -1115,14 +1115,13 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	miscfiles = filter(lambda x: x[4] == None, scanfile_result)
 	scanfile_result = filter(lambda x: x[4] != None, scanfile_result)
 
-	ninkaversion = "1.3"
+	ninkaversion = "2.0-pre1"
 	brokenninka = True
 	#brokenninka = False
 	insertfiles = []
 	tmpsha256s = set()
 	filehashes = {}
 	filestoscan = []
-	ninkacomments = extractconfig['ninkacomments']
 
 	## loop through the files to see which files should be scanned.
 	## A few assumptions are made:
@@ -1235,9 +1234,6 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 					cursor.execute('''insert into extracted_string (stringidentifier, checksum, language, linenumber) values (?,?,?,?)''', (configureresgroups[0], filehash, language, lineno))
 
 	if license:
-		ninkaconn = sqlite3.connect(ninkacomments, check_same_thread = False)
-		ninkacursor = ninkaconn.cursor()
-
 		licenseconn = sqlite3.connect(licensedb, check_same_thread = False)
 		licensecursor = licenseconn.cursor()
 		licensecursor.execute('PRAGMA synchronous=off')
@@ -1270,61 +1266,19 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			filtered_files = filestoscan
 			filtered_files_fossology = filestoscan_fossology
 
-		if 'patch' in languages:
-			## patch files should not be scanned for license information
-			comments_results = pool.map(extractcomments, map(lambda x: x+ (brokenninka,), filter(lambda x: x[4] != 'patch', filtered_files)), 1)
-		else:
-			comments_results = pool.map(extractcomments, map(lambda x: x + (brokenninka,), filtered_files), 1)
-		commentshash = {}
-		commentshash2 = {}
-		for c in comments_results:
-			if commentshash.has_key(c[0]):
-				continue
-			else:
-				commentshash[c[0]] = c[1]
-			if commentshash2.has_key(c[1]):
-				commentshash2[c[1]].append(c[0])
-			else:
-				commentshash2[c[1]] = [c[0]]
-
-		licensefilestoscan = []
-		for c in commentshash2:
-			ninkacursor.execute('''select license, version from ninkacomments where checksum=?''', (c,))
-			res = ninkacursor.fetchall()
-			if len(res) > 0:
-				## store all the licenses that are already known for this comment
-				for r in res:
-					(filelicense, scannerversion) = r
-					for f in commentshash2[c]:
-						## only use this if there actually are duplicates
-						#licensecursor.execute('''delete from licenses where checksum = ? and license = ? and scanner = ? and version = ?''', (f, filelicense, "ninka", scannerversion))
-						licensecursor.execute('''insert into licenses (checksum, license, scanner, version) values (?,?,?,?)''', (f, filelicense, "ninka", scannerversion))
-			else:
-				licensefilestoscan.append(commentshash2[c][0])
-		licenseconn.commit()
-
 		licensescanfiles = []
+		for l in filtered_files:
+			## just a few bits of information are needed
+			## def runninka((i, p, filehash, ninkaversion, brokenninka)):
+			#licensescanfiles.append((filehashes[l][0][0], filehashes[l][0][1], l, ninkaversion, brokenninka))
+			licensescanfiles.append((l[2], l[3], l[5], ninkaversion, brokenninka))
+		license_results = pool.map(runninka, licensescanfiles, 1)
 
-		for l in licensefilestoscan:
-			licensescanfiles.append((filehashes[l][0][0], filehashes[l][0][1], l, ninkaversion, brokenninka))
-		license_results = pool.map(runfullninka, licensescanfiles, 1)
-
-		## we now know the licenses for files we didn't know before. So:
-		## 1. find the corresponding commentshash
-		## 2. store the licenses for this file, plus for the commentshash
-		## 3. for each file that has the same commentshash, store the license as well
 		for l in license_results:
 			licenses = l[1]
 			for license in licenses:
-				ninkacursor.execute('''insert into ninkacomments (checksum, license, version) values (?,?,?)''', (commentshash[l[0]], license, ninkaversion))
-				for f in commentshash2[commentshash[l[0]]]:
-					licensecursor.execute('''insert into licenses (checksum, license, scanner, version) values (?,?,?,?)''', (f, license, "ninka", ninkaversion))
+				licensecursor.execute('''insert into licenses (checksum, license, scanner, version) values (?,?,?,?)''', (l[0], license, "ninka", ninkaversion))
 		licenseconn.commit()
-		ninkaconn.commit()
-
-		## cleanup
-		ninkacursor.close()
-		ninkaconn.close()
 
 		## TODO: sync names of licenses as found by FOSSology and Ninka
 		nomoschunks = extractconfig['nomoschunks']
@@ -1642,91 +1596,11 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 
 	return (scanfile_result)
 
-## extract comments in parallel
-def extractcomments((package, version, i, p, language, filehash, ninkaversion, extractconfig, brokenninka)):
-	## first generate a .comments file with Ninka and see if it is already
-	## known. This is because often license headers are identical, and
-	## there is no need to rescan the files if the headers are identical.
-	## For gtk+ 2.20.1 scanning time dropped with about 25%.
+def runninka((i, p, filehash, ninkaversion, brokenninka)):
 	ninkaenv = os.environ.copy()
 	ninkabasepath = '/gpl/ninka/ninka-%s' % ninkaversion
 	ninkaenv['PATH'] = ninkaenv['PATH'] + ":%s/comments" % ninkabasepath
-
-	broken = False
-	if brokenninka:
-		for b in ['$', ' ', ';', '(', ')', '[', ']', '`', '\'', '\\', '&']:
-			if b in i:
-				broken = True
-				break
-			if b in p:
-				broken = True
-				break
-	if broken:
-		while True:
-			ninkatmp = tempfile.mkstemp()
-			os.fdopen(ninkatmp[0]).close()
-			if '$' in ninkatmp[1]:
-				os.unlink(ninkatmp[1])
-				continue
-			if ' ' in ninkatmp[1]:
-				os.unlink(ninkatmp[1])
-				continue
-			if ';' in ninkatmp[1]:
-				os.unlink(ninkatmp[1])
-				continue
-			if '(' in ninkatmp[1]:
-				os.unlink(ninkatmp[1])
-				continue
-			if ')' in ninkatmp[1]:
-				os.unlink(ninkatmp[1])
-				continue
-			if '[' in ninkatmp[1]:
-				os.unlink(ninkatmp[1])
-				continue
-			if ']' in ninkatmp[1]:
-				os.unlink(ninkatmp[1])
-				continue
-			if '`' in ninkatmp[1]:
-				os.unlink(ninkatmp[1])
-				continue
-			if '\'' in ninkatmp[1]:
-				os.unlink(ninkatmp[1])
-				continue
-			if '\\' in ninkatmp[1]:
-				os.unlink(ninkatmp[1])
-				continue
-			if '&' in ninkatmp[1]:
-				os.unlink(ninkatmp[1])
-				continue
-			break
-		shutil.copy(os.path.join(i,p), ninkatmp[1])
-		p1 = subprocess.Popen(["%s/ninka.pl" % ninkabasepath, "-c", ninkatmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
-	else:
-		p1 = subprocess.Popen(["%s/ninka.pl" % ninkabasepath, "-c", os.path.join(i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
-
-	(stanout, stanerr) = p1.communicate()
-	if broken:
-		os.unlink(ninkatmp[1])
-		commentsfile = "%s.comments" % ninkatmp[1]
-	else:
-		commentsfile = os.path.join(i, "%s.comments" % p)
-	if not os.path.exists(commentsfile):
-		for j in ['$', ';', ' ', '(', ')', '[', ']', '`', '\'', '\\', '&']:
-			if j in p:
-				p = p.replace(j, '\%s' % j)
-		commentsfile = os.path.join(i, "%s.comments" % p)
-	scanfile = open(commentsfile, 'r')
-	ch = hashlib.new('sha256')
-	ch.update(scanfile.read())
-	scanfile.close()
-	commentshash = ch.hexdigest()
-	os.unlink(commentsfile)
-	return (filehash, commentshash)
-
-def runfullninka((i, p, filehash, ninkaversion, brokenninka)):
-	ninkaenv = os.environ.copy()
-	ninkabasepath = '/gpl/ninka/ninka-%s' % ninkaversion
-	ninkaenv['PATH'] = ninkaenv['PATH'] + ":%s/comments" % ninkabasepath
+	ninkaenv['PERL5LIB'] = "%s/lib" % ninkabasepath
 
 	ninkares = set()
 
@@ -1778,9 +1652,9 @@ def runfullninka((i, p, filehash, ninkaversion, brokenninka)):
 				continue
 			break
 		shutil.copy(os.path.join(i,p), ninkatmp[1])
-		p2 = subprocess.Popen(["%s/ninka.pl" % ninkabasepath, "-d", ninkatmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
+		p2 = subprocess.Popen(["%s/bin/ninka" % ninkabasepath, "-d", ninkatmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
 	else:
-		p2 = subprocess.Popen(["%s/ninka.pl" % ninkabasepath, os.path.join(i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
+		p2 = subprocess.Popen(["%s/bin/ninka" % ninkabasepath, os.path.join(i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
 	(stanout, stanerr) = p2.communicate()
 	if broken:
 		os.unlink(ninkatmp[1])
@@ -2726,10 +2600,6 @@ def main(argv):
 			except:
 				nomoschunks = 10
 			try:
-				ninkacomments = config.get(section, 'ninkacommentsdb')
-			except:
-				ninkacomments = None
-			try:
 				securitydb = config.get(section, 'securitydb')
 			except:
 				securitydb = None
@@ -2818,10 +2688,6 @@ def main(argv):
 		license = True
 		if licensedb == None:
 			parser.error("License scanning enabled, but no path to licensing database supplied")
-		if ninkacomments == None:
-			parser.error("License scanning enabled, but no path to ninkacomments database supplied")
-		if ninkacomments == masterdatabase:
-			parser.error("Database and ninkacomments database cannot be the same")
 		if authlicensedb != None:
 			if licensedb == authlicensedb:
 				authlicensedb = None
@@ -2884,10 +2750,6 @@ def main(argv):
 	c = conn.cursor()
 	#c.execute('PRAGMA synchronous=off')
 
-	if scanlicense:
-		ninkaconn = sqlite3.connect(ninkacomments, check_same_thread = False)
-		ninkac = ninkaconn.cursor()
-
 	if scanlicense or scancopyright:
 		licenseconn = sqlite3.connect(licensedb, check_same_thread = False)
 		licensec = licenseconn.cursor()
@@ -2900,11 +2762,6 @@ def main(argv):
 		try:
 			licensec.execute('''drop table licenses''')
 			licenseconn.commit()
-		except:
-			pass
-		try:
-			ninkac.execute('''drop table ninkacomments''')
-			ninkaconn.commit()
 		except:
 			pass
 	if wipe:
@@ -2922,11 +2779,6 @@ def main(argv):
 			licensec.execute('''drop table licenses''')
 			licensec.execute('''drop table extracted_copyright''')
 			licenseconn.commit()
-		except:
-			pass
-		try:
-			ninkac.execute('''drop table ninkacomments''')
-			ninkaconn.commit()
 		except:
 			pass
 		try:
@@ -3053,14 +2905,6 @@ def main(argv):
 			licensec.close()
 			licenseconn.close()
 
-		if scanlicense:
-			## Store the comments extracted by Ninka per checksum.
-			ninkac.execute('''create table if not exists ninkacomments (checksum text, license text, version text)''')
-			ninkac.execute('''create index if not exists comments_index on ninkacomments(checksum);''')
-
-			ninkaconn.commit()
-			ninkac.close()
-			ninkaconn.close()
 		if scansecurity:
 			securityc.execute('''create table if not exists security_cert(checksum text, securitybug text, linenumber int, function text, whitelist tinyint(1))''')
 			securityc.execute('''create index if not exists security_cert_checksum_index on security_cert(checksum);''')
@@ -3172,7 +3016,6 @@ def main(argv):
 	extractconfig = {}
 	extractconfig['nomoschunks'] = nomoschunks
 	extractconfig['urlcutoff'] = urlcutoff
-	extractconfig['ninkacomments'] = ninkacomments
 
 	res = resordered + batarchives
 	for i in res:
