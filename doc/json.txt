@@ -7,7 +7,7 @@ Each scan will have a number of JSON files:
 
 This distinction is done because the data can grow quite big (especially when dealing with packages with possibly millons of matches, like the Linux kernel) and because there is often duplication of files inside firmwares/archives, which can easily inflate the result set.
 
-The top level file will be called "scandata.json" (but this can be changed).
+The top level file is called "scandata.json". This name is hardcoded.
 
 Top level file, description:
 
