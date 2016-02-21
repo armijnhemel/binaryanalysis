@@ -1656,7 +1656,6 @@ def runninka((i, p, filehash, ninkaversion)):
 		## cleanup
 		if os.path.exists("%s.license" % ninkatmp[1]):
 			os.unlink("%s.license" % ninkatmp[1])
-	## TODO: handle cases with ';' in filename
 	ninkasplit = stanout.strip().split(';')[1:]
 	## filter out the licenses that can't be determined.
 	if ninkasplit[0] == '':
