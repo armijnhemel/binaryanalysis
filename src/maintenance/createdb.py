@@ -1652,7 +1652,7 @@ def runninka((i, p, filehash, ninkaversion, brokenninka)):
 				continue
 			break
 		shutil.copy(os.path.join(i,p), ninkatmp[1])
-		p2 = subprocess.Popen(["%s/bin/ninka" % ninkabasepath, "-d", ninkatmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
+		p2 = subprocess.Popen(["%s/bin/ninka" % ninkabasepath, ninkatmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
 	else:
 		p2 = subprocess.Popen(["%s/bin/ninka" % ninkabasepath, os.path.join(i, p)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ninkaenv)
 	(stanout, stanerr) = p2.communicate()
