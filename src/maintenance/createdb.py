@@ -1116,8 +1116,6 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	scanfile_result = filter(lambda x: x[4] != None, scanfile_result)
 
 	ninkaversion = "2.0-pre1"
-	brokenninka = True
-	#brokenninka = False
 	insertfiles = []
 	tmpsha256s = set()
 	filehashes = {}
@@ -1269,9 +1267,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		licensescanfiles = []
 		for l in filtered_files:
 			## just a few bits of information are needed
-			## def runninka((i, p, filehash, ninkaversion, brokenninka)):
-			#licensescanfiles.append((filehashes[l][0][0], filehashes[l][0][1], l, ninkaversion, brokenninka))
-			licensescanfiles.append((l[2], l[3], l[5], ninkaversion, brokenninka))
+			licensescanfiles.append((l[2], l[3], l[5], ninkaversion))
 		license_results = pool.map(runninka, licensescanfiles, 1)
 
 		for l in license_results:
@@ -1596,7 +1592,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 
 	return (scanfile_result)
 
-def runninka((i, p, filehash, ninkaversion, brokenninka)):
+def runninka((i, p, filehash, ninkaversion)):
 	ninkaenv = os.environ.copy()
 	ninkabasepath = '/gpl/ninka/ninka-%s' % ninkaversion
 	ninkaenv['PATH'] = ninkaenv['PATH'] + ":%s/comments" % ninkabasepath
@@ -1605,14 +1601,13 @@ def runninka((i, p, filehash, ninkaversion, brokenninka)):
 	ninkares = set()
 
 	broken = False
-	if brokenninka:
-		for b in ['$', ' ', ';', '(', ')', '[', ']', '`', '\'', '\\', '&']:
-			if b in i:
-				broken = True
-				break
-			if b in p:
-				broken = True
-				break
+	for b in ['$', ' ', ';', '(', ')', '[', ']', '`', '\'', '\\', '&']:
+		if b in i:
+			broken = True
+			break
+		if b in p:
+			broken = True
+			break
 	if broken:
 		while True:
 			ninkatmp = tempfile.mkstemp()
