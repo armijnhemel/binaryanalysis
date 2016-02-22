@@ -1656,13 +1656,14 @@ def runninka((i, p, filehash, ninkaversion)):
 		## cleanup
 		if os.path.exists("%s.license" % ninkatmp[1]):
 			os.unlink("%s.license" % ninkatmp[1])
-	ninkasplit = stanout.strip().split(';')[1:]
-	## filter out the licenses that can't be determined.
-	if ninkasplit[0] == '':
-		ninkares = set(['UNKNOWN'])
-	else:
-		licenses = ninkasplit[0].split(',')
-		ninkares = set(licenses)
+	if p2.returncode == 0:
+		ninkasplit = stanout.strip().split(';')[1:]
+		## filter out the licenses that can't be determined.
+		if ninkasplit[0] == '':
+			ninkares = set(['UNKNOWN'])
+		else:
+			licenses = ninkasplit[0].split(',')
+			ninkares = set(licenses)
 	return (filehash, ninkares)
 
 ## extract copyrights from the file. Previous versions of this method invoked the
