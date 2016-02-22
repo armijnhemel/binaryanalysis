@@ -1230,6 +1230,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 					ac_init_pos = configureaclines.find('AC_INIT(')
 					lineno = configureaclines.count('\n', 0, ac_init_pos) + 1
 					cursor.execute('''insert into extracted_string (stringidentifier, checksum, language, linenumber) values (?,?,?,?)''', (configureresgroups[0], filehash, language, lineno))
+		conn.commit()
 
 	if license:
 		licenseconn = sqlite3.connect(licensedb, check_same_thread = False)
