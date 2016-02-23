@@ -1,3 +1,12 @@
+2016-02-23:
+* brutefrorcescan.py: add 'compress' configuration option (default: no) for
+later use in reporting
+* generatejson.py: make JSON gzip compression optional
+* bat-scan.config: compress JSON files by default
+
+2016-02-22:
+* createdb.py: work around Ninka barf
+
 2016-02-21:
 * createdb.py: fix invocation for Ninka
 
