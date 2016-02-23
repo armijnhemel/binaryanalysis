@@ -869,7 +869,7 @@ def readconfig(config):
 						postgresql_hostaddr = None
 					try:
 						postgresql_port = config.get(section, 'postgresql_port')
-					except:
+					except Exception, e:
 						postgresql_port = None
 					batconf['environment']['POSTGRESQL_USER'] = postgresql_user
 					batconf['environment']['POSTGRESQL_PASSWORD'] = postgresql_password
@@ -1121,6 +1121,14 @@ def readconfig(config):
 					conf['storetarget'] = None
 					conf['storetype'] = None
 					conf['cleanup'] = False
+				try:
+					compress = config.get(section, 'compress')
+					if compress == 'yes':
+						conf['compress'] = True
+					else:
+						conf['compress'] = False
+				except:
+					conf['compress'] = False
 
 			## finally add the configurations to the right list
 			if config.get(section, 'type') == 'leaf':
@@ -1199,6 +1207,9 @@ def readconfig(config):
 		if s['cleanup']:
 			## this is an ugly hack *cringe*
 			s['environment']['overridedir'] = True
+		if s['compress']:
+			## this is an ugly hack *cringe*
+			s['environment']['compress'] = True
 		if 'reporthash' in batconf:
 			s['environment']['OUTPUTHASH'] = batconf['reporthash']
 		if 'template' in batconf:

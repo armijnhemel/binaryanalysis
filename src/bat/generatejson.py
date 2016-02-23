@@ -279,6 +279,10 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 		outputhash = scanenv['OUTPUTHASH']
 	else:
 		outputhash = 'sha256'
+	if "compress" in scanenv:
+		compressed = scanenv['compress']
+	else:
+		compressed = False
 
 	decodingneeded = ['utf-8','ascii','latin-1','euc_jp', 'euc_jis_2004', 'jisx0213', 'iso2022_jp', 'iso2022_jp_1', 'iso2022_jp_2', 'iso2022_jp_2004', 'iso2022_jp_3', 'iso2022_jp_ext', 'iso2022_kr','shift_jis','shift_jis_2004','shift_jisx0213']
 	for unpackreport in unpackreports:
@@ -349,7 +353,6 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 	jsontasks = []
 
 	converthash = False
-	compressed = True
 
 	## create tasks for printing results for each of the individual reports
 	for unpackreport in unpackreports:
