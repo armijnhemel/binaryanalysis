@@ -17,7 +17,7 @@ import bat.batdb
 from multiprocessing import Process, Lock
 from multiprocessing.sharedctypes import Value, Array
 
-def writejson(scanqueue, topleveldir, outputhash, cursor, conn, batdb, scanenv, converthash):
+def writejson(scanqueue, topleveldir, outputhash, cursor, conn, batdb, scanenv, converthash, compressed):
 	hashcache = {}
 	while True:
 		filehash = scanqueue.get(timeout=2592000)
@@ -255,12 +255,13 @@ def writejson(scanqueue, topleveldir, outputhash, cursor, conn, batdb, scanenv, 
 		for chunk in json.JSONEncoder(indent=4).iterencode(jsonreport):
 			jsonfile.write(chunk)
 		jsonfile.close()
-		fin = open(jsonfilename, 'rb')
-		fout = gzip.open("%s.gz" % jsonfilename, 'wb')
-		fout.write(fin.read())
-		fout.close()
-		fin.close()
-		os.unlink(fin.name)
+		if compressed:
+			fin = open(jsonfilename, 'rb')
+			fout = gzip.open("%s.gz" % jsonfilename, 'wb')
+			fout.write(fin.read())
+			fout.close()
+			fin.close()
+			os.unlink(fin.name)
 		scanqueue.task_done()
 
 def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, scandebug=False, unpacktempdir=None):
@@ -348,6 +349,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 	jsontasks = []
 
 	converthash = False
+	compressed = True
 
 	## create tasks for printing results for each of the individual reports
 	for unpackreport in unpackreports:
@@ -405,7 +407,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 					converthash = False
 			batcursors.append(cursor)
 			batconns.append(conn)
-			p = multiprocessing.Process(target=writejson, args=(scanqueue,topleveldir,outputhash,batcursors[i], batconns[i], batdb, scanenv, converthash))
+			p = multiprocessing.Process(target=writejson, args=(scanqueue,topleveldir,outputhash,batcursors[i], batconns[i], batdb, scanenv, converthash, compressed))
 			processpool.append(p)
 			p.start()
 
