@@ -134,7 +134,7 @@ def main(argv):
 							print >>sys.stderr, "output directory %s cannot be made, skipping %s" % (newoutdir, s)
 							continue
 					## template: "%s.tar.gz"
-					outpath = os.path.join(options.outdir, newoutdir, "%s.tar.gz" % s)
+					outpath = os.path.join(newoutdir, "%s.tar.gz" % s)
 					if not os.path.exists(outpath):
 						scanfiles.append((scanpath, outpath))
 					else:
