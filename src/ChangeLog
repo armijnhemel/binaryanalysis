@@ -3,6 +3,7 @@
 later use in reporting
 * generatejson.py: make JSON gzip compression optional
 * bat-scan.config: compress JSON files by default
+* bat-scan: fix using -u with relative paths
 
 2016-02-22:
 * createdb.py: work around Ninka barf
