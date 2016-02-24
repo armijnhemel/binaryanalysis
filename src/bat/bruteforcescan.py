@@ -1323,7 +1323,7 @@ def compressPickle((infile)):
 ## packed are hardcoded, the other files are determined from the configuration.
 ## The configuration option 'lite' allows to leave out the extracted data, to
 ## speed up extraction of data in the GUI.
-def writeDumpfile(unpackreports, scans, processamount, outputfile, configfile, tempdir, lite=False, debug=False):
+def writeDumpfile(unpackreports, scans, processamount, outputfile, configfile, tempdir, lite=False, debug=False, compress=True):
 	dumpData(unpackreports, scans, tempdir)
 	dumpfile = tarfile.open(outputfile, 'w:gz')
 	oldcwd = os.getcwd()
@@ -1351,13 +1351,14 @@ def writeDumpfile(unpackreports, scans, processamount, outputfile, configfile, t
 		dumpfile.add('data')
 	try:
 		os.stat('filereports')
-		## compress pickle files in parallel
-		filereports = os.listdir('filereports')
-		fnames = map(lambda x: os.path.join(tempdir, "filereports", x), filereports)
-		if fnames != []:
-			pool = multiprocessing.Pool(processes=processamount)
-			pool.map(compressPickle, fnames, 1)
-			pool.terminate()
+		if compress:
+			## compress pickle files in parallel
+			filereports = os.listdir('filereports')
+			fnames = map(lambda x: os.path.join(tempdir, "filereports", x), filereports)
+			if fnames != []:
+				pool = multiprocessing.Pool(processes=processamount)
+				pool.map(compressPickle, fnames, 1)
+				pool.terminate()
 		dumpfile.add('filereports')
 	except Exception,e:
 		if debug:
@@ -1854,7 +1855,8 @@ def runscan(scans, binaries):
 			print "POSTRUN END %s" % os.path.basename(scan_binary), datetime.datetime.utcnow().isoformat()
 
 		if writeconfig['writeoutput']:
-			writeDumpfile(unpackreports, scans, processamount, writeconfig['outputfile'], writeconfig['config'], topleveldir, scans['batconfig']['outputlite'], scans['batconfig']['debug'])
+			compress = True
+			writeDumpfile(unpackreports, scans, processamount, writeconfig['outputfile'], writeconfig['config'], topleveldir, scans['batconfig']['outputlite'], scans['batconfig']['debug'], compress)
 		if scans['batconfig']['cleanup']:
 			try:
 				shutil.rmtree(topleveldir)
