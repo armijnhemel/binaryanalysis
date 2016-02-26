@@ -629,6 +629,9 @@ def unpack(directory, filename, unpackdir):
         else:
 		filemagic = ms.file(filepath)
 
+	if iszip and filepath.endswith('.bz2'):
+		filemagic = ms.file(filepath)
+
         ## Assume if the files are bz2 or gzip compressed they are compressed tar files
         if 'bzip2 compressed data' in filemagic:
 		if unpackdir != None:
@@ -687,7 +690,7 @@ def unpack(directory, filename, unpackdir):
 			batzip.extractall(path=tmpdir)
 		except Exception, e:
 			shutil.rmtree(tmpdir)
-			print >>sys.stderr, "unpacking ZIP failed", e
+			print >>sys.stderr, "unpacking ZIP failed", e, filepath
 			return None
 	osgen = os.walk(tmpdir)
 	while True:
