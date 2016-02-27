@@ -155,7 +155,7 @@ def generatehtmlsnippet((picklefile, pickledir, picklehash, reportdir)):
 
 ## generate several output files and extract pickles
 ## TODO: change name
-def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir)):
+def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir, compressed)):
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 	leafreports = cPickle.load(leaf_file)
 	leaf_file.close()
@@ -277,9 +277,17 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 						html += "%s<br>\n" % cgi.escape(v)
 					html += "</p>\n"
 		if html != "":
-			nameshtmlfile = gzip.open("%s/%s-functionnames.html.gz" % (reportdir, filehash), 'wb')
+			htmlfilename = "%s/%s-functionnames.html" % (reportdir, filehash)
+			nameshtmlfile = open(htmlfilename, 'wb')
 			nameshtmlfile.write("<html><body>%s</body></html>" % html)
 			nameshtmlfile.close()
+			if compressed:
+				fin = open(htmlfilename, 'rb')
+				fout = gzip.open("%s.gz" % htmlfilename, 'wb')
+				fout.write(fin.read())
+				fout.close()
+				fin.close()
+				os.unlink(fin.name)
 
 	footer = "</body></html>"
 	if variablepvs != {}:
@@ -442,11 +450,19 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 						html += "</p>\n"
 
 		if html != "":
-			nameshtmlfile = gzip.open("%s/%s-names.html.gz" % (reportdir, filehash), 'wb')
+			htmlfilename = "%s/%s-names.html" % (reportdir, filehash)
+			nameshtmlfile = open(htmlfilename, 'wb')
 			nameshtmlfile.write(header)
 			nameshtmlfile.write(html)
 			nameshtmlfile.write(footer)
 			nameshtmlfile.close()
+			if compressed:
+				fin = open(htmlfilename, 'rb')
+				fout = gzip.open("%s.gz" % htmlfilename, 'wb')
+				fout.write(fin.read())
+				fout.close()
+				fin.close()
+				os.unlink(fin.name)
 
 	if res != None:
 		if res['unmatched'] != []:
@@ -485,13 +501,21 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir))
 				for rr in assignedmatches:
 					html += "%s<br>\n" % cgi.escape(rr)
 				html += "</p><hr>"
-			assignedhtmlfile = gzip.open("%s/%s-assigned.html.gz" % (reportdir, filehash), 'wb')
+			htmlfilename = "%s/%s-assigned.html" % (reportdir, filehash)
+			assignedhtmlfile = open(htmlfilename, 'wb')
 			assignedhtmlfile.write(html)
 			assignedhtmlfile.write(footer)
 			assignedhtmlfile.close()
+			if compressed:
+				fin = open(htmlfilename, 'rb')
+				fout = gzip.open("%s.gz" % htmlfilename, 'wb')
+				fout.write(fin.read())
+				fout.close()
+				fin.close()
+				os.unlink(fin.name)
 	return (filehash, reportresults, functionresults, unmatchedresult)
 
-def generateunmatched((picklefile, pickledir, filehash, reportdir)):
+def generateunmatched((picklefile, pickledir, filehash, reportdir, compressed)):
 
 	unmatched_pickle = open(os.path.join(pickledir, picklefile), 'rb')
 	unmatches = cPickle.load(unmatched_pickle)
@@ -501,9 +525,17 @@ def generateunmatched((picklefile, pickledir, filehash, reportdir)):
 	unmatchedsnippets = map(lambda x: "%s<br>\n" % cgi.escape(x), unmatches)
 	unmatchedhtml = unmatchedhtml + "".join(unmatchedsnippets)
 	unmatchedhtml = unmatchedhtml + "</p></body></html>"
-	unmatchedhtmlfile = gzip.open("%s/%s-unmatched.html.gz" % (reportdir, filehash), 'wb')
+	htmlfilename = "%s/%s-unmatched.html" % (reportdir, filehash)
+	unmatchedhtmlfile = open(htmlfilename, 'wb')
 	unmatchedhtmlfile.write(unmatchedhtml)
 	unmatchedhtmlfile.close()
+	if compressed:
+		fin = open(htmlfilename, 'rb')
+		fout = gzip.open("%s.gz" % htmlfilename, 'wb')
+		fout.write(fin.read())
+		fout.close()
+		fin.close()
+		os.unlink(fin.name)
 	os.unlink(os.path.join(pickledir, picklefile))
 
 def generatereports(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
@@ -563,8 +595,13 @@ def generatereports(unpackreports, scantempdir, topleveldir, processors, scanenv
 	unmatchedpickles = set()
 	reportpickles = set()
 
+	if "compress" in scanenv:
+		compressed = scanenv['compress']
+	else:
+		compressed = False
+
 	## extract pickles and generate some files
-	extracttasks = map(lambda x: (x, pickledir, topleveldir, reportdir, unpacktempdir), filehashes)
+	extracttasks = map(lambda x: (x, pickledir, topleveldir, reportdir, unpacktempdir, compressed), filehashes)
 	pool = multiprocessing.Pool(processes=processors)
 	res = filter(lambda x: x != None, pool.map(extractpickles, extracttasks, 1))
 	pool.terminate()
@@ -605,16 +642,25 @@ def generatereports(unpackreports, scantempdir, topleveldir, processors, scanenv
 
 	## generate files for unmatched strings
 	if unmatchedpickles != set():
-		unmatchedtasks = set(map(lambda x: (picklehashes[x[0]], pickledir, x[0], reportdir), unmatchedpicklespackages))
+		unmatchedtasks = set(map(lambda x: (picklehashes[x[0]], pickledir, x[0], reportdir, compressed), unmatchedpicklespackages))
 		results = pool.map(generateunmatched, unmatchedtasks, 1)
 		for p in unmatchedpicklespackages:
-			oldfilename = "%s-%s" % (p[0], "unmatched.html.gz")
-			filename = "%s-%s" % (p[1], "unmatched.html.gz")
+			if compressed:
+				oldfilename = "%s-%s" % (p[0], "unmatched.html.gz")
+			else:
+				oldfilename = "%s-%s" % (p[0], "unmatched.html")
+			if compressed:
+				filename = "%s-%s" % (p[1], "unmatched.html.gz")
+			else:
+				filename = "%s-%s" % (p[1], "unmatched.html")
 			if os.path.exists(os.path.join(reportdir, oldfilename)):
 				shutil.copy(os.path.join(reportdir, oldfilename), os.path.join(reportdir, filename))
 		for p in unmatchedpicklespackages:
 			try:
-				filename = "%s-%s" % (p[0], "unmatched.html.gz")
+				if compressed:
+					filename = "%s-%s" % (p[0], "unmatched.html.gz")
+				else:
+					filename = "%s-%s" % (p[0], "unmatched.html")
 				os.unlink(os.path.join(reportdir, filename))
 			except Exception, e:
 				#print >>sys.stderr, "ERR", e
@@ -625,7 +671,8 @@ def generatereports(unpackreports, scantempdir, topleveldir, processors, scanenv
 		## now recombine the results and write to a HTML file
 		pickleremoves = set()
 		for filehash in resultranks.keys():
-			uniquehtmlfile = gzip.open("%s/%s-unique.html.gz" % (reportdir, filehash), 'wb')
+			htmlfilename = "%s/%s-unique.html" % (reportdir, filehash)
+			uniquehtmlfile = open(htmlfilename, 'wb')
 			uniquehtmlfile.write("<html><body><h1>Unique matches per package</h1><p><ul>")
 			for r in resultranks[filehash]:
 				(picklehash, uniquematcheslen, packagename) = r
@@ -640,6 +687,13 @@ def generatereports(unpackreports, scantempdir, topleveldir, processors, scanenv
 				
 			uniquehtmlfile.write("</body></html>")
 			uniquehtmlfile.close()
+			if compressed:
+				fin = open(htmlfilename, 'rb')
+				fout = gzip.open("%s.gz" % htmlfilename, 'wb')
+				fout.write(fin.read())
+				fout.close()
+				fin.close()
+				os.unlink(fin.name)
 		for i in pickleremoves:
 			try:
 				os.unlink(os.path.join(reportdir, "%s-unique.snippet" % i))
