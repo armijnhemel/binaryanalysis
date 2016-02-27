@@ -322,53 +322,6 @@ def parallel_unpack((rpmfile, target, copyfiles, unpacktmpdir, insecurerpm, cuto
 	shutil.rmtree(cpiodir)
 	return specres
 
-## it's either in the form of:
-##   package-version.extension
-##   package_version.extension
-## where extension is tar.gz, tar.bz2, tar.xz, tgz, zip, tbz2, etc.
-def generatelist(filedir, origin):
-	files = os.walk(filedir)
-	try:
-        	while True:
-			i = files.next()
-			for p in i[2]:
-				if p == "LIST":
-					continue
-				## first determine things like the extension
-				res = p.rsplit('.', 1)
-				if len(res) == 1:
-					print >>sys.stderr, "can't split %s -- add manually" % (p,)
-					continue
-				(packageversion, extension) = res
-				if extension in ["tgz", "tbz2", "tar"]:
-					pass
-				elif extension in ["jar", "zip"]:
-					pass
-				else:
-					try:
-						(packageversion, extension, compression) = p.rsplit('.', 2)
-					except:
-						continue
-					if not (extension in ["tar"] and compression in ["gz", "bz2", "bz", "lz", "lzma", "xz", "Z"]):
-						continue
-				## exceptions go here
-				if "wireless_tools" in packageversion:
-					res = packageversion.rsplit(".", 1)
-				## first try package-version
-				else:
-					res = packageversion.rsplit("-", 1)
-					if len(res) == 1:
-						## then try package_version
-						res = packageversion.rsplit("_", 1)
-						if len(res) == 1:
-							print >>sys.stderr, "can't split %s -- add manually" % (p,)
-							continue
-				(package, version) = res
-				print "%s\t%s\t%s\t%s" % (package, version, p, origin)
-				
-	except Exception, e:
-		pass
-
 def scanhashes(resolved_path, extrahashes):
 	filehashes = {}
 	scanfile = open(resolved_path, 'r')
@@ -738,13 +691,10 @@ def main(argv):
 		try:
 			os.mkdir(options.target)
 		except Exception, e:
-			#print e.args, type(e.args)
-			#if e.args.startswith("[Errno 17] File exists:"):
-			#	pass
 			pass
 		target = options.target
+	extrahashes = []
 	unpacksrpm(options.filedir, target, unpackdir, origin, rpmdatabase, extrahashes, cutoff, insecurerpm)
-	#generatelist(target, origin)
 
 if __name__ == "__main__":
 	main(sys.argv)
