@@ -148,7 +148,7 @@ def gethash(path, filename, hashtype="sha256"):
 	return hashresults
 
 ## scan a single file, possibly unpack and recurse
-def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, prerunmagic, magicscans, optmagicscans, processid, hashdict, blacklistedfiles, llock, template, unpacktempdir, tempdir, outputhash, cursor, sourcecodequery, dumpoffsets, offsetdir):
+def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, prerunmagic, magicscans, optmagicscans, processid, hashdict, blacklistedfiles, llock, template, unpacktempdir, tempdir, outputhash, cursor, sourcecodequery, dumpoffsets, offsetdir, compressed):
 	lentempdir = len(tempdir)
 
 	## import all methods defined in the scans
@@ -391,13 +391,23 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 
 		if dumpoffsets:
 			## write pickles with offsets to disk
-			offsetpicklename = os.path.join(offsetdir, '%s-offsets.pickle.gz' % filehash)
+			if compressed:
+				offsetpicklename = os.path.join(offsetdir, '%s-offsets.pickle.gz' % filehash)
+			else:
+				offsetpicklename = os.path.join(offsetdir, '%s-offsets.pickle' % filehash)
 			try:
 				os.stat(offsetpicklename)
 			except:
-				picklefile = gzip.open(offsetpicklename, 'wb')
+				picklefile = open(offsetpicklename, 'wb')
 				cPickle.dump(offsets, picklefile)
 				picklefile.close()
+				if compressed:
+					fin = open(picklefile, 'rb')
+					fout = gzip.open("%s.gz" % infile, 'wb')
+					fout.write(fin.read())
+					fout.close()
+					fin.close()
+					os.unlink(fin.name)
 
 		if "encrypted" in tags:
 			knownfile = True
@@ -1226,6 +1236,9 @@ def readconfig(config):
 		if s['cleanup']:
 			## this is an ugly hack *cringe*
 			s['environment']['overridedir'] = True
+		if s['compress']:
+			## this is an ugly hack *cringe*
+			s['environment']['compress'] = True
 		if 'dbbackend' in s:
 			s['environment']['DBBACKEND'] = s['dbbackend']
 
@@ -1387,6 +1400,7 @@ def runscan(scans, binaries):
 	## every binary that is scanned.
 	debug = scans['batconfig']['debug']
 	debugphases = scans['batconfig']['debugphases']
+	compressed = True
 
 	magicscans = []
 	optmagicscans = []
@@ -1654,7 +1668,7 @@ def runscan(scans, binaries):
 				cursor = None
 				sourcecodequery = None
 				scansourcecode = False
-			p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, blacklistedfiles, lock, template, unpacktempdir, scantempdir, outputhash, cursor, sourcecodequery, scans['batconfig']['dumpoffsets'], offsetdir))
+			p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, blacklistedfiles, lock, template, unpacktempdir, scantempdir, outputhash, cursor, sourcecodequery, scans['batconfig']['dumpoffsets'], offsetdir, compressed))
 			processpool.append(p)
 			p.start()
 

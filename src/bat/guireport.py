@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2013-2015 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2013-2016 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -13,12 +13,12 @@ This should be run as a postrun scan
 import os, os.path, sys, cPickle, gzip
 
 def guireport(filename, unpackreport, scantempdir, topleveldir, scanenv, debug=False):
-	if not unpackreport.has_key('checksum'):
+	if not 'checksum' in unpackreport:
 		return
 	## this is a placeholder. The GUI should replace this one on the fly
 	imagesdir = "REPLACEME"
 
-	if scanenv.has_key('overridedir'):
+	if 'overridedir' in scanenv:
 		try:
 			del scanenv['BAT_REPORTDIR']
 		except: 
@@ -50,6 +50,11 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, scanenv, debug=F
 	filehash = unpackreport['checksum']
 	if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
 		return
+
+	if "compress" in scanenv:
+		compressed = scanenv['compress']
+	else:
+		compressed = False
 
 	leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
 	leafreports = cPickle.load(leaf_file)
@@ -274,9 +279,17 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, scanenv, debug=F
 		hreflist += '</ul>'
 	overviewstring = overviewstring + tablerows + "</table>" + hreflist + matchesrows + functionmatches + distrohtml + footer
 
-	guireportfile = gzip.open("%s/%s-guireport.html.gz" % (reportdir, filehash), 'wb')
+	htmlfilename = "%s/%s-guireport.html" % (reportdir, filehash)
+	guireportfile = open(htmlfilename, 'wb')
 	guireportfile.write(overviewstring)
 	guireportfile.close()
+	if compressed:
+		fin = open(htmlfilename, 'rb')
+		fout = gzip.open("%s.gz" % htmlfilename, 'wb')
+		fout.write(fin.read())
+		fout.close()
+		fin.close()
+		os.unlink(fin.name)
 
 	## ideally this should move to findlibs.py, where pictures are generated
 	elfheader = "<html><body><h1>Detailed ELF analysis</h1><table>"
@@ -316,6 +329,14 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, scanenv, debug=F
 			imagehtml += "</ul></p>"
 	if tablerows != "":
 		elfstring = elfheader + tablerows + elftablefooter + imagehtml + elffooter
-		elfreportfile = gzip.open("%s/%s-elfreport.html.gz" % (reportdir, filehash), 'wb')
+		htmlfilename = "%s/%s-elfreport.html" % (reportdir, filehash)
+		elfreportfile = open(htmlfilename, 'wb')
 		elfreportfile.write(elfstring)
 		elfreportfile.close()
+		if compressed:
+			fin = open(htmlfilename, 'rb')
+			fout = gzip.open("%s.gz" % htmlfilename, 'wb')
+			fout.write(fin.read())
+			fout.close()
+			fin.close()
+			os.unlink(fin.name)
