@@ -5337,16 +5337,21 @@ def searchUnpackIHex(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 	tags = []
 	diroffsets = []
 	counter = 1
+	filesize = os.stat(filename).st_size
+
 	tmpdir = dirsetup(tempdir, filename, "ihex", counter)
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	datafile = open(filename, 'r')
 	foundend = False
+	offset = 0
 	for d in datafile:
 		if foundend:
+			os.fdopen(tmpfile[0]).close()
 			datafile.close()
 			os.rmdir(tmpdir)
 			return (diroffsets, blacklist, tags, hints)
-		d = d.strip()
-		if len(d) < 3:
+		b = d.strip()
+		if len(b) < 3:
 			break
 		bytecount = ord(b[1:3].decode('hex'))
 		address = struct.unpack('>H', b[3:7].decode('hex'))
@@ -5357,10 +5362,11 @@ def searchUnpackIHex(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		if recordtype != 0:
 			continue
 		databytes = b[9:9+bytecount*2].decode('hex')
-		datafile.write(databytes)
-		diroffsets.append((tmpdir, offset, bytesread))
-		blacklist.append((offset, offset + bytesread))
+		os.write(tmpfile[0], databytes)
+		diroffsets.append((tmpdir, offset, filesize))
+		blacklist.append((offset, offset + filesize))
 		counter += 1
+	os.fdopen(tmpfile[0]).close()
 	datafile.close()
 	return (diroffsets, blacklist, tags, hints)
 
