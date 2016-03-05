@@ -4016,8 +4016,8 @@ def unpackRar(filename, offset, tempdir=None):
 	# inspect the rar archive, and retrieve the end of archive
 	# this way we won't waste too many resources when we don't need to
 	## TODO: unrar needs vvt now to work correctly?
-	#p = subprocess.Popen(['unrar', 'vvt', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
-	p = subprocess.Popen(['unrar', 'vt', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	p = subprocess.Popen(['unrar', 'vvt', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+	#p = subprocess.Popen(['unrar', 'vt', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.unlink(tmpfile[1])
@@ -5269,6 +5269,7 @@ def searchUnpackWIM(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			blacklist.append((0, size7z))
 			newtags.append('wim')
 			return (diroffsets, blacklist, newtags, hints)
+		os.rmdir(tmpdir)
 	return (diroffsets, blacklist, newtags, hints)
 
 ## Unpack Android backup files. These are zlib compressed files.
@@ -5329,6 +5330,39 @@ def searchUnpackAndroidBackup(filename, tempdir=None, blacklist=[], offsets={}, 
 		counter += 1
 	backupfile.close()
 	return (diroffsets, blacklist, newtags, hints)
+
+## unpack Intel hex files
+def searchUnpackIHex(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
+	hints = {}
+	tags = []
+	diroffsets = []
+	counter = 1
+	tmpdir = dirsetup(tempdir, filename, "ihex", counter)
+	datafile = open(filename, 'r')
+	foundend = False
+	for d in datafile:
+		if foundend:
+			datafile.close()
+			os.rmdir(tmpdir)
+			return (diroffsets, blacklist, tags, hints)
+		d = d.strip()
+		if len(d) < 3:
+			break
+		bytecount = ord(b[1:3].decode('hex'))
+		address = struct.unpack('>H', b[3:7].decode('hex'))
+		recordtype = ord(b[7:9].decode('hex'))
+		if recordtype == 1:
+			foundend = True
+			break
+		if recordtype != 0:
+			continue
+		databytes = b[9:9+bytecount*2].decode('hex')
+		datafile.write(databytes)
+		diroffsets.append((tmpdir, offset, bytesread))
+		blacklist.append((offset, offset + bytesread))
+		counter += 1
+	datafile.close()
+	return (diroffsets, blacklist, tags, hints)
 
 ## sometimes Ogg audio files are embedded into binary blobs
 def searchUnpackOgg(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
