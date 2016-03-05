@@ -5363,9 +5363,8 @@ def searchUnpackIHex(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			continue
 		databytes = b[9:9+bytecount*2].decode('hex')
 		os.write(tmpfile[0], databytes)
-		diroffsets.append((tmpdir, offset, filesize))
-		blacklist.append((offset, offset + filesize))
-		counter += 1
+	diroffsets.append((tmpdir, offset, filesize))
+	blacklist.append((offset, offset + filesize))
 	os.fdopen(tmpfile[0]).close()
 	datafile.close()
 	return (diroffsets, blacklist, tags, hints)
