@@ -1,7 +1,21 @@
+2016-03-05:
+* prerun.py: add verifier for Intel HEX files
+* fwunpack.py: unpack Intel HEX files
+* bat-scan.config: add configuration to unpack Intel HEX files
+
+2016-02-27:
+* generatereports.py: make gzip compression optional
+* guireport.py: make gzip compression optional
+* bruteforcescan.py: make gzip compression of pickles optional (not enabled
+yet)
+* rename generatelistrpm.py to extractrpms.py
+* generatejson.py: remove duplicate code
+
 2016-02-26:
 * createdb.py: work around error in zipfile module. The file
 xf86-input-keyboard-1.3.1.tar.bz2 from OpenWrt for example was misidentified
 as a ZIP file.
+* generatelistrpm.py: fixes for crc32
 
 2016-02-23:
 * brutefrorcescan.py: add 'compress' configuration option (default: no) for
