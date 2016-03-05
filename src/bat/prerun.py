@@ -23,7 +23,7 @@ files will be scanned and tagged properly later on, but more time might be
 spent, plus there might be false positives (mostly LZMA).
 '''
 
-import sys, os, subprocess, os.path, shutil, stat, struct, zlib
+import sys, os, subprocess, os.path, shutil, stat, struct, zlib, binascii
 import tempfile, re, magic, hashlib, HTMLParser
 import fsmagic, extractor, javacheck
 
@@ -1223,6 +1223,31 @@ def verifyTZ(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fals
 			## timezone files without any extra checks.
 			newtags.append('timezone')
 			newtags.append('resource')
+	return newtags
+
+def verifyIHex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+	newtags = []
+	if not 'text' in tags:
+		return newtags
+
+	## https://en.wikipedia.org/wiki/Intel_HEX
+	datafile = open(filename, 'r')
+	validfile = True
+	for d in datafile:
+		d = d.strip()
+		if not d.startswith(':'):
+			validfile = False
+			break
+		if len(d)%2 != 1:
+			validfile = False
+			break
+		databytes = binascii.unhexlify(d[1:])
+		if reduce(lambda x, y: x + y, map(lambda x: ord(x), databytes)) % 256 != 0:
+			validfile = False
+			break
+	datafile.close()
+	if validfile:
+		newtags.append('ihex')
 	return newtags
 
 ## verify Apple's AppleDouble encoded files (resource forks)
