@@ -399,7 +399,6 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 				if batdb != None:
 					conn = batdb.getConnection(hashdatabase,scanenv)
 					if conn != None:
-						batconns.append(conn)
 						cursor = conn.cursor()
 					else:
 						converthash = False
