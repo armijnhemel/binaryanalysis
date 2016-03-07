@@ -1,3 +1,6 @@
+2016-03-07:
+* generatejson.py: don't add a connection to the list of connections twice
+
 2016-03-05:
 * prerun.py: add verifier for Intel HEX files
 * fwunpack.py: unpack Intel HEX files
