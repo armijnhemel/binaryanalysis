@@ -1,3 +1,6 @@
+2016-03-19:
+* fwunpack.py: fix extra sanity check in ext2 unpacking
+
 2016-03-07:
 * generatejson.py: don't add a connection to the list of connections twice
 
