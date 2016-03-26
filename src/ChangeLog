@@ -1,3 +1,10 @@
+2016-03-26:
+* prerun.py: extra sanity checks for ihex unpacking
+* fwunpack.py: add extra flavour of squashfs
+* add reportcopyright.py to do a simple search of copyright statements in
+binaries
+* bat-scan.config: add configuration for copyright statement checker
+
 2016-03-19:
 * fwunpack.py: fix extra sanity check in ext2 unpacking
 
