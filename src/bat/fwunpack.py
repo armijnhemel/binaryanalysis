@@ -1170,10 +1170,6 @@ def searchUnpack7z(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 	if offsets['7z'] == []:
 		return ([], blacklist, [], hints)
 
-	## for now only try to unpack if 7z starts at offset 0
-	#if offsets['7z'][0] != 0:
-	#	return ([], blacklist, [], hints)
-
 	counter = 1
 	diroffsets = []
 	tags = []
