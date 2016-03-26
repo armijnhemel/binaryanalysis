@@ -2121,6 +2121,13 @@ def unpackSquashfsWrapper(filename, offset, squashtype, sevenzipcompression, maj
 				os.unlink(tmpfile[1])
 				return retval + (squashsize, 'squashfsralinklzma',)
 
+	## another Broadcom variant
+	retval = unpackSquashfsBroadcom40LZMA(tmpfile[1],tmpoffset,tmpdir)
+	if retval != None:
+		os.chmod(tmpdir, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+		os.unlink(tmpfile[1])
+		return retval + (squashsize, 'squashfsbroadcom40lzma',)
+
 	os.unlink(tmpfile[1])
 	if tempdir == None:
 		os.rmdir(tmpdir)
@@ -2316,6 +2323,10 @@ def unpackSquashfsAtherosLZMA(filename, offset, tmpdir):
 		return None
 	else:
 		return (tmpdir,)
+
+## squashfs variant from Broadcom, with LZMA
+def unpackSquashfsBroadcom40LZMA(filename, offset, tmpdir):
+	return unpackSquashfsWithLZMA(filename, offset, "bat-unsquashfs-broadcom40", tmpdir)
 
 ## squashfs variant from Ralink, with LZMA
 def unpackSquashfsRalinkLZMA(filename, offset, tmpdir):
