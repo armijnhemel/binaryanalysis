@@ -2584,6 +2584,8 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 		## only revisions 0 and 1 have ever been made, so ignore the rest
 		datafile.seek(offset - 0x438 + 0x44c)
 		revision = datafile.read(1)
+		if len(revision) < 1:
+			continue
 		if not (revision == '\x01' or revision == '\x00'):
 			continue
 
@@ -2591,6 +2593,8 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 		## Use tune2fs for this.
 		datafile.seek(offset - 0x438)
 		ext2checkdata = datafile.read(8192)
+		if len(ext2checkdata) != 8192:
+			continue
 
 		tmpfile = tempfile.mkstemp()
 		os.write(tmpfile[0], ext2checkdata)
