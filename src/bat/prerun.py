@@ -1242,6 +1242,9 @@ def verifyIHex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fa
 			validfile = False
 			break
 		databytes = binascii.unhexlify(d[1:])
+		if len(databytes) == 0:
+			validfile = False
+			break
 		if reduce(lambda x, y: x + y, map(lambda x: ord(x), databytes)) % 256 != 0:
 			validfile = False
 			break
