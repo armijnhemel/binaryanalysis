@@ -22,7 +22,7 @@ def scanEncryptedZip(path, tags, blacklist=[], scanenv={}, scandebug=False, unpa
 	if not 'zip' in tags:
 		return
 
-	if not scanenv.has_key('BAT_DB'):
+	if not 'BAT_DB' in scanenv:
 		return
 
 	encryptedzip = zipfile.ZipFile(path, 'r')
@@ -67,7 +67,7 @@ def encryptedZipSetup_postgresql(scanenv, debug=False):
 
 def encryptedZipSetup_sqlite3(scanenv, debug=False):
 	## first check if there is a database defined
-	if not scanenv.has_key('BAT_DB'):
+	if not 'BAT_DB' in scanenv:
 		return (False, None)
 	if not os.path.exists(scanenv['BAT_DB']):
 		return (False, None)
@@ -126,9 +126,9 @@ def scanVirus(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempd
 def scanShellInvocations(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
 	for i in unpackreports:
 		## Limit to ELF binaries for now
-		if not unpackreports[i].has_key('tags'):
+		if not 'tags' in unpackreports[i]:
 			continue
-		if not unpackreports[i].has_key('checksum'):
+		if not 'checksum' in unpackreports[i]:
 			continue
 		if not 'elf' in unpackreports[i]['tags']:
 			continue
@@ -334,7 +334,7 @@ def crackPasswordsSetup(scanenv, debug=False):
 
 def crackPasswordsSetup_sqlite3(scanenv, debug=False):
 	## first check if there is a database defined
-	if not scanenv.has_key('BAT_SECURITY_DB'):
+	if not 'BAT_SECURITY_DB' in scanenv:
 		return (False, None)
 	if not os.path.exists(scanenv['BAT_SECURITY_DB']):
 		del newenv['BAT_SECURITY_DB']
