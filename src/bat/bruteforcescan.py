@@ -468,7 +468,8 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 					scanmagic = unpackscan['magic'].split(':')
 					if set(scanmagic).intersection(filterscans) != set():
 						if set(scanmagic).intersection(zerooffsets) != set():
-							scanfirst.append(unpackscan)
+							unpackscans.append(unpackscan)
+							#scanfirst.append(unpackscan)
 						else:
 							unpackscans.append(unpackscan)
 				else:
