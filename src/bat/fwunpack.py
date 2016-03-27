@@ -5394,3 +5394,126 @@ def searchUnpackOgg(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 def searchUnpackMP3(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	return ([], blacklist, [], hints)
+
+## PLF is Parrot's own file format. An incomplete description can be found here:
+## http://embedded-software.blogspot.nl/2010/12/plf-file-format.html
+## Parrot's own header file with slightly more information can be found here:
+## https://github.com/Parrot-Developers/libARUpdater/blob/master/Sources/ARUPDATER_Plf.h
+def searchUnpackPLF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
+	hints = []
+	if not 'plf' in offsets:
+		return ([], blacklist, [], hints)
+	if offsets['plf'] == []:
+		return ([], blacklist, [], hints)
+
+	if not 0 in offsets['plf']:
+		return ([], blacklist, [], hints)
+
+	newtags = []
+	counter = 1
+	diroffsets = []
+
+	plffile = open(filename, 'rb')
+	for offset in offsets['plf']:
+		dataunpacked = False
+		## first some sanity checks for the header
+		plffile.seek(offset)
+		plfheader = plffile.read(0x38)
+
+		if len(plfheader) != 0x38:
+			continue
+
+		plfsize = struct.unpack('<I', plfheader[-4:])[0]
+		## right now only whole files that are PLF files are recognized
+		if not plfsize == os.stat(filename).st_size:
+			continue
+
+		## parse all the fields in the header and add some sanity checks
+		headerversion = struct.unpack('<I', plfheader[4:8])[0]
+		headersize = struct.unpack('<I', plfheader[8:12])[0] ## should be 56
+		if headersize != 0x38:
+			continue
+
+		sectionheadersize = struct.unpack('<I', plfheader[12:16])[0] ## should be 20
+		if sectionheadersize != 0x14:
+			continue
+
+		filetype = struct.unpack('<I', plfheader[16:20])[0]
+		entrypoint = struct.unpack('<I', plfheader[20:24])[0]
+		targetplatform = struct.unpack('<I', plfheader[24:28])[0]
+		targetapplication = struct.unpack('<I', plfheader[28:32])[0]
+		hardware = struct.unpack('<I', plfheader[32:36])[0]
+		fwversion = struct.unpack('<I', plfheader[36:40])[0]
+		fwedition = struct.unpack('<I', plfheader[40:44])[0]
+		fwextension = struct.unpack('<I', plfheader[44:48])[0]
+		language_zone = struct.unpack('<I', plfheader[48:52])[0]
+
+		## skip past the header
+		localoffset = offset+0x38
+		plffile.seek(localoffset)
+		plfentryheader = plffile.read(sectionheadersize)
+		newfs = False
+		tmpdir = dirsetup(tempdir, filename, "plf", counter)
+		while plfentryheader != '':
+			entrytype = struct.unpack('<I', plfentryheader[:4])[0]
+			entrysize = struct.unpack('<I', plfentryheader[4:8])[0]
+			entrycrc32 = struct.unpack('<I', plfentryheader[8:12])[0]
+			entryuncompressedsize = struct.unpack('<I', plfentryheader[16:])[0]
+
+			plffile.seek(localoffset+sectionheadersize)
+			plfname = ""
+			lenplfname = 0
+			compressed = False
+			if entryuncompressedsize != 0:
+				compressed = True
+
+			## process files
+			## TODO: other file types
+			if entrytype == 9:
+				plfbuf = plffile.read(entrysize)
+				## first check if the entry is gzip compressed. If so, decompress
+				if compressed:
+					plfbuf = zlib.decompress(plfbuf, zlib.MAX_WBITS | 16)
+				## then try to get the name of the file
+				plfnameend = plfbuf.find('\x00')
+				if plfnameend != -1:
+					plfname = plfbuf[0:plfnameend]
+					lenplfname = len(plfname) + 1
+				fileentry = plfbuf[lenplfname:lenplfname+12]
+				fileflags = struct.unpack('<I', fileentry[0:4])[0]
+				if (fileflags >> 12) == 0x04:
+					if len(plfname) + 1 + len(fileentry) == entrysize:
+						os.mkdir(os.path.join(tmpdir, plfname))
+						dataunpacked = True
+				elif (fileflags >> 12) == 0x08:
+					tmpfile = tempfile.mkstemp(dir=tmpdir)
+					os.write(tmpfile[0], plfbuf[lenplfname+len(fileentry):])
+					os.fdopen(tmpfile[0]).close()
+					if plfname != '':
+						shutil.move(tmpfile[1], os.path.join(tmpdir, plfname))
+					else:
+						pass
+					dataunpacked = True
+				elif (fileflags >> 12) == 0x0a:
+					plfbuf = plfbuf[len(plfname) + 1 + len(fileentry):]
+					symlinknameend = plfbuf.find('\x00')
+					if symlinknameend != -1:
+						dataunpacked = True
+						pass
+
+			localoffset += entrysize + sectionheadersize
+			if (localoffset -offset) % 4 != 0:
+				correction = 4 - (localoffset -offset) % 4
+				localoffset += correction
+			plffile.seek(localoffset)
+			plfentryheader = plffile.read(sectionheadersize)
+
+		if dataunpacked:
+			blacklist.append((offset, localoffset))
+			diroffsets.append((tmpdir, offset, localoffset-offset))
+			counter += 1
+		else:
+			os.rmdir(tmpdir)
+	plffile.close()
+
+	return (diroffsets, blacklist, newtags, hints)
