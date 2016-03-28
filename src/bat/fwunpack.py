@@ -5453,8 +5453,13 @@ def searchUnpackPLF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		plffile.seek(localoffset)
 		plfentryheader = plffile.read(sectionheadersize)
 		newfs = False
+		newdir = False
 		tmpdir = dirsetup(tempdir, filename, "plf", counter)
 		while plfentryheader != '':
+			if newdir:
+				## this is a superugly hack :-(
+				tmpdir = dirsetup(tempdir, filename, "plf", counter)
+				newdir = False
 			entrytype = struct.unpack('<I', plfentryheader[:4])[0]
 			entrysize = struct.unpack('<I', plfentryheader[4:8])[0]
 			entrycrc32 = struct.unpack('<I', plfentryheader[8:12])[0]
@@ -5467,18 +5472,23 @@ def searchUnpackPLF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			if entryuncompressedsize != 0:
 				compressed = True
 
-			## process files
-			## TODO: other file types
-			if entrytype == 9:
-				plfbuf = plffile.read(entrysize)
-				## first check if the entry is gzip compressed. If so, decompress
-				if compressed:
-					plfbuf = zlib.decompress(plfbuf, zlib.MAX_WBITS | 16)
+			plfbuf = plffile.read(entrysize)
+			## first check if the entry is gzip compressed. If so, decompress
+			if compressed:
+				plfbuf = zlib.decompress(plfbuf, zlib.MAX_WBITS | 16)
+
+			if entrytype == 4 or entrytype == 9:
 				## then try to get the name of the file
 				plfnameend = plfbuf.find('\x00')
 				if plfnameend != -1:
 					plfname = plfbuf[0:plfnameend]
 					lenplfname = len(plfname) + 1
+					plfname = os.path.normpath(plfname)
+					if plfname.startswith('/'):
+						plfname = plfname[1:]
+
+			## process files
+			if entrytype == 9:
 				fileentry = plfbuf[lenplfname:lenplfname+12]
 				fileflags = struct.unpack('<I', fileentry[0:4])[0]
 				if (fileflags >> 12) == 0x04:
@@ -5490,6 +5500,10 @@ def searchUnpackPLF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 					os.write(tmpfile[0], plfbuf[lenplfname+len(fileentry):])
 					os.fdopen(tmpfile[0]).close()
 					if plfname != '':
+						try:
+							os.makedirs(os.path.dirname(os.path.join(tmpdir, plfname)))
+						except:
+							pass
 						shutil.move(tmpfile[1], os.path.join(tmpdir, plfname))
 					else:
 						pass
@@ -5500,6 +5514,32 @@ def searchUnpackPLF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 					if symlinknameend != -1:
 						dataunpacked = True
 						pass
+			elif entrytype == 4:
+				tmpfile = tempfile.mkstemp(dir=tmpdir)
+				os.write(tmpfile[0], plfbuf[lenplfname:])
+				os.fdopen(tmpfile[0]).close()
+				if plfname != '':
+					try:
+						os.makedirs(os.path.dirname(os.path.join(tmpdir, plfname)))
+					except Exception, e:
+						pass
+					shutil.move(tmpfile[1], os.path.join(tmpdir, plfname))
+				else:
+					pass
+				dataunpacked = True
+			else:
+				## unsure what to do with the other PLF data, so
+				## just write it to a file and make it available
+				## for further analysis
+				tmpfile = tempfile.mkstemp(dir=tmpdir)
+				os.write(tmpfile[0], plfbuf)
+				os.fdopen(tmpfile[0]).close()
+				dataunpacked = True
+				newdir = True
+				## the offsets are actually incorrect. TODO: fix this
+				blacklist.append((offset, localoffset))
+				diroffsets.append((tmpdir, offset, localoffset-offset))
+				counter += 1
 
 			localoffset += entrysize + sectionheadersize
 			if (localoffset -offset) % 4 != 0:
