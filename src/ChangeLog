@@ -1,3 +1,10 @@
+2016-03-28:
+* fwunpack.py: extract more information from Parrot PLF files. This still
+needs some more work, as PLF files have a slightly non-standard structure.
+
+2016-03-27:
+* fwunpack.py: start working on unpacking Parrot PLF files
+
 2016-03-26:
 * prerun.py: extra sanity checks for ihex unpacking
 * fwunpack.py: add extra flavour of squashfs
