@@ -1,3 +1,14 @@
+bat (25.0) unstable; urgency=high
+
+  * tag and unpack Android backup files
+  * make gzip compression of some data optional
+  * unpack Intel iHex files
+  * don't try to clean up database connections twice in JSON reporting
+  * add simple copyright extractor
+  * unpack Parrot PLF files
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Tue, 29 Mar 2016 12:24:31 +0200
+
 bat (24.0) unstable; urgency=high
 
   * many performance fixes for lots of file systems
@@ -5,7 +16,7 @@ bat (24.0) unstable; urgency=high
   * tagging more files
   * reduced database connections (PostgreSQL) when scanning in directory mode
 
- -- Armijn Hemel <armijn@binaryanalysis.org>  Wed, 27 Jan 2015 17:21:51 +0100
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Wed, 27 Jan 2016 17:21:51 +0100
 
 bat (23.0) unstable; urgency=high
 
