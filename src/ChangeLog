@@ -1,3 +1,6 @@
+2016-03-29:
+* bat-scan.config: add configuration for unpacking Parrot PLF files.
+
 2016-03-28:
 * fwunpack.py: extract more information from Parrot PLF files. This still
 needs some more work, as PLF files have a slightly non-standard structure.
