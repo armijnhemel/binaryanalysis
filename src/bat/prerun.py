@@ -914,6 +914,8 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		elftype = 'elfdynamic'
 	elif elftypebyte == 4:
 		elftype = 'elfcore'
+	else:
+		return []
 	newtags.append(elftype)
 
 	## the size of the ELF header
