@@ -158,17 +158,22 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 			## check all jiffies, grab the first one that is surrounded by NULL characters
 			## If it is the first symbol it could happen that it is only *followed* by a NULL
 			## character but not *preceded* by a NULL characeter
+			seenjiffies = 0
 			for jiff in jiffies:
+				seenjiffies += 1
 				if extractor.inblacklist(jiff, blacklist) != None:
 					continue
 				if extractor.check_null(kerneldata, jiff, 'loops_per_jiffy'):
+					## if "loops_per_jiffy" is surrounded by NULL characters on both
+					## ends it is in the list of kernel symbols
 					jiffy_pos = jiff
 					break
 				else:
-					## sometimes "loops_per_jiffy" is not preceded by a NULL character.
-					## For now only consider this if there only is one "loops_per_jiffy"
-					## in the file.
-					if len(jiffies) == 1:
+					## sometimes "loops_per_jiffy" is not preceded by a NULL character
+					## because it is at the start of the list of kernel symbols.
+					## Right now only do it if jiffies has length 1 or if it is the
+					## last in the list of jiffies
+					if len(jiffies) == seenjiffies:
 						if kerneldata[jiff + len('loops_per_jiffy')] == chr(0x00):
 							jiffy_pos = jiff
 							break
