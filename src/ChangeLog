@@ -1,3 +1,15 @@
+2016-04-11:
+* identifier.py: try to identify source code file names in Linux kernel binary
+images
+* identifier.py: try to extract Linux kernel symbol names regardless whether
+or not certain database tables exist (leftover from before refactoring)
+* identifier.py: better deal with siutation of loops_per_jiffy appears
+multiple times in a Linux kernel binary image and it is the first in the list
+of kernel symbols (not preceded by a NULL character)
+
+2016-04-08:
+* prerun.py: extra sanity check for ELF files (ELF type)
+
 2016-03-29:
 * bat-scan.config: add configuration for unpacking Parrot PLF files.
 
