@@ -255,6 +255,10 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 	## in which they appear in the file
 	lines = []
 
+	## list of possible filenames of possible source code that was used
+	## to build the binary
+	filenames = []
+
 	## store the extracted function/method names and extracted variable names
 	functionnames = set()
 	variablenames = set()
@@ -336,8 +340,7 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 			if linuxkernel:
 				## no functions can be extracted from a Linux kernel ELF image
 				functionnames = set()
-				if 'BAT_KERNELSYMBOL_SCAN' in scanenv:
-					kernelsymbols = extractkernelsymbols(scanfile, scanenv, unpacktempdir)
+				kernelsymbols = extractkernelsymbols(scanfile, scanenv, unpacktempdir)
 			else:
 				dynres = extractDynamicFromELF(filepath)
 				if dynres != None:
@@ -368,6 +371,10 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 					lines = stanout[:-1].split("\n")
 				else:
 					lines = stanout.split("\n")
+			if linuxkernel:
+				for l in lines:
+					if l.endswith('.c') or l.endswith('.h'):
+						filenames.append(l)
 		except Exception, e:
 			print >>sys.stderr, "string scan failed for:", filepath, e, type(e)
 			if blacklist != [] and not linuxkernel:
@@ -378,6 +385,7 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 		## cleanup the tempfile
 		os.unlink(tmpfile[1])
 	cmeta['strings'] = lines
+	cmeta['filenames'] = filenames
 	cmeta['functionnames'] = functionnames
 	cmeta['variablenames'] = variablenames
 	cmeta['kernelsymbols'] = kernelsymbols
@@ -807,16 +815,12 @@ def extractidentifiersetup_sqlite3(scanenv, debug=False):
 		namecache = scanenv.get(namecacheperlanguage['C'])
 		## the cache should exist. If it doesn't exist then something is horribly wrong.
 		if not os.path.exists(namecache):
-			if newenv.has_key('BAT_KERNELSYMBOL_SCAN'):
-				del newenv['BAT_KERNELSYMBOL_SCAN']
 			if newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
 				del newenv['BAT_KERNELFUNCTION_SCAN']
 			if newenv.has_key(namecacheperlanguage['C']):
 				del newenv[namecacheperlanguage['C']]
 		else:
 			## TODO: add checks for each individual table
-			if not newenv.has_key('BAT_KERNELSYMBOL_SCAN'):
-				newenv['BAT_KERNELSYMBOL_SCAN'] = 1
 
 			## Sanity check for kernel function names
 			cacheconn = batdb.getConnection(namecache)
@@ -834,8 +838,6 @@ def extractidentifiersetup_sqlite3(scanenv, debug=False):
 			cacheconn.close()
 	else:
 		## undefined, so disable kernel scanning, variable/function name scanning
-		if newenv.has_key('BAT_KERNELSYMBOL_SCAN'):
-			del newenv['BAT_KERNELSYMBOL_SCAN']
 		if newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
 			del newenv['BAT_KERNELFUNCTION_SCAN']
 
