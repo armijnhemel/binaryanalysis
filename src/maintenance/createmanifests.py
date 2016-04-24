@@ -113,7 +113,7 @@ def unpack(directory, filename, unpackdir):
 		except Exception, e:
 			print >>sys.stderr, "unpacking ZIP failed", e
 
-def grabhash(filedir, filename, filehash, pool, extrahashes, temporarydir):
+def grabhash(filedir, filename, filehash, pool, extrahashes, temporarydir, hashcache):
 	## unpack the archive. If it fails, cleanup and return.
 	temporarydir = unpack(filedir, filename, temporarydir)
 	if temporarydir == None:
@@ -142,10 +142,34 @@ def grabhash(filedir, filename, filehash, pool, extrahashes, temporarydir):
 			print >>sys.stderr, e
 
 	## compute the hashes in parallel
-	scanfile_result = filter(lambda x: x != None, pool.map(computehash, scanfiles, 1))
+	scanfile_result_sha256 = filter(lambda x: x != None, pool.map(computesha256, scanfiles, 1))
+	scanfile_result = []
+
+	cached = 0
+
+	if len(extrahashes) != 0:
+		extrahashtasks = []
+		for s in scanfile_result_sha256:
+			if s == None:
+				continue
+			(filedir, filename, sha256sum) = s
+			if sha256sum in hashcache:
+				tmphashes = hashcache[sha256sum]
+				scanfile_result.append((filedir, filename, tmphashes))
+				cached += 1
+				continue
+			extrahashtasks.append((filedir, filename, extrahashes, sha256sum))
+
+		if len(extrahashtasks) != 0:
+			scanfile_result_extra = filter(lambda x: x != None, pool.map(computehash, extrahashtasks, 1))
+			for s in scanfile_result_extra:
+				(filedir, filename, filehashes) = s
+				sha256sum = filehashes['sha256']
+				hashcache[sha256sum] = filehashes
+				scanfile_result.append(s)
 	cleanupdir(temporarydir)
 	scanfile_result = map(lambda x: (x[0][lenunpackdir:],) +  x[1:], scanfile_result)
-	return scanfile_result
+	return (scanfile_result, cached)
 
 def cleanupdir(temporarydir):
 	osgen = os.walk(temporarydir)
@@ -171,8 +195,8 @@ def cleanupdir(temporarydir):
 		## nothing that can be done right now, so just give up
 		pass
 
-def computehash((path, filename, extrahashes)):
-	resolved_path = os.path.join(path, filename)
+def computesha256((filedir, filename, extrahashes)):
+	resolved_path = os.path.join(filedir, filename)
 	if not os.path.isfile(resolved_path):
 		## filter out fifo and pipe
 		return None
@@ -184,30 +208,36 @@ def computehash((path, filename, extrahashes)):
 	## skip links
 	if os.path.islink(resolved_path):
         	return None
-	filehashes = {}
 	scanfile = open(resolved_path, 'r')
 	h = hashlib.new('sha256')
-	h.update(scanfile.read())
+	data = scanfile.read()
+	h.update(data)
 	scanfile.close()
-	filehashes['sha256'] = h.hexdigest()
-	if len(extrahashes) != 0:
-		scanfile = open(resolved_path, 'r')
-		data = scanfile.read()
-		scanfile.close()
-		for i in extrahashes:
-			if i == 'crc32':
-				filehashes[i] = zlib.crc32(data) & 0xffffffff
-			elif i == 'tlsh':
-				if os.stat(resolved_path).st_size >= 256:
-					tlshhash = tlsh.hash(data)
-					filehashes[i] = tlshhash
-				else:
-					filehashes[i] = None
+	sha256sum = h.hexdigest()
+	return (filedir, filename, sha256sum)
+
+def computehash((filedir, filename, extrahashes, sha256sum)):
+	resolved_path = os.path.join(filedir, filename)
+	filehashes = {}
+	filehashes['sha256'] = sha256sum
+	scanfile = open(resolved_path, 'r')
+	data = scanfile.read()
+	scanfile.close()
+	for i in extrahashes:
+		if i == 'crc32':
+			filehashes[i] = zlib.crc32(data) & 0xffffffff
+		elif i == 'tlsh':
+			if os.stat(resolved_path).st_size >= 256:
+				tlshhash = tlsh.hash(data)
+				filehashes[i] = tlshhash
 			else:
-				h = hashlib.new(i)
-				h.update(data)
-				filehashes[i] = h.hexdigest()
-	return (path, filename, filehashes)
+				filehashes[i] = None
+		else:
+			h = hashlib.new(i)
+			h.update(data)
+			filehashes[i] = h.hexdigest()
+	filehashes['sha256'] = sha256sum
+	return (filedir, filename, filehashes)
 
 def checkalreadyscanned((filedir, filename, checksum)):
 	resolved_path = os.path.join(filedir, filename)
@@ -281,7 +311,7 @@ def main(argv):
 			pkgmeta.append((options.filedir, filename, checksums[filename]))
 		except Exception, e:
 			# oops, something went wrong
-			print >>sys.stderr, e
+			print >>sys.stderr, e, unpackfile
 	res = filter(lambda x: x != None, pool.map(checkalreadyscanned, pkgmeta, 1))
 
 	processed_hashes = set()
@@ -295,6 +325,8 @@ def main(argv):
 	sys.stdout.flush()
 
 	uniquehashes = set()
+	hashcache = {}
+	manifestfiles = set()
 	for r in res:
 		(filename, filehash) = r
 		if filehash in uniquehashes:
@@ -302,13 +334,16 @@ def main(argv):
 		uniquehashes.add(filehash)
 		if options.update and os.path.exists(os.path.join(outputdir, "%s.bz2" % filehash)):
 			continue
-		unpackres = grabhash(options.filedir, filename, filehash, pool, extrahashes, options.unpackdir)
-		if unpackres == None:
+		grabres = grabhash(options.filedir, filename, filehash, pool, extrahashes, options.unpackdir, hashcache)
+		if grabres == None:
 			continue
+		(unpackres, cached) = grabres
+		if cached == 0:
+			hashcache = {}
 		## first write the scanned/supported hashes, in the order in which they
 		## appear for each file
-		manifest = os.path.join(outputdir, "%s.bz2" % filehash)
-		manifestfile = bz2.BZ2File(manifest, 'w')
+		manifest = os.path.join(outputdir, "%s" % filehash)
+		manifestfile = open(manifest, 'w')
 		if extrahashes == []:
 			manifestfile.write("sha256\n")
 		else:
@@ -325,9 +360,19 @@ def main(argv):
 					hashesstring += "\t%s" % u[2][h]
 				manifestfile.write("%s\t%s\n" % (os.path.join(u[0], u[1]), hashesstring))
 		manifestfile.close()
+		manifestfiles.add((outputdir, filehash))
+	pool.map(compressfiles, manifestfiles)
 	pool.terminate()
 	print "%d hashes were written to %s" % (len(uniquehashes), outputdir)
 	sys.stdout.flush()
+
+def compressfiles((outputdir, filehash)):
+	fin = open(os.path.join(outputdir, filehash), 'rb')
+	fout = bz2.BZ2File(os.path.join(outputdir, "%s.bz2" % filehash), 'wb')
+	fout.write(fin.read())
+	fout.close()
+	fin.close()
+	os.unlink(fin.name)
 
 if __name__ == "__main__":
     main(sys.argv)
