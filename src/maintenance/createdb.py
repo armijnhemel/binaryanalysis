@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 ## Binary Analysis Tool
-## Copyright 2009-2015 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2009-2016 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -2793,11 +2793,15 @@ def main(argv):
 		c.execute('''create index if not exists processed_checksum on processed(checksum)''')
 		c.execute('''create index if not exists processed_origin on processed(origin)''')
 
-		## Keep an archive of which packages are blacklisted. This is useful during database creation,
-		## or during database expansion.
+		## Keep an archive of which packages are blacklisted. This is useful during database creation.
 		#c.execute('''create table if not exists blacklist (package text, version text, filename text, origin text, checksum text)''')
 		#c.execute('''create index if not exists blacklist_index on blacklist(package, version)''')
 
+		## Keep an archive of which packages have been seen. This is useful to ignore them later on during database
+		## creation.
+		c.execute('''create table if not exists seenpackages (package text, version text, filename text, origin text, checksum text)''')
+		c.execute('''create index if not exists seenpackages_index on seenpackages(package, version)''')
+		c.execute('''create index if not exists seenpackages_checksum_index on seenpackages(checksum)''')
 		## Since there is a lot of duplication inside source packages we store strings per checksum
 		## which we can later link with files
 		c.execute('''create table if not exists processed_file (package text, version text, pathname text, checksum text, filename text, thirdparty tinyint(1))''')
