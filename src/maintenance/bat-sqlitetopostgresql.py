@@ -40,9 +40,6 @@ funccaches = {'C': ['functioncache_c'], 'Java': ['functioncache_java']}
 funccachestablesperlanguage = {'C': ['functionnamecache_c', 'linuxkernelfunctionnamecache', 'linuxkernelnamecache', 'varnamecache_c'],
                               'Java': ['functionnamecache_java', 'classcache_java', 'fieldcache_java']}
 
-cachesdir = '/gpl/master2'
-#cachesdir = '/gpl/tmp'
-
 def createindexes((execquery,)):
 	postgresqlconn = psycopg2.connect("dbname=bat user=bat password=bat")
 	postgresqlcursor = postgresqlconn.cursor()
@@ -141,7 +138,8 @@ def main(argv):
 	parser.add_option("-c", "--cachesdirectory", action="store", dest="cachesdirectory", help="path to caches directory", metavar="DIR")
 	parser.add_option("-d", "--database", action="store", dest="sqlitedb", help="path to SQLite database file", metavar="FILE")
 	parser.add_option("-l", "--licensedatabase", action="store", dest="licensesqlitedb", help="path to SQLite license database file", metavar="FILE")
-	parser.add_option("-f", "--filedatabase", action="store", dest="filesqlitedb", help="path to SQLite license database file", metavar="FILE")
+	parser.add_option("-f", "--filedatabase", action="store", dest="filesqlitedb", help="path to SQLite filename database file", metavar="FILE")
+	parser.add_option("-s", "--securitydatabase", action="store", dest="securitydb", help="path to SQLite security database file", metavar="FILE")
 	(options, args) = parser.parse_args()
 	if options.sqlitedb == None:
 		parser.error("Specify SQLite database file")
@@ -149,12 +147,22 @@ def main(argv):
 	if options.cachesdirectory == None:
 		parser.error("Specify SQLite caches directory")
 
+	cachesdir = options.cachesdirectory
+
 	if options.licensesqlitedb == None:
 		parser.error("Specify SQLite licenses database file")
 
 	if not os.path.exists(options.sqlitedb):
 		print >>sys.stderr, "SQLite database file does not exist, exiting"
 		sys.exit(1)
+
+	if options.securitydb == None:
+		parser.error("Specify SQLite security database file")
+
+	if options.securitydb != None:
+		if not os.path.exists(options.securitydb):
+			print >>sys.stderr, "SQLite securitydb database file specified, but does not exist, exiting"
+			sys.exit(1)
 
 	if options.filesqlitedb != None:
 		if not os.path.exists(options.filesqlitedb):
@@ -329,13 +337,23 @@ def main(argv):
                   'kernelmodule_license','kernelmodule_parameter', 'kernelmodule_parameter_description',
                   'kernelmodule_version','hashconversion']
 
-	#tables = ['processed']
-	tables = ['hashconversion']
-
 	needsdecode = False
 
 	tabletasks = map(lambda x: (options.sqlitedb, x, chunks, preparedstatements[x], execqueries[x], needsdecode), tables)
 
+	'''
+	options.securitydb = None
+	if options.securitydb != None:
+		tablename = 'file'
+		tables.append(tablename)
+		preparedstatement = "prepare batfile as insert into file (filename, directory, package, packageversion, source, distroversion) values ($1, $2, $3, $4, $5, $6)"
+		execqueries[tablename] = {}
+		execqueries[tablename]['base'] = "execute batfile(%s, %s, %s, %s, %s, %s)"
+		execqueries[tablename]['chunked'] = "insert into file (filename, directory, package, packageversion, source, distroversion) values"
+		execqueries[tablename]['param'] = 6
+		needsdecode = False
+		#tabletasks.append((options.filesqlitedb,tablename,chunks,preparedstatement, execqueries[tablename],needsdecode))
+	'''
 	if options.filesqlitedb != None:
 		tablename = 'file'
 		tables.append(tablename)
@@ -356,7 +374,7 @@ def main(argv):
 		execqueries[tablename]['chunked'] = "insert into licenses (checksum, license, scanner, version) values"
 		execqueries[tablename]['param'] = 4
 		needsdecode = False
-		#tabletasks.append((options.licensesqlitedb,tablename,chunks,preparedstatement, execqueries[tablename],needsdecode))
+		tabletasks.append((options.licensesqlitedb,tablename,chunks,preparedstatement, execqueries[tablename],needsdecode))
 		tablename = 'extracted_copyright'
 		tables.append(tablename)
 		preparedstatement = "prepare bat_extracted_copyright as insert into extracted_copyright (checksum, copyright, type, byteoffset) values ($1, $2, $3, $4)"
@@ -365,7 +383,7 @@ def main(argv):
 		execqueries[tablename]['chunked'] = "insert into extracted_copyright (checksum, copyright, type, byteoffset) values"
 		execqueries[tablename]['param'] = 4
 		needsdecode = True
-		#tabletasks.append((options.licensesqlitedb,tablename,chunks,preparedstatement, execqueries[tablename],needsdecode))
+		tabletasks.append((options.licensesqlitedb,tablename,chunks,preparedstatement, execqueries[tablename],needsdecode))
 
 	## TODO: make configurable
 	cleandb = True
@@ -425,7 +443,7 @@ def main(argv):
 						preparedstatement = "prepare bat_%s as insert into %s (functionname, package) values ($1, $2)" % (t,t)
 						execqueries[tablename]['base'] = "execute bat_%s" % t + "(%s, %s)"
 						execqueries[tablename]['chunked'] = "insert into %s(functionname, package) values" % t
-						#tabletasks.append((dbfile,tablename,chunks,preparedstatement, execqueries[tablename],needsdecode))
+						tabletasks.append((dbfile,tablename,chunks,preparedstatement, execqueries[tablename],needsdecode))
 					## language specific
 					if i == 'C':
 						execqueries[tablename]['param'] = 2
@@ -433,29 +451,29 @@ def main(argv):
 							preparedstatement = "prepare bat_%s as insert into %s (functionname, package) values ($1, $2)" % (t,t)
 							execqueries[tablename]['base'] = "execute bat_%s" % t + "(%s, %s)"
 							execqueries[tablename]['chunked'] = "insert into %s(functionname, package) values" % t
-							#tabletasks.append((dbfile,tablename,chunks,preparedstatement, execqueries[tablename],needsdecode))
+							tabletasks.append((dbfile,tablename,chunks,preparedstatement, execqueries[tablename],needsdecode))
 						elif t.startswith('linuxkernelnamecache'):
 							preparedstatement = "prepare bat_%s as insert into %s (varname, package) values ($1, $2)" % (t,t)
 							execqueries[tablename]['base'] = "execute bat_%s" % t + "(%s, %s)"
 							execqueries[tablename]['chunked'] = "insert into %s(varname, package) values" % t
-							#tabletasks.append((dbfile,tablename,chunks,preparedstatement, execqueries[tablename],needsdecode))
+							tabletasks.append((dbfile,tablename,chunks,preparedstatement, execqueries[tablename],needsdecode))
 						elif t.startswith('varnamecache_c'):
 							preparedstatement = "prepare bat_%s as insert into %s (varname, package) values ($1, $2)" % (t,t)
 							execqueries[tablename]['base'] = "execute bat_%s" % t + "(%s, %s)"
 							execqueries[tablename]['chunked'] = "insert into %s(varname, package) values" % t
-							#tabletasks.append((dbfile,tablename,chunks,preparedstatement, execqueries[tablename],needsdecode))
+							tabletasks.append((dbfile,tablename,chunks,preparedstatement, execqueries[tablename],needsdecode))
 					if i == 'Java':
 						execqueries[tablename]['param'] = 2
 						if t.startswith('fieldcache_java'):
 							preparedstatement = "prepare bat_%s as insert into %s (fieldname, package) values ($1, $2)" % (t,t)
 							execqueries[tablename]['base'] = "execute bat_%s" % t + "(%s, %s)"
 							execqueries[tablename]['chunked'] = "insert into %s(fieldname, package) values" % t
-							#tabletasks.append((dbfile,tablename,chunks,preparedstatement, execqueries[tablename],needsdecode))
+							tabletasks.append((dbfile,tablename,chunks,preparedstatement, execqueries[tablename],needsdecode))
 						elif t.startswith('classcache_java'):
 							preparedstatement = "prepare bat_%s as insert into %s (classname, package) values ($1, $2)" % (t,t)
 							execqueries[tablename]['base'] = "execute bat_%s" % t + "(%s, %s)"
 							execqueries[tablename]['chunked'] = "insert into %s(classname, package) values" % t
-							#tabletasks.append((dbfile,tablename,chunks,preparedstatement, execqueries[tablename],needsdecode))
+							tabletasks.append((dbfile,tablename,chunks,preparedstatement, execqueries[tablename],needsdecode))
 
 	for i in stringscachesperlanguage:
 		dbfile = os.path.join(cachesdir, stringscachesperlanguage[i])
@@ -472,18 +490,18 @@ def main(argv):
 					preparedstatement = "prepare bat_%s as insert into %s (stringidentifier, package, filename) values ($1, $2, $3)" % (j,j)
 					execqueries[tablename]['base'] = "execute bat_%s" % j + "(%s, %s, %s)"
 					execqueries[tablename]['chunked'] = "insert into %s(stringidentifier, package, filename) values" % j
-					#tabletasks.append((dbfile,tablename,chunks,preparedstatement, execqueries[tablename],needsdecode))
+					tabletasks.append((dbfile,tablename,chunks,preparedstatement, execqueries[tablename],needsdecode))
 				elif j.startswith('scores'):
 					preparedstatement = "prepare bat_%s as insert into %s (stringidentifier, packages, score) values ($1, $2, $3)" % (j,j)
 					execqueries[tablename]['base'] = "execute bat_%s" % j + "(%s, %s, %s)"
 					execqueries[tablename]['chunked'] = "insert into %s(stringidentifier, packages, score) values" % j
-					#tabletasks.append((dbfile,tablename,chunks,preparedstatement, execqueries[tablename],needsdecode))
+					tabletasks.append((dbfile,tablename,chunks,preparedstatement, execqueries[tablename],needsdecode))
 				elif j.startswith('avgstringscache'):
 					preparedstatement = "prepare bat_%s as insert into %s (package, avgstrings) values ($1, $2)" % (j,j)
 					execqueries[tablename]['base'] = "execute bat_%s" % j + "(%s, %s)"
 					execqueries[tablename]['chunked'] = "insert into %s(package, avgstrings) values" % j
 					execqueries[tablename]['param'] = 2
-					#tabletasks.append((dbfile,tablename,chunks,preparedstatement, execqueries[tablename],needsdecode))
+					tabletasks.append((dbfile,tablename,chunks,preparedstatement, execqueries[tablename],needsdecode))
 
 	postgresqlconn.commit()
 	postgresqlcursor.close()
@@ -502,16 +520,6 @@ def main(argv):
 	pool = multiprocessing.Pool(processes=2)
 	pool.map(createindexes, indextasks, 1)
 	pool.terminate()
-
-	'''
-	## then other stuff
-
-	## then all hashes -- hardcoded SHA256, SHA1, MD5, CRC32
-
-	'''
-
-	## then licenses and copyright
-	## then security
 
 if __name__ == "__main__":
 	main(sys.argv)
