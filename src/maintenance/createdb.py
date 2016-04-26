@@ -199,6 +199,7 @@ for v in oldallowedvals:
 	reoldallowedexprs.append(re.compile("\d+\-\d+%s+" % v))
 
 rechar = re.compile("c\d+")
+rewhitespace = re.compile("(\s+)")
 
 ## from FOSSology
 fossologyurlre = re.compile("((:?ht|f)tps?\\:\\/\\/[^\\s\\<]+[^\\<\\.\\,\\s])")
@@ -2326,7 +2327,9 @@ def extractsourcestrings(filepath, language, package, unpackdir):
 	source = stanout 
 	lines = []
 	linenumbers = []
-	linecutoff = 5000
+	## TODO: configure
+	maxlinecutoff = 1000
+	minlinecutoff = 5
 
 	## escape just once to speed up extraction of filenumbers
 	filename_escape = re.escape(os.path.basename(scanfile))
@@ -2369,9 +2372,19 @@ def extractsourcestrings(filepath, language, package, unpackdir):
 							## but they do make the database a lot larger
 							if sline == '':
 								continue
-							## don't store strings that are larger or equal to linecutoff
+
+							## don't store whitespace
+							whitespaceres = rewhitespace.match(sline)
+							if whitespaceres != None:
+								if whitespaceres.groups()[0] == sline:
+									continue
+							## don't store strings that are larger to maxlinecutoff
 							## as some database engines have trouble processing them
-							if len(sline) >= linecutoff:
+							## Also, don't process lines that are shorter than a certain
+							## size.
+							if len(sline) > maxlinecutoff:
+								continue
+							if len(sline) < minlinecutoff:
 								continue
 							for i in range(0, len(linenumbers)):
 								stringres.append((sline, linenumbers[i]))
