@@ -192,7 +192,7 @@ def main(argv):
                    "archivealias": ["archivealias_checksum_index"],
                    "misc": ["misc_checksum_index", "misc_name_index"],
 
-                   "hashconversion": ["hashconversion_sha256_index", "hashconversion_md5_index", "hashconversion_sha1_index", "hashconversion_crc32_index"],
+                   "hashconversion": ["hashconversion_sha256_index", "hashconversion_md5_index", "hashconversion_sha1_index", "hashconversion_crc32_index", "hashconversion_tlsh_index"],
                    "renames": ["renames_index_originalname", "renames_index_originalname", "renames_index_newname"],
                    "licenses": ["license_index"],
                    "extracted_copyright": ["copyright_index", "copyright_type_index"],
@@ -251,7 +251,7 @@ def main(argv):
 	preparedstatements['kernelmodule_parameter'] = "prepare batkernelmodule_parameter as insert into kernelmodule_parameter(checksum, modulename, paramname, paramtype) values ($1, $2, $3, $4)"
 	preparedstatements['kernelmodule_parameter_description'] = "prepare batkernelmodule_parameter_description as insert into kernelmodule_parameter_description(checksum, modulename, paramname, description) values ($1, $2, $3, $4)"
 	preparedstatements['kernelmodule_version'] = "prepare batkernelmodule_version as insert into kernelmodule_version(checksum, modulename, version) values ($1, $2, $3)"
-	preparedstatements['hashconversion'] = "prepare bathashconversion as insert into hashconversion(sha256, md5, sha1, crc32) values ($1, $2, $3, $4)"
+	preparedstatements['hashconversion'] = "prepare bathashconversion as insert into hashconversion(sha256, md5, sha1, crc32, tlsh) values ($1, $2, $3, $4, $5)"
 
 	## queries that will be launched
 	execqueries = {}
@@ -327,9 +327,9 @@ def main(argv):
 	execqueries['kernelmodule_version']['param'] = 3
 
 	execqueries['hashconversion'] = {}
-	execqueries['hashconversion']['base'] = "execute bathashconversion(%s, %s, %s, %s)"
-	execqueries['hashconversion']['chunked'] = "insert into hashconversion(sha256, md5, sha1, crc32) values"
-	execqueries['hashconversion']['param'] = 4
+	execqueries['hashconversion']['base'] = "execute bathashconversion(%s, %s, %s, %s, %s)"
+	execqueries['hashconversion']['chunked'] = "insert into hashconversion(sha256, md5, sha1, crc32, tlsh) values"
+	execqueries['hashconversion']['param'] = 5
 
 	tables = ['processed', 'processed_file', 'extracted_string', 'extracted_function',
                   'extracted_name', 'kernel_configuration','kernelmodule_alias',
