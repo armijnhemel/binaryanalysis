@@ -1,3 +1,17 @@
+2016-05-02:
+* identifier.py: fix return type for Linux kernel symbols
+* bruteforcescan.py: start on carving out data that could not be unpacked, but
+for which it is still useful for it to be carved out. Example: a Linux kernel
+image, or several Linux kernel images, or a bootloader, from a larger
+firmware.
+
+2016-04-28:
+* bat-sqlitetopostgresql.py: change hashconversion because now tlsh hashes are
+stored too
+
+2016-04-24:
+* createmanifests.py: more aggressively cache hashes
+
 2016-04-11:
 * identifier.py: try to identify source code file names in Linux kernel binary
 images
