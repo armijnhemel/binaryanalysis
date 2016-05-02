@@ -608,6 +608,7 @@ def extractkernelsymbols(scanfile, scanenv, unpacktempdir):
 	(stanout, stanerr) = p.communicate()
 	st = stanout.strip().split("\n")
 
+	variables = set()
 	elftmp = tempfile.mkstemp(dir=unpacktempdir, suffix=".ksymtab")
 	datafile = open(scanfile, 'rb')
 	datafile.seek(0)
@@ -625,9 +626,8 @@ def extractkernelsymbols(scanfile, scanenv, unpacktempdir):
 	datafile.close()
 	if os.stat(elftmp[1]).st_size == 0:
 		os.unlink(elftmp[1])
-		return {}
+		return variables
 
-	variables = set()
         #p = subprocess.Popen(['strings', '-a', '-n', str(stringcutoff), elftmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         p = subprocess.Popen(['strings', '-a', elftmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (stanout, stanerr) = p.communicate()
