@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2009-2015 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2009-2016 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -412,6 +412,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 		if "encrypted" in tags:
 			knownfile = True
 
+		blacklisted = False
 		if not knownfile:
 			## all offsets are known now, so scans that are not needed can
 			## be filtered out. Also keep track of the "most promising" scans
@@ -490,6 +491,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 				## the whole file has already been scanned by other scans, so
 				## continue with the leaf scans.
 				if extractor.inblacklist(0, blacklist) == filesize:
+					blacklisted = True
 					break
 
 				if 'minimumsize' in unpackscan:
@@ -542,6 +544,8 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 					(diroffsets, blacklist, scantags, hints) = scanres
 					tags = list(set(tags + scantags))
 					#blacklist = mergeBlacklist(blacklist)
+					if extractor.inblacklist(0, blacklist) == filesize:
+						blacklisted = True
 					for diroffset in diroffsets:
 						if diroffset == None:
 							continue
@@ -587,6 +591,53 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 							pass
 						unpackreports[relfiletoscan]['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
 
+		blacklist.sort()
+
+		carveout = False
+		if carveout and not (blacklisted or knownfile):
+			if blacklist != []:
+				## TODO: make configurable
+				if not 'elf' in tags:
+					counter = 1
+					byteoffset = 0
+					prevblacklist = (0,0)
+					origfile = open(filetoscan, 'r')
+					for r in range(0, len(blacklist)):
+						b = blacklist[r]
+						if byteoffset == b[0]:
+							byteoffset = b[1]
+							prevblacklist = b
+							continue
+
+						origfile.seek(prevblacklist[1])
+
+						try:
+							tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filetoscan), os.path.basename(filetoscan), "carveout", counter)
+							os.makedirs(tmpdir)
+							carveoutfile = open(os.path.join(tmpdir, "carveout"), 'w')
+							carveoutfile.write(origfile.read(b[0] - prevblacklist[1]))
+							carveoutfile.close()
+							## now write the data
+							counter += 1
+						except Exception, e:
+							break
+						byteoffset = b[1]
+						prevblacklist = b
+					if filesize > byteoffset:
+						try:
+							origfile.seek(prevblacklist[1])
+							tmpdir = "%s/%s-%s-%s" % (os.path.dirname(filetoscan), os.path.basename(filetoscan), "carveout", counter)
+							os.makedirs(tmpdir)
+							carveoutfile = open(os.path.join(tmpdir, "carveout"), 'w')
+							carveoutfile.write(origfile.read(filesize - prevblacklist[1]))
+							carveoutfile.close()
+							## now write the data
+							counter += 1
+						except Exception, e:
+							pass
+					origfile.close()
+
+
 		unpackreports[relfiletoscan]['tags'] = tags
 		if not unpacked and 'temporary' in tags:
 			os.unlink(filetoscan)
@@ -595,7 +646,6 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 			for u in unpackreports:
 				reportqueue.put({u: unpackreports[u]})
 		else:
-			blacklist.sort()
 			leaftasks.append((filetoscan, tags, blacklist, filehash, filesize))
 			for l in leaftasks:
 				leafqueue.put(l)
