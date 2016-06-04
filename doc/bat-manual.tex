@@ -4,7 +4,7 @@
 \pagestyle{empty}
 
 \author{Armijn Hemel -- Tjaldur Software Governance Solutions}
-\title{Binary Analysis Tool User and Developer Manual - describing version 24}
+\title{Binary Analysis Tool User and Developer Manual - describing version 26}
 
 \begin{document}
 
@@ -503,7 +503,7 @@ description = Unpack JFFS2 file systems
 enabled     = yes
 \end{verbatim}
 
-In BAT 24 the following file systems, compressed files and media files can be
+In BAT 26 the following file systems, compressed files and media files can be
 unpacked or extracted:
 
 \begin{itemize}
@@ -869,7 +869,7 @@ cleanup     = yes
 The \texttt{cleanup} setting should be set to \texttt{yes} unless the results
 do not change in between subsequent runs of BAT.
 
-Currently (BAT 24) if \texttt{cleanup} is set the files are written directly to
+Currently (BAT 26) if \texttt{cleanup} is set the files are written directly to
 output directories. The values of these directories are hardcoded (and match
 values that the GUI expects) but these will be replaced by the value of
 \texttt{storetarget} in a later release.
@@ -892,28 +892,11 @@ very extensive examples of setup hooks.
 
 \subsection{Database configuration}
 
-Currently two database engines are supported by BAT: SQLite and PostgreSQL.
-Various scans can use a database backend. Depending on the scan or set up the
-databases can be in SQLite format, or PostgreSQL format and these can be freely
-mixed but it is advised to use one database backend.
+Historically BAT used SQLite as its database engine. Support for PostgreSQL was
+added as an alternative later. Since BAT 26 only PostgreSQL is supported.
 
-The database backend can be chosen either per scan, or defined as a global
-environment variable.
-
-To select SQLite as a backend set \texttt{dbbackend} as follows:
-
-\begin{verbatim}
-dbbackend = sqlite
-\end{verbatim}
-
-or for PostgreSQL:
-
-\begin{verbatim}
-dbbackend = postgresql
-\end{verbatim}
-
-If PostgreSQL is chosen a few other variables have to be set (username,
-password, database):
+For PostgreSQL a few variables have to be set to be able to connect with the
+database server, namely the username, password and database name:
 
 \begin{verbatim}
 postgresql_user     = bat
@@ -930,7 +913,7 @@ postgresql_port     = 5432
 
 Depending on the version of \texttt{python-psycopg2} it could be that
 \texttt{postgresql\_host} and \texttt{postgresql\_port} both have to be
-specified. On CentOS 6.x both have to be set.
+specified. For example on CentOS 6.x both parameters have to be set.
 
 \section{Analyser internals}
 
@@ -949,8 +932,6 @@ subdirectory (note that this directory currently contains more files than are
 actually used by BAT at the moment):
 
 \begin{itemize}
-\item \texttt{batdb.py} contains the BAT database abstraction code, as well
-as a query rewriting method.
 \item \texttt{batxor.py} contains experimental code to deal with files that
 have been obfuscated with XOR.
 \item \texttt{bruteforcescan.py} contains the main logic of the program: it
@@ -1661,9 +1642,6 @@ are hardcoded in the table and index definitions.
 
 \subsection{Database design}
 
-Depending on if the database is stored in PostgreSQL or SQLite the database
-tables might be in one database (PostgreSQL) or separate files (SQLite).
-
 The main database currently has 16 tables, 9 of which are Linux kernel specific.
 One other table is optional:
 
@@ -1735,7 +1713,7 @@ It has the following fields:
 \item \texttt{pathname}: relative path inside the source code archive
 \item \texttt{checksum}: SHA256 checksum of the file
 \item \texttt{filename}: filename of the file, without path component
-\item \texttt{thirdparty}: boolean (PostgreSQL)/\texttt{tinyint} (SQLite)
+\item \texttt{thirdparty}: boolean
 indicating if the file is an obvious copy of a file from another package.
 \end{itemize}
 
@@ -2058,49 +2036,14 @@ method looks up strings in the database, optionally aggregates results for
 Java class files at the JAR level, determines versions and licenses while also
 removing unlikely versions from the result set.
 
-The ranking method uses a few tables. Depending on the database backend the
-tables will either be in a single database (PostgreSQL) or possibly in multiple
-files (sqlite).
-
 For the first part (determining which package a string belongs to) it uses
 tables with caching information for string constants, function names, variable
 names and so on. These caching tables contain a subset of information to vastly
-speed up scanning. There is no script in the standard distribution of BAT to
-create these caching tables. The second part (determining versions and licenses)
-other tables are used.
-
-When the database backend is set to sqlite the configuration will be checked to
-see what the locations of the database files are. When the database backend is
-set to PostgreSQL the parameters for the database files will be ignored, but
-they still need to be supplied (for now).
-
-The location of the SQLite database files can be set in the configuration file
-in the \texttt{envvars} option:
-
-\begin{verbatim}
-[versionlicensecopyright]
-type        = aggregate
-module      = bat.licenseversion
-method      = determinelicense_version_copyright
-noscan      = text:xml:graphics:pdf:audio:video:mp4
-envvars     = BAT_DB=/home/bat/db/master.sqlite3:
-              BAT_LICENSE_DB=/home/bat/db/licenses.sqlite3:
-              BAT_CLONE_DB=/home/bat/db/clonedb.sqlite3:
-              BAT_STRINGSCACHE_C=/home/bat/db/stringscache_c:
-              BAT_STRINGSCACHE_JAVA=/home/bat/db/stringscache_java:
-              BAT_NAMECACHE_C=/home/bat/db/functioncache_c:
-              BAT_NAMECACHE_JAVA=/home/bat/db/functioncache_java:
-              BAT_STRING_CUTOFF=5:AGGREGATE_CLEAN=1:USE_SOURCE_ORDER=1:
-              BAT_RANKING_LICENSE=1:BAT_RANKING_VERSION=1:
-              BAT_KEEP_VERSIONS=10:BAT_KEEP_MAXIMUM_PERCENTAGE=50:
-              BAT_MINIMUM_UNIQUE=10
-enabled     = yes
-priority    = 3
-\end{verbatim}
-
-The main database with all information except license information is set using
-\texttt{BAT\_DB}. This option is mandatory. If it is not supplied scanning with
-the determining versions and licenses will be disabled.
+speed up scanning by using pregenerated results to avoid expensive database
+join operations. There is no script in the standard distribution of BAT to
+create these caching tables, but the format has been described in the database
+schema. For the second part (determining versions and licenses) other tables
+containing the raw package data are used.
 
 In the database the strings, averages, function names, variable names, etcetera
 are split per language family (C, Java, C\#, and so on). The reason for this is
@@ -2115,12 +2058,6 @@ caching databases a lot smaller so they can easier fit into memory. There are
 of course programs with language embeddeding and better support for these will
 be added in the future.
 
-The names of the caching databases start with \texttt{BAT\_STRINGSCACHE} and
-\texttt{BAT\_NAMECACHE} and are postfixed with an underscore and the name of
-the programming language family.  The strings cache database for Java for
-example is configured using the environment variable
-\texttt{BAT\_STRINGSCACHE\_JAVA}.
-
 An optional database to deal with copied and renamed packages can be set with
 \texttt{BAT\_CLONE\_DB}. If set and populated the ranking scan will use
 information from this database to rewrite package names. This is useful if a
@@ -2129,10 +2066,8 @@ they were a single package. Examples are Ethereal that had to be renamed to
 Wireshark, or KOffice that was forked into Calligra, after which development
 on KOffice effectively stopped and everyone moved to Calligra.
 
-The license database can be set with \texttt{BAT\_LICENSE\_DB}. If it is not
-supplied licensing information will not be used during the scan. If
-\texttt{BAT\_RANKING\_LICENSE} is not set to 1 no license information will be
-extracted. If \texttt{BAT\_RANKING\_VERSION} is not set to 1 no version
+If \texttt{BAT\_RANKING\_LICENSE} is not set to 1 no license information will
+be extracted. If \texttt{BAT\_RANKING\_VERSION} is not set to 1 no version
 information will be extracted. If \texttt{BAT\_RANKING\_LICENSE} is set to 1 it
 automatically sets \texttt{BAT\_RANKING\_VERSION} to 1 as well.
 
@@ -2864,7 +2799,7 @@ Finally there are some scans that unpack text files (\texttt{base64}) or media
 files. The \texttt{lzma} unpack scan also has the lowest priority because of
 possibly many false positives.
 
-The order of the unpack scans as defined in BAT 24 is:
+The order of the unpack scans as defined in BAT 26 is:
 
 \begin{enumerate}
 \item \texttt{byteSwap}
