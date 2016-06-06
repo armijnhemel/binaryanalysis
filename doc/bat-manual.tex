@@ -756,17 +756,22 @@ reporthash = sha256
 \subsubsection{Global environment variables}
 
 Global environment variables are shared between scans. They can be overridden
-by individual scans. For example to set the environment variable
-\texttt{BAT\_NAMECACHE\_C} for all scans you would put something like this in
-the global configuration:
+by individual scans. For example to set the environment variable \texttt{FOO}
+for all scans you would put something like this in the global configuration:
 
 \begin{verbatim}
-envvars     = BAT_NAMECACHE_C=/home/bat/db/functioncache_c
+envvars     = FOO=/home/bat/bar
 \end{verbatim}
 
-As a rule of thumb: settings that are shared between all scans (such as the
-location of various databases) should be set in the global sections, while scan
-specific options should be in the scan specific sections.
+To pass two or more environment variables use a semicolon:
+
+\begin{verbatim}
+envvars     = FOO=/home/bat/bar:XYZZY=1
+\end{verbatim}
+
+As a rule of thumb: settings that are shared between all scans should be set in
+the global sections, while scan specific options should be in the scan
+specific sections.
 
 \subsection{Viewer configuration}
 
@@ -1942,8 +1947,7 @@ Iceweasel), forks (KOffice versus Calligra), and so on.
 \end{itemize}
 
 The script \texttt{clonedbinit.py} in the \texttt{maintenance} directory
-generates a minimal translation database. In several scans this database can
-be used by setting the \texttt{BAT\_CLONE\_DB} parameter.
+generates a minimal translation database.
 
 \subsubsection{\texttt{security\_cert} table}
 
@@ -2058,13 +2062,14 @@ caching databases a lot smaller so they can easier fit into memory. There are
 of course programs with language embeddeding and better support for these will
 be added in the future.
 
-An optional database to deal with copied and renamed packages can be set with
-\texttt{BAT\_CLONE\_DB}. If set and populated the ranking scan will use
-information from this database to rewrite package names. This is useful if a
-package was renamed for a reason and different packages should be treated as if
-they were a single package. Examples are Ethereal that had to be renamed to
-Wireshark, or KOffice that was forked into Calligra, after which development
-on KOffice effectively stopped and everyone moved to Calligra.
+An optional table in the database to deal with copied and renamed packages can
+be generated with  \texttt{clonedbinit.py} in the \texttt{maintenance}
+directory. If this table is populated the ranking scan will use information
+from this table to rewrite package names. This is useful if a package was
+renamed for a reason and different packages should be treated as if they were
+a single package. Examples are Ethereal that had to be renamed to Wireshark,
+or KOffice that was forked into Calligra, after which development on KOffice
+effectively stopped and everyone moved to Calligra.
 
 If \texttt{BAT\_RANKING\_LICENSE} is not set to 1 no license information will
 be extracted. If \texttt{BAT\_RANKING\_VERSION} is not set to 1 no version
@@ -2603,6 +2608,17 @@ A few scans can use tmpfs or a ramdisk to write temporary results. The scans
 that can benefit from this are LZMA unpacking, ranking (temporary results of
 DEX and ODEX unpacking), compress unpacking, JFFS2 unpacking and TAR unpacking.
 
+\section{Description for scans using the database}
+
+\subsection{\texttt{file2package}}
+
+The \texttt{file2package} leaf scan uses the table \texttt{file} that contains
+information with checksums of file names found in standard Linux distributions.
+This table can be populated using the scripts
+\texttt{createfiledatabasedebian.py} and \texttt{createfiledatabasefedora.py}
+which can be found in the subdirectory \texttt{maintenance} in the BAT source
+tree and are for Debian and Fedora respectively.
+
 \section{Parameter description for default scans}
 
 This section describes the default parameters for several of the scans as
@@ -2667,14 +2683,6 @@ The \texttt{ZIP\_MEMORY\_CUTOFF} parameter is used to set the maximum size
 of ZIP data that should be read into memory. If the ZIP data is larger it will
 be carved out from the larger file using \texttt{dd}. If not set a value of 50
 million bytes will be used.
-
-\subsection{\texttt{file2package}}
-
-The \texttt{file2package} leaf scan has one parameter:
-\texttt{BAT\_PACKAGE\_DB}.  This parameter is used to specify the location of
-the database used by this scan. The database can be generated using the scripts
-\texttt{createfiledatabasedebian.py} and \texttt{createfiledatabasefedora.py}
-in the subdirectory \texttt{maintenance} in the BAT source tree.
 
 \subsection{\texttt{findlibs}}
 
