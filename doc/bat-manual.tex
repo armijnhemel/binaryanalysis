@@ -882,9 +882,10 @@ values that the GUI expects) but these will be replaced by the value of
 \subsection{Running setup code}
 
 For some scans it is necessary to run some setup code to ensure that certain
-conditions are met, for example that databases exist, or that locations are
-readable/writeable. These checks only need to be run once. Based on the result
-of the setup code the scan might be disabled if certain conditions are not met.
+conditions are met, for example to see if database tables exist, or if locations
+are readable/writeable. These checks only need to be run once. Based on the
+result of the setup code the scan might be disabled if certain conditions are
+not met.
 
 There is a special hook for leaf scans to run setup code for the scan:
 
@@ -1228,7 +1229,7 @@ Aggregators have a strict interface:
 
 \begin{verbatim}
 def aggregateexample(unpackreports, scantempdir, topleveldir, scanenv,
-                     debug=False, unpacktempdir=None)
+                     batcursors, batcons, debug=False, unpacktempdir=None)
 \end{verbatim}
 
 \begin{itemize}
@@ -2004,8 +2005,7 @@ scans.
 type        = leaf
 module      = bat.identifier
 method      = searchGeneric
-envvars     = BAT_NAMECACHE_C=/home/bat/db/functioncache_c:
-              DEX_TMPDIR=/ramdisk:BAT_STRING_CUTOFF=5
+envvars     = DEX_TMPDIR=/ramdisk:BAT_STRING_CUTOFF=5
 noscan      = text:xml:graphics:pdf:compressed:
               resource:audio:video:mp4:vimswap:timezone:ico
 description = Classify packages using advanced ranking mechanism
@@ -2014,16 +2014,9 @@ setup       = extractidentifiersetup
 priority    = 1
 \end{verbatim}
 
-The three parameters are:
+The two parameters are:
 
 \begin{itemize}
-\item \texttt{BAT\_NAMECACHE\_C} - in case the binary is a Linux kernel image
-or Linux kernel module the identifier extraction scan needs to be able to look
-up kernel function names to filter these out and assign to the function
-results. For this a caching database with function names is needed. If the
-database backend is configured to be PostgreSQL, then the value of this
-parameter will be ignored, but it is (at the moment) still required to set this
-parameter.
 \item \texttt{BAT\_STRING\_CUTOFF} - this value is the mimimal length of the
 string that is matched (default value is 5). If extracted strings are shorter
 than this value they will be ignored. It is important to keep this parameter in
