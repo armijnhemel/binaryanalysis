@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2009-2013 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2009-2016 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''This file contains information about how to recognize certain
@@ -47,6 +47,7 @@ fsmagic = {
             'xztrailer':        '\x59\x5a',
             'lzip':             'LZIP',
             'lzo':              '\x89\x4c\x5a\x4f\x00\x0d\x0a\x1a\x0a',
+            'lha':              '-lh7-',
             'cramfs_le':        '\x45\x3d\xcd\x28',
             'cramfs_be':        '\x28\xcd\x3d\x45',
             'romfs':            '-rom1fs-',
@@ -120,6 +121,7 @@ correction = {
                'tar2':    0x101,
                'fat12':   54,
                'fat16':   54,
+               'lha':     2,
              }
 
 ## collection of markers that should be scanned together
