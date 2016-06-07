@@ -159,24 +159,26 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 		except Exception, e:
 			blacklistscans.add((module, method))
 			continue
+
+	## grab tasks from the queue continuously until there are no more tasks
 	while True:
 		## reset the reports, blacklist, offsets and tags for each new scan
 		leaftasks = []
-		unpackreports = {}
 		blacklist = []
-		## set timeout to a month
+		## set timeout for scanning to a month
+		## TODO: make configurable
 		(dirname, filename, lenscandir, debug, tags, scanhints, offsets) = scanqueue.get(timeout=2592000)
 
 		## absolute path of the file in the file system (so including temporary dir)
 		filetoscan = os.path.join(dirname, filename)
 
-		## relative path of the file in the temporary dir
+		## path of the file relative to the temporary dir
 		relfiletoscan = filetoscan[lentempdir:]
 		if relfiletoscan.startswith('/'):
 			relfiletoscan = relfiletoscan[1:]
 
-		unpackreports[relfiletoscan] = {}
-		unpackreports[relfiletoscan]['name'] = filename
+		unpackreports = {}
+		unpackreports['name'] = filename
 
 		## use libmagic to find out the 'magic' of the file for reporting
 		## It cannot properly handle file names with 'exotic' encodings,
@@ -195,7 +197,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 			else:
 				## TODO: create a better value for 'magic'
 				magic = 'symbolic link'
-		unpackreports[relfiletoscan]['magic'] = magic
+		unpackreports['magic'] = magic
 
 		## Add both the path to indicate the position inside the file sytem
         	## or file that was unpacked, as well as the position of the files as unpacked
@@ -204,16 +206,15 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 		## directory too, if it is present (not always).
 		## TODO: validate if this is stil needed
 		storepath = dirname[lenscandir:].replace("/squashfs-root", "")
-		unpackreports[relfiletoscan]['path'] = storepath
-		unpackreports[relfiletoscan]['realpath'] = dirname
+		unpackreports['path'] = storepath
+		unpackreports['realpath'] = dirname
 
 		if os.path.islink(filetoscan):
 			tags.append('symlink')
-			unpackreports[relfiletoscan]['tags'] = tags
+			unpackreports['tags'] = tags
 			for l in leaftasks:
 				leafqueue.put(l)
-			for u in unpackreports:
-				reportqueue.put({u: unpackreports[u]})
+			reportqueue.put({relfiletoscan: unpackreports})
 			scanqueue.task_done()
 			continue
 
@@ -221,40 +222,37 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 		if not os.path.isfile(filetoscan) and not os.path.isdir(filetoscan):
 			for l in leaftasks:
 				leafqueue.put(l)
-			for u in unpackreports:
-				reportqueue.put({u: unpackreports[u]})
+			reportqueue.put({relfiletoscan: unpackreports})
 			scanqueue.task_done()
 			continue
 
 		filesize = os.lstat(filetoscan).st_size
-		unpackreports[relfiletoscan]['size'] = filesize
+		unpackreports['size'] = filesize
 
 		## empty file, not interested in further scanning
 		if filesize == 0:
 			tags.append('empty')
-			unpackreports[relfiletoscan]['tags'] = tags
+			unpackreports['tags'] = tags
 			for l in leaftasks:
 				leafqueue.put(l)
-			for u in unpackreports:
-				reportqueue.put({u: unpackreports[u]})
+			reportqueue.put({relfiletoscan: unpackreports})
 			scanqueue.task_done()
 			continue
 
 		## Store the hash of the file for identification and for possibly
 		## querying the knowledgebase later on.
 		filehashresults = gethash(dirname, filename, outputhash)
-		unpackreports[relfiletoscan]['checksum'] = filehashresults[outputhash]
-		unpackreports[relfiletoscan]['sha256'] = filehashresults['sha256']
+		unpackreports['checksum'] = filehashresults[outputhash]
+		unpackreports['sha256'] = filehashresults['sha256']
 		filehash = filehashresults[outputhash]
 
 		## blacklisted file, not interested in further scanning
 		if filehash in blacklistedfiles:
 			tags.append('blacklisted')
-			unpackreports[relfiletoscan]['tags'] = tags
+			unpackreports['tags'] = tags
 			for l in leaftasks:
 				leafqueue.put(l)
-			for u in unpackreports:
-				reportqueue.put({u: unpackreports[u]})
+			reportqueue.put({relfiletoscan: unpackreports})
 			scanqueue.task_done()
 			continue
 
@@ -263,9 +261,8 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 		llock.acquire()
 		if filehash in hashdict:
 			## if the hash is already there, return
-			unpackreports[relfiletoscan]['tags'] = ['duplicate']
-			for u in unpackreports:
-				reportqueue.put({u: unpackreports[u]})
+			unpackreports['tags'] = ['duplicate']
+			reportqueue.put({relfiletoscan: unpackreports})
 			llock.release()
 			scanqueue.task_done()
 			continue
@@ -326,7 +323,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 						tags = list(set(tags + scantags))
 						knownfile = True
 						unpacked = True
-						unpackreports[relfiletoscan]['scans'] = []
+						unpackreports['scans'] = []
 						## Add all the files found to the scan queue
 						## each diroffset is a (path, offset) tuple
 						for diroffset in diroffsets:
@@ -371,7 +368,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 											pass
 							except StopIteration:
 								pass
-							unpackreports[relfiletoscan]['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
+							unpackreports['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
 						break
 
 		if not knownfile:
@@ -474,7 +471,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 			scanfirst = sorted(scanfirst, key=lambda x: x['priority'], reverse=True)
 			unpackscans = scanfirst + unpackscans
 
-			unpackreports[relfiletoscan]['scans'] = []
+			unpackreports['scans'] = []
 
 			unpacked = False
 			for unpackscan in unpackscans:
@@ -578,7 +575,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 										pass
 						except StopIteration:
 							pass
-						unpackreports[relfiletoscan]['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
+						unpackreports['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
 
 		blacklist.sort()
 
@@ -627,19 +624,17 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 					origfile.close()
 
 
-		unpackreports[relfiletoscan]['tags'] = tags
+		unpackreports['tags'] = tags
 		if not unpacked and 'temporary' in tags:
 			os.unlink(filetoscan)
 			for l in leaftasks:
 				leafqueue.put(l)
-			for u in unpackreports:
-				reportqueue.put({u: unpackreports[u]})
+			reportqueue.put({relfiletoscan: unpackreports})
 		else:
 			leaftasks.append((filetoscan, tags, blacklist, filehash, filesize))
 			for l in leaftasks:
 				leafqueue.put(l)
-			for u in unpackreports:
-				reportqueue.put({u: unpackreports[u]})
+			reportqueue.put({relfiletoscan: unpackreports})
 		scanqueue.task_done()
 
 def leafScan(scanqueue, reportqueue, scans, processid, llock, unpacktempdir, topleveldir, debug, cursor, conn):
@@ -1927,7 +1922,8 @@ def runscan(scans, binaries):
 			print "done", scan_binary, datetime.datetime.utcnow().isoformat()
 			sys.stdout.flush()
 
-	## clean up the database connections
+	## clean up the database connections and
+	## close all connections to the database
 	for c in batcursors:
 		c.close()
 	for c in batcons:
