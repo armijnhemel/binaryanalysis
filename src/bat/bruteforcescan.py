@@ -1755,7 +1755,6 @@ def runscan(scans, binaries):
 
 		if debug:
 			print >>sys.stderr, "LEAF BEGIN", datetime.datetime.utcnow().isoformat()
-		poolresult = []
 		tagdict = {}
 
 		## determine whether or not the leaf scans should be run in parallel
