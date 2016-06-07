@@ -29,7 +29,7 @@ splitcharacters = map(lambda x: chr(x), range(0,9) + range(14,32) + [127])
 ## Original code (in Perl) was written by Eelco Dolstra.
 ## Reimplementation in Python done by Armijn Hemel.
 ##
-def searchGeneric(filepath, tags, blacklist=[], scanenv={}, offsets={}, scandebug=False, unpacktempdir=None):
+def searchGeneric(filepath, tags, cursor, conn, blacklist=[], scanenv={}, offsets={}, scandebug=False, unpacktempdir=None):
 	filesize = os.stat(filepath).st_size
 	## whole file is blacklisted, so no need to scan
 	if extractor.inblacklist(0, blacklist) == filesize:
@@ -91,10 +91,8 @@ def searchGeneric(filepath, tags, blacklist=[], scanenv={}, offsets={}, scandebu
 		if empty:
 			return None
 		if linuxkernel:
-			cursor = None
-			conn = None
 			if len(cmeta['strings']) != 0:
-				if 'BAT_KERNELFUNCTION_SCAN' in scanenv and False:
+				if 'BAT_KERNELFUNCTION_SCAN' in scanenv:
 					res = extractKernelData(cmeta['strings'], filepath, cursor, conn, scandebug)
 					if res != None:
 						if 'kernelfunctions' in res:
