@@ -6,7 +6,6 @@
 
 import os, os.path, sys, subprocess, copy, cPickle, multiprocessing
 import pydot, csv, tempfile, shutil
-import bat.batdb
 if sys.version_info[1] == 7:
 	import collections
 	have_counter = True
@@ -162,7 +161,7 @@ def extractfromkernelfile((filehash, filename, topleveldir, scantempdir)):
 	return (filehash, version, remotesymbols, dependencies, declaredlicenses, kernelsymbols, module)
 
 ## the main method called by BAT
-def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={}, scandebug=False, unpacktempdir=None):
+def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv, batcursors, batcons, scandebug=False, unpacktempdir=None):
 	generategraphs = True
 	## crude check for broken PyDot
 	if pydot.__version__ == '1.0.3' or pydot.__version__ == '1.0.2':
@@ -188,7 +187,7 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 	if scanenv.get("KERNELSYMBOL_DEPENDENCIES", 0) == '1':
 		displaydependencies = True
 
-	if scanenv.has_key('overridedir'):
+	if 'overridedir' in scanenv:
 		try:
 			del scanenv['BAT_IMAGEDIR']
 		except: 
@@ -213,10 +212,6 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 			os.makedirs(reportdir)
 		except Exception, e:
 			return
-
-	## Is the master database defined?
-	if not 'BAT_DB' in scanenv:
-		return
 
 	## store names of all files containing Linux kernel images or modules
 	symbolfiles = set()
@@ -275,13 +270,9 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 	filehashtomodules = set()
 	nametomodules = set()
 
-	masterdb = scanenv.get('BAT_DB')
-
-	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
-
 	## open database connection to the master database
-	masterconn = batdb.getConnection(masterdb,scanenv)
-	mastercursor = masterconn.cursor()
+	conn = batcons[0]
+	cursor = batcursors[0]
 
 	## store which type each symbol has in a dictionary:
 	## * gplkernel (EXPORT_SYMBOL_GPL)
@@ -291,8 +282,8 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 	## This can change per version
 	symboltotype = {}
 
-	symbolquery = batdb.getQuery('select * from extracted_name where name=%s')
-	versionquery = batdb.getQuery('select package,version from processed_file where checksum=%s')
+	symbolquery = "select * from extracted_name where name=%s"
+	versionquery = "select package,version from processed_file where checksum=%s"
 
 	for i in symbolres:
 		(filehash, version, remotesymbols, dependencies, declaredlicenses, kernelsymbols, module) = i
@@ -330,8 +321,9 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 		for k in scansymbols:
 			if k in symboltotype[version]:
 				continue
-			mastercursor.execute(symbolquery, (k,))
-			symres = mastercursor.fetchall()
+			cursor.execute(symbolquery, (k,))
+			symres = cursor.fetchall()
+			conn.commit()
 			symres = filter(lambda x: x[2] == 'kernelsymbol' or x[2] == 'gplkernelsymbol', symres)
 			symlen = len(set(map(lambda x: x[2], symres)))
 			if symlen == 0:
@@ -354,8 +346,9 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 			symboltypefinal = None
 			for sy in symres:
 				(syfilehash, symbolname, symboltype, language, linenumber) = sy
-				mastercursor.execute(versionquery, (syfilehash,))
-				packageres = mastercursor.fetchall()
+				cursor.execute(versionquery, (syfilehash,))
+				packageres = cursor.fetchall()
+				conn.commit()
 				for p in packageres:
 					if p[0] != 'linux':
 						continue
@@ -380,10 +373,6 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 				symboltotype[version][k] = 'undecided'
 			else:
 				symboltotype[version][k] = symboltypefinal
-
-	## close the database cursor and connection
-	mastercursor.close()
-	masterconn.close()
 
 	useddependenciessymbolsperfilename = {}
 
@@ -668,36 +657,14 @@ def findsymbols(unpackreports, scantempdir, topleveldir, processors, scanenv={},
 		pool.map(writeGraph, symbolgraphs, 1)
 	pool.terminate()
 
-def kernelsymbolssetup(scanenv, debug=False):
-	if not 'DBBACKEND' in scanenv:
-		return (False, None)
-	if scanenv['DBBACKEND'] == 'sqlite3':
-		return kernelsymbolssetup_sqlite3(scanenv, debug)
-	if scanenv['DBBACKEND'] == 'postgresql':
-		return kernelsymbolssetup_postgresql(scanenv, debug)
-	return (False, None)
-
-def kernelsymbolssetup_postgresql(scanenv, debug=False):
-	newenv = copy.deepcopy(scanenv)
-	batdb = bat.batdb.BatDb('postgresql')
-	conn = batdb.getConnection(None,scanenv)
-	if conn == None:
-		return (False, None)
-	conn.close()
-	return (True, newenv)
-
-def kernelsymbolssetup_sqlite3(scanenv, debug=False):
-	newenv = copy.deepcopy(scanenv)
-
-	## Is the master database defined?
-	if not scanenv.has_key('BAT_DB'):
-		return (False, None)
-
-	masterdb = scanenv.get('BAT_DB')
-
-	## Does the master database exist?
-	if not os.path.exists(masterdb):
-		return (False, None)
-
-	## TODO: many more checks
-	return (True, newenv)
+def kernelsymbolssetup(scanenv, cursor, conn, debug=False):
+	if cursor == None:
+		return (False, {})
+	cursor.execute("select table_name from information_schema.tables where table_type='BASE TABLE' and table_schema='public'")
+	tablenames = map(lambda x: x[0], cursor.fetchall())
+	conn.commit()
+	if not 'extracted_name' in tablenames:
+		return (False, {})
+	if not 'processed_file' in tablenames:
+		return (False, {})
+	return (True, scanenv)

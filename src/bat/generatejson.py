@@ -13,11 +13,10 @@ The documentation of the format can be found in the 'doc' directory (subject to 
 '''
 
 import os, sys, re, json, cPickle, multiprocessing, copy, gzip, codecs, Queue
-import bat.batdb
 from multiprocessing import Process, Lock
 from multiprocessing.sharedctypes import Value, Array
 
-def writejson(scanqueue, topleveldir, outputhash, cursor, conn, batdb, scanenv, converthash, compressed):
+def writejson(scanqueue, topleveldir, outputhash, cursor, conn, scanenv, converthash, compressed):
 	hashcache = {}
 	while True:
 		filehash = scanqueue.get(timeout=2592000)
@@ -37,7 +36,7 @@ def writejson(scanqueue, topleveldir, outputhash, cursor, conn, batdb, scanenv, 
 				jsonreport[i] = copy.deepcopy(leafreports[i])
 
 		if converthash:
-			query = batdb.getQuery("select %s from hashconversion where sha256=" % outputhash + "%s")
+			query = "select %s from hashconversion where sha256=" % outputhash + "%s"
 
 		## then the 'ranking' scan
 		if 'ranking' in leafreports:
@@ -264,7 +263,7 @@ def writejson(scanqueue, topleveldir, outputhash, cursor, conn, batdb, scanenv, 
 			os.unlink(fin.name)
 		scanqueue.task_done()
 
-def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, scandebug=False, unpacktempdir=None):
+def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv, batcursors, batcons, scandebug=False, unpacktempdir=None):
 	toplevelelem = None
 	for u in unpackreports:
 		if "tags" in unpackreports[u]:
@@ -283,6 +282,10 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 		compressed = scanenv['compress']
 	else:
 		compressed = False
+
+	usedb = False
+	if batcursors != []:
+		usedb = True
 
 	decodingneeded = ['utf-8','ascii','latin-1','euc_jp', 'euc_jis_2004', 'jisx0213', 'iso2022_jp', 'iso2022_jp_1', 'iso2022_jp_2', 'iso2022_jp_2004', 'iso2022_jp_3', 'iso2022_jp_ext', 'iso2022_kr','shift_jis','shift_jis_2004','shift_jisx0213']
 	for unpackreport in unpackreports:
@@ -384,29 +387,14 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 		scanqueue = multiprocessing.JoinableQueue(maxsize=0)
 		map(lambda x: scanqueue.put(x), jsontasks)
 
-		batconns = []
-		batcursors = []
-
-		batdb = None
-		if 'BAT_DB' in scanenv:
-			if 'DBBACKEND' in scanenv:
-				batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
-				hashdatabase = scanenv['BAT_DB']
 		for i in range(0,processamount):
-			cursor = None
-			conn = None
-			if converthash:
-				if batdb != None:
-					conn = batdb.getConnection(hashdatabase,scanenv)
-					if conn != None:
-						cursor = conn.cursor()
-					else:
-						converthash = False
-				else:
-					converthash = False
-			batcursors.append(cursor)
-			batconns.append(conn)
-			p = multiprocessing.Process(target=writejson, args=(scanqueue,topleveldir,outputhash,batcursors[i], batconns[i], batdb, scanenv, converthash, compressed))
+			if usedb:
+				cursor = batcursors[i]
+				conn = batcons[i]
+			else:
+				cursor = None
+				conn = None
+			p = multiprocessing.Process(target=writejson, args=(scanqueue,topleveldir,outputhash, cursor, conn, scanenv, converthash, compressed))
 			processpool.append(p)
 			p.start()
 
@@ -414,9 +402,3 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv={}, s
 
 		for p in processpool:
 			p.terminate()
-
-		if converthash:
-			for c in batcursors:
-				c.close()
-			for c in batconns:
-				c.close()

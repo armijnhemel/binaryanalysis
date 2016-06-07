@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2009-2015 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2009-2016 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -12,7 +12,7 @@ it with your own more robust checks.
 '''
 
 import string, re, os, magic, subprocess, sys, tempfile, copy
-import extractor, batdb
+import extractor
 
 ## generic searcher for certain marker strings
 ## TODO: implement overlap between subsequent buffer reads

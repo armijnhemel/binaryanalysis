@@ -42,7 +42,7 @@ import extractor
 import prerun, fsmagic
 from multiprocessing import Process, Lock
 from multiprocessing.sharedctypes import Value, Array
-import bat.batdb
+import psycopg2
 
 try:
 	ms = magic.open(magic.MAGIC_NO_CHECK_CDF|magic.MAGIC_NONE)
@@ -77,18 +77,21 @@ def mergeBlacklist(blacklist):
 		blacklist = res
 	return blacklist
 
-def runSetup(setupscan, debug=False):
+def runSetup(setupscan, usedatabase, cursor, conn, debug=False):
 	module = setupscan['module']
 	method = setupscan['setup']
 	if debug:
 		print >>sys.stderr, module, method
 		sys.stderr.flush()
 
+	if setupscan['needsdatabase'] and not usedatabase:
+		return (False, {})
+
 	try:
 		exec "from %s import %s as bat_%s" % (module, method, method)
-	except:
+	except Exception, e:
 		return (False, {})
-	scanres = eval("bat_%s(setupscan['environment'], debug=debug)" % (method))
+	scanres = eval("bat_%s(setupscan['environment'], cursor, conn, debug=debug)" % (method))
 	return scanres
 
 def paralleloffsetsearch((filedir, filename, magicscans, optmagicscans, offset, length)):
@@ -148,7 +151,7 @@ def gethash(path, filename, hashtype="sha256"):
 	return hashresults
 
 ## scan a single file, possibly unpack and recurse
-def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, prerunmagic, magicscans, optmagicscans, processid, hashdict, blacklistedfiles, llock, template, unpacktempdir, tempdir, outputhash, cursor, sourcecodequery, dumpoffsets, offsetdir, compressed):
+def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, prerunmagic, magicscans, optmagicscans, processid, hashdict, blacklistedfiles, llock, template, unpacktempdir, tempdir, outputhash, cursor, conn, sourcecodequery, dumpoffsets, offsetdir, compressed):
 	lentempdir = len(tempdir)
 
 	## import all methods defined in the scans
@@ -653,78 +656,65 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 				reportqueue.put({u: unpackreports[u]})
 		scanqueue.task_done()
 
-def leafScan((filetoscan, scans, tags, blacklist, filehash, topleveldir, debug, unpacktempdir)):
-	reports = {}
-	newtags = []
+def leafScan(scanqueue, reportqueue, scans, processid, llock, unpacktempdir, topleveldir, debug, cursor, conn):
+	while True:
+		## reset the reports, blacklist, offsets and tags for each new scan
+		(filetoscan, scans, tags, blacklist, filehash) = scanqueue.get(timeout=2592000)
+		reports = {}
+		newtags = []
 
-	for leafscan in scans:
-		ignore = False
-		if 'extensionsignore' in leafscan:
-			extensionsignore = leafscan['extensionsignore'].split(':')
-			for e in extensionsignore:
-				if filetoscan.endswith(e):
-					ignore = True
-					break
-		if ignore:
-			continue
-		report = {}
-		module = leafscan['module']
-		method = leafscan['method']
+		for leafscan in scans:
+			ignore = False
+			if 'extensionsignore' in leafscan:
+				extensionsignore = leafscan['extensionsignore'].split(':')
+				for e in extensionsignore:
+					if filetoscan.endswith(e):
+						ignore = True
+						break
+			if ignore:
+				continue
+			report = {}
+			module = leafscan['module']
+			method = leafscan['method']
 
-		scandebug = False
-		if 'debug' in leafscan:
-			scandebug = True
-			debug = True
+			scandebug = False
+			if 'debug' in leafscan:
+				scandebug = True
+				debug = True
 
-		if debug:
-			print >>sys.stderr, method, filetoscan, datetime.datetime.utcnow().isoformat()
-			sys.stderr.flush()
-			scandebug = True
+			if debug:
+				print >>sys.stderr, method, filetoscan, datetime.datetime.utcnow().isoformat()
+				sys.stderr.flush()
+				scandebug = True
 
+			try:
+				exec "from %s import %s as bat_%s" % (module, method, method)
+			except Exception, e:
+				continue
+			res = eval("bat_%s(filetoscan, tags, blacklist, leafscan['environment'], scandebug=scandebug, unpacktempdir=unpacktempdir)" % (method))
+			if res != None:
+				(nt, leafres) = res
+				reports[leafscan['name']] = leafres
+				newtags = newtags + nt
+				tags += list(set(newtags))
+		reports['tags'] = list(set(tags))
+
+		## write pickles with information to disk here to reduce memory usage
 		try:
-			exec "from %s import %s as bat_%s" % (module, method, method)
-		except Exception, e:
-			continue
-		res = eval("bat_%s(filetoscan, tags, blacklist, leafscan['environment'], scandebug=scandebug, unpacktempdir=unpacktempdir)" % (method))
-		if res != None:
-			(nt, leafres) = res
-			reports[leafscan['name']] = leafres
-			newtags = newtags + nt
-			tags += list(set(newtags))
-	reports['tags'] = list(set(tags))
+			os.stat('%s/filereports/%s-filereport.pickle' % (topleveldir,filehash))
+		except:
+			picklefile = open('%s/filereports/%s-filereport.pickle' % (topleveldir,filehash), 'wb')
+			cPickle.dump(reports, picklefile)
+			picklefile.close()
+		reportqueue.put((filehash, list(set(newtags))))
+		scanqueue.task_done()
 
-	## write pickles with information to disk here to reduce memory usage
-	try:
-		os.stat('%s/filereports/%s-filereport.pickle' % (topleveldir,filehash))
-	except:
-		picklefile = open('%s/filereports/%s-filereport.pickle' % (topleveldir,filehash), 'wb')
-		cPickle.dump(reports, picklefile)
-		picklefile.close()
-	return (filehash, list(set(newtags)))
-
-def aggregatescan(unpackreports, aggregatescans, processors, scantempdir, topleveldir, scan_binary, scandate, debug, unpacktempdir):
+def aggregatescan(unpackreports, aggregatescans, processors, scantempdir, topleveldir, scan_binary, scandate, batcursors, batcons, debug, unpacktempdir):
 	## aggregate scans look at the entire result and possibly modify it.
 	## The best example is JAR files: individual .class files will not be
 	## very significant (or even insignificant), but combined results are.
 	## Because aggregate scans have to look at everything as a whole, these
 	## cannot be run in parallel.
-
-	if 'checksum' in unpackreports[scan_binary]:
-		filehash = unpackreports[scan_binary]['checksum']
-		leaf_file_path = os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)
-
-		## first record what the top level element is. This will be used by other scans
-		leaf_file = open(leaf_file_path, 'rb')
-		leafreports = cPickle.load(leaf_file)
-		leaf_file.close()
-
-		unpackreports[scan_binary]['tags'].append('toplevel')
-		unpackreports[scan_binary]['scandate'] = scandate
-		leafreports['tags'].append('toplevel')
-
-		leaf_file = open(leaf_file_path, 'wb')
-		leafreports = cPickle.dump(leafreports, leaf_file)
-		leaf_file.close()
 
 	for aggregatescan in aggregatescans:
 		module = aggregatescan['module']
@@ -745,9 +735,11 @@ def aggregatescan(unpackreports, aggregatescans, processors, scantempdir, toplev
 		except Exception, e:
 			continue
 
-		res = eval("bat_%s(unpackreports, scantempdir, topleveldir, processors, aggregatescan['environment'], scandebug=scandebug, unpacktempdir=unpacktempdir)" % (method))
+		res = eval("bat_%s(unpackreports, scantempdir, topleveldir, processors, aggregatescan['environment'], batcursors, batcons, scandebug=scandebug, unpacktempdir=unpacktempdir)" % (method))
 		if res != None:
 			if res.keys() != []:
+				filehash = unpackreports[scan_binary]['checksum']
+				leaf_file_path = os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)
 				leaf_file = open(leaf_file_path, 'rb')
 				leafreports = cPickle.load(leaf_file)
 				leaf_file.close()
@@ -911,39 +903,39 @@ def readconfig(config):
 			## set a default minimum threshold of 20 million bytes
 			batconf['markersearchminimum'] = 20000000
 		try:
-			dbbackend = config.get(section, 'dbbackend')
-			if dbbackend in ['sqlite3', 'postgresql']:
-				batconf['dbbackend'] = dbbackend
-				batconf['environment']['DBBACKEND'] = dbbackend
-			if dbbackend == 'postgresql':
-				try:
-					postgresql_user = config.get(section, 'postgresql_user')
-					postgresql_password = config.get(section, 'postgresql_password')
-					postgresql_db = config.get(section, 'postgresql_db')
-					try:
-						postgresql_host = config.get(section, 'postgresql_host')
-					except:
-						postgresql_host = None
-					try:
-						postgresql_hostaddr = config.get(section, 'postgresql_hostaddr')
-					except:
-						postgresql_hostaddr = None
-					try:
-						postgresql_port = config.get(section, 'postgresql_port')
-					except Exception, e:
-						postgresql_port = None
-					batconf['environment']['POSTGRESQL_USER'] = postgresql_user
-					batconf['environment']['POSTGRESQL_PASSWORD'] = postgresql_password
-					batconf['environment']['POSTGRESQL_DB'] = postgresql_db
-					if postgresql_port != None:
-						batconf['environment']['POSTGRESQL_PORT'] = postgresql_port
-					if postgresql_host != None:
-						batconf['environment']['POSTGRESQL_HOST'] = postgresql_host
-					if postgresql_hostaddr != None:
-						batconf['environment']['POSTGRESQL_HOSTADDR'] = postgresql_hostaddr
-					batconf['environment']['DBBACKEND'] = dbbackend
-				except:
-					del batconf['dbbackend']
+			postgresql_user = config.get(section, 'postgresql_user')
+			postgresql_password = config.get(section, 'postgresql_password')
+			postgresql_db = config.get(section, 'postgresql_db')
+
+			## check to see if a host (IP-address) was supplied either
+			## as host or hostaddr. hostaddr is not supported on older
+			## versions of psycopg2, for example CentOS 6.6, so it is not
+			## used at the moment.
+			try:
+				postgresql_host = config.get(section, 'postgresql_host')
+			except:
+				postgresql_host = None
+			try:
+				postgresql_hostaddr = config.get(section, 'postgresql_hostaddr')
+			except:
+				postgresql_hostaddr = None
+
+			## check to see if a port was specified. If not, default to 'None'
+			try:
+				postgresql_port = config.get(section, 'postgresql_port')
+			except Exception, e:
+				postgresql_port = None
+
+			## store it in the environment
+			batconf['environment']['POSTGRESQL_USER'] = postgresql_user
+			batconf['environment']['POSTGRESQL_PASSWORD'] = postgresql_password
+			batconf['environment']['POSTGRESQL_DB'] = postgresql_db
+			if postgresql_port != None:
+				batconf['environment']['POSTGRESQL_PORT'] = postgresql_port
+			if postgresql_host != None:
+				batconf['environment']['POSTGRESQL_HOST'] = postgresql_host
+			if postgresql_hostaddr != None:
+				batconf['environment']['POSTGRESQL_HOSTADDR'] = postgresql_hostaddr
 		except:
 			pass
 		try:
@@ -1042,58 +1034,6 @@ def readconfig(config):
 			except:
 				pass
 			conf['environment'] = newenv
-			## see if a dbbackend is defined. If not, check if the
-			## top level configuration has it defined.
-			try:
-				dbbackend = config.get(section, 'dbbackend')
-				if dbbackend in ['sqlite3', 'postgresql']:
-					conf['dbbackend'] = dbbackend
-					if dbbackend == 'postgresql':
-						try:
-							postgresql_user = config.get(section, 'postgresql_user')
-							postgresql_password = config.get(section, 'postgresql_password')
-							postgresql_db = config.get(section, 'postgresql_db')
-							try:
-								postgresql_host = config.get(section, 'postgresql_user')
-							except:
-								postgresql_host = None
-							try:
-								postgresql_port = config.get(section, 'postgresql_port')
-							except:
-								postgresql_port = None
-							conf['environment']['POSTGRESQL_USER'] = postgresql_user
-							conf['environment']['POSTGRESQL_PASSWORD'] = postgresql_password
-							conf['environment']['POSTGRESQL_DB'] = postgresql_db
-							if postgresql_port != None:
-								batconf['environment']['POSTGRESQL_PORT'] = postgresql_port
-							if postgresql_host != None:
-								batconf['environment']['POSTGRESQL_HOST'] = postgresql_host
-							if postgresql_hostaddr != None:
-								batconf['environment']['POSTGRESQL_HOSTADDR'] = postgresql_hostaddr
-						except:
-							del conf['dbbackend']
-			except:
-				if 'dbbackend' in batconf:
-					conf['dbbackend'] = copy.deepcopy(batconf['dbbackend'])
-					dbbackend = conf['dbbackend']
-					if dbbackend in ['sqlite3', 'postgresql']:
-						conf['dbbackend'] = dbbackend
-						if dbbackend == 'postgresql':
-							try:
-								postgresql_user = copy.deepcopy(batconf['environment']['POSTGRESQL_USER'])
-								postgresql_password = copy.deepcopy(batconf['environment']['POSTGRESQL_PASSWORD'])
-								postgresql_db = copy.deepcopy(batconf['environment']['POSTGRESQL_DB'])
-								if 'POSTGRESQL_PORT' in batconf['environment']:
-									batconf['environment']['POSTGRESQL_PORT'] = copy.deepcopy(batconf['environment']['POSTGRESQL_PORT'])
-								if 'POSTGRESQL_HOST' in batconf['environment']:
-									batconf['environment']['POSTGRESQL_HOST'] = copy.deepcopy(batconf['environment']['POSTGRESQL_HOST'])
-								if 'POSTGRESQL_HOSTADDR' in batconf['environment']:
-									batconf['environment']['POSTGRESQL_HOSTADDR'] = copy.deepcopy(batconf['environment']['POSTGRESQL_HOSTADDR'])
-								conf['environment']['POSTGRESQL_USER'] = postgresql_user
-								conf['environment']['POSTGRESQL_PASSWORD'] = postgresql_password
-								conf['environment']['POSTGRESQL_DB'] = postgresql_db
-							except Exception, e:
-								del conf['dbbackend']
 			try:
 				conf['magic'] = config.get(section, 'magic')
 			except:
@@ -1149,6 +1089,14 @@ def readconfig(config):
 				conf['setup'] = config.get(section, 'setup')
 			except:
 				pass
+			try:
+				needsdatabase = config.get(section, 'needsdatabase')
+				if needsdatabase == 'yes':
+					conf['needsdatabase'] = True
+				else:
+					conf['needsdatabase'] = False
+			except:
+				conf['needsdatabase'] = False
 			try:
 				conf['conflicts'] = config.get(section, 'conflicts').split(':')
 			except:
@@ -1224,8 +1172,6 @@ def readconfig(config):
 			for e in batconf['environment']:
 				if not e in s['environment']:
 					s['environment'][e] = copy.deepcopy(batconf['environment'][e])
-		if 'dbbackend' in s:
-			s['environment']['DBBACKEND'] = s['dbbackend']
 
 	## set and/or amend environment for unpack scans
 	for s in unpackscans:
@@ -1235,8 +1181,7 @@ def readconfig(config):
 			for e in batconf['environment']:
 				if not e in s['environment']:
 					s['environment'][e] = copy.deepcopy(batconf['environment'][e])
-		if 'dbbackend' in s:
-			s['environment']['DBBACKEND'] = s['dbbackend']
+
 		## sanity checks for known file method scans
 		if not 'extensions' in s:
 			try:
@@ -1252,8 +1197,6 @@ def readconfig(config):
 			for e in batconf['environment']:
 				if not e in s['environment']:
 					s['environment'][e] = copy.deepcopy(batconf['environment'][e])
-		if 'dbbackend' in s:
-			s['environment']['DBBACKEND'] = s['dbbackend']
 
 	## set and/or amend environment for aggregate scans
 	for s in aggregatescans:
@@ -1263,8 +1206,6 @@ def readconfig(config):
 			for e in batconf['environment']:
 				if not e in s['environment']:
 					s['environment'][e] = copy.deepcopy(batconf['environment'][e])
-		if 'dbbackend' in s:
-			s['environment']['DBBACKEND'] = s['dbbackend']
 		if s['cleanup']:
 			## this is an ugly hack *cringe*
 			s['environment']['overridedir'] = True
@@ -1290,8 +1231,6 @@ def readconfig(config):
 		if s['compress']:
 			## this is an ugly hack *cringe*
 			s['environment']['compress'] = True
-		if 'dbbackend' in s:
-			s['environment']['DBBACKEND'] = s['dbbackend']
 
 	## sort scans on priority (highest priority first)
 	prerunscans = sorted(prerunscans, key=lambda x: x['priority'], reverse=True)
@@ -1464,21 +1403,21 @@ def runscan(scans, binaries):
 	prerunignore = {}
 	prerunmagic = {}
 	for prerunscan in scans['prerunscans']:
-		if prerunscan.has_key('noscan'):
+		if 'noscan' in prerunscan:
 			if not prerunscan['noscan'] == None:
 				noscans = prerunscan['noscan'].split(':')
 				prerunignore[prerunscan['name']] = noscans
-		if prerunscan.has_key('magic'):
+		if 'magic' in prerunscan:
 			if not prerunscan['magic'] == None:
 				magics = prerunscan['magic'].split(':')
 				if not prerunmagic.has_key(prerunscan['name']):
 					prerunmagic[prerunscan['name']] = magics
 				else:
 					prerunmagic[prerunscan['name']] = prerunmagic[prerunscan['name']] + magics
-		if prerunscan.has_key('optmagic'):
+		if 'optmagic' in prerunscan:
 			if not prerunscan['optmagic'] == None:
 				magics = prerunscan['optmagic'].split(':')
-				if not prerunmagic.has_key(prerunscan['name']):
+				if not prerunscan['name'] in prerunmagic:
 					prerunmagic[prerunscan['name']] = magics
 				else:
 					prerunmagic[prerunscan['name']] = prerunmagic[prerunscan['name']] + magics
@@ -1526,6 +1465,32 @@ def runscan(scans, binaries):
 			if not ('prerun' in debugphases or 'unpack' in debugphases):
 				tmpdebug = False
 
+	## create a bunch of connections and cursors in case
+	## the database is used.
+	usedatabase = True
+
+	batcons = []
+	batcursors = []
+	sourcecodequery = "select checksum from processed_file where checksum=%s limit 1"
+
+	scanenv = copy.deepcopy(scans['batconfig']['environment'])
+	if usedatabase:
+		for i in range(0,processamount):
+			try:
+				c = psycopg2.connect(database=scanenv['POSTGRESQL_DB'], user=scanenv['POSTGRESQL_USER'], password=scanenv['POSTGRESQL_PASSWORD'], host=scanenv.get('POSTGRESQL_HOST', None), port=scanenv.get('POSTGRESQL_PORT', None))
+				cursor = c.cursor()
+				batcons.append(c)
+				batcursors.append(cursor)
+			except Exception, e:
+				usedatabase = False
+				break
+
+	## source code scanning only makes sense if there is
+	## a database with source code in the first place
+	scansourcecode = False
+	if scans['batconfig']['scansourcecode'] and usedatabase:
+		scansourcecode = True
+
 	## determine whether or not the leaf scans should be run in parallel
 	parallel = True
 	if scans['leafscans'] != []:
@@ -1547,7 +1512,13 @@ def runscan(scans, binaries):
 			if not 'setup' in sscan:
 				finalleafscans.append(sscan)
 				continue
-			setupres = runSetup(sscan, leafdebug)
+			if usedatabase:
+				cursor = batcursors[0]
+				conn = batcons[0]
+			else:
+				cursor = None
+				conn = None
+			setupres = runSetup(sscan, usedatabase, cursor, conn, leafdebug)
 			(setuprun, newenv) = setupres
 			if not setuprun:
 				continue
@@ -1575,7 +1546,13 @@ def runscan(scans, binaries):
 			if not 'setup' in sscan:
 				finalaggregatescans.append(sscan)
 				continue
-			setupres = runSetup(sscan, leafdebug)
+			if usedatabase:
+				cursor = batcursors[0]
+				conn = batcons[0]
+			else:
+				cursor = None
+				conn = None
+			setupres = runSetup(sscan, usedatabase, cursor, conn, aggregatedebug)
 			(setuprun, newenv) = setupres
 			if not setuprun:
 				continue
@@ -1600,6 +1577,8 @@ def runscan(scans, binaries):
 	origcwd = os.getcwd()
 	for bins in binaries:
 		(scan_binary, writeconfig) = bins
+		scan_binary_basename = os.path.basename(scan_binary)
+
 		## force the cwd to a known value. This is to prevent mysterious
 		## errors in case some old results are cleaned up and the cwd is not
 		## restored in the code that had to change cwd for some reason.
@@ -1623,7 +1602,7 @@ def runscan(scans, binaries):
 			unpacktempdir = None
 			topleveldir = tempfile.mkdtemp(dir=unpacktempdir)
 
-		## copy the binary
+		## copy the binary, and reset the environment to a fresh copy
 		scanenv = copy.deepcopy(scans['batconfig']['environment'])
 
 		os.makedirs("%s/data" % (topleveldir,))
@@ -1633,7 +1612,7 @@ def runscan(scans, binaries):
 			sys.stderr.flush()
 
 		shutil.copy(scan_binary, scantempdir)
-		os.chmod(os.path.join(scantempdir, os.path.basename(scan_binary)), stat.S_IRWXU)
+		os.chmod(os.path.join(scantempdir, scan_binary_basename), stat.S_IRWXU)
 
 		if debug:
 			print >>sys.stderr, "COPYING END", datetime.datetime.utcnow().isoformat()
@@ -1658,7 +1637,7 @@ def runscan(scans, binaries):
 			if os.stat(scan_binary).st_size > offsetcutoff:
 				offsettasks = []
 				for i in range(0, os.stat(scan_binary).st_size, 100000):
-					offsettasks.append((scantempdir, os.path.basename(scan_binary), magicscans, optmagicscans, max(i-50, 0), 100000+50))
+					offsettasks.append((scantempdir, scan_binary_basname, magicscans, optmagicscans, max(i-50, 0), 100000+50))
 				pool = multiprocessing.Pool(processes=processamount)
 				res = pool.map(paralleloffsetsearch, offsettasks)
 				pool.terminate()
@@ -1672,7 +1651,7 @@ def runscan(scans, binaries):
 				for i in offsets:
 					offsets[i] = sorted(list(set(offsets[i])))
 
-		scantasks = [(scantempdir, os.path.basename(scan_binary), len(scantempdir), tmpdebug, tags, hints, offsets)]
+		scantasks = [(scantempdir, scan_binary_basename, len(scantempdir), tmpdebug, tags, hints, offsets)]
 
 		template = scans['batconfig']['template']
 
@@ -1693,33 +1672,18 @@ def runscan(scans, binaries):
 		leafqueue = scanmanager.Queue(maxsize=0)
 		processpool = []
 
-		scansourcecode = False
-		if scans['batconfig']['scansourcecode']:
-			scansourcecode = True
-
 		hashdict = scanmanager.dict()
 		blacklistedfiles = []
 		map(lambda x: scanqueue.put(x), scantasks)
-		batcons = []
 		cursor = None
-		sourcecodequery = ''
 		for i in range(0,processamount):
 			if scansourcecode:
-				if 'DBBACKEND' in scanenv:
-					batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
-					c = batdb.getConnection(scanenv['BAT_DB'],scanenv)
-					if c != None:
-						cursor = c.cursor()
-						batcons.append(c)
-						sourcecodequery = batdb.getQuery("select checksum from processed_file where checksum=%s limit 1")
-						scansourcecode = True
-					else:
-						scansourcecode = False
+				cursor = batcursors[i]
+				conn = batcons[i]
 			else:
 				cursor = None
-				sourcecodequery = None
-				scansourcecode = False
-			p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, blacklistedfiles, lock, template, unpacktempdir, scantempdir, outputhash, cursor, sourcecodequery, scans['batconfig']['dumpoffsets'], offsetdir, compressed))
+				conn = None
+			p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, blacklistedfiles, lock, template, unpacktempdir, scantempdir, outputhash, cursor, conn, sourcecodequery, scans['batconfig']['dumpoffsets'], offsetdir, compressed))
 			processpool.append(p)
 			p.start()
 
@@ -1746,10 +1710,6 @@ def runscan(scans, binaries):
 	
 		for p in processpool:
 			p.terminate()
-
-		if scansourcecode:
-			for c in batcons:
-				c.close()
 
 		## Sometimes there are identical files inside a blob.
 		## To minimize time spent on scanning these should only be
@@ -1791,7 +1751,7 @@ def runscan(scans, binaries):
 		if debug:
 			print >>sys.stderr, "PRERUN UNPACK END", datetime.datetime.utcnow().isoformat()
 		if scans['batconfig']['reportendofphase']:
-			print "PRERUN UNPACK END %s" % os.path.basename(scan_binary), datetime.datetime.utcnow().isoformat()
+			print "PRERUN UNPACK END %s" % scan_binary_basename, datetime.datetime.utcnow().isoformat()
 
 		if debug:
 			print >>sys.stderr, "LEAF BEGIN", datetime.datetime.utcnow().isoformat()
@@ -1811,7 +1771,7 @@ def runscan(scans, binaries):
 
 			## reverse sort on size: scan largest files first
 			leaftasks_tmp.sort(key=lambda x: x[-1], reverse=True)
-			leaftasks_tmp = map(lambda x: x[:1] + (filterScans(finalleafscans, x[1]),) + x[1:-1] + (topleveldir, leafdebug, unpacktempdir), leaftasks_tmp)
+			leaftasks_tmp = map(lambda x: x[:1] + (filterScans(finalleafscans, x[1]),) + x[1:-1], leaftasks_tmp)
 
 			if parallel:
 				if False in map(lambda x: x['parallel'], finalleafscans):
@@ -1826,16 +1786,50 @@ def runscan(scans, binaries):
 			if not os.path.exists(os.path.join(topleveldir, 'filereports')):
 				os.mkdir(os.path.join(topleveldir, 'filereports'))
 
-			if len(leaftasks_tmp) == 0:
-				poolresult = []
-			else:
+			poolresult = []
+			if len(leaftasks_tmp) != 0:
 				if parallel:
-					pool = multiprocessing.Pool(processes=processamount)
+					localprocessamount = processamount
 				else:
-					pool = multiprocessing.Pool(processes=1)
+					localprocessamount = 1
 
-				poolresult = pool.map(leafScan, leaftasks_tmp, 1)
-				pool.terminate()
+				## use a queue made with a manager to avoid some issues, see:
+				## http://docs.python.org/2/library/multiprocessing.html#pipes-and-queues
+				lock = Lock()
+				scanmanager = multiprocessing.Manager()
+				scanqueue = multiprocessing.JoinableQueue(maxsize=0)
+				reportqueue = scanmanager.Queue(maxsize=0)
+				processpool = []
+
+				hashdict = scanmanager.dict()
+				blacklistedfiles = []
+				map(lambda x: scanqueue.put(x), leaftasks_tmp)
+				cursor = None
+				for i in range(0,processamount):
+					if scansourcecode:
+						cursor = batcursors[i]
+						conn = batcons[i]
+					else:
+						cursor = None
+						conn = None
+					p = multiprocessing.Process(target=leafScan, args=(scanqueue,reportqueue, scans['leafscans'], i, lock, unpacktempdir, topleveldir, debug, cursor, conn))
+					processpool.append(p)
+					p.start()
+
+				scanqueue.join()
+
+				while True:
+					try:
+						val = reportqueue.get_nowait()
+						poolresult.append(val)
+						reportqueue.task_done()
+					except Queue.Empty, e:
+						## Queue is empty
+						break
+				reportqueue.join()
+	
+				for p in processpool:
+					p.terminate()
 
 			## filter the results for the leafscans. These are the ones that
 			## returned tags so need to be merged into unpackreports.
@@ -1853,16 +1847,33 @@ def runscan(scans, binaries):
 		if debug:
 			print >>sys.stderr, "LEAF END", datetime.datetime.utcnow().isoformat()
 		if scans['batconfig']['reportendofphase']:
-			print "LEAF END %s" % os.path.basename(scan_binary), datetime.datetime.utcnow().isoformat()
+			print "LEAF END %s" % scan_binary_basename, datetime.datetime.utcnow().isoformat()
+
+		if 'checksum' in unpackreports[scan_binary_basename]:
+			filehash = unpackreports[scan_binary_basename]['checksum']
+			leaf_file_path = os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)
+
+			## first record what the top level element is. This will be used by other scans
+			leaf_file = open(leaf_file_path, 'rb')
+			leafreports = cPickle.load(leaf_file)
+			leaf_file.close()
+
+			unpackreports[scan_binary_basename]['tags'].append('toplevel')
+			unpackreports[scan_binary_basename]['scandate'] = scandate
+			leafreports['tags'].append('toplevel')
+
+			leaf_file = open(leaf_file_path, 'wb')
+			leafreports = cPickle.dump(leafreports, leaf_file)
+			leaf_file.close()
 
 		if debug:
 			print >>sys.stderr, "AGGREGATE BEGIN", datetime.datetime.utcnow().isoformat()
 		if scans['aggregatescans'] != []:
-			aggregatescan(unpackreports, finalaggregatescans, processamount, scantempdir, topleveldir, os.path.basename(scan_binary), scandate, aggregatedebug, unpacktempdir)
+			aggregatescan(unpackreports, finalaggregatescans, processamount, scantempdir, topleveldir, scan_binary_basename, scandate, batcursors, batcons, aggregatedebug, unpacktempdir)
 		if debug:
 			print >>sys.stderr, "AGGREGATE END", datetime.datetime.utcnow().isoformat()
 		if scans['batconfig']['reportendofphase']:
-			print "AGGREGATE END %s" % os.path.basename(scan_binary), datetime.datetime.utcnow().isoformat()
+			print "AGGREGATE END %s" % scan_binary_basename, datetime.datetime.utcnow().isoformat()
 
 		for i in unpackreports:
 			if 'tags' in unpackreports[i]:
@@ -1917,7 +1928,7 @@ def runscan(scans, binaries):
 		if debug:
 			print >>sys.stderr, "POSTRUN END", datetime.datetime.utcnow().isoformat()
 		if scans['batconfig']['reportendofphase']:
-			print "POSTRUN END %s" % os.path.basename(scan_binary), datetime.datetime.utcnow().isoformat()
+			print "POSTRUN END %s" % scan_binary_basename, datetime.datetime.utcnow().isoformat()
 
 		if writeconfig['writeoutput']:
 			compress = True
@@ -1930,3 +1941,9 @@ def runscan(scans, binaries):
 		if scans['batconfig']['reportendofphase']:
 			print "done", scan_binary, datetime.datetime.utcnow().isoformat()
 			sys.stdout.flush()
+
+	## clean up the database connections
+	for c in batcursors:
+		c.close()
+	for c in batcons:
+		c.close()

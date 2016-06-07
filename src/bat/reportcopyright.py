@@ -12,7 +12,7 @@ is some sort of copyright notice in an extracted identifier. This might not
 work well in the case of multiline copyright notices.
 '''
 
-def reportcopyright(unpackreports, scantempdir, topleveldir, processors, scanenv={}, scandebug=False, unpacktempdir=None):
+def reportcopyright(unpackreports, scantempdir, topleveldir, processors, scanenv, batcursors, batcons, scandebug=False, unpacktempdir=None):
 	for i in unpackreports:
 		if not 'checksum' in unpackreports[i]:
 			continue

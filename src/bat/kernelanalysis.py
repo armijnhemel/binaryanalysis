@@ -165,7 +165,7 @@ def analyseKernelModule(path, tags, blacklist=[], scanenv={}, scandebug=False, u
 ## Also match the architectures of the modules: they should be for the same architecture
 ## but sometimes modules for an entirely different architecture pop up, which is a
 ## sign that something is wrong.
-def kernelmodulecheck(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
+def kernelmodulecheck(unpackreports, scantempdir, topleveldir, processors, scanenv, batcursors, batcons, scandebug=False, unpacktempdir=None):
 	kernelversions = set()
 	moduleversions = {}
 	modulearchitectures = {}

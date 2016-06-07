@@ -10,7 +10,7 @@ import os, os.path, sys
 This method can be used to prune scans, by for example ignoring all graphics files
 '''
 
-def prunefiles(unpackreports, scantempdir, topleveldir, processors, scanenv={}, scandebug=False, unpacktempdir=None):
+def prunefiles(unpackreports, scantempdir, topleveldir, processors, scanenv, batcursors, batcons, scandebug=False, unpacktempdir=None):
 	if not scanenv.has_key("PRUNE_TAGS"):
 		return
 	prunes = scanenv['PRUNE_TAGS']

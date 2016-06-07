@@ -1,3 +1,4 @@
+#!/usr/bin/python
 
 ## Binary Analysis Tool
 ## Copyright 2011-2016 Armijn Hemel for Tjaldur Software Governance Solutions
@@ -7,7 +8,6 @@ import os, os.path, sys, subprocess, copy, cPickle, Queue
 import multiprocessing, re, datetime
 from multiprocessing import Process, Lock
 from multiprocessing.sharedctypes import Value, Array
-import bat.batdb
 if sys.version_info[1] == 7:
 	import collections
 	have_counter = True
@@ -19,23 +19,6 @@ This file contains the ranking algorithm as described in the paper
 "Finding Software License Violations Through Binary Code Clone Detection"
 by Armijn Hemel, Karl Trygve Kalleberg, Eelco Dolstra and Rob Vermaas, as
 presented at the Mining Software Repositories 2011 conference.
-
-Configuration parameters for databases are:
-
-BAT_CLONE_DB :: location of database containing information about which packages
-                should be treated as equivalent from a scanning point of view,
-                like renamed packages.
-
-Per language:
-BAT_STRINGSCACHE_$LANGUAGE :: location of database with cached strings
-                              in $LANGUAGE per package to reduce lookups
-
-An additional classification method for dynamically linked executables or
-Java binaries based on function or method names takes this parameter:
-
-BAT_NAMECACHE_$LANGUAGE :: location of database containing cached
-                           function names and variable names per package
-                           to reduce lookups
 
 In this scan results can optionally be pruned. Results of scans can get very
 large, for example a scan of a Linux kernel image could have thousands of
@@ -67,26 +50,7 @@ should be removed from the result set after aggregation. By default these files
 are not removed.
 '''
 
-## mapping of environment variable names for databases per language
-namecacheperlanguageenv = { 'C':       'BAT_NAMECACHE_C'
-                          , 'Java':    'BAT_NAMECACHE_JAVA'
-                          }
-
-namecacheperlanguagetable = { 'C':      'functionnamecache_c'
-                            , 'Java':   'functionnamecache_java'
-                            }
-
-## mapping of environment variable names for databases per language
-stringsdbperlanguageenv = { 'C':              'BAT_STRINGSCACHE_C'
-                          , 'C#':             'BAT_STRINGSCACHE_C#'
-                          , 'Java':           'BAT_STRINGSCACHE_JAVA'
-                          , 'JavaScript':     'BAT_STRINGSCACHE_JAVASCRIPT'
-                          , 'PHP':            'BAT_STRINGSCACHE_PHP'
-                          , 'Python':         'BAT_STRINGSCACHE_PYTHON'
-                          , 'Ruby':           'BAT_STRINGSCACHE_Ruby'
-                          , 'ActionScript':   'BAT_STRINGSCACHE_ACTIONSCRIPT'
-                          }
-
+## lookup tables for names of string caches and string cache scores
 stringsdbperlanguagetable = { 'C':                'stringscache_c'
                             , 'C#':               'stringscache_csharp'
 			    , 'Java':             'stringscache_java'
@@ -446,7 +410,7 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 		reports.append((rank, s, uniqueMatchesperpkg.get(s,[]), uniquematcheslenperpkg.get(s,0), percentage, packageversionsperpkg.get(s, {}), list(set(packagelicensesperpkg.get(s, []))), packagecopyrights))
 		rank = rank+1
 
-	if dynamicresfinal.has_key('uniquepackages'):
+	if 'uniquepackages' in dynamicresfinal:
 
 		dynamicresfinal['namesmatched'] = reduce(lambda x, y: x + y, map(lambda x: len(x[1]), dynamicresfinal['uniquepackages'].items()))
 	else:
@@ -560,7 +524,11 @@ def prune(uniques, package):
 
 	return newuniques
 
-def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
+def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, processors, scanenv, batcursors, batcons, scandebug=False, unpacktempdir=None):
+	## sanity check if the database really is there
+	if batcursors[0] == None:
+		return None
+
 	## the environment might have changed and been cleaned up,
 	## so overwrite the old one
 	determineversion = False
@@ -616,19 +584,15 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	if len(rankingfilesperlanguage) == 0:
 		return None
 
-	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
-
 	## Some methods use a database to lookup renamed packages.
-	clonedb = scanenv.get('BAT_CLONE_DB')
 	clones = {}
-	if clonedb != None:
-		conn = batdb.getConnection(clonedb,scanenv)
-		c = conn.cursor()
+	clonedb = scanenv.get('HAVE_CLONE_DB')
+	if clonedb == 1:
+		conn = batcons[0]
+		c = batcursors[0]
 		c.execute("SELECT originalname,newname from renames")
 		clonestmp = c.fetchall()
 		conn.commit()
-		c.close() 
-		conn.close()
 		for cl in clonestmp:
 			(originalname,newname) = cl
 			if not originalname in clones:
@@ -640,20 +604,17 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	for language in avgstringsdbperlanguagetable:
 		if not language in rankingfilesperlanguage:
 			continue
-		stringscache = scanenv.get(stringsdbperlanguageenv[language])
-		if stringscache == None:
+		if not language in scanenv['supported_languages']:
 			continue
 		## open the database containing all the strings that were extracted
 		## from source code.
-		conn = batdb.getConnection(stringscache,scanenv)
-		c = conn.cursor()
+		conn = batcons[0]
+		c = batcursors[0]
 		avgscores[language] = {}
 		avgquery = "select package, avgstrings from %s" % avgstringsdbperlanguagetable[language]
 		c.execute(avgquery)
 		res = c.fetchall()
 		conn.commit()
-		c.close()
-		conn.close()
 
 		for r in filter(lambda x: x[1] != 0, res):
 			avgscores[language][r[0]] = r[1]
@@ -662,62 +623,32 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	## and looking up results and putting them in a result queue
 	scanmanager = multiprocessing.Manager()
 	res = []
-	batcons = []
-	batcursors = []
 
 	if processors == None:
 		processamount = 1
 	else:
 		processamount = processors
-	minprocessamount = min(max(map(lambda x: len(rankingfilesperlanguage[x]), rankingfilesperlanguage)), processamount)
 
-	masterdb = scanenv.get('BAT_DB')
-
-	for i in range(0,minprocessamount):
-		## then a cursor for the main database
-		conn = batdb.getConnection(masterdb,scanenv)
-		cursor = conn.cursor()
-		batcursors.append(cursor)
-		batcons.append(conn)
-
-	## now per language
+	## now proces each file per language
 	for language in rankingfilesperlanguage:
-		## creating new queues
+		if len(rankingfilesperlanguage[language]) == 0:
+			continue
+
+		## creating new queues (max: amount of tasks, or CPUs, whichever is the smallest)
 		scanqueue = multiprocessing.JoinableQueue(maxsize=0)
 		reportqueue = scanmanager.Queue(maxsize=0)
 		lock = Lock()
 		ignorecache = scanmanager.dict()
 
 		lookup_tasks = map(lambda x: (unpackreports[x]['checksum'], os.path.join(unpackreports[x]['realpath'], unpackreports[x]['name'])),rankingfilesperlanguage[language])
-		map(lambda x: scanqueue.put(x), lookup_tasks)
 
-		stringcacheconns = []
-		namecacheconns = []
+		map(lambda x: scanqueue.put(x), lookup_tasks)
+		minprocessamount = min(len(lookup_tasks), processamount)
+
 		processpool = []
 
-		## first a cursor for the cache of each supported language
-		stringcachecursors = []
-		namecachecursors = []
 		for i in range(0,minprocessamount):
-			if language in stringsdbperlanguagetable:
-				stringscache = scanenv.get(stringsdbperlanguageenv[language])
-				if stringscache == None:
-					continue
-				conn = batdb.getConnection(stringscache,scanenv)
-				c = conn.cursor()
-				stringcacheconns.append(conn)
-				stringcachecursors.append(c)
-			## then for namecaches
-			if language in namecacheperlanguagetable:
-				namecache = scanenv.get(namecacheperlanguageenv[language])
-				if namecache == None:
-					continue
-				conn = batdb.getConnection(namecache,scanenv)
-				c = conn.cursor()
-				namecacheconns.append(conn)
-				namecachecursors.append(c)
-
-			p = multiprocessing.Process(target=lookup_identifier, args=(scanqueue,reportqueue, stringcachecursors[i], stringcacheconns[i],namecachecursors[i],namecacheconns[i],batdb,scanenv,topleveldir,avgscores,clones,scandebug,ignorecache, lock))
+			p = multiprocessing.Process(target=lookup_identifier, args=(scanqueue,reportqueue, batcursors[i], batcons[i],scanenv,topleveldir,avgscores,clones,scandebug,ignorecache, lock))
 			processpool.append(p)
 			p.start()
 
@@ -735,19 +666,6 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 
 		for p in processpool:
 			p.terminate()
-		for c in stringcachecursors:
-			c.close()
-		for c in stringcacheconns:
-			c.close()
-		for c in namecachecursors:
-			c.close()
-		for c in namecacheconns:
-			c.close()
-
-	for c in batcursors:
-		c.close()
-	for c in batcons:
-		c.close()
 
 	for filehash in res:
 		if filehash != None:
@@ -786,8 +704,6 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 	## Currently finding the version is based on unique matches that were found.
 	## If determinelicense or determinecopyright are set licenses and copyright statements
 	## are also extracted.
-	if determinelicense or determinecopyright:
-		licensedb = scanenv.get('BAT_LICENSE_DB')
 
 	pruning = False
 	if 'BAT_KEEP_VERSIONS' in scanenv:
@@ -799,12 +715,6 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 				minimumunique = int(scanenv.get('BAT_MINIMUM_UNIQUE', 0))
 				if minimumunique > 0:
 					pruning = True
-	batcons = []
-	batcursors = []
-
-	licensecons = []
-	licensecursors = []
-
 	## first determine whether or not there are any unique links at all and
 	## if there should be database queries
 	#alluniques = set()
@@ -838,40 +748,30 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 					#alluniques.update(uniques)
 					if unique != []:
 						connectdb = True
+						break
 
 			if 'versionresults' in functionRes:
 
 				for package in functionRes['versionresults'].keys():
-					if not functionRes.has_key('uniquepackages'):
+					if not 'uniquepackages' in functionRes:
 						continue
 					connectdb = True
+					break
 			if variablepvs != {}:
 				if language == 'C':
 					if 'uniquepackages' in variablepvs:
 						if variablepvs['uniquepackages'] != {}:
 							connectdb = True
+							break
 
 	if not connectdb:
 		return
 
-	for i in range(0,processamount):
-		c = batdb.getConnection(masterdb,scanenv)
-		cursor = c.cursor()
-		batcursors.append(cursor)
-		batcons.append(c)
-
-	if determinelicense or determinecopyright:
-		for i in range(0,processamount):
-			c = batdb.getConnection(licensedb,scanenv)
-			cursor = c.cursor()
-			licensecursors.append(cursor)
-			licensecons.append(c)
-
 	scanmanager = multiprocessing.Manager()
 
-	sha256_filename_query = batdb.getQuery("select version, pathname from processed_file where checksum=%s")
-	sha256_license_query = batdb.getQuery("select distinct license, scanner from licenses where checksum=%s")
-	sha256_copyright_query = batdb.getQuery("select distinct copyright, type from extracted_copyright where checksum=%s")
+	sha256_filename_query = "select version, pathname from processed_file where checksum=%s"
+	sha256_license_query = "select distinct license, scanner from licenses where checksum=%s"
+	sha256_copyright_query = "select distinct copyright, type from extracted_copyright where checksum=%s"
 
 	for language in rankingfilesperlanguage:
 		## keep a list of versions per sha256, since source files often are in more than one version
@@ -929,7 +829,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 					minprocessamount = min(len(uniques), processamount)
 
 					for i in range(0,minprocessamount):
-						p = multiprocessing.Process(target=grab_sha256_parallel, args=(scanqueue,reportqueue,batcursors[i], batcons[i], batdb, language, 'string'))
+						p = multiprocessing.Process(target=grab_sha256_parallel, args=(scanqueue,reportqueue,batcursors[i], batcons[i], language, 'string'))
 						processpool.append(p)
 						p.start()
 
@@ -1068,7 +968,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 							minprocessamount = min(len(licensesha256s), processamount)
 
 							for i in range(0,minprocessamount):
-								p = multiprocessing.Process(target=grab_sha256_license, args=(scanqueue,reportqueue,licensecursors[i], licensecons[i], sha256_license_query))
+								p = multiprocessing.Process(target=grab_sha256_license, args=(scanqueue,reportqueue,batcursors[i], batcons[i], sha256_license_query))
 								processpool.append(p)
 								p.start()
 
@@ -1103,7 +1003,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 							minprocessamount = min(len(copyrightsha256s), processamount)
 
 							for i in range(0,minprocessamount):
-								p = multiprocessing.Process(target=grab_sha256_copyright, args=(scanqueue,reportqueue,licensecursors[i], licensecons[i], sha256_copyright_query))
+								p = multiprocessing.Process(target=grab_sha256_copyright, args=(scanqueue,reportqueue,batcursors[i], batcons[i], sha256_copyright_query))
 								processpool.append(p)
 								p.start()
 
@@ -1134,9 +1034,9 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 			if 'versionresults' in functionRes:
 
 				for package in functionRes['versionresults'].keys():
-					if not functionRes.has_key('uniquepackages'):
+					if not 'uniquepackages' in functionRes:
 						continue
-					if not functionRes['uniquepackages'].has_key(package):
+					if not package in functionRes['uniquepackages']:
 						continue
 					changed = True
 					functionnames = functionRes['uniquepackages'][package]
@@ -1152,7 +1052,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 					minprocessamount = min(len(functionnames), processamount)
 
 					for i in range(0,minprocessamount):
-						p = multiprocessing.Process(target=grab_sha256_parallel, args=(scanqueue,reportqueue,batcursors[i], batcons[i], batdb, 'C', 'function'))
+						p = multiprocessing.Process(target=grab_sha256_parallel, args=(scanqueue,reportqueue,batcursors[i], batcons[i], 'C', 'function'))
 						processpool.append(p)
 						p.start()
 
@@ -1295,7 +1195,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 							minprocessamount = min(len(uniques), processamount)
 
 							for i in range(0,minprocessamount):
-								p = multiprocessing.Process(target=grab_sha256_parallel, args=(scanqueue,reportqueue,batcursors[i], batcons[i], batdb, language, vartype))
+								p = multiprocessing.Process(target=grab_sha256_parallel, args=(scanqueue,reportqueue,batcursors[i], batcons[i], language, vartype))
 								processpool.append(p)
 								p.start()
 
@@ -1424,11 +1324,6 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 				leaf_file.close()
 				unpackreport['tags'].append('ranking')
 
-	for c in batcons:
-		c.close()
-	for c in licensecons:
-		c.close()
-
 ## grab variable names.
 def grab_sha256_varname(scanqueue, reportqueue, cursor, conn, query):
 	while True:
@@ -1470,11 +1365,11 @@ def grab_sha256_license(scanqueue, reportqueue, cursor, conn, query):
 		reportqueue.put({sha256sum: results})
 		scanqueue.task_done()
 
-def grab_sha256_parallel(scanqueue, reportqueue, cursor, conn, batdb, language, querytype):
-	stringquery = batdb.getQuery("select distinct checksum, linenumber, language from extracted_string where stringidentifier=%s and language=%s")
-	functionquery = batdb.getQuery("select distinct checksum, linenumber, language from extracted_function where functionname=%s")
-	variablequery = batdb.getQuery("select distinct checksum, linenumber, language, type from extracted_name where name=%s")
-	kernelvarquery = batdb.getQuery("select distinct checksum, linenumber, language, type from extracted_name where name=%s")
+def grab_sha256_parallel(scanqueue, reportqueue, cursor, conn, language, querytype):
+	stringquery = "select distinct checksum, linenumber, language from extracted_string where stringidentifier=%s and language=%s"
+	functionquery = "select distinct checksum, linenumber, language from extracted_function where functionname=%s"
+	variablequery = "select distinct checksum, linenumber, language, type from extracted_name where name=%s"
+	kernelvarquery = "select distinct checksum, linenumber, language, type from extracted_name where name=%s"
 	while True:
 		res = None
 		line = scanqueue.get(timeout=2592000)
@@ -1500,7 +1395,7 @@ def grab_sha256_parallel(scanqueue, reportqueue, cursor, conn, batdb, language, 
 			reportqueue.put((line, res))
 		scanqueue.task_done()
 
-def extractJava(javameta, scanenv, funccursor, funcconn, batdb, clones):
+def extractJava(javameta, scanenv, funccursor, funcconn, clones):
 	dynamicRes = {}  # {'namesmatched': 0, 'totalnames': int, 'uniquematches': int, 'packages': {} }
 	namesmatched = 0
 	uniquematches = 0
@@ -1527,7 +1422,7 @@ def extractJava(javameta, scanenv, funccursor, funcconn, batdb, clones):
 
 	if 'BAT_METHOD_SCAN' in scanenv:
 
-		query = batdb.getQuery("select distinct package from %s where functionname=" % namecacheperlanguagetable['Java'] + "%s")
+		query = "select distinct package from functionnamecache_java where functionname=%s"
 		for meth in methods:
 			if meth == 'main':
 				continue
@@ -1548,7 +1443,7 @@ def extractJava(javameta, scanenv, funccursor, funcconn, batdb, clones):
 				## unique match
 				if len(packages_tmp) == 1:
 					uniquematches += 1
-					if uniquepackages.has_key(packages_tmp[0]):
+					if packages_tmp[0] in uniquepackages:
 						uniquepackages[packages_tmp[0]].append(meth)
 					else:
 						uniquepackages[packages_tmp[0]] = [meth]
@@ -1573,7 +1468,7 @@ def extractJava(javameta, scanenv, funccursor, funcconn, batdb, clones):
 	## uncommon. TODO: merge class name and source file name searching
 	if 'BAT_CLASSNAME_SCAN' in scanenv:
 		classes = set(map(lambda x: x.split('$')[0], classes))
-		query = batdb.getQuery("select package from classcache_java where classname=%s")
+		query = "select package from classcache_java where classname=%s"
 		for i in classes:
 			pvs = []
 			## first try the name as found in the binary. If it can't
@@ -1636,7 +1531,7 @@ def extractJava(javameta, scanenv, funccursor, funcconn, batdb, clones):
 	## that often.
 	sha256cache = {}
 	if 'BAT_FIELDNAME_SCAN' in scanenv:
-		query = batdb.getQuery("select package from fieldcache_java where fieldname=%s")
+		query = "select package from fieldcache_java where fieldname=%s"
 		for f in fields:
 			## a few fields are so common that they will be completely useless
 			## for reporting, but processing them will take a *lot* of time, so
@@ -1689,7 +1584,7 @@ def scankernelsymbols(variables, scanenv, kernelquery, funccursor, funcconn, clo
 			else:
 				pvs_tmp.append(r)
 		if len(pvs_tmp) == 1:
-			if uniquevvs.has_key(pvs_tmp[0]):
+			if pvs_tmp[0] in uniquevvs:
 				uniquevvs[pvs_tmp[0]].append(v)
 			else:
 				uniquevvs[pvs_tmp[0]] = [v]
@@ -1710,7 +1605,7 @@ def scankernelsymbols(variables, scanenv, kernelquery, funccursor, funcconn, clo
 ## By searching a database that contains which function names and variable names
 ## can be found in which packages it is possible to identify which package was
 ## used.
-def scanDynamic(scanstr, variables, scanenv, funccursor, funcconn, batdb, clones):
+def scanDynamic(scanstr, variables, scanenv, funccursor, funcconn, clones):
 	dynamicRes = {}
 	variablepvs = {}
 
@@ -1728,7 +1623,7 @@ def scanDynamic(scanstr, variables, scanenv, funccursor, funcconn, batdb, clones
 		## the database made from ctags output only has function names, not the types. Since
 		## C++ functions could be in an executable several times with different types we
 		## deduplicate first
-		query = batdb.getQuery("select package from %s where functionname=" % namecacheperlanguagetable['C'] + "%s")
+		query = "select package from functionnamecache_c where functionname=%s"
 		for funcname in scanstr:
 			funccursor.execute(query, (funcname,))
 			res = funccursor.fetchall()
@@ -1747,7 +1642,7 @@ def scanDynamic(scanstr, variables, scanenv, funccursor, funcconn, batdb, clones
 				## unique match
 				if len(packages_tmp) == 1:
 					uniquematches += 1
-					if uniquepackages.has_key(packages_tmp[0]):
+					if packages_tmp[0] in uniquepackages:
 						uniquepackages[packages_tmp[0]] += [funcname]
 					else:
 						uniquepackages[packages_tmp[0]] = [funcname]
@@ -1778,7 +1673,7 @@ def scanDynamic(scanstr, variables, scanenv, funccursor, funcconn, batdb, clones
 		## 2. package per variable name
 		uniquevvs = {}
 		allvvs = {}
-		query = batdb.getQuery("select distinct package from varnamecache_c where varname=%s")
+		query = "select distinct package from varnamecache_c where varname=%s"
 		for v in variables:
 			## These variable names are very generic and would not be useful, so skip.
 			## This is based on research of millions of C files.
@@ -1798,7 +1693,7 @@ def scanDynamic(scanstr, variables, scanenv, funccursor, funcconn, batdb, clones
 				else:
 					pvs_tmp.append(r)
 			if len(pvs_tmp) == 1:
-				if uniquevvs.has_key(pvs_tmp[0]):
+				if pvs_tmp[0] in uniquevvs:
 					uniquevvs[pvs_tmp[0]].append(v)
 				else:
 					uniquevvs[pvs_tmp[0]] = [v]
@@ -1816,7 +1711,7 @@ def scanDynamic(scanstr, variables, scanenv, funccursor, funcconn, batdb, clones
 
 ## match identifiers with data in the database
 ## First match string literals, then function names and variable names for various languages
-def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccursor, funcconn, batdb, scanenv, topleveldir, avgscores, clones, scandebug, unmatchedignorecache, lock):
+def lookup_identifier(scanqueue, reportqueue, cursor, conn, scanenv, topleveldir, avgscores, clones, scandebug, unmatchedignorecache, lock):
 	## first some things that are shared between all scans
 	if 'BAT_STRING_CUTOFF' in scanenv:
 		try:
@@ -1843,8 +1738,8 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 	scorecutoff = 1.0e-20
 	gaincutoff = 1
 
-	kernelquery = batdb.getQuery("select package FROM linuxkernelfunctionnamecache WHERE functionname=%s LIMIT 1")
-	precomputequery = batdb.getQuery("select score from scores where stringidentifier=%s LIMIT 1")
+	kernelquery = "select package FROM linuxkernelfunctionnamecache WHERE functionname=%s LIMIT 1"
+	precomputequery = "select score from scores where stringidentifier=%s LIMIT 1"
 
 	while True:
 		## get a new task from the queue
@@ -1871,7 +1766,7 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 
 		## this should of course not happen, but hey...
 		scanlines = True
-		if not scanenv.has_key(stringsdbperlanguageenv[language]):
+		if not language in scanenv['supported_languages']:
 			scanlines = False
 
 		if lines == None:
@@ -1955,7 +1850,7 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 				## sort the lines first, so it is easy to skip duplicates
 				lines.sort()
 
-			stringquery = batdb.getQuery("select package, filename FROM %s WHERE stringidentifier=" % stringsdbperlanguagetable[language] + "%s")
+			stringquery = "select package, filename FROM %s WHERE stringidentifier=" % stringsdbperlanguagetable[language] + "%s"
 
 			for line in lines:
 				#if scandebug:
@@ -2006,9 +1901,9 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 				## helps reduce load on databases stored on slower disks. Only used if
 				## precomputescore is set and "source order" is False.
 				if precomputescore:
-					stringcursor.execute(precomputequery, (line,))
-					scoreres = stringcursor.fetchone()
-					stringconn.commit()
+					cursor.execute(precomputequery, (line,))
+					scoreres = cursor.fetchone()
+					conn.commit()
 					if scoreres != None:
 						## If the score is so low it will not have any influence on the final
 						## score, why even bother hitting the disk?
@@ -2031,9 +1926,9 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 					## kernel image could also be function names, not string constants.
 					## There could be false positives here...
 					if scankernelfunctions:
-						funccursor.execute(kernelquery, (line,))
-						kernelres = funccursor.fetchall()
-						funcconn.commit()
+						cursor.execute(kernelquery, (line,))
+						kernelres = cursor.fetchall()
+						conn.commit()
 						if len(kernelres) != 0:
 							kernelfuncres.append(line)
 							kernelfunctionmatched = True
@@ -2041,9 +1936,9 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 							continue
 
 				## then see if there is anything in the cache at all
-				stringcursor.execute(stringquery, (line,))
-				res = stringcursor.fetchall()
-				stringconn.commit()
+				cursor.execute(stringquery, (line,))
+				res = cursor.fetchall()
+				conn.commit()
 
 				if len(res) == 0 and linuxkernel:
 					## make a copy of the original line
@@ -2064,9 +1959,9 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 							unmatchedignorecache[origline] = 1
 							lock.release()
 							continue
-						stringcursor.execute(stringquery, (scanline,))
-						res = stringcursor.fetchall()
-						stringconn.commit()
+						cursor.execute(stringquery, (scanline,))
+						res = cursor.fetchall()
+						conn.commit()
 						if len(res) != 0:
 							line = scanline
 						else:
@@ -2083,9 +1978,9 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 									unmatchedignorecache[origline] = 1
 									lock.release()
 									continue
-								stringcursor.execute(stringquery, (scanline,))
-								res = stringcursor.fetchall()
-								stringconn.commit()
+								cursor.execute(stringquery, (scanline,))
+								res = cursor.fetchall()
+								conn.commit()
 								if len(res) != 0:
 									if len(scanline) != 0:
 										line = scanline
@@ -2104,9 +1999,9 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 								unmatchedignorecache[origline] = 1
 								lock.release()
 								continue
-							stringcursor.execute(stringquery, (scanline,))
-							res = stringcursor.fetchall()
-							stringconn.commit()
+							cursor.execute(stringquery, (scanline,))
+							res = cursor.fetchall()
+							conn.commit()
 							if len(res) != 0:
 								if len(scanline) != 0:
 									line = scanline
@@ -2125,9 +2020,9 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 									unmatchedignorecache[origline] = 1
 									lock.release()
 									continue
-								stringcursor.execute(stringquery, (scanline,))
-								res = stringcursor.fetchall()
-								stringconn.commit()
+								cursor.execute(stringquery, (scanline,))
+								res = cursor.fetchall()
+								conn.commit()
 								if len(res) != 0:
 									if len(scanline) != 0:
 										line = scanline
@@ -2596,21 +2491,21 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 		if language == 'C':
 			if linuxkernel:
 				functionRes = {}
-				if scanenv.has_key('BAT_KERNELSYMBOL_SCAN'):
-					kernelquery = batdb.getQuery("select distinct package from linuxkernelnamecache where varname=%s")
-					variablepvs = scankernelsymbols(leafreports['identifier']['kernelsymbols'], scanenv, kernelquery, funccursor, funcconn, clones)
+				if 'BAT_KERNELSYMBOL_SCAN' in scanenv:
+					kernelquery = "select distinct package from linuxkernelnamecache where varname=%s"
+					variablepvs = scankernelsymbols(leafreports['identifier']['kernelsymbols'], scanenv, kernelquery, cursor, conn, clones)
 				## TODO: clean up
 				if leafreports['identifier'].has_key('kernelfunctions'):
 					if leafreports['identifier']['kernelfunctions'] != []:
 						functionRes['kernelfunctions'] = copy.deepcopy(leafreports['identifier']['kernelfunctions'])
 			else:
-				(functionRes, variablepvs) = scanDynamic(leafreports['identifier']['functionnames'], leafreports['identifier']['variablenames'], scanenv, funccursor, funcconn, batdb, clones)
+				(functionRes, variablepvs) = scanDynamic(leafreports['identifier']['functionnames'], leafreports['identifier']['variablenames'], scanenv, cursor, conn, clones)
 		elif language == 'Java':
-			if not scanenv.has_key(namecacheperlanguageenv['Java']):
+			if not ('BAT_CLASSNAME_SCAN' in scanenv or 'BAT_FIELDNAME_SCAN' in scanenv or 'BAT_METHOD_SCAN' in scanenv):
 				variablepvs = {}
 				functionRes = {}
 			else:
-				(functionRes, variablepvs) = extractJava(leafreports['identifier'], scanenv, funccursor, funcconn, batdb, clones)
+				(functionRes, variablepvs) = extractJava(leafreports['identifier'], scanenv, cursor, conn, clones)
 		else:
 			variablepvs = {}
 			functionRes = {}
@@ -2625,243 +2520,63 @@ def lookup_identifier(scanqueue, reportqueue, stringcursor, stringconn, funccurs
 		reportqueue.put(filehash)
 		scanqueue.task_done()
 
-
-def licensesetup(scanenv, debug=False):
-	if not 'DBBACKEND' in scanenv:
-		return (False, None)
-	if scanenv['DBBACKEND'] == 'sqlite3':
-		return licensesetup_sqlite3(scanenv, debug)
-	if scanenv['DBBACKEND'] == 'postgresql':
-		return licensesetup_postgresql(scanenv, debug)
-	return (False, None)
-
-def licensesetup_postgresql(scanenv, debug=False):
-	newenv = copy.deepcopy(scanenv)
-	batdb = bat.batdb.BatDb('postgresql')
-	conn = batdb.getConnection(None,scanenv)
-	if conn == None:
-		return (False, None)
+def licensesetup(scanenv, cursor, conn, debug=False):
+	if cursor == None:
+		return (False, {})
+	cursor.execute("select table_name from information_schema.tables where table_type='BASE TABLE' and table_schema='public'")
+	tablenames = map(lambda x: x[0], cursor.fetchall())
 	conn.commit()
-	conn.close()
-	newenv['BAT_CLASSNAME_SCAN'] = 1
-	newenv['BAT_FIELDNAME_SCAN'] = 1
-	newenv['BAT_METHOD_SCAN'] = 1
-	newenv['BAT_KERNELSYMBOL_SCAN'] = 1
-	newenv['BAT_VARNAME_SCAN'] = 1
-	newenv['BAT_FUNCTION_SCAN'] = 1
-	newenv['BAT_KERNELFUNCTION_SCAN'] = 1
 
-	return (True, newenv)
-
-## method that makes sure that everything is set up properly and modifies
-## the environment, as well as determines whether the scan should be run at
-## all.
-## Returns tuple (run, environment)
-## * run: boolean indicating whether or not the scan should run
-## * environment: (possibly) modified
-## This is the minimum that is needed for determining the licenses
-def licensesetup_sqlite3(scanenv, debug=False):
+	## Now verify the names of the tables
 	newenv = copy.deepcopy(scanenv)
 
-	## Is the master database defined?
-	if not 'BAT_DB' in scanenv:
-		return (False, None)
+	supported_languages = set()
 
-	masterdb = scanenv.get('BAT_DB')
-
-	## Does the master database exist?
-	if not os.path.exists(masterdb):
-		return (False, None)
-
-	## Does the master database have the right tables?
-	## processed_file is always needed
-	batdb = bat.batdb.BatDb('sqlite3')
-	conn = batdb.getConnection(masterdb)
-	c = conn.cursor()
-	res = c.execute("select * from sqlite_master where type='table' and name='processed_file'").fetchall()
-	if res == []:
-		c.close()
-		conn.close()
-		return (False, None)
-
-	## extracted_string is needed for string matches
-	res = c.execute("select * from sqlite_master where type='table' and name='extracted_string'").fetchall()
-	if res == []:
-		stringmatches = False
+	## for Java
+	if 'stringscache_java' in tablenames:
+		supported_languages.add('Java')
 	else:
-		stringmatches = True
-
-	## check the license database. If it does not exist, or does not have
-	## the right schema remove it from the configuration
-	if scanenv.get('BAT_RANKING_LICENSE', 0) == '1' or scanenv.get('BAT_RANKING_COPYRIGHT', 0) == 1:
-		if scanenv.get('BAT_LICENSE_DB') != None:
-			if not os.path.exists(scanenv.get('BAT_LICENSE_DB')):
-				if newenv.has_key('BAT_LICENSE_DB'):
-					del newenv['BAT_LICENSE_DB']
-				if newenv.has_key('BAT_RANKING_LICENSE'):
-					del newenv['BAT_RANKING_LICENSE']
-			else:
-				try:
-					licenseconn = batdb.getConnection(scanenv.get('BAT_LICENSE_DB'))
-					licensecursor = licenseconn.cursor()
-					licensecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='licenses';")
-					if licensecursor.fetchall() == []:
-						if newenv.has_key('BAT_LICENSE_DB'):
-							del newenv['BAT_LICENSE_DB']
-						if newenv.has_key('BAT_RANKING_LICENSE'):
-							del newenv['BAT_RANKING_LICENSE']
-					## also check if copyright information exists
-					licensecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='extracted_copyright';")
-					if licensecursor.fetchall() == []:
-						if newenv.has_key('BAT_RANKING_COPYRIGHT'):
-							del newenv['BAT_RANKING_COPYRIGHT']
-					licensecursor.close()
-					licenseconn.close()
-				except:
-					if newenv.has_key('BAT_LICENSE_DB'):
-						del newenv['BAT_LICENSE_DB']
-					if newenv.has_key('BAT_RANKING_LICENSE'):
-						del newenv['BAT_RANKING_LICENSE']
-					if newenv.has_key('BAT_RANKING_COPYRIGHT'):
-						del newenv['BAT_RANKING_COPYRIGHT']
-	## cleanup
-	c.close()
-	conn.close()
-
-	for language in stringsdbperlanguageenv.keys():
-		if scanenv.has_key(stringsdbperlanguageenv[language]):
-			## sanity checks to see if the database exists.
-			stringscache = scanenv.get(stringsdbperlanguageenv[language])
-			if not os.path.exists(stringscache):
-				## remove from the configuration
-				if newenv.has_key(stringsdbperlanguageenv[language]):
-					del newenv[stringsdbperlanguageenv[language]]
-				continue
-
-			stringscache = scanenv.get(stringsdbperlanguageenv[language])
-			conn = batdb.getConnection(stringscache)
-			c = conn.cursor()
-
-			## TODO: check if the format of the cache database is sane
-
-			## check if there is a precomputed scores table and if it has any content.
-			## TODO: this really has to be done per language
-			res = c.execute("select * from sqlite_master where type='table' and name='scores'").fetchall()
-			if res != []:
-				if not newenv.has_key('BAT_SCORE_CACHE'):
-					newenv['BAT_SCORE_CACHE'] = 1
-				res = c.execute("select * from scores LIMIT 1")
-				if res == []:
-					## if there are no precomputed scores remove it again to save queries later
-					if newenv.has_key('BAT_SCORE_CACHE'):
-						del newenv['BAT_SCORE_CACHE']
-			c.close()
-			conn.close()
+		if 'Java' in supported_languages:
+			a.remove('Java')
+	if 'Java' in supported_languages:
+		if 'classcache_java' in tablenames:
+			newenv['BAT_CLASSNAME_SCAN'] = 1
 		else:
-			## strings cache is not defined, but it should be there according to
-			## the configuration so remove from the configuration
-			if newenv.has_key(stringsdbperlanguageenv[language]):
-				del newenv[stringsdbperlanguageenv[language]]
-
-	## check the cloning database. If it does not exist, or does not have
-	## the right schema remove it from the configuration
-	if scanenv.has_key('BAT_CLONE_DB'):
-		clonedb = scanenv.get('BAT_CLONE_DB')
-		if os.path.exists(clonedb):
-			conn = batdb.getConnection(clonedb)
-			c = conn.cursor()
-			c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='renames';")
-			if c.fetchall() == []:
-				if newenv.has_key('BAT_CLONE_DB'):
-					del newenv['BAT_CLONE_DB']
-			c.close()
-			conn.close()
-		else:
-			if newenv.has_key('BAT_CLONE_DB'):
-				del newenv['BAT_CLONE_DB']
-
-	## check the various caching databases, first for C
-	if scanenv.has_key(namecacheperlanguageenv['C']):
-		namecache = scanenv.get(namecacheperlanguageenv['C'])
-		## the cache should exist. If it doesn't exist then something is horribly wrong.
-		if not os.path.exists(namecache):
-			if newenv.has_key('BAT_KERNELSYMBOL_SCAN'):
-				del newenv['BAT_KERNELSYMBOL_SCAN']
-			if newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
-				del newenv['BAT_KERNELFUNCTION_SCAN']
-			if newenv.has_key('BAT_VARNAME_SCAN'):
-				del newenv['BAT_VARNAME_SCAN']
-			if newenv.has_key('BAT_FUNCTION_SCAN'):
-				del newenv['BAT_FUNCTION_SCAN']
-			if newenv.has_key(namecacheperlanguageenv['C']):
-				del newenv[namecacheperlanguageenv['C']]
-		else:
-			## TODO: add checks for each individual table
-			if not newenv.has_key('BAT_KERNELSYMBOL_SCAN'):
-				newenv['BAT_KERNELSYMBOL_SCAN'] = 1
-			if not newenv.has_key('BAT_VARNAME_SCAN'):
-				newenv['BAT_VARNAME_SCAN'] = 1
-			if not newenv.has_key('BAT_FUNCTION_SCAN'):
-				newenv['BAT_FUNCTION_SCAN'] = 1
-
-			## Sanity check for kernel function names
-			cacheconn = batdb.getConnection(namecache)
-			cachecursor = cacheconn.cursor()
-			cachecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='linuxkernelfunctionnamecache';")
-			kernelfuncs = cachecursor.fetchall()
-			if kernelfuncs == []:
-				if newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
-					del newenv['BAT_KERNELFUNCTION_SCAN']
-			else:
-				if not newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
-					newenv['BAT_KERNELFUNCTION_SCAN'] = 1
-			cachecursor.close()
-			cacheconn.close()
-	else:
-		## undefined, so disable kernel scanning, variable/function name scanning
-		if newenv.has_key('BAT_KERNELSYMBOL_SCAN'):
-			del newenv['BAT_KERNELSYMBOL_SCAN']
-		if newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
-			del newenv['BAT_KERNELFUNCTION_SCAN']
-		if newenv.has_key('BAT_VARNAME_SCAN'):
-			del newenv['BAT_VARNAME_SCAN']
-		if newenv.has_key('BAT_FUNCTION_SCAN'):
-			del newenv['BAT_FUNCTION_SCAN']
-
-	## then check for Java
-	if scanenv.has_key(namecacheperlanguageenv['Java']):
-		namecache = scanenv.get(namecacheperlanguageenv['Java'])
-		## check if the cache exists. If not, something is wrong.
-		if not os.path.exists(namecache):
-			if newenv.has_key('BAT_CLASSNAME_SCAN'):
+			if 'BAT_CLASSNAME_SCAN' in newenv:
 				del newenv['BAT_CLASSNAME_SCAN']
-			if newenv.has_key('BAT_FIELDNAME_SCAN'):
-				del newenv['BAT_FIELDNAME_SCAN']
-			if newenv.has_key('BAT_METHOD_SCAN'):
-				del newenv['BAT_METHOD_SCAN']
-			if newenv.has_key(namecacheperlanguageenv['Java']):
-				del newenv[namecacheperlanguageenv['Java']]
+		if 'fieldcache_java' in tablenames:
+			newenv['BAT_FIELDNAME_SCAN'] = 1
 		else:
-			## TODO: add checks for each individual table
-			if not newenv.has_key('BAT_CLASSNAME_SCAN'):
-				newenv['BAT_CLASSNAME_SCAN'] = 1
-			if not newenv.has_key('BAT_FIELDNAME_SCAN'):
-				newenv['BAT_FIELDNAME_SCAN'] = 1
-			if not newenv.has_key('BAT_METHOD_SCAN'):
-				newenv['BAT_METHOD_SCAN'] = 1
-	else:
-		## undefined, so disable classname/fieldname/method name scan
-		if newenv.has_key('BAT_CLASSNAME_SCAN'):
-			del newenv['BAT_CLASSNAME_SCAN']
-		if newenv.has_key('BAT_FIELDNAME_SCAN'):
-			del newenv['BAT_FIELDNAME_SCAN']
-		if newenv.has_key('BAT_METHOD_SCAN'):
-			del newenv['BAT_METHOD_SCAN']
+			if 'BAT_FIELDNAME_SCAN' in newenv:
+				del newenv['BAT_FIELDNAME_SCAN']
+		if 'functionnamecache_java' in tablenames:
+			newenv['BAT_METHOD_SCAN'] = 1
+		else:
+			if 'BAT_METHOD_SCAN' in newenv:
+				del newenv['BAT_METHOD_SCAN']
 
-	## extra sanity check to see if there is at least one entry from
-	## stringsdperlanguage and namecacheperlanguageenv in the new environment.
-	scanenvkeys = newenv.keys()
-	envcheck = set(map(lambda x: x in scanenvkeys, stringsdbperlanguageenv.values() + namecacheperlanguageenv.values()))
-	if envcheck == set([False]):
-		return (False, None)
+	## for C
+	if 'stringscache_c' in tablenames:
+		supported_languages.add('C')
+	else:
+		if 'C' in supported_languages:
+			a.remove('C')
+	if 'C' in supported_languages:
+		if 'varnamecache_c' in tablenames:
+			newenv['BAT_VARNAME_SCAN'] = 1
+		if 'functionnamecache_c' in tablenames:
+			newenv['BAT_FUNCTION_SCAN'] = 1
+
+		## for Linux kernel
+		if 'linuxkernelnamecache' in tablenames:
+			newenv['BAT_KERNELSYMBOL_SCAN'] = 1
+		if 'linuxkernelfunctionnamecache' in tablenames:
+			newenv['BAT_KERNELFUNCTION_SCAN'] = 1
+
+	if 'renames' in tablenames:
+		newenv['HAVE_CLONE_DB'] = 1
+
+	supported_languages = list(supported_languages)
+	newenv['supported_languages'] = supported_languages
+
 	return (True, newenv)

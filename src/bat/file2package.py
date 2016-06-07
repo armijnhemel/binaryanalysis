@@ -11,7 +11,6 @@ mined from distributions like Fedora and Debian.
 '''
 
 import os, os.path, sqlite3, sys, subprocess, copy, Queue, cPickle
-import bat.batdb
 import multiprocessing
 from multiprocessing import Process, Lock
 from multiprocessing.sharedctypes import Value, Array
@@ -38,17 +37,7 @@ def grabpackage(scanqueue, reportqueue, cursor, query):
 			reportqueue.put({filename: returnres})
 		scanqueue.task_done()
 
-def filename2package(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
-	(envresult, newenv) = file2packagesetup(scanenv, scandebug)
-	if not envresult:
-		return None
-
-	if not scanenv.has_key('BAT_PACKAGE_DB'):
-		return
-
-	## open the database containing the mapping of filenames to package
-	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
-
+def filename2package(unpackreports, scantempdir, topleveldir, processors, scanenv, batcursors, batcons, scandebug=False, unpacktempdir=None):
 	processtasks = []
 	for i in unpackreports:
 		if not 'checksum' in unpackreports[i]:
@@ -61,23 +50,17 @@ def filename2package(unpackreports, scantempdir, topleveldir, processors, scanen
 		processamount = processors
 	## create a queue for tasks, with a few threads reading from the queue
 	## and looking up results and putting them in a result queue
-	query = batdb.getQuery("select distinct package, packageversion, source, distroversion from file where filename = %s")
+	query = "select distinct package, packageversion, source, distroversion from file where filename = %s"
 	scanmanager = multiprocessing.Manager()
 	scanqueue = multiprocessing.JoinableQueue(maxsize=0)
 	reportqueue = scanmanager.Queue(maxsize=0)
 	processpool = []
-        batcons = []
-        batcursors = []
 
-        map(lambda x: scanqueue.put(x), processtasks)
-        minprocessamount = min(len(processtasks), processamount)
+	map(lambda x: scanqueue.put(x), processtasks)
+	minprocessamount = min(len(processtasks), processamount)
 	res = []
 
 	for i in range(0,minprocessamount):
-		conn = batdb.getConnection(scanenv['BAT_PACKAGE_DB'],scanenv)
-		c = conn.cursor()
-		batcursors.append(c)
-		batcons.append(conn)
 		p = multiprocessing.Process(target=grabpackage, args=(scanqueue,reportqueue,batcursors[i],query))
 		processpool.append(p)
 		p.start()
@@ -96,9 +79,6 @@ def filename2package(unpackreports, scantempdir, topleveldir, processors, scanen
 
 	for p in processpool:
 		p.terminate()
-
-	for c in batcons:
-		c.close()
 
 	for r in res:
 		filename = r.keys()[0]
@@ -119,46 +99,12 @@ def filename2package(unpackreports, scantempdir, topleveldir, processors, scanen
 
 	returnres = res
 
-def file2packagesetup(scanenv, debug=False):
-	if not 'DBBACKEND' in scanenv:
-		return (False, None)
-	if scanenv['DBBACKEND'] == 'sqlite3':
-		return file2packagesetup_sqlite3(scanenv, debug)
-	if scanenv['DBBACKEND'] == 'postgresql':
-		return file2packagesetup_postgresql(scanenv, debug)
-	return (False, None)
-
-def file2packagesetup_postgresql(scanenv, debug=False):
-	newenv = copy.deepcopy(scanenv)
-	batdb = bat.batdb.BatDb('postgresql')
-	conn = batdb.getConnection(None,scanenv)
-	if conn == None:
-		return (False, None)
-	conn.close()
+def file2packagesetup(scanenv, cursor, conn, debug=False):
+	if cursor == None:
+		return (False, {})
+	cursor.execute("select table_name from information_schema.tables where table_type='BASE TABLE' and table_schema='public'")
+	tablenames = map(lambda x: x[0], cursor.fetchall())
+	conn.commit()
+	if not 'file' in tablenames:
+		return (False, {})
 	return (True, scanenv)
-
-## checks specific for sqlite3 databases
-def file2packagesetup_sqlite3(scanenv, debug=False):
-	newenv = copy.deepcopy(scanenv)
-
-	## Is the package database defined?
-	if not scanenv.has_key('BAT_PACKAGE_DB'):
-		return (False, None)
-
-	packagedb = scanenv.get('BAT_PACKAGE_DB')
-
-	## Does the package database exist?
-	if not os.path.exists(packagedb):
-		return (False, None)
-
-	## Does the package database have the right table?
-	conn = sqlite3.connect(packagedb)
-	c = conn.cursor()
-	res = c.execute("select * from sqlite_master where type='table' and name='file'").fetchall()
-	c.close()
-	conn.close()
-	if res == []:
-		return (False, None)
-
-	## TODO: more sanity checks
-	return (True, newenv)

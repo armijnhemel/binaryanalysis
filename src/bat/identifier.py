@@ -9,23 +9,11 @@
 This file contains code to extract identifiers (strings, function names,
 variable names, etc.) from binaries and make them available for further
 processing by various other scans.
-
-Configuration parameters for databases are:
-
-BAT_NAMECACHE_$LANGUAGE :: location of database containing cached
-                           function names and variable names per package.
-                           This is only used to look up Linux kernel functions.
 '''
 
 import string, re, os, os.path, sys, tempfile, shutil, copy, struct
-import bat.batdb
 import subprocess
 import extractor, javacheck
-
-## mapping of names for databases per language
-namecacheperlanguage = { 'C':       'BAT_NAMECACHE_C'
-                       , 'Java':    'BAT_NAMECACHE_JAVA'
-                       }
 
 ## some regular expressions for Java, precompiled
 reconststring = re.compile("\s+const-string\s+v\d+")
@@ -103,12 +91,15 @@ def searchGeneric(filepath, tags, blacklist=[], scanenv={}, offsets={}, scandebu
 		if empty:
 			return None
 		if linuxkernel:
+			cursor = None
+			conn = None
 			if len(cmeta['strings']) != 0:
-				res = extractKernelData(cmeta['strings'], filepath, scanenv, scandebug)
-				if res != None:
-					if 'kernelfunctions' in res:
-						if res['kernelfunctions'] != []:
-							cmeta['kernelfunctions'] = copy.deepcopy(res['kernelfunctions'])
+				if 'BAT_KERNELFUNCTION_SCAN' in scanenv and False:
+					res = extractKernelData(cmeta['strings'], filepath, cursor, conn, scandebug)
+					if res != None:
+						if 'kernelfunctions' in res:
+							if res['kernelfunctions'] != []:
+								cmeta['kernelfunctions'] = copy.deepcopy(res['kernelfunctions'])
 		cmeta['language'] = language
 		return (['identifier'], cmeta)
 	elif language == 'Java':
@@ -712,19 +703,7 @@ def extractDynamicFromELF(scanfile):
 	return (functionnames, variables)
 
 ## extract Linux kernel data from a binary file. False positives could exist.
-def extractKernelData(lines, filepath, scanenv, scandebug):
-	## setup code guarantees that this database exists and that sanity
-	## checks were done.
-	if scanenv.get('BAT_KERNELFUNCTION_SCAN') == '1':
-		batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
-		funccache = scanenv.get(namecacheperlanguage['C'])
-		kernelconn = batdb.getConnection(funccache,scanenv)
-		kernelcursor = kernelconn.cursor()
-	else:
-		return None
-
-	dbbackend = scanenv['DBBACKEND']
-
+def extractKernelData(lines, filepath, kernelcursor, kernelconn, scandebug):
 	kernelfuncres = []
 	kernelparamres = []
 	oldline = None
@@ -734,7 +713,7 @@ def extractKernelData(lines, filepath, scanenv, scandebug):
 	if scandebug:
 		print >>sys.stderr, "total extracted strings for %s: %d" %(filepath, lenlines)
 
-	query = batdb.getQuery("select package FROM linuxkernelfunctionnamecache WHERE functionname = %s;")
+	query = "select package FROM linuxkernelfunctionnamecache WHERE functionname = %s;"
 	for line in lines:
 		if scandebug:
 			print >>sys.stderr, "processing <|%s|>" % line
@@ -754,18 +733,12 @@ def extractKernelData(lines, filepath, scanenv, scandebug):
 		if len(kernelres) != 0:
 			kernelfuncres.append(line)
 
-	kernelcursor.close()
-	kernelconn.close()
-
 	returnres = {}
 	if kernelfuncres != []:
 		returnres['kernelfunctions'] = kernelfuncres
 	return returnres
 
-def extractidentifiersetup(scanenv, debug=False):
-	if not 'DBBACKEND' in scanenv:
-		return (False, None)
-
+def extractidentifiersetup(scanenv, cursor, conn, debug=False):
 	newenv = copy.deepcopy(scanenv)
 
 	if 'DEX_TMPDIR' in scanenv:
@@ -781,72 +754,17 @@ def extractidentifiersetup(scanenv, debug=False):
 		else:
 			del newenv['DEX_TMPDIR']
 
-	if scanenv['DBBACKEND'] == 'sqlite3':
-		return extractidentifiersetup_sqlite3(newenv, debug)
-	if scanenv['DBBACKEND'] == 'postgresql':
-		return extractidentifiersetup_postgresql(newenv, debug)
-	return (False, None)
+	if 'BAT_KERNELFUNCTION_SCAN' in newenv:
+		if cursor != None:
+			cursor.execute("select table_name from information_schema.tables where table_type='BASE TABLE' and table_schema='public'")
+			tablenames = map(lambda x: x[0], cursor.fetchall())
+			conn.commit()
 
-def extractidentifiersetup_postgresql(scanenv, debug=False):
-	newenv = copy.deepcopy(scanenv)
-	batdb = bat.batdb.BatDb('postgresql')
-	conn = batdb.getConnection(None,scanenv)
-	if conn == None:
-		return (False, None)
-	## TODO: more checks
-	conn.close()
-	return (True, scanenv)
+			## Now verify the names of the tables
 
-## method that makes sure that everything is set up properly and modifies
-## the environment, as well as determines whether the scan should be run at
-## all.
-## Returns tuple (run, environment)
-## * run: boolean indicating whether or not the scan should run
-## * environment: (possibly) modified
-def extractidentifiersetup_sqlite3(scanenv, debug=False):
-	## TODO: verify if the following programs are available and work:
-	## * strings
-	## * java
-	## * readelf
-	## * c++filt
-
-	newenv = copy.deepcopy(scanenv)
-
-	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
-
-	## check the various caching databases, first for C
-	if scanenv.has_key(namecacheperlanguage['C']):
-		namecache = scanenv.get(namecacheperlanguage['C'])
-		## the cache should exist. If it doesn't exist then something is horribly wrong.
-		if not os.path.exists(namecache):
-			if newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
+			if not 'linuxkernelfunctionnamecache' in tablenames:
 				del newenv['BAT_KERNELFUNCTION_SCAN']
-			if newenv.has_key(namecacheperlanguage['C']):
-				del newenv[namecacheperlanguage['C']]
 		else:
-			## TODO: add checks for each individual table
-
-			## Sanity check for kernel function names
-			cacheconn = batdb.getConnection(namecache)
-			cachecursor = cacheconn.cursor()
-			cachecursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='linuxkernelfunctionnamecache';")
-
-			kernelfuncs = cachecursor.fetchall()
-			if kernelfuncs == []:
-				if newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
-					del newenv['BAT_KERNELFUNCTION_SCAN']
-			else:
-				if not newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
-					newenv['BAT_KERNELFUNCTION_SCAN'] = 1
-			cachecursor.close()
-			cacheconn.close()
-	else:
-		## undefined, so disable kernel scanning, variable/function name scanning
-		if newenv.has_key('BAT_KERNELFUNCTION_SCAN'):
 			del newenv['BAT_KERNELFUNCTION_SCAN']
 
-	scanenvkeys = newenv.keys()
-	envcheck = set(map(lambda x: x in scanenvkeys, namecacheperlanguage.values()))
-	if envcheck == set([False]):
-		return (False, None)
 	return (True, newenv)

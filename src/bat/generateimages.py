@@ -247,7 +247,7 @@ def gethash(path):
 	scanfile.close()
 	return h.hexdigest()
 
-def generateimages(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
+def generateimages(unpackreports, scantempdir, topleveldir, processors, scanenv, batcursors, batcons, scandebug=False, unpacktempdir=None):
 	if scanenv.has_key('overridedir'):
 		try:
 			del scanenv['BAT_IMAGEDIR']

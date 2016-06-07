@@ -16,7 +16,7 @@ unpacked files. For example:
   files/directories, like /root or /dev it is likely an initramfs
 '''
 
-def renamefiles(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
+def renamefiles(unpackreports, scantempdir, topleveldir, processors, scanenv, batcursors, batcons, scandebug=False, unpacktempdir=None):
 	## only focus on initramfs that is also compressed for now
 	kernelfiles = set()
 	## known compressions for initramfs

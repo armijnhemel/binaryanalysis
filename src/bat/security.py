@@ -9,98 +9,78 @@ This file contains a few methods that can be useful for security scanning.
 '''
 
 import os, sys, zipfile, subprocess, re, cPickle, copy, tempfile
-import bat.batdb
 
 ## This method extracts the CRC32 checksums from the entries of the encrypted zip file and checks
 ## whether or not there are any files in the database with the same CRC32. If so, a known plaintext
 ## attack is possible to decrypt the archive and extract the key. The return value will be the files
 ## or checksums in the database for which there is a plaintext version available.
-def scanEncryptedZip(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
-	if not 'encrypted' in tags:
-		return
+def scanEncryptedZip(unpackreports, scantempdir, topleveldir, processors, scanenv, batcursors, batcons, scandebug=False, unpacktempdir=None):
+	## sanity check if the database really is there
+	if batcursors[0] == None:
+		return None
 
-	if not 'zip' in tags:
-		return
-
-	if not 'BAT_DB' in scanenv:
-		return
-
-	encryptedzip = zipfile.ZipFile(path, 'r')
-	encryptedinfos = encryptedzip.infolist()
-	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
-	c = batdb.getConnection(scanenv['BAT_DB'],scanenv)
-	cursor = c.cursor()
-	plaintexts = set()
-	query = batdb.getQuery("select sha256 from hashconversion where crc32=%s")
-	for e in encryptedinfos:
-		crc = e.CRC
-		## if the CRC is 0 it is a directory entry
-		if crc == 0:
+	encryptedfiles = []
+	for i in unpackreports:
+		if not 'checksum' in unpackreports[i]:
 			continue
-		cursor.execute(query, (str(crc),))
-		res = cursor.fetchone()
-		if res != None:
-			plaintexts.add(res[0])
-	cursor.close()
-	c.close()
-	if len(plaintexts) != 0:
-		return (['encryptedzip-attack'], plaintexts)
+		if not 'tags' in unpackreports[i]:
+			continue
+		if not 'encrypted' in unpackreports[i]['tags']:
+			continue
+		if not 'zip' in unpackreports[i]['tags']:
+                        continue
+		filehash = unpackreports[i]['checksum']
+		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
+			continue
+		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
+		leafreports = cPickle.load(leaf_file)
+		leaf_file.close()
+		if not 'encrypted' in leafreports['tags']:
+			continue
+		if not 'zip' in leafreports['tags']:
+			continue
+		encryptedfiles.append(i)
+
+	for i in encryptedfiles:
+		zippath = os.path.join(scantempdir, i)
+		encryptedzip = zipfile.ZipFile(zippath, 'r')
+		encryptedinfos = encryptedzip.infolist()
+
+		## TODO: grab cursor and connection from *somewhere*
+		conn = batcons[0]
+		cursor = batcursors[0]
+		plaintexts = set()
+		query = "select sha256 from hashconversion where crc32=%s"
+		for e in encryptedinfos:
+			crc = e.CRC
+			## if the CRC is 0 it is a directory entry
+			if crc == 0:
+				continue
+			cursor.execute(query, (str(crc),))
+			res = cursor.fetchone()
+			conn.commit()
+			if res != None:
+				plaintexts.add(res[0])
+		## now write back the results
+		if len(plaintexts) != 0:
+			leafreports['encryptedzip-plaintexts'] = plaintexts
+			leafreports['tags'].append('encryptedzip-attack')
+			unpackreports[i]['tags'].append('encryptedzip-attack')
+			leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'wb')
+			cPickle.dump(leafreports, leaf_file)
+			leaf_file.close()
 	return
 
-def encryptedZipSetup(scanenv, debug=False):
-	if not 'DBBACKEND' in scanenv:
-		return (False, None)
-	if scanenv['DBBACKEND'] == 'sqlite3':
-		return encryptedZipSetup_sqlite3(scanenv, debug)
-	elif scanenv['DBBACKEND'] == 'postgresql':
-		return encryptedZipSetup_postgresql(scanenv, debug)
-	return (False, None)
+def encryptedZipSetup(scanenv, cursor, conn, debug=False):
+	if cursor == None:
+		return (False, {})
+	cursor.execute("select table_name from information_schema.tables where table_type='BASE TABLE' and table_schema='public'")
+	tablenames = map(lambda x: x[0], cursor.fetchall())
+	conn.commit()
 
-def encryptedZipSetup_postgresql(scanenv, debug=False):
-	newenv = copy.deepcopy(scanenv)
-	batdb = bat.batdb.BatDb('postgresql')
-	conn = batdb.getConnection(None,scanenv)
-        if conn == None:
+        if not 'hashconversion' in tablenames:
 		return (False, None)
-	conn.close()
-	return (True, newenv)
-
-def encryptedZipSetup_sqlite3(scanenv, debug=False):
-	## first check if there is a database defined
-	if not 'BAT_DB' in scanenv:
-		return (False, None)
-	if not os.path.exists(scanenv['BAT_DB']):
-		return (False, None)
-
-	newenv = copy.deepcopy(scanenv)
-	batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
-	c = batdb.getConnection(scanenv['BAT_DB'])
-	cursor = c.cursor()
-
-	## then check the database schema to see if there are crc32 checksums
-	res = c.execute("select * from sqlite_master where type='table' and name='hashconversion'").fetchall()
-	if res == []:
-		cursor.close()
-		c.close()
-		return (False, None)
-
-	## then check if there is a column 'crc32'
-	res = c.execute("pragma table_info('hashconversion')").fetchall()
-	cursor.close()
-	c.close()
-	if res == []:
-		return (False, None)
-
-	process = False
-
-	for i in res:
-		if i[1] == 'crc32':
-			process = True
-			break
-	if not process:
-		return (False, None)
-		
-	return (True, newenv)
+	return (True, scanenv)
 
 ## experimental clamscan feature
 ## Always run freshclam before scanning to get the latest
@@ -123,7 +103,7 @@ def scanVirus(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempd
 ## Some of these can be detected by looking for typical shell invocation
 ## patterns, such as %s or * in combination with hard coded paths
 ## TODO: add more patterns
-def scanShellInvocations(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
+def scanShellInvocations(unpackreports, scantempdir, topleveldir, processors, scanenv, batcursors, batcons, scandebug=False, unpacktempdir=None):
 	for i in unpackreports:
 		## Limit to ELF binaries for now
 		if not 'tags' in unpackreports[i]:
@@ -201,7 +181,7 @@ def checkCertificate(filename, tags, blacklist=[], scanenv={}, scandebug=False, 
 ## This is implemented as an "aggregate scan". Running "John the Ripper"
 ## is an expensive operation and often there can be duplicate password
 ## or shadow files in firmwares.
-def crackPasswords(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
+def crackPasswords(unpackreports, scantempdir, topleveldir, processors, scanenv, batcursors, batcons, scandebug=False, unpacktempdir=None):
 	passwdfiles = []
 	for u in unpackreports.keys():
 		if not (os.path.basename(u) == 'shadow' or os.path.basename(u) == 'passwd'):
@@ -215,26 +195,18 @@ def crackPasswords(unpackreports, scantempdir, topleveldir, processors, scanenv,
 		else:
 			passwdfiles.append((u, 'passwd'))
 
-	(envresult, newenv) = crackPasswordsSetup(scanenv, scandebug)
-
-	if envresult:
-		newscanenv = newenv
-	else:
-		newscanenv = scanenv
-
 	db = False
-	if "BAT_SECURITY_DB" in newscanenv:
+	if "HAVE_SECURITY_DB" in scanenv:
 		db = True
-		batdb = batdb = bat.batdb.BatDb(scanenv['DBBACKEND'])
-		conn = batdb.getConnection(newscanenv['BAT_SECURITY_DB'],newscanenv)
-		cursor = conn.cursor()
+		conn = batcons[0]
+		cursor = batcursors[0]
 
 	seenhashes = set()
 	foundpasswords = []
 	hashestopassword = {}
 	hashestologins = {}
 
-	passwdquery = batdb.getQuery("select password from security_password where hash=%s")
+	passwdquery = "select password from security_password where hash=%s"
 	for i in passwdfiles:
 		(pwdfilename, pwdfiletype) = i
 		pwdfile = os.path.join(scantempdir, pwdfilename)
@@ -310,10 +282,6 @@ def crackPasswords(unpackreports, scantempdir, topleveldir, processors, scanenv,
 				counter += 1
 			os.unlink(tmppwdfile[1])
 
-	if db:
-		cursor.close()
-		conn.close()
-
 	res = set()
 	## now return the found login + password combinations
 	for f in foundpasswords:
@@ -323,44 +291,34 @@ def crackPasswords(unpackreports, scantempdir, topleveldir, processors, scanenv,
 	if len(res) != 0:
 		return {'passwords': res}
 			
-def crackPasswordsSetup(scanenv, debug=False):
-	if not 'DBBACKEND' in scanenv:
-		return (False, None)
-	if scanenv['DBBACKEND'] == 'sqlite3':
-		return crackPasswordsSetup_sqlite3(scanenv, debug)
-	#elif scanenv['DBBACKEND'] == 'postgresql':
-	#	return encryptedZipSetup_postgresql(scanenv, debug)
-	return (False, None)
-
-def crackPasswordsSetup_sqlite3(scanenv, debug=False):
-	## first check if there is a database defined
-	if not 'BAT_SECURITY_DB' in scanenv:
-		return (False, None)
-	if not os.path.exists(scanenv['BAT_SECURITY_DB']):
-		del newenv['BAT_SECURITY_DB']
-		return (True, newenv)
-
+def crackPasswordsSetup(scanenv, cursor, conn, debug=False):
+	## First check if there is a database and if it actually has the
+	## right tables. If so, then it can be used to retrieve cached
+	## results. If not, then there is no cache.
 	newenv = copy.deepcopy(scanenv)
-	c = sqlite3.connect(scanenv['BAT_SECURITY_DB'])
-	cursor = c.cursor()
-	## then check the database schema to see if the right table is there
-	res = c.execute("select * from sqlite_master where type='table' and name='security_password'").fetchall()
-	if res == []:
-		cursor.close()
-		c.close()
-		del newenv['BAT_SECURITY_DB']
+	if cursor == None:
+		if 'HAVE_SECURITY_DB' in newenv:
+			del newenv['HAVE_SECURITY_DB']
 		return (True, newenv)
-	cursor.close()
-	c.close()
-	## environment hasn't changed
-	return (False, None)
+	cursor.execute("select table_name from information_schema.tables where table_type='BASE TABLE' and table_schema='public'")
+	tablenames = map(lambda x: x[0], cursor.fetchall())
+	conn.commit()
+
+	## Now verify the names of the tables
+	if not 'security_password' in tablenames:
+		if 'HAVE_SECURITY_DB' in newenv:
+			del newenv['HAVE_SECURITY_DB']
+		return (True, newenv)
+	else:
+		newenv['HAVE_SECURITY_DB'] = 1
+		return (True, newenv)
 
 ## search all files based on the usernames and passwords found
 ## Of special interest are:
 ## * binaries
 ## * HTML pages
 ## * JavaScript files
-def searchLogins(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
+def searchLogins(unpackreports, scantempdir, topleveldir, processors, scanenv, batcursors, batcons, scandebug=False, unpacktempdir=None):
 	toplevelelem = None
 	for u in unpackreports.keys():
 		if 'tags' in unpackreports[u]:

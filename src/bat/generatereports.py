@@ -538,7 +538,7 @@ def generateunmatched((picklefile, pickledir, filehash, reportdir, compressed)):
 		os.unlink(fin.name)
 	os.unlink(os.path.join(pickledir, picklefile))
 
-def generatereports(unpackreports, scantempdir, topleveldir, processors, scanenv, scandebug=False, unpacktempdir=None):
+def generatereports(unpackreports, scantempdir, topleveldir, processors, scanenv, batcursors, batcons, scandebug=False, unpacktempdir=None):
 	if scanenv.has_key('overridedir'):
 		try:
 			del scanenv['BAT_REPORTDIR']
