@@ -137,7 +137,9 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, scanenv, debug=F
 				tablerows = tablerows + tablerowtemplate % ("Linux kernel", leafreports['kernelchecks']['version'])
 	if leafreports.has_key('tags'):
 		if leafreports['tags'] != []:
-			tablerows = tablerows + tablerowtemplate % ("Tags", reduce(lambda x, y: x + ", " + y, leafreports['tags']))
+			tags = leafreports['tags']
+			tags.sort()
+			tablerows = tablerows + tablerowtemplate % ("Tags", reduce(lambda x, y: x + ", " + y, tags))
 
 	if leafreports.has_key('ranking'):
 		(stringsres, dynamicres, variablepvs,language) = leafreports['ranking']
