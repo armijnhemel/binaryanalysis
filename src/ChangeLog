@@ -1,3 +1,7 @@
+2016-06-07:
+* remove SQLite support from scanning engine, use PostgreSQL only
+* bruteforcescan.py: simplify data structures for unpack scan processing
+
 2016-05-02:
 * identifier.py: fix return type for Linux kernel symbols
 * bruteforcescan.py: start on carving out data that could not be unpacked, but
