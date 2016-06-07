@@ -899,7 +899,9 @@ very extensive examples of setup hooks.
 \subsection{Database configuration}
 
 Historically BAT used SQLite as its database engine. Support for PostgreSQL was
-added as an alternative later. Since BAT 26 only PostgreSQL is supported.
+added as an alternative later. Since BAT 26 only PostgreSQL is supported in the
+scanner, while the database creation script still uses SQLite. This will be
+changed in BAT 27.
 
 For PostgreSQL a few variables have to be set to be able to connect with the
 database server, namely the username, password and database name:
@@ -910,7 +912,8 @@ postgresql_password = bat
 postgresql_db       = bat
 \end{verbatim}
 
-Optionally a port and host can be set too:
+Optionally a port and host can be set too if another port and/or host need to
+be used:
 
 \begin{verbatim}
 postgresql_host     = 127.0.0.1
@@ -919,13 +922,16 @@ postgresql_port     = 5432
 
 Depending on the version of \texttt{python-psycopg2} it could be that
 \texttt{postgresql\_host} and \texttt{postgresql\_port} both have to be
-specified. For example on CentOS 6.x both parameters have to be set.
+specified. For example on CentOS 6.x both parameters have to be set when using
+a different port, even if the database resides on the local machine.
 
 \section{Analyser internals}
 
 The analyser was written with extensibility in mind: new file systems or
 variants of old ones tend to appear regularly (for example: there are at
-least 5 or more versions of SquashFS with LZMA compression out there).
+least 5 or more versions of SquashFS with LZMA compression out there), and
+sometimes it is needed to plug in a new unpacker for a file system or
+compressed file type.
 
 \subsection{Code organisation}
 
@@ -1160,14 +1166,14 @@ other files were carved, will be scanned by the leaf scans.
 
 \subsubsection{Writing a leaf scan}
 
-The leaf scans have a simple interface. There are six parameters passed to the
-scan, namely the absolute path of the file, the tags of the file, an optional
-blacklist with byte ranges that should not be scanned, an optional list of
-environment variables and an optional name of a directory for writing temporary
-results. For example:
+The leaf scans have a simple interface. There are eight parameters passed to the
+scan, namely the absolute path of the file, the tags of the file, a database
+cursor and connection, an optional blacklist with byte ranges that should not
+be scanned, an optional list of environment variables and an optional name of a
+directory for writing temporary results. For example:
 
 \begin{verbatim}
-def leafScan(path, tags, blacklist=[], scanenv={},
+def leafScan(path, tags, cursor, conn, blacklist=[], scanenv={},
                 debug=False, unpacktempdir=None):
         ## code goes here
 \end{verbatim}
@@ -1239,6 +1245,10 @@ the scan
 \item \texttt{topleveldir} is the location of the top level directory of the
 scan
 \item \texttt{scanenv} is a dictionary of environment variables
+\item \texttt{batcursors} is a list of PostgreSQL database cursors. If no
+database is used this list will be empty.
+\item \texttt{batcons} is a list of PostgreSQL database connections. If no
+database is used this list will be empty.
 \item \texttt{debug} is an environment variable that can be used to optionally
 set the scan in debugging mode so it can print more information on standard
 error. By default it is set to \texttt{False}.
@@ -1630,10 +1640,10 @@ and change one hardcoded path that points to the main Ninka script in
 
 \subsection{Converting the SQLite database to PostgreSQL}
 
-The database creation script outputs the database in SQLite format. It is
-possible to use PostgreSQL as well. To convert the database from SQLite to
-PostgreSQL there is helper script called \texttt{bat-sqlitetopostgresql.py}
-that can help convert the database from SQLite to PostgreSQL.
+The database creation script currently outputs the database in SQLite format.
+To convert the database from SQLite to PostgreSQL there is helper script called
+\texttt{bat-sqlitetopostgresql.py} that can help convert the database from
+SQLite to PostgreSQL.
 
 A set of statements to create the database in PostgreSQL can be found in the
 files \texttt{maintenance/postgresql-table.sql} and
