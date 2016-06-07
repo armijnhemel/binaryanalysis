@@ -9,30 +9,37 @@ This script tries to analyse binary blobs, using a "brute force" approach
 
 The script has a few separate scanning phases:
 
-1. marker scanning phase, to search for specific markers (compression, file systems,
-media formats), if available. This information is later used to filter scans and to
-carve files.
+1. marker scanning phase, to search for specific markers (compression, file
+systems, media formats), if available. This information is later used to filter
+scans and to find the start/end of embedded files and carve them out from a
+larger binary blob.
 
-2. prerun phase for tagging files. This is a first big rough sweep of determining what
-files are to prevent spending too much time on useless scanning in the following phases.
-Some things that are tagged here are text files, XML files, various graphics formats and
-some other files.
+2. prerun phase for tagging files. This is a first big rough sweep to determine
+what files are to prevent spending too much time on useless scanning in the
+following phases.  Some things that tagged in this phase (by some of the BAT
+default scans) are text files, XML files, various graphics formats and some
+other files.
 
-3. unpack phase for unpacking files. In this phase several methods for unpacking files are
-run, using the information from the marker scanning phase (if a file system file or
-compressed file actually uses markers, which is not always the case). Also some simple
-metadata about files is recorded in this phase. This method runs recursively: if a file
-system was found and unpacked all the scans from steps 1, 2, 3 are run on the files that
-were unpacked.
+3. unpack phase for unpacking files. In this phase several methods for
+unpacking files are run, using the information from the marker scanning phase
+if applicable. Also some simple metadata about files is recorded in this phase.
+This method runs recursively: if a file system was found and unpacked all the
+scans from steps 1, 2, 3 are run on the files that were unpacked.
 
-4. individual file scanning phase. Here each file will be inspected individually. Based on
-the configuration that was given this could be basically anything.
+4. individual file scanning phase. In this phase each file will be inspected
+individually. There are many different scans in BAT, like extraction of
+markers, and so on.
 
-5. postrun phase. In this phase methods that are not necessary for generating output, but
-which should be run anyway, are run. Examples are generating pictures or running statistics.
+5. aggregate file scanning phase. In this phase all files are inspected in
+context, because some information only makes sense in context, for example
+ELF dynamic linking analysis.
 
-6. packing phase. In this phase several datafiles, plus the state of the running program,
-are packed in a tar file.
+6. postrun phase. In this phase methods that just process results of earlier
+scans, but which do not modify the results or add to the results are run, such
+as generating pictures or creating reports.
+
+7. packing phase. In this phase several datafiles, plus the state of the
+running program, are packed in a tar file.
 '''
 
 import sys, os, os.path, magic, hashlib, subprocess, tempfile, shutil, stat, multiprocessing, cPickle, glob, tarfile, copy, gzip, Queue
@@ -44,39 +51,18 @@ from multiprocessing import Process, Lock
 from multiprocessing.sharedctypes import Value, Array
 import psycopg2
 
+## load the magic library. Some versions of libmagic are too old
+## to have the NO_CHECK_CDF magic flag, which might be problematic
+## with some files.
 try:
 	ms = magic.open(magic.MAGIC_NO_CHECK_CDF|magic.MAGIC_NONE)
 except:
 	ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
-## convenience method to merge ranges that overlap in a blacklist
-## We do multiple passes to make sure everything is correctly merged
-## Example:
-## [(1,3), (2,4), (5,7), (3,7)] would result in [(1,7)]
-def mergeBlacklist(blacklist):
-	if len(blacklist) == 0:
-		return []
-	blacklistold = []
-	while (blacklistold != blacklist):
-		res = []
-		res.append(blacklist[0])
-		for i in xrange(1,len(blacklist)):
-			lower = res[-1][0]
-			upper = res[-1][1]
-			if upper >= blacklist[i][0] or lower >= blacklist[i][0]:
-				if upper <= blacklist[i][1]:
-					upper = blacklist[i][1]
-				if lower >= blacklist[i][0]:
-					lower = blacklist[i][0]
-				res[-1] = (lower,upper)
-				continue
-			## no overlapping ranges, so just append
-			res.append(blacklist[i])
-		blacklistold = blacklist
-		blacklist = res
-	return blacklist
-
+## Method to run a setup scan. Returns the result of the setup
+## scan, which is in the form of a tuple (boolean, environment).
+## The environment returned is always a dictionary.
 def runSetup(setupscan, usedatabase, cursor, conn, debug=False):
 	module = setupscan['module']
 	method = setupscan['setup']
@@ -94,6 +80,7 @@ def runSetup(setupscan, usedatabase, cursor, conn, debug=False):
 	scanres = eval("bat_%s(setupscan['environment'], cursor, conn, debug=debug)" % (method))
 	return scanres
 
+## convenience method to run the genericMarkerSearch in chunks if needed
 def paralleloffsetsearch((filedir, filename, magicscans, optmagicscans, offset, length)):
 	return prerun.genericMarkerSearch(os.path.join(filedir, filename), magicscans, optmagicscans, offset, length)
 
@@ -546,7 +533,6 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 				if len(scanres) == 4:
 					(diroffsets, blacklist, scantags, hints) = scanres
 					tags = list(set(tags + scantags))
-					#blacklist = mergeBlacklist(blacklist)
 					if extractor.inblacklist(0, blacklist) == filesize:
 						blacklisted = True
 					for diroffset in diroffsets:
