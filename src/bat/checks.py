@@ -90,7 +90,7 @@ def genericSearch(filename, markerDict, blacklist=[], unpacktempdir=None):
 ## the dynamic linker configuration on the device. With some mixing and matching it is
 ## nearly always to determine which library in which path is used, since most installations
 ## don't change the default search paths.
-def searchDynamicLibs(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+def searchDynamicLibs(filename, tags, cursor, conn, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	if not 'elf' in tags:
 		return
 	libs = []
@@ -108,7 +108,7 @@ def searchDynamicLibs(filename, tags, blacklist=[], scanenv={}, scandebug=False,
 ## This method uses readelf to determine the architecture of the executable file.
 ## This is necessary because sometimes leftovers from different products (and
 ## different architectures) can be found in one firmware.
-def scanArchitecture(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+def scanArchitecture(filename, tags, cursor, conn, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	if not 'elf' in tags:
 		return
 	p = subprocess.Popen(['readelf', '-h', "%s" % (filename,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -121,7 +121,7 @@ def scanArchitecture(filename, tags, blacklist=[], scanenv={}, scandebug=False, 
 
 ## search markers for various open source programs
 ## This search is not accurate, but might come in handy in some situations
-def searchMarker(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+def searchMarker(filename, tags, cursor, conn, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	markerStrings = {
              'loadlin': [ 'Ooops..., size of "setup.S" has become too long for LOADLIN,'
 			, 'LOADLIN started from $'
@@ -173,7 +173,7 @@ def searchMarker(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpa
 ## What actually do these dependencies mean?
 ## Are they dependencies of the installer itself, or of the programs that are
 ## installed by the installer?
-def searchWindowsDependencies(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+def searchWindowsDependencies(filename, tags, cursor, conn, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	## first determine if we are dealing with a MS Windows executable
 	ms = magic.open(magic.MAGIC_NONE)
 	ms.load()
@@ -191,7 +191,7 @@ def searchWindowsDependencies(filename, tags, blacklist=[], scanenv={}, scandebu
 '''
 
 ## method to extract meta information from PDF files
-def scanPDF(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+def scanPDF(filename, tags, cursor, conn, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	## Only consider whole PDF files. If anything has been carved from
 	## it, skip it. Blacklists are a good indicator.
 	if blacklist != []:
@@ -239,7 +239,7 @@ def scanPDF(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpacktem
 ######################################
 ## This should only be used as an indicator for further investigation,
 ## never as proof that a binary is actually licensed under a license!
-def scanLicenses(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+def scanLicenses(filename, tags, cursor, conn, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	licenseidentifiers = {}
 
 	## identifiers for any GNU license (could apply to multiple licenses)
@@ -305,7 +305,7 @@ def scanLicenses(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpa
 ## scan for mentions of several forges
 ## Some of the URLs of the forges no longer work or are redirected, but they
 ## might still pop up in binaries.
-def scanForges(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+def scanForges(filename, tags, cursor, conn, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	forgeidentifiers = {}
 
 	forgeidentifiers['sourceforge.net'] = ["sourceforge.net"]

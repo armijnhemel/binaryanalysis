@@ -691,7 +691,7 @@ def leafScan(scanqueue, reportqueue, scans, processid, llock, unpacktempdir, top
 				exec "from %s import %s as bat_%s" % (module, method, method)
 			except Exception, e:
 				continue
-			res = eval("bat_%s(filetoscan, tags, blacklist, leafscan['environment'], scandebug=scandebug, unpacktempdir=unpacktempdir)" % (method))
+			res = eval("bat_%s(filetoscan, tags, cursor, conn, blacklist, leafscan['environment'], scandebug=scandebug, unpacktempdir=unpacktempdir)" % (method))
 			if res != None:
 				(nt, leafres) = res
 				reports[leafscan['name']] = leafres

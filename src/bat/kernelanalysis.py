@@ -7,7 +7,7 @@
 import os, sys, string, re, subprocess, cPickle, tempfile, shutil
 import extractor
 
-def kernelChecks(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+def kernelChecks(path, tags, cursor, conn, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	results = {}
         try:
                 kernelbinary = open(path, 'rb')
@@ -113,7 +113,7 @@ def findRedBoot(lines):
 	return lines.find("No RedBoot partition table detected in %s")
 
 ## analyse a kernel module by analysing output from readelf
-def analyseKernelModule(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+def analyseKernelModule(path, tags, cursor, conn, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	if not "elfrelocatable" in tags:
 		return None
 	newtags = []

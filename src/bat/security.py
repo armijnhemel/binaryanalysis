@@ -85,8 +85,8 @@ def encryptedZipSetup(scanenv, cursor, conn, debug=False):
 ## experimental clamscan feature
 ## Always run freshclam before scanning to get the latest
 ## virus signatures!
-def scanVirus(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
-	p = subprocess.Popen(['clamscan', "%s" % (path,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+def scanVirus(filepath, tags, cursor, conn, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+	p = subprocess.Popen(['clamscan', "%s" % (filepath,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode == 0:
                	return
@@ -94,7 +94,7 @@ def scanVirus(path, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempd
 		## Oooh, virus found!
 		viruslines = stanout.split("\n")
 		## first line contains the report:
-		virusname = viruslines[0].strip()[len(path) + 2:-6]
+		virusname = viruslines[0].strip()[len(filepath) + 2:-6]
 		return (['virus'], virusname)
 
 ## experimental feature to detect possible smells in binaries
@@ -142,7 +142,7 @@ def scanShellInvocations(unpackreports, scantempdir, topleveldir, processors, sc
 
 ## method to check if a file is an OpenSSH public or private key
 ## uses openssl to check
-def checkOpenSSHKeys(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+def checkOpenSSHKeys(filename, tags, cursor, conn, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	if not 'text' in tags:
 		return
 
@@ -158,7 +158,7 @@ def checkOpenSSHKeys(filename, tags, blacklist=[], scanenv={}, scandebug=False, 
 		return (['privatekey'], None)
 
 ## method to check if a file is a certificate
-def checkCertificate(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+def checkCertificate(filename, tags, cursor, conn, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	if not 'text' in tags:
 		return
 

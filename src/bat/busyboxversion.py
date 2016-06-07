@@ -11,7 +11,7 @@ import sys, os, tempfile, copy
 from optparse import OptionParser
 import busybox, extractor
 
-def busybox_version(filename, tags, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+def busybox_version(filename, tags, cursor, conn, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	try:
                 filesize = os.stat(filename).st_size
 		## if the whole file is blacklisted, we don't have to scan
@@ -63,7 +63,7 @@ def main(argv):
 	(options, args) = parser.parse_args()
 	if options.bb == None:
 		parser.error("Path to BusyBox binary needed")
-	(res, version) = busybox_version(options.bb, [])
+	(res, version) = busybox_version(options.bb, None, None, [])
 
 	if version != None:
 		print version
