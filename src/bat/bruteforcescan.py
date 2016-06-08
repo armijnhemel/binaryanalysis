@@ -138,8 +138,9 @@ def gethash(path, filename, hashtype="sha256"):
 	return hashresults
 
 ## scan a single file, possibly unpack and recurse
-def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, prerunmagic, magicscans, optmagicscans, processid, hashdict, blacklistedfiles, llock, template, unpacktempdir, tempdir, outputhash, cursor, conn, sourcecodequery, dumpoffsets, offsetdir, compressed):
+def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, prerunmagic, magicscans, optmagicscans, processid, hashdict, blacklistedfiles, llock, template, unpacktempdir, tempdir, outputhash, cursor, conn, scansourcecode, dumpoffsets, offsetdir, compressed):
 	lentempdir = len(tempdir)
+	sourcecodequery = "select checksum from processed_file where checksum=%s limit 1"
 
 	## import all methods defined in the scans
 	blacklistscans = set()
@@ -182,13 +183,18 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 
 		## use libmagic to find out the 'magic' of the file for reporting
 		## It cannot properly handle file names with 'exotic' encodings,
-		## so wrap it in a try statement.
+		## so wrap it in a try statement and provide a default value of
+		## 'data'.
 		magic = 'data'
 		try:
 			magic = ms.file(filetoscan)
 		except Exception, e:
+			## libmagic could not handle it because of an encoding
+			## issue, so try to workaround the problem. In case
+			## of a regular file (anything but a link) copy it to a
+			## temporary location with a file name that libmagic will
+			## be able to handle.
 			if not os.path.islink(filetoscan):
-				## first copy the file to a temporary location
 				tmpmagic = tempfile.mkstemp()
 				os.fdopen(tmpmagic[0]).close()
 				shutil.copy(filetoscan, tmpmagic[1])
@@ -218,7 +224,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 			scanqueue.task_done()
 			continue
 
-		## no use checking pipes, sockets, device files, etcetera
+		## no use to further check pipes, sockets, device files, etcetera
 		if not os.path.isfile(filetoscan) and not os.path.isdir(filetoscan):
 			for l in leaftasks:
 				leafqueue.put(l)
@@ -226,6 +232,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 			scanqueue.task_done()
 			continue
 
+		## store the size of the file
 		filesize = os.lstat(filetoscan).st_size
 		unpackreports['size'] = filesize
 
@@ -260,17 +267,21 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 		## scanned, or is in the process of being scanned.
 		llock.acquire()
 		if filehash in hashdict:
-			## if the hash is already there, return
+			## if the hash is already there mark it as a
+			## duplicate and stop scanning.
 			unpackreports['tags'] = ['duplicate']
 			reportqueue.put({relfiletoscan: unpackreports})
 			llock.release()
 			scanqueue.task_done()
 			continue
 		else:
+			## add the file to the shared dictionary
 			hashdict[filehash] = relfiletoscan
 			llock.release()
 
-		if cursor != None:
+		## look up the file in the BAT database to see if it is
+		## a known source code file.
+		if scansourcecode:
 			cursor.execute(sourcecodequery, (filehash,))
 			fetchres = cursor.fetchone()
 			if fetchres != None:
@@ -372,7 +383,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 						break
 
 		if not knownfile:
-			## scan for markers.
+			## scan for markers in case they are not already known
 			if offsets == {}:
 				offsets =  prerun.genericMarkerSearch(filetoscan, magicscans, optmagicscans)
 
@@ -1448,11 +1459,11 @@ def runscan(scans, binaries):
 
 	## create a bunch of connections and cursors in case
 	## the database is used.
+	## TODO: make configurable
 	usedatabase = True
 
 	batcons = []
 	batcursors = []
-	sourcecodequery = "select checksum from processed_file where checksum=%s limit 1"
 
 	scanenv = copy.deepcopy(scans['batconfig']['environment'])
 	if usedatabase:
@@ -1613,6 +1624,10 @@ def runscan(scans, binaries):
 						knownextension = True
 						break
 
+		## In case the extension is not known (and it is not possible to
+		## take a shortcut) try to do the marker search for the top level
+		## file in parallel if the file is big enough. For very big files
+		## this can save quite a bit of time.
 		if not knownextension:
 			offsetcutoff = scans['batconfig']['markersearchminimum']
 			if os.stat(scan_binary).st_size > offsetcutoff:
@@ -1632,6 +1647,7 @@ def runscan(scans, binaries):
 				for i in offsets:
 					offsets[i] = sorted(list(set(offsets[i])))
 
+		## fill the scan task list with the first entry
 		scantasks = [(scantempdir, scan_binary_basename, len(scantempdir), tmpdebug, tags, hints, offsets)]
 
 		template = scans['batconfig']['template']
@@ -1640,6 +1656,8 @@ def runscan(scans, binaries):
 			print >>sys.stderr, "PRERUN UNPACK BEGIN", datetime.datetime.utcnow().isoformat()
 			sys.stderr.flush()
 
+		## create the directory to dump offsets in case they need
+		## to be dumped for later reference.
 		offsetdir = os.path.join(topleveldir, "offsets")
 		if scans['batconfig']['dumpoffsets']:
 			os.makedirs(offsetdir)
@@ -1656,15 +1674,14 @@ def runscan(scans, binaries):
 		hashdict = scanmanager.dict()
 		blacklistedfiles = []
 		map(lambda x: scanqueue.put(x), scantasks)
-		cursor = None
 		for i in range(0,processamount):
-			if scansourcecode:
+			if usedatabase:
 				cursor = batcursors[i]
 				conn = batcons[i]
 			else:
 				cursor = None
 				conn = None
-			p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, blacklistedfiles, lock, template, unpacktempdir, scantempdir, outputhash, cursor, conn, sourcecodequery, scans['batconfig']['dumpoffsets'], offsetdir, compressed))
+			p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, blacklistedfiles, lock, template, unpacktempdir, scantempdir, outputhash, cursor, conn, scansourcecode, scans['batconfig']['dumpoffsets'], offsetdir, compressed))
 			processpool.append(p)
 			p.start()
 
@@ -1784,7 +1801,6 @@ def runscan(scans, binaries):
 				hashdict = scanmanager.dict()
 				blacklistedfiles = []
 				map(lambda x: scanqueue.put(x), leaftasks_tmp)
-				cursor = None
 				for i in range(0,processamount):
 					if scansourcecode:
 						cursor = batcursors[i]
