@@ -152,7 +152,8 @@ def main(argv):
 		writeconfig['outputfile'] = outputfile
 		scantasks.append((scanfile, writeconfig))
 
-	bat.bruteforcescan.runscan(scans, scantasks)
+	if scantasks != []:
+		bat.bruteforcescan.runscan(scans, scantasks)
 
 if __name__ == "__main__":
         main(sys.argv)
