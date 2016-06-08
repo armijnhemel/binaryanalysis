@@ -1,6 +1,12 @@
+2016-06-08:
+* bat-scan: add sanity check, don't scan if there are no tasks (saves running
+set up code)
+* bruteforcescan.py: remove some unused code, better document code
+
 2016-06-07:
 * remove SQLite support from scanning engine, use PostgreSQL only
 * bruteforcescan.py: simplify data structures for unpack scan processing
+* bat-scan.config: simplify configuration file, add some saner defaults
 
 2016-05-02:
 * identifier.py: fix return type for Linux kernel symbols
