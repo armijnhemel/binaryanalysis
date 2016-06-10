@@ -2,7 +2,7 @@
 #-*- coding: utf-8 -*-
 
 ## Binary Analysis Tool
-## Copyright 2014-2015 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2014-2016 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 import os, os.path, sys, subprocess, copy, cPickle
@@ -29,7 +29,7 @@ def fixduplicates(unpackreports, scantempdir, topleveldir, processors, scanenv, 
 	seendupe = False
 
 	for i in unpackreports:
-		if not unpackreports[i].has_key('checksum'):
+		if not 'checksum' in unpackreports[i]:
 			continue
 		filehash = unpackreports[i]['checksum']
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
@@ -55,7 +55,7 @@ def fixduplicates(unpackreports, scantempdir, topleveldir, processors, scanenv, 
 		dupehashes = {}
 		for i in dupefiles:
 			filehash = unpackreports[i]['checksum']
-			if dupehashes.has_key(filehash):
+			if filehash in dupehashes:
 				dupehashes[filehash].append(i)
 			else:
 				dupehashes[filehash] = [i]
