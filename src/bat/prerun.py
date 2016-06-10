@@ -45,7 +45,7 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, offset=0, length=0,
 		## use a set to have automatic deduplication. Each offset
 		## should be in the list only once.
 		offsets[key] = set()
-		if not fsmagic.fsmagic.has_key(key):
+		if not key in fsmagic.fsmagic:
 			continue
 		bufkeys.append((key,fsmagic.fsmagic[key]))
 	while databuffer != '':
@@ -583,7 +583,7 @@ def verifySqlite3(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug
 		return newtags
 	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags:
 		return newtags
-	if not offsets.has_key('sqlite3'):
+	if not 'sqlite3' in offsets:
 		return newtags
 	if not 0 in offsets['sqlite3']:
 		return newtags
@@ -644,7 +644,7 @@ def verifyMP4(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		return newtags
 	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags or 'audio' in tags:
 		return newtags
-	if not offsets.has_key('mp4'):
+	if not 'mp4' in offsets:
 		return newtags
 	if len(offsets['mp4']) == 0:
 		return newtags
@@ -689,7 +689,7 @@ def verifyOTF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		return newtags
 	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags:
 		return newtags
-	if not offsets.has_key('otf'):
+	if not 'otf' in offsets:
 		return newtags
 	if not 0 in offsets['otf']:
 		return newtags
@@ -1131,7 +1131,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 ## simple helper method to verify if a file is a valid Java class file
 def verifyJavaClass(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
-	if not offsets.has_key('java'):
+	if not 'java' in offsets:
 		return newtags
 	if offsets['java'] == []:
 		return newtags
@@ -1184,7 +1184,7 @@ def verifyJavaClass(filename, tempdir=None, tags=[], offsets={}, scanenv={}, deb
 ## Method to verify if a Windows executable is a valid 7z file
 def verifyExe(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
-	if not offsets.has_key('pe'):
+	if not 'pe' in offsets:
 		return newtags
 	## a PE file *has* to start with the identifier 'MZ'
 	if offsets['pe'][0] != 0:
@@ -1203,6 +1203,7 @@ def verifyExe(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	## run 7z l on the file and see if the file size matches 'Physical Size' in the output of 7z
 	return newtags
 
+## Check if a file is a Vim swap file
 def verifyVimSwap(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if filename.endswith('.swp'):
@@ -1213,6 +1214,9 @@ def verifyVimSwap(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug
 			newtags.append('vimswap')
 	return newtags
 
+## simplistic check for timezone data. This should be enough for
+## most Linux based machines to filter the majority of the
+## timezone files without any extra checks.
 def verifyTZ(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if "zoneinfo" in filename:
@@ -1220,13 +1224,12 @@ def verifyTZ(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fals
 		databuffer = datafile.read(4)
 		datafile.close()
 		if databuffer == 'TZif':
-			## simplistic check for timezone data. This should be enough for
-			## most Linux based machines to filter the majority of the
-			## timezone files without any extra checks.
 			newtags.append('timezone')
 			newtags.append('resource')
 	return newtags
 
+## verify if a file is in Intel HEX format and tag it is as such.
+## This will only be done if the *entire* file is in Intel HEX format.
 def verifyIHex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not 'text' in tags:
@@ -1260,7 +1263,7 @@ def verifyIHex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fa
 	return newtags
 
 ## verify Apple's AppleDouble encoded files (resource forks)
-## http://tools.ietf.org/html/rfc1740 -- Appendix A & B -- Appendix A & B -- Appendix A & B -- Appendix A & B -- Appendix A & B
+## http://tools.ietf.org/html/rfc1740 -- Appendix A & B
 def verifyResourceFork(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not 'binary' in tags:
