@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2009-2015 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2009-2016 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -46,7 +46,6 @@ def scanEncryptedZip(unpackreports, scantempdir, topleveldir, processors, scanen
 		encryptedzip = zipfile.ZipFile(zippath, 'r')
 		encryptedinfos = encryptedzip.infolist()
 
-		## TODO: grab cursor and connection from *somewhere*
 		conn = batcons[0]
 		cursor = batcursors[0]
 		plaintexts = set()
