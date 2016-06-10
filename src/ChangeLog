@@ -1,3 +1,6 @@
+2016-06-10:
+* bruteforcescan.py: remove unnecessary code, better document flow
+
 2016-06-08:
 * bat-scan: add sanity check, don't scan if there are no tasks (saves running
 set up code)
