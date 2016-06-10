@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2013-2015 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2013-2016 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 import os, os.path, sys
@@ -11,7 +11,7 @@ This method can be used to prune scans, by for example ignoring all graphics fil
 '''
 
 def prunefiles(unpackreports, scantempdir, topleveldir, processors, scanenv, batcursors, batcons, scandebug=False, unpacktempdir=None):
-	if not scanenv.has_key("PRUNE_TAGS"):
+	if not "PRUNE_TAGS" in scanenv:
 		return
 	prunes = scanenv['PRUNE_TAGS']
 	prunetags = set(prunes.split(','))
