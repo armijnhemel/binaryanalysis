@@ -42,14 +42,21 @@ as generating pictures or creating reports.
 running program, are packed in a tar file.
 '''
 
-import sys, os, os.path, magic, hashlib, subprocess, tempfile, shutil, stat, multiprocessing, cPickle, glob, tarfile, copy, gzip, Queue
+## import a few standard Python modules
+import sys, os, os.path, hashlib, subprocess, tempfile, shutil, stat, multiprocessing, cPickle, glob, tarfile, copy, gzip, Queue
 from optparse import OptionParser
 import datetime, re, struct
-import extractor
-import prerun, fsmagic
 from multiprocessing import Process, Lock
 from multiprocessing.sharedctypes import Value, Array
+
+## import the Python magic module
+import magic
+
+## import the PostgreSQL connection module
 import psycopg2
+
+## finally import a few BAT specific modules
+import extractor, prerun, fsmagic
 
 ## load the magic library. Some versions of libmagic are too old
 ## to have the NO_CHECK_CDF magic flag, which might be problematic
@@ -164,7 +171,6 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 	## grab tasks from the queue continuously until there are no more tasks
 	while True:
 		## reset the reports, blacklist, offsets and tags for each new scan
-		leaftasks = []
 		blacklist = []
 		## set timeout for scanning to a month
 		## TODO: make configurable
@@ -178,6 +184,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 		if relfiletoscan.startswith('/'):
 			relfiletoscan = relfiletoscan[1:]
 
+		## initialize the result dictionary
 		unpackreports = {}
 		unpackreports['name'] = filename
 
@@ -215,19 +222,18 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 		unpackreports['path'] = storepath
 		unpackreports['realpath'] = dirname
 
+
+		## if the file is a symbolic link, then there is not much
+		## to report about it, so continue.
 		if os.path.islink(filetoscan):
 			tags.append('symlink')
 			unpackreports['tags'] = tags
-			for l in leaftasks:
-				leafqueue.put(l)
 			reportqueue.put({relfiletoscan: unpackreports})
 			scanqueue.task_done()
 			continue
 
 		## no use to further check pipes, sockets, device files, etcetera
 		if not os.path.isfile(filetoscan) and not os.path.isdir(filetoscan):
-			for l in leaftasks:
-				leafqueue.put(l)
 			reportqueue.put({relfiletoscan: unpackreports})
 			scanqueue.task_done()
 			continue
@@ -240,8 +246,6 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 		if filesize == 0:
 			tags.append('empty')
 			unpackreports['tags'] = tags
-			for l in leaftasks:
-				leafqueue.put(l)
 			reportqueue.put({relfiletoscan: unpackreports})
 			scanqueue.task_done()
 			continue
@@ -257,8 +261,6 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 		if filehash in blacklistedfiles:
 			tags.append('blacklisted')
 			unpackreports['tags'] = tags
-			for l in leaftasks:
-				leafqueue.put(l)
 			reportqueue.put({relfiletoscan: unpackreports})
 			scanqueue.task_done()
 			continue
@@ -638,13 +640,10 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 		unpackreports['tags'] = tags
 		if not unpacked and 'temporary' in tags:
 			os.unlink(filetoscan)
-			for l in leaftasks:
-				leafqueue.put(l)
 			reportqueue.put({relfiletoscan: unpackreports})
 		else:
-			leaftasks.append((filetoscan, tags, blacklist, filehash, filesize))
-			for l in leaftasks:
-				leafqueue.put(l)
+			## finally add the file to the queue for leaf tasks
+			leafqueue.put((filetoscan, tags, blacklist, filehash, filesize))
 			reportqueue.put({relfiletoscan: unpackreports})
 		scanqueue.task_done()
 
@@ -1751,6 +1750,8 @@ def runscan(scans, binaries):
 		if scans['batconfig']['reportendofphase']:
 			print "PRERUN UNPACK END %s" % scan_binary_basename, datetime.datetime.utcnow().isoformat()
 
+		## Now the next phase starts, namely scanning each individual file. This
+		## is done once per unique file (based on checksum).
 		if debug:
 			print >>sys.stderr, "LEAF BEGIN", datetime.datetime.utcnow().isoformat()
 		tagdict = {}
@@ -1780,6 +1781,8 @@ def runscan(scans, binaries):
 					if 'leaf' in debugphases:
 						parallel = False
 
+			## create the directory where result files will be stored if
+			## it does not already exist.
 			if not os.path.exists(os.path.join(topleveldir, 'filereports')):
 				os.mkdir(os.path.join(topleveldir, 'filereports'))
 
@@ -1840,11 +1843,9 @@ def runscan(scans, binaries):
 			if unpacksha256 in tagdict:
 				if 'tags' in unpackreports[i]:
 					unpackreports[i]['tags'] = list(set(unpackreports[i]['tags'] + tagdict[unpacksha256]))
-		if debug:
-			print >>sys.stderr, "LEAF END", datetime.datetime.utcnow().isoformat()
-		if scans['batconfig']['reportendofphase']:
-			print "LEAF END %s" % scan_binary_basename, datetime.datetime.utcnow().isoformat()
 
+		## make sure that all the tags are in sync between the
+		## unpackreports and the leafreports.
 		if 'checksum' in unpackreports[scan_binary_basename]:
 			filehash = unpackreports[scan_binary_basename]['checksum']
 			leaf_file_path = os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)
@@ -1862,6 +1863,12 @@ def runscan(scans, binaries):
 			leafreports = cPickle.dump(leafreports, leaf_file)
 			leaf_file.close()
 
+		if debug:
+			print >>sys.stderr, "LEAF END", datetime.datetime.utcnow().isoformat()
+		if scans['batconfig']['reportendofphase']:
+			print "LEAF END %s" % scan_binary_basename, datetime.datetime.utcnow().isoformat()
+
+		## Scan the files in context
 		if debug:
 			print >>sys.stderr, "AGGREGATE BEGIN", datetime.datetime.utcnow().isoformat()
 		if scans['aggregatescans'] != []:
