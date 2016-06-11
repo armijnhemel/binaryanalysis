@@ -389,19 +389,21 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 
 		if dumpoffsets:
 			## write pickles with offsets to disk
+			offsetpicklename = os.path.join(offsetdir, '%s-offsets.pickle' % filehash)
 			if compressed:
-				offsetpicklename = os.path.join(offsetdir, '%s-offsets.pickle.gz' % filehash)
+				checkoffsetpicklename = "%s.gz" % offsetpicklename
 			else:
-				offsetpicklename = os.path.join(offsetdir, '%s-offsets.pickle' % filehash)
+				checkoffsetpicklename = offsetpicklename
 			try:
-				os.stat(offsetpicklename)
+				os.stat(checkoffsetpicklename)
 			except:
 				picklefile = open(offsetpicklename, 'wb')
 				cPickle.dump(offsets, picklefile)
 				picklefile.close()
+
 				if compressed:
-					fin = open(picklefile, 'rb')
-					fout = gzip.open("%s.gz" % infile, 'wb')
+					fin = open(offsetpicklename, 'rb')
+					fout = gzip.open("%s.gz" % offsetpicklename, 'wb')
 					fout.write(fin.read())
 					fout.close()
 					fin.close()
