@@ -1337,15 +1337,31 @@ def writeDumpfile(unpackreports, scans, processamount, outputfile, configfile, t
 	dumpfile = tarfile.open(outputfile, 'w:gz')
 	oldcwd = os.getcwd()
 	os.chdir(tempdir)
-	scrub = False
 	if scans['batconfig']['packconfig']:
-		shutil.copy(configfile, '.')
+		if scans['batconfig']['scrub'] != []:
+			## pretty print the configuration file, scrubbed of
+			## any of the values in 'scrub' (example: database
+			## credentials)
+			tmpscrub = tempfile.mkstemp()
+			configlines = open(configfile, 'rb').readlines()
+			for c in configlines:
+				scrubline = c
+				if c.startswith('scrub'):
+					os.write(tmpscrub[0], scrubline)
+					continue
+				for sc in scans['batconfig']['scrub']:
+					if sc in c:
+						scrubsplits = scrubline.split('=', 1)
+						if sc == scrubsplits[0].strip():
+							scrubline = "%s = *****\n" % sc
+				os.write(tmpscrub[0], scrubline)
+			os.fdopen(tmpscrub[0]).close()
+			scrubfile = tmpscrub[1]
+			shutil.copy(scrubfile, os.path.basename(configfile))
+			os.unlink(scrubfile)
+		else:
+			shutil.copy(configfile, '.')
 		dumpfile.add(os.path.basename(configfile))
-		scrub = True
-	if scrub and scans['batconfig']['scrub'] != []:
-		## TODO pretty print the configuration file, scrubbed of
-		## any of the values in 'scrub'
-		pass
 	dumpfile.add('scandata.pickle')
 	if scans['batconfig']['extrapack'] != []:
 		for e in scans['batconfig']['extrapack']:
