@@ -3,6 +3,11 @@
 * bruteforcescan.py: make using the database optional, default: yes
 * bruteforcescan.py: implement scrubbing of the configuration file (example:
 database credentials)
+* bruteforcescan.py: fix dumping of marker search offset data
+* bruteforcescan.py: support 'compress' in top level configuration and use it
+in more places
+* bat-scan.config: add more defaults
+* docs: better document options in configuration file
 
 2016-06-10:
 * bruteforcescan.py: remove unnecessary code, better document flow
