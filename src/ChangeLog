@@ -1,3 +1,9 @@
+2016-06-11:
+* bruteforcescan.py: make timeout for tasks configurable, default 1 month
+* bruteforcescan.py: make using the database optional, default: yes
+* bruteforcescan.py: implement scrubbing of the configuration file (example:
+database credentials)
+
 2016-06-10:
 * bruteforcescan.py: remove unnecessary code, better document flow
 
