@@ -1002,6 +1002,14 @@ def readconfig(config):
 			batconf['template']   = template
 		except Exception, e:
 			batconf['template']   = None
+		try:
+			compress = config.get(section, 'compress')
+			if compress == 'yes':
+				batconf['compress'] = True
+			else:
+				batconf['compress'] = False
+		except:
+			batconf['compress'] = False
 	
 	for section in sectionstoprocess:
 		if config.has_option(section, 'type'):
@@ -1145,7 +1153,12 @@ def readconfig(config):
 					else:
 						conf['compress'] = False
 				except:
-					conf['compress'] = False
+					## copy the defaulf from batconf, if any, otherwise
+					## default to no compression
+					if 'compress' in batconf:
+						conf['compress'] = batconf['compress']
+					else:
+						conf['compress'] = False
 
 			## finally add the configurations to the right list
 			if config.get(section, 'type') == 'leaf':
@@ -1414,7 +1427,7 @@ def runscan(scans, binaries):
 	## every binary that is scanned.
 	debug = scans['batconfig']['debug']
 	debugphases = scans['batconfig']['debugphases']
-	compressed = True
+	compressed = scans['batconfig']['compress']
 
 	magicscans = []
 	optmagicscans = []
@@ -1968,8 +1981,7 @@ def runscan(scans, binaries):
 			print "POSTRUN END %s" % scan_binary_basename, datetime.datetime.utcnow().isoformat()
 
 		if writeconfig['writeoutput']:
-			compress = True
-			writeDumpfile(unpackreports, scans, processamount, writeconfig['outputfile'], writeconfig['config'], topleveldir, scans['batconfig']['outputlite'], scans['batconfig']['debug'], compress)
+			writeDumpfile(unpackreports, scans, processamount, writeconfig['outputfile'], writeconfig['config'], topleveldir, scans['batconfig']['outputlite'], scans['batconfig']['debug'], compressed)
 		if scans['batconfig']['cleanup']:
 			try:
 				shutil.rmtree(topleveldir)
