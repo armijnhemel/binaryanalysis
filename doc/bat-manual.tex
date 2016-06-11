@@ -668,7 +668,8 @@ section and one section specific for the viewer tool.
 \subsection{Global configuration}
 
 The global configuration section is called \texttt{batconfig}. In this section
-various global settings are defined. The section looks like this:
+various global settings are defined which are described below. The section can
+be identified in the configuration file by looking for this:
 
 \begin{verbatim}
 [batconfig]
@@ -682,7 +683,6 @@ configuration as shipped in the official BAT distribution is to use multiple
 threads:
 
 \begin{verbatim}
-[batconfig]
 multiprocessing = yes
 \end{verbatim}
 
@@ -742,6 +742,42 @@ debug = yes
 debugphases = leaf:aggregate
 \end{verbatim}
 
+\subsubsection{\texttt{postgresql\_user}, \texttt{postgresql\_password}, \texttt{postgresql\_db}, \texttt{postgresql\_host} and \texttt{postgresql\_port}}
+
+The PostgreSQL database used by BAT is configured in the global section. A few
+variables have to be set to be able to connect with the database server, namely
+the username, password and database name:
+
+\begin{verbatim}
+postgresql_user     = bat
+postgresql_password = bat
+postgresql_db       = bat
+\end{verbatim}
+
+Optionally a port and host can be set too if another port and/or host need to
+be used:
+
+\begin{verbatim}
+postgresql_host     = 127.0.0.1
+postgresql_port     = 5432
+\end{verbatim}
+
+Depending on the version of \texttt{python-psycopg2} it could be that
+\texttt{postgresql\_host} and \texttt{postgresql\_port} both have to be
+specified. For example on CentOS 6.x both parameters have to be set when using
+a different port, even if the database resides on the local machine.
+
+\subsubsection{\texttt{usedatabase}}
+
+By default the database is enabled. There could be situations where it is
+undesirable to use the database and it needs to be temporarily disabled. By
+setting \texttt{usedatabase} to anything but \texttt{yes} the database will
+be disabled:
+
+\begin{verbatim}
+usedatabase = no
+\end{verbatim}
+
 \subsubsection{\texttt{reporthash}}
 
 If \texttt{reporthash} is set, then hashes in the ranking scan that come from
@@ -752,6 +788,94 @@ database as shipped by Tjaldur Software Governance Solutions:
 \begin{verbatim}
 reporthash = sha256
 \end{verbatim}
+
+\subsubsection{\texttt{reportendofphase}}
+
+If \texttt{reportendofphase} is set to \texttt{yes}, then BAT will write a
+line with some statistics about when a scanning phase has ended on standard
+output. This can be useful to track progress of BAT.
+
+\begin{verbatim}
+reportendofphase = yes
+\end{verbatim}
+
+\subsubsection{\texttt{packconfig} and \texttt{scrub}}
+
+The output archive by default does not contain the configuration file that was
+used during the scan. In some situations it is actually desirable to store the
+configuration with the scan archive results, for example to debug an issue, or
+to recreate results with the same configuration. For this the option
+\texttt{packconfig} can be set to \texttt{yes}.
+
+\begin{verbatim}
+packconfig = yes
+\end{verbatim}
+
+Because the configuration file can contain confidential information (such as
+database credentials) it is desirable to scrub this information from the
+configuration file. For this the \texttt{scrub} setting can be used. Its value
+should be a colon separated list of configuration options for which the value
+in the configuration file (all occurances) should be replaced. For example, to
+scrub the values of \texttt{postgresql\_user} and \texttt{postgresql\_password}
+the following would be used:
+
+\begin{verbatim}
+scrub = postgresql_user:postgresql_password
+\end{verbatim}
+
+\subsubsection{\texttt{template}}
+
+Some compression formats or file systems are stored anonymously without a name.
+Examples are certain gzip-compressed files (like a ramdisk), or an LZMA-stream.
+
+\begin{verbatim}
+template = unpacked-by-bat-from-%s
+\end{verbatim}
+
+\subsubsection{\texttt{scansourcecode}}
+
+The \texttt{scansourcecode} option can be used to check if a file that is
+scanned can actually be found in the BAT database of source code files:
+
+\begin{verbatim}
+scansourcecode = yes
+\end{verbatim}
+
+The underlying rationale for this option is that various people have tried to
+use BAT for source code scanning and did not get the results they expected. By
+filtering out exact matches to the BAT database beforehand there are fewer
+false positives.
+
+\subsubsection{\texttt{dumpoffsets}}
+
+During the BAT marker scans a dictionary with possible offsets for compressed
+files and file systems is generated. Although most of these are discarded
+during unpacking (as they are false positives) it could be useful to store this
+data. By setting \texttt{dumpoffsets} to \texttt{yes} the offsets will be
+stored as Python pickles in the \texttt{offsets} directory:
+
+\begin{verbatim}
+dumpoffsets = yes
+\end{verbatim}
+
+\subsubsection{\texttt{cleanup}}
+
+\subsubsection{\texttt{markersearchminimum}}
+
+\subsubsection{\texttt{tasktimeout}}
+
+Several of the scanning phases in BAT use a task queue. Unfortunately it could
+be that due to unknown bugs in BAT there are uncaught errors, which make it
+seem like BAT hangs. For this the task queues have time outs. The default for
+the timeout is 2592000 seconds (roughly one month). The task queue timeout can
+be shortened by setting \texttt{tasktimeout} to a lower value:
+
+\begin{verbatim}
+tasktimeout = 2592000
+\end{verbatim}
+
+It should be noted that the value should not be set to 0, because otherwise
+the queues will timeout immediately and BAT will barf.
 
 \subsubsection{Global environment variables}
 
@@ -895,35 +1019,6 @@ setup     = nameOfSetupMethod
 
 The files \texttt{bat/identifier.py} and \texttt{bat/licenseversion.py} contain
 very extensive examples of setup hooks.
-
-\subsection{Database configuration}
-
-Historically BAT used SQLite as its database engine. Support for PostgreSQL was
-added as an alternative later. Since BAT 26 only PostgreSQL is supported in the
-scanner, while the database creation script still uses SQLite. This will be
-changed in BAT 27.
-
-For PostgreSQL a few variables have to be set to be able to connect with the
-database server, namely the username, password and database name:
-
-\begin{verbatim}
-postgresql_user     = bat
-postgresql_password = bat
-postgresql_db       = bat
-\end{verbatim}
-
-Optionally a port and host can be set too if another port and/or host need to
-be used:
-
-\begin{verbatim}
-postgresql_host     = 127.0.0.1
-postgresql_port     = 5432
-\end{verbatim}
-
-Depending on the version of \texttt{python-psycopg2} it could be that
-\texttt{postgresql\_host} and \texttt{postgresql\_port} both have to be
-specified. For example on CentOS 6.x both parameters have to be set when using
-a different port, even if the database resides on the local machine.
 
 \section{Analyser internals}
 
