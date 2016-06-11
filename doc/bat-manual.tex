@@ -180,11 +180,10 @@ compressed) with scan results. Since identical files might be present the
 results are stored per checksum, not file name.
 \item \texttt{images} - directory containing various images with results of
 scans (depending on which scans are enabled), per checksum
-\item \texttt{offsets} - directory with gzip compressed Python pickle files
-containing the offsets of possible file systems, compressed files and media
-files found in the file. This directory as well as its files will only be
-created if \texttt{dumpoffsets} is set to \texttt{yes} in the global
-configuration.
+\item \texttt{offsets} - directory with Python pickle files containing the
+offsets of possible file systems, compressed files and media files found in
+the file. This directory as well as its files will only be created if
+\texttt{dumpoffsets} is set to \texttt{yes} in the global configuration.
 \item \texttt{reports} - directory containing HTML and (optionally) JSON
 reports, per checksum
 \end{itemize}
@@ -443,10 +442,15 @@ markers that are searched for are found in \url{bat/fsmagic.py}.
 
 As an optimization the marker search can be skipped for some files if they
 have an extension which gives a possible hint about what kind of file it might
-be. For example, for gzip compressed files files with the extension \texttt{gz}
-a special method (configured in the configuration for the gzip unpacker) is
-first run to see if the file is actually a gzip file, without looking at any
-other markers, or trying other scans first.
+be. For example, the extension \texttt{gz} is frequently used for gzip
+compressed files, so for files with the extension \texttt{gz} a special method
+(configured in the configuration for the gzip unpacker) is first run to see if
+the whole file is actually a gzip file, without looking at any other markers,
+or trying other scans first. If the whole file is indeed gzip compressed (which
+will be the case for the vast majority of files) then all other unpacking scans
+will be skipped. If the file is not gzip compressed, or only part of the file
+is gzip compressed (and there is trailing data), then the file will be
+processed in the normal way instead.
 
 If multiple CPUs are available and the top level file is larger than a certain
 limit and does not have a known extension as described above the marker search
@@ -2943,7 +2947,7 @@ The order for pre-run scans is:
 \item \texttt{fixduplicates}
 \item \texttt{prunefiles} (disabled by default)
 \item \texttt{findduplicates}
-\item \texttt{findlibs} \texttt{findsymbols}
+\item \texttt{findlibs}, \texttt{findsymbols}
 \item \texttt{jars}, \texttt{kernelversions}
 \item \texttt{versionlicensecopyright}
 \item \texttt{shellinvocations}
