@@ -145,7 +145,7 @@ def gethash(path, filename, hashtype="sha256"):
 	return hashresults
 
 ## scan a single file, possibly unpack and recurse
-def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, prerunmagic, magicscans, optmagicscans, processid, hashdict, blacklistedfiles, llock, template, unpacktempdir, tempdir, outputhash, cursor, conn, scansourcecode, dumpoffsets, offsetdir, compressed):
+def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, prerunmagic, magicscans, optmagicscans, processid, hashdict, blacklistedfiles, llock, template, unpacktempdir, tempdir, outputhash, cursor, conn, scansourcecode, dumpoffsets, offsetdir, compressed, timeout):
 	lentempdir = len(tempdir)
 	sourcecodequery = "select checksum from processed_file where checksum=%s limit 1"
 
@@ -173,8 +173,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 		## reset the reports, blacklist, offsets and tags for each new scan
 		blacklist = []
 		## set timeout for scanning to a month
-		## TODO: make configurable
-		(dirname, filename, lenscandir, debug, tags, scanhints, offsets) = scanqueue.get(timeout=2592000)
+		(dirname, filename, lenscandir, debug, tags, scanhints, offsets) = scanqueue.get(timeout=timeout)
 
 		## absolute path of the file in the file system (so including temporary dir)
 		filetoscan = os.path.join(dirname, filename)
@@ -647,10 +646,10 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 			reportqueue.put({relfiletoscan: unpackreports})
 		scanqueue.task_done()
 
-def leafScan(scanqueue, reportqueue, scans, processid, llock, unpacktempdir, topleveldir, debug, cursor, conn):
+def leafScan(scanqueue, reportqueue, scans, processid, llock, unpacktempdir, topleveldir, debug, cursor, conn, timeout):
 	while True:
 		## reset the reports, blacklist, offsets and tags for each new scan
-		(filetoscan, scans, tags, blacklist, filehash) = scanqueue.get(timeout=2592000)
+		(filetoscan, scans, tags, blacklist, filehash) = scanqueue.get(timeout=timeout)
 		reports = {}
 		newtags = []
 
@@ -893,6 +892,12 @@ def readconfig(config):
 		except:
 			## set a default minimum threshold of 20 million bytes
 			batconf['markersearchminimum'] = 20000000
+		try:
+			tasktimeout = int(config.get(section, 'tasktimeout'))
+			batconf['tasktimeout'] = tasktimeout
+		except:
+			## set a default minimum threshold of a month
+			batconf['tasktimeout'] = 2592000
 		try:
 			postgresql_user = config.get(section, 'postgresql_user')
 			postgresql_password = config.get(section, 'postgresql_password')
@@ -1565,6 +1570,8 @@ def runscan(scans, binaries):
 	if outputhash == 'crc32' or outputhash == 'tlsh':
 		outputhash = 'sha256'
 
+	timeout=scans['batconfig']['tasktimeout']
+
 	origcwd = os.getcwd()
 	for bins in binaries:
 		(scan_binary, writeconfig) = bins
@@ -1680,7 +1687,7 @@ def runscan(scans, binaries):
 			else:
 				cursor = None
 				conn = None
-			p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, blacklistedfiles, lock, template, unpacktempdir, scantempdir, outputhash, cursor, conn, scansourcecode, scans['batconfig']['dumpoffsets'], offsetdir, compressed))
+			p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, blacklistedfiles, lock, template, unpacktempdir, scantempdir, outputhash, cursor, conn, scansourcecode, scans['batconfig']['dumpoffsets'], offsetdir, compressed, timeout))
 			processpool.append(p)
 			p.start()
 
@@ -1811,7 +1818,7 @@ def runscan(scans, binaries):
 					else:
 						cursor = None
 						conn = None
-					p = multiprocessing.Process(target=leafScan, args=(scanqueue,reportqueue, scans['leafscans'], i, lock, unpacktempdir, topleveldir, debug, cursor, conn))
+					p = multiprocessing.Process(target=leafScan, args=(scanqueue,reportqueue, scans['leafscans'], i, lock, unpacktempdir, topleveldir, debug, cursor, conn, timeout))
 					processpool.append(p)
 					p.start()
 
