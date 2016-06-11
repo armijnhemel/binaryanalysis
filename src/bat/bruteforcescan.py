@@ -172,7 +172,6 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 	while True:
 		## reset the reports, blacklist, offsets and tags for each new scan
 		blacklist = []
-		## set timeout for scanning to a month
 		(dirname, filename, lenscandir, debug, tags, scanhints, offsets) = scanqueue.get(timeout=timeout)
 
 		## absolute path of the file in the file system (so including temporary dir)
@@ -943,6 +942,17 @@ def readconfig(config):
 		except:
 			batconf['reportendofphase'] = False
 		try:
+			## check if the database should be used. The default
+			## is to use the database and this configuration option
+			## is mostly meant to quickly disable the database.
+			usedatabase = config.get(section, 'usedatabase')
+			if usedatabase == 'yes':
+				batconf['usedatabase'] = True
+			else:
+				batconf['usedatabase'] = False
+		except:
+			batconf['usedatabase'] = True
+		try:
 			debug = config.get(section, 'debug')
 			if debug == 'yes':
 				batconf['debug'] = True
@@ -1461,11 +1471,10 @@ def runscan(scans, binaries):
 			if not ('prerun' in debugphases or 'unpack' in debugphases):
 				tmpdebug = False
 
+	usedatabase = scans['batconfig']['usedatabase']
+
 	## create a bunch of connections and cursors in case
 	## the database is used.
-	## TODO: make configurable
-	usedatabase = True
-
 	batcons = []
 	batcursors = []
 
