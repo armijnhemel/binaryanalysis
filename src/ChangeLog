@@ -1,3 +1,8 @@
+2016-06-12:
+* bruteforcescan.py: introduce setup scans for unpack scans
+* fwunpack.py: introduce setup scan for lzma temporary unpacking dir
+* bat-scan.config: fix defaults for lzma
+
 2016-06-11:
 * bruteforcescan.py: make timeout for tasks configurable, default 1 month
 * bruteforcescan.py: make using the database optional, default: yes
