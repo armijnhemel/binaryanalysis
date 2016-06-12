@@ -1527,6 +1527,40 @@ def runscan(scans, binaries):
 	if scans['batconfig']['scansourcecode'] and usedatabase:
 		scansourcecode = True
 
+	## First run the 'setup' hooks for the scans and pass
+	## results via the environment. This should keep the
+	## code cleaner.
+	finalunpackscans = []
+	unpackdebug=False
+	if debug:
+		unpackdebug = True
+		if debugphases != []:
+			if not 'unpack' in debugphases:
+				unpackdebug = False
+
+	for sscan in scans['unpackscans']:
+		if not 'setup' in sscan:
+			finalunpackscans.append(sscan)
+			continue
+		if usedatabase:
+			cursor = batcursors[0]
+			conn = batcons[0]
+		else:
+			cursor = None
+			conn = None
+		setupres = runSetup(sscan, usedatabase, cursor, conn, unpackdebug)
+		(setuprun, newenv) = setupres
+		if not setuprun:
+			continue
+		## 'parallel' can be used to modify whether or not the
+		## scans should be run in parallel. This is right now
+		## the only 'special' keyword.
+		if 'parallel' in newenv:
+			if newenv['parallel'] == False:
+				parallel = False
+		sscan['environment'] = newenv
+		finalunpackscans.append(sscan)
+
 	## determine whether or not the leaf scans should be run in parallel
 	parallel = True
 	if scans['leafscans'] != []:
@@ -1664,7 +1698,7 @@ def runscan(scans, binaries):
 		fileextensions = scan_binary.lower().rsplit('.', 1)
 		if len(fileextensions) == 2:
 			fileextension = fileextensions[1]
-			for unpackscan in scans['unpackscans']:
+			for unpackscan in finalunpackscans:
 				if 'knownfilemethod' in unpackscan:
 					if fileextension in unpackscan['extensions']:
 						knownextension = True
@@ -1727,7 +1761,7 @@ def runscan(scans, binaries):
 			else:
 				cursor = None
 				conn = None
-			p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, scans['unpackscans'], scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, blacklistedfiles, lock, template, unpacktempdir, scantempdir, outputhash, cursor, conn, scansourcecode, scans['batconfig']['dumpoffsets'], offsetdir, compressed, timeout))
+			p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, finalunpackscans, scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, blacklistedfiles, lock, template, unpacktempdir, scantempdir, outputhash, cursor, conn, scansourcecode, scans['batconfig']['dumpoffsets'], offsetdir, compressed, timeout))
 			processpool.append(p)
 			p.start()
 
@@ -1805,7 +1839,7 @@ def runscan(scans, binaries):
 
 		## determine whether or not the leaf scans should be run in parallel
 		parallel = True
-		if scans['leafscans'] != []:
+		if finalleafscans != []:
 			## each entry in leaftasks: (filetoscan, tags, blacklist, filehash, filesize)
 			sha256leaf = {}
 			leaftasks_tmp = []

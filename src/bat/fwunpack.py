@@ -4056,6 +4056,28 @@ def unpackRar(filename, offset, tempdir=None):
 	os.unlink(tmpfile[1])
 	return (endofarchive, tmpdir)
 
+def lzmasetup(scanenv, cursor, conn, debug=False):
+	lzma_tmpdir = scanenv.get('LZMA_TMPDIR', None)
+	if lzma_tmpdir == None:
+		return (True, scanenv)
+
+	newenv = copy.deepcopy(scanenv)
+
+	if not os.path.exists(lzma_tmpdir):
+		del newenv['LZMA_TMPDIR']
+		return (True, newenv)
+
+	try:
+		tmpfile = tempfile.mkstemp(dir=lzma_tmpdir)
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+	except OSError, e:
+		lzma_tmpdir=None
+		del newenv['LZMA_TMPDIR']
+
+	return (True, newenv)
+
+
 def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	lzmaoffsets = []
@@ -4089,17 +4111,6 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		lzma_try_all = False
 
 	lzma_tmpdir = scanenv.get('LZMA_TMPDIR', None)
-	if lzma_tmpdir != None:
-		if not os.path.exists(lzma_tmpdir):
-			lzma_tmpdir = None
-
-	## TODO: make sure this check is only done once through a setup scan
-	try:
-		tmpfile = tempfile.mkstemp(dir=lzma_tmpdir)
-		os.fdopen(tmpfile[0]).close()
-		os.unlink(tmpfile[1])
-	except OSError, e:
-		lzma_tmpdir=None
 
 	for offset in lzmaoffsets:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
