@@ -1015,11 +1015,15 @@ are readable/writeable. These checks only need to be run once. Based on the
 result of the setup code the scan might be disabled if certain conditions are
 not met.
 
-There is a special hook for leaf scans to run setup code for the scan:
+There is a special hook for unpack scans, leaf scans and aggregate scans to run
+setup code for the scan:
 
 \begin{verbatim}
 setup     = nameOfSetupMethod
 \end{verbatim}
+
+The result of the setup method is a tuple containing a boolean to indicate
+wheter or not the scan should be run, and a (possibly adapted) environment.
 
 The files \texttt{bat/identifier.py} and \texttt{bat/licenseversion.py} contain
 very extensive examples of setup hooks.
