@@ -401,12 +401,14 @@ def searchUnpackSwf(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 
 def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
+	filesize = os.stat(filename).st_size
+	if filesize < 8:
+		return ([], blacklist, [], hints)
+
 	if not 'jffs2_le' in offsets and not 'jffs2_be' in offsets:
 		return ([], blacklist, [], hints)
 	if offsets['jffs2_le'] == [] and offsets['jffs2_be'] == []:
 		return ([], blacklist, [], hints)
-
-	jffs2_tmpdir = scanenv.get('UNPACK_TEMPDIR', None)
 
 	if not 'jffs2_be' in offsets:
 		be_offsets = set()
@@ -419,7 +421,7 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 	newtags = []
 	jffs2offsets.sort()
 
-	filesize = os.stat(filename).st_size
+	jffs2_tmpdir = scanenv.get('UNPACK_TEMPDIR', None)
 
 	crccache = {}
 
@@ -428,13 +430,13 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 		## at least 8 bytes are needed for a JFFS2 file system
 		if filesize - offset < 8:
 			break
-		bigendian = False
-		if offset in be_offsets:
-			bigendian = True
 		## check if the offset found is in a blacklist
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
+		bigendian = False
+		if offset in be_offsets:
+			bigendian = True
 		## first a simple sanity check. Read bytes 4-8 from the inode, which
 		## represent the total node of the inode. If the total length of the
 		## inode is bigger than the total size of the file it is not a valid
