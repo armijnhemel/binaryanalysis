@@ -706,6 +706,25 @@ def unpackISO9660(filename, offset, blacklist, tempdir=None, unpacktempdir=None)
 	os.unlink(tmpfile[1])
 	return (tmpdir, size)
 
+def tarsetup(scanenv, cursor, conn, debug=False):
+	tar_tmpdir = scanenv.get('TAR_TMPDIR', None)
+	if tar_tmpdir == None:
+		return (True, scanenv)
+
+	newenv = copy.deepcopy(scanenv)
+
+	if not os.path.exists(tar_tmpdir):
+		del newenv['TAR_TMPDIR']
+		return (True, newenv)
+	try:
+		tmpfile = tempfile.mkstemp(dir=tar_tmpdir)
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+	except OSError, e:
+		del newenv['TAR_TMPDIR']
+
+	return (True, newenv)
+
 ## unpacking POSIX or GNU tar archives. This does not work yet for the V7 tar format
 def searchUnpackTar(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
@@ -717,17 +736,6 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	taroffsets.sort()
 
 	tar_tmpdir = scanenv.get('TAR_TMPDIR', None)
-	if tar_tmpdir != None:
-		if not os.path.exists(tar_tmpdir):
-			tar_tmpdir = None
-
-	## TODO: make sure this check is only done once through a setup scan
-	try:
-		tmpfile = tempfile.mkstemp(dir=tar_tmpdir)
-		os.fdopen(tmpfile[0]).close()
-		os.unlink(tmpfile[1])
-	except OSError, e:
-		tar_tmpdir=None
 
 	diroffsets = []
 	counter = 1
