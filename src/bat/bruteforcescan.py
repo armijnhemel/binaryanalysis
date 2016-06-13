@@ -979,15 +979,30 @@ def readconfig(config):
 		except:
 			batconf['outputlite'] = False
 		try:
-			unpacktempdir = config.get(section, 'tempdir')
-			if not os.path.isdir(unpacktempdir):
-				batconf['tempdir'] = None
+			unpackdir = config.get(section, 'unpackdirectory')
+			if not os.path.isdir(unpackdir):
+				batconf['unpackdirectory'] = None
 			else:
-				batconf['tempdir'] = unpacktempdir
+				batconf['unpackdirectory'] = unpackdir
 				## TODO: try to create a temporary directory
 				## to see if the directory is writable
 		except:
-			batconf['tempdir'] = None
+			batconf['unpackdirectory'] = None
+		try:
+			unpackdir = config.get(section, 'temporary_unpackdirectory')
+			if not os.path.isdir(unpackdir):
+				batconf['temporary_unpackdirectory'] = None
+			else:
+				try:
+					testfile = tempfile.mkstemp(dir=unpackdir)
+					os.fdopen(testfile[0]).close()
+					os.unlink(testfile[1])
+					## store it in the environment
+					batconf['environment']['UNPACK_TEMPDIR'] = unpackdir
+				except OSError, e:
+					pass
+		except:
+			batconf['unpackdirectory'] = None
 		try:
 			template = config.get(section, 'template')
 
@@ -1635,10 +1650,10 @@ def runscan(scans, binaries):
 			sscan['environment'] = newenv
 			finalaggregatescans.append(sscan)
 
-	unpacktempdir = scans['batconfig']['tempdir']
-	if unpacktempdir != None:
-		if not os.path.exists(unpacktempdir):
-			unpacktempdir = None
+	unpackdirectory = scans['batconfig']['unpackdirectory']
+	if unpackdirectory != None:
+		if not os.path.exists(unpackdirectory):
+			unpackdirectory = None
 
 	outputhash = scans['batconfig'].get('reporthash', 'sha256')
 	if outputhash == 'crc32' or outputhash == 'tlsh':
@@ -1668,11 +1683,11 @@ def runscan(scans, binaries):
 		unpackreports = {}
 
 		try:
-			## test if unpacktempdir is actually writable
-			topleveldir = tempfile.mkdtemp(dir=unpacktempdir)
+			## test if unpackdirectory is actually writable
+			topleveldir = tempfile.mkdtemp(dir=unpackdirectory)
 		except:
-			unpacktempdir = None
-			topleveldir = tempfile.mkdtemp(dir=unpacktempdir)
+			unpackdirectory = None
+			topleveldir = tempfile.mkdtemp(dir=unpackdirectory)
 
 		## copy the binary, and reset the environment to a fresh copy
 		scanenv = copy.deepcopy(scans['batconfig']['environment'])
@@ -1761,7 +1776,7 @@ def runscan(scans, binaries):
 			else:
 				cursor = None
 				conn = None
-			p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, finalunpackscans, scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, blacklistedfiles, lock, template, unpacktempdir, scantempdir, outputhash, cursor, conn, scansourcecode, scans['batconfig']['dumpoffsets'], offsetdir, compressed, timeout))
+			p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, finalunpackscans, scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, blacklistedfiles, lock, template, unpackdirectory, scantempdir, outputhash, cursor, conn, scansourcecode, scans['batconfig']['dumpoffsets'], offsetdir, compressed, timeout))
 			processpool.append(p)
 			p.start()
 
@@ -1892,7 +1907,7 @@ def runscan(scans, binaries):
 					else:
 						cursor = None
 						conn = None
-					p = multiprocessing.Process(target=leafScan, args=(scanqueue,reportqueue, scans['leafscans'], i, lock, unpacktempdir, topleveldir, debug, cursor, conn, timeout))
+					p = multiprocessing.Process(target=leafScan, args=(scanqueue,reportqueue, scans['leafscans'], i, lock, unpackdirectory, topleveldir, debug, cursor, conn, timeout))
 					processpool.append(p)
 					p.start()
 
@@ -1953,7 +1968,7 @@ def runscan(scans, binaries):
 		if debug:
 			print >>sys.stderr, "AGGREGATE BEGIN", datetime.datetime.utcnow().isoformat()
 		if scans['aggregatescans'] != []:
-			aggregatescan(unpackreports, finalaggregatescans, processamount, scantempdir, topleveldir, scan_binary_basename, scandate, batcursors, batcons, aggregatedebug, unpacktempdir)
+			aggregatescan(unpackreports, finalaggregatescans, processamount, scantempdir, topleveldir, scan_binary_basename, scandate, batcursors, batcons, aggregatedebug, unpackdirectory)
 		if debug:
 			print >>sys.stderr, "AGGREGATE END", datetime.datetime.utcnow().isoformat()
 		if scans['batconfig']['reportendofphase']:

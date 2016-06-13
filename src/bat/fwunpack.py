@@ -399,25 +399,6 @@ def searchUnpackSwf(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		counter += 1
 	return (diroffsets, blacklist, newtags, hints)
 
-def jffs2setup(scanenv, cursor, conn, debug=False):
-	jffs2_tmpdir = scanenv.get('JFFS2_TMPDIR', None)
-	if jffs2_tmpdir == None:
-		return (True, scanenv)
-
-	newenv = copy.deepcopy(scanenv)
-
-	if not os.path.exists(jffs2_tmpdir):
-		del newenv['JFFS2_TMPDIR']
-		return (True, newenv)
-	try:
-		tmpfile = tempfile.mkstemp(dir=jffs2_tmpdir)
-		os.fdopen(tmpfile[0]).close()
-		os.unlink(tmpfile[1])
-	except OSError, e:
-		del newenv['JFFS2_TMPDIR']
-
-	return (True, newenv)
-
 def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	if not 'jffs2_le' in offsets and not 'jffs2_be' in offsets:
@@ -425,7 +406,7 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 	if offsets['jffs2_le'] == [] and offsets['jffs2_be'] == []:
 		return ([], blacklist, [], hints)
 
-	jffs2_tmpdir = scanenv.get('JFFS2_TMPDIR', None)
+	jffs2_tmpdir = scanenv.get('UNPACK_TEMPDIR', None)
 
 	if not 'jffs2_be' in offsets:
 		be_offsets = set()
@@ -706,25 +687,6 @@ def unpackISO9660(filename, offset, blacklist, tempdir=None, unpacktempdir=None)
 	os.unlink(tmpfile[1])
 	return (tmpdir, size)
 
-def tarsetup(scanenv, cursor, conn, debug=False):
-	tar_tmpdir = scanenv.get('TAR_TMPDIR', None)
-	if tar_tmpdir == None:
-		return (True, scanenv)
-
-	newenv = copy.deepcopy(scanenv)
-
-	if not os.path.exists(tar_tmpdir):
-		del newenv['TAR_TMPDIR']
-		return (True, newenv)
-	try:
-		tmpfile = tempfile.mkstemp(dir=tar_tmpdir)
-		os.fdopen(tmpfile[0]).close()
-		os.unlink(tmpfile[1])
-	except OSError, e:
-		del newenv['TAR_TMPDIR']
-
-	return (True, newenv)
-
 ## unpacking POSIX or GNU tar archives. This does not work yet for the V7 tar format
 def searchUnpackTar(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
@@ -735,7 +697,7 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		return ([], blacklist, [], hints)
 	taroffsets.sort()
 
-	tar_tmpdir = scanenv.get('TAR_TMPDIR', None)
+	tar_tmpdir = scanenv.get('UNPACK_TEMPDIR', None)
 
 	diroffsets = []
 	counter = 1
@@ -2961,25 +2923,6 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 
 	return (diroffsets, blacklist, newtags, hints)
 
-def compresssetup(scanenv, cursor, conn, debug=False):
-	compress_tmpdir = scanenv.get('COMPRESS_TMPDIR', None)
-	if compress_tmpdir == None:
-		return (True, scanenv)
-
-	newenv = copy.deepcopy(scanenv)
-
-	if not os.path.exists(compress_tmpdir):
-		del newenv['COMPRESS_TMPDIR']
-		return (True, newenv)
-	try:
-		tmpfile = tempfile.mkstemp(dir=compress_tmpdir)
-		os.fdopen(tmpfile[0]).close()
-		os.unlink(tmpfile[1])
-	except OSError, e:
-		del newenv['COMPRESS_TMPDIR']
-
-	return (True, newenv)
-
 def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	if not 'compress' in offsets:
@@ -2988,7 +2931,7 @@ def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, scane
 		return ([], blacklist, [], hints)
 
 	compresslimit = int(scanenv.get('COMPRESS_MINIMUM_SIZE', 1))
-	compress_tmpdir = scanenv.get('COMPRESS_TMPDIR', None)
+	compress_tmpdir = scanenv.get('UNPACK_TEMPDIR', None)
 
 	counter = 1
 	diroffsets = []
@@ -3046,7 +2989,7 @@ def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, scane
 def unpackCompress(filename, offset, compresslimit, tempdir=None, compress_tmpdir=None, blacklist=[]):
 	tmpdir = unpacksetup(tempdir)
 
-	## if COMPRESS_TMPDIR is set to for example a ramdisk use that instead.
+	## if UNPACK_TEMPDIR is set to for example a ramdisk use that instead.
 	if compress_tmpdir != None:
 		tmpfile = tempfile.mkstemp(dir=compress_tmpdir)
 		os.fdopen(tmpfile[0]).close()
@@ -4081,26 +4024,6 @@ def unpackRar(filename, offset, tempdir=None):
 	os.unlink(tmpfile[1])
 	return (endofarchive, tmpdir)
 
-def lzmasetup(scanenv, cursor, conn, debug=False):
-	lzma_tmpdir = scanenv.get('LZMA_TMPDIR', None)
-	if lzma_tmpdir == None:
-		return (True, scanenv)
-
-	newenv = copy.deepcopy(scanenv)
-
-	if not os.path.exists(lzma_tmpdir):
-		del newenv['LZMA_TMPDIR']
-		return (True, newenv)
-
-	try:
-		tmpfile = tempfile.mkstemp(dir=lzma_tmpdir)
-		os.fdopen(tmpfile[0]).close()
-		os.unlink(tmpfile[1])
-	except OSError, e:
-		del newenv['LZMA_TMPDIR']
-
-	return (True, newenv)
-
 def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	lzmaoffsets = []
@@ -4133,7 +4056,7 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 	else:
 		lzma_try_all = False
 
-	lzma_tmpdir = scanenv.get('LZMA_TMPDIR', None)
+	lzma_tmpdir = scanenv.get('UNPACK_TEMPDIR', None)
 
 	for offset in lzmaoffsets:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
@@ -4278,7 +4201,7 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 def unpackLZMA(filename, offset, template, tempdir=None, minbytesize=1, lzma_tmpdir=None, blacklist=[]):
 	tmpdir = unpacksetup(tempdir)
 
-	## if LZMA_TMPDIR is set to for example a ramdisk use that instead.
+	## if UNPACK_TEMPDIR is set to for example a ramdisk use that instead.
 	if lzma_tmpdir != None:
 		tmpfile = tempfile.mkstemp(dir=lzma_tmpdir)
 		os.fdopen(tmpfile[0]).close()
