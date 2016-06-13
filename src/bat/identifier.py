@@ -20,6 +20,63 @@ reconststring = re.compile("\s+const-string\s+v\d+")
 
 splitcharacters = map(lambda x: chr(x), range(0,9) + range(14,32) + [127])
 
+dalvik_opcodes_no_argument = [ 0x00, 0x01, 0x04, 0x07, 0x0a, 0x0b, 0x0c
+                             , 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x1d
+                             , 0x1e, 0x21, 0x27, 0x28, 0x3e, 0x3f, 0x40
+                             , 0x41, 0x42, 0x43, 0x73, 0x79, 0x7a, 0x7b
+                             , 0x7c, 0x7d, 0x7e, 0x7f, 0x80, 0x81, 0x82
+                             , 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89
+                             , 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f, 0xb0
+                             , 0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7
+                             , 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe
+                             , 0xbf, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5
+                             , 0xc6, 0xc7, 0xc8, 0xc9, 0xca, 0xcb, 0xcc
+                             , 0xcd, 0xce, 0xcf, 0xe3, 0xe4, 0xe5, 0xe6
+                             , 0xe7, 0xe8, 0xe9, 0xea, 0xeb, 0xec, 0xed
+                             , 0xee, 0xef, 0xf0, 0xf1, 0xf2, 0xf3, 0xf4
+                             , 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb
+                             , 0xfc, 0xfd, 0xfe, 0xff]
+
+dalvik_opcodes_single_argument = [ 0x02, 0x05, 0x08, 0x13, 0x15, 0x16, 0x19
+                                 , 0x1c, 0x1f, 0x20, 0x22, 0x23, 0x29, 0x2d
+                                 , 0x2e, 0x2f, 0x30, 0x31, 0x32, 0x33, 0x34
+                                 , 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b
+                                 , 0x3c, 0x3d, 0x44, 0x45, 0x46, 0x47, 0x48
+                                 , 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f
+                                 , 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56
+                                 , 0x57, 0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d
+                                 , 0x5e, 0x5f, 0x60, 0x61, 0x62, 0x63, 0x64
+                                 , 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b
+                                 , 0x6c, 0x6d, 0x90, 0x91, 0x92, 0x93, 0x94
+                                 , 0x95, 0x96, 0x97, 0x98, 0x99, 0x9a, 0x9b
+                                 , 0x9c, 0x9d, 0x9e, 0x9f, 0xa0, 0xa1, 0xa2
+                                 , 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9
+                                 , 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf, 0xd0
+                                 , 0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7
+                                 , 0xd8, 0xd9, 0xda, 0xdb, 0xdc, 0xdd, 0xde
+                                 , 0xdf, 0xe0, 0xe1, 0xe2, 0x1a]
+
+dalvik_opcodes_two_arguments = [ 0x03, 0x06, 0x09, 0x14, 0x17, 0x24, 0x25
+                               , 0x26, 0x2a, 0x2b, 0x2c, 0x6e, 0x6f, 0x70
+                               , 0x71, 0x72, 0x74, 0x75, 0x76, 0x77, 0x78, 0x1b]
+
+dex_opcodes_extra_data = {}
+
+for i in dalvik_opcodes_no_argument:
+        dex_opcodes_extra_data[i] = 0
+for i in dalvik_opcodes_single_argument:
+        dex_opcodes_extra_data[i] = 1
+for i in dalvik_opcodes_two_arguments:
+        dex_opcodes_extra_data[i] = 2
+dex_opcodes_extra_data[0x18] = 4
+
+unused = [ 0x73, 0x79, 0x7a, 0x3e, 0x3f, 0x40, 0x41
+         , 0x42, 0x43, 0xe3, 0xe4, 0xe5, 0xe6, 0xe7
+         , 0xe8, 0xe9, 0xea, 0xeb, 0xec, 0xed, 0xee
+         , 0xef, 0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5
+         , 0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc
+         , 0xfd, 0xfe, 0xff]
+
 ## Main part of the scan
 ##
 ## 1. extract string constants, function names, variable names, etc.
@@ -464,7 +521,9 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 
 			## skip most of the header, as it has already been parsed
 			## by the prerun scan
-			dexfile.seek(56)
+			dexfile.seek(52)
+
+			map_off = struct.unpack('<I', dexfile.read(4))[0]
 
 			## get the length of the string identifiers and the offset
 			string_ids_size = struct.unpack('<I', dexfile.read(4))[0]
@@ -490,20 +549,134 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 			data_size = struct.unpack('<I', dexfile.read(4))[0]
 			data_offset = struct.unpack('<I', dexfile.read(4))[0]
 
+			string_id_to_value = {}
 			if string_ids_offset != 0:
 				dexfile.seek(string_ids_offset)
-				string_id_to_value = {}
-				for dr in range(1, string_ids_size+1):
+				for dr in range(0, string_ids_size):
+					## find the offset of the string identifier in the file
 					string_id_offset = struct.unpack('<I', dexfile.read(4))[0]
+
+					## store the old offset so it can be
+					## returned to later
 					oldoffset = dexfile.tell()
+
+					## jump to the place of the string identifier
+					## and read its contents
 					dexfile.seek(string_id_offset)
 					dexdata = ''
 					dexread = dexfile.read(1)
 					while dexread != '\x00':
 						dexdata += dexread
 						dexread = dexfile.read(1)
+
+					if len(dexdata) != 0:
+						## the data is length (LEB-128) followed by the actual data
+						lenstr = ""
+						lencount = 0
+						startbyteseen = False
+						for c in dexdata:
+							lencount += 1
+							## add 7 bits
+							lenstr = "{:0>8b}".format(ord(c))[1:] + lenstr
+							## most significant bit means that the next byte
+							## is also part of the length
+							if (ord(c) & 0x80) == 0:
+								break
+						string_id_to_value[dr] = dexdata[lencount:]
+
+					## jump back to the old offset to read
+					## the next item
 					dexfile.seek(oldoffset)
-					string_id_to_value[dr] = dexdata
+
+			map_contents = {}
+
+			## jump to the map and parse it
+			if map_off != 0:
+				dexfile.seek(map_off)
+				map_size = struct.unpack('<I', dexfile.read(4))[0]
+				## walk all the map items
+				for m in range(0,map_size):
+					map_item_type = struct.unpack('<H', dexfile.read(2))[0]
+					## discard the next two bytes
+					dexfile.read(2)
+					## then read the size of the map item and the offset
+					map_item_size = struct.unpack('<I', dexfile.read(4))[0]
+					map_item_offset = struct.unpack('<I', dexfile.read(4))[0]
+					map_contents[map_item_type] = {'offset': map_item_offset, 'size': map_item_size}
+
+			## some of the interesting bits are located in the
+			## code section. In particular, the instructions for
+			## const-string and const-string/jumbo are interesting
+			## https://source.android.com/devices/tech/dalvik/dalvik-bytecode.html
+			## The code items are stored in the map_contents, as TYPE_CODE_ITEM
+			## which is 0x2001.
+			if 0x2001 in map_contents:
+				map_offset = map_contents[0x2001]['offset']
+				map_item_size = map_contents[0x2001]['size']
+				dexfile.seek(map_offset)
+
+				## for each piece of byte code look at the instructions and
+				## try to filter out the interesting ones
+				print "MAP_ITEM_SIZE", map_item_size
+				sys.stdout.flush()
+				for m in range(0,map_item_size):
+					pos = dexfile.tell()
+					## code items are 4 byte aligned
+					if pos%4 != 0:
+						dexfile.read(4 - pos%4)
+					registers_size = struct.unpack('<H', dexfile.read(2))[0]
+					print m, "registers_size", registers_size
+					ins_size = struct.unpack('<H', dexfile.read(2))[0]
+					print "ins", m, ins_size
+					outs_size = struct.unpack('<H', dexfile.read(2))[0]
+					print "outs", m, outs_size
+					tries_size = struct.unpack('<H', dexfile.read(2))[0]
+					print "tries", m, tries_size
+					debug_info_offset = struct.unpack('<I', dexfile.read(4))[0]
+					insns_size = struct.unpack('<I', dexfile.read(4))[0]
+					print insns_size
+
+					## keep track of how many 16 bit code units were read
+					bytecodecounter = 0
+					while bytecodecounter < insns_size:
+						## find out the opcode.
+						opcode = struct.unpack('<H', dexfile.read(2))[0] & 0xff
+						## opcode (and possible register instructions) is
+						## one 16 bite code unit
+						bytecodecounter += 1
+
+						print m, "opcode", hex(opcode), dex_opcodes_extra_data[opcode]
+						if opcode in unused:
+							print "UNUSED", opcode
+						sys.stdout.flush()
+
+						## find out how many extra code units need to be read
+						bytecodecounter += dex_opcodes_extra_data[opcode]
+						extradatacount = dex_opcodes_extra_data[opcode] * 2
+						if extradatacount != 0:
+							extradata = dexfile.read(extradatacount)
+							if opcode == 0x1a:
+								string_id = struct.unpack('<H', extradata)[0]
+							elif opcode == 0x1b:
+								string_id = struct.unpack('<I', extradata)[0]
+							elif opcode == 0x2b:
+								print "2B", hex(dexfile.tell())
+								## some extra work might be needed here, as the
+								## data might be in "packed-switch-format"
+								#print ord(extradata)
+
+								pass
+					print 'equal?', bytecodecounter, insns_size, bytecodecounter == insns_size
+					sys.stdout.flush()
+					if tries_size != 0:
+						if insns_size%2 != 0:
+							padding = struct.unpack('<H', dexfile.read(2))[0]
+						for t in range(0,tries_size):
+							start_addr = struct.unpack('<I', dexfile.read(4))[0]
+							insn_count = struct.unpack('<H', dexfile.read(2))[0]
+							handler_offset = struct.unpack('<H', dexfile.read(2))[0]
+							pass
+					#break
 			dexfile.close()
 
 		## Using dedexer http://dedexer.sourceforge.net/ extract information from Dalvik
@@ -517,8 +690,8 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 		methods = set()
 		fields = set()
 		dex_tmpdir = None
-		if 'DEX_TMPDIR' in scanenv:
-			dex_tmpdir = scanenv['DEX_TMPDIR']
+		if 'UNPACK_TEMPDIR' in scanenv:
+			dex_tmpdir = scanenv['UNPACK_TEMPDIR']
 		if dex_tmpdir != None:
 			dalvikdir = tempfile.mkdtemp(dir=dex_tmpdir)
 		else:
@@ -738,20 +911,6 @@ def extractKernelData(lines, filepath, kernelcursor, kernelconn, scandebug):
 
 def extractidentifiersetup(scanenv, cursor, conn, debug=False):
 	newenv = copy.deepcopy(scanenv)
-
-	if 'DEX_TMPDIR' in scanenv:
-		dex_tmpdir = scanenv['DEX_TMPDIR']
-		if os.path.exists(dex_tmpdir):
-			## TODO: make sure this check is only done once through a setup scan
-			try:
-				tmpfile = tempfile.mkstemp(dir=dex_tmpdir)
-				os.fdopen(tmpfile[0]).close()
-				os.unlink(tmpfile[1])
-			except OSError, e:
-				del newenv['DEX_TMPDIR']
-		else:
-			del newenv['DEX_TMPDIR']
-
 	if 'BAT_KERNELFUNCTION_SCAN' in newenv:
 		if cursor != None:
 			cursor.execute("select table_name from information_schema.tables where table_type='BASE TABLE' and table_schema='public'")
