@@ -716,17 +716,17 @@ a full copy of the unpacked data, significantly decreasing the size of the
 output archive, but making it harder to do a ``post mortem'' on the unpacked
 data (a new analysis should be run to get it again).
 
-\subsubsection{\texttt{tempdir}}
+\subsubsection{\texttt{unpackdirectory}}
 
 There is one setting to set the prefix for creating temporary files or
-directories, namely \texttt{tempdir}. By default the directory for creating
-temporary files and directories is \texttt{/tmp}. There might be situations
-where the temporary directory might need to be changed, for example for
-unpacking on a faster medium (ramdisk, SSD) than a normal harddisk. It can be
-used as follows:
+directories, namely \texttt{unpackdirectory}. By default the directory for
+creating temporary files and directories is \texttt{/tmp}. There might be
+situations where the temporary directory might need to be changed, for example
+for unpacking on a faster medium (ramdisk, SSD) than a normal harddisk. It can
+be used as follows:
 
 \begin{verbatim}
-tempdir = /ssd/tmp
+unpackdirectory = /ssd/tmp
 \end{verbatim}
 
 \subsubsection{\texttt{debug} and \texttt{debugphases}}
