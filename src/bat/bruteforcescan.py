@@ -1728,7 +1728,7 @@ def runscan(scans, binaries):
 			if os.stat(scan_binary).st_size > offsetcutoff:
 				offsettasks = []
 				for i in range(0, os.stat(scan_binary).st_size, 100000):
-					offsettasks.append((scantempdir, scan_binary_basname, magicscans, optmagicscans, max(i-50, 0), 100000+50))
+					offsettasks.append((scantempdir, scan_binary_basename, magicscans, optmagicscans, max(i-50, 0), 100000+50))
 				pool = multiprocessing.Pool(processes=processamount)
 				res = pool.map(paralleloffsetsearch, offsettasks)
 				pool.terminate()
