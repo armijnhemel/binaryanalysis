@@ -399,6 +399,25 @@ def searchUnpackSwf(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		counter += 1
 	return (diroffsets, blacklist, newtags, hints)
 
+def jffs2setup(scanenv, cursor, conn, debug=False):
+	jffs2_tmpdir = scanenv.get('JFFS2_TMPDIR', None)
+	if jffs2_tmpdir == None:
+		return (True, scanenv)
+
+	newenv = copy.deepcopy(scanenv)
+
+	if not os.path.exists(jffs2_tmpdir):
+		del newenv['JFFS2_TMPDIR']
+		return (True, newenv)
+	try:
+		tmpfile = tempfile.mkstemp(dir=jffs2_tmpdir)
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+	except OSError, e:
+		del newenv['JFFS2_TMPDIR']
+
+	return (True, newenv)
+
 def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	if not 'jffs2_le' in offsets and not 'jffs2_be' in offsets:
@@ -407,22 +426,11 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 		return ([], blacklist, [], hints)
 
 	jffs2_tmpdir = scanenv.get('JFFS2_TMPDIR', None)
-	if jffs2_tmpdir != None:
-		if not os.path.exists(jffs2_tmpdir):
-			jffs2_tmpdir = None
 
 	if not 'jffs2_be' in offsets:
 		be_offsets = set()
 	else:
 		be_offsets = set(offsets['jffs2_be'])
-
-	## TODO: make sure this check is only done once through a setup scan
-	try:
-		tmpfile = tempfile.mkstemp(dir=jffs2_tmpdir)
-		os.fdopen(tmpfile[0]).close()
-		os.unlink(tmpfile[1])
-	except OSError, e:
-		jffs2_tmpdir=None
 
 	counter = 1
 	jffs2offsets = copy.deepcopy(offsets['jffs2_le']) + copy.deepcopy(offsets['jffs2_be'])
@@ -4072,11 +4080,9 @@ def lzmasetup(scanenv, cursor, conn, debug=False):
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 	except OSError, e:
-		lzma_tmpdir=None
 		del newenv['LZMA_TMPDIR']
 
 	return (True, newenv)
-
 
 def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
