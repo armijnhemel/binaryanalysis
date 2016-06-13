@@ -2953,6 +2953,25 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 
 	return (diroffsets, blacklist, newtags, hints)
 
+def compresssetup(scanenv, cursor, conn, debug=False):
+	compress_tmpdir = scanenv.get('COMPRESS_TMPDIR', None)
+	if compress_tmpdir == None:
+		return (True, scanenv)
+
+	newenv = copy.deepcopy(scanenv)
+
+	if not os.path.exists(compress_tmpdir):
+		del newenv['COMPRESS_TMPDIR']
+		return (True, newenv)
+	try:
+		tmpfile = tempfile.mkstemp(dir=compress_tmpdir)
+		os.fdopen(tmpfile[0]).close()
+		os.unlink(tmpfile[1])
+	except OSError, e:
+		del newenv['COMPRESS_TMPDIR']
+
+	return (True, newenv)
+
 def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	if not 'compress' in offsets:
@@ -2962,17 +2981,7 @@ def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, scane
 
 	compresslimit = int(scanenv.get('COMPRESS_MINIMUM_SIZE', 1))
 	compress_tmpdir = scanenv.get('COMPRESS_TMPDIR', None)
-	if compress_tmpdir != None:
-		if not os.path.exists(compress_tmpdir):
-			compress_tmpdir = None
 
-	## TODO: make sure this check is only done once through a setup scan
-	try:
-		tmpfile = tempfile.mkstemp(dir=compress_tmpdir)
-		os.fdopen(tmpfile[0]).close()
-		os.unlink(tmpfile[1])
-	except OSError, e:
-		compress_tmpdir=None
 	counter = 1
 	diroffsets = []
 	for offset in offsets['compress']:
