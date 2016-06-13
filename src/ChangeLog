@@ -1,3 +1,13 @@
+2016-06-13:
+* fwunpack.py: introduce setup scan for tar/jffs2/compress temporary unpacking dir
+* bat-scan.config: fix defaults for lzma/jffs2/compress
+* bruteforcescan.py: introduce global temporary unpacking directory
+* identifier.py: replace DEX_TMPDIR with UNPACK_TEMPDIR
+* fwunpack.py: replace setup methods for lzma, compress, tar and jffs2 with
+environment lookup to UNPACK_TEMPDIR
+* bat-scan.config: rename tempdir to unpackdirectory, add
+temporary_unpackdirectory (to define UNPACK_TEMPDIR)
+
 2016-06-12:
 * bruteforcescan.py: introduce setup scans for unpack scans
 * fwunpack.py: introduce setup scan for lzma temporary unpacking dir
