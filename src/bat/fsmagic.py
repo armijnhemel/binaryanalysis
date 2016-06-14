@@ -64,7 +64,7 @@ fsmagic = {
             'pkbac':            'PKBAC',
             'winrar':           'WinRAR',
             'png':              '\x89PNG\x0d\x0a\x1a\x0a',
-            'pngtrailer':       'IEND',
+            'pngtrailer':       '\x00\x00\x00\x00IEND\xae\x42\x60\x82', # length, chunk type and CRC for PNG trailer are always the same
             'cpiotrailer':      'TRAILER!!!',
             'bmp':              'BM',
             'jpeg':             '\xff\xd8',
