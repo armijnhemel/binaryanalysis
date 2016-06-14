@@ -18,6 +18,7 @@ to prevent other scans from (re)scanning (part of) the data.
 import sys, os, subprocess, os.path, shutil, stat, array, struct, binascii, json
 import tempfile, bz2, re, magic, tarfile, zlib, copy, uu, hashlib, StringIO, zipfile
 import fsmagic, extractor, ext2, jffs2, prerun
+from collections import deque
 
 ## generic method to create temporary directories, with the correct filenames
 ## which is used throughout the code.
@@ -4953,13 +4954,13 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		return ([], blacklist, [], hints)
 	diroffsets = []
 	headeroffsets = offsets['png']
-	traileroffsets = offsets['pngtrailer']
+	traileroffsets = deque(offsets['pngtrailer'])
 	counter = 1
 	datafile = open(filename, 'rb')
 	orig_offset = headeroffsets[0]
 	lenheaderoffsets = len(headeroffsets)
 
-	lastseentrailer = 0
+	trailerpopcounter = 0
 
 	for i in range(0,len(headeroffsets)):
 		offset = headeroffsets[i]
@@ -4989,15 +4990,16 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 
 		datafile.seek(offset)
 
-		traileroffsets = traileroffsets[lastseentrailer:]
+		for r in xrange(0, trailerpopcounter):
+			traileroffsets.popleft()
 
-		lastseentrailer = 0
+		trailerpopcounter = 0
 
 		tmpdir = dirsetup(tempdir, filename, "png", counter)
 		pngfound = False
 		for trail in traileroffsets:
 			if trail <= offset:
-				lastseentrailer += 1
+				trailerpopcounter += 1
 				continue
 			if trail >= nextoffset:
 				break
@@ -5033,6 +5035,7 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 					blacklist.append((offset,trail+12))
 					diroffsets.append((tmpdir, offset, pngsize))
 					counter = counter + 1
+					trailerpopcounter += 1
 					break
 		if not pngfound:
 			os.rmdir(tmpdir)
@@ -5183,6 +5186,7 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 				lastseentrailer += 1
 				continue
 			if trail < localoffset:
+				lastseentrailer += 1
 				continue
 			blacklistoffset = extractor.inblacklist(trail, blacklist)
 			if blacklistoffset != None:
@@ -5213,6 +5217,7 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 					blacklist.append((offset,trail+2))
 					diroffsets.append((tmpdir, offset, trail-offset+2))
 					counter = counter + 1
+					lastseentrailer += 1
 					break
 				os.rmdir(tmpdir)
 	datafile.close()
