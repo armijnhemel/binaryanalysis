@@ -4946,13 +4946,17 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		return ([], blacklist, [], hints)
 	if offsets['pngtrailer'] == []:
 		return ([], blacklist, [], hints)
+	lendata = os.stat(filename).st_size
+	## sanity check: minimal PNG consists of header (8 bytes), IHDR chunk (25 bytes)
+	## and IEND chunk (12 bytes)
+	if lendata < 45:
+		return ([], blacklist, [], hints)
 	diroffsets = []
 	headeroffsets = offsets['png']
 	traileroffsets = offsets['pngtrailer']
 	counter = 1
 	datafile = open(filename, 'rb')
 	orig_offset = headeroffsets[0]
-	lendata = os.stat(filename).st_size
 	lenheaderoffsets = len(headeroffsets)
 
 	lastseentrailer = 0
@@ -4975,7 +4979,7 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		## The PNG signature is 8 bytes
 		datafile.seek(offset+8)
 		chunkbytes = datafile.read(4)
-		## IHDR chunk is always 13 bytes
+		## IHDR chunk size is always 13 bytes
 		#chunksize = struct.unpack('>I', chunkbytes)[0]
 		if chunkbytes != '\x00\x00\x00\x0d':
 			continue
@@ -5003,7 +5007,7 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			blacklistoffset = extractor.inblacklist(trail, blacklist)
 			if blacklistoffset != None:
 				break
-			pngsize = trail+8-offset
+			pngsize = trail+12-offset
 			data = datafile.read(pngsize)
 			p = subprocess.Popen(['webpng', '-d', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 			(stanout, stanerr) = p.communicate(data)
@@ -5013,7 +5017,7 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 				pngfound = True
 				## basically we have a copy of the original
 				## image here, so why bother?
-				if offset == 0 and trail == lendata - 8:
+				if offset == 0 and trail == lendata - 12:
 					os.rmdir(tmpdir)
 					blacklist.append((0,lendata))
 					datafile.close()
@@ -5026,7 +5030,7 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 					hints[tmpfilename] = {}
 					hints[tmpfilename]['tags'] = ['graphics', 'png', 'binary']
 					hints[tmpfilename]['scanned'] = True
-					blacklist.append((offset,trail+8))
+					blacklist.append((offset,trail+12))
 					diroffsets.append((tmpdir, offset, pngsize))
 					counter = counter + 1
 					break
