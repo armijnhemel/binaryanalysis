@@ -1,3 +1,12 @@
+2016-06-14:
+* bat-unyaffs: extra sanity check to prevent crash and filling up the abrt log
+on Fedora systems
+* bat-minix: extra sanity check to prevent crash and filling up the abrt log
+on Fedora sytems
+* fsmagic.py: the PNG trailer has always the same length and CRC, so use it in
+the signature
+* fwunpack.py: extra sanity checks for PNG
+
 2016-06-13:
 * fwunpack.py: introduce setup scan for tar/jffs2/compress temporary unpacking dir
 * bat-scan.config: fix defaults for lzma/jffs2/compress
