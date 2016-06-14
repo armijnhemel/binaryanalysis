@@ -6,6 +6,11 @@ on Fedora sytems
 * fsmagic.py: the PNG trailer has always the same length and CRC, so use it in
 the signature
 * fwunpack.py: extra sanity checks for PNG
+* fwunpack.py: use deque for slicing PNG trailers that are left instead of
+using lists. There are firmwares where (because of false positives and/or some
+missing information, like on some Android firmwares) there can be a few
+tenthousand PNG files, so the list of trailers can get really long. Unpacking
+these files can take quite a long time.
 
 2016-06-13:
 * fwunpack.py: introduce setup scan for tar/jffs2/compress temporary unpacking dir
