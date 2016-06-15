@@ -275,15 +275,24 @@ def searchUnpackUPX(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		diroffsets.append((tmpdir, 0, filesize))
 	return (diroffsets, blacklist, tags, hints)
 
-## unpack Java serialized data
+## carve Java serialized data from a larger file by verifying content
 ## A specification can be found here:
 ## https://docs.oracle.com/javase/7/docs/platform/serialization/spec/protocol.html
+##
+## At the moment it works only well for blockdata, which is what is encountered
+## the most in the wild (example: data in some Android apps)
 def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	if not 'java_serialized' in offsets:
 		return ([], blacklist, [], hints)
 	if offsets['java_serialized'] == []:
 		return ([], blacklist, [], hints)
+
+	## file has to be at least 5 bytes long
+	filesize = os.stat(filename).st_size
+	if filesize < 5:
+		return ([], blacklist, [], hints)
+
 	tags = []
 	counter = 1
 	diroffsets = []
@@ -296,60 +305,124 @@ def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={},
 		## extra sanity check to see if STREAM_VERSION is set to 5
 		serialized_file = open(filename, 'rb')
 		serialized_file.seek(offset+2)
+		bytes_read = 2
 		serialized_bytes = serialized_file.read(2)
+		bytes_read += 2
 		stream_version = struct.unpack('>H', serialized_bytes)[0]
 		if stream_version != 5:
 			serialized_file.close()
 			continue
 
 		## The next bytes always have to be in range 0x70 - 0x7e
-		tc_byte = serialized_file.read(1)
-		serialized_file.close()
-		if tc_byte not in tc_bytes:
-			continue
-		tmpdir = dirsetup(tempdir, filename, "java_serialized", counter)
-		tempname = "deserialize"
-		res = unpackJavaSerialized(filename, offset, tempname, tmpdir, blacklist)
-		if res != None:
-			(serdir, size) = res
-			diroffsets.append((serdir, offset, size))
-			blacklist.append((offset, offset + size))
-			tmpfilename = os.path.join(tmpdir, tempname)
-			hints[tmpfilename] = {}
-			hints[tmpfilename]['tags'] = ['serializedjava']
-			counter = counter + 1
-		else:
-			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, tags, hints)
-
-def unpackJavaSerialized(filename, offset, tempname, tempdir=None, blacklist=[]):
-	tmpdir = unpacksetup(tempdir)
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.fdopen(tmpfile[0]).close()
-
-	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
-
-	p = subprocess.Popen(['java', '-jar', '/usr/share/java/bat-jdeserialize.jar', '-blockdata', tempname, tmpfile[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
-        (stanout, stanerr) = p.communicate()
-        if p.returncode != 0 or 'file version mismatch!' in stanerr or "error while attempting to decode file" in stanerr:
 		try:
-			os.unlink("%s/%s" % (tmpdir, tempname))
-		except OSError, e:
-			pass
-		os.unlink(tmpfile[1])
-		if tempdir == None:
-			os.rmdir(tmpdir)
-		return None
-	if os.stat("%s/%s" % (tmpdir, tempname)).st_size == 0:
-		os.unlink("%s/%s" % (tmpdir, tempname))
-		os.unlink(tmpfile[1])
-		if tempdir == None:
-			os.rmdir(tmpdir)
-		return None
-	serialized_size = os.stat(tmpfile[1]).st_size
-	os.unlink(tmpfile[1])
-	return (tmpdir, serialized_size)
+			tc_byte = serialized_file.read(1)
+			if len(tc_byte) != 1:
+				serialized_file.close()
+				continue
+		except:
+			serialized_file.close()
+			continue
+		bytes_read += 1
+		if tc_byte not in tc_bytes:
+			serialized_file.close()
+			continue
 
+		## now verify for each of the bytes if it is a valid Java serialized file
+		## At the moment only supports NULL, STRING, BLOCKDATA, RESET, BLOCKDATA_LONG.
+		## TODO: use a proper state machine to verify all of the data
+		while True:
+			# 0x70 == NULL
+			if tc_byte == '\x70':
+				## nothing happens here, so continue
+				pass
+			# 0x73 == OBJECT
+			elif tc_byte == '\x73':
+				pass
+			# 0x74 == STRING
+			elif tc_byte == '\x74':
+				try:
+					## followed by size, then the data
+					serialized_bytes = serialized_file.read(2)
+					bytes_read += 2
+					size = struct.unpack('>H', serialized_bytes)[0]
+					serialized_bytes = serialized_file.seek(offset+bytes_read+size)
+					bytes_read += size
+				except:
+					serialized_file.close()
+					break
+			# 0x77 == BLOCKDATA
+			elif tc_byte == '\x77':
+				## start with a byte that indicates the size.
+				try:
+					serialized_bytes = serialized_file.read(1)
+					bytes_read += 1
+					size = struct.unpack('>B', serialized_bytes)[0]
+					if offset + bytes_read+size > filesize:
+						serialized_file.close()
+						break
+					serialized_bytes = serialized_file.seek(offset+bytes_read+size)
+					bytes_read += size
+				except:
+					serialized_file.close()
+					break
+			# 0x79 == RESET
+			elif tc_byte == '\x79':
+				## nothing happens here, so continue
+				pass
+			# 0x7a == BLOCKDATA_LONG
+			elif tc_byte == '\x7a':
+				## start with an int that indicates the size.
+				try:
+					serialized_bytes = serialized_file.read(4)
+					bytes_read += 4
+					size = struct.unpack('>I', serialized_bytes)[0]
+					if offset + bytes_read+size > filesize:
+						serialized_file.close()
+						break
+					serialized_bytes = serialized_file.seek(offset+bytes_read+size)
+					bytes_read += size
+				except:
+					serialized_file.close()
+					break
+			# 0x7e == ENUM
+			elif tc_byte == '\x7e':
+				## first a class descriptor, then a newHandle, then enumConstName
+				pass
+			else:
+				serialized_file.close()
+				break
+			if offset + bytes_read == filesize:
+				if offset == 0:
+					serialized_file.close()
+					## the whole file is serialized Java, so tag it as such
+					blacklist.append((0,filesize))
+					return (diroffsets, blacklist, ['serializedjava', 'binary'], hints)
+				tmpdir = dirsetup(tempdir, filename, "java_serialized", counter)
+				tempname = "deserialize"
+				tmpfilename = os.path.join(tmpdir, tempname)
+				hints[tmpfilename] = {}
+				hints[tmpfilename]['tags'] = ['serializedjava', 'binary']
+				hints[tmpfilename]['scanned'] = True
+				serialized_file.seek(offset)
+				serialized_tmpfile = open(tmpfilename, 'wb')
+				serialized_tmpfile.write(serialized_file.read(bytes_read))
+				serialized_tmpfile.close()
+				counter = counter + 1
+				serialized_file.close()
+				blacklist.append((offset,offset+bytes_read))
+				diroffsets.append((tmpdir, offset, bytes_read))
+				break
+			try:
+				tc_byte = serialized_file.read(1)
+				if len(tc_byte) != 1:
+					serialized_file.close()
+					break
+				bytes_read += 1
+			except:
+				serialized_file.close()
+				break
+
+	return (diroffsets, blacklist, tags, hints)
 
 ## Unpack SWF files that are zlib compressed. Not all SWF files
 ## are compressed but some are. For now it is assumed that the whole
