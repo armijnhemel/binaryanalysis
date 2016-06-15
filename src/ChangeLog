@@ -1,3 +1,16 @@
+2016-06-15:
+* fwunpack.py: add known file method for PNG files (extension: .png). This is
+mostly to prevent bat-unyaffs running on many many PNG files.
+* bat-scan.config: add known file method configuration for PNG files
+* bruteforcescan.py: prevent files that are already known to be picked up by a
+known file method if they happen to have the matching extension (example:
+.png)
+* bruteforcescan.py: refactor code for readability
+* fwunpack.py: rework Java deserialization code. Remove jdeserialize as a
+dependency and instead just focus on carving/verifying known serialized Java
+files. Tag the serialized Java files as "javaserialized", instead of the data
+grabbed from these deserialized files.
+
 2016-06-14:
 * bat-unyaffs: extra sanity check to prevent crash and filling up the abrt log
 on Fedora systems
