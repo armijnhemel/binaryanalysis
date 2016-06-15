@@ -5009,7 +5009,7 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	return (diroffsets, blacklist, [], hints)
 
 def searchUnpackKnownPNG(filename, tempdir=None, scanenv={}, debug=False):
-	## first check if the file actually could be a valid gzip file
+	## first check if the file actually could be a valid png file
 	pngfile = open(filename, 'rb')
 	pngfile.seek(0)
 	pngheader = pngfile.read(8)
