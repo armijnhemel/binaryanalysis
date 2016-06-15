@@ -295,92 +295,97 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 		if 'knownfile' in scanhints:
 			knownfile = scanhints['knownfile']
 			unpacked = True
-
-		processdiroffsets = []
-		for unpackscan in scans:
-			if 'knownfilemethod' in unpackscan:
+		else:
+			for unpackscan in scans:
+				if not 'knownfilemethod' in unpackscan:
+					continue
 				fileextensions = filename.lower().rsplit('.', 1)
 				if len(fileextensions) != 2:
 					continue
 				fileextension = fileextensions[1]
-				if fileextension in unpackscan['extensions']:
-					module = unpackscan['module']
-					method = unpackscan['knownfilemethod']
-					if 'minimumsize' in unpackscan:
-						if filesize < unpackscan['minimumsize']:
-							continue
-					if debug:
-						print >>sys.stderr, module, method, filetoscan, datetime.datetime.utcnow().isoformat()
-						sys.stderr.flush()
-
-					## make a copy before changing the environment
-					newenv = copy.deepcopy(unpackscan['environment'])
-
-					if template != None:
-						templen = len(re.findall('%s', template))
-						if templen == 2:
-							newenv['TEMPLATE'] = template % (os.path.basename(filetoscan), unpackscan['name'])
-						elif templen == 1:
-							newenv['TEMPLATE'] = template % unpackscan['name']
-						else:
-							newenv['TEMPLATE'] = template
-					try:
-						exec "from %s import %s as bat_%s" % (module, method, method)
-					except Exception, e:
+				if not fileextension in unpackscan['extensions']:
+					continue
+				module = unpackscan['module']
+				method = unpackscan['knownfilemethod']
+				if 'minimumsize' in unpackscan:
+					if filesize < unpackscan['minimumsize']:
 						continue
-					scanres = eval("bat_%s(filetoscan, tempdir, newenv, debug=debug)" % (method))
-					if scanres != ([], [], [], {}):
-						(diroffsets, blacklist, scantags, hints) = scanres
-						tags = list(set(tags + scantags))
-						knownfile = True
-						unpacked = True
-						unpackreports['scans'] = []
-						## Add all the files found to the scan queue
-						## each diroffset is a (path, offset) tuple
-						for diroffset in diroffsets:
-							if diroffset == None:
-								continue
-							report = {}
-							scandir = diroffset[0]
+				if debug:
+					print >>sys.stderr, module, method, filetoscan, datetime.datetime.utcnow().isoformat()
+					sys.stderr.flush()
 
-							## recursively scan all files in the directory
-							osgen = os.walk(scandir)
-							scanreports = []
-							try:
-       								while True:
-                							i = osgen.next()
-									## make sure all directories can be accessed
-									for d in i[1]:
-										directoryname = os.path.join(i[0], d)
-										if not os.path.islink(directoryname):
-											os.chmod(directoryname, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-                							for p in i[2]:
-										leaftags = []
-										filepathname = os.path.join(i[0], p)
-										try:
-											if not os.path.islink(filepathname):
-												os.chmod(filepathname, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-											scannerhints = {}
-											if filepathname in hints:
-												if 'tags' in hints[filepathname]:
-													leaftags = list(set(leaftags + hints[filepathname]['tags']))
-												if 'scanned' in hints[filepathname]:
-													if hints[filepathname]['scanned']:
-														scannerhints['knownfile'] = True
-											if "temporary" in tags and diroffset[1] == 0 and diroffset[2] == filesize:
-												leaftags.append('temporary')
-											scantask = (i[0], p, len(scandir), debug, leaftags, scannerhints, {})
-											scanqueue.put(scantask)
-											relscanpath = "%s/%s" % (i[0][lentempdir:], p)
-											if relscanpath.startswith('/'):
-												relscanpath = relscanpath[1:]
-											scanreports.append(relscanpath)
-										except Exception, e:
-											pass
-							except StopIteration:
-								pass
-							unpackreports['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
-						break
+				## make a copy before changing the environment
+				newenv = copy.deepcopy(unpackscan['environment'])
+
+				if template != None:
+					templen = len(re.findall('%s', template))
+					if templen == 2:
+						newenv['TEMPLATE'] = template % (os.path.basename(filetoscan), unpackscan['name'])
+					elif templen == 1:
+						newenv['TEMPLATE'] = template % unpackscan['name']
+					else:
+						newenv['TEMPLATE'] = template
+				try:
+					exec "from %s import %s as bat_%s" % (module, method, method)
+				except Exception, e:
+					continue
+
+				## run the setup method
+				scanres = eval("bat_%s(filetoscan, tempdir, newenv, debug=debug)" % (method))
+				if scanres == ([], [], [], {}):
+					## no result, so move on to the next scan
+					continue
+				(diroffsets, blacklist, scantags, hints) = scanres
+				tags = list(set(tags + scantags))
+				knownfile = True
+				unpacked = True
+				unpackreports['scans'] = []
+				## Add all the files found to the scan queue
+				## each diroffset is a (path, offset) tuple
+				for diroffset in diroffsets:
+					if diroffset == None:
+						continue
+					report = {}
+					scandir = diroffset[0]
+
+					## recursively scan all files in the directory
+					osgen = os.walk(scandir)
+					scanreports = []
+					try:
+       						while True:
+							i = osgen.next()
+							## make sure all directories can be accessed
+							for d in i[1]:
+								directoryname = os.path.join(i[0], d)
+								if not os.path.islink(directoryname):
+									os.chmod(directoryname, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+							for p in i[2]:
+								leaftags = []
+								filepathname = os.path.join(i[0], p)
+								try:
+									if not os.path.islink(filepathname):
+										os.chmod(filepathname, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+									scannerhints = {}
+									if filepathname in hints:
+										if 'tags' in hints[filepathname]:
+											leaftags = list(set(leaftags + hints[filepathname]['tags']))
+										if 'scanned' in hints[filepathname]:
+											if hints[filepathname]['scanned']:
+												scannerhints['knownfile'] = True
+									if "temporary" in tags and diroffset[1] == 0 and diroffset[2] == filesize:
+										leaftags.append('temporary')
+									scantask = (i[0], p, len(scandir), debug, leaftags, scannerhints, {})
+									scanqueue.put(scantask)
+									relscanpath = "%s/%s" % (i[0][lentempdir:], p)
+									if relscanpath.startswith('/'):
+										relscanpath = relscanpath[1:]
+									scanreports.append(relscanpath)
+								except Exception, e:
+									pass
+					except StopIteration:
+						pass
+					unpackreports['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
+				break
 
 		if not knownfile:
 			## scan for markers in case they are not already known
@@ -540,55 +545,57 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 				## result is either empty, or contains offsets, blacklist, tags and hints
 				if len(scanres) == 0:
 					continue
-				if len(scanres) == 4:
-					(diroffsets, blacklist, scantags, hints) = scanres
-					tags = list(set(tags + scantags))
-					if extractor.inblacklist(0, blacklist) == filesize:
-						blacklisted = True
-					for diroffset in diroffsets:
-						if diroffset == None:
-							continue
-						unpacked = True
-						report = {}
-						scandir = diroffset[0]
+				if len(scanres) != 4:
+					continue
+				(diroffsets, blacklist, scantags, hints) = scanres
+				tags = list(set(tags + scantags))
+				if extractor.inblacklist(0, blacklist) == filesize:
+					blacklisted = True
+				for diroffset in diroffsets:
+					if diroffset == None:
+						continue
+					unpacked = True
+					report = {}
+					scandir = diroffset[0]
 
-						## recursively scan all files in the directory
-						osgen = os.walk(scandir)
-						scanreports = []
-						try:
-       							while True:
-                						i = osgen.next()
-								## make sure all directories can be accessed
-								for d in i[1]:
-									directoryname = os.path.join(i[0], d)
-									if not os.path.islink(directoryname):
-										os.chmod(directoryname, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-                						for p in i[2]:
-									filepathname = os.path.join(i[0], p)
-									try:
-										leaftags = []
-										scannerhints = {}
-										if not os.path.islink(filepathname):
-											os.chmod(filepathname, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
-										if filepathname in hints:
-											if 'tags' in hints[filepathname]:
-												leaftags = list(set(leaftags + hints[filepathname]['tags']))
-											if 'scanned' in hints[filepathname]:
-												if hints[filepathname]['scanned']:
-													scannerhints['knownfile'] = True
-										if "temporary" in tags and diroffset[1] == 0 and diroffset[2] == filesize:
-											leaftags.append('temporary')
-										scantask = (i[0], p, len(scandir), debug, leaftags, scannerhints, {})
-										scanqueue.put(scantask)
-										relscanpath = "%s/%s" % (i[0][lentempdir:], p)
-										if relscanpath.startswith('/'):
-											relscanpath = relscanpath[1:]
-										scanreports.append(relscanpath)
-									except Exception, e:
-										pass
-						except StopIteration:
-							pass
-						unpackreports['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
+					## recursively scan all files in the directory
+					osgen = os.walk(scandir)
+					scanreports = []
+					try:
+       						while True:
+                					i = osgen.next()
+							## make sure all directories can be accessed
+							for d in i[1]:
+								directoryname = os.path.join(i[0], d)
+								if not os.path.islink(directoryname):
+									os.chmod(directoryname, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+                					for p in i[2]:
+								filepathname = os.path.join(i[0], p)
+								try:
+									leaftags = []
+									scannerhints = {}
+									if not os.path.islink(filepathname):
+										os.chmod(filepathname, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+									if filepathname in hints:
+										if 'tags' in hints[filepathname]:
+											leaftags = list(set(leaftags + hints[filepathname]['tags']))
+										if 'scanned' in hints[filepathname]:
+											if hints[filepathname]['scanned']:
+												scannerhints['knownfile'] = True
+												## TODO: add offsets if available
+									if "temporary" in tags and diroffset[1] == 0 and diroffset[2] == filesize:
+										leaftags.append('temporary')
+									scantask = (i[0], p, len(scandir), debug, leaftags, scannerhints, {})
+									scanqueue.put(scantask)
+									relscanpath = "%s/%s" % (i[0][lentempdir:], p)
+									if relscanpath.startswith('/'):
+										relscanpath = relscanpath[1:]
+									scanreports.append(relscanpath)
+								except Exception, e:
+									pass
+					except StopIteration:
+						pass
+					unpackreports['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
 
 		blacklist.sort()
 
