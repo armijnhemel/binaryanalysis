@@ -5008,6 +5008,50 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	datafile.close()
 	return (diroffsets, blacklist, [], hints)
 
+def searchUnpackKnownPNG(filename, tempdir=None, scanenv={}, debug=False):
+	## first check if the file actually could be a valid gzip file
+	pngfile = open(filename, 'rb')
+	pngfile.seek(0)
+	pngheader = pngfile.read(8)
+	pngfile.close()
+	if pngheader != fsmagic.fsmagic['png']:
+		return ([], [], [], {})
+
+	lendata = os.stat(filename).st_size
+	pngfile = open(filename, 'rb')
+	pngfile.seek(lendata - 12)
+	pngtrailer = pngfile.read(12)
+	pngfile.close()
+	if pngtrailer != fsmagic.fsmagic['pngtrailer']:
+		return ([], [], [], {})
+	## only check files smaller than or equal to 10 MiB for now
+	if lendata > 10485760:
+		return ([], [], [], {})
+	pngheaderoffsets = prerun.genericMarkerSearch(filename, ['png'], [])['png']
+	if len(pngheaderoffsets) != 1:
+		return ([], [], [], {})
+	pngtraileroffsets = prerun.genericMarkerSearch(filename, ['pngtrailer'], [])['pngtrailer']
+	if len(pngtraileroffsets) != 1:
+		return ([], [], [], {})
+	res = searchUnpackPNG(filename, tempdir, [], {'png': [0], 'pngtrailer': [lendata - 12]}, scanenv, debug)
+	(diroffsets, blacklist, newtags, hints) = res
+
+	failed = False
+	## there were results, so check if they were successful
+	if blacklist != []:
+		if len(blacklist) != 1:
+			failed = True
+		else:
+			(startoffset, endoffset) = blacklist[0]
+			if startoffset != 0 or endoffset != os.stat(filename).st_size:
+				failed = True
+
+		if failed:
+			return ([], [], [], {})
+		else:
+			return (diroffsets, blacklist, newtags, hints)
+	return ([], [], [], {})
+
 ## PNG extraction is similar to GIF extraction, except there is a way better
 ## defined trailer.
 def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
