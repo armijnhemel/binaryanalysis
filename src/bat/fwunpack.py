@@ -392,11 +392,15 @@ def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={},
 				serialized_file.close()
 				break
 			if offset + bytes_read == filesize:
+				## currently only grab files that are at the end
+				## of the file.
 				if offset == 0:
 					serialized_file.close()
 					## the whole file is serialized Java, so tag it as such
 					blacklist.append((0,filesize))
 					return (diroffsets, blacklist, ['serializedjava', 'binary'], hints)
+
+				## write the data out to a file and tag it as serializedjava
 				tmpdir = dirsetup(tempdir, filename, "java_serialized", counter)
 				tempname = "deserialize"
 				tmpfilename = os.path.join(tmpdir, tempname)
