@@ -262,7 +262,15 @@ def main(argv):
 						reference = vs.childNodes[0].data
 						outfilename = None
 						if reference.startswith('http://git.kernel.org/') or reference.startswith('https://git.kernel.org/'):
-							patchid = reference.rsplit('=', 1)[-1]
+							## The following assumes that the patchid can be found in for
+							## the following form (example from CVE-2010-1187:
+							## http://git.kernel.org/?p=linux/kernel/git/davem/net-2.6.git;a=commitdiff;h=d0021b252eaf65ca07ed14f0d66425dd9ccab9a6;hp=6d55cb91a0020ac0d78edcad61efd6c8cf5785a3
+							if '=' in reference:
+								patchid = reference.rsplit('=', 1)[-1]
+							else:
+								## example from CVE-2010-1188:
+								## http://git.kernel.org/linus/fb7e2399ec17f1004c0e0ccfd17439f8759ede01
+								patchid = reference.rsplit('/', 1)[-1]
 							patches.add(patchid)
 							outfilename = os.path.join(patchdir, patchid)
 							if not os.path.exists(outfilename):
