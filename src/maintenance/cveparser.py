@@ -16,6 +16,10 @@ Documentation:
 
 CPE specification: http://cpe.mitre.org/files/cpe-specification_2.1.pdf
 CPE dictionary: https://cpe.mitre.org/dictionary/
+
+Datafiles (version 2.0 of the format):
+
+https://nvd.nist.gov/download.aspx
 '''
 
 import sys, os, re, sqlite3, multiprocessing
