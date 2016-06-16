@@ -175,7 +175,7 @@ def main(argv):
 		sys.exit(1)
 
 	if not os.path.exists(securitydatabase):
-		print >>sys.stderr, "security database %s does not exist" % database
+		print >>sys.stderr, "security database %s does not exist" % securitydatabase
 		sys.exit(1)
 
 	## TODO: replace with PostgreSQL
