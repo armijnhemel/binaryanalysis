@@ -1,3 +1,6 @@
+2016-06-16:
+* cveparser.py/createdb.config: open source first version of CVE parser
+
 2016-06-15:
 * fwunpack.py: add known file method for PNG files (extension: .png). This is
 mostly to prevent bat-unyaffs running on many many PNG files.
