@@ -429,8 +429,7 @@ def searchUnpackJavaSerialized(filename, tempdir=None, blacklist=[], offsets={},
 	return (diroffsets, blacklist, tags, hints)
 
 ## Unpack SWF files that are zlib compressed. Not all SWF files
-## are compressed but some are. For now it is assumed that the whole
-## file is a complete  SWF file.
+## are compressed but some are.
 def searchUnpackSwf(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	if not 'swf' in offsets:
