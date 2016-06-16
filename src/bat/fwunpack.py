@@ -1626,6 +1626,7 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 	cpiooffsets.sort()
 
 	diroffsets = []
+	newtags = []
 	counter = 1
 	newcpiooffsets = []
 	for offset in cpiooffsets:
@@ -1657,7 +1658,7 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		datafile.close()
 
 	if newcpiooffsets == []:
-		return ([], blacklist, [], hints)
+		return ([], blacklist, newtags, hints)
 	datafile = open(filename, 'rb')
 	for offset in newcpiooffsets:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
@@ -1678,7 +1679,9 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			data += datafile.read(trailercorrection)
 			res = unpackCpio(data, tmpdir)
 			if res != None:
-				diroffsets.append((res, offset, 0))
+				diroffsets.append((res, offset, len(data)))
+				if offset == 0 and len(data) == os.stat(filename).st_size:
+					newtags.append('cpio')
 				blacklist.append((offset, trailer + 10 + trailercorrection))
 				counter = counter + 1
 				## success with unpacking, no need to continue with
@@ -1688,7 +1691,7 @@ def searchUnpackCpio(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 				## cleanup
 				os.rmdir(tmpdir)
 	datafile.close()
-	return (diroffsets, blacklist, [], hints)
+	return (diroffsets, blacklist, newtags, hints)
 
 ## tries to unpack stuff using cpio. If it is successful, it will
 ## return a directory for further processing, otherwise it will return None.
