@@ -606,8 +606,13 @@ def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 		return ([], blacklist, [], hints)
 	if offsets['ar'] == []:
 		return ([], blacklist, [], hints)
+	filesize = os.stat(filename).st_size
+	## extra sanity check for size of the header
+	if filesize < 64:
+		return ([], blacklist, [], hints)
 	counter = 1
 	diroffsets = []
+	newtags = []
 	for offset in offsets['ar']:
 		## check if the offset found is in a blacklist
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
@@ -637,12 +642,14 @@ def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 		res = unpackAr(filename, offset, tmpdir, blacklist)
 		if res != None:
 			(ardir, size) = res
+			if size == filesize:
+				newtags.append("ar")
 			diroffsets.append((ardir, offset, size))
 			blacklist.append((offset, offset + size))
 			counter = counter + 1
 		else:
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [], hints)
+	return (diroffsets, blacklist, newtags, hints)
 
 def unpackAr(filename, offset, tempdir=None, blacklist=[]):
 	tmpdir = unpacksetup(tempdir)
