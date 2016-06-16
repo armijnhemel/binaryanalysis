@@ -1,5 +1,8 @@
 2016-06-16:
 * cveparser.py/createdb.config: open source first version of CVE parser
+* fwunpack.py: tag ar files
+* fwunpack.py: tag cramfs files, rework checks
+* fwunpack.py: tag cpio files, correct size reporting of cpio
 
 2016-06-15:
 * fwunpack.py: add known file method for PNG files (extension: .png). This is
