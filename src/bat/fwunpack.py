@@ -1807,9 +1807,12 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 		be_offsets = []
 	if le_offsets == [] and be_offsets == []:
 		return ([], blacklist, [], hints)
+
+	filesize = os.stat(filename).st_size
 	counter = 1
 	cramfsoffsets = le_offsets + be_offsets
 	diroffsets = []
+	newtags = []
 	cramfsoffsets.sort()
 
 	if not 'cramfs_be' in offsets:
@@ -1828,6 +1831,8 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 		cramfsfile.seek(offset)
 		tmpbytes = cramfsfile.read(64)
 		cramfsfile.close()
+		if len(tmpbytes) != 64:
+			break
 		if not "Compressed ROMFS" in tmpbytes:
 			continue
 
@@ -1837,21 +1842,23 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 			(res, cramfssize) = retval
 			if cramfssize != 0:
 				blacklist.append((offset,offset+cramfssize))
+			if cramfssize == filesize:
+				newtags.append("cramfs")
 			diroffsets.append((res, offset, cramfssize))
 			counter = counter + 1
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [], hints)
+	return (diroffsets, blacklist, newtags, hints)
 
-## tries to unpack stuff using fsck.cramfs. If it is successful, it will
-## return a directory for further processing, otherwise it will return None.
+## unpack a cramfs file system
 def unpackCramfs(filename, offset, tempdir=None, unpacktempdir=None, bigendian=False, blacklist=[]):
 	sizetmpfile = open(filename)
 	sizetmpfile.seek(offset+4)
 	tmpbytes = sizetmpfile.read(4)
 	sizetmpfile.close()
 
+	## needs at least 4 bytes to determine the size
 	if len(tmpbytes) < 4:
 		return
 	if bigendian:
@@ -1863,17 +1870,24 @@ def unpackCramfs(filename, offset, tempdir=None, unpacktempdir=None, bigendian=F
 	versiontmpfile.seek(offset+8)
 	tmpbytes = versiontmpfile.read(4)
 	versiontmpfile.close()
+	oldcramfs = False
 
 	if bigendian:
 		cramfsversion = struct.unpack('>I', tmpbytes)[0]
 	else:
 		cramfsversion = struct.unpack('<I', tmpbytes)[0]
+
+	## check if the length of the cramfslen field does not
+	## exceed the actual size of the file. This does not work
+	## for cramfs versions that are version 0.
 	if cramfsversion != 0:
 		if cramfslen > os.stat(filename).st_size:
 			return
 	else:
+		oldcramfs = True
 		## this is an old cramfs version, so length
-		## field does not mean anything
+		## field does not mean anything, so just set it
+		## to the entire file.
 		cramfslen = os.stat(filename).st_size
 
 	tmpdir = unpacksetup(tempdir)
@@ -1882,11 +1896,11 @@ def unpackCramfs(filename, offset, tempdir=None, unpacktempdir=None, bigendian=F
 
 	unpackFile(filename, offset, tmpfile[1], tmpdir, length=cramfslen, unpacktempdir=unpacktempdir, blacklist=blacklist)
 
-	## directory to avoid name clashes
+	## A new subdirectory inside tmpdir has to be created to unpack the
+	## files into, otherwise the tool will complain.
         tmpdir2 = tempfile.mkdtemp(dir=unpacktempdir)
 
 	## right now this is a path to a specially adapted fsck.cramfs that ignores special inodes
-	## We actually need to create a new subdirectory inside tmpdir, otherwise the tool will complain
 	p = subprocess.Popen(['bat-fsck.cramfs', '-x', os.path.join(tmpdir2, "cramfs"), tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
@@ -1903,17 +1917,23 @@ def unpackCramfs(filename, offset, tempdir=None, unpacktempdir=None, bigendian=F
 			if os.path.islink(os.path.join(tmpdir2, 'cramfs', f)):
 				continue
 			shutil.move(os.path.join(tmpdir2, "cramfs", f), tmpdir)
-		## determine if the whole file actually is the cramfs file. Do this by running bat-fsck.cramfs again with -v and check stderr.
-		## If there is no warning or error on stderr, we know that the entire file is the cramfs file and it can be blacklisted.
-		p = subprocess.Popen(['bat-fsck.cramfs', '-v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
-		(stanout, stanerr) = p.communicate()
-		if len(stanerr) != 0:
-			cramfssize = 0
-		else:
-			cramfssize = os.stat(tmpfile[1]).st_size
-		os.unlink(tmpfile[1])
+
+		## then remove the temporary directory
 		shutil.rmtree(tmpdir2)
-		return (tmpdir, cramfssize)
+
+		## Since for old cramfs (version 0) the length field does not mean
+		## anyting ## determine if the whole file actually is the cramfs file
+		## by running bat-fsck.cramfs again with -v and check stderr for any
+		## errors.
+		## If there is no warning or error on stderr the entire file is the
+		## cramfs file and it can be blacklisted.
+		if oldcramfs:
+			p = subprocess.Popen(['bat-fsck.cramfs', '-v', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
+			(stanout, stanerr) = p.communicate()
+			if len(stanerr) != 0:
+				cramfslen = 0
+		os.unlink(tmpfile[1])
+		return (tmpdir, cramfslen)
 
 ## Search and unpack a squashfs file system. Since there are so many flavours
 ## of squashfs available we have to do some extra work here, and possibly have
