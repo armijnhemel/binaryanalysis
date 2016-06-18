@@ -1716,6 +1716,7 @@ def searchUnpackRomfs(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 	if offsets['romfs'] == []:
 		return ([], blacklist, [], hints)
 	diroffsets = []
+	newtags = []
 	counter = 1
 	for offset in offsets['romfs']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
@@ -1725,12 +1726,15 @@ def searchUnpackRomfs(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 		res = unpackRomfs(filename, offset, tmpdir, blacklist=blacklist)
 		if res != None:
 			(romfsdir, size) = res
+			filesize = os.stat(filename).st_size
+			if offset == 0 and size == filesize:
+				newtags.append("romfs")
 			diroffsets.append((romfsdir, offset, size))
 			blacklist.append((offset, offset + size))
 			counter = counter + 1
 		else:
 			os.rmdir(tmpdir)
-        return (diroffsets, blacklist, [], hints)
+        return (diroffsets, blacklist, newtags, hints)
 
 def unpackRomfs(filename, offset, tempdir=None, unpacktempdir=None, blacklist=[]):
 	## First check the size of the header. If it has some
@@ -1776,6 +1780,7 @@ def unpackRomfs(filename, offset, tempdir=None, unpacktempdir=None, blacklist=[]
 			os.rmdir(tmpdir)
 		shutil.rmtree(tmpdir2)
 		return None
+	os.unlink(tmpfile[1])
 	## then move all the contents using shutil.move()
 	mvfiles = os.listdir(tmpdir2)
 	for f in mvfiles:
@@ -1784,14 +1789,8 @@ def unpackRomfs(filename, offset, tempdir=None, unpacktempdir=None, blacklist=[]
 	shutil.rmtree(tmpdir2)
 
 	## determine the size and cleanup
-	datafile = open(tmpfile[1])
-	datafile.seek(8)
-	## TODO: replace with romfssize??
-	sizedata = datafile.read(4)
-	size = struct.unpack('>I', sizedata)[0]
-	datafile.close()
-	os.unlink(tmpfile[1])
-	return (tmpdir, size)
+	romfssizecorrection = 1024 - romfssize%1024
+	return (tmpdir, romfssize + romfssizecorrection)
 
 ## unpacking cramfs file systems. This will fail on file systems from some
 ## devices most notably from Sigma Designs, since they seem to have tweaked
