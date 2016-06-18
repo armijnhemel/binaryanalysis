@@ -214,28 +214,6 @@ def verifyRiff(filename, validchunks, fourcc, tempdir=None, tags=[], offsets={},
 	newtags.append('riff')
 	return newtags
 
-## Quick check to verify if a file is a graphics file.
-def verifyGraphics(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
-	newtags = []
-	if "text" in tags or "compressed" in tags or "audio" in tags or "graphics" in tags:
-		return newtags
-	newtags = verifyBMP(filename, tempdir, tags, offsets, scanenv)
-	return newtags
-
-def verifyBMP(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
-	newtags = []
-	if not 'bmp' in offsets:
-		return newtags
-	if not 0 in offsets['bmp']:
-		return newtags
-	p = subprocess.Popen(['bmptopnm', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0 or "warning" in stanerr:
-		return newtags
-	newtags.append("bmp")
-	newtags.append("graphics")
-	return newtags
-
 ## Verify if this is an Android resources file. These files can be found in
 ## Android APK archives and are always called "resources.arsc".
 ## There are various valid types of resource files, which are documented here:

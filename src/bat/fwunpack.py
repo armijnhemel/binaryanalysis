@@ -4828,6 +4828,61 @@ def unpackPDF(filename, offset, trailer, tempdir=None):
 		size = os.stat(tmpfile[1]).st_size
 		return (tmpdir, size)
 
+def searchUnpackBMP(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
+	hints = {}
+	if not 'bmp' in offsets:
+		return ([], blacklist, [], hints)
+	if offsets['bmp'] == []:
+		return ([], blacklist, [], hints)
+	filesize = os.stat(filename).st_size
+	diroffsets = []
+	newtags = []
+	counter = 1
+
+	datafile = open(filename, 'rb')
+
+	for offset in offsets['bmp']:
+		## first check if the offset is not blacklisted
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		datafile.seek(offset+2)
+		sizebytes = datafile.read(2)
+		if len(sizebytes) != 2:
+			break
+		bmpsize = struct.unpack('<H', sizebytes)[0]
+		if bmpsize > filesize:
+			break
+		## reset the file pointer
+		datafile.seek(offset)
+		data = datafile.read(bmpsize)
+		p = subprocess.Popen(['bmptopnm'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		(stanout, stanerr) = p.communicate(data)
+		if p.returncode != 0:
+			continue
+		else:
+			## basically we have a copy of the original
+			## image here, so why bother?
+			if offset == 0 and bmpsize == filesize:
+				blacklist.append((0,bmpsize))
+				datafile.close()
+				return (diroffsets, blacklist, ['graphics', 'bmp', 'binary'], hints)
+			else:
+				tmpdir = dirsetup(tempdir, filename, "bmp", counter)
+				tmpfilename = os.path.join(tmpdir, 'unpack-%d.bmp' % counter)
+				tmpfile = open(tmpfilename, 'wb')
+				tmpfile.write(data)
+				tmpfile.close()
+				hints[tmpfilename] = {}
+				hints[tmpfilename]['tags'] = ['graphics', 'bmp', 'binary']
+				hints[tmpfilename]['scanned'] = True
+				blacklist.append((offset,offset + bmpsize))
+				diroffsets.append((tmpdir, offset, bmpsize))
+				counter = counter + 1
+	datafile.close()
+
+	return (diroffsets, blacklist, newtags, hints)
+
 ## http://en.wikipedia.org/wiki/Graphics_Interchange_Format
 ## 1. search for a GIF header
 ## 2. search for a GIF trailer
