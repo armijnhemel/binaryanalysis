@@ -1,3 +1,10 @@
+2016-06-18:
+* prerun.py: remove verifyGraphics and verifyBMP
+* fwunpack.py: add searchUnpackBMP that also allows unpacking and carving BMP
+files
+* bat-scan.config: add configuration for new BMP code
+* fwunpack.py: tag romfs file systems, correct blacklist and size for romfs
+
 2016-06-16:
 * cveparser.py/createdb.config: open source first version of CVE parser
 * fwunpack.py: tag ar files
