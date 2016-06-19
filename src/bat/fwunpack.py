@@ -211,7 +211,7 @@ def searchUnpackByteSwap(filename, tempdir=None, blacklist=[], offsets={}, scane
 ## unpack UU encoded files
 def searchUnpackUU(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
-	if not offsets.has_key('text'):
+	if not 'text' in offsets:
 		return ([], blacklist, [], hints)
 	pass
 
