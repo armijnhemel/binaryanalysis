@@ -5193,7 +5193,6 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			continue
 
 		datafile.seek(offset)
-
 		for r in xrange(0, trailerpopcounter):
 			traileroffsets.popleft()
 
@@ -5213,34 +5212,82 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			blacklistoffset = extractor.inblacklist(trail, blacklist)
 			if blacklistoffset != None:
 				break
+
+			## Now walk the PNG to see if it actually is a valid
+			## file. Do this by looking at the length and the chunk
+			## of the file and stepping through the file
+			localoffset = offset + 8
+			trailerseen = False
+			while localoffset <= trail and not trailerseen:
+				datafile.seek(localoffset)
+				pngbytes = datafile.read(8)
+				if len(pngbytes) != 8:
+					break
+				localoffset += 8
+
+				chunksize = struct.unpack('>I', pngbytes[:4])[0]
+				chunktype = pngbytes[4:]
+				if chunktype == 'IEND':
+					## trailer reached
+					trailerseen = True
+				## now add the length to the localoffset, plus add four
+				## bytes for the CRC, then seek to that offset.
+				localoffset += chunksize + 4
+			if not trailerseen:
+				break
+			if not trail + 12 == localoffset:
+				break
+
+			## now walk the image data again to compute the CRCs
+			localoffset = offset + 8
+			while localoffset <= trail:
+				crccorrect = False
+				datafile.seek(localoffset)
+
+				## grab the size
+				pngbytes = datafile.read(4)
+				localoffset += 4
+
+				chunksize = struct.unpack('>I', pngbytes)[0]
+				databytes = datafile.read(chunksize + 4)
+				pngcrc = datafile.read(4)
+				computedcrc = binascii.crc32(databytes) & 0xffffffff
+				if pngcrc == struct.pack('>I', computedcrc):
+					crccorrect = True
+				## now add the length to the localoffset, plus add four
+				## bytes for the CRC and four for the chunk, then seek to
+				## that offset.
+				localoffset += chunksize + 8
+			if not crccorrect:
+				break
+
+			## basically we have a copy of the original
+			## image here, so why bother reading and
+			## copying the data again?
+			if offset == 0 and trail == lendata - 12:
+				os.rmdir(tmpdir)
+				blacklist.append((0,lendata))
+				datafile.close()
+				return (diroffsets, blacklist, ['graphics', 'png', 'binary'], hints)
+
+			## carve the image data from the file and write it to disk
+			datafile.seek(offset)
 			pngsize = trail+12-offset
 			data = datafile.read(pngsize)
-			p = subprocess.Popen(['webpng', '-d', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-			(stanout, stanerr) = p.communicate(data)
-			if p.returncode != 0:
-				continue
-			else:
-				pngfound = True
-				## basically we have a copy of the original
-				## image here, so why bother?
-				if offset == 0 and trail == lendata - 12:
-					os.rmdir(tmpdir)
-					blacklist.append((0,lendata))
-					datafile.close()
-					return (diroffsets, blacklist, ['graphics', 'png', 'binary'], hints)
-				else:
-					tmpfilename = os.path.join(tmpdir, 'unpack-%d.png' % counter)
-					tmpfile = open(tmpfilename, 'wb')
-					tmpfile.write(data)
-					tmpfile.close()
-					hints[tmpfilename] = {}
-					hints[tmpfilename]['tags'] = ['graphics', 'png', 'binary']
-					hints[tmpfilename]['scanned'] = True
-					blacklist.append((offset,trail+12))
-					diroffsets.append((tmpdir, offset, pngsize))
-					counter = counter + 1
-					trailerpopcounter += 1
-					break
+			pngfound = True
+			tmpfilename = os.path.join(tmpdir, 'unpack-%d.png' % counter)
+			tmpfile = open(tmpfilename, 'wb')
+			tmpfile.write(data)
+			tmpfile.close()
+			hints[tmpfilename] = {}
+			hints[tmpfilename]['tags'] = ['graphics', 'png', 'binary']
+			hints[tmpfilename]['scanned'] = True
+			blacklist.append((offset,trail+12))
+			diroffsets.append((tmpdir, offset, pngsize))
+			counter = counter + 1
+			trailerpopcounter += 1
+			break
+
 		if not pngfound:
 			os.rmdir(tmpdir)
 	datafile.close()
