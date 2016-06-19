@@ -69,9 +69,13 @@ tarmagic = ['POSIX tar archive (GNU)'
 ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
+## Because the Linux kernel makes extensive use of macros it is not always
+## easy to spot the string literals using xgettext, so regular expressions
+## need to be used to grab the right data.
 kernelexprs = []
 
-## lots of things with _ATTR, like DEVICE_ATTR and friends. This list should be expanded.
+## lots of things with _ATTR, like DEVICE_ATTR and friends.
+## This list should be expanded.
 kernelexprs.append(re.compile("__ATTR\s*\((\w+)", re.MULTILINE))
 kernelexprs.append(re.compile("__ATTR_RO\s*\((\w+)", re.MULTILINE))
 kernelexprs.append(re.compile("__ATTR_WO\s*\((\w+)", re.MULTILINE))
@@ -173,7 +177,7 @@ kernelexprs.append(re.compile("WIRELESS_SHOW\s*\((\w+)", re.MULTILINE))
 #SYSCALL_DEFINE + friends go here
 #COMPAT_SYSCALL_DEFINE
 
-## some more precompiled regex
+## some more precompiled regular expressions
 recopyright = re.compile('^\s*\[(\d+):\d+:(\w+)] \'(.*)\'$')
 recopyright2 = re.compile('^\s*\[(\d+):\d+:(\w+)] \'(.*)')
 
@@ -190,6 +194,7 @@ for m in msc24obsolescent:
 ## TODO
 #msc24uncheckedobsolescent = ["bsearch", "fprintf", "fscanf", "fwprintf", "fwscanf", "getenv", "gmtime", "localtime", "mbsrtowcs", "mbstowcs", "memcpy", "memmove", "printf", "qsort", "setbuf", "snprintf", "sprintf", "sscanf", "strcat", "strcpy", "strerror", "strncat", "strncpy", "strtok", "swprintf", "swscanf", "vfprintf", "vfscanf", "vfwprintf", "vfwscanf", "vprintf", "vscanf", "vsnprintf", "vsprintf", "vsscanf", "vswprintf", "vswscanf", "vwprintf", "vwscanf", "wcrtomb", "wcscat", "wcscpy", "wcsncat", "wcsncpy", "wcsrtombs", "wcstok", "wcstombs", "wctomb", "wmemcpy", "wmemmove", "wprintf", "wscanf"]
 
+## allowed values for older kernel parameter type information
 oldallowedvals= ["b", "c", "h", "i", "l", "s"]
 
 reoldallowedexprs = []
@@ -236,13 +241,11 @@ def readrewritelist(rewritelist):
 			## format error, bail out
 			if len(rs) != 7:
 				return {}
-			else:
-				(package, version, filename, origin, sha256, newp, newv) = rs
-				## dupe, skip
-				if rewrite.has_key(sha256):
-					continue
-				else:
-					rewrite[sha256] = {'package': package, 'version': version, 'filename': filename, 'origin': origin, 'newpackage': newp, 'newversion': newv}
+			(package, version, filename, origin, sha256, newp, newv) = rs
+			## dupe, skip
+			if sha256 in rewrite:
+				continue
+			rewrite[sha256] = {'package': package, 'version': version, 'filename': filename, 'origin': origin, 'newpackage': newp, 'newversion': newv}
 	except:
 		return {}
 	return rewrite
@@ -462,7 +465,7 @@ def extractkernelconfiguration(kerneldir):
 								if match != None:
 									if not f.endswith('.o'):
 										dirpath = os.path.normpath(os.path.join(i[0][kerneldirlen:], f))
-										if dirstoconfigs.has_key(dirpath):
+										if dirpath in dirstoconfigs:
 											dirstoconfigs[dirpath].append(config)
 										else:
 											dirstoconfigs[dirpath] = [config]
@@ -478,7 +481,7 @@ def extractkernelconfiguration(kerneldir):
 						if res != None:
 							tmpkey = res.groups()[0]
 							tmpvals = res.groups()[1].split()
-							if tmpconfigs.has_key(tmpkey):
+							if tmpkey in tmpconfigs:
 								for f in tmpvals:
 									match = matchconfig(f, i[0], tmpconfigs[tmpkey], kerneldirlen)
 									if match != None:
@@ -1425,15 +1428,15 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		if moduleres.has_key('parameters'):
 			for res in moduleres['parameters']:
 				(pstring, ptype) = res
-				if filehashtomodule.has_key(filehash):
+				if filehash in filehashtomodule:
 					modulenames = filehashtomodule[filehash]
 					for modulename in modulenames:
 						cursor.execute('''insert into kernelmodule_parameter (checksum, modulename, paramname, paramtype) values (?,?,?,?)''', (filehash, modulename, pstring, ptype))
 				else:
 					cursor.execute('''insert into kernelmodule_parameter (checksum, modulename, paramname, paramtype) values (?,?,?,?)''', (filehash, None, pstring, ptype))
-		if moduleres.has_key('alias'):
+		if 'alias' in moduleres:
 			for res in moduleres['alias']:
-				if filehashtomodule.has_key(filehash):
+				if filehash in filehashtomodule:
 					modulenames = filehashtomodule[filehash]
 					for modulename in modulenames:
 						cursor.execute('''insert into kernelmodule_alias (checksum, modulename, alias) values (?,?,?)''', (filehash, modulename, res))
