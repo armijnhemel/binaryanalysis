@@ -1479,7 +1479,7 @@ def unpackLzo(filename, offset, tempdir=None):
 	os.unlink(tmpfile[1])
 	return (tmpdir, lzopsize)
 
-## To unpack XZ a header and a footer and footer need to be found
+## To unpack XZ a header and a footer need to be found
 ## http://tukaani.org/xz/xz-file-format.txt
 def searchUnpackXZ(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
@@ -4132,6 +4132,10 @@ def unpackRar(filename, offset, tempdir=None):
 	os.unlink(tmpfile[1])
 	return (endofarchive, tmpdir)
 
+## unpack LZMA compressed data. Uncompressing LZMA is difficult,
+## as it is a stream without a fixed header and theoretically millions
+## and millions of possible variations. In practice only a few seem
+## to be used.
 def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	lzmaoffsets = []
