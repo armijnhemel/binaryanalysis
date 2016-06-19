@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2012-2015 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2012-2016 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -24,7 +24,7 @@ import os, os.path, sys, subprocess
 from PIL import Image
 
 def generateImages(filename, unpackreport, scantempdir, topleveldir, scanenv={}, debug=False):
-	if not unpackreport.has_key('checksum'):
+	if not 'checksum' in unpackreport:
 		return
 
 	imagedir = scanenv.get('BAT_IMAGEDIR', "%s/%s" % (topleveldir, "images"))
