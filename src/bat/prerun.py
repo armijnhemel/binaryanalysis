@@ -805,12 +805,17 @@ def verifyIco(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		if not icooffset >= oldoffset:
 			return newtags
 		oldoffset = icooffset + icosize
-		## TODO: extra sanity check to see if each image is either PNG or BMP
+		## TODO: extra sanity check to see if each image
+		## is actually a valid image.
 		#oldoffset = icofile.tell()
 		#icofile.seek(icooffset)
 		#icobytes = icofile.read(icosize)
 		#icofile.seek(oldoffset)
 	icofile.close()
+
+	## the size of all icons together has to be the file size
+	if not oldoffset == icofilesize:
+		return newtags
 
 	## then check each individual image in the file
 	icodir = tempfile.mkdtemp(dir=unpacktempdir)
