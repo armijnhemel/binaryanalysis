@@ -4546,38 +4546,62 @@ def searchUnpackIco(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	counter = 1
 	offset = 0
 	template = None
-	if 'TEMPLATE' in scanenv:
-		template = scanenv['TEMPLATE']
 	blacklistoffset = extractor.inblacklist(offset, blacklist)
 	if blacklistoffset != None:
 		return (diroffsets, blacklist, [], hints)
-	tmpdir = dirsetup(tempdir, filename, "ico", counter)
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.fdopen(tmpfile[0]).close()
 
-	icofile = tmpfile[1]
+	## now check how many images there are in the file
+	icofile = open(filename, 'rb')
+	icofile.seek(4)
+	icobytes = icofile.read(2)
+	icocount = struct.unpack('<H', icobytes)[0]
 
-	if template != None:
-		mvpath = os.path.join(tmpdir, template)
-		if not os.path.exists(mvpath):
-			try:
-				shutil.move(tmpfile[1], mvpath)
-				icofile = mvpath
-			except:
+	## the ICO format first has all the headers, then the image data
+	for i in xrange(0,icocount):
+		tmpdir = dirsetup(tempdir, filename, "ico", counter)
+		icoheader = icofile.read(16)
+		## grab the size of the icon, plus the offset where it can
+		## be found in the file
+		icosize = struct.unpack('<I', icoheader[8:12])[0]
+		icooffset = struct.unpack('<I', icoheader[12:16])[0]
+
+		ispng = False
+		oldoffset = icofile.tell()
+		icofile.seek(icooffset)
+		icobytes = icofile.read(icosize)
+		if len(icobytes) > 45:
+			if icobytes[:8] == fsmagic.fsmagic['png']:
+				ispng = True
+		if ispng:
+			tmpfile = os.path.join(tmpdir, "unpack-%d.png" % counter)
+		else:
+			tmpfile = os.path.join(tmpdir, "unpack-%d.bmp" % counter)
+		icooutput = open(tmpfile, 'wb')
+		if not ispng:
+			## it is a BMP. This means that the BMP header needs to be
+			## reconstructed first.
+			if icobytes[:4] == '\x28\x00\x00\x00':
+				icooutput.write('BM')
+				## BMP magic
+				bmpsize = len(icobytes) + 16
+				## BMP size
+				icooutput.write(struct.pack('<I', bmpsize))
+				## BMP header reserved fields
+				icooutput.write('\x00\x00\x00\x00')
+				## BMP header offset of pixel array
+				## TODO: find out the correct value for this
+				icooutput.write('\x00\x00\x00\x00')
+			else:
 				pass
+		icooutput.write(icobytes)
+		icooutput.close()
+		
+		icofile.seek(oldoffset)
+		counter += 1
+		diroffsets.append((tmpdir, icooffset, icosize))
+	
+	icofile.close()
 
-	unpackFile(filename, offset, icofile, tmpdir)
-
-	p = subprocess.Popen(['icotool', '-x', '-o', tmpdir, icofile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-
-	if p.returncode != 0 or "no images matched" in stanerr:
-		os.unlink(icofile)
-		os.rmdir(tmpdir)
-		return (diroffsets, blacklist, [], hints)
-	## clean up the temporary files
-	os.unlink(icofile)
-	diroffsets.append((tmpdir, offset, 0))
 	return (diroffsets, blacklist, [], hints)
 
 ## Windows MSI
