@@ -753,7 +753,6 @@ def verifyIco(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	else:
 		return newtags
 	## now check how many images there are in the file
-	## actually unpack the ico files
 	icofile = open(filename, 'rb')
 	icofile.seek(4)
 	icobytes = icofile.read(2)
@@ -766,6 +765,9 @@ def verifyIco(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	icofilesize = os.stat(filename).st_size
 	icofile = open(filename, 'rb')
 	icofile.seek(6)
+
+	oldoffset = 0
+	## the ICO format first has all the headers, then the image data
 	for i in xrange(0,icocount):
 		icoheader = icofile.read(16)
 		if len(icoheader) != 16:
@@ -778,17 +780,31 @@ def verifyIco(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		if not (icoheader[3] == '\x00' or icoheader[3] == '\xff'):
 			icofile.close()
 			return newtags
+
+		## grab the size of the icon, plus the offset where it can
+		## be found in the file
 		icosize = struct.unpack('<I', icoheader[8:12])[0]
 		icooffset = struct.unpack('<I', icoheader[12:16])[0]
+
+		## the declared size of the icon cannot be larger than
+		## the icon file
 		if icosize > icofilesize:
 			icofile.close()
 			return newtags
+		## the declared offset of the icon cannot be beyond the
+		## end of the icon file
 		if icooffset > icofilesize:
 			icofile.close()
 			return newtags
+		## the data of the icon cannot be outside of the file
 		if icooffset + icosize > icofilesize:
 			icofile.close()
 			return newtags
+		## the icon cannot start before the end of the
+		## previous icon (if any)
+		if not icooffset >= oldoffset:
+			return newtags
+		oldoffset = icooffset + icosize
 		## TODO: extra sanity check to see if each image is either PNG or BMP
 		#oldoffset = icofile.tell()
 		#icofile.seek(icooffset)
