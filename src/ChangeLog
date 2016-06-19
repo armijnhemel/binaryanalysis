@@ -1,3 +1,11 @@
+2016-06-19:
+* fwunpack.py: replace call to webpng with own PNG checking code
+* setup.cfg: remove dependency on gd-progs
+* fwunpack.py: replace call to icotool with own unpacking code for ico,
+since icotool would always spit out PNG files, not BMP files. BMP files still
+need to be corrected though.
+* prerun.py: more sanity checks for ICO files.
+
 2016-06-18:
 * prerun.py: remove verifyGraphics and verifyBMP
 * fwunpack.py: add searchUnpackBMP that also allows unpacking and carving BMP
