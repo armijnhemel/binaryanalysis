@@ -4579,20 +4579,37 @@ def searchUnpackIco(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		icooutput = open(tmpfile, 'wb')
 		if not ispng:
 			## it is a BMP. This means that the BMP header needs to be
-			## reconstructed first.
+			## reconstructed first. According to the specification on
+			## wikipedia the bitmap data in the ICO file isn't
+			## regular bitmap data (because of a XOR mask), so skip
+			## for now.
+			pass
+			'''
 			if icobytes[:4] == '\x28\x00\x00\x00':
 				icooutput.write('BM')
-				## BMP magic
-				bmpsize = len(icobytes) + 16
+				## BMP magic, header is 14 long
+				bmpsize = len(icobytes) + 14
 				## BMP size
 				icooutput.write(struct.pack('<I', bmpsize))
 				## BMP header reserved fields
 				icooutput.write('\x00\x00\x00\x00')
 				## BMP header offset of pixel array
-				## TODO: find out the correct value for this
-				icooutput.write('\x00\x00\x00\x00')
+				## first there is the BMP file header,
+				## which is 14 bytes, then the DIB
+				## header, in total 54 bytes
+				pixelarrayoffset = 54
+				## Then there is an optional color table
+				bitsperpixel = struct.unpack('<H', icobytes[14:16])[0]
+				rawimagesize = struct.unpack('<I', icobytes[20:24])[0]
+				colorsinpalette = struct.unpack('<I', icobytes[32:36])[0]
+
+				pixelarrayoffset += pow(2,bitsperpixel)
+				if colorsinpalette == 0:
+					print pow(2, bitsperpixel), filename, counter
+				icooutput.write(struct.pack('<I', pixelarrayoffset))
 			else:
 				pass
+			'''
 		icooutput.write(icobytes)
 		icooutput.close()
 		
