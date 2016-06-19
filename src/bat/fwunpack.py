@@ -5244,8 +5244,8 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 
 			## now walk the image data again to compute the CRCs
 			localoffset = offset + 8
+			crccorrect = True
 			while localoffset <= trail:
-				crccorrect = False
 				datafile.seek(localoffset)
 
 				## grab the size
@@ -5256,8 +5256,9 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 				databytes = datafile.read(chunksize + 4)
 				pngcrc = datafile.read(4)
 				computedcrc = binascii.crc32(databytes) & 0xffffffff
-				if pngcrc == struct.pack('>I', computedcrc):
-					crccorrect = True
+				if pngcrc != struct.pack('>I', computedcrc):
+					crccorrect = False
+					break
 				## now add the length to the localoffset, plus add four
 				## bytes for the CRC and four for the chunk, then seek to
 				## that offset.
