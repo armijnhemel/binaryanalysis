@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2013-2015 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2013-2016 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
@@ -50,11 +50,11 @@ def main(argv):
 	## loop through the reports, record modules and kernel
 	kernelfiles = set()
 	for u in unpackreports:
-		if not unpackreports[u].has_key('tags'):
+		if not 'checksum' in unpackreports[u]:
+			continue
+		if not 'tags' in unpackreports[u]:
 			continue
 		if not 'linuxkernel' in unpackreports[u]['tags']:
-			continue
-		if not unpackreports[u].has_key('checksum'):
 			continue
 		if not os.path.exists(os.path.join(tmpdir, 'filereports', "%s-filereport.pickle.gz" % unpackreports[u]['checksum'])):
 			continue
@@ -67,17 +67,17 @@ def main(argv):
 		picklefile = gzip.open(os.path.join(tmpdir, 'filereports', "%s-filereport.pickle.gz" % sha256sum))
 		leafreports = cPickle.load(picklefile)
 		picklefile.close()
-		if not leafreports.has_key('ranking'):
+		if not 'ranking' leafreports:
 			continue
-		if leafreports.has_key('kernelchecks'):
-			if leafreports['kernelchecks'].has_key('version'):
-				if kernelversions.has_key(leafreports['kernelchecks']['version']):
+		if 'kernelchecks' in leafreports:
+			if 'version' in leafreports['kernelchecks']:
+				if leafreports['kernelchecks']['version'] in kernelversions:
 					kernelversions[leafreports['kernelchecks']['version']].append(sha256sum)
 				else:
 					kernelversions[leafreports['kernelchecks']['version']] = [sha256sum]
-		if leafreports.has_key('kernelmodule'):
+		if 'kernelmodule' in leafreports:
 			if 'version' in leafreports['kernelmodule']:
-				if kernelversions.has_key(leafreports['kernelmodule']['version']):
+				if leafreports['kernelmodule']['version'] in kernelversions:
 					kernelversions[leafreports['kernelmodule']['version']].append(sha256sum)
 				else:
 					kernelversions[leafreports['kernelmodule']['version']] = [sha256sum]
