@@ -109,6 +109,7 @@ fsmagic = {
             'mswim':	        'MSWIM\x00\x00\x00',
             'certificate':	'-----BEGIN',
             'androidbackup':	'ANDROID BACKUP\n',
+            'woff':		'wOFF',
           }
 
 ## some offsets can be found after a certain number of bytes, but
