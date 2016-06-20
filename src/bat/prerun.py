@@ -24,7 +24,7 @@ spent, plus there might be false positives (mostly LZMA).
 '''
 
 import sys, os, subprocess, os.path, shutil, stat, struct, zlib, binascii
-import tempfile, re, magic, hashlib, HTMLParser
+import tempfile, re, magic, hashlib, HTMLParser, math
 import fsmagic, extractor, javacheck
 
 ## method to search for all the markers in magicscans
@@ -638,7 +638,8 @@ def verifyMP4(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	newtags.append('mp4')
 	return newtags
 
-## very simplistic verifier for OpenType fonts
+## verifier for OpenType fonts
+## https://www.microsoft.com/typography/otspec/otff.htm
 def verifyOTF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not 'binary' in tags:
@@ -650,54 +651,146 @@ def verifyOTF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	if not 0 in offsets['otf']:
 		return newtags
 
-	## sanity check: list the tables and see if offset + length
-	## matches the file length
 	filesize = os.stat(filename).st_size
-	p = subprocess.Popen(['ttx', '-l', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		return newtags
-	lengthmatch = False
-	for l in stanout.strip().split('\n')[3:]:
-		ttfsplits = l.strip().split()
-		try:
-			ttflength = int(ttfsplits[2])
-			ttfoffset = int(ttfsplits[3])
-			if ttflength + ttfoffset == filesize:
-				lengthmatch = True
-				break
-		except:
-			return newtags
-	if not lengthmatch:
+
+	## walk the file structure
+	otffile = open(filename, 'rb')
+	otffile.seek(0)
+
+	## first the magic header
+	otfbytes = otffile.read(4)
+	if otfbytes != 'OTTO':
+		otffile.close()
 		return newtags
 
-	## run mkeot first. If it fails (mkeot might not be able to handle
-	## all OTF fonts) use ttx to dump fonts
-	p = subprocess.Popen(['mkeot', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		## first create a temporary directory where ttx can write its temporary files
-		fontdir = tempfile.mkdtemp(dir=unpacktempdir)
-		## now check if it is a valid file by running ttx
-		p = subprocess.Popen(['ttx', '-d', fontdir, '-i', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-		if p.returncode != 0:
-			## cleanup
-			## TODO: sanity checks
-			rmfiles = os.listdir(fontdir)
-			for r in rmfiles:
-				os.unlink(os.path.join(fontdir, r))
-			os.rmdir(fontdir)
+	## then the number of tables
+	otfbytes = otffile.read(2)
+	if len(otfbytes) != 2:
+		otffile.close()
+		return newtags
+	numberoftables = struct.unpack('>H', otfbytes)[0]
+
+	## followed by searchrange
+	otfbytes = otffile.read(2)
+	if len(otfbytes) != 2:
+		otffile.close()
+		return newtags
+	searchrange = struct.unpack('>H', otfbytes)[0]
+
+	## sanity check, see specification
+	if pow(2, int(math.log(numberoftables, 2)+4)) != searchrange:
+		otffile.close()
+		return newtags
+
+	## followed by entryselector
+	otfbytes = otffile.read(2)
+	if len(otfbytes) != 2:
+		otffile.close()
+		return newtags
+	entryselector = struct.unpack('>H', otfbytes)[0]
+
+	## sanity check, see specification
+	if int(math.log(numberoftables, 2)) != entryselector:
+		otffile.close()
+		return newtags
+
+	## followed by rangeshift
+	otfbytes = otffile.read(2)
+	if len(otfbytes) != 2:
+		otffile.close()
+		return newtags
+
+	rangeshift = struct.unpack('>H', otfbytes)[0]
+
+	## sanity check, see specification
+	if rangeshift != numberoftables*16 - searchrange:
+		otffile.close()
+		return newtags
+
+	tablenames = set()
+	## proces the tables
+	for i in xrange(0,numberoftables):
+		## first the tag
+		otfbytes = otffile.read(4)
+		if len(otfbytes) != 4:
+			otffile.close()
 			return newtags
-		else:
-			## TODO: process output of ttx, since it might return 0 even though the font file is corrupted
-			pass
-		## cleanup
-		## TODO: sanity checks
-		rmfiles = os.listdir(fontdir)
-		for r in rmfiles:
-			os.unlink(os.path.join(fontdir, r))
-		os.rmdir(fontdir)
+		tabletag = otfbytes
+
+		## each table should only appear once
+		if tabletag in tablenames:
+			otffile.close()
+			return newtags
+		tablenames.add(tabletag)
+
+		## then the checksum
+		if tabletag == 'head':
+			headchecklocation = otffile.tell()
+		otfbytes = otffile.read(4)
+		if len(otfbytes) != 4:
+			otffile.close()
+			return newtags
+		checksum = otfbytes
+
+		## then the offset
+		otfbytes = otffile.read(4)
+		if len(otfbytes) != 4:
+			otffile.close()
+			return newtags
+		tableoffset = struct.unpack('>L', otfbytes)[0]
+		if tableoffset > filesize:
+			otffile.close()
+			return newtags
+
+		## finally the length
+		otfbytes = otffile.read(4)
+		if len(otfbytes) != 4:
+			otffile.close()
+			return newtags
+		tablelength = struct.unpack('>L', otfbytes)[0]
+		if tablelength > filesize:
+			otffile.close()
+			return newtags
+		if tablelength + tableoffset > filesize:
+			otffile.close()
+			return newtags
+
+		## now calculate the checksum.
+		oldoffset = otffile.tell()
+		otffile.seek(tableoffset)
+		otfbytes = otffile.read(tablelength)
+		if len(otfbytes) != tablelength:
+			otffile.close()
+			return newtags
+		computedchecksum = 0
+		pad = 0
+		if tablelength % 4 != 0:
+			pad = 4 - tablelength % 4
+			otfbytes += '\x00'*pad
+
+		## the checksum has to fit in 4 bytes (long)
+		for r in xrange(0, len(otfbytes)/4):
+			computedchecksum += struct.unpack('>L', otfbytes[r*4:r*4+4])[0]
+		computedchecksum = computedchecksum%pow(2,32)
+
+		## the checksum for the 'head' section will be different
+		## according to the specification.
+		if not struct.pack('>L', computedchecksum) == checksum:
+			if tabletag != 'head':
+				otffile.close()
+				return newtags
+		otffile.seek(oldoffset)
+
+	## sanity check for required table names
+	requiredtablenames = set(['cmap', 'head', 'hhea', 'hmtx', 'maxp', 'name', 'OS/2', 'post'])
+	if tablenames.intersection(requiredtablenames) != requiredtablenames:
+		otffile.close()
+		return newtags
+
+	## TODO: compute checksumadjustment for header
+
+	otffile.close()
+
 	newtags.append('otf')
 	newtags.append('font')
 	newtags.append('resource')
