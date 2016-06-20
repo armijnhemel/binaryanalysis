@@ -5822,3 +5822,247 @@ def searchUnpackPLF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	plffile.close()
 
 	return (diroffsets, blacklist, newtags, hints)
+
+## carve WOFF fonts from a file and tag them
+## https://www.w3.org/TR/WOFF/
+def searchUnpackWOFF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
+	hints = {}
+	if not 'woff' in offsets:
+		return ([], blacklist, [], hints)
+	if offsets['woff'] == []:
+		return ([], blacklist, [], hints)
+
+	newtags = []
+	counter = 1
+	diroffsets = []
+
+	filesize = os.stat(filename).st_size
+	wofffile = open(filename, 'rb')
+	for offset in offsets['woff']:
+		wofffile.seek(offset)
+
+		## First walk the header
+		## a WOFF file starts with 'wOFF'
+		woffbytes = wofffile.read(4)
+		if woffbytes != 'wOFF':
+			continue
+
+		## the next 4 bytes are the "flavour"
+		## followed by the length of the file (4 bytes)
+		woffbytes = wofffile.read(8)
+		if len(woffbytes) != 8:
+			continue
+
+		wofflength = struct.unpack('>L', woffbytes[4:8])[0]
+
+		## font cannot be bigger than the file
+		if wofflength + offset > filesize:
+			continue
+
+		## followed by the number of font tables
+		woffbytes = wofffile.read(2)
+		if len(woffbytes) != 2:
+			continue
+
+		numtables = struct.unpack('>H', woffbytes)[0]
+
+		## followed by a reserved number that has to be zero
+		woffbytes = wofffile.read(2)
+		if len(woffbytes) != 2:
+			continue
+		reserved = struct.unpack('>H', woffbytes)[0]
+		if reserved != 0:
+			continue
+
+		## followed by the size of the uncompressed data
+		## which MUST be a multiple of four
+		woffbytes = wofffile.read(4)
+		if len(woffbytes) != 4:
+			continue
+		totalsfntsize = struct.unpack('>I', woffbytes)[0]
+		if totalsfntsize%4 != 0:
+			continue
+
+		## followed by the major version and minor version
+		woffbytes = wofffile.read(2)
+		if len(woffbytes) != 2:
+			continue
+		majorversion = struct.unpack('>H', woffbytes)[0]
+
+		woffbytes = wofffile.read(2)
+		if len(woffbytes) != 2:
+			continue
+		minorversion = struct.unpack('>H', woffbytes)[0]
+
+		## followed by the offset of the metadata
+		woffbytes = wofffile.read(4)
+		if len(woffbytes) != 4:
+			continue
+		metadataoffset = struct.unpack('>I', woffbytes)[0]
+
+		## meta data offset MUST start on a 4 byte boundary
+		## according to the specification (section 7)
+		if metadataoffset%4 != 0:
+			continue
+
+		## meta data offset cannot be outside of the file
+		if metadataoffset + offset > filesize:
+			continue
+
+		## followed by the length of the metadata
+		woffbytes = wofffile.read(4)
+		if len(woffbytes) != 4:
+			continue
+		metadatalength = struct.unpack('>I', woffbytes)[0]
+
+		## meta data length cannot be larger than the file
+		if metadatalength + offset > filesize:
+			continue
+
+		## meta data length cannot be larger than the file
+		if metadatalength + metadataoffset + offset > filesize:
+			continue
+
+		## followed by the length of the metadata
+		woffbytes = wofffile.read(4)
+		if len(woffbytes) != 4:
+			continue
+		metadataoriglength = struct.unpack('>I', woffbytes)[0]
+
+		## followed by the offset of the private data
+		woffbytes = wofffile.read(4)
+		if len(woffbytes) != 4:
+			continue
+		privatedataoffset = struct.unpack('>I', woffbytes)[0]
+
+		## private data offset MUST start on a 4 byte boundary
+		## according to the specification (section 8)
+		if privatedataoffset%4 != 0:
+			continue
+
+		## private data offset cannot be outside of the file
+		if privatedataoffset + offset > filesize:
+			continue
+
+		## followed by the length of the private data
+		woffbytes = wofffile.read(4)
+		if len(woffbytes) != 4:
+			continue
+		privatedatalength = struct.unpack('>I', woffbytes)[0]
+
+		## private data length cannot be larger than the file
+		if privatedatalength + offset > filesize:
+			continue
+
+		## private data length cannot be larger than the file
+		if privatedatalength + privatedataoffset + offset > filesize:
+			continue
+
+		failtounpack = False
+		fontblacklist = []
+		## now parse the individual tables
+		for i in xrange(0, numtables):
+			## first a header
+			woffbytes = wofffile.read(4)
+			if len(woffbytes) != 4:
+				failtounpack = True
+				break
+			tabletag = struct.unpack('>I', woffbytes)[0]
+
+			## then the offset of the data
+			woffbytes = wofffile.read(4)
+			if len(woffbytes) != 4:
+				failtounpack = True
+				break
+			tableoffset = struct.unpack('>I', woffbytes)[0]
+			## table offset has to start on a 4 byte boundary
+			## according to section 5 of the specification
+			if tableoffset%4 != 0:
+				failtounpack = True
+				break
+			if tableoffset + offset > filesize:
+				failtounpack = True
+				break
+
+			## followed by the length of the compressed data (excl. padding)
+			woffbytes = wofffile.read(4)
+			if len(woffbytes) != 4:
+				failtounpack = True
+				break
+			complength = struct.unpack('>I', woffbytes)[0]
+			if complength + offset > filesize:
+				failtounpack = True
+				break
+			if tableoffset + complength + offset > filesize:
+				failtounpack = True
+				break
+
+			## check if there are any overlaps by checking the blacklist
+			blacklistoffset = extractor.inblacklist(tableoffset, fontblacklist)
+			if blacklistoffset != None:
+				failtounpack = True
+				break
+			blacklistlistoffset = extractor.inblacklist(tableoffset + complength, fontblacklist)
+			if blacklistoffset != None:
+				failtounpack = True
+				break
+
+			## followed by the length of the uncompressed data (excl. padding)
+			woffbytes = wofffile.read(4)
+			if len(woffbytes) != 4:
+				failtounpack = True
+				break
+			uncomplength = struct.unpack('>I', woffbytes)[0]
+
+			## followed by the checksum of the uncompressed data
+			woffbytes = wofffile.read(4)
+			if len(woffbytes) != 4:
+				failtounpack = True
+				break
+			tablechecksum = struct.unpack('>I', woffbytes)[0]
+			fontblacklist.append((tableoffset, tableoffset + complength))
+
+			## sanity check for the compressed tables, if any
+			if complength < uncomplength:
+				oldoffset = wofffile.tell()
+				wofffile.seek(tableoffset + offset )
+				compbytes = wofffile.read(complength)
+				if len(compbytes) != complength:
+					failtounpack = True
+					break
+				try:
+					unzobj = zlib.decompressobj()
+					uncompresseddata = unzobj.decompress(compbytes)
+					if len(uncompresseddata) != uncomplength:
+						failtounpack = True
+						break
+				except Exception, e:
+					failtounpack = True
+					break
+				wofffile.seek(oldoffset)
+
+			## TODO: calculate checksums
+		if failtounpack:
+			continue
+
+		## basically we have a copy of the original
+		## image here, so why bother?
+		if offset == 0 and wofflength == filesize:
+			blacklist.append((0,wofflength))
+			wofffile.close()
+			return (diroffsets, blacklist, ['woff', 'font', 'resource', 'binary'], hints)
+		else:
+			tmpdir = dirsetup(tempdir, filename, "woff", counter)
+			tmpfilename = os.path.join(tmpdir, 'unpack-%d.woff' % counter)
+			tmpfile = open(tmpfilename, 'wb')
+			wofffile.seek(offset)
+			tmpfile.write(wofffile.read(wofflength))
+			tmpfile.close()
+			hints[tmpfilename] = {}
+			hints[tmpfilename]['tags'] = ['woff', 'font', 'resource', 'binary']
+			hints[tmpfilename]['scanned'] = True
+			blacklist.append((offset,offset + wofflength))
+			diroffsets.append((tmpdir, offset, wofflength))
+			counter = counter + 1
+	wofffile.close()
+	return (diroffsets, blacklist, newtags, hints)
