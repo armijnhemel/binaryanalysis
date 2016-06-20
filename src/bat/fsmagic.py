@@ -110,6 +110,7 @@ fsmagic = {
             'certificate':	'-----BEGIN',
             'androidbackup':	'ANDROID BACKUP\n',
             'woff':		'wOFF',
+            'woff2':		'wOF2',
           }
 
 ## some offsets can be found after a certain number of bytes, but
