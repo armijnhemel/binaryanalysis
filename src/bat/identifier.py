@@ -512,6 +512,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 				lines.append(printstring)
 		javameta = {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile, 'javatype': javatype, 'strings': lines}
 	elif javatype == 'dex' or javatype == 'odex':
+		'''
 		if javatype == 'dex':
 			## Further parse the Dex file
 			## https://source.android.com/devices/tech/dalvik/dex-format.html
@@ -678,6 +679,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 							pass
 					#break
 			dexfile.close()
+		'''
 
 		## Using dedexer http://dedexer.sourceforge.net/ extract information from Dalvik
 		## files, then process each file in $tmpdir and search file for lines containing
