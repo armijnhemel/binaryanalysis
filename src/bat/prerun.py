@@ -850,6 +850,28 @@ def verifyWOFF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fa
 		tablechecksum = struct.unpack('>I', ttfbytes)[0]
 		fontblacklist.append((tableoffset, tableoffset + complength))
 
+		## sanity check for the compressed tables, if any
+		if complength < uncomplength:
+			oldoffset = ttffile.tell()
+			ttffile.seek(tableoffset)
+			compbytes = ttffile.read(complength)
+			if len(compbytes) != complength:
+				ttffile.close()
+				return newtags
+
+			try:
+				unzobj = zlib.decompressobj()
+				uncompresseddata = unzobj.decompress(compbytes)
+				if len(uncompresseddata) != uncomplength:
+					ttffile.close()
+					return newtags
+			except Exception, e:
+				ttffile.close()
+				return newtags
+			ttffile.seek(oldoffset)
+
+		## TODO: calculate checksums
+
 	if wofflength == filesize:
 		newtags.append('woff')
 		newtags.append('font')
