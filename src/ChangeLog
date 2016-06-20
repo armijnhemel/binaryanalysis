@@ -1,3 +1,8 @@
+2016-06-20:
+* prerun.py/fwunpack.py: remove WOFF tagger and replace with WOFF unpacker
+* bat-scan.config: add configuration for WOFF unpacker, remove WOFF tagger
+configuration
+
 2016-06-19:
 * fwunpack.py: replace call to webpng with own PNG checking code
 * setup.cfg: remove dependency on gd-progs
