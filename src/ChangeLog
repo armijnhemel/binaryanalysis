@@ -2,6 +2,8 @@
 * prerun.py/fwunpack.py: remove WOFF tagger and replace with WOFF unpacker
 * bat-scan.config: add configuration for WOFF unpacker, remove WOFF tagger
 configuration
+* prerun.py: rework OTF verifier and no longer use external tools
+* setup.cfg: remove fonttools as dependency
 
 2016-06-19:
 * fwunpack.py: replace call to webpng with own PNG checking code
