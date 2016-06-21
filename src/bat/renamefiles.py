@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2015 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2015-2016 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 import sys, shutil, os.path, copy
@@ -22,7 +22,7 @@ def renamefiles(unpackreports, scantempdir, topleveldir, processors, scanenv, ba
 	## known compressions for initramfs
 	initramfscompressions = ['gzip']
 	for r in unpackreports.keys():
-		if unpackreports[r].has_key('checksum'):
+		if 'checksum' in unpackreports[r]:
 			if 'linuxkernel' in unpackreports[r]['tags']:
 				if 'modulekernelversion' in unpackreports[r]['tags']:
 					continue
@@ -39,8 +39,10 @@ def renamefiles(unpackreports, scantempdir, topleveldir, processors, scanenv, ba
 	cpiotemplate = "initramfs"
 	for r in kernelfiles:
 		if unpackreports[r]['scans'] != []:
+			counter = 0
 			for s in unpackreports[r]['scans']:
 				if len(s['scanreports']) != 1:
+					counter += 1
 					continue
 				renamefiles = set()
 				origcpio = ''
@@ -55,9 +57,11 @@ def renamefiles(unpackreports, scantempdir, topleveldir, processors, scanenv, ba
 							if unpackreports[unpackfile]['name'].startswith(template):
 								process = True
 					if not process:
+						counter += 1
 						continue
 					if unpackreports[unpackfile]['scans'] != []:
 						if len(unpackreports[unpackfile]['scans']) != 1:
+							counter += 1
 							continue
 						if unpackreports[unpackfile]['scans'][0]['scanname'] == 'cpio':
 							## it is an initramfs, so it is possible to rename the file
@@ -80,7 +84,8 @@ def renamefiles(unpackreports, scantempdir, topleveldir, processors, scanenv, ba
 								## in unpackreports
 								unpackreports[unpackfile]['name'] = cpiotemplate
 								newunpackreportsname = os.path.join(os.path.dirname(unpackfile), cpiotemplate)
-								unpackreports[r]['scans'][0]['scanreports'][0] = newunpackreportsname
+
+								unpackreports[r]['scans'][counter]['scanreports'][0] = newunpackreportsname
 								renamefiles.add(unpackfile)
 
 				while len(renamefiles) != 0:
@@ -107,3 +112,4 @@ def renamefiles(unpackreports, scantempdir, topleveldir, processors, scanenv, ba
 						unpackreports[newr] = copy.deepcopy(unpackreports[re])
 						del unpackreports[re]
 					renamefiles = newrenamefiles
+				counter += 1
