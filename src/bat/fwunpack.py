@@ -6123,7 +6123,7 @@ def searchUnpackFont(filename, tempdir, blacklist, offsets, requiredtablenames, 
 			continue
 		## walk the file structure
 		fontfile.seek(offset)
-		otfsize = 0
+		fontsize = 0
 
 		## first the magic header, already checked
 		fontbytes = fontfile.read(4)
@@ -6217,9 +6217,9 @@ def searchUnpackFont(filename, tempdir, blacklist, offsets, requiredtablenames, 
 			if tablelength + tableoffset > filesize:
 				validfont = False
 				break
-			otfsize = max(otfsize, tablelength + tableoffset)
-			if otfsize%4 != 0:
-				otfsize += (4 - otfsize%4)
+			fontsize = max(fontsize, tablelength + tableoffset)
+			if fontsize%4 != 0:
+				fontsize += (4 - fontsize%4)
 
 			## now calculate the checksum.
 			oldoffset = fontfile.tell()
@@ -6268,8 +6268,8 @@ def searchUnpackFont(filename, tempdir, blacklist, offsets, requiredtablenames, 
 		## the stored checksumadjustment in the head table
 		fontfile.seek(offset)
 		computedchecksum = 0
-		fontbytes = fontfile.read(otfsize)
-		for r in xrange(0, otfsize/4):
+		fontbytes = fontfile.read(fontsize)
+		for r in xrange(0, fontsize/4):
 			if r*4 == headchecklocation+8:
 				## first adapt the checksumadjustment in the 'head' table
 				computedchecksum += 0
@@ -6282,8 +6282,8 @@ def searchUnpackFont(filename, tempdir, blacklist, offsets, requiredtablenames, 
 
 		## basically we have a copy of the original
 		## image here, so why bother?
-		if offset == 0 and otfsize == filesize:
-			blacklist.append((0,otfsize))
+		if offset == 0 and fontsize == filesize:
+			blacklist.append((0,fontsize))
 			fontfile.close()
 			return (diroffsets, blacklist, [reporttag, 'font', 'resource', 'binary'], hints)
 
@@ -6292,13 +6292,13 @@ def searchUnpackFont(filename, tempdir, blacklist, offsets, requiredtablenames, 
 		tmpfilename = os.path.join(tmpdir, 'unpack-%d.%s' % (counter, extension))
 		tmpfile = open(tmpfilename, 'wb')
 		fontfile.seek(offset)
-		tmpfile.write(fontfile.read(otfsize))
+		tmpfile.write(fontfile.read(fontsize))
 		tmpfile.close()
 		hints[tmpfilename] = {}
 		hints[tmpfilename]['tags'] = [reporttag, 'font', 'resource', 'binary']
 		hints[tmpfilename]['scanned'] = True
-		blacklist.append((offset,offset + otfsize))
-		diroffsets.append((tmpdir, offset, otfsize))
+		blacklist.append((offset,offset + fontsize))
+		diroffsets.append((tmpdir, offset, fontsize))
 		counter = counter + 1
 
 	fontfile.close()
