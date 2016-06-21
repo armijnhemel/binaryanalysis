@@ -6287,6 +6287,10 @@ def searchUnpackFont(filename, tempdir, blacklist, offsets, requiredtablenames, 
 		## basically we have a copy of the original
 		## image here, so why bother?
 		if offset == 0 and fontsize == filesize:
+			hints[filename] = {}
+			hints[filename]['scanned'] = True
+			hints[filename]['blacklistignorescans'] = set()
+			hints[filename]['blacklistignorescans'].add('png')
 			blacklist.append((0,fontsize))
 			fontfile.close()
 			return (diroffsets, blacklist, [reporttag, 'font', 'resource', 'binary'], hints)
@@ -6301,6 +6305,8 @@ def searchUnpackFont(filename, tempdir, blacklist, offsets, requiredtablenames, 
 		hints[tmpfilename] = {}
 		hints[tmpfilename]['tags'] = [reporttag, 'font', 'resource', 'binary']
 		hints[tmpfilename]['scanned'] = True
+		hints[tmpfilename]['blacklistignorescans'] = set()
+		hints[tmpfilename]['blacklistignorescans'].add('png')
 		blacklist.append((offset,offset + fontsize))
 		diroffsets.append((tmpdir, offset, fontsize))
 		counter = counter + 1
