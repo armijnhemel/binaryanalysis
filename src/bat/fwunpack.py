@@ -4895,7 +4895,7 @@ def searchUnpackBMP(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		if len(sizebytes) != 2:
 			break
 		bmpsize = struct.unpack('<H', sizebytes)[0]
-		if bmpsize > filesize:
+		if bmpsize + offset > filesize:
 			break
 		## reset the file pointer
 		datafile.seek(offset)
