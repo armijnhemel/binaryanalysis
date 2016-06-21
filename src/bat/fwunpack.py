@@ -6108,6 +6108,8 @@ def searchUnpackOTF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		if len(otfbytes) != 2:
 			break
 		numberoftables = struct.unpack('>H', otfbytes)[0]
+		if numberoftables == 0:
+			continue
 
 		## followed by searchrange
 		otfbytes = otffile.read(2)
