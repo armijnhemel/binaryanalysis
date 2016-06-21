@@ -4911,18 +4911,19 @@ def searchUnpackBMP(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 				blacklist.append((0,bmpsize))
 				datafile.close()
 				return (diroffsets, blacklist, ['graphics', 'bmp', 'binary'], hints)
-			else:
-				tmpdir = dirsetup(tempdir, filename, "bmp", counter)
-				tmpfilename = os.path.join(tmpdir, 'unpack-%d.bmp' % counter)
-				tmpfile = open(tmpfilename, 'wb')
-				tmpfile.write(data)
-				tmpfile.close()
-				hints[tmpfilename] = {}
-				hints[tmpfilename]['tags'] = ['graphics', 'bmp', 'binary']
-				hints[tmpfilename]['scanned'] = True
-				blacklist.append((offset,offset + bmpsize))
-				diroffsets.append((tmpdir, offset, bmpsize))
-				counter = counter + 1
+
+			## not the whole file, so carve
+			tmpdir = dirsetup(tempdir, filename, "bmp", counter)
+			tmpfilename = os.path.join(tmpdir, 'unpack-%d.bmp' % counter)
+			tmpfile = open(tmpfilename, 'wb')
+			tmpfile.write(data)
+			tmpfile.close()
+			hints[tmpfilename] = {}
+			hints[tmpfilename]['tags'] = ['graphics', 'bmp', 'binary']
+			hints[tmpfilename]['scanned'] = True
+			blacklist.append((offset,offset + bmpsize))
+			diroffsets.append((tmpdir, offset, bmpsize))
+			counter = counter + 1
 	datafile.close()
 
 	return (diroffsets, blacklist, newtags, hints)
@@ -5122,19 +5123,20 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 						datafile.close()
 						os.rmdir(tmpdir)
 						return (diroffsets, blacklist, ['graphics', 'gif', 'binary'], hints)
-					else:
-						tmpfilename = os.path.join(tmpdir, 'unpack-%d.gif' % counter)
-						tmpfile = open(tmpfilename, 'wb')
-						tmpfile.write(data[:trail+2])
-						tmpfile.close()
-						diroffsets.append((tmpdir, offset, trail+2))
-						hints[tmpfilename] = {}
-						hints[tmpfilename]['tags'] = ['graphics', 'gif', 'binary']
-						hints[tmpfilename]['scanned'] = True
-						counter = counter + 1
-						blacklist.append((offset, offset+trail+2))
-						## go to the next header
-						break
+
+					## not the whole file, so carve
+					tmpfilename = os.path.join(tmpdir, 'unpack-%d.gif' % counter)
+					tmpfile = open(tmpfilename, 'wb')
+					tmpfile.write(data[:trail+2])
+					tmpfile.close()
+					diroffsets.append((tmpdir, offset, trail+2))
+					hints[tmpfilename] = {}
+					hints[tmpfilename]['tags'] = ['graphics', 'gif', 'binary']
+					hints[tmpfilename]['scanned'] = True
+					counter = counter + 1
+					blacklist.append((offset, offset+trail+2))
+					## go to the next header
+					break
 		if not giffound:
 			os.rmdir(tmpdir)
 	datafile.close()
