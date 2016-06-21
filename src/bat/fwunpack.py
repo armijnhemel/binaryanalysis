@@ -15,7 +15,7 @@ Optionally return a range of bytes that should be excluded in same cases
 to prevent other scans from (re)scanning (part of) the data.
 '''
 
-import sys, os, subprocess, os.path, shutil, stat, array, struct, binascii, json
+import sys, os, subprocess, os.path, shutil, stat, array, struct, binascii, json, math
 import tempfile, bz2, re, magic, tarfile, zlib, copy, uu, hashlib, StringIO, zipfile
 import fsmagic, extractor, ext2, jffs2, prerun
 from collections import deque
@@ -5839,6 +5839,10 @@ def searchUnpackWOFF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 	filesize = os.stat(filename).st_size
 	wofffile = open(filename, 'rb')
 	for offset in offsets['woff']:
+		## first check if the offset is not blacklisted
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
 		wofffile.seek(offset)
 
 		## First walk the header
@@ -6051,18 +6055,222 @@ def searchUnpackWOFF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			blacklist.append((0,wofflength))
 			wofffile.close()
 			return (diroffsets, blacklist, ['woff', 'font', 'resource', 'binary'], hints)
-		else:
-			tmpdir = dirsetup(tempdir, filename, "woff", counter)
-			tmpfilename = os.path.join(tmpdir, 'unpack-%d.woff' % counter)
-			tmpfile = open(tmpfilename, 'wb')
-			wofffile.seek(offset)
-			tmpfile.write(wofffile.read(wofflength))
-			tmpfile.close()
-			hints[tmpfilename] = {}
-			hints[tmpfilename]['tags'] = ['woff', 'font', 'resource', 'binary']
-			hints[tmpfilename]['scanned'] = True
-			blacklist.append((offset,offset + wofflength))
-			diroffsets.append((tmpdir, offset, wofflength))
-			counter = counter + 1
+
+		## not the whole file, so carve
+		tmpdir = dirsetup(tempdir, filename, "woff", counter)
+		tmpfilename = os.path.join(tmpdir, 'unpack-%d.woff' % counter)
+		tmpfile = open(tmpfilename, 'wb')
+		wofffile.seek(offset)
+		tmpfile.write(wofffile.read(wofflength))
+		tmpfile.close()
+		hints[tmpfilename] = {}
+		hints[tmpfilename]['tags'] = ['woff', 'font', 'resource', 'binary']
+		hints[tmpfilename]['scanned'] = True
+		blacklist.append((offset,offset + wofflength))
+		diroffsets.append((tmpdir, offset, wofflength))
+		counter = counter + 1
 	wofffile.close()
+	return (diroffsets, blacklist, newtags, hints)
+
+## verifier for OpenType fonts
+## https://www.microsoft.com/typography/otspec/otff.htm
+def searchUnpackOTF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
+	hints = {}
+	if not 'otf' in offsets:
+		return ([], blacklist, [], hints)
+	if offsets['otf'] == []:
+		return ([], blacklist, [], hints)
+
+	newtags = []
+	counter = 1
+	diroffsets = []
+
+	filesize = os.stat(filename).st_size
+	otffile = open(filename, 'rb')
+	for offset in offsets['otf']:
+		## first check if the offset is not blacklisted
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		## walk the file structure
+		otffile.seek(offset)
+		otfsize = 0
+
+		## first the magic header
+		otfbytes = otffile.read(4)
+		if otfbytes != 'OTTO':
+			continue
+
+		## then the number of tables
+		otfbytes = otffile.read(2)
+		if len(otfbytes) != 2:
+			break
+		numberoftables = struct.unpack('>H', otfbytes)[0]
+
+		## followed by searchrange
+		otfbytes = otffile.read(2)
+		if len(otfbytes) != 2:
+			break
+		searchrange = struct.unpack('>H', otfbytes)[0]
+
+		## sanity check, see specification
+		if pow(2, int(math.log(numberoftables, 2)+4)) != searchrange:
+			continue
+
+		## followed by entryselector
+		otfbytes = otffile.read(2)
+		if len(otfbytes) != 2:
+			break
+		entryselector = struct.unpack('>H', otfbytes)[0]
+
+		## sanity check, see specification
+		if int(math.log(numberoftables, 2)) != entryselector:
+			continue
+
+		## followed by rangeshift
+		otfbytes = otffile.read(2)
+		if len(otfbytes) != 2:
+			break
+
+		rangeshift = struct.unpack('>H', otfbytes)[0]
+
+		## sanity check, see specification
+		if rangeshift != numberoftables*16 - searchrange:
+			continue
+
+		tablenames = set()
+		headchecklocation = 0
+		checksumadjustment = 0
+		## proces the tables
+		validotf = True
+		for i in xrange(0,numberoftables):
+			## first the tag
+			otfbytes = otffile.read(4)
+			if len(otfbytes) != 4:
+				validotf = False
+				break
+			tabletag = otfbytes
+
+			## each table should only appear once
+			if tabletag in tablenames:
+				validotf = False
+				break
+			tablenames.add(tabletag)
+
+			## then the checksum
+			otfbytes = otffile.read(4)
+			if len(otfbytes) != 4:
+				validotf = False
+				break
+			checksum = otfbytes
+
+			## then the offset
+			otfbytes = otffile.read(4)
+			if len(otfbytes) != 4:
+				validotf = False
+				break
+			tableoffset = struct.unpack('>L', otfbytes)[0]
+			if tableoffset > filesize:
+				validotf = False
+				break
+			if tabletag == 'head':
+				headchecklocation = tableoffset
+
+			## finally the length
+			otfbytes = otffile.read(4)
+			if len(otfbytes) != 4:
+				validotf = False
+				break
+			tablelength = struct.unpack('>L', otfbytes)[0]
+			if tablelength > filesize:
+				validotf = False
+				break
+			if tablelength + tableoffset > filesize:
+				validotf = False
+				break
+			otfsize = max(otfsize, tablelength + tableoffset)
+			if otfsize%4 != 0:
+				otfsize += (4 - otfsize%4)
+
+			## now calculate the checksum.
+			oldoffset = otffile.tell()
+			otffile.seek(offset+tableoffset)
+			otfbytes = otffile.read(tablelength)
+			if len(otfbytes) != tablelength:
+				validotf = False
+				break
+			computedchecksum = 0
+			pad = 0
+			if tablelength % 4 != 0:
+				pad = 4 - tablelength % 4
+				otfbytes += '\x00'*pad
+
+			## the checksum has to fit in 4 bytes (long)
+			for r in xrange(0, len(otfbytes)/4):
+				computedchecksum += struct.unpack('>L', otfbytes[r*4:r*4+4])[0]
+			computedchecksum = computedchecksum%pow(2,32)
+
+			## the checksum for the 'head' section will be different
+			## according to the specification.
+			if not struct.pack('>L', computedchecksum) == checksum:
+				if tabletag != 'head':
+					validotf = False
+					break
+			## store the checksumadjustment
+			if tabletag == 'head':
+				otffile.seek(offset+tableoffset+8)
+				otfbytes = otffile.read(4)
+				if len(otfbytes) != 4:
+					validotf = False
+					break
+				checksumadjustment = struct.unpack('>L', otfbytes)[0]
+
+			otffile.seek(oldoffset)
+
+		if not validotf:
+			continue
+
+		## sanity check for required table names
+		requiredtablenames = set(['cmap', 'head', 'hhea', 'hmtx', 'maxp', 'name', 'OS/2', 'post'])
+		if tablenames.intersection(requiredtablenames) != requiredtablenames:
+			continue
+
+		## compute checksumadjustment and compare it to
+		## the stored checksumadjustment in the head table
+		otffile.seek(offset)
+		computedchecksum = 0
+		otfbytes = otffile.read(otfsize)
+		for r in xrange(0, otfsize/4):
+			if r*4 == headchecklocation+8:
+				## first adapt the checksumadjustment in the 'head' table
+				computedchecksum += 0
+			else:
+				computedchecksum += struct.unpack('>L', otfbytes[r*4:r*4+4])[0]
+			computedchecksum = computedchecksum%pow(2,32)
+
+		if (0xB1B0AFBA - computedchecksum)%pow(2,32) != checksumadjustment:
+			continue
+
+		## basically we have a copy of the original
+		## image here, so why bother?
+		if offset == 0 and otfsize == filesize:
+			blacklist.append((0,otfsize))
+			otffile.close()
+			return (diroffsets, blacklist, ['otf', 'font', 'resource', 'binary'], hints)
+
+		## not the whole file, so carve
+		tmpdir = dirsetup(tempdir, filename, "otf", counter)
+		tmpfilename = os.path.join(tmpdir, 'unpack-%d.otf' % counter)
+		tmpfile = open(tmpfilename, 'wb')
+		otffile.seek(offset)
+		tmpfile.write(otffile.read(otfsize))
+		tmpfile.close()
+		hints[tmpfilename] = {}
+		hints[tmpfilename]['tags'] = ['otf', 'font', 'resource', 'binary']
+		hints[tmpfilename]['scanned'] = True
+		blacklist.append((offset,offset + otfsize))
+		diroffsets.append((tmpdir, offset, otfsize))
+		counter = counter + 1
+
+	otffile.close()
 	return (diroffsets, blacklist, newtags, hints)
