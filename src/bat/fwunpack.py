@@ -6077,66 +6077,84 @@ def searchUnpackWOFF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 ## verifier for OpenType fonts
 ## https://www.microsoft.com/typography/otspec/otff.htm
 def searchUnpackOTF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
-	hints = {}
 	if not 'otf' in offsets:
 		return ([], blacklist, [], hints)
 	if offsets['otf'] == []:
 		return ([], blacklist, [], hints)
 
+	requiredtablenames = set(['cmap', 'head', 'hhea', 'hmtx', 'maxp', 'name', 'OS/2', 'post'])
+	reporttag = 'otf'
+	extension = 'otf'
+	return searchUnpackFont(filename, tempdir, blacklist, offsets['otf'], requiredtablenames, reporttag, extension)
+
+## verifier for TTF fonts. It is very similar to OTF, except for a few required
+## tables, the magic header and the extension.
+## https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6.html
+def searchUnpackTTF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
+	if not 'ttf' in offsets:
+		return ([], blacklist, [], hints)
+	if offsets['ttf'] == []:
+		return ([], blacklist, [], hints)
+
+	requiredtablenames = set(['cmap', 'glyf', 'head', 'hhea', 'hmtx', 'loca', 'maxp', 'name', 'post'])
+	reporttag = 'ttf'
+	extension = 'ttf'
+	return searchUnpackFont(filename, tempdir, blacklist, offsets['ttf'], requiredtablenames, reporttag, extension)
+
+def searchUnpackFont(filename, tempdir, blacklist, offsets, requiredtablenames, reporttag, extension):
+	hints = {}
 	newtags = []
 	counter = 1
 	diroffsets = []
 
 	filesize = os.stat(filename).st_size
-	otffile = open(filename, 'rb')
-	for offset in offsets['otf']:
+	fontfile = open(filename, 'rb')
+	for offset in offsets:
 		## first check if the offset is not blacklisted
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
 		## walk the file structure
-		otffile.seek(offset)
+		fontfile.seek(offset)
 		otfsize = 0
 
-		## first the magic header
-		otfbytes = otffile.read(4)
-		if otfbytes != 'OTTO':
-			continue
+		## first the magic header, already checked
+		fontbytes = fontfile.read(4)
 
 		## then the number of tables
-		otfbytes = otffile.read(2)
-		if len(otfbytes) != 2:
+		fontbytes = fontfile.read(2)
+		if len(fontbytes) != 2:
 			break
-		numberoftables = struct.unpack('>H', otfbytes)[0]
+		numberoftables = struct.unpack('>H', fontbytes)[0]
 		if numberoftables == 0:
 			continue
 
 		## followed by searchrange
-		otfbytes = otffile.read(2)
-		if len(otfbytes) != 2:
+		fontbytes = fontfile.read(2)
+		if len(fontbytes) != 2:
 			break
-		searchrange = struct.unpack('>H', otfbytes)[0]
+		searchrange = struct.unpack('>H', fontbytes)[0]
 
 		## sanity check, see specification
 		if pow(2, int(math.log(numberoftables, 2)+4)) != searchrange:
 			continue
 
 		## followed by entryselector
-		otfbytes = otffile.read(2)
-		if len(otfbytes) != 2:
+		fontbytes = fontfile.read(2)
+		if len(fontbytes) != 2:
 			break
-		entryselector = struct.unpack('>H', otfbytes)[0]
+		entryselector = struct.unpack('>H', fontbytes)[0]
 
 		## sanity check, see specification
 		if int(math.log(numberoftables, 2)) != entryselector:
 			continue
 
 		## followed by rangeshift
-		otfbytes = otffile.read(2)
-		if len(otfbytes) != 2:
+		fontbytes = fontfile.read(2)
+		if len(fontbytes) != 2:
 			break
 
-		rangeshift = struct.unpack('>H', otfbytes)[0]
+		rangeshift = struct.unpack('>H', fontbytes)[0]
 
 		## sanity check, see specification
 		if rangeshift != numberoftables*16 - searchrange:
@@ -6146,92 +6164,92 @@ def searchUnpackOTF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		headchecklocation = 0
 		checksumadjustment = 0
 		## proces the tables
-		validotf = True
+		validfont = True
 		for i in xrange(0,numberoftables):
 			## first the tag
-			otfbytes = otffile.read(4)
-			if len(otfbytes) != 4:
-				validotf = False
+			fontbytes = fontfile.read(4)
+			if len(fontbytes) != 4:
+				validfont = False
 				break
-			tabletag = otfbytes
+			tabletag = fontbytes
 
 			## each table should only appear once
 			if tabletag in tablenames:
-				validotf = False
+				validfont = False
 				break
 			tablenames.add(tabletag)
 
 			## then the checksum
-			otfbytes = otffile.read(4)
-			if len(otfbytes) != 4:
-				validotf = False
+			fontbytes = fontfile.read(4)
+			if len(fontbytes) != 4:
+				validfont = False
 				break
-			checksum = otfbytes
+			checksum = fontbytes
 
 			## then the offset
-			otfbytes = otffile.read(4)
-			if len(otfbytes) != 4:
-				validotf = False
+			fontbytes = fontfile.read(4)
+			if len(fontbytes) != 4:
+				validfont = False
 				break
-			tableoffset = struct.unpack('>L', otfbytes)[0]
+			tableoffset = struct.unpack('>L', fontbytes)[0]
 			if tableoffset > filesize:
-				validotf = False
+				validfont = False
 				break
 			if tabletag == 'head':
 				headchecklocation = tableoffset
 
 			## finally the length
-			otfbytes = otffile.read(4)
-			if len(otfbytes) != 4:
-				validotf = False
+			fontbytes = fontfile.read(4)
+			if len(fontbytes) != 4:
+				validfont = False
 				break
-			tablelength = struct.unpack('>L', otfbytes)[0]
+			tablelength = struct.unpack('>L', fontbytes)[0]
 			if tablelength > filesize:
-				validotf = False
+				validfont = False
 				break
 			if tablelength + tableoffset > filesize:
-				validotf = False
+				validfont = False
 				break
 			otfsize = max(otfsize, tablelength + tableoffset)
 			if otfsize%4 != 0:
 				otfsize += (4 - otfsize%4)
 
 			## now calculate the checksum.
-			oldoffset = otffile.tell()
-			otffile.seek(offset+tableoffset)
-			otfbytes = otffile.read(tablelength)
-			if len(otfbytes) != tablelength:
-				validotf = False
+			oldoffset = fontfile.tell()
+			fontfile.seek(offset+tableoffset)
+			fontbytes = fontfile.read(tablelength)
+			if len(fontbytes) != tablelength:
+				validfont = False
 				break
 			computedchecksum = 0
 			pad = 0
 			if tablelength % 4 != 0:
 				pad = 4 - tablelength % 4
-				otfbytes += '\x00'*pad
+				fontbytes += '\x00'*pad
 
 			## the checksum has to fit in 4 bytes (long)
-			for r in xrange(0, len(otfbytes)/4):
-				computedchecksum += struct.unpack('>L', otfbytes[r*4:r*4+4])[0]
+			for r in xrange(0, len(fontbytes)/4):
+				computedchecksum += struct.unpack('>L', fontbytes[r*4:r*4+4])[0]
 			computedchecksum = computedchecksum%pow(2,32)
 
 			## the checksum for the 'head' section will be different
 			## according to the specification.
 			if not struct.pack('>L', computedchecksum) == checksum:
 				if tabletag != 'head':
-					validotf = False
+					validfont = False
 					break
 			## store the checksumadjustment
 			if tabletag == 'head':
-				otffile.seek(offset+tableoffset+8)
-				otfbytes = otffile.read(4)
-				if len(otfbytes) != 4:
-					validotf = False
+				fontfile.seek(offset+tableoffset+8)
+				fontbytes = fontfile.read(4)
+				if len(fontbytes) != 4:
+					validfont = False
 					break
-				checksumadjustment = struct.unpack('>L', otfbytes)[0]
+				checksumadjustment = struct.unpack('>L', fontbytes)[0]
 
-			otffile.seek(oldoffset)
+			fontfile.seek(oldoffset)
 
-		if not validotf:
+		if not validfont:
 			continue
 
 		## sanity check for required table names
@@ -6241,15 +6259,15 @@ def searchUnpackOTF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 
 		## compute checksumadjustment and compare it to
 		## the stored checksumadjustment in the head table
-		otffile.seek(offset)
+		fontfile.seek(offset)
 		computedchecksum = 0
-		otfbytes = otffile.read(otfsize)
+		fontbytes = fontfile.read(otfsize)
 		for r in xrange(0, otfsize/4):
 			if r*4 == headchecklocation+8:
 				## first adapt the checksumadjustment in the 'head' table
 				computedchecksum += 0
 			else:
-				computedchecksum += struct.unpack('>L', otfbytes[r*4:r*4+4])[0]
+				computedchecksum += struct.unpack('>L', fontbytes[r*4:r*4+4])[0]
 			computedchecksum = computedchecksum%pow(2,32)
 
 		if (0xB1B0AFBA - computedchecksum)%pow(2,32) != checksumadjustment:
@@ -6259,22 +6277,22 @@ def searchUnpackOTF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		## image here, so why bother?
 		if offset == 0 and otfsize == filesize:
 			blacklist.append((0,otfsize))
-			otffile.close()
-			return (diroffsets, blacklist, ['otf', 'font', 'resource', 'binary'], hints)
+			fontfile.close()
+			return (diroffsets, blacklist, [reporttag, 'font', 'resource', 'binary'], hints)
 
 		## not the whole file, so carve
-		tmpdir = dirsetup(tempdir, filename, "otf", counter)
-		tmpfilename = os.path.join(tmpdir, 'unpack-%d.otf' % counter)
+		tmpdir = dirsetup(tempdir, filename, extension, counter)
+		tmpfilename = os.path.join(tmpdir, 'unpack-%d.%s' % (counter, extension))
 		tmpfile = open(tmpfilename, 'wb')
-		otffile.seek(offset)
-		tmpfile.write(otffile.read(otfsize))
+		fontfile.seek(offset)
+		tmpfile.write(fontfile.read(otfsize))
 		tmpfile.close()
 		hints[tmpfilename] = {}
-		hints[tmpfilename]['tags'] = ['otf', 'font', 'resource', 'binary']
+		hints[tmpfilename]['tags'] = [reporttag, 'font', 'resource', 'binary']
 		hints[tmpfilename]['scanned'] = True
 		blacklist.append((offset,offset + otfsize))
 		diroffsets.append((tmpdir, offset, otfsize))
 		counter = counter + 1
 
-	otffile.close()
+	fontfile.close()
 	return (diroffsets, blacklist, newtags, hints)
