@@ -6,6 +6,14 @@ configuration
 item in the 'scans' list
 * prerun.py: replace call to mkeot with own TTF verifier
 * setup.cfg: remove dependency on eot-utils
+* prerun.py/fwunpack.py: remove TTF tagger and replace with TTF unpacker
+* bat-scan.config: add configuration for TTF unpacker, remove TTF tagger
+configuration
+* fwunpack.py: better check BMP files
+* bruteforcescan.py: allow scans to indicate that certain other scans can
+ignore the blacklist
+* fwunpack.py: PNG can ignore the blacklist of TTF and OTF fonts (to unpack
+glyphs)
 
 2016-06-20:
 * prerun.py/fwunpack.py: remove WOFF tagger and replace with WOFF unpacker
