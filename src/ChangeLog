@@ -4,6 +4,8 @@
 configuration
 * renamefiles.py: fix index, initramfs in kernels will not always be the first
 item in the 'scans' list
+* prerun.py: replace call to mkeot with own TTF verifier
+* setup.cfg: remove dependency on eot-utils
 
 2016-06-20:
 * prerun.py/fwunpack.py: remove WOFF tagger and replace with WOFF unpacker
