@@ -708,6 +708,8 @@ def verifyOTF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		return newtags
 
 	tablenames = set()
+	headchecklocation = 0
+	checksumadjustment = 0
 	## proces the tables
 	for i in xrange(0,numberoftables):
 		## first the tag
@@ -724,8 +726,6 @@ def verifyOTF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		tablenames.add(tabletag)
 
 		## then the checksum
-		if tabletag == 'head':
-			headchecklocation = otffile.tell()
 		otfbytes = otffile.read(4)
 		if len(otfbytes) != 4:
 			otffile.close()
@@ -741,6 +741,8 @@ def verifyOTF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		if tableoffset > filesize:
 			otffile.close()
 			return newtags
+		if tabletag == 'head':
+			headchecklocation = tableoffset
 
 		## finally the length
 		otfbytes = otffile.read(4)
@@ -779,6 +781,15 @@ def verifyOTF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 			if tabletag != 'head':
 				otffile.close()
 				return newtags
+		## store the checksumadjustment
+		if tabletag == 'head':
+			otffile.seek(tableoffset+8)
+			otfbytes = otffile.read(4)
+			if len(otfbytes) != 4:
+				otffile.close()
+				return newtags
+			checksumadjustment = struct.unpack('>L', otfbytes)[0]
+
 		otffile.seek(oldoffset)
 
 	## sanity check for required table names
@@ -787,9 +798,22 @@ def verifyOTF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		otffile.close()
 		return newtags
 
-	## TODO: compute checksumadjustment for header
+	## compute checksumadjustment and compare it to
+	## the stored checksumadjustment in the head table
+	otffile.seek(0)
+	computedchecksum = 0
+	otfbytes = otffile.read(filesize)
+	for r in xrange(0, filesize/4):
+		if r*4 == headchecklocation+8:
+			## first adapt the checksumadjustment in the 'head' table
+			computedchecksum += 0
+		else:
+			computedchecksum += struct.unpack('>L', otfbytes[r*4:r*4+4])[0]
+		computedchecksum = computedchecksum%pow(2,32)
 
 	otffile.close()
+	if (0xB1B0AFBA - computedchecksum)%pow(2,32) != checksumadjustment:
+		return newtags
 
 	newtags.append('otf')
 	newtags.append('font')
