@@ -2,6 +2,8 @@
 * prerun.py/fwunpack.py: remove OTF tagger and replace with OTF unpacker
 * bat-scan.config: add configuration for OTF unpacker, remove OTF tagger
 configuration
+* renamefiles.py: fix index, initramfs in kernels will not always be the first
+item in the 'scans' list
 
 2016-06-20:
 * prerun.py/fwunpack.py: remove WOFF tagger and replace with WOFF unpacker
