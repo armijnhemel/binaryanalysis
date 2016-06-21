@@ -296,6 +296,10 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 			knownfile = scanhints['knownfile']
 			unpacked = True
 		else:
+			blacklistignorescans = set()
+			if "blacklistignorescans" in scanhints:
+				blacklistignorescans = scanhints['blacklistignorescans']
+
 			for unpackscan in scans:
 				if not 'knownfilemethod' in unpackscan:
 					continue
@@ -340,6 +344,15 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 				knownfile = True
 				unpacked = True
 				unpackreports['scans'] = []
+
+				## special case: the whole file was unpacked and blacklisted
+				## but 'blacklistignorescans' was set. Resubmitting into the queue is
+				## not a possibility
+				if len(diroffsets) == 0:
+					if filetoscan in hints:
+						if 'blacklistignorescans' in hints[filetoscan]:
+							blacklistignorescans = hints[filetoscan]['blacklistignorescans']
+
 				## Add all the files found to the scan queue
 				## each diroffset is a (path, offset) tuple
 				for diroffset in diroffsets:
@@ -372,6 +385,8 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 										if 'scanned' in hints[filepathname]:
 											if hints[filepathname]['scanned']:
 												scannerhints['knownfile'] = True
+										for sc in hints[filepathname]:
+											scannerhints[sc] = copy.deepcopy(hints[filepathname][sc])
 									if "temporary" in tags and diroffset[1] == 0 and diroffset[2] == filesize:
 										leaftags.append('temporary')
 									scantask = (i[0], p, len(scandir), debug, leaftags, scannerhints, {})
@@ -387,7 +402,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 					unpackreports['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
 				break
 
-		if not knownfile:
+		if not knownfile or 'blacklistignorescans' in scanhints:
 			## scan for markers in case they are not already known
 			if offsets == {}:
 				offsets =  prerun.genericMarkerSearch(filetoscan, magicscans, optmagicscans)
@@ -418,7 +433,7 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 			knownfile = True
 
 		blacklisted = False
-		if not knownfile:
+		if not knownfile or 'blacklistignorescans' in scanhints:
 			## all offsets are known now, so scans that are not needed can
 			## be filtered out. Also keep track of the "most promising" scans
 			## (offset 0) to try them first.
@@ -463,7 +478,8 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 
 			## Reorder the scans based on information about offsets. If one scan has a
 			## match for offset 0 (after correction of the offset, like for tar, gzip,
-			## iso9660, etc.) make sure it is run first.
+			## iso9660, etc.) make sure it is run first (not enabled now, unsafe in some
+			## cases).
 			unpackscans = []
 			scanfirst = []
 
@@ -491,13 +507,26 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 
 			unpackreports['scans'] = []
 
+			blacklistignorescans = set()
+			if "blacklistignorescans" in scanhints:
+				blacklistignorescans = scanhints['blacklistignorescans']
+
 			unpacked = False
 			for unpackscan in unpackscans:
-				## the whole file has already been scanned by other scans, so
-				## continue with the leaf scans.
+				blacklistignored = False
 				if extractor.inblacklist(0, blacklist) == filesize:
+					## the whole file has already been scanned by other scans, so
+					## continue with the leaf scans.
 					blacklisted = True
-					break
+					if len(blacklistignorescans) == 0:
+						break
+					if not unpackscan['name'] in blacklistignorescans:
+						continue
+
+					## store a copy of the old blacklist
+					blacklistignored = True
+					oldblacklist = copy.deepcopy(blacklist)
+					blacklist = []
 
 				if 'minimumsize' in unpackscan:
 					if filesize < unpackscan['minimumsize']:
@@ -551,6 +580,14 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 				tags = list(set(tags + scantags))
 				if extractor.inblacklist(0, blacklist) == filesize:
 					blacklisted = True
+
+				## special case: the whole file was unpacked and blacklisted
+				## but 'blacklistignorescans' was set. Resubmitting into the queue is
+				## not a possibility
+				if len(diroffsets) == 0:
+					if filetoscan in hints:
+						if 'blacklistignorescans' in hints[filetoscan]:
+							blacklistignorescans = hints[filetoscan]['blacklistignorescans']
 				for diroffset in diroffsets:
 					if diroffset == None:
 						continue
@@ -583,6 +620,8 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 											if hints[filepathname]['scanned']:
 												scannerhints['knownfile'] = True
 												## TODO: add offsets if available
+										for sc in hints[filepathname]:
+											scannerhints[sc] = copy.deepcopy(hints[filepathname][sc])
 									if "temporary" in tags and diroffset[1] == 0 and diroffset[2] == filesize:
 										leaftags.append('temporary')
 									scantask = (i[0], p, len(scandir), debug, leaftags, scannerhints, {})
@@ -596,6 +635,9 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 					except StopIteration:
 						pass
 					unpackreports['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
+				if blacklistignored:
+					## restore the old blacklist
+					blacklist = copy.deepcopy(oldblacklist)
 
 		blacklist.sort()
 
