@@ -4903,6 +4903,10 @@ def searchUnpackBMP(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		bmpoffset = struct.unpack('<I', bmpdata[4:])[0]
 		if bmpoffset + offset > filesize:
 			break
+		## offset for BMP cannot be less than the current
+		## file pointer
+		if bmpoffset + offset < datafile.tell():
+			break
 		## reset the file pointer and read all needed data
 		datafile.seek(offset)
 		bmpdata = datafile.read(bmpsize)
