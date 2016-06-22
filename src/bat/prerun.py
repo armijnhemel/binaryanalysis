@@ -137,7 +137,7 @@ def verifyText(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fa
 def verifyWav(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	## some chunks observed in the wild. 'LGWV' and 'bext' seem to be extensions
 	validchunks = ['fmt ', 'fact', 'data', 'cue ', 'list', 'plst', 'labl', 'ltxt', 'note', 'smpl', 'inst', 'bext', 'LGWV']
-	## the next four characters should be 'WEBP'
+	## the next four characters should be 'WAVE'
 	fourcc = 'WAVE'
 	newtags = verifyRiff(filename, validchunks, fourcc, tempdir, tags, offsets, scanenv, debug, unpacktempdir)
 	if newtags != []:
@@ -168,7 +168,7 @@ def verifyRiff(filename, validchunks, fourcc, tempdir=None, tags=[], offsets={},
 		return newtags
 	filesize = os.stat(filename).st_size
 
-	## there should at least be a WebP header
+	## there should at least be a valid header
 	if filesize < 12:
 		return newtags
 	rifffile = open(filename, 'rb')
