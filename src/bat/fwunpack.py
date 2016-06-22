@@ -2211,6 +2211,14 @@ def unpackSquashfsWrapper(filename, offset, squashtype, sevenzipcompression, maj
 		return retval + (squashsize, 'squashfsbroadcom40lzma',)
 
 	os.unlink(tmpfile[1])
+	rmfiles = os.listdir(tmpdir)
+	for r in rmfiles:
+		rmfile = os.path.join(tmpdir, r)
+		if not os.path.isdir(rmfile):
+			os.unlink(rmfile)
+		else:
+			shutil.rmtree(rmfile)
+
 	if tempdir == None:
 		os.rmdir(tmpdir)
 	return None
