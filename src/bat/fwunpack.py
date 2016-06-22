@@ -216,8 +216,14 @@ def searchUnpackUU(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 	pass
 
 ## unpack base64 files
+## There are quite a few false positives, for example ld.so.conf on
+## Linux systems
 def searchUnpackBase64(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
+	if os.path.basename(filename) == 'ld.so.conf':
+		if '/etc/ld.so.conf' in filename:
+			## just ignore ld.so.conf
+			return ([], blacklist, [], hints)
 	counter = 1
 	diroffsets = []
 	template = None
@@ -229,22 +235,21 @@ def searchUnpackBase64(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 	if p.returncode != 0:
 		os.rmdir(tmpdir)
 		return ([], blacklist, [], hints)
-	else:
-		tmpfile = tempfile.mkstemp(dir=tmpdir)
-		os.write(tmpfile[0], stanout)
-		os.fdopen(tmpfile[0]).close()
-		if template != None:
-			mvpath = os.path.join(tmpdir, template)
-			if not os.path.exists(mvpath):
-				try:
-					shutil.move(tmpfile[1], mvpath)
-				except:
-					pass
-		## the whole file is blacklisted
-		filesize = os.stat(filename).st_size
-		blacklist.append((0, filesize))
-		diroffsets.append((tmpdir, 0, filesize))
-		return (diroffsets, blacklist, [], hints)
+	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	os.write(tmpfile[0], stanout)
+	os.fdopen(tmpfile[0]).close()
+	if template != None:
+		mvpath = os.path.join(tmpdir, template)
+		if not os.path.exists(mvpath):
+			try:
+				shutil.move(tmpfile[1], mvpath)
+			except:
+				pass
+	## the whole file is blacklisted
+	filesize = os.stat(filename).st_size
+	blacklist.append((0, filesize))
+	diroffsets.append((tmpdir, 0, filesize))
+	return (diroffsets, blacklist, [], hints)
 
 ## decompress executables that have been compressed with UPX.
 def searchUnpackUPX(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
