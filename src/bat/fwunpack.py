@@ -2705,11 +2705,6 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 
 		## it doesn't make sense if the size of the file system is
 		## larger than the actual file size
-		if ext2checksize > filesize:
-			continue
-
-		## it also does not make sense if the declared size of the file system
-		## extends beyond the file
 		if ext2checksize + offset - 0x438 > filesize:
 			continue
 
@@ -5659,14 +5654,6 @@ def searchUnpackIHex(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 	os.fdopen(tmpfile[0]).close()
 	datafile.close()
 	return (diroffsets, blacklist, tags, hints)
-
-## sometimes Ogg audio files are embedded into binary blobs
-def searchUnpackOgg(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
-	hints = {}
-	datafile = open(filename, 'rb')
-	data = datafile.read()
-	datafile.close()
-	return ([], blacklist, [], hints)
 
 ## sometimes MP3 audio files are embedded into binary blobs
 def searchUnpackMP3(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
