@@ -6368,6 +6368,12 @@ def searchUnpackOgg(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 				if p.returncode != 0:
 					os.unlink(tmpfilename)
 				else:
+					if os.stat(tmpfilename).st_size == filesize:
+						blacklist.append((0, filesize))
+						os.unlink(tmpfilename)
+						shutil.rmtree(tmpdir)
+						return (diroffsets, blacklist, ['ogg', 'audio', 'binary'], hints)
+						
 					## valid file, so do some more bookkeeping
 					hints[tmpfilename] = {}
 					hints[tmpfilename]['tags'] = ['ogg', 'audio', 'binary']
@@ -6464,6 +6470,7 @@ def searchUnpackOgg(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		oldoffset = offset
 
 	tmpfile.close()
+	oggfile.close()
 
 	if writeoggdata:
 		## now check if it is a valid file by running ogginfo
@@ -6473,6 +6480,11 @@ def searchUnpackOgg(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			os.unlink(tmpfilename)
 			shutil.rmtree(tmpdir)
 		else:
+			if os.stat(tmpfilename).st_size == filesize:
+				blacklist.append((0, filesize))
+				os.unlink(tmpfilename)
+				shutil.rmtree(tmpdir)
+				return (diroffsets, blacklist, ['ogg', 'audio', 'binary'], hints)
 			hints[tmpfilename] = {}
 			hints[tmpfilename]['tags'] = ['ogg', 'audio', 'binary']
 			hints[tmpfilename]['scanned'] = True
@@ -6481,7 +6493,5 @@ def searchUnpackOgg(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	else:
 		## remove the empty dir
 		shutil.rmtree(tmpdir)
-
-	oggfile.close()
 
 	return (diroffsets, blacklist, newtags, hints)
