@@ -3065,7 +3065,7 @@ def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, scane
 		## since compress expects a stream it will decompress some
 		## data, so as a first test read 1 MiB of data and then
 		## try to decompress it.
-		## If no data could be impressed
+		## If no data could be uncompressed return
 		compressfile = open(filename, 'rb')
 		compressfile.seek(offset)
 		compressdata = compressfile.read(1048576)
