@@ -7,6 +7,7 @@ configuration
 files
 * fwunpack.py: clean up after squashfs unpackers if they cannot unpack and
 some data was left behind (for example: symbolic links)
+* fwunpack.py: crude hack to ignore some false positives for base64 decoding
 
 2016-06-21:
 * prerun.py/fwunpack.py: remove OTF tagger and replace with OTF unpacker
