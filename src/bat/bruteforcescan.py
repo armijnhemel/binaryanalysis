@@ -173,6 +173,8 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 		## reset the reports, blacklist, offsets and tags for each new scan
 		blacklist = []
 		(dirname, filename, lenscandir, debug, tags, scanhints, offsets) = scanqueue.get(timeout=timeout)
+		if debug:
+			starttime = datetime.datetime.utcnow().isoformat()
 
 		## absolute path of the file in the file system (so including temporary dir)
 		filetoscan = os.path.join(dirname, filename)
@@ -694,6 +696,9 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 			## finally add the file to the queue for leaf tasks
 			leafqueue.put((filetoscan, tags, blacklist, filehash, filesize))
 			reportqueue.put({relfiletoscan: unpackreports})
+		if debug:
+			print >>sys.stderr, "DONE", filetoscan, starttime, datetime.datetime.utcnow().isoformat()
+			sys.stderr.flush()
 		scanqueue.task_done()
 
 def leafScan(scanqueue, reportqueue, scans, processid, llock, unpacktempdir, topleveldir, debug, cursor, conn, timeout):
@@ -1956,7 +1961,7 @@ def runscan(scans, binaries):
 					else:
 						cursor = None
 						conn = None
-					p = multiprocessing.Process(target=leafScan, args=(scanqueue,reportqueue, scans['leafscans'], i, lock, unpackdirectory, topleveldir, debug, cursor, conn, timeout))
+					p = multiprocessing.Process(target=leafScan, args=(scanqueue,reportqueue, scans['leafscans'], i, lock, unpackdirectory, topleveldir, leafdebug, cursor, conn, timeout))
 					processpool.append(p)
 					p.start()
 
