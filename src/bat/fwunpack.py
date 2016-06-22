@@ -6313,3 +6313,172 @@ def searchUnpackFont(filename, tempdir, blacklist, offsets, requiredtablenames, 
 
 	fontfile.close()
 	return (diroffsets, blacklist, newtags, hints)
+
+## Search Ogg files in and unpack from a larger file. Since Ogg
+## bitstreams can be multiplexed and chained it is difficult to
+## separate Ogg files if they have been concatenated.
+## http://www.ietf.org/rfc/rfc3533.txt
+def searchUnpackOgg(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
+	hints = {}
+	if not 'ogg' in offsets:
+		return ([], blacklist, [], hints)
+	if offsets['ogg'] == []:
+		return ([], blacklist, [], hints)
+
+	filesize = os.stat(filename).st_size
+
+	newtags = []
+	counter = 1
+	diroffsets = []
+
+	oggfile = open(filename, 'rb')
+
+	## Ogg files can be multiplexed and chained so some data
+	## needs to be juggled.
+
+	## oggcontinue is a flag to indicate whether or not the
+	## processed page should be considered part of the same
+	## bitstream (or part of the same file) or not.
+	oggcontinue = True
+
+	## writeoggdata is a flag to indicate whether or not
+	## data was previously written. This is used to do proper
+	## bookkeeping (writing data, creating temporary
+	## directories, etc.)
+	writeoggdata = False
+
+	## a mapping per file that maps bitstreams to page numbers
+	## to detect if pages are out of order.
+	bitstreams = {}
+
+	## first set up a directory and temporary file to write data to
+	tmpdir = dirsetup(tempdir, filename, "ogg", counter)
+	tmpfilename = os.path.join(tmpdir, 'unpack-%d.ogg' % counter)
+	tmpfile = open(tmpfilename, 'wb')
+	totalwritten = 0
+	oldoffset = 0
+	for offset in offsets['ogg']:
+		blacklisted = False
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			blacklisted = True
+			oggcontinue = False
+
+		if offset != oggfile.tell():
+			oggcontinue = False
+
+		## first check if this is a new stream or not
+		## and if it is a new stream reset everything
+		if not oggcontinue:
+			if writeoggdata:
+				## data was written
+				## first close the old file
+				tmpfile.close()
+				hints[tmpfilename] = {}
+				hints[tmpfilename]['tags'] = ['ogg', 'audio', 'binary']
+				hints[tmpfilename]['scanned'] = True
+				blacklist.append((oldoffset,oldoffset + oggdatatoread))
+				diroffsets.append((tmpdir, oldoffset, oggdatatoread))
+				counter += 1
+				tmpdir = dirsetup(tempdir, filename, "ogg", counter)
+				tmpfilename = os.path.join(tmpdir, 'unpack-%d.ogg' % counter)
+				tmpfile = open(tmpfilename, 'wb')
+			## then reset data for the new stream
+			writeoggdata = False
+			oggcontinue = True
+			bitstreams = {}
+
+		## if the current offset is blacklisted, then continue
+		if blacklisted:
+			continue
+
+		## version field has to be zero
+		oggfile.seek(offset+4)
+		version = oggfile.read(1)
+		if version != '\x00':
+			oggcontinue = False
+			continue
+
+		streamtype = oggfile.read(1)
+		## TODO: checks with streamtypes
+
+		oggbytes = oggfile.read(8)
+		if len(oggbytes) != 8:
+			writeoggdata = False
+			break
+		granuleposition = oggbytes
+
+		oggbytes = oggfile.read(4)
+		if len(oggbytes) != 4:
+			writeoggdata = False
+			break
+		bitstreamserialnumber = struct.unpack('<L', oggbytes)[0]
+
+		oggbytes = oggfile.read(4)
+		if len(oggbytes) != 4:
+			writeoggdata = False
+			break
+		pagesequencenumber = struct.unpack('<L', oggbytes)[0]
+
+		if bitstreamserialnumber in bitstreams:
+			## pages have to be ordered per bitstream
+			if bitstreams[bitstreamserialnumber] > pagesequencenumber:
+				oggcontinue = False
+				continue
+		else:
+			bitstreams[bitstreamserialnumber] = pagesequencenumber
+
+		oggbytes = oggfile.read(4)
+		if len(oggbytes) != 4:
+			writeoggdata = False
+			break
+		oggchecksum = struct.unpack('<L', oggbytes)[0]
+
+		oggbytes = oggfile.read(1)
+		if len(oggbytes) != 1:
+			writeoggdata = False
+			break
+		pagesegments = struct.unpack('<B', oggbytes)[0]
+		segmenttotalsize = 0
+		for p in xrange(0, pagesegments):
+			oggbytes = oggfile.read(1)
+			segmentsize = struct.unpack('<B', oggbytes)[0]
+			segmenttotalsize += segmentsize
+
+		'''
+		## compute the checksum. The standard crc32 methods in
+		## Python (binascii and zlib) use reverse polynomial
+		## representation, whereas Ogg uses normal
+		## TODO: compute checksum
+		oggdataforchecksum = oggfile.tell() - offset + segmentsize
+		oggfile.seek(offset)
+		oggbytes = oggfile.read(oggdataforchecksum)
+		newoggbytes = oggbytes[:20]
+		newoggbytes += '\x00\x00\x00\x00'
+		newoggbytes += oggbytes[24:]
+		crc = 0
+		computedchecksum = binascii.crc32(oggbytes)
+		'''
+
+		writeoggdata = True
+		oggdatatoread = oggfile.tell() - offset + segmenttotalsize
+		oggfile.seek(offset)
+		tmpfile.write(oggfile.read(oggdatatoread))
+		totalwritten += oggdatatoread
+		oldoffset = offset
+
+	tmpfile.close()
+
+	if writeoggdata:
+		hints[tmpfilename] = {}
+		hints[tmpfilename]['tags'] = ['ogg', 'audio', 'binary']
+		hints[tmpfilename]['scanned'] = True
+		blacklist.append((oldoffset,oldoffset + oggdatatoread))
+		diroffsets.append((tmpdir, oldoffset, oggdatatoread))
+	else:
+		## remove the empty dir
+		shutil.rmtree(tmpdir)
+
+	oggfile.close()
+
+	return (diroffsets, blacklist, newtags, hints)
