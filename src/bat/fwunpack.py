@@ -6318,6 +6318,8 @@ def searchUnpackFont(filename, tempdir, blacklist, offsets, requiredtablenames, 
 ## bitstreams can be multiplexed and chained it is difficult to
 ## separate Ogg files if they have been concatenated.
 ## http://www.ietf.org/rfc/rfc3533.txt
+## Note: some Ogg files on some Android devices are "created by a
+## buggy encoder" according to ogginfo
 def searchUnpackOgg(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	if not 'ogg' in offsets:
@@ -6371,19 +6373,25 @@ def searchUnpackOgg(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		## and if it is a new stream reset everything
 		if not oggcontinue:
 			if writeoggdata:
-				## data was written
-				## first close the old file
+				## data was written, so first close the old file
 				tmpfile.close()
-				hints[tmpfilename] = {}
-				hints[tmpfilename]['tags'] = ['ogg', 'audio', 'binary']
-				hints[tmpfilename]['scanned'] = True
-				blacklist.append((oldoffset,oldoffset + oggdatatoread))
-				diroffsets.append((tmpdir, oldoffset, oggdatatoread))
-				counter += 1
-				tmpdir = dirsetup(tempdir, filename, "ogg", counter)
-				tmpfilename = os.path.join(tmpdir, 'unpack-%d.ogg' % counter)
-				tmpfile = open(tmpfilename, 'wb')
-			## then reset data for the new stream
+				## now check if it is a valid file by running ogginfo
+				p = subprocess.Popen(['ogginfo', tmpfilename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+				(stanout, stanerr) = p.communicate()
+				if p.returncode != 0:
+					os.unlink(tmpfilename)
+				else:
+					## valid file, so do some more bookkeeping
+					hints[tmpfilename] = {}
+					hints[tmpfilename]['tags'] = ['ogg', 'audio', 'binary']
+					hints[tmpfilename]['scanned'] = True
+					blacklist.append((oldoffset,oldoffset + oggdatatoread))
+					diroffsets.append((tmpdir, oldoffset, oggdatatoread))
+					counter += 1
+					tmpdir = dirsetup(tempdir, filename, "ogg", counter)
+					tmpfilename = os.path.join(tmpdir, 'unpack-%d.ogg' % counter)
+					tmpfile = open(tmpfilename, 'wb')
+			## then reset data for the new file
 			writeoggdata = False
 			oggcontinue = True
 			bitstreams = {}
@@ -6449,7 +6457,8 @@ def searchUnpackOgg(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		## compute the checksum. The standard crc32 methods in
 		## Python (binascii and zlib) use reverse polynomial
 		## representation, whereas Ogg uses normal
-		## TODO: compute checksum
+		## TODO: compute checksum, then remove the calls to
+		## ogginfo
 		oggdataforchecksum = oggfile.tell() - offset + segmentsize
 		oggfile.seek(offset)
 		oggbytes = oggfile.read(oggdataforchecksum)
@@ -6470,11 +6479,18 @@ def searchUnpackOgg(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	tmpfile.close()
 
 	if writeoggdata:
-		hints[tmpfilename] = {}
-		hints[tmpfilename]['tags'] = ['ogg', 'audio', 'binary']
-		hints[tmpfilename]['scanned'] = True
-		blacklist.append((oldoffset,oldoffset + oggdatatoread))
-		diroffsets.append((tmpdir, oldoffset, oggdatatoread))
+		## now check if it is a valid file by running ogginfo
+		p = subprocess.Popen(['ogginfo', tmpfilename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		(stanout, stanerr) = p.communicate()
+		if p.returncode != 0:
+			os.unlink(tmpfilename)
+			shutil.rmtree(tmpdir)
+		else:
+			hints[tmpfilename] = {}
+			hints[tmpfilename]['tags'] = ['ogg', 'audio', 'binary']
+			hints[tmpfilename]['scanned'] = True
+			blacklist.append((oldoffset,oldoffset + oggdatatoread))
+			diroffsets.append((tmpdir, oldoffset, oggdatatoread))
 	else:
 		## remove the empty dir
 		shutil.rmtree(tmpdir)

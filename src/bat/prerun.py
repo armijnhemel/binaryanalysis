@@ -589,32 +589,6 @@ def verifySqlite3(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug
 	newtags.append('sqlite3')
 	return newtags
 
-## Extremely simple verifier for Ogg files.
-## This will not tag all Ogg files, but it will be good enough
-## for the common cases.
-## Note: some Ogg files on some Android devices are "created by a
-## buggy encoder" according to ogginfo
-def verifyOgg(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
-	newtags = []
-	if not filename.endswith('.ogg'):
-		return newtags
-	if not 'binary' in tags:
-		return newtags
-	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags:
-		return newtags
-	if not 'ogg' in offsets:
-		return newtags
-	if not 0 in offsets['ogg']:
-		return newtags
-	## now check if it is a valid file by running ogginfo
-	p = subprocess.Popen(['ogginfo', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		return newtags
-	newtags.append('ogg')
-	newtags.append('audio')
-	return newtags
-
 ## extremely simple verifier for MP4 to reduce false positives
 def verifyMP4(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
