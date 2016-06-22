@@ -6376,8 +6376,8 @@ def searchUnpackOgg(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 					diroffsets.append((tmpdir, oldoffset, oggdatatoread))
 					counter += 1
 					tmpdir = dirsetup(tempdir, filename, "ogg", counter)
-					tmpfilename = os.path.join(tmpdir, 'unpack-%d.ogg' % counter)
-					tmpfile = open(tmpfilename, 'wb')
+				tmpfilename = os.path.join(tmpdir, 'unpack-%d.ogg' % counter)
+				tmpfile = open(tmpfilename, 'wb')
 			## then reset data for the new file
 			writeoggdata = False
 			oggcontinue = True
