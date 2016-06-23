@@ -1,3 +1,6 @@
+2016-06-23:
+* fwunpack.py: add version byte sanity check for ISO9660
+
 2016-06-22:
 * prerun.py/fwunpack.py: remove Ogg tagger and replace with Ogg unpacker
 * bat-scan.config: add configuration for Ogg unpacker, remove Ogg tagger
