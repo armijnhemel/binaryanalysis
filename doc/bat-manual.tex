@@ -63,7 +63,8 @@ the host system is Ubuntu or Debian this information will be in
 Do not install BAT on a machine that is performing any critical functions for
 your organisation. There are certain pieces of code in BAT that have known
 security issues, such as some of the Squashfs unpacking programs in
-\texttt{bat-extratools} that have been lifted from vendor SDKs.
+\texttt{bat-extratools} that have been lifted from vendor SDKs. When scanning
+untrusted binary code there might be security risk.
 
 \subsubsection{Installation on Fedora}
 
@@ -108,7 +109,8 @@ a special graphical viewer (\texttt{batgui}).
 \subsection{Running \texttt{bat-scan}}
 
 The \texttt{bat-scan} program can scan in two modes: either scan a single
-binary, or scan a whole directory of files.
+binary, or scan a whole directory of files. These are mutually exclusive and
+you cannot mix and match parameters for both modes.
 
 To scan a single binary you will need to supply three parameters to
 \texttt{bat-scan}:
@@ -151,7 +153,9 @@ python bat-scan -c /path/to/configuration -d /path/to/dirwithbinaries
 \end{verbatim}
 
 The format of output files in ``directory scan'' mode will be the name of the
-original file with the suffix \texttt{.tar.gz}.
+original file with the suffix \texttt{.tar.gz}. If there is already a file with
+that name in the output directory the file will not be scanned again. If the
+file should be scanned again, then the output file should be (re)moved.
 
 \subsection{Interpreting the results}
 
@@ -371,6 +375,7 @@ Currently the collection consists of:
 that are frequently found on older embedded Linux systems, such as IP cameras.
 \item modified version of \texttt{code2html} (which is unmaintained by the
 upstream author) that adds support for various more programming languages.
+This tool i snot needed by BAT.
 \item unmodified version of \texttt{simg2img} needed for converting Android
 sparse files to ext4 file system images.
 \item unmodified version of \texttt{romfsck} needed for unpacking romfs file
@@ -382,12 +387,15 @@ YAFFS2 file systems.
 \item various versions of \texttt{unsquashfs} that enable unpacking variants
 of SquashFS. These versions have either been lifted from vendor SDKs, the
 OpenWrt project, DD-WRT, or upstream SquashFS project.
-\item \texttt{ubi\_reader} is a set of tools to deal with UBI/UBIFS images.
+\item \texttt{ubi\_reader} is a set of tools to deal with UBI/UBIFS images,
+currently not used by default.
 \item \texttt{bat-visualisation} containing a few custom tools to help generate
 pictures. These might be removed in the future.
 \item two Java projects: \texttt{jdeserialize} and \texttt{ddex}, to help
 respectively with unpacking serialized Java files and scanning binary files
-from the Dalvik VM (Android).
+from the Dalvik VM (Android). The \texttt{jdeserialize} program is no longer
+needed by BAT and just retained for reference. It will likely be removed in
+BAT 27.
 \end{itemize}
 
 The collection is split in three packages: \texttt{bat-extratools-java} contains
@@ -404,16 +412,18 @@ it tries to determine what is inside by applying a wide range of methods, such
 as looking for known identifiers of file systems and compressed files and
 running external tools to find contents in the binary. It should be noted that
 there are possibilities to add more information to the system to speed up
-scanning.
+scanning and skip phases.
 
 During scanning of a file the following steps are taken:
 
 \begin{enumerate}
-\item identifier search, using a list of known identifiers
+\item identifier search, using a list of known identifiers, like headers,
+footers or identifiers that indicate the start or end of a file system,
+compressed file or media file.
 \item verifying file type of a file and, if successful, tagging it. Tags can
 be used later on to give more information to the scanner.
 \item unpacking file systems, compressed files and media files from the file,
-carving them out of the file first.
+carving them out of the larger file first.
 \item repeat steps 1 - 3 for each file that was unpacked in step 3
 \item run individual scans on each file if no further unpacking is possible
 \item optionally aggregate scan results or modify results based on information
@@ -438,7 +448,7 @@ define an additional magic header in \texttt{optmagic}. The values defined in
 example is the YAFFS2 scan.
 
 The marker search cannot be enabled or disabled via the configuration file. The
-markers that are searched for are found in \url{bat/fsmagic.py}.
+markers that are searched for can be found in \url{bat/fsmagic.py}.
 
 As an optimization the marker search can be skipped for some files if they
 have an extension which gives a possible hint about what kind of file it might
@@ -471,7 +481,7 @@ that only work on binaries can then ignore anything that has been tagged as
 \texttt{text}.
 
 Other checks that are available are for valid XML, various Android formats,
-ELF executables and libraries, graphics files, audio files, and so on.
+ELF executables and libraries, certain graphics and audio files, and so on.
 
 The prerun checks can easily be identified in the configuration, since it has
 its type set to \texttt{prerun}:
@@ -512,14 +522,15 @@ unpacked or extracted:
 
 \begin{itemize}
 \item file systems: Android sparse files, cramfs, ext2/ext3/ext4, ISO9660,
-JFFS2, Minix (specific variant of v1 often found on older embedded Linux
-systems), SquashFS (several variants), romfs, YAFFS2 (specific variants),
-ubifs (not on all systems)
+JFFS2 (no LZO compression), Minix (specific variant of v1 often found on older
+embedded Linux systems), SquashFS (several variants), romfs, YAFFS2 (specific
+variants), ubifs (not on all systems), PLF (Parrot specific file format)
 \item compressed files and executable formats: 7z, ar, ARJ, BASE64, BZIP2,
 compressed Flash, CAB, compress, CPIO, EXE (specific compression methods only),
-GZIP, InstallShield (old versions), LRZIP, LZIP, LZMA, LZO, MSI, pack200, RAR,
-RPM, RZIP, serialized Java, TAR, UPX, XZ, ZIP (including APK, EAR, JAR and WAR)
-\item media files: BMP, GIF, ICO, PDF, PNG, WOFF, CHM, WIM
+GZIP, InstallShield (old versions), LRZIP, LZIP, LZMA, LZOP, MSI, pack200, RAR,
+RPM, RZIP, serialized Java, TAR, UPX, XZ, ZIP (including APK, EAR, JAR and
+WAR), WIM, Intel HEX (whole files only, no comments allowed)
+\item media files: BMP, GIF, JPEG, PNG, ICO, PDF, CHM, OTF, TTF, WOFF
 \end{itemize}
 
 Most of the unpackers for these file systems, compressed files and media files
@@ -2872,12 +2883,13 @@ The order for pre-run scans is:
 \item \texttt{checkXML}
 \item \texttt{verifytext}
 \item \texttt{verifyjava}
-\item \texttt{verifyelf}, \texttt{verifygraphics}, \texttt{verifysqlite3}
+\item \texttt{verifyelf}, \texttt{verifysqlite3}
 \item \texttt{verifyandroiddex}, \texttt{verifyandroidodex},
-\texttt{verifyandroidresource}, \texttt{verifyandroidxml}, \texttt{verifyico},
-\texttt{verifyjar}, \texttt{verifymessagecatalog}, \texttt{verifyogg},
-\texttt{verifyotf}, \texttt{verifyttf}, \texttt{verifytz}, \texttt{verifywoff},
-\texttt{vimswap}
+\texttt{verifyandroidresource}, \texttt{verifyandroidxml},
+\texttt{verifycertificate}, \texttt{verifychromepak}, \texttt{verifyico},
+\texttt{verifyihex}, \texttt{verifyjava}, \texttt{verifymessagecatalog},
+\texttt{verifyresourcefork}, \texttt{verifyrsacertificate}, \texttt{verifytz},
+\texttt{verifywebp}, \texttt{vimswap}
 \end{enumerate}
 
 \subsection{Unpack scans}
@@ -2906,8 +2918,9 @@ The order in which they appear is not fool proof: container files could be
 embedded in container files with a lower priority, but BAT comes with
 (hopefully) sane defaults to prevent this.
 
-Second to last unpack scans for compressed files where all data is packed in
-such a way that the original content can't be seen without unpacking are run,
+As a second to last step the unpack scans for compressed files where all data is
+packed in such a way that the original content can't be seen without unpacking
+are run.
 
 Finally there are some scans that unpack text files (\texttt{base64}) or media
 files. The \texttt{lzma} unpack scan also has the lowest priority because of
@@ -2916,19 +2929,20 @@ possibly many false positives.
 The order of the unpack scans as defined in BAT 26 is:
 
 \begin{enumerate}
-\item \texttt{byteSwap}
-\item \texttt{tar}
-\item \texttt{pdf\_unpack}, \texttt{iso9660}, \texttt{wim}
+\item \texttt{byteswap}
+\item \texttt{tar}, \texttt{android-sparse}
+\item \texttt{pdf\_unpack}, \texttt{iso9660}, \texttt{plf}, \texttt{wim}
 \item \texttt{cramfs}, \texttt{ext2fs}, \texttt{ubi}
 \item \texttt{ar}, \texttt{cpio}, \texttt{java\_serialized}, \texttt{romfs},
 \texttt{rpm}, \texttt{upx}, \texttt{yaffs}
 \item \texttt{exe}, \texttt{jffs2}, \texttt{squashfs}
-\item \texttt{7z}, \texttt{arj}, \texttt{bzip2}, \texttt{cab},
-\texttt{compress}, \texttt{gzip}, \texttt{installshield}, \texttt{lrzip},
-\texttt{lzip}, \texttt{lzo}, \texttt{pack200}, \texttt{rar}, \texttt{rzip},
-\texttt{xz}, \texttt{zip}, \texttt{chm}
-\item \texttt{base64}, \texttt{gif}, \texttt{ico}, \texttt{png}, \texttt{swf},
-\texttt{lzma}
+\item \texttt{7z}, \texttt{arj}, \texttt{bzip2}, \texttt{cab}, \texttt{chm},
+\texttt{compress}, \texttt{gzip}, \texttt{installshield}, \texttt{intelhex},
+\texttt{lrzip}, \texttt{lzip}, \texttt{lzo}, \texttt{minix}, \texttt{msi},
+\texttt{pack200}, \texttt{rar}, \texttt{rzip}, \texttt{xz}, \texttt{zip},
+\item \texttt{android-backup}, \texttt{base64}, \texttt{bmp}, \texttt{gif},
+\texttt{ico}, \texttt{jpeg}, \texttt{lzma}, \texttt{ogg}, \texttt{otf},
+\texttt{png}, \texttt{swf}, \texttt{ttf}, \texttt{woff}
 \end{enumerate}
 
 \subsection{Leaf scans}
@@ -2945,17 +2959,17 @@ the very end when all information is known. Other scans are mostly independent
 of eachother, but are usually run before \texttt{versionlicensecopyright} to
 prevent having to read big report pickles from disk.
 
-The order for pre-run scans is:
+The order for aggregate scans is:
 
 \begin{enumerate}
 \item \texttt{fixduplicates}
 \item \texttt{prunefiles} (disabled by default)
 \item \texttt{findduplicates}
-\item \texttt{findlibs}, \texttt{findsymbols}
-\item \texttt{jars}, \texttt{kernelversions}
+\item \texttt{findlibs}, \texttt{findsymbols}, \texttt{copyright}, \texttt{file2package}
+\item \texttt{kernelversions}
 \item \texttt{versionlicensecopyright}
-\item \texttt{shellinvocations}
-\item \texttt{generateimages}, \texttt{generatereports}, \texttt{generatejson}
+\item \texttt{passwords} (disabled by default), \texttt{shellinvocations}
+\item \texttt{generateimages}, \texttt{generatereports}, \texttt{generatejson}, \texttt{searchlogins}
 \end{enumerate}
 
 \end{document}
