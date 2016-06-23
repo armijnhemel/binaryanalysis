@@ -695,6 +695,7 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 		return ([], blacklist, [], hints)
 	diroffsets = []
 	counter = 1
+	isofile = open(filename, 'rb')
 	for offset in offsets['iso9660']:
 		## according to /usr/share/magic the magic header starts at 0x8001
 		if offset < 32769:
@@ -702,6 +703,12 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 		## check if the offset found is in a blacklist
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
+			continue
+
+		## version byte, should be 1 according to ECMA-119/ISO9660
+		isofile.seek(offset+5)
+		isobyte = isofile.read(1)
+		if isobyte != '\x01':
 			continue
 		tmpdir = dirsetup(tempdir, filename, "iso9660", counter)
 		res = unpackISO9660(filename, offset - 32769, blacklist, tmpdir)
@@ -712,6 +719,7 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 			counter = counter + 1
 		else:
 			os.rmdir(tmpdir)
+	isofile.close()
 	return (diroffsets, blacklist, [], hints)
 
 def unpackISO9660(filename, offset, blacklist, tempdir=None, unpacktempdir=None):
