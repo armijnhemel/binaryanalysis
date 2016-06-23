@@ -1,3 +1,11 @@
+bat (26.0) unstable; urgency=high
+
+  * remove sqlite from scanning engine
+  * remove several external dependencies
+  * allow carving of several more file types
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Thu, 23 Jun 2016 20:37:31 +0200
+
 bat (25.0) unstable; urgency=high
 
   * tag and unpack Android backup files
