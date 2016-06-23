@@ -729,15 +729,28 @@ data (a new analysis should be run to get it again).
 
 \subsubsection{\texttt{unpackdirectory}}
 
-There is one setting to set the prefix for creating temporary files or
-directories, namely \texttt{unpackdirectory}. By default the directory for
-creating temporary files and directories is \texttt{/tmp}. There might be
-situations where the temporary directory might need to be changed, for example
-for unpacking on a faster medium (ramdisk, SSD) than a normal harddisk. It can
-be used as follows:
+The unpacking directory where BAT will store its runtime state can be set using
+\texttt{unpackdirectory}. By default this is \texttt{/tmp}. Each run of BAT
+will create a new directory underneath this directory. In some cases it can be
+wise to change it to a different location, with more storage (more and more
+Linux distributions have \texttt{/tmp} mounted on a ramdisk) or less latency
+(SSD). It can be use as follows:
 
 \begin{verbatim}
 unpackdirectory = /ssd/tmp
+\end{verbatim}
+
+\subsubsection{\texttt{temporary\_unpackdirectory}}
+
+There is one setting to set the prefix for creating temporary files or
+directories, namely \texttt{temporary\_unpackdirectory}. By default the
+directory for creating temporary files and directories is \texttt{/tmp}. There
+might be situations where the temporary directory might need to be changed, for
+example for unpacking on a faster medium (ramdisk, SSD) than a normal harddisk.
+It can be used as follows:
+
+\begin{verbatim}
+temporary_unpackdirectory = /ramdisk
 \end{verbatim}
 
 \subsubsection{\texttt{debug} and \texttt{debugphases}}
@@ -875,7 +888,21 @@ dumpoffsets = yes
 
 \subsubsection{\texttt{cleanup}}
 
+If \texttt{cleanup} is set to \texttt{yes} the BAT working directory will be
+removed after the scan has finished. By default the working directories are not
+removed:
+
+\begin{verbatim}
+cleanup = yes
+\end{verbatim}
+
+\subsubsection{\texttt{compress}}
+
+TODO
+
 \subsubsection{\texttt{markersearchminimum}}
+
+TODO
 
 \subsubsection{\texttt{tasktimeout}}
 
@@ -2129,7 +2156,7 @@ scans.
 type        = leaf
 module      = bat.identifier
 method      = searchGeneric
-envvars     = DEX_TMPDIR=/ramdisk:BAT_STRING_CUTOFF=5
+envvars     = ramdisk:BAT_STRING_CUTOFF=5
 noscan      = text:xml:graphics:pdf:compressed:
               resource:audio:video:mp4:vimswap:timezone:ico
 description = Classify packages using advanced ranking mechanism
@@ -2138,16 +2165,13 @@ setup       = extractidentifiersetup
 priority    = 1
 \end{verbatim}
 
-The two parameters are:
+The parameter is:
 
 \begin{itemize}
 \item \texttt{BAT\_STRING\_CUTOFF} - this value is the mimimal length of the
 string that is matched (default value is 5). If extracted strings are shorter
 than this value they will be ignored. It is important to keep this parameter in
 sync with the minimum length of strings in the database extract script.
-\item \texttt{DEX\_TMPDIR} - set the location of a temporary location for
-unpacking Android DEX files. This can be for example set to the location of a
-ramdisk.
 \end{itemize}
 
 \subsection{Configuring the ranking method}
@@ -2725,6 +2749,9 @@ A few scans can use tmpfs or a ramdisk to write temporary results. The scans
 that can benefit from this are LZMA unpacking, ranking (temporary results of
 DEX and ODEX unpacking), compress unpacking, JFFS2 unpacking and TAR unpacking.
 
+The parameter \texttt{temporary\_unpackdirectory} in the global configuration
+can be used to set this location.
+
 \section{Description for scans using the database}
 
 \subsection{\texttt{file2package}}
@@ -2745,28 +2772,27 @@ passed to the scans as part of the environment and are defined in the
 
 \subsection{\texttt{compress}}
 
-The \texttt{COMPRESS\_TMPDIR} parameter is used to let the scan use a different
-location for unpacking temporary files than the standard unpacking directory.
-It was introduced to let the scan unpack onto a tmpfs file system to avoid disk
-I/O and speed up scanning.
-
 The \texttt{COMPRESS\_MINIMUM\_SIZE} parameter instructs the scan to ignore
 output files that are \texttt{COMPRESS\_MINIMUM\_SIZE} bytes in size or less.
 This parameter was introduced because false positives in compress unpacking are
 very common on Debian and Ubuntu, often leading to small sized files that
 contain no useful data and which could interfere with scanning.
 
+The scan can also use a different directory for unpacking temporary files.
+The location is set in the global configuration using the parameter
+\texttt{temporary\_unpackdirectory}. By setting this to for example SSD or
+ramdisk it can help avoid disk I/O on a slower disk and speed up scanning.
+
 \subsection{\texttt{jffs2}}
 
-The \texttt{JFFS2\_TMPDIR} parameter is used to let the scan use a different
-location for unpacking temporary files than the standard unpacking directory.
-It was introduced to let the scan unpack onto a tmpfs file system to avoid disk
-I/O and speed up scanning.
+The scan can use a different directory for unpacking temporary files.
+The location is set in the global configuration using the parameter
+\texttt{temporary\_unpackdirectory}. By setting this to for example SSD or
+ramdisk it can help avoid disk I/O on a slower disk and speed up scanning.
 
 \subsection{\texttt{lzma}}
 
-The \texttt{lzma} unpack scan has two parameters: \texttt{LZMA\_MINIMUM\_SIZE}
-and \texttt{LZMA\_TMPDIR}.
+The \texttt{lzma} unpack scan has one parameter: \texttt{LZMA\_MINIMUM\_SIZE}.
 
 The \texttt{LZMA\_MINIMUM\_SIZE} parameter instructs the scan to ignore output
 files that are \texttt{LZMA\_MINIMUM\_SIZE} bytes in size or less. This
@@ -2776,17 +2802,17 @@ common, often leading to small sized files that contain no useful data.
 By default \texttt{LZMA\_MINIMUM\_SIZE} is set to 10 bytes, but this is a very
 conservative setting and can likely be set higher safely.
 
-The \texttt{LZMA\_TMPDIR} parameter is used to let the scan use a different
-location for unpacking temporary files than the standard unpacking directory.
-It was introduced to let the scan unpack onto a tmpfs file system to avoid disk
-I/O and speed up scanning.
+The scan can also use a different directory for unpacking temporary files.
+The location is set in the global configuration using the parameter
+\texttt{temporary\_unpackdirectory}. By setting this to for example SSD or
+ramdisk it can help avoid disk I/O on a slower disk and speed up scanning.
 
 \subsection{\texttt{tar}}
 
-The \texttt{TAR\_TMPDIR} parameter is used to let the scan use a different
-location for unpacking temporary files than the standard unpacking directory.
-It was introduced to let the scan unpack onto a tmpfs file system to avoid disk
-I/O and speed up scanning.
+The scan can use a different directory for unpacking temporary files.
+The location is set in the global configuration using the parameter
+\texttt{temporary\_unpackdirectory}. By setting this to for example SSD or
+ramdisk it can help avoid disk I/O on a slower disk and speed up scanning.
 
 \subsection{\texttt{xor}}
 
@@ -2821,10 +2847,10 @@ The \texttt{generateimages} postrun scan has five optional parameters:
 
 \subsection{\texttt{identifier}}
 
-The \texttt{identifier} leaf scan has several parameters, including
-\texttt{DEX\_TMPDIR}. This parameter can be used to set a location where
-temporary files for DEX and ODEX (Android Dalvik files) unpacking can be
-written. This would typically be tmpfs or a ramdisk.
+The scan can use a different directory for unpacking temporary files.
+The location is set in the global configuration using the parameter
+\texttt{temporary\_unpackdirectory}. By setting this to for example SSD or
+ramdisk it can help avoid disk I/O on a slower disk and speed up scanning.
 
 \subsection{\texttt{licenseversion}}
 
