@@ -67,7 +67,7 @@ def main(argv):
 		picklefile = gzip.open(os.path.join(tmpdir, 'filereports', "%s-filereport.pickle.gz" % sha256sum))
 		leafreports = cPickle.load(picklefile)
 		picklefile.close()
-		if not 'ranking' leafreports:
+		if not 'ranking' in leafreports:
 			continue
 		if 'kernelchecks' in leafreports:
 			if 'version' in leafreports['kernelchecks']:
