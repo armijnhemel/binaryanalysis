@@ -1,3 +1,7 @@
+2016-06-24:
+* bruteforcescan.py: fix database useage for leafscans
+* fwunpack.py: start on implementing length checks for ISO9660
+
 2016-06-23:
 * fwunpack.py: add version byte sanity check for ISO9660
 * bat-scan.config: remove obsolete config parameters
