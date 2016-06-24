@@ -1955,7 +1955,7 @@ def runscan(scans, binaries):
 				blacklistedfiles = []
 				map(lambda x: scanqueue.put(x), leaftasks_tmp)
 				for i in range(0,processamount):
-					if scansourcecode:
+					if usedatabase:
 						cursor = batcursors[i]
 						conn = batcons[i]
 					else:
