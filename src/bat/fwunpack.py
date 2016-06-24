@@ -687,6 +687,8 @@ def unpackAr(filename, offset, tempdir=None, blacklist=[]):
 ## 3. copy the contents
 ## 4. make sure all permissions are correct (so use chmod)
 ## 5. unmount file system
+## https://en.wikipedia.org/wiki/ISO_9660
+## http://wiki.osdev.org/ISO_9660
 def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	if not 'iso9660' in offsets:
@@ -696,6 +698,7 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 	diroffsets = []
 	counter = 1
 	isofile = open(filename, 'rb')
+	filesize = os.stat(filename).st_size
 	for offset in offsets['iso9660']:
 		## according to /usr/share/magic the magic header starts at 0x8001
 		if offset < 32769:
@@ -705,29 +708,63 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 		if blacklistoffset != None:
 			continue
 
+		## a volume descriptor should be 2048 bytes
+		if offset-1+2048 > filesize:
+			break
+
 		## version byte, should be 1 according to ECMA-119/ISO9660
 		isofile.seek(offset+5)
 		isobyte = isofile.read(1)
 		if isobyte != '\x01':
 			continue
-		tmpdir = dirsetup(tempdir, filename, "iso9660", counter)
-		res = unpackISO9660(filename, offset - 32769, blacklist, tmpdir)
-		if res != None:
-			(isooffset, size) = res
-			diroffsets.append((isooffset, offset - 32769, size))
-			blacklist.append((offset - 32769, offset + size))
-			counter = counter + 1
-		else:
-			os.rmdir(tmpdir)
+		## the volume descriptor type
+		isofile.seek(offset-1)
+		isobyte = isofile.read(1)
+
+		## volume descriptor set terminator
+		#if isobyte == '\xff':
+		#	continue
+
+		if isobyte == '\x01':
+			## read the volume space size
+			isofile.seek(offset-1+80)
+			isobytes = isofile.read(8)
+			if struct.unpack('<I', isobytes[0:4])[0] != struct.unpack('>I', isobytes[4:8])[0]:
+				continue
+
+			volumespacesize = struct.unpack('<I', isobytes[0:4])[0]
+		
+			## read the logical block size. This will most likely be 2048.
+			isofile.seek(offset-1+128)
+			isobytes = isofile.read(4)
+			if struct.unpack('<H', isobytes[0:2])[0] != struct.unpack('>H', isobytes[2:4])[0]:
+				continue
+			logicalblocksize = struct.unpack('<H', isobytes[0:2])[0]
+
+			## the total length of the file system is defined
+			## as volumespacesize * logicalblocksize
+			fslength = volumespacesize * logicalblocksize
+			if fslength + offset > filesize:
+				continue
+
+			tmpdir = dirsetup(tempdir, filename, "iso9660", counter)
+			res = unpackISO9660(filename, offset - 32769, fslength, blacklist, tmpdir)
+			if res != None:
+				(isooffset, size) = res
+				diroffsets.append((isooffset, offset - 32769, size))
+				blacklist.append((offset - 32769, offset + size))
+				counter = counter + 1
+			else:
+				os.rmdir(tmpdir)
 	isofile.close()
 	return (diroffsets, blacklist, [], hints)
 
-def unpackISO9660(filename, offset, blacklist, tempdir=None, unpacktempdir=None):
+def unpackISO9660(filename, offset, fslength, blacklist, tempdir=None, unpacktempdir=None):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
+	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist, length=fslength)
 
 	## create a mountpoint
 	mountdir = tempfile.mkdtemp(dir=unpacktempdir)
