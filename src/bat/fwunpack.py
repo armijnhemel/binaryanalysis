@@ -520,7 +520,7 @@ def searchUnpackJffs2(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 		if offset in be_offsets:
 			bigendian = True
 		## first a simple sanity check. Read bytes 4-8 from the inode, which
-		## represent the total node of the inode. If the total length of the
+		## represent the total length of the inode. If the total length of the
 		## inode is bigger than the total size of the file it is not a valid
 		## JFFS2 file system, so return.
 		## If offset + size of the JFFS2 inode is blacklisted it is also not
