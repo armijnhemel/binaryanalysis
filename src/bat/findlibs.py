@@ -407,6 +407,9 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 		leafreports = cPickle.load(leaf_file)
 		leaf_file.close()
 
+		if not 'architecture' in leafreports:
+			continue
+
 		architectures[i] = leafreports['architecture']
 
 	## Is this correct???
