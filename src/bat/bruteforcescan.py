@@ -1056,7 +1056,7 @@ def readconfig(config):
 				except OSError, e:
 					pass
 		except:
-			batconf['unpackdirectory'] = None
+			batconf['temporary_unpackdirectory'] = None
 		try:
 			template = config.get(section, 'template')
 
