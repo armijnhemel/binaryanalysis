@@ -1033,6 +1033,14 @@ def readconfig(config):
 		except:
 			batconf['outputlite'] = False
 		try:
+			configdir = config.get(section, 'configdirectory')
+			if not os.path.isdir(configdir):
+				batconf['configdirectory'] = None
+			else:
+				batconf['configdirectory'] = configdir
+		except:
+			batconf['configdirectory'] = None
+		try:
 			unpackdir = config.get(section, 'unpackdirectory')
 			if not os.path.isdir(unpackdir):
 				batconf['unpackdirectory'] = None
