@@ -45,7 +45,7 @@ running program, are packed in a tar file.
 ## import a few standard Python modules
 import sys, os, os.path, hashlib, subprocess, tempfile, shutil, stat, multiprocessing, cPickle, glob, tarfile, copy, gzip, Queue
 from optparse import OptionParser
-import datetime, re, struct
+import datetime, re, struct, ConfigParser
 from multiprocessing import Process, Lock
 from multiprocessing.sharedctypes import Value, Array
 
@@ -826,6 +826,178 @@ def postrunscan((filetoscan, unpackreports, scans, scantempdir, topleveldir, deb
 		if res != None:
 			pass
 
+def scanconfigsection(config, section, scanenv, batconf):
+	if config.has_option(section, 'type'):
+		debug = False
+		## scans have to be explicitely enabled
+		if not config.has_option(section, 'enabled'):
+			return
+		if config.get(section, 'enabled') == 'no':
+			return
+		conf = {}
+
+		try:
+			conf['module'] = config.get(section, 'module')
+			conf['method'] = config.get(section, 'method')
+		except:
+			return
+
+		## some scans might, or might not, have these defined
+		try:
+			conf['name']   = config.get(section, 'name')
+		except:
+			conf['name']   = section
+
+		## deal with the environment
+		newenv = copy.deepcopy(scanenv)
+		try:
+			envvars = config.get(section, 'envvars')
+			if envvars == None:
+				pass
+			else:
+				for en in envvars.split(':'):
+					try:
+						(envname, envvalue) = en.split('=')
+						newenv[envname] = envvalue
+					except Exception, e:
+						print >>sys.stderr, "EXCEPTION", e
+						pass
+		except:
+			pass
+
+		conf['environment'] = newenv
+		try:
+			conf['magic'] = config.get(section, 'magic')
+		except:
+			conf['magic'] = None
+		try:
+			conf['optmagic'] = config.get(section, 'optmagic')
+		except:
+			conf['optmagic'] = None
+		try:
+			conf['noscan'] = config.get(section, 'noscan')
+		except:
+			conf['noscan'] = None
+		try:
+			conf['scanonly'] = config.get(section, 'scanonly')
+		except:
+			conf['scanonly'] = None
+		try:
+			conf['extensionsignore'] = config.get(section, 'extensionsignore')
+		except:
+			pass
+		try:
+			conf['minimumsize'] = max(0, int(config.get(section, 'minimumsize')))
+		except:
+			pass
+		try:
+			scandebug = config.get(section, 'debug')
+			if scandebug == 'yes':
+				debug = True
+				conf['debug'] = True
+		except:
+			pass
+		try:
+			parallel = config.get(section, 'parallel')
+			if parallel == 'yes':
+				conf['parallel'] = True
+			else:
+				conf['parallel'] = False
+		except:
+			conf['parallel'] = True
+		try:
+			conf['priority'] = int(config.get(section, 'priority'))
+		except:
+			conf['priority'] = 0
+		try:
+			conf['ppoutput'] = config.get(section, 'ppoutput')
+		except:
+			pass
+		try:
+			conf['ppmodule'] = config.get(section, 'ppmodule')
+		except:
+			pass
+		try:
+			conf['setup'] = config.get(section, 'setup')
+		except:
+			pass
+		try:
+			needsdatabase = config.get(section, 'needsdatabase')
+			if needsdatabase == 'yes':
+				conf['needsdatabase'] = True
+			else:
+				conf['needsdatabase'] = False
+		except:
+			conf['needsdatabase'] = False
+		try:
+			conf['conflicts'] = config.get(section, 'conflicts').split(':')
+		except:
+			pass
+		try:
+			conf['extensions'] = config.get(section, 'extensions').split(':')
+		except:
+			pass
+		try:
+			conf['knownfilemethod'] = config.get(section, 'knownfilemethod')
+		except:
+			pass
+
+		## some things only make sense in a particular context
+		if config.get(section, 'type') == 'postrun' or config.get(section, 'type') == 'aggregate':
+			try:
+				## all three parameters should be there together
+				conf['storedir'] = config.get(section, 'storedir')
+				conf['storetarget'] = config.get(section, 'storetarget')
+				conf['storetype'] = config.get(section, 'storetype')
+				try:
+					cleanup = config.get(section, 'cleanup')
+					if cleanup == 'yes':
+						conf['cleanup'] = True
+					else:
+						conf['cleanup'] = False
+				except:
+					conf['cleanup'] = False
+			except:
+				conf['storedir'] = None
+				conf['storetarget'] = None
+				conf['storetype'] = None
+				conf['cleanup'] = False
+			try:
+				compress = config.get(section, 'compress')
+				if compress == 'yes':
+					conf['compress'] = True
+				else:
+					conf['compress'] = False
+			except:
+				## copy the defaulf from batconf, if any, otherwise
+				## default to no compression
+				if 'compress' in batconf:
+					conf['compress'] = batconf['compress']
+				else:
+					conf['compress'] = False
+
+		## finally add the configurations to the right list
+		if config.get(section, 'type') == 'leaf':
+			if debug:
+				return(conf, 'leaf', 'leaf')
+			return(conf, 'leaf', None)
+		elif config.get(section, 'type') == 'unpack':
+			if debug:
+				return(conf, 'unpack', 'unpack')
+			return(conf, 'unpack', None)
+		elif config.get(section, 'type') == 'prerun':
+			if debug:
+				return(conf, 'prerun', 'prerun')
+			return(conf, 'prerun', None)
+		elif config.get(section, 'type') == 'postrun':
+			if debug:
+				return(conf, 'postrun', 'postrun')
+			return(conf, 'postrun', None)
+		elif config.get(section, 'type') == 'aggregate':
+			if debug:
+				return(conf, 'aggregate', 'aggregate')
+			return(conf, 'aggregate', None)
+
 ## arrays for storing data for the scans
 ## unpackscans: {name, module, method, ppoutput, priority}
 ## These are sorted by priority
@@ -849,11 +1021,16 @@ def readconfig(config):
 
 	sectionstoprocess = set()
 
+	sectionsseen = set()
 	## process sections, make sure that the global configuration is
 	## always processed first.
 	for section in config.sections():
 		if section != "batconfig":
+			if section in sectionsseen:
+				## TODO: proper error message
+				continue
 			sectionstoprocess.add(section)
+			sectionsseen.add(section)
 			continue
 
 		## first set the environment
@@ -1087,177 +1264,56 @@ def readconfig(config):
 				batconf['compress'] = False
 		except:
 			batconf['compress'] = False
-	
+
+	if batconf['configdirectory'] != None:
+		configs = filter(lambda x: x.endswith('.conf'), os.listdir(batconf['configdirectory']))
+		for mc in configs:
+			mconfig = ConfigParser.ConfigParser()
+			try:
+				mconfigfile = open(os.path.join(batconf['configdirectory'], mc), 'rb')
+				mconfig.readfp(mconfigfile)
+			except Exception, e:
+				pass
+			for section in mconfig.sections():
+				if section in sectionsseen:
+					## TODO: proper error message
+					continue
+				scanconfigres = scanconfigsection(config, section, scanenv, batconf)
+				if scanconfigres == None:
+					continue
+				(scanconfig, scantype, scandebug) = scanconfigres
+				if scandebug != None:
+					tmpbatconfdebug.add(scandebug)
+				if scantype == 'leaf':
+					leafscans.append(scanconfig)
+				elif scantype == 'unpack':
+					unpackscans.append(scanconfig)
+				elif scantype == 'prerun':
+					prerunscans.append(scanconfig)
+				elif scantype == 'postrun':
+					postrunscans.append(scanconfig)
+				elif scantype == 'aggregate':
+					aggregatescans.append(scanconfig)
+			mconfigfile.close()
+
 	for section in sectionstoprocess:
-		if config.has_option(section, 'type'):
-			debug = False
-			## scans have to be explicitely enabled
-			if not config.has_option(section, 'enabled'):
-				continue
-			if config.get(section, 'enabled') == 'no':
-				continue
-			conf = {}
+		scanconfigres = scanconfigsection(config, section, scanenv, batconf)
+		if scanconfigres == None:
+			continue
+		(scanconfig, scantype, scandebug) = scanconfigres
+		if scandebug != None:
+			tmpbatconfdebug.add(scandebug)
+		if scantype == 'leaf':
+			leafscans.append(scanconfig)
+		elif scantype == 'unpack':
+			unpackscans.append(scanconfig)
+		elif scantype == 'prerun':
+			prerunscans.append(scanconfig)
+		elif scantype == 'postrun':
+			postrunscans.append(scanconfig)
+		elif scantype == 'aggregate':
+			aggregatescans.append(scanconfig)
 
-			try:
-				conf['module'] = config.get(section, 'module')
-				conf['method'] = config.get(section, 'method')
-			except:
-				continue
-
-			## some scans might, or might not, have these defined
-			try:
-				conf['name']   = config.get(section, 'name')
-			except:
-				conf['name']   = section
-
-			## deal with the environment
-			newenv = copy.deepcopy(scanenv)
-			try:
-				envvars = config.get(section, 'envvars')
-				if envvars == None:
-					pass
-				else:
-					for en in envvars.split(':'):
-						try:
-							(envname, envvalue) = en.split('=')
-							newenv[envname] = envvalue
-						except Exception, e:
-							print >>sys.stderr, "EXCEPTION", e
-							pass
-			except:
-				pass
-			conf['environment'] = newenv
-			try:
-				conf['magic'] = config.get(section, 'magic')
-			except:
-				conf['magic'] = None
-			try:
-				conf['optmagic'] = config.get(section, 'optmagic')
-			except:
-				conf['optmagic'] = None
-			try:
-				conf['noscan'] = config.get(section, 'noscan')
-			except:
-				conf['noscan'] = None
-			try:
-				conf['scanonly'] = config.get(section, 'scanonly')
-			except:
-				conf['scanonly'] = None
-			try:
-				conf['extensionsignore'] = config.get(section, 'extensionsignore')
-			except:
-				pass
-			try:
-				conf['minimumsize'] = max(0, int(config.get(section, 'minimumsize')))
-			except:
-				pass
-			try:
-				scandebug = config.get(section, 'debug')
-				if scandebug == 'yes':
-					debug = True
-					conf['debug'] = True
-			except:
-				pass
-			try:
-				parallel = config.get(section, 'parallel')
-				if parallel == 'yes':
-					conf['parallel'] = True
-				else:
-					conf['parallel'] = False
-			except:
-				conf['parallel'] = True
-			try:
-				conf['priority'] = int(config.get(section, 'priority'))
-			except:
-				conf['priority'] = 0
-			try:
-				conf['ppoutput'] = config.get(section, 'ppoutput')
-			except:
-				pass
-			try:
-				conf['ppmodule'] = config.get(section, 'ppmodule')
-			except:
-				pass
-			try:
-				conf['setup'] = config.get(section, 'setup')
-			except:
-				pass
-			try:
-				needsdatabase = config.get(section, 'needsdatabase')
-				if needsdatabase == 'yes':
-					conf['needsdatabase'] = True
-				else:
-					conf['needsdatabase'] = False
-			except:
-				conf['needsdatabase'] = False
-			try:
-				conf['conflicts'] = config.get(section, 'conflicts').split(':')
-			except:
-				pass
-			try:
-				conf['extensions'] = config.get(section, 'extensions').split(':')
-			except:
-				pass
-			try:
-				conf['knownfilemethod'] = config.get(section, 'knownfilemethod')
-			except:
-				pass
-
-			## some things only make sense in a particular context
-			if config.get(section, 'type') == 'postrun' or config.get(section, 'type') == 'aggregate':
-				try:
-					## all three parameters should be there together
-					conf['storedir'] = config.get(section, 'storedir')
-					conf['storetarget'] = config.get(section, 'storetarget')
-					conf['storetype'] = config.get(section, 'storetype')
-					try:
-						cleanup = config.get(section, 'cleanup')
-						if cleanup == 'yes':
-							conf['cleanup'] = True
-						else:
-							conf['cleanup'] = False
-					except:
-						conf['cleanup'] = False
-				except:
-					conf['storedir'] = None
-					conf['storetarget'] = None
-					conf['storetype'] = None
-					conf['cleanup'] = False
-				try:
-					compress = config.get(section, 'compress')
-					if compress == 'yes':
-						conf['compress'] = True
-					else:
-						conf['compress'] = False
-				except:
-					## copy the defaulf from batconf, if any, otherwise
-					## default to no compression
-					if 'compress' in batconf:
-						conf['compress'] = batconf['compress']
-					else:
-						conf['compress'] = False
-
-			## finally add the configurations to the right list
-			if config.get(section, 'type') == 'leaf':
-				leafscans.append(conf)
-				if debug:
-					tmpbatconfdebug.add('leaf')
-			elif config.get(section, 'type') == 'unpack':
-				unpackscans.append(conf)
-				if debug:
-					tmpbatconfdebug.add('unpack')
-			elif config.get(section, 'type') == 'prerun':
-				prerunscans.append(conf)
-				if debug:
-					tmpbatconfdebug.add('prerun')
-			elif config.get(section, 'type') == 'postrun':
-				postrunscans.append(conf)
-				if debug:
-					tmpbatconfdebug.add('postrun')
-			elif config.get(section, 'type') == 'aggregate':
-				aggregatescans.append(conf)
-				if debug:
-					tmpbatconfdebug.add('aggregate')
 	if tmpbatconfdebug != set():
 		tmpbatconfdebug.update(batconf['debugphases'])
 		batconf['debugphases'] = list(tmpbatconfdebug)
