@@ -1,3 +1,12 @@
+2016-07-01:
+* bruteforcescan.py: add modular configuration
+
+2016-06-30:
+* findlibs.py: extra sanity check for architecture
+* bruteforcescan.py: fix config parsing
+* bruteforcescan.py: add configdirectory option to implement modular
+configuration scanning
+
 2016-06-24:
 * bruteforcescan.py: fix database useage for leafscans
 * fwunpack.py: start on implementing length checks for ISO9660
