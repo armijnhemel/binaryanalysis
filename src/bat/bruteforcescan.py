@@ -914,10 +914,6 @@ def scanconfigsection(config, section, scanenv, batconf):
 		except:
 			pass
 		try:
-			conf['ppmodule'] = config.get(section, 'ppmodule')
-		except:
-			pass
-		try:
 			conf['setup'] = config.get(section, 'setup')
 		except:
 			pass
