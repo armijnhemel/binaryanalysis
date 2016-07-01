@@ -67,8 +67,8 @@ def generateImages(filename, unpackreport, scantempdir, topleveldir, scanenv={},
 
 		im = Image.frombuffer("L", (height, width), imgbuffer, "raw", "L", 0, 1)
 		im.save("%s/%s.png" % (imagedir, unpackreport['checksum']))
-		'''
+		#'''
 		if width > 100:
 			imthumb = im.thumbnail((height/4, width/4))
 			im.save("%s/%s-thumbnail.png" % (imagedir, unpackreport['checksum']))
-		'''
+		#'''

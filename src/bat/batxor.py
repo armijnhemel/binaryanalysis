@@ -31,6 +31,7 @@ import fwunpack
 signatures = { 'splashtop': ['\x51', '\x57', '\x45', '\x52']
              , 'bococom':   ['\x3a', '\x93', '\xa2', '\x95', '\xc3', '\x63', '\x48', '\x45', '\x58', '\x09', '\x12', '\x03', '\x08', '\xc8', '\x3c']
              , 'sitecom':   ['\x78', '\x3c', '\x9e', '\xcf', '\x67', '\xb3', '\x59', '\xac']
+             , 'edimax':   ['\x88','\x44','\xa2','\xd1','\x68','\xb4','\x5a','\x2d']
              }
 
 def unpackXOR(filename, sig, tempdir=None):
