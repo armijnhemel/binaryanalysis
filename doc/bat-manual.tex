@@ -4,7 +4,7 @@
 \pagestyle{empty}
 
 \author{Armijn Hemel -- Tjaldur Software Governance Solutions}
-\title{Binary Analysis Tool User and Developer Manual - describing version 26}
+\title{Binary Analysis Tool User and Developer Manual - describing version 27}
 
 \begin{document}
 
@@ -517,7 +517,7 @@ description = Unpack JFFS2 file systems
 enabled     = yes
 \end{verbatim}
 
-In BAT 26 the following file systems, compressed files and media files can be
+In BAT 27 the following file systems, compressed files and media files can be
 unpacked or extracted:
 
 \begin{itemize}
@@ -726,6 +726,19 @@ It defaults to \texttt{yes}. If set to \texttt{yes} the output archive will omit
 a full copy of the unpacked data, significantly decreasing the size of the
 output archive, but making it harder to do a ``post mortem'' on the unpacked
 data (a new analysis should be run to get it again).
+
+\subsubsection{\texttt{configdirectory}}
+
+BAT allows configurations for scans to be split in different files and stored
+in a separate directory. The directory with configurations can be set using the
+\texttt{configdirectory} parameter:
+
+\begin{verbatim}
+configdirectory = /home/bat/configs/
+\end{verbatim}
+
+Important note: the configuration files have to use the extension
+\texttt{.conf}.
 
 \subsubsection{\texttt{unpackdirectory}}
 
@@ -1040,7 +1053,7 @@ cleanup     = yes
 The \texttt{cleanup} setting should be set to \texttt{yes} unless the results
 do not change in between subsequent runs of BAT.
 
-Currently (BAT 26) if \texttt{cleanup} is set the files are written directly to
+Currently (BAT 27) if \texttt{cleanup} is set the files are written directly to
 output directories. The values of these directories are hardcoded (and match
 values that the GUI expects) but these will be replaced by the value of
 \texttt{storetarget} in a later release.
@@ -2952,7 +2965,7 @@ Finally there are some scans that unpack text files (\texttt{base64}) or media
 files. The \texttt{lzma} unpack scan also has the lowest priority because of
 possibly many false positives.
 
-The order of the unpack scans as defined in BAT 26 is:
+The order of the unpack scans as defined in BAT 27 is:
 
 \begin{enumerate}
 \item \texttt{byteswap}
