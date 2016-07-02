@@ -841,10 +841,6 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 			if primaryoffset == None:
 				continue
 
-			## jump to the extent for the root of the file system
-			isofile.seek((rootextentlocation * logicalblocksize) + primaryoffset - 32769)
-			print hex(isofile.tell()), rootextentlocation
-
 			tmpdir = dirsetup(tempdir, filename, "iso9660", counter)
 			res = unpackISO9660(filename, offset - 32769, fslength, blacklist, tmpdir)
 			if res != None:
