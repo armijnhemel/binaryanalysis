@@ -710,8 +710,9 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 	havebootrecord = False
 	haverockridge = False
 	havejoliet = False
+	primaryoffset = None
 	for offset in offsets['iso9660']:
-		## according to /usr/share/magic the magic header starts at start of file + 0x8001
+		## according to /usr/share/magic the magic header can be found at start of ISO9660 + 0x8001
 		if offset < 32769:
 			continue
 		## check if the offset found is in a blacklist
@@ -728,7 +729,7 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 		isobyte = isofile.read(1)
 		if isobyte != '\x01':
 			continue
-		## the volume descriptor type
+		## the volume descriptor type precedes the magic marker
 		isofile.seek(offset-1)
 		isobyte = isofile.read(1)
 
@@ -827,6 +828,7 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 				continue
 
 			primaryvolumedescripterseen = True
+			primaryoffset = offset
 		elif isobyte == '\x02':
 			## extensions, such as rock ridge or joliet. If so, then it might be possible
 			## or necessary to translate the file names using the information in this section.
@@ -835,6 +837,13 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 			## volume descriptor set terminator
 			if not primaryvolumedescripterseen:
 				continue
+
+			if primaryoffset == None:
+				continue
+
+			## jump to the extent for the root of the file system
+			isofile.seek((rootextentlocation * logicalblocksize) + primaryoffset - 32769)
+			print hex(isofile.tell()), rootextentlocation
 
 			tmpdir = dirsetup(tempdir, filename, "iso9660", counter)
 			res = unpackISO9660(filename, offset - 32769, fslength, blacklist, tmpdir)
@@ -847,6 +856,7 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 				havebootrecord = False
 				haverockridge = False
 				havejoliet = False
+				primaryoffset = None
 			else:
 				os.rmdir(tmpdir)
 	isofile.close()
