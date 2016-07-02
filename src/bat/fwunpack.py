@@ -707,6 +707,9 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 	isofile = open(filename, 'rb')
 	filesize = os.stat(filename).st_size
 	primaryvolumedescripterseen = False
+	havebootrecord = False
+	haverockridge = False
+	havejoliet = False
 	for offset in offsets['iso9660']:
 		## according to /usr/share/magic the magic header starts at start of file + 0x8001
 		if offset < 32769:
@@ -729,8 +732,14 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 		isofile.seek(offset-1)
 		isobyte = isofile.read(1)
 
-		## process the primary volume descriptor
-		if isobyte == '\x01':
+		if isobyte == '\x00':
+			## record the boot record. This is important to detect bootable CDs that might use isolinux
+			havebootrecord = True
+			isofile.seek(offset -1 + 7)
+			bootsystemidentifier = isofile.read(32)
+			bootidentifier = isofile.read(32)
+		elif isobyte == '\x01':
+			## process the primary volume descriptor
 			## read the volume space size
 			isofile.seek(offset-1+80)
 			isobytes = isofile.read(8)
@@ -818,9 +827,12 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 				continue
 
 			primaryvolumedescripterseen = True
-
-		## volume descriptor set terminator
+		elif isobyte == '\x02':
+			## extensions, such as rock ridge or joliet. If so, then it might be possible
+			## or necessary to translate the file names using the information in this section.
+			pass
 		elif isobyte == '\xff':
+			## volume descriptor set terminator
 			if not primaryvolumedescripterseen:
 				continue
 
@@ -831,6 +843,10 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 				diroffsets.append((isooffset, offset - 32769, size))
 				blacklist.append((offset - 32769, offset + size))
 				counter = counter + 1
+				primaryvolumedescripterseen = False
+				havebootrecord = False
+				haverockridge = False
+				havejoliet = False
 			else:
 				os.rmdir(tmpdir)
 	isofile.close()
