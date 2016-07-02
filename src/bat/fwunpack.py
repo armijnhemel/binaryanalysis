@@ -699,8 +699,9 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 	counter = 1
 	isofile = open(filename, 'rb')
 	filesize = os.stat(filename).st_size
+	primaryvolumedescripterseen = False
 	for offset in offsets['iso9660']:
-		## according to /usr/share/magic the magic header starts at 0x8001
+		## according to /usr/share/magic the magic header starts at start of file + 0x8001
 		if offset < 32769:
 			continue
 		## check if the offset found is in a blacklist
@@ -722,8 +723,8 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 		isobyte = isofile.read(1)
 
 		## volume descriptor set terminator
-		#if isobyte == '\xff':
-		#	continue
+		if isobyte == '\xff' and not primaryvolumedescripterseen:
+			continue
 
 		if isobyte == '\x01':
 			## read the volume space size
@@ -744,9 +745,44 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 			## the total length of the file system is defined
 			## as volumespacesize * logicalblocksize
 			fslength = volumespacesize * logicalblocksize
-			if fslength + offset > filesize:
+			if fslength + offset - 32769 > filesize:
 				continue
 
+			## logical block size is followed by the path table size
+			isobytes = isofile.read(8)
+			if struct.unpack('<I', isobytes[0:4])[0] != struct.unpack('>I', isobytes[4:8])[0]:
+				continue
+			pathtablesize = struct.unpack('<I', isobytes[0:4])[0]
+			if pathtablesize + offset > filesize:
+				continue
+
+			## followed by the location of the location of the "L-path table"
+			## mpath and lpath are not used by Linux
+			isobytes = isofile.read(4)
+			lpathlocation = struct.unpack('<I', isobytes)[0]
+			#if lpathlocation + offset > filesize:
+			#	continue
+
+			## and the location of the location of the "M-path table"
+			isobytes = isofile.read(4)
+			mpathlocation = struct.unpack('>I', isobytes)[0]
+			#if mpathlocation + offset > filesize:
+			#	continue
+
+			## There is a directory entry (34 bytes) at offset - 1 + 156
+			isofile.seek(offset-1+156)
+			isobytes = isofile.read(34)
+			## the directory entry should have length 34
+			if ord(isobytes[0]) != 34:
+				continue
+
+			## the length of the extended attribute record cannot
+			## exceed the length of the file
+			extendedattributerecordlength = ord(isobytes[1])
+			if extendedattributerecordlength + offset - 32769 > filesize:
+				continue
+
+			primaryvolumedescripterseen = True
 			tmpdir = dirsetup(tempdir, filename, "iso9660", counter)
 			res = unpackISO9660(filename, offset - 32769, fslength, blacklist, tmpdir)
 			if res != None:
