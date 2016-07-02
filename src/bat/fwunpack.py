@@ -790,11 +790,18 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 				continue
 
 			## then the location of the extent
-			isobytes = isofile.read(8)
-			if struct.unpack('<I', isobytes[0:4])[0] != struct.unpack('>I', isobytes[4:8])[0]:
+			if struct.unpack('<I', isobytes[2:6])[0] != struct.unpack('>I', isobytes[6:10])[0]:
 				continue
 			extentlocation = struct.unpack('<I', isobytes[0:4])[0]
 			if extentlocation + offset - 32769 > filesize:
+				continue
+
+			## then the the extent size
+			if struct.unpack('<I', isobytes[10:14])[0] != struct.unpack('>I', isobytes[14:18])[0]:
+				continue
+			extentsize = struct.unpack('<I', isobytes[0:4])[0]
+
+			if extentlocation + extentsize - offset - 32769 >  filesize:
 				continue
 
 			primaryvolumedescripterseen = True
