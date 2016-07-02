@@ -729,6 +729,7 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 		isofile.seek(offset-1)
 		isobyte = isofile.read(1)
 
+		## process the primary volume descriptor
 		if isobyte == '\x01':
 			## read the volume space size
 			isofile.seek(offset-1+80)
@@ -785,21 +786,30 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 			if extendedattributerecordlength + offset - 32769 > filesize:
 				continue
 
-			## then the location of the extent
+			## then the location of the extent, recorded as the block number,
+			## so multiply with logicalblocksize
 			if struct.unpack('<I', isobytes[2:6])[0] != struct.unpack('>I', isobytes[6:10])[0]:
 				continue
-			extentlocation = struct.unpack('<I', isobytes[0:4])[0]
+			rootextentlocation = struct.unpack('<I', isobytes[2:6])[0]
 			## extent cannot be located outside of the file
-			if extentlocation + offset - 32769 > filesize:
+			if (rootextentlocation * logicalblocksize) + offset - 32769 > filesize:
 				continue
 
 			## then the the extent size
 			if struct.unpack('<I', isobytes[10:14])[0] != struct.unpack('>I', isobytes[14:18])[0]:
 				continue
-			extentsize = struct.unpack('<I', isobytes[0:4])[0]
+			rootextentsize = struct.unpack('<I', isobytes[10:14])[0]
 
 			## extent cannot be located outside of the file
-			if extentlocation + extentsize + offset - 32769 >  filesize:
+			if rootextentlocation + (rootextentsize * logicalblocksize) + offset - 32769 >  filesize:
+				continue
+
+			## then the date, ignore for now
+			extentdate = isobytes[18:25]
+
+			extentfileflags = isobytes[25]
+			## check if it is a directory
+			if (ord(extentfileflags) >> 1 & 1) != 1:
 				continue
 
 			## filename size, should be 1 for the root
