@@ -729,10 +729,6 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 		isofile.seek(offset-1)
 		isobyte = isofile.read(1)
 
-		## volume descriptor set terminator
-		if isobyte == '\xff' and not primaryvolumedescripterseen:
-			continue
-
 		if isobyte == '\x01':
 			## read the volume space size
 			isofile.seek(offset-1+80)
@@ -793,6 +789,7 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 			if struct.unpack('<I', isobytes[2:6])[0] != struct.unpack('>I', isobytes[6:10])[0]:
 				continue
 			extentlocation = struct.unpack('<I', isobytes[0:4])[0]
+			## extent cannot be located outside of the file
 			if extentlocation + offset - 32769 > filesize:
 				continue
 
@@ -801,10 +798,22 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 				continue
 			extentsize = struct.unpack('<I', isobytes[0:4])[0]
 
-			if extentlocation + extentsize - offset - 32769 >  filesize:
+			## extent cannot be located outside of the file
+			if extentlocation + extentsize + offset - 32769 >  filesize:
+				continue
+
+			## filename size, should be 1 for the root
+			extentfilenamesize = ord(isobytes[32])
+			if extentfilenamesize != 1:
 				continue
 
 			primaryvolumedescripterseen = True
+
+		## volume descriptor set terminator
+		elif isobyte == '\xff':
+			if not primaryvolumedescripterseen:
+				continue
+
 			tmpdir = dirsetup(tempdir, filename, "iso9660", counter)
 			res = unpackISO9660(filename, offset - 32769, fslength, blacklist, tmpdir)
 			if res != None:
