@@ -801,7 +801,7 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 			rootextentsize = struct.unpack('<I', isobytes[10:14])[0]
 
 			## extent cannot be located outside of the file
-			if rootextentlocation + (rootextentsize * logicalblocksize) + offset - 32769 >  filesize:
+			if rootextentsize + (rootextentlocation * logicalblocksize) + offset - 32769 >  filesize:
 				continue
 
 			## then the date, ignore for now
