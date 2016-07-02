@@ -674,6 +674,13 @@ def unpackAr(filename, offset, tempdir=None, blacklist=[]):
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
 		os.unlink(tmpfile[1])
+		rmfiles = os.listdir(tmpdir)
+		if rmfiles != []:
+			for rmfile in rmfiles:
+				try:
+					shutil.rmtree(os.path.join(tmpdir, rmfile))
+				except:
+					os.remove(os.path.join(tmpdir, rmfile))
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return None
@@ -753,20 +760,20 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 			if struct.unpack('<I', isobytes[0:4])[0] != struct.unpack('>I', isobytes[4:8])[0]:
 				continue
 			pathtablesize = struct.unpack('<I', isobytes[0:4])[0]
-			if pathtablesize + offset > filesize:
+			if pathtablesize + offset - 32769 > filesize:
 				continue
 
 			## followed by the location of the location of the "L-path table"
 			## mpath and lpath are not used by Linux
 			isobytes = isofile.read(4)
 			lpathlocation = struct.unpack('<I', isobytes)[0]
-			#if lpathlocation + offset > filesize:
+			#if lpathlocation + offset - 32769 > filesize:
 			#	continue
 
 			## and the location of the location of the "M-path table"
 			isobytes = isofile.read(4)
 			mpathlocation = struct.unpack('>I', isobytes)[0]
-			#if mpathlocation + offset > filesize:
+			#if mpathlocation + offset - 32769 > filesize:
 			#	continue
 
 			## There is a directory entry (34 bytes) at offset - 1 + 156
@@ -780,6 +787,14 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 			## exceed the length of the file
 			extendedattributerecordlength = ord(isobytes[1])
 			if extendedattributerecordlength + offset - 32769 > filesize:
+				continue
+
+			## then the location of the extent
+			isobytes = isofile.read(8)
+			if struct.unpack('<I', isobytes[0:4])[0] != struct.unpack('>I', isobytes[4:8])[0]:
+				continue
+			extentlocation = struct.unpack('<I', isobytes[0:4])[0]
+			if extentlocation + offset - 32769 > filesize:
 				continue
 
 			primaryvolumedescripterseen = True
