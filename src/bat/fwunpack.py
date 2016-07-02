@@ -760,17 +760,17 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 			if pathtablesize + offset - 32769 > filesize:
 				continue
 
-			## followed by the location of the location of the "L-path table"
+			## followed by the LBA location of the "L-path table"
 			## mpath and lpath are not used by Linux
 			isobytes = isofile.read(4)
 			lpathlocation = struct.unpack('<I', isobytes)[0]
-			#if lpathlocation + offset - 32769 > filesize:
+			#if (lpathlocation * logicalblocksize) + offset - 32769 > filesize:
 			#	continue
 
-			## and the location of the location of the "M-path table"
+			## and the LBA location of the "M-path table"
 			isobytes = isofile.read(4)
 			mpathlocation = struct.unpack('>I', isobytes)[0]
-			#if mpathlocation + offset - 32769 > filesize:
+			#if (mpathlocation * logicalblocksize) + offset - 32769 > filesize:
 			#	continue
 
 			## There is a directory entry (34 bytes) at offset - 1 + 156
