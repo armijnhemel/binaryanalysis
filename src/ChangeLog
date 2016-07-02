@@ -1,3 +1,8 @@
+2016-07-02:
+* fwunpack.py: add more ISO9660 checks
+* fwunpack.py: remove temporary files if ar unpacking failed but unpacked some
+data
+
 2016-07-01:
 * bruteforcescan.py: add modular configuration
 
