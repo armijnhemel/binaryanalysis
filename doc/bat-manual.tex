@@ -1118,9 +1118,6 @@ packages from popular distributions in a database.
 archive.
 \item \texttt{findlibs.py} and \texttt{interfaces.py} are for researching
 dynamically linked ELF files in the archive.
-\item \texttt{findsymbols.py} is for researching relationships between Linux
-kernel modules and the Linux kernel in the archive, specifically for the
-declared licenses and the license of symbols used.
 \item \texttt{fixduplicates.py} is used to correct tagging of files that were
 tagged incorrectly as duplicates, as they are the original, not the copy. For
 now this is only for ELF files.
@@ -1137,6 +1134,7 @@ generate textual and graphical representations of results of the analysis.
 \item \texttt{identifier.py} implements functionality to extract identifiers
 (string constants, function names, method names, variable names, and so on)
 from binary files and make them available for further analysis.
+\item \texttt{javacheck.py} has code to parse Java class files.
 \item \texttt{jffs2.py} has code specific to handling JFFS2 file systems.
 \item \texttt{kernelanalysis.py} includes code to extract information from
 Linux kernel images and Linux kernel modules.
