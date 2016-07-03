@@ -15,8 +15,8 @@
 
 \section{Introducing the Binary Analysis Tool}
 
-The Binary Analysis Tool (BAT) is a framework that can help developers and
-companies check binary files. Its primary application is for Open Source
+The Binary Analysis Tool (BAT) is a generic framework that can help developers
+and companies analyse binary files. Its primary application is for Open Source
 software license compliance, with a special focus on supply chain management
 in consumer electronics, but it can also be used for other checks of binary
 for example the presence of security bugs.
@@ -24,7 +24,7 @@ for example the presence of security bugs.
 BAT consists of several programs written in Python. The most important program
 is the scanner for binary objects to unpack binaries recursively and apply a
 number of scans, for example for open source license compliance, visualising
-linking information, finding version information, and so on.  There are also
+linking information, finding version information, and so on. There are also
 other programs to help with specific license compliance tasks, such as
 verifying if configurations for a given BusyBox binary match with the
 configuration in source code. Also included is a very experimental program to
@@ -39,7 +39,7 @@ The tools in the Binary Analysis Tool can be quite resource intensive. They
 are largely I/O-bound (database access, reading files from disk), so it is
 better to invest in faster disks or ramdisks than in raw CPU power. Using more
 cores is also highly recommended, since most of the programs in the Binary
-Analysis Tool will vastly benefit from this.
+Analysis Tool can take advantage of this and will run significantly faster.
 
 \subsection{Software requirements}
 
@@ -48,9 +48,9 @@ done on Fedora 22 and Ubuntu 14.04, so those platforms are likely to
 work best. Ubuntu versions older than 14.04, will not work due to a broken
 version of the PyDot package. Debian versions older than 7 are unsupported.
 
-Versions older than Fedora 20 might not work if a database is used when
-scanning a whole directory of files instead of a single binary because of a bug
-in the version of matplotlib shipped on those distributions.
+Versions older than Fedora 20 might not work scanning because of a bug in the
+version of matplotlib shipped on those distributions will throw errors in some
+cases.
 
 If the latest version from version control is used it is important to look at
 the file \texttt{setup.cfg} to get a list of the dependencies that should be
