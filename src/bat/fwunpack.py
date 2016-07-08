@@ -689,11 +689,8 @@ def unpackAr(filename, offset, tempdir=None, blacklist=[]):
 		os.rmdir(tmpdir)
 	return (tmpdir, os.stat(filename).st_size)
 
-## 1. search ISO9660 file system
-## 2. mount it using FUSE
-## 3. copy the contents
-## 4. make sure all permissions are correct (so use chmod)
-## 5. unmount file system
+## Unpack ISO 9660 file systems. Currently supports plain ISO9660 and Rock Ridge.
+## TODO: Joliet and zisofs
 ## https://en.wikipedia.org/wiki/ISO_9660
 ## http://wiki.osdev.org/ISO_9660
 def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
@@ -702,27 +699,63 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 		return ([], blacklist, [], hints)
 	if offsets['iso9660'] == []:
 		return ([], blacklist, [], hints)
+
+	userockridge = True
+	newtags = []
+
+	## disable Rock Ridge on request
+	if 'ISO9660_NO_ROCKRIDGE' in scanenv:
+		userockridge = False
+
+	## SUSP entries, used by Rock Ridge
+	suspentries = ['CE', 'PD', 'SP', 'ST', 'ER', 'ES']
+
+	## Rock Ridge system use entries
+	rockridgeentries = ['PX', 'PN', 'SL', 'NM', 'CL', 'PL', 'RE', 'TF', 'SF', 'RR']
+
+	## other extensions, such as zisofs
+	customentries = ['ZF']
+
 	diroffsets = []
 	counter = 1
 	isofile = open(filename, 'rb')
 	filesize = os.stat(filename).st_size
+
+	## set a few variables that need to be (re)set for each ISO image
+	## contained in the file
 	primaryvolumedescripterseen = False
 	havebootrecord = False
-	haverockridge = False
+	haveextensions = False
 	havejoliet = False
 	primaryoffset = None
+	validiso = True
+	previousoffset = offsets['iso9660'][0]
+
+	## walk all of the offsets. A valid ISO image will have at least two of these:
+	## primary volume descriptor and terminator
 	for offset in offsets['iso9660']:
 		## according to /usr/share/magic the magic header can be found at start of ISO9660 + 0x8001
 		if offset < 32769:
-			continue
-		## check if the offset found is in a blacklist
-		blacklistoffset = extractor.inblacklist(offset, blacklist)
-		if blacklistoffset != None:
 			continue
 
 		## a volume descriptor should be 2048 bytes
 		if offset-1+2048 > filesize:
 			break
+
+		## volume descriptors have to be continuous
+		if not primaryoffset == None:
+			if offset - previousoffset != 2048:
+				primaryvolumedescripterseen = False
+				havebootrecord = False
+				haveextensions = False
+				havejoliet = False
+				primaryoffset = None
+				continue
+
+		## check if the offset found is in a blacklist
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
 
 		## version byte, should be 1 according to ECMA-119/ISO9660
 		isofile.seek(offset+5)
@@ -735,6 +768,7 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 
 		if isobyte == '\x00':
 			## record the boot record. This is important to detect bootable CDs that might use isolinux
+			## but not relevant for storing the CD's content.
 			havebootrecord = True
 			isofile.seek(offset -1 + 7)
 			bootsystemidentifier = isofile.read(32)
@@ -744,12 +778,16 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 			## read the volume space size
 			isofile.seek(offset-1+80)
 			isobytes = isofile.read(8)
+
+			## a lot of the data is stored in little endian and big endian
+			## format and often needs to match
 			if struct.unpack('<I', isobytes[0:4])[0] != struct.unpack('>I', isobytes[4:8])[0]:
 				continue
 
 			volumespacesize = struct.unpack('<I', isobytes[0:4])[0]
 		
-			## read the logical block size. This will most likely be 2048.
+			## read the logical block size. This will almost always be 2048, but
+			## could be different.
 			isofile.seek(offset-1+128)
 			isobytes = isofile.read(4)
 			if struct.unpack('<H', isobytes[0:2])[0] != struct.unpack('>H', isobytes[2:4])[0]:
@@ -771,7 +809,7 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 				continue
 
 			## followed by the LBA location of the "L-path table"
-			## mpath and lpath are not used by Linux
+			## mpath and lpath are typically not used by Linux
 			isobytes = isofile.read(4)
 			lpathlocation = struct.unpack('<I', isobytes)[0]
 			#if (lpathlocation * logicalblocksize) + offset - 32769 > filesize:
@@ -783,10 +821,10 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 			#if (mpathlocation * logicalblocksize) + offset - 32769 > filesize:
 			#	continue
 
-			## There is a directory entry (34 bytes) at offset - 1 + 156
+			## There is a root directory entry (34 bytes) at offset - 1 + 156
 			isofile.seek(offset-1+156)
 			isobytes = isofile.read(34)
-			## the directory entry should have length 34
+			## the directory entry should always have length 34
 			if ord(isobytes[0]) != 34:
 				continue
 
@@ -805,7 +843,7 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 			if (rootextentlocation * logicalblocksize) + offset - 32769 > filesize:
 				continue
 
-			## then the the extent size
+			## then the extent size
 			if struct.unpack('<I', isobytes[10:14])[0] != struct.unpack('>I', isobytes[14:18])[0]:
 				continue
 			rootextentsize = struct.unpack('<I', isobytes[10:14])[0]
@@ -818,7 +856,7 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 			extentdate = isobytes[18:25]
 
 			extentfileflags = isobytes[25]
-			## check if it is a directory
+			## check if the root entry is actually a directory
 			if (ord(extentfileflags) >> 1 & 1) != 1:
 				continue
 
@@ -830,11 +868,13 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 			primaryvolumedescripterseen = True
 			primaryoffset = offset
 		elif isobyte == '\x02':
-			## extensions, such as rock ridge or joliet. If so, then it might be possible
-			## or necessary to translate the file names using the information in this section.
+			## extensions, such as joliet. If so, then it might be possible
+			## or necessary to translate the file names using the information
+			## in this section.
 			pass
 		elif isobyte == '\xff':
-			## volume descriptor set terminator
+			## volume descriptor set terminator. If it is just a standalone
+			## terminator then it makes no sense to continue.
 			if not primaryvolumedescripterseen:
 				continue
 
@@ -842,85 +882,440 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 				continue
 
 			tmpdir = dirsetup(tempdir, filename, "iso9660", counter)
-			res = unpackISO9660(filename, offset - 32769, fslength, blacklist, tmpdir)
-			if res != None:
-				(isooffset, size) = res
-				diroffsets.append((isooffset, offset - 32769, size))
-				blacklist.append((offset - 32769, offset + size))
-				counter = counter + 1
-				primaryvolumedescripterseen = False
-				havebootrecord = False
-				haverockridge = False
-				havejoliet = False
-				primaryoffset = None
-			else:
-				os.rmdir(tmpdir)
+
+			## keep track of information for relocated directories
+			## logical block address of extent -> extent name
+			extenttoname = {}
+
+			## keep a list of translated names in case of deep directories
+			translatednames = {}
+
+			## keep a list of directories that need to be relocated (deep directories)
+			toberelocated = {}
+
+			## CL entries (deep directories)
+			clentries = {}
+
+			extenttoparent = {}
+
+			## keep a list of extents to parent directories (deep directories)
+			relocatedextenttoparent = {}
+
+			## keep a list of relocated directories to parents (PL field) (deep directories)
+			relocatedtoparent = {}
+
+			## populate the queue with the first entry
+			extentqueue = deque([(rootextentlocation, rootextentsize, "", True)])
+			dotdot = rootextentlocation
+
+			while len(extentqueue) != 0:
+				if not validiso:
+					break
+				(thisextentlocation, thisextentsize, parentdirname, inroot) = extentqueue.popleft()
+				## jump to the extent for the root of the file system and walk it, fill up a queue
+				## with files that need to be looked at.
+				isofile.seek((thisextentlocation * logicalblocksize) + primaryoffset - 32769)
+				isobytes = isofile.read(thisextentsize)
+
+				directoryentryoffset = 0
+				lenisobytes = len(isobytes)
+				while directoryentryoffset < lenisobytes:
+					if not validiso:
+						break
+					diroffsetlen = ord(isobytes[directoryentryoffset])
+					if diroffsetlen == 0:
+						if 2048 - directoryentryoffset%2048 < 255:
+							directoryentryoffset += (2048 - directoryentryoffset%2048)
+							continue
+						else:
+							## according to the specification unused
+							## positions after the last byte record are set to 0
+							break
+					## the length of the extended attribute record cannot
+					## exceed the length of the file
+					extendedattributerecordlength = ord(isobytes[directoryentryoffset+1])
+					if extendedattributerecordlength + primaryoffset - 32769 > filesize:
+						validiso = False
+						break
+
+					## then the location of the extent with the actual content, recorded as the block number
+					if struct.unpack('<I', isobytes[directoryentryoffset+2:directoryentryoffset+6])[0] != struct.unpack('>I', isobytes[directoryentryoffset+6:directoryentryoffset+10])[0]:
+						validiso = False
+						break
+					extentlocation = struct.unpack('<I', isobytes[directoryentryoffset+2:directoryentryoffset+6])[0]
+					## extent cannot be located outside of the file
+					if (extentlocation * logicalblocksize) + primaryoffset - 32769 > filesize:
+						validiso = False
+						break
+
+					## then the extent size
+					if struct.unpack('<I', isobytes[directoryentryoffset+10:directoryentryoffset+14])[0] != struct.unpack('>I', isobytes[directoryentryoffset+14:directoryentryoffset+18])[0]:
+						validiso = False
+						break
+					extentsize = struct.unpack('<I', isobytes[directoryentryoffset+10:directoryentryoffset+14])[0]
+
+					## extent cannot be located outside of the file
+					if extentsize + (extentlocation * logicalblocksize) + primaryoffset - 32769 >  filesize:
+						validiso = False
+						break
+
+					## then the date, ignore for now
+					extentdate = isobytes[directoryentryoffset+18:directoryentryoffset+25]
+
+					extentfileflags = isobytes[directoryentryoffset+25]
+
+					## filename size, should be 1 for the root
+					extentfilenamesize = ord(isobytes[directoryentryoffset+32])
+
+					extentfilename = isobytes[directoryentryoffset+33:directoryentryoffset+33+extentfilenamesize]
+					ishidden = False
+					isdirectory = False
+					isassociatedfile = False
+					isfinaldirectory = True
+					if (ord(extentfileflags) & 1) == 1:
+						ishidden = True
+					if (ord(extentfileflags) >> 1 & 1) == 1:
+						isdirectory = True
+					if (ord(extentfileflags) >> 2 & 1) == 1:
+						isassociatedfile = True
+					if (ord(extentfileflags) >> 3 & 1) == 1:
+						pass
+					if (ord(extentfileflags) >> 4 & 1) == 1:
+						pass
+					if (ord(extentfileflags) >> 7 & 1) == 1:
+						isfinaldirectory = False
+
+					if not isdirectory:
+						pass ## TODO, as in case of relocated files it does not
+						## always work correctly
+						## check for the file name
+						#if extentfilename[-2] != ';':
+							#pass
+							#break
+
+					## now check the "system use" field in the directory record to
+					## see if Rock Ridge is used by checking for the 'SP' record (defined
+					## in SUSP), but only for the root of the file system
+					if extentfilename == '\x00':
+						if userockridge:
+							if inroot:
+								if diroffsetlen > 33+extentfilenamesize+2:
+									## grab the first two bytes from the system use field to see if they are 'SP'
+									if isobytes[directoryentryoffset+33+extentfilenamesize:directoryentryoffset+33+extentfilenamesize+2] == 'SP':
+										if haveextensions:
+											validiso = False
+											break
+										haveextensions = True
+										## record how many bytes to skip in the system use field
+										## to get to the rock ridge information
+										rockridgeskip = ord(isobytes[directoryentryoffset+33+extentfilenamesize+9])
+					elif extentfilename == '\x01':
+						## check the '..' link. In case of "deep directories" this
+						## information is important.
+						if not inroot:
+							## extentlocation points to '..'
+							extenttoparent[thisextentlocation] = extentlocation
+							dotdot = extentlocation
+							if haveextensions:
+								localoffset = directoryentryoffset+33+extentfilenamesize
+								if localoffset % 2 != 0:
+									localoffset += 1
+								while localoffset < directoryentryoffset + diroffsetlen:
+									extension = isobytes[localoffset:localoffset+2]
+									if not (extension in rockridgeentries or extension in customentries or extension in suspentries):
+										break
+									rrlen = ord(isobytes[localoffset+2])
+									if directoryentryoffset + rrlen > lenisobytes:
+										validiso = False
+										break
+									if extension == 'PL':
+										## PL is needed ## for relocating directories
+										if not struct.unpack('<I', isobytes[localoffset+4:localoffset+8])[0] == struct.unpack('>I', isobytes[localoffset+8:localoffset+12])[0]:
+											validiso = False
+											break
+										originalparentlocation = struct.unpack('<I', isobytes[localoffset+4:localoffset+8])[0]
+										relocatedtoparent[thisextentlocation] = originalparentlocation
+									localoffset += rrlen
+					else:
+						## now look at everything that is not '.' or '..'
+						islink = False
+						iszisofs = False
+						localoffset = directoryentryoffset+33+extentfilenamesize
+						dontwrite = False
+						isrelocated = False
+						alternatename = ""
+						if localoffset % 2 != 0:
+							localoffset += 1
+						if haveextensions:
+							symlinktargetname = ""
+							continuelinkname = False
+							islinkpx = False
+							delayeddirectorycheck = False
+							while localoffset < directoryentryoffset + diroffsetlen:
+								extension = isobytes[localoffset:localoffset+2]
+								if not (extension in rockridgeentries or extension in customentries or extension in suspentries):
+									break
+								rrlen = ord(isobytes[localoffset+2])
+								if directoryentryoffset + rrlen > lenisobytes:
+									validiso = False
+									break
+								if extension == 'PX':
+									pxversion = ord(isobytes[localoffset+3])
+									if pxversion != 1:
+										validiso = False
+										break
+									if rrlen < 12:
+										validiso = False
+										break
+									if not struct.unpack('<I', isobytes[localoffset+4:localoffset+8])[0] == struct.unpack('>I', isobytes[localoffset+8:localoffset+12])[0]:
+										validiso = False
+										break
+									posixfilemode = struct.unpack('<I', isobytes[localoffset+4:localoffset+8])[0]
+									## filter pipes, sockets, etc. and sanity check directories, symlinks and files
+									if posixfilemode >= 0140000:
+										## no need for sockets
+										break
+									if posixfilemode >= 0120000:
+										## store if the file is a symlink
+										islinkpx = True
+									else:
+										if posixfilemode < 0040000:
+											## pipe, FIFO, character device
+											break
+										if posixfilemode >= 0060000:
+											## regular file or block device
+											if posixfilemode < 0100000:
+												break
+											## it should be a regular file. Sanity check to see
+											## if the ISO9660 information says it is a directory
+											if isdirectory:
+												validiso = False
+												break
+										else:
+											## check if the directory is really a directory.
+											## If there are relocations this will not work.
+											if not isdirectory:
+												delayeddirectorycheck = True
+								elif extension == 'PN':
+									## skip over the PN field, as block and character devices
+									## are not interesting
+									pass
+								elif extension == 'SL':
+									islink = True
+									## look at the SL component flags
+									componentflags = isobytes[localoffset+5]
+									if (ord(componentflags) >> 6 & 1) == 1:
+										validiso = False
+										break
+									if (ord(componentflags) >> 7 & 1) == 1:
+										validiso = False
+										break
+									if (ord(componentflags) & 1) == 1:
+										continuelinkname = True
+									elif (ord(componentflags) >> 1 & 1) == 1:
+										if continuelinkname:
+											validiso = False
+											break
+										else:
+											symlinktargetname = '.'
+									elif (ord(componentflags) >> 2 & 1) == 1:
+										if continuelinkname:
+											validiso = False
+											break
+										else:
+											if inroot:
+												symlinktargetname = '.'
+											else:
+												symlinktargetname = '..'
+									elif (ord(componentflags) >> 3 & 1) == 1:
+										if continuelinkname:
+											validiso = False
+											break
+										else:
+											symlinktargetname = '/'
+									else:
+										symlinktargetlength = ord(isobytes[localoffset+6])
+										if directoryentryoffset + symlinktargetlength > lenisobytes:
+											validiso = False
+											break
+										symlinktargetname += isobytes[localoffset+7:localoffset+7+symlinktargetlength]
+								elif extension == 'NM':
+									## there can be multiple 'NM' entries to make
+									## longer names possible.
+									alternatename += isobytes[localoffset+5:localoffset+rrlen]
+								elif extension == 'CL':
+									## The CL field is needed for relocating directories
+									delayeddirectorycheck = False
+									if not struct.unpack('<I', isobytes[localoffset+4:localoffset+8])[0] == struct.unpack('>I', isobytes[localoffset+8:localoffset+12])[0]:
+										validiso = False
+										break
+									childlocation = struct.unpack('<I', isobytes[localoffset+4:localoffset+8])[0]
+									## record the parent of the child location
+									clentries[childlocation] = thisextentlocation
+									## an empty file with the same name will be written, but
+									## this is not really needed.
+									dontwrite = True
+								elif extension == 'RE':
+									## record the name of the RE field. This is needed
+									## for identifiying directories that were relocated.
+									isrelocated = True
+								elif extension == 'TF':
+									## skip over the TF field as time information
+									## is not interesting
+									pass
+								elif extension == 'SF':
+									## skip over the SF field for now. Sparse files
+									## are rare
+									pass
+								localoffset += rrlen
+
+							## now process the result of the delayed directory
+							## check if any.
+							if delayeddirectorycheck:
+								validiso = False
+								break
+
+						if not isdirectory:
+							if islink:
+								origoutfilename = extentfilename.rsplit(';', 1)[0]
+								while os.path.isabs(origoutfilename):
+									origoutfilename = origoutfilename[1:]
+								if alternatename != '':
+									outfilename = alternatename
+								else:
+									outfilename = origoutfilename
+								while os.path.isabs(outfilename):
+									outfilename = outfilename[1:]
+								oldcwd = os.getcwd()
+								os.chdir(os.path.join(tmpdir, parentdirname))
+								os.symlink(symlinktargetname, alternatename)
+								os.chdir(oldcwd)
+							else:
+								if dontwrite:
+									## this is for a CL entry, so record the parent
+									relocatedextenttoparent[extentlocation] = thisextentlocation
+								else:
+									## regular file, so grab contents and write them
+									## to a file.
+									origoutfilename = extentfilename.rsplit(';', 1)[0]
+									while os.path.isabs(origoutfilename):
+										origoutfilename = origoutfilename[1:]
+									if alternatename != '':
+										outfilename = alternatename
+									else:
+										outfilename = origoutfilename
+									while os.path.isabs(outfilename):
+										outfilename = outfilename[1:]
+									oldoffset = isofile.tell()
+									isofile.seek(extentlocation * logicalblocksize + primaryoffset - 32769)
+									curfilename = os.path.join(tmpdir, parentdirname, outfilename)
+									outfile = open(curfilename, 'wb')
+									outfile.write(isofile.read(extentsize))
+									outfile.close()
+									isofile.seek(oldoffset)
+						else:
+							## create directories
+							if alternatename != '':
+								curdirfilename = os.path.join(parentdirname, alternatename)
+							else:
+								curdirfilename = os.path.join(parentdirname, extentfilename)
+							while os.path.isabs(curdirfilename):
+								curdirfilename = curdirfilename[1:]
+							origcurdirfilename = curdirfilename
+							extenttoname[extentlocation] = origcurdirfilename
+
+							## it could be that there are relocated directories with the
+							## same alternate name. In that case create a temporary directory
+							## and record the name somewhere so it can be changed later.
+							if os.path.exists((os.path.join(tmpdir, curdirfilename))):
+								while True:
+									try:
+										tempdirname = tempfile.mkdtemp(dir=os.path.join(tmpdir, parentdirname))
+										curdirfilename = os.path.join(parentdirname, os.path.basename(tempdirname))
+										translatednames[curdirfilename] = origcurdirfilename
+										break
+									except Exception, e:
+										pass
+							else:
+								os.mkdir(os.path.join(tmpdir, curdirfilename))
+
+							## record the parent for each directory that will be visited
+							relocatedextenttoparent[extentlocation] = thisextentlocation
+
+							## queue the extent so it can be visited.
+							extentqueue.append((extentlocation, extentsize, curdirfilename, False))
+							if isrelocated:
+								if extentfilename in toberelocated:
+									toberelocated[curdirfilename].append({'parent': thisextentlocation, 'self': extentlocation})
+								else:
+									toberelocated[curdirfilename] = [{'parent': thisextentlocation, 'self': extentlocation}]
+
+					## finally go to the next directory record
+					directoryentryoffset += diroffsetlen
+					if directoryentryoffset % 2 != 0:
+						break
+
+			## now move any replaced directories into the right place
+			for relocentry in toberelocated:
+				## walk the RE entries. The 'self' field has to
+				## correspond to the key of a 'CL' entry (child location).
+				lenrelocentry = len(relocentry)
+				if relocentry in translatednames:
+					translatedlenrelocentry = len(translatednames[relocentry])
+				for reloc in toberelocated[relocentry]:
+					if not reloc['self'] in clentries:
+						continue
+					if not reloc['self'] in relocatedtoparent:
+						continue
+					## The entry of PL should correspond to the parent of the
+					## CL value, which was recorded in clentries
+					cl = clentries[reloc['self']]
+					if not cl in relocatedextenttoparent:
+						continue
+					if not cl == relocatedtoparent[reloc['self']]:
+						continue
+					shutil.move(os.path.join(tmpdir, relocentry), os.path.join(tmpdir, extenttoname[cl]))
+					if relocentry in translatednames:
+						oldcwd = os.getcwd()
+						os.chdir(os.path.join(tmpdir, extenttoname[cl]))
+						shutil.move(os.path.basename(relocentry), os.path.basename(translatednames[relocentry]))
+						os.chdir(oldcwd)
+						translatename = os.path.join(extenttoname[cl], os.path.basename(translatednames[relocentry]))
+					else:
+						translatename = os.path.join(extenttoname[cl], os.path.basename(relocentry))
+
+					## now fix every other instance too
+					for ex in extenttoname:
+						if extenttoname[ex] == relocentry:
+							if relocentry in translatednames:
+								extenttoname[ex] = translatename
+						if extenttoname[ex].startswith(relocentry):
+							newextentname = extenttoname[ex][lenrelocentry:]
+							while os.path.isabs(newextentname):
+								newextentname = newextentname[1:]
+							extenttoname[ex] = os.path.join(translatename, newextentname)
+
+			## Add the results to the result list and the black list and continue
+			## with the next image.
+			diroffsets.append((tmpdir, primaryoffset - 32769, fslength))
+			blacklist.append((primaryoffset - 32769, primaryoffset - 32769 + fslength))
+			counter = counter + 1
+			if primaryoffset - 32769 == 0 and fslength == os.stat(filename).st_size:
+				## whole file, so return right away
+				isofile.close()
+				newtags.append('iso9660')
+				return (diroffsets, blacklist, newtags, hints)
+			primaryvolumedescripterseen = False
+			havebootrecord = False
+			haveextensions = False
+			havejoliet = False
+			primaryoffset = None
+			validiso = True
+
+		if not primaryoffset == None:
+			previousoffset = offset
 	isofile.close()
-	return (diroffsets, blacklist, [], hints)
-
-def unpackISO9660(filename, offset, fslength, blacklist, tempdir=None, unpacktempdir=None):
-	tmpdir = unpacksetup(tempdir)
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.fdopen(tmpfile[0]).close()
-
-	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist, length=fslength)
-
-	## create a mountpoint
-	mountdir = tempfile.mkdtemp(dir=unpacktempdir)
-	p = subprocess.Popen(['fuseiso', tmpfile[1], mountdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		os.rmdir(mountdir)
-		os.unlink(tmpfile[1])
-		if tempdir == None:
-			os.rmdir(tmpdir)
-		return None
-	## first create *another* temporary directory, because of the behaviour of shutil.copytree()
-	tmpdir2 = tempfile.mkdtemp(dir=unpacktempdir)
-	## then copy the contents to a subdir, and don't follow symlinks
-	shutil.copytree(mountdir, tmpdir2 + "/bla", symlinks=True)
-	## then change all the permissions
-	osgen = os.walk(tmpdir2 + "/bla")
-	try:
-		while True:
-			i = osgen.next()
-			os.chmod(i[0], stat.S_IRWXU)
-			if os.path.islink(i[0]):
-				continue
-			if not os.path.isdir(i[0]):
-				continue
-			for p in i[2]:
-				if os.path.islink(os.path.join(i[0], p)):
-					continue
-				if os.path.isfile(os.path.join(i[0], p)):
-					continue
-				os.chmod("%s/%s" % (i[0], p), stat.S_IRWXU)
-	except Exception, e:
-		pass
-	## then move all the contents using shutil.move()
-	mvfiles = os.listdir(os.path.join(tmpdir2, "bla"))
-	for f in mvfiles:
-		shutil.move(os.path.join(tmpdir2, "bla", f), tmpdir)
-	## then cleanup the temporary dir
-	shutil.rmtree(tmpdir2)
-	
-	## determine size. It might not be accurate.
-	p = subprocess.Popen(['du', '-scb', mountdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		## this should not happen
-		os.unlink(tmpfile[1])
-		if tempdir == None:
-			os.rmdir(tmpdir)
-		return None
-	size = int(stanout.strip().split("\n")[-1].split()[0])
-	## unmount the ISO image using fusermount
-	p = subprocess.Popen(['fusermount', "-u", mountdir], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	## TODO: check exit codes
-	os.rmdir(mountdir)
-	os.unlink(tmpfile[1])
-	return (tmpdir, size)
+	return (diroffsets, blacklist, newtags, hints)
 
 ## unpacking POSIX or GNU tar archives. This does not work yet for the V7 tar format
 def searchUnpackTar(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
