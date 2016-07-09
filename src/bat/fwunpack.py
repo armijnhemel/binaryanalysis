@@ -636,7 +636,6 @@ def searchUnpackKnownAr(filename, tempdir=None, scanenv={}, debug=False):
 					pass
 			return ([], [], [], {})
 		else:
-			print "known", filename
 			return (diroffsets, blacklist, newtags, hints)
 	return ([], [], [], {})
 
