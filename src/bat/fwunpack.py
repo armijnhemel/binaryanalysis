@@ -604,6 +604,42 @@ def unpackJffs2(filename, offset, filesize, tempdir=None, bigendian=False, jffs2
 		os.rmdir(tmpdir)
 	return res
 
+def searchUnpackKnownAr(filename, tempdir=None, scanenv={}, debug=False):
+	## first check if the file actually could be a valid ar file
+	arfile = open(filename, 'rb')
+	arfile.seek(0)
+	arheader = arfile.read(7)
+	arfile.close()
+	if arheader != fsmagic.fsmagic['ar']:
+		return ([], [], [], {})
+
+	## then try unpacking it.
+	res = searchUnpackAr(filename, tempdir, [], {'ar': [0]}, scanenv, debug)
+	(diroffsets, blacklist, newtags, hints) = res
+
+	failed = False
+	## there were results, so check if they were successful
+	if diroffsets != []:
+		if len(diroffsets) != 1:
+			failed = True
+		else:
+			(dirpath, startoffset, endoffset) = diroffsets[0]
+			if startoffset != 0 or endoffset != os.stat(filename).st_size:
+				failed = True
+
+		if failed:
+			for i in diroffsets:
+				(dirpath, startoffset, endoffset) = i
+				try:
+					shutil.rmtree(dirpath)
+				except:
+					pass
+			return ([], [], [], {})
+		else:
+			print "known", filename
+			return (diroffsets, blacklist, newtags, hints)
+	return ([], [], [], {})
+
 def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	if not 'ar' in offsets:
