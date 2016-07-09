@@ -1982,17 +1982,17 @@ def unpackLzip(filename, offset, tempdir=None):
 	os.unlink(tmpfile[1])
 	return (tmpdir, lzipsize)
 
-## unpack lzo archives.
-def searchUnpackLzo(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
+## unpack lzop archives.
+def searchUnpackLzop(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
-	if not 'lzo' in offsets:
+	if not 'lzop' in offsets:
 		return ([], blacklist, [], hints)
-	if offsets['lzo'] == []:
+	if offsets['lzop'] == []:
 		return ([], blacklist, [], hints)
 	diroffsets = []
 	tags = []
 	counter = 1
-	for offset in offsets['lzo']:
+	for offset in offsets['lzop']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
@@ -2014,21 +2014,21 @@ def searchUnpackLzo(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		if not ord(lzopversionbyte) in [1,2,3]:
 			continue
 		
-		tmpdir = dirsetup(tempdir, filename, "lzo", counter)
-		(res, lzosize) = unpackLzo(filename, offset, tmpdir)
+		tmpdir = dirsetup(tempdir, filename, "lzop", counter)
+		(res, lzopsize) = unpackLzop(filename, offset, tmpdir)
 		if res != None:
-			diroffsets.append((res, offset, lzosize))
-			blacklist.append((offset, offset+lzosize))
-			if offset == 0 and lzosize == os.stat(filename).st_size:
+			diroffsets.append((res, offset, lzopsize))
+			blacklist.append((offset, offset+lzopsize))
+			if offset == 0 and lzopsize == os.stat(filename).st_size:
 				tags.append("compressed")
-				tags.append("lzo")
+				tags.append("lzop")
 			counter = counter + 1
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
 	return (diroffsets, blacklist, tags, hints)
 
-def unpackLzo(filename, offset, tempdir=None):
+def unpackLzop(filename, offset, tempdir=None):
 	## first unpack things, write things to a file and return
 	## the directory if the file is not empty
 	## Assumes (for now) that lzop is in the path
