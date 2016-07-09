@@ -1,3 +1,15 @@
+2016-07-09:
+* fwunpack.py: add known method for ar (includes deb, udeb, etc.)
+* fwunpack.py/fsmagic.py/bat-scan.config: lzo -> lzop
+* fsmagic.py: add identifiers for ID3 (1 and 2)
+* bruteforcescan.py/bat-scan: throw error if there are duplicate sections in
+the configuration
+
+2016-07-08:
+* fwunpack.py: rewite ISO9660 unpacking (ISO9660, Rock Ridge) and remove fuse
+and fuseiso dependencies. Still needs support for Joliet and zisofs to be on
+par with fuseiso though.
+
 2016-07-02:
 * fwunpack.py: add more ISO9660 checks
 * fwunpack.py: remove temporary files if ar unpacking failed but unpacked some
