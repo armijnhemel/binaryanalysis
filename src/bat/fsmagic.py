@@ -96,6 +96,8 @@ fsmagic = {
             'oat':		'oat\n', ## Android OAT
             'otf':		'OTTO',
             'ttf':		'\x00\x01\x00\x00',
+            'id3':		'TAG',
+            'id3v2':		'ID3',
             'mp4':		'ftyp',
             'ogg':  		'OggS',
             'sqlite3':		'SQLite format 3\x00',
