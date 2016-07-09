@@ -1004,6 +1004,7 @@ def readconfig(config):
 	prerunscans = []
 	postrunscans = []
 	aggregatescans = []
+	errors = []
 	batconf = {}
 	tmpbatconfdebug = set()
 
@@ -1022,11 +1023,7 @@ def readconfig(config):
 	## always processed first.
 	for section in config.sections():
 		if section != "batconfig":
-			if section in sectionsseen:
-				## TODO: proper error message
-				continue
 			sectionstoprocess.add(section)
-			sectionsseen.add(section)
 			continue
 
 		## first set the environment
@@ -1271,12 +1268,16 @@ def readconfig(config):
 			except Exception, e:
 				pass
 			for section in mconfig.sections():
-				if section in sectionsseen:
-					## TODO: proper error message
-					continue
 				scanconfigres = scanconfigsection(config, section, scanenv, batconf)
 				if scanconfigres == None:
 					continue
+
+				if section in sectionsseen:
+					errors.append({'errortype': 'duplicate', 'section': section})
+					continue
+				sectionstoprocess.add(section)
+				sectionsseen.add(section)
+
 				(scanconfig, scantype, scandebug) = scanconfigres
 				if scandebug != None:
 					tmpbatconfdebug.add(scandebug)
@@ -1296,6 +1297,11 @@ def readconfig(config):
 		scanconfigres = scanconfigsection(config, section, scanenv, batconf)
 		if scanconfigres == None:
 			continue
+		if section in sectionsseen:
+			errors.append({'errortype': 'duplicate', 'section': section})
+			continue
+		sectionstoprocess.add(section)
+		sectionsseen.add(section)
 		(scanconfig, scantype, scandebug) = scanconfigres
 		if scandebug != None:
 			tmpbatconfdebug.add(scandebug)
@@ -1386,7 +1392,7 @@ def readconfig(config):
 	prerunscans = sorted(prerunscans, key=lambda x: x['priority'], reverse=True)
 	leafscans = sorted(leafscans, key=lambda x: x['priority'], reverse=True)
 	aggregatescans = sorted(aggregatescans, key=lambda x: x['priority'], reverse=True)
-	return {'batconfig': batconf, 'unpackscans': unpackscans, 'leafscans': leafscans, 'prerunscans': prerunscans, 'postrunscans': postrunscans, 'aggregatescans': aggregatescans}
+	return {'batconfig': batconf, 'unpackscans': unpackscans, 'leafscans': leafscans, 'prerunscans': prerunscans, 'postrunscans': postrunscans, 'aggregatescans': aggregatescans, 'errors': errors}
 
 def dumpData(unpackreports, scans, tempdir):
 	## a dump of all the result contains:

@@ -91,6 +91,12 @@ def main(argv):
 		configfile.close()
 		sys.exit(1)
 
+	if 'errors' in scans:
+		if scans['errors'] != []:
+			for e in scans['errors']:
+				print >>sys.stderr, "ERROR IN SECTION '%s': %s" % (e['section'], e['errortype'])
+			sys.exit(1)
+
 	## check if there are any conflicts in the configuration file
 	## conflicts are determined per phase
 	for s in scans:
