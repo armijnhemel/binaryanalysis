@@ -46,7 +46,7 @@ fsmagic = {
             'xz':               '\xfd\x37\x7a\x58\x5a\x00',
             'xztrailer':        '\x59\x5a',
             'lzip':             'LZIP',
-            'lzo':              '\x89\x4c\x5a\x4f\x00\x0d\x0a\x1a\x0a',
+            'lzop':              '\x89\x4c\x5a\x4f\x00\x0d\x0a\x1a\x0a',
             'lha':              '-lh7-',
             'cramfs_le':        '\x45\x3d\xcd\x28',
             'cramfs_be':        '\x28\xcd\x3d\x45',
