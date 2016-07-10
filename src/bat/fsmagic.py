@@ -114,6 +114,7 @@ fsmagic = {
             'androidbackup':	'ANDROID BACKUP\n',
             'woff':		'wOFF',
             'woff2':		'wOF2',
+            'xar':		'\x78\x61\x72\x21',
           }
 
 ## some offsets can be found after a certain number of bytes, but
