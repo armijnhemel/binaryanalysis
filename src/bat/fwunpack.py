@@ -19,6 +19,7 @@ import sys, os, subprocess, os.path, shutil, stat, array, struct, binascii, json
 import tempfile, bz2, re, magic, tarfile, zlib, copy, uu, hashlib, StringIO, zipfile
 import fsmagic, extractor, ext2, jffs2, prerun
 from collections import deque
+import xml.dom
 
 ## generic method to create temporary directories, with the correct filenames
 ## which is used throughout the code.
@@ -1350,6 +1351,258 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 		if not primaryoffset == None:
 			previousoffset = offset
 	isofile.close()
+	return (diroffsets, blacklist, newtags, hints)
+
+## unpacking xar archives
+## https://github.com/mackyle/xar/wiki/xarformat
+def searchUnpackXar(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
+	hints = {}
+	if not 'xar' in offsets:
+		return ([], blacklist, [], hints)
+	if offsets['xar'] == []:
+		return ([], blacklist, [], hints)
+
+	newtags = []
+	counter = 1
+	diroffsets = []
+	filesize = os.stat(filename).st_size
+	xarfile = open(filename, 'rb')
+	for offset in offsets['xar']:
+		xarfile.seek(offset+4)
+
+		## sanity checks first for the header, the compression, etc.
+		## First the size of the header
+		xarbytes = xarfile.read(2)
+		if len(xarbytes) != 2:
+			break
+		headerlength = struct.unpack('>H', xarbytes)[0]
+		if headerlength + offset > filesize:
+			continue
+
+		## Then the number. So far only 1 has been used
+		xarbytes = xarfile.read(2)
+		if len(xarbytes) != 2:
+			break
+		if struct.unpack('>H', xarbytes)[0] != 1:
+			continue
+
+		## Then the length of the table of contents (compressed)
+		xarbytes = xarfile.read(8)
+		if len(xarbytes) != 8:
+			break
+		toccompressedlength = struct.unpack('>Q', xarbytes)[0]
+		if toccompressedlength + offset > filesize:
+			continue
+
+		## Then the length of the table of contents (uncompressed)
+		## Use this for sanity check after decompression of TOC
+		xarbytes = xarfile.read(8)
+		if len(xarbytes) != 8:
+			break
+		tocuncompressedlength = struct.unpack('>Q', xarbytes)[0]
+
+		## Then the checksum algorithm. Only support 'none', MD5 or SHA1
+		## for now.
+		xarbytes = xarfile.read(4)
+		if len(xarbytes) != 4:
+			break
+		checksumalgorithm = struct.unpack('>I', xarbytes)[0]
+		if not checksumalgorithm in [0,1,2]:
+			continue
+
+		## offsets in the TOC are relative to after end of the compressed TOC
+		localoffset = offset + toccompressedlength + headerlength
+
+		## now read the TOC
+		xarbytes = xarfile.read(toccompressedlength)
+		toc = zlib.decompress(xarbytes)
+		if len(toc) != tocuncompressedlength:
+			continue
+		try:
+			dom = xml.dom.minidom.parseString(toc)
+		except:
+			continue
+
+		## now walk the DOM file to get information about the files
+		## Verify that the XML file is actually correct
+		if not dom.documentElement.tagName == 'xar':
+			continue
+
+		rootchildnodes = dom.documentElement.childNodes
+		havetoc = False
+		for r in rootchildnodes:
+			if r.nodeType == xml.dom.Node.ELEMENT_NODE:
+				if r.tagName == 'toc':
+					if havetoc:
+						## there should only be one instance of toc
+						havetoc = False
+						break
+					havetoc = True
+					tocnode = r
+		if not havetoc:
+			continue
+
+		## now create the directory
+		tmpdir = dirsetup(tempdir, filename, "xar", counter)
+
+		## elements inside toc can be 'checksum', 'file', 'x-signature'
+		## 'creation-time' and 'signature'. 'file' elements can be nested
+		## to create a directory structure.
+		nodes = deque(map(lambda x: (x, tmpdir), tocnode.childNodes))
+		brokentoc = False
+		maxoffset = localoffset
+		while len(nodes) != 0:
+			if brokentoc:
+				break
+			(ch, curdir) = nodes.popleft()
+			if ch.nodeType == xml.dom.Node.ELEMENT_NODE:
+				if ch.tagName == 'file':
+					filenodes = ch.childNodes
+					childname = ''
+					childtype = ''
+					childdata = None
+					newchildnodes = []
+					for fch in filenodes:
+						if fch.nodeType == xml.dom.Node.ELEMENT_NODE:
+							if fch.tagName == 'name':
+								for n in fch.childNodes:
+									if n.nodeType == xml.dom.Node.TEXT_NODE:
+										childname = n.data.strip()
+							elif fch.tagName == 'type':
+								for n in fch.childNodes:
+									if n.nodeType == xml.dom.Node.TEXT_NODE:
+										if n.data in ['file', 'directory']:
+											childtype = n.data.strip()
+							elif fch.tagName == 'data':
+								childdata = fch
+							elif fch.tagName == 'file':
+								newchildnodes.append(fch)
+
+					if childname != '' and childtype != '':
+						if childtype == 'directory':
+							childdirname = os.path.join(curdir, childname)
+							os.mkdir(childdirname)
+							for n in newchildnodes:
+								nodes.append((n, childdirname))
+						elif childtype == 'file':
+							if childdata == None:
+								## empty file
+								childfile = open(os.path.join(curdir, childname), 'wb')
+								childfile.close()
+								## and reset for the next file
+								childname = ''
+								childtype = ''
+								childdata = None
+								continue
+
+							## first extract the right data from the childdata node
+							dataoffset = 0
+							datasize = 0
+							datalength = 0
+							extractedchecksum = ''
+							checksumtype = None
+							compression = None
+							childdatanodes = childdata.childNodes
+							for childdatanode in childdatanodes:
+								if childdatanode.nodeType == xml.dom.Node.ELEMENT_NODE:
+									if childdatanode.tagName == 'offset':
+										for n in childdatanode.childNodes:
+											if n.nodeType == xml.dom.Node.TEXT_NODE:
+												try:
+													dataoffset = int(n.data.strip())
+												except Exception, e:
+													brokentoc = True
+													break
+									if childdatanode.tagName == 'size':
+										for n in childdatanode.childNodes:
+											if n.nodeType == xml.dom.Node.TEXT_NODE:
+												try:
+													datasize = int(n.data.strip())
+												except Exception, e:
+													brokentoc = True
+													break
+									if childdatanode.tagName == 'length':
+										for n in childdatanode.childNodes:
+											if n.nodeType == xml.dom.Node.TEXT_NODE:
+												try:
+													datalength = int(n.data.strip())
+												except Exception, e:
+													brokentoc = True
+													break
+									if childdatanode.tagName == 'extracted-checksum':
+										for n in childdatanode.childNodes:
+											if n.nodeType == xml.dom.Node.TEXT_NODE:
+												extractedchecksum = n.data.strip()
+										checksumstyle = childdatanode.getAttribute('style')
+										if checksumstyle != '':
+											if checksumstyle.lower() in ['md5', 'sha1']:
+												checksumtype = checksumstyle
+									if childdatanode.tagName == 'encoding':
+										for n in childdatanode.childNodes:
+											if n.nodeType == xml.dom.Node.TEXT_NODE:
+												datachecksum = n.data.strip()
+										compressionstyle = childdatanode.getAttribute('style')
+										if compressionstyle != '':
+											if compressionstyle.lower() == 'application/x-gzip':
+												compression = 'gzip'
+											elif compressionstyle.lower() == 'application/x-bzip2':
+												compression = 'bzip2'
+									if brokentoc:
+										break
+							if brokentoc:
+								break
+
+							if dataoffset != 0 and datalength != 0 and checksumtype != None:
+								oldoffset = xarfile.tell()
+								xarfile.seek(localoffset + dataoffset)
+								childfilename = os.path.join(curdir, childname)
+								childfile = open(childfilename, 'wb')
+								databytes = xarfile.read(datalength)
+								if compression == None:
+									childfile.write(databytes)
+								elif compression == 'bzip2':
+									bzip2decompressobj = bz2.BZ2Decompressor()
+									try:
+										uncompresseddata = bzip2decompressobj.decompress(databytes)
+										if bzip2decompressobj.unused_data != "":
+											brokentoc = True
+										else:
+											childfile.write(uncompresseddata)
+									except Exception, e:
+										brokentoc = True
+								elif compression == 'gzip':
+									deflateobj = zlib.decompressobj()
+									try:
+										uncompresseddata = deflateobj.decompress(databytes)
+										if deflateobj.unused_data != "":
+											brokentoc = True
+										else:
+											childfile.write(uncompresseddata)
+									except Exception, e:
+										brokentoc = True
+								childfile.close()
+								xarfile.seek(oldoffset)
+								if brokentoc:
+									os.unlink(childfilename)
+								else:
+									if datasize != os.stat(childfilename).st_size:
+										brokentoc = True
+										os.unlink(childfilename)
+								if localoffset + dataoffset + datalength > maxoffset:
+									maxoffset = localoffset + dataoffset + datalength
+							
+						## and reset for the next file
+						childname = ''
+						childtype = ''
+						childdata = None
+		if brokentoc:
+			continue
+		counter += 1
+		diroffsets.append((tmpdir, offset, maxoffset - offset))
+		blacklist.append((offset, maxoffset))
+
+	xarfile.close()
+
 	return (diroffsets, blacklist, newtags, hints)
 
 ## unpacking POSIX or GNU tar archives. This does not work yet for the V7 tar format
