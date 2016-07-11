@@ -87,7 +87,7 @@ def runSetup(setupscan, usedatabase, cursor, conn, debug=False):
 	scanres = eval("bat_%s(setupscan['environment'], cursor, conn, debug=debug)" % (method))
 	return scanres
 
-## convenience method to run the genericMarkerSearch in chunks if needed
+## convenience method to run the genericMarkerSearch in parallel chunks if needed
 def paralleloffsetsearch((filedir, filename, magicscans, optmagicscans, offset, length)):
 	return prerun.genericMarkerSearch(os.path.join(filedir, filename), magicscans, optmagicscans, offset, length)
 
@@ -144,7 +144,7 @@ def gethash(path, filename, hashtype="sha256"):
 		hashresults[h] = hashdict[h].hexdigest()
 	return hashresults
 
-## scan a single file, possibly unpack and recurse
+## continuously grab tasks (files) from a queue, tag and possibly unpack and recurse
 def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, prerunmagic, magicscans, optmagicscans, processid, hashdict, blacklistedfiles, llock, template, unpacktempdir, tempdir, outputhash, cursor, conn, scansourcecode, dumpoffsets, offsetdir, compressed, timeout):
 	lentempdir = len(tempdir)
 	sourcecodequery = "select checksum from processed_file where checksum=%s limit 1"
