@@ -2,6 +2,7 @@
 * fsmagic.py: add magic for ICS
 * fwunpack.py: add unpacker for ICS
 * bat-scan.config: add configuration for ICS
+* prerun.py: remove unused code in verifyJavaClass
 
 2016-07-11:
 * fwunpack.py: add unpacker for xar files
