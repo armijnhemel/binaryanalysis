@@ -104,8 +104,8 @@ def searchXML(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 
 ## Verify a file only contains text. This depends on the settings of the
 ## Python installation.
-## The default encoding in Python 2 is 'ascii'. We can't guarantee
-## that it has been set by the user to another encoding (possibly we could).
+## The default encoding in Python 2 is 'ascii'. It cannot be guaranteed
+## that it has been set by the user to another encoding.
 ## Since other encodings also contain ASCII it should not be much of an issue.
 ##
 ## Interesting link with background info:
@@ -939,6 +939,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		## on some architectures it is necessary to look at the maximum of the starting
 		## address of all sections, plus the size of the section to see if
 		## (offset of section + size of section) == file size
+		#p = subprocess.Popen(['readelf', '-Wt', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		p = subprocess.Popen(['readelf', '-t', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
@@ -953,7 +954,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 			if len(spl) == 8:
 				try:
 					totalsize = int(spl[2], 16) + int(spl[3], 16)
-				except:
+				except Exception, e:
 					continue
 				if totalsize == os.stat(filename).st_size:
 					newtags.append("elf")
@@ -998,46 +999,10 @@ def verifyJavaClass(filename, tempdir=None, tags=[], offsets={}, scanenv={}, deb
 		return newtags
 	if not filename.lower().endswith('.class'):
 		return newtags
-	## There could be multiple class files included. There are situations where there are
-	## multiple Java class headers in a file and the file *is* valid. These are files
-	## from Java compilers that need to read or write Java class files.
-	if len(offsets['java']) > 1:
-		tmpfile = tempfile.mkstemp()
-		os.fdopen(tmpfile[0]).close()
-
-		## test for each offset found. If the Java class parser thinks it's a valid class
-		## file there are multiple class files embedded in this file and then this file
-		## cannot be tagged as an individual Java class file.
-		origclassfile = open(filename)
-		for i in offsets['java']:
-			tmpclassfile = open(tmpfile[1], 'wb')
-			origclassfile.seek(i)
-			data = origclassfile.read()
-			tmpclassfile.write(data)
-			tmpclassfile.close()
-			javares = javacheck.parseJava(filename)
-			if javares != None:
-				origclassfile.close()
-				os.unlink(tmpfile[1])
-				return newtags
-
-		origclassfile.close()
-		os.unlink(tmpfile[1])
-		javares = javacheck.parseJava(filename)
-		if javares == None:
-			return newtags
-		newtags.append('java')
-	else:
-		## The following will only work if the file has either one or multiple valid class
-		## files, starting with a valid class file and ending with a valid class file, or
-		## class files followed by random garbage, but no partial class file.
-		## The only case that might slip through here is if there is a class file with random
-		## garbage following the class file
-		javares = javacheck.parseJava(filename)
-		if javares == None:
-			return newtags
-		## TODO: add more checks
-		newtags.append('java')
+	javares = javacheck.parseJava(filename)
+	if javares == None:
+		return newtags
+	newtags.append('java')
 	return newtags
 
 ## Method to verify if a Windows executable is a valid 7z file
