@@ -115,6 +115,7 @@ fsmagic = {
             'woff':		'wOFF',
             'woff2':		'wOF2',
             'xar':		'\x78\x61\x72\x21',
+            'ics':		'acsp',
           }
 
 ## some offsets can be found after a certain number of bytes, but
@@ -128,6 +129,7 @@ correction = {
                'fat12':   54,
                'fat16':   54,
                'lha':     2,
+               'ics':     36,
              }
 
 ## collection of markers that should be scanned together

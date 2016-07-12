@@ -7335,3 +7335,112 @@ def searchUnpackOgg(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		shutil.rmtree(tmpdir)
 
 	return (diroffsets, blacklist, newtags, hints)
+
+## ICS color profiles
+## http://www.color.org/specification/ICC1v43_2010-12.pdf
+## http://www.color.org/icc_specs2.xalter
+def searchUnpackICS(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
+	hints = {}
+	if not 'ics' in offsets:
+		return ([], blacklist, [], hints)
+	if offsets['ics'] == []:
+		return ([], blacklist, [], hints)
+
+	filesize = os.stat(filename).st_size
+	if filesize < 128:
+		return ([], blacklist, [], hints)
+
+	newtags = []
+	counter = 1
+	diroffsets = []
+
+	icsfile = open(filename, 'rb')
+	for offset in offsets['ics']:
+		icsfile.seek(offset-36)
+		## first the profile header
+		databytes = icsfile.read(128)
+		if len(databytes) != 128:
+			break
+		## first check the size
+		profilesize = struct.unpack('>I', databytes[:4])[0]
+		if profilesize + offset - 36 > filesize:
+			continue
+		## then add a few more checks, such as profile class
+		profileclass = databytes[12:16]
+		if not profileclass in ['scnr', 'mntr', 'prtr', 'link', 'spac', 'abst', 'nmcl']:
+			continue
+		## and the primary platform field
+		primaryplatform = databytes[40:44]
+		if not primaryplatform in ['APPL', 'MSFT', 'SGI ', 'SUNW', '\x00\x00\x00\x00']:
+			continue
+
+		## now read the tag table
+		icsfile.seek(offset-36+128)
+
+		## first find the amount of tags
+		databytes = icsfile.read(4)
+		if len(databytes) != 4:
+			break
+		tagcount = struct.unpack('>I', databytes)[0]
+
+		brokenics = False
+		maxoffset = 0
+		## then for each tag read the signature, offset and size
+		for n in xrange(0,tagcount):
+			## then the tag signature
+			## TODO: add some extra sanity checks
+			databytes = icsfile.read(4)
+			if len(databytes) != 4:
+				brokenics = True
+				break
+			## then the offset
+			databytes = icsfile.read(4)
+			if len(databytes) != 4:
+				brokenics = True
+				break
+			tagoffset = struct.unpack('>I', databytes)[0]
+			if tagoffset + offset - 36 > filesize:
+				brokenics = True
+				break
+			## and finally the size
+			databytes = icsfile.read(4)
+			if len(databytes) != 4:
+				brokenics = True
+				break
+			tagsize = struct.unpack('>I', databytes)[0]
+			if tagoffset + tagsize + offset - 36 > filesize:
+				brokenics = True
+				break
+			if tagoffset + tagsize + offset - 36 > maxoffset:
+				maxoffset = tagoffset + tagsize + offset - 36
+
+
+		if (maxoffset - (offset - 36)) % 4 != 0:
+			maxoffset += (4 - (maxoffset - (offset - 36)) % 4)
+		if maxoffset - (offset - 36) != profilesize:
+			brokenics = True
+		if brokenics:
+			continue
+
+		if profilesize == filesize:
+			icsfile.close()
+			blacklist.append((0, filesize))
+			return (diroffsets, blacklist, ['ics', 'resource', 'binary'], hints)
+
+		## set up a directory and temporary file to write data to
+		tmpdir = dirsetup(tempdir, filename, "ics", counter)
+		tmpfilename = os.path.join(tmpdir, 'unpack-%d.ics' % counter)
+		tmpfile = open(tmpfilename, 'wb')
+		icsfile.seek(offset-36)
+		tmpfile.write(icsfile.read(profilesize))
+
+		hints[tmpfilename] = {}
+		hints[tmpfilename]['tags'] = ['ics', 'resource', 'binary']
+		hints[tmpfilename]['scanned'] = True
+		blacklist.append((offset - 36, offset - 36 + profilesize))
+		diroffsets.append((tmpdir, offset - 36, profilesize))
+		counter += 1
+
+	icsfile.close()
+
+	return (diroffsets, blacklist, newtags, hints)
