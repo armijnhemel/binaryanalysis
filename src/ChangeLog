@@ -1,3 +1,12 @@
+2016-07-13:
+* fwunpack.py: remove external call to 'ar' in ar unpacking
+* fwunpack.py: proper cleanup for xar
+* prerun.py: remove verifyJavaClass
+* fwunpack.py: add Java class carver
+* bat-scan.config: add configuration for Java class carver
+* javacheck.py: pass offset to Java class checker, drop requirement that whole
+file has to be a class file
+
 2016-07-12:
 * fsmagic.py: add magic for ICS
 * fwunpack.py: add unpacker for ICS
