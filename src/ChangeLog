@@ -6,6 +6,7 @@
 * bat-scan.config: add configuration for Java class carver
 * javacheck.py: pass offset to Java class checker, drop requirement that whole
 file has to be a class file
+* prerun.py: keep mapping of offset to keys
 
 2016-07-12:
 * fsmagic.py: add magic for ICS
