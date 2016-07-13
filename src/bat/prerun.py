@@ -988,23 +988,6 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 				break
 	return newtags
 
-## simple helper method to verify if a file is a valid Java class file
-def verifyJavaClass(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
-	newtags = []
-	if not 'java' in offsets:
-		return newtags
-	if offsets['java'] == []:
-		return newtags
-	if offsets['java'][0] != 0:
-		return newtags
-	if not filename.lower().endswith('.class'):
-		return newtags
-	javares = javacheck.parseJava(filename)
-	if javares == None:
-		return newtags
-	newtags.append('java')
-	return newtags
-
 ## Method to verify if a Windows executable is a valid 7z file
 def verifyExe(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []

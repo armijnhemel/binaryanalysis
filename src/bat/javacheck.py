@@ -218,16 +218,11 @@ def parseJava(filename, offset):
 				classfile.close()
 				return None
 
-	## final sanity check: the amount of bytes read should
-	## be the same as the file size
-	if not classfile.tell() == os.stat(filename).st_size:
-		classfile.close()
-		return None
-
+	classsize = classfile.tell() - offset
 	classfile.close()
 
 	stringidentifiers = []
 	for s in string_lookups:
 		stringidentifiers.append(lookup_table[s])
 
-	return {'methods': methodnames, 'fields': fieldnames, 'classname': classname, 'strings': stringidentifiers, 'sourcefile': sourcefile}
+	return {'methods': methodnames, 'fields': fieldnames, 'classname': classname, 'strings': stringidentifiers, 'sourcefile': sourcefile, 'size': classsize}

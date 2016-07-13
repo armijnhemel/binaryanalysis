@@ -17,7 +17,7 @@ to prevent other scans from (re)scanning (part of) the data.
 
 import sys, os, subprocess, os.path, shutil, stat, array, struct, binascii, json, math
 import tempfile, bz2, re, magic, tarfile, zlib, copy, uu, hashlib, StringIO, zipfile
-import fsmagic, extractor, ext2, jffs2, prerun
+import fsmagic, extractor, ext2, jffs2, prerun, javacheck
 from collections import deque
 import xml.dom
 
@@ -7472,4 +7472,44 @@ def searchUnpackICS(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 
 	icsfile.close()
 
+	return (diroffsets, blacklist, newtags, hints)
+
+## carve Java classes from files
+def searchUnpackJavaClass(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
+	hints = {}
+	if not 'java' in offsets:
+		return ([], blacklist, [], hints)
+	if offsets['java'] == []:
+		return ([], blacklist, [], hints)
+
+	filesize = os.stat(filename).st_size
+
+	newtags = []
+	counter = 1
+	diroffsets = []
+
+	javafile = open(filename, 'rb')
+	for offset in offsets['java']:
+		javares = javacheck.parseJava(filename, offset)
+		if javares != None:
+			if javares['size'] != 0:
+				if offset == 0 and javares['size'] == filesize:
+					blacklist.append((0, filesize))
+					javafile.close()
+					return (diroffsets, blacklist, ['java', 'binary'], hints)
+			## set up a directory and temporary file to write data to
+			tmpdir = dirsetup(tempdir, filename, "java", counter)
+			tmpfilename = os.path.join(tmpdir, 'unpack-%d.class' % counter)
+			tmpfile = open(tmpfilename, 'wb')
+			javafile.seek(offset)
+			tmpfile.write(javafile.read(javares['size']))
+
+			hints[tmpfilename] = {}
+			hints[tmpfilename]['tags'] = ['java', 'binary']
+			hints[tmpfilename]['scanned'] = True
+			blacklist.append((offset, offset + javares['size']))
+			diroffsets.append((tmpdir, offset, javares['size']))
+			counter += 1
+
+	javafile.close()
 	return (diroffsets, blacklist, newtags, hints)
