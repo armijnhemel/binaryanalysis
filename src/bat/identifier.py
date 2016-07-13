@@ -491,7 +491,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 		fields = []
 		methods = []
 
-		javares = javacheck.parseJava(scanfile)
+		javares = javacheck.parseJava(scanfile, 0)
 		if javares == None:
 			return None
 

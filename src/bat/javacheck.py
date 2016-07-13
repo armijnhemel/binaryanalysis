@@ -35,10 +35,10 @@ METHODHANDLE = 15
 METHODTYPE = 16
 INVOKEDYNAMIC = 18
 
-def parseJava(filename):
+def parseJava(filename, offset):
 	classfile = open(filename, 'rb')
 
-	classfile.seek(0)
+	classfile.seek(offset)
 
 	## first read the magic bytes. If these are not present it is not a class file
 	javamagic = classfile.read(4)
