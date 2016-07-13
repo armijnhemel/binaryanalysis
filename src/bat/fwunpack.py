@@ -676,6 +676,7 @@ def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 		## The file header is 60 bytes long and has 0x60 0x0a
 		## at the end.
 		## https://en.wikipedia.org/wiki/Ar_%28Unix%29
+		## http://www.freebsd.org/cgi/man.cgi?query=ar&sektion=5
 		## TODO: filenames could occur multiple times
 		filenames = deque()
 		longfilenames = False
