@@ -70,10 +70,19 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, offset=0, length=0,
 		else:
 			offset = offset + len(databuffer)
 	datafile.close()
+
+	## mapping of offset to keys
+	offsettokeys = {}
+
 	for key in marker_keys:
 		offsets[key] = list(offsets[key])
 		## offsets are expected to be sorted.
 		offsets[key].sort()
+		for offset in offsets[key]:
+			if offset in offsettokeys:
+				offsettokeys[offset].append(key)
+			else:
+				offsettokeys[offset] = [key]
 	return offsets
 
 ## Verify a file is an XML file using xmllint.
