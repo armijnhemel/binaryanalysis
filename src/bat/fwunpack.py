@@ -7499,7 +7499,13 @@ def searchUnpackJavaClass(filename, tempdir=None, blacklist=[], offsets={}, scan
 					return (diroffsets, blacklist, ['java', 'binary'], hints)
 			## set up a directory and temporary file to write data to
 			tmpdir = dirsetup(tempdir, filename, "java", counter)
-			tmpfilename = os.path.join(tmpdir, 'unpack-%d.class' % counter)
+			if javares['classname'] != '':
+				if not javares['classname'].endswith('.class'):
+					tmpfilename = os.path.join(tmpdir, os.path.basename(javares['classname']) + '.class')
+				else:
+					tmpfilename = os.path.join(tmpdir, os.path.basename(javares['classname']))
+			else:
+				tmpfilename = os.path.join(tmpdir, 'unpack-%d.class' % counter)
 			tmpfile = open(tmpfilename, 'wb')
 			javafile.seek(offset)
 			tmpfile.write(javafile.read(javares['size']))
