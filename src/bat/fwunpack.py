@@ -706,17 +706,17 @@ def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 				## BSD ar
 				pass
 			elif '/' in entryfilename:
-				if longfilenames:
-					if entryfilename.startswith('/'):
+				if entryfilename.startswith('/'):
+					if longfilenames:
 						entryfilename = filenames.popleft()
 					else:
-						## space in the filename
-						entryfilename = entryfilename.split('/', 1)[0]
+						localoffset += 60 + entrysize
+						if localoffset % 2 != 0:
+							localoffset += 1
+						continue
 				else:
-					localoffset += 60 + entrysize
-					if localoffset % 2 != 0:
-						localoffset += 1
-					continue
+					## space in the filename
+					entryfilename = entryfilename.split('/', 1)[0]
 			else:
 				## regular short filename
 				entryfilename = entryfilename.rstrip()
@@ -1385,6 +1385,7 @@ def searchUnpackXar(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	xarfile = open(filename, 'rb')
 	for offset in offsets['xar']:
 		xarfile.seek(offset+4)
+		dataunpacked = False
 
 		## sanity checks first for the header, the compression, etc.
 		## First the size of the header
@@ -1498,6 +1499,7 @@ def searchUnpackXar(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 						if childtype == 'directory':
 							childdirname = os.path.join(curdir, childname)
 							os.mkdir(childdirname)
+							dataunpacked = True
 							for n in newchildnodes:
 								nodes.append((n, childdirname))
 						elif childtype == 'file':
@@ -1576,6 +1578,7 @@ def searchUnpackXar(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 								databytes = xarfile.read(datalength)
 								if compression == None:
 									childfile.write(databytes)
+									dataunpacked = True
 								elif compression == 'bzip2':
 									bzip2decompressobj = bz2.BZ2Decompressor()
 									try:
@@ -1584,6 +1587,7 @@ def searchUnpackXar(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 											brokentoc = True
 										else:
 											childfile.write(uncompresseddata)
+											dataunpacked = True
 									except Exception, e:
 										brokentoc = True
 								elif compression == 'gzip':
@@ -1594,6 +1598,7 @@ def searchUnpackXar(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 											brokentoc = True
 										else:
 											childfile.write(uncompresseddata)
+											dataunpacked = True
 									except Exception, e:
 										brokentoc = True
 								childfile.close()
@@ -1612,6 +1617,8 @@ def searchUnpackXar(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 						childtype = ''
 						childdata = None
 		if brokentoc:
+			if not dataunpacked:
+				os.rmdir(tmpdir)
 			continue
 		counter += 1
 		diroffsets.append((tmpdir, offset, maxoffset - offset))
@@ -7373,6 +7380,9 @@ def searchUnpackICS(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 
 	icsfile = open(filename, 'rb')
 	for offset in offsets['ics']:
+		blacklistoffset = extractor.inblacklist(offset-36, blacklist)
+		if blacklistoffset != None:
+			continue
 		icsfile.seek(offset-36)
 		## first the profile header
 		databytes = icsfile.read(128)
