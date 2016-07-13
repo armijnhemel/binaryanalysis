@@ -653,14 +653,15 @@ def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 	counter = 1
 	diroffsets = []
 	newtags = []
+	arfile = open(filename, 'rb')
 	for offset in offsets['ar']:
+		dataunpacked = False
 		## check if the offset found is in a blacklist
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
 		## extra sanity check, the byte following the magic is always '\x0a'
 		localoffset = offset + 7
-		arfile = open(filename, 'rb')
 		arfile.seek(localoffset)
 		archeckbyte = arfile.read(1)
 		localoffset += 1
@@ -668,62 +669,71 @@ def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 			arfile.close()
 			continue
 
-		## the magic bytes are followed by a header which has 0x60 0x0a
-		## at the end.
-		## see, for example, https://en.wikipedia.org/wiki/Ar_%28Unix%29
-		localoffset += 58
-		arfile.seek(localoffset)
-		archeckbytes = arfile.read(2)
-		arfile.close()
-		if not archeckbytes == '\x60\x0a':
-			continue
-
 		tmpdir = dirsetup(tempdir, filename, "ar", counter)
-		res = unpackAr(filename, offset, tmpdir, blacklist)
-		if res != None:
-			(ardir, size) = res
-			if size == filesize:
+
+		## Then the content of the archive follows. Each entry consists of a
+		## file, followed by the actual data.
+		## The file header is 60 bytes long and has 0x60 0x0a
+		## at the end.
+		## https://en.wikipedia.org/wiki/Ar_%28Unix%29
+		filenames = deque()
+		longfilenames = False
+		while localoffset + 60 <= filesize:
+			arfile.seek(localoffset)
+			arbytes = arfile.read(60)
+			if not arbytes[-2:] == '\x60\x0a':
+				break
+			## first read the ar file size
+			try:
+				entrysize = int(arbytes[48:58].rstrip())
+			except:
+				break
+			if localoffset + 60 + entrysize > filesize:
+				break
+			entryfilename = arbytes[0:16]
+			if '//' in entryfilename:
+				## System V/GNU long filenames, all filenames stored in
+				## a special section
+				longfilenames = True
+				arbytes = arfile.read(entrysize)
+				for fn in arbytes.split('\n'):
+					 filenames.append(fn.split('/', 1)[0])
+				localoffset += 60 + entrysize
+				if localoffset % 2 != 0:
+					localoffset += 1
+				continue
+			elif '#1/' in entryfilename:
+				## BSD ar
+				pass
+			elif '/' in entryfilename:
+				if entryfilename.startswith('/'):
+					entryfilename = filenames.popleft()
+				else:
+					## space in the filename
+					entryfilename = entryfilename.split('/', 1)[0]
+			else:
+				## regular short filename
+				entryfilename = entryfilename.rstrip()
+			## now write the data
+			arentry = open(os.path.join(tmpdir, entryfilename), 'wb')
+			arentry.write(arfile.read(entrysize))
+			arentry.close()
+			dataunpacked = True
+
+			localoffset += 60 + entrysize
+			if localoffset % 2 != 0:
+				localoffset += 1
+
+		if dataunpacked:
+			if offset == 0 and localoffset == filesize:
 				newtags.append("ar")
-			diroffsets.append((ardir, offset, size))
-			blacklist.append((offset, offset + size))
+			diroffsets.append((tmpdir, offset, localoffset - offset))
+			blacklist.append((offset, localoffset))
 			counter = counter + 1
 		else:
 			os.rmdir(tmpdir)
+	arfile.close()
 	return (diroffsets, blacklist, newtags, hints)
-
-def unpackAr(filename, offset, tempdir=None, blacklist=[]):
-	tmpdir = unpacksetup(tempdir)
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
-	os.fdopen(tmpfile[0]).close()
-
-	unpackFile(filename, offset, tmpfile[1], tmpdir, blacklist=blacklist)
-
-	p = subprocess.Popen(['ar', 'tv', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		os.unlink(tmpfile[1])
-		if tempdir == None:
-			os.rmdir(tmpdir)
-		return None
-	## ar only works on complete files, so the size can be set to length of the file
-	p = subprocess.Popen(['ar', 'x', tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, cwd=tmpdir)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		os.unlink(tmpfile[1])
-		rmfiles = os.listdir(tmpdir)
-		if rmfiles != []:
-			for rmfile in rmfiles:
-				try:
-					shutil.rmtree(os.path.join(tmpdir, rmfile))
-				except:
-					os.remove(os.path.join(tmpdir, rmfile))
-		if tempdir == None:
-			os.rmdir(tmpdir)
-		return None
-	os.unlink(tmpfile[1])
-	if tempdir == None:
-		os.rmdir(tmpdir)
-	return (tmpdir, os.stat(filename).st_size)
 
 ## Unpack ISO 9660 file systems. Currently supports plain ISO9660 and Rock Ridge.
 ## TODO: Joliet and zisofs
@@ -2621,6 +2631,7 @@ def unpackRomfs(filename, offset, tempdir=None, unpacktempdir=None, blacklist=[]
 	shutil.rmtree(tmpdir2)
 
 	## determine the size and cleanup
+	## Correct if romfssize%1024 == 0?
 	romfssizecorrection = 1024 - romfssize%1024
 	return (tmpdir, romfssize + romfssizecorrection)
 
