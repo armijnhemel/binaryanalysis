@@ -706,11 +706,17 @@ def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 				## BSD ar
 				pass
 			elif '/' in entryfilename:
-				if entryfilename.startswith('/'):
-					entryfilename = filenames.popleft()
+				if longfilenames:
+					if entryfilename.startswith('/'):
+						entryfilename = filenames.popleft()
+					else:
+						## space in the filename
+						entryfilename = entryfilename.split('/', 1)[0]
 				else:
-					## space in the filename
-					entryfilename = entryfilename.split('/', 1)[0]
+					localoffset += 60 + entrysize
+					if localoffset % 2 != 0:
+						localoffset += 1
+					continue
 			else:
 				## regular short filename
 				entryfilename = entryfilename.rstrip()
