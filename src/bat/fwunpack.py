@@ -5576,6 +5576,8 @@ def searchUnpackPDF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			int(pdfbytes[2])
 		except:
 			continue
+		## then walk the trailers. Additional information can follow in the
+		## form of updates so the first trailer is not always the last
 		for trailer in offsets['pdftrailer']:
 			if offset > trailer:
 				continue
