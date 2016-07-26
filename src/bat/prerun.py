@@ -779,14 +779,6 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 					newtags.append("elf")
 					break
 
-	## TODO: better research this
-	if not "elf" in newtags:
-		return []
-	if not dynamic:
-		newtags.append("static")
-	else:
-		newtags.append("dynamic")
-
 	return newtags
 
 ## Method to verify if a Windows executable is a valid 7z file
