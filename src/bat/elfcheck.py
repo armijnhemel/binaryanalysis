@@ -483,6 +483,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	sections = {}
 
 	## process the section headers
+	maxendofsection = 0
 	dynamiccount = 0
 	for i in xrange(0,numbersectionheaders):
 		elffile.seek(offset+startsectionheader + i * sectionheadersize)
@@ -559,6 +560,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 			if offset + sectionoffset + sectionsize > filesize:
 				brokenelf = True
 				break
+			maxendofsection = max(offset + sectionoffset + sectionsize, maxendofsection)
 
 		sections[i] = {'sectionoffset': sectionoffset, 'sectionsize': sectionsize}
 
@@ -578,57 +580,41 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	## finally close the file
 	elffile.close()
 
-	## This does not work well, for example for Linux kernel modules
-	#if elfheadersize != startprogramheader:
-	#	return []
-
-	## This does not work well for some Linux kernel modules as well as other files
-	## (architecture dependent?)
-	## One architecture where this sometimes seems to happen is ARM.
-	totalsize = startsectionheader + sectionheadersize * numbersectionheaders
-	if totalsize == filesize:
-		newtags.append("elf")
+	## Now some extra checks so files can be tagged as ELF
+	if maxendofsection == filesize:
+		newtags.append('elf')
 	else:
-		## If it is a signed kernel module then the key is appended to the ELF data
-		elffile = open(filename, 'rb')
-		elffile.seek(-28, os.SEEK_END)
-		elfbytes = elffile.read()
-		if elfbytes == "~Module signature appended~\n":
-			## The metadata of the signing data can be found in 12 bytes
-			## preceding the 'magic'
-			## According to 'scripts/sign-file' in the Linux kernel
-			## the last 4 bytes are the size of the signature data
-			## three bytes before that are 0x00
-			## The byte before that is the length of the key identifier
-			## The byte before that is the length of the "signer's name"
-			elffile.seek(-40, os.SEEK_END)
-			totalsiglength = 40
-			elfbytes = elffile.read(12)
-			signaturelength = struct.unpack('>I', elfbytes[-4:])[0]
-			totalsiglength += signaturelength
-			keyidentifierlen = ord(elfbytes[4])
-			signernamelen = ord(elfbytes[3])
-			totalsiglength += keyidentifierlen
-			totalsiglength += signernamelen
-			if totalsiglength + totalsize == filesize:
-				newtags.append("elf")
-		elffile.close()
-
-	if not 'elf' in newtags:
-		## on some architectures we can probably look at the starting point
-		## of the last section, then use the offset value there and see if the offset
-		## of the last section, plus the size of the last section == file size
-		p = subprocess.Popen(['readelf', '-Wt', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-		if p.returncode != 0:
-			return []
-		st = stanout.strip().split("\n")
-		for s in st[-3:]:
-			spl = s.split()
-			if len(spl) == 8:
-				totalsize = int(spl[2], 16) + int(spl[3], 16)
-				if totalsize == os.stat(filename).st_size:
+		## This does not work well for some Linux kernel modules as well as other files
+		## (architecture dependent?)
+		## One architecture where this sometimes seems to happen is ARM.
+		totalsize = startsectionheader + sectionheadersize * numbersectionheaders
+		if totalsize == filesize:
+			newtags.append("elf")
+		else:
+			## If it is a signed kernel module then the key is appended to the ELF data
+			elffile = open(filename, 'rb')
+			elffile.seek(-28, os.SEEK_END)
+			elfbytes = elffile.read()
+			if elfbytes == "~Module signature appended~\n":
+				## The metadata of the signing data can be found in 12 bytes
+				## preceding the 'magic'
+				## According to 'scripts/sign-file' in the Linux kernel
+				## the last 4 bytes are the size of the signature data
+				## three bytes before that are 0x00
+				## The byte before that is the length of the key identifier
+				## The byte before that is the length of the "signer's name"
+				elffile.seek(-40, os.SEEK_END)
+				totalsiglength = 40
+				elfbytes = elffile.read(12)
+				signaturelength = struct.unpack('>I', elfbytes[-4:])[0]
+				totalsiglength += signaturelength
+				keyidentifierlen = ord(elfbytes[4])
+				signernamelen = ord(elfbytes[3])
+				totalsiglength += keyidentifierlen
+				totalsiglength += signernamelen
+				if totalsiglength + totalsize == filesize:
 					newtags.append("elf")
+			elffile.close()
 
 	if not "elf" in newtags:
 		return []
