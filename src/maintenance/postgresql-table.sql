@@ -1,4 +1,4 @@
-create table if not exists processed (package text, version text, filename text, origin text, checksum text, downloadurl text);
+create table if not exists processed (package text, version text, filename text, origin text, checksum text, downloadurl text, website text);
 create table if not exists processed_file (package text, version text, pathname text, checksum text, filename text, thirdparty boolean);
 create table if not exists extracted_string (stringidentifier text, checksum text, language text, linenumber int);
 create table if not exists extracted_function (checksum text, functionname text, language text, linenumber int);

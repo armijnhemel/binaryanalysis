@@ -1,6 +1,7 @@
 create index processed_index on processed(package, version);
 create index processed_checksum on processed(checksum);
 create index processed_origin on processed(origin);
+create index processed_website on processed(website);
 create index processedfile_package_checksum_index on processed_file(checksum, package);
 create index processedfile_package_version_index on processed_file(package, version);
 create index processedfile_filename_index on processed_file(filename);

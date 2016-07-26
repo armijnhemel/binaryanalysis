@@ -949,7 +949,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 		if extractionresults != []:
 			## Add the file to the database: name of archive, sha256, packagename and version
 			## This is to be able to just update the database instead of recreating it.
-			c.execute('''insert into processed (package, version, filename, origin, checksum, downloadurl) values (?,?,?,?,?,?)''', (package, version, filename, origin, filehash, downloadurl))
+			c.execute('''insert into processed (package, version, filename, origin, checksum, downloadurl, website) values (?,?,?,?,?,?,?)''', (package, version, filename, origin, filehash, downloadurl, website))
 			process_extra_hashes = set()
 
 			c.execute('''select sha256 from hashconversion where sha256=? LIMIT 1''', (filehash,))
@@ -961,7 +961,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 					query = "update hashconversion set %s='%s' where sha256=?" % (k, checksums[k])
 					c.execute(query, (filehash,))
 		elif batarchive and not emptyarchive:
-			c.execute('''insert into processed (package, version, filename, origin, checksum, download) values (?,?,?,?,?,?)''', (package, version, filename, origin, filehash, downloadurl))
+			c.execute('''insert into processed (package, version, filename, origin, checksum, downloadurl, website) values (?,?,?,?,?,?,?)''', (package, version, filename, origin, filehash, downloadurl, website))
 	conn.commit()
 	c.close()
 	conn.close()
@@ -2804,10 +2804,11 @@ def main(argv):
         try:
 		## Keep an archive of which packages and archive files (tar.gz, tar.bz2, etc.) we've already
 		## processed, so we don't repeat work.
-		c.execute('''create table if not exists processed (package text, version text, filename text, origin text, checksum text, downloadurl text)''')
+		c.execute('''create table if not exists processed (package text, version text, filename text, origin text, checksum text, downloadurl text, website text)''')
 		c.execute('''create index if not exists processed_index on processed(package, version)''')
 		c.execute('''create index if not exists processed_checksum on processed(checksum)''')
 		c.execute('''create index if not exists processed_origin on processed(origin)''')
+		c.execute('''create index if not exists processed_website on processed(website)''')
 
 		## Keep an archive of which packages are blacklisted. This is useful during database creation.
 		#c.execute('''create table if not exists blacklist (package text, version text, filename text, origin text, checksum text)''')
