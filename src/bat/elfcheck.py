@@ -394,11 +394,6 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	else:
 		sectionheaderindex = struct.unpack('>H', elfunpackbytes)[0]
 
-	## section header index cannot be outside of the file
-	if offset + sectionheaderindex > filesize:
-		elffile.close()
-		return []
-
 	## section header cannot be inside the ELF header
 	if offset + startsectionheader + sectionheadersize < offset + elfheadersize:
 		elffile.close()
