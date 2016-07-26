@@ -203,10 +203,15 @@ def getArchitecture(filename, tags):
 	return architecture
 
 ## method to verify if a file is a valid ELF file
+##
 ## Use several specifications:
 ## http://en.wikipedia.org/wiki/Executable_and_Linkable_Format
 ## https://refspecs.linuxbase.org/elf/elf.pdf
 ## https://www.uclibc.org/docs/elf-64-gen.pdf (important for 64 bit offsets)
+##
+## For these checks the ELF header, the program header and the section
+## headers are looked at.
+##
 def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	offset = 0
 	if not 'binary' in tags:
@@ -561,6 +566,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		elffile.close()
 		return []
 
+	## dynamic count cannot be larger than 1
 	if dynamiccount == 1:
 		dynamic = True
 
@@ -624,12 +630,13 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 				if totalsize == os.stat(filename).st_size:
 					newtags.append("elf")
 
+	if not "elf" in newtags:
+		return []
+
 	if not dynamic:
 		newtags.append("static")
 	else:
 		newtags.append("dynamic")
-	#if not "elf" in newtags:
-		#newtags.append("elf")
 
 	if "__ksymtab_strings" in sectionnames:
 		newtags.append('linuxkernel')
