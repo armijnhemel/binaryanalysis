@@ -418,6 +418,11 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 			segmenttype = struct.unpack('<I', elfbytes[:4])[0]
 		else:
 			segmenttype = struct.unpack('>I', elfbytes[:4])[0]
+
+		## PT_NULL is unused, so ignore
+		if segmenttype == 0:
+			continue
+
 		## then the offset in the file
 		if littleendian:
 			if bit32:
@@ -454,7 +459,24 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 			brokenelf = True
 			break
 
-		## then the size in bytes in memory image (skip for now) -- 4 bytes or 8 bytes
+		## then the size in bytes in memory image
+		if littleendian:
+			if bit32:
+				memsegmentsize = struct.unpack('<I', elfbytes[16:20])[0]
+			else:
+				memsegmentsize = struct.unpack('<Q', elfbytes[32:40])[0]
+		else:
+			if bit32:
+				memsegmentsize = struct.unpack('>I', elfbytes[16:20])[0]
+			else:
+				memsegmentsize = struct.unpack('>Q', elfbytes[32:40])[0]
+		## PT_LOAD
+		if segmenttype == 1:
+			## memory size cannot be smaller than the
+			## segment to be loaded into memory.
+			if memsegmentsize < segmentsize:
+				brokenelf = True
+				break
 		## then the segment dependent flags (skip for now) -- 4 bytes
 		## then the alignment
 		if littleendian:
