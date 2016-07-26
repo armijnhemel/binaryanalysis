@@ -344,11 +344,6 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		elffile.close()
 		return []
 
-	## program header cannot be inside the ELF header
-	if offset + startprogramheader + programheadersize < offset + elfheadersize:
-		elffile.close()
-		return []
-
 	## the amount of program headers
 	if bit32:
 		elfunpackbytes = elfbytes[0x2C:0x2C+2]
@@ -358,6 +353,12 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		numberprogramheaders = struct.unpack('<H', elfunpackbytes)[0]
 	else:
 		numberprogramheaders = struct.unpack('>H', elfunpackbytes)[0]
+
+	if numberprogramheaders != 0:
+		## program header cannot be inside the ELF header
+		if offset + startprogramheader + programheadersize < offset + elfheadersize:
+			elffile.close()
+			return []
 
 	## the size of the section headers
 	if bit32:
@@ -468,6 +469,8 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 
 	dynamic = False
 
+	sections = {}
+
 	## process the section headers
 	dynamiccount = 0
 	for i in xrange(0,numbersectionheaders):
@@ -544,12 +547,19 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 			brokenelf = True
 			break
 
+		sections[i] = {'sectionoffset': sectionoffset, 'sectionsize': sectionsize}
+
 	if brokenelf:
 		elffile.close()
 		return []
 
 	if dynamiccount == 1:
 		dynamic = True
+
+	sectionnames = []
+	if sectionheaderindex in sections:
+		elffile.seek(sections[i]['sectionoffset'])
+		sectionnames = filter(lambda x: x != '',  elffile.read(sections[i]['sectionsize']).split('\x00'))
 
 	## finally close the file
 	elffile.close()
