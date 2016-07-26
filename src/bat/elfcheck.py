@@ -453,14 +453,18 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		## then the alignment
 		if littleendian:
 			if bit32:
-				alignment = struct.unpack('<I', elfbytes[24:28])[0]
+				alignment = struct.unpack('<I', elfbytes[28:32])[0]
 			else:
 				alignment = struct.unpack('<I', elfbytes[52:60])[0]
+
 		else:
 			if bit32:
-				alignment = struct.unpack('>I', elfbytes[24:28])[0]
+				alignment = struct.unpack('>I', elfbytes[28:32])[0]
 			else:
 				alignment = struct.unpack('>I', elfbytes[56:60])[0]
+		if alignment != 0:
+			## TODO: check if certain parts are properly aligned
+			pass
 
 	if brokenelf:
 		elffile.close()
