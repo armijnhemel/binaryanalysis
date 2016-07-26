@@ -1,3 +1,10 @@
+2016-07-26:
+* elfcheck.py: start working on own ELF parser
+* checks.py: replace call to readelf with own ELF parser
+* createdb.py/postgresql-table.sql/postgresql-index.sql: add extra column in
+'processed'
+* fwunpack.py: extra sanity checks for Android sparse files
+
 2016-07-13:
 * fwunpack.py: remove external call to 'ar' in ar unpacking
 * fwunpack.py: proper cleanup for xar
