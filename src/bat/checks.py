@@ -12,7 +12,7 @@ it with your own more robust checks.
 '''
 
 import string, re, os, magic, subprocess, sys, tempfile, copy
-import extractor
+import extractor, elfcheck
 
 ## generic searcher for certain marker strings
 ## TODO: implement overlap between subsequent buffer reads
@@ -111,13 +111,9 @@ def searchDynamicLibs(filename, tags, cursor, conn, blacklist=[], scanenv={}, sc
 def scanArchitecture(filename, tags, cursor, conn, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	if not 'elf' in tags:
 		return
-	p = subprocess.Popen(['readelf', '-h', "%s" % (filename,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		return
-	for line in stanout.split('\n'):
-		if "Machine:" in line:
-			return (['architecture'], line.split(':')[1].strip())
+	archres = elfcheck.getArchitecture(filename, tags)
+	if archres != None:
+		return (['architecture'], archres)
 
 ## search markers for various open source programs
 ## This search is not accurate, but might come in handy in some situations

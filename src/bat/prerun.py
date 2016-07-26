@@ -25,7 +25,7 @@ spent, plus there might be false positives (mostly LZMA).
 
 import sys, os, subprocess, os.path, shutil, stat, struct, zlib, binascii
 import tempfile, re, magic, hashlib, HTMLParser, math
-import fsmagic, extractor, javacheck
+import fsmagic, extractor, javacheck, elfcheck
 
 ## method to search for all the markers in magicscans
 ## Although it is in this method it is actually not a pre-run scan, so perhaps
@@ -745,6 +745,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	elffile.close()
 	if elfbytes != '\x7f\x45\x4c\x46':
 		return newtags
+	#elfcheck.verifyELF(filename, tempdir, tags, offsets, scanenv, debug, unpacktempdir)
 	p = subprocess.Popen(['readelf', '-h', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0:
