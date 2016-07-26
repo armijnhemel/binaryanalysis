@@ -4261,6 +4261,8 @@ def searchUnpackAndroidSparse(filename, tempdir=None, blacklist=[], offsets={}, 
 		sparsefile.seek(offset+4)
 		sparsedata = sparsefile.read(2)
 		sparsefile.close()
+		if len(sparsedata) != 2:
+			break
 		majorversion = struct.unpack('<H', sparsedata)[0]
 		if not majorversion == 1:
 			continue
@@ -4287,6 +4289,9 @@ def unpackAndroidSparse(filename, offset, tempdir=None):
 	sparsefile.seek(offset)
 	sparsedata = sparsefile.read(28)
 	sparsefile.close()
+
+	if len(sparsedata) != 28:
+		return
 
 	## from sparse_format.h, everything little endian
 	## 0 - 3 : magic
