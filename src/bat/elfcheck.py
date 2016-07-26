@@ -400,9 +400,10 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		sectionheaderindex = struct.unpack('>H', elfunpackbytes)[0]
 
 	## section header cannot be inside the ELF header
-	if offset + startsectionheader + sectionheadersize < offset + elfheadersize:
-		elffile.close()
-		return []
+	if numbersectionheaders != 0:
+		if offset + startsectionheader + sectionheadersize < offset + elfheadersize:
+			elffile.close()
+			return []
 
 	## First process the program header table
 	brokenelf = False
