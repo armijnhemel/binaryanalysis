@@ -202,10 +202,11 @@ def getArchitecture(filename, tags):
 	elffile.close()
 	return architecture
 
-## simplistic method to verify if a file is an ELF file
-## This might not work for all ELF files and it is a conservative verification, only used to
-## reduce false positives of LZMA scans.
-## This does for sure not work for Linux kernel modules on some devices.
+## method to verify if a file is a valid ELF file
+## Use several specifications:
+## http://en.wikipedia.org/wiki/Executable_and_Linkable_Format
+## https://refspecs.linuxbase.org/elf/elf.pdf
+## https://www.uclibc.org/docs/elf-64-gen.pdf (important for 64 bit offsets)
 def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	offset = 0
 	if not 'binary' in tags:
@@ -222,8 +223,6 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	newtags = []
 	filesize = os.stat(filename).st_size
 
-	## don't rely on output of readelf as it does not take localized systems into account
-	## Instead, use specification found here: http://en.wikipedia.org/wiki/Executable_and_Linkable_Format
 	elffile.seek(offset)
 	elfbytes = elffile.read(64)
 	if len(elfbytes) != 64:
@@ -541,11 +540,13 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 			else:
 				sectionsize = struct.unpack('>Q', elfbytes[32:40])[0]
 
-		## segment cannot extend past the end of the file, except if the
-		## file is debugging package on for example Fedora. TODO
-		if offset + sectionoffset + sectionsize > filesize:
-			brokenelf = True
-			break
+		## segment cannot extend past the end of the file.
+		## This check only makes sense if the section has a different
+		## type than NOBITS
+		if sh_type != 8:
+			if offset + sectionoffset + sectionsize > filesize:
+				brokenelf = True
+				break
 
 		sections[i] = {'sectionoffset': sectionoffset, 'sectionsize': sectionsize}
 
@@ -623,20 +624,10 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	#if not "elf" in newtags:
 		#newtags.append("elf")
 
-	## check whether or not it might be a Linux kernel file or module
-	p = subprocess.Popen(['readelf', '-SW', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if "There are no sections in this file." in stanout:
-		pass
-	else:
-		st = stanout.strip().split("\n")
-		for s in st[3:]:
-			if "__ksymtab_strings" in s:
-				newtags.append('linuxkernel')
-				break
-			if "oat_patches" in s:
-				## Android
-				newtags.append('oat')
-				newtags.append('android')
-				break
+	if "__ksymtab_strings" in sectionnames:
+		newtags.append('linuxkernel')
+	elif "oat_patches" in sectionnames:
+		newtags.append('oat')
+		newtags.append('android')
+
 	return newtags
