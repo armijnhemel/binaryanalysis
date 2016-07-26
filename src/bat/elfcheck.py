@@ -9,7 +9,7 @@ This module contains methods to verify ELF files and extract data from ELF files
 such as the architecture, and so on.
 '''
 
-import sys, os, subprocess, os.path, struct
+import sys, os, subprocess, os.path, struct, math
 import tempfile, re
 
 ## mappings of architectures to names
@@ -462,9 +462,12 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 				alignment = struct.unpack('>I', elfbytes[28:32])[0]
 			else:
 				alignment = struct.unpack('>I', elfbytes[56:60])[0]
-		if alignment != 0:
+		if alignment != 0 and alignment != 1:
+			## alignment has to be a power of 2
+			if alignment != pow(2,int(math.log(alignment, 2))):
+				brokenelf = True
+				break
 			## TODO: check if certain parts are properly aligned
-			pass
 
 	if brokenelf:
 		elffile.close()
