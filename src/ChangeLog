@@ -1,6 +1,11 @@
+2016-07-27:
+* elfcheck.py: split verification code into parser and verifier
+* elfcheck.py: extract more information
+* checks.py: replace call to readelf with own ELF parser (dynamic libs)
+
 2016-07-26:
 * elfcheck.py: start working on own ELF parser
-* checks.py: replace call to readelf with own ELF parser
+* checks.py: replace call to readelf with own ELF parser (architecture)
 * createdb.py/postgresql-table.sql/postgresql-index.sql: add extra column in
 'processed'
 * fwunpack.py: extra sanity checks for Android sparse files
