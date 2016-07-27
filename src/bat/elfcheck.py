@@ -626,7 +626,7 @@ def parseELF(filename, debug=False):
 				break
 			maxendofsection = max(offset + sectionoffset + sectionsize, maxendofsection)
 
-		sections[i] = {'sectionoffset': sectionoffset, 'sectionsize': sectionsize}
+		sections[i] = {'sectionoffset': sectionoffset, 'sectionsize': sectionsize, 'nameoffset': sh_name, 'sectiontype': sh_type}
 
 	if brokenelf:
 		elffile.close()
@@ -639,7 +639,11 @@ def parseELF(filename, debug=False):
 	sectionnames = []
 	if sectionheaderindex in sections:
 		elffile.seek(sections[sectionheaderindex]['sectionoffset'])
-		sectionnames = elffile.read(sections[sectionheaderindex]['sectionsize']).split('\x00')
+		sectionnamebytes = elffile.read(sections[sectionheaderindex]['sectionsize'])
+		sectionnames = sectionnamebytes.split('\x00')
+		for i in sections:
+			endofsectionname = sectionnamebytes.find('\x00', sections[i]['nameoffset'])
+			sections[i]['name'] = sectionnamebytes[sections[i]['nameoffset']:endofsectionname]
 
 	## finally close the file
 	elffile.close()
