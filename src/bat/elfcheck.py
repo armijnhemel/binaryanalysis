@@ -238,31 +238,63 @@ def getDynamicLibs(filename, debug=False):
 		tagsize = 8
 
 	needed_offsets = []
+	soname_offset = None
+	rpath_offset = None
 	for i in xrange(0, len(elfbytes)/tagsize, 2):
 		tagbytes = elfbytes[i*tagsize:i*tagsize+tagsize]
 		if littleendian:
 			if bit32:
-				d_tag = struct.unpack('<H', tagbytes)[0]
+				d_tag = struct.unpack('<I', tagbytes)[0]
 			else:
 				d_tag = struct.unpack('<Q', tagbytes)[0]
 		else:
 			if bit32:
-				d_tag = struct.unpack('>H', tagbytes)[0]
+				d_tag = struct.unpack('>I', tagbytes)[0]
 			else:
 				d_tag = struct.unpack('>Q', tagbytes)[0]
+
 		if d_tag == 1:
+			## NEEDED
 			offsetbytes = elfbytes[i*tagsize+tagsize:i*tagsize+tagsize*2]
 			if littleendian:
 				if bit32:
-					d_needed_offset = struct.unpack('<H', offsetbytes)[0]
+					d_needed_offset = struct.unpack('<I', offsetbytes)[0]
 				else:
 					d_needed_offset = struct.unpack('<Q', offsetbytes)[0]
 			else:
 				if bit32:
-					d_needed_offset = struct.unpack('>H', offsetbytes)[0]
+					d_needed_offset = struct.unpack('>I', offsetbytes)[0]
 				else:
 					d_needed_offset = struct.unpack('>Q', offsetbytes)[0]
 			needed_offsets.append(d_needed_offset)
+		elif d_tag == 14:
+			## SONAME
+			offsetbytes = elfbytes[i*tagsize+tagsize:i*tagsize+tagsize*2]
+			if littleendian:
+				if bit32:
+					soname_offset = struct.unpack('<I', offsetbytes)[0]
+				else:
+					soname_offset = struct.unpack('<Q', offsetbytes)[0]
+			else:
+				if bit32:
+					soname_offset = struct.unpack('>I', offsetbytes)[0]
+				else:
+					soname_offset = struct.unpack('>Q', offsetbytes)[0]
+		elif d_tag == 15:
+			## RPATH
+			offsetbytes = elfbytes[i*tagsize+tagsize:i*tagsize+tagsize*2]
+			if littleendian:
+				if bit32:
+					rpath_offset = struct.unpack('<I', offsetbytes)[0]
+				else:
+					rpath_offset = struct.unpack('<Q', offsetbytes)[0]
+			else:
+				if bit32:
+					rpath_offset = struct.unpack('>I', offsetbytes)[0]
+				else:
+					rpath_offset = struct.unpack('>Q', offsetbytes)[0]
+
+	dynamic_res = {}
 	needed_names = []
 	if needed_offsets != []:
 		if elfresult['sections'][dynstrsection]['sectiontype'] != 3:
@@ -274,9 +306,32 @@ def getDynamicLibs(filename, debug=False):
 		for n in needed_offsets:
 			endofneededname = elfbytes.find('\x00', n)
 			needed_names.append(elfbytes[n:endofneededname])
+
+	if soname_offset != None:
+		if elfresult['sections'][dynstrsection]['sectiontype'] != 3:
+			elffile.close()
+			return
+
+		elffile.seek(elfresult['sections'][dynstrsection]['sectionoffset'])
+		elfbytes = elffile.read(elfresult['sections'][dynstrsection]['sectionsize'])
+		endofsoname = elfbytes.find('\x00', soname_offset)
+		soname = elfbytes[soname_offset:endofsoname]
+		dynamic_res['soname'] = soname
+	if rpath_offset != None:
+		if elfresult['sections'][dynstrsection]['sectiontype'] != 3:
+			elffile.close()
+			return
+
+		elffile.seek(elfresult['sections'][dynstrsection]['sectionoffset'])
+		elfbytes = elffile.read(elfresult['sections'][dynstrsection]['sectionsize'])
+		endofrpathname = elfbytes.find('\x00', rpath_offset)
+		rpathname = elfbytes[rpath_offset:endofrpathname]
+		dynamic_res['rpathname'] = rpathname
 	elffile.close()
 	if needed_names != []:
-		return needed_names
+		dynamic_res['needed_libs'] = needed_names
+	if dynamic_res != {}:
+		return dynamic_res
 
 ## method to verify if a file is a valid ELF file
 ##
@@ -306,7 +361,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 
 	elfresult = parseELF(filename, debug)
 
-	if elfresult == {}:
+	if elfresult == None:
 		return []
 
 	if not elfresult['dynamic']:

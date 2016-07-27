@@ -93,10 +93,11 @@ def genericSearch(filename, markerDict, blacklist=[], unpacktempdir=None):
 def searchDynamicLibs(filename, tags, cursor, conn, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	if not 'elf' in tags:
 		return
-	libs = elfcheck.getDynamicLibs(filename, scandebug)
-	if libs == [] or libs == None:
+	dynamicres = elfcheck.getDynamicLibs(filename, scandebug)
+	if dynamicres == {} or dynamicres == None:
 		return None
-	return (['libs'], libs)
+	if 'needed_libs' in dynamicres:
+		return (['libs'], dynamicres['needed_libs'])
 
 ## This method determines the architecture of the executable file.
 ## This is necessary because sometimes leftovers from different products (and
