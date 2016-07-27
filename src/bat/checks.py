@@ -93,15 +93,8 @@ def genericSearch(filename, markerDict, blacklist=[], unpacktempdir=None):
 def searchDynamicLibs(filename, tags, cursor, conn, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	if not 'elf' in tags:
 		return
-	libs = []
-	p = subprocess.Popen(['readelf', '-d', "%s" % (filename,)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-               	return
-	for line in stanout.split('\n'):
-		if "Shared library:" in line:
-			libs.append(line.split(': ')[1][1:-1])
-	if libs == []:
+	libs = elfcheck.getDynamicLibs(filename, scandebug)
+	if libs == [] or libs == None:
 		return None
 	return (['libs'], libs)
 
