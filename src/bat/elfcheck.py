@@ -228,11 +228,47 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	newtags = []
 	filesize = os.stat(filename).st_size
 
+	elfresult = parseELF(filename, debug)
+
+	if elfresult == {}:
+		return []
+
+	if not elfresult['dynamic']:
+		newtags.append("static")
+	else:
+		newtags.append("dynamic")
+
+	newtags.append(elfresult['elftype'])
+
+	if "__ksymtab_strings" in elfresult['sectionnames']:
+		newtags.append('linuxkernel')
+	elif "oat_patches" in elfresult['sectionnames']:
+		newtags.append('oat')
+		newtags.append('android')
+	newtags.append('elf')
+	return newtags
+
+## method to parse an ELF file
+## returns the following data:
+## * endianness
+## * 32 bit or 64 bit
+## * ELF type
+def parseELF(filename, debug=False):
+	offset = 0
+	elffile = open(filename, 'rb')
+	elffile.seek(offset)
+
+	elfresult = {}
+	filesize = os.stat(filename).st_size
+
+	## read 64 bytes for the header
 	elffile.seek(offset)
 	elfbytes = elffile.read(64)
 	if len(elfbytes) != 64:
 		elffile.close()
-		return []
+		return
+
+	iself = False
 
 	## just set some default values: little endian, 32 bit
 	littleendian = True
@@ -244,6 +280,9 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	## then check if this is a little endian or big endian binary
 	if struct.unpack('>B', elfbytes[5])[0] != 1:
 		littleendian = False
+
+	elfresult['bit32'] = bit32
+	elfresult['littleendian'] = littleendian
 
 	## first determine the size of the ELF header
 	if bit32:
@@ -258,7 +297,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	## ELF header cannot extend past the end of the file
 	if offset + elfheadersize > filesize:
 		elffile.close()
-		return []
+		return
 
 	## then read the actual ELF header
 	elffile.seek(offset)
@@ -279,7 +318,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		elftype = 'elfdynamic'
 	elif elftypebyte == 4:
 		elftype = 'elfcore'
-	newtags.append(elftype)
+	elfresult['elftype'] = elftype
 
 	## check the machine type
 	if littleendian:
@@ -290,6 +329,8 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		architecture = architecturemapping[elfmachinebyte]
 	else:
 		architecture = "UNKNOWN"
+
+	elfresult['architecture'] = architecture
 
 	## the start of program headers
 	if bit32:
@@ -310,7 +351,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	## program header cannot be outside of the file
 	if offset + startprogramheader > filesize:
 		elffile.close()
-		return []
+		return
 
 	## the start of section headers
 	if bit32:
@@ -331,7 +372,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	## section header cannot be outside of the file
 	if offset + startsectionheader > filesize:
 		elffile.close()
-		return []
+		return
 
 	## the size of the program headers
 	if bit32:
@@ -346,7 +387,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	## program header cannot extend past the file
 	if offset + startprogramheader + programheadersize > filesize:
 		elffile.close()
-		return []
+		return
 
 	## the amount of program headers
 	if bit32:
@@ -362,7 +403,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		## program header cannot be inside the ELF header
 		if offset + startprogramheader + programheadersize < offset + elfheadersize:
 			elffile.close()
-			return []
+			return
 
 	## the size of the section headers
 	if bit32:
@@ -377,7 +418,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	## section header cannot extend past the end of the file
 	if offset + startsectionheader + sectionheadersize > filesize:
 		elffile.close()
-		return []
+		return
 
 	## the amount of section headers
 	if bit32:
@@ -403,7 +444,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	if numbersectionheaders != 0:
 		if offset + startsectionheader + sectionheadersize < offset + elfheadersize:
 			elffile.close()
-			return []
+			return
 
 	## First process the program header table
 	brokenelf = False
@@ -499,7 +540,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 
 	if brokenelf:
 		elffile.close()
-		return []
+		return
 
 	dynamic = False
 
@@ -513,7 +554,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		elfbytes = elffile.read(sectionheadersize)
 		if len(elfbytes) != sectionheadersize:
 			elffile.close()
-			return []
+			return
 		if littleendian:
 			sh_name = struct.unpack('<I', elfbytes[0:4])[0]
 		else:
@@ -589,7 +630,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 
 	if brokenelf:
 		elffile.close()
-		return []
+		return
 
 	## dynamic count cannot be larger than 1
 	if dynamiccount == 1:
@@ -605,14 +646,14 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 
 	## Now some extra checks so files can be tagged as ELF
 	if maxendofsection == filesize:
-		newtags.append('elf')
+		iself = True
 	else:
 		## This does not work well for some Linux kernel modules as well as other files
 		## (architecture dependent?)
 		## One architecture where this sometimes seems to happen is ARM.
 		totalsize = startsectionheader + sectionheadersize * numbersectionheaders
 		if totalsize == filesize:
-			newtags.append("elf")
+			iself = True
 		else:
 			## If it is a signed kernel module then the key is appended to the ELF data
 			elffile = open(filename, 'rb')
@@ -636,21 +677,13 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 				totalsiglength += keyidentifierlen
 				totalsiglength += signernamelen
 				if totalsiglength + totalsize == filesize:
-					newtags.append("elf")
+					iself = True
 			elffile.close()
 
-	if not "elf" in newtags:
-		return []
+	if not iself:
+		return
 
-	if not dynamic:
-		newtags.append("static")
-	else:
-		newtags.append("dynamic")
+	elfresult['dynamic'] = dynamic
+	elfresult['sectionnames'] = sectionnames
 
-	if "__ksymtab_strings" in sectionnames:
-		newtags.append('linuxkernel')
-	elif "oat_patches" in sectionnames:
-		newtags.append('oat')
-		newtags.append('android')
-
-	return newtags
+	return elfresult
