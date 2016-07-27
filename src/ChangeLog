@@ -1,6 +1,6 @@
 2016-07-27:
 * elfcheck.py: split verification code into parser and verifier
-* elfcheck.py: extract more information
+* elfcheck.py: extract more information (soname, rpath, needed libs)
 * checks.py: replace call to readelf with own ELF parser (dynamic libs)
 
 2016-07-26:
