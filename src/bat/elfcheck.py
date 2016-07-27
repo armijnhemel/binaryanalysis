@@ -638,8 +638,8 @@ def parseELF(filename, debug=False):
 
 	sectionnames = []
 	if sectionheaderindex in sections:
-		elffile.seek(sections[i]['sectionoffset'])
-		sectionnames = filter(lambda x: x != '',  elffile.read(sections[i]['sectionsize']).split('\x00'))
+		elffile.seek(sections[sectionheaderindex]['sectionoffset'])
+		sectionnames = elffile.read(sections[sectionheaderindex]['sectionsize']).split('\x00')
 
 	## finally close the file
 	elffile.close()
