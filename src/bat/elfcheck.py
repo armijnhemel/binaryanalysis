@@ -202,6 +202,82 @@ def getArchitecture(filename, tags):
 	elffile.close()
 	return architecture
 
+## similar to readelf -d
+def getDynamicLibs(filename, debug=False):
+	elfresult = parseELF(filename, debug)
+
+	if not 'dynamic' in elfresult:
+		return
+	
+	dynamicsection = None
+	dynstrsection = None
+	for i in elfresult['sections']:
+		if elfresult['sections'][i]['name'] == '.dynstr':
+			dynstrsection = i
+		if elfresult['sections'][i]['name'] == '.dynamic':
+			dynamicsection = i
+
+	if dynamicsection == None:
+		return
+
+	if elfresult['sections'][dynamicsection]['sectiontype'] != 6:
+		return
+
+	bit32 = elfresult['bit32']
+	littleendian = elfresult['littleendian']
+
+	## first, get the dynamic section
+	elffile = open(filename, 'rb')
+	elffile.seek(elfresult['sections'][dynamicsection]['sectionoffset'])
+	elfbytes = elffile.read(elfresult['sections'][dynamicsection]['sectionsize'])
+
+	## then process the entries
+	if bit32:
+		tagsize = 4
+	else:
+		tagsize = 8
+
+	needed_offsets = []
+	for i in xrange(0, len(elfbytes)/tagsize, 2):
+		tagbytes = elfbytes[i*tagsize:i*tagsize+tagsize]
+		if littleendian:
+			if bit32:
+				d_tag = struct.unpack('<H', tagbytes)[0]
+			else:
+				d_tag = struct.unpack('<Q', tagbytes)[0]
+		else:
+			if bit32:
+				d_tag = struct.unpack('>H', tagbytes)[0]
+			else:
+				d_tag = struct.unpack('>Q', tagbytes)[0]
+		if d_tag == 1:
+			offsetbytes = elfbytes[i*tagsize+tagsize:i*tagsize+tagsize*2]
+			if littleendian:
+				if bit32:
+					d_needed_offset = struct.unpack('<H', offsetbytes)[0]
+				else:
+					d_needed_offset = struct.unpack('<Q', offsetbytes)[0]
+			else:
+				if bit32:
+					d_needed_offset = struct.unpack('>H', offsetbytes)[0]
+				else:
+					d_needed_offset = struct.unpack('>Q', offsetbytes)[0]
+			needed_offsets.append(d_needed_offset)
+	needed_names = []
+	if needed_offsets != []:
+		if elfresult['sections'][dynstrsection]['sectiontype'] != 3:
+			elffile.close()
+			return
+
+		elffile.seek(elfresult['sections'][dynstrsection]['sectionoffset'])
+		elfbytes = elffile.read(elfresult['sections'][dynstrsection]['sectionsize'])
+		for n in needed_offsets:
+			endofneededname = elfbytes.find('\x00', n)
+			needed_names.append(elfbytes[n:endofneededname])
+	elffile.close()
+	if needed_names != []:
+		return needed_names
+
 ## method to verify if a file is a valid ELF file
 ##
 ## Use several specifications:
@@ -689,5 +765,6 @@ def parseELF(filename, debug=False):
 
 	elfresult['dynamic'] = dynamic
 	elfresult['sectionnames'] = sectionnames
+	elfresult['sections'] = sections
 
 	return elfresult
