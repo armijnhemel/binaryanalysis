@@ -105,7 +105,7 @@ def searchDynamicLibs(filename, tags, cursor, conn, blacklist=[], scanenv={}, sc
 		return None
 	return (['libs'], libs)
 
-## This method uses readelf to determine the architecture of the executable file.
+## This method determines the architecture of the executable file.
 ## This is necessary because sometimes leftovers from different products (and
 ## different architectures) can be found in one firmware.
 def scanArchitecture(filename, tags, cursor, conn, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
