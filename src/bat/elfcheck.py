@@ -238,7 +238,7 @@ def getDynamicLibs(filename, debug=False):
 		tagsize = 8
 
 	needed_offsets = []
-	soname_offset = None
+	soname_offsets = []
 	rpath_offset = None
 	for i in xrange(0, len(elfbytes)/tagsize, 2):
 		tagbytes = elfbytes[i*tagsize:i*tagsize+tagsize]
@@ -280,6 +280,7 @@ def getDynamicLibs(filename, debug=False):
 					soname_offset = struct.unpack('>I', offsetbytes)[0]
 				else:
 					soname_offset = struct.unpack('>Q', offsetbytes)[0]
+			soname_offsets.append(soname_offset)
 		elif d_tag == 15:
 			## RPATH
 			offsetbytes = elfbytes[i*tagsize+tagsize:i*tagsize+tagsize*2]
@@ -307,16 +308,19 @@ def getDynamicLibs(filename, debug=False):
 			endofneededname = elfbytes.find('\x00', n)
 			needed_names.append(elfbytes[n:endofneededname])
 
-	if soname_offset != None:
+	if soname_offsets != []:
+		sonames = []
 		if elfresult['sections'][dynstrsection]['sectiontype'] != 3:
 			elffile.close()
 			return
 
 		elffile.seek(elfresult['sections'][dynstrsection]['sectionoffset'])
 		elfbytes = elffile.read(elfresult['sections'][dynstrsection]['sectionsize'])
-		endofsoname = elfbytes.find('\x00', soname_offset)
-		soname = elfbytes[soname_offset:endofsoname]
-		dynamic_res['soname'] = soname
+		for n in soname_offsets:
+			endofsoname = elfbytes.find('\x00', soname_offset)
+			soname = elfbytes[soname_offset:endofsoname]
+			sonames.append(soname)
+		dynamic_res['sonames'] = sonames
 	if rpath_offset != None:
 		if elfresult['sections'][dynstrsection]['sectiontype'] != 3:
 			elffile.close()
