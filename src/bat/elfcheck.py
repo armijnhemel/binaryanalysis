@@ -202,9 +202,96 @@ def getArchitecture(filename, tags):
 	elffile.close()
 	return architecture
 
+## similar to readelf --dyn-syms (just the dynamic section)
+def getDynamicSymbols(filename, debug=False):
+	elfresult = parseELF(filename, debug)
+	if elfresult == None:
+		return
+
+	if not 'dynamic' in elfresult:
+		return
+
+	dynsymsection = None
+	dynstrsection = None
+	for i in elfresult['sections']:
+		if elfresult['sections'][i]['sectiontype'] == 11:
+			dynsymsection = i
+		if elfresult['sections'][i]['name'] == '.dynstr':
+			if elfresult['sections'][i]['sectiontype'] == 3:
+				dynstrsection = i
+
+	if dynsymsection == None:
+		return
+
+	bit32 = elfresult['bit32']
+	littleendian = elfresult['littleendian']
+
+	## first, get the dynamic symbol section
+	elffile = open(filename, 'rb')
+	elffile.seek(elfresult['sections'][dynsymsection]['sectionoffset'])
+	elfbytes = elffile.read(elfresult['sections'][dynsymsection]['sectionsize'])
+
+
+	elffile.seek(elfresult['sections'][dynstrsection]['sectionoffset'])
+	dynstrbytes = elffile.read(elfresult['sections'][dynstrsection]['sectionsize'])
+	elffile.close()
+
+	dynamicsymbols = []
+
+	## then process all the symbol entries. For 64 bit binaries each
+	## entry takes up 24 bytes
+	if bit32:
+		entrysize = 16
+	else:
+		entrysize = 24
+	for i in xrange(0, len(elfbytes)/entrysize):
+		dynsymres = {}
+		dynsymres['index'] = i
+		if bit32:
+			if littleendian:
+				pass
+			else:
+				pass
+		else:
+			if littleendian:
+				st_name = struct.unpack('<I', elfbytes[i*entrysize:i*entrysize+4])[0]
+				st_info = ord(elfbytes[i*entrysize+4])
+				st_other = ord(elfbytes[i*entrysize+5])
+				st_shndx = struct.unpack('<H', elfbytes[i*entrysize+6:i*entrysize+8])[0]
+				st_value = struct.unpack('<Q', elfbytes[i*entrysize+8:i*entrysize+16])[0]
+				st_size = struct.unpack('<Q', elfbytes[i*entrysize+16:i*entrysize+24])[0]
+				endofname = dynstrbytes.find('\x00', st_name)
+				dynsymres['name'] = dynstrbytes[st_name:endofname]
+				dynsymres['section'] = st_shndx
+				dynsymres['size'] = st_size
+				binding = st_info >> 4
+				if binding == 0:
+					dynsymres['binding'] = 'local'
+				elif binding == 1:
+					dynsymres['binding'] = 'global'
+				elif binding == 2:
+					dynsymres['binding'] = 'weak'
+				else:
+					## by default ignore, TODO
+					dynsymres['binding'] = 'ignore'
+				dyntype = st_info%16
+				if dyntype == 0:
+					dynsymres['type'] = 'notype'
+				elif dyntype == 1:
+					dynsymres['type'] = 'object'
+				elif dyntype == 2:
+					dynsymres['type'] = 'func'
+				elif dyntype == 3:
+					dynsymres['type'] = 'section'
+			else:
+				pass
+		dynamicsymbols.append(dynsymres)
+
 ## similar to readelf -d
 def getDynamicLibs(filename, debug=False):
 	elfresult = parseELF(filename, debug)
+	if elfresult == None:
+		return
 
 	if not 'dynamic' in elfresult:
 		return
@@ -223,6 +310,9 @@ def getDynamicLibs(filename, debug=False):
 	if elfresult['sections'][dynamicsection]['sectiontype'] != 6:
 		return
 
+	if elfresult['sections'][dynstrsection]['sectiontype'] != 3:
+		return
+
 	bit32 = elfresult['bit32']
 	littleendian = elfresult['littleendian']
 
@@ -231,15 +321,19 @@ def getDynamicLibs(filename, debug=False):
 	elffile.seek(elfresult['sections'][dynamicsection]['sectionoffset'])
 	elfbytes = elffile.read(elfresult['sections'][dynamicsection]['sectionsize'])
 
+	elffile.seek(elfresult['sections'][dynstrsection]['sectionoffset'])
+	dynstrbytes = elffile.read(elfresult['sections'][dynstrsection]['sectionsize'])
+	elffile.close()
+
 	## then process the entries
 	if bit32:
 		tagsize = 4
 	else:
 		tagsize = 8
 
-	needed_offsets = []
-	soname_offsets = []
-	rpath_offset = None
+	needed_names = []
+	sonames = []
+	rpathname = None
 	for i in xrange(0, len(elfbytes)/tagsize, 2):
 		tagbytes = elfbytes[i*tagsize:i*tagsize+tagsize]
 		if littleendian:
@@ -266,7 +360,8 @@ def getDynamicLibs(filename, debug=False):
 					d_needed_offset = struct.unpack('>I', offsetbytes)[0]
 				else:
 					d_needed_offset = struct.unpack('>Q', offsetbytes)[0]
-			needed_offsets.append(d_needed_offset)
+			endofneededname = dynstrbytes.find('\x00', d_needed_offset)
+			needed_names.append(dynstrbytes[d_needed_offset:endofneededname])
 		elif d_tag == 14:
 			## SONAME
 			offsetbytes = elfbytes[i*tagsize+tagsize:i*tagsize+tagsize*2]
@@ -280,7 +375,9 @@ def getDynamicLibs(filename, debug=False):
 					soname_offset = struct.unpack('>I', offsetbytes)[0]
 				else:
 					soname_offset = struct.unpack('>Q', offsetbytes)[0]
-			soname_offsets.append(soname_offset)
+			endofsoname = dynstrbytes.find('\x00', soname_offset)
+			soname = dynstrbytes[soname_offset:endofsoname]
+			sonames.append(soname)
 		elif d_tag == 15:
 			## RPATH
 			offsetbytes = elfbytes[i*tagsize+tagsize:i*tagsize+tagsize*2]
@@ -294,44 +391,15 @@ def getDynamicLibs(filename, debug=False):
 					rpath_offset = struct.unpack('>I', offsetbytes)[0]
 				else:
 					rpath_offset = struct.unpack('>Q', offsetbytes)[0]
+			endofrpathname = dynstrbytes.find('\x00', rpath_offset)
+			rpathname = dynstrbytes[rpath_offset:endofrpathname]
 
 	dynamic_res = {}
-	needed_names = []
-	if needed_offsets != []:
-		if elfresult['sections'][dynstrsection]['sectiontype'] != 3:
-			elffile.close()
-			return
 
-		elffile.seek(elfresult['sections'][dynstrsection]['sectionoffset'])
-		elfbytes = elffile.read(elfresult['sections'][dynstrsection]['sectionsize'])
-		for n in needed_offsets:
-			endofneededname = elfbytes.find('\x00', n)
-			needed_names.append(elfbytes[n:endofneededname])
-
-	if soname_offsets != []:
-		sonames = []
-		if elfresult['sections'][dynstrsection]['sectiontype'] != 3:
-			elffile.close()
-			return
-
-		elffile.seek(elfresult['sections'][dynstrsection]['sectionoffset'])
-		elfbytes = elffile.read(elfresult['sections'][dynstrsection]['sectionsize'])
-		for n in soname_offsets:
-			endofsoname = elfbytes.find('\x00', soname_offset)
-			soname = elfbytes[soname_offset:endofsoname]
-			sonames.append(soname)
-		dynamic_res['sonames'] = sonames
-	if rpath_offset != None:
-		if elfresult['sections'][dynstrsection]['sectiontype'] != 3:
-			elffile.close()
-			return
-
-		elffile.seek(elfresult['sections'][dynstrsection]['sectionoffset'])
-		elfbytes = elffile.read(elfresult['sections'][dynstrsection]['sectionsize'])
-		endofrpathname = elfbytes.find('\x00', rpath_offset)
-		rpathname = elfbytes[rpath_offset:endofrpathname]
+	if rpathname != None:
 		dynamic_res['rpathname'] = rpathname
-	elffile.close()
+	if sonames != []:
+		dynamic_res['sonames'] = sonames
 	if needed_names != []:
 		dynamic_res['needed_libs'] = needed_names
 	if dynamic_res != {}:
