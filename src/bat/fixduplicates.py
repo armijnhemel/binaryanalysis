@@ -5,7 +5,7 @@
 ## Copyright 2014-2016 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
-import os, os.path, sys, subprocess, copy, cPickle
+import os, os.path, sys, subprocess, copy, cPickle, elfcheck
 
 '''
 During scanning BAT tags duplicate files (same checksums) and only processes a
@@ -66,26 +66,20 @@ def fixduplicates(unpackreports, scantempdir, topleveldir, processors, scanenv, 
 				realpath = unpackreports[i]['realpath']
 				filename = unpackreports[i]['name']
 
-				## extract dynamic section
-				p = subprocess.Popen(['readelf', '-Wd', "%s" % os.path.join(realpath, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-				(stanout, stanerr) = p.communicate()
-				if p.returncode != 0:
+				elfres = elfcheck.getDynamicLibs(os.path.join(realpath, filename))
+				if elfres == {} or elfres == None:
 					continue
 
-				## determine if a library might have a soname
-				sonames = set()
-				for line in stanout.split('\n'):
-					if "(SONAME)" in line:
-						soname_split = line.split(': ')
-						if len(soname_split) < 2:
-							continue
-						soname = line.split(': ')[1][1:-1]
-						sonames.add(soname)
+				if not 'sonames' in elfres:
+					continue
+
+				sonames = elfres['sonames']
+
 				## there should be only one SONAME
 				if len(sonames) != 1:
 					continue
 
-				soname = sonames.pop()
+				soname = sonames[0]
 				if soname == filename:
 					## no need for fixing
 					continue
