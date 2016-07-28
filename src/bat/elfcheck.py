@@ -249,9 +249,19 @@ def getDynamicSymbols(filename, debug=False):
 		dynsymres['index'] = i
 		if bit32:
 			if littleendian:
-				pass
+				st_name = struct.unpack('<I', elfbytes[i*entrysize:i*entrysize+4])[0]
+				st_value = struct.unpack('<I', elfbytes[i*entrysize+4:i*entrysize+8])[0]
+				st_size = struct.unpack('<I', elfbytes[i*entrysize+8:i*entrysize+12])[0]
+				st_info = ord(elfbytes[i*entrysize+12])
+				st_other = ord(elfbytes[i*entrysize+13])
+				st_shndx = struct.unpack('<H', elfbytes[i*entrysize+14:i*entrysize+16])[0]
 			else:
-				pass
+				st_name = struct.unpack('>I', elfbytes[i*entrysize:i*entrysize+4])[0]
+				st_value = struct.unpack('>I', elfbytes[i*entrysize+4:i*entrysize+8])[0]
+				st_size = struct.unpack('>I', elfbytes[i*entrysize+8:i*entrysize+12])[0]
+				st_info = ord(elfbytes[i*entrysize+12])
+				st_other = ord(elfbytes[i*entrysize+13])
+				st_shndx = struct.unpack('>H', elfbytes[i*entrysize+14:i*entrysize+16])[0]
 		else:
 			if littleendian:
 				st_name = struct.unpack('<I', elfbytes[i*entrysize:i*entrysize+4])[0]
@@ -260,31 +270,43 @@ def getDynamicSymbols(filename, debug=False):
 				st_shndx = struct.unpack('<H', elfbytes[i*entrysize+6:i*entrysize+8])[0]
 				st_value = struct.unpack('<Q', elfbytes[i*entrysize+8:i*entrysize+16])[0]
 				st_size = struct.unpack('<Q', elfbytes[i*entrysize+16:i*entrysize+24])[0]
-				endofname = dynstrbytes.find('\x00', st_name)
-				dynsymres['name'] = dynstrbytes[st_name:endofname]
-				dynsymres['section'] = st_shndx
-				dynsymres['size'] = st_size
-				binding = st_info >> 4
-				if binding == 0:
-					dynsymres['binding'] = 'local'
-				elif binding == 1:
-					dynsymres['binding'] = 'global'
-				elif binding == 2:
-					dynsymres['binding'] = 'weak'
-				else:
-					## by default ignore, TODO
-					dynsymres['binding'] = 'ignore'
-				dyntype = st_info%16
-				if dyntype == 0:
-					dynsymres['type'] = 'notype'
-				elif dyntype == 1:
-					dynsymres['type'] = 'object'
-				elif dyntype == 2:
-					dynsymres['type'] = 'func'
-				elif dyntype == 3:
-					dynsymres['type'] = 'section'
 			else:
-				pass
+				st_name = struct.unpack('>I', elfbytes[i*entrysize:i*entrysize+4])[0]
+				st_info = ord(elfbytes[i*entrysize+4])
+				st_other = ord(elfbytes[i*entrysize+5])
+				st_shndx = struct.unpack('>H', elfbytes[i*entrysize+6:i*entrysize+8])[0]
+				st_value = struct.unpack('>Q', elfbytes[i*entrysize+8:i*entrysize+16])[0]
+				st_size = struct.unpack('>Q', elfbytes[i*entrysize+16:i*entrysize+24])[0]
+
+		## TODO: work on 'hidden' symbols (stored in st_other)
+		endofname = dynstrbytes.find('\x00', st_name)
+		dynsymres['name'] = dynstrbytes[st_name:endofname]
+		dynsymres['section'] = st_shndx
+		dynsymres['size'] = st_size
+		binding = st_info >> 4
+		if binding == 0:
+			dynsymres['binding'] = 'local'
+		elif binding == 1:
+			dynsymres['binding'] = 'global'
+		elif binding == 2:
+			dynsymres['binding'] = 'weak'
+		else:
+			## by default ignore, TODO
+			dynsymres['binding'] = 'ignore'
+		dyntype = st_info%16
+		if dyntype == 0:
+			dynsymres['type'] = 'notype'
+		elif dyntype == 1:
+			dynsymres['type'] = 'object'
+		elif dyntype == 2:
+			dynsymres['type'] = 'func'
+		elif dyntype == 3:
+			dynsymres['type'] = 'section'
+		elif dyntype == 4:
+			dynsymres['type'] = 'file'
+		else:
+			## by default ignore, TODO
+			dynsymres['type'] = 'ignore'
 		dynamicsymbols.append(dynsymres)
 	return dynamicsymbols
 
