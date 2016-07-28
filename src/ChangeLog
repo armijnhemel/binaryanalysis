@@ -1,3 +1,8 @@
+2016-07-28:
+* elfcheck.py: return a list of SONAME values
+* fixduplicates.py: replace call to readelf
+* elfcheck.py: extract dynamic symbols (needs more work)
+
 2016-07-27:
 * elfcheck.py: split verification code into parser and verifier
 * elfcheck.py: extract more information (soname, rpath, needed libs)
