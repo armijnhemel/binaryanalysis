@@ -286,6 +286,7 @@ def getDynamicSymbols(filename, debug=False):
 			else:
 				pass
 		dynamicsymbols.append(dynsymres)
+	return dynamicsymbols
 
 ## similar to readelf -d
 def getDynamicLibs(filename, debug=False):
