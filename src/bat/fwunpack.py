@@ -670,6 +670,8 @@ def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 
 		tmpdir = dirsetup(tempdir, filename, "ar", counter)
 
+		filenamecount = {}
+
 		## Then the content of the archive follows. Each entry consists of a
 		## file, followed by the actual data.
 		## The file header is 60 bytes long and has 0x60 0x0a
@@ -721,8 +723,26 @@ def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 			else:
 				## regular short filename
 				entryfilename = entryfilename.rstrip()
+
 			## now write the data
-			arentry = open(os.path.join(tmpdir, entryfilename), 'wb')
+			outfilename = os.path.join(tmpdir, entryfilename)
+
+			## this is an ugly hack for now to deal with
+			## archives created for Windows in COFF format. TODO
+			try:
+				os.path.exists(outfilename)
+			except:
+				break
+
+			## if there are files with the same name included, modify
+			## the name first and then copy the contents
+			if os.path.exists(outfilename):
+				if outfilename in filenamecount:
+					filenamecount[outfilename] += 1
+				else:
+					filenamecount[outfilename] = 1
+				outfilename = outfilename + "-copy-%d" % filenamecount[outfilename]
+			arentry = open(outfilename, 'wb')
 			arentry.write(arfile.read(entrysize))
 			arentry.close()
 			dataunpacked = True
