@@ -43,18 +43,31 @@ def parseJava(filename, offset):
 	## first read the magic bytes. If these are not present it is not a class file
 	javamagic = classfile.read(4)
 	if javamagic != '\xca\xfe\xba\xbe':
+		classfile.close()
 		return None
 
 	## The minor and major version of the Java class file format. These are not yet
 	## used for checks
 	classbytes = classfile.read(2)
-	minorversion = struct.unpack('>H', classbytes)
+	if len(classbytes) != 2:
+		classfile.close()
+		return None
+
+	minorversion = struct.unpack('>H', classbytes)[0]
 
 	classbytes = classfile.read(2)
-	majorversion = struct.unpack('>H', classbytes)
+	if len(classbytes) != 2:
+		classfile.close()
+		return None
+
+	majorversion = struct.unpack('>H', classbytes)[0]
 
 	## The amount of entries in the so called "constant pool", +1
 	classbytes = classfile.read(2)
+	if len(classbytes) != 2:
+		classfile.close()
+		return None
+
 	constant_pool_count = struct.unpack('>H', classbytes)[0]
 
 	lookup_table = {}
@@ -65,7 +78,11 @@ def parseJava(filename, offset):
 
 	## parse the constant pool and split data accordingly
 	skip = False
+	brokenclass = False
 	for i in range(1, constant_pool_count):
+		if brokenclass:
+			classfile.close()
+			return
 		if skip:
 			skip = False
 			continue
@@ -105,6 +122,9 @@ def parseJava(filename, offset):
 			classbytes = classfile.read(2)
 			stringlength = struct.unpack('>H', classbytes)[0]
 			utf8string = classfile.read(stringlength)
+			if len(utf8string) != stringlength:
+				brokenclass = True
+				continue
 			lookup_table[i] = utf8string
 		elif constanttag == METHODHANDLE:
 			## reference kind
