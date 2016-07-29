@@ -666,7 +666,6 @@ def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 		archeckbyte = arfile.read(1)
 		localoffset += 1
 		if archeckbyte != '\x0a':
-			arfile.close()
 			continue
 
 		tmpdir = dirsetup(tempdir, filename, "ar", counter)
