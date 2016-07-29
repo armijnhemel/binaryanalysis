@@ -756,7 +756,7 @@ def parseELF(filename, debug=False):
 			if bit32:
 				alignment = struct.unpack('>I', elfbytes[28:32])[0]
 			else:
-				alignment = struct.unpack('>I', elfbytes[56:60])[0]
+				alignment = struct.unpack('>I', elfbytes[52:60])[0]
 		if alignment != 0 and alignment != 1:
 			## alignment has to be a power of 2
 			if alignment != pow(2,int(math.log(alignment, 2))):
