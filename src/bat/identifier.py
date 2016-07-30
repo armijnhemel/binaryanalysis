@@ -13,7 +13,7 @@ processing by various other scans.
 
 import string, re, os, os.path, sys, tempfile, shutil, copy, struct
 import subprocess
-import extractor, javacheck
+import extractor, javacheck, elfcheck
 
 ## some regular expressions for Java, precompiled
 reconststring = re.compile("\s+const-string\s+v\d+")
@@ -310,9 +310,11 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 	## to build the binary
 	filenames = []
 
-	## store the extracted function/method names and extracted variable names
+	## store the extracted function/method names, extracted variable names
+	## and any file names possibly extracted from debugging sections
 	functionnames = set()
 	variablenames = set()
+	symbolfilenames = set()
 
 	## For ELF binaries concentrate on just a few sections of the
 	## binary, namely the .rodata and .data sections.
@@ -393,9 +395,9 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 				functionnames = set()
 				kernelsymbols = extractkernelsymbols(scanfile, scanenv, unpacktempdir)
 			else:
-				dynres = extractDynamicFromELF(filepath)
+				dynres = extractSymbolsFromELF(filepath)
 				if dynres != None:
-					(functionnames, variablenames) = dynres
+					(functionnames, variablenames, symbolfilenames) = dynres
 		except Exception, e:
 			print >>sys.stderr, "string scan failed for:", filepath, e, type(e)
 			if blacklist != [] and not linuxkernel:
@@ -440,6 +442,7 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 	cmeta['functionnames'] = functionnames
 	cmeta['variablenames'] = variablenames
 	cmeta['kernelsymbols'] = kernelsymbols
+	cmeta['symbolfilenames'] = symbolfilenames
 	return cmeta
 
 def extractJava(scanfile, tags, scanenv, filesize, stringcutoff, blacklist=[], scandebug=False, unpacktempdir=None):
@@ -802,59 +805,47 @@ def extractkernelsymbols(scanfile, scanenv, unpacktempdir):
 	os.unlink(elftmp[1])
 	return variables
 
-## extract dynamic linking information from the dynamic symbols table from an ELF
-## binary and return two sets:
+## extract informationfrom the symbol tables (debug symbols, plus dynamic symbols from an ELF
+## binary and return three sets:
 ## 1. function names
 ## 2. variable names
-def extractDynamicFromELF(scanfile):
- 	p = subprocess.Popen(['readelf', '-W', '--dyn-syms', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		## perhaps an older readelf that does not support --dyn-syms
- 		p = subprocess.Popen(['readelf', '-W', '-s', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-		(stanout, stanerr) = p.communicate()
-		if p.returncode != 0:
-			return (set(), set())
+## 3. file names (from debugging section) TODO
+def extractSymbolsFromELF(scanfile):
+	symres = elfcheck.getAllSymbols(scanfile)
+	if symres == []:
+		return (set(), set(), set())
 
-	st = stanout.strip().split("\n")
-
-	## there is nothing in the dynamic ELF section
-	if st == ['']:
-		return (set(), set())
-
-	## Walk through the output of readelf, and split results accordingly
-	## in function names and variables.
+	## Split results in function names, variables and file names
 	functionnames = set()
 	mangles = []
 	variables = set()
-	for i in st[3:]:
-		dynstr = i.split()
-		if len(dynstr) < 8:
+	filenames = set()
+
+	for i in symres:
+		if i['type'] == 'notype':
 			continue
-		if '@' in dynstr[7]:
+		elif i['type'] == 'section':
 			continue
-		if dynstr[6] == 'UND':
+		elif i['type'] == 'file':
+			filenames.add(i['name'])
 			continue
-		if dynstr[3] != 'FUNC':
-			if dynstr[3] == 'OBJECT':
-				if dynstr[4] == 'WEAK':
-					continue
-				variables.add(dynstr[7])
+		elif i['type'] == 'object':
+			if i['binding'] == 'weak':
 				continue
-		## every program has 'main', so skip
-		if dynstr[7] == 'main':
-			continue
-		## _init _fini _start are in the ELF standard and/or added by GCC to everything, so skip
-		if dynstr[7] == '_init' or dynstr[7] == '_fini' or dynstr[7] == '_start':
-			continue
-		## __libc_csu_init __libc_csu_fini are in the ELF standard and/or added by GCC to everything, so skip
-		if dynstr[7] == '__libc_csu_init' or dynstr[7] == '__libc_csu_fini':
-			continue
-		## C++ string, needs to be demangled first
-		if dynstr[7].startswith("_Z"):
-			mangles.append(dynstr[7])
-		else:
-			functionnames.add(dynstr[7])
+			variables.add(i['name'])
+		elif i['type'] == 'func':
+			if i['name'] == 'main':
+				continue
+			## _init _fini _start are in the ELF standard and/or added by GCC to everything, so skip
+			if i['name'] == '_init' or i['name'] == '_fini' or i['name'] == '_start':
+				continue
+			## __libc_csu_init __libc_csu_fini are in the ELF standard and/or added by GCC to everything, so skip
+			if i['name'] == '__libc_csu_init' or i['name'] == '__libc_csu_fini':
+				continue
+			if i['name'].startswith("_Z"):
+				mangles.append(i['name'])
+			else:
+				functionnames.add(i['name'])
 	## run c++filt in batched mode to avoid launching many processes
 	## C++ demangling is tricky: the types declared in the function in the source code
 	## are not necessarily what demangling will return.
@@ -873,7 +864,7 @@ def extractDynamicFromELF(scanfile):
 				## TODO more sanity checks here, since demangling
 				## will sometimes not return a single function name
 				functionnames.add(funcname)
-	return (functionnames, variables)
+	return (functionnames, variables, filenames)
 
 ## extract Linux kernel data from a binary file. False positives could exist.
 def extractKernelData(lines, filepath, kernelcursor, kernelconn, scandebug):
