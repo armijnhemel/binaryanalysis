@@ -229,7 +229,7 @@ def getSymbolsAbstraction(filename, symboltype, elfresult, debug=False):
 			return
 
 	symsection = None
-	dynstrsection = None
+	strsection = None
 	for i in elfresult['sections']:
 		if symboltype == 'dynamic':
 			if elfresult['sections'][i]['sectiontype'] == 11:
@@ -237,9 +237,14 @@ def getSymbolsAbstraction(filename, symboltype, elfresult, debug=False):
 		elif symboltype == 'symbol':
 			if elfresult['sections'][i]['sectiontype'] == 2:
 				symsection = i
-		if elfresult['sections'][i]['name'] == '.dynstr':
-			if elfresult['sections'][i]['sectiontype'] == 3:
-				dynstrsection = i
+		if symboltype == 'dynamic':
+			if elfresult['sections'][i]['name'] == '.dynstr':
+				if elfresult['sections'][i]['sectiontype'] == 3:
+					strsection = i
+		else:
+			if elfresult['sections'][i]['name'] == '.strtab':
+				if elfresult['sections'][i]['sectiontype'] == 3:
+					strsection = i
 
 	if symsection == None:
 		return
@@ -253,8 +258,8 @@ def getSymbolsAbstraction(filename, symboltype, elfresult, debug=False):
 	elfbytes = elffile.read(elfresult['sections'][symsection]['sectionsize'])
 
 
-	elffile.seek(elfresult['sections'][dynstrsection]['sectionoffset'])
-	dynstrbytes = elffile.read(elfresult['sections'][dynstrsection]['sectionsize'])
+	elffile.seek(elfresult['sections'][strsection]['sectionoffset'])
+	strbytes = elffile.read(elfresult['sections'][strsection]['sectionsize'])
 	elffile.close()
 
 	dynamicsymbols = []
@@ -300,8 +305,8 @@ def getSymbolsAbstraction(filename, symboltype, elfresult, debug=False):
 				st_size = struct.unpack('>Q', elfbytes[i*entrysize+16:i*entrysize+24])[0]
 
 		## TODO: work on 'hidden' symbols (stored in st_other)
-		endofname = dynstrbytes.find('\x00', st_name)
-		dynsymres['name'] = dynstrbytes[st_name:endofname]
+		endofname = strbytes.find('\x00', st_name)
+		dynsymres['name'] = strbytes[st_name:endofname]
 		dynsymres['section'] = st_shndx
 		dynsymres['size'] = st_size
 		binding = st_info >> 4
