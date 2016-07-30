@@ -1,3 +1,12 @@
+2016-07-30:
+* elfcheck.py: extract symbols from strtab section from non-stripped binaries
+* identifier.py: replace call to readelf with own ELF parser (symbols)
+
+2016-07-29:
+* javacheck.py: add more sanity checks
+* fwunpack.py: some more sanity checks for ar
+* elfcheck.py: correct offset
+
 2016-07-28:
 * elfcheck.py: return a list of SONAME values
 * fixduplicates.py: replace call to readelf
