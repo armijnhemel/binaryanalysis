@@ -202,25 +202,46 @@ def getArchitecture(filename, tags):
 	elffile.close()
 	return architecture
 
-## similar to readelf --dyn-syms (just the dynamic section)
-def getDynamicSymbols(filename, debug=False):
+## similar to readelf -s (all symbols)
+def getAllSymbols(filename, debug=False):
 	elfresult = parseELF(filename, debug)
+	symres = []
+	symbolres = getSymbols(filename, elfresult, debug)
+	if symbolres != None:
+		symres += symbolres
+	symbolres = getDynamicSymbols(filename, elfresult, debug)
+	if symbolres != None:
+		symres += symbolres
+	return symres
+
+## similar to readelf -s but only regular symbols (not dynamic)
+def getSymbols(filename, elfresult=None, debug=False):
+	return getSymbolsAbstraction(filename, 'symbol', elfresult, debug)
+
+## similar to readelf --dyn-syms (just the dynamic section)
+def getDynamicSymbols(filename, elfresult=None, debug=False):
+	return getSymbolsAbstraction(filename, 'dynamic', elfresult, debug)
+
+def getSymbolsAbstraction(filename, symboltype, elfresult, debug=False):
 	if elfresult == None:
-		return
+		elfresult = parseELF(filename, debug)
+		if elfresult == None:
+			return
 
-	if not 'dynamic' in elfresult:
-		return
-
-	dynsymsection = None
+	symsection = None
 	dynstrsection = None
 	for i in elfresult['sections']:
-		if elfresult['sections'][i]['sectiontype'] == 11:
-			dynsymsection = i
+		if symboltype == 'dynamic':
+			if elfresult['sections'][i]['sectiontype'] == 11:
+				symsection = i
+		elif symboltype == 'symbol':
+			if elfresult['sections'][i]['sectiontype'] == 2:
+				symsection = i
 		if elfresult['sections'][i]['name'] == '.dynstr':
 			if elfresult['sections'][i]['sectiontype'] == 3:
 				dynstrsection = i
 
-	if dynsymsection == None:
+	if symsection == None:
 		return
 
 	bit32 = elfresult['bit32']
@@ -228,8 +249,8 @@ def getDynamicSymbols(filename, debug=False):
 
 	## first, get the dynamic symbol section
 	elffile = open(filename, 'rb')
-	elffile.seek(elfresult['sections'][dynsymsection]['sectionoffset'])
-	elfbytes = elffile.read(elfresult['sections'][dynsymsection]['sectionsize'])
+	elffile.seek(elfresult['sections'][symsection]['sectionoffset'])
+	elfbytes = elffile.read(elfresult['sections'][symsection]['sectionsize'])
 
 
 	elffile.seek(elfresult['sections'][dynstrsection]['sectionoffset'])
@@ -307,6 +328,7 @@ def getDynamicSymbols(filename, debug=False):
 		else:
 			## by default ignore, TODO
 			dynsymres['type'] = 'ignore'
+		dynsymres['symboltype'] = symboltype
 		dynamicsymbols.append(dynsymres)
 	return dynamicsymbols
 
