@@ -147,24 +147,17 @@ def extractfromelf((path, filename)):
 			if functionstrings[7].split('@')[0] not in varignores:
 				remotevars.add(functionstrings[7].split('@')[0])
 
-	## extract dynamic section
-	p = subprocess.Popen(['readelf', '-Wd', "%s" % os.path.join(path, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
+	elfres = elfcheck.getDynamicLibs(os.path.join(path, filename))
+
+	if elfres == None:
 		return
 
-	## determine if a library might have a soname
-	for line in stanout.split('\n'):
-		if "(SONAME)" in line:
-			soname_split = line.split(': ')
-			if len(soname_split) < 2:
-				continue
-			soname = line.split(': ')[1][1:-1]
-			elfsonames.add(soname)
-		if "(RPATH)" in line:
-			rpath_split = line.split('[')[1]
-			rpaths = rpath_split[:-1].split(':')
+	if 'rpath' in elfres:
+		rpaths = elfres['rpath'].split(':')
+		pass
 
+	if 'sonames' in elfres:
+		elfsonames = set(elfres['sonames'])
 
 	elfres = elfcheck.parseELF(os.path.join(path, filename))
 	if elfres == None:
