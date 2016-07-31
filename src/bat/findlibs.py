@@ -392,6 +392,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 	## or, at least the same base architecture.
 	architectures = {}
 	for i in elffiles:
+		if not i in elftypes:
+			continue
 		if elftypes[i] == 'elfrelocatable':
 			continue
 		filehash = unpackreports[i]['checksum']
@@ -407,6 +409,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 	## Is this correct???
 	ignorefuncs = set(["__ashldi3", "__ashrdi3", "__cmpdi2", "__divdi3", "__fixdfdi", "__fixsfdi", "__fixunsdfdi", "__fixunssfdi", "__floatdidf", "__floatdisf", "__floatundidf", "__lshrdi3", "__moddi3", "__ucmpdi2", "__udivdi3", "__umoddi3", "main"])
 	for i in elffiles:
+		if not i in elftypes:
+			continue
 		if elftypes[i] == 'elfrelocatable':
 			continue
 		## per ELF file keep lists of used libraries and possibly used libraries.
@@ -805,6 +809,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 	## for each ELF file for which there are results write back the results to
 	## 'leafreports'. Also update tags if the file is a plugin.
 	for i in elffiles:
+		if not i in elftypes:
+			continue
 		if elftypes[i] == 'elfrelocatable':
 			continue
 		writeback = False
@@ -853,6 +859,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 
 	squashedgraph = {}
 	for i in elffiles:
+		if not i in elftypes:
+			continue
 		if elftypes[i] == 'elfrelocatable':
 			continue
 		libdeps = usedlibsandcountperfile[i]
@@ -881,6 +889,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 	## TODO: make more parallel
 	elfgraphs = set()
 	for i in elffiles:
+		if not i in elftypes:
+			continue
 		if elftypes[i] == 'elfrelocatable':
 			continue
 		if not squashedgraph.has_key(i):

@@ -468,8 +468,7 @@ def getDynamicLibs(filename, debug=False):
 		dynamic_res['sonames'] = sonames
 	if needed_names != []:
 		dynamic_res['needed_libs'] = needed_names
-	if dynamic_res != {}:
-		return dynamic_res
+	return dynamic_res
 
 ## method to verify if a file is a valid ELF file
 ##
