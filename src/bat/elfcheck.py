@@ -340,6 +340,10 @@ def getSymbolsAbstraction(filename, symboltype, elfresult, debug=False):
 			dynsymres['type'] = 'section'
 		elif dyntype == 4:
 			dynsymres['type'] = 'file'
+		elif dyntype == 6:
+			dynsymres['type'] = 'tls' # thread local storage
+		elif dyntype == 10:
+			dynsymres['type'] = 'ifunc' # STT_LOOS according to ELF specs, so might be Linux specific
 		else:
 			## by default ignore, TODO
 			dynsymres['type'] = 'ignore'
