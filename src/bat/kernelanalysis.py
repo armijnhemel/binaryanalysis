@@ -173,8 +173,10 @@ def analyseKernelModule(filename, tags, cursor, conn, blacklist=[], scanenv={}, 
 		kernelfields['license'] = set(kernelfields['license'])
 		newtags.append('modulelicense')
 	if 'author' in kernelfields:
+		kernelfields['author'] = set(kernelfields['author'])
 		newtags.append('author')
 	if 'version' in kernelfields:
+		kernelfields['version'] = set(kernelfields['version'])
 		newtags.append('modulekernelversion')
 	newtags.append('linuxkernel')
 
