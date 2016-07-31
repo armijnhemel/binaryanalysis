@@ -5,7 +5,7 @@
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 import os, sys, string, re, subprocess, cPickle, tempfile, shutil
-import extractor
+import extractor, elfcheck
 
 def kernelChecks(path, tags, cursor, conn, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	results = {}
@@ -112,45 +112,57 @@ def findSysfs(lines):
 def findRedBoot(lines):
 	return lines.find("No RedBoot partition table detected in %s")
 
-## analyse a kernel module by analysing output from readelf
-def analyseKernelModule(path, tags, cursor, conn, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+## analyse the modinfo section of a Linux kernel module (Linux kernel 2.6 and later)
+def analyseKernelModule(filename, tags, cursor, conn, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	if not "elfrelocatable" in tags:
 		return None
+
+	sectionres = elfcheck.getSection(filename, '.modinfo')
+	if sectionres == None:
+		return
+	elffile = open(filename, 'rb')
+	elffile.seek(sectionres['sectionoffset'])
+	elfdata = elffile.read(sectionres['sectionsize'])
+	elffile.close()
+
+	tagfields = filter(lambda x: x != '', elfdata.split('\x00'))
 	newtags = []
-	p = subprocess.Popen(['readelf', "-p", ".modinfo", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-        (stanout, stanerr) = p.communicate()
-        if p.returncode != 0:
-		return None
 
 	kernelfields = {}
-	## now process the output from readelf
-	for s in stanout.split('\n'):
-		if not '[' in s:
-			continue
-		try:
-			(field, vals) = s.split(']',1)[-1].lstrip().split('=', 1)
-			if len(vals) != 0:
-				if len(vals.strip()) != 0:
-					if not field in ['license', 'vermagic', 'depends']:
-						## deal with parm types later
-						continue
-					if field == 'vermagic':
-						field = 'version'
-						vals = vals.split()[0]
-					if field in kernelfields:
-						kernelfields[field].add(vals)
-					else:
-						kernelfields[field] = set([vals])
-		except:
-			continue
+
+	oldkernel = False
+	for t in tagfields:
+		(field, vals) = t.split('=', 1)
+		if len(vals) != 0:
+			if len(vals.strip()) != 0:
+				if field == 'kernel_version':
+					oldkernel = True
+				if not field in ['license', 'vermagic', 'depends', 'kernel_version', 'author']:
+					## deal with parm types later
+					continue
+				if field == 'vermagic':
+					field = 'version'
+					vals = vals.split()[0]
+				if field == 'kernel_version':
+					field = 'version'
+				if field in kernelfields:
+					kernelfields[field].add(vals)
+				else:
+					kernelfields[field] = set([vals])
 
 	if len(kernelfields) == 0:
 		return
 
-	if not path.endswith('.ko'):
-		newtags.append('misnamedkernelmodule')
+	if oldkernel:
+		if not filename.endswith('.o'):
+			newtags.append('misnamedkernelmodule')
+	else:
+		if not filename.endswith('.ko'):
+			newtags.append('misnamedkernelmodule')
 	if 'license' in kernelfields:
 		newtags.append('modulelicense')
+	if 'author' in kernelfields:
+		newtags.append('author')
 	if 'version' in kernelfields:
 		newtags.append('modulekernelversion')
 	newtags.append('linuxkernel')
