@@ -1,3 +1,13 @@
+2016-07-31:
+* elfcheck.py: add convenience method to extract information about a single
+section from the ELF file
+* identifier.py: replace call to readelf with own ELF parser (kernel symbols)
+* kernelanalysis.py: replace call to readelf with own ELF parser (module
+information). Support 2.4 kernel now too.
+* findlibs.py: replace several calls to readelf
+* findlibs.py: fixes for latest pydot (probably needs installation via pip,
+out of scope, so keep disabled for now)
+
 2016-07-30:
 * elfcheck.py: extract symbols from strtab section from non-stripped binaries
 * identifier.py: replace call to readelf with own ELF parser (symbols)
