@@ -131,8 +131,18 @@ def analyseKernelModule(filename, tags, cursor, conn, blacklist=[], scanenv={}, 
 	kernelfields = {}
 
 	oldkernel = False
+	prevfield = None
 	for t in tagfields:
-		(field, vals) = t.split('=', 1)
+		fieldvals = t.split('=', 1)
+		if len(fieldvals) == 1:
+			## workaround for people not playing nice with the license
+			## field: https://lwn.net/Articles/82305/
+			if prevfield != 'license':
+				continue
+			kernelfields[prevfield][-1] = kernelfields[prevfield][-1] + " " + fieldvals[0]
+			continue
+		(field, vals) = fieldvals
+		prevfield = field
 		if len(vals) != 0:
 			if len(vals.strip()) != 0:
 				if field == 'kernel_version':
@@ -146,9 +156,9 @@ def analyseKernelModule(filename, tags, cursor, conn, blacklist=[], scanenv={}, 
 				if field == 'kernel_version':
 					field = 'version'
 				if field in kernelfields:
-					kernelfields[field].add(vals)
+					kernelfields[field].append(vals)
 				else:
-					kernelfields[field] = set([vals])
+					kernelfields[field] = [vals]
 
 	if len(kernelfields) == 0:
 		return
@@ -160,6 +170,7 @@ def analyseKernelModule(filename, tags, cursor, conn, blacklist=[], scanenv={}, 
 		if not filename.endswith('.ko'):
 			newtags.append('misnamedkernelmodule')
 	if 'license' in kernelfields:
+		kernelfields['license'] = set(kernelfields['license'])
 		newtags.append('modulelicense')
 	if 'author' in kernelfields:
 		newtags.append('author')
