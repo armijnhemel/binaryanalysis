@@ -72,9 +72,15 @@ def knownInterface(names, ptype):
 ## generate PNG files and optionally SVG
 def writeGraph((elfgraph, filehash, imagedir, generatesvg)):
 	elfgraph_tmp = pydot.graph_from_dot_data(elfgraph)
-	elfgraph_tmp.write_png(os.path.join(imagedir, '%s-graph.png' % filehash))
-	if generatesvg:
-		elfgraph_tmp.write_svg(os.path.join(imagedir, '%s-graph.svg' % filehash))
+	if type(elfgraph_tmp) == list:
+		if len(elfgraph_tmp) == 1:
+			elfgraph_tmp[0].write_png(os.path.join(imagedir, '%s-graph.png' % filehash))
+			if generatesvg:
+				elfgraph_tmp[0].write_svg(os.path.join(imagedir, '%s-graph.svg' % filehash))
+	else:
+		elfgraph_tmp.write_png(os.path.join(imagedir, '%s-graph.png' % filehash))
+		if generatesvg:
+			elfgraph_tmp.write_svg(os.path.join(imagedir, '%s-graph.svg' % filehash))
 
 ## extract variable names, function names and the soname from an ELF file
 def extractfromelf((path, filename)):
