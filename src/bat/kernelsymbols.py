@@ -11,6 +11,7 @@ if sys.version_info[1] == 7:
 	have_counter = True
 else:
 	have_counter = False
+import elfcheck
 
 '''
 This plugin for the Binary Analysis Tool can be used to check how the symbols
@@ -137,23 +138,11 @@ def extractfromkernelfile((filehash, filename, topleveldir, scantempdir)):
 				## need to find out what to do with this
 				return (filehash, version, remotesymbols, dependencies, declaredlicenses, kernelsymbols, module)
 
-	## for modules read the symbol table and extract the right symbols
-	p = subprocess.Popen(['readelf', '-W', '--syms', os.path.join(scantempdir, filename)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
+	symres = elfcheck.getAllSymbols(os.path.join(scantempdir, filename))
+	if symres == []:
 		return
 
-	stansplit = stanout.split("\n")
-	for s in stansplit[3:]:
-		functionstrings = s.split()
-		if len(functionstrings) <= 7:
-			continue
-		## not interested in anything but undefined kernel symbols
-		if functionstrings[6] == 'UND':
-			if functionstrings[4] != 'GLOBAL':
-				continue
-			funcname = functionstrings[7]
-			remotesymbols.add(funcname)
+	remotesymbols = set(map(lambda x: x['name'], filter(lambda x: x['binding'] == 'global' and x['section'] == 0, symres)))
 
 	if 'depends' in leafreports['kernelmodule']:
 		dependencies = copy.deepcopy(leafreports['kernelmodule']['depends'])
