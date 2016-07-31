@@ -733,7 +733,6 @@ def verifyIco(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 ## This might not work for all ELF files and it is a conservative verification, only used to
 ## reduce false positives of LZMA scans.
 ## This does for sure not work for Linux kernel modules on some devices.
-## TODO: move out to a separate module
 def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not 'binary' in tags:
@@ -746,39 +745,6 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	if elfbytes != '\x7f\x45\x4c\x46':
 		return newtags
 	newtags = elfcheck.verifyELF(filename, tempdir, tags, offsets, scanenv, debug, unpacktempdir)
-	if newtags != []:
-		return newtags
-
-	p = subprocess.Popen(['readelf', '-h', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		return newtags
-
-	if not "elf" in newtags:
-		## on some architectures it is necessary to look at the maximum of the starting
-		## address of all sections, plus the size of the section to see if
-		## (offset of section + size of section) == file size
-		#p = subprocess.Popen(['readelf', '-Wt', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		p = subprocess.Popen(['readelf', '-t', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-		if p.returncode != 0:
-			return newtags
-		st = stanout.strip().split("\n")
-		for s in st:
-			if "Addr" in s:
-				continue
-			if ':' in s:
-				continue
-			spl = s.split()
-			if len(spl) == 8:
-				try:
-					totalsize = int(spl[2], 16) + int(spl[3], 16)
-				except Exception, e:
-					continue
-				if totalsize == os.stat(filename).st_size:
-					newtags.append("elf")
-					break
-
 	return newtags
 
 ## Method to verify if a Windows executable is a valid 7z file
