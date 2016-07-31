@@ -770,39 +770,22 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 ## modules often have a section __ksymtab_strings. This section contains variables
 ## that are exported by the kernel using the EXPORT_SYMBOL* macros in the Linux
 ## kernel source tree.
-def extractkernelsymbols(scanfile, scanenv, unpacktempdir):
-	p = subprocess.Popen(['readelf', '-SW', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-	(stanout, stanerr) = p.communicate()
-	st = stanout.strip().split("\n")
-
+def extractkernelsymbols(filename, scanenv, unpacktempdir):
 	variables = set()
-	elftmp = tempfile.mkstemp(dir=unpacktempdir, suffix=".ksymtab")
-	datafile = open(scanfile, 'rb')
-	datafile.seek(0)
-	for s in st[3:]:
-		if "__ksymtab_strings" in s:
-			elfsplits = s[7:].split()
-			if elfsplits[0].startswith("__ksymtab_strings"):
-				elfoffset = int(elfsplits[3], 16)
-				elfsize = int(elfsplits[4], 16)
-				datafile.seek(elfoffset)
-				data = datafile.read(elfsize)
-				os.write(elftmp[0], data)
-				os.fdopen(elftmp[0]).close()
-				break
-	datafile.close()
-	if os.stat(elftmp[1]).st_size == 0:
-		os.unlink(elftmp[1])
+	sectionres = elfcheck.getSection(filename, '__ksymtab_strings')
+	if sectionres == None:
 		return variables
 
-        p = subprocess.Popen(['strings', '-a', elftmp[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        (stanout, stanerr) = p.communicate()
-	st = stanout.split("\n")
-	for s in st:
-		printstring = s
-		if len(printstring) > 0:
-			variables.add(printstring)
-	os.unlink(elftmp[1])
+	datafile = open(filename, 'rb')
+	datafile.seek(sectionres['sectionoffset'])
+	data = datafile.read(sectionres['sectionsize'])
+	datafile.close()
+
+	if len(data) == 0:
+		return variables
+
+	variables = set(filter(lambda x: x != '', data.split('\x00')))
+
 	return variables
 
 ## extract informationfrom the symbol tables (debug symbols, plus dynamic symbols from an ELF
