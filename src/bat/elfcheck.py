@@ -202,6 +202,16 @@ def getArchitecture(filename, tags):
 	elffile.close()
 	return architecture
 
+def getSection(filename, sectionname, debug=False):
+	elfresult = parseELF(filename, debug)
+	returnsection = None
+	for i in elfresult['sections']:
+		if elfresult['sections'][i]['name'] == sectionname:
+			returnsection = i
+			break
+	if returnsection != None:
+		return elfresult['sections'][returnsection]
+
 ## similar to readelf -s (all symbols)
 def getAllSymbols(filename, debug=False):
 	elfresult = parseELF(filename, debug)
