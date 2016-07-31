@@ -1,13 +1,13 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2009-2015 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2009-2016 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 import sys, os, string, re, subprocess
 import pickle
 from optparse import OptionParser
-import extractor
+import extractor, elfcheck
 
 ## Some versions of busybox use different configuration directives
 ## We need to translate them from the name we got to the name that is actually
@@ -184,20 +184,10 @@ def extract_configuration_pass1(lines, busybox):
 				offset = lines.find("_main", offset+1)
 		elif lines[offset2+1:offset] == '__libc_start':
 			# glibc
-			p = subprocess.Popen(['readelf', '-sW', busybox], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-			(stanout, stanerr) = p.communicate()
-			if p.returncode != 0:
+			elfres = elfcheck.getAllSymbols(busybox)
+			if elfres == None:
 				return []
-			lines = stanout.split('\n')
-			for line in lines:
-				if not "_main" in line:
-					continue
-				elif "UND" in line:
-					continue
-				elif not "FUNC" in line:
-					continue
-				else:
-					config.append(line.strip().split()[-1][0:-5])
+			config = map(lambda x: x['name'][:-5], filter(lambda x: x['section'] != 0 and x['type'] == 'func' and '_main' in x['name'], elfres))
 	return config
 
 ## default pretty printer for undefined applets
