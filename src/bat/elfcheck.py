@@ -326,6 +326,8 @@ def getSymbolsAbstraction(filename, symboltype, elfresult, debug=False):
 			dynsymres['binding'] = 'global'
 		elif binding == 2:
 			dynsymres['binding'] = 'weak'
+		elif binding == 10:
+			dynsymres['binding'] = 'unique' # STB_LOOS according to ELF specs, so might be Linux specific
 		else:
 			## by default ignore, TODO
 			dynsymres['binding'] = 'ignore'
