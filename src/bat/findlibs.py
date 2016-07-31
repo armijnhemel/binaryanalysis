@@ -6,6 +6,7 @@
 
 import os, os.path, sys, subprocess, copy, cPickle, multiprocessing, pydot
 import bat.interfaces
+import elfcheck
 
 '''
 This program can be used to check whether the dependencies of a dynamically
@@ -158,20 +159,12 @@ def extractfromelf((path, filename)):
 			rpath_split = line.split('[')[1]
 			rpaths = rpath_split[:-1].split(':')
 
-	p = subprocess.Popen(['readelf', '-h', "%s" % os.path.join(path, filename)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		return
-	for line in stanout.split('\n'):
-		if "Type:" in line:
-			if "DYN" in line:
-				elftype = "lib"
-			if "EXE" in line:
-				elftype = "exe"
-			if "REL" in line:
-				elftype = "kernelmod"
 
-	return (filename, list(localfuncs), list(remotefuncs), list(localvars), list(remotevars), list(weaklocalfuncs), list(weakremotefuncs), list(weaklocalvars), list(weakremotevars), elfsonames, elftype, rpaths)
+	elfres = elfcheck.parseELF(os.path.join(path, filename))
+	if elfres == None:
+		return
+
+	return (filename, list(localfuncs), list(remotefuncs), list(localvars), list(remotevars), list(weaklocalfuncs), list(weakremotefuncs), list(weaklocalvars), list(weakremotevars), elfsonames, elfres['elftype'], rpaths)
 
 def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcursors, batcons, scandebug=False, unpacktempdir=None):
 	## crude check for broken PyDot
@@ -400,7 +393,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 	## or, at least the same base architecture.
 	architectures = {}
 	for i in elffiles:
-		if elftypes[i] == 'kernelmod':
+		if elftypes[i] == 'elfrelocatable':
 			continue
 		filehash = unpackreports[i]['checksum']
 		leaf_file = open(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash), 'rb')
@@ -415,7 +408,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 	## Is this correct???
 	ignorefuncs = set(["__ashldi3", "__ashrdi3", "__cmpdi2", "__divdi3", "__fixdfdi", "__fixsfdi", "__fixunsdfdi", "__fixunssfdi", "__floatdidf", "__floatdisf", "__floatundidf", "__lshrdi3", "__moddi3", "__ucmpdi2", "__udivdi3", "__umoddi3", "main"])
 	for i in elffiles:
-		if elftypes[i] == 'kernelmod':
+		if elftypes[i] == 'elfrelocatable':
 			continue
 		## per ELF file keep lists of used libraries and possibly used libraries.
 		## The later is searched if it needs to be guessed which libraries were used.
@@ -711,8 +704,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 							## 1. the file is a plugin that is loaded into executables
 							##    at run time.
 							## 2. false positives.
-							if elftypes[i] == 'lib':
-								if list(set(map(lambda x: elftypes[x], funcstolibs[r]))) == ['exe']:
+							if elftypes[i] == 'elfdynamic':
+								if list(set(map(lambda x: elftypes[x], funcstolibs[r]))) == ['elfexecutable']:
 									plugsinto += funcstolibs[r]
 							possiblesolutions = possiblesolutions + funcstolibs[r]
 							continue
@@ -728,8 +721,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 								## 1. the file is a plugin that is loaded into executables
 								##    at run time.
 								## 2. false positives.
-								if elftypes[i] == 'lib':
-									if list(set(map(lambda x: elftypes[x], funcstolibs[r]))) == ['exe']:
+								if elftypes[i] == 'elfdynamic':
+									if list(set(map(lambda x: elftypes[x], funcstolibs[r]))) == ['elfexecutable']:
 										plugsinto += funcstolibs[r]
 								## there are multiple files that can satisfy this dependency
 								## 1. check if the files are identical (checksum)
@@ -767,7 +760,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 				#print >>sys.stderr
 		else:
 			## there are files that are dynamically linked
-			if elftypes[i] == 'lib':
+			if elftypes[i] == 'elfdynamic':
 				## if there are undefined references, then it is likely a plugin
 				pass
 		usedlibs_tmp = {}
@@ -813,7 +806,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 	## for each ELF file for which there are results write back the results to
 	## 'leafreports'. Also update tags if the file is a plugin.
 	for i in elffiles:
-		if elftypes[i] == 'kernelmod':
+		if elftypes[i] == 'elfrelocatable':
 			continue
 		writeback = False
 
@@ -861,7 +854,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 
 	squashedgraph = {}
 	for i in elffiles:
-		if elftypes[i] == 'kernelmod':
+		if elftypes[i] == 'elfrelocatable':
 			continue
 		libdeps = usedlibsandcountperfile[i]
 		if not squashedgraph.has_key(i):
@@ -889,7 +882,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 	## TODO: make more parallel
 	elfgraphs = set()
 	for i in elffiles:
-		if elftypes[i] == 'kernelmod':
+		if elftypes[i] == 'elfrelocatable':
 			continue
 		if not squashedgraph.has_key(i):
 			continue
