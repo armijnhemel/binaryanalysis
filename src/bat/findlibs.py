@@ -44,13 +44,6 @@ is defined in one of the declared dependencies as WEAK.
 4. for each defined weak symbol in a file see if one of the declared
 dependencies defines the same symbols as GLOBAL.
 
-This method does not always work. Some vendors run sstrip on the binaries.
-Some versions of the sstrip tool are buggy and create files with a section
-header that confuses standard readelf:
-
-https://dev.openwrt.org/ticket/6847
-https://bugs.busybox.net/show_bug.cgi?id=729
-
 Symbolic links can be a challenge as well if they point to locations that are
 only known at run time, for example other file systems that are mounted. Since
 BAT will not unpack these in the same locations as where they are supposed to be

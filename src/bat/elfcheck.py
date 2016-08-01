@@ -7,6 +7,13 @@
 '''
 This module contains methods to verify ELF files and extract data from ELF files
 such as the architecture, and so on.
+
+Some vendors run sstrip on the binaries. There are versions of the sstrip tool
+that are buggy and create files with a section header that is actually
+incorrect and will for example confuse readelf:
+
+https://dev.openwrt.org/ticket/6847
+https://bugs.busybox.net/show_bug.cgi?id=729
 '''
 
 import sys, os, subprocess, os.path, struct, math
