@@ -83,7 +83,7 @@ def writeGraph((elfgraph, filehash, imagedir, generatesvg)):
 			elfgraph_tmp.write_svg(os.path.join(imagedir, '%s-graph.svg' % filehash))
 
 ## extract variable names, function names and the soname from an ELF file
-def extractfromelf((path, filename)):
+def extractfromelf((filepath, filename)):
 	remotefuncs = set()
 	localfuncs = set()
 	remotevars = set()
@@ -96,70 +96,64 @@ def extractfromelf((path, filename)):
 	elfsonames = set()
 	elftype = ""
 
-	p = subprocess.Popen(['readelf', '-W', '--dyn-syms', os.path.join(path, filename)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
-		## perhaps an older version that does not support --dyn-syms
-		p = subprocess.Popen(['readelf', '-W', '-s', os.path.join(path, filename)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-		(stanout, stanerr) = p.communicate()
-		if p.returncode != 0:
-			return
+	elfres = elfcheck.getAllSymbols(os.path.join(filepath, filename))
+	if elfres == None:
+		return
 
 	## a list of variable names to ignore.
 	varignores = ['__dl_ldso__']
 
-	stansplit = stanout.split("\n")
-	for s in stansplit[3:]:
-		functionstrings = s.split()
-		if len(functionstrings) <= 7:
+	for s in elfres:
+		if not s['type'] in ['func', 'object','ifunc']:
 			continue
-		## only store functions and objects
-		if functionstrings[3] != 'FUNC' and functionstrings[3] != 'IFUNC' and functionstrings[3] != 'OBJECT':
-			continue
-		## store local functions and variables (normal and weak)
-		elif functionstrings[6] != 'UND':
-			if functionstrings[3] == 'FUNC' or functionstrings[3] == 'IFUNC':
-				funcname = functionstrings[7].split('@')[0]
-				if functionstrings[4] == 'WEAK':
-					weaklocalfuncs.add(funcname)
-				else:
-					localfuncs.add(funcname)
-			elif functionstrings[3] == 'OBJECT' and functionstrings[6] != 'ABS':
-				varname = functionstrings[7].split('@')[0]
-				if varname not in varignores:
-					varname = functionstrings[7].split('@')[0]
-					if functionstrings[4] == 'WEAK':
-						weaklocalvars.add(varname)
-					else:
-						localvars.add(varname)
-			continue
-		## See http://gcc.gnu.org/ml/gcc/2002-06/msg00112.html
-		if functionstrings[7].split('@')[0] == '_Jv_RegisterClasses':
-			continue
-		## some things are annotated with '@' which could come in handy in the future
-		if functionstrings[3] == 'FUNC' or functionstrings[3] == 'IFUNC':
-			funcname = functionstrings[7].split('@')[0]
-			if functionstrings[4] == 'WEAK':
-				weakremotefuncs.add(funcname)
-			else:
-				remotefuncs.add(funcname)
-		elif functionstrings[3] == 'OBJECT' and functionstrings[6] != 'ABS':
-			if functionstrings[7].split('@')[0] not in varignores:
-				remotevars.add(functionstrings[7].split('@')[0])
 
-	elfres = elfcheck.getDynamicLibs(os.path.join(path, filename))
+		## then split into local and global symbols
+		if s['section'] != 0:
+			if s['type'] in ['func', 'ifunc']:
+				if s['binding'] == 'weak':
+					weaklocalfuncs.add(s['name'])
+				else:
+					localfuncs.add(s['name'])
+			else:
+				## no ABS values
+				if s['section'] == 0xfff1:
+					continue
+				if s['name'] in varignores:
+					continue
+				if s['binding'] == 'weak':
+					weaklocalvars.add(s['name'])
+				else:
+					localvars.add(s['name'])
+		else:
+			if s['type'] in ['func', 'ifunc']:
+				## See http://gcc.gnu.org/ml/gcc/2002-06/msg00112.html
+				if s['name'] == '_Jv_RegisterClasses':
+					continue
+				if s['binding'] == 'weak':
+					weakremotefuncs.add(s['name'])
+				else:
+					remotefuncs.add(s['name'])
+			else:
+				## no ABS values
+				if s['section'] == 0xfff1:
+					continue
+				if s['binding'] == 'weak':
+					weakremotevars.add(s['name'])
+				else:
+					remotevars.add(s['name'])
+
+	elfres = elfcheck.getDynamicLibs(os.path.join(filepath, filename))
 
 	if elfres == None:
 		return
 
 	if 'rpath' in elfres:
 		rpaths = elfres['rpath'].split(':')
-		pass
 
 	if 'sonames' in elfres:
 		elfsonames = set(elfres['sonames'])
 
-	elfres = elfcheck.parseELF(os.path.join(path, filename))
+	elfres = elfcheck.parseELF(os.path.join(filepath, filename))
 	if elfres == None:
 		return
 
