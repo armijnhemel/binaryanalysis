@@ -330,12 +330,11 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 		## first determine the size and offset of .data and .rodata sections,
 		## carve these sections from the ELF file, then run 'strings'
        		try:
-			p = subprocess.Popen(['readelf', '-SW', scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-			(stanout, stanerr) = p.communicate()
+			elfres = elfcheck.parseELF(scanfile)
+
 			## check if there actually are sections. On some systems the
-			## binary is somewhat corrupted and does not have section headers
-			## TODO: localisation fixes
-			if "There are no sections in this file." in stanout:
+			## ELF header is corrupted and does not have section headers
+			if elfres['sections'] == {}:
 				p = subprocess.Popen(['strings', '-a', '-n', str(stringcutoff), scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 				(stanout, stanerr) = p.communicate()
 				if p.returncode != 0:
@@ -345,37 +344,29 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 					return None
 				lines = stanout.split("\n")
 			else:
-				st = stanout.strip().split("\n")
 				datafile = open(filepath, 'rb')
-				datafile.seek(0)
-				for s in st[3:]:
-					for section in [".data", ".rodata"]:
-						if section in s:
-							elfsplits = s[7:].split()
-							if elfsplits[0].startswith(section):
-								## section actually contains no data, so skip
-								if elfsplits[1] == 'NOBITS':
-									continue
-								elfoffset = int(elfsplits[3], 16)
-								elfsize = int(elfsplits[4], 16)
-								## sanity check
-								if (elfoffset + elfsize) > os.stat(filepath).st_size:
-									continue
-								elftmp = tempfile.mkstemp(dir=unpacktempdir,suffix=section)
-								unpackelf = True
-								if blacklist != []:
-									if extractor.inblacklist(elfoffset, blacklist) != None:
-										unpackelf = False
-									if extractor.inblacklist(elfoffset+elfoffset, blacklist) != None:
-										unpackelf = False
-								if unpackelf:
-									datafile.seek(elfoffset)
-									data = datafile.read(elfsize)
-									os.write(elftmp[0], data)
-									os.fdopen(elftmp[0]).close()
-									elfscanfiles.append(elftmp[1])
-								else:
-									os.unlink(elftmp[1])
+				for s in elfres['sections']:
+					section = elfres['sections'][s]['name']
+					if not section in ['.data', '.rodata']:
+						continue
+					## not interested in NOBITS
+					if elfres['sections'][s]['sectiontype'] == 8:
+						continue
+					unpackelf = True
+					elfoffset = elfres['sections'][s]['sectionoffset']
+					elfsize = elfres['sections'][s]['sectionsize']
+					if blacklist != []:
+						if extractor.inblacklist(elfoffset, blacklist) != None:
+							unpackelf = False
+						if extractor.inblacklist(elfoffset+elfsize, blacklist) != None:
+							unpackelf = False
+					if unpackelf:
+						elftmp = tempfile.mkstemp(dir=unpacktempdir,suffix=section)
+						datafile.seek(elfoffset)
+						data = datafile.read(elfsize)
+						os.write(elftmp[0], data)
+						os.fdopen(elftmp[0]).close()
+						elfscanfiles.append(elftmp[1])
 				datafile.close()
 
 				for i in elfscanfiles:
