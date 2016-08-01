@@ -1,3 +1,8 @@
+2016-08-01:
+* elfcheck.py: extra size check in case there are no section headers
+* findlibs.py: replace call to readelf
+* identifier.py: replace call to readelf
+
 2016-07-31:
 * elfcheck.py: add convenience method to extract information about a single
 section from the ELF file
@@ -7,6 +12,8 @@ information). Support 2.4 kernel now too.
 * findlibs.py: replace several calls to readelf
 * findlibs.py: fixes for latest pydot (probably needs installation via pip,
 out of scope, so keep disabled for now)
+* prerun.py: remove call to readelf
+* busybox.py: remove call to readelf
 
 2016-07-30:
 * elfcheck.py: extract symbols from strtab section from non-stripped binaries
