@@ -716,6 +716,7 @@ def parseELF(filename, debug=False):
 
 	## First process the program header table
 	brokenelf = False
+	maxendofprogramsegments = 0
 	for i in range(0,numberprogramheaders):
 		elffile.seek(offset + startprogramheader + i*programheadersize)
 		elfbytes = elffile.read(programheadersize)
@@ -767,6 +768,7 @@ def parseELF(filename, debug=False):
 		if offset + segmentoffset + segmentsize > filesize:
 			brokenelf = True
 			break
+		maxendofprogramsegments = max(offset + segmentoffset + segmentsize, maxendofprogramsegments)
 
 		## then the size in bytes in memory image
 		if littleendian:
@@ -917,7 +919,9 @@ def parseELF(filename, debug=False):
 	elffile.close()
 
 	## Now some extra checks so files can be tagged as ELF
-	if maxendofsection == filesize:
+	if maxendofprogramsegments == filesize:
+		iself = True
+	elif maxendofsection == filesize:
 		iself = True
 	else:
 		## This does not work well for some Linux kernel modules as well as other files
