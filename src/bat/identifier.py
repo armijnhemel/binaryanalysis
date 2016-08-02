@@ -544,6 +544,9 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 			data_size = struct.unpack('<I', dexfile.read(4))[0]
 			data_offset = struct.unpack('<I', dexfile.read(4))[0]
 
+			## mapping of string id to the actual string value
+			## this is a combination of string literals, method names
+			## class names, signatures, and so on.
 			string_id_to_value = {}
 			if string_ids_offset != 0:
 				dexfile.seek(string_ids_offset)
@@ -565,14 +568,16 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 						dexread = dexfile.read(1)
 
 					if len(dexdata) != 0:
-						## the data is length (LEB-128) followed by the actual data
-						lenstr = ""
+						## The string data (string_data_item in Dalvik
+						## specificiations) consists of the length of the
+						## (as ULEB-128), followed by the the actual data
+						#lenstr = ""
 						lencount = 0
 						startbyteseen = False
 						for c in dexdata:
 							lencount += 1
 							## add 7 bits
-							lenstr = "{:0>8b}".format(ord(c))[1:] + lenstr
+							#lenstr = "{:0>8b}".format(ord(c))[1:] + lenstr
 							## most significant bit means that the next byte
 							## is also part of the length
 							if (ord(c) & 0x80) == 0:
@@ -629,18 +634,19 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 					print "tries", m, tries_size
 					debug_info_offset = struct.unpack('<I', dexfile.read(4))[0]
 					insns_size = struct.unpack('<I', dexfile.read(4))[0]
-					print insns_size
+					print "instructions size", insns_size
 
 					## keep track of how many 16 bit code units were read
 					bytecodecounter = 0
 					while bytecodecounter < insns_size:
+						opcode_location = dexfile.tell()
 						## find out the opcode.
 						opcode = struct.unpack('<H', dexfile.read(2))[0] & 0xff
 						## opcode (and possible register instructions) is
 						## one 16 bite code unit
 						bytecodecounter += 1
 
-						print m, "opcode", hex(opcode), dex_opcodes_extra_data[opcode]
+						print hex(opcode_location), m, "opcode", hex(opcode), dex_opcodes_extra_data[opcode]
 						if opcode in unused:
 							print "UNUSED", opcode
 						sys.stdout.flush()
@@ -654,24 +660,84 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 								string_id = struct.unpack('<H', extradata)[0]
 							elif opcode == 0x1b:
 								string_id = struct.unpack('<I', extradata)[0]
-							elif opcode == 0x2b:
-								print "2B", hex(dexfile.tell())
+							elif opcode == 0x26:
+								print "SPECIAL 26", hex(dexfile.tell()), hex(opcode_location)
 								## some extra work might be needed here, as the
-								## data might be in "packed-switch-format"
-								#print ord(extradata)
+								## data might be in "packed-switch-payload"
+								pass
+							elif opcode == 0x2b:
+								print "SPECIAL 2B", hex(dexfile.tell()), hex(opcode_location)
+								## some extra work might be needed here, as the
+								## data might be in "packed-switch-payload"
+								branch_offset = struct.unpack('<I', extradata)[0]
+
+								pass
+							elif opcode == 0x2c:
+								print "SPECIAL 2C", hex(dexfile.tell()), hex(opcode_location)
+								## some extra work might be needed here, as the
+								## data might be in "sparse-switch-payload"
+								branch_offset = struct.unpack('<I', extradata)[0]
 
 								pass
 					print 'equal?', bytecodecounter, insns_size, bytecodecounter == insns_size
+					print
 					sys.stdout.flush()
+
 					if tries_size != 0:
+						print "HAS TRIES", tries_size
+						print
+						sys.stdout.flush()
+						## first the list of try_items
 						if insns_size%2 != 0:
 							padding = struct.unpack('<H', dexfile.read(2))[0]
 						for t in range(0,tries_size):
 							start_addr = struct.unpack('<I', dexfile.read(4))[0]
 							insn_count = struct.unpack('<H', dexfile.read(2))[0]
 							handler_offset = struct.unpack('<H', dexfile.read(2))[0]
-							pass
-					#break
+						## then the encoded_catch_handler_list
+						lenstr = ""
+						while True:
+							uleb128byte = dexfile.read(1)
+							lenstr = "{:0>8b}".format(ord(uleb128byte))[1:] + lenstr
+							## most significant bit means that the next byte
+							## is also part of the length
+							if (ord(uleb128byte) & 0x80) == 0:
+								break
+						for ca in xrange(0, int(lenstr, 2)):
+							catchlenstr = ''
+							bytecount = 0
+							while True:
+								sleb128byte = dexfile.read(1)
+								bytecount += 1
+								catchlenstr = "{:0>8b}".format(ord(sleb128byte))[1:] + catchlenstr
+								## most significant bit means that the next byte
+								## is also part of the length
+								if (ord(sleb128byte) & 0x80) == 0:
+									break
+							if bytecount == 1:
+								catchsize = int(catchlenstr, 2)
+							else:
+								pass
+							for ct in xrange(0,abs(catchsize)):
+								## skip over the type_idx and exception
+								## handler address for now
+								lenstr = ''
+								while True:
+									uleb128byte = dexfile.read(1)
+									lenstr = "{:0>8b}".format(ord(uleb128byte))[1:] + lenstr
+									## most significant bit means that the next byte
+									## is also part of the length
+									if (ord(uleb128byte) & 0x80) == 0:
+										break
+								lenstr = ''
+								while True:
+									uleb128byte = dexfile.read(1)
+									lenstr = "{:0>8b}".format(ord(uleb128byte))[1:] + lenstr
+									## most significant bit means that the next byte
+									## is also part of the length
+									if (ord(uleb128byte) & 0x80) == 0:
+										break
+						sys.stdout.flush()
 			dexfile.close()
 		'''
 
