@@ -1,3 +1,6 @@
+2016-08-02:
+* identifier.py: work more on Dalvik unpacking (does not yet work)
+
 2016-08-01:
 * elfcheck.py: extra size check in case there are no section headers
 * findlibs.py: replace call to readelf
