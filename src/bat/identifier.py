@@ -506,6 +506,10 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 				lines.append(printstring)
 		javameta = {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile, 'javatype': javatype, 'strings': lines}
 	elif javatype == 'dex' or javatype == 'odex':
+		classnames = set()
+		sourcefiles = set()
+		methods = set()
+		fields = set()
 		'''
 		if javatype == 'dex':
 			## Further parse the Dex file
@@ -535,6 +539,10 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 			## get the length of the field identifiers and the offset
 			field_ids_size = struct.unpack('<I', dexfile.read(4))[0]
 			field_ids_offset = struct.unpack('<I', dexfile.read(4))[0]
+
+			## get the length of the class definitions and the offset
+			methods_defs_size = struct.unpack('<I', dexfile.read(4))[0]
+			methods_defs_offset = struct.unpack('<I', dexfile.read(4))[0]
 
 			## get the length of the class definitions and the offset
 			class_defs_size = struct.unpack('<I', dexfile.read(4))[0]
@@ -588,6 +596,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 					## the next item
 					dexfile.seek(oldoffset)
 
+			## TODO: sanity checks for the map and the values in the header
 			map_contents = {}
 
 			## jump to the map and parse it
@@ -608,6 +617,93 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 			## code section. In particular, the instructions for
 			## const-string and const-string/jumbo are interesting
 			## https://source.android.com/devices/tech/dalvik/dalvik-bytecode.html
+			## TYPE_TYPE_ID_ITEM == 0x0002
+			type_ids = {}
+			if 0x0002 in map_contents:
+				map_offset = map_contents[0x0002]['offset']
+				map_item_size = map_contents[0x0002]['size']
+				dexfile.seek(map_offset)
+				for m in range(0,map_item_size):
+					pos = dexfile.tell()
+					## items are 4 byte aligned
+					if pos%4 != 0:
+						dexfile.read(4 - pos%4)
+					descriptor_idx = struct.unpack('<I', dexfile.read(4))[0]
+					type_ids[m] = descriptor_idx
+			## TYPE_FIELD_ID_ITEM == 0x0004
+			## TYPE_METHOD_ID_ITEM == 0x0005
+			if 0x0004 in map_contents:
+				map_offset = map_contents[0x0004]['offset']
+				map_item_size = map_contents[0x0004]['size']
+				dexfile.seek(map_offset)
+				for m in range(0,map_item_size):
+					pos = dexfile.tell()
+					## items are 4 byte aligned
+					if pos%4 != 0:
+						dexfile.read(4 - pos%4)
+					class_idx = struct.unpack('<H', dexfile.read(2))[0]
+					proto_idx = struct.unpack('<H', dexfile.read(2))[0]
+					name_idx = struct.unpack('<I', dexfile.read(4))[0]
+					## TODO: sanity checks
+					field = string_id_to_value[name_idx]
+					if field == 'serialVersionUID':
+						continue
+					if '$' in field:
+						continue
+					fields.add(field)
+			## TYPE_METHOD_ID_ITEM == 0x0005
+			if 0x0005 in map_contents:
+				map_offset = map_contents[0x0005]['offset']
+				map_item_size = map_contents[0x0005]['size']
+				dexfile.seek(map_offset)
+				for m in range(0,map_item_size):
+					pos = dexfile.tell()
+					## items are 4 byte aligned
+					if pos%4 != 0:
+						dexfile.read(4 - pos%4)
+					class_idx = struct.unpack('<H', dexfile.read(2))[0]
+					proto_idx = struct.unpack('<H', dexfile.read(2))[0]
+					name_idx = struct.unpack('<I', dexfile.read(4))[0]
+					## TODO: sanity checks
+					method = string_id_to_value[name_idx]
+					if method == '<init>' or method == '<clinit>':
+						pass
+					elif method.startswith('access$'):
+						pass
+					else:
+						methods.add(method)
+			## TYPE_CLASS_DEF_ITEM == 0x0006
+			if 0x0006 in map_contents:
+				map_offset = map_contents[0x0006]['offset']
+				map_item_size = map_contents[0x0006]['size']
+				dexfile.seek(map_offset)
+				for m in range(0,map_item_size):
+					pos = dexfile.tell()
+					## items are 4 byte aligned
+					if pos%4 != 0:
+						dexfile.read(4 - pos%4)
+					class_idx = struct.unpack('<I', dexfile.read(4))[0]
+
+					## TODO: sanity checks
+					classname = string_id_to_value[type_ids[class_idx]]
+					if classname.startswith('L') and classname.endswith(';'):
+						classname = classname[1:-1]
+						if "$" in classname:
+							classname = classname.split("$")[0]
+						classnames.add(classname)
+					access_flags = struct.unpack('<I', dexfile.read(4))[0]
+					superclass_idx = struct.unpack('<I', dexfile.read(4))[0]
+					interfaces_offset = struct.unpack('<I', dexfile.read(4))[0]
+					sourcefile_index = struct.unpack('<I', dexfile.read(4))[0]
+					annotations_offset = struct.unpack('<I', dexfile.read(4))[0]
+					classdata_offset = struct.unpack('<I', dexfile.read(4))[0]
+					static_values_offset = struct.unpack('<I', dexfile.read(4))[0]
+					if sourcefile_index in string_id_to_value:
+						sourcefiles.add(string_id_to_value[sourcefile_index])
+					else:
+						## broken
+						pass
+			return
 			## The code items are stored in the map_contents, as TYPE_CODE_ITEM
 			## which is 0x2001.
 			if 0x2001 in map_contents:
@@ -680,6 +776,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 
 								pass
 					print 'equal?', bytecodecounter, insns_size, bytecodecounter == insns_size
+					print hex(dexfile.tell())
 					print
 					sys.stdout.flush()
 
@@ -747,10 +844,6 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 		## TODO: Research http://code.google.com/p/smali/ as a replacement for dedexer
 		skipfields = ['public', 'private', 'protected', 'static', 'final', 'volatile', 'transient']
 		javameta = {'classes': [], 'methods': [], 'fields': [], 'sourcefiles': [], 'javatype': javatype}
-		classnames = set()
-		sourcefiles = set()
-		methods = set()
-		fields = set()
 		dex_tmpdir = None
 		if 'UNPACK_TEMPDIR' in scanenv:
 			dex_tmpdir = scanenv['UNPACK_TEMPDIR']
