@@ -2307,10 +2307,22 @@ def searchUnpackLzop(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		## byte 15 has to be 1, 2 or 3
 		lzopfile.seek(offset+15)
 		lzopversionbyte = lzopfile.read(1)
-		lzopfile.close()
 		if not ord(lzopversionbyte) in [1,2,3]:
+			lzopfile.close()
 			continue
-		
+
+		## extra sanity check: LZOP version that is needed.
+		## the latest lzop version is 0x1030
+		## if the version_needed field is larger than this
+		## then it won't work
+		## LZOP 1030 generates output files for 0940
+		## which is very old, so this should not be a problem.
+		lzopfile.seek(offset+13)
+		lzopversionneeded = lzopfile.read(2)
+		lzopfile.close()
+		if struct.unpack('>H', lzopversionneeded)[0] > 0x1030:
+			continue
+
 		tmpdir = dirsetup(tempdir, filename, "lzop", counter)
 		(res, lzopsize) = unpackLzop(filename, offset, tmpdir)
 		if res != None:
