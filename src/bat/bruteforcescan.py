@@ -145,7 +145,7 @@ def gethash(path, filename, hashtype="sha256"):
 	return hashresults
 
 ## continuously grab tasks (files) from a queue, tag and possibly unpack and recurse
-def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, prerunmagic, magicscans, optmagicscans, processid, hashdict, blacklistedfiles, llock, template, unpacktempdir, tempdir, outputhash, cursor, conn, scansourcecode, dumpoffsets, offsetdir, compressed, timeout):
+def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, prerunmagic, magicscans, optmagicscans, processid, hashdict, blacklistedfiles, llock, template, unpacktempdir, topleveldir, tempdir, outputhash, cursor, conn, scansourcecode, dumpoffsets, offsetdir, compressed, timeout):
 	lentempdir = len(tempdir)
 	sourcecodequery = "select checksum from processed_file where checksum=%s limit 1"
 
@@ -694,64 +694,56 @@ def scan(scanqueue, reportqueue, leafqueue, scans, prerunscans, prerunignore, pr
 			reportqueue.put({relfiletoscan: unpackreports})
 		else:
 			## finally add the file to the queue for leaf tasks
-			leafqueue.put((filetoscan, tags, blacklist, filehash, filesize))
+			newtags = []
+			reports = {}
+			for leafscan in leafscans:
+				ignore = False
+				if 'extensionsignore' in leafscan:
+					extensionsignore = leafscan['extensionsignore'].split(':')
+					for e in extensionsignore:
+						if filetoscan.endswith(e):
+							ignore = True
+							break
+				if ignore:
+					continue
+				report = {}
+				module = leafscan['module']
+				method = leafscan['method']
+
+				scandebug = False
+				if 'debug' in leafscan:
+					scandebug = True
+					debug = True
+
+				if debug:
+					print >>sys.stderr, method, filetoscan, datetime.datetime.utcnow().isoformat()
+					sys.stderr.flush()
+					scandebug = True
+
+				try:
+					exec "from %s import %s as bat_%s" % (module, method, method)
+				except Exception, e:
+					continue
+				res = eval("bat_%s(filetoscan, tags, cursor, conn, blacklist, leafscan['environment'], scandebug=scandebug, unpacktempdir=unpacktempdir)" % (method))
+				if res != None:
+					(nt, leafres) = res
+					reports[leafscan['name']] = leafres
+					newtags = newtags + nt
+					tags += list(set(newtags))
+			reports['tags'] = list(set(tags))
+			unpackreports['tags'] = list(set(unpackreports['tags'] + reports['tags']))
+
+			## write pickles with information to disk here to reduce memory usage
+			try:
+				os.stat('%s/filereports/%s-filereport.pickle' % (topleveldir,filehash))
+			except Exception, e:
+				picklefile = open('%s/filereports/%s-filereport.pickle' % (topleveldir,filehash), 'wb')
+				cPickle.dump(reports, picklefile)
+				picklefile.close()
 			reportqueue.put({relfiletoscan: unpackreports})
 		if debug:
 			print >>sys.stderr, "DONE", filetoscan, starttime, datetime.datetime.utcnow().isoformat()
 			sys.stderr.flush()
-		scanqueue.task_done()
-
-def leafScan(scanqueue, reportqueue, scans, processid, llock, unpacktempdir, topleveldir, debug, cursor, conn, timeout):
-	while True:
-		## reset the reports, blacklist, offsets and tags for each new scan
-		(filetoscan, scans, tags, blacklist, filehash) = scanqueue.get(timeout=timeout)
-		reports = {}
-		newtags = []
-
-		for leafscan in scans:
-			ignore = False
-			if 'extensionsignore' in leafscan:
-				extensionsignore = leafscan['extensionsignore'].split(':')
-				for e in extensionsignore:
-					if filetoscan.endswith(e):
-						ignore = True
-						break
-			if ignore:
-				continue
-			report = {}
-			module = leafscan['module']
-			method = leafscan['method']
-
-			scandebug = False
-			if 'debug' in leafscan:
-				scandebug = True
-				debug = True
-
-			if debug:
-				print >>sys.stderr, method, filetoscan, datetime.datetime.utcnow().isoformat()
-				sys.stderr.flush()
-				scandebug = True
-
-			try:
-				exec "from %s import %s as bat_%s" % (module, method, method)
-			except Exception, e:
-				continue
-			res = eval("bat_%s(filetoscan, tags, cursor, conn, blacklist, leafscan['environment'], scandebug=scandebug, unpacktempdir=unpacktempdir)" % (method))
-			if res != None:
-				(nt, leafres) = res
-				reports[leafscan['name']] = leafres
-				newtags = newtags + nt
-				tags += list(set(newtags))
-		reports['tags'] = list(set(tags))
-
-		## write pickles with information to disk here to reduce memory usage
-		try:
-			os.stat('%s/filereports/%s-filereport.pickle' % (topleveldir,filehash))
-		except:
-			picklefile = open('%s/filereports/%s-filereport.pickle' % (topleveldir,filehash), 'wb')
-			cPickle.dump(reports, picklefile)
-			picklefile.close()
-		reportqueue.put((filehash, list(set(newtags))))
 		scanqueue.task_done()
 
 def aggregatescan(unpackreports, aggregatescans, processors, scantempdir, topleveldir, scan_binary, scandate, batcursors, batcons, debug, unpacktempdir):
@@ -1825,6 +1817,11 @@ def runscan(scans, binaries):
 			print >>sys.stderr, "COPYING END", datetime.datetime.utcnow().isoformat()
 			sys.stderr.flush()
 
+		## create the directory where result files will be stored if
+		## it does not already exist.
+		if not os.path.exists(os.path.join(topleveldir, 'filereports')):
+			os.mkdir(os.path.join(topleveldir, 'filereports'))
+
 		tags = []
 		offsets = {}
 		hints = {}
@@ -1883,7 +1880,6 @@ def runscan(scans, binaries):
 		scanmanager = multiprocessing.Manager()
 		scanqueue = multiprocessing.JoinableQueue(maxsize=0)
 		reportqueue = scanmanager.Queue(maxsize=0)
-		leafqueue = scanmanager.Queue(maxsize=0)
 		processpool = []
 
 		hashdict = scanmanager.dict()
@@ -1896,7 +1892,7 @@ def runscan(scans, binaries):
 			else:
 				cursor = None
 				conn = None
-			p = multiprocessing.Process(target=scan, args=(scanqueue,reportqueue,leafqueue, finalunpackscans, scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, blacklistedfiles, lock, template, unpackdirectory, scantempdir, outputhash, cursor, conn, scansourcecode, scans['batconfig']['dumpoffsets'], offsetdir, compressed, timeout))
+			p = multiprocessing.Process(target=scan, args=(scanqueue, reportqueue, finalunpackscans, finalleafscans, scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, blacklistedfiles, lock, template, unpackdirectory, topleveldir, scantempdir, outputhash, cursor, conn, scansourcecode, scans['batconfig']['dumpoffsets'], offsetdir, compressed, timeout))
 			processpool.append(p)
 			p.start()
 
@@ -1910,15 +1906,6 @@ def runscan(scans, binaries):
 			except Queue.Empty, e:
 				## Queue is empty
 				break
-		while True:
-			try:
-				val = leafqueue.get_nowait()
-				leaftasks.append(val)
-				leafqueue.task_done()
-			except Queue.Empty, e:
-				## Queue is empty
-				break
-		leafqueue.join()
 		reportqueue.join()
 	
 		for p in processpool:
@@ -1970,114 +1957,6 @@ def runscan(scans, binaries):
 		## is done once per unique file (based on checksum).
 		if debug:
 			print >>sys.stderr, "LEAF BEGIN", datetime.datetime.utcnow().isoformat()
-		tagdict = {}
-
-		## determine whether or not the leaf scans should be run in parallel
-		parallel = True
-		if finalleafscans != []:
-			## each entry in leaftasks: (filetoscan, tags, blacklist, filehash, filesize)
-			sha256leaf = {}
-			leaftasks_tmp = []
-			for i in leaftasks:
-				if not i[-2] in sha256leaf:
-					sha256leaf[i[-2]] = 1
-					leaftasks_tmp.append(i)
-
-			## reverse sort on size: scan largest files first
-			leaftasks_tmp.sort(key=lambda x: x[-1], reverse=True)
-			leaftasks_tmp = map(lambda x: x[:1] + (filterScans(finalleafscans, x[1]),) + x[1:-1], leaftasks_tmp)
-
-			if parallel:
-				if False in map(lambda x: x['parallel'], finalleafscans):
-					parallel = False
-			if debug:
-				if debugphases == []:
-					parallel = False
-				else:
-					if 'leaf' in debugphases:
-						parallel = False
-
-			## create the directory where result files will be stored if
-			## it does not already exist.
-			if not os.path.exists(os.path.join(topleveldir, 'filereports')):
-				os.mkdir(os.path.join(topleveldir, 'filereports'))
-
-			poolresult = []
-			if len(leaftasks_tmp) != 0:
-				if parallel:
-					localprocessamount = processamount
-				else:
-					localprocessamount = 1
-
-				## use a queue made with a manager to avoid some issues, see:
-				## http://docs.python.org/2/library/multiprocessing.html#pipes-and-queues
-				lock = Lock()
-				scanmanager = multiprocessing.Manager()
-				scanqueue = multiprocessing.JoinableQueue(maxsize=0)
-				reportqueue = scanmanager.Queue(maxsize=0)
-				processpool = []
-
-				hashdict = scanmanager.dict()
-				blacklistedfiles = []
-				map(lambda x: scanqueue.put(x), leaftasks_tmp)
-				for i in range(0,processamount):
-					if usedatabase:
-						cursor = batcursors[i]
-						conn = batcons[i]
-					else:
-						cursor = None
-						conn = None
-					p = multiprocessing.Process(target=leafScan, args=(scanqueue,reportqueue, scans['leafscans'], i, lock, unpackdirectory, topleveldir, leafdebug, cursor, conn, timeout))
-					processpool.append(p)
-					p.start()
-
-				scanqueue.join()
-
-				while True:
-					try:
-						val = reportqueue.get_nowait()
-						poolresult.append(val)
-						reportqueue.task_done()
-					except Queue.Empty, e:
-						## Queue is empty
-						break
-				reportqueue.join()
-	
-				for p in processpool:
-					p.terminate()
-
-			## filter the results for the leafscans. These are the ones that
-			## returned tags so need to be merged into unpackreports.
-			mergetags = filter(lambda x: x[1] != [], poolresult)
-			for m in mergetags:
-				tagdict[m[0]] = m[1]
-
-		for i in unpackreports.keys():
-			if not 'checksum' in unpackreports[i]:
-				continue
-			unpacksha256 = unpackreports[i]['checksum']
-			if unpacksha256 in tagdict:
-				if 'tags' in unpackreports[i]:
-					unpackreports[i]['tags'] = list(set(unpackreports[i]['tags'] + tagdict[unpacksha256]))
-
-		## make sure that all the tags are in sync between the
-		## unpackreports and the leafreports.
-		if 'checksum' in unpackreports[scan_binary_basename]:
-			filehash = unpackreports[scan_binary_basename]['checksum']
-			leaf_file_path = os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)
-
-			## first record what the top level element is. This will be used by other scans
-			leaf_file = open(leaf_file_path, 'rb')
-			leafreports = cPickle.load(leaf_file)
-			leaf_file.close()
-
-			unpackreports[scan_binary_basename]['tags'].append('toplevel')
-			unpackreports[scan_binary_basename]['scandate'] = scandate
-			leafreports['tags'].append('toplevel')
-
-			leaf_file = open(leaf_file_path, 'wb')
-			leafreports = cPickle.dump(leafreports, leaf_file)
-			leaf_file.close()
 
 		if debug:
 			print >>sys.stderr, "LEAF END", datetime.datetime.utcnow().isoformat()
