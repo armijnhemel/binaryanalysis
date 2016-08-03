@@ -479,6 +479,7 @@ def extractJavaScript(path, tags, scanenv, filesize, stringcutoff, blacklist=[],
 ## 5. method names
 def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 	lines = []
+	filesize = os.stat(scanfile).st_size
         if javatype == 'java':
 		classname = []
 		sourcefile = []
@@ -512,6 +513,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 		fields = set()
 		'''
 		if javatype == 'dex':
+			brokendex = False
 			## Further parse the Dex file
 			## https://source.android.com/devices/tech/dalvik/dex-format.html
 
@@ -703,7 +705,6 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 					else:
 						## broken
 						pass
-			return
 			## The code items are stored in the map_contents, as TYPE_CODE_ITEM
 			## which is 0x2001.
 			if 0x2001 in map_contents:
@@ -721,11 +722,8 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 					if pos%4 != 0:
 						dexfile.read(4 - pos%4)
 					registers_size = struct.unpack('<H', dexfile.read(2))[0]
-					print m, "registers_size", registers_size
 					ins_size = struct.unpack('<H', dexfile.read(2))[0]
-					print "ins", m, ins_size
 					outs_size = struct.unpack('<H', dexfile.read(2))[0]
-					print "outs", m, outs_size
 					tries_size = struct.unpack('<H', dexfile.read(2))[0]
 					print "tries", m, tries_size
 					debug_info_offset = struct.unpack('<I', dexfile.read(4))[0]
@@ -734,17 +732,23 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 
 					## keep track of how many 16 bit code units were read
 					bytecodecounter = 0
+					skipbytes = {}
 					while bytecodecounter < insns_size:
 						opcode_location = dexfile.tell()
 						## find out the opcode.
 						opcode = struct.unpack('<H', dexfile.read(2))[0] & 0xff
 						## opcode (and possible register instructions) is
 						## one 16 bite code unit
+						if opcode_location in skipbytes:
+							dexfile.seek(opcode_location+skipbytes[opcode_location])
+							bytecodecounter += skipbytes[opcode_location]/2
+							continue
+
 						bytecodecounter += 1
 
 						print hex(opcode_location), m, "opcode", hex(opcode), dex_opcodes_extra_data[opcode]
 						if opcode in unused:
-							print "UNUSED", opcode
+							print "UNUSED", hex(opcode)
 						sys.stdout.flush()
 
 						## find out how many extra code units need to be read
@@ -754,30 +758,63 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 							extradata = dexfile.read(extradatacount)
 							if opcode == 0x1a:
 								string_id = struct.unpack('<H', extradata)[0]
+								lines.append(string_id_to_value[string_id])
 							elif opcode == 0x1b:
 								string_id = struct.unpack('<I', extradata)[0]
+								lines.append(string_id_to_value[string_id])
 							elif opcode == 0x26:
-								print "SPECIAL 26", hex(dexfile.tell()), hex(opcode_location)
-								## some extra work might be needed here, as the
-								## data might be in "packed-switch-payload"
-								pass
-							elif opcode == 0x2b:
-								print "SPECIAL 2B", hex(dexfile.tell()), hex(opcode_location)
 								## some extra work might be needed here, as the
 								## data might be in "packed-switch-payload"
 								branch_offset = struct.unpack('<I', extradata)[0]
+								if opcode_location + branch_offset*2 > filesize:
+									print 'BROKEN 26'
+									pass
+								curoffset = dexfile.tell()
+								dexfile.seek(opcode_location + branch_offset*2)
+								dexbytes = dexfile.read(2)
+								if dexbytes == '\x00\x03':
+									element_width = struct.unpack('<H', dexfile.read(2))[0]
+									number_of_elements = struct.unpack('<I', dexfile.read(4))[0]
+									skipbytes[opcode_location + branch_offset*2] = 2*((number_of_elements * element_width + 1) / 2 + 4)
+								dexfile.seek(curoffset)
+								sys.stdout.flush()
+								pass
+							elif opcode == 0x2b:
+								## some extra work might be needed here, as the
+								## data might be in "packed-switch-payload"
+								branch_offset = struct.unpack('<I', extradata)[0]
+								if opcode_location + branch_offset*2 > filesize:
+									print 'BROKEN 2B'
+									pass
+								curoffset = dexfile.tell()
+								dexfile.seek(opcode_location + branch_offset*2)
+								dexbytes = dexfile.read(2)
+								if dexbytes == '\x00\x01':
+									packedsize = struct.unpack('<H', dexfile.read(2))[0]
+									skipbytes[opcode_location + branch_offset*2] = 2*(packedsize * 2+4)
+								dexfile.seek(curoffset)
+								sys.stdout.flush()
 
 								pass
 							elif opcode == 0x2c:
-								print "SPECIAL 2C", hex(dexfile.tell()), hex(opcode_location)
 								## some extra work might be needed here, as the
 								## data might be in "sparse-switch-payload"
 								branch_offset = struct.unpack('<I', extradata)[0]
+								if opcode_location + branch_offset*2 > filesize:
+									print 'BROKEN 2C'
+									pass
+								curoffset = dexfile.tell()
+								dexfile.seek(opcode_location + branch_offset*2)
+								dexbytes = dexfile.read(2)
+								if dexbytes == '\x00\x02':
+									packedsize = struct.unpack('<H', dexfile.read(2))[0]
+									skipbytes[opcode_location + branch_offset*2] = 2*(packedsize * 4+2)
+								dexfile.seek(curoffset)
+								sys.stdout.flush()
 
 								pass
 					print 'equal?', bytecodecounter, insns_size, bytecodecounter == insns_size
 					print hex(dexfile.tell())
-					print
 					sys.stdout.flush()
 
 					if tries_size != 0:
@@ -816,8 +853,8 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 							else:
 								pass
 							for ct in xrange(0,abs(catchsize)):
-								## skip over the type_idx and exception
-								## handler address for now
+								## Then read the encoded_type_addr_pair items
+								## but don't actually use their data
 								lenstr = ''
 								while True:
 									uleb128byte = dexfile.read(1)
@@ -835,6 +872,8 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 									if (ord(uleb128byte) & 0x80) == 0:
 										break
 						sys.stdout.flush()
+					print
+					sys.stdout.flush()
 			dexfile.close()
 		'''
 
