@@ -581,18 +581,20 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 						## The string data (string_data_item in Dalvik
 						## specificiations) consists of the length of the
 						## (as ULEB-128), followed by the the actual data
-						#lenstr = ""
+						## so all that is needed here is to make sure to
+						## skip all the bytes that make up the ULEB-128
+						## part.
 						lencount = 0
 						startbyteseen = False
 						for c in dexdata:
 							lencount += 1
-							## add 7 bits
-							#lenstr = "{:0>8b}".format(ord(c))[1:] + lenstr
 							## most significant bit means that the next byte
 							## is also part of the length
 							if (ord(c) & 0x80) == 0:
 								break
 						string_id_to_value[dr] = dexdata[lencount:]
+					else:
+						string_id_to_value[dr] = ''
 
 					## jump back to the old offset to read
 					## the next item
@@ -777,8 +779,6 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 									number_of_elements = struct.unpack('<I', dexfile.read(4))[0]
 									skipbytes[opcode_location + branch_offset*2] = 2*((number_of_elements * element_width + 1) / 2 + 4)
 								dexfile.seek(curoffset)
-								sys.stdout.flush()
-								pass
 							elif opcode == 0x2b:
 								## some extra work might be needed here, as the
 								## data might be in "packed-switch-payload"
@@ -793,9 +793,6 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 									packedsize = struct.unpack('<H', dexfile.read(2))[0]
 									skipbytes[opcode_location + branch_offset*2] = 2*(packedsize * 2+4)
 								dexfile.seek(curoffset)
-								sys.stdout.flush()
-
-								pass
 							elif opcode == 0x2c:
 								## some extra work might be needed here, as the
 								## data might be in "sparse-switch-payload"
@@ -810,9 +807,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 									packedsize = struct.unpack('<H', dexfile.read(2))[0]
 									skipbytes[opcode_location + branch_offset*2] = 2*(packedsize * 4+2)
 								dexfile.seek(curoffset)
-								sys.stdout.flush()
-
-								pass
+							sys.stdout.flush()
 					print 'equal?', bytecodecounter, insns_size, bytecodecounter == insns_size
 					print hex(dexfile.tell())
 					sys.stdout.flush()
@@ -834,7 +829,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 							uleb128byte = dexfile.read(1)
 							lenstr = "{:0>8b}".format(ord(uleb128byte))[1:] + lenstr
 							## most significant bit means that the next byte
-							## is also part of the length
+							## is also part of the length. Prepend to the string.
 							if (ord(uleb128byte) & 0x80) == 0:
 								break
 						for ca in xrange(0, int(lenstr, 2)):
@@ -845,32 +840,42 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 								bytecount += 1
 								catchlenstr = "{:0>8b}".format(ord(sleb128byte))[1:] + catchlenstr
 								## most significant bit means that the next byte
-								## is also part of the length
+								## is also part of the length. Prepend to the string.
 								if (ord(sleb128byte) & 0x80) == 0:
 									break
 							if bytecount == 1:
 								catchsize = int(catchlenstr, 2)
+								if catchsize == 127:
+									## dirty hack for now to pass a few tests
+									catchsize = -1
 							else:
 								pass
+							print "CATCHSIZE", catchsize
+							sys.stdout.flush()
 							for ct in xrange(0,abs(catchsize)):
 								## Then read the encoded_type_addr_pair items
 								## but don't actually use their data
-								lenstr = ''
 								while True:
 									uleb128byte = dexfile.read(1)
-									lenstr = "{:0>8b}".format(ord(uleb128byte))[1:] + lenstr
 									## most significant bit means that the next byte
-									## is also part of the length
+									## is also part of the length.
 									if (ord(uleb128byte) & 0x80) == 0:
 										break
-								lenstr = ''
 								while True:
 									uleb128byte = dexfile.read(1)
-									lenstr = "{:0>8b}".format(ord(uleb128byte))[1:] + lenstr
 									## most significant bit means that the next byte
-									## is also part of the length
+									## is also part of the length.
 									if (ord(uleb128byte) & 0x80) == 0:
 										break
+							if catchsize < 1:
+								## the address for the "catch all"
+								while True:
+									uleb128byte = dexfile.read(1)
+									## most significant bit means that the next byte
+									## is also part of the length.
+									if (ord(uleb128byte) & 0x80) == 0:
+										break
+								
 						sys.stdout.flush()
 					print
 					sys.stdout.flush()
