@@ -1,5 +1,11 @@
 2016-08-03:
 * identifier.py: work more on Dalvik unpacking (does not work yet)
+* bruteforcescan.py: remove leafScan, run all the leafScans directly after
+unpacking is done. For large firmwares this saves building a list of tasks in
+memory, and possibly resources are better utilized when the unpacker is
+running for a long time on a single task (LZMA unpacking for example), but
+there are files for which leafscans can already be run.
+* fwunpack.py: extra sanity check for lzop files
 
 2016-08-02:
 * identifier.py: work more on Dalvik unpacking (does not work yet)
