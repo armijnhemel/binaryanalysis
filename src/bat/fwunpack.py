@@ -5102,7 +5102,8 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			continue
 
 		## A few more sanity checks: first check if the file is a stream
-		## of unknown size, or if it has a file set.
+		## of unknown size, or if it has a file size set (for the
+		## uncompressed file).
 		## If it has a file size set, then check if the value of the size
 		## actually makes sense.
 		## Then read some data and try to decompress it. Because LZMA is a
