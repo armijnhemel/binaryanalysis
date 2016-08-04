@@ -4424,6 +4424,125 @@ def unpackAndroidSparse(filename, offset, tempdir=None):
 	os.unlink(outtmpfile[1])
 	return (seekctr, tmpdir)
 
+## This is for Android update files that are sparse, since Android 5.something
+## See for example:
+## https://android.googlesource.com/platform/bootable/recovery/+/android-5.1.1_r1/updater/blockimg.c
+##
+## Files observed in the wild are: system.new.dat
+def searchUnpackAndroidSparseDataImage(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
+	hints = {}
+	if not filename.endswith('.new.dat'):
+		return ([], blacklist, [], hints)
+	listdir = os.listdir(os.path.dirname(filename))
+	systemtransferfiles = filter(lambda x: x.endswith(".transfer.list"), listdir)
+	if systemtransferfiles == []:
+		return ([], blacklist, [], hints)
+	transferfile = None
+	for i in systemtransferfiles:
+		if i.startswith(os.path.basename(filename)[:-8]):
+			transferfile = i
+			break
+	if transferfile == None:
+		return ([], blacklist, [], hints)
+	## now read the transferlist
+	transferfilelines = open(os.path.join(os.path.dirname(filename), transferfile), 'rb').readlines()
+	if transferfilelines == []:
+		return ([], blacklist, [], hints)
+	## first line is the version number:
+	lineindexnumber = 0
+	try:
+		version = int(transferfilelines[lineindexnumber].strip())
+		lineindexnumber += 1
+	except:
+		return ([], blacklist, [], hints)
+	try:
+		blockstowrite = int(transferfilelines[lineindexnumber].strip())
+		lineindexnumber += 1
+	except:
+		return ([], blacklist, [], hints)
+	if version >= 2:
+		try:
+			stash_entries_needed = int(transferfilelines[lineindexnumber].strip())
+			lineindexnumber += 1
+		except:
+			return ([], blacklist, [], hints)
+		try:
+			max_stash_blocks = int(transferfilelines[lineindexnumber].strip())
+			lineindexnumber += 1
+		except:
+			return ([], blacklist, [], hints)
+
+	## hardcoded in the Android source code
+	blocksize = 4096
+	filesize = os.stat(filename).st_size
+
+	## now process all the commands
+	## The lines should be structured as:
+	## "command rangeset"
+	## where rangeset is separated by colons
+	tmpdir = dirsetup(tempdir, filename, "java-sparse-data-image", 1)
+	outfile = open(os.path.join(tmpdir, os.path.basename(filename)[:-8] + '.img'), 'wb')
+	infile = open(filename, 'rb')
+	unsupported = False
+	for i in range(lineindexnumber, len(transferfilelines)):
+		if unsupported:
+			outfile.close()
+			infile.close()
+			os.unlink(outfile)
+			os.rmdir(tmpdir)
+			return ([], blacklist, [], hints)
+		try:
+			splitline = transferfilelines[i].rstrip().split(' ', 1)
+			if len(splitline) != 2:
+				outfile.close()
+				infile.close()
+				os.unlink(outfile)
+				os.rmdir(tmpdir)
+				return ([], blacklist, [], hints)
+			(command, rangeset) = splitline
+			rangesetitems = map(lambda x: int(x), filter(lambda x: x != '', rangeset.split(',')))
+			if len(rangesetitems) - 1 != rangesetitems[0]:
+				outfile.close()
+				infile.close()
+				os.unlink(outfile)
+				os.rmdir(tmpdir)
+				return ([], blacklist, [], hints)
+			if command == "erase":
+				for r in xrange(1,len(rangesetitems), 2):
+					blockstoerase = rangesetitems[r+1] - rangesetitems[r]
+					if rangesetitems[r] == 0:
+						## seek to a position beyond the file size
+						## and then write one character. Because
+						## the file is in write mode the old data
+						## is truncated first. The end result is
+						## a file with just \x00.
+						outfile.seek(blockstoerase*blocksize-1)
+						outfile.write('\x00')
+					else:
+						unsupported = True
+					outfile.flush()
+			elif command == "new":
+				infile.seek(0)
+				for r in xrange(1,len(rangesetitems), 2):
+					## TODO: sanity checks. The range should not
+					## extend beyond the target file.
+					blockstoread = rangesetitems[r+1] - rangesetitems[r]
+					outfile.seek(rangesetitems[r]*blocksize)
+					outfile.write(infile.read(blockstoread*blocksize))
+					outfile.flush()
+		except Exception, e:
+			outfile.close()
+			infile.close()
+			os.unlink(outfile)
+			os.rmdir(tmpdir)
+			return ([], blacklist, [], hints)
+	outfile.close()
+	infile.close()
+	diroffsets = []
+	diroffsets.append((tmpdir, 0, filesize))
+	blacklist.append((0, filesize))
+	return (diroffsets, blacklist, [], hints)
+
 def searchUnpackLRZIP(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	if not 'lrzip' in offsets:
