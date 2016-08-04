@@ -116,6 +116,8 @@ fsmagic = {
             'woff2':		'wOF2',
             'xar':		'\x78\x61\x72\x21',
             'ics':		'acsp',
+            'elf':		'\x7f\x45\x4c\x46',
+            'bflt':		'\x62\x46\x4c\x54',
           }
 
 ## some offsets can be found after a certain number of bytes, but
