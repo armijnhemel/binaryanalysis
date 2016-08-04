@@ -729,6 +729,70 @@ def verifyIco(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	shutil.rmtree(icodir)
 	return newtags
 
+def verifyBFLT(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+	newtags = []
+	if not 'binary' in tags:
+		return newtags
+	if not 'bflt' in offsets:
+		return newtags
+	if not 0 in offsets['bflt']:
+		return newtags
+	filesize = os.stat(filename).st_size
+	if filesize < 64:
+		return newtags
+	bfltfile = open(filename, 'rb')
+	bfltfile.seek(4)
+	bfltbytes = bfltfile.read(4)
+	version = struct.unpack('>I', bfltbytes)[0]
+	## only support version 4 for now
+	if version != 4:
+		bfltfile.close()
+		return newtags
+
+	bfltbytes = bfltfile.read(4)
+	firstinsoffset = struct.unpack('>I', bfltbytes)[0]
+	if firstinsoffset > filesize:
+		bfltfile.close()
+		return newtags
+	
+	bfltbytes = bfltfile.read(4)
+	data_start_offset = struct.unpack('>I', bfltbytes)[0]
+	if data_start_offset > filesize:
+		bfltfile.close()
+		return newtags
+
+	bfltbytes = bfltfile.read(4)
+	data_end_offset = struct.unpack('>I', bfltbytes)[0]
+	if data_end_offset > filesize:
+		bfltfile.close()
+		return newtags
+
+	bfltbytes = bfltfile.read(4)
+	bss_end_offset = struct.unpack('>I', bfltbytes)[0]
+
+	bfltbytes = bfltfile.read(4)
+	stacksize = struct.unpack('>I', bfltbytes)[0]
+
+	bfltbytes = bfltfile.read(4)
+	reloc_start_offset = struct.unpack('>I', bfltbytes)[0]
+	if reloc_start_offset > filesize:
+		bfltfile.close()
+		return newtags
+
+	bfltbytes = bfltfile.read(4)
+	reloc_count = struct.unpack('>I', bfltbytes)[0]
+
+	bfltbytes = bfltfile.read(4)
+	flags = struct.unpack('>I', bfltbytes)[0]
+
+	## should be all null, but isn't always the case.
+	filler = bfltfile.read(24)
+	bfltfile.close()
+
+	if (reloc_count * 4) + reloc_start_offset == filesize:
+		newtags.append('bflt')
+	return newtags
+
 ## simplistic method to verify if a file is an ELF file
 ## This might not work for all ELF files and it is a conservative verification, only used to
 ## reduce false positives of LZMA scans.
