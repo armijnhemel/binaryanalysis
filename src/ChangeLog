@@ -1,8 +1,11 @@
 2016-08-04:
 * fwunpack.py: add support for Android sparse data image files (currently only
 system.new.dat and only if the right information is there)
-* bat-scan.config: add configuration for unpackign Android sparse data image
+* bat-scan.config: add configuration for unpacking Android sparse data image
 files
+* fsmagic.py: add magic for ELF and BFLT
+* prerun.py: add verifier for BFLT
+* bat-scan.config: add configuration for tagging BFLT files
 
 2016-08-03:
 * identifier.py: work more on Dalvik unpacking (does not work yet)
