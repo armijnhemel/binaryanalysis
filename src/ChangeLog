@@ -1,3 +1,9 @@
+2016-08-05:
+* identifier.py: extract identifiers only from the .data section in a bFLT
+file
+* bat-scan/bruteforcescan.py: store some statistics about the underlying
+system in the result archive
+
 2016-08-04:
 * fwunpack.py: add support for Android sparse data image files (currently only
 system.new.dat and only if the right information is there)
