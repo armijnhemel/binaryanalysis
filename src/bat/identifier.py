@@ -11,7 +11,7 @@ variable names, etc.) from binaries and make them available for further
 processing by various other scans.
 '''
 
-import string, re, os, os.path, sys, tempfile, shutil, copy, struct
+import string, re, os, os.path, sys, tempfile, shutil, copy, struct, zlib
 import subprocess
 import extractor, javacheck, elfcheck
 
@@ -118,6 +118,8 @@ def searchGeneric(filepath, tags, cursor, conn, blacklist=[], scanenv={}, offset
 			language = 'Java'
 		else:
 			language = 'C'
+	elif 'bflt' in tags:
+		language = 'C'
 	elif "java" in tags:
 		language = 'Java'
 	elif "dalvik" in tags:
@@ -395,6 +397,43 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 				## cleanup the tempfile
 				os.unlink(tmpfile[1])
 			return None
+	elif 'bflt' in tags:
+		## first check the flags to see if the data section
+		## is gzip compressed
+		bfltfile = open(scanfile, 'rb')
+		bfltfile.seek(12)
+		bfltbytes = bfltfile.read(4)
+		data_start = struct.unpack('>I', bfltbytes)[0]
+		bfltbytes = bfltfile.read(4)
+		data_end = struct.unpack('>I', bfltbytes)[0]
+		bfltfile.seek(36)
+		bfltbytes = bfltfile.read(4)
+		bfltfile.seek(data_start)
+		databytes = bfltfile.read(data_end-data_start)
+		bfltfile.close()
+		
+		## write the bytes to a temporary file
+		bfltdata = tempfile.mkstemp()
+		flags = struct.unpack('>I', bfltbytes)[0]
+		if flags & 0x04 != 0:
+			deflateobj = zlib.decompressobj(-zlib.MAX_WBITS)
+			uncompresseddata = deflateobj.decompress(databytes)
+			os.write(bfltdata[0], uncompresseddata)
+		else:
+			os.write(bfltdata[0], databytes)
+		os.fdopen(bfltdata[0]).close()
+
+		## TODO: check if -Tbinary is needed or not
+       		p = subprocess.Popen(['strings', '-a', '-n', str(stringcutoff), bfltdata[1]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+       		(stanout, stanerr) = p.communicate()
+
+      		st = stanout.split("\n")
+
+       		for s in st:
+			printstring = s
+               		if len(printstring) >= stringcutoff:
+				lines.append(printstring)
+		os.unlink(bfltdata[1])
 	else:
 		## extract all strings from the binary. Only look at strings
 		## that are a certain amount of characters or longer. This is
@@ -507,6 +546,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 				lines.append(printstring)
 		javameta = {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile, 'javatype': javatype, 'strings': lines}
 	elif javatype == 'dex' or javatype == 'odex':
+		javameta = {'classes': [], 'methods': [], 'fields': [], 'sourcefiles': [], 'javatype': javatype}
 		classnames = set()
 		sourcefiles = set()
 		methods = set()
@@ -707,6 +747,13 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 					else:
 						## broken
 						pass
+		javameta['classes'] = list(classnames)
+		javameta['sourcefiles'] = list(sourcefiles)
+		javameta['methods'] = list(methods)
+		javameta['fields'] = list(fields)
+		javameta['strings'] = lines
+
+	return javameta
 			## The code items are stored in the map_contents, as TYPE_CODE_ITEM
 			## which is 0x2001.
 			if 0x2001 in map_contents:
@@ -880,8 +927,8 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 					print
 					sys.stdout.flush()
 			dexfile.close()
-		'''
 
+		'''
 		## Using dedexer http://dedexer.sourceforge.net/ extract information from Dalvik
 		## files, then process each file in $tmpdir and search file for lines containing
 		## "const-string" and other things as well.
@@ -959,6 +1006,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 		## cleanup
 		shutil.rmtree(dalvikdir)
 	return javameta
+	#'''
 
 ## Linux kernels that are stored as statically linked ELF files and Linux kernel
 ## modules often have a section __ksymtab_strings. This section contains variables
