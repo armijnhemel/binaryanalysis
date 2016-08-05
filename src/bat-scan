@@ -159,7 +159,7 @@ def main(argv):
 		scantasks.append((scanfile, writeconfig))
 
 	if scantasks != []:
-		bat.bruteforcescan.runscan(scans, scantasks)
+		bat.bruteforcescan.runscan(scans, scantasks, batversion)
 
 if __name__ == "__main__":
         main(sys.argv)

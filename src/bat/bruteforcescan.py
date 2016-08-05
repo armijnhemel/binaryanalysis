@@ -43,7 +43,8 @@ running program, are packed in a tar file.
 '''
 
 ## import a few standard Python modules
-import sys, os, os.path, hashlib, subprocess, tempfile, shutil, stat, multiprocessing, cPickle, glob, tarfile, copy, gzip, Queue
+import sys, os, os.path, hashlib, subprocess, tempfile, shutil, stat, multiprocessing
+import platform, cPickle, glob, tarfile, copy, gzip, Queue
 from optparse import OptionParser
 import datetime, re, struct, ConfigParser
 from multiprocessing import Process, Lock
@@ -1474,11 +1475,26 @@ def compressPickle((infile)):
 ## packed are hardcoded, the other files are determined from the configuration.
 ## The configuration option 'lite' allows to leave out the extracted data, to
 ## speed up extraction of data in the GUI.
-def writeDumpfile(unpackreports, scans, processamount, outputfile, configfile, tempdir, lite=False, debug=False, compress=True):
+def writeDumpfile(unpackreports, scans, processamount, outputfile, configfile, tempdir, batversion, lite=False, debug=False, compress=True):
 	dumpData(unpackreports, scans, tempdir)
 	dumpfile = tarfile.open(outputfile, 'w:gz')
 	oldcwd = os.getcwd()
 	os.chdir(tempdir)
+
+	## write some statistics about BAT and the underlying
+	## platform, mostly for debugging purposes
+	versionfile = open('VERSION', 'wb')
+	versionfile.write("BAT VERSION: %d" % batversion)
+	versionfile.write('\n')
+	versionfile.write("PLATFORM: " + platform.platform())
+	versionfile.write('\n')
+	versionfile.write("CPU: " + platform.processor())
+	versionfile.write('\n')
+	versionfile.write("PYTHON IMPLEMENTATION: " + platform.python_implementation())
+	versionfile.write('\n')
+	versionfile.write("PYTHON VERSION: " + platform.python_version())
+	versionfile.close()
+	dumpfile.add('VERSION')
 	if scans['batconfig']['packconfig']:
 		if scans['batconfig']['scrub'] != []:
 			## pretty print the configuration file, scrubbed of
@@ -1549,7 +1565,7 @@ def writeDumpfile(unpackreports, scans, processamount, outputfile, configfile, t
 	dumpfile.close()
 	os.chdir(oldcwd)
 
-def runscan(scans, binaries):
+def runscan(scans, binaries, batversion):
 	## first some initialization code that is the same for
 	## every binary that is scanned.
 	debug = scans['batconfig']['debug']
@@ -2029,7 +2045,7 @@ def runscan(scans, binaries):
 			print "POSTRUN END %s" % scan_binary_basename, datetime.datetime.utcnow().isoformat()
 
 		if writeconfig['writeoutput']:
-			writeDumpfile(unpackreports, scans, processamount, writeconfig['outputfile'], writeconfig['config'], topleveldir, scans['batconfig']['outputlite'], scans['batconfig']['debug'], compressed)
+			writeDumpfile(unpackreports, scans, processamount, writeconfig['outputfile'], writeconfig['config'], topleveldir, batversion, scans['batconfig']['outputlite'], scans['batconfig']['debug'], compressed)
 		if scans['batconfig']['cleanup']:
 			try:
 				shutil.rmtree(topleveldir)
