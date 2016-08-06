@@ -2012,7 +2012,6 @@ def runscan(scans, binaries, batversion):
 			lock = Lock()
 			scanmanager = multiprocessing.Manager()
 			scanqueue = multiprocessing.JoinableQueue(maxsize=0)
-			reportqueue = scanmanager.Queue(maxsize=0)
 			processpool = []
 
 			## if unpackreports != {} since deduplication has already been done
@@ -2028,11 +2027,20 @@ def runscan(scans, binaries, batversion):
 							if not 'postrun' in debugphases:
 								tmpdebug = False
 					postruntasks.append((i, unpackreports[i]))
-			if len(postruntasks) == 0:
-				postrunresults = []
-			else:
+			if len(postruntasks) != 0:
 				map(lambda x: scanqueue.put(x), postruntasks)
-				for i in range(0,processamount):
+				parallel = True
+				if tmpdebug:
+					if debugphases == []:
+						parallel = False
+					else:
+						if 'postrun' in debugphases:
+							parallel = False
+				if not parallel:
+					postrunprocessamount = 1
+				else:
+					postrunprocessamount = processamount
+				for i in range(0,postrunprocessamount):
 					if usedatabase:
 						cursor = batcursors[i]
 						conn = batcons[i]
@@ -2045,15 +2053,6 @@ def runscan(scans, binaries, batversion):
 
 				scanqueue.join()
 
-				while True:
-					try:
-						val = reportqueue.get_nowait()
-						reportqueue.task_done()
-					except Queue.Empty, e:
-						## Queue is empty
-						break
-				reportqueue.join()
-	
 				for p in processpool:
 					p.terminate()
 
@@ -2063,12 +2062,6 @@ def runscan(scans, binaries, batversion):
 					parallel = False
 			else:
 				parallel = False
-			if debug:
-				if debugphases == []:
-					parallel = False
-				else:
-					if 'postrun' in debugphases:
-						parallel = False
 			'''
 
 		if debug:
