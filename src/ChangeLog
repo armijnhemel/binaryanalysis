@@ -1,3 +1,9 @@
+2016-08-06:
+* bruteforcescan.py: pass database connection and cursor to postrun scans,
+rewrite to use a queue instead of a pool of processes
+* guireport.py/images.py/generatehexdump.py: use new interface for postrun
+scans
+
 2016-08-05:
 * identifier.py: extract identifiers only from the .data section in a bFLT
 file
