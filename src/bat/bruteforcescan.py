@@ -717,7 +717,7 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 					debug = True
 
 				if debug:
-					print >>sys.stderr, method, filetoscan, datetime.datetime.utcnow().isoformat()
+					print >>sys.stderr, module, method, filetoscan, datetime.datetime.utcnow().isoformat()
 					sys.stderr.flush()
 					scandebug = True
 
