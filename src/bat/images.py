@@ -23,7 +23,7 @@ Parameters for configuration file:
 import os, os.path, sys, subprocess
 from PIL import Image
 
-def generateImages(filename, unpackreport, scantempdir, topleveldir, scanenv={}, debug=False):
+def generateImages(filename, unpackreport, scantempdir, topleveldir, scanenv, cursor, conn, debug=False):
 	if not 'checksum' in unpackreport:
 		return
 

@@ -12,7 +12,7 @@ This should be run as a postrun scan
 
 import os, os.path, sys, cPickle, gzip
 
-def guireport(filename, unpackreport, scantempdir, topleveldir, scanenv, debug=False):
+def guireport(filename, unpackreport, scantempdir, topleveldir, scanenv, cursor, conn, debug=False):
 	if not 'checksum' in unpackreport:
 		return
 	## this is a placeholder. The GUI should replace this one on the fly

@@ -793,31 +793,40 @@ def aggregatescan(unpackreports, aggregatescans, processors, scantempdir, toplev
 		if debug:
 			print >>sys.stderr, "AGGREGATE END", method, datetime.datetime.utcnow().isoformat()
 
-def postrunscan((filetoscan, unpackreports, scans, scantempdir, topleveldir, debug)):
-	for postrunscan in scans:
-		ignore = False
-		if 'extensionsignore' in postrunscan:
-			extensionsignore = postrunscan['extensionsignore'].split(':')
-			for e in extensionsignore:
-				if filetoscan.endswith(e):
-					ignore = True
-					break
-		if ignore:
-			continue
+## continuously grab tasks (files) from a queue, tag and possibly unpack and recurse
+def postrunscan(scanqueue, postrunscans, topleveldir, scantempdir, cursor, conn, debug, timeout):
+
+	## import all methods defined in the scans
+	blacklistscans = set()
+	extensionsignore = []
+
+	for postrunscan in postrunscans:
 		module = postrunscan['module']
 		method = postrunscan['method']
-		if debug:
-			print >>sys.stderr, module, method, filetoscan, datetime.datetime.utcnow().isoformat()
-			sys.stderr.flush()
 		try:
 			exec "from %s import %s as bat_%s" % (module, method, method)
 		except Exception, e:
+			blacklistscans.add((module, method))
 			continue
+		ignore = False
+		if 'extensionsignore' in postrunscan:
+			extensionsignore = postrunscan['extensionsignore'].split(':')
 
-		res = eval("bat_%s(filetoscan, unpackreports, scantempdir, topleveldir, postrunscan['environment'], debug=debug)" % (method))
-		## TODO: find out what to do with this
-		if res != None:
-			pass
+	## grab tasks from the queue continuously until there are no more tasks
+	while True:
+		(filetoscan, unpackreports) = scanqueue.get(timeout=timeout)
+		for e in extensionsignore:
+			if filetoscan.endswith(e):
+				ignore = True
+				scanqueue.task_done()
+		for postrunscan in postrunscans:
+			module = postrunscan['module']
+			method = postrunscan['method']
+			res = eval("bat_%s(filetoscan, unpackreports, scantempdir, topleveldir, postrunscan['environment'], cursor, conn, debug=debug)" % (method))
+			## TODO: find out what to do with this
+			if res != None:
+				pass
+		scanqueue.task_done()
 
 def scanconfigsection(config, section, scanenv, batconf):
 	if config.has_option(section, 'type'):
@@ -1970,13 +1979,9 @@ def runscan(scans, binaries, batversion):
 		if scans['batconfig']['reportendofphase']:
 			print "PRERUN UNPACK END %s" % scan_binary_basename, datetime.datetime.utcnow().isoformat()
 
-		## Now the next phase starts, namely scanning each individual file. This
-		## is done once per unique file (based on checksum).
-		if debug:
-			print >>sys.stderr, "LEAF BEGIN", datetime.datetime.utcnow().isoformat()
-
-		if debug:
-			print >>sys.stderr, "LEAF END", datetime.datetime.utcnow().isoformat()
+		## LEGACY: Now the next phase starts, namely scanning each individual
+		## file. This is done once per unique file (based on checksum).
+		## CURRENT: this is a NOP and just there to satisfy a few older use cases
 		if scans['batconfig']['reportendofphase']:
 			print "LEAF END %s" % scan_binary_basename, datetime.datetime.utcnow().isoformat()
 
@@ -2002,10 +2007,17 @@ def runscan(scans, binaries, batversion):
 		## fancier reports, use microblogging to post scan results, etc.
 		## Duplicates that are tagged as 'duplicate' are not processed.
 		if scans['postrunscans'] != [] and unpackreports != {}:
-			## if unpackreports != {} since deduplication has already been done
+			## use a queue made with a manager to avoid some issues, see:
+			## http://docs.python.org/2/library/multiprocessing.html#pipes-and-queues
+			lock = Lock()
+			scanmanager = multiprocessing.Manager()
+			scanqueue = multiprocessing.JoinableQueue(maxsize=0)
+			reportqueue = scanmanager.Queue(maxsize=0)
+			processpool = []
 
+			## if unpackreports != {} since deduplication has already been done
 			dedupes = filter(lambda x: 'duplicate' not in unpackreports[x]['tags'], filter(lambda x: 'tags' in unpackreports[x], filter(lambda x: 'checksum' in unpackreports[x], unpackreports.keys())))
-			postrunscans = []
+			postruntasks = []
 			for i in dedupes:
 				## results might have been changed by aggregate scans, so check if it still exists
 				if i in unpackreports:
@@ -2015,9 +2027,37 @@ def runscan(scans, binaries, batversion):
 						if debugphases != []:
 							if not 'postrun' in debugphases:
 								tmpdebug = False
-					postrunscans.append((i, unpackreports[i], scans['postrunscans'], scantempdir, topleveldir, tmpdebug))
+					postruntasks.append((i, unpackreports[i]))
+			if len(postruntasks) == 0:
+				postrunresults = []
+			else:
+				map(lambda x: scanqueue.put(x), postruntasks)
+				for i in range(0,processamount):
+					if usedatabase:
+						cursor = batcursors[i]
+						conn = batcons[i]
+					else:
+						cursor = None
+						conn = None
+					p = multiprocessing.Process(target=postrunscan, args=(scanqueue, scans['postrunscans'], topleveldir, scantempdir, cursor, conn, tmpdebug, timeout))
+					processpool.append(p)
+					p.start()
 
-			parallel = True
+				scanqueue.join()
+
+				while True:
+					try:
+						val = reportqueue.get_nowait()
+						reportqueue.task_done()
+					except Queue.Empty, e:
+						## Queue is empty
+						break
+				reportqueue.join()
+	
+				for p in processpool:
+					p.terminate()
+
+			'''
 			if scans['batconfig']['multiprocessing']:
 				if False in map(lambda x: x['parallel'], scans['postrunscans']):
 					parallel = False
@@ -2029,17 +2069,8 @@ def runscan(scans, binaries, batversion):
 				else:
 					if 'postrun' in debugphases:
 						parallel = False
+			'''
 
-			if len(postrunscans) == 0:
-				postrunresults = []
-			else:
-				if parallel:
-					pool = multiprocessing.Pool(processes=processamount)
-				else:
-					pool = multiprocessing.Pool(processes=1)
-
-				postrunresults = pool.map(postrunscan, postrunscans, 1)
-				pool.terminate()
 		if debug:
 			print >>sys.stderr, "POSTRUN END", datetime.datetime.utcnow().isoformat()
 		if scans['batconfig']['reportendofphase']:

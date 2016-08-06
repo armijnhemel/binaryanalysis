@@ -19,7 +19,7 @@ This should be run as a postrun scan
 
 import os, os.path, sys, subprocess, gzip
 
-def generateHexdump(filename, unpackreport, scantempdir, topleveldir, scanenv={}, debug=False):
+def generateHexdump(filename, unpackreport, scantempdir, topleveldir, scanenv, cursor, conn, debug=False):
 	if not unpackreport.has_key('checksum'):
 		return
 	reportdir = scanenv.get('BAT_REPORTDIR', '.')
