@@ -3,6 +3,7 @@
 rewrite to use a queue instead of a pool of processes
 * guireport.py/images.py/generatehexdump.py: use new interface for postrun
 scans
+* fwunpack.py: minimally check validity of ext2 superblock copies
 
 2016-08-05:
 * identifier.py: extract identifiers only from the .data section in a bFLT
