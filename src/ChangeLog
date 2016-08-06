@@ -124,7 +124,7 @@ data
 configuration scanning
 
 2016-06-24:
-* bruteforcescan.py: fix database useage for leafscans
+* bruteforcescan.py: fix database usage for leafscans
 * fwunpack.py: start on implementing length checks for ISO9660
 
 2016-06-23:
