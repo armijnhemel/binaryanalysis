@@ -1483,18 +1483,19 @@ def writeDumpfile(unpackreports, scans, processamount, outputfile, configfile, t
 
 	## write some statistics about BAT and the underlying
 	## platform, mostly for debugging purposes
-	versionfile = open('VERSION', 'wb')
-	versionfile.write("BAT VERSION: %d" % batversion)
-	versionfile.write('\n')
-	versionfile.write("PLATFORM: " + platform.platform())
-	versionfile.write('\n')
-	versionfile.write("CPU: " + platform.processor())
-	versionfile.write('\n')
-	versionfile.write("PYTHON IMPLEMENTATION: " + platform.python_implementation())
-	versionfile.write('\n')
-	versionfile.write("PYTHON VERSION: " + platform.python_version())
-	versionfile.close()
-	dumpfile.add('VERSION')
+	statisticsfilename = 'STATISTICS'
+	statisticsfile = open(statisticsfilename, 'wb')
+	statisticsfile.write("BAT VERSION: %d" % batversion)
+	statisticsfile.write('\n')
+	statisticsfile.write("PLATFORM: " + platform.platform())
+	statisticsfile.write('\n')
+	statisticsfile.write("CPU: " + platform.processor())
+	statisticsfile.write('\n')
+	statisticsfile.write("PYTHON IMPLEMENTATION: " + platform.python_implementation())
+	statisticsfile.write('\n')
+	statisticsfile.write("PYTHON VERSION: " + platform.python_version())
+	statisticsfile.close()
+	dumpfile.add(statisticsfilename)
 	if scans['batconfig']['packconfig']:
 		if scans['batconfig']['scrub'] != []:
 			## pretty print the configuration file, scrubbed of
