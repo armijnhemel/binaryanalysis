@@ -3566,10 +3566,11 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 
 		## only revisions 0 and 1 have ever been made, so ignore the rest
 		datafile.seek(offset - 0x438 + 0x44c)
-		revision = datafile.read(1)
-		if len(revision) < 1:
+		revisionbytes = datafile.read(4)
+		if len(revisionbytes) < 4:
 			continue
-		if not (revision == '\x01' or revision == '\x00'):
+		revision = struct.unpack('<I', revisionbytes)[0]
+		if not (revision == 1 or revision == 0):
 			continue
 
 		## for a quick sanity check only a tiny bit of data is needed.
@@ -3578,6 +3579,16 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 		ext2checkdata = datafile.read(8192)
 		if len(ext2checkdata) != 8192:
 			continue
+
+		## check for RO_COMPAT_SPARSE_SUPER
+		datafile.seek(offset - 0x438 + 0x46c)
+		featureflagbytes = datafile.read(4)
+		if len(featureflagbytes) < 4:
+			continue
+		featureflags = struct.unpack('<I', featureflagbytes)[0]
+		sparse_super = False
+		if featureflags & 0x01:
+			sparse_super = True
 
 		tmpfile = tempfile.mkstemp()
 		os.write(tmpfile[0], ext2checkdata)
@@ -3599,6 +3610,48 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 		else:
 			ext2checksize = 0
 		os.unlink(tmpfile[1])
+
+		## blocks per group
+		## check for RO_COMPAT_SPARSE_SUPER
+		datafile.seek(offset - 0x438 + 0x420)
+		ext2bytes = datafile.read(4)
+		if len(ext2bytes) < 4:
+			continue
+		blockspergroup = struct.unpack('<I', ext2bytes)[0]
+
+		## sanity check: see if there are backup superblocks at
+		## the correct locations
+		validext2 = True
+		for i in xrange(0, blockcount, blockspergroup):
+			if not validext2:
+				break
+			if i == 0:
+				continue
+			groupnumber = i/blockspergroup
+			if sparse_super:
+				for p in [3,5,7]:
+					if pow(p, int(math.log(groupnumber, p))) == groupnumber:
+						datafile.seek(offset - 0x438 + 0x400 + groupnumber*blocksize*blockspergroup)
+						ext2bytes = datafile.read(1024)
+						if len(ext2bytes) != 1024:
+							validext2 = False
+							break
+						if ext2bytes[0x38:0x3a] != '\x53\xef':
+							validext2 = False
+							break
+						break
+			else:
+				datafile.seek(offset - 0x438 + 0x400 + groupnumber*blocksize*blockspergroup)
+				ext2bytes = datafile.read(1024)
+				if len(ext2bytes) != 1024:
+					validext2 = False
+					break
+				if ext2bytes[0x38:0x3a] != '\x53\xef':
+					validext2 = False
+					break
+
+		if not validext2:
+			continue
 
 		## it doesn't make sense if the size of the file system is
 		## larger than the actual file size
