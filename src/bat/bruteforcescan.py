@@ -2056,14 +2056,6 @@ def runscan(scans, binaries, batversion):
 				for p in processpool:
 					p.terminate()
 
-			'''
-			if scans['batconfig']['multiprocessing']:
-				if False in map(lambda x: x['parallel'], scans['postrunscans']):
-					parallel = False
-			else:
-				parallel = False
-			'''
-
 		if debug:
 			print >>sys.stderr, "POSTRUN END", datetime.datetime.utcnow().isoformat()
 		if scans['batconfig']['reportendofphase']:
