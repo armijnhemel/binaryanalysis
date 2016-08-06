@@ -1428,7 +1428,7 @@ Post-run methods have a strict interface:
 
 \begin{verbatim}
 def postrunHelloWorld(filename, unpackreport, scantempdir, topleveldir,
-                      scanenv={}, debug=False):
+                      scanenv, cursor, conn, debug=False):
         print "Hello World"
 \end{verbatim}
 
@@ -1439,7 +1439,11 @@ unpacking.
 \item \texttt{scantempdir} is the directory that contains the unpacked data
 \item \texttt{topleveldir} is the top level directory containing the data
 directory and the directory with the per file result pickles.
-\item \texttt{scanenv} is an optional dictionary of environment variables
+\item \texttt{scanenv} is a dictionary of environment variables
+\item \texttt{cursor} is the database cursor (or \texttt{None} if there is no
+database)
+\item \texttt{conn} is the database connection (or \texttt{None} if there is no
+database)
 \item \texttt{debug} is an environment variable that can be used to optionally
 set the scan in debugging mode so it can print more information on standard
 error. By default it is set to \texttt{False}.
