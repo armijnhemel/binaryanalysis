@@ -6462,6 +6462,19 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 	diroffsets = []
 	newtags = []
 
+	## list of JPEG markers
+	jpegmarkers = ['\xc0', '\xc1', '\xc2', '\xc3', '\xc4', '\xc5', '\xc6',
+                       '\xc7', '\xc8', '\xc9', '\xca', '\xcb', '\xcc', '\xcd',
+                       '\xce', '\xcf', '\xda', '\xdb', '\xdc', '\xdd', '\xde', '\xdf']
+
+	## APP and COM
+	jpegappmarkers = ['\xe0', '\xe1', '\xe2', '\xe3', '\xe4', '\xe5',
+                          '\xe6', '\xe7', '\xe8', '\xe9', '\xea', '\xeb',
+                          '\xec', '\xed', '\xee', '\xfe']
+
+	standalonemarkers = ['\x01', '\xd0', '\xd1', '\xd2', '\xd3', '\xd4',
+                             '\xd5', '\xd6', '\xd7', '\xd8', '\xd9']
+
 	lendata = os.stat(filename).st_size
 
 	traileroffsets = offsets['jpegtrailer']
@@ -6476,35 +6489,35 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		localoffset = offset
 		datafile.seek(offset+2)
 		localoffset += 2
-		jpegdata = datafile.read(2)
+		jpegmarker = datafile.read(2)
 		localoffset += 2
 		## following the JPEG "start of image" there is
-		## either a APP0 (JFIF), APP1 (Exif and XMP)
-		## APP2 (ICC) or APP13 (PSIR/IPTC)
-		if not  jpegdata in ['\xff\xe0', '\xff\xe1', '\xff\xe2', '\xff\xed']:
-			continue
+		## either a APP0 (JFIF), APP1 (Exif and XMP), APP11 (Ducky)
+		## APP2 (ICC), APP13 (PSIR/IPTC) or APP14 (Adobe)
+		## There are probably more (see lists of APP markers mentioned
+		## above) but these have been observed in the wild.
 		validpng = True
 		havexmp = False
 		xmp = None
-		while jpegdata in ['\xff\xe0', '\xff\xe1', '\xff\xe2', '\xff\xed']:
+		havecomment = False
+		while jpegmarker[0] == '\xff' and jpegmarker[1] in jpegappmarkers:
 			if not validpng:
 				break
-			if jpegdata == '\xff\xe0':
-				## JFIF data
-				## first the size of the app marker
-				jpegdata = datafile.read(2)
-				if not len(jpegdata) == 2:
-					validpng = False
-					break
-				sizeheader = struct.unpack('>H', jpegdata)[0]
-				if sizeheader > lendata:
-					validpng = False
-					break
-				jpegdata = datafile.read(sizeheader - 2)
-				localoffset += sizeheader
-				if len(jpegdata) != sizeheader - 2:
-					validpng = False
-					break
+			## first the size of the app marker
+			jpegsize = datafile.read(2)
+			if not len(jpegsize) == 2:
+				validpng = False
+				break
+			sizeheader = struct.unpack('>H', jpegsize)[0]
+			if sizeheader > lendata:
+				validpng = False
+				break
+			jpegdata = datafile.read(sizeheader - 2)
+			localoffset += sizeheader
+			if len(jpegdata) != sizeheader - 2:
+				validpng = False
+				break
+			if jpegmarker == '\xff\xe0':
 				## check if the rest of the header starts with either
 				## JFIF or JFXX
 				if not (jpegdata.startswith('JFIF\x00') or jpegdata.startswith('JFXX\x00')):
@@ -6514,96 +6527,74 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 					if not (jpegdata[5:7] == '\x01\x01' or jpegdata[5:7] == '\x01\x02'):
 						validpng = False
 						break
-				jpegdata = datafile.read(2)
-				localoffset += 2
-			elif jpegdata == '\xff\xe1':
+			elif jpegmarker == '\xff\xe1':
 				## EXIF, XMP
-				## first the size of the app marker
-				jpegdata = datafile.read(2)
-				if not len(jpegdata) == 2:
-					validpng = False
-					break
-				sizeheader = struct.unpack('>H', jpegdata)[0]
-				if sizeheader > lendata:
-					validpng = False
-					break
-				jpegdata = datafile.read(sizeheader - 2)
-				localoffset += sizeheader
-				if len(jpegdata) != sizeheader - 2:
-					validpng = False
-					break
 				if not (jpegdata.startswith('Exif\x00') or jpegdata.startswith('http://ns.adobe.com/xap/1.0/\x00')):
 					validpng = False
 					break
 				if jpegdata.startswith('http://ns.adobe.com/xap/1.0/\x00'):
 					xmp = jpegdata.split('\x00', 1)[1]
 					havexmp = True
-				jpegdata = datafile.read(2)
-				localoffset += 2
-			elif jpegdata == '\xff\xe2':
+			elif jpegmarker == '\xff\xe2':
 				## ICC http://www.color.org/specification/ICC1v43_2010-12.pdf
-				## first the size of the app marker
-				jpegdata = datafile.read(2)
-				if not len(jpegdata) == 2:
-					validpng = False
-					break
-				sizeheader = struct.unpack('>H', jpegdata)[0]
-				if sizeheader > lendata:
-					validpng = False
-					break
-				jpegdata = datafile.read(sizeheader - 2)
-				localoffset += sizeheader
-				if len(jpegdata) != sizeheader - 2:
-					validpng = False
-					break
 				if not jpegdata.startswith('ICC_PROFILE\x00'):
 					validpng = False
 					break
-				jpegdata = datafile.read(2)
-				localoffset += 2
-			elif jpegdata == '\xff\xed':
+			elif jpegmarker == '\xff\xec':
+				## Ducky, used by Photoshop
+				if not jpegdata.startswith('Ducky\x00'):
+					validpng = False
+					break
+			elif jpegmarker == '\xff\xed':
 				## PSIR/IPTC
-				jpegdata = datafile.read(2)
-				if not len(jpegdata) == 2:
+				if not (jpegdata.startswith('Photoshop 3.0\x00') or jpegdata.startswith('Adobe_CM\x00')):
 					validpng = False
 					break
-				sizeheader = struct.unpack('>H', jpegdata)[0]
-				if sizeheader > lendata:
+			elif jpegmarker == '\xff\xee':
+				## Adobe
+				if not jpegdata.startswith('Adobe\x00'):
 					validpng = False
 					break
-				jpegdata = datafile.read(sizeheader - 2)
-				localoffset += sizeheader
-				if len(jpegdata) != sizeheader - 2:
-					validpng = False
-					break
-				if not jpegdata.startswith('Photoshop 3.0\x00'):
-					validpng = False
-					break
-				jpegdata = datafile.read(2)
-				localoffset += 2
+			elif jpegmarker == '\xff\xfe':
+				## COM
+				havecomment = True
+			else:
+				## TODO: add more
+				validpng = False
+				break
+			jpegmarker = datafile.read(2)
+			localoffset += 2
 		if not validpng:
 			continue
 
-		if jpegdata[0] != '\xff':
+		if jpegmarker[0] != '\xff':
 			## catch all for non-compliant data
 			continue
 
-		'''
-		## TODO: better parse the data to see if it is correct. Right now
-		## it is possible that some JPEG files are not correctly unpacked
-		while jpegdata[0] == '\xff':
+		## look at individual JPEG segments, that have not already been
+		## looked at before (like APP)
+		while jpegmarker[0] == '\xff':
+			if jpegmarker[1] == '\xda':
+				break
 			## individual checks to see if JPEG is valid
-			if jpegdata[1] in ['\xc0', '\xc1', '\xc2', '\xc3', '\xc4', '\xd4','\xda', '\xdb']:
-				jpegdata = datafile.read(2)
+			if jpegmarker[1] in standalonemarkers:
+				jpegmarker = datafile.read(2)
 				localoffset += 2
-				markerlength = struct.unpack('>H', jpegdata)[0]
+			elif jpegmarker[1] in jpegmarkers:
+				jpeglength = datafile.read(2)
+				localoffset += 2
+				markerlength = struct.unpack('>H', jpeglength)[0]
 				if markerlength > lendata:
 					continue
+				## do individual checks here if needed
+				if jpegmarker[1] == '\xdb':
+					pass
 				jpegdata = datafile.read(markerlength-2)
 				localoffset += markerlength-2
-				jpegdata = datafile.read(2)
+				jpegmarker = datafile.read(2)
 				localoffset += 2
-		'''
+			else:
+				break
 
 		traileroffsets = traileroffsets[lastseentrailer:]
 
