@@ -6479,20 +6479,23 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		jpegdata = datafile.read(2)
 		localoffset += 2
 		## following the JPEG "start of image" there is
-		## either a APP0 (JFIF) or APP1 (Exif and XMP)
-		## or APP13 (PSIR/IPTC)
-		if not  jpegdata in ['\xff\xe0', '\xff\xe1', '\xff\xed']:
+		## either a APP0 (JFIF), APP1 (Exif and XMP)
+		## APP2 (ICC) or APP13 (PSIR/IPTC)
+		if not  jpegdata in ['\xff\xe0', '\xff\xe1', '\xff\xe2', '\xff\xed']:
 			continue
 		validpng = True
 		havexmp = False
 		xmp = None
-		while jpegdata in ['\xff\xe0', '\xff\xe1', '\xff\xed']:
+		while jpegdata in ['\xff\xe0', '\xff\xe1', '\xff\xe2', '\xff\xed']:
 			if not validpng:
 				break
 			if jpegdata == '\xff\xe0':
 				## JFIF data
 				## first the size of the app marker
 				jpegdata = datafile.read(2)
+				if not len(jpegdata) == 2:
+					validpng = False
+					break
 				sizeheader = struct.unpack('>H', jpegdata)[0]
 				if sizeheader > lendata:
 					validpng = False
@@ -6517,6 +6520,9 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 				## EXIF, XMP
 				## first the size of the app marker
 				jpegdata = datafile.read(2)
+				if not len(jpegdata) == 2:
+					validpng = False
+					break
 				sizeheader = struct.unpack('>H', jpegdata)[0]
 				if sizeheader > lendata:
 					validpng = False
@@ -6534,9 +6540,33 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 					havexmp = True
 				jpegdata = datafile.read(2)
 				localoffset += 2
+			elif jpegdata == '\xff\xe2':
+				## ICC http://www.color.org/specification/ICC1v43_2010-12.pdf
+				## first the size of the app marker
+				jpegdata = datafile.read(2)
+				if not len(jpegdata) == 2:
+					validpng = False
+					break
+				sizeheader = struct.unpack('>H', jpegdata)[0]
+				if sizeheader > lendata:
+					validpng = False
+					break
+				jpegdata = datafile.read(sizeheader - 2)
+				localoffset += sizeheader
+				if len(jpegdata) != sizeheader - 2:
+					validpng = False
+					break
+				if not jpegdata.startswith('ICC_PROFILE\x00'):
+					validpng = False
+					break
+				jpegdata = datafile.read(2)
+				localoffset += 2
 			elif jpegdata == '\xff\xed':
 				## PSIR/IPTC
 				jpegdata = datafile.read(2)
+				if not len(jpegdata) == 2:
+					validpng = False
+					break
 				sizeheader = struct.unpack('>H', jpegdata)[0]
 				if sizeheader > lendata:
 					validpng = False
