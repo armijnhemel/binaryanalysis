@@ -5243,6 +5243,8 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
+		if filesize - offset < 13:
+			continue
 		## According to http://svn.python.org/projects/external/xz-5.0.3/doc/lzma-file-format.txt the first
 		## 13 bytes of the LZMA file are the header. It consists of properties (1 byte), dictionary
 		## size (4 bytes), and a field to store the size of the uncompressed data (8 bytes).
@@ -5265,7 +5267,7 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			if lzmacheckbyte not in ['\x01\x00', '\x02\x00', '\x03\x00', '\x04\x00', '\x06\x00', '\x08\x00', '\x10\x00', '\x20\x00', '\x30\x00', '\x40\x00', '\x60\x00', '\x80\x00', '\x80\x01', '\x0c\x00', '\x18\x00', '\x00\x00', '\x00\x01', '\x00\x02', '\x00\x03', '\x00\x04', '\xc0\x00']:
 				continue
 
-		## sanity checks if the size is set.
+		## sanity checks to see if the size is set.
 		lzmafile = open(filename, 'rb')
 		lzmafile.seek(offset+5)
 		lzmasizebytes = lzmafile.read(8)
@@ -5294,18 +5296,27 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 
 		## either read all bytes that are left in the file or a minimum
 		## amount of bytes, whichever is the smallest
-		minlzmadatatoread = 1000000
+		minlzmadatatoread = 10000000
 		lzmabytestoread = min(filesize-offset, minlzmadatatoread)
 
 		lzmafile = open(filename, 'rb')
 		lzmafile.seek(offset)
 		lzmadata = lzmafile.read(lzmabytestoread)
-		lzmafile.close()
+		if len(lzmadata) < 14:
+			lzmafile.close()
+			continue
+
+		if not lzma_try_all:
+			if not lzmadata[14] == '\x00':
+				lzmafile.close()
+				continue
 
 		p = subprocess.Popen(['lzma', '-cd', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate(lzmadata)
 		if p.returncode == 0:
-			# whole stream successfully unpacked.
+			lzmafile.close()
+			## whole stream successfully unpacked and there was
+			## no trailing data
 			tmpdir = dirsetup(tempdir, filename, "lzma", counter)
 			tmpfile = tempfile.mkstemp(dir=tmpdir)
 			os.write(tmpfile[0], stanout)
@@ -5318,11 +5329,16 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		if len(stanout) == 0:
 			## no data was successfully unpacked, so this is not
 			## a valid LZMA stream
+			lzmafile.close()
 			continue
 
 		## The data seems to be a valid LZMA stream, but not all LZMA
 		## data was unpacked.
+		if lzmafile.tell() == filesize:
+			## dunno what to do in this case
+			pass
 
+		lzmafile.close()
 		## If there is a very big difference (thousandfold) between
 		## the unpacked data and the declared size it is a false positive
 		## for sure
