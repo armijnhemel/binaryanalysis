@@ -6,6 +6,7 @@ instead of a list
 * fwunpack.py: several sanity checks for JPEG checking
 * prerun.py: hardcode a few filters to avoid passing around large dicts of
 offsets
+* createdb.py: start processing website URLs for packages
 
 2016-08-07:
 * fwunpack.py: add some LZMA sanity checks
