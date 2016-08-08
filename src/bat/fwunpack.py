@@ -6675,6 +6675,8 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 
 		traileroffsets = traileroffsets[lastseentrailer:]
 
+		minendofimage = datafile.tell()
+
 		lastseentrailer = 0
 		## find the closest jpeg trailer
 		for trail in traileroffsets:
@@ -6691,6 +6693,13 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			## this trailer
 			if seenendofimage:
 				if trail != endofimage:
+					continue
+			else:
+				## no valid end of image was seen before
+				## the data segment was seen, so it has to
+				## come after the data that was already
+				## looked at.
+				if trail < minendofimage:
 					continue
 			if offset == 0 and trail+2 == filesize:
 				p = subprocess.Popen(['jpegtopnm', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
