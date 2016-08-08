@@ -2976,11 +2976,19 @@ def main(argv):
 			(archivefilename, origchecksum, origfilename) = checksumsplit
 			archivechecksums[archivefilename] = (origchecksum, origfilename)
 	downloadurls = {}
+	websites = {}
 	if os.path.exists(os.path.join(options.filedir, "DOWNLOADURL")):
 		downloadlines = map(lambda x: x.strip(), open(os.path.join(options.filedir, "DOWNLOADURL")).readlines())
 		for d in downloadlines:
+			dsplits = d.rsplit('\t', 1)
+			if len(dsplits) == 2:
+				(archivefilename, website) = dsplits
+			else:
+				archivefilename = d
+				website = None
 			archivefilename = d.rsplit('/', 1)[-1]
 			downloadurls[archivefilename] = d
+			websites[archivefilename] = website
 
 	## TODO: do all kinds of checks here
 	for unpackfile in filelist:
