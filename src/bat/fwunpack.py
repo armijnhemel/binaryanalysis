@@ -3988,6 +3988,7 @@ def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, scane
 
 	counter = 1
 	diroffsets = []
+	compressfile = open(filename, 'rb')
 	for offset in offsets['compress']:
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
@@ -3995,10 +3996,8 @@ def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, scane
 		## according to the specification the "bits per code" has
 		## to be 9 <= bits per code <= 16
 		## The "bits per code" field is masked with 0x1f
-		compressfile = open(filename, 'rb')
 		compressfile.seek(offset+2)
 		compressdata = compressfile.read(1)
-		compressfile.close()
 		if len(compressdata) != 1:
 			break
 		compressbits = ord(compressdata) & 0x1f
@@ -4011,10 +4010,8 @@ def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, scane
 		## data, so as a first test read 1 MiB of data and then
 		## try to decompress it.
 		## If no data could be uncompressed return
-		compressfile = open(filename, 'rb')
 		compressfile.seek(offset)
 		compressdata = compressfile.read(1048576)
-		compressfile.close()
 
 		p = subprocess.Popen(['uncompress'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 		(stanout, stanerr) = p.communicate(compressdata)
@@ -4037,6 +4034,7 @@ def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, scane
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
+	compressfile.close()
 	return (diroffsets, blacklist, [], hints)
 
 def unpackCompress(filename, offset, compresslimit, tempdir=None, compress_tmpdir=None, blacklist=[]):
@@ -6457,25 +6455,32 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 	if len(offsets['jpegtrailer']) == 0:
 		return ([],blacklist, [], hints)
 
+	## check if there could be at least one valid image
+	if not offsets['jpeg'][0] < offsets['jpegtrailer'][-1]:
+		return ([],blacklist, [], hints)
+
 	hints = {}
 	counter = 1
 	diroffsets = []
 	newtags = []
+	filesize = os.stat(filename).st_size
 
-	## list of JPEG markers
+	## list of JPEG segment markers
 	jpegmarkers = ['\xc0', '\xc1', '\xc2', '\xc3', '\xc4', '\xc5', '\xc6',
                        '\xc7', '\xc8', '\xc9', '\xca', '\xcb', '\xcc', '\xcd',
                        '\xce', '\xcf', '\xda', '\xdb', '\xdc', '\xdd', '\xde', '\xdf']
+
+	framemarkers = ['\xc0', '\xc1', '\xc2', '\xc3', '\xc5', '\xc6', '\xc7',
+                        '\xc8', '\xc9', '\xca', '\xcb', '\xcd', '\xce', '\xcf']
 
 	## APP and COM
 	jpegappmarkers = ['\xe0', '\xe1', '\xe2', '\xe3', '\xe4', '\xe5',
                           '\xe6', '\xe7', '\xe8', '\xe9', '\xea', '\xeb',
                           '\xec', '\xed', '\xee', '\xfe']
 
+	## stand alone markers, have no length field
 	standalonemarkers = ['\x01', '\xd0', '\xd1', '\xd2', '\xd3', '\xd4',
                              '\xd5', '\xd6', '\xd7', '\xd8', '\xd9']
-
-	lendata = os.stat(filename).st_size
 
 	traileroffsets = offsets['jpegtrailer']
 	lastseentrailer = 0
@@ -6490,16 +6495,34 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		datafile.seek(offset+2)
 		localoffset += 2
 		jpegmarker = datafile.read(2)
+		if not len(jpegmarker) == 2:
+			continue
+		if not jpegmarker[0] == '\xff':
+			## SOI is always followed by a segment
+			continue
+		## some values are not valid
+		if jpegmarker[1] == '\xff' or jpegmarker[1] == '\x00':
+			continue
+		## only one SOI
+		if jpegmarker[1] == '\xd8':
+			continue
+		## useless to have EOI immediately following SOI
+		if jpegmarker[1] == '\xd9':
+			continue
+		if not (jpegmarker[1] in standalonemarkers or jpegmarker[1] in jpegmarkers or jpegmarker[1] in jpegappmarkers):
+			continue
 		localoffset += 2
-		## following the JPEG "start of image" there is
-		## either a APP0 (JFIF), APP1 (Exif and XMP), APP11 (Ducky)
+		## following the JPEG "start of image" there could be
+		## a APP0 (JFIF), APP1 (Exif and XMP), APP11 (Ducky)
 		## APP2 (ICC), APP13 (PSIR/IPTC) or APP14 (Adobe)
+		## or COM.
 		## There are probably more (see lists of APP markers mentioned
 		## above) but these have been observed in the wild.
 		validpng = True
 		havexmp = False
 		xmp = None
 		havecomment = False
+		seenstartofframe = False
 		while jpegmarker[0] == '\xff' and jpegmarker[1] in jpegappmarkers:
 			if not validpng:
 				break
@@ -6509,7 +6532,10 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 				validpng = False
 				break
 			sizeheader = struct.unpack('>H', jpegsize)[0]
-			if sizeheader > lendata:
+			if sizeheader == 0:
+				validpng = False
+				break
+			if offset + sizeheader > filesize:
 				validpng = False
 				break
 			jpegdata = datafile.read(sizeheader - 2)
@@ -6564,6 +6590,9 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 				break
 			jpegmarker = datafile.read(2)
 			localoffset += 2
+			if len(jpegmarker) != 2:
+				validpng = False
+				break
 		if not validpng:
 			continue
 
@@ -6571,30 +6600,78 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			## catch all for non-compliant data
 			continue
 
-		## look at individual JPEG segments, that have not already been
+		## look at individual JPEG segments that have not already been
 		## looked at before (like APP)
+		seenscanheader = False
+		seenendofimage = False
+		endofimage = None
 		while jpegmarker[0] == '\xff':
-			if jpegmarker[1] == '\xda':
+			if jpegmarker[1] == '\xd8':
+				## there can be only one SOI
+				validpng = False
+				break
+			if jpegmarker[1] == '\xd9':
+				endofimage = datafile.tell() - 2
+				seenendofimage = True
 				break
 			## individual checks to see if JPEG is valid
 			if jpegmarker[1] in standalonemarkers:
 				jpegmarker = datafile.read(2)
+				if len(jpegmarker) != 2:
+					break
 				localoffset += 2
 			elif jpegmarker[1] in jpegmarkers:
 				jpeglength = datafile.read(2)
+				if len(jpeglength) != 2:
+					validpng = False
+					break
 				localoffset += 2
 				markerlength = struct.unpack('>H', jpeglength)[0]
-				if markerlength > lendata:
+				if markerlength == 0:
+					validpng = False
+					break
+				if offset + markerlength > filesize:
 					continue
+				if jpegmarker[1] in framemarkers:
+					seenstartofframe = True
+				if jpegmarker[1] == '\xda':
+					if not seenstartofframe:
+						validpng = False
+						break
+					numberofcomponents = ord(datafile.read(1))
+					if not numberofcomponents in [1,2,3,4]:
+						validpng = False
+						break
+					localoffset += 1
+					seenscanheader = True
+					break
 				## do individual checks here if needed
 				if jpegmarker[1] == '\xdb':
 					pass
-				jpegdata = datafile.read(markerlength-2)
 				localoffset += markerlength-2
+				datafile.seek(localoffset)
 				jpegmarker = datafile.read(2)
 				localoffset += 2
+				if len(jpegmarker) != 2:
+					validpng = False
+					break
 			else:
+				validpng = False
 				break
+
+		## no frame without a scan header
+		if seenstartofframe:
+			if not seenscanheader:
+				validpng = False
+		else:
+			## Abbreviated format should always be
+			## correctly formatted with just application
+			## data, and various headers, but never
+			## image data.
+			if not seenendofimage:
+				validpng = False
+		if not validpng:
+			continue
 
 		traileroffsets = traileroffsets[lastseentrailer:]
 
@@ -6610,13 +6687,18 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			blacklistoffset = extractor.inblacklist(trail, blacklist)
 			if blacklistoffset != None:
 				break
-			if offset == 0 and trail+2 == lendata:
+			## there is a valid end of image, so only consider
+			## this trailer
+			if seenendofimage:
+				if trail != endofimage:
+					continue
+			if offset == 0 and trail+2 == filesize:
 				p = subprocess.Popen(['jpegtopnm', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 				(stanout, stanerr) = p.communicate()
 				if p.returncode != 0:
 					validpng = False
 					break
-				blacklist.append((0,lendata))
+				blacklist.append((0,filesize))
 				datafile.close()
 				return (diroffsets, blacklist, ['graphics', 'jpeg', 'binary'], hints)
 			else:
