@@ -1,3 +1,9 @@
+2016-08-07:
+* fwunpack.py: add some LZMA sanity checks
+* fwunpack.py: check for JPEG APP2 ICC profile, many extra JPEG sanity checks
+* fwunpack.py: don't keep opening files in compress unpacking
+* fwunpack.py: start reworking JPEG unpacking, add many more sanity checks
+
 2016-08-06:
 * bruteforcescan.py: pass database connection and cursor to postrun scans,
 rewrite to use a queue instead of a pool of processes
