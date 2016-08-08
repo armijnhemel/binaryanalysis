@@ -65,12 +65,25 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, offset=0, length=0,
 						if checkkey == '\xff':
 							offsets[key].add(offset + res)
 				elif key == 'compress':
-					datafile2.seek(offset+2)
+					datafile2.seek(offset+res+2)
 					compressdata = datafile2.read(1)
 					if len(compressdata) == 1:
 						compressbits = ord(compressdata) & 0x1f
 						if compressbits >= 9 and compressbits <= 16:
 							offsets[key].add(offset + res)
+				elif key == 'ttf':
+					datafile2.seek(offset+res+4)
+					fontbytes = datafile2.read(2)
+					if len(fontbytes) == 2:
+						numberoftables = struct.unpack('>H', fontbytes)[0]
+						if numberoftables != 0:
+							## followed by searchrange
+							fontbytes = datafile2.read(2)
+							if len(fontbytes) == 2:
+								searchrange = struct.unpack('>H', fontbytes)[0]
+								## sanity check, see specification
+								if pow(2, int(math.log(numberoftables, 2)+4)) == searchrange:
+									offsets[key].add(offset + res)
 				else:
 					offsets[key].add(offset + res)
 				res = databuffer.find(bufkey, res+1)
