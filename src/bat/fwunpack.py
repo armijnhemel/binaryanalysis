@@ -6482,8 +6482,8 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 	standalonemarkers = ['\x01', '\xd0', '\xd1', '\xd2', '\xd3', '\xd4',
                              '\xd5', '\xd6', '\xd7', '\xd8', '\xd9']
 
-	traileroffsets = offsets['jpegtrailer']
-	lastseentrailer = 0
+	traileroffsets = deque(offsets['jpegtrailer'])
+	trailerpopcounter = 0
 
 	## TODO: make configurable. For now set to 100 MiB.
 	jpegmaxsize = 104857600
@@ -6680,18 +6680,19 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		if not validpng:
 			continue
 
-		traileroffsets = traileroffsets[lastseentrailer:]
-
 		minendofimage = datafile.tell()
 
-		lastseentrailer = 0
+		for r in xrange(0, trailerpopcounter):
+			traileroffsets.popleft()
+
+		trailerpopcounter = 0
 		## find the closest jpeg trailer
 		for trail in traileroffsets:
 			if trail <= offset:
-				lastseentrailer += 1
+				trailerpopcounter += 1
 				continue
 			if trail < localoffset:
-				lastseentrailer += 1
+				trailerpopcounter += 1
 				continue
 			blacklistoffset = extractor.inblacklist(trail, blacklist)
 			if blacklistoffset != None:
@@ -6736,7 +6737,7 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 					blacklist.append((offset,trail+2))
 					diroffsets.append((tmpdir, offset, trail-offset+2))
 					counter = counter + 1
-					lastseentrailer += 1
+					trailerpopcounter += 1
 					break
 				os.rmdir(tmpdir)
 	datafile.close()
