@@ -4013,7 +4013,7 @@ def searchUnpackCompress(filename, tempdir=None, blacklist=[], offsets={}, scane
 		compressfile.seek(offset)
 		compressdata = compressfile.read(1048576)
 
-		p = subprocess.Popen(['uncompress'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+		p = subprocess.Popen(['uncompress'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		(stanout, stanerr) = p.communicate(compressdata)
 		if len(stanout) == 0:
 			continue
@@ -6485,6 +6485,9 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 	traileroffsets = offsets['jpegtrailer']
 	lastseentrailer = 0
 
+	## TODO: make configurable. For now set to 100 MiB.
+	jpegmaxsize = 104857600
+
 	datafile = open(filename, 'rb')
 	## Start verifying the JFIF image.
 	for offset in offsets['jpeg']:
@@ -6715,6 +6718,8 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 				datafile.close()
 				return (diroffsets, blacklist, ['graphics', 'jpeg', 'binary'], hints)
 			else:
+				if trail+2 - offset > jpegmaxsize:
+					break
 				tmpdir = dirsetup(tempdir, filename, "jpeg", counter)
 				datafile.seek(offset)
 				jpegtestdata = datafile.read(trail+2 - offset)
