@@ -48,6 +48,7 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, offset=0, length=0,
 		if not key in fsmagic.fsmagic:
 			continue
 		bufkeys.append((key,fsmagic.fsmagic[key]))
+	datafile2 = open(filename, 'rb')
 	while databuffer != '':
 		for bkey in bufkeys:
 			(key, bufkey) = bkey
@@ -55,7 +56,23 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, offset=0, length=0,
 				continue
 			res = databuffer.find(bufkey)
 			while res != -1:
-				offsets[key].add(offset + res)
+				## hardcode a few checks to avoid possibly passing
+				## around many offsets to many methods
+				if key == 'jpeg':
+					datafile2.seek(offset+res+2)
+					checkkey = datafile2.read(1)
+					if len(checkkey) == 1:
+						if checkkey == '\xff':
+							offsets[key].add(offset + res)
+				elif key == 'compress':
+					datafile2.seek(offset+2)
+					compressdata = datafile2.read(1)
+					if len(compressdata) == 1:
+						compressbits = ord(compressdata) & 0x1f
+						if compressbits >= 9 and compressbits <= 16:
+							offsets[key].add(offset + res)
+				else:
+					offsets[key].add(offset + res)
 				res = databuffer.find(bufkey, res+1)
 		if length != 0:
 			break
@@ -69,6 +86,7 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, offset=0, length=0,
 			offset = offset + 1999950
 		else:
 			offset = offset + len(databuffer)
+	datafile2.close()
 	datafile.close()
 
 	## mapping of offset to keys
