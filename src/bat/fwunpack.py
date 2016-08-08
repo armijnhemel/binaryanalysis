@@ -6635,6 +6635,7 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 				if jpegmarker[1] in framemarkers:
 					seenstartofframe = True
 				if jpegmarker[1] == '\xda':
+					## no start of scan without a frame
 					if not seenstartofframe:
 						validpng = False
 						break
@@ -6667,7 +6668,7 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			## Abbreviated format should always be
 			## correctly formatted with just application
 			## data, and various headers, but never
-			## image data.
+			## any image data.
 			if not seenendofimage:
 				validpng = False
 		if not validpng:
