@@ -6643,6 +6643,9 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 					if not numberofcomponents in [1,2,3,4]:
 						validpng = False
 						break
+					if not markerlength == 6+2*numberofcomponents:
+						validpng = False
+						break
 					localoffset += 1
 					seenscanheader = True
 					break
