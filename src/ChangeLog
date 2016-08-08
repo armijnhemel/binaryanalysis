@@ -4,6 +4,8 @@ instead of a list
 * fwunpack.py: don't reopen files in compress checking
 * fwunpack.py: set maximum size for JPEG data (hardcoded to 100 MiB right now)
 * fwunpack.py: several sanity checks for JPEG checking
+* prerun.py: hardcode a few filters to avoid passing around large dicts of
+offsets
 
 2016-08-07:
 * fwunpack.py: add some LZMA sanity checks
