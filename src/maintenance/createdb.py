@@ -3063,7 +3063,7 @@ def main(argv):
 		## no need to process some files twice, even if they
 		## are under a different name.
 		if filehash in processed_hashes:
-			cursor.execute("select * from archivealias where checksum=?", filehash)
+			cursor.execute("select * from archivealias where checksum=?", (filehash,))
 			aliasres = cursor.fetchall()
 			if len(aliasres) != []:
 				archivefound = False
