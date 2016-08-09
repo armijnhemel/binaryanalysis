@@ -236,7 +236,7 @@ def main(argv):
 
 	preparedstatements = {}
 
-	preparedstatements['processed'] = "prepare batprocessed_base as insert into processed (package, version, filename, origin, checksum, downloadurl) values ($1, $2, $3, $4, $5, $6)"
+	preparedstatements['processed'] = "prepare batprocessed_base as insert into processed (package, version, filename, origin, checksum, downloadurl, website) values ($1, $2, $3, $4, $5, $6, $7)"
 
 	preparedstatements['processed_file'] = "prepare batprocessed_file as insert into processed_file (package, version, pathname, checksum, filename, thirdparty) values ($1, $2, $3, $4, $5, $6)"
 	preparedstatements['extracted_string'] = "prepare batextracted_string as insert into extracted_string (stringidentifier, checksum, language, linenumber) values ($1, $2, $3, $4)"
@@ -257,9 +257,9 @@ def main(argv):
 	execqueries = {}
 
 	execqueries['processed'] = {}
-	execqueries['processed']['base'] = "execute batprocessed_base(%s,%s,%s,%s,%s,%s)"
-	execqueries['processed']['chunked'] = "insert into processed (package, version, filename, origin, checksum, downloadurl) values"
-	execqueries['processed']['param'] = 6
+	execqueries['processed']['base'] = "execute batprocessed_base(%s,%s,%s,%s,%s,%s,%s)"
+	execqueries['processed']['chunked'] = "insert into processed (package, version, filename, origin, checksum, downloadurl, website) values"
+	execqueries['processed']['param'] = 7
 
 	execqueries['processed_file'] = {}
 	execqueries['processed_file']['base'] = "execute batprocessed_file(%s,%s,%s,%s,%s,%s)"
