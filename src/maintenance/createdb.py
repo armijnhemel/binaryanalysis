@@ -2893,7 +2893,7 @@ def main(argv):
 		c.execute('''create index if not exists rpm_rpmname_index on rpm(rpmname)''')
 
 		## keep information about aliases of archives (different origins, etc.)
-		c.execute('''create table if not exists archivealias(checksum text, archivename text, origin text, downloadurl text)''')
+		c.execute('''create table if not exists archivealias(checksum text, archivename text, origin text, downloadurl text, website text)''')
 		c.execute('''create index if not exists archivealias_checksum_index on archivealias(checksum)''')
 
 		## keep information about other files, such as media files, configuration files,
@@ -2948,6 +2948,10 @@ def main(argv):
 
 	pkgmeta = []
 
+	## keep a mapping of archive file name to checksum. Although the file is
+	## called SHA256SUM there could be more checksums in the file (but always
+	## at least sha256). The hashes used file are defined in the first line of
+	## the SHA256 file.
 	checksums = {}
 	if os.path.exists(os.path.join(options.filedir, "SHA256SUM")):
 		checksumlines = open(os.path.join(options.filedir, "SHA256SUM")).readlines()
@@ -2970,6 +2974,10 @@ def main(argv):
 	else:
 		print >>sys.stderr, "SHA256SUM not found"
 		sys.exit(1)
+
+	## keep a mapping of BAT archive checksums. This a file specifically for
+	## archives created with createbatarchive.py and is used in addition
+	## to SHA256SUM files.
 	archivechecksums = {}
 	if os.path.exists(os.path.join(options.filedir, "SHA256SUM-ARCHIVE")):
 		checksumlines = open(os.path.join(options.filedir, "SHA256SUM-ARCHIVE")).readlines()
@@ -2979,6 +2987,8 @@ def main(argv):
 				continue
 			(archivefilename, origchecksum, origfilename) = checksumsplit
 			archivechecksums[archivefilename] = (origchecksum, origfilename)
+
+	## keep mappings of download URLs and website addresses for packages
 	downloadurls = {}
 	websites = {}
 	if os.path.exists(os.path.join(options.filedir, "DOWNLOADURL")):
@@ -2987,6 +2997,8 @@ def main(argv):
 			dsplits = d.rsplit('\t', 1)
 			if len(dsplits) == 2:
 				(archivefilename, website) = dsplits
+				if website.strip() == '':
+					website = None
 			else:
 				archivefilename = d
 				website = None
@@ -3022,6 +3034,8 @@ def main(argv):
 	sys.stdout.flush()
 	res = filter(lambda x: x != None, pool.map(checkalreadyscanned, pkgmeta, 1))
 
+	## keep some meta information about the previous package that was scanned
+	## to quickly filter
 	oldpackage = ""
 	oldres = []
 	processed_hashes = set()
@@ -3037,6 +3051,7 @@ def main(argv):
 			continue
 		## no need to process some files twice, even if they
 		## are under a different name.
+		## TODO: record as alternatives.
 		if filehash in processed_hashes:
 			continue
 		if batarchive:
