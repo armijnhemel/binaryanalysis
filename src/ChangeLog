@@ -1,3 +1,8 @@
+2016-08-09:
+* postgresql-table.sql: add column to archivealias table
+* createdb.py: use website column (if present) in 'processed' table and also
+record archive aliases
+
 2016-08-08:
 * fwunpack.py: use deque and popleft() for list of trailers in JPEG unpacking
 instead of a list
