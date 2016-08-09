@@ -1259,10 +1259,13 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 				authlicensecursor.execute("select distinct * from licenses where checksum=?", (f[5],))
 				authlicenses = authlicensecursor.fetchall()
 				if len(authlicenses) != 0:
-					for a in authlicenses:
-						licensecursor.execute("insert into licenses values (?,?,?,?)", a)
-					licenseconn.commit()
-					ignorefiles.add(f[5])
+					try:
+						for a in authlicenses:
+							licensecursor.execute("insert into licenses values (?,?,?,?)", a)
+						licenseconn.commit()
+						ignorefiles.add(f[5])
+					except:
+						pass
 			authlicensecursor.close()
 			authlicenseconn.close()
 
@@ -1344,13 +1347,16 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 
 			## then check for every file in filestoscan to see if they are already in authlicensedb
 			for f in filestoscan:
-				authlicensecursor.execute("select distinct * from extracted_copyright where checksum=?", (f[5],))
-				authlicenses = authlicensecursor.fetchall()
-				if len(authlicenses) != 0:
-					for a in authlicenses:
-						licensecursor.execute("insert into extracted_copyright values (?,?,?,?)", a)
-					licenseconn.commit()
-					ignorefiles.add(f[5])
+				try:
+					authlicensecursor.execute("select distinct * from extracted_copyright where checksum=?", (f[5],))
+					authlicenses = authlicensecursor.fetchall()
+					if len(authlicenses) != 0:
+						for a in authlicenses:
+							licensecursor.execute("insert into extracted_copyright values (?,?,?,?)", a)
+						licenseconn.commit()
+						ignorefiles.add(f[5])
+				except:
+					pass
 			authlicensecursor.close()
 			authlicenseconn.close()
 
