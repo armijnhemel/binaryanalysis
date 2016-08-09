@@ -2535,6 +2535,10 @@ def main(argv):
 			# oops, something went wrong
 			print >>sys.stderr, e
 
+	## keep extra information about certain packages here
+	## examples are:
+	## * files with certain extensions that are non-standard
+	## * file names that should be ignored
 	packageconfig = {}
 
 	## search configuration to see if it is correct and/or not malformed
@@ -2659,8 +2663,8 @@ def main(argv):
 						## in the list of currently supported languages
 						if not lang in languages:
 							continue
-						if packageconfig.has_key(section):
-							if packageconfig[section].has_key('extensions'):
+						if section in packageconfig:
+							if 'extensions' in packageconfig[section]:
 								packageconfig[section]['extensions'].append((ext,lang))
 							else:
 								packageconfig[section]['extensions'] [(ext,lang)]
@@ -2674,8 +2678,8 @@ def main(argv):
 				alwaysscanitems = sec.split(':')
 				if alwaysscanitems != []:
 					for b in alwaysscanitems:
-						if packageconfig.has_key(section):	
-							if packageconfig[section].has_key('alwaysscan'):
+						if section in packageconfig:
+							if 'alwaysscan' in packageconfig[section]:
 								packageconfig[section]['alwaysscan'].append(b)
 							else:
 								packageconfig[section]['alwaysscan'] = [b]
@@ -2689,8 +2693,8 @@ def main(argv):
 				blacklistitems = sec.split(':')
 				if blacklistitems != []:
 					for b in blacklistitems:
-						if packageconfig.has_key(section):	
-							if packageconfig[section].has_key('blacklist'):
+						if section in packageconfig:
+							if 'blacklist' in packageconfig[section]:
 								packageconfig[section]['blacklist'].append(b)
 							else:
 								packageconfig[section]['blacklist'] = [b]
