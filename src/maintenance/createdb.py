@@ -725,7 +725,7 @@ def unpack_verify(filedir, filename):
 
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
-def unpack_getstrings(filedir, package, version, filename, origin, checksums, downloadurl, dbpath, cleanup, license, copyrights, security, pool, extractconfig, licensedb, authlicensedb, authdb, authcopy, securitydb, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
+def unpack_getstrings(filedir, package, version, filename, origin, checksums, downloadurl, website, dbpath, cleanup, license, copyrights, security, pool, extractconfig, licensedb, authlicensedb, authdb, authcopy, securitydb, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
 	## unpack the archive. If it fails, cleanup and return.
 	## TODO: make temporarydir configurable
 
@@ -784,6 +784,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 				emptyarchive = False
 		checksums = checksums[filename]
 		downloadurl = downloadurl.get(filename, None)
+		website = website.get(filename, None)
 
 	filetohash = {}
 
@@ -3006,14 +3007,14 @@ def main(argv):
 		for d in downloadlines:
 			dsplits = d.rsplit('\t', 1)
 			if len(dsplits) == 2:
-				(archivefilename, website) = dsplits
+				(downloadurl, website) = dsplits
 				if website.strip() == '':
 					website = None
 			else:
-				archivefilename = d
+				downloadurl = d
 				website = None
-			archivefilename = d.rsplit('/', 1)[-1]
-			downloadurls[archivefilename] = d
+			archivefilename = downloadurl.rsplit('/', 1)[-1]
+			downloadurls[archivefilename] = downloadurl
 			websites[archivefilename] = website
 
 	## Now check the contents of the packages to see if they
@@ -3047,11 +3048,10 @@ def main(argv):
 	sys.stdout.flush()
 	res = filter(lambda x: x != None, pool.map(checkalreadyscanned, pkgmeta, 1))
 
-	processed_hashes = set()
-
 	batarchives = []
 	resordered = []
 
+	processed_hashes = set()
 	## first loop through everything to filter out all the files that don't
 	## need processing, plus moving any batarchives to the end of the queue
 	conn = sqlite3.connect(masterdatabase, check_same_thread = False)
@@ -3084,11 +3084,13 @@ def main(argv):
 	cursor.close()
 	conn.close()
 
+	## order the results so full files are processed first, and then the
+	## BAT archives, as they assume full files to be processed first.
+	res = resordered + batarchives
+
 	extractconfig = {}
 	extractconfig['nomoschunks'] = nomoschunks
 	extractconfig['urlcutoff'] = urlcutoff
-
-	res = resordered + batarchives
 
 	## keep some meta information about the previous package that was scanned
 	## to be able to more quickly filter results
@@ -3101,9 +3103,9 @@ def main(argv):
 			if package != oldpackage:
 				oldres = set()
 			if not batarchive:
-				unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums[filename], downloadurl, masterdatabase, cleanup, license, copyrights, security, pool, extractconfig, licensedb, authlicensedb, authdb, authcopy, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
+				unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums[filename], downloadurl, website, masterdatabase, cleanup, license, copyrights, security, pool, extractconfig, licensedb, authlicensedb, authdb, authcopy, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
 			else:
-				unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums, downloadurl, masterdatabase, cleanup, license, copyrights, security, pool, extractconfig, licensedb, authlicensedb, authdb, authcopy, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
+				unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums, downloadurls, websites, masterdatabase, cleanup, license, copyrights, security, pool, extractconfig, licensedb, authlicensedb, authdb, authcopy, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
 			if unpackres != None:
 				oldres = set(map(lambda x: x[2]['sha256'], unpackres))
 				## by updating oldres instead of overwriting itsome more files could be filtered
