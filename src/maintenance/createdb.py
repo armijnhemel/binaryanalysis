@@ -2401,6 +2401,12 @@ def extractsourcestrings(filepath, language, package, unpackdir):
 			os.unlink(scanfile)
 	return (stringres, moduleres)
 
+## method to see if a package has already been scanned or not by
+## looking up the checksum in a list of readily available checksums
+## or by computing the checksum and then looking it up in the
+## database with already scanned packages.
+## If the package is a BAT archive the procedure is slightly
+## different.
 def checkalreadyscanned((filedir, package, version, filename, origin, downloadurl, batarchive, dbpath, checksum, archivechecksums)):
 	resolved_path = os.path.join(filedir, filename)
 	try:
@@ -2409,7 +2415,7 @@ def checkalreadyscanned((filedir, package, version, filename, origin, downloadur
 		print >>sys.stderr, "Can't find %s" % filename
 		return None
 	if batarchive:
-		if archivechecksums.has_key(filename):
+		if filename in archivechecksums:
 			(filehash, package) = archivechecksums[filename]
 		else:
 			## first extract the MANIFEST.BAT file from the BAT archive
@@ -2417,10 +2423,14 @@ def checkalreadyscanned((filedir, package, version, filename, origin, downloadur
 			archivedir = tempfile.mkdtemp()
 			tar = tarfile.open(resolved_path, 'r')
 			tarmembers = tar.getmembers()
+			manifestseen = False
 			for i in tarmembers:
-				## TODO: sanity check to see if there is a MANIFEST.BAT
 				if i.name.endswith('MANIFEST.BAT'):
 					tar.extract(i, path=archivedir)
+					manifestseen = True
+					break
+			if not manifestseen:
+				return None
 			manifest = os.path.join(archivedir, "MANIFEST.BAT")
 			manifestfile = open(manifest)
 			manifestlines = manifestfile.readlines()
@@ -3006,6 +3016,9 @@ def main(argv):
 			downloadurls[archivefilename] = d
 			websites[archivefilename] = website
 
+	## Now check the contents of the packages to see if they
+	## have already been scanned and recorded in the database.
+	## These checks differ for BAT archives and non-archives.
 	## TODO: do all kinds of checks here
 	for unpackfile in filelist:
 		try:
@@ -3034,10 +3047,6 @@ def main(argv):
 	sys.stdout.flush()
 	res = filter(lambda x: x != None, pool.map(checkalreadyscanned, pkgmeta, 1))
 
-	## keep some meta information about the previous package that was scanned
-	## to quickly filter
-	oldpackage = ""
-	oldres = []
 	processed_hashes = set()
 
 	batarchives = []
@@ -3080,6 +3089,12 @@ def main(argv):
 	extractconfig['urlcutoff'] = urlcutoff
 
 	res = resordered + batarchives
+
+	## keep some meta information about the previous package that was scanned
+	## to be able to more quickly filter results
+	oldpackage = ""
+	oldres = []
+
 	for i in res:
 		try:
 			(package, version, filename, origin, filehash, downloadurl, batarchive) = i
