@@ -3021,7 +3021,11 @@ def main(argv):
 	## have already been scanned and recorded in the database.
 	## These checks differ for BAT archives and non-archives.
 	## TODO: do all kinds of checks here
+	seenlines = set()
 	for unpackfile in filelist:
+		if unpackfile in seenlines:
+			continue
+		seenlines.add(unpackfile)
 		try:
 			unpacks = unpackfile.strip().split()
 			if len(unpacks) == 4:
@@ -3073,7 +3077,7 @@ def main(argv):
 						archivefound = True
 						break
 				if not archivefound:
-					cursor.execute("insert into archivealias (checksum, archivename, origin, downloadurl, website) values (?,?,?,?,?)", filehash, filename, origin, downloadurl, websites[filename])
+					cursor.execute("insert into archivealias (checksum, archivename, origin, downloadurl, website) values (?,?,?,?,?)", (filehash, filename, origin, downloadurl, websites[filename]))
 			continue
 		if batarchive:
 			batarchives.append(i)
