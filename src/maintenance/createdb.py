@@ -3045,20 +3045,35 @@ def main(argv):
 
 	## first loop through everything to filter out all the files that don't
 	## need processing, plus moving any batarchives to the end of the queue
+	conn = sqlite3.connect(masterdatabase, check_same_thread = False)
+	cursor = conn.cursor()
 	for i in res:
 		(package, version, filename, origin, filehash, downloadurl, batarchive) = i
 		if filehash in blacklistsha256sums:
 			continue
 		## no need to process some files twice, even if they
 		## are under a different name.
-		## TODO: record as alternatives.
 		if filehash in processed_hashes:
+			cursor.execute("select * from archivealias where checksum=?", filehash)
+			aliasres = cursor.fetchall()
+			if len(aliasres) != []:
+				archivefound = False
+				for a in aliasres:
+					(aliaschecksum, archivename, aliasorigin, aliasdownloadurl, aliaswebsite) = a
+					if archivename == filename and aliasorigin == origin:
+						archivefound = True
+						break
+				if not archivefound:
+					cursor.execute("insert into archivealias (checksum, archivename, origin, downloadurl, website) values (?,?,?,?,?)", filehash, filename, origin, downloadurl, websites[filename])
 			continue
 		if batarchive:
 			batarchives.append(i)
 		else:
 			resordered.append(i)
 		processed_hashes.add(filehash)
+	conn.commit()
+	cursor.close()
+	conn.close()
 
 	extractconfig = {}
 	extractconfig['nomoschunks'] = nomoschunks
