@@ -3083,7 +3083,7 @@ def main(argv):
 						archivefound = True
 						break
 				if not archivefound:
-					cursor.execute("insert into archivealias (checksum, archivename, origin, downloadurl, website) values (?,?,?,?,?)", (filehash, filename, origin, downloadurl, websites[filename]))
+					cursor.execute("insert into archivealias (checksum, archivename, origin, downloadurl, website) values (?,?,?,?,?)", (filehash, filename, origin, downloadurl, websites.get(filename, None)))
 			continue
 		if batarchive:
 			batarchives.append(i)
@@ -3113,7 +3113,7 @@ def main(argv):
 			if package != oldpackage:
 				oldres = set()
 			if not batarchive:
-				unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums[filename], downloadurl, website, masterdatabase, cleanup, license, copyrights, security, pool, extractconfig, licensedb, authlicensedb, authdb, authcopy, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
+				unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums[filename], downloadurl, websites.get(filename, None), masterdatabase, cleanup, license, copyrights, security, pool, extractconfig, licensedb, authlicensedb, authdb, authcopy, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
 			else:
 				unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums, downloadurls, websites, masterdatabase, cleanup, license, copyrights, security, pool, extractconfig, licensedb, authlicensedb, authdb, authcopy, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
 			if unpackres != None:
