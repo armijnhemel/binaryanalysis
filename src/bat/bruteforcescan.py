@@ -169,6 +169,15 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 			blacklistscans.add((module, method))
 			continue
 
+	for leafscan in leafscans:
+		module = leafscan['module']
+		method = leafscan['method']
+		try:
+			exec "from %s import %s as bat_%s" % (module, method, method)
+		except Exception, e:
+			blacklistscans.add((module, method))
+			continue
+
 	## grab tasks from the queue continuously until there are no more tasks
 	while True:
 		## reset the reports, blacklist, offsets and tags for each new scan
@@ -713,6 +722,9 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 				module = leafscan['module']
 				method = leafscan['method']
 
+				if (module, method) in blacklistscans:
+					continue
+
 				scandebug = False
 				if 'debug' in leafscan:
 					scandebug = True
@@ -723,10 +735,6 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 					sys.stderr.flush()
 					scandebug = True
 
-				try:
-					exec "from %s import %s as bat_%s" % (module, method, method)
-				except Exception, e:
-					continue
 				res = eval("bat_%s(filetoscan, tags, cursor, conn, blacklist, leafscan['environment'], scandebug=scandebug, unpacktempdir=unpacktempdir)" % (method))
 				if res != None:
 					(nt, leafres) = res
