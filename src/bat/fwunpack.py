@@ -7383,6 +7383,7 @@ def searchUnpackFont(filename, tempdir, blacklist, offsets, requiredtablenames, 
 		checksumadjustment = 0
 		## proces the tables
 		validfont = True
+		fontsizepadding = 0
 		for i in xrange(0,numberoftables):
 			## first the tag
 			fontbytes = fontfile.read(4)
@@ -7430,6 +7431,7 @@ def searchUnpackFont(filename, tempdir, blacklist, offsets, requiredtablenames, 
 				break
 			fontsize = max(fontsize, tablelength + tableoffset)
 			if fontsize%4 != 0:
+				fontsizepadding = (4 - fontsize%4)
 				fontsize += (4 - fontsize%4)
 
 			## now calculate the checksum.
@@ -7477,12 +7479,24 @@ def searchUnpackFont(filename, tempdir, blacklist, offsets, requiredtablenames, 
 
 		## compute checksumadjustment and compare it to
 		## the stored checksumadjustment in the head table
+		## If the offset of the last table in the font
+		## (offset wise, not alphabetically) plus its size
+		## are not 4 byte aligned, then padding bytes need
+		## to be added, if only as to not read beyond
+		## where the font ends.
+		## See https://lists.w3.org/Archives/Public/public-webfonts-wg/2010Jun/0063.html
+		## However, checksums in some fonts are then no longer
+		## properly computed.
+		## Example: Font4_Luminous_Sans.ttf in some phones
 		fontfile.seek(offset)
 		computedchecksum = 0
-		fontbytes = fontfile.read(fontsize)
+		fontbytes = fontfile.read(fontsize - fontsizepadding)
+		if len(fontbytes) % 4 != 0:
+			pad = 4 - len(fontbytes) % 4
+			fontbytes += '\x00'*pad
 		for r in xrange(0, fontsize/4):
 			if r*4 == headchecklocation+8:
-				## first adapt the checksumadjustment in the 'head' table
+				## skip the value for checksumadjustment in the 'head' table
 				computedchecksum += 0
 			else:
 				computedchecksum += struct.unpack('>L', fontbytes[r*4:r*4+4])[0]
