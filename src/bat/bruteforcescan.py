@@ -493,8 +493,10 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 					scanmagic = unpackscan['magic'].split(':')
 					if set(scanmagic).intersection(filterscans) != set():
 						if set(scanmagic).intersection(zerooffsets) != set():
-							unpackscans.append(unpackscan)
-							#scanfirst.append(unpackscan)
+							if unpackscan['name'] != 'lzma':
+								scanfirst.append(unpackscan)
+							else:
+								unpackscans.append(unpackscan)
 						else:
 							unpackscans.append(unpackscan)
 				else:
