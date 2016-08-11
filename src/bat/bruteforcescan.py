@@ -468,10 +468,10 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 							break
 				if ignore:
 					continue
-				if prerunignore.has_key(prerunscan['name']):
+				if prerunscan['name'] in prerunignore:
 					if set(tags).intersection(set(prerunignore[prerunscan['name']])) != set():
 						continue
-				if prerunmagic.has_key(prerunscan['name']):
+				if prerunscan['name'] in prerunmagic:
 					if set(prerunmagic[prerunscan['name']]).intersection(filterscans) == set():
 						continue
 				module = prerunscan['module']
@@ -1610,7 +1610,7 @@ def runscan(scans, binaries, batversion):
 		if 'magic' in prerunscan:
 			if not prerunscan['magic'] == None:
 				magics = prerunscan['magic'].split(':')
-				if not prerunmagic.has_key(prerunscan['name']):
+				if not prerunscan['name'] in prerunmagic:
 					prerunmagic[prerunscan['name']] = magics
 				else:
 					prerunmagic[prerunscan['name']] = prerunmagic[prerunscan['name']] + magics
