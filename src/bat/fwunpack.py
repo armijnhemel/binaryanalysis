@@ -3631,7 +3631,10 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 			if sparse_super:
 				for p in [3,5,7]:
 					if pow(p, int(math.log(groupnumber, p))) == groupnumber:
-						datafile.seek(offset - 0x438 + 0x400 + groupnumber*blocksize*blockspergroup)
+						if blocksize == 1024:
+							datafile.seek(offset - 0x438 + 0x400 + groupnumber*blocksize*blockspergroup)
+						else:
+							datafile.seek(offset - 0x438 + groupnumber*blocksize*blockspergroup)
 						ext2bytes = datafile.read(1024)
 						if len(ext2bytes) != 1024:
 							validext2 = False
@@ -3641,7 +3644,10 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 							break
 						break
 			else:
-				datafile.seek(offset - 0x438 + 0x400 + groupnumber*blocksize*blockspergroup)
+				if blocksize == 1024:
+					datafile.seek(offset - 0x438 + 0x400 + groupnumber*blocksize*blockspergroup)
+				else:
+					datafile.seek(offset - 0x438 + groupnumber*blocksize*blockspergroup)
 				ext2bytes = datafile.read(1024)
 				if len(ext2bytes) != 1024:
 					validext2 = False
@@ -3649,7 +3655,6 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 				if ext2bytes[0x38:0x3a] != '\x53\xef':
 					validext2 = False
 					break
-
 		if not validext2:
 			continue
 
