@@ -1989,6 +1989,24 @@ def runscan(scans, binaries, batversion):
 		if scans['batconfig']['reportendofphase']:
 			print "PRERUN UNPACK END %s" % scan_binary_basename, datetime.datetime.utcnow().isoformat()
 
+		## add an extra tag for the top level item
+		if 'checksum' in unpackreports[scan_binary_basename]:
+			filehash = unpackreports[scan_binary_basename]['checksum']
+			leaf_file_path = os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)
+
+			## first record what the top level element is. This will be used by other scans
+			leaf_file = open(leaf_file_path, 'rb')
+			leafreports = cPickle.load(leaf_file)
+			leaf_file.close()
+
+			unpackreports[scan_binary_basename]['tags'].append('toplevel')
+			unpackreports[scan_binary_basename]['scandate'] = scandate
+			leafreports['tags'].append('toplevel')
+
+			leaf_file = open(leaf_file_path, 'wb')
+			leafreports = cPickle.dump(leafreports, leaf_file)
+			leaf_file.close()
+
 		## LEGACY: Now the next phase starts, namely scanning each individual
 		## file. This is done once per unique file (based on checksum).
 		## CURRENT: this is a NOP and just there to satisfy a few older use cases
