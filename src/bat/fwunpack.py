@@ -3581,7 +3581,7 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 			continue
 
 		## check for RO_COMPAT_SPARSE_SUPER
-		datafile.seek(offset - 0x438 + 0x46c)
+		datafile.seek(offset - 0x438 + 0x464)
 		featureflagbytes = datafile.read(4)
 		if len(featureflagbytes) < 4:
 			continue
@@ -3612,7 +3612,6 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 		os.unlink(tmpfile[1])
 
 		## blocks per group
-		## check for RO_COMPAT_SPARSE_SUPER
 		datafile.seek(offset - 0x438 + 0x420)
 		ext2bytes = datafile.read(4)
 		if len(ext2bytes) < 4:
