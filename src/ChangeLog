@@ -1,3 +1,8 @@
+2016-08-12:
+* bat-unyaffs: add another chunk/spare combination observed in the wild
+* bruteforcescan.py: make sure the top level element is tagged as such
+* fwunpack.py: correct offset for ext2 feature flags for sparse_super check
+
 2016-08-11:
 * fwunpack.py: ext2 superblock checks need different offsets if blocksize ==
 1024
@@ -6,6 +11,8 @@ aligned don't trigger a crash, plus that some checks don't read beyond where
 they should read in case multiple files are concatenated and some fonts are
 not 4 byte aligned.
 * bruteforcescan.py: reenable scanfirst, but not for lzma
+* bruteforcescan.py: import leaf scans only once per thread instead of once
+per file
 
 2016-08-10:
 * createdb.py: fixes for website entries in case there is no DOWNLOADURL file
