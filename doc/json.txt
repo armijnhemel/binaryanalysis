@@ -11,6 +11,8 @@ The top level file is called "scandata.json". This name is hardcoded.
 
 Top level file, description:
 
+The top level consists of a list of elements that together describe the structure of the unpacked files. Each element in this list is constructed like this:
+
 {
   'name': <name of the file including relative path inside unpacking directory>,
   'path': <relative path inside the unpacked file system or compressed file>,
@@ -18,7 +20,7 @@ Top level file, description:
   'tags': <list of tags>,
   'size': <size in bytes, optional>
   'checksum': <checksum of the file, optional>,
-  'checksumtype': <type of checksum, only present if checksumtype is set too>,
+  'checksumtype': <type of checksum, only present if checksumtype is set in the configuration>,
   'scans': [
      {'offset': <offset in the original file where the file system/compressed file starts>,
       'size': <size of the file system/compressed file in the original file, optional>,
@@ -28,7 +30,9 @@ Top level file, description:
            ]
 }
 
-Top level file, data type:
+It should be noted that the element 'scans' describes possible child elements of the file, but it merely records the name of the child elements. The child elements themselves will be described separately in the top level list. So it is not a recursive structure, but a recursive structure can be reconstructed using the information.
+
+Top level file element, data type:
 
 {
   'name': string
@@ -47,7 +51,7 @@ Top level file, data type:
            ]
 }
 
-The files with the actual results will be called $checksum.json where the checksum can be found in the top level file.
+The files with the actual results will be stored in the directory "reports". The results per file are actually stored in a file with the checksum of the file in it, not called the name. This is because there is a lot of duplication in firmwares at the file level. Getting the results for a particularly named file requires a two step approach: first the checksum of the file needs to be retrieved from the top level file (scandata.json), and then the file results need to be looked up using the checksum. The file will be called "$checksum.json" or "$checksum.json.gz", depending on whether or not compression was used.
 
 Depending on the scans that are activated there will be different results available in the JSON file. Since scans are added on a regular basis this will change over time. For sake of simplicity only a few scans will be described in detail. All other data should be ignored.
 
