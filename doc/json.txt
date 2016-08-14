@@ -9,10 +9,9 @@ This distinction is done because the data can grow quite big (especially when de
 
 The top level file is called "scandata.json". This name is hardcoded.
 
-Top level file, description:
-
 The top level consists of a list of elements that together describe the structure of the unpacked files. Each element in this list is constructed like this:
 
+Top level file element, description:
 {
   'name': <name of the file including relative path inside unpacking directory>,
   'path': <relative path inside the unpacked file system or compressed file>,
