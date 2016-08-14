@@ -6564,6 +6564,12 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 	traileroffsets = deque(offsets['jpegtrailer'])
 	trailerpopcounter = 0
 
+	## This is just a hack in case to make sure not too much data is read
+	## in case there is an invalid JPEG that is hard to detect (example:
+	## Android sparse data images where pieces of the ext4 file system
+	## with NUL bytes have been removed. The alternative would be to do
+	## a full decoding of the JPEG data in the SOS section which is not
+	## trivial to implement.
 	## TODO: make configurable. For now set to 100 MiB.
 	jpegmaxsize = 104857600
 
@@ -6702,7 +6708,7 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 				if len(jpegmarker) != 2:
 					break
 				localoffset += 2
-			elif jpegmarker[1] in jpegmarkers:
+			elif jpegmarker[1] in jpegmarkers or jpegmarker[1] in jpegappmarkers:
 				jpeglength = datafile.read(2)
 				if len(jpeglength) != 2:
 					validpng = False
@@ -6779,6 +6785,8 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			## there is a valid end of image, so only consider
 			## this trailer
 			if seenendofimage:
+				if trail > endofimage:
+					break
 				if trail != endofimage:
 					continue
 			else:
