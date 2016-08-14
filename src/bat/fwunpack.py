@@ -762,10 +762,14 @@ def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 	arfile.close()
 	return (diroffsets, blacklist, newtags, hints)
 
-## Unpack ISO 9660 file systems. Currently supports plain ISO9660 and Rock Ridge.
-## TODO: Joliet and zisofs
+## Unpack ISO 9660 file systems. Currently supports plain ISO9660, Rock Ridge and zisofs.
+## TODO: Joliet
 ## https://en.wikipedia.org/wiki/ISO_9660
 ## http://wiki.osdev.org/ISO_9660
+## http://libburnia-project.org/wiki/zisofs
+##
+## For zisofs systems the assumption is made that they were created by (for example)
+## running mkisofs with the rock ridge and -z options.
 def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	if not 'iso9660' in offsets:
@@ -1132,7 +1136,9 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 								if directoryentryoffset + rrlen > lenisobytes:
 									validiso = False
 									break
-								if extension == 'PX':
+								if extension == 'ZF':
+									iszisofs = True
+								elif extension == 'PX':
 									pxversion = ord(isobytes[localoffset+3])
 									if pxversion != 1:
 										validiso = False
@@ -1283,7 +1289,76 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 									isofile.seek(extentlocation * logicalblocksize + primaryoffset - 32769)
 									curfilename = os.path.join(tmpdir, parentdirname, outfilename)
 									outfile = open(curfilename, 'wb')
-									outfile.write(isofile.read(extentsize))
+									if not iszisofs:
+										## regular files, also in zisofs file
+										## systems if they were not compressed.
+										outfile.write(isofile.read(extentsize))
+									else:
+										## first zisofs magic header
+										isodata = isofile.read(8)
+										if not isodata == '\x37\xe4\x53\x96\xc9\xdb\xd6\x07':
+											validiso = False
+											break
+
+										## followed by the original size
+										isodata = isofile.read(4)
+										if not len(isodata) == 4:
+											validiso = False
+											break
+										uncompressed_size = struct.unpack('<I', isodata)[0]
+										isodata = isofile.read(1)
+										if not len(isodata) == 1:
+											validiso = False
+											break
+										header_size = ord(isodata)
+										if header_size != 4:
+											validiso = False
+											break
+										real_header_size = header_size << 2
+
+										isodata = isofile.read(1)
+										if not len(isodata) == 1:
+											validiso = False
+											break
+										block_size_byte = ord(isodata)
+										if not block_size_byte in [15,16,17]:
+											validiso = False
+											break
+										block_size = pow(2,block_size_byte)
+
+										numberofblocks = int(math.ceil(uncompressed_size/block_size)) + 1
+										## then seek past the header to process
+										## the meta information about each compressed
+										## block. The list contains one final pointer
+										## that is indicates the start of the
+										## non-zlib data.
+										isofile.seek(extentlocation * logicalblocksize + primaryoffset - 32769 + real_header_size)
+										blockpointers = []
+										for bl in xrange(0,numberofblocks+1):
+											blpointerbytes = isofile.read(4)
+											if len(blpointerbytes) != 4:
+												validiso = False
+												break
+											blpointer = struct.unpack('<I', blpointerbytes)[0]
+											blockpointers.append(blpointer)
+										blockswritten = 0
+										for bl in xrange(0, len(blockpointers)-1):
+											if (blockpointers[bl] + extentlocation * logicalblocksize + primaryoffset - 32769) > filesize:
+												validiso = False
+												break
+											if (blockpointers[bl+1] + extentlocation * logicalblocksize + primaryoffset - 32769) > filesize:
+												validiso = False
+												break
+											isofile.seek(extentlocation * logicalblocksize + primaryoffset - 32769 + blockpointers[bl])
+											isodata = isofile.read(blockpointers[bl+1] - blockpointers[bl])
+											deflateobj = zlib.decompressobj()
+											uncompresseddata = deflateobj.decompress(isodata)
+											outfile.write(uncompresseddata)
+											blockswritten += 1
+										if not validiso:
+											outfile.close()
+											os.unlink(curfilename)
+											break
 									outfile.close()
 									isofile.seek(oldoffset)
 						else:
