@@ -764,6 +764,8 @@ def aggregatescan(unpackreports, aggregatescans, processors, scantempdir, toplev
 	## Because aggregate scans have to look at everything as a whole, these
 	## cannot be run in parallel.
 
+	statistics = {}
+
 	for aggregatescan in aggregatescans:
 		module = aggregatescan['module']
 		method = aggregatescan['method']
@@ -773,8 +775,9 @@ def aggregatescan(unpackreports, aggregatescans, processors, scantempdir, toplev
 			scandebug = True
 			debug = True
 
+		starttime = datetime.datetime.utcnow()
 		if debug:
-			print >>sys.stderr, "AGGREGATE BEGIN", method, datetime.datetime.utcnow().isoformat()
+			print >>sys.stderr, "AGGREGATE BEGIN", method, starttime.isoformat()
 			sys.stderr.flush()
 			scandebug = True
 
@@ -800,8 +803,11 @@ def aggregatescan(unpackreports, aggregatescans, processors, scantempdir, toplev
 				leaf_file = open(leaf_file_path, 'wb')
 				leafreports = cPickle.dump(leafreports, leaf_file)
 				leaf_file.close()
+		endtime = datetime.datetime.utcnow()
 		if debug:
-			print >>sys.stderr, "AGGREGATE END", method, datetime.datetime.utcnow().isoformat()
+			print >>sys.stderr, "AGGREGATE END", method, endtime.isoformat()
+		statistics[method] = endtime - starttime
+	return statistics
 
 ## continuously grab tasks (files) from a queue, tag and possibly unpack and recurse
 def postrunscan(scanqueue, postrunscans, topleveldir, scantempdir, cursor, conn, debug, timeout):
@@ -2024,7 +2030,8 @@ def runscan(scans, binaries, batversion):
 		if debug:
 			print >>sys.stderr, "AGGREGATE BEGIN", starttime.isoformat()
 		if scans['aggregatescans'] != []:
-			aggregatescan(unpackreports, finalaggregatescans, processamount, scantempdir, topleveldir, scan_binary_basename, scandate, batcursors, batcons, aggregatedebug, unpackdirectory)
+			aggregatestatistics = aggregatescan(unpackreports, finalaggregatescans, processamount, scantempdir, topleveldir, scan_binary_basename, scandate, batcursors, batcons, aggregatedebug, unpackdirectory)
+			statistics.update(aggregatestatistics)
 		endtime = datetime.datetime.utcnow()
 		if debug:
 			print >>sys.stderr, "AGGREGATE END", endtime.isoformat()
