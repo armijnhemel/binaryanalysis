@@ -767,6 +767,7 @@ def searchUnpackAr(filename, tempdir=None, blacklist=[], offsets={}, scanenv={},
 ## https://en.wikipedia.org/wiki/ISO_9660
 ## http://wiki.osdev.org/ISO_9660
 ## http://libburnia-project.org/wiki/zisofs
+## http://pismotec.com/cfs/jolspec.html
 ##
 ## For zisofs systems the assumption is made that they were created by (for example)
 ## running mkisofs with the rock ridge and -z options.
@@ -948,7 +949,10 @@ def searchUnpackISO9660(filename, tempdir=None, blacklist=[], offsets={}, scanen
 			## extensions, such as joliet. If so, then it might be possible
 			## or necessary to translate the file names using the information
 			## in this section.
-			pass
+			isofile.seek(offset-1+88)
+			isobytes = isofile.read(3)
+			if isobytes in ['\x25\x2f\x40', '\x25\x2f\x43', '\x25\x2f\x45']:
+				havejoliet = True
 		elif isobyte == '\xff':
 			## volume descriptor set terminator. If it is just a standalone
 			## terminator then it makes no sense to continue.
