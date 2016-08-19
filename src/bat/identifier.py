@@ -456,7 +456,7 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 					lines = stanout.split("\n")
 			if linuxkernel:
 				for l in lines:
-					if l.endswith('.c') or l.endswith('.h'):
+					if l.endswith('.c') or l.endswith('.h') or l.endswith('.S'):
 						filenames.append(l)
 		except Exception, e:
 			print >>sys.stderr, "string scan failed for:", filepath, e, type(e)
@@ -1034,7 +1034,7 @@ def extractkernelsymbols(filename, scanenv, unpacktempdir):
 ## binary and return three sets:
 ## 1. function names
 ## 2. variable names
-## 3. file names (from debugging section) TODO
+## 3. file names (from debugging section)
 def extractSymbolsFromELF(scanfile):
 	symres = elfcheck.getAllSymbols(scanfile)
 	if symres == []:
