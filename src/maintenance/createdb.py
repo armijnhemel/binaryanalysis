@@ -717,24 +717,22 @@ def unpack(directory, filename, unpackdir):
 			break
 	return tmpdir
 
-def unpack_verify(filedir, filename):
-	try:
-		os.stat(os.path.join(filedir, filename))
-	except:
-		print >>sys.stderr, "Can't find %s" % filename
-
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
 def unpack_getstrings(filedir, package, version, filename, origin, checksums, downloadurl, website, dbpath, cleanup, license, copyrights, security, pool, extractconfig, licensedb, authlicensedb, authdb, authcopy, securitydb, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
-	## unpack the archive. If it fails, cleanup and return.
+	process = True
+	unpacked = False
+
 	## TODO: make temporarydir configurable
 
 	if not batarchive:
 		filehash = checksums['sha256']
 	else:
+		## Always unpack BAT archive files
 		temporarydir = unpack(filedir, filename, unpackdir)
 		if temporarydir == None:
 			return None
+		unpacked = True
 		## override the data for package, version, filename, origin, filehash
 		## first unpack
 		## first extract the MANIFEST.BAT file from the BAT archive
@@ -796,15 +794,20 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 			if os.path.exists(manifestfile):
 				has_manifest = True
 
+	## if there is a manifest file, read the contents and
+	## store the contents of each line (except line 1) in filetohash
 	if has_manifest:
 		## Read the entries in the manifest file
 		manifest = bz2.BZ2File(manifestfile, 'r')
 		manifestlines = manifest.readlines()
 		manifest.close()
 
+		## read any configuration data specific for the package
+		## if it exists
+		pkgconf = packageconfig.get(package,{})
+
 		## first line is always a list of supported hashes.
 		checksumsused = manifestlines[0].strip().split()
-		process = True
 		if set(checksumsused).intersection(set(extrahashes)) != set(extrahashes):
 			## if the checksums recorded in the file are not the same
 			## as in the hashes wanted, then don't process the manifest file
@@ -831,36 +834,32 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 						filetohash[fileentry][c] = entries[counter+1]
 					counter += 1
 
-		## read any configuration data specific for the package
-		## if it exists
-		pkgconf = packageconfig.get(package,{})
-
-		## check if there are actually any files to process. Record if
-		## there are any new files to process as well, as that means
-		## that the archive has to be unpacked.
-		processstatus = False
-		havenewfile = False
-		for f in filetohash.keys():
-			if filetohash[f]['sha256'] in oldsha256:
-				processstatus = True
-				continue
-			if filterfilename(f, pkgconf)[0]:
-				## There is at least one new file so
-				## no need to look any further.
-				havenewfile = True
-				processstatus = True
-				break
-
-		if processstatus:
-			temporarydir = unpack(filedir, filename, unpackdir)
-			if temporarydir == None:
-				return None
+			## check if there are actually any files to process by checking the
+			## extension (and, as a shortcut, also check if it has already been
+			## processed previously, as that means that the file was interesting.
+			## Record if there are any new files to process as well, as that means
+			## that the archive has to be unpacked.
+			processstatus = False
+			havenewfile = False
+			for f in filetohash.keys():
+				if filetohash[f]['sha256'] in oldsha256:
+					processstatus = True
+					continue
+				if filterfilename(f, pkgconf)[0]:
+					## There is at least one new file so
+					## no need to look any further.
+					havenewfile = True
+					processstatus = True
+					break
 		else:
+			processstatus = True
+
+		if not processstatus:
+			## this only happens if there are no files of interest that could be found
 			return None
+		process = True
 	else:
-		temporarydir = unpack(filedir, filename, unpackdir)
-		if temporarydir == None:
-			return None
+		process = True
 
 	print >>sys.stdout, "processing", filename, datetime.datetime.utcnow().isoformat()
 	sys.stdout.flush()
@@ -871,7 +870,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 	c.execute('PRAGMA synchronous=off')
 
 	## First see if this exact version is in the rewrite list. If so, rewrite.
-	if rewrites.has_key(filehash):
+	if filehash in rewrites:
 		if origin == rewrites[filehash]['origin']:
 			if filename == rewrites[filehash]['filename']:
 				if package == rewrites[filehash]['package']:
@@ -879,22 +878,57 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 						package = rewrites[filehash]['newpackage']
 						version = rewrites[filehash]['newversion']
 
-	## Then check if version exists in the database.
+	## Then check if this version exists in the database.
 	c.execute('''select checksum from processed where package=? and version=? LIMIT 1''', (package, version))
 	checkres = c.fetchall()
 	if len(checkres) == 0:
 		## If the version is not in 'processed' check if there are already any strings
-		## from program + version. If so, first remove the results before adding to
+		## from program + version. If so, first remove the results before adding new results to
 		## avoid unnecessary duplication.
 		c.execute('''select checksum from processed_file where package=? and version=? LIMIT 1''', (package, version))
 		if len(c.fetchall()) != 0:
 			c.execute('''delete from processed_file where package=? and version=?''', (package, version))
 			conn.commit()
+		if process and not batarchive:
+			## because there are no results always unpack the archive
+			temporarydir = unpack(filedir, filename, unpackdir)
+			if temporarydir == None:
+				c.close()
+				conn.close()
+				return None
 	else:
 		## If the version is in 'processed' then it should be checked if every file is in processed_file
+		## and if every file in processed_file is in the archive.
 		## If they are, then the versions are equivalent and no processing is needed.
 		## If not, one of the versions should be renamed.
 		## TODO: support for batarchive
+		existing_files_to_hash = {}
+		existing_files = conn.execute('''select pathname, checksum from processed_file where package=? and version=?''', (package, version)).fetchall()
+		for e in existing_files:
+			(existing_filename, existing_checksum) = e
+			existing_files_to_hash[existing_filename] = existing_checksum
+
+		identical = True
+		interesting_files = set(filter(lambda x: filterfilename(x, pkgconf)[0], filetohash.keys()))
+		if interesting_files == set(existing_files_to_hash.keys()):
+			for i in interesting_files:
+				if filetohash[i]['sha256'] != existing_files_to_hash[i]:
+					identical = False
+					break
+		else:
+			identical = False
+		if identical:
+			c.execute("insert into archivealias (checksum, archivename, origin, downloadurl, website) values (?,?,?,?,?)", (filehash, filename, origin, downloadurl, website))
+			conn.commit()
+			return
+
+		temporarydir = unpack(filedir, filename, unpackdir)
+		if temporarydir == None:
+			c.close()
+			conn.close()
+			return None
+
+		## First grab all the files
 		osgen = os.walk(temporarydir)
 		pkgconf = packageconfig.get(package,{})
 
@@ -918,7 +952,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 		identical = True
 		## compare amount of checksums for this version and the one recorded in the database.
 		## If they are not equal the package is not identical.
-		origlen = len(conn.execute('''select checksum from processed_file where package=? and version=?''', (package, version)).fetchall())
+		origlen = len(existing_files)
 		if len(scanfile_result) == origlen:
 			tasks = map(lambda x: (dbpath, package, version, x[2]['sha256']), scanfile_result)
 			nonidenticals = filter(lambda x: x[1] == False, pool.map(grabhash, tasks, 1))
@@ -943,6 +977,11 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 			c.close()
 			conn.close()
 			return
+
+		if has_manifest:
+			temporarydir = unpack(filedir, filename, unpackdir)
+			if temporarydir == None:
+				return None
 
 	extractionresults = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, security, pool, extractconfig, licensedb, authlicensedb, authdb, authcopy, securitydb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles)
 
@@ -3072,18 +3111,17 @@ def main(argv):
 			continue
 		## no need to process some files twice, even if they
 		## are under a different name.
-		if filehash in processed_hashes:
-			cursor.execute("select * from archivealias where checksum=?", (filehash,))
-			aliasres = cursor.fetchall()
-			if len(aliasres) != []:
-				archivefound = False
-				for a in aliasres:
-					(aliaschecksum, archivename, aliasorigin, aliasdownloadurl, aliaswebsite) = a
-					if archivename == filename and aliasorigin == origin:
-						archivefound = True
-						break
-				if not archivefound:
-					cursor.execute("insert into archivealias (checksum, archivename, origin, downloadurl, website) values (?,?,?,?,?)", (filehash, filename, origin, downloadurl, websites.get(filename, None)))
+		cursor.execute("select * from archivealias where checksum=?", (filehash,))
+		aliasres = cursor.fetchall()
+		if len(aliasres) != 0:
+			archivefound = False
+			for a in aliasres:
+				(aliaschecksum, archivename, aliasorigin, aliasdownloadurl, aliaswebsite) = a
+				if archivename == filename and aliasorigin == origin:
+					archivefound = True
+					break
+			if not archivefound:
+				cursor.execute("insert into archivealias (checksum, archivename, origin, downloadurl, website) values (?,?,?,?,?)", (filehash, filename, origin, downloadurl, websites.get(filename, None)))
 			continue
 		if batarchive:
 			batarchives.append(i)
