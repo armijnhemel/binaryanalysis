@@ -1494,7 +1494,7 @@ def compressPickle((infile)):
 ## packed are hardcoded, the other files are determined from the configuration.
 ## The configuration option 'lite' allows to leave out the extracted data, to
 ## speed up extraction of data in the GUI.
-def writeDumpfile(unpackreports, scans, processamount, outputfile, configfile, tempdir, batversion, lite=False, debug=False, compress=True):
+def writeDumpfile(unpackreports, scans, processamount, outputfile, configfile, tempdir, batversion, statistics, lite=False, debug=False, compress=True):
 	dumpData(unpackreports, scans, tempdir)
 	dumpfile = tarfile.open(outputfile, 'w:gz')
 	oldcwd = os.getcwd()
@@ -1504,15 +1504,13 @@ def writeDumpfile(unpackreports, scans, processamount, outputfile, configfile, t
 	## platform, mostly for debugging purposes
 	statisticsfilename = 'STATISTICS'
 	statisticsfile = open(statisticsfilename, 'wb')
-	statisticsfile.write("BAT VERSION: %d" % batversion)
-	statisticsfile.write('\n')
-	statisticsfile.write("PLATFORM: " + platform.platform())
-	statisticsfile.write('\n')
-	statisticsfile.write("CPU: " + platform.processor())
-	statisticsfile.write('\n')
-	statisticsfile.write("PYTHON IMPLEMENTATION: " + platform.python_implementation())
-	statisticsfile.write('\n')
-	statisticsfile.write("PYTHON VERSION: " + platform.python_version())
+	statisticsfile.write("BAT VERSION: %d\n" % batversion)
+	statisticsfile.write("PLATFORM: %s\n" % platform.platform())
+	statisticsfile.write("CPU: %s\n" % platform.processor())
+	statisticsfile.write("PYTHON IMPLEMENTATION: %s\n" % platform.python_implementation())
+	statisticsfile.write("PYTHON VERSION: %s\n" % platform.python_version())
+	for i in statistics:
+		statisticsfile.write("%s: %s\n" % (i.upper(), statistics[i]))
 	statisticsfile.close()
 	dumpfile.add(statisticsfilename)
 	if scans['batconfig']['packconfig']:
@@ -1811,6 +1809,7 @@ def runscan(scans, binaries, batversion):
 
 	origcwd = os.getcwd()
 	for bins in binaries:
+		statistics = {}
 		(scan_binary, writeconfig) = bins
 		scan_binary_basename = os.path.basename(scan_binary)
 
@@ -1842,16 +1841,20 @@ def runscan(scans, binaries, batversion):
 
 		os.makedirs("%s/data" % (topleveldir,))
 		scantempdir = "%s/data" % (topleveldir,)
+		starttime = datetime.datetime.utcnow()
 		if debug:
-			print >>sys.stderr, "COPYING BEGIN", datetime.datetime.utcnow().isoformat()
+			print >>sys.stderr, "COPYING BEGIN", starttime.isoformat()
 			sys.stderr.flush()
 
 		shutil.copy(scan_binary, scantempdir)
 		os.chmod(os.path.join(scantempdir, scan_binary_basename), stat.S_IRWXU)
 
+		endtime = datetime.datetime.utcnow()
 		if debug:
-			print >>sys.stderr, "COPYING END", datetime.datetime.utcnow().isoformat()
+			print >>sys.stderr, "COPYING END", endtime.isoformat()
 			sys.stderr.flush()
+
+		statistics['copying'] = endtime - starttime
 
 		## create the directory where result files will be stored if
 		## it does not already exist.
@@ -1900,8 +1903,9 @@ def runscan(scans, binaries, batversion):
 
 		template = scans['batconfig']['template']
 
+		starttime = datetime.datetime.utcnow()
 		if debug:
-			print >>sys.stderr, "PRERUN UNPACK BEGIN", datetime.datetime.utcnow().isoformat()
+			print >>sys.stderr, "PRERUN UNPACK BEGIN", starttime.isoformat()
 			sys.stderr.flush()
 
 		## create the directory to dump offsets in case they need
@@ -1984,10 +1988,12 @@ def runscan(scans, binaries, batversion):
 				dupecopy['tags'].append('duplicate')
 				unpackreports[k] = dupecopy
 
+		endtime = datetime.datetime.utcnow()
 		if debug:
-			print >>sys.stderr, "PRERUN UNPACK END", datetime.datetime.utcnow().isoformat()
+			print >>sys.stderr, "PRERUN UNPACK END", endtime.isoformat()
 		if scans['batconfig']['reportendofphase']:
-			print "PRERUN UNPACK END %s" % scan_binary_basename, datetime.datetime.utcnow().isoformat()
+			print "PRERUN UNPACK END %s" % scan_binary_basename, endtime.isoformat()
+		statistics['prerununpack'] = endtime - starttime
 
 		## add an extra tag for the top level item
 		if 'checksum' in unpackreports[scan_binary_basename]:
@@ -2014,21 +2020,25 @@ def runscan(scans, binaries, batversion):
 			print "LEAF END %s" % scan_binary_basename, datetime.datetime.utcnow().isoformat()
 
 		## Scan the files in context
+		starttime = datetime.datetime.utcnow()
 		if debug:
-			print >>sys.stderr, "AGGREGATE BEGIN", datetime.datetime.utcnow().isoformat()
+			print >>sys.stderr, "AGGREGATE BEGIN", starttime.isoformat()
 		if scans['aggregatescans'] != []:
 			aggregatescan(unpackreports, finalaggregatescans, processamount, scantempdir, topleveldir, scan_binary_basename, scandate, batcursors, batcons, aggregatedebug, unpackdirectory)
+		endtime = datetime.datetime.utcnow()
 		if debug:
-			print >>sys.stderr, "AGGREGATE END", datetime.datetime.utcnow().isoformat()
+			print >>sys.stderr, "AGGREGATE END", endtime.isoformat()
 		if scans['batconfig']['reportendofphase']:
-			print "AGGREGATE END %s" % scan_binary_basename, datetime.datetime.utcnow().isoformat()
+			print "AGGREGATE END %s" % scan_binary_basename, endtime.isoformat()
+		statistics['aggregate'] = endtime - starttime
 
 		for i in unpackreports:
 			if 'tags' in unpackreports[i]:
 				unpackreports[i]['tags'] = list(set(unpackreports[i]['tags']))
 
+		starttime = datetime.datetime.utcnow()
 		if debug:
-			print >>sys.stderr, "POSTRUN BEGIN", datetime.datetime.utcnow().isoformat()
+			print >>sys.stderr, "POSTRUN BEGIN", starttime.isoformat()
 		## run postrunscans here, again in parallel, if needed/wanted
 		## These scans typically only have a few side effects, but don't change
 		## the reporting/scanning, just process the results. Examples: generate
@@ -2084,13 +2094,15 @@ def runscan(scans, binaries, batversion):
 				for p in processpool:
 					p.terminate()
 
+		endtime = datetime.datetime.utcnow()
 		if debug:
-			print >>sys.stderr, "POSTRUN END", datetime.datetime.utcnow().isoformat()
+			print >>sys.stderr, "POSTRUN END", endtime.isoformat()
 		if scans['batconfig']['reportendofphase']:
-			print "POSTRUN END %s" % scan_binary_basename, datetime.datetime.utcnow().isoformat()
+			print "POSTRUN END %s" % scan_binary_basename, endtime.isoformat()
+		statistics['postrun'] = endtime - starttime
 
 		if writeconfig['writeoutput']:
-			writeDumpfile(unpackreports, scans, processamount, writeconfig['outputfile'], writeconfig['config'], topleveldir, batversion, scans['batconfig']['outputlite'], scans['batconfig']['debug'], compressed)
+			writeDumpfile(unpackreports, scans, processamount, writeconfig['outputfile'], writeconfig['config'], topleveldir, batversion, statistics, scans['batconfig']['outputlite'], scans['batconfig']['debug'], compressed)
 		if scans['batconfig']['cleanup']:
 			try:
 				shutil.rmtree(topleveldir)
