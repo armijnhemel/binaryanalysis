@@ -2790,6 +2790,7 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 	else:
 		be_offsets = set(offsets['cramfs_be'])
 
+	cramfsfile = open(filename, 'rb')
 	for offset in cramfsoffsets:
 		bigendian = False
 		if offset in be_offsets:
@@ -2797,10 +2798,8 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
-		cramfsfile = open(filename, 'rb')
 		cramfsfile.seek(offset)
 		tmpbytes = cramfsfile.read(64)
-		cramfsfile.close()
 		if len(tmpbytes) != 64:
 			break
 		if not tmpbytes[16:32] == "Compressed ROMFS":
@@ -2820,15 +2819,73 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 		## check if the length of the cramfslen field does not
 		## exceed the actual size of the file. This does not work
 		## for cramfs versions that are version 0.
+		validcramfs = True
 		if cramfsversion != 0:
 			if cramfslen > filesize - offset:
 				continue
+
+			## find out the amount of files, which includes the root inode
+			## as well
+			if bigendian:
+				amountoffiles = struct.unpack('>I', tmpbytes[44:48])[0]
+			else:
+				amountoffiles = struct.unpack('<I', tmpbytes[44:48])[0]
+			cramfsfile.seek(offset+64)
+
+			## Then walk the inodes. 6 bits are for the name length, the
+			## other 26 bits for the offset. Depending on whether or not the
+			## file system is big endian or little endian some tricks have to
+			## be performed to get the correct data out of the inode.
+			## first the root node
+			tmpbytes = cramfsfile.read(12)
+			if len(tmpbytes) != 12:
+				continue
+			if bigendian:
+				namelenoffset = struct.unpack('>I', tmpbytes[8:12])[0]
+				namelength = (namelenoffset & 4227858432) >> 26
+				entryoffset = (namelenoffset & 67108863)
+			else:
+				namelenoffset = struct.unpack('<I', tmpbytes[8:12])[0]
+				namelength = namelenoffset & 63
+				entryoffset = (namelenoffset & 4294967232) >> 6
+				if entryoffset*4 > filesize - offset:
+					validcramfs = False
+					continue
+			for a in range(1,amountoffiles):
+				## first read the data of a cramfs_inode
+				tmpbytes = cramfsfile.read(12)
+				if len(tmpbytes) != 12:
+					validcramfs = False
+					break
+				if bigendian:
+					namelenoffset = struct.unpack('>I', tmpbytes[8:12])[0]
+					namelength = (namelenoffset & 4227858432) >> 26
+					entryoffset = (namelenoffset & 67108863)
+				else:
+					namelenoffset = struct.unpack('<I', tmpbytes[8:12])[0]
+					namelength = namelenoffset & 63
+					entryoffset = (namelenoffset & 4294967232) >> 6
+				if namelength == 0:
+					validcramfs = False
+					break
+				if entryoffset*4 > filesize - offset:
+					validcramfs = False
+					break
+				## followed by the file name
+				tmpbytes = cramfsfile.read(namelength*4)
+				if len(tmpbytes) != namelength*4:
+					validcramfs = False
+					break
+				filenameentry = tmpbytes.split('\x00', 1)[0]
 		else:
 			oldcramfs = True
 			## this is an old cramfs version, so length
 			## field does not mean anything, so just set it
 			## to the entire file.
 			cramfslen = filesize
+
+		if not validcramfs:
+			continue
 
 		tmpdir = dirsetup(tempdir, filename, "cramfs", counter)
 		retval = unpackCramfs(filename, offset, bigendian, cramfslen, oldcramfs, tmpdir, blacklist=blacklist)
@@ -2843,6 +2900,7 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 		else:
 			## cleanup
 			os.rmdir(tmpdir)
+	cramfsfile.close()
 	return (diroffsets, blacklist, newtags, hints)
 
 ## unpack a cramfs file system
