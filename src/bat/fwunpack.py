@@ -2806,8 +2806,32 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 		if not "Compressed ROMFS" in tmpbytes:
 			continue
 
+		if bigendian:
+			cramfslen = struct.unpack('>I', tmpbytes[4:8])[0]
+		else:
+			cramfslen = struct.unpack('<I', tmpbytes[4:8])[0]
+
+		if bigendian:
+			cramfsversion = struct.unpack('>I', tmpbytes[8:12])[0]
+		else:
+			cramfsversion = struct.unpack('<I', tmpbytes[8:12])[0]
+
+		oldcramfs = False
+		## check if the length of the cramfslen field does not
+		## exceed the actual size of the file. This does not work
+		## for cramfs versions that are version 0.
+		if cramfsversion != 0:
+			if cramfslen > filesize - offset:
+				continue
+		else:
+			oldcramfs = True
+			## this is an old cramfs version, so length
+			## field does not mean anything, so just set it
+			## to the entire file.
+			cramfslen = filesize
+
 		tmpdir = dirsetup(tempdir, filename, "cramfs", counter)
-		retval = unpackCramfs(filename, offset, tmpdir, bigendian=bigendian, blacklist=blacklist)
+		retval = unpackCramfs(filename, offset, bigendian, cramfslen, oldcramfs, tmpdir, blacklist=blacklist)
 		if retval != None:
 			(res, cramfssize) = retval
 			if cramfssize != 0:
@@ -2822,44 +2846,7 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 	return (diroffsets, blacklist, newtags, hints)
 
 ## unpack a cramfs file system
-def unpackCramfs(filename, offset, tempdir=None, unpacktempdir=None, bigendian=False, blacklist=[]):
-	sizetmpfile = open(filename)
-	sizetmpfile.seek(offset+4)
-	tmpbytes = sizetmpfile.read(4)
-	sizetmpfile.close()
-
-	## needs at least 4 bytes to determine the size
-	if len(tmpbytes) < 4:
-		return
-	if bigendian:
-		cramfslen = struct.unpack('>I', tmpbytes)[0]
-	else:
-		cramfslen = struct.unpack('<I', tmpbytes)[0]
-
-	versiontmpfile = open(filename)
-	versiontmpfile.seek(offset+8)
-	tmpbytes = versiontmpfile.read(4)
-	versiontmpfile.close()
-	oldcramfs = False
-
-	if bigendian:
-		cramfsversion = struct.unpack('>I', tmpbytes)[0]
-	else:
-		cramfsversion = struct.unpack('<I', tmpbytes)[0]
-
-	## check if the length of the cramfslen field does not
-	## exceed the actual size of the file. This does not work
-	## for cramfs versions that are version 0.
-	if cramfsversion != 0:
-		if cramfslen > os.stat(filename).st_size:
-			return
-	else:
-		oldcramfs = True
-		## this is an old cramfs version, so length
-		## field does not mean anything, so just set it
-		## to the entire file.
-		cramfslen = os.stat(filename).st_size
-
+def unpackCramfs(filename, offset, bigendian, cramfslen, oldcramfs, tempdir=None, unpacktempdir=None, blacklist=[]):
 	tmpdir = unpacksetup(tempdir)
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
