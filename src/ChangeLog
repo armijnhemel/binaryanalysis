@@ -4,6 +4,9 @@ scan
 * bruteforcescan.py: record for each blacklist entry by which scan it was set
 * fwunpack.py: rework cramfs sanity checks, add more sanity checks for cramfs
 * fwunpack.py: tag ext2/3/4 files
+* createdb.py/postgresql-*.sql: add "blacklist" database for known files that
+should be ignored (example: broken ext2 file systems that are present as test
+data in e2fsprogs)
 
 2016-08-19:
 * createdb.py: check entries in the manifest before unpacking an archive. This
