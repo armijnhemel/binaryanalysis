@@ -2946,7 +2946,11 @@ def main(argv):
 		c.execute('''create index if not exists kernelmodule_parameter_description_checksum_index on kernelmodule_parameter_description(checksum)''')
 		c.execute('''create index if not exists kernelmodule_version_checksum_index on kernelmodule_version(checksum)''')
 
-		## keep information specifically about for files
+		##
+		c.execute('''create table if not exists blacklist(checksum text, filename text, origin text)''')
+		c.execute('''create index if not exists blacklist_checksum_index on blacklist(checksum)''')
+
+		## keep information specifically about rpm files
 		c.execute('''create table if not exists rpm(rpmname text, checksum text, downloadurl text)''')
 		c.execute('''create index if not exists rpm_checksum_index on rpm(checksum)''')
 		c.execute('''create index if not exists rpm_rpmname_index on rpm(rpmname)''')
