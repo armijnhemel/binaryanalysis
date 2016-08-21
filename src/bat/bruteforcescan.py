@@ -346,7 +346,7 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 				except Exception, e:
 					continue
 
-				## run the setup method
+				## run the known unpack method
 				scanres = eval("bat_%s(filetoscan, tempdir, newenv, debug=debug)" % (method))
 				if scanres == ([], [], [], {}):
 					## no result, so move on to the next scan
