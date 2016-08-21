@@ -725,7 +725,7 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 			## finally add the file to the queue for leaf tasks
 			newtags = []
 			reports = {}
-			for leafscan in leafscans:
+			for leafscan in filterScans(leafscans, tags):
 				ignore = False
 				if 'extensionsignore' in leafscan:
 					extensionsignore = leafscan['extensionsignore'].split(':')
