@@ -14,6 +14,7 @@ drop table kernelmodule_parameter;
 drop table kernelmodule_parameter_description;
 drop table kernelmodule_version;
 
+drop table blacklist;
 drop table rpm;
 drop table archivealias;
 drop table misc;

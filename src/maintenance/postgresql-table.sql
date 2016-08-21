@@ -14,6 +14,7 @@ create table if not exists kernelmodule_parameter(checksum text, modulename text
 create table if not exists kernelmodule_parameter_description(checksum text, modulename text, paramname text, description text);
 create table if not exists kernelmodule_version(checksum text, modulename text, version text);
 
+create table if not exists blacklist(checksum text, filename text, origin text);
 create table if not exists rpm(rpmname text, checksum text, downloadurl text);
 create table if not exists archivealias(checksum text, archivename text, origin text, downloadurl text, website text);
 create table if not exists misc(checksum text, name text);

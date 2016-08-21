@@ -32,6 +32,7 @@ create index kernelmodule_license_checksum_index on kernelmodule_license(checksu
 create index kernelmodule_parameter_checksum_index on kernelmodule_parameter(checksum);
 create index kernelmodule_parameter_description_checksum_index on kernelmodule_parameter_description(checksum);
 create index kernelmodule_version_checksum_index on kernelmodule_version(checksum);
+create index blacklist_checksum_index on blacklist(checksum);
 create index rpm_checksum_index on rpm(checksum);
 create index rpm_rpmname_index on rpm(rpmname);
 create index archivealias_checksum_index on archivealias(checksum);
