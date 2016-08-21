@@ -2108,6 +2108,9 @@ def runscan(scans, binaries, batversion):
 			print "POSTRUN END %s" % scan_binary_basename, endtime.isoformat()
 		statistics['postrun'] = endtime - starttime
 
+		endtime = datetime.datetime.utcnow()
+		statistics['total'] = endtime - scandate
+
 		if writeconfig['writeoutput']:
 			writeDumpfile(unpackreports, scans, processamount, writeconfig['outputfile'], writeconfig['config'], topleveldir, batversion, statistics, scans['batconfig']['outputlite'], scans['batconfig']['debug'], compressed)
 		if scans['batconfig']['cleanup']:
