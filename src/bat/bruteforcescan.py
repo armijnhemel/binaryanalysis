@@ -146,7 +146,7 @@ def gethash(path, filename, hashtype="sha256"):
 	return hashresults
 
 ## continuously grab tasks (files) from a queue, tag and possibly unpack and recurse
-def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, prerunmagic, magicscans, optmagicscans, processid, hashdict, blacklistedfiles, llock, template, unpacktempdir, topleveldir, tempdir, outputhash, cursor, conn, scansourcecode, dumpoffsets, offsetdir, compressed, timeout):
+def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, prerunmagic, magicscans, optmagicscans, processid, hashdict, llock, template, unpacktempdir, topleveldir, tempdir, outputhash, cursor, conn, scansourcecode, dumpoffsets, offsetdir, compressed, timeout):
 	lentempdir = len(tempdir)
 	sourcecodequery = "select checksum from processed_file where checksum=%s limit 1"
 
@@ -267,6 +267,8 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 		unpackreports['sha256'] = filehashresults['sha256']
 		filehash = filehashresults[outputhash]
 
+		## TODO: replace ith database lookup
+		blacklistedfiles = []
 		## blacklisted file, not interested in further scanning
 		if filehash in blacklistedfiles:
 			tags.append('blacklisted')
@@ -1944,7 +1946,6 @@ def runscan(scans, binaries, batversion):
 		processpool = []
 
 		hashdict = scanmanager.dict()
-		blacklistedfiles = []
 		map(lambda x: scanqueue.put(x), scantasks)
 		for i in range(0,processamount):
 			if usedatabase:
@@ -1953,7 +1954,7 @@ def runscan(scans, binaries, batversion):
 			else:
 				cursor = None
 				conn = None
-			p = multiprocessing.Process(target=scan, args=(scanqueue, reportqueue, finalunpackscans, finalleafscans, scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, blacklistedfiles, lock, template, unpackdirectory, topleveldir, scantempdir, outputhash, cursor, conn, scansourcecode, scans['batconfig']['dumpoffsets'], offsetdir, compressed, timeout))
+			p = multiprocessing.Process(target=scan, args=(scanqueue, reportqueue, finalunpackscans, finalleafscans, scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, lock, template, unpackdirectory, topleveldir, scantempdir, outputhash, cursor, conn, scansourcecode, scans['batconfig']['dumpoffsets'], offsetdir, compressed, timeout))
 			processpool.append(p)
 			p.start()
 
