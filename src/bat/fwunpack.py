@@ -3672,6 +3672,7 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 	datafile = open(filename, 'rb')
 	diroffsets = []
 	counter = 1
+	newtags = []
 
 	## set path for Debian
 	unpackenv = os.environ.copy()
@@ -3793,10 +3794,13 @@ def searchUnpackExt2fs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 			diroffsets.append((ext2tmpdir, offset - 0x438, ext2size))
 			blacklist.append((offset - 0x438, offset - 0x438 + ext2size))
 			counter = counter + 1
+			if offset - 0x438 == 0 and ext2size == filesize:
+				newtags.append('ext2')
+				newtags.append('filesystem')
 		else:
 			os.rmdir(tmpdir)
 	datafile.close()
-	return (diroffsets, blacklist, [], hints)
+	return (diroffsets, blacklist, newtags, hints)
 
 ## Unpack an ext2 file system using e2tools and some custom written code from BAT's own ext2 module
 def unpackExt2fs(filename, offset, ext2length, tempdir=None, unpackenv={}, blacklist=[]):
