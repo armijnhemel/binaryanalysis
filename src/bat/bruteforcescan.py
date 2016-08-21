@@ -352,6 +352,12 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 					## no result, so move on to the next scan
 					continue
 				(diroffsets, blacklist, scantags, hints) = scanres
+				newblacklist = []
+				for b in blacklist:
+					if len(b) == 2:
+						b = b + (unpackscan['name'],)
+					newblacklist.append(b)
+				blacklist = newblacklist
 				tags = list(set(tags + scantags))
 				knownfile = True
 				unpacked = True
@@ -649,9 +655,18 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 					except StopIteration:
 						pass
 					unpackreports['scans'].append({'scanname': unpackscan['name'], 'scanreports': scanreports, 'offset': diroffset[1], 'size': diroffset[2]})
+				newblacklist = []
+				for b in blacklist:
+					if len(b) == 2:
+						b = b + (unpackscan['name'],)
+					newblacklist.append(b)
+				blacklist = newblacklist
 				if blacklistignored:
 					## restore the old blacklist
 					blacklist = copy.deepcopy(oldblacklist)
+					## add anything new
+					for b in newblacklist:
+						blacklist.append(b)
 
 		blacklist.sort()
 
