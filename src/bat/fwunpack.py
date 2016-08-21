@@ -1777,7 +1777,7 @@ def unpackTar(filename, offset, tempdir=None, tar_tmpdir=None):
 	## filter out false positives
 	if os.stat(filename).st_size > 1024*1024:
 		tartest = open(testtar[1], 'wb')
-		testtarfile = open(filename, 'r')
+		testtarfile = open(filename, 'rb')
 		testtarfile.seek(offset - 0x101)
 		testtarbuffer = testtarfile.read(1024*1024)
 		testtarfile.close()
@@ -1819,7 +1819,7 @@ def unpackTar(filename, offset, tempdir=None, tar_tmpdir=None):
 
 	try:
 		## tmpfile[1] cannot be a closed file for some reason. Strange.
-		tar = tarfile.open(tmpfile[1], 'r')
+		tar = tarfile.open(tmpfile[1], 'rb')
 		tarmembers = tar.getmembers()
 		## assume that the last member is also the last in the file
 		tarsize = tarmembers[-1].offset_data + tarmembers[-1].size
@@ -2707,7 +2707,7 @@ def unpackRomfs(filename, offset, tempdir=None, unpacktempdir=None, blacklist=[]
 	## First check the size of the header. If it has some
 	## bizarre value (like bigger than the file it can unpack)
 	## it is not a valid romfs file system
-	romfsfile = open(filename)
+	romfsfile = open(filename, 'rb')
 	romfsfile.seek(offset)
 	romfsdata = romfsfile.read(12)
 	romfsfile.close()
@@ -2797,7 +2797,7 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
-		cramfsfile = open(filename)
+		cramfsfile = open(filename, 'rb'))
 		cramfsfile.seek(offset)
 		tmpbytes = cramfsfile.read(64)
 		cramfsfile.close()
@@ -2949,7 +2949,7 @@ def searchUnpackSquashfs(filename, tempdir=None, blacklist=[], offsets={}, scane
 		## the string '7zip' can be found. If so, then the inodes have been
 		## compressed with a variant of squashfs that uses 7zip compression
 		## and might cause crashes in some of the variants below.
-		sqshfile = open(filename)
+		sqshfile = open(filename, 'rb')
 		sqshfile.seek(offset)
 		sqshbuffer = sqshfile.read(80)
 		sqshfile.close()
@@ -3857,7 +3857,7 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 		## 1. check if "FEXTRA" is set. If so, don't continue searching for the name
 		## 2. check if "FNAME" is set. If so, it follows immediately after MTIME
 		## TODO: also process if FEXTRA is set
-		gzipfile = open(filename)
+		gzipfile = open(filename, 'rb')
 		gzipfile.seek(offset+3)
 		gzipbyte = gzipfile.read(1)
 		gzipfile.close()
@@ -3884,7 +3884,7 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			## reserved
 			continue
 
-		gzipfile = open(filename)
+		gzipfile = open(filename, 'rb')
 		localoffset = offset+10
 		renamename = None
 		comment = None
@@ -4409,7 +4409,7 @@ def searchUnpackAndroidSparse(filename, tempdir=None, blacklist=[], offsets={}, 
 		if blacklistoffset != None:
 			continue
 		## first see if the major version is correct
-		sparsefile = open(filename)
+		sparsefile = open(filename, 'rb')
 		sparsefile.seek(offset+4)
 		sparsedata = sparsefile.read(2)
 		sparsefile.close()
