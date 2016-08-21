@@ -2797,13 +2797,13 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
 			continue
-		cramfsfile = open(filename, 'rb'))
+		cramfsfile = open(filename, 'rb')
 		cramfsfile.seek(offset)
 		tmpbytes = cramfsfile.read(64)
 		cramfsfile.close()
 		if len(tmpbytes) != 64:
 			break
-		if not "Compressed ROMFS" in tmpbytes:
+		if not tmpbytes[16:32] == "Compressed ROMFS":
 			continue
 
 		if bigendian:
@@ -2812,9 +2812,9 @@ def searchUnpackCramfs(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 			cramfslen = struct.unpack('<I', tmpbytes[4:8])[0]
 
 		if bigendian:
-			cramfsversion = struct.unpack('>I', tmpbytes[8:12])[0]
+			cramfsversion = struct.unpack('>I', tmpbytes[8:12])[0] & 1
 		else:
-			cramfsversion = struct.unpack('<I', tmpbytes[8:12])[0]
+			cramfsversion = struct.unpack('<I', tmpbytes[8:12])[0] & 1
 
 		oldcramfs = False
 		## check if the length of the cramfslen field does not
