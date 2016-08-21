@@ -1,3 +1,21 @@
+2016-08-21:
+* bruteforcecan.py: record some more statistics about the total run time of a
+scan
+* bruteforcescan.py: record for each blacklist entry by which scan it was set
+* fwunpack.py: rework cramfs sanity checks, add more sanity checks for cramfs
+* fwunpack.py: tag ext2/3/4 files
+
+2016-08-19:
+* createdb.py: check entries in the manifest before unpacking an archive. This
+could save quite a bit of I/O in the case of big archives (Linux kernel,
+LibreOffice)
+* bruteforcescan.py: record some runtime statistics about each phase,
+individual aggregate scans and the total amount spent on scanning (except for
+writing the dump file)
+* remove jdserialize from bat-extratools-java
+* identifier.py: also record references to source code file names in the Linux
+kernel ending in .S
+
 2016-08-14:
 * fwunpack.py: add zisofs support to ISO9660 unpacking
 * docs: better document JSON
