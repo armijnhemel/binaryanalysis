@@ -1526,7 +1526,7 @@ def extractJava(javameta, scanenv, funccursor, funcconn, clones):
 				sourcepvs[classname] = classres
 
 	## A list of Java fields that should be ignored
-	ignorefields = ['value', 'name', 'type', 'data', 'options', 'parent', 'description', 'instance', 'port', 'out', 'properties', 'project', 'next', 'id', 'listeners', 'status', 'target', 'result', 'index', 'buffer', 'values', 'count', 'size', 'key', 'path', 'cache', 'map', 'file', 'context', 'initialized', 'verbose', 'version', 'debug', 'message', 'attributes', 'url', 'DEBUG', 'NAME', 'state', 'source', 'password', 'text', 'start', 'factory', 'entries', 'buf', 'args', 'logger', 'config', 'length', 'encoding', 'method', 'resources', 'timeout', 'filename', 'offset', 'server', 'mode', 'in', 'connection']
+	ignorefields = set(['value', 'name', 'type', 'data', 'options', 'parent', 'description', 'instance', 'port', 'out', 'properties', 'project', 'next', 'id', 'listeners', 'status', 'target', 'result', 'index', 'buffer', 'values', 'count', 'size', 'key', 'path', 'cache', 'map', 'file', 'context', 'initialized', 'verbose', 'version', 'debug', 'message', 'attributes', 'url', 'DEBUG', 'NAME', 'state', 'source', 'password', 'text', 'start', 'factory', 'entries', 'buf', 'args', 'logger', 'config', 'length', 'encoding', 'method', 'resources', 'timeout', 'filename', 'offset', 'server', 'mode', 'in', 'connection'])
 
 	## Keep a list of which sha256s were already seen. Since the files are
 	## likely only coming from a few packages there is no need to hit the database
@@ -1670,6 +1670,7 @@ def scanDynamic(scanstr, variables, scanenv, funccursor, funcconn, clones):
 	## Scan C variables extracted from dynamically linked files.
 	if scanenv.get('BAT_VARNAME_SCAN'):
 
+		ignorevariables = set(['options', 'debug', 'options', 'verbose', 'optarg', 'optopt', 'optfind', 'optind', 'opterr'])
 		## keep two mappings:
 		## 1. unique variable names per package
 		## 2. package per variable name
@@ -1679,7 +1680,7 @@ def scanDynamic(scanstr, variables, scanenv, funccursor, funcconn, clones):
 		for v in variables:
 			## These variable names are very generic and would not be useful, so skip.
 			## This is based on research of millions of C files.
-			if v in ['options', 'debug', 'options', 'verbose', 'optarg', 'optopt', 'optfind', 'optind', 'opterr']:
+			if v in ignorevariables:
 				continue
 			pvs = []
 			funccursor.execute(query, (v,))
