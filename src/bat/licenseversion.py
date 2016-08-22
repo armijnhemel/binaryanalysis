@@ -1421,7 +1421,6 @@ def extractJava(javameta, scanenv, funccursor, funcconn, clones):
 	sourcefile = javameta['sourcefiles']
 
 	if 'BAT_METHOD_SCAN' in scanenv:
-
 		query = "select distinct package from functionnamecache_java where functionname=%s"
 		for meth in methods:
 			if meth == 'main':
@@ -1526,6 +1525,9 @@ def extractJava(javameta, scanenv, funccursor, funcconn, clones):
 				classres = map(lambda x: (x, 0), classres_tmp)
 				sourcepvs[classname] = classres
 
+	## A list of Java fields that should be ignored
+	ignorefields = ['value', 'name', 'type', 'data', 'options', 'parent', 'description', 'instance', 'port', 'out', 'properties', 'project', 'next', 'id', 'listeners', 'status', 'target', 'result', 'index', 'buffer', 'values', 'count', 'size', 'key', 'path', 'cache', 'map', 'file', 'context', 'initialized', 'verbose', 'version', 'debug', 'message', 'attributes', 'url', 'DEBUG', 'NAME', 'state', 'source', 'password', 'text', 'start', 'factory', 'entries', 'buf', 'args', 'logger', 'config', 'length', 'encoding', 'method', 'resources', 'timeout', 'filename', 'offset', 'server', 'mode', 'in', 'connection']
+
 	## Keep a list of which sha256s were already seen. Since the files are
 	## likely only coming from a few packages there is no need to hit the database
 	## that often.
@@ -1537,7 +1539,7 @@ def extractJava(javameta, scanenv, funccursor, funcconn, clones):
 			## for reporting, but processing them will take a *lot* of time, so
 			## just skip them. This list is based on research of many many Java
 			## source code files.
-			if f in ['value', 'name', 'type', 'data', 'options', 'parent', 'description', 'instance', 'port', 'out', 'properties', 'project', 'next', 'id', 'listeners', 'status', 'target', 'result', 'index', 'buffer', 'values', 'count', 'size', 'key', 'path', 'cache', 'map', 'file', 'context', 'initialized', 'verbose', 'version', 'debug', 'message', 'attributes', 'url', 'DEBUG', 'NAME', 'state', 'source', 'password', 'text', 'start', 'factory', 'entries', 'buf', 'args', 'logger', 'config', 'length', 'encoding', 'method', 'resources', 'timeout', 'filename', 'offset', 'server', 'mode', 'in', 'connection']:
+			if f in ignorefields:
 				continue
 			pvs = []
 
