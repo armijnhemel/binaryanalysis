@@ -68,6 +68,12 @@ except:
 	ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
+try:
+	import tlsh
+	tlshscan = True
+except Exception, e:
+	tlshscan = False
+
 ## Method to run a setup scan. Returns the result of the setup
 ## scan, which is in the form of a tuple (boolean, environment).
 ## The environment returned is always a dictionary.
