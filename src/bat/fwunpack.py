@@ -1819,7 +1819,7 @@ def unpackTar(filename, offset, tempdir=None, tar_tmpdir=None):
 
 	try:
 		## tmpfile[1] cannot be a closed file for some reason. Strange.
-		tar = tarfile.open(tmpfile[1], 'rb')
+		tar = tarfile.open(tmpfile[1], 'r')
 		tarmembers = tar.getmembers()
 		## assume that the last member is also the last in the file
 		tarsize = tarmembers[-1].offset_data + tarmembers[-1].size
