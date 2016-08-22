@@ -1804,13 +1804,28 @@ SQLite to PostgreSQL.
 A set of statements to create the database in PostgreSQL can be found in the
 files \texttt{maintenance/postgresql-table.sql} and
 \texttt{maintenance/postgresql-index.sql} that can be directly passed to
-PostgreSQL's \texttt{psql} program. Configuring PostgreSQL is out of scope of
-this manual.
+PostgreSQL's \texttt{psql} program.
 
 At the moment some of the settings in the conversion script, table and index
 definitions are hardcoded and specific to Tjaldur Software Governance
 Solutions. This will be changed in the future. Please note that a few settings
 are hardcoded in the table and index definitions.
+
+\subsection{Setting up PostgreSQL}
+
+Setting up the PostgreSQL server itself is out of scope for this document. The
+important things is that there is a database and a user with enough priviliges
+to read from and possibly modify the data. After setting up the PostgreSQL
+server the following commands could be used to create a database and a user.
+It should be noted that for network access settings in PostgreSQL should be
+changed. If stricter privileges are needed these commands are probably giving
+too many privileges.
+
+\begin{enumerate}
+\item \texttt{create database bat;}
+\item \texttt{create user bat with password 'bat';}
+\item \texttt{grant all privileges on database bat to bat;}
+\end{enumerate}
 
 \subsection{Database design}
 
