@@ -121,22 +121,17 @@ def filterScans(scans, tags):
 ## compute a SHA256, and possibly other hashes as well. This is done in chunks
 ## to prevent a big file from being read in its entirety at once, slowing down
 ## the machine.
-def gethash(path, filename, hashtype="sha256"):
-	hashresults = {}
-	if hashtype == None:
-		hashtype = 'sha256'
-	## CRC32 and TLSH are not yet supported
-	elif hashtype == 'crc32':
-		hashtype = 'sha256'
-	elif hashtype == 'tlsh':
-		hashtype = 'sha256'
+def gethash(path, filename, hashtypes):
+	hashestocompute = set()
+	## always compute SHA256
+	hashestocompute.add('sha256')
+	for hashtype in hashtypes:
+		hashestocompute.add(hashtype)
 
-	hashtypes = set()
-	hashtypes.add(hashtype)
-	hashtypes.add('sha256')
+	hashresults = {}
 
 	hashdict = {}
-	for hasht in hashtypes:
+	for hasht in hashestocompute:
 		hashdict[hasht] = hashlib.new(hashtype)
 
 	scanfile = open(os.path.join(path, filename), 'r')
@@ -144,10 +139,13 @@ def gethash(path, filename, hashtype="sha256"):
 	hashdata = scanfile.read(10000000)
 	while hashdata != '':
 		for h in hashtypes:
+			## CRC32 and TLSH are not yet supported
+			if h == 'crc32' or h == 'tlsh':
+				continue
 			hashdict[h].update(hashdata)
 		hashdata = scanfile.read(10000000)
 	scanfile.close()
-	for h in hashtypes:
+	for h in hashestocompute:
 		hashresults[h] = hashdict[h].hexdigest()
 	return hashresults
 
@@ -268,7 +266,7 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 
 		## Store the hash of the file for identification and for possibly
 		## querying the knowledgebase later on.
-		filehashresults = gethash(dirname, filename, outputhash)
+		filehashresults = gethash(dirname, filename, [outputhash])
 		unpackreports['checksum'] = filehashresults[outputhash]
 		unpackreports['sha256'] = filehashresults['sha256']
 		filehash = filehashresults[outputhash]
