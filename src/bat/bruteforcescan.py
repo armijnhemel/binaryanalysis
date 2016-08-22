@@ -121,7 +121,8 @@ def filterScans(scans, tags):
 ## compute a SHA256, and possibly other hashes as well. This is done in chunks
 ## to prevent a big file from being read in its entirety at once, slowing down
 ## the machine.
-def gethash(path, filename, hashtypes):
+## For TLSH a default maximum size is set to 50 MiB
+def gethash(filepath, filename, hashtypes, tlshmaxsize=52428800):
 	hashestocompute = set()
 	## always compute SHA256
 	hashestocompute.add('sha256')
@@ -131,14 +132,16 @@ def gethash(path, filename, hashtypes):
 	hashresults = {}
 
 	hashdict = {}
-	for hasht in hashestocompute:
-		hashdict[hasht] = hashlib.new(hashtype)
+	for h in hashestocompute:
+		if h == 'crc32' or h == 'tlsh':
+			continue
+		hashdict[h] = hashlib.new(h)
 
-	scanfile = open(os.path.join(path, filename), 'r')
+	scanfile = open(os.path.join(filepath, filename), 'rb')
 	scanfile.seek(0)
 	hashdata = scanfile.read(10000000)
 	while hashdata != '':
-		for h in hashtypes:
+		for h in hashestocompute:
 			## CRC32 and TLSH are not yet supported
 			if h == 'crc32' or h == 'tlsh':
 				continue
@@ -146,7 +149,20 @@ def gethash(path, filename, hashtypes):
 		hashdata = scanfile.read(10000000)
 	scanfile.close()
 	for h in hashestocompute:
+		if h == 'crc32' or h == 'tlsh':
+			continue
 		hashresults[h] = hashdict[h].hexdigest()
+	filesize = os.stat(os.path.join(filepath, filename)).st_size
+	if 'tlsh' in hashestocompute:
+		if tlshscan:
+			if filesize >= 256 and filesize <= tlshmaxsize:
+				scanfile = open(os.path.join(filepath, filename), 'rb')
+				scanfile.seek(0)
+				hashdata = scanfile.read()
+				scanfile.close()
+				hashresults['tlsh'] = tlsh.hash(hashdata)
+			else:
+				hashresults['tlsh'] = None
 	return hashresults
 
 ## continuously grab tasks (files) from a queue, tag and possibly unpack and recurse
@@ -266,9 +282,10 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 
 		## Store the hash of the file for identification and for possibly
 		## querying the knowledgebase later on.
-		filehashresults = gethash(dirname, filename, [outputhash])
+		filehashresults = gethash(dirname, filename, [outputhash, 'tlsh'])
 		unpackreports['checksum'] = filehashresults[outputhash]
-		unpackreports['sha256'] = filehashresults['sha256']
+		for u in filehashresults:
+			unpackreports[u] = filehashresults[u]
 		filehash = filehashresults[outputhash]
 
 		## TODO: replace ith database lookup
