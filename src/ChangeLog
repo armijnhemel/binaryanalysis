@@ -1,3 +1,10 @@
+2016-08-22:
+* bruteforcescan.py: add TLSH hashing for binary files, record more hashes in
+unpackreports (if available)
+* licenseversion.py: don't build up a list of variables and fields for every
+field/variable that is looked at. Instead, use a set() that is created once
+per method invocation.
+
 2016-08-21:
 * bruteforcecan.py: record some more statistics about the total run time of a
 scan
