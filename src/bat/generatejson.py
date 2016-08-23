@@ -295,6 +295,10 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv, batc
 			filehash = copy.deepcopy(unpackreports[unpackreport]['checksum'])
 			jsonreport['checksum'] = filehash
 			jsonreport['checksumtype'] = outputhash
+			for c in ['sha256', 'md5', 'sha1', 'crc32', 'tlsh']:
+				if c in unpackreports[unpackreport]:
+					if unpackreports[unpackreport][c] != None:
+						jsonreport[c] = copy.deepcopy(unpackreports[unpackreport][c])
 		for p in ["name", "path", "realpath"]:
 			if p in unpackreports[unpackreport]:
 				nodename = copy.deepcopy(unpackreports[unpackreport][p])
@@ -349,6 +353,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv, batc
 			jsonfile.write(chunk)
 		jsonfile.close()
 
+	## keep track of which file hashes have already been seen
 	filehashes = set()
 	jsontasks = []
 
