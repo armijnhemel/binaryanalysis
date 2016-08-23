@@ -286,7 +286,7 @@ def crackPasswords(unpackreports, scantempdir, topleveldir, processors, scanenv,
 	for f in foundpasswords:
 		(orighash, foundpassword) = f
 		for l in hashestologins[orighash]:
-			res.add((l, foundpassword))
+			res.add((l, foundpassword, orighash))
 	if len(res) != 0:
 		return {'passwords': res}
 			
