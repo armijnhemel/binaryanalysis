@@ -1,3 +1,6 @@
+2016-08-23:
+* add storeresult.py to store results of a previous BAT run in the database
+
 2016-08-22:
 * bruteforcescan.py: add TLSH hashing for binary files, record more hashes in
 unpackreports (if available)
