@@ -8,7 +8,7 @@
 Script to upload BAT results into the BAT database. Works on a directory with scan results.
 '''
 
-import sys, os, os.path, json
+import sys, os, os.path, json, gzip, cPickle
 from optparse import OptionParser
 import ConfigParser
 
@@ -112,7 +112,7 @@ def main(argv):
 		if not 'checksum' in i:
 			continue
 		if 'toplevel' in i['tags']:
-			toplevelelem = i['name']
+			toplevelelem = i
 			toplevelchecksum = i['sha256']
 			lentopleveldir = len(i['realpath'])
 			break
@@ -124,14 +124,37 @@ def main(argv):
 		storepath = os.path.join(i['realpath'][lentopleveldir:], i['name'])
 		if storepath.startswith('/'):
 			storepath = storepath[1:]
-		#checksum text, filename text, tlsh text, pathname text, parentname text, parentchecksum text
 		tlshchecksum = None
 		if 'tlsh' in i:
 			tlshchecksum = i['tlsh']
-		cursor.execute("insert into batresult (checksum, filename, tlsh, pathname, parentname, parentchecksum) values (%s, %s, %s, %s, %s, %s)", (i['sha256'], i['name'], tlshchecksum, storepath, toplevelelem, toplevelchecksum))
+		cursor.execute("insert into batresult (checksum, filename, tlsh, pathname, parentname, parentchecksum) values (%s, %s, %s, %s, %s, %s)", (i['sha256'], i['name'], tlshchecksum, storepath, toplevelelem['name'], toplevelchecksum))
 
-	## commit all the pending data and close the database connections
+	## commit all the pending data
 	conn.commit()
+
+	## now check to see if any interesting security information like passwords were found
+	if 'passwords' in toplevelelem['tags']:
+		## first check if there is a pickle for the top level file,
+		## either gzip compressed or regular
+		if os.path.exists(os.path.join(options.resultdirectory, 'filereports', '%s-filereport.pickle') % toplevelchecksum):
+			leaf_file = open(os.path.join(options.resultdirectory, 'filereports', '%s-filereport.pickle') % toplevelchecksum)
+		elif os.path.exists(os.path.join(options.resultdirectory, 'filereports', '%s-filereport.pickle.gz') % toplevelchecksum):
+			leaf_file = gzip.open(os.path.join(options.resultdirectory, 'filereports', '%s-filereport.pickle.gz') % toplevelchecksum)
+		else:
+			## close the database connections
+			cursor.close()
+			conn.close()
+			sys.exit(0)
+		leafreports = cPickle.load(leaf_file)
+		leaf_file.close()
+
+		for i in set(map(lambda x: (x[1], x[2]), leafreports['passwords'])):
+			(password, orighash) = i
+			# security_password(hash text, password text);
+			cursor.execute("insert into security_password (hash, password) values (%s, %s)", (orighash, password))
+		conn.commit()
+
+	## close the database connections
 	cursor.close()
 	conn.close()
 
