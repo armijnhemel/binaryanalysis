@@ -4,6 +4,7 @@
 distance
 * bruteforcescan.py: fix issue where in some cases files were not tagged
 properly
+* bruteforcescan.py: record exact matches to earlier BAT scans
 
 2016-08-23:
 * add storeresult.py to store results of a previous BAT run in the database
