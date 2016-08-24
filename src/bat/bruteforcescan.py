@@ -121,8 +121,7 @@ def filterScans(scans, tags):
 ## compute a SHA256, and possibly other hashes as well. This is done in chunks
 ## to prevent a big file from being read in its entirety at once, slowing down
 ## the machine.
-## For TLSH a default maximum size is set to 50 MiB
-def gethash(filepath, filename, hashtypes, tlshmaxsize=52428800):
+def gethash(filepath, filename, hashtypes, tlshmaxsize):
 	hashestocompute = set()
 	## always compute SHA256
 	hashestocompute.add('sha256')
@@ -166,7 +165,7 @@ def gethash(filepath, filename, hashtypes, tlshmaxsize=52428800):
 	return hashresults
 
 ## continuously grab tasks (files) from a queue, tag and possibly unpack and recurse
-def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, prerunmagic, magicscans, optmagicscans, processid, hashdict, llock, template, unpacktempdir, topleveldir, tempdir, outputhash, cursor, conn, scansourcecode, dumpoffsets, offsetdir, compressed, timeout):
+def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, prerunmagic, magicscans, optmagicscans, processid, hashdict, llock, template, unpacktempdir, topleveldir, tempdir, outputhash, cursor, conn, scansourcecode, dumpoffsets, offsetdir, compressed, timeout, scan_binary_basename):
 	lentempdir = len(tempdir)
 	sourcecodequery = "select checksum from processed_file where checksum=%s limit 1"
 
@@ -252,7 +251,6 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 		unpackreports['path'] = storepath
 		unpackreports['realpath'] = dirname
 
-
 		## if the file is a symbolic link, then there is not much
 		## to report about it, so continue.
 		if os.path.islink(filetoscan):
@@ -282,14 +280,27 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 
 		## Store the hash of the file for identification and for possibly
 		## querying the knowledgebase later on.
-		filehashresults = gethash(dirname, filename, [outputhash, 'tlsh'])
+		## For TLSH a default maximum size is set to 50 MiB
+		## TODO: make configurable
+		tlshmaxsize=52428800
+		filehashresults = gethash(dirname, filename, [outputhash, 'tlsh'], tlshmaxsize)
 		unpackreports['checksum'] = filehashresults[outputhash]
 		for u in filehashresults:
 			unpackreports[u] = filehashresults[u]
 		filehash = filehashresults[outputhash]
 
-		## TODO: replace ith database lookup
+		seenbefore = False
+		if cursor != None:
+			cursor.execute("select pathname, parentname, parentchecksum from batresult where checksum=%s", (filehash,))
+			res = cursor.fetchall()
+			if res != []:
+				seenbefore = True
+				for r in res:
+					pass
+
 		blacklistedfiles = []
+		if cursor != None:
+			pass
 		## blacklisted file, not interested in further scanning
 		if filehash in blacklistedfiles:
 			tags.append('blacklisted')
@@ -737,15 +748,39 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 							pass
 					origfile.close()
 
-
 		unpackreports['tags'] = tags
 		if not unpacked and 'temporary' in tags:
 			os.unlink(filetoscan)
 			reportqueue.put({relfiletoscan: unpackreports})
 		else:
-			## finally add the file to the queue for leaf tasks
-			newtags = []
 			reports = {}
+
+			## First compute the closest
+			## a threshold for TLSH for the files to be considered similar.
+			## TODO: make configurable
+			tlshthreshold = 60
+			closestfile = None
+			if cursor != None:
+				if tlshscan and not seenbefore:
+					if 'tlsh' in filehashresults:
+						if filehashresults['tlsh'] != None:
+							tlshminimum = sys.maxint
+							cursor.execute("select tlsh, pathname, parentname, parentchecksum from batresult where filename=%s", (filename,))
+							res = cursor.fetchall()
+							for r in res:
+								(tlshchecksum, tlshpathname, parentname, parentchecksum) = r
+								if tlshchecksum == None:
+									continue
+								tlshdistance = tlsh.diff(filehashresults['tlsh'], tlshchecksum)
+								if tlshdistance < tlshminimum:
+									tlshminimum = tlshdistance
+							if tlshminimum < tlshthreshold:
+								closestfile = (tlshpathname, parentname, tlshdistance)
+			if closestfile != None:
+				reports['closematch'] = closestfile
+				tags.append('closematch')
+
+			## run the leaf scans for the file
 			for leafscan in filterScans(leafscans, tags):
 				ignore = False
 				if 'extensionsignore' in leafscan:
@@ -777,8 +812,8 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 				if res != None:
 					(nt, leafres) = res
 					reports[leafscan['name']] = leafres
-					newtags = newtags + nt
-					tags += list(set(newtags))
+					tags += list(set(tags + nt))
+
 			reports['tags'] = list(set(tags))
 			unpackreports['tags'] = list(set(unpackreports['tags'] + reports['tags']))
 
@@ -1975,7 +2010,7 @@ def runscan(scans, binaries, batversion):
 			else:
 				cursor = None
 				conn = None
-			p = multiprocessing.Process(target=scan, args=(scanqueue, reportqueue, finalunpackscans, finalleafscans, scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, lock, template, unpackdirectory, topleveldir, scantempdir, outputhash, cursor, conn, scansourcecode, scans['batconfig']['dumpoffsets'], offsetdir, compressed, timeout))
+			p = multiprocessing.Process(target=scan, args=(scanqueue, reportqueue, finalunpackscans, finalleafscans, scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, lock, template, unpackdirectory, topleveldir, scantempdir, outputhash, cursor, conn, scansourcecode, scans['batconfig']['dumpoffsets'], offsetdir, compressed, timeout, scan_binary_basename))
 			processpool.append(p)
 			p.start()
 
