@@ -24,7 +24,7 @@ create table if not exists licenses (checksum text, license text, scanner text, 
 create table if not exists extracted_copyright (checksum text, copyright text, type text, byteoffset int);
 create table if not exists security_cert(checksum text, securitybug text, linenumber int, function text, whitelist boolean);
 create table if not exists security_cve(checksum text, cve text);
-create table if not exists security_password(hash text, password text);
+create table if not exists security_password(hash text, password text, origin text);
 create table if not exists renames (originalname text, newname text);
 create table if not exists file(filename text, directory text, package text, packageversion text, source text, distroversion text);
 create table if not exists stringscache_actionscript (stringidentifier text, package text, filename text);

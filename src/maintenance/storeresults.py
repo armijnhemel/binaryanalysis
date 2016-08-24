@@ -151,7 +151,7 @@ def main(argv):
 		for i in set(map(lambda x: (x[1], x[2]), leafreports['passwords'])):
 			(password, orighash) = i
 			# security_password(hash text, password text);
-			cursor.execute("insert into security_password (hash, password) values (%s, %s)", (orighash, password))
+			cursor.execute("insert into security_password (hash, password, origin) values (%s, %s, %s)", (orighash, password, "file://%s" % toplevelelem['name']))
 		conn.commit()
 
 	## close the database connections
