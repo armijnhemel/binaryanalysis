@@ -289,6 +289,7 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 			unpackreports[u] = filehashresults[u]
 		filehash = filehashresults[outputhash]
 
+		exactmatches = []
 		seenbefore = False
 		if cursor != None:
 			cursor.execute("select pathname, parentname, parentchecksum from batresult where checksum=%s", (filehash,))
@@ -296,7 +297,7 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 			if res != []:
 				seenbefore = True
 				for r in res:
-					pass
+					exactmatches.append(res)
 
 		blacklistedfiles = []
 		if cursor != None:
@@ -779,6 +780,10 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 			if closestfile != None:
 				reports['closematch'] = closestfile
 				tags.append('closematch')
+
+			if seenbefore:
+				reports['exactbinarymatches'] = exactmatches
+				tags.append('exactbinarymatch')
 
 			## run the leaf scans for the file
 			for leafscan in filterScans(leafscans, tags):
