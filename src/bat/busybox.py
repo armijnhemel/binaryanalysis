@@ -224,7 +224,7 @@ def extract_version(filename):
 			bboffset = offset + markeroffset
 			bboffsets.append(bboffset)
 			markeroffset = databuffer.find("BusyBox v", markeroffset+1)
-			res = re.search("BusyBox v([\d\.\d\w-]+) \(", databuffer)
+			res = re.search("BusyBox v+([\d\.\d\w-]+) \(", databuffer)
 			if res != None:
 				datafile.close()
 				return res.groups(0)[0]
