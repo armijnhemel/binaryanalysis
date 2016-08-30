@@ -6158,14 +6158,16 @@ def searchUnpackBMP(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	return (diroffsets, blacklist, newtags, hints)
 
 ## http://en.wikipedia.org/wiki/Graphics_Interchange_Format
+## https://www.w3.org/Graphics/GIF/spec-gif89a.txt
 ## 1. search for a GIF header
-## 2. search for a GIF trailer
+## 2. parse the GIF file and look for a trailer
 ## 3. check the data with gifinfo
 ##
 ## gifinfo will not recognize if there is trailing data for
 ## a GIF file, so all data needs to be looked at, until a
 ## valid GIF file has been carved out (part of the file, or
 ## the whole file), or stop if no valid GIF file can be found.
+## TODO: remove call to gifinfo after running more tests
 def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	gifoffsets = []
@@ -6189,13 +6191,9 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	xmpmagic = "".join(xmpmagicheaderbytes)
 
 	datafile = open(filename, 'rb')
-	lendata = os.stat(filename).st_size
+	filesize = os.stat(filename).st_size
 	for i in range(0,len(gifoffsets)):
 		offset = gifoffsets[i]
-		if i < len(gifoffsets) - 1:
-			nextoffset = gifoffsets[i+1]
-		else:
-			nextoffset = lendata
 		## first check if the header is not blacklisted
 		blacklistoffset = extractor.inblacklist(offset, blacklist)
 		if blacklistoffset != None:
@@ -6238,136 +6236,157 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		databytes = datafile.read(1)
 		localoffset += 1
 
+		validgif = True
 		## there could be various extensions before there is an image
 		## control block
-		while databytes == '\x21':
-			## depending on the extension label a number of bytes
-			## need to be skipped
-			databytes = datafile.read(1)
-			localoffset += 1
-			if databytes == '\xf9':
-				## graphic control extension, 8 bytes in total counting
-				## label and extension identifier
-				localoffset += 6
-				datafile.seek(localoffset)
-			elif databytes == '\xfe':
-				## length of the comment
+		endofimage = -1
+		while True:
+			if databytes == '\x3b':
+				## end of image
+				endofimage = datafile.tell()
+				break
+			elif databytes == '\x21':
+				## depending on the extension label a number of bytes
+				## need to be skipped
 				databytes = datafile.read(1)
 				localoffset += 1
-				commentsize = ord(databytes)
-				localoffset += commentsize
-				datafile.seek(localoffset)
-			elif databytes == '\xff':
-				## application extension with all other data is 14 bytes
-				## unless it is XMP, in which case it is variable
-				## for details see XMP Specification part 3
-				## TODO: add support for other extensions such
-				## as ICC profiles
-				databytes = datafile.read(1)
-				if databytes != '\x0b':
-					break
-				localoffset += 1
-				databytes = datafile.read(8)
-				localoffset += 8
-				if databytes == 'XMP Data':
-					databytes = datafile.read(1000)
-					magicoffset = databytes.find(xmpmagic)
-					while magicoffset == -1:
-						databuf = datafile.read(1000)
-						## files with a broken XMP trailer
-						## exist, so check if the end of the
-						## file is reached at some point
-						## TODO: check blacklists as well
-						if databuf == '':
-							break
-						databytes += databuf
-						magicoffset = databytes.find(xmpmagic)
-					localoffset += magicoffset + 258
+				if databytes == '\xf9':
+					## graphic control extension, 8 bytes in total counting
+					## label and extension identifier
+					localoffset += 6
 					datafile.seek(localoffset)
-				else:
-					localoffset += 3
-					datafile.seek(localoffset)
+				elif databytes == '\xfe':
+					## length of the comment
 					databytes = datafile.read(1)
 					localoffset += 1
-					blocksize = ord(databytes)
-					localoffset += blocksize
+					commentsize = ord(databytes)
+					localoffset += commentsize
 					datafile.seek(localoffset)
-			databytes = datafile.read(1)
-			localoffset += 1
-			if databytes == '\x00':
+				elif databytes == '\xff':
+					## application extension with all other data is 14 bytes
+					## unless it is XMP, in which case it is variable
+					## for details see XMP Specification part 3
+					## TODO: add support for other extensions such
+					## as ICC profiles
+					databytes = datafile.read(1)
+					if databytes != '\x0b':
+						validgif = False
+						break
+					localoffset += 1
+					databytes = datafile.read(8)
+					localoffset += 8
+					if databytes == 'XMP Data':
+						databytes = datafile.read(1000)
+						magicoffset = databytes.find(xmpmagic)
+						while magicoffset == -1:
+							databuf = datafile.read(1000)
+							## files with a broken XMP trailer
+							## exist, so check if the end of the
+							## file is reached at some point
+							## TODO: check blacklists as well
+							if databuf == '':
+								validgif = False
+								break
+							databytes += databuf
+							magicoffset = databytes.find(xmpmagic)
+						localoffset += magicoffset + 258
+						datafile.seek(localoffset)
+					else:
+						localoffset += 3
+						datafile.seek(localoffset)
+						databytes = datafile.read(1)
+						localoffset += 1
+						blocksize = ord(databytes)
+						localoffset += blocksize
+						datafile.seek(localoffset)
 				databytes = datafile.read(1)
 				localoffset += 1
-		if databytes != '\x2c':
+				if databytes == '\x00':
+					databytes = datafile.read(1)
+					localoffset += 1
+			elif databytes == '\x2c':
+				## According to section 20 of the GIF89a specification first there
+				## is the image descriptor (10 bytes, starting with 0x2c), then an
+				## optional local color table and then the image data followed by
+				## a block terminator.
+				datafile.seek(localoffset)
+				imagedescriptor = datafile.read(9)
+				if len(imagedescriptor) != 9 and firstimagedescriptor:
+					validgif = False
+					break
+
+				firstimagedescriptor = False
+
+				## test if there is a local color table defined
+				localcolortablesize = 0
+				if ord(imagedescriptor[-1]) & 128 == 1:
+					localcolortablepow = ord(imagedescriptor[-1]) & 7
+					if localcolortablepow != 0:
+						localcolortablesize = pow(2,localcolortablepow+1)
+
+				if (localoffset -offset + localcolortablesize) > filesize:
+					validgif = False
+					break
+				localoffset += 9 + localcolortablesize
+				lzwcodesize = datafile.read(1)
+				if len(lzwcodesize) != 1:
+					validgif = False
+					break
+				localoffset = datafile.tell()
+				## then the datablocks follow
+				## the first byte of each datablock indicates how many bytes follow
+				while True:
+					lzwdatasizebyte = datafile.read(1)
+					if len(lzwdatasizebyte) != 1:
+						validgif = False
+						break
+					localoffset = datafile.tell()
+					if lzwdatasizebyte == '\x00':
+						## end of data block
+						databytes = datafile.read(1)
+						localoffset = datafile.tell()
+						break
+					lzwdatasize = ord(lzwdatasizebyte)
+					if (localoffset - offset + lzwdatasize) > filesize:
+						validgif = False
+						break
+					localoffset += lzwdatasize
+					datafile.seek(localoffset)
+			else:
+				validgif = False
+				break
+		if not validgif:
 			continue
 
-		## Now read data from the current offset until the next offset
-		## and search for trailer bytes. If these cannot be found, then
-		## move onto the next GIF offset.
-		## GIF files have a trailer which according to the GIF specification
-		## consists of a "block terminator" and a semi-colon. Since the trailer
-		## is very generic it is best to search for it here instead of in the
-		## top level identifier search which would be quite costly.
-		datafile.seek(offset)
+		if endofimage == -1:
+			continue
 
-		## read around 10 meg of data
-		gifchunkread = 100000000
-		bytesread = 0
-		giffound = False
-		data = ""
-		trailersearchoffset = 0
-		tmpdir = dirsetup(tempdir, filename, "gif", counter)
-		while bytesread <= nextoffset-offset and not giffound:
-			## concatenation of data is expensive :-(
-			data += datafile.read(gifchunkread)
-			bytesread += gifchunkread
-			traileroffsets = []
-			trailer = data.find('\x00;', trailersearchoffset)
-			while trailer != -1:
-				## see if the trailer is actually after the next offset
-				if trailer > nextoffset-offset:
-					break
-				## check if the trailer is not blacklisted. If so, then
-				## the trailer and any trailer following it can never be
-				## part of this GIF file.
-				blacklistoffset = extractor.inblacklist(trailer+offset, blacklist)
-				if blacklistoffset == None:
-					traileroffsets.append(trailer)
-				else:
-					break
-				trailersearchoffset = trailer + 2
-				trailer = data.find('\x00;', trailersearchoffset)
-
-			for trail in traileroffsets:
-				## TODO: use templates here to make the name of the file more predictable
-				## which helps with result interpretation
-				p = subprocess.Popen(['gifinfo'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-				(stanout, stanerr) = p.communicate(data[:trail+2])
-				if p.returncode != 0:
-					continue
-				else:
-					giffound = True
-					## basically this is copy of the original image so why bother?
-					if offset == 0 and trail == lendata - 2:
-						blacklist.append((0, lendata))
-						datafile.close()
-						os.rmdir(tmpdir)
-						return (diroffsets, blacklist, ['graphics', 'gif', 'binary'], hints)
-
-					## not the whole file, so carve
-					tmpfilename = os.path.join(tmpdir, 'unpack-%d.gif' % counter)
-					tmpfile = open(tmpfilename, 'wb')
-					tmpfile.write(data[:trail+2])
-					tmpfile.close()
-					diroffsets.append((tmpdir, offset, trail+2))
-					hints[tmpfilename] = {}
-					hints[tmpfilename]['tags'] = ['graphics', 'gif', 'binary']
-					hints[tmpfilename]['scanned'] = True
-					counter = counter + 1
-					blacklist.append((offset, offset+trail+2))
-					## go to the next header
-					break
-		if not giffound:
-			os.rmdir(tmpdir)
+		if offset == 0 and endofimage == filesize:
+			p = subprocess.Popen(['gifinfo', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+			(stanout, stanerr) = p.communicate()
+			## basically this is copy of the original image so why bother?
+			if p.returncode == 0:
+				blacklist.append((0, filesize))
+				datafile.close()
+				return (diroffsets, blacklist, ['graphics', 'gif', 'binary'], hints)
+		else:
+			## not the whole file, so carve
+			datafile.seek(offset)
+			data = datafile.read(endofimage - offset)
+			p = subprocess.Popen(['gifinfo'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+			(stanout, stanerr) = p.communicate(data)
+			if p.returncode == 0:
+				tmpdir = dirsetup(tempdir, filename, "gif", counter)
+				tmpfilename = os.path.join(tmpdir, 'unpack-%d.gif' % counter)
+				tmpfile = open(tmpfilename, 'wb')
+				tmpfile.write(data)
+				tmpfile.close()
+				diroffsets.append((tmpdir, offset, endofimage - offset))
+				hints[tmpfilename] = {}
+				hints[tmpfilename]['tags'] = ['graphics', 'gif', 'binary']
+				hints[tmpfilename]['scanned'] = True
+				counter = counter + 1
+				blacklist.append((offset, endofimage))
 	datafile.close()
 	return (diroffsets, blacklist, [], hints)
 
