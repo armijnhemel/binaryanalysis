@@ -1,3 +1,11 @@
+2016-08-30:
+* fwunpack.py: add many more sanity checks for GIF. Extract XMP data for GIF
+(not stored yet)
+
+2016-08-29:
+* busybox.py: make the BusyBox version number extraction a little bit more
+robust
+
 2016-08-24:
 * storeresult.py: add origin field for passwords
 * bruteforcescan.py: compare files to earlier runs of BAT and record TLSH
