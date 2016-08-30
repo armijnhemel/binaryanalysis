@@ -6186,7 +6186,9 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	diroffsets = []
 	counter = 1
 
-	## magic header for XMP https://en.wikipedia.org/wiki/Extensible_Metadata_Platform
+	## magic header for XMP:
+	## https://en.wikipedia.org/wiki/Extensible_Metadata_Platform
+	## http://www.adobe.com/content/dam/Adobe/en/devnet/xmp/pdfs/XMPSpecificationPart3.pdf
 	xmpmagicheaderbytes = ['\x01'] + map(lambda x: chr(x), range(255,-1,-1)) + ['\x00']
 	xmpmagic = "".join(xmpmagicheaderbytes)
 
@@ -6240,6 +6242,7 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		## there could be various extensions before there is an image
 		## control block
 		endofimage = -1
+		xmpdata = ''
 		while True:
 			if databytes == '\x3b':
 				## end of image
@@ -6277,18 +6280,21 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 					localoffset += 8
 					if databytes == 'XMP Data':
 						databytes = datafile.read(1000)
+						if not databytes.startswith('XMP'):
+							validgif = False
+							break
 						magicoffset = databytes.find(xmpmagic)
 						while magicoffset == -1:
 							databuf = datafile.read(1000)
 							## files with a broken XMP trailer
-							## exist, so check if the end of the
-							## file is reached at some point
-							## TODO: check blacklists as well
+							## exist.
 							if databuf == '':
 								validgif = False
 								break
 							databytes += databuf
 							magicoffset = databytes.find(xmpmagic)
+						datafile.seek(localoffset)
+						xmpdata = datafile.read(magicoffset)[3:]
 						localoffset += magicoffset + 258
 						datafile.seek(localoffset)
 					else:
