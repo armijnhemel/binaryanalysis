@@ -1816,15 +1816,15 @@ are hardcoded in the table and index definitions.
 Setting up the PostgreSQL server itself is out of scope for this document. The
 rest of this section should be considered as one potential way to set up a
 PostgreSQL database. Any changes to the PostgreSQL installation should be
-discussed with a local database adminitrator.
+discussed with a local database administrator.
 
-The main configuration file of PostgreSQL is called \texttt{pg\_hba.conf}.
-Usually this file resides in the top level PostgreSQL directory, for example
-\texttt{/var/lib/pgsql/data} (but this depends on the local configuration). In
-this file various configuration options are set, such as how clients can
-connect and how they should authenticate.
+\subsubsection{Authentication configuration}
 
-\subsubsection{}
+The main authentication configuration file of PostgreSQL is called
+\texttt{pg\_hba.conf}. Usually this file resides in the top level PostgreSQL
+directory, for example \texttt{/var/lib/pgsql/data} (but this depends on the
+local configuration). In this file various configuration options are set, such
+as how clients can connect and how they should authenticate.
 
 In a default installation of PostgreSQL local users connecting over a local socket
 in the file system are implicitely trusted:
@@ -1852,20 +1852,43 @@ and can be changed to:
 host    all      all       127.0.0.1/32      password
 \end{verbatim}
 
-Something similar can be done for the IPv6 connections.
+Something similar can be done for the local IPv6 connections.
 
-The important things is that there is a database and a user with enough
-priviliges to read from and possibly modify the data. After setting up the
-PostgreSQL server the following commands could be used to create a database and
-a user. It should be noted that for network access settings in PostgreSQL
-should be changed. If stricter privileges are needed these commands are
-probably giving too many privileges.
+To allow connections on a different port the main configuration file for
+PostgreSQL (called \texttt{postgresql.conf}) should be adapted. By default the
+server only listens on \texttt{localhost}, as defined by the
+\texttt{listen\_address} configuration. To allow PostgreSQL to also listen on a
+different interface this should be changed, for example:
+
+\begin{verbatim}
+listen_addresses = 'localhost,172.16.0.1'
+\end{verbatim}
+
+The authentication in \texttt{pg\_hba.conf} should also be changed:
+
+\begin{verbatim}
+host    all      all       172.16.0.1/16      password
+\end{verbatim}
+
+Note: in this case the network mask is \texttt{255.255.0.0}, but this could
+of course be different.
+
+\subsubsection{Creating the database and database user}
+
+After setting up the PostgreSQL server the following commands can be used to
+create a database and a user:
 
 \begin{enumerate}
 \item \texttt{create database bat;}
 \item \texttt{create user bat with password 'bat';}
 \item \texttt{grant all privileges on database bat to bat;}
 \end{enumerate}
+
+The database name, user name and password should correspond to the database
+name, user name and password in the BAT configuration.
+
+As a next step the database can be filled, either by loading an existing dump
+file or by using the database creation scripts.
 
 \subsection{Database design}
 
