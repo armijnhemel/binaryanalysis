@@ -1892,8 +1892,7 @@ file or by using the database creation scripts.
 
 \subsection{Database design}
 
-The main database currently has 16 tables, 9 of which are Linux kernel specific.
-One other table is optional:
+The database currently has 16 tables, 9 of which are Linux kernel specific.
 
 \begin{itemize}
 \item \texttt{processed}
@@ -1911,24 +1910,9 @@ One other table is optional:
 \item \texttt{kernelmodule\_parameter\_description}
 \item \texttt{kernelmodule\_version}
 \item \texttt{renames}
-\end{itemize}
-
-The optional table:
-
-\begin{itemize}
 \item \texttt{hashconversion}
-\end{itemize}
-
-The licenses database has 2 tables:
-
-\begin{itemize}
 \item \texttt{extracted\_copyright}
 \item \texttt{licenses}
-\end{itemize}
-
-The security database has 1 table:
-
-\begin{itemize}
 \item \texttt{security}
 \end{itemize}
 
@@ -1946,7 +1930,8 @@ It has the following fields:
 \item \texttt{filename}: name of the archive
 \item \texttt{origin}: site/origin where the archive was downloaded (optional)
 \item \texttt{checksum}: SHA256 checksum of the archive
-\item \texttt{downloadurl}: download URL of the site (optional)
+\item \texttt{downloadurl}: download URL of the source code package (optional)
+\item \texttt{website}: the website of the project (optional)
 \end{itemize}
 
 \subsubsection{\texttt{processed\_file} table}
