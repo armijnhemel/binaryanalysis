@@ -6528,6 +6528,7 @@ def searchUnpackPNG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 
 				chunksize = struct.unpack('>I', pngbytes[:4])[0]
 				chunktype = pngbytes[4:]
+				## TODO: extract XMP data
 				if chunktype == 'IEND':
 					## trailer reached
 					trailerseen = True
