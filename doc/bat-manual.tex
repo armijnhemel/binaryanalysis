@@ -1814,12 +1814,52 @@ are hardcoded in the table and index definitions.
 \subsection{Setting up PostgreSQL}
 
 Setting up the PostgreSQL server itself is out of scope for this document. The
-important things is that there is a database and a user with enough priviliges
-to read from and possibly modify the data. After setting up the PostgreSQL
-server the following commands could be used to create a database and a user.
-It should be noted that for network access settings in PostgreSQL should be
-changed. If stricter privileges are needed these commands are probably giving
-too many privileges.
+rest of this section should be considered as one potential way to set up a
+PostgreSQL database. Any changes to the PostgreSQL installation should be
+discussed with a local database adminitrator.
+
+The main configuration file of PostgreSQL is called \texttt{pg\_hba.conf}.
+Usually this file resides in the top level PostgreSQL directory, for example
+\texttt{/var/lib/pgsql/data} (but this depends on the local configuration). In
+this file various configuration options are set, such as how clients can
+connect and how they should authenticate.
+
+\subsubsection{}
+
+In a default installation of PostgreSQL local users connecting over a local socket
+in the file system are implicitely trusted:
+
+\begin{verbatim}
+local   all      all       trust
+\end{verbatim}
+
+To prompt for the password (recommended) it should be changed in:
+
+\begin{verbatim}
+local   all      all       password
+\end{verbatim}
+
+Local users connecting over an IPv4 TCP/IP socket (over the network stack) are
+also implicitely trusted:
+
+\begin{verbatim}
+host    all      all       127.0.0.1/32      trust
+\end{verbatim}
+
+and can be changed to:
+
+\begin{verbatim}
+host    all      all       127.0.0.1/32      password
+\end{verbatim}
+
+Something similar can be done for the IPv6 connections.
+
+The important things is that there is a database and a user with enough
+priviliges to read from and possibly modify the data. After setting up the
+PostgreSQL server the following commands could be used to create a database and
+a user. It should be noted that for network access settings in PostgreSQL
+should be changed. If stricter privileges are needed these commands are
+probably giving too many privileges.
 
 \begin{enumerate}
 \item \texttt{create database bat;}
