@@ -763,8 +763,6 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 
 				## for each piece of byte code look at the instructions and
 				## try to filter out the interesting ones
-				print "MAP_ITEM_SIZE", map_item_size
-				sys.stdout.flush()
 				for m in range(0,map_item_size):
 					pos = dexfile.tell()
 					## code items are 4 byte aligned
@@ -774,10 +772,8 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 					ins_size = struct.unpack('<H', dexfile.read(2))[0]
 					outs_size = struct.unpack('<H', dexfile.read(2))[0]
 					tries_size = struct.unpack('<H', dexfile.read(2))[0]
-					print "tries", m, tries_size
 					debug_info_offset = struct.unpack('<I', dexfile.read(4))[0]
 					insns_size = struct.unpack('<I', dexfile.read(4))[0]
-					print "instructions size", insns_size
 
 					## keep track of how many 16 bit code units were read
 					bytecodecounter = 0
@@ -795,11 +791,6 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 
 						bytecodecounter += 1
 
-						print hex(opcode_location), m, "opcode", hex(opcode), dex_opcodes_extra_data[opcode]
-						if opcode in unused:
-							print "UNUSED", hex(opcode)
-						sys.stdout.flush()
-
 						## find out how many extra code units need to be read
 						bytecodecounter += dex_opcodes_extra_data[opcode]
 						extradatacount = dex_opcodes_extra_data[opcode] * 2
@@ -808,15 +799,16 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 							if opcode == 0x1a:
 								string_id = struct.unpack('<H', extradata)[0]
 								lines.append(string_id_to_value[string_id])
+								## TODO: translate from MUTF-8 into something else
 							elif opcode == 0x1b:
 								string_id = struct.unpack('<I', extradata)[0]
 								lines.append(string_id_to_value[string_id])
+								## TODO: translate from MUTF-8 into something else
 							elif opcode == 0x26:
 								## some extra work might be needed here, as the
 								## data might be in "packed-switch-payload"
 								branch_offset = struct.unpack('<I', extradata)[0]
 								if opcode_location + branch_offset*2 > filesize:
-									print 'BROKEN 26'
 									pass
 								curoffset = dexfile.tell()
 								dexfile.seek(opcode_location + branch_offset*2)
@@ -831,7 +823,6 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 								## data might be in "packed-switch-payload"
 								branch_offset = struct.unpack('<I', extradata)[0]
 								if opcode_location + branch_offset*2 > filesize:
-									print 'BROKEN 2B'
 									pass
 								curoffset = dexfile.tell()
 								dexfile.seek(opcode_location + branch_offset*2)
@@ -845,7 +836,6 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 								## data might be in "sparse-switch-payload"
 								branch_offset = struct.unpack('<I', extradata)[0]
 								if opcode_location + branch_offset*2 > filesize:
-									print 'BROKEN 2C'
 									pass
 								curoffset = dexfile.tell()
 								dexfile.seek(opcode_location + branch_offset*2)
@@ -854,15 +844,8 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 									packedsize = struct.unpack('<H', dexfile.read(2))[0]
 									skipbytes[opcode_location + branch_offset*2] = 2*(packedsize * 4+2)
 								dexfile.seek(curoffset)
-							sys.stdout.flush()
-					print 'equal?', bytecodecounter, insns_size, bytecodecounter == insns_size
-					print hex(dexfile.tell())
-					sys.stdout.flush()
 
 					if tries_size != 0:
-						print "HAS TRIES", tries_size
-						print
-						sys.stdout.flush()
 						## first the list of try_items
 						if insns_size%2 != 0:
 							padding = struct.unpack('<H', dexfile.read(2))[0]
@@ -880,25 +863,33 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 							if (ord(uleb128byte) & 0x80) == 0:
 								break
 						for ca in xrange(0, int(lenstr, 2)):
+							## The number of catches is encoded in SLEB-128 notation
+							## instead of ULEB-128. Depending on the sign there might
+							## or might not be a default catch defined.
 							catchlenstr = ''
 							bytecount = 0
+							bytestr = ''
 							while True:
 								sleb128byte = dexfile.read(1)
 								bytecount += 1
 								catchlenstr = "{:0>8b}".format(ord(sleb128byte))[1:] + catchlenstr
+								bytestr += sleb128byte
 								## most significant bit means that the next byte
 								## is also part of the length. Prepend to the string.
 								if (ord(sleb128byte) & 0x80) == 0:
 									break
 							if bytecount == 1:
-								catchsize = int(catchlenstr, 2)
-								if catchsize == 127:
-									## dirty hack for now to pass a few tests
-									catchsize = -1
+								## now convert the sleb bytes to a number
+								catchsize = 0
+								shift = 0
+								for bb in bytestr:
+									catchsize |= ((ord(bb) & 0x7f) << shift)
+									shift += 7
+								if catchsize != 0:
+									if ord(bb) & 0x40 == 0x40:
+										catchsize |= - ( 1 << shift )
 							else:
 								pass
-							print "CATCHSIZE", catchsize
-							sys.stdout.flush()
 							for ct in xrange(0,abs(catchsize)):
 								## Then read the encoded_type_addr_pair items
 								## but don't actually use their data
@@ -923,9 +914,6 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 									if (ord(uleb128byte) & 0x80) == 0:
 										break
 								
-						sys.stdout.flush()
-					print
-					sys.stdout.flush()
 			dexfile.close()
 
 		'''
