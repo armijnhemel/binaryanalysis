@@ -609,7 +609,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 					oldoffset = dexfile.tell()
 
 					## jump to the place of the string identifier
-					## and read its contents
+					## and read its contents until a NULL byte is encountered
 					dexfile.seek(string_id_offset)
 					dexdata = ''
 					dexread = dexfile.read(1)
