@@ -225,6 +225,20 @@ def searchUnpackBase64(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 		if '/etc/ld.so.conf' in filename:
 			## just ignore ld.so.conf
 			return ([], blacklist, [], hints)
+
+	## open the file, read a line and see if there is anything in there
+	## that is not [a-zA-Z0-9=\n] because then it is not a valid base64
+	## file.
+	base64indexes = set('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+/=\n')
+	base64file = open(filename, 'rw')
+	base64data = base64file.readline()
+	while base64data != '':
+		if filter(lambda x: x not in base64indexes, base64data) != []:
+			base64file.close()
+			return ([], blacklist, [], hints)
+		base64data = base64file.readline()
+	base64file.close()
+	
 	counter = 1
 	diroffsets = []
 	template = None
@@ -3233,6 +3247,8 @@ def unpackSquashfsWrapper(filename, offset, squashtype, sevenzipcompression, maj
 	for r in rmfiles:
 		rmfile = os.path.join(tmpdir, r)
 		if not os.path.isdir(rmfile):
+			os.unlink(rmfile)
+		elif os.path.islink(rmfile):
 			os.unlink(rmfile)
 		else:
 			shutil.rmtree(rmfile)
