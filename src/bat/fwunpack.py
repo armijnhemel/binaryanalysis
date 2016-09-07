@@ -1823,7 +1823,12 @@ def unpackTar(filename, offset, tempdir=None, tar_tmpdir=None):
 		tarmembers = tar.getmembers()
 		## assume that the last member is also the last in the file
 		tarsize = tarmembers[-1].offset_data + tarmembers[-1].size
+		tarseen = set()
 		for i in tarmembers:
+			if i.name in tarseen:
+				## skip double entries. TODO: some more checks
+				continue
+			tarseen.add(i.name)
 			if not i.isdev():
 				tar.extract(i, path=tmpdir)
 			if i.isdir():
