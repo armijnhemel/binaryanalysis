@@ -233,7 +233,7 @@ def searchUnpackBase64(filename, tempdir=None, blacklist=[], offsets={}, scanenv
 	base64file = open(filename, 'rw')
 	base64data = base64file.readline()
 	while base64data != '':
-		if filter(lambda x: x not in base64indexes, base64data) != []:
+		if filter(lambda x: x not in base64indexes, base64data) != '':
 			base64file.close()
 			return ([], blacklist, [], hints)
 		base64data = base64file.readline()
