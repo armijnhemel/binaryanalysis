@@ -2,6 +2,10 @@
 * fwunpack.py: extra sanity check for broken GIF files
 * fwunpack.py: clean up in case tar barfs, but some data was unpacked
 * fwunpack.py: skip double entries in tar files
+* fwunpack.py: extra sanity check for base64 files
+* fwunpack.py: remove symbolic links to directories in squashfs unpacking in
+case it fails but some data was unpacked
+* fwunpack.py: fix for broken symbolic links in romfs files
 
 2016-08-30:
 * fwunpack.py: add many more sanity checks for GIF. Extract XMP data for GIF
