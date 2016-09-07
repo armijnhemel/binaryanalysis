@@ -6361,6 +6361,8 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			else:
 				validgif = False
 				break
+			if not validgif:
+				break
 		if not validgif:
 			continue
 
