@@ -6321,6 +6321,8 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 					validgif = False
 					break
 
+				localoffset = datafile.tell()
+
 				firstimagedescriptor = False
 
 				## test if there is a local color table defined
@@ -6333,7 +6335,10 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 				if (localoffset -offset + localcolortablesize) > filesize:
 					validgif = False
 					break
-				localoffset += 9 + localcolortablesize
+
+				## skip over the local color table
+				localoffset += localcolortablesize
+				datafile.seek(localoffset)
 				lzwcodesize = datafile.read(1)
 				if len(lzwcodesize) != 1:
 					validgif = False
