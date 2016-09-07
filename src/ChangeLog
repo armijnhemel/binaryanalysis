@@ -1,3 +1,8 @@
+2016-09-07:
+* fwunpack.py: extra sanity check for broken GIF files
+* fwunpack.py: clean up in case tar barfs, but some data was unpacked
+* fwunpack.py: skip double entries in tar files
+
 2016-08-30:
 * fwunpack.py: add many more sanity checks for GIF. Extract XMP data for GIF
 (not stored yet)
