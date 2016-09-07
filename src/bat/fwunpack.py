@@ -2770,7 +2770,18 @@ def unpackRomfs(filename, offset, tempdir=None, unpacktempdir=None, blacklist=[]
 	## then move all the contents using shutil.move()
 	mvfiles = os.listdir(tmpdir2)
 	for f in mvfiles:
-		shutil.move(os.path.join(tmpdir2, f), tmpdir)
+		pathtomove = os.path.join(os.path.join(tmpdir2, f))
+		if os.path.islink(pathtomove):
+			if os.path.exists(pathtomove):
+				shutil.move(pathtomove, tmpdir)
+			else:
+				linktarget = os.readlink(pathtomove)
+				oldcwd = os.getcwd()
+				os.chdir(tmpdir)
+				os.symlink(linktarget, f)
+				os.chdir(oldcwd)
+				continue
+		shutil.move(pathtomove, tmpdir)
 	## then cleanup the temporary dir
 	shutil.rmtree(tmpdir2)
 
