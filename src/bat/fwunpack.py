@@ -1759,7 +1759,7 @@ def searchUnpackTar(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			blacklist.append((offset - 0x101, offset - 0x101 + tarsize))
 		else:
 			## cleanup
-			os.rmdir(tmpdir)
+			shutil.rmtree(tmpdir)
 	return (diroffsets, blacklist, [], hints)
 
 def unpackTar(filename, offset, tempdir=None, tar_tmpdir=None):
@@ -1834,7 +1834,7 @@ def unpackTar(filename, offset, tempdir=None, tar_tmpdir=None):
 		os.fdopen(tmpfile[0]).close()
 		os.unlink(tmpfile[1])
 		if tempdir == None:
-			os.rmdir(tmpdir)
+			shutil.rmtree(tmpdir)
 		return (None, None)
 	os.fdopen(tmpfile[0]).close()
 	os.unlink(tmpfile[1])
