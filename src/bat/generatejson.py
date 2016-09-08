@@ -288,69 +288,78 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv, batc
 		usedb = True
 
 	decodingneeded = ['utf-8','ascii','latin-1','euc_jp', 'euc_jis_2004', 'jisx0213', 'iso2022_jp', 'iso2022_jp_1', 'iso2022_jp_2', 'iso2022_jp_2004', 'iso2022_jp_3', 'iso2022_jp_ext', 'iso2022_kr','shift_jis','shift_jis_2004','shift_jisx0213']
-	for unpackreport in unpackreports:
-		jsonreport = {}
-		filehash = None
-		if "checksum" in unpackreports[unpackreport]:
-			filehash = copy.deepcopy(unpackreports[unpackreport]['checksum'])
-			jsonreport['checksum'] = filehash
-			jsonreport['checksumtype'] = outputhash
-			for c in ['sha256', 'md5', 'sha1', 'crc32', 'tlsh']:
-				if c in unpackreports[unpackreport]:
-					if unpackreports[unpackreport][c] != None:
-						jsonreport[c] = copy.deepcopy(unpackreports[unpackreport][c])
-		for p in ["name", "path", "realpath"]:
-			if p in unpackreports[unpackreport]:
-				nodename = copy.deepcopy(unpackreports[unpackreport][p])
-				## check whether or not the name of the file does not contain any weird
-				## characters by decoding it to UTF-8
-				decoded = False
-				for i in decodingneeded:
-					try:
-						nodename = nodename.decode(i)
-						decoded = True
-						break
-					except Exception, e:
-						pass
-				if decoded:
-					jsonreport[p] = nodename
-				else:
-					if filehash != None:
-						jsonreport[p] = "name-for-%s-cannot-be-displayed" % filehash
-		if "tags" in unpackreports[unpackreport]:
-			jsonreport['tags'] = list(set(copy.deepcopy(unpackreports[unpackreport]['tags'])))
-		if "magic" in unpackreports[unpackreport]:
-			jsonreport['magic'] = copy.deepcopy(unpackreports[unpackreport]['magic'])
-		if "size" in unpackreports[unpackreport]:
-			jsonreport['size'] = copy.deepcopy(unpackreports[unpackreport]['size'])
-		if "scans" in unpackreports[unpackreport]:
-			if unpackreports[unpackreport]['scans'] != []:
-				reps = copy.deepcopy(unpackreports[unpackreport]['scans'])
-				for r in reps:
-					if 'scanreports' in r:
-						newscanreports = []
-						for s in r['scanreports']:
-							decoded = False
-							for i in decodingneeded:
-								try:
-									s = s.decode(i)
-									decoded = True
-									break
-								except Exception, e:
-									pass
-							if decoded:
-								newscanreports.append(s)
-							else:
-								if filehash != None:
-									newscanreports.append("name-for-%s-cannot-be-displayed" % filehash)
-						r['scanreports'] = newscanreports
-				jsonreport['scans'] = reps
-		jsondumps.append(jsonreport)
 
-	if jsondumps != []:
+	unpackreportslen = len(unpackreports)
+	unpackreportsprocessed = 0
+
+	if unpackreportslen != 0:
+		## open the JSON file
 		jsonfile = open(os.path.join(topleveldir, "scandata.json"), 'w')
-		for chunk in json.JSONEncoder(indent=4).iterencode(jsondumps):
-			jsonfile.write(chunk)
+		jsonfile.write('[\n')
+
+		for unpackreport in unpackreports:
+			jsonreport = {}
+			filehash = None
+			if "checksum" in unpackreports[unpackreport]:
+				filehash = copy.deepcopy(unpackreports[unpackreport]['checksum'])
+				jsonreport['checksum'] = filehash
+				jsonreport['checksumtype'] = outputhash
+				for c in ['sha256', 'md5', 'sha1', 'crc32', 'tlsh']:
+					if c in unpackreports[unpackreport]:
+						if unpackreports[unpackreport][c] != None:
+							jsonreport[c] = copy.deepcopy(unpackreports[unpackreport][c])
+			for p in ["name", "path", "realpath"]:
+				if p in unpackreports[unpackreport]:
+					nodename = copy.deepcopy(unpackreports[unpackreport][p])
+					## check whether or not the name of the file does not contain any weird
+					## characters by decoding it to UTF-8
+					decoded = False
+					for i in decodingneeded:
+						try:
+							nodename = nodename.decode(i)
+							decoded = True
+							break
+						except Exception, e:
+							pass
+					if decoded:
+						jsonreport[p] = nodename
+					else:
+						if filehash != None:
+							jsonreport[p] = "name-for-%s-cannot-be-displayed" % filehash
+			if "tags" in unpackreports[unpackreport]:
+				jsonreport['tags'] = list(set(copy.deepcopy(unpackreports[unpackreport]['tags'])))
+			if "magic" in unpackreports[unpackreport]:
+				jsonreport['magic'] = copy.deepcopy(unpackreports[unpackreport]['magic'])
+			if "size" in unpackreports[unpackreport]:
+				jsonreport['size'] = copy.deepcopy(unpackreports[unpackreport]['size'])
+			if "scans" in unpackreports[unpackreport]:
+				if unpackreports[unpackreport]['scans'] != []:
+					reps = copy.deepcopy(unpackreports[unpackreport]['scans'])
+					for r in reps:
+						if 'scanreports' in r:
+							newscanreports = []
+							for s in r['scanreports']:
+								decoded = False
+								for i in decodingneeded:
+									try:
+										s = s.decode(i)
+										decoded = True
+										break
+									except Exception, e:
+										pass
+								if decoded:
+									newscanreports.append(s)
+								else:
+									if filehash != None:
+										newscanreports.append("name-for-%s-cannot-be-displayed" % filehash)
+							r['scanreports'] = newscanreports
+					jsonreport['scans'] = reps
+			unpackreportsprocessed += 1
+			for chunk in json.JSONEncoder(indent=4).iterencode(jsonreport):
+				jsonfile.write(chunk)
+			if unpackreportsprocessed < unpackreportslen:
+				jsonfile.write(',\n')
+		jsonfile.write(']\n')
 		jsonfile.close()
 
 	jsontaskamount = 0
