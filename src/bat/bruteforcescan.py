@@ -2021,19 +2021,6 @@ def runscan(scans, binaries, batversion):
 
 		scanqueue.join()
 
-		while True:
-			try:
-				val = reportqueue.get_nowait()
-				unpackreports_tmp.append(val)
-				reportqueue.task_done()
-			except Queue.Empty, e:
-				## Queue is empty
-				break
-		reportqueue.join()
-	
-		for p in processpool:
-			p.terminate()
-
 		## Sometimes there are identical files inside a blob.
 		## To minimize time spent on scanning these should only be
 		## scanned once. Since the results are independent anyway (the
@@ -2047,15 +2034,24 @@ def runscan(scans, binaries, batversion):
 		## * copy results in case there are duplicates
 		dupes = []
 
-		## the result is a list of dicts which needs to be turned into one dict
-		for i in unpackreports_tmp:
-			for k in i:
-				if 'tags' in i[k]:
-					## the file is a duplicate, store for later 
-					if 'duplicate' in i[k]['tags']:
-						dupes.append(i)
-						continue
-				unpackreports[k] = i[k]
+		while True:
+			try:
+				val = reportqueue.get_nowait()
+				for k in val:
+					if 'tags' in val[k]:
+						## the file is a duplicate, store for later 
+						if 'duplicate' in val[k]['tags']:
+							dupes.append(val)
+							continue
+					unpackreports[k] = val[k]
+				reportqueue.task_done()
+			except Queue.Empty, e:
+				## Queue is empty
+				break
+		reportqueue.join()
+	
+		for p in processpool:
+			p.terminate()
 
 		for i in dupes:
 			for k in i:
@@ -2101,19 +2097,25 @@ def runscan(scans, binaries, batversion):
 		## CURRENT: this is a NOP and just there to satisfy a few older use cases
 		if scans['batconfig']['reportendofphase']:
 			print "LEAF END %s" % scan_binary_basename, datetime.datetime.utcnow().isoformat()
+			sys.stdout.flush()
 
 		## Scan the files in context
 		starttime = datetime.datetime.utcnow()
 		if debug:
 			print >>sys.stderr, "AGGREGATE BEGIN", starttime.isoformat()
+			sys.stderr.flush()
 		if scans['aggregatescans'] != []:
+			## because there are 'eval' statements the code to call aggregate scans
+			## has to be in a separate method
 			aggregatestatistics = aggregatescan(unpackreports, finalaggregatescans, processamount, scantempdir, topleveldir, scan_binary_basename, scandate, batcursors, batcons, aggregatedebug, unpackdirectory)
 			statistics.update(aggregatestatistics)
 		endtime = datetime.datetime.utcnow()
 		if debug:
 			print >>sys.stderr, "AGGREGATE END", endtime.isoformat()
+			sys.stderr.flush()
 		if scans['batconfig']['reportendofphase']:
 			print "AGGREGATE END %s" % scan_binary_basename, endtime.isoformat()
+			sys.stdout.flush()
 		statistics['aggregate'] = endtime - starttime
 
 		for i in unpackreports:
