@@ -2131,10 +2131,8 @@ def runscan(scans, binaries, batversion):
 		if scans['postrunscans'] != [] and unpackreports != {}:
 			## use a queue made with a manager to avoid some issues, see:
 			## http://docs.python.org/2/library/multiprocessing.html#pipes-and-queues
-			lock = Lock()
 			scanmanager = multiprocessing.Manager()
 			scanqueue = multiprocessing.JoinableQueue(maxsize=0)
-			processpool = []
 
 			havetask = False
 			for i in unpackreports:
@@ -2153,6 +2151,7 @@ def runscan(scans, binaries, batversion):
 				havetask = True
 				scanqueue.put((i, unpackreports[i]))
 			if havetask:
+				processpool = []
 				parallel = True
 				if tmpdebug:
 					if debugphases == []:
