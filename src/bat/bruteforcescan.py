@@ -1910,7 +1910,6 @@ def runscan(scans, binaries, batversion):
 		## more lists in some fields, like libraries, or more result lists if
 		## the file inside a file system we looked at was in fact a file system.
 		leaftasks = []
-		unpackreports_tmp = []
 		unpackreports = {}
 
 		try:
