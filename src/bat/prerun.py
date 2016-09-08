@@ -131,11 +131,19 @@ def searchXML(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 		offset = 3
 	datafile.seek(offset)
 	firstchar = datafile.read(1)
-	datafile.close()
 	## xmllint expects a file to start either with whitespace,
 	## or a < character.
 	if firstchar not in ['\n', '\r', '\t', ' ', '\v', '<']:
+		datafile.close()
 		return newtags
+	if firstchar == '<':
+		databytes = datafile.read(4)
+		datafile.close()
+		try:
+			if databytes.lower() != '?xml':
+				return newtags
+		except:
+			return newtags
 	p = subprocess.Popen(['xmllint','--noout', "--nonet", filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode == 0:
