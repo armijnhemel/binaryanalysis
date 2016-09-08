@@ -353,19 +353,20 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv, batc
 			jsonfile.write(chunk)
 		jsonfile.close()
 
-	## keep track of which file hashes have already been seen
-	filehashes = set()
-	jsontasks = []
+	jsontaskamount = 0
 
 	converthash = False
 
+	havetasks = False
+
+	scanqueue = multiprocessing.JoinableQueue(maxsize=0)
 	## create tasks for printing results for each of the individual reports
 	for unpackreport in unpackreports:
 		## first see if there is a filehash. If not, continue
 		if not "checksum" in unpackreports[unpackreport]:
 			continue
 		filehash = unpackreports[unpackreport]['checksum']
-		if filehash in filehashes:
+		if 'duplicate' in unpackreports[unpackreport]['tags']:
 			continue
 		## then check if there is a pickle file. If not, continue
 		if not os.path.exists(os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)):
@@ -378,19 +379,18 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv, batc
 		if 'ranking' in unpackreports[unpackreport]['tags']:
 			if outputhash != 'sha256':
 				converthash = True
-		filehashes.add(filehash)
-		jsontasks.append(filehash)
+		jsontaskamount += 1
+		havetasks = True
+		scanqueue.put(filehash)
 
-	if len(jsontasks) != 0:
+	if havetasks:
 		if processors == None:
 			processamount = 1
 		else:
 			processamount = processors
-		processamount = min(processamount, len(jsontasks))
+		processamount = min(processamount, jsontaskamount)
 		scanmanager = multiprocessing.Manager()
 		processpool = []
-		scanqueue = multiprocessing.JoinableQueue(maxsize=0)
-		map(lambda x: scanqueue.put(x), jsontasks)
 
 		for i in range(0,processamount):
 			if usedb:
