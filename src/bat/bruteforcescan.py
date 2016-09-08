@@ -2136,20 +2136,22 @@ def runscan(scans, binaries, batversion):
 			scanqueue = multiprocessing.JoinableQueue(maxsize=0)
 			processpool = []
 
-			## if unpackreports != {} since deduplication has already been done
-			dedupes = filter(lambda x: 'duplicate' not in unpackreports[x]['tags'], filter(lambda x: 'tags' in unpackreports[x], filter(lambda x: 'checksum' in unpackreports[x], unpackreports.keys())))
 			havetask = False
-			for i in dedupes:
-				## results might have been changed by aggregate scans, so check if it still exists
-				if i in unpackreports:
-					tmpdebug = False
-					if debug:
-						tmpdebug = True
-						if debugphases != []:
-							if not 'postrun' in debugphases:
-								tmpdebug = False
-					havetask = True
-					scanqueue.put((i, unpackreports[i]))
+			for i in unpackreports:
+				if not 'checksum' in unpackreports[i]:
+					continue
+				if not 'tags' in unpackreports[i]:
+					continue
+				if 'duplicate' in unpackreports[i]['tags']:
+					continue
+				tmpdebug = False
+				if debug:
+					tmpdebug = True
+					if debugphases != []:
+						if not 'postrun' in debugphases:
+							tmpdebug = False
+				havetask = True
+				scanqueue.put((i, unpackreports[i]))
 			if havetask:
 				parallel = True
 				if tmpdebug:
