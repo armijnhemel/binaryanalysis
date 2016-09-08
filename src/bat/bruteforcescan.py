@@ -2138,7 +2138,7 @@ def runscan(scans, binaries, batversion):
 
 			## if unpackreports != {} since deduplication has already been done
 			dedupes = filter(lambda x: 'duplicate' not in unpackreports[x]['tags'], filter(lambda x: 'tags' in unpackreports[x], filter(lambda x: 'checksum' in unpackreports[x], unpackreports.keys())))
-			postruntasks = []
+			havetask = False
 			for i in dedupes:
 				## results might have been changed by aggregate scans, so check if it still exists
 				if i in unpackreports:
@@ -2148,9 +2148,9 @@ def runscan(scans, binaries, batversion):
 						if debugphases != []:
 							if not 'postrun' in debugphases:
 								tmpdebug = False
-					postruntasks.append((i, unpackreports[i]))
-			if len(postruntasks) != 0:
-				map(lambda x: scanqueue.put(x), postruntasks)
+					havetask = True
+					scanqueue.put((i, unpackreports[i]))
+			if havetask:
 				parallel = True
 				if tmpdebug:
 					if debugphases == []:
