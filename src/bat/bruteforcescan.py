@@ -2048,9 +2048,6 @@ def runscan(scans, binaries, batversion):
 				break
 		reportqueue.join()
 	
-		for p in processpool:
-			p.terminate()
-
 		for i in dupes:
 			for k in i:
 				dupesha256 = i[k]['checksum']
@@ -2064,6 +2061,11 @@ def runscan(scans, binaries, batversion):
 				dupecopy['realpath'] = origrealpath
 				dupecopy['tags'].append('duplicate')
 				unpackreports[k] = dupecopy
+
+		for p in processpool:
+			p.terminate()
+
+		scanmanager.shutdown()
 
 		endtime = datetime.datetime.utcnow()
 		if debug:
@@ -2129,9 +2131,6 @@ def runscan(scans, binaries, batversion):
 		## fancier reports, use microblogging to post scan results, etc.
 		## Duplicates that are tagged as 'duplicate' are not processed.
 		if scans['postrunscans'] != [] and unpackreports != {}:
-			## use a queue made with a manager to avoid some issues, see:
-			## http://docs.python.org/2/library/multiprocessing.html#pipes-and-queues
-			scanmanager = multiprocessing.Manager()
 			scanqueue = multiprocessing.JoinableQueue(maxsize=0)
 
 			havetask = False
@@ -2150,6 +2149,7 @@ def runscan(scans, binaries, batversion):
 							tmpdebug = False
 				havetask = True
 				scanqueue.put((i, unpackreports[i]))
+
 			if havetask:
 				processpool = []
 				parallel = True
