@@ -1,3 +1,9 @@
+2016-09-09:
+* prerun.py: extra sanity checks to prevent unnecessary calls to xmllint
+* guireport.py: use more efficient string concat for duplicates. In case there
+are many duplicate entries (one test archive seen had 48000+ duplicate files)
+this can save a lot of time
+
 2016-09-08:
 * bruteforcescan.py: avoid building up temporary lists in postrun scans
 * bruteforcescan.py: avoid building up temporary lists when processing
