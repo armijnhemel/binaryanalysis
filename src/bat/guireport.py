@@ -87,11 +87,11 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, scanenv, cursor,
 	tablerows = ""
 
 	tablerows = tablerows + tablerowtemplate % ("SHA256", filehash)
-	if leafreports.has_key('duplicates'):
-		dups = "<ul>"
+	if 'duplicates' in leafreports:
+		dupitems = []
 		for d in leafreports['duplicates']:
-			dups = dups + "<li>" + reduce(lambda x, y: "%s, %s" % (x, y), d) + "</li>"
-		dups = dups + "</ul>"
+			dupitems.append(", ".join(d))
+		dups = "<ul><li>%s</li></ul>" % "</li>\n<li>".join(dupitems)
 		tablerows = tablerows + tablerowtemplate % ("Duplicate files", dups)
 	if leafreports.has_key('kernelmoduleversionmismatch'):
 		tablerows = tablerows + tablerowtemplate % ("Kernel module version mismatch", 'yes')
