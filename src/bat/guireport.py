@@ -330,10 +330,13 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, scanenv, cursor,
 			imagehtml += "<li>black dotted line: defined and used dependency, part of standard API</li>"
 			imagehtml += "</ul></p>"
 	if tablerows != "":
-		elfstring = elfheader + tablerows + elftablefooter + imagehtml + elffooter
 		htmlfilename = "%s/%s-elfreport.html" % (reportdir, filehash)
 		elfreportfile = open(htmlfilename, 'wb')
-		elfreportfile.write(elfstring)
+		elfreportfile.write(elfheader)
+		elfreportfile.write(tablerows)
+		elfreportfile.write(elftablefooter)
+		elfreportfile.write(imagehtml)
+		elfreportfile.write(elffooter)
 		elfreportfile.close()
 		if compressed:
 			fin = open(htmlfilename, 'rb')
