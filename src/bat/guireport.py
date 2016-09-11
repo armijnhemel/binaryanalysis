@@ -279,11 +279,17 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, scanenv, cursor,
 		if distrohtml != '':
 			hreflist += '<li><a href="#distro">distribution file name matches</a></li>'
 		hreflist += '</ul>'
-	overviewstring = overviewstring + tablerows + "</table>" + hreflist + matchesrows + functionmatches + distrohtml + footer
-
 	htmlfilename = "%s/%s-guireport.html" % (reportdir, filehash)
 	guireportfile = open(htmlfilename, 'wb')
 	guireportfile.write(overviewstring)
+	guireportfile.write(tablerows)
+	guireportfile.write("</table>")
+	guireportfile.write(hreflist)
+	guireportfile.write(matchesrows)
+	guireportfile.write(functionmatches)
+	guireportfile.write(distrohtml)
+	guireportfile.write(footer)
+
 	guireportfile.close()
 	if compressed:
 		fin = open(htmlfilename, 'rb')
