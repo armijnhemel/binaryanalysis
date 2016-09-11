@@ -887,18 +887,260 @@ def verifyVimSwap(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug
 			newtags.append('vimswap')
 	return newtags
 
-## simplistic check for timezone data. This should be enough for
-## most Linux based machines to filter the majority of the
-## timezone files without any extra checks.
+## Check for timezone files.
+## documentation: man 5 tzfile
 def verifyTZ(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
-	if "zoneinfo" in filename:
-		datafile = open(filename, 'rb')
-		databuffer = datafile.read(4)
+	filesize = os.stat(filename).st_size
+
+	## for now only consider file that have 'zoneinfo' in
+	## the name. This will change in the future.
+	if not "zoneinfo" in filename:
+		pass
+		#return newtags
+
+	## header is 44 bytes
+	if filesize < 44:
+		return newtags
+
+	datafile = open(filename, 'rb')
+	databuffer = datafile.read(4)
+	if databuffer != 'TZif':
 		datafile.close()
-		if databuffer == 'TZif':
-			newtags.append('timezone')
-			newtags.append('resource')
+		return newtags
+	## the version of the file
+	databytes = datafile.read(1)
+	if not databytes in ['\x00', '\x32', '\x33']:
+		datafile.close()
+		return newtags
+	if databytes == '\x00':
+		version = 0
+	elif databytes == '\x32':
+		version = 2
+	elif databytes == '\x33':
+		version = 3
+	## then 15 null bytes
+	databytes = datafile.read(15)
+	if set(databytes) != set(['\x00']):
+		datafile.close()
+		return newtags
+
+	## number of utc/local indicators
+	databytes = datafile.read(4)
+	utcindicators = struct.unpack('>I', databytes)[0]
+
+	## number of standard indicators
+	databytes = datafile.read(4)
+	standardindicators = struct.unpack('>I', databytes)[0]
+
+	## number of leap seconds
+	databytes = datafile.read(4)
+	leapseconds = struct.unpack('>I', databytes)[0]
+
+	## number of transition times
+	databytes = datafile.read(4)
+	transitiontimes = struct.unpack('>I', databytes)[0]
+	
+	## number of local time types
+	databytes = datafile.read(4)
+	localtimetypes = struct.unpack('>I', databytes)[0]
+
+	if localtimetypes == 0:
+		datafile.close()
+		return newtags
+
+	## number of characters in the timezone abbrevation strings
+	databytes = datafile.read(4)
+	timezoneabbreviationchars = struct.unpack('>I', databytes)[0]
+
+	for i in xrange(0,transitiontimes):
+		databytes = datafile.read(4)
+		if len(databytes) != 4:
+			datafile.close()
+			return newtags
+	for i in xrange(0,transitiontimes):
+		databytes = datafile.read(1)
+		if len(databytes) != 1:
+			datafile.close()
+			return newtags
+
+	for i in xrange(0, localtimetypes):
+		databytes = datafile.read(6)
+		if len(databytes) != 6:
+			datafile.close()
+			return newtags
+
+	databytes = datafile.read(timezoneabbreviationchars)
+	if len(databytes) != timezoneabbreviationchars:
+		datafile.close()
+		return newtags
+
+	for i in xrange(0, leapseconds):
+		databytes = datafile.read(8)
+		if len(databytes) != 8:
+			datafile.close()
+			return newtags
+
+	for i in xrange(0, standardindicators):
+		databytes = datafile.read(1)
+		if len(databytes) != 1:
+			datafile.close()
+			return newtags
+
+	for i in xrange(0, utcindicators):
+		databytes = datafile.read(1)
+		if len(databytes) != 1:
+			datafile.close()
+			return newtags
+
+	## if the end of the file is reached, then this
+	## is a valid time zone file
+	if datafile.tell() == filesize:
+		newtags.append('timezone')
+		newtags.append('resource')
+		datafile.close()
+		return newtags
+	if version == 0:
+		## version 0 does not have an extra header
+		datafile.close()
+		return newtags
+
+	## for version 2 and version 3 there can be extra data
+	## header is 44 bytes
+	if filesize - datafile.tell() < 44:
+		datafile.close()
+		return newtags
+
+	databytes = datafile.read(4)
+	if databytes != 'TZif':
+		datafile.close()
+		return newtags
+
+	## the version of the file, has to be the same as
+	## in the first header
+	databytes = datafile.read(1)
+	if not databytes in ['\x32', '\x33']:
+		datafile.close()
+		return newtags
+
+	if databytes == '\x32':
+		if version != 2:
+			datafile.close()
+			return newtags
+	elif databytes == '\x33':
+		if version != 3:
+			datafile.close()
+			return newtags
+
+	## then again 15 null bytes
+	databytes = datafile.read(15)
+	if set(databytes) != set(['\x00']):
+		datafile.close()
+		return newtags
+
+	## and then all the same data again
+	## number of utc/local indicators
+	databytes = datafile.read(4)
+	utcindicators = struct.unpack('>I', databytes)[0]
+
+	## number of standard indicators
+	databytes = datafile.read(4)
+	standardindicators = struct.unpack('>I', databytes)[0]
+
+	## number of leap seconds
+	databytes = datafile.read(4)
+	leapseconds = struct.unpack('>I', databytes)[0]
+
+	## number of transition times
+	databytes = datafile.read(4)
+	transitiontimes = struct.unpack('>I', databytes)[0]
+	
+	## number of local time types
+	databytes = datafile.read(4)
+	localtimetypes = struct.unpack('>I', databytes)[0]
+
+	if localtimetypes == 0:
+		datafile.close()
+		return newtags
+
+	## number of characters in the timezone abbrevation strings
+	databytes = datafile.read(4)
+	timezoneabbreviationchars = struct.unpack('>I', databytes)[0]
+
+	for i in xrange(0,transitiontimes):
+		databytes = datafile.read(8)
+		if len(databytes) != 8:
+			datafile.close()
+			return newtags
+	for i in xrange(0,transitiontimes):
+		databytes = datafile.read(1)
+		if len(databytes) != 1:
+			datafile.close()
+			return newtags
+
+	for i in xrange(0, localtimetypes):
+		databytes = datafile.read(6)
+		if len(databytes) != 6:
+			datafile.close()
+			return newtags
+
+	databytes = datafile.read(timezoneabbreviationchars)
+	if len(databytes) != timezoneabbreviationchars:
+		datafile.close()
+		return newtags
+
+	for i in xrange(0, leapseconds):
+		databytes = datafile.read(12)
+		if len(databytes) != 12:
+			datafile.close()
+			return newtags
+
+	for i in xrange(0, standardindicators):
+		databytes = datafile.read(1)
+		if len(databytes) != 1:
+			datafile.close()
+			return newtags
+
+	for i in xrange(0, utcindicators):
+		databytes = datafile.read(1)
+		if len(databytes) != 1:
+			datafile.close()
+			return newtags
+
+	## if the end of the file is reached, then this
+	## is a valid time zone file
+	if datafile.tell() == filesize:
+		newtags.append('timezone')
+		newtags.append('resource')
+		datafile.close()
+		return newtags
+
+	## on to the third header, which is a (possibly empty)
+	## tzset string (man 3 tzset) in between two newlines
+	databytes = datafile.read(1)
+	if databytes != '\n':
+		datafile.close()
+		return newtags
+
+	## there have to be at two newlines, so this cannot be
+	## the last byte of the file
+	if datafile.tell() == filesize:
+		datafile.close()
+		return newtags
+
+	## check if the file ends with a newline
+	curoffset = datafile.tell()
+	datafile.seek(filesize-1)
+	databytes = datafile.read(1)
+	if databytes != '\n':
+		datafile.close()
+		return newtags
+	datafile.seek(curoffset)
+
+	## TODO: check if the tzset string is valid
+	datafile.close()
+	newtags.append('timezone')
+	newtags.append('resource')
 	return newtags
 
 ## verify if a file is in Intel HEX format and tag it is as such.
