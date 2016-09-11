@@ -1095,9 +1095,6 @@ def verifyTerminfo(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debu
 		terminfofile.close()
 		return newtags
 	offset += stringtablesize
-	if offset != filesize:
-		terminfofile.close()
-		return newtags
 	## extra sanity check, the string number offsets should be
 	## valid offsets into the string table
 	terminfofile.seek(stringnumberoffset)
@@ -1109,6 +1106,43 @@ def verifyTerminfo(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debu
 		if stringtableoffset + tableoffset > filesize:
 			terminfofile.close()
 			return newtags
+	if offset != filesize:
+		## perhaps it uses ncurses extensions
+		terminfofile.seek(offset)
+		## the number of extended boolean capabilities
+		databytes = terminfofile.read(2)
+		if len(databytes) != 2:
+			terminfofile.close()
+			return newtags
+		extendedboolean = struct.unpack('<H', databytes)[0]
+		## the number of extended numeric capabilities
+		databytes = terminfofile.read(2)
+		if len(databytes) != 2:
+			terminfofile.close()
+			return newtags
+		extendednumeric = struct.unpack('<H', databytes)[0]
+		## the number of extended string capabilities
+		databytes = terminfofile.read(2)
+		if len(databytes) != 2:
+			terminfofile.close()
+			return newtags
+		extendedstring = struct.unpack('<H', databytes)[0]
+		## the size of extended string table
+		databytes = terminfofile.read(2)
+		if len(databytes) != 2:
+			terminfofile.close()
+			return newtags
+		extendedstringtablesize = struct.unpack('<H', databytes)[0]
+		## the last offset of extended string table in bytes
+		databytes = terminfofile.read(2)
+		if len(databytes) != 2:
+			terminfofile.close()
+			return newtags
+
+		## TODO: more sanity checks
+		extendedstringtablelastoffset = struct.unpack('<H', databytes)[0]
+		terminfofile.close()
+		return newtags
 	terminfofile.close()
 	newtags.append('terminfo')
 	newtags.append('resource')
