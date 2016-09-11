@@ -1,3 +1,9 @@
+2016-09-11:
+* guireport.py/generatereports.py: don't keep results in memory unnecessarily
+but write them to a file earlier
+* prerun.py: tag compiled terminfo files
+* bat-scan.config: add configuration for compiled terminfo files
+
 2016-09-09:
 * prerun.py: extra sanity checks to prevent unnecessary calls to xmllint
 * guireport.py: use more efficient string concat for duplicates. In case there
