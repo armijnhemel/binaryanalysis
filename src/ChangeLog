@@ -3,6 +3,7 @@
 but write them to a file earlier
 * prerun.py: tag compiled terminfo files
 * bat-scan.config: add configuration for compiled terminfo files
+* prerun.py: expand timezone file checks
 
 2016-09-09:
 * prerun.py: extra sanity checks to prevent unnecessary calls to xmllint
