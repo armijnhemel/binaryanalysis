@@ -520,13 +520,12 @@ def generateunmatched((picklefile, pickledir, filehash, reportdir, compressed)):
 	unmatches = cPickle.load(unmatched_pickle)
         unmatched_pickle.close()
 
-	unmatchedhtml = "<html><body><h1>Unmatched strings (%d strings)</h1><p>" % (len(unmatches),)
-	unmatchedsnippets = map(lambda x: "%s<br>\n" % cgi.escape(x), unmatches)
-	unmatchedhtml = unmatchedhtml + "".join(unmatchedsnippets)
-	unmatchedhtml = unmatchedhtml + "</p></body></html>"
 	htmlfilename = "%s/%s-unmatched.html" % (reportdir, filehash)
 	unmatchedhtmlfile = open(htmlfilename, 'wb')
-	unmatchedhtmlfile.write(unmatchedhtml)
+	unmatchedhtmlfile.write("<html><body><h1>Unmatched strings (%d strings)</h1><p>" % (len(unmatches),))
+	unmatchedsnippets = map(lambda x: "%s<br>\n" % cgi.escape(x), unmatches)
+	unmatchedhtmlfile.write("".join(unmatchedsnippets))
+	unmatchedhtmlfile.write("</p></body></html>")
 	unmatchedhtmlfile.close()
 	if compressed:
 		fin = open(htmlfilename, 'rb')
