@@ -1023,6 +1023,97 @@ def verifyCertificate(filename, tempdir=None, tags=[], offsets={}, scanenv={}, d
 			newtags.append('certificate')
 	return newtags
 
+## check compiled terminfo files
+## man 5 term
+## does not check the ncurses extensions
+def verifyTerminfo(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+	newtags = []
+	if not 'binary' in tags:
+		return newtags
+	if 'compressed' in tags or 'graphics' in tags or 'xml' in tags:
+		return newtags
+	terminfofile = open(filename, 'rb')
+	databytes = terminfofile.read(2)
+	if databytes != '\x1a\x01':
+		terminfofile.close()
+		return newtags
+	filesize = os.stat(filename).st_size
+	## keep a fictional offset, starting directly after the header
+	offset = 12
+	## next two bytes is the size in bytes in the names section
+	databytes = terminfofile.read(2)
+	if len(databytes) != 2:
+		terminfofile.close()
+		return newtags
+	namesectionbytes = struct.unpack('<H', databytes)[0]
+	if offset + namesectionbytes > filesize:
+		terminfofile.close()
+		return newtags
+	offset += namesectionbytes
+	## then next two bytes is the size in bytes in the boolean section
+	databytes = terminfofile.read(2)
+	if len(databytes) != 2:
+		terminfofile.close()
+		return newtags
+	booleansectionbytes = struct.unpack('<H', databytes)[0]
+	if offset + booleansectionbytes > filesize:
+		terminfofile.close()
+		return newtags
+	if booleansectionbytes%2 != 0:
+		## align bytes
+		booleansectionbytes += 1
+	offset += booleansectionbytes
+	## then next two bytes is the size in short integers in the numbers section
+	databytes = terminfofile.read(2)
+	if len(databytes) != 2:
+		terminfofile.close()
+		return newtags
+	numbersectionbytes = struct.unpack('<H', databytes)[0]
+	if offset + numbersectionbytes*2 > filesize:
+		terminfofile.close()
+		return newtags
+	offset += numbersectionbytes * 2
+	## then next two bytes is the number of offsets in the string table
+	databytes = terminfofile.read(2)
+	if len(databytes) != 2:
+		terminfofile.close()
+		return newtags
+	numberoffsets = struct.unpack('<H', databytes)[0]
+	stringnumberoffset = offset
+	if offset + numberoffsets*2 > filesize:
+		terminfofile.close()
+		return newtags
+	offset += numberoffsets * 2
+	## then next two bytes is the size of the string table
+	databytes = terminfofile.read(2)
+	if len(databytes) != 2:
+		terminfofile.close()
+		return newtags
+	stringtablesize = struct.unpack('<H', databytes)[0]
+	stringtableoffset = offset
+	if offset + stringtablesize > filesize:
+		terminfofile.close()
+		return newtags
+	offset += stringtablesize
+	if offset != filesize:
+		terminfofile.close()
+		return newtags
+	## extra sanity check, the string number offsets should be
+	## valid offsets into the string table
+	terminfofile.seek(stringnumberoffset)
+	termbytes = terminfofile.read(numberoffsets*2)
+	for t in xrange(0, len(termbytes), 2):
+		if termbytes[t:t+2] == '\xff\xff':
+			continue
+		tableoffset = struct.unpack('<H', termbytes[t:t+2])[0]
+		if stringtableoffset + tableoffset > filesize:
+			terminfofile.close()
+			return newtags
+	terminfofile.close()
+	newtags.append('terminfo')
+	newtags.append('resource')
+	return newtags
+	
 '''
 ## stubs for very crude check for HTML files
 def verifyHTML(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
