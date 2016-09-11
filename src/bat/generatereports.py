@@ -487,23 +487,22 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir, 
 		if res['nonUniqueMatches'] != {}:
 			order = map(lambda x: (len(res['nonUniqueMatches'][x]), x), res['nonUniqueMatches'].keys())
 			order.sort(reverse=True)
-			html = "<html><body><h1>Assigned strings per package</h1><p><ul>"
+			htmlfilename = "%s/%s-assigned.html" % (reportdir, filehash)
+			assignedhtmlfile = open(htmlfilename, 'wb')
+			## first write the header
+			assignedhtmlfile.write("<html><body><h1>Assigned strings per package</h1><p><ul>")
 			for r in order:
 				(count, packagename) = r
-				html += "<li><a href=\"#%s\">%s (%d)</a></li>" % (packagename, packagename, count)
-			html += "</ul></p><hr>"
-			html += "</body></html>"
+				assignedhtmlfile.write("<li><a href=\"#%s\">%s (%d)</a></li>" % (packagename, packagename, count))
+			assignedhtmlfile.write("</ul></p><hr>")
 			for r in order:
 				(count, packagename) = r
-				html += "<h2><a name=\"%s\" href=\"#%s\">Matches for %s (%d)</a></h2><p>" % (packagename, packagename, packagename, count)
+				assignedhtmlfile.write("<h2><a name=\"%s\" href=\"#%s\">Matches for %s (%d)</a></h2><p>" % (packagename, packagename, packagename, count))
 				assignedmatches = res['nonUniqueMatches'][packagename]
 				assignedmatches.sort()
 				for rr in assignedmatches:
-					html += "%s<br>\n" % cgi.escape(rr)
-				html += "</p><hr>"
-			htmlfilename = "%s/%s-assigned.html" % (reportdir, filehash)
-			assignedhtmlfile = open(htmlfilename, 'wb')
-			assignedhtmlfile.write(html)
+					assignedhtmlfile.write("%s<br>\n" % cgi.escape(rr))
+				assignedhtmlfile.write("</p><hr>")
 			assignedhtmlfile.write(footer)
 			assignedhtmlfile.close()
 			if compressed:
