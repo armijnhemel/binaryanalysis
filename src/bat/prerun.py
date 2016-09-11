@@ -893,11 +893,6 @@ def verifyTZ(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fals
 	newtags = []
 	filesize = os.stat(filename).st_size
 
-	## for now only consider file that have 'zoneinfo' in
-	## the name. This will change in the future.
-	if not "zoneinfo" in filename:
-		return newtags
-
 	## header is 44 bytes
 	if filesize < 44:
 		return newtags
@@ -1136,7 +1131,17 @@ def verifyTZ(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fals
 		return newtags
 	datafile.seek(curoffset)
 
-	## TODO: check if the tzset string is valid
+	## TODO: better check if the tzset string is valid
+	validtzchars = set("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ<>:+-.,/")
+	while True:
+		databytes = datafile.read(1)
+		if datafile.tell() == filesize:
+			datafile.close()
+			break
+		if not databytes in validtzchars:
+			datafile.close()
+			return newtags
+
 	datafile.close()
 	newtags.append('timezone')
 	newtags.append('resource')
