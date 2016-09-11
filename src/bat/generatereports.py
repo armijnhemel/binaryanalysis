@@ -279,7 +279,9 @@ def extractpickles((filehash, pickledir, topleveldir, reportdir, unpacktempdir, 
 		if html != "":
 			htmlfilename = "%s/%s-functionnames.html" % (reportdir, filehash)
 			nameshtmlfile = open(htmlfilename, 'wb')
-			nameshtmlfile.write("<html><body>%s</body></html>" % html)
+			nameshtmlfile.write("<html><body>")
+			nameshtmlfile.write(html)
+			nameshtmlfile.write("</body></html>")
 			nameshtmlfile.close()
 			if compressed:
 				fin = open(htmlfilename, 'rb')
