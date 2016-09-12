@@ -2,6 +2,7 @@
 * move configs directory to bat-data directory, remove from the default BAT
 distribution
 * busybox.py: change the path to look for the BusyBox pickles
+* tagging BAT 27
 
 2016-09-11:
 * guireport.py/generatereports.py: don't keep results in memory unnecessarily
