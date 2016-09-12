@@ -13,8 +13,7 @@ setup(name='bat',
       packages=['bat'],
       license="Apache 2.0",
       scripts=['maintenance/batconfigcheck.py', 'maintenance/busybox-appletname-extractor.py', 'maintenance/clonedbinit.py', 'bat-scan', 'busybox-compare-configs.py'],
-      data_files=[('/etc/bat/configs', glob.glob('configs/*')),
-                  ('/etc/bat',  ['bat-scan.config']),
+      data_files=[ ('/etc/bat',  ['bat-scan.config']),
                  ],
      long_description="""The Binary Analysis Tool is a modular framework that assists with auditing
 the contents of compiled software. It makes it easier and cheaper to look
