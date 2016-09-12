@@ -1,3 +1,12 @@
+bat (27.0) unstable; urgency=high
+
+  * replace several external dependencies
+  * reduce memory consumption
+  * several crasher fixes
+  * much more (see ChangeLog)
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Mon, 12 Sep 2016 22:01:31 +0200
+
 bat (26.0) unstable; urgency=high
 
   * remove sqlite from scanning engine
