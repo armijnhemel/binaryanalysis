@@ -177,8 +177,13 @@ contain any of the actual scan results.
 \item \texttt{scandata.json} - JSON file containing a subset of
 the information in \texttt{scandata.pickle}. This file is only generated if the
 \texttt{generatejson} scan is enabled.
+\item \texttt{STATISTICS} - text file containing some statistics about the
+version of BAT used, the underlying Python implementation, and the scan times
+for each of the phases and some subphases. This file will likely be replaced
+by a JSON file in the future.
 \item \texttt{data} - directory containing the full unpacked directory tree.
-If \texttt{outputlite} is set to \texttt{yes} this directory will be omitted.
+If \texttt{outputlite} is set to \texttt{yes} this directory will be omitted
+from the output archive.
 \item \texttt{filereports} - directory containing Python pickle files (gzip
 compressed) with scan results. Since identical files might be present the
 results are stored per checksum, not file name.
@@ -259,11 +264,12 @@ extracted configuration with a vendor supplied configuration.
 Extracting a configuration from a BusyBox executable is done using
 \texttt{busybox.py} which can be found in the \texttt{bat} directory. It needs
 two commandline parameters: the path to the binary and the path to a directory
-containing a directory \texttt{configs} which has files containing mappings
-from BusyBox applet names to BusyBox configuration directives. By default this
-value is hardcoded as \texttt{/etc/bat}, but this might change in the future.
+which has files containing mappings from BusyBox applet names to BusyBox
+configuration directives. By default this value is hardcoded as
+\texttt{/etc/bat}, but this might change in the future. Some pre-extracted
+configurations can be found in the \texttt{bat-data} package (coming soon).
 
-Output (a configuration) is written to standard output.
+The output (a possible BusyBox configuration) is written to standard output.
 
 \begin{verbatim}
 python bat/busybox.py -b /path/to/busybox/binary -c
@@ -375,7 +381,7 @@ Currently the collection consists of:
 that are frequently found on older embedded Linux systems, such as IP cameras.
 \item modified version of \texttt{code2html} (which is unmaintained by the
 upstream author) that adds support for various more programming languages.
-This tool i snot needed by BAT.
+This tool is not needed by BAT.
 \item unmodified version of \texttt{simg2img} needed for converting Android
 sparse files to ext4 file system images.
 \item unmodified version of \texttt{romfsck} needed for unpacking romfs file
@@ -391,11 +397,8 @@ OpenWrt project, DD-WRT, or upstream SquashFS project.
 currently not used by default.
 \item \texttt{bat-visualisation} containing a few custom tools to help generate
 pictures. These might be removed in the future.
-\item two Java projects: \texttt{jdeserialize} and \texttt{ddex}, to help
-respectively with unpacking serialized Java files and scanning binary files
-from the Dalvik VM (Android). The \texttt{jdeserialize} program is no longer
-needed by BAT and just retained for reference. It will likely be removed in
-BAT 27.
+\item one Java project called \texttt{ddex} extract identifiers from binary
+files from the Dalvik VM (Android).
 \end{itemize}
 
 The collection is split in three packages: \texttt{bat-extratools-java} contains
