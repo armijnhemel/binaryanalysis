@@ -91,7 +91,7 @@ def runSetup(setupscan, usedatabase, cursor, conn, debug=False):
 		exec "from %s import %s as bat_%s" % (module, method, method)
 	except Exception, e:
 		return (False, {})
-	scanres = eval("bat_%s(setupscan['environment'], cursor, conn, debug=debug)" % (method))
+	scanres = locals()["bat_%s" % method](setupscan['environment'], cursor, conn, debug=debug)
 	return scanres
 
 ## convenience method to run the genericMarkerSearch in parallel chunks if needed
@@ -523,7 +523,7 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 					print >>sys.stderr, module, method, filetoscan, datetime.datetime.utcnow().isoformat()
 					sys.stderr.flush()
 
-				scantags = eval("bat_%s(filetoscan, tempdir, tags, offsets, prerunscan['environment'], debug=debug, unpacktempdir=unpacktempdir)" % (method))
+				scantags = locals()['bat_%s' % method](filetoscan, tempdir, tags, offsets, prerunscan['environment'], debug=debug, unpacktempdir=unpacktempdir)
 				## append the tag results. These will be used later to be able to specifically filter
 				## out files
 				if scantags != []:
@@ -625,7 +625,7 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 				## return value is the temporary dir, plus offset in the parent file
 				## plus a blacklist containing blacklisted ranges for the *original*
 				## file and a hash with offsets for each marker.
-				scanres = eval("bat_%s(filetoscan, tempdir, blacklist, offsets, newenv, debug=debug)" % (method))
+				scanres = locals()["bat_%s" % method](filetoscan, tempdir, blacklist, offsets, newenv, debug=debug)
 				## result is either empty, or contains offsets, blacklist, tags and hints
 				if len(scanres) == 0:
 					continue
