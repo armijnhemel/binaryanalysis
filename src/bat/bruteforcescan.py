@@ -1256,6 +1256,14 @@ def readconfig(config):
 		except:
 			pass
 		try:
+			packpickles = config.get(section, 'packpickles')
+			if packpickles == 'yes':
+				batconf['packpickles'] = True
+			else:
+				batconf['packpickles'] = False
+		except:
+			batconf['packpickles'] = False
+		try:
 			reportendofphase = config.get(section, 'reportendofphase')
 			if reportendofphase == 'yes':
 				batconf['reportendofphase'] = True
@@ -1578,7 +1586,7 @@ def compressPickle((infile)):
 ## packed are hardcoded, the other files are determined from the configuration.
 ## The configuration option 'lite' allows to leave out the extracted data, to
 ## speed up extraction of data in the GUI.
-def writeDumpfile(unpackreports, scans, processamount, outputfile, configfile, tempdir, batversion, statistics, lite=False, debug=False, compress=True):
+def writeDumpfile(unpackreports, scans, processamount, outputfile, configfile, tempdir, batversion, statistics, packpickles, lite=False, debug=False, compress=True):
 	dumpData(unpackreports, scans, tempdir)
 	dumpfile = tarfile.open(outputfile, 'w:gz')
 	oldcwd = os.getcwd()
@@ -1622,7 +1630,8 @@ def writeDumpfile(unpackreports, scans, processamount, outputfile, configfile, t
 		else:
 			shutil.copy(configfile, '.')
 		dumpfile.add(os.path.basename(configfile))
-	dumpfile.add('scandata.pickle')
+	if packpickles:
+		dumpfile.add('scandata.pickle')
 	if scans['batconfig']['extrapack'] != []:
 		for e in scans['batconfig']['extrapack']:
 			if os.path.isabs(e):
@@ -1634,21 +1643,22 @@ def writeDumpfile(unpackreports, scans, processamount, outputfile, configfile, t
 				dumpfile.add(e)
 	if not lite:
 		dumpfile.add('data')
-	try:
-		os.stat('filereports')
-		if compress:
-			## compress pickle files in parallel
-			filereports = os.listdir('filereports')
-			fnames = map(lambda x: os.path.join(tempdir, "filereports", x), filereports)
-			if fnames != []:
-				pool = multiprocessing.Pool(processes=processamount)
-				pool.map(compressPickle, fnames, 1)
-				pool.terminate()
-		dumpfile.add('filereports')
-	except Exception,e:
-		if debug:
-			print >>sys.stderr, "writeDumpfile", e
-			sys.stderr.flush()
+	if packpickles:
+		try:
+			os.stat('filereports')
+			if compress:
+				## compress pickle files in parallel
+				filereports = os.listdir('filereports')
+				fnames = map(lambda x: os.path.join(tempdir, "filereports", x), filereports)
+				if fnames != []:
+					pool = multiprocessing.Pool(processes=processamount)
+					pool.map(compressPickle, fnames, 1)
+					pool.terminate()
+			dumpfile.add('filereports')
+		except Exception,e:
+			if debug:
+				print >>sys.stderr, "writeDumpfile", e
+				sys.stderr.flush()
 
 	dumpadds = set()
 	for i in (scans['postrunscans'] + scans['aggregatescans']):
@@ -2190,7 +2200,7 @@ def runscan(scans, binaries, batversion):
 		statistics['total'] = endtime - scandate
 
 		if writeconfig['writeoutput']:
-			writeDumpfile(unpackreports, scans, processamount, writeconfig['outputfile'], writeconfig['config'], topleveldir, batversion, statistics, scans['batconfig']['outputlite'], scans['batconfig']['debug'], compressed)
+			writeDumpfile(unpackreports, scans, processamount, writeconfig['outputfile'], writeconfig['config'], topleveldir, batversion, statistics, scans['batconfig']['packpickles'], scans['batconfig']['outputlite'], scans['batconfig']['debug'], compressed)
 		if scans['batconfig']['cleanup']:
 			try:
 				shutil.rmtree(topleveldir)
