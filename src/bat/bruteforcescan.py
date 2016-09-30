@@ -1299,6 +1299,14 @@ def readconfig(config):
 		except:
 			batconf['debugphases'] = []
 		try:
+			writeoutputfile = config.get(section, 'writeoutputfile')
+			if writeoutputfile == 'yes':
+				batconf['writeoutputfile'] = True
+			else:
+				batconf['writeoutputfile'] = False
+		except:
+			batconf['writeoutputfile'] = True
+		try:
 			outputlite = config.get(section, 'outputlite')
 			if outputlite == 'yes':
 				batconf['outputlite'] = True
@@ -2199,7 +2207,7 @@ def runscan(scans, binaries, batversion):
 		endtime = datetime.datetime.utcnow()
 		statistics['total'] = endtime - scandate
 
-		if writeconfig['writeoutput']:
+		if scans['batconfig']['writeoutputfile']:
 			writeDumpfile(unpackreports, scans, processamount, writeconfig['outputfile'], writeconfig['config'], topleveldir, batversion, statistics, scans['batconfig']['packpickles'], scans['batconfig']['outputlite'], scans['batconfig']['debug'], compressed)
 		if scans['batconfig']['cleanup']:
 			try:

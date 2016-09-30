@@ -39,49 +39,7 @@ def main(argv):
 	else:
 		parser.error("Need configuration file")
 
-	if options.fw == None and options.fwdir == None:
-        	parser.error("Path to binary file or directory needed")
-
-	if options.fw != None and options.fwdir != None:
-        	parser.error("Don't supply binary file and directory at the same time")
-
-	if options.fw != None:
-		if os.path.isdir(options.fw):
-			parser.error("File to scan is a directory. Did you mean -d ?")
-
-		if not os.path.exists(options.fw):
-        		parser.error("No file to scan found")
-
-		if not os.path.isfile(options.fw):
-        		parser.error("%s is not a file" % options.fw)
-
-		if options.outputfile == None:
-        		parser.error("Path to output file needed")
-		try:
-			os.stat(options.outputfile)
-			print >>sys.stderr, "output file already exists"
-			sys.exit(1)
-		except Exception, e:
-			pass
-
-	if options.fwdir != None:
-		if options.outputfile != None:
-			parser.error("-o/--outputfile cannot be used for directory scanning")
-		if not os.path.exists(options.fwdir):
-        		parser.error("firmware directory does not exist")
-		if not os.path.isdir(options.fwdir):
-        		parser.error("directory path is not a directory")
-
-		if options.outdir == None:
-        		parser.error("output directory not supplied")
-		else:
-			if not os.path.exists(options.outdir):
-        			parser.error("output directory does not exist")
-			if not os.path.isdir(options.outdir):
-        			parser.error("output path is not a directory")
-		if os.path.normpath(options.fwdir) == os.path.normpath(options.outdir):
-        		parser.error("firmware directory and output directory cannot be the same")
-
+	## first parse the configuration file
 	try:
 		config.readfp(configfile)
 		scans = bat.bruteforcescan.readconfig(config)
@@ -110,6 +68,52 @@ def main(argv):
 			errorstring = reduce(lambda x, y: x + " " + y, scannames.intersection(conflicts))
 			print >>sys.stderr, "conflict in configuration file: %s" % errorstring
 			sys.exit(1)
+
+	if options.fw == None and options.fwdir == None:
+		parser.error("Path to binary file or directory needed")
+
+	if options.fw != None and options.fwdir != None:
+		parser.error("Don't supply binary file and directory at the same time")
+
+	if options.fw != None:
+		if os.path.isdir(options.fw):
+			parser.error("File to scan is a directory. Did you mean -d ?")
+
+		if not os.path.exists(options.fw):
+			parser.error("No file to scan found")
+
+		if not os.path.isfile(options.fw):
+			parser.error("%s is not a file" % options.fw)
+
+		if scans['batconfig']['writeoutputfile']:
+			if options.outputfile == None:
+				parser.error("Path to output file needed")
+			try:
+				os.stat(options.outputfile)
+				print >>sys.stderr, "output file already exists"
+				sys.exit(1)
+			except Exception, e:
+				pass
+
+	if options.fwdir != None:
+		if not os.path.exists(options.fwdir):
+			parser.error("firmware directory does not exist")
+		if not os.path.isdir(options.fwdir):
+			parser.error("directory path is not a directory")
+
+		if scans['batconfig']['writeoutputfile']:
+			if options.outputfile != None:
+				parser.error("-o/--outputfile cannot be used for directory scanning")
+
+			if options.outdir == None:
+				parser.error("output directory not supplied")
+			else:
+				if not os.path.exists(options.outdir):
+					parser.error("output directory does not exist")
+				if not os.path.isdir(options.outdir):
+					parser.error("output path is not a directory")
+			if os.path.normpath(options.fwdir) == os.path.normpath(options.outdir):
+				parser.error("firmware directory and output directory cannot be the same")
 
 	scanfiles = []
 	if options.fw != None:
@@ -153,7 +157,6 @@ def main(argv):
 		(scanfile, outputfile) = so
 
 		writeconfig = {}
-		writeconfig['writeoutput'] = True
 		writeconfig['config'] = os.path.realpath(options.cfg)
 		writeconfig['outputfile'] = outputfile
 		scantasks.append((scanfile, writeconfig))
