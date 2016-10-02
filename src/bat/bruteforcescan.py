@@ -935,7 +935,7 @@ def scanconfigsection(config, section, scanenv, batconf):
 		try:
 			conf['module'] = config.get(section, 'module')
 			conf['method'] = config.get(section, 'method')
-		except:
+		except Exception, e:
 			return
 
 		## some scans might, or might not, have these defined
@@ -1371,7 +1371,7 @@ def readconfig(config):
 			batconf['compress'] = False
 
 	if batconf['configdirectory'] != None:
-		configs = filter(lambda x: x.endswith('.conf'), os.listdir(batconf['configdirectory']))
+		configs = filter(lambda x: x.endswith('.conf') or x.endswith('.config'), os.listdir(batconf['configdirectory']))
 		for mc in configs:
 			mconfig = ConfigParser.ConfigParser()
 			try:
@@ -1380,7 +1380,7 @@ def readconfig(config):
 			except Exception, e:
 				pass
 			for section in mconfig.sections():
-				scanconfigres = scanconfigsection(config, section, scanenv, batconf)
+				scanconfigres = scanconfigsection(mconfig, section, scanenv, batconf)
 				if scanconfigres == None:
 					continue
 
