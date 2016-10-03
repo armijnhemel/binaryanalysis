@@ -593,6 +593,9 @@ def parseELF(filename, debug=False):
 		elftype = 'elfdynamic'
 	elif elftypebyte == 4:
 		elftype = 'elfcore'
+	else:
+		return
+
 	elfresult['elftype'] = elftype
 
 	## check the machine type
