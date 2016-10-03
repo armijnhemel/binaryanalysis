@@ -5239,32 +5239,44 @@ def searchUnpackPack200(filename, tempdir=None, blacklist=[], offsets={}, scanen
 		return ([], blacklist, [], hints)
 	tags = []
 	diroffsets = []
+	counter = 1
 	if offsets['pack200'] == []:
 		return ([], blacklist, tags, hints)
-	if len(offsets['pack200']) != 1:
-		return ([], blacklist, tags, hints)
-	if offsets['pack200'][0] != 0:
-		return ([], blacklist, tags, hints)
-	if blacklist != []:
-		return ([], blacklist, tags, hints)
-	tmpdir = dirsetup(tempdir, filename, "pack200", 1)
-	res = unpackPack200(filename, tmpdir)
-	if res != None:
-		filesize = os.stat(filename).st_size
-		diroffsets.append((res, 0, filesize))
-		blacklist.append((0, filesize))
-	else:
-		## cleanup
-		os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [], hints)
+	lenheaderoffsets = len(offsets['pack200'])
+	filesize = os.stat(filename).st_size
+	for i in xrange(0,lenheaderoffsets):
+		offset = offsets['pack200'][i]
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			continue
+		if i < lenheaderoffsets - 1:
+			nextoffset = offsets['pack200'][i+1]
+		else:
+			nextoffset = filesize
+		blacklistoffset = extractor.inblacklist(nextoffset, blacklist)
+		if blacklistoffset != None:
+			break
+		pack200length = nextoffset - offset
+		tmpdir = dirsetup(tempdir, filename, "pack200", counter)
+		res = unpackPack200(filename, offset, pack200length, tmpdir)
+		if res != None:
+			diroffsets.append((res, offset, pack200length))
+			blacklist.append((offset, nextoffset))
+			counter += 1
+			if offset == 0 and pack200length == filesize:
+				tags.append('pack200')
+		else:
+			## cleanup
+			os.rmdir(tmpdir)
+	return (diroffsets, blacklist, tags, hints)
 
-def unpackPack200(filename, tempdir=None):
+def unpackPack200(filename, offset, pack200length, tempdir=None):
 	tmpdir = unpacksetup(tempdir)
 
 	tmpfile = tempfile.mkstemp(dir=tmpdir)
 	os.fdopen(tmpfile[0]).close()
 
-	unpackFile(filename, 0, tmpfile[1], tmpdir)
+	unpackFile(filename, offset, tmpfile[1], tmpdir, length=pack200length)
 
 	packtmpfile = tempfile.mkstemp(dir=tmpdir, suffix=".jar")
 	os.fdopen(packtmpfile[0]).close()
