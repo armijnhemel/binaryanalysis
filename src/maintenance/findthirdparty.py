@@ -31,50 +31,55 @@ def main(argv):
 
 	ignorepackages = ['linux', 'busybox']
 
-	packages = map(lambda x: x[:2], filter(lambda x: x[2] == 'qt', packages))
+	packages = map(lambda x: x[:2], packages)
 
 	packages.sort()
 
-	thirdparty = ['thirdparty', 'third_party', '3rdparty', '3rdpart']
+	thirdparty = set(['thirdparty', 'third_party', '3rdparty', '3rdpart'])
 
 	seensha256 = set()
 	for i in packages:
 		cursor.execute("select distinct checksum,thirdparty from processed_file where package=? and version=?", i)
-		res = cursor.fetchall()
-		for s in res:
-			if s[0] in seensha256:
-				continue
-			if s[1] != None:
-				continue
-			checksum = s[0]
-			cursor.execute("select distinct package,pathname,thirdparty from processed_file where checksum=?", (checksum,))
-			packageres = cursor.fetchall()
-			packageres = filter(lambda x: x[0] != i[0], packageres)
-			for p in packageres:
-				if p[0] in ignorepackages:
+		while True:
+			res = cursor.fetchmany(5000)
+			if len(res) == 0:
+				break
+			for s in res:
+				if s[0] in seensha256:
 					continue
-				if p[2] != None:
+				if s[1] != None:
 					continue
-				## check if specific markers are in the path
-				if i[0] in os.path.dirname(p[1]):
-					for t in thirdparty:
-						if t in os.path.dirname(p[1]):
+				checksum = s[0]
+				cursor.execute("select distinct package,pathname,thirdparty from processed_file where checksum=?", (checksum,))
+				packageres = cursor.fetchall()
+				packageres = filter(lambda x: x[0] != i[0], packageres)
+				for p in packageres:
+					if p[0] in ignorepackages:
+						continue
+					if p[2] != None:
+						continue
+					## check if specific markers are in the path
+					if i[0] in os.path.dirname(p[1]):
+						for t in thirdparty:
+							if t in os.path.dirname(p[1]):
+								if options.dryrun:
+									print i[0], i[1], checksum, p[:-1]
+								else:
+									cursor.execute("update processed_file set thirdparty=? where package=? and pathname=? and checksum=?", (True, p[0], p[1], checksum))
+								break
+						if 'external' in os.path.dirname(p[1]):
 							if options.dryrun:
 								print i[0], i[1], checksum, p[:-1]
 							else:
 								cursor.execute("update processed_file set thirdparty=? where package=? and pathname=? and checksum=?", (True, p[0], p[1], checksum))
-					if 'external' in os.path.dirname(p[1]):
-						if options.dryrun:
-							print i[0], i[1], checksum, p[:-1]
 						else:
-							cursor.execute("update processed_file set thirdparty=? where package=? and pathname=? and checksum=?", (True, p[0], p[1], checksum))
-					else:
-						if options.dryrun:
-							print i[0], i[1], checksum, p[:-1]
-						else:
-							pass
-			conn.commit()
-			seensha256.add(s[0])
+							if options.dryrun:
+								pass
+								#print i[0], i[1], checksum, p[:-1]
+							else:
+								pass
+				conn.commit()
+				seensha256.add(s[0])
 	cursor.close()
 	conn.close()
 
