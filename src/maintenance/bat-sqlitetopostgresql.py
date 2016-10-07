@@ -514,7 +514,7 @@ def main(argv):
 
 	print "creating indexes"
 	sys.stdout.flush()
-	indextasks = map(lambda x: (x.strip(),), open('postgresql-index.sql').readlines())
+	indextasks = filter(lambda x: != '', map(lambda x: (x.strip(),), open('postgresql-index.sql').readlines()))
 	pool.terminate()
 
 	pool = multiprocessing.Pool(processes=2)
