@@ -1,3 +1,10 @@
+bat (29.0) unstable; urgency=high
+
+  * fix loading of modular configurations if all configurations are in the
+    same directory
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Mon, 10 Oct 2016 00:02:31 +0200
+
 bat (28.0) unstable; urgency=high
 
   * fix loading of modular configurations
