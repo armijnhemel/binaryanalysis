@@ -42,7 +42,7 @@ def main(argv):
 	## first parse the configuration file
 	try:
 		config.readfp(configfile)
-		scans = bat.bruteforcescan.readconfig(config)
+		scans = bat.bruteforcescan.readconfig(config, os.path.realpath(options.cfg))
 		configfile.close()
 	except:
 		print >>sys.stderr, "Malformed configuration file. Exiting"
