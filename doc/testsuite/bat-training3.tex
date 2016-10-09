@@ -134,33 +134,76 @@ The configuration file is in Windows INI format and contains several parts:
 The general configuration is mandatory, the other directives are optional.
 }
 
+\frame{
+\frametitle{General configuration}
+BAT is very configurable. The configuration file lists many options, with descriptions of what they do.
+
+The most important sections to get started quickly are related to:
+
+\begin{itemize}
+\item unpacking and multiprocessing
+\item database
+\item debugging
+\end{itemize}
+}
+
 \begin{frame}[fragile]
-\frametitle{General configuration (1)}
+\frametitle{General configuration: unpacking and multiprocessing}
 
 \begin{verbatim}
 [batconfig]
 multiprocessing = yes
-module = bat.simpleprettyprint
-output = prettyprintresxml
+unpackdirectory     = /home/bat/tmp
+temporary_unpackdirectory = /ramdisk
+configdirectory     = /home/bat/configs
 \end{verbatim}
 
-\texttt{multiprocessing} is for using multiple threads. If a scan is not safe (example: it writes to a database) it should be set to \texttt{no}.
+\begin{itemize}
+\item \texttt{multiprocessing} is for using multiple threads. If this is not desirable it should be set to \texttt{no}
+\item \texttt{unpackdirectory}: set prefix of toplevel directory where data should be unpacked (default: \texttt{/tmp})
+\item \texttt{temporary\_unpackdirectory}: set prefix for some scans where temporary files should be created (default: default somewhere in the unpacking directory)
+\item \texttt{configdirectory}: path of directory that contain extra configuration files for plugins
+\end{itemize}
 
-\texttt{output} and \texttt{module} are used together to specify an (optional) method that prints results in XML.
 \end{frame}
 
-\frame{
-\frametitle{General configuration (2)}
-There are four optional configuration settings:
+\begin{frame}[fragile]
+\frametitle{General configuration: database}
+
+\begin{verbatim}
+postgresql_user     = bat
+postgresql_password = bat
+postgresql_db       = bat
+postgresql_port     = 5432
+postgresql_host     = 127.0.0.1
+#usedatabase         = no
+\end{verbatim}
 
 \begin{itemize}
-\item \texttt{outputlite}: do not include full copy of the data in the output archive.
+\item \texttt{postgresql\_user}: PostgreSQL user to use
+\item \texttt{postgresql\_password}: PostgreSQL password
+\item \texttt{postgresql\_db}: PostgreSQL database to use
+\item \texttt{postgresql\_port}: TCP port to use
+\item \texttt{postgresql\_host}: host to use
+\end{itemize}
+
+If everything runs on a local machine commenting \texttt{postgresql\_port} and \texttt{postgresql\_host} will force PostgreSQL to use the local socket.
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{General configuration: debugging}
+There are two optional configurations related to debugging:
+
+\begin{verbatim}
+debug               = yes
+debugphases         = unpack:aggregate
+\end{verbatim}
+
+\begin{itemize}
 \item \texttt{debug}: disable multiprocessing and output debugging information on standard error
 \item \texttt{debugphases}: apply \texttt{debug} only to specific scanning phases
-\item \texttt{tempdir}: set prefix where temporary files should be created (default: \texttt{/tmp})
 \end{itemize}
-}
-
+\end{frame}
 
 \frame{
 \frametitle{Mandatory scan configuration options}
@@ -191,7 +234,6 @@ The configuration for each type of scan has a few mandatory options:
 
 \begin{itemize}
 \item \texttt{description} - a human readable description of the scan
-\item \texttt{xmloutput} - custom output method for XML output of BAT. The code should be in the same file as the actual scan code.
 \item \texttt{storetype}, \texttt{storetarget} and \texttt{storedir} - used for postrun scans and aggregate scans to describe which files to store in the output, where to store them and where to get them
 \item \texttt{cleanup} - used in postrun scans and aggregate scans to tell BAT to clean up any generated file. Used in combination with \texttt{storetype}, \texttt{storetarget} and \texttt{storedir}.
 \item \texttt{parallel} - used to indicate whether files should be scanned in parallel. Defaults to \texttt{yes}. If set to \texttt{no} no files will be scanned in parallel for scans of this type.
@@ -244,7 +286,6 @@ The following example is for querying a database to see if the name of the file 
 type        = leaf
 module      = bat.file2package
 method      = filename2package
-xmloutput   = xmlprettyprint
 envvars     = BAT_PACKAGE_DB=/tmp/filepackages
 description = Look up name of file name in popular
               distributions
@@ -302,8 +343,6 @@ The raw output of the Binary Analysis Tool is written as a tar archive. The tar 
 \end{itemize}
 
 The results can be viewed using the Binary Analysis Tool result viewer.
-
-If enabled in the configuration a representation of the results in XML will be printed to standard output after the scan.
 }
 
 \frame{
