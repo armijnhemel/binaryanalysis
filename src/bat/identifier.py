@@ -327,6 +327,7 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 	## different sections.
 	## TODO: find out which compilation settings influence this and how it
 	## can be detected that strings were moved to different sections.
+	validsectionswithstrings = set(['.data', '.rodata', '.rodata.str1.1', '.rodata.str1.8'])
 	if "elf" in tags:
 		elfscanfiles = []
 		## first determine the size and offset of .data and .rodata sections,
@@ -349,7 +350,7 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 				datafile = open(filepath, 'rb')
 				for s in elfres['sections']:
 					section = elfres['sections'][s]['name']
-					if not section in ['.data', '.rodata']:
+					if not section in validsectionswithstrings:
 						continue
 					## not interested in NOBITS
 					if elfres['sections'][s]['sectiontype'] == 8:

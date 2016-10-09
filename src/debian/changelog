@@ -1,3 +1,18 @@
+bat (29.0) unstable; urgency=high
+
+  * fix loading of modular configurations if all configurations are in the
+    same directory
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Mon, 10 Oct 2016 00:02:31 +0200
+
+bat (28.0) unstable; urgency=high
+
+  * fix loading of modular configurations
+  * ELF processing: return if no valid type can be found
+  * better pack200 carving
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Sat, 8 Oct 2016 23:27:51 +0200
+
 bat (27.0) unstable; urgency=high
 
   * replace several external dependencies

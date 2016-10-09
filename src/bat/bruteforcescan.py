@@ -1094,7 +1094,7 @@ def scanconfigsection(config, section, scanenv, batconf):
 ## unpackscans: {name, module, method, ppoutput, priority}
 ## These are sorted by priority
 ## leafscans: {name, module, method, ppoutput}
-def readconfig(config):
+def readconfig(config, configfilename):
 	unpackscans = []
 	leafscans = []
 	prerunscans = []
@@ -1372,6 +1372,8 @@ def readconfig(config):
 
 	if batconf['configdirectory'] != None:
 		configs = filter(lambda x: x.endswith('.conf') or x.endswith('.config'), os.listdir(batconf['configdirectory']))
+		if os.path.realpath(batconf['configdirectory']) == os.path.dirname(configfilename):
+			configs = filter(lambda x: x != os.path.basename(configfilename), configs)
 		for mc in configs:
 			mconfig = ConfigParser.ConfigParser()
 			try:

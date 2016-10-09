@@ -17,7 +17,7 @@ import bat.bruteforcescan
 import datetime
 
 def main(argv):
-	batversion = 27
+	batversion = 30
 	config = ConfigParser.ConfigParser()
         parser = OptionParser()
 	parser.add_option("-b", "--binary", action="store", dest="fw", help="path to binary file", metavar="FILE")
@@ -42,7 +42,7 @@ def main(argv):
 	## first parse the configuration file
 	try:
 		config.readfp(configfile)
-		scans = bat.bruteforcescan.readconfig(config)
+		scans = bat.bruteforcescan.readconfig(config, os.path.realpath(options.cfg))
 		configfile.close()
 	except:
 		print >>sys.stderr, "Malformed configuration file. Exiting"
