@@ -1508,7 +1508,7 @@ def readconfig(config, configfilename):
 	aggregatescans = sorted(aggregatescans, key=lambda x: x['priority'], reverse=True)
 	return {'batconfig': batconf, 'unpackscans': unpackscans, 'leafscans': leafscans, 'prerunscans': prerunscans, 'postrunscans': postrunscans, 'aggregatescans': aggregatescans, 'errors': errors}
 
-def dumpData(unpackreports, scans, tempdir):
+def dumpData(unpackreports, scans, tempdir, packpickles):
 	## a dump of all the result contains:
 	## * a copy of all the unpacked data
 	## * whatever results from postrunscans that should be stored (defined in the config file)
@@ -1580,9 +1580,10 @@ def dumpData(unpackreports, scans, tempdir):
 					print >>sys.stderr, "dumpData: removing failed", r, e
 					pass
 
-	picklefile = open(os.path.join(tempdir, 'scandata.pickle'), 'wb')
-	cPickle.dump(unpackreports, picklefile)
-	picklefile.close()
+	if packpickles:
+		picklefile = open(os.path.join(tempdir, 'scandata.pickle'), 'wb')
+		cPickle.dump(unpackreports, picklefile)
+		picklefile.close()
 
 def compressPickle((infile)):
 	fin = open(infile, 'rb')
@@ -1597,7 +1598,7 @@ def compressPickle((infile)):
 ## The configuration option 'lite' allows to leave out the extracted data, to
 ## speed up extraction of data in the GUI.
 def writeDumpfile(unpackreports, scans, processamount, outputfile, configfile, tempdir, batversion, statistics, packpickles, lite=False, debug=False, compress=True):
-	dumpData(unpackreports, scans, tempdir)
+	dumpData(unpackreports, scans, tempdir, packpickles)
 	dumpfile = tarfile.open(outputfile, 'w:gz')
 	oldcwd = os.getcwd()
 	os.chdir(tempdir)
