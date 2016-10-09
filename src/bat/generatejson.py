@@ -139,6 +139,8 @@ def writejson(scanqueue, topleveldir, outputhash, cursor, conn, scanenv, convert
 								uniquereport['identifierdata'].append(identifierdatareport)
 							report['unique'].append(uniquereport)
 						report['packageversions'] = []
+						determinedlicenses = map(lambda x: x[0], filter(lambda x: x[1] == 'squashed', packagelicenses))
+						report['determinedlicenses'] = determinedlicenses
 						for p in packageversions:
 							packagereport = {}
 							packagereport['packageversion'] = p
