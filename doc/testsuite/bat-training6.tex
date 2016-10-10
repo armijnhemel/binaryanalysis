@@ -120,7 +120,7 @@ The ranking scan uses several caching databases:
 \item function names
 \end{itemize}
 
-If caching databases are not found then the ranking code will be automatically disabled.
+If caching databases are not found then the ranking code will not work properly.
 }
 
 \frame{
@@ -131,49 +131,17 @@ The functionality for the ranking scan is split in two separate scans:
 \item identifier extraction (in the \texttt{[identifier]} scan)
 \item identifier lookup and scoring (in the \texttt{[versionlicensecopyright]} scan)
 \end{enumerate}
-
-Both scans need to be configured with the right database information
 }
 
 \begin{frame}[fragile]
-\frametitle{Database configuration (1)}
-The parameters for the databases are passed via the environment. In \texttt{[identifier]}:
-
-\begin{verbatim}
-[identifier]
-...
-envvars = BAT_NAMECACHE_C=/gpl/master/functioncache_c
-...
-\end{verbatim}
-
-Only the caching database for C needs to be added here to
-be able to filter out Linux kernel function names.
-\end{frame}
-
-\begin{frame}[fragile]
-\frametitle{Database configuration (2)}
-
-\begin{verbatim}
-[versionlicensecopyright]
-envvars = BAT_DB=/path/to/main_database:
-      BAT_STRINGSCACHE_C=/path/to/stringscache_for_c:
-      BAT_NAMECACHE_C=/path/to/functioncache_for_c
-...
-\end{verbatim}
-
-Caches for other programming language families (like Java) can be added in a similar way.
-\end{frame}
-
-\begin{frame}[fragile]
 \frametitle{Further ranking configuration}
-To enable license scanning and reporting the parameter \texttt{BAT\_RANKING\_LICENSE} should be set to \texttt{1} and the location of the license database should be set:
+To enable license scanning and reporting the parameter \texttt{BAT\_RANKING\_LICENSE} should be set to \texttt{1}:
 
 \begin{verbatim}
 [ranking]
 ...
 envvars = ...
  :BAT_RANKING_LICENSE=1
- :BAT_LICENSE_DB=/path/to/licensedb
 ...
 \end{verbatim}
 \end{frame}
