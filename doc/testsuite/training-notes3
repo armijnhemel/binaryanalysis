@@ -66,7 +66,7 @@ Slide 9: Postrun scans are scans that simply take the results of previous scans
 and process them, but don't change the results, but merely have side effects,
 such as generating pictures of the results, or making reports.
 
-Slide 10: The Binary Analysis Tool is extremely configurable: each scan, aprt
+Slide 10: The Binary Analysis Tool is extremely configurable: each scan, apart
 from the identifier search, can be enabled or disabled by simply editing a
 configuration file. This configuration file is in a very simple Windows INI
 format.
@@ -76,24 +76,44 @@ The configuration for scanning is conceptually divided in four main parts
 a main part, plus a configuration part per category. Only the general
 configuration part is mandatory.
 
-Slide 11: The main configuration defines two things: whether or not BAT should
-write the results of a scan in a simple XML format (default: yes) and if BAT
-should be run using parallel processing (default: no).
+Slide 11: The main configuration defines things related to for example unpacking
+and multiprocessing, database configuration, and debugging. There are many more
+options that can tweak specific parts of BAT. All options are described in detail
+in the manual.
 
-The XML pretty printer can be replaced at will by pointing to a different XML
-pretty printer.
+Slide 12: By default BAT will use all processors that are available.
+multiprocessing can be disabled, which might be useful in some situatiions.
 
-Multiprocessing can safely be turned on if there are no scans that have side
-effects, such as modifying a database. In the default configuration it is safe
-to turn this on.
+The "unpackdirectory" sets the directory where files are unpacked by BAT. By
+default this is /tmp, but on some distributions (like Fedora) it is better to
+change this, as /tmp is by default on a ramdisk and limited.
 
-Slide 12: The configurations for scans are all slightly similar. Depending on
+The directory "temporary_unpackdirectory" is for specifying a location for
+writing temporary data. Some unpack scans and other scans write temporary data
+and use a lot of I/O which can take a lot of time (example: LZMA unpacking).
+By for example setting this to a ramdisk potentially a lot of time can be saved.
+
+Slide 13: BAT uses a database by default. The PostgreSQL configurations can be
+tweaked. If the database runs on the same machine as BAT, then the local socket
+can be used instead. For this postgresql_port and postgresql_host need to be
+outcommented.
+
+If no database is available (no database server running, etc.) it will
+automatically be disabled but it can also be disabled manually by setting
+usedatabase to "no".
+
+Slide 14: In case BAT needs to be debugged it can be set either for all of
+BAT or for individual phases (note: prerun, unpack and leaf are actually run
+in the same phase). Setting debugging will force BAT into single thread mode,
+at least for the phase(s) for which debugging is enabled.
+
+Slide 15: The configurations for scans are all slightly similar. Depending on
 the type of scan there might be a few differences, but each one has a few
 mandatory options: type of the scan, the module where the method that
 implements the scan can be found, the method name of the scan and if it is
 enabled or disabled.
 
-Slide 13 + 14: There are also a few optional configuration parameters that can
+Slide 16 + 17: There are also a few optional configuration parameters that can
 be set by individual scans. Depending on the type it might, or might not, make
 sense in the context. The description option can be set for all scans since it
 has no influence. The envvars option can also be set for all scans, but it
@@ -134,21 +154,17 @@ to 'no' then all scans for the category will be scanned in sequence, so for
 example setting it to 'no' for gzip unpacking would run all unpack scans
 sequentially. The default value for parallel is 'yes'.
 
-Slide 15: no comments
+Slide 18: no comments
 
-Slide 16: This scan has a low priority, is only run for files where the
+Slide 19: This scan has a low priority, is only run for files where the
 identifier for 7z can be found in and ignores files which have already been
 classified as something that is not 7z.
 
-Slide 17: This scan uses an environment variable, namely the location of a
-database with extra information. It is passed to the scan using the envvars
-configuration parameter.
-
-Slide 18 + 19: Similarly, these scans uses a few environment variables (please
+Slide 20 + 21: these scans uses a few environment variables (please
 note that in the configuration these should be on one line), and ignores quite
 a few file types.
 
-Slide 20: After all scans are done BAT writes its output to a tar file. This
+Slide 22: After all scans are done BAT writes its output to a tar file. This
 file will contain everything: the original file, the unpacked files, the scan
 results as Python pickle files, possibly more output files like pictures and
 reports.
