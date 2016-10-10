@@ -20,8 +20,7 @@ In this course you will learn:
 \item adding new identifiers to BAT
 \item writing a new prerun scan
 \item writing a new unpack scan
-\item writing a new file specific scan
-\item writing a pretty printer for file specific scans
+\item writing a new leaf scan
 \item writing a new aggregate scan
 \item writing a new postrun scan
 \end{itemize}
@@ -43,17 +42,17 @@ A new identifier will be scanned as soon as there is a scan that has declared it
 \begin{frame}[fragile]
 \frametitle{Using identifiers in scans}
 Identifiers can be accessed in a dictionary called \texttt{offsets}. This dictionary is passed around as an argument
- to each scan and can be accessed by the keys from the \texttt{fsmagic} dictionary, for example:
+ to each scan and can be accessed by the keys from the \texttt{fsmagic} dictionary, for example (code snippet from \texttt{fwunpack.py}):
 
 \begin{verbatim}
 if offsets['java_serialized'] == []:
-        return ([], blacklist, [])
+        return ([], blacklist, [], hints)
 \end{verbatim}
 \end{frame}
 
 \frame{
 \frametitle{Writing a new prerun scan}
-A prerun scan takes 5 parameters:
+A prerun scan takes 6 parameters:
 
 \begin{itemize}
 \item \texttt{filename} - the full filename of the file during scanning
@@ -89,7 +88,7 @@ def searchXML(filename, tempdir=None, tags=[],
 \end{frame}
 
 \frame{
-\frametitle{Writing a new unpacking scan}
+\frametitle{Writing a new unpacking scan (1)}
 An unpack scan takes the following parameters:
 
 \begin{itemize}
@@ -98,78 +97,58 @@ An unpack scan takes the following parameters:
 \item \texttt{blacklist} (default \texttt{[]}) - a list of tuples of byte ranges in the file that should not be scanned
 \item \texttt{offsets} (default \texttt{\{\}}) - offsets of identifiers
 \item \texttt{envvars} (default \texttt{None}) - optional environment variables
+\item \texttt{debug} (default \texttt{False}) - optional debug flag
 \end{itemize}
+}
 
+\frame{
+\frametitle{Writing a new unpacking scan (2)}
 The return value is a tuple containing:
 
 \begin{itemize}
 \item list of tuples with directories where unpacked files can be found, offsets in the original file where the compressed file/file system can be found, plus (if possible), the size of the compressed file/file system
 \item updated blacklist
 \item list of tags
+\item list of ``hints'' to give to the scanner. This is a dictionary with extra information.
 \end{itemize}
 }
 
 \frame{
-\frametitle{Writing a new file scan}
-A file scan takes the following parameters:
+\frametitle{Writing a new leaf scan}
+A leaf scan takes the following parameters:
 
 \begin{itemize}
-\item \texttt{path} - the full filename of the file during scanning
+\item \texttt{filename} - the full filename of the file during scanning
 \item \texttt{tags} - the list of tags for this file
+\item \texttt{cursor} - an active database cursor, or \texttt{None} if no database is used
+\item \texttt{conn} - an active database connection, or \texttt{None} if no database is used
 \item \texttt{blacklist} (default \texttt{[]}) - a list of tuples of byte ranges in the file that should not be scanned
-\item \texttt{envvars} (default \texttt{None}) - optional environment variables
+\item \texttt{scanenv} (default \texttt{\{\}}) - optional environment
+\item \texttt{scandebug} (default \texttt{False} - optional debug flags
+\item \texttt{unpacktempdir} (default \texttt{None}) - optional directory for writing temporary files
 \end{itemize}
 
-The return value can be an arbitrary value. If XML output is enabled and the return value is a complex data structure a XML pretty printer should be written (simple values, like integers, strings or booleans, will be included verbatim).
+The return value can be an arbitrary value.
 }
 
 \begin{frame}[fragile]
 \frametitle{File scan example}
 \begin{verbatim}
-def scanVirus(path, tags, blacklist=[], envvars=None):
-
-  p = subprocess.Popen(['clamscan', "%s" % (path,)],
-      stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-      close_fds=True)
-
-  (stanout, stanerr) = p.communicate()
-
-  if p.returncode == 0:
-    return
-  else:
-    # virus found
-    viruslines = stanout.split("\n")
-    virusname = viruslines[0].strip()[len(path) + 2:-6]
-    return virusname
+def scanVirus(filepath, tags, cursor, conn, blacklist=[],
+   scanenv={}, scandebug=False, unpacktempdir=None):
+    p = subprocess.Popen(['clamscan', "%s" % (filepath,)],
+       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    (stanout, stanerr) = p.communicate()
+    if p.returncode == 0:
+       return
+    else:
+       ## virus found
+       viruslines = stanout.split("\n")
+       ## first line contains the report:
+       virusname =
+          viruslines[0].strip()[len(filepath) + 2:-6]
+       return (['virus'], virusname)
 \end{verbatim}
-\end{frame}
-
-\frame{
-\frametitle{Writing a XML pretty printer for file scans}
-
-\begin{itemize}
-\item \texttt{res} - result of file specific scan
-\item \texttt{root} - top level XML node (for creating new XML elements)
-\item \texttt{envvars} (default \texttt{None}) - optional environment variables
-\end{itemize}
-
-The return value should be a XML node.
-}
-
-\begin{frame}[fragile]
-\frametitle{XML pretty printer example}
-\begin{verbatim}
-def dynamicLibsPrettyPrint(res, root, envvars=None):
-    tmpnode = root.createElement('libs')
-    for lib in res:
-        tmpnode2 = root.createElement('lib')
-        tmpnodetext = xml.dom.minidom.Text()
-        tmpnodetext.data = lib
-        tmpnode2.appendChild(tmpnodetext)
-        tmpnode.appendChild(tmpnode2)
-    return tmpnode
-\end{verbatim}
-
 \end{frame}
 
 \frame{
@@ -180,8 +159,11 @@ A postrun scan takes a few parameters:
 \item \texttt{filename} - the full filename of the file during scanning
 \item \texttt{unpackreport} - results from unpack scans
 \item \texttt{scantempdir} - relative directory in the scan tree of where the original file can be found
-\item \texttt{toplevelscandir} - top level directory of the scan
-\item \texttt{envvars} (default \texttt{None}) - optional environment variables
+\item \texttt{topleveldir} - top level directory of the scan
+\item \texttt{scanenv} - scan environment (dictionary)
+\item \texttt{cursor} - active database cursor, or \texttt{None} if no database is used
+\item \texttt{conn} - active database connection, or \texttt{None} if no database is used
+\item \texttt{debug} - optional debugging flag (default: \texttt{False})
 \end{itemize}
 
 Since postrun scans are only supposed to have side effects no return value is expected.

@@ -31,7 +31,7 @@ a list of new tags the scan has found.
 
 Slide 6: no comments
 
-Slide 7: Unpacking scans try to carve a file out of a larger file and unpack
+Slide 7 + 8: Unpacking scans try to carve a file from a larger file and unpack
 its contents. Parameters to methods include a blacklist, which contains tuples
 of with start/end values of byte ranges in the file that should be ignored,
 since these ranges have already been scanned for example by another unpack
@@ -44,8 +44,10 @@ file system or media file can be found
 2. an updated blacklist to which new byte ranges have been added in case of
 successful unpacking
 3. a list of tags, the same as are returned by prerun scans
+4. hints for the scanning engine, for example if the type of results is already
+known in advance (example: PNG unpacking)
 
-Slide 8: a new file scan is fairly simple and only has a few parameters, namely
+Slide 9: a new leaf scan is fairly simple and only has a few parameters, namely
 the full path of the file, the blacklist with byte ranges that should be
 ignored, and environment variables.
 
@@ -54,17 +56,9 @@ enabled it might be necessary to write a custom XML pretty printer for return
 values that are more complex than basic types (integer, boolean, float,
 strings).
 
-Slide 9: no comments
+Slide 10: no comments
 
-Slide 10: Writing a XML pretty printer for file scans is not difficult. There
-are three parameters: the result of the scan, a top level XML node for creating
-new XML nodes, plus optional environment variables.
-
-The result should be a valid XML node.
-
-Slide 11: no comments
-
-Slide 12: Postrun scans do not alter the scan results, but merely process them
+Slide 11: Postrun scans do not alter the scan results, but merely process them
 to for example create a different representation of the results, like reports
 or graphics.
 
@@ -73,4 +67,4 @@ information like paths in the file system and environment variables.
 
 There is no return value for post run scans.
 
-Slide 13: no comments
+Slide 12: no comments
