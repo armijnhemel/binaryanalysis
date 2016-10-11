@@ -326,6 +326,7 @@ def getSymbolsAbstraction(filename, symboltype, elfresult, debug=False):
 		dynsymres['name'] = strbytes[st_name:endofname]
 		dynsymres['section'] = st_shndx
 		dynsymres['size'] = st_size
+		dynsymres['value'] = st_value
 		binding = st_info >> 4
 		if binding == 0:
 			dynsymres['binding'] = 'local'
