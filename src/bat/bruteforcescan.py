@@ -1641,20 +1641,31 @@ def writeDumpfile(unpackreports, scans, processamount, outputfile, configfile, t
 		else:
 			shutil.copy(configfile, '.')
 		dumpfile.add(os.path.basename(configfile))
-	if packpickles:
-		dumpfile.add('scandata.pickle')
+
+	## By default pack all the JSON files in the current directory
+	dirfiles = os.listdir('.')
+	jsonfiles = filter(lambda x: x.endswith('.json'), dirfiles)
+	for j in jsonfiles:
+		dumpfile.add(j)
+
 	if scans['batconfig']['extrapack'] != []:
 		for e in scans['batconfig']['extrapack']:
 			if os.path.isabs(e):
 				continue
 			if os.path.islink(e):
 				continue
+			## only pack files once
+			if e in jsonfiles:
+				continue
 			## TODO: many more checks
 			if os.path.exists(e):
 				dumpfile.add(e)
 	if not lite:
 		dumpfile.add('data')
+
+	## optionally pack the Python pickles
 	if packpickles:
+		dumpfile.add('scandata.pickle')
 		try:
 			os.stat('filereports')
 			if compress:
