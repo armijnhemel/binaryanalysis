@@ -250,6 +250,7 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 		storepath = dirname[lenscandir:].replace("/squashfs-root", "")
 		unpackreports['path'] = storepath
 		unpackreports['realpath'] = dirname
+		unpackreports['relativename'] = relfiletoscan
 
 		## if the file is a symbolic link, then there is not much
 		## to report about it, so continue.
@@ -855,7 +856,7 @@ def aggregatescan(unpackreports, aggregatescans, processors, scantempdir, toplev
 
 		starttime = datetime.datetime.utcnow()
 		if debug:
-			print >>sys.stderr, "AGGREGATE BEGIN", method, starttime.isoformat()
+			print >>sys.stderr, "AGGREGATE BEGIN", module, method, starttime.isoformat()
 			sys.stderr.flush()
 			scandebug = True
 

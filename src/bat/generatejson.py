@@ -310,7 +310,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv, batc
 					if c in unpackreports[unpackreport]:
 						if unpackreports[unpackreport][c] != None:
 							jsonreport[c] = copy.deepcopy(unpackreports[unpackreport][c])
-			for p in ["name", "path", "realpath"]:
+			for p in ["name", "path", "realpath", "relativename"]:
 				if p in unpackreports[unpackreport]:
 					nodename = copy.deepcopy(unpackreports[unpackreport][p])
 					## check whether or not the name of the file does not contain any weird
