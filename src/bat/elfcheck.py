@@ -321,7 +321,6 @@ def getSymbolsAbstraction(filename, symboltype, elfresult, debug=False):
 				st_value = struct.unpack('>Q', elfbytes[i*entrysize+8:i*entrysize+16])[0]
 				st_size = struct.unpack('>Q', elfbytes[i*entrysize+16:i*entrysize+24])[0]
 
-		## TODO: work on 'hidden' symbols (stored in st_other)
 		endofname = strbytes.find('\x00', st_name)
 		dynsymres['name'] = strbytes[st_name:endofname]
 		dynsymres['section'] = st_shndx
@@ -357,6 +356,16 @@ def getSymbolsAbstraction(filename, symboltype, elfresult, debug=False):
 		else:
 			## by default ignore, TODO
 			dynsymres['type'] = 'ignore'
+
+		## visibility
+		if st_other & 0x03 == 0:
+			dynsymres['visibility'] = 'default'
+		elif st_other & 0x03 == 1:
+			dynsymres['visibility'] = 'internal'
+		elif st_other & 0x03 == 2:
+			dynsymres['visibility'] = 'hidden'
+		elif st_other & 0x03 == 3:
+			dynsymres['visibility'] = 'protected'
 		dynsymres['symboltype'] = symboltype
 		dynamicsymbols.append(dynsymres)
 	return dynamicsymbols
