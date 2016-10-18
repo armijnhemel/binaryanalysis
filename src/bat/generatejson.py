@@ -299,7 +299,9 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv, batc
 		jsonfile = open(os.path.join(topleveldir, "scandata.json"), 'w')
 		jsonfile.write('[\n')
 
-		for unpackreport in unpackreports:
+		unpackreportskeys = unpackreports.keys()
+		unpackreportskeys.sort()
+		for unpackreport in unpackreportskeys:
 			jsonreport = {}
 			filehash = None
 			if "checksum" in unpackreports[unpackreport]:
