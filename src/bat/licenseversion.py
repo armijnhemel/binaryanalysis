@@ -2495,8 +2495,8 @@ def lookup_identifier(scanqueue, reportqueue, cursor, conn, scanenv, topleveldir
 			if linuxkernel:
 				functionRes = {}
 				if 'BAT_KERNELSYMBOL_SCAN' in scanenv:
-					kernelquery = "select distinct package from linuxkernelnamecache where varname=%s"
-					variablepvs = scankernelsymbols(leafreports['identifier']['kernelsymbols'], scanenv, kernelquery, cursor, conn, clones)
+					namekernelquery = "select distinct package from linuxkernelnamecache where varname=%s"
+					variablepvs = scankernelsymbols(leafreports['identifier']['kernelsymbols'], scanenv, namekernelquery, cursor, conn, clones)
 				## TODO: clean up
 				if leafreports['identifier'].has_key('kernelfunctions'):
 					if leafreports['identifier']['kernelfunctions'] != []:
