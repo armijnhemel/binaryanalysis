@@ -1,7 +1,8 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2013-2015 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2013-2016 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2016 Armijn Hemel for Insignary Inc.
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 import os, os.path, sys, subprocess, copy, cPickle, tempfile, hashlib, shutil, multiprocessing, piecharts
@@ -198,6 +199,7 @@ def extractpickles((filehash, pickledir, topleveldir, unpacktempdir, minpercenta
 		## process match data for version information
 		for j in res['reports']:
 			packageversions = j['packageversions']
+			package = j['package']
 			if packageversions != {}:
 				pickledata = []
 				vals = list(set(packageversions.values()))
