@@ -1973,6 +1973,8 @@ def runscan(scans, binaries, batversion):
 
 		## create the directory where result files will be stored if
 		## it does not already exist.
+		if not os.path.exists(os.path.join(topleveldir, 'reports')):
+			os.mkdir(os.path.join(topleveldir, 'reports'))
 		if not os.path.exists(os.path.join(topleveldir, 'filereports')):
 			os.mkdir(os.path.join(topleveldir, 'filereports'))
 
