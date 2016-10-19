@@ -553,6 +553,10 @@ def parseELF(filename, debug=False):
 		elffile.close()
 		return
 
+	if elfbytes[0:4] != '\x7f\x45\x4c\x46':
+		elffile.close()
+		return
+
 	iself = False
 
 	## just set some default values: little endian, 32 bit
@@ -581,6 +585,10 @@ def parseELF(filename, debug=False):
 
 	## ELF header cannot extend past the end of the file
 	if offset + elfheadersize > filesize:
+		elffile.close()
+		return
+
+	if elfheadersize == 0:
 		elffile.close()
 		return
 
