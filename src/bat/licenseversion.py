@@ -354,7 +354,14 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 						scoresperpkg[s] = stringmatches['scores'][s]
 			if stringmatches['reports'] != []:
 				for r in stringmatches['reports']:
-					(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses, packagecopyrights) = r
+					rank = r['rank']
+					package = r['package']
+					unique = r['unique']
+					uniquematcheslen = r['uniquematcheslen']
+					percentage = r['percentage']
+					packageversions = r['packageversions']
+					packagelicenses = r['packagelicenses']
+					packagecopyrights = r['packagecopyrights']
 					## ignore rank and percentage
 					if package in uniqueMatchesperpkg:
 						tmpres = []
@@ -407,7 +414,7 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 			percentage = (scoresperpkg[s]/totalscore)*100.0
 		except:
 			percentage = 0.0
-		reports.append((rank, s, uniqueMatchesperpkg.get(s,[]), uniquematcheslenperpkg.get(s,0), percentage, packageversionsperpkg.get(s, {}), list(set(packagelicensesperpkg.get(s, []))), packagecopyrights))
+		reports.append({'rank': rank, 'package': s, 'unique': uniqueMatchesperpkg.get(s,[]), 'uniquematcheslen': uniquematcheslenperpkg.get(s,0), 'percentage': percentage, 'packageversions': packageversionsperpkg.get(s, {}), 'packagelicenses': list(set(packagelicensesperpkg.get(s, []))), 'packagecopyrights': packagecopyrights})
 		rank = rank+1
 
 	if 'uniquepackages' in dynamicresfinal:
@@ -743,7 +750,7 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 				newreports = []
 
 				for r in res['reports']:
-					(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses, packagecopyrights) = r
+					unique = r['unique']
 					uniques = set(map(lambda x: x[0], unique))
 					#alluniques.update(uniques)
 					if unique != []:
@@ -799,7 +806,14 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 				newreports = []
 
 				for r in res['reports']:
-					(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses, packagecopyrights) = r
+					rank = r['rank']
+					package = r['package']
+					unique = r['unique']
+					uniquematcheslen = r['uniquematcheslen']
+					percentage = r['percentage']
+					packageversions = r['packageversions']
+					packagelicenses = r['packagelicenses']
+					packagecopyrights = r['packagecopyrights']
 					if unique == []:
 						## Continue to the next item if there are no unique matches
 						newreports.append(r)
@@ -1027,7 +1041,8 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 							for p in packagecopyrights:
 								packagecopyrights_tmp += reduce(lambda x,y: x + y, p.values(), [])
 							packagecopyrights = list(set(packagecopyrights_tmp))
-					newreports.append((rank, package, newuniques, uniquematcheslen, percentage, newpackageversions, packagelicenses, packagecopyrights))
+					#newreports.append((rank, package, newuniques, uniquematcheslen, percentage, newpackageversions, packagelicenses, packagecopyrights))
+					newreports.append({'rank': rank, 'package': package, 'unique': newuniques, 'uniquematcheslen': uniquematcheslen, 'percentage': percentage, 'packageversions': newpackageversions, 'packagelicenses': packagelicenses, 'packagecopyrights': packagecopyrights})
 				res['reports'] = newreports
 
 			## Then process the results for the function names
@@ -2477,7 +2492,7 @@ def lookup_identifier(scanqueue, reportqueue, cursor, conn, scanenv, topleveldir
 					percentage = (scores[s]/totalscore)*100.0
 				except:
 					percentage = 0.0
-				reports.append((rank, s, uniqueMatches.get(s,[]), len(uniqueMatches.get(s,[])), percentage, packageversions.get(s, {}), packagelicenses.get(s, []), packagecopyrights.get(s,[])))
+				reports.append({'rank': rank, 'package': s, 'unique': uniqueMatches.get(s,[]), 'uniquematcheslen': len(uniqueMatches.get(s,[])), 'percentage': percentage, 'packageversions': packageversions.get(s, {}), 'packagelicenses': packagelicenses.get(s, []), 'packagecopyrights': packagecopyrights.get(s,[])})
 				rank = rank+1
 
 			if matchedlines == 0 and unmatched == []:

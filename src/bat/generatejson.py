@@ -96,7 +96,13 @@ def writejson(scanqueue, topleveldir, outputhash, cursor, conn, scanenv, convert
 				if 'reports' in stringidentifiers:
 					jsonreport['ranking']['stringresults']['reports'] = []
 					for u in stringidentifiers['reports']:
-						(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses, packagecopyrights) = u
+						rank = u['rank']
+						package = u['package']
+						unique = u['unique']
+						percentage = u['percentage']
+						packageversions = u['packageversions']
+						packagecopyrights = u['packagecopyrights']
+						packagelicenses = u['packagelicenses']
 						report = {}
 						report['packagename'] = package
 						report['rank'] = rank

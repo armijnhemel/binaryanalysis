@@ -150,7 +150,8 @@ def extractpickles((filehash, pickledir, topleveldir, unpacktempdir, minpercenta
 			statpiedata.append(res['nonUniqueAssignments'][j])
 			assignedoruniquematches += res['nonUniqueAssignments'][j]
 		for j in res['reports']:
-			(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses, packagecopyrights) = j
+			package = j['package']
+			unique = j['unique']
 			if len(unique) != 0:
 				statpielabels.append("%s - unique (%d)" % (package,len(unique)))
 				statpiedata.append(len(unique))
@@ -170,7 +171,8 @@ def extractpickles((filehash, pickledir, topleveldir, unpacktempdir, minpercenta
 		totals = 0.0
 		others = 0.0
 		for j in res['reports']:
-			(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses, packagecopyrights) = j
+			package = j['package']
+			percentage = j['percentage']
 			## less than half a percent, that's not significant anymore
 			if percentage < minpercentagecutoff:
 				totals += percentage
@@ -195,7 +197,7 @@ def extractpickles((filehash, pickledir, topleveldir, unpacktempdir, minpercenta
 
 		## process match data for version information
 		for j in res['reports']:
-			(rank, package, unique, uniquematcheslen, percentage, packageversions, packagelicenses, packagecopyrights) = j
+			packageversions = j['packageversions']
 			if packageversions != {}:
 				pickledata = []
 				vals = list(set(packageversions.values()))
