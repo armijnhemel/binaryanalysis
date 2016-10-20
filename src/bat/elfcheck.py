@@ -183,6 +183,7 @@ architecturemapping = { 0: None
                      , 200: "Freescale 56800EX"
                      }
 
+## read the architecture of a (validated) ELF file
 def getArchitecture(filename, tags):
 	if not 'elf' in tags:
 		return
@@ -538,6 +539,10 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 ## * endianness
 ## * 32 bit or 64 bit
 ## * ELF type
+## * architecture
+## * section names
+## * section meta data
+## * is ELF file dynamically linked (or could be)?
 def parseELF(filename, debug=False):
 	offset = 0
 	elffile = open(filename, 'rb')
