@@ -1700,13 +1700,19 @@ def writeDumpfile(unpackreports, scans, processamount, outputfile, configfile, t
 	dumpfile.close()
 	os.chdir(oldcwd)
 
+## runscan is the entry point for this file.
+## It takes a list of binaries, a full configuration
+## and the BAT version number and then processes each
+## binary separately.
 def runscan(scans, binaries, batversion):
 	## first some initialization code that is the same for
-	## every binary that is scanned.
+	## every binary to be scanned.
 	debug = scans['batconfig']['debug']
 	debugphases = scans['batconfig']['debugphases']
 	compressed = scans['batconfig']['compress']
 
+	## first split the scans per 'magic' (needed) and
+	## 'optmagic' (optional).
 	magicscans = []
 	optmagicscans = []
 	for k in ["prerunscans", "unpackscans", "leafscans", "postrunscans"]:
@@ -1740,16 +1746,17 @@ def runscan(scans, binaries, batversion):
 	magicscans = list(set(magicscans))
 	optmagicscans = list(set(optmagicscans))
 
-	## Use multithreading to speed up scanning. Sometimes we hit http://bugs.python.org/issue9207
-	## Threading can be configured in the configuration file, but
-	## often it is wise to have it set to 'no'. This is because ranking writes
-	## to databases and you don't want concurrent writes.
-	## some categories of scans can still be run in parallel. For example
-	## if only one of the leaf scans has a side effect, then prerun, unpack
-	## and unpack scans can still be run in parallel.
+	## Use multithreading to speed up scanning. Sometimes we hit
+	## http://bugs.python.org/issue9207
+	## Threading can be configured in the configuration file and
+	## is enabled by default, but it might be necessary to disable
+	## it in certain cases. In most cases it is highly desirable to
+	## have multiprocessing enabled, as it speeds up unpacking and
+	## processing individual files a lot.
 	## By setting 'multiprocessing' to 'yes' and indicating that some scans should
-	## not be run in parallel (which will be for the whole category of scans) it is
-	## possible to have partial parallel scanning.
+	## not be run in parallel (which will actually be for the whole category of scans
+	## where prerun, unpack and leaf are treated as a single category)
+	## it is possible to have partial parallel scanning.
 
 	## first see if unpacking should be done in parallel
 	parallel = True
@@ -1765,6 +1772,8 @@ def runscan(scans, binaries, batversion):
 			if 'unpack' in debugphases or 'prerun' in debugphases:
 				parallel = False
 
+	## Even if parallel is set it is possible to hardcode the
+	## maximum amount of CPUs to use.
 	if parallel:
 		if 'processors' in scans['batconfig']:
 			processamount = min(multiprocessing.cpu_count(),scans['batconfig']['processors'])
@@ -1816,6 +1825,12 @@ def runscan(scans, binaries, batversion):
 			if not 'unpack' in debugphases:
 				unpackdebug = False
 
+	## create the final list of unpack scans. If there
+	## are any setup scans that need to be run (for example
+	## to check if the right database tables are present)
+	## then they are run here. If the setup scan for
+	## an unpack scan does not work properly, then the unpack
+	## scan is disabled.
 	for sscan in scans['unpackscans']:
 		if not 'setup' in sscan:
 			finalunpackscans.append(sscan)
@@ -1826,6 +1841,9 @@ def runscan(scans, binaries, batversion):
 		else:
 			cursor = None
 			conn = None
+		## if any information from the setup scan should
+		## be returned to the unpack scan, then this will be
+		## done via the environment.
 		setupres = runSetup(sscan, usedatabase, cursor, conn, unpackdebug)
 		(setuprun, newenv) = setupres
 		if not setuprun:
@@ -1853,9 +1871,8 @@ def runscan(scans, binaries, batversion):
 				if not 'leaf' in debugphases:
 					leafdebug = False
 
-		## First run the 'setup' hooks for the scans and pass
-		## results via the environment. This should keep the
-		## code cleaner.
+		## First run setup scans, similar to for how it is
+		## done for unpack scans.
 		for sscan in scans['leafscans']:
 			if not 'setup' in sscan:
 				finalleafscans.append(sscan)
@@ -1887,9 +1904,8 @@ def runscan(scans, binaries, batversion):
 			if debugphases != []:
 				if not 'aggregate' in debugphases:
 					aggregatedebug = False
-		## First run the 'setup' hooks for the scans and pass
-		## results via the environment. This should keep the
-		## code cleaner.
+		## First run setup scans, similar to for how it is
+		## done for unpack scans.
 		for sscan in scans['aggregatescans']:
 			if not 'setup' in sscan:
 				finalaggregatescans.append(sscan)
@@ -1918,13 +1934,22 @@ def runscan(scans, binaries, batversion):
 		if not os.path.exists(unpackdirectory):
 			unpackdirectory = None
 
+	## By default the output hash is set to SHA256, but
+	## it can be changed to other hashes, such as MD5
+	## or SHA1 (the only two other options supported at
+	## the moment). Internally BAT will always use SHA256
+	## for direct matches and TLSH for fuzzy matches.
 	outputhash = scans['batconfig'].get('reporthash', 'sha256')
 	if outputhash == 'crc32' or outputhash == 'tlsh':
 		outputhash = 'sha256'
 
 	timeout=scans['batconfig']['tasktimeout']
 
+	## record the original working directory, as that is
+	## what BAT will start at for each scan.
 	origcwd = os.getcwd()
+
+	## now process each of the binaries individually
 	for bins in binaries:
 		statistics = {}
 		(scan_binary, writeconfig) = bins
@@ -1951,11 +1976,15 @@ def runscan(scans, binaries, batversion):
 			unpackdirectory = None
 			topleveldir = tempfile.mkdtemp(dir=unpackdirectory)
 
-		## copy the binary, and reset the environment to a fresh copy
+		## reset the environment to a fresh copy
 		scanenv = copy.deepcopy(scans['batconfig']['environment'])
 
-		os.makedirs("%s/data" % (topleveldir,))
-		scantempdir = "%s/data" % (topleveldir,)
+		## create the top level directory where all the unpacked data
+		## will be stored
+		scantempdir = os.path.join(topleveldir, "data")
+		os.makedirs(scantempdir)
+
+		## copy the binary to the root of the unpack directory
 		starttime = datetime.datetime.utcnow()
 		if debug:
 			print >>sys.stderr, "COPYING BEGIN", starttime.isoformat()
@@ -1971,17 +2000,29 @@ def runscan(scans, binaries, batversion):
 
 		statistics['copying'] = endtime - starttime
 
-		## create the directory where result files will be stored if
-		## it does not already exist.
-		if not os.path.exists(os.path.join(topleveldir, 'reports')):
-			os.mkdir(os.path.join(topleveldir, 'reports'))
+		## create the directory where result files (internal use) will be stored
 		if not os.path.exists(os.path.join(topleveldir, 'filereports')):
 			os.mkdir(os.path.join(topleveldir, 'filereports'))
 
+		## create the directory where result files (external) will be stored
+		if not os.path.exists(os.path.join(topleveldir, 'reports')):
+			os.mkdir(os.path.join(topleveldir, 'reports'))
+
+		## initialize a few data structures for the top level file:
+		## * tags    :: a list of tags that BAT will keep for the file
+		## * offsets :: a dictionary with offsets for each file type
+		##              found and which is used by unpacking scans
+		## * hints   :: a dictionary to pass extra information back
+		##              to the code launching the unpackers
 		tags = []
 		offsets = {}
 		hints = {}
 
+		## check if the file has an extension try to find if there
+		## is a special method defined for processing fies with that
+		## extension: often files with a particular extension will
+		## actually be of that file type, and it is possible to take
+		## a shortcut in those cases and skip many scans.
 		knownextension = False
 		fileextensions = scan_binary.lower().rsplit('.', 1)
 		if len(fileextensions) == 2:
