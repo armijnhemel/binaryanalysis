@@ -177,10 +177,11 @@ def guireport(filename, unpackreport, scantempdir, topleveldir, scanenv, cursor,
 <tr><td><b>Matched lines (not clones)</b></td><td>%d</td></tr>
 <tr><td><b>Matched lines (unassigned)</b></td><td>%d</td></tr>
 <tr><td><b>Unmatched lines</b></td><td>%d</td></tr>
+<tr><td><b>Ignored lines</b></td><td>%d</td></tr>
 <tr><td><b>Match percentage</b></td><td>%f%%</td></tr>
 </table>
                                                 '''
-				matchesrows = matchesrows % (stringsres['extractedlines'], totalmatched, stringsres['matchedlines'], stringsres['matchednotclonelines'], stringsres['matchednonassignedlines'], stringsres['unmatchedlines'], (float(totalmatched)/stringsres['extractedlines']*100))
+				matchesrows = matchesrows % (stringsres['extractedlines'], totalmatched, stringsres['matchedlines'], stringsres['matchednotclonelines'], stringsres['matchednonassignedlines'], stringsres['unmatchedlines'], len(stringsres['ignored']), (float(totalmatched)/stringsres['extractedlines']*100))
 				## TODO: check if statpiechart.png exists
 				matchesrows = matchesrows + "<p><img src=\"%s\"/></p>" % ("%s/%s-statpiechart.png" % (imagesdir, filehash))
 				if len(stringsres['reports']) != 0:
