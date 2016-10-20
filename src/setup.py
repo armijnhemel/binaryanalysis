@@ -7,7 +7,7 @@ import os.path
 setup(name='bat',
       version='30.0',
       description='Binary Analysis Tool',
-      author='Tjaldur Software Governance Solutions',
+      author='Binary Analysis Project',
       author_email='info@binaryanalysis.org',
       url='http://www.binaryanalysis.org/',
       packages=['bat'],
