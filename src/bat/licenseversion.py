@@ -258,6 +258,7 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 	extractedlines = 0
 	nonUniqueAssignments = {}
 	unmatched = []
+	ignored = []
 	nonUniqueMatches = {}
 	totalscore = 0
 	scoresperpkg = {}
@@ -333,6 +334,8 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 			extractedlines = extractedlines + stringmatches['extractedlines']
 			if stringmatches['unmatched'] != []:
 				unmatched = unmatched + stringmatches['unmatched']
+			if stringmatches['ignored'] != []:
+				ignored = ignored + stringmatches['ignored']
 			if stringmatches['nonUniqueAssignments'] != {}:
 				for n in stringmatches['nonUniqueAssignments'].keys():
 					if n in nonUniqueAssignments:
@@ -429,6 +432,7 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 	unmatched = list(set(unmatched))
 	unmatched.sort()
 	rankres['unmatched'] = unmatched
+	rankres['ignored'] = ignored
 	rankres['matchedlines'] = matchedlines
 	rankres['matchednonassignedlines'] = matchednonassignedlines
 	rankres['matchednotclonelines'] = matchednotclonelines
@@ -1830,6 +1834,7 @@ def lookup_identifier(scanqueue, reportqueue, cursor, conn, scanenv, topleveldir
 			nonUniqueAssignments = {}
 			directAssignedString = {}
 			unmatched = []
+			ignored = []
 			#unmatchedignorecache = set()
 
 			kernelfuncres = []
@@ -1915,6 +1920,11 @@ def lookup_identifier(scanqueue, reportqueue, cursor, conn, scanenv, topleveldir
 					continue
 				lock.release()
 
+				if len(line) < stringcutoff:
+					ignored.append(line)
+					linecount[line] = linecount[line] - 1
+					continue
+
 				## An extra check for lines that score extremely low. This
 				## helps reduce load on databases stored on slower disks. Only used if
 				## precomputescore is set and "source order" is False.
@@ -1970,12 +1980,8 @@ def lookup_identifier(scanqueue, reportqueue, cursor, conn, scanenv, topleveldir
 					if matchres != None:
 						scanline = line.split('>', 1)[1]
 						if len(scanline) < stringcutoff:
-							unmatched.append(line)
-							unmatchedlines += 1
+							ignored.append(line)
 							linecount[line] = linecount[line] - 1
-							lock.acquire()
-							unmatchedignorecache[origline] = 1
-							lock.release()
 							continue
 						cursor.execute(stringquery, (scanline,))
 						res = cursor.fetchall()
@@ -1989,12 +1995,8 @@ def lookup_identifier(scanqueue, reportqueue, cursor, conn, scanenv, topleveldir
 								if scanline.startswith(" "):
 									scanline = scanline[1:]
 								if len(scanline) < stringcutoff:
-									unmatched.append(line)
-									unmatchedlines += 1
+									ignored.append(line)
 									linecount[line] = linecount[line] - 1
-									lock.acquire()
-									unmatchedignorecache[origline] = 1
-									lock.release()
 									continue
 								cursor.execute(stringquery, (scanline,))
 								res = cursor.fetchall()
@@ -2010,12 +2012,8 @@ def lookup_identifier(scanqueue, reportqueue, cursor, conn, scanenv, topleveldir
 						if matchres != None:
 							scanline = line[1:]
 							if len(scanline) < stringcutoff:
-								unmatched.append(line)
-								unmatchedlines += 1
+								ignored.append(line)
 								linecount[line] = linecount[line] - 1
-								lock.acquire()
-								unmatchedignorecache[origline] = 1
-								lock.release()
 								continue
 							cursor.execute(stringquery, (scanline,))
 							res = cursor.fetchall()
@@ -2031,12 +2029,8 @@ def lookup_identifier(scanqueue, reportqueue, cursor, conn, scanenv, topleveldir
 								if scanline.startswith(" "):
 									scanline = scanline[1:]
 								if len(scanline) < stringcutoff:
-									unmatched.append(line)
-									unmatchedlines += 1
+									ignored.append(line)
 									linecount[line] = linecount[line] - 1
-									lock.acquire()
-									unmatchedignorecache[origline] = 1
-									lock.release()
 									continue
 								cursor.execute(stringquery, (scanline,))
 								res = cursor.fetchall()
@@ -2501,7 +2495,7 @@ def lookup_identifier(scanqueue, reportqueue, cursor, conn, scanenv, topleveldir
 				if scankernelfunctions:
 					matchedlines = matchedlines - len(kernelfuncres)
 					lenlines = lenlines - len(kernelfuncres)
-				res = {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched, 'scores': scores, 'unmatchedlines': unmatchedlines, 'matchednonassignedlines': matchednonassignedlines, 'matchednotclonelines': matchednotclonelines, 'matcheddirectassignedlines': matcheddirectassignedlines}
+				res = {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched, 'scores': scores, 'unmatchedlines': unmatchedlines, 'matchednonassignedlines': matchednonassignedlines, 'matchednotclonelines': matchednotclonelines, 'matcheddirectassignedlines': matcheddirectassignedlines, 'ignored': ignored}
 		else:
 			res = None
 
