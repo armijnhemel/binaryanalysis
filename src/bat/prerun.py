@@ -1149,6 +1149,7 @@ def verifyTZ(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fals
 
 ## verify if a file is in Intel HEX format and tag it is as such.
 ## This will only be done if the *entire* file is in Intel HEX format.
+## comments (starting with #) are allowed though.
 def verifyIHex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
 	newtags = []
 	if not 'text' in tags:
@@ -1160,8 +1161,9 @@ def verifyIHex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fa
 	for d in datafile:
 		d = d.strip()
 		if not d.startswith(':'):
-			validfile = False
-			break
+			if not d.startswith('#'):
+				validfile = False
+				break
 		if len(d)%2 != 1:
 			validfile = False
 			break
