@@ -49,28 +49,30 @@ def writejson(scanqueue, topleveldir, outputhash, cursor, conn, scanenv, convert
 			## then the string identifier results
 			jsonreport['ranking']['stringresults'] = {}
 			jsonreport['ranking']['stringresults']['unmatched'] = []
+			jsonreport['ranking']['stringresults']['ignored'] = []
 			jsonreport['ranking']['stringresults']['matchednonassignedlines'] = 0
 			jsonreport['ranking']['stringresults']['matchednotclonelines'] = 0
 			jsonreport['ranking']['stringresults']['nonUniqueMatches'] = []
 			jsonreport['ranking']['stringresults']['scores'] = []
 			jsonreport['ranking']['stringresults']['reports'] = []
 			if stringidentifiers != None:
-				if 'unmatched' in stringidentifiers:
-					newunmatched = []
-					for u in stringidentifiers['unmatched']:
-						decoded = False
-						for i in ['utf-8','ascii','latin-1','euc_jp', 'euc_jis_2004', 'jisx0213', 'iso2022_jp', 'iso2022_jp_1', 'iso2022_jp_2', 'iso2022_jp_2004', 'iso2022_jp_3', 'iso2022_jp_ext', 'iso2022_kr','shift_jis','shift_jis_2004','shift_jisx0213']:
-							try:
-								unmatchedline = u.decode(i)
-								decoded = True
-								break
-							except Exception, e:
+				for todecode in ['ignored', 'unmatched']:
+					if todecode in stringidentifiers:
+						newres = []
+						for u in stringidentifiers[todecode]:
+							decoded = False
+							for i in ['utf-8','ascii','latin-1','euc_jp', 'euc_jis_2004', 'jisx0213', 'iso2022_jp', 'iso2022_jp_1', 'iso2022_jp_2', 'iso2022_jp_2004', 'iso2022_jp_3', 'iso2022_jp_ext', 'iso2022_kr','shift_jis','shift_jis_2004','shift_jisx0213']:
+								try:
+									decodeline = u.decode(i)
+									decoded = True
+									break
+								except Exception, e:
+									pass
+							if decoded:
+								newres.append(decodeline)
+							else:
 								pass
-						if decoded:
-							newunmatched.append(unmatchedline)
-						else:
-							pass
-					jsonreport['ranking']['stringresults']['unmatched'] = newunmatched
+						jsonreport['ranking']['stringresults'][todecode] = newres
 
 				if 'matchednonassignedlines' in stringidentifiers:
 					jsonreport['ranking']['stringresults']['matchednonassignedlines'] = stringidentifiers['matchednonassignedlines']
