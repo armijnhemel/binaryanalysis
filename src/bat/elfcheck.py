@@ -5,12 +5,12 @@
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 '''
-This module contains methods to verify ELF files and extract data from ELF files
-such as the architecture, and so on.
+This module contains methods to verify ELF files and help extract data
+from ELF files such as the architecture, sections, symbols, and so on.
 
-Some vendors run sstrip on the binaries. There are versions of the sstrip tool
-that are buggy and create files with a section header that is actually
-incorrect and will for example confuse readelf:
+Note: some vendors run sstrip on the binaries. There are versions of the
+sstrip tool that are buggy and create files with a section header that is
+actually incorrect and will for example confuse readelf:
 
 https://dev.openwrt.org/ticket/6847
 https://bugs.busybox.net/show_bug.cgi?id=729
@@ -19,14 +19,14 @@ https://bugs.busybox.net/show_bug.cgi?id=729
 import sys, os, subprocess, os.path, struct, math
 import tempfile, re
 
-## mappings of architectures to names
-## info from the following places:
+## information about ELF was collected from the following places:
 ##
 ## https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
 ## https://docs.oracle.com/cd/E19683-01/816-1386/chapter6-43405/index.html
 ## https://refspecs.linuxbase.org/elf/elf.pdf
 ## https://android.googlesource.com/platform/art/+/master/runtime/elf.h
 ##
+## mappings of architectures to names
 architecturemapping = { 0: None
                      , 1: "AT&T WE 32100"
                      , 2: "SPARC"
@@ -185,24 +185,27 @@ architecturemapping = { 0: None
 
 ## read the architecture of a (validated) ELF file
 def getArchitecture(filename, tags):
+	## return if the file is not a valid ELF file
 	if not 'elf' in tags:
 		return
 	elffile = open(filename, 'rb')
+
+	## first read the ELF header
 	elffile.seek(0)
 	elfbytes = elffile.read(64)
 
-	## just set some default values: little endian, 32 bit
-	littleendian = True
-
 	## then check if this is a little endian or big endian binary
+	littleendian = True
 	if struct.unpack('>B', elfbytes[5])[0] != 1:
 		littleendian = False
 
-	## check the machine type
+	## extract the machine type from the right place in the binary
 	if littleendian:
 		elfmachinebyte = struct.unpack('<H', elfbytes[0x12:0x12+2])[0]
 	else:
 		elfmachinebyte = struct.unpack('>H', elfbytes[0x12:0x12+2])[0]
+
+	## then look up the machine type in the list of architectures
 	if elfmachinebyte in architecturemapping:
 		architecture = architecturemapping[elfmachinebyte]
 	else:
@@ -210,6 +213,7 @@ def getArchitecture(filename, tags):
 	elffile.close()
 	return architecture
 
+## extract information about a section given a section name
 def getSection(filename, sectionname, debug=False):
 	elfresult = parseELF(filename, debug)
 	returnsection = None
@@ -220,7 +224,12 @@ def getSection(filename, sectionname, debug=False):
 	if returnsection != None:
 		return elfresult['sections'][returnsection]
 
-## similar to readelf -s (all symbols)
+## get all the symbols from an ELF binary.
+## This is similar to "readelf -s"
+## For most binaries (stripped) this is equivalent to
+## getting the dynamic symbol table.
+## In case the file has not been stripped this also
+## includes the debugging symbols.
 def getAllSymbols(filename, debug=False):
 	elfresult = parseELF(filename, debug)
 	symres = []
@@ -233,6 +242,7 @@ def getAllSymbols(filename, debug=False):
 	return symres
 
 ## similar to readelf -s but only regular symbols (not dynamic)
+## This will only return results on binaries that are not stripped
 def getSymbols(filename, elfresult=None, debug=False):
 	return getSymbolsAbstraction(filename, 'symbol', elfresult, debug)
 
@@ -240,6 +250,8 @@ def getSymbols(filename, elfresult=None, debug=False):
 def getDynamicSymbols(filename, elfresult=None, debug=False):
 	return getSymbolsAbstraction(filename, 'dynamic', elfresult, debug)
 
+## A generic method to get symbols from either the dynamic symbol
+## table or the symbol table (non-stripped binaries)
 def getSymbolsAbstraction(filename, symboltype, elfresult, debug=False):
 	if elfresult == None:
 		elfresult = parseELF(filename, debug)
@@ -275,18 +287,23 @@ def getSymbolsAbstraction(filename, symboltype, elfresult, debug=False):
 	elffile.seek(elfresult['sections'][symsection]['sectionoffset'])
 	elfbytes = elffile.read(elfresult['sections'][symsection]['sectionsize'])
 
-
+	## then get the string section from the binary
 	elffile.seek(elfresult['sections'][strsection]['sectionoffset'])
 	strbytes = elffile.read(elfresult['sections'][strsection]['sectionsize'])
 	elffile.close()
 
 	dynamicsymbols = []
 
-	## then process all the symbol entries. For 64 bit binaries each
-	## entry takes up 24 bytes
+	## Then process all the symbol entries.
+	## Various pieces of information are extracted, such as type,
+	## binding and visibility. The name of the symbol is extracted
+	## from the string section using an offset defined in the symbol
+	## entry.
 	if bit32:
+		## for 32 bit binaries each entry takes up 16 bytes
 		entrysize = 16
 	else:
+		## for 64 bit binaries each entry takes up 24 bytes
 		entrysize = 24
 	for i in xrange(0, len(elfbytes)/entrysize):
 		dynsymres = {}
@@ -339,26 +356,33 @@ def getSymbolsAbstraction(filename, symboltype, elfresult, debug=False):
 		else:
 			## by default ignore, TODO
 			dynsymres['binding'] = 'ignore'
+
+		## extract the symbol type
 		dyntype = st_info%16
 		if dyntype == 0:
 			dynsymres['type'] = 'notype'
 		elif dyntype == 1:
+			## symbol is an object (variable)
 			dynsymres['type'] = 'object'
 		elif dyntype == 2:
+			## symbol is a function
 			dynsymres['type'] = 'func'
 		elif dyntype == 3:
+			## symbol is a section
 			dynsymres['type'] = 'section'
 		elif dyntype == 4:
+			## symbol is a file name
 			dynsymres['type'] = 'file'
 		elif dyntype == 6:
 			dynsymres['type'] = 'tls' # thread local storage
 		elif dyntype == 10:
+			## symbol is an ifunc (GNU extension)
 			dynsymres['type'] = 'ifunc' # STT_LOOS according to ELF specs, so might be Linux specific
 		else:
 			## by default ignore, TODO
 			dynsymres['type'] = 'ignore'
 
-		## visibility
+		## extract the visibility
 		if st_other & 0x03 == 0:
 			dynsymres['visibility'] = 'default'
 		elif st_other & 0x03 == 1:
@@ -543,6 +567,9 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 ## * section names
 ## * section meta data
 ## * is ELF file dynamically linked (or could be)?
+##
+## First the ELF header is checked, then the program header
+## table, then the section header table
 def parseELF(filename, debug=False):
 	offset = 0
 	elffile = open(filename, 'rb')
@@ -939,6 +966,7 @@ def parseELF(filename, debug=False):
 	if dynamiccount == 1:
 		dynamic = True
 
+	## for each section find the name in the table with section names
 	sectionnames = []
 	if sectionheaderindex in sections:
 		elffile.seek(sections[sectionheaderindex]['sectionoffset'])
