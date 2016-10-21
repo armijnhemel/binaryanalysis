@@ -306,7 +306,7 @@ def scanForges(filename, tags, cursor, conn, blacklist=[], scanenv={}, scandebug
 
 	forgeidentifiers['savannah.gnu.org'] = ["savannah.gnu.org/"]
 
-	forgeidentifiers['github.com'] = ["github.com"]
+	forgeidentifiers['github.com'] = ["github.com", "github.io"]
 
 	forgeidentifiers['bitbucket.org'] = ["bitbucket.org"]
 
