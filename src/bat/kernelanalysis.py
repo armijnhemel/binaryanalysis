@@ -4,9 +4,17 @@
 ## Copyright 2009-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
+'''
+This module implements a few checks for Linux kernel images and
+modules.
+'''
+
 import os, sys, string, re, subprocess, cPickle, tempfile, shutil
 import extractor, elfcheck
 
+## perform various checks, such as extracting the Linux kernel
+## version number, plus certain hardcoded identifiers from some
+## Linux kernel subsystems.
 def kernelChecks(path, tags, cursor, conn, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	results = {}
         try:
