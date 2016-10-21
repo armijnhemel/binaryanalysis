@@ -7,6 +7,15 @@
 '''
 This file contains methods to parse a Java class file
 
+It returns the following information:
+
+* method names
+* field names
+* class name
+* string identifiers
+* source file (if present)
+* size of class file
+
 Documentation on how to parse class files can be found here:
 
 http://docs.oracle.com/javase/specs/jvms/se6/html/ClassFile.doc.html
@@ -35,19 +44,29 @@ METHODHANDLE = 15
 METHODTYPE = 16
 INVOKEDYNAMIC = 18
 
+## parse a Java class
+## returns:
+## * method names
+## * field names
+## * class name
+## * string identifiers
+## * source file (if present)
+## * size of class file
 def parseJava(filename, offset):
 	classfile = open(filename, 'rb')
 
 	classfile.seek(offset)
 
-	## first read the magic bytes. If these are not present it is not a class file
+	## read the first four bytes and check it with
+	## the Java 'magic'. If these are not present it is not a
+	## class file.
 	javamagic = classfile.read(4)
 	if javamagic != '\xca\xfe\xba\xbe':
 		classfile.close()
 		return None
 
 	## The minor and major version of the Java class file format. These are not yet
-	## used for checks
+	## used for checks, yet.
 	classbytes = classfile.read(2)
 	if len(classbytes) != 2:
 		classfile.close()
@@ -77,6 +96,8 @@ def parseJava(filename, offset):
 	class_lookup_table = {}
 
 	## parse the constant pool and split data accordingly
+	## Values that are not interesting are parsed, but not
+	## stored.
 	skip = False
 	brokenclass = False
 	for i in range(1, constant_pool_count):
@@ -89,6 +110,8 @@ def parseJava(filename, offset):
 		classbytes = classfile.read(1)
 		constanttag = ord(classbytes)
 		if constanttag == CLASS:
+			## store the index of the class name for
+			## later look up
 			classbytes = classfile.read(2)
 			name_index = struct.unpack('>H', classbytes)[0]
 			class_lookups.append(name_index)
@@ -99,6 +122,8 @@ def parseJava(filename, offset):
 			classbytes = classfile.read(2)
 			name_and_type_index = struct.unpack('>H', classbytes)[0]
 		elif constanttag == STRING:
+			## store the indexes for strings that need to
+			## be looked up.
 			classbytes = classfile.read(2)
 			string_index = struct.unpack('>H', classbytes)[0]
 			string_lookups.append(string_index)
@@ -119,6 +144,8 @@ def parseJava(filename, offset):
 			classbytes = classfile.read(2)
 			descriptor_index = struct.unpack('>H', classbytes)
 		elif constanttag == UTF8:
+			## store strings that were found
+			## so they can later be looked up.
 			classbytes = classfile.read(2)
 			stringlength = struct.unpack('>H', classbytes)[0]
 			utf8string = classfile.read(stringlength)
