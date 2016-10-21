@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ## Binary Analysis Tool
-## Copyright 2012-2015 Armijn Hemel for Tjaldur Software Governance Solutions
+## Copyright 2012-2016 Armijn Hemel for Tjaldur Software Governance Solutions
 ## Licensed under Apache 2.0, see LICENSE file for details
 
 import os, os.path, sys, subprocess, copy, cPickle, multiprocessing, pydot
@@ -51,6 +51,7 @@ mounted some links might not resolve properly.
 '''
 
 ## helper function to find if names can be found in known interfaces
+## such as POSIX, SuS, LSB, and so on
 def knownInterface(names, ptype):
 	if ptype == 'functions':
 		for i in names:
@@ -62,7 +63,7 @@ def knownInterface(names, ptype):
 				return False
 	return True
 
-## generate PNG files and optionally SVG
+## generate PNG files and optionally SVG files of the graph
 def writeGraph((elfgraph, filehash, imagedir, generatesvg)):
 	elfgraph_tmp = pydot.graph_from_dot_data(elfgraph)
 	if type(elfgraph_tmp) == list:
@@ -75,7 +76,10 @@ def writeGraph((elfgraph, filehash, imagedir, generatesvg)):
 		if generatesvg:
 			elfgraph_tmp.write_svg(os.path.join(imagedir, '%s-graph.svg' % filehash))
 
-## extract variable names, function names and the soname from an ELF file
+## store variable names, function names from the ELF file
+## along with the type, and so on. Also store the soname for
+## the ELF file, as well as any RPATH values that might have
+## been defined.
 def extractfromelf((filepath, filename)):
 	remotefuncs = set()
 	localfuncs = set()
@@ -152,11 +156,12 @@ def extractfromelf((filepath, filename)):
 
 	return (filename, list(localfuncs), list(remotefuncs), list(localvars), list(remotevars), list(weaklocalfuncs), list(weakremotefuncs), list(weaklocalvars), list(weakremotevars), elfsonames, elfres['elftype'], rpaths)
 
+## The entry point for this module.
 def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcursors, batcons, scandebug=False, unpacktempdir=None):
 	## crude check for broken PyDot
 	if pydot.__version__ == '1.0.3' or pydot.__version__ == '1.0.2':
 		return
-	if scanenv.has_key('overridedir'):
+	if 'overridedir' in scanenv:
 		try:
 			del scanenv['BAT_IMAGEDIR']
 		except: 
@@ -172,6 +177,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 		except Exception, e:
 			return
 
+	## by default SVG representations of the graphs are not
+	## generated unless explicitely enabled.
 	generatesvg = False
 	if scanenv.get('ELF_SVG', '0') == '1':
 		generatesvg = True
@@ -179,12 +186,24 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 	## store names of all ELF files present in scan archive
 	elffiles = set()
 
-	## keep track of which libraries map to what.
+	## There are situations when it is not clear which library to look at.
+	## Examples are:
+	## * files that are normally symlinks, but have been copied into
+	##   a file system that does not support symlinks
+	## * rescue file systems in a firmware that contain the same, or
+	##   similar (partial) content as the main image
+	## Sometimes it will only be apparent at run time which files
+	## really are linked with eachother.
+	##
+	## Therefore we need the keep a list of file names to their
+	## full paths in the scan archive.
+	##
 	## For example, libm.so.0 could map to lib/libm.so.0 and lib2/libm.so.0
 	## libraryname -> [list of libraries]
 	squashedelffiles = {}
 
-	## cache the names of local and remote functions and variables, both normal and weak
+	## cache the names of local and remote functions and variables,
+	## both normal and weak
 	localfunctionnames = {}
 	remotefunctionnames = {}
 	localvariablenames = {}
@@ -195,22 +214,30 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 	weakremotevariablenames = {}
 
 	## a list of unresolvable files: they don't exist on the system
+	## One situation in where this is possible is if the archive
+	## that is scanned does not include all dependencies. Example:
+	## a single binary, or a firmware update that surgically replaces
+	## parts on a device.
 	unresolvable = []
 
-	## Frequently programs do not record the name of the library, but the
-	## name of a symbolic link that points to the library. To correctly resolve
-	## symbols these symbolic links first have to be resolved. This can be a
-	## multistep process if symbolic links point to other link. Symbolic links could
-	## be absolute links or relative paths. Absolute paths first have to be converted
-	## into paths relative to the root of the firmware, so they do not point to the
-	## host system, possibly contaminating results.
-	## store all symlinks in the scan archive that point to ELF files (as far as can be determined)
+	## Frequently programs do not record the name of the library, but instead
+	## use the name of a symbolic link that points to the library. To correctly
+	## resolve symbols from the libraries these symbolic links point to the
+	## correct library first has to be found. This can be a multistep process if
+	## symbolic links point to other files that are symbolic links themselves.
+	## Symbolic links could be absolute links or relative paths. Absolute paths first
+	## have to be converted into paths relative to the root of the firmware, so they
+	## do not point to files in the host system, which could possibly contaminate
+	## results.
+	##
+	## Store all symlinks in the scan archive that point to ELF files (as far as
+	## can be determined)
 	symlinks = {}
 	symlinklinks = {}
 	scantempdirlen = len(scantempdir)
 	for i in unpackreports:
-		if not unpackreports[i].has_key('checksum'):
-			if unpackreports[i].has_key('tags'):
+		if not 'checksum' in unpackreports[i]:
+			if 'tags' in unpackreports[i]:
 				store = False
 				if 'symlink' in unpackreports[i]['tags']:
 					target = os.readlink(os.path.join(scantempdir, i))
@@ -282,7 +309,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 	if len(elffiles) == 0:
 		return
 
-	## there are some symlinks that point to symlinks
+	## there could be symlinks that point to other symlinks
 	if len(symlinklinks) != 0:
 		resolving = True
 		while len(symlinklinks) != 0 and resolving:
@@ -299,8 +326,9 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 						resolving = True
 			symlinklinks = symlinklinksnew
 
-	## map functions to libraries. For each function name a list of libraries
-	## that define the function is kept.
+	## Then map the function names to libraries that define them. For this two
+	## mappings from function names to libraries are kept, one for "regular"
+	## functions, one for "weak" functions.
 	funcstolibs = {}
 	weakfuncstolibs = {}
 
@@ -311,8 +339,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 	## a list of variable names to ignore.
 	varignores = ['__dl_ldso__']
 
-	## Store all local and remote function names for each dynamic ELF executable
-	## or library on the system.
+	## Store all local (defined) and remote function names (undefined and needed)
+	## for each dynamic ELF executable or library on the system.
 
 	pool = multiprocessing.Pool(processes=processors)
 	elftasks = map(lambda x: (scantempdir, x), elffiles)
@@ -329,17 +357,17 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 		if elfrpaths != []:
 			rpaths[filename] = elfrpaths
 		for soname in elfsonames:
-			if sonames.has_key(soname):
+			if soname in sonames:
 				sonames[soname].append(filename)
 			else:
 				sonames[soname] = [filename]
 		for funcname in localfuncs:
-			if funcstolibs.has_key(funcname):
+			if funcname in funcstolibs:
 				funcstolibs[funcname].append(filename)
 			else:
 				funcstolibs[funcname] = [filename]
 		for funcname in weaklocalfuncs:
-			if weakfuncstolibs.has_key(funcname):
+			if funcname in weakfuncstolibs:
 				weakfuncstolibs[funcname].append(filename)
 			else:
 				weakfuncstolibs[funcname] = [filename]
@@ -375,8 +403,10 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 	## Keep a list of files that are identical, for example copies of libraries
 	dupes = {}
 
-	## grab and store the architecture of each file. Files should have the same architecture,
-	## or, at least the same base architecture.
+	## grab and store the architecture of each file. Files should have
+	## the same architecture, or, at least the same base architecture or they cannot
+	## have been linked with eachother (example: ARM and MIPS files cannot be
+	## linked with eachother)
 	architectures = {}
 	for i in elffiles:
 		if not i in elftypes:
@@ -393,15 +423,17 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 
 		architectures[i] = leafreports['architecture']
 
-	## Is this correct???
+	## A list of functions to ignore (is this correct???)
 	ignorefuncs = set(["__ashldi3", "__ashrdi3", "__cmpdi2", "__divdi3", "__fixdfdi", "__fixsfdi", "__fixunsdfdi", "__fixunssfdi", "__floatdidf", "__floatdisf", "__floatundidf", "__lshrdi3", "__moddi3", "__ucmpdi2", "__udivdi3", "__umoddi3", "main"])
 	for i in elffiles:
 		if not i in elftypes:
 			continue
 		if elftypes[i] == 'elfrelocatable':
 			continue
-		## per ELF file keep lists of used libraries and possibly used libraries.
-		## The later is searched if it needs to be guessed which libraries were used.
+		## per ELF file keep lists of used libraries and libraries that are possibly
+		## used.
+		## The later is searched if it needs to be guessed which libraries were
+		## actually used.
 		usedlibs = []
 		possiblyused = []
 		plugsinto = []
@@ -785,7 +817,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 					pcount[p] = 1
 			plugins[i] = pcount
 
-	## store plugins per executable
+	## store a list of possible plugins per executable
 	for p in plugins:
 		for pl in plugins[p]:
 			if pl in pluginsperexecutable:
@@ -843,7 +875,6 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 			leafreports = cPickle.dump(leafreports, leaf_file)
 			leaf_file.close()
 
-
 	squashedgraph = {}
 	for i in elffiles:
 		if not i in elftypes:
@@ -851,7 +882,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 		if elftypes[i] == 'elfrelocatable':
 			continue
 		libdeps = usedlibsandcountperfile[i]
-		if not squashedgraph.has_key(i):
+		if not i in squashedgraph:
 			squashedgraph[i] = []
 		for d in libdeps:
 			(dependency, amountofsymbols, knowninterface) = d
@@ -880,7 +911,7 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 			continue
 		if elftypes[i] == 'elfrelocatable':
 			continue
-		if not squashedgraph.has_key(i):
+		if not i in squashedgraph:
 			continue
 		filehash = unpackreports[i]['checksum']
 		ppname = os.path.join(unpackreports[i]['path'], unpackreports[i]['name'])
@@ -973,6 +1004,8 @@ def findlibs(unpackreports, scantempdir, topleveldir, processors, scanenv, batcu
 		elfgraph_data = elfgraph.to_string()
 		elfgraphs.add((elfgraph_data, filehash, imagedir, generatesvg))
 
+	## finally generate pictures/SVG in parallel, in case there
+	## are any graphs that need to be generated.
 	if len(elfgraphs) != 0:
 		pool = multiprocessing.Pool(processes=processors)
 		elfres = pool.map(writeGraph, elfgraphs,1)
