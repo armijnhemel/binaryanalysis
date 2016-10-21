@@ -7069,6 +7069,9 @@ def searchUnpackIHex(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			os.rmdir(tmpdir)
 			return (diroffsets, blacklist, tags, hints)
 		b = d.strip()
+		if not b.startswith(':'):
+			if not b.startswith('#'):
+				break
 		if len(b) < 3:
 			break
 		bytecount = ord(b[1:3].decode('hex'))
