@@ -7048,8 +7048,6 @@ def searchUnpackAndroidBackup(filename, tempdir=None, blacklist=[], offsets={}, 
 	return (diroffsets, blacklist, newtags, hints)
 
 ## unpack some Intel hex files
-## TODO: sometimes these files can contain comments, for example:
-## mulaw_main.csp.ihex and other firmware files in the Linux kernel
 def searchUnpackIHex(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
 	tags = []
