@@ -314,6 +314,8 @@ def scanForges(filename, tags, cursor, conn, blacklist=[], scanenv={}, scandebug
 
 	forgeidentifiers['svn.apache.org'] = ["http://svn.apache.org/"]
 
+	forgeidentifiers['launchpad.net'] = ["https://git.launchpad.net/", "launchpad.net"]
+
 	## various gits:
 	## http://git.fedoraproject.org/git/
 	## https://fedorahosted.org/
