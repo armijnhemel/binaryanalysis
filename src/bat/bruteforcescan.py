@@ -1408,7 +1408,6 @@ def readconfig(config, configfilename):
 				if section in sectionsseen:
 					errors.append({'errortype': 'duplicate', 'section': section})
 					continue
-				sectionstoprocess.add(section)
 				sectionsseen.add(section)
 
 				(scanconfig, scantype, scandebug) = scanconfigres
