@@ -1408,6 +1408,10 @@ def readconfig(config, configfilename):
 				if section in sectionsseen:
 					errors.append({'errortype': 'duplicate', 'section': section})
 					continue
+
+				## add the section to the list of sections
+				## that was seen. Prefer plug in configurations
+				## over the regular configurations.
 				sectionsseen.add(section)
 
 				(scanconfig, scantype, scandebug) = scanconfigres
@@ -1425,6 +1429,7 @@ def readconfig(config, configfilename):
 					aggregatescans.append(scanconfig)
 			mconfigfile.close()
 
+	## finally process all the scans in the main configuration file
 	for section in sectionstoprocess:
 		scanconfigres = scanconfigsection(config, section, scanenv, batconf)
 		if scanconfigres == None:
@@ -1634,6 +1639,10 @@ def writeDumpfile(unpackreports, scans, processamount, outputfile, configfile, t
 		statisticsfile.write("%s: %s\n" % (i.upper(), statistics[i]))
 	statisticsfile.close()
 	dumpfile.add(statisticsfilename)
+
+	## see if the BAT configuration file needs to be
+	## stored in the archive, with some information
+	## possibly scrubbed.
 	if scans['batconfig']['packconfig']:
 		if scans['batconfig']['scrub'] != []:
 			## pretty print the configuration file, scrubbed of
@@ -1718,7 +1727,7 @@ def writeDumpfile(unpackreports, scans, processamount, outputfile, configfile, t
 	os.chdir(oldcwd)
 
 ## runscan is the entry point for this file.
-## It takes a list of binaries, a full configuration
+## It takes a list of binaries, a fully checked configuration
 ## and the BAT version number and then processes each
 ## binary separately.
 def runscan(scans, binaries, batversion):
@@ -2097,7 +2106,11 @@ def runscan(scans, binaries, batversion):
 		reportqueue = scanmanager.Queue(maxsize=0)
 		processpool = []
 
+		## keep a dictionary for hashes, to see which ones
+		## have already been processed, so duplicates can be
+		## detected.
 		hashdict = scanmanager.dict()
+
 		map(lambda x: scanqueue.put(x), scantasks)
 		for i in range(0,processamount):
 			if usedatabase:
@@ -2117,7 +2130,8 @@ def runscan(scans, binaries, batversion):
 		## scanned once. Since the results are independent anyway (the
 		## unpacking phase is where unique paths are determined after all)
 		## each sha256 can be scanned only once. If there are more files
-		## with the same sha256 the result can simply be copied.
+		## with the same sha256 the result can simply be copied
+		## with some data changed.
 		##
 		## * keep a list of which sha256 have duplicates.
 		## * filter out the checksums
@@ -2130,7 +2144,9 @@ def runscan(scans, binaries, batversion):
 				val = reportqueue.get_nowait()
 				for k in val:
 					if 'tags' in val[k]:
-						## the file is a duplicate, store for later 
+						## the file is a duplicate, so store
+						## it in a list dupes and continue
+						## with the next item.
 						if 'duplicate' in val[k]['tags']:
 							dupes.append(val)
 							continue
@@ -2139,22 +2155,31 @@ def runscan(scans, binaries, batversion):
 			except Queue.Empty, e:
 				## Queue is empty
 				break
+
+		## block here until the reportqueue is empty
 		reportqueue.join()
 	
+		## for duplicate files copy some information into
+		## unpackreports, except for the name and path
 		for i in dupes:
 			for k in i:
 				dupesha256 = i[k]['checksum']
 				origname = i[k]['name']
 				origrealpath = i[k]['realpath']
 				origpath = i[k]['path']
-				## keep: name, realpath, path, copy the rest of the original
+				origrelativename = i[k]['relativename']
+				## keep name, realpath, relativename, path for
+				## the duplicate, and copy the rest of the
+				## data from the original.
 				dupecopy = copy.deepcopy(unpackreports[hashdict[dupesha256]])
 				dupecopy['name'] = origname
 				dupecopy['path'] = origpath
 				dupecopy['realpath'] = origrealpath
+				dupecopy['relativename'] = origrelativename
 				dupecopy['tags'].append('duplicate')
 				unpackreports[k] = dupecopy
 
+		## finally shut down all the processes and the scanmanager
 		for p in processpool:
 			p.terminate()
 
