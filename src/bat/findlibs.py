@@ -150,8 +150,8 @@ def extractfromelf((filepath, filename)):
 	if 'sonames' in elfres:
 		elfsonames = set(elfres['sonames'])
 
-	elfres = elfcheck.parseELF(os.path.join(filepath, filename))
-	if elfres == None:
+	(totalelf, elfres) = elfcheck.parseELF(os.path.join(filepath, filename))
+	if not totalelf:
 		return
 
 	return (filename, list(localfuncs), list(remotefuncs), list(localvars), list(remotevars), list(weaklocalfuncs), list(weakremotefuncs), list(weaklocalvars), list(weakremotevars), elfsonames, elfres['elftype'], rpaths)

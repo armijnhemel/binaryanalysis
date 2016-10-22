@@ -333,7 +333,7 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 		## first determine the size and offset of .data and .rodata sections,
 		## carve these sections from the ELF file, then run 'strings'
        		try:
-			elfres = elfcheck.parseELF(scanfile)
+			(totalelf, elfres) = elfcheck.parseELF(scanfile)
 
 			## check if there actually are sections. On some systems the
 			## ELF header is corrupted and does not have section headers

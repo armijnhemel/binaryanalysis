@@ -215,7 +215,7 @@ def getArchitecture(filename, tags):
 
 ## extract information about a section given a section name
 def getSection(filename, sectionname, debug=False):
-	elfresult = parseELF(filename, debug)
+	(totalelf, elfresult) = parseELF(filename, 0, debug)
 	returnsection = None
 	for i in elfresult['sections']:
 		if elfresult['sections'][i]['name'] == sectionname:
@@ -231,7 +231,7 @@ def getSection(filename, sectionname, debug=False):
 ## In case the file has not been stripped this also
 ## includes the debugging symbols.
 def getAllSymbols(filename, debug=False):
-	elfresult = parseELF(filename, debug)
+	(totalelf, elfresult) = parseELF(filename, 0, debug)
 	symres = []
 	symbolres = getSymbols(filename, elfresult, debug)
 	if symbolres != None:
@@ -254,8 +254,8 @@ def getDynamicSymbols(filename, elfresult=None, debug=False):
 ## table or the symbol table (non-stripped binaries)
 def getSymbolsAbstraction(filename, symboltype, elfresult, debug=False):
 	if elfresult == None:
-		elfresult = parseELF(filename, debug)
-		if elfresult == None:
+		(totalelf, elfresult) = parseELF(filename, 0, debug)
+		if not totalelf:
 			return
 
 	symsection = None
@@ -397,8 +397,8 @@ def getSymbolsAbstraction(filename, symboltype, elfresult, debug=False):
 
 ## similar to readelf -d
 def getDynamicLibs(filename, debug=False):
-	elfresult = parseELF(filename, debug)
-	if elfresult == None:
+	(totalelf, elfresult) = parseELF(filename, 0, debug)
+	if not totalelf:
 		return
 
 	if not 'dynamic' in elfresult:
@@ -538,9 +538,9 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	newtags = []
 	filesize = os.stat(filename).st_size
 
-	elfresult = parseELF(filename, debug)
+	(totalelf, elfresult) = parseELF(filename, 0, debug)
 
-	if elfresult == None:
+	if not totalelf:
 		return []
 
 	if not elfresult['dynamic']:
@@ -570,8 +570,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 ##
 ## First the ELF header is checked, then the program header
 ## table, then the section header table
-def parseELF(filename, debug=False):
-	offset = 0
+def parseELF(filename, offset=0, debug=False):
 	elffile = open(filename, 'rb')
 	elffile.seek(offset)
 
@@ -583,11 +582,11 @@ def parseELF(filename, debug=False):
 	elfbytes = elffile.read(64)
 	if len(elfbytes) != 64:
 		elffile.close()
-		return
+		return (False, None)
 
 	if elfbytes[0:4] != '\x7f\x45\x4c\x46':
 		elffile.close()
-		return
+		return (False, None)
 
 	iself = False
 
@@ -618,11 +617,11 @@ def parseELF(filename, debug=False):
 	## ELF header cannot extend past the end of the file
 	if offset + elfheadersize > filesize:
 		elffile.close()
-		return
+		return (False, None)
 
 	if elfheadersize == 0:
 		elffile.close()
-		return
+		return (False, None)
 
 	## then read the actual ELF header
 	elffile.seek(offset)
@@ -644,7 +643,7 @@ def parseELF(filename, debug=False):
 	elif elftypebyte == 4:
 		elftype = 'elfcore'
 	else:
-		return
+		return (False, None)
 
 	elfresult['elftype'] = elftype
 
@@ -679,7 +678,7 @@ def parseELF(filename, debug=False):
 	## program header cannot be outside of the file
 	if offset + startprogramheader > filesize:
 		elffile.close()
-		return
+		return (False, None)
 
 	## the start of section headers
 	if bit32:
@@ -700,7 +699,7 @@ def parseELF(filename, debug=False):
 	## section header cannot be outside of the file
 	if offset + startsectionheader > filesize:
 		elffile.close()
-		return
+		return (False, None)
 
 	## the size of the program headers
 	if bit32:
@@ -715,7 +714,7 @@ def parseELF(filename, debug=False):
 	## program header cannot extend past the file
 	if offset + startprogramheader + programheadersize > filesize:
 		elffile.close()
-		return
+		return (False, None)
 
 	## the amount of program headers
 	if bit32:
@@ -731,7 +730,7 @@ def parseELF(filename, debug=False):
 		## program header cannot be inside the ELF header
 		if offset + startprogramheader + programheadersize < offset + elfheadersize:
 			elffile.close()
-			return
+			return (False, None)
 
 	## the size of the section headers
 	if bit32:
@@ -746,7 +745,7 @@ def parseELF(filename, debug=False):
 	## section header cannot extend past the end of the file
 	if offset + startsectionheader + sectionheadersize > filesize:
 		elffile.close()
-		return
+		return (False, None)
 
 	## the amount of section headers
 	if bit32:
@@ -772,7 +771,7 @@ def parseELF(filename, debug=False):
 	if numbersectionheaders != 0:
 		if offset + startsectionheader + sectionheadersize < offset + elfheadersize:
 			elffile.close()
-			return
+			return (False, None)
 
 	## First process the program header table
 	brokenelf = False
@@ -870,7 +869,7 @@ def parseELF(filename, debug=False):
 
 	if brokenelf:
 		elffile.close()
-		return
+		return (False, None)
 
 	dynamic = False
 
@@ -884,7 +883,7 @@ def parseELF(filename, debug=False):
 		elfbytes = elffile.read(sectionheadersize)
 		if len(elfbytes) != sectionheadersize:
 			elffile.close()
-			return
+			return (False, None)
 		if littleendian:
 			sh_name = struct.unpack('<I', elfbytes[0:4])[0]
 		else:
@@ -960,7 +959,7 @@ def parseELF(filename, debug=False):
 
 	if brokenelf:
 		elffile.close()
-		return
+		return (False, None)
 
 	## dynamic count cannot be larger than 1
 	if dynamiccount == 1:
@@ -1004,8 +1003,8 @@ def parseELF(filename, debug=False):
 				## three bytes before that are 0x00
 				## The byte before that is the length of the key identifier
 				## The byte before that is the length of the "signer's name"
-				elffile.seek(-40, os.SEEK_END)
 				totalsiglength = 40
+				elffile.seek(-40, os.SEEK_END)
 				elfbytes = elffile.read(12)
 				signaturelength = struct.unpack('>I', elfbytes[-4:])[0]
 				totalsiglength += signaturelength
@@ -1015,13 +1014,15 @@ def parseELF(filename, debug=False):
 				totalsiglength += signernamelen
 				if totalsiglength + totalsize == filesize:
 					iself = True
+				totalsize += totalsiglength
 			elffile.close()
-
-	if not iself:
-		return
 
 	elfresult['dynamic'] = dynamic
 	elfresult['sectionnames'] = sectionnames
 	elfresult['sections'] = sections
+	elfresult['size'] = totalsize
 
-	return elfresult
+	if not iself:
+		return (False, elfresult)
+
+	return (True, elfresult)

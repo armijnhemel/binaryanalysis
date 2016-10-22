@@ -17,7 +17,7 @@ to prevent other scans from (re)scanning (part of) the data.
 
 import sys, os, subprocess, os.path, shutil, stat, array, struct, binascii, json, math
 import tempfile, bz2, re, magic, tarfile, zlib, copy, uu, hashlib, StringIO, zipfile
-import fsmagic, extractor, ext2, jffs2, prerun, javacheck
+import fsmagic, extractor, ext2, jffs2, prerun, javacheck, elfcheck
 from collections import deque
 import xml.dom
 
@@ -6960,6 +6960,48 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 	datafile.close()
 	return (diroffsets, blacklist, newtags, hints)
 
+## carve ELF files from a bigger file
+def searchUnpackELF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
+	hints = {}
+	diroffsets = []
+	newtags = []
+	if not 'elf' in offsets:
+		return (diroffsets, blacklist, newtags, hints)
+	if offsets['elf'] == []:
+		return (diroffsets, blacklist, newtags, hints)
+
+	counter = 1
+	elffile = open(filename, 'rb')
+	for offset in offsets['elf']:
+		blacklistoffset = extractor.inblacklist(offset, blacklist)
+		if blacklistoffset != None:
+			return (diroffsets, blacklist, newtags, hints)
+		tmpdir = dirsetup(tempdir, filename, "elf", counter)
+		(totalelf, elfres) = elfcheck.parseELF(filename, offset)
+		if totalelf:
+			elffile.close()
+			os.rmdir(tmpdir)
+			newtags.append('elf')
+			return (diroffsets, blacklist, newtags, hints)
+		if elfres != None:
+			## TODO: in case SONAME is defined use that
+			## as the name for the file instead
+			tmpfilename = os.path.join(tmpdir, 'unpack-%d.elf' % counter)
+			tmpfile = open(tmpfilename, 'wb')
+			elffile.seek(offset)
+			tmpfile.write(elffile.read(elfres['size']))
+			tmpfile.close()
+			hints[tmpfilename] = {}
+			hints[tmpfilename]['tags'] = ['elf', 'binary']
+			hints[tmpfilename]['tags'].append(elfres['elftype'])
+			blacklist.append((offset,offset + elfres['size']))
+			diroffsets.append((tmpdir, offset, elfres['size']))
+			counter = counter + 1
+		else:
+			os.rmdir(tmpdir)
+	elffile.close()
+	return (diroffsets, blacklist, newtags, hints)
+
 ## unpack Windows Imaging files
 ## Assume for now that the whole image is a WIM file
 def searchUnpackWIM(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
@@ -7082,10 +7124,10 @@ def searchUnpackIHex(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			continue
 		databytes = b[9:9+bytecount*2].decode('hex')
 		os.write(tmpfile[0], databytes)
-	diroffsets.append((tmpdir, offset, filesize))
-	blacklist.append((offset, offset + filesize))
 	os.fdopen(tmpfile[0]).close()
 	datafile.close()
+	diroffsets.append((tmpdir, offset, filesize))
+	blacklist.append((offset, offset + filesize))
 	return (diroffsets, blacklist, tags, hints)
 
 ## sometimes MP3 audio files are embedded into binary blobs
