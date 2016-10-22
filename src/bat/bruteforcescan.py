@@ -51,6 +51,7 @@ from multiprocessing import Process, Lock
 from multiprocessing.sharedctypes import Value, Array
 
 ## import the Python magic module
+## NOTE: there are various incompatible python-magic modules
 import magic
 
 ## import the PostgreSQL connection module
@@ -76,7 +77,7 @@ except Exception, e:
 
 ## Method to run a setup scan. Returns the result of the setup
 ## scan, which is in the form of a tuple (boolean, environment).
-## The environment returned is always a dictionary.
+## The environment returned is always a dictionary, like os.environ
 def runSetup(setupscan, usedatabase, cursor, conn, debug=False):
 	module = setupscan['module']
 	method = setupscan['setup']
@@ -130,6 +131,8 @@ def gethash(filepath, filename, hashtypes, tlshmaxsize):
 
 	hashresults = {}
 
+	## initiate new hashing objects, except for CRC32
+	## and TLSH, which need to be treated slightly differently
 	hashdict = {}
 	for h in hashestocompute:
 		if h == 'crc32' or h == 'tlsh':
@@ -141,7 +144,8 @@ def gethash(filepath, filename, hashtypes, tlshmaxsize):
 	hashdata = scanfile.read(10000000)
 	while hashdata != '':
 		for h in hashestocompute:
-			## CRC32 and TLSH are not yet supported
+			## CRC32 is not yet supported, TLSH is
+			## processed later
 			if h == 'crc32' or h == 'tlsh':
 				continue
 			hashdict[h].update(hashdata)
@@ -152,6 +156,8 @@ def gethash(filepath, filename, hashtypes, tlshmaxsize):
 			continue
 		hashresults[h] = hashdict[h].hexdigest()
 	filesize = os.stat(os.path.join(filepath, filename)).st_size
+
+	## compute TLSH, as long as it is not too big
 	if 'tlsh' in hashestocompute:
 		if tlshscan:
 			if filesize >= 256 and filesize <= tlshmaxsize:
@@ -164,12 +170,14 @@ def gethash(filepath, filename, hashtypes, tlshmaxsize):
 				hashresults['tlsh'] = None
 	return hashresults
 
-## continuously grab tasks (files) from a queue, tag and possibly unpack and recurse
+## continuously grab tasks (files) from a queue, tag ('prerun phase'), possibly unpack
+## and recurse ('unpack'). Then run different scans per file ('leaf').
 def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, prerunmagic, magicscans, optmagicscans, processid, hashdict, llock, template, unpacktempdir, topleveldir, tempdir, outputhash, cursor, conn, scansourcecode, dumpoffsets, offsetdir, compressed, timeout, scan_binary_basename):
 	lentempdir = len(tempdir)
 	sourcecodequery = "select checksum from processed_file where checksum=%s limit 1"
 
-	## import all methods defined in the scans
+	## import all methods defined in the scans, once per thread
+	## ignore all scans that cannot be loaded successfully
 	blacklistscans = set()
 	for prerunscan in prerunscans:
 		module = prerunscan['module']
@@ -197,7 +205,7 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 			blacklistscans.add((module, method))
 			continue
 
-	## grab tasks from the queue continuously until there are no more tasks
+	## grab tasks from the queue continuously until there are no more tasks left
 	while True:
 		## reset the reports, blacklist, offsets and tags for each new scan
 		blacklist = []
@@ -315,11 +323,11 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 		## scanned, or is in the process of being scanned.
 		llock.acquire()
 		if filehash in hashdict:
+			llock.release()
 			## if the hash is already there mark it as a
 			## duplicate and stop scanning.
 			unpackreports['tags'] = ['duplicate']
 			reportqueue.put({relfiletoscan: unpackreports})
-			llock.release()
 			scanqueue.task_done()
 			continue
 		else:
@@ -475,6 +483,7 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 				cPickle.dump(offsets, picklefile)
 				picklefile.close()
 
+				## optionally compress the pickle files to save space
 				if compressed:
 					fin = open(offsetpicklename, 'rb')
 					fout = gzip.open("%s.gz" % offsetpicklename, 'wb')
@@ -888,7 +897,7 @@ def aggregatescan(unpackreports, aggregatescans, processors, scantempdir, toplev
 		statistics[method] = endtime - starttime
 	return statistics
 
-## continuously grab tasks (files) from a queue, tag and possibly unpack and recurse
+## continuously grab tasks (files) from a queue and process
 def postrunscan(scanqueue, postrunscans, topleveldir, scantempdir, cursor, conn, debug, timeout):
 
 	## import all methods defined in the scans
@@ -923,6 +932,7 @@ def postrunscan(scanqueue, postrunscans, topleveldir, scantempdir, cursor, conn,
 				pass
 		scanqueue.task_done()
 
+## process a single configuration section
 def scanconfigsection(config, section, scanenv, batconf):
 	if config.has_option(section, 'type'):
 		debug = False
@@ -1371,10 +1381,18 @@ def readconfig(config, configfilename):
 		except:
 			batconf['compress'] = False
 
+	## then process configurations of any plugins
+	## if defined.
 	if batconf['configdirectory'] != None:
+		## configuration files can end either with .conf or .config
 		configs = filter(lambda x: x.endswith('.conf') or x.endswith('.config'), os.listdir(batconf['configdirectory']))
+		## if the configuration directory is set to the same
+		## directory as where the main configuration file is located
+		## then don't process the main configuration file twice
 		if os.path.realpath(batconf['configdirectory']) == os.path.dirname(configfilename):
 			configs = filter(lambda x: x != os.path.basename(configfilename), configs)
+
+		## read each individual configuration file and process all the sections.
 		for mc in configs:
 			mconfig = ConfigParser.ConfigParser()
 			try:
