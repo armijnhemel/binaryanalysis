@@ -292,7 +292,7 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 		## For TLSH a default maximum size is set to 50 MiB
 		## TODO: make configurable
 		tlshmaxsize=52428800
-		filehashresults = gethash(dirname, filename, [outputhash, 'tlsh'], tlshmaxsize)
+		filehashresults = gethash(dirname, filename, [outputhash, 'sha1', 'md5', 'tlsh'], tlshmaxsize)
 		unpackreports['checksum'] = filehashresults[outputhash]
 		for u in filehashresults:
 			unpackreports[u] = filehashresults[u]
