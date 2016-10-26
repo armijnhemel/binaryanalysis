@@ -981,8 +981,10 @@ def parseELF(filename, offset=0, debug=False):
 	## Now some extra checks so files can be tagged as ELF
 	if maxendofprogramsegments == filesize:
 		iself = True
+		totalsize = filesize
 	elif maxendofsection == filesize:
 		iself = True
+		totalsize = filesize
 	else:
 		## This does not work well for some Linux kernel modules as well as other files
 		## (architecture dependent?)
