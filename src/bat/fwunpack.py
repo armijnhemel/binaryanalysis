@@ -6984,19 +6984,22 @@ def searchUnpackELF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			newtags.append('elf')
 			return (diroffsets, blacklist, newtags, hints)
 		if elfres != None:
-			## TODO: in case SONAME is defined use that
-			## as the name for the file instead
-			tmpfilename = os.path.join(tmpdir, 'unpack-%d.elf' % counter)
-			tmpfile = open(tmpfilename, 'wb')
-			elffile.seek(offset)
-			tmpfile.write(elffile.read(elfres['size']))
-			tmpfile.close()
-			hints[tmpfilename] = {}
-			hints[tmpfilename]['tags'] = ['elf', 'binary']
-			hints[tmpfilename]['tags'].append(elfres['elftype'])
-			blacklist.append((offset,offset + elfres['size']))
-			diroffsets.append((tmpdir, offset, elfres['size']))
-			counter = counter + 1
+			if elfres['size'] == 0:
+				os.rmdir(tmpdir)
+			else:
+				## TODO: in case SONAME is defined use that
+				## as the name for the file instead
+				tmpfilename = os.path.join(tmpdir, 'unpack-%d.elf' % counter)
+				tmpfile = open(tmpfilename, 'wb')
+				elffile.seek(offset)
+				tmpfile.write(elffile.read(elfres['size']))
+				tmpfile.close()
+				hints[tmpfilename] = {}
+				hints[tmpfilename]['tags'] = ['elf', 'binary']
+				hints[tmpfilename]['tags'].append(elfres['elftype'])
+				blacklist.append((offset,offset + elfres['size']))
+				diroffsets.append((tmpdir, offset, elfres['size']))
+				counter = counter + 1
 		else:
 			os.rmdir(tmpdir)
 	elffile.close()
