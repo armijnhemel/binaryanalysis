@@ -2,7 +2,7 @@ This document describes the format of the datastructures used internally by BAT.
 
 For each file that is unpacked and scanned by BAT data is kept, including information about the path, unpacked files (children), tags, and so on.
 
-Because the data can grow quite big (especially when dealing with packages with possibly millons of matches, like the Linux kernel) the data in BAT is kept in two separate data structures to keep memory usage (fairly) low:
+Because the data can grow quite big (especially when dealing with packages with possibly millons of matches, like the Linux kernel) the data in BAT is kept in two separate data structures to keep memory usage (fairly) low. One part is kept in memory, the other part is kept on disk and (de)serialized on a per need basis:
 
 * unpackreports: this is a list of dictionairies containing metainformation about every file. This list is always kept in memory during the entire scan. Information stored includes the path, checksums, tags, offsets and sizes of filesystems/compressed files contained in the file (children), names of files that were unpacked from this file, ranges of 'blacklisted' bytes that don't need to be (re)scanned, and so on. The key of each dictionary is the path of a file that is unpacked by BAT. Files that are duplicates (same checksum) are tagged as such. This list is written to a Python pickle called "scandata.pickle" or a JSON file called "scandata.json" (or both, depending on the configuration) at the end of the scan.
 
