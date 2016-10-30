@@ -8120,7 +8120,7 @@ def searchUnpackJavaClass(filename, tempdir=None, blacklist=[], offsets={}, scan
 		if javares != None:
 			if javares['size'] != 0:
 				if offset == 0 and javares['size'] == filesize:
-					blacklist.append((0, filesize))
+					#blacklist.append((0, filesize))
 					javafile.close()
 					return (diroffsets, blacklist, ['java', 'binary'], hints)
 			## set up a directory and temporary file to write data to
