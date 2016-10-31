@@ -468,6 +468,10 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 			## scan for markers in case they are not already known
 			if offsets == {}:
 				(offsets, offsetkeys, isascii) = prerun.genericMarkerSearch(filetoscan, magicscans, optmagicscans)
+				if isascii:
+					tags.append('text')
+				else:
+					tags.append('binary')
 
 		if dumpoffsets:
 			## write pickles with offsets to disk
@@ -2073,15 +2077,22 @@ def runscan(scans, binaries, batversion):
 				res = pool.map(paralleloffsetsearch, offsettasks)
 				pool.terminate()
 
+				isascii = True
+
 				for offsetresult in res:
-					(i, offsettokeys, isascii) = offsetresult
+					(i, offsettokeys, offsetisascii) = offsetresult
 					for j in i:
 						if j in offsets:
 							offsets[j] += i[j]
 						else:
 							offsets[j] = copy.deepcopy(i[j])
+					isascii = isascii and offsetisascii
 				for i in offsets:
 					offsets[i] = sorted(list(set(offsets[i])))
+				if isascii:
+					tags.append('text')
+				else:
+					tags.append('binary')
 
 		## fill the scan task list with the first entry
 		scantasks = [(scantempdir, scan_binary_basename, len(scantempdir), tmpdebug, tags, hints, offsets)]
