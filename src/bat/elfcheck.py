@@ -572,7 +572,6 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 ## table, then the section header table
 def parseELF(filename, offset=0, debug=False):
 	elffile = open(filename, 'rb')
-	elffile.seek(offset)
 
 	elfresult = {}
 	filesize = os.stat(filename).st_size
@@ -990,6 +989,12 @@ def parseELF(filename, offset=0, debug=False):
 		## (architecture dependent?)
 		## One architecture where this sometimes seems to happen is ARM.
 		totalsize = startsectionheader + sectionheadersize * numbersectionheaders
+
+		## there are files where the number of section headers is zero, but
+		## which are valid ELF files. An example is the bootloader on certain
+		## Android devices. TODO.
+		if totalsize == 0:
+			pass
 		if totalsize == filesize:
 			iself = True
 		else:

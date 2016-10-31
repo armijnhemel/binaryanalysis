@@ -335,9 +335,16 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
        		try:
 			(totalelf, elfres) = elfcheck.parseELF(scanfile)
 
+			validelf = True
+			if elfres == None:
+				validelf = False
+			else:
+				if elfres['sections'] == {}:
+					validelf = False
+
 			## check if there actually are sections. On some systems the
 			## ELF header is corrupted and does not have section headers
-			if elfres['sections'] == {}:
+			if not validelf:
 				p = subprocess.Popen(['strings', '-a', '-n', str(stringcutoff), scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 				(stanout, stanerr) = p.communicate()
 				if p.returncode != 0:

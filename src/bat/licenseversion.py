@@ -368,7 +368,7 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 					## ignore rank and percentage
 					if package in uniqueMatchesperpkg:
 						tmpres = []
-						for p in r[2]:
+						for p in unique:
 							if p[0] in upp:
 								continue
 							else:
@@ -376,7 +376,7 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 								upp[p[0]] = 1
 						uniqueMatchesperpkg[package] = uniqueMatchesperpkg[package] + tmpres
 					else:
-						uniqueMatchesperpkg[package] = r[2]
+						uniqueMatchesperpkg[package] = unique
 					if packageversions != {}:
 						if not package in packageversionsperpkg:
 							packageversionsperpkg[package] = {}
