@@ -4616,7 +4616,8 @@ def unpackAndroidSparse(filename, offset, tempdir=None):
 
 	if databuffer != fsmagic.fsmagic['ext2']:
 		## no expected marker found
-		ext2offsets = prerun.genericMarkerSearch(outtmpfile[1], ['ext2'], [])['ext2']
+		ext2offsetsres = prerun.genericMarkerSearch(outtmpfile[1], ['ext2'], [])['ext2']
+		(ext2offsets, offsettokeys, isascii) = ext2offsetsres
 	else:
 		ext2offsets = [0]
 
@@ -6466,10 +6467,12 @@ def searchUnpackKnownPNG(filename, tempdir=None, scanenv={}, debug=False):
 	## only check files smaller than or equal to 10 MiB for now
 	if lendata > 10485760:
 		return ([], [], [], {})
-	pngheaderoffsets = prerun.genericMarkerSearch(filename, ['png'], [])['png']
+	pngheaderoffsetsres = prerun.genericMarkerSearch(filename, ['png'], [])['png']
+	(pngheaderoffsets, offsettokeys, isascii) = pngheaderoffsetsres
 	if len(pngheaderoffsets) != 1:
 		return ([], [], [], {})
-	pngtraileroffsets = prerun.genericMarkerSearch(filename, ['pngtrailer'], [])['pngtrailer']
+	pngtraileroffsetsres = prerun.genericMarkerSearch(filename, ['pngtrailer'], [])['pngtrailer']
+	(pngtraileroffsets, offsettokeys, isascii) = pngtraileroffsetsres
 	if len(pngtraileroffsets) != 1:
 		return ([], [], [], {})
 	res = searchUnpackPNG(filename, tempdir, [], {'png': [0], 'pngtrailer': [lendata - 12]}, scanenv, debug)

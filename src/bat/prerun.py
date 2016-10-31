@@ -30,10 +30,24 @@ import fsmagic, extractor, javacheck, elfcheck
 ## method to search for all the markers in magicscans
 ## Although it is in this method it is actually not a pre-run scan, so perhaps
 ## it should be moved to bruteforcescan.py instead.
+## This method returns a tuple with three results:
+## * offsets :: a dictionary with offsets per marker
+## * offsettokeys :: a dictionary that maps an offset to a marker
+## * isascii :: a flag to indicate that the data found was ASCII
+## data only or not
 def genericMarkerSearch(filename, magicscans, optmagicscans, offset=0, length=0, debug=False):
 	datafile = open(filename, 'rb')
 	databuffer = []
+
+	## dictionary with offsets per marker
 	offsets = {}
+
+	## mapping of offset to keys
+	offsettokeys = {}
+
+	## flag that indicates if the data is ASCII
+	isascii = True
+
 	datafile.seek(offset)
 	if length == 0:
 		databuffer = datafile.read(2000000)
@@ -52,10 +66,7 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, offset=0, length=0,
 	## don't read the file if there are no keys to process
 	if bufkeys == []:
 		datafile.close()
-		return offsets
-
-	#isascii = True
-	isascii = False
+		return (offsets, offsettokeys, isascii)
 
 	datafile2 = open(filename, 'rb')
 	while databuffer != '':
@@ -114,9 +125,6 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, offset=0, length=0,
 	datafile2.close()
 	datafile.close()
 
-	## mapping of offset to keys
-	offsettokeys = {}
-
 	for key in marker_keys:
 		offsets[key] = list(offsets[key])
 		## offsets are expected to be sorted.
@@ -126,7 +134,7 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, offset=0, length=0,
 				offsettokeys[offset].append(key)
 			else:
 				offsettokeys[offset] = [key]
-	return offsets
+	return (offsets, offsettokeys, isascii)
 
 ## Verify a file is an XML file using xmllint.
 ## Actually this *could* be done with xml.dom.minidom (although some parser settings should be set

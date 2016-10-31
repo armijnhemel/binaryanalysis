@@ -467,7 +467,7 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 		if not knownfile or 'blacklistignorescans' in scanhints:
 			## scan for markers in case they are not already known
 			if offsets == {}:
-				offsets =  prerun.genericMarkerSearch(filetoscan, magicscans, optmagicscans)
+				(offsets, offsetkeys, isascii) = prerun.genericMarkerSearch(filetoscan, magicscans, optmagicscans)
 
 		if dumpoffsets:
 			## write pickles with offsets to disk
@@ -2073,7 +2073,8 @@ def runscan(scans, binaries, batversion):
 				res = pool.map(paralleloffsetsearch, offsettasks)
 				pool.terminate()
 
-				for i in res:
+				for offsetresult in res:
+					(i, offsettokeys, isascii) = offsetresult
 					for j in i:
 						if j in offsets:
 							offsets[j] += i[j]
