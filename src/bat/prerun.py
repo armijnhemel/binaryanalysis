@@ -48,8 +48,20 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, offset=0, length=0,
 		if not key in fsmagic.fsmagic:
 			continue
 		bufkeys.append((key,fsmagic.fsmagic[key]))
+
+	## don't read the file if there are no keys to process
+	if bufkeys == []:
+		datafile.close()
+		return offsets
+
+	#isascii = True
+	isascii = False
+
 	datafile2 = open(filename, 'rb')
 	while databuffer != '':
+		if isascii:
+			if not extractor.isPrintables(databuffer):
+				isascii = False
 		for bkey in bufkeys:
 			(key, bufkey) = bkey
 			if not bufkey in databuffer:
