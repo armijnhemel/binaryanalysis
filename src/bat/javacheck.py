@@ -108,68 +108,125 @@ def parseJava(filename, offset):
 			skip = False
 			continue
 		classbytes = classfile.read(1)
+		if len(classbytes) != 1:
+			brokenclass = True
+			break
 		constanttag = ord(classbytes)
 		if constanttag == CLASS:
 			## store the index of the class name for
 			## later look up
 			classbytes = classfile.read(2)
+			if len(classbytes) != 2:
+				brokenclass = True
+				break
 			name_index = struct.unpack('>H', classbytes)[0]
 			class_lookups.append(name_index)
 			class_lookup_table[i] = name_index
 		elif constanttag == FIELDREFERENCE or constanttag == METHODREFERENCE or constanttag == INTERFACEMETHODREFERENCE:
 			classbytes = classfile.read(2)
+			if len(classbytes) != 2:
+				brokenclass = True
+				break
 			class_index = struct.unpack('>H', classbytes)
 			classbytes = classfile.read(2)
+			if len(classbytes) != 2:
+				brokenclass = True
+				break
 			name_and_type_index = struct.unpack('>H', classbytes)[0]
 		elif constanttag == STRING:
 			## store the indexes for strings that need to
 			## be looked up.
 			classbytes = classfile.read(2)
+			if len(classbytes) != 2:
+				brokenclass = True
+				break
 			string_index = struct.unpack('>H', classbytes)[0]
 			string_lookups.append(string_index)
 		elif constanttag == INTEGER or constanttag == FLOAT:
 			classbytes = classfile.read(4)
+			if len(classbytes) != 4:
+				brokenclass = True
+				break
 			constantbytes = struct.unpack('>I', classbytes)
 		elif constanttag == LONG or constanttag == DOUBLE:
 			classbytes = classfile.read(4)
+			if len(classbytes) != 4:
+				brokenclass = True
+				break
 			highconstantbytes = struct.unpack('>I', classbytes)
 			classbytes = classfile.read(4)
+			if len(classbytes) != 4:
+				brokenclass = True
+				break
 			lowconstantbytes = struct.unpack('>I', classbytes)
 			## longs and doubles take up a bit more space, so skip
 			## the next entry
 			skip = True
 		elif constanttag == NAMEANDTYPE:
 			classbytes = classfile.read(2)
+			if len(classbytes) != 2:
+				brokenclass = True
+				break
 			name_index = struct.unpack('>H', classbytes)
 			classbytes = classfile.read(2)
+			if len(classbytes) != 2:
+				brokenclass = True
+				break
 			descriptor_index = struct.unpack('>H', classbytes)
 		elif constanttag == UTF8:
 			## store strings that were found
 			## so they can later be looked up.
 			classbytes = classfile.read(2)
+			if len(classbytes) != 2:
+				brokenclass = True
+				break
 			stringlength = struct.unpack('>H', classbytes)[0]
 			utf8string = classfile.read(stringlength)
 			if len(utf8string) != stringlength:
 				brokenclass = True
-				continue
+				break
 			lookup_table[i] = utf8string
 		elif constanttag == METHODHANDLE:
 			## reference kind
 			classbytes = classfile.read(1)
+			if len(classbytes) != 1:
+				brokenclass = True
+				break
 			## reference index
 			classbytes = classfile.read(2)
+			if len(classbytes) != 2:
+				brokenclass = True
+				break
 		elif constanttag == METHODTYPE:
 			## descriptor index
 			classbytes = classfile.read(2)
+			if len(classbytes) != 2:
+				brokenclass = True
+				break
 		elif constanttag == INVOKEDYNAMIC:
 			## bootstrap_method_attr_index
 			classbytes = classfile.read(2)
+			if len(classbytes) != 2:
+				brokenclass = True
+				break
 			## name_and_type_index
 			classbytes = classfile.read(2)
+			if len(classbytes) != 2:
+				brokenclass = True
+				break
+	if brokenclass:
+		classfile.close()
+		return
 
 	classbytes = classfile.read(2)
+	if len(classbytes) != 2:
+		classfile.close()
+		return None
 	accessflags = struct.unpack('>H', classbytes)[0]
 	classbytes = classfile.read(2)
+	if len(classbytes) != 2:
+		classfile.close()
+		return None
 	thisclass = struct.unpack('>H', classbytes)[0]
 	try:
 		classname = lookup_table[class_lookup_table[thisclass]]
@@ -178,9 +235,15 @@ def parseJava(filename, offset):
 		return None
 
 	classbytes = classfile.read(2)
+	if len(classbytes) != 2:
+		classfile.close()
+		return None
 	superclass = struct.unpack('>H', classbytes)[0]
 
 	classbytes = classfile.read(2)
+	if len(classbytes) != 2:
+		classfile.close()
+		return None
 	interfaces_count = struct.unpack('>H', classbytes)[0]
 
 	for i in range(0, interfaces_count+1):
@@ -189,11 +252,21 @@ def parseJava(filename, offset):
 	fields_count = struct.unpack('>H', classbytes)[0]
 
 	fieldnames = []
+	brokenclass = False
 	for i in range(0, fields_count):
+		if brokenclass:
+			classfile.close()
+			return
 		## access flags
 		classbytes = classfile.read(2)
+		if len(classbytes) != 2:
+			brokenclass = True
+			break
 		## name_index
 		classbytes = classfile.read(2)
+		if len(classbytes) != 2:
+			brokenclass = True
+			break
 		name_index = struct.unpack('>H', classbytes)[0]
 		try:
 			fieldname = lookup_table[name_index]
@@ -205,22 +278,48 @@ def parseJava(filename, offset):
 				fieldnames.append(fieldname)
 		## descriptor_index
 		classbytes = classfile.read(2)
+		if len(classbytes) != 2:
+			brokenclass = True
+			break
 		descriptor_index = struct.unpack('>H', classbytes)[0]
 		## attributes_count
 		classbytes = classfile.read(2)
+		if len(classbytes) != 2:
+			brokenclass = True
+			break
 		attributes_count = struct.unpack('>H', classbytes)[0]
 		for a in range(0, attributes_count):
 			classbytes = classfile.read(2)
+			if len(classbytes) != 2:
+				brokenclass = True
+				break
 			attribute_name_index = struct.unpack('>H', classbytes)[0]
 			classbytes = classfile.read(4)
+			if len(classbytes) != 4:
+				brokenclass = True
+				break
 			attribute_length = struct.unpack('>I', classbytes)[0]
 			classbytes = classfile.read(attribute_length)
+			if len(classbytes) != attribute_length:
+				brokenclass = True
+				break
+
+	if brokenclass:
+		classfile.close()
+		return
 
 	classbytes = classfile.read(2)
+	if len(classbytes) != 2:
+		classfile.close()
+		return None
 	method_count = struct.unpack('>H', classbytes)[0]
 
 	methodnames = []
+	brokenclass = False
 	for i in range(0, method_count):
+		if brokenclass:
+			classfile.close()
+			return
 		## access flags
 		classbytes = classfile.read(2)
 		## name_index
@@ -248,8 +347,15 @@ def parseJava(filename, offset):
 			attribute_length = struct.unpack('>I', classbytes)[0]
 			classbytes = classfile.read(attribute_length)
 
+	if brokenclass:
+		classfile.close()
+		return
+
 	sourcefile = None
 	classbytes = classfile.read(2)
+	if len(classbytes) != 2:
+		classfile.close()
+		return None
 	attributes_count = struct.unpack('>H', classbytes)[0]
 	for a in range(0, attributes_count):
 		classbytes = classfile.read(2)
