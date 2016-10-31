@@ -322,8 +322,14 @@ def parseJava(filename, offset):
 			return
 		## access flags
 		classbytes = classfile.read(2)
+		if len(classbytes) != 2:
+			brokenclass = False
+			break
 		## name_index
 		classbytes = classfile.read(2)
+		if len(classbytes) != 2:
+			brokenclass = False
+			break
 		name_index = struct.unpack('>H', classbytes)[0]
 		try:
 			method_name = lookup_table[name_index]
@@ -336,16 +342,31 @@ def parseJava(filename, offset):
 					methodnames.append(method_name)
 		## descriptor_index
 		classbytes = classfile.read(2)
+		if len(classbytes) != 2:
+			brokenclass = False
+			break
 		descriptor_index = struct.unpack('>H', classbytes)[0]
 		## attributes_count
 		classbytes = classfile.read(2)
+		if len(classbytes) != 2:
+			brokenclass = False
+			break
 		attributes_count = struct.unpack('>H', classbytes)[0]
 		for a in range(0, attributes_count):
 			classbytes = classfile.read(2)
+			if len(classbytes) != 2:
+				brokenclass = False
+				break
 			attribute_name_index = struct.unpack('>H', classbytes)[0]
 			classbytes = classfile.read(4)
+			if len(classbytes) != 4:
+				brokenclass = False
+				break
 			attribute_length = struct.unpack('>I', classbytes)[0]
 			classbytes = classfile.read(attribute_length)
+			if len(classbytes) != attribute_length:
+				brokenclass = False
+				break
 
 	if brokenclass:
 		classfile.close()
@@ -356,6 +377,7 @@ def parseJava(filename, offset):
 	if len(classbytes) != 2:
 		classfile.close()
 		return None
+
 	attributes_count = struct.unpack('>H', classbytes)[0]
 	for a in range(0, attributes_count):
 		classbytes = classfile.read(2)
