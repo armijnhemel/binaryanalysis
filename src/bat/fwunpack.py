@@ -6237,6 +6237,11 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	xmpmagicheaderbytes = ['\x01'] + map(lambda x: chr(x), range(255,-1,-1)) + ['\x00']
 	xmpmagic = "".join(xmpmagicheaderbytes)
 
+	## broken XMP headers exist. In one of them the value 0x3b
+	## is 0x00 instead.
+	brokenxmpmagicheaderbytes = ['\x01'] + map(lambda x: chr(x), range(255,-1,-1)[:196]) + ['\x00'] + map(lambda x: chr(x), range(58,-1,-1)) + ['\x00']
+	brokenxmpmagic = "".join(brokenxmpmagicheaderbytes)
+
 	datafile = open(filename, 'rb')
 	filesize = os.stat(filename).st_size
 	for i in range(0,len(gifoffsets)):
@@ -6330,14 +6335,18 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 							break
 						magicoffset = databytes.find(xmpmagic)
 						while magicoffset == -1:
-							databuf = datafile.read(1000)
 							## files with a broken XMP trailer
 							## exist.
-							if databuf == '':
-								validgif = False
-								break
-							databytes += databuf
-							magicoffset = databytes.find(xmpmagic)
+							magicoffset = databytes.find(brokenxmpmagic)
+							if magicoffset == -1:
+								databuf = datafile.read(1000)
+								if databuf == '':
+									validgif = False
+									print "XMP", filename, datafile.tell(), hex(datafile.tell())
+									sys.stdout.flush()
+									break
+								databytes += databuf
+								magicoffset = databytes.find(xmpmagic)
 						datafile.seek(localoffset)
 						xmpdata = datafile.read(magicoffset)[3:]
 						localoffset += magicoffset + 258
