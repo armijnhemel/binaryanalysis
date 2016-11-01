@@ -613,6 +613,10 @@ def parseELF(filename, offset=0, debug=False):
 	else:
 		elfheadersize = struct.unpack('>H', elfunpackbytes)[0]
 
+	if not (elfheadersize == 52 or elfheadersize == 64):
+		elffile.close()
+		return (False, None)
+
 	## ELF header cannot extend past the end of the file
 	if offset + elfheadersize > filesize:
 		elffile.close()
