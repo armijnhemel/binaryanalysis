@@ -6727,8 +6727,13 @@ def searchUnpackJPEG(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 	## with NUL bytes have been removed. The alternative would be to do
 	## a full decoding of the JPEG data in the SOS section which is not
 	## trivial to implement.
-	## TODO: make configurable. For now set to 100 MiB.
+	## By default set this to 100 MiB.
 	jpegmaxsize = 104857600
+	if 'JPEG_MAXIMUM' in scanenv:
+		try:
+			jpegmaxsize = int(scanenv['JPEG_MAXIMUM'])
+		except:
+			pass
 
 	datafile = open(filename, 'rb')
 	## Start verifying the JFIF image.
