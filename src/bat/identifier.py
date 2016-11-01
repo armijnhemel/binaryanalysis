@@ -806,11 +806,13 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 							extradata = dexfile.read(extradatacount)
 							if opcode == 0x1a:
 								string_id = struct.unpack('<H', extradata)[0]
-								lines.append(string_id_to_value[string_id])
+								stringtoadd = string_id_to_value[string_id].replace('\xc0\x80', '\x00')
+								lines.append(stringtoadd)
 								## TODO: translate from MUTF-8 into something else
 							elif opcode == 0x1b:
 								string_id = struct.unpack('<I', extradata)[0]
-								lines.append(string_id_to_value[string_id])
+								stringtoadd = string_id_to_value[string_id].replace('\xc0\x80', '\x00')
+								lines.append(stringtoadd)
 								## TODO: translate from MUTF-8 into something else
 							elif opcode == 0x26:
 								## some extra work might be needed here, as the
