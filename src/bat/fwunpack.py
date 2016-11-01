@@ -6215,6 +6215,7 @@ def searchUnpackBMP(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 ## TODO: remove call to gifinfo after running more tests
 def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
 	hints = {}
+	newtags = []
 	gifoffsets = []
 	for marker in fsmagic.gif:
 		## first check if the header is not blacklisted
@@ -6224,7 +6225,7 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 				continue
 			gifoffsets.append(m)
 	if gifoffsets == []:
-		return ([], blacklist, [], hints)
+		return ([], blacklist, newtags, hints)
 
 	gifoffsets.sort()
 
@@ -6237,10 +6238,18 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 	xmpmagicheaderbytes = ['\x01'] + map(lambda x: chr(x), range(255,-1,-1)) + ['\x00']
 	xmpmagic = "".join(xmpmagicheaderbytes)
 
-	## broken XMP headers exist. In one of them the value 0x3b
-	## is 0x00 instead.
-	brokenxmpmagicheaderbytes = ['\x01'] + map(lambda x: chr(x), range(255,-1,-1)[:196]) + ['\x00'] + map(lambda x: chr(x), range(58,-1,-1)) + ['\x00']
-	brokenxmpmagic = "".join(brokenxmpmagicheaderbytes)
+	## broken XMP headers exist.
+	brokenxmpheaders = []
+
+	## In one of them the value 0x3b is 0x00 instead.
+	brokenxmpmagicheaderbytes1 = ['\x01'] + map(lambda x: chr(x), range(255,-1,-1)[:196]) + ['\x00'] + map(lambda x: chr(x), range(58,-1,-1)) + ['\x00']
+	brokenxmpmagic1 = "".join(brokenxmpmagicheaderbytes1)
+	brokenxmpheaders.append(brokenxmpmagic1)
+
+	## In another one 0xdc is missing and 0x07 is duplicated
+	brokenxmpmagicheaderbytes2 = ['\x01'] + map(lambda x: chr(x), range(255,-1,-1)[:35]) + map(lambda x: chr(x), range(219,-1,-1))[:-7] + ['\x07', '\x06', '\x05', '\x04', '\x03', '\x02', '\x01', '\x00', '\x00']
+	brokenxmpmagic2 = "".join(brokenxmpmagicheaderbytes2)
+	brokenxmpheaders.append(brokenxmpmagic2)
 
 	datafile = open(filename, 'rb')
 	filesize = os.stat(filename).st_size
@@ -6293,6 +6302,7 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 		## control block
 		endofimage = -1
 		xmpdata = ''
+		brokenxmp = False
 		while True:
 			if databytes == '\x3b':
 				## end of image
@@ -6337,13 +6347,15 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 						while magicoffset == -1:
 							## files with a broken XMP trailer
 							## exist.
-							magicoffset = databytes.find(brokenxmpmagic)
+							for br in brokenxmpheaders:
+								magicoffset = databytes.find(br)
+								if magicoffset != -1:
+									brokenxmp = True
+									break
 							if magicoffset == -1:
 								databuf = datafile.read(1000)
 								if databuf == '':
 									validgif = False
-									print "XMP", filename, datafile.tell(), hex(datafile.tell())
-									sys.stdout.flush()
 									break
 								databytes += databuf
 								magicoffset = databytes.find(xmpmagic)
@@ -6429,31 +6441,31 @@ def searchUnpackGIF(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 			continue
 
 		if offset == 0 and endofimage == filesize:
-			p = subprocess.Popen(['gifinfo', filename], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-			(stanout, stanerr) = p.communicate()
 			## basically this is copy of the original image so why bother?
-			if p.returncode == 0:
-				blacklist.append((0, filesize))
-				datafile.close()
-				return (diroffsets, blacklist, ['graphics', 'gif', 'binary'], hints)
+			blacklist.append((0, filesize))
+			datafile.close()
+			newtags = ['graphics', 'gif', 'binary']
+			if brokenxmp:
+				newtags.append('brokenxmp')
+			return (diroffsets, blacklist, newtags, hints)
 		else:
 			## not the whole file, so carve
 			datafile.seek(offset)
 			data = datafile.read(endofimage - offset)
-			p = subprocess.Popen(['gifinfo'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-			(stanout, stanerr) = p.communicate(data)
-			if p.returncode == 0:
-				tmpdir = dirsetup(tempdir, filename, "gif", counter)
-				tmpfilename = os.path.join(tmpdir, 'unpack-%d.gif' % counter)
-				tmpfile = open(tmpfilename, 'wb')
-				tmpfile.write(data)
-				tmpfile.close()
-				diroffsets.append((tmpdir, offset, endofimage - offset))
-				hints[tmpfilename] = {}
-				hints[tmpfilename]['tags'] = ['graphics', 'gif', 'binary']
-				hints[tmpfilename]['scanned'] = True
-				counter = counter + 1
-				blacklist.append((offset, endofimage))
+			tmpdir = dirsetup(tempdir, filename, "gif", counter)
+			tmpfilename = os.path.join(tmpdir, 'unpack-%d.gif' % counter)
+			tmpfile = open(tmpfilename, 'wb')
+			tmpfile.write(data)
+			tmpfile.close()
+			diroffsets.append((tmpdir, offset, endofimage - offset))
+			hints[tmpfilename] = {}
+			newtags = ['graphics', 'gif', 'binary']
+			if brokenxmp:
+				newtags.append('brokenxmp')
+			hints[tmpfilename]['tags'] = newtags
+			hints[tmpfilename]['scanned'] = True
+			counter = counter + 1
+			blacklist.append((offset, endofimage))
 	datafile.close()
 	return (diroffsets, blacklist, [], hints)
 
