@@ -1,3 +1,11 @@
+bat (31.0) unstable; urgency=high
+
+  * add ELF carver
+  * allow comments in iHex files
+  * remove dependency on gifinfo
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Wed, 2 Nov 2016 08:27:20 +0100
+
 bat (30.0) unstable; urgency=high
 
   * expose more information in ELF module
