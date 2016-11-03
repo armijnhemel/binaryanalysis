@@ -2440,14 +2440,14 @@ def unpackLzop(filename, offset, tempdir=None):
 	## the directory if the file is not empty
 	## Assumes (for now) that lzop is in the path
 	tmpdir = unpacksetup(tempdir)
-	tmpfile = tempfile.mkstemp(dir=tmpdir)
+	tmpfile = tempfile.mkstemp(dir=tmpdir, suffix='.lzo')
 	os.fdopen(tmpfile[0]).close()
 
 	unpackFile(filename, offset, tmpfile[1], tmpdir)
 
 	p = subprocess.Popen(['lzop', "-d", "-P", "-p%s" % (tmpdir,), tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
-	if p.returncode != 0:
+	if p.returncode != 0 and p.returncode != 2:
 		os.unlink(tmpfile[1])
 		if tempdir == None:
 			os.rmdir(tmpdir)
