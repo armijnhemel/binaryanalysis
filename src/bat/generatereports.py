@@ -24,6 +24,7 @@ originally belonged to.
 '''
 
 import os, os.path, sys, copy, cPickle, tempfile, hashlib, shutil, multiprocessing, cgi, gzip
+import codecs
 
 ## compute a SHA256 hash. This is done in chunks to prevent a big file from
 ## being read in its entirety at once, slowing down a machine.
@@ -530,11 +531,11 @@ def generateunmatched((picklefile, pickledir, filehash, reportdir, compressed)):
         unmatched_pickle.close()
 
 	htmlfilename = "%s/%s-unmatched.html" % (reportdir, filehash)
-	unmatchedhtmlfile = open(htmlfilename, 'wb')
-	unmatchedhtmlfile.write("<html><body><h1>Unmatched strings (%d strings)</h1><p>" % (len(unmatches),))
-	unmatchedsnippets = map(lambda x: "%s<br>\n" % cgi.escape(x), unmatches)
-	unmatchedhtmlfile.write("".join(unmatchedsnippets))
-	unmatchedhtmlfile.write("</p></body></html>")
+	unmatchedhtmlfile = codecs.open(htmlfilename, encoding='utf-8', mode='wb')
+	unmatchedhtmlfile.write(u"<html><body><h1>Unmatched strings (%d strings)</h1><p>" % (len(unmatches),))
+	unmatchedsnippets = map(lambda x: u"%s<br>\n" % cgi.escape(x), unmatches)
+	unmatchedhtmlfile.write(u"".join(unmatchedsnippets))
+	unmatchedhtmlfile.write(u"</p></body></html>")
 	unmatchedhtmlfile.close()
 	if compressed:
 		fin = open(htmlfilename, 'rb')
