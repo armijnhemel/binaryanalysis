@@ -1877,7 +1877,7 @@ def lookup_identifier(scanqueue, reportqueue, cursor, conn, scanenv, topleveldir
 
 			for line in lines:
 				#if scandebug:
-				#	print >>sys.stderr, "processing <|%s|>" % line
+				#	print >>sys.stderr, u"processing <|%s|>" % line
 				kernelfunctionmatched = False
 
 				if not usesourceorder:
@@ -1964,7 +1964,23 @@ def lookup_identifier(scanqueue, reportqueue, cursor, conn, scanenv, topleveldir
 							continue
 
 				## then see if there is anything in the cache at all
-				cursor.execute(stringquery, (line,))
+				try:
+					cursor.execute(stringquery, (line,))
+				except:
+					conn.commit()
+					## something weird is going on here, probably
+					## with encodings, so just ignore the line for
+					## now.
+					## One example is com.addi_40_src/src/com/addi/toolbox/crypto/aes.java
+					## from F-Droid. At line 221 there is a string SS.
+					## This string poses a problem.
+					unmatched.append(line)
+					unmatchedlines += 1
+					linecount[line] = linecount[line] - 1
+					lock.acquire()
+					unmatchedignorecache[line] = 1
+					lock.release()
+					continue
 				res = cursor.fetchall()
 				conn.commit()
 

@@ -559,7 +559,6 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 		sourcefiles = set()
 		methods = set()
 		fields = set()
-		'''
 		if javatype == 'dex':
 			brokendex = False
 			## Further parse the Dex file
@@ -640,9 +639,10 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 							## is also part of the length
 							if (ord(c) & 0x80) == 0:
 								break
-						string_id_to_value[dr] = dexdata[lencount:]
+						stringtoadd = dexdata[lencount:].replace('\xc0\x80', '\x00')
+						string_id_to_value[dr] = stringtoadd.decode('utf-8')
 					else:
-						string_id_to_value[dr] = ''
+						string_id_to_value[dr] = u''
 
 					## jump back to the old offset to read
 					## the next item
@@ -755,13 +755,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 					else:
 						## broken
 						pass
-		javameta['classes'] = list(classnames)
-		javameta['sourcefiles'] = list(sourcefiles)
-		javameta['methods'] = list(methods)
-		javameta['fields'] = list(fields)
-		javameta['strings'] = lines
 
-	return javameta
 			## The code items are stored in the map_contents, as TYPE_CODE_ITEM
 			## which is 0x2001.
 			if 0x2001 in map_contents:
@@ -805,15 +799,15 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 						if extradatacount != 0:
 							extradata = dexfile.read(extradatacount)
 							if opcode == 0x1a:
+								## TODO: translate from MUTF-8 into something else
 								string_id = struct.unpack('<H', extradata)[0]
-								stringtoadd = string_id_to_value[string_id].replace('\xc0\x80', '\x00')
+								stringtoadd = string_id_to_value[string_id]
 								lines.append(stringtoadd)
-								## TODO: translate from MUTF-8 into something else
 							elif opcode == 0x1b:
-								string_id = struct.unpack('<I', extradata)[0]
-								stringtoadd = string_id_to_value[string_id].replace('\xc0\x80', '\x00')
-								lines.append(stringtoadd)
 								## TODO: translate from MUTF-8 into something else
+								string_id = struct.unpack('<I', extradata)[0]
+								stringtoadd = string_id_to_value[string_id]
+								lines.append(stringtoadd)
 							elif opcode == 0x26:
 								## some extra work might be needed here, as the
 								## data might be in "packed-switch-payload"
@@ -926,85 +920,84 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 								
 			dexfile.close()
 
-		'''
-		## Using dedexer http://dedexer.sourceforge.net/ extract information from Dalvik
-		## files, then process each file in $tmpdir and search file for lines containing
-		## "const-string" and other things as well.
-		## TODO: Research http://code.google.com/p/smali/ as a replacement for dedexer
-		skipfields = ['public', 'private', 'protected', 'static', 'final', 'volatile', 'transient']
-		javameta = {'classes': [], 'methods': [], 'fields': [], 'sourcefiles': [], 'javatype': javatype}
-		dex_tmpdir = None
-		if 'UNPACK_TEMPDIR' in scanenv:
-			dex_tmpdir = scanenv['UNPACK_TEMPDIR']
-		if dex_tmpdir != None:
-			dalvikdir = tempfile.mkdtemp(dir=dex_tmpdir)
-		else:
-			dalvikdir = tempfile.mkdtemp(dir=unpacktempdir)
-		p = subprocess.Popen(['java', '-jar', '/usr/share/java/bat-ddx.jar', '-d', dalvikdir, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-		(stanout, stanerr) = p.communicate()
-		if p.returncode == 0:
-			osgen = os.walk(dalvikdir)
-			try:
-				while True:
-					ddxfiles = osgen.next()
-					for ddx in ddxfiles[2]:
-						ddxlines = open("%s/%s" % (ddxfiles[0], ddx)).readlines()
-						for d in ddxlines:
-							## search for string constants
-							if "const-string" in d:
-								reres = reconststring.match(d)
-								if reres != None:
-									printstring = d.strip().split(',', 1)[1][1:-1]
-        								if len(printstring) >= stringcutoff:
-										lines.append(printstring)
-							## extract method names
-							elif d.startswith(".method"):
-								method = (d.split('(')[0]).split(" ")[-1]
-								if method == '<init>' or method == '<clinit>':
-									pass
-								elif method.startswith('access$'):
-									pass
-								else:
-									methods.add(method)
-							## extract class files, including inner classes
-							elif d.startswith(".class") or d.startswith(".inner"):
-								classname = d.strip().split('/')[-1]
-								if "$" in classname:
-									classname = classname.split("$")[0]
-								classnames.add(classname)
-							## extract source code files
-							elif d.startswith(".source"):
-								sourcefile = d.strip().split(' ')[-1]
-								sourcefiles.add(sourcefile)
-							## extract fields
-							elif d.startswith(".field"):
-								field = d.strip().split(';')[0]
-								fieldstmp = field.split()
-								ctr = 1
-								for f in fieldstmp[1:]:
-									## these are keywords
-									if f in skipfields:
-										ctr = ctr + 1
-										continue
-									if '$' in f:
+		elif javatype == 'odex':
+			## Using dedexer http://dedexer.sourceforge.net/ extract information from Dalvik
+			## files, then process each file in $tmpdir and search file for lines containing
+			## "const-string" and other things as well.
+			## TODO: Research http://code.google.com/p/smali/ as a replacement for dedexer
+			skipfields = ['public', 'private', 'protected', 'static', 'final', 'volatile', 'transient']
+			javameta = {'classes': [], 'methods': [], 'fields': [], 'sourcefiles': [], 'javatype': javatype}
+			dex_tmpdir = None
+			if 'UNPACK_TEMPDIR' in scanenv:
+				dex_tmpdir = scanenv['UNPACK_TEMPDIR']
+			if dex_tmpdir != None:
+				dalvikdir = tempfile.mkdtemp(dir=dex_tmpdir)
+			else:
+				dalvikdir = tempfile.mkdtemp(dir=unpacktempdir)
+			p = subprocess.Popen(['java', '-jar', '/usr/share/java/bat-ddx.jar', '-d', dalvikdir, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+			(stanout, stanerr) = p.communicate()
+			if p.returncode == 0:
+				osgen = os.walk(dalvikdir)
+				try:
+					while True:
+						ddxfiles = osgen.next()
+						for ddx in ddxfiles[2]:
+							ddxlines = open("%s/%s" % (ddxfiles[0], ddx)).readlines()
+							for d in ddxlines:
+								## search for string constants
+								if "const-string" in d:
+									reres = reconststring.match(d)
+									if reres != None:
+										printstring = d.strip().split(',', 1)[1][1:-1]
+										if len(printstring) >= stringcutoff:
+											lines.append(printstring)
+								## extract method names
+								elif d.startswith(".method"):
+									method = (d.split('(')[0]).split(" ")[-1]
+									if method == '<init>' or method == '<clinit>':
+										pass
+									elif method.startswith('access$'):
+										pass
+									else:
+										methods.add(method)
+								## extract class files, including inner classes
+								elif d.startswith(".class") or d.startswith(".inner"):
+									classname = d.strip().split('/')[-1]
+									if "$" in classname:
+										classname = classname.split("$")[0]
+									classnames.add(classname)
+								## extract source code files
+								elif d.startswith(".source"):
+									sourcefile = d.strip().split(' ')[-1]
+									sourcefiles.add(sourcefile)
+								## extract fields
+								elif d.startswith(".field"):
+									field = d.strip().split(';')[0]
+									fieldstmp = field.split()
+									ctr = 1
+									for f in fieldstmp[1:]:
+										## these are keywords
+										if f in skipfields:
+											ctr = ctr + 1
+											continue
+										if '$' in f:
+											break
+										## often generated, so useless
+										if "serialVersionUID" in f:
+											break
+										fields.add(f)
 										break
-									## often generated, so useless
-									if "serialVersionUID" in f:
-										break
-									fields.add(f)
-									break
-			except StopIteration:
-				pass
+				except StopIteration:
+					pass
+			## cleanup
+			shutil.rmtree(dalvikdir)
 		javameta['classes'] = list(classnames)
 		javameta['sourcefiles'] = list(sourcefiles)
 		javameta['methods'] = list(methods)
 		javameta['fields'] = list(fields)
 		javameta['strings'] = lines
 
-		## cleanup
-		shutil.rmtree(dalvikdir)
 	return javameta
-	#'''
 
 ## Linux kernels that are stored as statically linked ELF files and Linux kernel
 ## modules often have a section __ksymtab_strings. This section contains variables
