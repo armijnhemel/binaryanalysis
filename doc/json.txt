@@ -77,8 +77,11 @@ Result file, description:
   'licenses': <list of names of license (families)>
   'ranking': {
      'language': <language that BAT thinks source files were in>,
+     'totalextracted': <number indicating total number of identifiers (functions, variables, string literals, extracted>,
      'stringresults': {
           'unmatched': <list of unmatched strings>,
+          'totalstrings': <number with lines that were extracted>,
+          'totalunique': <number indicating amount of unique matches>,
           'matchednonassignedlines': <number with lines that were assigned, but for which the score is too low>,
           'matchednotclonelines': <number indicating number of matches that were matched, but which are not cloned between packages>,
           'nonUniqueMatches': [
@@ -172,8 +175,11 @@ Result file, data type:
   'licenses': [string],
   'ranking': {
      'language': string,
+     'totalextracted': number,
      'stringresults': {
           'unmatched': [string],
+          'totalstrings': number,
+          'totalunique': number,
           'matchednonassignedlines': number,
           'matchednotclonelines': number,
           'nonUniqueMatches': [
