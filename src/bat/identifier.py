@@ -20,6 +20,12 @@ reconststring = re.compile("\s+const-string\s+v\d+")
 
 splitcharacters = map(lambda x: chr(x), range(0,9) + range(14,32) + [127])
 
+## Dalvik opcodes, with the number of arguments.
+## These can largely be found at https://source.android.com/devices/tech/dalvik/dalvik-bytecode.html
+## but it should be noted that ODEX opcodes are not documented there.
+## Information about ODEX opcodes was lifted from:
+## http://pallergabor.uw.hu/androidblog/dalvik_opcodes.html
+## and the Dedexer source code, specifically DexInstructionParser.java
 dalvik_opcodes_no_argument = [ 0x00, 0x01, 0x04, 0x07, 0x0a, 0x0b, 0x0c
                              , 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x1d
                              , 0x1e, 0x21, 0x27, 0x28, 0x3e, 0x3f, 0x40
@@ -555,467 +561,395 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 		sourcefiles = set()
 		methods = set()
 		fields = set()
+		## Further parse the Dex file
+		## https://source.android.com/devices/tech/dalvik/dex-format.html
+
+		## assume little endian for now
+		dexfile = open(scanfile, 'rb')
+		odexoffset = 0
 		if javatype == 'dex':
-			## Further parse the Dex file
-			## https://source.android.com/devices/tech/dalvik/dex-format.html
+			dexoffset = 52
+		elif javatype == 'odex':
+			## For odex the dex header is after the
+			## odex header.
+			dexfile.seek(8)
+			androidbytes = dexfile.read(4)
+			odexoffset = struct.unpack('<I', androidbytes)[0]
 
-			## assume little endian for now
-			dexfile = open(scanfile, 'rb')
-			odexoffset = 0
-			if javatype == 'dex':
-				dexoffset = 52
-			elif javatype == 'odex':
-				## For odex the dex header is after the
-				## odex header.
-				dexfile.seek(8)
-				androidbytes = dexfile.read(4)
-				odexoffset = struct.unpack('<I', androidbytes)[0]
+		## skip most of the header, as it has already been parsed
+		## by the prerun scan
+		dexfile.seek(52 + odexoffset)
 
-			## skip most of the header, as it has already been parsed
-			## by the prerun scan
-			dexfile.seek(52 + odexoffset)
+		map_off = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+		if map_off > filesize:
+			dexfile.close()
+			return
 
-			map_off = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
-			if map_off > filesize:
-				dexfile.close()
-				return
+		## get the length of the string identifiers section and the offset
+		string_ids_size = struct.unpack('<I', dexfile.read(4))[0]
+		string_ids_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+		if string_ids_offset> filesize:
+			dexfile.close()
+			return
 
-			## get the length of the string identifiers and the offset
-			string_ids_size = struct.unpack('<I', dexfile.read(4))[0]
-			string_ids_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
-			if string_ids_offset> filesize:
-				dexfile.close()
-				return
+		## get the length of the type identifiers and the offset
+		type_ids_size = struct.unpack('<I', dexfile.read(4))[0]
+		type_ids_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+		if type_ids_offset > filesize:
+			dexfile.close()
+			return
 
-			## get the length of the type identifiers and the offset
-			type_ids_size = struct.unpack('<I', dexfile.read(4))[0]
-			type_ids_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
-			if type_ids_offset > filesize:
-				dexfile.close()
-				return
+		## get the length of the prototype identifiers and the offset
+		proto_ids_size = struct.unpack('<I', dexfile.read(4))[0]
+		proto_ids_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+		if proto_ids_offset > filesize:
+			dexfile.close()
+			return
 
-			## get the length of the prototype identifiers and the offset
-			proto_ids_size = struct.unpack('<I', dexfile.read(4))[0]
-			proto_ids_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
-			if proto_ids_offset > filesize:
-				dexfile.close()
-				return
+		## get the length of the field identifiers and the offset
+		field_ids_size = struct.unpack('<I', dexfile.read(4))[0]
+		field_ids_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+		if field_ids_offset > filesize:
+			dexfile.close()
+			return
 
-			## get the length of the field identifiers and the offset
-			field_ids_size = struct.unpack('<I', dexfile.read(4))[0]
-			field_ids_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
-			if field_ids_offset > filesize:
-				dexfile.close()
-				return
+		## get the length of the class definitions and the offset
+		methods_defs_size = struct.unpack('<I', dexfile.read(4))[0]
+		methods_defs_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+		if methods_defs_offset > filesize:
+			dexfile.close()
+			return
 
-			## get the length of the class definitions and the offset
-			methods_defs_size = struct.unpack('<I', dexfile.read(4))[0]
-			methods_defs_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
-			if methods_defs_offset > filesize:
-				dexfile.close()
-				return
+		## get the length of the class definitions and the offset
+		class_defs_size = struct.unpack('<I', dexfile.read(4))[0]
+		class_defs_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+		if class_defs_offset > filesize:
+			dexfile.close()
+			return
 
-			## get the length of the class definitions and the offset
-			class_defs_size = struct.unpack('<I', dexfile.read(4))[0]
-			class_defs_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
-			if class_defs_offset > filesize:
-				dexfile.close()
-				return
+		## get the length of the data section and the offset
+		data_size = struct.unpack('<I', dexfile.read(4))[0]
+		data_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+		if data_offset > filesize:
+			dexfile.close()
+			return
 
-			## get the length of the data section and the offset
-			data_size = struct.unpack('<I', dexfile.read(4))[0]
-			data_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
-			if data_offset > filesize:
-				dexfile.close()
-				return
+		## mapping of string id to the actual string value
+		## this is a combination of string literals, method names
+		## class names, signatures, and so on.
+		string_id_to_value = {}
+		if string_ids_offset != 0:
+			dexfile.seek(string_ids_offset)
+			for dr in range(0, string_ids_size):
+				## find the offset of the string identifier in the file
+				string_id_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
 
-			## mapping of string id to the actual string value
-			## this is a combination of string literals, method names
-			## class names, signatures, and so on.
-			string_id_to_value = {}
-			if string_ids_offset != 0:
-				dexfile.seek(string_ids_offset)
-				for dr in range(0, string_ids_size):
-					## find the offset of the string identifier in the file
-					string_id_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+				## store the old offset so it can be
+				## returned to later
+				oldoffset = dexfile.tell()
 
-					## store the old offset so it can be
-					## returned to later
-					oldoffset = dexfile.tell()
-
-					## jump to the place of the string identifier
-					## and read its contents until a NULL byte is encountered
-					dexfile.seek(string_id_offset)
-					dexdata = ''
+				## jump to the place of the string identifier
+				## and read its contents until a NULL byte is encountered
+				dexfile.seek(string_id_offset)
+				dexdata = ''
+				dexread = dexfile.read(1)
+				while dexread != '\x00':
+					dexdata += dexread
 					dexread = dexfile.read(1)
-					while dexread != '\x00':
-						dexdata += dexread
-						dexread = dexfile.read(1)
 
-					if len(dexdata) != 0:
-						## The string data (string_data_item in Dalvik
-						## specificiations) consists of the length of the
-						## (as ULEB-128), followed by the the actual data
-						## so all that is needed here is to make sure to
-						## skip all the bytes that make up the ULEB-128
-						## part.
-						lencount = 0
-						startbyteseen = False
-						for c in dexdata:
-							lencount += 1
-							## most significant bit means that the next byte
-							## is also part of the length
-							if (ord(c) & 0x80) == 0:
-								break
-						stringtoadd = dexdata[lencount:].replace('\xc0\x80', '\x00')
-						string_id_to_value[dr] = stringtoadd.decode('utf-8')
-					else:
-						string_id_to_value[dr] = u''
+				if len(dexdata) != 0:
+					## The string data (string_data_item in Dalvik
+					## specificiations) consists of the length of the
+					## (as ULEB-128), followed by the the actual data
+					## so all that is needed here is to make sure to
+					## skip all the bytes that make up the ULEB-128
+					## part.
+					lencount = 0
+					startbyteseen = False
+					for c in dexdata:
+						lencount += 1
+						## most significant bit means that the next byte
+						## is also part of the length
+						if (ord(c) & 0x80) == 0:
+							break
+					stringtoadd = dexdata[lencount:].replace('\xc0\x80', '\x00')
+					string_id_to_value[dr] = stringtoadd.decode('utf-8')
+				else:
+					string_id_to_value[dr] = u''
 
-					## jump back to the old offset to read
-					## the next item
-					dexfile.seek(oldoffset)
+				## jump back to the old offset to read
+				## the next item
+				dexfile.seek(oldoffset)
 
-			## TODO: sanity checks for the map and the values in the header
-			map_contents = {}
+		## TODO: sanity checks for the map and the values in the header
+		map_contents = {}
 
-			## jump to the map and parse it
-			if map_off != 0:
-				dexfile.seek(map_off)
-				map_size = struct.unpack('<I', dexfile.read(4))[0]
-				## walk all the map items
-				for m in range(0,map_size):
-					map_item_type = struct.unpack('<H', dexfile.read(2))[0]
-					## discard the next two bytes
-					dexfile.read(2)
-					## then read the size of the map item and the offset
-					map_item_size = struct.unpack('<I', dexfile.read(4))[0]
-					map_item_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
-					map_contents[map_item_type] = {'offset': map_item_offset, 'size': map_item_size}
+		## jump to the map and parse it
+		if map_off != 0:
+			dexfile.seek(map_off)
+			map_size = struct.unpack('<I', dexfile.read(4))[0]
+			## walk all the map items
+			for m in range(0,map_size):
+				map_item_type = struct.unpack('<H', dexfile.read(2))[0]
+				## discard the next two bytes
+				dexfile.read(2)
+				## then read the size of the map item and the offset
+				map_item_size = struct.unpack('<I', dexfile.read(4))[0]
+				map_item_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+				map_contents[map_item_type] = {'offset': map_item_offset, 'size': map_item_size}
 
-			## some of the interesting bits are located in the
-			## code section. In particular, the instructions for
-			## const-string and const-string/jumbo are interesting
-			## https://source.android.com/devices/tech/dalvik/dalvik-bytecode.html
-			## TYPE_TYPE_ID_ITEM == 0x0002
-			type_ids = {}
-			if 0x0002 in map_contents:
-				map_offset = map_contents[0x0002]['offset']
-				map_item_size = map_contents[0x0002]['size']
-				dexfile.seek(map_offset)
-				for m in range(0,map_item_size):
-					pos = dexfile.tell()
-					## items are 4 byte aligned
-					if pos%4 != 0:
-						dexfile.read(4 - pos%4)
-					descriptor_idx = struct.unpack('<I', dexfile.read(4))[0]
-					type_ids[m] = descriptor_idx
-			## TYPE_FIELD_ID_ITEM == 0x0004
-			## TYPE_METHOD_ID_ITEM == 0x0005
-			if 0x0004 in map_contents:
-				map_offset = map_contents[0x0004]['offset']
-				map_item_size = map_contents[0x0004]['size']
-				dexfile.seek(map_offset)
-				for m in range(0,map_item_size):
-					pos = dexfile.tell()
-					## items are 4 byte aligned
-					if pos%4 != 0:
-						dexfile.read(4 - pos%4)
-					class_idx = struct.unpack('<H', dexfile.read(2))[0]
-					proto_idx = struct.unpack('<H', dexfile.read(2))[0]
-					name_idx = struct.unpack('<I', dexfile.read(4))[0]
-					## TODO: sanity checks
-					field = string_id_to_value[name_idx]
-					if field == 'serialVersionUID':
+		## some of the interesting bits are located in the
+		## code section. In particular, the instructions for
+		## const-string and const-string/jumbo are interesting
+		## https://source.android.com/devices/tech/dalvik/dalvik-bytecode.html
+		## TYPE_TYPE_ID_ITEM == 0x0002
+		type_ids = {}
+		if 0x0002 in map_contents:
+			map_offset = map_contents[0x0002]['offset']
+			map_item_size = map_contents[0x0002]['size']
+			dexfile.seek(map_offset)
+			for m in range(0,map_item_size):
+				pos = dexfile.tell()
+				## items are 4 byte aligned
+				if pos%4 != 0:
+					dexfile.read(4 - pos%4)
+				descriptor_idx = struct.unpack('<I', dexfile.read(4))[0]
+				type_ids[m] = descriptor_idx
+		## TYPE_FIELD_ID_ITEM == 0x0004
+		## TYPE_METHOD_ID_ITEM == 0x0005
+		if 0x0004 in map_contents:
+			map_offset = map_contents[0x0004]['offset']
+			map_item_size = map_contents[0x0004]['size']
+			dexfile.seek(map_offset)
+			for m in range(0,map_item_size):
+				pos = dexfile.tell()
+				## items are 4 byte aligned
+				if pos%4 != 0:
+					dexfile.read(4 - pos%4)
+				class_idx = struct.unpack('<H', dexfile.read(2))[0]
+				proto_idx = struct.unpack('<H', dexfile.read(2))[0]
+				name_idx = struct.unpack('<I', dexfile.read(4))[0]
+				## TODO: sanity checks
+				field = string_id_to_value[name_idx]
+				if field == 'serialVersionUID':
+					continue
+				if '$' in field:
+					continue
+				fields.add(field)
+		## TYPE_METHOD_ID_ITEM == 0x0005
+		if 0x0005 in map_contents:
+			map_offset = map_contents[0x0005]['offset']
+			map_item_size = map_contents[0x0005]['size']
+			dexfile.seek(map_offset)
+			for m in range(0,map_item_size):
+				pos = dexfile.tell()
+				## items are 4 byte aligned
+				if pos%4 != 0:
+					dexfile.read(4 - pos%4)
+				class_idx = struct.unpack('<H', dexfile.read(2))[0]
+				proto_idx = struct.unpack('<H', dexfile.read(2))[0]
+				name_idx = struct.unpack('<I', dexfile.read(4))[0]
+				## TODO: sanity checks
+				method = string_id_to_value[name_idx]
+				if method == '<init>' or method == '<clinit>':
+					pass
+				elif method.startswith('access$'):
+					pass
+				else:
+					methods.add(method)
+		## TYPE_CLASS_DEF_ITEM == 0x0006
+		if 0x0006 in map_contents:
+			map_offset = map_contents[0x0006]['offset']
+			map_item_size = map_contents[0x0006]['size']
+			dexfile.seek(map_offset)
+			for m in range(0,map_item_size):
+				pos = dexfile.tell()
+				## items are 4 byte aligned
+				if pos%4 != 0:
+					dexfile.read(4 - pos%4)
+				class_idx = struct.unpack('<I', dexfile.read(4))[0]
+
+				## TODO: sanity checks
+				classname = string_id_to_value[type_ids[class_idx]]
+				if classname.startswith('L') and classname.endswith(';'):
+					classname = classname[1:-1]
+					if "$" in classname:
+						classname = classname.split("$")[0]
+					classnames.add(classname)
+				access_flags = struct.unpack('<I', dexfile.read(4))[0]
+				superclass_idx = struct.unpack('<I', dexfile.read(4))[0]
+				interfaces_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+				sourcefile_index = struct.unpack('<I', dexfile.read(4))[0]
+				annotations_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+				classdata_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+				static_values_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+				if sourcefile_index in string_id_to_value:
+					sourcefiles.add(string_id_to_value[sourcefile_index])
+				else:
+					## broken
+					pass
+
+		## The code items are stored in the map_contents, as TYPE_CODE_ITEM
+		## which is 0x2001.
+		if 0x2001 in map_contents:
+			map_offset = map_contents[0x2001]['offset']
+			map_item_size = map_contents[0x2001]['size']
+			dexfile.seek(map_offset)
+
+			## for each piece of byte code look at the instructions and
+			## try to filter out the interesting ones
+			for m in range(0,map_item_size):
+				pos = dexfile.tell()
+				## code items are 4 byte aligned
+				if pos%4 != 0:
+					dexfile.read(4 - pos%4)
+				registers_size = struct.unpack('<H', dexfile.read(2))[0]
+				ins_size = struct.unpack('<H', dexfile.read(2))[0]
+				outs_size = struct.unpack('<H', dexfile.read(2))[0]
+				tries_size = struct.unpack('<H', dexfile.read(2))[0]
+				debug_info_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+				insns_size = struct.unpack('<I', dexfile.read(4))[0]
+
+				## keep track of how many 16 bit code units were read
+				bytecodecounter = 0
+				skipbytes = {}
+				while bytecodecounter < insns_size:
+					opcode_location = dexfile.tell()
+					## find out the opcode.
+					opcode = struct.unpack('<H', dexfile.read(2))[0] & 0xff
+					## opcode (and possible register instructions) is
+					## one 16 bite code unit
+					if opcode_location in skipbytes:
+						dexfile.seek(opcode_location+skipbytes[opcode_location])
+						bytecodecounter += skipbytes[opcode_location]/2
 						continue
-					if '$' in field:
-						continue
-					fields.add(field)
-			## TYPE_METHOD_ID_ITEM == 0x0005
-			if 0x0005 in map_contents:
-				map_offset = map_contents[0x0005]['offset']
-				map_item_size = map_contents[0x0005]['size']
-				dexfile.seek(map_offset)
-				for m in range(0,map_item_size):
-					pos = dexfile.tell()
-					## items are 4 byte aligned
-					if pos%4 != 0:
-						dexfile.read(4 - pos%4)
-					class_idx = struct.unpack('<H', dexfile.read(2))[0]
-					proto_idx = struct.unpack('<H', dexfile.read(2))[0]
-					name_idx = struct.unpack('<I', dexfile.read(4))[0]
-					## TODO: sanity checks
-					method = string_id_to_value[name_idx]
-					if method == '<init>' or method == '<clinit>':
-						pass
-					elif method.startswith('access$'):
-						pass
-					else:
-						methods.add(method)
-			## TYPE_CLASS_DEF_ITEM == 0x0006
-			if 0x0006 in map_contents:
-				map_offset = map_contents[0x0006]['offset']
-				map_item_size = map_contents[0x0006]['size']
-				dexfile.seek(map_offset)
-				for m in range(0,map_item_size):
-					pos = dexfile.tell()
-					## items are 4 byte aligned
-					if pos%4 != 0:
-						dexfile.read(4 - pos%4)
-					class_idx = struct.unpack('<I', dexfile.read(4))[0]
 
-					## TODO: sanity checks
-					classname = string_id_to_value[type_ids[class_idx]]
-					if classname.startswith('L') and classname.endswith(';'):
-						classname = classname[1:-1]
-						if "$" in classname:
-							classname = classname.split("$")[0]
-						classnames.add(classname)
-					access_flags = struct.unpack('<I', dexfile.read(4))[0]
-					superclass_idx = struct.unpack('<I', dexfile.read(4))[0]
-					interfaces_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
-					sourcefile_index = struct.unpack('<I', dexfile.read(4))[0]
-					annotations_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
-					classdata_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
-					static_values_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
-					if sourcefile_index in string_id_to_value:
-						sourcefiles.add(string_id_to_value[sourcefile_index])
-					else:
-						## broken
-						pass
+					bytecodecounter += 1
 
-			## The code items are stored in the map_contents, as TYPE_CODE_ITEM
-			## which is 0x2001.
-			if 0x2001 in map_contents:
-				map_offset = map_contents[0x2001]['offset']
-				map_item_size = map_contents[0x2001]['size']
-				dexfile.seek(map_offset)
+					## find out how many extra code units need to be read
+					bytecodecounter += dex_opcodes_extra_data[opcode]
+					extradatacount = dex_opcodes_extra_data[opcode] * 2
+					if extradatacount != 0:
+						extradata = dexfile.read(extradatacount)
+						if opcode == 0x1a:
+							string_id = struct.unpack('<H', extradata)[0]
+							stringtoadd = string_id_to_value[string_id]
+							lines.append(stringtoadd)
+						elif opcode == 0x1b:
+							string_id = struct.unpack('<I', extradata)[0]
+							stringtoadd = string_id_to_value[string_id]
+							lines.append(stringtoadd)
+						elif opcode == 0x26:
+							## some extra work might be needed here, as the
+							## data might be in "packed-switch-payload"
+							branch_offset = struct.unpack('<I', extradata)[0]
+							if opcode_location + branch_offset*2 > filesize:
+								pass
+							curoffset = dexfile.tell()
+							dexfile.seek(opcode_location + branch_offset*2)
+							dexbytes = dexfile.read(2)
+							if dexbytes == '\x00\x03':
+								element_width = struct.unpack('<H', dexfile.read(2))[0]
+								number_of_elements = struct.unpack('<I', dexfile.read(4))[0]
+								skipbytes[opcode_location + branch_offset*2] = 2*((number_of_elements * element_width + 1) / 2 + 4)
+							dexfile.seek(curoffset)
+						elif opcode == 0x2b:
+							## some extra work might be needed here, as the
+							## data might be in "packed-switch-payload"
+							branch_offset = struct.unpack('<I', extradata)[0]
+							if opcode_location + branch_offset*2 > filesize:
+								pass
+							curoffset = dexfile.tell()
+							dexfile.seek(opcode_location + branch_offset*2)
+							dexbytes = dexfile.read(2)
+							if dexbytes == '\x00\x01':
+								packedsize = struct.unpack('<H', dexfile.read(2))[0]
+								skipbytes[opcode_location + branch_offset*2] = 2*(packedsize * 2+4)
+							dexfile.seek(curoffset)
+						elif opcode == 0x2c:
+							## some extra work might be needed here, as the
+							## data might be in "sparse-switch-payload"
+							branch_offset = struct.unpack('<I', extradata)[0]
+							if opcode_location + branch_offset*2 > filesize:
+								pass
+							curoffset = dexfile.tell()
+							dexfile.seek(opcode_location + branch_offset*2)
+							dexbytes = dexfile.read(2)
+							if dexbytes == '\x00\x02':
+								packedsize = struct.unpack('<H', dexfile.read(2))[0]
+								skipbytes[opcode_location + branch_offset*2] = 2*(packedsize * 4+2)
+							dexfile.seek(curoffset)
 
-				## for each piece of byte code look at the instructions and
-				## try to filter out the interesting ones
-				for m in range(0,map_item_size):
-					pos = dexfile.tell()
-					## code items are 4 byte aligned
-					if pos%4 != 0:
-						dexfile.read(4 - pos%4)
-					registers_size = struct.unpack('<H', dexfile.read(2))[0]
-					ins_size = struct.unpack('<H', dexfile.read(2))[0]
-					outs_size = struct.unpack('<H', dexfile.read(2))[0]
-					tries_size = struct.unpack('<H', dexfile.read(2))[0]
-					debug_info_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
-					insns_size = struct.unpack('<I', dexfile.read(4))[0]
-
-					## keep track of how many 16 bit code units were read
-					bytecodecounter = 0
-					skipbytes = {}
-					while bytecodecounter < insns_size:
-						opcode_location = dexfile.tell()
-						## find out the opcode.
-						opcode = struct.unpack('<H', dexfile.read(2))[0] & 0xff
-						## opcode (and possible register instructions) is
-						## one 16 bite code unit
-						if opcode_location in skipbytes:
-							dexfile.seek(opcode_location+skipbytes[opcode_location])
-							bytecodecounter += skipbytes[opcode_location]/2
-							continue
-
-						bytecodecounter += 1
-
-						## find out how many extra code units need to be read
-						bytecodecounter += dex_opcodes_extra_data[opcode]
-						extradatacount = dex_opcodes_extra_data[opcode] * 2
-						if extradatacount != 0:
-							extradata = dexfile.read(extradatacount)
-							if opcode == 0x1a:
-								string_id = struct.unpack('<H', extradata)[0]
-								stringtoadd = string_id_to_value[string_id]
-								lines.append(stringtoadd)
-							elif opcode == 0x1b:
-								string_id = struct.unpack('<I', extradata)[0]
-								stringtoadd = string_id_to_value[string_id]
-								lines.append(stringtoadd)
-							elif opcode == 0x26:
-								## some extra work might be needed here, as the
-								## data might be in "packed-switch-payload"
-								branch_offset = struct.unpack('<I', extradata)[0]
-								if opcode_location + branch_offset*2 > filesize:
-									pass
-								curoffset = dexfile.tell()
-								dexfile.seek(opcode_location + branch_offset*2)
-								dexbytes = dexfile.read(2)
-								if dexbytes == '\x00\x03':
-									element_width = struct.unpack('<H', dexfile.read(2))[0]
-									number_of_elements = struct.unpack('<I', dexfile.read(4))[0]
-									skipbytes[opcode_location + branch_offset*2] = 2*((number_of_elements * element_width + 1) / 2 + 4)
-								dexfile.seek(curoffset)
-							elif opcode == 0x2b:
-								## some extra work might be needed here, as the
-								## data might be in "packed-switch-payload"
-								branch_offset = struct.unpack('<I', extradata)[0]
-								if opcode_location + branch_offset*2 > filesize:
-									pass
-								curoffset = dexfile.tell()
-								dexfile.seek(opcode_location + branch_offset*2)
-								dexbytes = dexfile.read(2)
-								if dexbytes == '\x00\x01':
-									packedsize = struct.unpack('<H', dexfile.read(2))[0]
-									skipbytes[opcode_location + branch_offset*2] = 2*(packedsize * 2+4)
-								dexfile.seek(curoffset)
-							elif opcode == 0x2c:
-								## some extra work might be needed here, as the
-								## data might be in "sparse-switch-payload"
-								branch_offset = struct.unpack('<I', extradata)[0]
-								if opcode_location + branch_offset*2 > filesize:
-									pass
-								curoffset = dexfile.tell()
-								dexfile.seek(opcode_location + branch_offset*2)
-								dexbytes = dexfile.read(2)
-								if dexbytes == '\x00\x02':
-									packedsize = struct.unpack('<H', dexfile.read(2))[0]
-									skipbytes[opcode_location + branch_offset*2] = 2*(packedsize * 4+2)
-								dexfile.seek(curoffset)
-
-					if tries_size != 0:
-						## first the list of try_items
-						if insns_size%2 != 0:
-							padding = struct.unpack('<H', dexfile.read(2))[0]
-						for t in range(0,tries_size):
-							start_addr = struct.unpack('<I', dexfile.read(4))[0]
-							insn_count = struct.unpack('<H', dexfile.read(2))[0]
-							handler_offset = struct.unpack('<H', dexfile.read(2))[0] + odexoffset
-						## then the encoded_catch_handler_list
-						lenstr = ""
+				if tries_size != 0:
+					## first the list of try_items
+					if insns_size%2 != 0:
+						padding = struct.unpack('<H', dexfile.read(2))[0]
+					for t in range(0,tries_size):
+						start_addr = struct.unpack('<I', dexfile.read(4))[0]
+						insn_count = struct.unpack('<H', dexfile.read(2))[0]
+						handler_offset = struct.unpack('<H', dexfile.read(2))[0] + odexoffset
+					## then the encoded_catch_handler_list
+					lenstr = ""
+					while True:
+						uleb128byte = dexfile.read(1)
+						lenstr = "{:0>8b}".format(ord(uleb128byte))[1:] + lenstr
+						## most significant bit means that the next byte
+						## is also part of the length. Prepend to the string.
+						if (ord(uleb128byte) & 0x80) == 0:
+							break
+					for ca in xrange(0, int(lenstr, 2)):
+						## The number of catches is encoded in SLEB-128 notation
+						## instead of ULEB-128. Depending on the sign there might
+						## or might not be a default catch defined.
+						catchlenstr = ''
+						bytecount = 0
+						bytestr = ''
 						while True:
-							uleb128byte = dexfile.read(1)
-							lenstr = "{:0>8b}".format(ord(uleb128byte))[1:] + lenstr
+							sleb128byte = dexfile.read(1)
+							bytecount += 1
+							catchlenstr = "{:0>8b}".format(ord(sleb128byte))[1:] + catchlenstr
+							bytestr += sleb128byte
 							## most significant bit means that the next byte
 							## is also part of the length. Prepend to the string.
-							if (ord(uleb128byte) & 0x80) == 0:
+							if (ord(sleb128byte) & 0x80) == 0:
 								break
-						for ca in xrange(0, int(lenstr, 2)):
-							## The number of catches is encoded in SLEB-128 notation
-							## instead of ULEB-128. Depending on the sign there might
-							## or might not be a default catch defined.
-							catchlenstr = ''
-							bytecount = 0
-							bytestr = ''
+						if bytecount == 1:
+							## now convert the sleb bytes to a number
+							catchsize = 0
+							shift = 0
+							for bb in bytestr:
+								catchsize |= ((ord(bb) & 0x7f) << shift)
+								shift += 7
+							if catchsize != 0:
+								if ord(bb) & 0x40 == 0x40:
+									catchsize |= - ( 1 << shift )
+						else:
+							pass
+						for ct in xrange(0,abs(catchsize)):
+							## Then read the encoded_type_addr_pair items
+							## but don't actually use their data
 							while True:
-								sleb128byte = dexfile.read(1)
-								bytecount += 1
-								catchlenstr = "{:0>8b}".format(ord(sleb128byte))[1:] + catchlenstr
-								bytestr += sleb128byte
+								uleb128byte = dexfile.read(1)
 								## most significant bit means that the next byte
-								## is also part of the length. Prepend to the string.
-								if (ord(sleb128byte) & 0x80) == 0:
+								## is also part of the length.
+								if (ord(uleb128byte) & 0x80) == 0:
 									break
-							if bytecount == 1:
-								## now convert the sleb bytes to a number
-								catchsize = 0
-								shift = 0
-								for bb in bytestr:
-									catchsize |= ((ord(bb) & 0x7f) << shift)
-									shift += 7
-								if catchsize != 0:
-									if ord(bb) & 0x40 == 0x40:
-										catchsize |= - ( 1 << shift )
-							else:
-								pass
-							for ct in xrange(0,abs(catchsize)):
-								## Then read the encoded_type_addr_pair items
-								## but don't actually use their data
-								while True:
-									uleb128byte = dexfile.read(1)
-									## most significant bit means that the next byte
-									## is also part of the length.
-									if (ord(uleb128byte) & 0x80) == 0:
-										break
-								while True:
-									uleb128byte = dexfile.read(1)
-									## most significant bit means that the next byte
-									## is also part of the length.
-									if (ord(uleb128byte) & 0x80) == 0:
-										break
-							if catchsize < 1:
-								## the address for the "catch all"
-								while True:
-									uleb128byte = dexfile.read(1)
-									## most significant bit means that the next byte
-									## is also part of the length.
-									if (ord(uleb128byte) & 0x80) == 0:
-										break
-			dexfile.close()
+							while True:
+								uleb128byte = dexfile.read(1)
+								## most significant bit means that the next byte
+								## is also part of the length.
+								if (ord(uleb128byte) & 0x80) == 0:
+									break
+						if catchsize < 1:
+							## the address for the "catch all"
+							while True:
+								uleb128byte = dexfile.read(1)
+								## most significant bit means that the next byte
+								## is also part of the length.
+								if (ord(uleb128byte) & 0x80) == 0:
+									break
+		dexfile.close()
 
-		elif javatype == 'odex':
-			## Using dedexer http://dedexer.sourceforge.net/ extract information from Dalvik
-			## files, then process each file in $tmpdir and search file for lines containing
-			## "const-string" and other things as well.
-			## TODO: Research http://code.google.com/p/smali/ as a replacement for dedexer
-			skipfields = ['public', 'private', 'protected', 'static', 'final', 'volatile', 'transient']
-			javameta = {'classes': [], 'methods': [], 'fields': [], 'sourcefiles': [], 'javatype': javatype}
-			dex_tmpdir = None
-			if 'UNPACK_TEMPDIR' in scanenv:
-				dex_tmpdir = scanenv['UNPACK_TEMPDIR']
-			if dex_tmpdir != None:
-				dalvikdir = tempfile.mkdtemp(dir=dex_tmpdir)
-			else:
-				dalvikdir = tempfile.mkdtemp(dir=unpacktempdir)
-			p = subprocess.Popen(['java', '-jar', '/usr/share/java/bat-ddx.jar', '-d', dalvikdir, scanfile], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-			(stanout, stanerr) = p.communicate()
-			if p.returncode == 0:
-				osgen = os.walk(dalvikdir)
-				try:
-					while True:
-						ddxfiles = osgen.next()
-						for ddx in ddxfiles[2]:
-							ddxlines = open("%s/%s" % (ddxfiles[0], ddx)).readlines()
-							for d in ddxlines:
-								## search for string constants
-								if "const-string" in d:
-									reres = reconststring.match(d)
-									if reres != None:
-										printstring = d.strip().split(',', 1)[1][1:-1]
-										if len(printstring) >= stringcutoff:
-											lines.append(printstring)
-								## extract method names
-								elif d.startswith(".method"):
-									method = (d.split('(')[0]).split(" ")[-1]
-									if method == '<init>' or method == '<clinit>':
-										pass
-									elif method.startswith('access$'):
-										pass
-									else:
-										methods.add(method)
-								## extract class files, including inner classes
-								elif d.startswith(".class") or d.startswith(".inner"):
-									classname = d.strip().split('/')[-1]
-									if "$" in classname:
-										classname = classname.split("$")[0]
-									classnames.add(classname)
-								## extract source code files
-								elif d.startswith(".source"):
-									sourcefile = d.strip().split(' ')[-1]
-									sourcefiles.add(sourcefile)
-								## extract fields
-								elif d.startswith(".field"):
-									field = d.strip().split(';')[0]
-									fieldstmp = field.split()
-									ctr = 1
-									for f in fieldstmp[1:]:
-										## these are keywords
-										if f in skipfields:
-											ctr = ctr + 1
-											continue
-										if '$' in f:
-											break
-										## often generated, so useless
-										if "serialVersionUID" in f:
-											break
-										fields.add(f)
-										break
-				except StopIteration:
-					pass
-			## cleanup
-			shutil.rmtree(dalvikdir)
 		javameta['classes'] = list(classnames)
 		javameta['sourcefiles'] = list(sourcefiles)
 		javameta['methods'] = list(methods)
