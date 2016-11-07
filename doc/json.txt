@@ -125,7 +125,7 @@ Result file, description:
                     ],
              },
      'functionnameresults': {
-                 'totalfunctionnames': <total amount of function names extracted<.
+                 'totalfunctionnames': <total amount of function names extracted>.
                  'versionresults': [
                         'functionname': <name of function>.
                         'functionnamedata': [
