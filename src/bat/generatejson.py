@@ -46,6 +46,8 @@ def writejson(scanqueue, topleveldir, outputhash, cursor, conn, scanenv, convert
 			## first the language
 			jsonreport['ranking']['language'] = language
 
+			totalextracted = 0
+
 			## then the string identifier results
 			jsonreport['ranking']['stringresults'] = {}
 			jsonreport['ranking']['stringresults']['unmatched'] = []
@@ -55,7 +57,11 @@ def writejson(scanqueue, topleveldir, outputhash, cursor, conn, scanenv, convert
 			jsonreport['ranking']['stringresults']['nonUniqueMatches'] = []
 			jsonreport['ranking']['stringresults']['scores'] = []
 			jsonreport['ranking']['stringresults']['reports'] = []
+			jsonreport['ranking']['stringresults']['totalstrings'] = 0
+			totalunique = 0
 			if stringidentifiers != None:
+				jsonreport['ranking']['stringresults']['totalstrings'] = stringidentifiers['extractedlines']
+				totalextracted += stringidentifiers['extractedlines']
 				for todecode in ['ignored', 'unmatched']:
 					if todecode in stringidentifiers:
 						newres = []
@@ -101,6 +107,7 @@ def writejson(scanqueue, topleveldir, outputhash, cursor, conn, scanenv, convert
 						rank = u['rank']
 						package = u['package']
 						unique = u['unique']
+						totalunique += len(unique)
 						percentage = u['percentage']
 						packageversions = u['packageversions']
 						packagecopyrights = u['packagecopyrights']
@@ -156,12 +163,15 @@ def writejson(scanqueue, topleveldir, outputhash, cursor, conn, scanenv, convert
 							report['packageversions'].append(packagereport)
 						jsonreport['ranking']['stringresults']['reports'].append(report)
 
+			jsonreport['ranking']['stringresults']['totalunique'] = totalunique
+
 			## then the functionname results
 			jsonreport['ranking']['functionnameresults'] = {}
 			jsonreport['ranking']['functionnameresults']['totalfunctionnames'] = 0
 			jsonreport['ranking']['functionnameresults']['versionresults'] = []
 			if 'totalnames' in functionnameresults:
 				jsonreport['ranking']['functionnameresults']['totalfunctionnames'] = functionnameresults['totalnames']
+				totalextracted += functionnameresults['totalnames']
 			if 'versionresults' in functionnameresults:
 				for packagename in functionnameresults['versionresults']:
 					packagereport = {}
@@ -212,6 +222,8 @@ def writejson(scanqueue, topleveldir, outputhash, cursor, conn, scanenv, convert
 			jsonreport['ranking']['variablenameresults']['versionresults'] = []
 			if 'totalnames' in variablenameresults:
 				jsonreport['ranking']['variablenameresults']['totalvariablenames'] = variablenameresults['totalnames']
+				totalextracted += variablenameresults['totalnames']
+
 			if 'versionresults' in variablenameresults:
 				for packagename in variablenameresults['versionresults']:
 					packagereport = {}
@@ -254,6 +266,8 @@ def writejson(scanqueue, topleveldir, outputhash, cursor, conn, scanenv, convert
 							uniquereport['identifierdata'].append(identifierdatareport)
 						packagereport['unique'].append(uniquereport)
 					jsonreport['ranking']['variablenameresults']['versionresults'].append(packagereport)
+
+			jsonreport['ranking']['totalextracted'] = totalextracted
 
 		## then security information
 		## TODO
