@@ -31,8 +31,7 @@ dalvik_opcodes_no_argument = [ 0x00, 0x01, 0x04, 0x07, 0x0a, 0x0b, 0x0c
                              , 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe
                              , 0xbf, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5
                              , 0xc6, 0xc7, 0xc8, 0xc9, 0xca, 0xcb, 0xcc
-                             , 0xcd, 0xce, 0xcf, 0xec, 0xed, 0xef, 0xf1
-                             , 0xff]
+                             , 0xcd, 0xce, 0xcf, 0xec, 0xed, 0xf1, 0xff]
 
 dalvik_opcodes_single_argument = [ 0x02, 0x05, 0x08, 0x13, 0x15, 0x16, 0x19
                                  , 0x1c, 0x1f, 0x20, 0x22, 0x23, 0x29, 0x2d
@@ -53,13 +52,13 @@ dalvik_opcodes_single_argument = [ 0x02, 0x05, 0x08, 0x13, 0x15, 0x16, 0x19
                                  , 0xd8, 0xd9, 0xda, 0xdb, 0xdc, 0xdd, 0xde
                                  , 0xdf, 0xe0, 0xe1, 0xe2, 0xe3, 0xe4, 0xe5
                                  , 0xe6, 0xe7, 0xe8, 0xe9, 0xea, 0xeb, 0x1a
-                                 , 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xfd, 0xfe]
+                                 , 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xfc, 0xfd, 0xfe]
 
 dalvik_opcodes_two_arguments = [ 0x03, 0x06, 0x09, 0x14, 0x17, 0x24, 0x25
                                , 0x26, 0x2a, 0x2b, 0x2c, 0x6e, 0x6f, 0x70
                                , 0x71, 0x72, 0x74, 0x75, 0x76, 0x77, 0x78
-                               , 0x1b, 0xee, 0xf0, 0xf8, 0xf9, 0xfa, 0xfb
-                               , 0xfc]
+                               , 0x1b, 0xee, 0xef, 0xf0, 0xf8, 0xf9, 0xfa
+                               , 0xfb]
 
 dex_opcodes_extra_data = {}
 
@@ -838,7 +837,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 							elif opcode == 0x26:
 								## some extra work might be needed here, as the
 								## data might be in "packed-switch-payload"
-								branch_offset = struct.unpack('<I', extradata)[0] + odexoffset
+								branch_offset = struct.unpack('<I', extradata)[0]
 								if opcode_location + branch_offset*2 > filesize:
 									pass
 								curoffset = dexfile.tell()
@@ -852,7 +851,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 							elif opcode == 0x2b:
 								## some extra work might be needed here, as the
 								## data might be in "packed-switch-payload"
-								branch_offset = struct.unpack('<I', extradata)[0] + odexoffset
+								branch_offset = struct.unpack('<I', extradata)[0]
 								if opcode_location + branch_offset*2 > filesize:
 									pass
 								curoffset = dexfile.tell()
@@ -865,7 +864,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 							elif opcode == 0x2c:
 								## some extra work might be needed here, as the
 								## data might be in "sparse-switch-payload"
-								branch_offset = struct.unpack('<I', extradata)[0] + odexoffset
+								branch_offset = struct.unpack('<I', extradata)[0]
 								if opcode_location + branch_offset*2 > filesize:
 									pass
 								curoffset = dexfile.tell()
@@ -944,7 +943,6 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 									## is also part of the length.
 									if (ord(uleb128byte) & 0x80) == 0:
 										break
-								
 			dexfile.close()
 
 		elif javatype == 'odex':
