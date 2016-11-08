@@ -13,8 +13,10 @@ The top level consists of a list of elements that together describe the structur
 
 Top level file element, description:
 {
-  'name': <name of the file including relative path inside unpacking directory>,
+  'name': <name of the file without paths>,
+  'relativename': <name of the file, including full path inside unpacking directory>,
   'path': <relative path inside the unpacked file system or compressed file>,
+  'realpath': <absolute path for the directory used during unpacking>,
   'magic': <output of libmagic>,
   'tags': <list of tags>,
   'size': <size in bytes, optional>
@@ -35,7 +37,9 @@ Top level file element, data type:
 
 {
   'name': string
+  'relativename': string
   'path': string
+  'realpath': string
   'magic': string
   'tags': [string]
   'size': number
