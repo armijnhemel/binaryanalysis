@@ -15,7 +15,7 @@ import extractor, elfcheck
 ## perform various checks, such as extracting the Linux kernel
 ## version number, plus certain hardcoded identifiers from some
 ## Linux kernel subsystems.
-def kernelChecks(path, tags, cursor, conn, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+def kernelChecks(path, tags, cursor, conn, filehashes, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	results = {}
         try:
                 kernelbinary = open(path, 'rb')
@@ -121,7 +121,7 @@ def findRedBoot(lines):
 	return lines.find("No RedBoot partition table detected in %s")
 
 ## analyse the modinfo section of a Linux kernel module (Linux kernel 2.6 and later)
-def analyseKernelModule(filename, tags, cursor, conn, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
+def analyseKernelModule(filename, tags, cursor, conn, filehashes, blacklist=[], scanenv={}, scandebug=False, unpacktempdir=None):
 	if not "elfrelocatable" in tags:
 		return None
 

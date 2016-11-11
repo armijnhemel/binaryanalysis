@@ -827,7 +827,7 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 					sys.stderr.flush()
 					scandebug = True
 
-				res = eval("bat_%s(filetoscan, tags, cursor, conn, blacklist, leafscan['environment'], scandebug=scandebug, unpacktempdir=unpacktempdir)" % (method))
+				res = eval("bat_%s(filetoscan, tags, cursor, conn, filehashresults, blacklist, leafscan['environment'], scandebug=scandebug, unpacktempdir=unpacktempdir)" % (method))
 				if res != None:
 					(nt, leafres) = res
 					reports[leafscan['name']] = leafres
