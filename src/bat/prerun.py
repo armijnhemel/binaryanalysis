@@ -139,7 +139,7 @@ def genericMarkerSearch(filename, magicscans, optmagicscans, offset=0, length=0,
 ## Verify a file is an XML file using xmllint.
 ## Actually this *could* be done with xml.dom.minidom (although some parser settings should be set
 ## to deal with unresolved entities) to avoid launching another process
-def searchXML(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def searchXML(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	newtags = []
 	datafile = open(filename, 'rb')
 
@@ -182,7 +182,7 @@ def searchXML(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 ##
 ## Interesting link with background info:
 ## * http://fedoraproject.org/wiki/Features/PythonEncodingUsesSystemLocale
-def verifyText(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def verifyText(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	newtags = []
 	datafile = open(filename, 'rb')
 	databuffer = []
@@ -206,7 +206,7 @@ def verifyText(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fa
 ## verify WAV files
 ## http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html
 ## https://sites.google.com/site/musicgapi/technical-documents/wav-file-format
-def verifyWav(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def verifyWav(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	## some chunks observed in the wild. 'LGWV' and 'bext' seem to be extensions
 	validchunks = ['fmt ', 'fact', 'data', 'cue ', 'list', 'plst', 'labl', 'ltxt', 'note', 'smpl', 'inst', 'bext', 'LGWV']
 	## the next four characters should be 'WAVE'
@@ -219,7 +219,7 @@ def verifyWav(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 
 ## verify WebP files
 ## https://developers.google.com/speed/webp/docs/riff_container
-def verifyWebP(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def verifyWebP(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	validchunks = ['VP8 ', 'VP8L', 'VP8X', 'ANIM', 'ANMF', 'ALPH', 'ICCP', 'EXIF', 'XMP ']
 	## the next four characters should be 'WEBP'
 	fourcc = 'WEBP'
@@ -230,7 +230,7 @@ def verifyWebP(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fa
 	return newtags
 
 ## generic method to verify RIFF files, such as WebP or WAV
-def verifyRiff(filename, validchunks, fourcc, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def verifyRiff(filename, validchunks, fourcc, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	newtags = []
 	if "text" in tags or "compressed" in tags or "audio" in tags or "graphics" in tags:
 		return newtags
@@ -299,7 +299,7 @@ def verifyRiff(filename, validchunks, fourcc, tempdir=None, tags=[], offsets={},
 ## * XML
 ## 
 ## Each of these can be constructed in a different way. Focus is on tables first.
-def verifyAndroidResource(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def verifyAndroidResource(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	newtags = []
 	if not 'binary' in tags:
 		return newtags
@@ -336,7 +336,7 @@ def verifyAndroidResource(filename, tempdir=None, tags=[], offsets={}, scanenv={
 
 ## Verify and tag Chrome/Chromium/WebView .pak files
 ## http://dev.chromium.org/developers/design-documents/linuxresourcesandlocalizedstrings
-def verifyChromePak(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def verifyChromePak(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	newtags = []
 	if not 'binary' in tags:
 		return newtags
@@ -398,7 +398,7 @@ def verifyChromePak(filename, tempdir=None, tags=[], offsets={}, scanenv={}, deb
 ## file ends in '.xml', plus check the first four bytes of the file
 ## If it is an Android XML file, mark it as a 'resource' file
 ## TODO: have a better check here to increase fidelity
-def verifyAndroidXML(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def verifyAndroidXML(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	newtags = []
 	if not 'binary' in tags:
 		return newtags
@@ -418,7 +418,7 @@ def verifyAndroidXML(filename, tempdir=None, tags=[], offsets={}, scanenv={}, de
 ## Verify if this is an Android/Dalvik classes file. First check if the name of
 ## the file is 'classes.dex', then check the header and the checksum.
 ## Header information from https://source.android.com/devices/tech/dalvik/dex-format.html
-def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	newtags = []
 	if not 'dex' in offsets:
 		return newtags
@@ -436,7 +436,7 @@ def verifyAndroidDex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, de
 	newtags = verifyAndroidDexGeneric(filename, dexsize, 0, verifychecksum=True)
 	return newtags
 
-def verifyAndroidDexGeneric(filename, dexsize, offset, verifychecksum=True):
+def verifyAndroidDexGeneric(filename, dexsize, offset, verifychecksum=True, filehashes=None):
 	newtags = []
 	byteswapped = False
 	## Parse the Dalvik header.
@@ -508,7 +508,7 @@ def verifyAndroidDexGeneric(filename, dexsize, offset, verifychecksum=True):
 ## The specification of the header can be found at:
 ## https://android.googlesource.com/platform/dalvik.git/+/master/libdex/DexFile.h
 ## in the struct DexOptHeader
-def verifyAndroidOdex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def verifyAndroidOdex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	newtags = []
 	if not 'binary' in tags:
 		return newtags
@@ -602,7 +602,7 @@ def verifyAndroidOdex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, d
 ## verify if this is a GNU message catalog. First check if the name of the
 ## file ends in '.po', plus check the first few bytes of the file
 ## If it is a GNU message catalog, mark it as a 'resource' file
-def verifyMessageCatalog(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def verifyMessageCatalog(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	newtags = []
 	if not 'binary' in tags:
 		return newtags
@@ -627,7 +627,7 @@ def verifyMessageCatalog(filename, tempdir=None, tags=[], offsets={}, scanenv={}
 
 ## Simple verifier for SQLite 3 files
 ## See http://sqlite.org/fileformat.html
-def verifySqlite3(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def verifySqlite3(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	newtags = []
 	if not 'binary' in tags:
 		return newtags
@@ -662,7 +662,7 @@ def verifySqlite3(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug
 	return newtags
 
 ## extremely simple verifier for MP4 to reduce false positives
-def verifyMP4(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def verifyMP4(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	newtags = []
 	if not 'binary' in tags:
 		return newtags
@@ -686,7 +686,7 @@ def verifyMP4(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 
 ## very simplistic verifier for some Windows icon files
 ## https://en.wikipedia.org/wiki/ICO_%28file_format%29
-def verifyIco(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def verifyIco(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	newtags = []
 	knownicoextensions = ['cur', 'ico', 'hdb']
 	filesplit = filename.lower().rsplit('.', 1)
@@ -792,7 +792,7 @@ def verifyIco(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	shutil.rmtree(icodir)
 	return newtags
 
-def verifyBFLT(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def verifyBFLT(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	newtags = []
 	if not 'binary' in tags:
 		return newtags
@@ -860,7 +860,7 @@ def verifyBFLT(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fa
 ## This might not work for all ELF files and it is a conservative verification, only used to
 ## reduce false positives of LZMA scans.
 ## This does for sure not work for Linux kernel modules on some devices.
-def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	newtags = []
 	if not 'binary' in tags:
 		return newtags
@@ -875,7 +875,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	return newtags
 
 ## Method to verify if a Windows executable is a valid 7z file
-def verifyExe(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def verifyExe(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	newtags = []
 	if not 'pe' in offsets:
 		return newtags
@@ -897,7 +897,7 @@ def verifyExe(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	return newtags
 
 ## Check if a file is a Vim swap file
-def verifyVimSwap(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def verifyVimSwap(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	newtags = []
 	if filename.endswith('.swp'):
 		datafile = open(filename, 'rb')
@@ -909,7 +909,7 @@ def verifyVimSwap(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug
 
 ## Check for timezone files.
 ## documentation: man 5 tzfile
-def verifyTZ(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def verifyTZ(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	newtags = []
 	filesize = os.stat(filename).st_size
 
@@ -1170,7 +1170,7 @@ def verifyTZ(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fals
 ## verify if a file is in Intel HEX format and tag it is as such.
 ## This will only be done if the *entire* file is in Intel HEX format.
 ## comments (starting with #) are allowed though.
-def verifyIHex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def verifyIHex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	newtags = []
 	if not 'text' in tags:
 		return newtags
@@ -1205,7 +1205,7 @@ def verifyIHex(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fa
 
 ## verify Apple's AppleDouble encoded files (resource forks)
 ## http://tools.ietf.org/html/rfc1740 -- Appendix A & B
-def verifyResourceFork(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def verifyResourceFork(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	newtags = []
 	if not 'binary' in tags:
 		return newtags
@@ -1254,7 +1254,7 @@ def verifyResourceFork(filename, tempdir=None, tags=[], offsets={}, scanenv={}, 
 	return newtags
 
 ## Tag and check some RSA certificates as found for example on Android
-def verifyRSACertificate(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def verifyRSACertificate(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	newtags = []
 	if not os.path.basename(filename).endswith('.RSA'):
 		return newtags
@@ -1268,7 +1268,7 @@ def verifyRSACertificate(filename, tempdir=None, tags=[], offsets={}, scanenv={}
 
 ## simple check for certificates that you can find in Windows software
 ## and that could lead to false positives later in the scanning process.
-def verifyCertificate(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def verifyCertificate(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	newtags = []
 
 	## a list of known certificates observed in the wild in various
@@ -1294,7 +1294,7 @@ def verifyCertificate(filename, tempdir=None, tags=[], offsets={}, scanenv={}, d
 ## check compiled terminfo files
 ## man 5 term
 ## does not check the ncurses extensions
-def verifyTerminfo(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def verifyTerminfo(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	newtags = []
 	if not 'binary' in tags:
 		return newtags
@@ -1418,7 +1418,7 @@ def verifyTerminfo(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debu
 	
 '''
 ## stubs for very crude check for HTML files
-def verifyHTML(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None):
+def verifyHTML(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
 	newtags = []
 	extensions = ['htm', 'html']
 	if not os.path.basename(filename).lower().rsplit('.', 1)[-1] in extensions:
