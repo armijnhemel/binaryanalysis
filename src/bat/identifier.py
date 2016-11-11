@@ -88,7 +88,7 @@ unused = [ 0x73, 0x79, 0x7a, 0x3e, 0x3f, 0x40, 0x41
 ## Original code (in Perl) was written by Eelco Dolstra.
 ## Reimplementation in Python done by Armijn Hemel.
 ##
-def searchGeneric(filepath, tags, cursor, conn, blacklist=[], scanenv={}, offsets={}, scandebug=False, unpacktempdir=None):
+def searchGeneric(filepath, tags, cursor, conn, filehashresults, blacklist=[], scanenv={}, offsets={}, scandebug=False, unpacktempdir=None):
 	filesize = os.stat(filepath).st_size
 	## whole file is blacklisted, so no need to scan
 	if extractor.inblacklist(0, blacklist) == filesize:
