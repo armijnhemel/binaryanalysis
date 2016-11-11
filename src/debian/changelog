@@ -1,3 +1,14 @@
+bat (32.0) unstable; urgency=high
+
+  * remove dependency on bat-extratools-java and java
+  * add more information to JSON
+  * fix ELF parsing crash
+  * pass database connection and cursor to prerun scans
+  * pass file hashes to prerun scans and leaf scans
+  * fix to unpack lzo compressed Linux kernel images
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Fri, 11 Nov 2016 09:21:20 +0100
+
 bat (31.0) unstable; urgency=high
 
   * add ELF carver
