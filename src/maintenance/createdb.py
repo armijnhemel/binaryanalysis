@@ -32,7 +32,8 @@ Files that are processed:
 * are explicitely defined in the configuration file (per package)
 * configure.ac from packages using GNU autotools
 
-Sometimes files are explicitely ignored in packages.
+Sometimes files are explicitely ignored in packages, because the
+results are not useful.
 
 For the Linux kernel additional information is extracted:
 
@@ -56,6 +57,8 @@ import tempfile, bz2, tarfile, gzip, ConfigParser, zipfile
 from optparse import OptionParser
 import sqlite3, hashlib, zlib, urlparse, tokenize, multiprocessing
 import batextensions
+
+## import the tlsh module if present. If not, disable TLSH scanning
 try:
         import tlsh
 	tlshscan = True
@@ -177,11 +180,11 @@ kernelexprs.append(re.compile("WIRELESS_SHOW\s*\((\w+)", re.MULTILINE))
 #SYSCALL_DEFINE + friends go here
 #COMPAT_SYSCALL_DEFINE
 
-## some more precompiled regular expressions
+## some more precompiled regular expressions for copyright extractions
 recopyright = re.compile('^\s*\[(\d+):\d+:(\w+)] \'(.*)\'$')
 recopyright2 = re.compile('^\s*\[(\d+):\d+:(\w+)] \'(.*)')
 
-## precompiled regular expression for extracting security information
+## precompiled regular expression for extracting some very basic security information
 ## ENV33-C
 resystem = re.compile('system\(.*\);')
 
@@ -194,7 +197,9 @@ for m in msc24obsolescent:
 ## TODO
 #msc24uncheckedobsolescent = ["bsearch", "fprintf", "fscanf", "fwprintf", "fwscanf", "getenv", "gmtime", "localtime", "mbsrtowcs", "mbstowcs", "memcpy", "memmove", "printf", "qsort", "setbuf", "snprintf", "sprintf", "sscanf", "strcat", "strcpy", "strerror", "strncat", "strncpy", "strtok", "swprintf", "swscanf", "vfprintf", "vfscanf", "vfwprintf", "vfwscanf", "vprintf", "vscanf", "vsnprintf", "vsprintf", "vsscanf", "vswprintf", "vswscanf", "vwprintf", "vwscanf", "wcrtomb", "wcscat", "wcscpy", "wcsncat", "wcsncpy", "wcsrtombs", "wcstok", "wcstombs", "wctomb", "wmemcpy", "wmemmove", "wprintf", "wscanf"]
 
-## allowed values for older kernel parameter type information
+## Linux kernel modules have parameters that have certain types.
+## This format has changed over the years. These are the allowed values
+## for older kernel parameter type information
 oldallowedvals= ["b", "c", "h", "i", "l", "s"]
 
 reoldallowedexprs = []
@@ -210,6 +215,7 @@ rewhitespace = re.compile("(\s+)")
 fossologyurlre = re.compile("((:?ht|f)tps?\\:\\/\\/[^\\s\\<]+[^\\<\\.\\,\\s])")
 fossologyemailre = re.compile("[\\<\\(]?([\\w\\-\\.\\+]{1,100}@[\\w\\-\\.\\+]{1,100}\\.[a-z]{1,12})[\\>\\)]?")
 
+## grab the extensions for files that should be processed
 extensions = batextensions.extensions
 
 ## extensions, without leading .
@@ -288,6 +294,7 @@ def splitSpecialChars(s):
 				lensplit = len(i)
 	return final_splits
 
+## A Python parser using the tokenize module
 def parsepython((filedir, filepath, unpackdir)):
 	comments = []
 	strings = []
