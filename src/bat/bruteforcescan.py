@@ -537,7 +537,7 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 					print >>sys.stderr, module, method, filetoscan, datetime.datetime.utcnow().isoformat()
 					sys.stderr.flush()
 
-				scantags = locals()['bat_%s' % method](filetoscan, tempdir, tags, offsets, prerunscan['environment'], debug=debug, unpacktempdir=unpacktempdir, filehashes=filehashresults)
+				scantags = locals()['bat_%s' % method](filetoscan, cursor, conn, tempdir, tags, offsets, prerunscan['environment'], debug=debug, unpacktempdir=unpacktempdir, filehashes=filehashresults)
 				## append the tag results. These will be used later to be able to specifically filter
 				## out files
 				if scantags != []:
