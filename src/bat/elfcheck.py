@@ -217,6 +217,8 @@ def getArchitecture(filename, tags):
 def getSection(filename, sectionname, debug=False):
 	(totalelf, elfresult) = parseELF(filename, 0, debug)
 	returnsection = None
+	if elfresult == None:
+		return
 	for i in elfresult['sections']:
 		if elfresult['sections'][i]['name'] == sectionname:
 			returnsection = i
