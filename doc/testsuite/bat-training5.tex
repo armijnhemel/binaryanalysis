@@ -56,6 +56,8 @@ A prerun scan takes 6 parameters:
 
 \begin{itemize}
 \item \texttt{filename} - the full filename of the file during scanning
+\item \texttt{cursor} - the database cursor
+\item \texttt{conn} - the database connection
 \item \texttt{tempdir} (default \texttt{None}) - the temporary directory where the file has been unpacked
 \item \texttt{tags} (default \texttt{[]}) - any existing tags for this file (from other prerun scans)
 \item \texttt{offsets} (default \texttt{\{\}}) - offsets of identifiers
@@ -69,7 +71,7 @@ The return value should be a list of tags (strings), or an empty list.
 \begin{frame}[fragile]
 \frametitle{Prerun scan example}
 \begin{verbatim}
-def searchXML(filename, tempdir=None, tags=[],
+def searchXML(filename, cursor, conn, tempdir=None, tags=[],
               offsets={}, envvars=None,
               unpacktempdir=None, filehashes=None):
 
