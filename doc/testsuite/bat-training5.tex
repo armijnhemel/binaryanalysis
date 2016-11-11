@@ -125,6 +125,7 @@ A leaf scan takes the following parameters:
 \item \texttt{tags} - the list of tags for this file
 \item \texttt{cursor} - an active database cursor, or \texttt{None} if no database is used
 \item \texttt{conn} - an active database connection, or \texttt{None} if no database is used
+\item \texttt{filehashes} - a dictionary with file hashes
 \item \texttt{blacklist} (default \texttt{[]}) - a list of tuples of byte ranges in the file that should not be scanned
 \item \texttt{scanenv} (default \texttt{\{\}}) - optional environment
 \item \texttt{scandebug} (default \texttt{False} - optional debug flags
@@ -137,8 +138,9 @@ The return value can be an arbitrary value.
 \begin{frame}[fragile]
 \frametitle{File scan example}
 \begin{verbatim}
-def scanVirus(filepath, tags, cursor, conn, blacklist=[],
-   scanenv={}, scandebug=False, unpacktempdir=None):
+def scanVirus(filepath, tags, cursor, conn,
+   filehashes, blacklist=[], scanenv={},
+    scandebug=False, unpacktempdir=None):
     p = subprocess.Popen(['clamscan', "%s" % (filepath,)],
        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     (stanout, stanerr) = p.communicate()
