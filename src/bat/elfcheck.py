@@ -1029,6 +1029,9 @@ def parseELF(filename, offset=0, debug=False):
 					iself = True
 				totalsize += totalsiglength
 			elffile.close()
+			## check if the max end of section happens to be later than
+			## the totalsize, as this happens as well in non-stripped binaries
+			totalsize = max(maxendofsection, totalsize)
 
 	elfresult['dynamic'] = dynamic
 	elfresult['sectionnames'] = sectionnames
