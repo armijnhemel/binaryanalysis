@@ -69,6 +69,8 @@ except:
 	ms = magic.open(magic.MAGIC_NONE)
 ms.load()
 
+## Try to load the TLSH module if available, else disable TLSH
+## scanning, as TLSH is not standard on every Linux distribution.
 try:
 	import tlsh
 	tlshscan = True
@@ -157,7 +159,7 @@ def gethash(filepath, filename, hashtypes, tlshmaxsize):
 		hashresults[h] = hashdict[h].hexdigest()
 	filesize = os.stat(os.path.join(filepath, filename)).st_size
 
-	## compute TLSH, as long as it is not too big
+	## compute TLSH, as long as it is not too big (determined by tlshmaxsize)
 	if 'tlsh' in hashestocompute:
 		if tlshscan:
 			if filesize >= 256 and filesize <= tlshmaxsize:
@@ -187,6 +189,7 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 		except Exception, e:
 			blacklistscans.add((module, method))
 			continue
+
 	for unpackscan in scans:
 		module = unpackscan['module']
 		method = unpackscan['method']
@@ -210,7 +213,10 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 		## reset the reports, blacklist, offsets and tags for each new scan
 		blacklist = []
 		(dirname, filename, lenscandir, debug, tags, scanhints, offsets) = scanqueue.get(timeout=timeout)
+
 		if debug:
+			## record the time when processing of the file started
+			## in case debugging is enabled.
 			starttime = datetime.datetime.utcnow().isoformat()
 
 		## absolute path of the file in the file system (so including temporary dir)
@@ -233,11 +239,11 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 		try:
 			magic = ms.file(filetoscan)
 		except Exception, e:
-			## libmagic could not handle it because of an encoding
-			## issue, so try to workaround the problem. In case
-			## of a regular file (anything but a link) copy it to a
-			## temporary location with a file name that libmagic will
-			## be able to handle.
+			## libmagic could not handle it, likely because of an encoding
+			## issue (name with 'weird' characters, so try to workaround the
+			## problem. In case of a regular file (anything but a link) copy
+			## the file to a temporary location with a file name that libmagic
+			## will be able to handle.
 			if not os.path.islink(filetoscan):
 				tmpmagic = tempfile.mkstemp()
 				os.fdopen(tmpmagic[0]).close()
@@ -289,7 +295,7 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 
 		## Store the hash of the file for identification and for possibly
 		## querying the knowledgebase later on.
-		## For TLSH a default maximum size is set to 50 MiB
+		## For TLSH a default maximum size is currently set to 50 MiB
 		## TODO: make configurable
 		tlshmaxsize=52428800
 		filehashresults = gethash(dirname, filename, [outputhash, 'sha1', 'md5', 'tlsh'], tlshmaxsize)
@@ -1983,6 +1989,10 @@ def runscan(scans, binaries, batversion):
 	for bins in binaries:
 		statistics = {}
 		(scan_binary, writeconfig) = bins
+
+		## extra sanity check, in case the binary was removed
+		if not os.path.exists(scan_binary):
+			continue
 		scan_binary_basename = os.path.basename(scan_binary)
 
 		## force the cwd to a known value. This is to prevent mysterious
