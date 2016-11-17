@@ -174,7 +174,7 @@ def gethash(filepath, filename, hashtypes, tlshmaxsize):
 
 ## continuously grab tasks (files) from a queue, tag ('prerun phase'), possibly unpack
 ## and recurse ('unpack'). Then run different scans per file ('leaf').
-def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, prerunmagic, magicscans, optmagicscans, processid, hashdict, llock, template, unpacktempdir, topleveldir, tempdir, outputhash, cursor, conn, scansourcecode, dumpoffsets, offsetdir, compressed, timeout, scan_binary_basename):
+def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, prerunmagic, magicscans, optmagicscans, processid, hashdict, llock, template, unpacktempdir, topleveldir, tempdir, outputhash, cursor, conn, scansourcecode, dumpoffsets, offsetdir, compressed, timeout, scan_binary_basename, tlshmaxsize):
 	lentempdir = len(tempdir)
 	sourcecodequery = "select checksum from processed_file where checksum=%s limit 1"
 
@@ -295,9 +295,6 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 
 		## Store the hash of the file for identification and for possibly
 		## querying the knowledgebase later on.
-		## For TLSH a default maximum size is currently set to 50 MiB
-		## TODO: make configurable
-		tlshmaxsize=52428800
 		filehashresults = gethash(dirname, filename, [outputhash, 'sha1', 'md5', 'tlsh'], tlshmaxsize)
 		unpackreports['checksum'] = filehashresults[outputhash]
 		for u in filehashresults:
@@ -1304,6 +1301,10 @@ def readconfig(config, configfilename):
 		except:
 			batconf['usedatabase'] = True
 		try:
+			batconf['tlshmaxsize'] = int(config.get(section, 'tlshmaxsize'))
+		except:
+			pass
+		try:
 			debug = config.get(section, 'debug')
 			if debug == 'yes':
 				batconf['debug'] = True
@@ -1827,6 +1828,11 @@ def runscan(scans, binaries, batversion):
 
 	usedatabase = scans['batconfig']['usedatabase']
 
+	## For TLSH a default maximum size is set to 50 MiB
+	tlshmaxsize=52428800
+	if 'tlshmaxsize' in scans['batconfig']:
+		tlshmaxsize = scans['batconfig']['tlshmaxsize']
+
 	## create a bunch of connections and cursors in case
 	## the database is used.
 	batcons = []
@@ -2141,7 +2147,7 @@ def runscan(scans, binaries, batversion):
 			else:
 				cursor = None
 				conn = None
-			p = multiprocessing.Process(target=scan, args=(scanqueue, reportqueue, finalunpackscans, finalleafscans, scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, lock, template, unpackdirectory, topleveldir, scantempdir, outputhash, cursor, conn, scansourcecode, scans['batconfig']['dumpoffsets'], offsetdir, compressed, timeout, scan_binary_basename))
+			p = multiprocessing.Process(target=scan, args=(scanqueue, reportqueue, finalunpackscans, finalleafscans, scans['prerunscans'], prerunignore, prerunmagic, magicscans, optmagicscans, i, hashdict, lock, template, unpackdirectory, topleveldir, scantempdir, outputhash, cursor, conn, scansourcecode, scans['batconfig']['dumpoffsets'], offsetdir, compressed, timeout, scan_binary_basename, tlshmaxsize))
 			processpool.append(p)
 			p.start()
 
