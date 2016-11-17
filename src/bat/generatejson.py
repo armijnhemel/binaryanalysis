@@ -281,10 +281,17 @@ def writejson(scanqueue, topleveldir, outputhash, cursor, conn, scanenv, convert
 		if compressed:
 			fin = open(jsonfilename, 'rb')
 			fout = gzip.open("%s.gz" % jsonfilename, 'wb')
-			fout.write(fin.read())
-			fout.close()
-			fin.close()
-			os.unlink(fin.name)
+			## workaround for https://bugs.python.org/issue23306
+			## result: JSON will not be gzip compressed
+			try:
+				fout.write(fin.read())
+				fout.close()
+				fin.close()
+				os.unlink(fin.name)
+			except:
+				fout.close()
+				fin.close()
+				os.unlink(fout.name)
 		scanqueue.task_done()
 
 def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv, batcursors, batcons, scandebug=False, unpacktempdir=None):
