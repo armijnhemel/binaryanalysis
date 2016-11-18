@@ -432,7 +432,7 @@ def aggregate((jarfile, jarreport, unpackreports, topleveldir)):
 	unmatched = list(set(unmatched))
 	unmatched.sort()
 	rankres['unmatched'] = unmatched
-	rankres['ignored'] = ignored
+	rankres['ignored'] = list(set(ignored))
 	rankres['matchedlines'] = matchedlines
 	rankres['matchednonassignedlines'] = matchednonassignedlines
 	rankres['matchednotclonelines'] = matchednotclonelines
@@ -2511,7 +2511,7 @@ def lookup_identifier(scanqueue, reportqueue, cursor, conn, scanenv, topleveldir
 				if scankernelfunctions:
 					matchedlines = matchedlines - len(kernelfuncres)
 					lenlines = lenlines - len(kernelfuncres)
-				res = {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched, 'scores': scores, 'unmatchedlines': unmatchedlines, 'matchednonassignedlines': matchednonassignedlines, 'matchednotclonelines': matchednotclonelines, 'matcheddirectassignedlines': matcheddirectassignedlines, 'ignored': ignored}
+				res = {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched, 'scores': scores, 'unmatchedlines': unmatchedlines, 'matchednonassignedlines': matchednonassignedlines, 'matchednotclonelines': matchednotclonelines, 'matcheddirectassignedlines': matcheddirectassignedlines, 'ignored': list(set(ignored))}
 		else:
 			res = None
 
