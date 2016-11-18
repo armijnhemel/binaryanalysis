@@ -11,12 +11,9 @@ variable names, etc.) from binaries and make them available for further
 processing by various other scans.
 '''
 
-import string, re, os, os.path, sys, tempfile, shutil, copy, struct, zlib
+import string, os, os.path, sys, tempfile, shutil, copy, struct, zlib
 import subprocess
 import extractor, javacheck, elfcheck
-
-## some regular expressions for Java, precompiled
-reconststring = re.compile("\s+const-string\s+v\d+")
 
 splitcharacters = map(lambda x: chr(x), range(0,9) + range(14,32) + [127])
 
@@ -169,6 +166,7 @@ def searchGeneric(filepath, tags, cursor, conn, filehashresults, blacklist=[], s
 		javameta['language'] = language
 		return (['identifier'], javameta)
 
+## Extract identifiers from files that are treated as C
 def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, blacklist=[], scandebug=False, unpacktempdir=None):
 	## special var to indicate whether or not the file is a Linux kernel
 	## image. If so extra checks can be done.
@@ -183,10 +181,10 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 	if "elf" in tags:
 		scanfile = filepath
 	else:
-		## The file contains a Linux kernel image and it is not an ELF file.
-		## Kernel symbols recorded in the image could lead to false positives,
-		## so they first have to be found and be blacklisted.
 		if linuxkernel:
+			## The file contains a Linux kernel image and it is not an ELF file.
+			## Kernel symbols recorded in the image could lead to false positives,
+			## so they first have to be found and be blacklisted.
 			kernelfile = open(filepath, 'r')
 			## TODO: this is inefficient
 			kerneldata = kernelfile.read()
