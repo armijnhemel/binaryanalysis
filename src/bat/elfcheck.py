@@ -554,7 +554,7 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 
 	if "__ksymtab_strings" in elfresult['sectionnames']:
 		newtags.append('linuxkernel')
-	elif "oat_patches" in elfresult['sectionnames']:
+	elif "oat_patches" in elfresult['sectionnames'] or '.text.oat_patches' in elfresult['sectionnames']):
 		newtags.append('oat')
 		newtags.append('android')
 	newtags.append('elf')
