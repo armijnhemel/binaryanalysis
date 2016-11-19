@@ -458,7 +458,7 @@ def getDynamicLibs(filename, debug=False):
 				d_tag = struct.unpack('>Q', tagbytes)[0]
 
 		if d_tag == 1:
-			## NEEDED
+			## equivalent to NEEDED in readelf output
 			offsetbytes = elfbytes[i*tagsize+tagsize:i*tagsize+tagsize*2]
 			if littleendian:
 				if bit32:
@@ -473,7 +473,7 @@ def getDynamicLibs(filename, debug=False):
 			endofneededname = dynstrbytes.find('\x00', d_needed_offset)
 			needed_names.append(dynstrbytes[d_needed_offset:endofneededname])
 		elif d_tag == 14:
-			## SONAME
+			## equivalent to SONAME in readelf output
 			offsetbytes = elfbytes[i*tagsize+tagsize:i*tagsize+tagsize*2]
 			if littleendian:
 				if bit32:
@@ -489,7 +489,7 @@ def getDynamicLibs(filename, debug=False):
 			soname = dynstrbytes[soname_offset:endofsoname]
 			sonames.append(soname)
 		elif d_tag == 15:
-			## RPATH
+			## equivalent to RPATH in readelf output
 			offsetbytes = elfbytes[i*tagsize+tagsize:i*tagsize+tagsize*2]
 			if littleendian:
 				if bit32:
@@ -553,8 +553,12 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 	newtags.append(elfresult['elftype'])
 
 	if "__ksymtab_strings" in elfresult['sectionnames']:
+		## some Linux kernel specific data is stored in a
+		## separate section, so it is easy to recognize
 		newtags.append('linuxkernel')
 	elif "oat_patches" in elfresult['sectionnames'] or '.text.oat_patches' in elfresult['sectionnames']:
+		## newer Android programs are actually ELF files, with
+		## the dex opcodes stored in the .rodata section
 		newtags.append('oat')
 		newtags.append('android')
 	newtags.append('elf')
