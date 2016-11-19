@@ -25,8 +25,7 @@ splitcharacters = map(lambda x: chr(x), range(0,9) + range(14,32) + [127])
 ## https://android.googlesource.com/platform/dalvik.git/+/master/libdex/DexOpcodes.h
 ##
 ## Information about ODEX opcodes was lifted from:
-## http://pallergabor.uw.hu/androidblog/dalvik_opcodes.html
-## and the Dedexer source code, specifically DexInstructionParser.java
+## https://android.googlesource.com/platform/dalvik.git/+/master/opcode-gen/bytecode.txt
 dalvik_opcodes_no_argument = [ 0x00, 0x01, 0x04, 0x07, 0x0a, 0x0b, 0x0c
                              , 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x1d
                              , 0x1e, 0x21, 0x27, 0x28, 0x3e, 0x3f, 0x40
