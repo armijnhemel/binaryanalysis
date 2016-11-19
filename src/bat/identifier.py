@@ -11,7 +11,7 @@ variable names, etc.) from binaries and make them available for further
 processing by various other scans.
 '''
 
-import string, os, os.path, sys, tempfile, shutil, copy, struct, zlib
+import string, os, os.path, sys, tempfile, shutil, copy, struct, zlib, cStringIO
 import subprocess
 import extractor, javacheck, elfcheck
 
@@ -490,8 +490,6 @@ def extractJava(scanfile, tags, scanenv, filesize, stringcutoff, blacklist=[], s
 		javatype = 'odex'
 	elif 'oat' in tags:
 		javatype = 'oat'
-		## TODO: find out what to do with this
-		return None
 	elif 'serializedjava' in tags:
 		javatype = 'serializedjava'
 		## TODO: find out what to do with this
@@ -553,7 +551,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 			if splitchars == []:
 				lines.append(printstring)
 		javameta = {'classes': classname, 'methods': list(set(methods)), 'fields': list(set(fields)), 'sourcefiles': sourcefile, 'javatype': javatype, 'strings': lines}
-	elif javatype == 'dex' or javatype == 'odex':
+	elif javatype == 'dex' or javatype == 'odex' or javatype == 'oat':
 		javameta = {'classes': [], 'methods': [], 'fields': [], 'sourcefiles': [], 'javatype': javatype}
 		classnames = set()
 		sourcefiles = set()
@@ -561,73 +559,150 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 		fields = set()
 		## Further parse the Dex file
 		## https://source.android.com/devices/tech/dalvik/dex-format.html
+		if javatype == 'oat':
+			## first try older oat
+			sectionres = elfcheck.getSection(scanfile, '.rodata')
+			if sectionres == None:
+				return
+			elffile = open(scanfile, 'rb')
+			elffile.seek(sectionres['sectionoffset'])
+			elfdata = elffile.read(sectionres['sectionsize'])
+			elffile.close()
+			dexfile = cStringIO.StringIO(elfdata)
+		else:
+			dexfile = open(scanfile, 'rb')
 
 		## assume little endian for now
-		dexfile = open(scanfile, 'rb')
-		odexoffset = 0
-		if javatype == 'dex':
-			dexoffset = 52
-		elif javatype == 'odex':
+		dexoffset = 0
+		if javatype == 'odex':
 			## For odex the dex header is after the
 			## odex header.
 			dexfile.seek(8)
 			androidbytes = dexfile.read(4)
-			odexoffset = struct.unpack('<I', androidbytes)[0]
+			dexoffset = struct.unpack('<I', androidbytes)[0]
+		elif javatype == 'oat':
+			## grab the version number
+			## The version number is changing very frequently:
+			## https://android.googlesource.com/platform/art/+log/master/runtime/oat.h
+			dexfile.seek(4)
+			oatversion = dexfile.read(4)
+			if len(oatversion) != 4:
+				dexfile.close()
+				return
+			## only support 064 for now
+			if oatversion !=  '064\x00':
+				dexfile.close()
+				return
+			## for oat the dex header is after the oat header
+			## https://www.blackhat.com/docs/asia-15/materials/asia-15-Sabanal-Hiding-Behind-ART-wp.pdf page 7
+			dexfile.seek(20)
+			androidbytes = dexfile.read(4)
+			if len(androidbytes) != 4:
+				dexfile.close()
+				return
+			dexfilecount = struct.unpack('<I', androidbytes)[0]
+			if dexfilecount != 1:
+				## TODO: what if there are multiple dex files included?
+				dexfile.close()
+				return
+
+			if oatversion == '064\x00':
+				## skip many fields and go straight to key_value_store_size
+				dexfile.seek(68)
+			androidbytes = dexfile.read(4)
+			if len(androidbytes) != 4:
+				dexfile.close()
+				return
+			key_value_store_size = struct.unpack('<I', androidbytes)[0]
+			androidbytes = dexfile.read(key_value_store_size)
+			if len(androidbytes) != key_value_store_size:
+				dexfile.close()
+				return
+
+			## then there are a few OAT dex file headers
+			for n in xrange(0,dexfilecount):
+				## first the dex_file_location_size
+				androidbytes = dexfile.read(4)
+				if len(androidbytes) != 4:
+					dexfile.close()
+					return
+				dex_file_location_size = struct.unpack('<I', androidbytes)[0]
+				## then dex_file_location_data (original path of the input DEX)
+				androidbytes = dexfile.read(dex_file_location_size)
+				if len(androidbytes) != dex_file_location_size:
+					dexfile.close()
+					return
+				## then the location of the checksum, skip
+				androidbytes = dexfile.read(4)
+				if len(androidbytes) != 4:
+					dexfile.close()
+					return
+				## then the dex_file_pointer, which is what is needed
+				androidbytes = dexfile.read(4)
+				if len(androidbytes) != 4:
+					dexfile.close()
+					return
+				dex_file_pointer = struct.unpack('<I', androidbytes)[0]
+				## dex data cannot be outside of the oat data
+				if dex_file_pointer > len(elfdata):
+					dexfile.close()
+					return
+				dexoffset = dex_file_pointer
 
 		## skip most of the header, as it has already been parsed
 		## by the prerun scan
-		dexfile.seek(52 + odexoffset)
+		dexfile.seek(52 + dexoffset)
 
-		map_off = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+		map_off = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
 		if map_off > filesize:
 			dexfile.close()
 			return
 
 		## get the length of the string identifiers section and the offset
 		string_ids_size = struct.unpack('<I', dexfile.read(4))[0]
-		string_ids_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+		string_ids_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
 		if string_ids_offset> filesize:
 			dexfile.close()
 			return
 
 		## get the length of the type identifiers and the offset
 		type_ids_size = struct.unpack('<I', dexfile.read(4))[0]
-		type_ids_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+		type_ids_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
 		if type_ids_offset > filesize:
 			dexfile.close()
 			return
 
 		## get the length of the prototype identifiers and the offset
 		proto_ids_size = struct.unpack('<I', dexfile.read(4))[0]
-		proto_ids_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+		proto_ids_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
 		if proto_ids_offset > filesize:
 			dexfile.close()
 			return
 
 		## get the length of the field identifiers and the offset
 		field_ids_size = struct.unpack('<I', dexfile.read(4))[0]
-		field_ids_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+		field_ids_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
 		if field_ids_offset > filesize:
 			dexfile.close()
 			return
 
 		## get the length of the class definitions and the offset
 		methods_defs_size = struct.unpack('<I', dexfile.read(4))[0]
-		methods_defs_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+		methods_defs_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
 		if methods_defs_offset > filesize:
 			dexfile.close()
 			return
 
 		## get the length of the class definitions and the offset
 		class_defs_size = struct.unpack('<I', dexfile.read(4))[0]
-		class_defs_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+		class_defs_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
 		if class_defs_offset > filesize:
 			dexfile.close()
 			return
 
 		## get the length of the data section and the offset
 		data_size = struct.unpack('<I', dexfile.read(4))[0]
-		data_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+		data_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
 		if data_offset > filesize:
 			dexfile.close()
 			return
@@ -640,7 +715,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 			dexfile.seek(string_ids_offset)
 			for dr in range(0, string_ids_size):
 				## find the offset of the string identifier in the file
-				string_id_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+				string_id_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
 
 				## store the old offset so it can be
 				## returned to later
@@ -693,7 +768,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 				dexfile.read(2)
 				## then read the size of the map item and the offset
 				map_item_size = struct.unpack('<I', dexfile.read(4))[0]
-				map_item_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+				map_item_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
 				map_contents[map_item_type] = {'offset': map_item_offset, 'size': map_item_size}
 
 		## some of the interesting bits are located in the
@@ -776,11 +851,11 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 					classnames.add(classname)
 				access_flags = struct.unpack('<I', dexfile.read(4))[0]
 				superclass_idx = struct.unpack('<I', dexfile.read(4))[0]
-				interfaces_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+				interfaces_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
 				sourcefile_index = struct.unpack('<I', dexfile.read(4))[0]
-				annotations_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
-				classdata_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
-				static_values_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+				annotations_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
+				classdata_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
+				static_values_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
 				if sourcefile_index in string_id_to_value:
 					sourcefiles.add(string_id_to_value[sourcefile_index])
 				else:
@@ -805,7 +880,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 				ins_size = struct.unpack('<H', dexfile.read(2))[0]
 				outs_size = struct.unpack('<H', dexfile.read(2))[0]
 				tries_size = struct.unpack('<H', dexfile.read(2))[0]
-				debug_info_offset = struct.unpack('<I', dexfile.read(4))[0] + odexoffset
+				debug_info_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
 				insns_size = struct.unpack('<I', dexfile.read(4))[0]
 
 				## keep track of how many 16 bit code units were read
@@ -885,7 +960,7 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 					for t in range(0,tries_size):
 						start_addr = struct.unpack('<I', dexfile.read(4))[0]
 						insn_count = struct.unpack('<H', dexfile.read(2))[0]
-						handler_offset = struct.unpack('<H', dexfile.read(2))[0] + odexoffset
+						handler_offset = struct.unpack('<H', dexfile.read(2))[0] + dexoffset
 					## then the encoded_catch_handler_list
 					lenstr = ""
 					while True:
