@@ -19,7 +19,11 @@ splitcharacters = map(lambda x: chr(x), range(0,9) + range(14,32) + [127])
 
 ## Dalvik opcodes, with the number of arguments.
 ## These can largely be found at https://source.android.com/devices/tech/dalvik/dalvik-bytecode.html
-## but it should be noted that ODEX opcodes are not documented there.
+## but it should be noted that ODEX opcodes are not documented there
+## and the Android source code should be used instead:
+##
+## https://android.googlesource.com/platform/dalvik.git/+/master/libdex/DexOpcodes.h
+##
 ## Information about ODEX opcodes was lifted from:
 ## http://pallergabor.uw.hu/androidblog/dalvik_opcodes.html
 ## and the Dedexer source code, specifically DexInstructionParser.java
@@ -34,7 +38,7 @@ dalvik_opcodes_no_argument = [ 0x00, 0x01, 0x04, 0x07, 0x0a, 0x0b, 0x0c
                              , 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe
                              , 0xbf, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5
                              , 0xc6, 0xc7, 0xc8, 0xc9, 0xca, 0xcb, 0xcc
-                             , 0xcd, 0xce, 0xcf, 0xec, 0xed, 0xf1, 0xff]
+                             , 0xcd, 0xce, 0xcf, 0xec, 0xf1, 0xff]
 
 dalvik_opcodes_single_argument = [ 0x02, 0x05, 0x08, 0x13, 0x15, 0x16, 0x19
                                  , 0x1c, 0x1f, 0x20, 0x22, 0x23, 0x29, 0x2d
@@ -54,7 +58,7 @@ dalvik_opcodes_single_argument = [ 0x02, 0x05, 0x08, 0x13, 0x15, 0x16, 0x19
                                  , 0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7
                                  , 0xd8, 0xd9, 0xda, 0xdb, 0xdc, 0xdd, 0xde
                                  , 0xdf, 0xe0, 0xe1, 0xe2, 0xe3, 0xe4, 0xe5
-                                 , 0xe6, 0xe7, 0xe8, 0xe9, 0xea, 0xeb, 0x1a
+                                 , 0xe6, 0xe7, 0xe8, 0xe9, 0xea, 0xeb, 0xed, 0x1a
                                  , 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xfc, 0xfd, 0xfe]
 
 dalvik_opcodes_two_arguments = [ 0x03, 0x06, 0x09, 0x14, 0x17, 0x24, 0x25
@@ -74,7 +78,7 @@ for i in dalvik_opcodes_two_arguments:
 dex_opcodes_extra_data[0x18] = 4
 
 unused = [ 0x73, 0x79, 0x7a, 0x3e, 0x3f, 0x40, 0x41
-         , 0x42, 0x43, 0xec, 0xed, 0xff]
+         , 0x42, 0x43, 0xff]
 
 ## Main part of the scan
 ##
@@ -910,8 +914,12 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 							lines.append(stringtoadd)
 						elif opcode == 0x1b:
 							string_id = struct.unpack('<I', extradata)[0]
-							stringtoadd = string_id_to_value[string_id]
-							lines.append(stringtoadd)
+							try:
+								stringtoadd = string_id_to_value[string_id]
+								lines.append(stringtoadd)
+							except Exception, e:
+								## lookup failed for some reason, so just skip
+								pass
 						elif opcode == 0x26:
 							## some extra work might be needed here, as the
 							## data might be in "packed-switch-payload"
