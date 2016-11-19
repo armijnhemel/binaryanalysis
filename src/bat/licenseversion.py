@@ -2511,6 +2511,8 @@ def lookup_identifier(scanqueue, reportqueue, cursor, conn, scanenv, topleveldir
 				if scankernelfunctions:
 					matchedlines = matchedlines - len(kernelfuncres)
 					lenlines = lenlines - len(kernelfuncres)
+				ignored = list(set(ignored))
+				ignored.sort()
 				res = {'matchedlines': matchedlines, 'extractedlines': lenlines, 'reports': reports, 'nonUniqueMatches': nonUniqueMatches, 'nonUniqueAssignments': nonUniqueAssignments, 'unmatched': unmatched, 'scores': scores, 'unmatchedlines': unmatchedlines, 'matchednonassignedlines': matchednonassignedlines, 'matchednotclonelines': matchednotclonelines, 'matcheddirectassignedlines': matcheddirectassignedlines, 'ignored': list(set(ignored))}
 		else:
 			res = None
