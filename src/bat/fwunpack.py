@@ -3641,7 +3641,9 @@ def searchUnpackMinix(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 	if not 0x410 in offsets['minix']:
 		return ([], blacklist, [], hints)
 	diroffsets = []
+	newtags = []
 	counter = 1
+	filesize = os.stat(filename).st_size
 	for offset in offsets['minix']:
 		## according to /usr/share/magic the magic header starts at 0x410
 		if offset < 0x410:
@@ -3658,9 +3660,12 @@ def searchUnpackMinix(filename, tempdir=None, blacklist=[], offsets={}, scanenv=
 			diroffsets.append((minixtmpdir, offset - 0x410, minixsize))
 			blacklist.append((offset - 0x410, offset - 0x410 + minixsize))
 			counter = counter + 1
+			if (offset - 0x410) == 0 and minixsize == filesize:
+				newtags.append('minix')
+				newtags.append('filesystem')
 		else:
 			os.rmdir(tmpdir)
-	return (diroffsets, blacklist, [], hints)
+	return (diroffsets, blacklist, newtags, hints)
 
 ## Unpack an minix v1 file system using bat-minix. Needs hints for size of minix file system
 def unpackMinix(filename, offset, tempdir=None, unpackenv={}, unpacktempdir=None):
