@@ -943,11 +943,23 @@ def postrunscan(scanqueue, postrunscans, topleveldir, scantempdir, cursor, conn,
 def scanconfigsection(config, section, scanenv, batconf):
 	if config.has_option(section, 'type'):
 		debug = False
+		mandatory = False
+		## some scans are mandatory
+		if not config.has_option(section, 'mandatory'):
+			if config.get(section, 'enabled') == 'yes':
+				mandatory = True
+
 		## scans have to be explicitely enabled
 		if not config.has_option(section, 'enabled'):
 			return
 		if config.get(section, 'enabled') == 'no':
-			return
+			if not mandatory:
+				return
+			else:
+				## TODO: figure out the cleanest way to
+				## handle this, probably passing some
+				## error message back
+				return
 		conf = {}
 
 		try:
