@@ -1,3 +1,11 @@
+bat (33.0) unstable; urgency=high
+
+  * add support for OAT variant
+  * prevent crash related to Python bug for crc32
+  * make maximum size of file for computing TLSH configurable
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Thu, 24 Nov 2016 07:53:40 +0100
+
 bat (32.0) unstable; urgency=high
 
   * remove dependency on bat-extratools-java and java
