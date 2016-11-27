@@ -2232,7 +2232,7 @@ def runscan(scans, binaries, batversion):
 			print "PRERUN UNPACK END %s" % scan_binary_basename, endtime.isoformat()
 		statistics['prerununpack'] = endtime - starttime
 
-		## add an extra tag for the top level item
+		## always add an extra tag 'toplevel' for the top level item
 		if 'checksum' in unpackreports[scan_binary_basename]:
 			filehash = unpackreports[scan_binary_basename]['checksum']
 			leaf_file_path = os.path.join(topleveldir, "filereports", "%s-filereport.pickle" % filehash)
@@ -2347,6 +2347,7 @@ def runscan(scans, binaries, batversion):
 		endtime = datetime.datetime.utcnow()
 		statistics['total'] = endtime - scandate
 
+		## finally write an archive file with all the data, if configured to do so
 		if scans['batconfig']['writeoutputfile']:
 			writeDumpfile(unpackreports, scans, processamount, writeconfig['outputfile'], writeconfig['config'], topleveldir, batversion, statistics, scans['batconfig']['packpickles'], scans['batconfig']['outputlite'], scans['batconfig']['debug'], compressed)
 		if scans['batconfig']['cleanup']:

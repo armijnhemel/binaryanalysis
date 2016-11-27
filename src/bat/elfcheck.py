@@ -576,6 +576,9 @@ def verifyELF(filename, tempdir=None, tags=[], offsets={}, scanenv={}, debug=Fal
 ##
 ## First the ELF header is checked, then the program header
 ## table, then the section header table
+##
+## For thorough documentation of each of the parts consult
+## the ELF documentation referred above.
 def parseELF(filename, offset=0, debug=False):
 	elffile = open(filename, 'rb')
 

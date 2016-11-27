@@ -34,6 +34,7 @@ def dirsetup(tempdir, filename, marker, counter):
 			tmpdir = tempfile.mkdtemp(dir=tempdir)
 	return tmpdir
 
+## a convenience method to set up a temporary directory if necessary
 def unpacksetup(tempdir):
 	if tempdir == None:
 		tmpdir = tempfile.mkdtemp()
@@ -41,7 +42,7 @@ def unpacksetup(tempdir):
 		tmpdir = tempdir
 	return tmpdir
 
-## Carve a file from a larger file, or copy a file.
+## Carve a file from a larger file, or simply copy or hardlink the file.
 def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpacktempdir=None, blacklist=[]):
 	if blacklist != []:
 		if length == 0:
@@ -60,7 +61,7 @@ def unpackFile(filename, offset, tmpfile, tmpdir, length=0, modify=False, unpack
 	## TODO: make configurable
 	unpackcutoff = 50000000
 
-	## If the while file needs to be scanned, then either copy it, or hardlink it.
+	## If the whole file needs to be scanned, then either copy it, or hardlink it.
 	## Hardlinking is only possible if the file resides on the same file system
 	## and if the file is not modified in a way.
 	if offset == 0 and length == 0:
