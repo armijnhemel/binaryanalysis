@@ -909,8 +909,12 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 						extradata = dexfile.read(extradatacount)
 						if opcode == 0x1a:
 							string_id = struct.unpack('<H', extradata)[0]
-							stringtoadd = string_id_to_value[string_id]
-							lines.append(stringtoadd)
+							try:
+								stringtoadd = string_id_to_value[string_id]
+								lines.append(stringtoadd)
+							except Exception, e:
+								## lookup failed for some reason, so just skip
+								pass
 						elif opcode == 0x1b:
 							string_id = struct.unpack('<I', extradata)[0]
 							try:
