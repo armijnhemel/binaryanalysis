@@ -556,6 +556,11 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 			## Filter scans
 			filteredscans = filterScans(scans, tags)
 			for unpackscan in filteredscans:
+				## filter the scan again as the tags might have changed
+				if unpackscan['noscan'] != None:
+					noscans = unpackscan['noscan'].split(':')
+					if set(noscans).intersection(set(tags)) != set():
+						continue
 				if unpackscan['magic'] != None:
 					scanmagic = unpackscan['magic'].split(':')
 					if set(scanmagic).intersection(filterscans) != set():
@@ -804,6 +809,12 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 
 			## run the leaf scans for the file
 			for leafscan in filterScans(leafscans, tags):
+				## filter the scan again as the tags might have changed
+				if leafscan['noscan'] != None:
+					noscans = leafscan['noscan'].split(':')
+					if set(noscans).intersection(set(tags)) != set():
+						continue
+
 				ignore = False
 				if 'extensionsignore' in leafscan:
 					extensionsignore = leafscan['extensionsignore'].split(':')
