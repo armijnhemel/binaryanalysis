@@ -1,0 +1,42 @@
+This is a list that maps tags to files. Each file could have more than one tag.
+
+empty :: empty files
+symlink :: symbolic link
+temporary :: temporary file used internally by BAT (should never be exposed to the outside world)
+
+
+The first basic distinction is between 'text' and 'binary':
+
+text :: files that only contain ASCII characters.
+binary :: files that contain other characters than ASCII characters (possibly also including ASCII characters)
+
+
+androidresource :: resource file (Android specific)
+
+androidxml :: Android 'binary' XML
+appledouble :: Apple Double files (resource forks, etc.)
+audio :: audio files (generic for all audio files that are tagged)
+bflt :: bFLT files (uClinux)
+certificate :: certificate files (generic for certiicates)
+cursor :: MS Windows cursor file (like ICO)
+dalvik :: Android dalvik file (gemeric, both dex and odex)
+dex :: Android Dex (old Android)
+graphics :: graphics files (generic for all graphics: WebP, BMP, GIF, JPEG, PNG)
+ico :: MS Windows ICO file
+ihex :: Intel iHEX file
+messagecatalog :: GNU message catalogue
+mp4 :: MPEG 4
+odex :: Android ODEX (optimized DEX)
+pak ::
+resource :: 
+resourcefork :: Apple resource fork
+riff :: RIFF container (WebP, WAV)
+rsa ::
+sqlite3 :: Sqlite3 database file
+terminfo :: terminfo file
+timezone :: time zone file
+vimswap :: Vim swap file
+wav :: WAV file
+webp :: WebP graphics file
+xml :: XML file
+
