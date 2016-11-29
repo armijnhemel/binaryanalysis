@@ -4096,7 +4096,7 @@ def searchUnpackGzip(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			os.unlink(tmpfile[1])
 			os.rmdir(tmpdir)
 			continue
-		filesize = os.stat(tmpfile[1]).st_size
+		filesize = os.stat(tmpfile[1]).st_size % pow(2,32)
 		if gzipcrc32andsize[4:8] != struct.pack('<I', filesize):
 			gzipfile.close()
 			os.unlink(tmpfile[1])
