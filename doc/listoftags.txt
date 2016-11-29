@@ -18,25 +18,31 @@ appledouble :: Apple Double files (resource forks, etc.)
 audio :: audio files (generic for all audio files that are tagged)
 bflt :: bFLT files (uClinux)
 certificate :: certificate files (generic for certiicates)
+compressed :: various compressed files (UPX, 7z, lzip, lzop, xz, gzip, compress, bzip2, lrzip, zip, lzma)
 cursor :: MS Windows cursor file (like ICO)
 dalvik :: Android dalvik file (gemeric, both dex and odex)
 dex :: Android Dex (old Android)
+font :: font data (woff, otf, ttf)
 graphics :: graphics files (generic for all graphics: WebP, BMP, GIF, JPEG, PNG)
 ico :: MS Windows ICO file
 ihex :: Intel iHEX file
 messagecatalog :: GNU message catalogue
 mp4 :: MPEG 4
 odex :: Android ODEX (optimized DEX)
+otf :: OpenType fonts
 pak ::
 resource :: 
 resourcefork :: Apple resource fork
 riff :: RIFF container (WebP, WAV)
 rsa ::
+serializedjava :: serialized Java
 sqlite3 :: Sqlite3 database file
 terminfo :: terminfo file
 timezone :: time zone file
+ttf :: True Type fonts
+upx :: UPX files
 vimswap :: Vim swap file
 wav :: WAV file
 webp :: WebP graphics file
+woff :: WOFF font files
 xml :: XML file
-
