@@ -1,3 +1,11 @@
+bat (34.0) unstable; urgency=high
+
+  * prevent crash in gzip crc checking
+  * make tag filtering more granular (example: filter when tags are added as
+    well)
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Wed, 30 Nov 2016 02:45:40 +0100
+
 bat (33.0) unstable; urgency=high
 
   * add support for OAT variant

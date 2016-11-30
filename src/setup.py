@@ -5,7 +5,7 @@ import glob
 import os.path
 
 setup(name='bat',
-      version='33.0',
+      version='34.0',
       description='Binary Analysis Tool',
       author='Binary Analysis Project',
       author_email='info@binaryanalysis.org',
