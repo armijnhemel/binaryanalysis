@@ -112,6 +112,7 @@ fsmagic = {
             'mswim':	        'MSWIM\x00\x00\x00',
             'certificate':	'-----BEGIN',
             'androidbackup':	'ANDROID BACKUP\n',
+            'aiff':		'FORM',
             'woff':		'wOFF',
             'woff2':		'wOF2',
             'xar':		'\x78\x61\x72\x21',

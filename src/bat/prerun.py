@@ -286,6 +286,84 @@ def verifyRiff(filename, validchunks, fourcc, tempdir=None, tags=[], offsets={},
 	newtags.append('riff')
 	return newtags
 
+## generic method to verify AIFF and AIFF-C. This is very similar to RIFF
+## but has different endianness and several other restrictions.
+## https://en.wikipedia.org/wiki/Audio_Interchange_File_Format
+def verifyAIFF(filename, cursor, conn, tempdir=None, tags=[], offsets={}, scanenv={}, debug=False, unpacktempdir=None, filehashes=None):
+	newtags = []
+	if "text" in tags or "compressed" in tags or "audio" in tags or "graphics" in tags:
+		return newtags
+	if not 'aiff' in offsets:
+		return newtags
+	if not 0 in offsets['aiff']:
+		return newtags
+	filesize = os.stat(filename).st_size
+
+	## there should at least be a valid header
+	if filesize < 12:
+		return newtags
+
+	bigendian = True
+
+	aifffile = open(filename, 'rb')
+	aifffile.seek(4)
+
+	## size of bytes following the size field. This field
+	## should be filesize - 8 if the whole file is AIFF
+	formsizebytes = aifffile.read(4)
+
+	formsize = struct.unpack('>I', formsizebytes)[0]
+
+	if formsize + 8 != filesize:
+		aifffile.close()
+		return newtags
+
+	## then check if it is little endian or big endian
+	## this is not used, but could be useful in the future
+	endianbytes = aifffile.read(4)
+
+	if endianbytes == 'AIFC':
+		bigendian = False
+	elif endianbytes == 'AIFF':
+		bigendian = True
+	else:
+		aifffile.close()
+		return newtags
+
+	## then depending on the file format different
+	## content will follow.
+	## There are different chunks that can follow eachother
+	## in the file.
+	seenchunkids = set()
+	while aifffile.tell() != filesize:
+		chunkheaderbytes = aifffile.read(4)
+		if len(chunkheaderbytes) != 4:
+			aifffile.close()
+			return newtags
+		seenchunkids.add(chunkheaderbytes)
+
+		## then read the size of the chunk
+		chunksizebytes = aifffile.read(4)
+		if len(chunksizebytes) != 4:
+			aifffile.close()
+			return newtags
+		chunksizebytes = struct.unpack('>I', chunksizebytes)[0]
+		curoffset = aifffile.tell()
+		if curoffset + chunksizebytes > filesize:
+			aifffile.close()
+			return newtags
+		aifffile.seek(curoffset + chunksizebytes)
+	aifffile.close()
+
+	## AIFF files have two mandatory chunks
+	if not ('COMM' in seenchunkids and 'SSND' in seenchunkids):
+		return newtags
+
+	newtags.append('aiff')
+	newtags.append('audio')
+
+	return newtags
+
 ## Verify if this is an Android resources file. These files can be found in
 ## Android APK archives and are always called "resources.arsc".
 ## There are various valid types of resource files, which are documented here:
