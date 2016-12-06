@@ -406,7 +406,8 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 			print >>sys.stderr, "string scan failed for:", filepath, e, type(e)
 			if blacklist != [] and not linuxkernel:
 				## cleanup the tempfile
-				os.unlink(tmpfile[1])
+				if createdtempfile:
+					os.unlink(tmpfile[1])
 			return None
 	elif 'bflt' in tags:
 		## first check the flags to see if the data section
