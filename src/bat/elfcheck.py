@@ -278,7 +278,12 @@ def getSymbolsAbstraction(filename, symboltype, elfresult, debug=False):
 				if elfresult['sections'][i]['sectiontype'] == 3:
 					strsection = i
 
+	## no need to continue if both the symsection
+	## and strsection are None (most likely indicating a corrupt ELF file)
 	if symsection == None:
+		return
+
+	if strsection == None:
 		return
 
 	bit32 = elfresult['bit32']
