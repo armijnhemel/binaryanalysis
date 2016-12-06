@@ -189,6 +189,7 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 			## Kernel symbols recorded in the image could lead to false positives,
 			## so they first have to be found and be blacklisted.
 			kernelfile = open(filepath, 'r')
+			validkernelfile = True
 			## TODO: this is inefficient
 			kerneldata = kernelfile.read()
 			kernelfile.close()
@@ -234,7 +235,11 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 				## or a NULL character.
 				offset = jiffy_pos + len('loops_per_jiffy')
 				lastnull = offset + 1
+				lenkerneldata = len(kerneldata)
 				while True:
+					if offset == lenkerneldata:
+						validkernelfile = False
+						break
 					if not kerneldata[offset] in string.printable:
 						if not kerneldata[offset] == chr(0x00):
 							break
@@ -242,24 +247,25 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 							lastnull = offset
 					offset += 1
 
-				if extractor.check_null(kerneldata, jiffy_pos, 'loops_per_jiffy'):
-					## loops_per_jiffy is not the first symbol in the list
-					## so work backwards
-					offset = jiffy_pos
-					firstnull = jiffy_pos - 1
+				if validkernelfile:
+					if extractor.check_null(kerneldata, jiffy_pos, 'loops_per_jiffy'):
+						## loops_per_jiffy is not the first symbol in the list
+						## so work backwards
+						offset = jiffy_pos
+						firstnull = jiffy_pos - 1
 
-					while True:
-						if not kerneldata[offset] in string.printable:
-							if not kerneldata[offset] == chr(0x00):
-								break
-							else:
-								firstnull = offset
-						offset -= 1
-				else:
-					firstnull = jiffy_pos
-				kernelsymdata = kerneldata[firstnull:lastnull]
-				kernelsymbols = filter(lambda x: x != '', kernelsymdata.split('\x00'))
-				blacklist.append((firstnull,lastnull))
+						while True:
+							if not kerneldata[offset] in string.printable:
+								if not kerneldata[offset] == chr(0x00):
+									break
+								else:
+									firstnull = offset
+							offset -= 1
+					else:
+						firstnull = jiffy_pos
+					kernelsymdata = kerneldata[firstnull:lastnull]
+					kernelsymbols = filter(lambda x: x != '', kernelsymdata.split('\x00'))
+					blacklist.append((firstnull,lastnull))
 
 		## If part of the file is blacklisted the blacklisted byte ranges
 		## should be ignored. Examples are firmwares, where there is a
