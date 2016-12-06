@@ -1,3 +1,12 @@
+bat (35.0) unstable; urgency=high
+
+  * prevent crash in case ELF file is corrupt
+  * prevent crash in case Linux kernel file is corrupt
+  * add configuration for WAV checker
+  * add AIFF checker
+
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Tue, 6 Dec 2016 22:32:40 +0100
+
 bat (34.0) unstable; urgency=high
 
   * prevent crash in gzip crc checking
