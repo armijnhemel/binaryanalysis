@@ -899,7 +899,12 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 				while bytecodecounter < insns_size:
 					opcode_location = dexfile.tell()
 					## find out the opcode.
-					opcode = struct.unpack('<H', dexfile.read(2))[0] & 0xff
+					opcodebytes = dexfile.read(2)
+					if len(opcodebytes) != 2:
+						## something is wrong here
+						dexfile.close()
+						return
+					opcode = struct.unpack('<H', opcodebytes)[0] & 0xff
 					## opcode (and possible register instructions) is
 					## one 16 bite code unit
 					if opcode_location in skipbytes:
