@@ -1,0 +1,50 @@
+This document describes how the database for BAT should be created.
+
+1. download sources
+2. install necessary tools
+3. create meta files
+4. start database server
+5. configure database creation script
+6. run database creation script
+
+
+1. Download sources
+-------------------
+
+First you need to download sources. How to do this is out of scope of BAT.
+Downloading can be done using a crawler, or by hand. You should store these
+files in a directory. It is recommended to create one directory per "origin"
+(for example: Linux kernel, KDE, etc.).
+
+2. Install necessary tools
+--------------------------
+
+If you want to create a database you will need the following tools installed:
+
+* ctags
+* xgettext
+* GNU tar
+* FOSSology (if you want to extract licenses) -- http://www.fossology.org/
+* Ninka (if you want to extract licenses) -- https://github.com/dmgerman/ninka/
+* python-tlsh (if you want TLSH checksums) -- https://github.com/trendmicro/tlsh
+
+python-tlsh is popping up in more and more distributions.
+
+3. Create meta files
+--------------------
+
+There are a few meta files that need to be created in the directory with downloaded sources.
+
+* SHA256SUM -- this is a file that, despite its name, contains several hashes for each archive in a directory
+* MANIFESTS/* -- a directory with files with hashes for each file in an archive
+* DOWNLOADURL -- a file with download URL of each package, plus project website
+* LIST -- main file used by the database creation script, lists package, version, package name and origin
+
+
+  Generating SHA256SUM
+
+In the directory 'maintenance' there is a script called 'updatesha256sum.py'. It can be invoked as follows:
+
+$ python updatesha256sum.py -f /path/to/directory/with/files
+
+This script will then generate a file called SHA256SUM in /path/to/directory/with/files
