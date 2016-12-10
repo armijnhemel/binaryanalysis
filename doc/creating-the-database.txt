@@ -16,6 +16,9 @@ Downloading can be done using a crawler, or by hand. You should store these
 files in a directory. It is recommended to create one directory per "origin"
 (for example: Linux kernel, KDE, etc.).
 
+Linux distributions, like Debian, are a good start to get all the useful and
+actively open source software for Linux.
+
 2. Install necessary tools
 --------------------------
 
@@ -104,3 +107,25 @@ and package version. This is not always easy, as there are many naming
 conventions in use by several distributions and some distributions use different
 names for packages. That is why it is necessary to manually check the output of
 this script.
+
+  Generating MANIFESTS/* files
+
+First create a directory called "MANIFESTS" inside of the directory with sources:
+
+$ mkdir /path/to/directory/with/files/MANIFESTS
+
+A script called 'createmanifests.py' can be found in the directory
+'maintenance'. This script unpacks each archive listed in the LIST file created
+in the previous step, unpacks it, and computes checksums for each file found in
+the archive and stores it as a bzip2 compressed file in the 'MANIFESTS'
+directory.
+
+
+4. Start the database server
+----------------------------
+
+5. configure database creation script
+-------------------------------------
+
+6. run database creation script
+-------------------------------
