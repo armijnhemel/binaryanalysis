@@ -33,18 +33,74 @@ python-tlsh is popping up in more and more distributions.
 3. Create meta files
 --------------------
 
-There are a few meta files that need to be created in the directory with downloaded sources.
+There are a few meta files that need to be created in the directory with
+downloaded sources. They need to be created in this order:
 
-* SHA256SUM -- this is a file that, despite its name, contains several hashes for each archive in a directory
+* SHA256SUM -- this is a file that, despite its name, contains several hashes
+for each archive in a directory
+* LIST -- main file used by the database creation script, lists package,
+version, package name and origin
 * MANIFESTS/* -- a directory with files with hashes for each file in an archive
 * DOWNLOADURL -- a file with download URL of each package, plus project website
-* LIST -- main file used by the database creation script, lists package, version, package name and origin
 
 
   Generating SHA256SUM
 
-In the directory 'maintenance' there is a script called 'updatesha256sum.py'. It can be invoked as follows:
+In the directory 'maintenance' there is a script called 'updatesha256sum.py'.
+It can be invoked as follows:
 
 $ python updatesha256sum.py -f /path/to/directory/with/files
 
-This script will then generate a file called SHA256SUM in /path/to/directory/with/files
+This script will then generate a file called SHA256SUM in
+/path/to/directory/with/files
+
+Example:
+
+$ python updatesha256sum.py -f /data/sources/kernel
+
+By default in this file the following hashes will be recorded:
+
+* SHA256
+* MD5
+* SHA1
+* CRC32
+* TLSH (if python-tlsh is installed)
+
+Each line of the file is tab separated. The first line of the file describes
+the hashes and order that are in the file.
+
+  Generating LIST
+
+In the directory 'maintenance' there is a script called 'generatelist.py'. It
+can be invoked as follows:
+
+$ python generatelist.py -f /path/to/directory/with/files -o origin
+
+Example:
+
+$ python generatelist.py -f /data/sources/gnome -o gnome
+
+Output is printed on standard out and needs to be directed. It is also highly
+recommended to sort the output first, for example:
+
+$ python generatelist.py -f /data/sources/gnome -o gnome | sort > /data/sources/gnome/LIST
+
+The script will output a line per package with the following
+information (tab separated):
+
+* package name
+* version
+* archive name
+* origin
+
+Only files with known archive extensions are included, for example:
+  * tar.gz, tgz
+  * zip, jar
+  * tbz2, tar.bz2
+  * etc.
+
+The script tries to automatically split the archive name into a package name
+and package version. This is not always easy, as there are many naming
+conventions in use by several distributions and some distributions use different
+names for packages. That is why it is necessary to manually check the output of
+this script.
