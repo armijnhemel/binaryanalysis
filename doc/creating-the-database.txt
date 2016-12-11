@@ -1,5 +1,11 @@
 This document describes how the database for BAT should be created.
 
+--------------------
+NOTE: currently the database creation scripts are under reconstruction
+(rewrite from sqlite to postgresql). This document describes the situation of
+how the scripts will be used after the rewrite.
+--------------------
+
 1. download sources
 2. install necessary tools
 3. create meta files
@@ -120,12 +126,37 @@ in the previous step, unpacks it, and computes checksums for each file found in
 the archive and stores it as a bzip2 compressed file in the 'MANIFESTS'
 directory.
 
+The script can be invoked as follows:
+
+$ python createmanifests -u -f /path/to/directory/with/files
+
+for example:
+
+$ python createmanifests.py -u -f /data/sources/gnome
+
+The name of a file in the MANIFESTS directory is actually the sha256 checksum
+of the file, to avoid duplication and work around the fact that sometimes
+archives with different contents use the same name.
+
+
+  Creating DOWNLOADURL file
+
+The DOWNLOADURL file is optional, but it can be used to store useful metadata
+about files in the database that is useful for for example reporting. This file
+should have two fields per line, separated by a tab. The fields are are the
+download URL of the archive (including the archive name), plus the website of
+the project.
 
 4. Start the database server
 ----------------------------
 
+Before the database creation script can be run the database server needs to be
+started.
+
 5. configure database creation script
 -------------------------------------
+
+The database needs a configuration script.
 
 6. run database creation script
 -------------------------------
