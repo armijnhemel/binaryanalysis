@@ -100,7 +100,7 @@ information (tab separated):
 * package name
 * version
 * archive name
-* origin
+* origin (optional)
 
 Only files with known archive extensions are included, for example:
   * tar.gz, tgz
@@ -147,6 +147,9 @@ should have two fields per line, separated by a tab. The fields are are the
 download URL of the archive (including the archive name), plus the website of
 the project.
 
+This information, if present, will be stored in the database in the database
+table "processed".
+
 4. Start the database server
 ----------------------------
 
@@ -156,7 +159,34 @@ started.
 5. configure database creation script
 -------------------------------------
 
-The database needs a configuration script.
+The database needs a configuration file. In the standard distribution a sample
+configuration file is provided. This configuration file contains a few
+sections, some generic, some specific to certain packages.
+
+...
+
+By default only files with specific extensions are scanned. The extensions (with
+a mapping to the programming language) can be found in the file
+'batextensions.py'. Sometimes there are additional files that need to be scanned
+that are package specific. These can be specified in additional sections. These
+sections have to have 'configtype' set to 'package'. For example, for the bash
+package there are additional files with identifiers that end up in the binary.
+The files with these identifiers have the extension ".def" and the language
+would be 'C'. In that case this can be configured as follows in the
+configuration file:
+
+  [bash]
+  configtype = package
+  extensions = .def:C
+
+The value for "extensions" is a space separated list. Each item has an
+extension and language identifier, separated by colons. If two extensions
+should be configured, then it works as follows:
+
+  extensions = .foo:C .bar:Java
+
+It should be noted that the name of the section should match the name of the
+package in the LIST file.
 
 6. run database creation script
 -------------------------------
