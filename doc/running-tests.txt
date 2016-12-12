@@ -1,0 +1,13 @@
+Notes for running tests
+
+(these are some personal notes for testing)
+
+Smoke test for unpacking
+------------------------
+
+To run a smoke test for unpacking with a large collection of firmwares it is
+important to do the following:
+
+* set 'cleanup' to yes so the disk doesn't fill up with unpacking directories
+* set 'writeoutputfile' to 'no' so the disk doesn't fill up with result files
+* disable ranking so the database is not hit (taking a long time)
