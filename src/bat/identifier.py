@@ -663,36 +663,76 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 		## by the prerun scan
 		dexfile.seek(52 + dexoffset)
 
-		map_off = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
+		dexbytes = dexfile.read(4)
+		if len(dexbytes) != 4:
+			dexfile.close()
+			return
+		map_off = struct.unpack('<I', dexbytes)[0] + dexoffset
 		if map_off > filesize:
 			dexfile.close()
 			return
 
 		## get the length of the string identifiers section and the offset
-		string_ids_size = struct.unpack('<I', dexfile.read(4))[0]
-		string_ids_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
-		if string_ids_offset> filesize:
+		dexbytes = dexfile.read(4)
+		if len(dexbytes) != 4:
+			dexfile.close()
+			return
+		string_ids_size = struct.unpack('<I', dexbytes)[0]
+		dexbytes = dexfile.read(4)
+		if len(dexbytes) != 4:
+			dexfile.close()
+			return
+		string_ids_offset = struct.unpack('<I', dexbytes)[0] + dexoffset
+		if string_ids_offset > filesize:
+			## string_ids_offset cannot be outside of the file
 			dexfile.close()
 			return
 
 		## get the length of the type identifiers and the offset
-		type_ids_size = struct.unpack('<I', dexfile.read(4))[0]
-		type_ids_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
+		dexbytes = dexfile.read(4)
+		if len(dexbytes) != 4:
+			dexfile.close()
+			return
+		type_ids_size = struct.unpack('<I', dexbytes)[0]
+		dexbytes = dexfile.read(4)
+		if len(dexbytes) != 4:
+			dexfile.close()
+			return
+		type_ids_offset = struct.unpack('<I', dexbytes)[0] + dexoffset
 		if type_ids_offset > filesize:
+			## type_ids_offset cannot be outside of the file
 			dexfile.close()
 			return
 
 		## get the length of the prototype identifiers and the offset
-		proto_ids_size = struct.unpack('<I', dexfile.read(4))[0]
-		proto_ids_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
+		dexbytes = dexfile.read(4)
+		if len(dexbytes) != 4:
+			dexfile.close()
+			return
+		proto_ids_size = struct.unpack('<I', dexbytes)[0]
+		dexbytes = dexfile.read(4)
+		if len(dexbytes) != 4:
+			dexfile.close()
+			return
+		proto_ids_offset = struct.unpack('<I', dexbytes)[0] + dexoffset
 		if proto_ids_offset > filesize:
+			## proto_ids_offset cannot be outside of the file
 			dexfile.close()
 			return
 
 		## get the length of the field identifiers and the offset
-		field_ids_size = struct.unpack('<I', dexfile.read(4))[0]
-		field_ids_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
+		dexbytes = dexfile.read(4)
+		if len(dexbytes) != 4:
+			dexfile.close()
+			return
+		field_ids_size = struct.unpack('<I', dexbytes)[0]
+		dexbytes = dexfile.read(4)
+		if len(dexbytes) != 4:
+			dexfile.close()
+			return
+		field_ids_offset = struct.unpack('<I', dexbytes)[0] + dexoffset
 		if field_ids_offset > filesize:
+			## field_ids_offset cannot be outside of the file
 			dexfile.close()
 			return
 
