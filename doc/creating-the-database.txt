@@ -37,7 +37,8 @@ If you want to create a database you will need the following tools installed:
 * Ninka (if you want to extract licenses) -- https://github.com/dmgerman/ninka/
 * python-tlsh (if you want TLSH checksums) -- https://github.com/trendmicro/tlsh
 
-python-tlsh is popping up in more and more distributions.
+python-tlsh is popping up in more and more distributions, but it might be
+necessary to configure, compile and install by hand.
 
 3. Create meta files
 --------------------
@@ -46,7 +47,7 @@ There are a few meta files that need to be created in the directory with
 downloaded sources. They need to be created in this order:
 
 * SHA256SUM -- this is a file that, despite its name, contains several hashes
-for each archive in a directory
+for each archive in a directory (and not just SHA256)
 * LIST -- main file used by the database creation script, lists package,
 version, package name and origin
 * MANIFESTS/* -- a directory with files with hashes for each file in an archive
@@ -92,7 +93,8 @@ Example:
 $ python generatelist.py -f /data/sources/gnome -o gnome
 
 Output is printed on standard out and needs to be directed. It is also highly
-recommended to sort the output first, for example:
+recommended to sort the output first (the database creation script caches
+results of the previous run to prevent duplicate scanning), for example:
 
 $ python generatelist.py -f /data/sources/gnome -o gnome | sort > /data/sources/gnome/LIST
 
@@ -165,6 +167,7 @@ The database needs a configuration file. In the standard distribution a sample
 configuration file is provided. This configuration file contains a few
 sections, some generic, some specific to certain packages.
 
+The first part of the configuration file sets various options.
 ...
 
 By default only files with specific extensions are scanned. The extensions (with
@@ -223,6 +226,9 @@ In BAT there are various tables:
 * tables holding regular data
 * 'caching' tables
 
+The tables holding regular data are filled by the database creation script.
+The database caching scripts need to be created separately.
+
 The caching tables are merely there for convenience to prevent expensive join
 operations on the tables. The reason is that the data in the 'extracted_*'
 tables do not contain any package information, but just checksums, because
@@ -233,3 +239,20 @@ thousands of identical files. Storing package and version name with the
 extracted identifiers would lead to a monstrous explosion in the database,
 which is why most of the tables use SHA256 hashes instead of package name
 and version.
+
+The schema for the caching database tables can be found in the file
+'postgresql-table.sql' in the directory 'maintenance'.
+
+To create the caching databases the following should be done for each
+identifier:
+
+1. select the checksums for the identifier, plus the associated language (as
+there are caching tables per language family)
+
+2. for each checksum in 1. look up the package name and file name (without path
+components)
+
+3. store the identifier, with package name and file name from 2.
+
+The score cache builds on the caches and can be computed by running the script
+'scorecache.py'.
