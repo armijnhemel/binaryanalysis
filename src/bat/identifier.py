@@ -919,6 +919,10 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 					extradatacount = dex_opcodes_extra_data[opcode] * 2
 					if extradatacount != 0:
 						extradata = dexfile.read(extradatacount)
+						if len(extradata) != extradatacount:
+							## something is wrong here
+							dexfile.close()
+							return
 						if opcode == 0x1a:
 							string_id = struct.unpack('<H', extradata)[0]
 							try:
@@ -944,9 +948,23 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 							curoffset = dexfile.tell()
 							dexfile.seek(opcode_location + branch_offset*2)
 							dexbytes = dexfile.read(2)
+							if len(dexbytes) != 2:
+								## something is wrong here
+								dexfile.close()
+								return
 							if dexbytes == '\x00\x03':
-								element_width = struct.unpack('<H', dexfile.read(2))[0]
-								number_of_elements = struct.unpack('<I', dexfile.read(4))[0]
+								dexbytes = dexfile.read(2)
+								if len(dexbytes) != 2:
+									## something is wrong here
+									dexfile.close()
+									return
+								element_width = struct.unpack('<H', dexbytes)[0]
+								dexbytes = dexfile.read(4)
+								if len(dexbytes) != 4:
+									## something is wrong here
+									dexfile.close()
+									return
+								number_of_elements = struct.unpack('<I', dexbytes)[0]
 								skipbytes[opcode_location + branch_offset*2] = 2*((number_of_elements * element_width + 1) / 2 + 4)
 							dexfile.seek(curoffset)
 						elif opcode == 0x2b:
@@ -958,8 +976,17 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 							curoffset = dexfile.tell()
 							dexfile.seek(opcode_location + branch_offset*2)
 							dexbytes = dexfile.read(2)
+							if len(dexbytes) != 2:
+								## something is wrong here
+								dexfile.close()
+								return
 							if dexbytes == '\x00\x01':
-								packedsize = struct.unpack('<H', dexfile.read(2))[0]
+								dexbytes = dexfile.read(2)
+								if len(dexbytes) != 2:
+									## something is wrong here
+									dexfile.close()
+									return
+								packedsize = struct.unpack('<H', dexbytes)[0]
 								skipbytes[opcode_location + branch_offset*2] = 2*(packedsize * 2+4)
 							dexfile.seek(curoffset)
 						elif opcode == 0x2c:
@@ -971,23 +998,56 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 							curoffset = dexfile.tell()
 							dexfile.seek(opcode_location + branch_offset*2)
 							dexbytes = dexfile.read(2)
+							if len(dexbytes) != 2:
+								## something is wrong here
+								dexfile.close()
+								return
 							if dexbytes == '\x00\x02':
-								packedsize = struct.unpack('<H', dexfile.read(2))[0]
+								dexbytes = dexfile.read(2)
+								if len(dexbytes) != 2:
+									## something is wrong here
+									dexfile.close()
+									return
+								packedsize = struct.unpack('<H', dexbytes)[0]
 								skipbytes[opcode_location + branch_offset*2] = 2*(packedsize * 4+2)
 							dexfile.seek(curoffset)
 
 				if tries_size != 0:
 					## first the list of try_items
 					if insns_size%2 != 0:
-						padding = struct.unpack('<H', dexfile.read(2))[0]
+						dexbytes = dexfile.read(2)
+						if len(dexbytes) != 2:
+							## something is wrong here
+							dexfile.close()
+							return
+						padding = struct.unpack('<H', dexbytes)[0]
 					for t in range(0,tries_size):
-						start_addr = struct.unpack('<I', dexfile.read(4))[0]
-						insn_count = struct.unpack('<H', dexfile.read(2))[0]
-						handler_offset = struct.unpack('<H', dexfile.read(2))[0] + dexoffset
+						dexbytes = dexfile.read(4)
+						if len(dexbytes) != 4:
+							## something is wrong here
+							dexfile.close()
+							return
+						start_addr = struct.unpack('<I', dexbytes)[0]
+						dexbytes = dexfile.read(2)
+						if len(dexbytes) != 2:
+							## something is wrong here
+							dexfile.close()
+							return
+						insn_count = struct.unpack('<H', dexbytes)[0]
+						dexbytes = dexfile.read(2)
+						if len(dexbytes) != 2:
+							## something is wrong here
+							dexfile.close()
+							return
+						handler_offset = struct.unpack('<H', dexbytes)[0] + dexoffset
 					## then the encoded_catch_handler_list
 					lenstr = ""
 					while True:
 						uleb128byte = dexfile.read(1)
+						if len(uleb128byte) != 1:
+							## something is wrong here
+							dexfile.close()
+							return
 						lenstr = "{:0>8b}".format(ord(uleb128byte))[1:] + lenstr
 						## most significant bit means that the next byte
 						## is also part of the length. Prepend to the string.
@@ -1002,6 +1062,10 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 						bytestr = ''
 						while True:
 							sleb128byte = dexfile.read(1)
+							if len(sleb128byte) != 1:
+								## something is wrong here
+								dexfile.close()
+								return
 							bytecount += 1
 							catchlenstr = "{:0>8b}".format(ord(sleb128byte))[1:] + catchlenstr
 							bytestr += sleb128byte
@@ -1026,12 +1090,20 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 							## but don't actually use their data
 							while True:
 								uleb128byte = dexfile.read(1)
+								if len(uleb128byte) != 1:
+									## something is wrong here
+									dexfile.close()
+									return
 								## most significant bit means that the next byte
 								## is also part of the length.
 								if (ord(uleb128byte) & 0x80) == 0:
 									break
 							while True:
 								uleb128byte = dexfile.read(1)
+								if len(uleb128byte) != 1:
+									## something is wrong here
+									dexfile.close()
+									return
 								## most significant bit means that the next byte
 								## is also part of the length.
 								if (ord(uleb128byte) & 0x80) == 0:
@@ -1040,6 +1112,10 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 							## the address for the "catch all"
 							while True:
 								uleb128byte = dexfile.read(1)
+								if len(uleb128byte) != 1:
+									## something is wrong here
+									dexfile.close()
+									return
 								## most significant bit means that the next byte
 								## is also part of the length.
 								if (ord(uleb128byte) & 0x80) == 0:
