@@ -841,12 +841,24 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 			map_size = struct.unpack('<I', dexbytes)[0]
 			## walk all the map items
 			for m in range(0,map_size):
-				map_item_type = struct.unpack('<H', dexfile.read(2))[0]
+				dexbytes = dexfile.read(2)
+				if len(dexbytes) != 2:
+					dexfile.close()
+					return
+				map_item_type = struct.unpack('<H', dexbytes)[0]
 				## discard the next two bytes
 				dexfile.read(2)
 				## then read the size of the map item and the offset
-				map_item_size = struct.unpack('<I', dexfile.read(4))[0]
-				map_item_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
+				dexbytes = dexfile.read(4)
+				if len(dexbytes) != 4:
+					dexfile.close()
+					return
+				map_item_size = struct.unpack('<I', dexbytes)[0]
+				dexbytes = dexfile.read(4)
+				if len(dexbytes) != 4:
+					dexfile.close()
+					return
+				map_item_offset = struct.unpack('<I', dexbytes)[0] + dexoffset
 				map_contents[map_item_type] = {'offset': map_item_offset, 'size': map_item_size}
 
 		## some of the interesting bits are located in the
@@ -918,7 +930,11 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 				## items are 4 byte aligned
 				if pos%4 != 0:
 					dexfile.read(4 - pos%4)
-				class_idx = struct.unpack('<I', dexfile.read(4))[0]
+				dexbytes = dexfile.read(4)
+				if len(dexbytes) != 4:
+					dexfile.close()
+					return
+				class_idx = struct.unpack('<I', dexbytes)[0]
 
 				## TODO: sanity checks
 				classname = string_id_to_value[type_ids[class_idx]]
@@ -927,13 +943,41 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 					if "$" in classname:
 						classname = classname.split("$")[0]
 					classnames.add(classname)
-				access_flags = struct.unpack('<I', dexfile.read(4))[0]
-				superclass_idx = struct.unpack('<I', dexfile.read(4))[0]
-				interfaces_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
-				sourcefile_index = struct.unpack('<I', dexfile.read(4))[0]
-				annotations_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
-				classdata_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
-				static_values_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
+				dexbytes = dexfile.read(4)
+				if len(dexbytes) != 4:
+					dexfile.close()
+					return
+				access_flags = struct.unpack('<I', dexbytes)[0]
+				dexbytes = dexfile.read(4)
+				if len(dexbytes) != 4:
+					dexfile.close()
+					return
+				superclass_idx = struct.unpack('<I', dexbytes)[0]
+				dexbytes = dexfile.read(4)
+				if len(dexbytes) != 4:
+					dexfile.close()
+					return
+				interfaces_offset = struct.unpack('<I', dexbytes)[0] + dexoffset
+				dexbytes = dexfile.read(4)
+				if len(dexbytes) != 4:
+					dexfile.close()
+					return
+				sourcefile_index = struct.unpack('<I', dexbytes)[0]
+				dexbytes = dexfile.read(4)
+				if len(dexbytes) != 4:
+					dexfile.close()
+					return
+				annotations_offset = struct.unpack('<I', dexbytes)[0] + dexoffset
+				dexbytes = dexfile.read(4)
+				if len(dexbytes) != 4:
+					dexfile.close()
+					return
+				classdata_offset = struct.unpack('<I', dexbytes)[0] + dexoffset
+				dexbytes = dexfile.read(4)
+				if len(dexbytes) != 4:
+					dexfile.close()
+					return
+				static_values_offset = struct.unpack('<I', dexbytes)[0] + dexoffset
 				if sourcefile_index in string_id_to_value:
 					sourcefiles.add(string_id_to_value[sourcefile_index])
 				else:
