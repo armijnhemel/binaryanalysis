@@ -834,7 +834,11 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 		## jump to the map and parse it
 		if map_off != 0:
 			dexfile.seek(map_off)
-			map_size = struct.unpack('<I', dexfile.read(4))[0]
+			dexbytes = dexfile.read(4)
+			if len(dexbytes) != 4:
+				dexfile.close()
+				return
+			map_size = struct.unpack('<I', dexbytes)[0]
 			## walk all the map items
 			for m in range(0,map_size):
 				map_item_type = struct.unpack('<H', dexfile.read(2))[0]
@@ -950,12 +954,36 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 				## code items are 4 byte aligned
 				if pos%4 != 0:
 					dexfile.read(4 - pos%4)
-				registers_size = struct.unpack('<H', dexfile.read(2))[0]
-				ins_size = struct.unpack('<H', dexfile.read(2))[0]
-				outs_size = struct.unpack('<H', dexfile.read(2))[0]
-				tries_size = struct.unpack('<H', dexfile.read(2))[0]
-				debug_info_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
-				insns_size = struct.unpack('<I', dexfile.read(4))[0]
+				dexbytes = dexfile.read(2)
+				if len(dexbytes) != 2:
+					dexfile.close()
+					return
+				registers_size = struct.unpack('<H', dexbytes)[0]
+				dexbytes = dexfile.read(2)
+				if len(dexbytes) != 2:
+					dexfile.close()
+					return
+				ins_size = struct.unpack('<H', dexbytes)[0]
+				dexbytes = dexfile.read(2)
+				if len(dexbytes) != 2:
+					dexfile.close()
+					return
+				outs_size = struct.unpack('<H', dexbytes)[0]
+				dexbytes = dexfile.read(2)
+				if len(dexbytes) != 2:
+					dexfile.close()
+					return
+				tries_size = struct.unpack('<H', dexbytes)[0]
+				dexbytes = dexfile.read(4)
+				if len(dexbytes) != 4:
+					dexfile.close()
+					return
+				debug_info_offset = struct.unpack('<I', dexbytes)[0] + dexoffset
+				dexbytes = dexfile.read(4)
+				if len(dexbytes) != 4:
+					dexfile.close()
+					return
+				insns_size = struct.unpack('<I', dexbytes)[0]
 
 				## keep track of how many 16 bit code units were read
 				bytecodecounter = 0
