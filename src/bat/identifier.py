@@ -737,22 +737,46 @@ def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
 			return
 
 		## get the length of the class definitions and the offset
-		methods_defs_size = struct.unpack('<I', dexfile.read(4))[0]
-		methods_defs_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
+		dexbytes = dexfile.read(4)
+		if len(dexbytes) != 4:
+			dexfile.close()
+			return
+		methods_defs_size = struct.unpack('<I', dexbytes)[0]
+		dexbytes = dexfile.read(4)
+		if len(dexbytes) != 4:
+			dexfile.close()
+			return
+		methods_defs_offset = struct.unpack('<I', dexbytes)[0] + dexoffset
 		if methods_defs_offset > filesize:
 			dexfile.close()
 			return
 
 		## get the length of the class definitions and the offset
-		class_defs_size = struct.unpack('<I', dexfile.read(4))[0]
-		class_defs_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
+		dexbytes = dexfile.read(4)
+		if len(dexbytes) != 4:
+			dexfile.close()
+			return
+		class_defs_size = struct.unpack('<I', dexbytes)[0]
+		dexbytes = dexfile.read(4)
+		if len(dexbytes) != 4:
+			dexfile.close()
+			return
+		class_defs_offset = struct.unpack('<I', dexbytes)[0] + dexoffset
 		if class_defs_offset > filesize:
 			dexfile.close()
 			return
 
 		## get the length of the data section and the offset
-		data_size = struct.unpack('<I', dexfile.read(4))[0]
-		data_offset = struct.unpack('<I', dexfile.read(4))[0] + dexoffset
+		dexbytes = dexfile.read(4)
+		if len(dexbytes) != 4:
+			dexfile.close()
+			return
+		data_size = struct.unpack('<I', dexbytes)[0]
+		dexbytes = dexfile.read(4)
+		if len(dexbytes) != 4:
+			dexfile.close()
+			return
+		data_offset = struct.unpack('<I', dexbytes)[0] + dexoffset
 		if data_offset > filesize:
 			dexfile.close()
 			return
