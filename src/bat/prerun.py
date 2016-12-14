@@ -389,6 +389,8 @@ def verifyAndroidResource(filename, cursor, conn, tempdir=None, tags=[], offsets
 	androidfile = open(filename, 'rb')
 	androidbytes = androidfile.read(8)
 	androidfile.close()
+	if not len(androidbytes) == 8:
+		return newtags
 	restype = struct.unpack('<H', androidbytes[:2])[0]
 	## NULL type, handle later
 	if restype == 0:
@@ -793,8 +795,10 @@ def verifyIco(filename, cursor, conn, tempdir=None, tags=[], offsets={}, scanenv
 	icofile = open(filename, 'rb')
 	icofile.seek(4)
 	icobytes = icofile.read(2)
-	icocount = struct.unpack('<H', icobytes)[0]
 	icofile.close()
+	if len(icobytes) != 2:
+		return newtags
+	icocount = struct.unpack('<H', icobytes)[0]
 
 	if icocount == 0:
 		return newtags
@@ -1013,6 +1017,9 @@ def verifyTZ(filename, cursor, conn, tempdir=None, tags=[], offsets={}, scanenv=
 		version = 3
 	## then 15 null bytes
 	databytes = datafile.read(15)
+	if len(databytes) != 15:
+		datafile.close()
+		return newtags
 	if set(databytes) != set(['\x00']):
 		datafile.close()
 		return newtags
