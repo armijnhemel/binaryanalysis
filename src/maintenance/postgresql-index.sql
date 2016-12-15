@@ -50,7 +50,7 @@ create index copyright_index on extracted_copyright(checksum);
 create index copyright_type_index on extracted_copyright(copyright, type);
 create index security_cert_checksum_index on security_cert(checksum);
 create index security_cve_checksum_index on security_cve(checksum);
-create index security_password_hash_index on security_password(checksum);
+create index security_password_hash_index on security_password(hash);
 create index renames_index_originalname on renames (originalname);
 create index renames_index_newname on renames (newname);
 create index file_index on file(filename, directory);
