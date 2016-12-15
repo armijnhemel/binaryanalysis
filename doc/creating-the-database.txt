@@ -167,7 +167,58 @@ The database needs a configuration file. In the standard distribution a sample
 configuration file is provided. This configuration file contains a few
 sections, some generic, some specific to certain packages.
 
-The first part of the configuration file sets various options.
+The first part of the configuration file sets various options. The type of this
+configuration is set to 'global':
+
+  [extractconfig]
+  configtype = global
+
+Inside this configuration file there are various settings, for example for the
+database (user, password and database table):
+
+  postgresql_user     = bat
+  postgresql_password = bat
+  postgresql_db       = bat
+
+Optionally there are also settings in case the database server runs on a
+different port or machine:
+
+  postgresql_port     = 5432
+  postgresql_host     = 127.0.0.1
+
+There are a few settings related to unpacking archives:
+
+  cleanup = yes
+  unpackdir = /ramdisk
+
+The 'cleanup' option (default: no, but this will be changed) is used to
+indicate whether or not the unpacked source code archive should be removed
+after processing. Needless to say it is highly recommended to set this to 'yes'
+to avoid that the disk fills up.
+
+The 'unpackdir' option can be used to specify a different location for
+unpacking source code (default: /tmp). Good reasons for changing this:
+
+1. many recent Linux distributions mount /tmp on a ramdisk, and might be
+limited in space. Also, /tmp is used by other applications and filling up this
+partition might cause other programs to fail
+
+2. in case /tmp is not mounted on a ramdisk but regular disk (or even SSD) and
+there is a lot of RAM available it might make sense to create a ramdisk to
+speed up unpacking. For large archives (Linux kernel, Qt, Chromium,
+LibreOffice, etc.) the speed up will be significant.
+
+The other settings are related to which data to extract and especially which
+data to ignore.
+
+  wipe = no
+  extrahashes = md5:sha1:crc32:tlsh
+  nomoschunks = 10
+  urlcutoff = 1000
+  maxstringcutoff = 1000
+  minstringcutoff = 4
+  cutoff = 209715200
+
 ...
 
 By default only files with specific extensions are scanned. The extensions (with
