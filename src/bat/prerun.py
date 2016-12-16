@@ -444,8 +444,16 @@ def verifyChromePak(filename, cursor, conn, tempdir=None, tags=[], offsets={}, s
 
 	for i in range(0,numberofentries):
 		try:
-			resourceid = struct.unpack('<H', pakfile.read(2))[0]
-			resourceoffset = struct.unpack('<I', pakfile.read(4))[0]
+			resourcebytes = pakfileread(2)
+			if len(resourcebytes) != 2:
+				pakfile.close()
+				return newtags
+			resourceid = struct.unpack('<H', resourcebytes)[0]
+			resourcebytes = pakfileread(4)
+			if len(resourcebytes) != 4:
+				pakfile.close()
+				return newtags
+			resourceoffset = struct.unpack('<I', resourcebytes)[0]
 			if resourceoffset > filesize:
 				pakfile.close()
 				return newtags
