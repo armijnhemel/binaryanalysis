@@ -257,7 +257,11 @@ package in the LIST file.
 6. run database creation script
 -------------------------------
 
+$ python createdb.py -c /path/to/configuration -f /path/to/directory/with/archives
 
+for example:
+
+$ python createdb.py -c createdb.config -f /data/sources/zlib
 
 
 
