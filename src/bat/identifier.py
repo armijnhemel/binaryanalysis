@@ -83,7 +83,7 @@ unused = [ 0x73, 0x79, 0x7a, 0x3e, 0x3f, 0x40, 0x41
 ##
 ## 1. extract string constants, function names, variable names, etc.
 ## 2. Then run strings through computeScore, that queries the database and does
-## funky statistics as described in our paper.
+## funky statistics as described in our paper. This part is done in other files
 ##
 ## Original code (in Perl) was written by Eelco Dolstra.
 ## Reimplementation in Python done by Armijn Hemel.
@@ -493,27 +493,6 @@ def extractC(filepath, tags, scanenv, filesize, stringcutoff, linuxkernel, black
 	cmeta['symbolfilenames'] = symbolfilenames
 	return cmeta
 
-def extractJava(scanfile, tags, scanenv, filesize, stringcutoff, blacklist=[], scandebug=False, unpacktempdir=None):
-	if 'dex' in tags:
-		javatype = 'dex'
-	elif 'odex' in tags:
-		javatype = 'odex'
-	elif 'oat' in tags:
-		javatype = 'oat'
-	elif 'serializedjava' in tags:
-		javatype = 'serializedjava'
-		## TODO: find out what to do with this
-		return None
-	else:
-		javatype = 'java'
-	if blacklist == []:
-		javares = extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir)
-	else:
-		javares = None
-	if javares == None:
-		return None
-	return javares
-
 '''
 def extractJavaScript(path, tags, scanenv, filesize, stringcutoff, blacklist=[], scandebug=False, unpacktempdir=None):
 	## JavaScript can be minified, but using xgettext it is still
@@ -532,7 +511,24 @@ def extractJavaScript(path, tags, scanenv, filesize, stringcutoff, blacklist=[],
 ## 3. variable names
 ## 4. source file names
 ## 5. method names
-def extractJavaInfo(scanfile, scanenv, stringcutoff, javatype, unpacktempdir):
+def extractJava(scanfile, tags, scanenv, filesize, stringcutoff, blacklist=[], scandebug=False, unpacktempdir=None):
+	if blacklist != []:
+		return None
+
+	## first try to determine the type of Java file
+	if 'dex' in tags:
+		javatype = 'dex'
+	elif 'odex' in tags:
+		javatype = 'odex'
+	elif 'oat' in tags:
+		javatype = 'oat'
+	elif 'serializedjava' in tags:
+		javatype = 'serializedjava'
+		## TODO: find out what to do with this
+		return None
+	else:
+		javatype = 'java'
+
 	lines = []
 	filesize = os.stat(scanfile).st_size
         if javatype == 'java':
