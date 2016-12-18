@@ -53,9 +53,9 @@ binary kernel image and modules back to a configuration.
 '''
 
 import sys, os, magic, string, re, subprocess, shutil, stat, datetime
-import tempfile, bz2, tarfile, gzip, ConfigParser, zipfile
+import tempfile, bz2, tarfile, gzip, ConfigParser, zipfile, Queue
 from optparse import OptionParser
-import sqlite3, hashlib, zlib, urlparse, tokenize, multiprocessing
+import hashlib, zlib, urlparse, tokenize, multiprocessing, psycopg2
 import batextensions
 
 ## import the tlsh module if present. If not, disable TLSH scanning
@@ -629,6 +629,7 @@ def unpack(directory, filename, unpackdir):
 		os.stat(os.path.join(directory, filename))
 	except:
 		print >>sys.stderr, "Can't find %s" % filename
+		sys.stderr.flush()
 		return None
 
 	filepath = os.path.realpath(os.path.join(directory, filename))
@@ -656,6 +657,7 @@ def unpack(directory, filename, unpackdir):
 		(stanout, stanerr) = p.communicate()
 		if p.returncode != 0:
 			print >>sys.stderr, "corrupt bz2 archive %s/%s" % (directory, filename)
+			sys.stderr.flush()
 			try:
 				shutil.rmtree(tmpdir)
 			except:
@@ -702,6 +704,7 @@ def unpack(directory, filename, unpackdir):
 		except Exception, e:
 			shutil.rmtree(tmpdir)
 			print >>sys.stderr, "unpacking ZIP failed", e, filepath
+			sys.stderr.flush()
 			return None
 	osgen = os.walk(tmpdir)
 	while True:
@@ -721,12 +724,13 @@ def unpack(directory, filename, unpackdir):
 		except Exception, e:
 			if str(e) != "":
 				print >>sys.stderr, e
+				sys.stderr.flush()
 			break
 	return tmpdir
 
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
-def unpack_getstrings(filedir, package, version, filename, origin, checksums, downloadurl, website, dbpath, cleanup, license, copyrights, security, pool, extractconfig, licensedb, authlicensedb, authdb, authcopy, securitydb, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
+def unpack_getstrings(cursor, conn, filedir, package, version, filename, origin, checksums, downloadurl, website, cleanup, license, copyrights, security, pool, extractconfig, authdb, authcopy, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, newlist, allfiles, batcursors, batcons, processors):
 	process = True
 	unpacked = False
 
@@ -791,6 +795,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 		downloadurl = downloadurl.get(filename, None)
 		website = website.get(filename, None)
 
+	## store file names to hash values
 	filetohash = {}
 
 	has_manifest = False
@@ -820,6 +825,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 			## as in the hashes wanted, then don't process the manifest file
 			process = False
 			print >>sys.stderr, "something is wrong, please regenerate your manifest files with the right hashes"
+			sys.stderr.flush()
 
 		if process:
 			for i in manifestlines[1:]:
@@ -874,11 +880,6 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 	print >>sys.stdout, "processing", filename, datetime.datetime.utcnow().isoformat()
 	sys.stdout.flush()
 
-        conn = sqlite3.connect(dbpath, check_same_thread = False)
-	conn.text_factory = str
-	c = conn.cursor()
-	c.execute('PRAGMA synchronous=off')
-
 	## First see if this exact version is in the rewrite list. If so, rewrite.
 	if filehash in rewrites:
 		if origin == rewrites[filehash]['origin']:
@@ -889,22 +890,21 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 						version = rewrites[filehash]['newversion']
 
 	## Then check if this version exists in the database.
-	c.execute('''select checksum from processed where package=? and version=? LIMIT 1''', (package, version))
-	checkres = c.fetchall()
+	cursor.execute('''select checksum from processed where package=%s and version=%s LIMIT 1''', (package, version))
+	checkres = cursor.fetchall()
+	conn.commit()
 	if len(checkres) == 0:
 		## If the version is not in 'processed' check if there are already any strings
 		## from program + version. If so, first remove the results before adding new results to
 		## avoid unnecessary duplication.
-		c.execute('''select checksum from processed_file where package=? and version=? LIMIT 1''', (package, version))
-		if len(c.fetchall()) != 0:
-			c.execute('''delete from processed_file where package=? and version=?''', (package, version))
+		cursor.execute('''select checksum from processed_file where package=%s and version=%s LIMIT 1''', (package, version))
+		if len(cursor.fetchall()) != 0:
+			cursor.execute('''delete from processed_file where package=%s and version=%s''', (package, version))
 			conn.commit()
 		if process and not batarchive:
 			## because there are no results always unpack the archive
 			temporarydir = unpack(filedir, filename, unpackdir)
 			if temporarydir == None:
-				c.close()
-				conn.close()
 				return None
 	else:
 		## If the version is in 'processed' then it should be checked if every file is in processed_file
@@ -913,7 +913,9 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 		## If not, one of the versions should be renamed.
 		## TODO: support for batarchive
 		existing_files_to_hash = {}
-		existing_files = conn.execute('''select pathname, checksum from processed_file where package=? and version=?''', (package, version)).fetchall()
+		cursor.execute('''select pathname, checksum from processed_file where package=%s and version=%s''', (package, version))
+		existing_files = cursor.fetchall()
+		conn.commit()
 		for e in existing_files:
 			(existing_filename, existing_checksum) = e
 			existing_files_to_hash[existing_filename] = existing_checksum
@@ -928,14 +930,12 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 		else:
 			identical = False
 		if identical:
-			c.execute("insert into archivealias (checksum, archivename, origin, downloadurl, website) values (?,?,?,?,?)", (filehash, filename, origin, downloadurl, website))
+			cursor.execute("insert into archivealias (checksum, archivename, origin, downloadurl, website) values (%s,%s,%s,%s,%s)", (filehash, filename, origin, downloadurl, website))
 			conn.commit()
 			return
 
 		temporarydir = unpack(filedir, filename, unpackdir)
 		if temporarydir == None:
-			c.close()
-			conn.close()
 			return None
 
 		## First grab all the files
@@ -952,6 +952,7 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 		except Exception, e:
 			if str(e) != "":
 				print >>sys.stderr, package, version, e
+				sys.stderr.flush()
 
 		## first filter out the uninteresting files
 		scanfiles = filter(lambda x: x != None, pool.map(filterfiles, scanfiles, 1))
@@ -964,8 +965,46 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 		## If they are not equal the package is not identical.
 		origlen = len(existing_files)
 		if len(scanfile_result) == origlen:
-			tasks = map(lambda x: (dbpath, package, version, x[2]['sha256']), scanfile_result)
-			nonidenticals = filter(lambda x: x[1] == False, pool.map(grabhash, tasks, 1))
+			tasks = map(lambda x: (package, version, x[2]['sha256']), scanfile_result)
+			scanmanager = multiprocessing.Manager()
+			scanqueue = multiprocessing.JoinableQueue(maxsize=0)
+			reportqueue = scanmanager.Queue(maxsize=0)
+
+			map(lambda x: scanqueue.put(x), tasks)
+
+			processpool = []
+			## TODO: make configurable
+			timeout = 2592000
+
+			for i in range(0,processors):
+				batcursor = batcursors[i]
+				batconn = batcons[i]
+				p = multiprocessing.Process(target=grabhash, args=(batconn, batcursor, scanqueue, reportqueue, timeout))
+				processpool.append(p)
+				p.start()
+
+			scanqueue.join()
+
+			nonidenticals = []
+
+			while True:
+				try:
+					val = reportqueue.get_nowait()
+					nonidenticals.append(val)
+					reportqueue.task_done()
+				except Queue.Empty, e:
+					## Queue is empty
+					break
+
+			## block here until the reportqueue is empty
+			reportqueue.join()
+
+			for p in processpool:
+				p.terminate()
+
+			scanmanager.shutdown()
+
+			nonidenticals = filter(lambda x: x[1] == False, nonidenticals)
 			if len(nonidenticals) != 0:
 				identical = False
 		else:
@@ -977,15 +1016,13 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 			## If the version is not in 'processed' check if there are already any strings
 			## from program + version. If so, first remove the results before adding to
 			## avoid unnecessary duplication.
-			c.execute('''select checksum from processed_file where package=? and version=? LIMIT 1''', (package, version))
-			if len(c.fetchall()) != 0:
-				c.execute('''delete from processed_file where package=? and version=?''', (package, version))
-				conn.commit()
+			cursor.execute('''select checksum from processed_file where package=%s and version=%s LIMIT 1''', (package, version))
+			if len(cursor.fetchall()) != 0:
+				cursor.execute('''delete from processed_file where package=%s and version=%s''', (package, version))
+			conn.commit()
 		else:
 			if cleanup:
 				cleanupdir(temporarydir)
-			c.close()
-			conn.close()
 			return
 
 		if has_manifest:
@@ -993,28 +1030,29 @@ def unpack_getstrings(filedir, package, version, filename, origin, checksums, do
 			if temporarydir == None:
 				return None
 
-	extractionresults = traversefiletree(temporarydir, conn, c, package, version, license, copyrights, security, pool, extractconfig, licensedb, authlicensedb, authdb, authcopy, securitydb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles)
+	## process the files in the unpacked directory
+	extractionresults = traversefiletree(temporarydir, conn, cursor, package, version, license, copyrights, security, pool, extractconfig, authdb, authcopy, oldpackage, oldsha256, batarchive, filetohash, packageconfig.get(package, {}), unpackdir, extrahashes, update, newlist, allfiles)
 
 	if extractionresults != None:
 		if extractionresults != []:
 			## Add the file to the database: name of archive, sha256, packagename and version
 			## This is to be able to just update the database instead of recreating it.
-			c.execute('''insert into processed (package, version, filename, origin, checksum, downloadurl, website) values (?,?,?,?,?,?,?)''', (package, version, filename, origin, filehash, downloadurl, website))
+			cursor.execute('''insert into processed (package, version, filename, origin, checksum, downloadurl, website) values (%s,%s,%s,%s,%s,%s,%s)''', (package, version, filename, origin, filehash, downloadurl, website))
 			process_extra_hashes = set()
+			conn.commit()
 
-			c.execute('''select sha256 from hashconversion where sha256=? LIMIT 1''', (filehash,))
-			if len(c.fetchall()) == 0:
-				c.execute('''insert into hashconversion (sha256) values (?)''', (filehash,))
+			cursor.execute('''select sha256 from hashconversion where sha256=%s LIMIT 1''', (filehash,))
+			if len(cursor.fetchall()) == 0:
+				cursor.execute('''insert into hashconversion (sha256) values (%s)''', (filehash,))
 				for k in checksums.keys():
 					if k == 'sha256':
 						continue
-					query = "update hashconversion set %s='%s' where sha256=?" % (k, checksums[k])
-					c.execute(query, (filehash,))
+					query = "update hashconversion set %s='%s' where sha256=%%s" % (k, checksums[k])
+					cursor.execute(query, (filehash,))
+			conn.commit()
 		elif batarchive and not emptyarchive:
-			c.execute('''insert into processed (package, version, filename, origin, checksum, downloadurl, website) values (?,?,?,?,?,?,?)''', (package, version, filename, origin, filehash, downloadurl, website))
+			cursor.execute('''insert into processed (package, version, filename, origin, checksum, downloadurl, website) values (%s,%s,%s,%s,%s,%s,%s)''', (package, version, filename, origin, filehash, downloadurl, website))
 	conn.commit()
-	c.close()
-	conn.close()
 	if cleanup:
 		cleanupdir(temporarydir)
 	return extractionresults
@@ -1026,18 +1064,18 @@ def cleanupdir(temporarydir):
 		## nothing that can be done right now, so just give up
 		pass
 
-def grabhash((db, package, version, checksum)):
-	conn = sqlite3.connect(db)
-	c = conn.cursor()
-	c.execute('''select checksum from processed_file where package=? and version=? and checksum=?''', (package, version, checksum))
-	cres = c.fetchall()
-	if len(cres) == 0:
-		identical = False
-	else:
-		identical = True
-	c.close()
-	conn.close()
-	return (checksum, identical)
+def grabhash(conn, cursor, scanqueue, reportqueue, timeout):
+	while True:
+		(package, version, checksum) = scanqueue.get(timeout=timeout)
+		cursor.execute('''select checksum from processed_file where package=%s and version=%s and checksum=%s''', (package, version, checksum))
+		cres = cursor.fetchall()
+		conn.commit()
+		if len(cres) == 0:
+			identical = False
+		else:
+			identical = True
+		reportqueue.put((checksum, identical))
+		scanqueue.task_done()
 
 def filterfilename(filename, pkgconf):
 	## some filenames might have uppercase extensions, so lowercase them first
@@ -1124,9 +1162,7 @@ def computehash((filedir, filename, extension, language, extrahashes)):
 		
 	return (filedir, filename, filehashes, extension, language)
 
-def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, security, pool, extractconfig, licensedb, authlicensedb, authdb, authcopy, securitydb, oldpackage, oldsha256, batarchive, filetohash, packageconfig, unpackdir, extrahashes, update, newlist, allfiles):
-
-	pkgconf = packageconfig.get(package,{})
+def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, security, pool, extractconfig, authdb, authcopy, oldpackage, oldsha256, batarchive, filetohash, pkgconf, unpackdir, extrahashes, update, newlist, allfiles):
 
 	srcdirlen = len(srcdir)+1
 	scanfiles = []
@@ -1146,6 +1182,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	except Exception, e:
 		if str(e) != "":
 			print >>sys.stderr, package, version, e
+			sys.stderr.flush()
 			return
 		pass
 
@@ -1208,14 +1245,15 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 				continue
 		if filehash in tmpsha256s:
 			continue
-		cursor.execute("select * from processed_file where checksum=? LIMIT 1", (filehash,))
+		cursor.execute("select * from processed_file where checksum=%s LIMIT 1", (filehash,))
 		testres = cursor.fetchall()
 		if len(testres) != 0:
 			continue
 		tmpsha256s.add(filehash)
-		cursor.execute('''select * from extracted_string where checksum=? LIMIT 1''', (filehash,))
+		cursor.execute('''select * from extracted_string where checksum=%s LIMIT 1''', (filehash,))
 		if len(cursor.fetchall()) != 0:
 			#print >>sys.stderr, "duplicate %s %s: %s/%s" % (package, version, i[0], p)
+			#sys.stderr.flush()
 			continue
 		if filename == 'configure.ac':
 			filestoscanextra.append((package, version, filedir, filename, language, filehash))
@@ -1286,32 +1324,28 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 					configureresgroups = configureres.groups()
 					ac_init_pos = configureaclines.find('AC_INIT(')
 					lineno = configureaclines.count('\n', 0, ac_init_pos) + 1
-					cursor.execute('''insert into extracted_string (stringidentifier, checksum, language, linenumber) values (?,?,?,?)''', (configureresgroups[0], filehash, language, lineno))
+					cursor.execute('''insert into extracted_string (stringidentifier, checksum, language, linenumber) values (%s,%s,%s,%s)''', (configureresgroups[0], filehash, language, lineno))
 		conn.commit()
 
 	if license:
-		licenseconn = sqlite3.connect(licensedb, check_same_thread = False)
-		licensecursor = licenseconn.cursor()
-		licensecursor.execute('PRAGMA synchronous=off')
-
 		ignorefiles = set()
 
-		## if authlicensedb is not empty see if the checksum can be found in this database
-		if authlicensedb != None:
-			authlicenseconn = sqlite3.connect(authlicensedb, check_same_thread = False)
+		## if authdb is not empty see if the checksum can be found in this database
+		if authdb != None:
+			authlicenseconn = sqlite3.connect(authdb, check_same_thread = False)
 			authlicensecursor = authlicenseconn.cursor()
 			authlicensecursor.execute('PRAGMA synchronous=off')
 			## TODO: check for presence of licenses
 
-			## then check for every file in filestoscan to see if they are already in authlicensedb
+			## then check for every file in filestoscan to see if they are already in authdb
 			for f in filestoscan:
-				authlicensecursor.execute("select distinct * from licenses where checksum=?", (f[5],))
+				authlicensecursor.execute("select distinct * from licenses where checksum=%s", (f[5],))
 				authlicenses = authlicensecursor.fetchall()
 				if len(authlicenses) != 0:
 					try:
 						for a in authlicenses:
-							licensecursor.execute("insert into licenses values (?,?,?,?)", a)
-						licenseconn.commit()
+							cursor.execute("insert into licenses values (%s,%s,%s,%s)", a)
+						conn.commit()
 						ignorefiles.add(f[5])
 					except:
 						pass
@@ -1334,8 +1368,8 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		for l in license_results:
 			licenses = l[1]
 			for license in licenses:
-				licensecursor.execute('''insert into licenses (checksum, license, scanner, version) values (?,?,?,?)''', (l[0], license, "ninka", ninkaversion))
-		licenseconn.commit()
+				cursor.execute('''insert into licenses (checksum, license, scanner, version) values (%s,%s,%s,%s)''', (l[0], license, "ninka", ninkaversion))
+		conn.commit()
 
 		## TODO: sync names of licenses as found by FOSSology and Ninka
 		nomoschunks = extractconfig['nomoschunks']
@@ -1373,36 +1407,29 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 			for license in fres:
 				if license == 'No_license_found' and len(fres) > 1:
 					continue
-				#licensecursor.execute('''delete from licenses where checksum = ? and license = ? and scanner = ? and version = ?''', (filehash, license, "fossology", fossology_version))
-				licensecursor.execute('''insert into licenses (checksum, license, scanner, version) values (?,?,?,?)''', (filehash, license, "fossology", fossology_version))
-		licenseconn.commit()
-		licensecursor.close()
-		licenseconn.close()
+				#cursor.execute('''delete from licenses where checksum = ? and license = ? and scanner = ? and version = ?''', (filehash, license, "fossology", fossology_version))
+				cursor.execute('''insert into licenses (checksum, license, scanner, version) values (%s,%s,%s,%s)''', (filehash, license, "fossology", fossology_version))
+		conn.commit()
 
 	## extract copyrights
 	if copyrights:
-		licenseconn = sqlite3.connect(licensedb, check_same_thread = False)
-		licenseconn.text_factory = str
-		licensecursor = licenseconn.cursor()
-		licensecursor.execute('PRAGMA synchronous=off')
-
 		ignorefiles = set()
-		## if authlicensedb is not empty see if the checksum can be found in this database
-		if authlicensedb != None:
-			authlicenseconn = sqlite3.connect(authlicensedb, check_same_thread = False)
+		## if authdb is not empty see if the checksum can be found in this database
+		if authdb != None:
+			authlicenseconn = sqlite3.connect(authdb, check_same_thread = False)
 			authlicensecursor = authlicenseconn.cursor()
 			authlicensecursor.execute('PRAGMA synchronous=off')
 			## TODO: check for presence of extracted_copyright
 
-			## then check for every file in filestoscan to see if they are already in authlicensedb
+			## then check for every file in filestoscan to see if they are already in authdb
 			for f in filestoscan:
 				try:
-					authlicensecursor.execute("select distinct * from extracted_copyright where checksum=?", (f[5],))
+					authlicensecursor.execute("select distinct * from extracted_copyright where checksum=%s", (f[5],))
 					authlicenses = authlicensecursor.fetchall()
 					if len(authlicenses) != 0:
 						for a in authlicenses:
-							licensecursor.execute("insert into extracted_copyright values (?,?,?,?)", a)
-						licenseconn.commit()
+							cursor.execute("insert into extracted_copyright values (%s,%s,%s,%s)", a)
+						conn.commit()
 						ignorefiles.add(f[5])
 				except:
 					pass
@@ -1428,11 +1455,9 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 				for cr in cres:
 					## OK, this delete is *really* stupid because we don't have an index for this
 					## combination of parameters.
-					#licensecursor.execute('''delete from extracted_copyright where checksum = ? and copyright = ? and type = ? and byteoffset = ?''', (filehash, cr[1], cr[0], cr[2]))
-					licensecursor.execute('''insert into extracted_copyright (checksum, copyright, type, byteoffset) values (?,?,?,?)''', (filehash, cr[1], cr[0], cr[2]))
-		licenseconn.commit()
-		licensecursor.close()
-		licenseconn.close()
+					#cursor.execute('''delete from extracted_copyright where checksum = ? and copyright = ? and type = ? and byteoffset = ?''', (filehash, cr[1], cr[0], cr[2]))
+					cursor.execute('''insert into extracted_copyright (checksum, copyright, type, byteoffset) values (%s,%s,%s,%s)''', (filehash, cr[1], cr[0], cr[2]))
+		conn.commit()
 
 	## now clean up the temporary Python files
 	if pythonfiles != []:
@@ -1455,7 +1480,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		for res in makefileresults:
 			pathstring = res[0]
 			configstring = res[1]
-			cursor.execute('''insert into kernel_configuration(configstring, filename, version) values (?, ?, ?)''', (configstring, pathstring, version))
+			cursor.execute('''insert into kernel_configuration(configstring, filename, version) values (%s, %s, %s)''', (configstring, pathstring, version))
 		for res in moduleresults:
 			(kernelfilename, modulename) = res
 			if filetohash.has_key(kernelfilename):
@@ -1465,11 +1490,6 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 					filehashtomodule[filetohash[kernelfilename]['sha256']] = [modulename]
 		conn.commit()
 
-	if security:
-		securityconn = sqlite3.connect(securitydb, check_same_thread = False)
-		securityc = securityconn.cursor()
-		securityc.execute('PRAGMA synchronous=off')
-
 	for extractres in extracted_results:
 		if extractres == None:
 			continue
@@ -1477,125 +1497,121 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		if security:
 			for res in securityresults:
 				(securitybug, linenumber, function) = res
-				securityc.execute('''insert into security_cert (checksum, securitybug, linenumber, function, whitelist) values (?,?,?,?,?)''', (filehash, securitybug, linenumber, function, False))
+				cursor.execute('''insert into security_cert (checksum, securitybug, linenumber, function, whitelist) values (%s,%s,%s,%s,%s)''', (filehash, securitybug, linenumber, function, False))
 		for res in stringres:
 			(pstring, linenumber) = res
-			cursor.execute('''insert into extracted_string (stringidentifier, checksum, language, linenumber) values (?,?,?,?)''', (pstring, filehash, language, linenumber))
+			cursor.execute('''insert into extracted_string (stringidentifier, checksum, language, linenumber) values (%s,%s,%s,%s)''', (pstring, filehash, language, linenumber))
 		if moduleres.has_key('parameters'):
 			for res in moduleres['parameters']:
 				(pstring, ptype) = res
 				if filehash in filehashtomodule:
 					modulenames = filehashtomodule[filehash]
 					for modulename in modulenames:
-						cursor.execute('''insert into kernelmodule_parameter (checksum, modulename, paramname, paramtype) values (?,?,?,?)''', (filehash, modulename, pstring, ptype))
+						cursor.execute('''insert into kernelmodule_parameter (checksum, modulename, paramname, paramtype) values (%s,%s,%s,%s)''', (filehash, modulename, pstring, ptype))
 				else:
-					cursor.execute('''insert into kernelmodule_parameter (checksum, modulename, paramname, paramtype) values (?,?,?,?)''', (filehash, None, pstring, ptype))
+					cursor.execute('''insert into kernelmodule_parameter (checksum, modulename, paramname, paramtype) values (%s,%s,%s,%s)''', (filehash, None, pstring, ptype))
 		if 'alias' in moduleres:
 			for res in moduleres['alias']:
 				if filehash in filehashtomodule:
 					modulenames = filehashtomodule[filehash]
 					for modulename in modulenames:
-						cursor.execute('''insert into kernelmodule_alias (checksum, modulename, alias) values (?,?,?)''', (filehash, modulename, res))
+						cursor.execute('''insert into kernelmodule_alias (checksum, modulename, alias) values (%s,%s,%s)''', (filehash, modulename, res))
 				else:
-					cursor.execute('''insert into kernelmodule_alias (checksum, modulename, alias) values (?,?,?)''', (filehash, None, res))
+					cursor.execute('''insert into kernelmodule_alias (checksum, modulename, alias) values (%s,%s,%s)''', (filehash, None, res))
 		if moduleres.has_key('author'):
 			for res in moduleres['author']:
 				if filehashtomodule.has_key(filehash):
 					modulenames = filehashtomodule[filehash]
 					for modulename in modulenames:
-						cursor.execute('''insert into kernelmodule_author (checksum, modulename, author) values (?,?,?)''', (filehash, modulename, res))
+						cursor.execute('''insert into kernelmodule_author (checksum, modulename, author) values (%s,%s,%s)''', (filehash, modulename, res))
 				else:
-					cursor.execute('''insert into kernelmodule_author (checksum, modulename, author) values (?,?,?)''', (filehash, None, res))
+					cursor.execute('''insert into kernelmodule_author (checksum, modulename, author) values (%s,%s,%s)''', (filehash, None, res))
 		if moduleres.has_key('descriptions'):
 			for res in moduleres['descriptions']:
 				if filehashtomodule.has_key(filehash):
 					modulenames = filehashtomodule[filehash]
 					for modulename in modulenames:
-						cursor.execute('''insert into kernelmodule_description (checksum, modulename, description) values (?,?,?)''', (filehash, modulename, res))
+						cursor.execute('''insert into kernelmodule_description (checksum, modulename, description) values (%s,%s,%s)''', (filehash, modulename, res))
 				else:
-					cursor.execute('''insert into kernelmodule_description (checksum, modulename, description) values (?,?,?)''', (filehash, None, res))
+					cursor.execute('''insert into kernelmodule_description (checksum, modulename, description) values (%s,%s,%s)''', (filehash, None, res))
 		if moduleres.has_key('firmware'):
 			for res in moduleres['firmware']:
 				if filehashtomodule.has_key(filehash):
 					modulenames = filehashtomodule[filehash]
 					for modulename in modulenames:
-						cursor.execute('''insert into kernelmodule_firmware (checksum, modulename, firmware) values (?,?,?)''', (filehash, modulename, res))
+						cursor.execute('''insert into kernelmodule_firmware (checksum, modulename, firmware) values (%s,%s,%s)''', (filehash, modulename, res))
 				else:
-					cursor.execute('''insert into kernelmodule_firmware (checksum, modulename, firmware) values (?,?,?)''', (filehash, None, res))
+					cursor.execute('''insert into kernelmodule_firmware (checksum, modulename, firmware) values (%s,%s,%s)''', (filehash, None, res))
 		if moduleres.has_key('license'):
 			for res in moduleres['license']:
 				if filehashtomodule.has_key(filehash):
 					modulenames = filehashtomodule[filehash]
 					for modulename in modulenames:
-						cursor.execute('''insert into kernelmodule_license (checksum, modulename, license) values (?,?,?)''', (filehash, modulename, res))
+						cursor.execute('''insert into kernelmodule_license (checksum, modulename, license) values (%s,%s,%s)''', (filehash, modulename, res))
 				else:
-					cursor.execute('''insert into kernelmodule_license (checksum, modulename, license) values (?,?,?)''', (filehash, None, res))
+					cursor.execute('''insert into kernelmodule_license (checksum, modulename, license) values (%s,%s,%s)''', (filehash, None, res))
 		if moduleres.has_key('versions'):
 			for res in moduleres['versions']:
 				if filehashtomodule.has_key(filehash):
 					modulenames = filehashtomodule[filehash]
 					for modulename in modulenames:
-						cursor.execute('''insert into kernelmodule_version (checksum, modulename, version) values (?,?,?)''', (filehash, modulename, res))
+						cursor.execute('''insert into kernelmodule_version (checksum, modulename, version) values (%s,%s,%s)''', (filehash, modulename, res))
 				else:
-					cursor.execute('''insert into kernelmodule_version (checksum, modulename, version) values (?,?,?)''', (filehash, None, res))
+					cursor.execute('''insert into kernelmodule_version (checksum, modulename, version) values (%s,%s,%s)''', (filehash, None, res))
 		if moduleres.has_key('param_descriptions'):
 			for res in moduleres['param_descriptions']:
 				if filehashtomodule.has_key(filehash):
 					modulenames = filehashtomodule[filehash]
 					for modulename in modulenames:
-						cursor.execute('''insert into kernelmodule_parameter_description (checksum, modulename, paramname, description) values (?,?,?,?)''', (filehash, modulename) + res)
+						cursor.execute('''insert into kernelmodule_parameter_description (checksum, modulename, paramname, description) values (%s,%s,%s,%s)''', (filehash, modulename) + res)
 				else:
-					cursor.execute('''insert into kernelmodule_parameter_description (checksum, modulename, paramname, description) values (?,?,?,?)''', (filehash, None) + res)
+					cursor.execute('''insert into kernelmodule_parameter_description (checksum, modulename, paramname, description) values (%s,%s,%s,%s)''', (filehash, None) + res)
 
 		if language == 'C':
 			for res in results:
 				(cname, linenumber, nametype) = res
 				if nametype == 'function':
-					cursor.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, language, linenumber))
+					cursor.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (%s,%s,%s,%s)''', (filehash, cname, language, linenumber))
 				elif nametype == 'kernelfunction':
-					cursor.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, 'linuxkernel', linenumber))
+					cursor.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (%s,%s,%s,%s)''', (filehash, cname, 'linuxkernel', linenumber))
 				else:
-					cursor.execute('''insert into extracted_name (checksum, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, language, linenumber))
+					cursor.execute('''insert into extracted_name (checksum, name, type, language, linenumber) values (%s,%s,%s,%s,%s)''', (filehash, cname, nametype, language, linenumber))
 		elif language == 'C#':
 			for res in results:
 				(cname, linenumber, nametype) = res
 				if nametype == 'method':
-					cursor.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, language, linenumber))
+					cursor.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (%s,%s,%s,%s)''', (filehash, cname, language, linenumber))
 		elif language == 'Java':
 			for res in results:
 				(cname, linenumber, nametype) = res
 				if nametype == 'method':
-					cursor.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, language, linenumber))
+					cursor.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (%s,%s,%s,%s)''', (filehash, cname, language, linenumber))
 				else:
-					cursor.execute('''insert into extracted_name (checksum, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, language, linenumber))
+					cursor.execute('''insert into extracted_name (checksum, name, type, language, linenumber) values (%s,%s,%s,%s,%s)''', (filehash, cname, nametype, language, linenumber))
 
 		elif language == 'PHP':
 			for res in results:
 				(cname, linenumber, nametype) = res
 				if nametype == 'function':
-					cursor.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, language, linenumber))
+					cursor.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (%s,%s,%s,%s)''', (filehash, cname, language, linenumber))
 				else:
-					cursor.execute('''insert into extracted_name (checksum, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, language, linenumber))
+					cursor.execute('''insert into extracted_name (checksum, name, type, language, linenumber) values (%s,%s,%s,%s,%s)''', (filehash, cname, nametype, language, linenumber))
 
 		elif language == 'Python':
 			for res in results:
 				(cname, linenumber, nametype) = res
 				if nametype == 'function' or nametype == 'member':
-					cursor.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, language, linenumber))
+					cursor.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (%s,%s,%s,%s)''', (filehash, cname, language, linenumber))
 				else:
-					cursor.execute('''insert into extracted_name (checksum, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, language, linenumber))
+					cursor.execute('''insert into extracted_name (checksum, name, type, language, linenumber) values (%s,%s,%s,%s,%s)''', (filehash, cname, nametype, language, linenumber))
 		elif language == 'Ruby':
 			for res in results:
 				(cname, linenumber, nametype) = res
 				if nametype == 'method':
-					cursor.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (?,?,?,?)''', (filehash, cname, language, linenumber))
+					cursor.execute('''insert into extracted_function (checksum, functionname, language, linenumber) values (%s,%s,%s,%s)''', (filehash, cname, language, linenumber))
 				else:
-					cursor.execute('''insert into extracted_name (checksum, name, type, language, linenumber) values (?,?,?,?,?)''', (filehash, cname, nametype, language, linenumber))
+					cursor.execute('''insert into extracted_name (checksum, name, type, language, linenumber) values (%s,%s,%s,%s,%s)''', (filehash, cname, nametype, language, linenumber))
 	conn.commit()
-	if security:
-		securityconn.commit()
-		securityc.close()
-		securityconn.close()
 
 	if update:
 		updatefile = open(newlist, 'a')
@@ -1608,15 +1624,15 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		updatefile.close()
 	for i in insertfiles:
 		filehash = i[1]['sha256']
-		cursor.execute('''insert into processed_file (package, version, pathname, checksum, filename) values (?,?,?,?,?)''', (package, version, i[0], filehash, os.path.basename(i[0])))
+		cursor.execute('''insert into processed_file (package, version, pathname, checksum, filename) values (%s,%s,%s,%s,%s)''', (package, version, i[0], filehash, os.path.basename(i[0])))
 		if len(i[1]) != 1:
-			cursor.execute('''select sha256 from hashconversion where sha256=? LIMIT 1''', (filehash,))
+			cursor.execute('''select sha256 from hashconversion where sha256=%s LIMIT 1''', (filehash,))
 			if len(cursor.fetchall()) == 0:
-				cursor.execute('''insert into hashconversion (sha256) values (?)''', (filehash,))
+				cursor.execute('''insert into hashconversion (sha256) values (%s)''', (filehash,))
 				for k in i[1].keys():
 					if k == 'sha256':
 						continue
-					query = "update hashconversion set %s='%s' where sha256=?" % (k, i[1][k])
+					query = "update hashconversion set %s='%s' where sha256=%%s" % (k, i[1][k])
 					cursor.execute(query, (filehash,))
 	conn.commit()
 
@@ -1651,7 +1667,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 				continue
 			if infiles:
 				(archivepath, archivechecksum, archiveversion) = i.strip().split('\t')
-				cursor.execute('''insert into processed_file (package, version, pathname, checksum, filename) values (?,?,?,?,?)''', (package, version, archivepath, archivechecksum, os.path.basename(archivepath)))
+				cursor.execute('''insert into processed_file (package, version, pathname, checksum, filename) values (%s,%s,%s,%s,%s)''', (package, version, archivepath, archivechecksum, os.path.basename(archivepath)))
 		conn.commit()
 
 	return (scanfile_result)
@@ -1865,7 +1881,7 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 			authconn = sqlite3.connect(authdb)
 			authcursor = authconn.cursor()
 			moduleres = {}
-			authres = authcursor.execute('select distinct package from processed_file where checksum=?', (filehash,)).fetchall()
+			authres = authcursor.execute('select distinct package from processed_file where checksum=%s', (filehash,)).fetchall()
 			if len(authres) != 0:
 				filterres = len(filter(lambda x: x[0] == 'linux', authres))
 				if filterres == 0:
@@ -1873,12 +1889,12 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 					stringres = []
 					funcvarresults = set()
 					## first get all string identifiers
-					authcursor.execute('select stringidentifier, language, linenumber from extracted_string where checksum=?', (filehash,))
+					authcursor.execute('select stringidentifier, language, linenumber from extracted_string where checksum=%s', (filehash,))
 					for f in authcursor.fetchall():
 						(stringidentifier, newlanguage, linenumber) = f
 						stringres.append((stringidentifier, linenumber))
 					## then get all function names/variable names
-					authcursor.execute('select functionname, language, linenumber from extracted_function where checksum=?', (filehash,))
+					authcursor.execute('select functionname, language, linenumber from extracted_function where checksum=%s', (filehash,))
 					for f in authcursor.fetchall():
 						(cname, newlanguage, linenumber) = f
 						if newlanguage in ['C', 'Python', 'PHP']:
@@ -1893,7 +1909,7 @@ def extractidentifiers((package, version, i, p, language, filehash, ninkaversion
 						funcvarresults.add((cname, linenumber, nametype))
 
 					if not scanidentifiers:
-						authcursor.execute('select name, language, type, linenumber from extracted_name where checksum=?', (filehash,))
+						authcursor.execute('select name, language, type, linenumber from extracted_name where checksum=%s', (filehash,))
 						for f in authcursor.fetchall():
 							(cname, newlanguage, nametype, linenumber) = f
 							funcvarresults.add((cname, linenumber, nametype))
@@ -2463,65 +2479,66 @@ def extractsourcestrings(filepath, language, package, unpackdir):
 ## database with already scanned packages.
 ## If the package is a BAT archive the procedure is slightly
 ## different.
-def checkalreadyscanned((filedir, package, version, filename, origin, downloadurl, batarchive, dbpath, checksum, archivechecksums)):
-	resolved_path = os.path.join(filedir, filename)
-	try:
-		os.stat(resolved_path)
-	except:
-		print >>sys.stderr, "Can't find %s" % filename
-		return None
-	if batarchive:
-		if filename in archivechecksums:
-			(filehash, package) = archivechecksums[filename]
+def checkalreadyscanned(conn, cursor, scanqueue, reportqueue, filedir, archivechecksums, timeout):
+	while True:
+		(package, version, filename, origin, downloadurl, batarchive, checksum, linenumber) = scanqueue.get(timeout=timeout)
+		resolved_path = os.path.join(filedir, filename)
+		try:
+			os.stat(resolved_path)
+		except:
+			print >>sys.stderr, "Can't find %s" % filename
+			sys.stderr.flush()
+			scanqueue.task_done()
+		if batarchive:
+			if filename in archivechecksums:
+				(filehash, package) = archivechecksums[filename]
+			else:
+				## first extract the MANIFEST.BAT file from the BAT archive
+				## TODO: add support for unpackdir
+				archivedir = tempfile.mkdtemp()
+				tar = tarfile.open(resolved_path, 'r')
+				tarmembers = tar.getmembers()
+				manifestseen = False
+				for i in tarmembers:
+					if i.name.endswith('MANIFEST.BAT'):
+						tar.extract(i, path=archivedir)
+						manifestseen = True
+						break
+				if not manifestseen:
+					scanqueue.task_done()
+				manifest = os.path.join(archivedir, "MANIFEST.BAT")
+				manifestfile = open(manifest)
+				manifestlines = manifestfile.readlines()
+				manifestfile.close()
+				shutil.rmtree(archivedir)
+				for i in manifestlines:
+					## for later checks the package and filehash are important
+					## The rest needs to be overriden later anyway
+					if i.startswith('package'):
+						package = i.split(':')[1].strip()
+					elif i.startswith('sha256'):
+						filehash = i.split(':')[1].strip()
+						break
 		else:
-			## first extract the MANIFEST.BAT file from the BAT archive
-			## TODO: add support for unpackdir
-			archivedir = tempfile.mkdtemp()
-			tar = tarfile.open(resolved_path, 'r')
-			tarmembers = tar.getmembers()
-			manifestseen = False
-			for i in tarmembers:
-				if i.name.endswith('MANIFEST.BAT'):
-					tar.extract(i, path=archivedir)
-					manifestseen = True
-					break
-			if not manifestseen:
-				return None
-			manifest = os.path.join(archivedir, "MANIFEST.BAT")
-			manifestfile = open(manifest)
-			manifestlines = manifestfile.readlines()
-			manifestfile.close()
-			shutil.rmtree(archivedir)
-			for i in manifestlines:
-				## for later checks the package and filehash are important
-				## The rest needs to be overriden later anyway
-				if i.startswith('package'):
-					package = i.split(':')[1].strip()
-				elif i.startswith('sha256'):
-					filehash = i.split(':')[1].strip()
-					break
-	else:
-		if checksum != None:
-			filehash = checksum['sha256']
+			if checksum != None:
+				filehash = checksum['sha256']
+			else:
+				scanfile = open(resolved_path, 'r')
+				h = hashlib.new('sha256')
+				h.update(scanfile.read())
+				scanfile.close()
+				filehash = h.hexdigest()
+
+		## Check if we've already processed this file. If so, we can easily skip it and return.
+		cursor.execute('''select * from processed where checksum=%s''', (filehash,))
+		if len(cursor.fetchall()) != 0:
+			res = None
 		else:
-			scanfile = open(resolved_path, 'r')
-			h = hashlib.new('sha256')
-			h.update(scanfile.read())
-			scanfile.close()
-			filehash = h.hexdigest()
+			res = (linenumber, package, version, filename, origin, filehash, downloadurl, batarchive)
+		conn.commit()
 
-	conn = sqlite3.connect(dbpath, check_same_thread = False)
-	c = conn.cursor()
-	## Check if we've already processed this file. If so, we can easily skip it and return.
-	c.execute('''select * from processed where checksum=?''', (filehash,))
-	if len(c.fetchall()) != 0:
-		res = None
-	else:
-		res = (package, version, filename, origin, filehash, downloadurl, batarchive)
-	c.close()
-	conn.close()
-
-	return res
+		reportqueue.put(res)
+		scanqueue.task_done()
 
 def main(argv):
 	config = ConfigParser.ConfigParser()
@@ -2562,6 +2579,7 @@ def main(argv):
 				update = True
 			except:
 				print >>sys.stderr, "Cannot open %s for appending", options.newlist
+				sys.stderr.flush()
 				sys.exit(1)
 		else:
 			## extra sanity check to see if the parent directory exists.
@@ -2570,6 +2588,7 @@ def main(argv):
 				update = True
 			else:
 				print >>sys.stderr, "Cannot open %s for appending", options.newlist
+				sys.stderr.flush()
 				sys.exit(1)
 
 	if options.filedir == None:
@@ -2600,6 +2619,7 @@ def main(argv):
 		except Exception, e:
 			# oops, something went wrong
 			print >>sys.stderr, e
+			sys.stderr.flush()
 
 	## keep extra information about certain packages here
 	## examples are:
@@ -2636,9 +2656,31 @@ def main(argv):
 			except:
 				scansecurity = False
 			try:
-				masterdatabase = config.get(section, 'database')
+				postgresql_user = config.get(section, 'postgresql_user')
+				postgresql_password = config.get(section, 'postgresql_password')
+				postgresql_db = config.get(section, 'postgresql_db')
+
+				## check to see if a host (IP-address) was supplied either
+				## as host or hostaddr. hostaddr is not supported on older
+				## versions of psycopg2, for example CentOS 6.6, so it is not
+				## used at the moment.
+				try:
+					postgresql_host = config.get(section, 'postgresql_host')
+				except:
+					postgresql_host = None
+				try:
+					postgresql_hostaddr = config.get(section, 'postgresql_hostaddr')
+				except:
+					postgresql_hostaddr = None
+
+				## check to see if a port was specified. If not, default to 'None'
+				try:
+					postgresql_port = config.get(section, 'postgresql_port')
+				except Exception, e:
+					postgresql_port = None
 			except:
-				print >>sys.stderr, "Database location not defined in configuration file. Exiting..."
+				print >>sys.stderr, "Database connection not defined in configuration file. Exiting..."
+				sys.stderr.flush()
 				sys.exit(1)
 			try:
 				sec = config.get(section, 'cleanup')
@@ -2647,15 +2689,7 @@ def main(argv):
 				else:
 					cleanup = False
 			except:
-				cleanup = False
-			try:
-				sec = config.get(section, 'wipe')
-				if sec == 'yes':
-					wipe = True
-				else:
-					wipe = False
-			except:
-				wipe = False
+				cleanup = True
 			try:
 				sec = config.get(section, 'allfiles')
 				if sec == 'yes':
@@ -2665,15 +2699,8 @@ def main(argv):
 			except:
 				allfiles = False
 			try:
-				licensedb = config.get(section, 'licensedb')
-			except:
-				licensedb = None
-			try:
-				authlicensedb = config.get(section, 'authlicensedb')
-			except:
-				authlicensedb = None
-			try:
-				authdb = config.get(section, 'authdatabase')
+				#authdb = config.get(section, 'authdatabase')
+				authdb = None
 			except:
 				authdb = None
 			try:
@@ -2684,10 +2711,6 @@ def main(argv):
 				nomoschunks = int(config.get(section, 'nomoschunks'))
 			except:
 				nomoschunks = 10
-			try:
-				securitydb = config.get(section, 'securitydb')
-			except:
-				securitydb = None
 			try:
 				unpackdir = config.get(section, 'unpackdir')
 			except:
@@ -2769,40 +2792,17 @@ def main(argv):
 							packageconfig[section]['blacklist'] = [b]
 			except Exception, e:
 				pass
-	if scanlicense:
-		license = True
-		if licensedb == None:
-			parser.error("License scanning enabled, but no path to licensing database supplied")
-		if authlicensedb != None:
-			if licensedb == authlicensedb:
-				authlicensedb = None
-			if not os.path.exists(authlicensedb):
-				authlicensedb = None
-	else:
-		license = False
 
-	if authdb != None:
-		if not os.path.exists(authdb):
-			authdb = None
-
-	if scancopyright:
-		copyrights = True
-		if licensedb == None:
-			parser.error("Copyright scanning enabled, but no path to copyright database supplied")
-	else:
-		copyrights = False
-
-	if scansecurity:
-		security = True
-		## TODO: more checks
-	else:
-		security = False
+	## test the unpacking directory to see if it is valid. If not,
+	## output a warning, but continue unpacking in the standard
+	## temporary directory.
 	if unpackdir != None:
 		try:
 			testfile = tempfile.mkstemp(dir=unpackdir)
 			os.unlink(testfile[1])
 		except Exception, e:
 			print >>sys.stderr, "Can't use %s for unpacking" % unpackdir
+			sys.stderr.flush()
 			unpackdir = None
 
 	## optionally rewrite files
@@ -2815,206 +2815,230 @@ def main(argv):
 	else:
 		rewrites = {}
 
-	if (scanlicense or scancopyright) and licensedb == None:
-		print >>sys.stderr, "Specify path to licenses/copyrights database"
-		sys.exit(1)
+	conn = psycopg2.connect(database=postgresql_db, user=postgresql_user, password=postgresql_password, host=postgresql_host, port=postgresql_port)
 
-	if scansecurity and securitydb == None:
-		print >>sys.stderr, "Specify path to security database"
-		sys.exit(1)
-
-	masterdbdir = os.path.dirname(masterdatabase)
-	if not os.path.exists(masterdbdir):
-		print >>sys.stderr, "Cannot create database %s, directory %s does not exist" % (masterdatabase, masterdbdir)
-		sys.exit(1)
-	try:
-		conn = sqlite3.connect(masterdatabase, check_same_thread = False)
-	except:
-		print >>sys.stderr, "Cannot create database %s" % masterdatabase
-		sys.exit(1)
-	c = conn.cursor()
-	#c.execute('PRAGMA synchronous=off')
-
-	if scanlicense or scancopyright:
-		licenseconn = sqlite3.connect(licensedb, check_same_thread = False)
-		licensec = licenseconn.cursor()
-
-	if scansecurity:
-		securityconn = sqlite3.connect(securitydb, check_same_thread = False)
-		securityc = securityconn.cursor()
+	cursor = conn.cursor()
 
 	if scanlicense and options.updatelicense:
 		try:
-			licensec.execute('''drop table licenses''')
-			licenseconn.commit()
-		except:
-			pass
-	if wipe:
-		## drop all tables and all the indexes. Probably this option should not be used...
-		c.execute("select name from sqlite_master where type='table'")
-		tables = c.fetchall()
-		if len(tables) != 0:
-			for t in tables:
-				try:
-					c.execute('''drop table %s''' % t)
-				except Exception, e:
-					print >>sys.stderr, e
-		conn.commit()
-		try:
-			licensec.execute('''drop table licenses''')
-			licensec.execute('''drop table extracted_copyright''')
-			licenseconn.commit()
-		except:
-			pass
-		try:
-			securityc.execute('''drop table security''')
-			securityconn.commit()
+			cursor.execute('''drop table licenses''')
+			conn.commit()
 		except:
 			pass
         try:
 		## Keep an archive of which packages and archive files (tar.gz, tar.bz2, etc.) we've already
 		## processed, so we don't repeat work.
-		c.execute('''create table if not exists processed (package text, version text, filename text, origin text, checksum text, downloadurl text, website text)''')
-		c.execute('''create index if not exists processed_index on processed(package, version)''')
-		c.execute('''create index if not exists processed_checksum on processed(checksum)''')
-		c.execute('''create index if not exists processed_origin on processed(origin)''')
-		c.execute('''create index if not exists processed_website on processed(website)''')
+		cursor.execute('''create table if not exists processed (package text, version text, filename text, origin text, checksum text, downloadurl text, website text)''')
+		try:
+			cursor.execute('''create index processed_index on processed(package, version)''')
+			cursor.execute('''create index processed_checksum on processed(checksum)''')
+			cursor.execute('''create index processed_origin on processed(origin)''')
+			cursor.execute('''create index processed_website on processed(website)''')
+		except:
+			pass
+
+		conn.commit()
 
 		## Keep an archive of which packages are blacklisted. This is useful during database creation.
-		#c.execute('''create table if not exists blacklist (package text, version text, filename text, origin text, checksum text)''')
-		#c.execute('''create index if not exists blacklist_index on blacklist(package, version)''')
+		#cursor.execute('''create table if not exists blacklist (package text, version text, filename text, origin text, checksum text)''')
+		#try:
+		#	cursor.execute('''create index blacklist_index on blacklist(package, version)''')
+		#except:
+		#	pass
 
 		## Keep an archive of which packages have been seen. This is useful to ignore them later on during database
 		## creation.
-		c.execute('''create table if not exists seenpackages (package text, version text, filename text, origin text, checksum text)''')
-		c.execute('''create index if not exists seenpackages_index on seenpackages(package, version)''')
-		c.execute('''create index if not exists seenpackages_checksum_index on seenpackages(checksum)''')
+		cursor.execute('''create table if not exists seenpackages (package text, version text, filename text, origin text, checksum text)''')
+		try:
+			cursor.execute('''create index seenpackages_index on seenpackages(package, version)''')
+			cursor.execute('''create index seenpackages_checksum_index on seenpackages(checksum)''')
+		except:
+			pass
+
+		conn.commit()
 		## Since there is a lot of duplication inside source packages we store strings per checksum
 		## which we can later link with files
-		c.execute('''create table if not exists processed_file (package text, version text, pathname text, checksum text, filename text, thirdparty tinyint(1))''')
-		c.execute('''create index if not exists processedfile_package_checksum_index on processed_file(checksum, package)''')
-		c.execute('''create index if not exists processedfile_package_version_index on processed_file(package, version)''')
-		c.execute('''create index if not exists processedfile_filename_index on processed_file(filename)''')
+		cursor.execute('''create table if not exists processed_file (package text, version text, pathname text, checksum text, filename text, thirdparty boolean)''')
+		try:
+			cursor.execute('''create index processedfile_package_checksum_index on processed_file(checksum, package)''')
+			cursor.execute('''create index processedfile_package_version_index on processed_file(package, version)''')
+			cursor.execute('''create index processedfile_filename_index on processed_file(filename)''')
+		except:
+			pass
+		conn.commit()
+
 		## TODO: use analyze processedfile_package_version_index and processedfile_package_checksum_index
 
 		## Store the extracted strings per checksum, not per (package, version, filename).
 		## This saves a lot of space in the database
 		## The field 'language' denotes what 'language' (family) the file the string is extracted from
 		## is in. Possible values: extensions.values()
-		c.execute('''create table if not exists extracted_string (stringidentifier text, checksum text, language text, linenumber int)''')
-		c.execute('''create index if not exists stringidentifier_index_language on extracted_string(stringidentifier,language)''')
-		c.execute('''create index if not exists extracted_hash_index on extracted_string(checksum)''')
-		c.execute('''create index if not exists extracted_language_index on extracted_string(language);''')
+		cursor.execute('''create table if not exists extracted_string (stringidentifier text, checksum text, language text, linenumber int)''')
+		try:
+			cursor.execute('''create index stringidentifier_index_language on extracted_string(stringidentifier,language)''')
+			cursor.execute('''create index extracted_hash_index on extracted_string(checksum)''')
+			cursor.execute('''create index extracted_language_index on extracted_string(language);''')
+		except:
+			pass
+
+		conn.commit()
 
 		## Store the function names extracted, per checksum
-		c.execute('''create table if not exists extracted_function (checksum text, functionname text, language text, linenumber int)''')
-		c.execute('''create index if not exists function_index on extracted_function(checksum);''')
-		c.execute('''create index if not exists functionname_index on extracted_function(functionname)''')
-		c.execute('''create index if not exists functionname_language on extracted_function(language);''')
+		cursor.execute('''create table if not exists extracted_function (checksum text, functionname text, language text, linenumber int)''')
+		try:
+			cursor.execute('''create index function_index on extracted_function(checksum);''')
+			cursor.execute('''create index functionname_index on extracted_function(functionname)''')
+			cursor.execute('''create index functionname_language on extracted_function(language);''')
+		except:
+			pass
+
+		conn.commit()
 
 		## Store variable names/etc extracted
-		c.execute('''create table if not exists extracted_name (checksum text, name text, type text, language text, linenumber int)''')
-		c.execute('''create index if not exists name_checksum_index on extracted_name(checksum);''')
-		c.execute('''create index if not exists name_name_index on extracted_name(name)''')
-		c.execute('''create index if not exists name_type_index on extracted_name(type)''')
-		c.execute('''create index if not exists name_language_index on extracted_name(language);''')
+		cursor.execute('''create table if not exists extracted_name (checksum text, name text, type text, language text, linenumber int)''')
+		try:
+			cursor.execute('''create index name_checksum_index on extracted_name(checksum);''')
+			cursor.execute('''create index name_name_index on extracted_name(name)''')
+			cursor.execute('''create index name_type_index on extracted_name(type)''')
+			cursor.execute('''create index name_language_index on extracted_name(language);''')
+		except:
+			pass
 
+		conn.commit()
 		## Store information about Linux kernel configuration directives
 		## TODO: check if this should be changed to use SHA256 instead of file names.
 		## TODO: add whether or not a configuration - filename mapping is 1:1
-		c.execute('''create table if not exists kernel_configuration(configstring text, filename text, version text)''')
-		c.execute('''create index if not exists kernel_configuration_filename on kernel_configuration(filename)''')
+		cursor.execute('''create table if not exists kernel_configuration(configstring text, filename text, version text)''')
+		try:
+			cursor.execute('''create index kernel_configuration_filename on kernel_configuration(filename)''')
+		except:
+			pass
+
+		conn.commit()
 
 		## Store information about Linux kernel modules
-		c.execute('''create table if not exists kernelmodule_alias(checksum text, modulename text, alias text)''')
-		c.execute('''create table if not exists kernelmodule_author(checksum text, modulename text, author text)''')
-		c.execute('''create table if not exists kernelmodule_description(checksum text, modulename text, description text)''')
-		c.execute('''create table if not exists kernelmodule_firmware(checksum text, modulename text, firmware text)''')
-		c.execute('''create table if not exists kernelmodule_license(checksum text, modulename text, license text)''')
-		c.execute('''create table if not exists kernelmodule_parameter(checksum text, modulename text, paramname text, paramtype text)''')
-		c.execute('''create table if not exists kernelmodule_parameter_description(checksum text, modulename text, paramname text, description text)''')
-		c.execute('''create table if not exists kernelmodule_version(checksum text, modulename text, version text)''')
+		cursor.execute('''create table if not exists kernelmodule_alias(checksum text, modulename text, alias text)''')
+		cursor.execute('''create table if not exists kernelmodule_author(checksum text, modulename text, author text)''')
+		cursor.execute('''create table if not exists kernelmodule_description(checksum text, modulename text, description text)''')
+		cursor.execute('''create table if not exists kernelmodule_firmware(checksum text, modulename text, firmware text)''')
+		cursor.execute('''create table if not exists kernelmodule_license(checksum text, modulename text, license text)''')
+		cursor.execute('''create table if not exists kernelmodule_parameter(checksum text, modulename text, paramname text, paramtype text)''')
+		cursor.execute('''create table if not exists kernelmodule_parameter_description(checksum text, modulename text, paramname text, description text)''')
+		cursor.execute('''create table if not exists kernelmodule_version(checksum text, modulename text, version text)''')
 
-		c.execute('''create index if not exists kernelmodule_alias_index on kernelmodule_alias(alias)''')
-		c.execute('''create index if not exists kernelmodule_author_index on kernelmodule_author(author)''')
-		c.execute('''create index if not exists kernelmodule_description_index on kernelmodule_description(description)''')
-		c.execute('''create index if not exists kernelmodule_firmware_index on kernelmodule_firmware(firmware)''')
-		c.execute('''create index if not exists kernelmodule_license_index on kernelmodule_license(license)''')
-		c.execute('''create index if not exists kernelmodule_parameter_index on kernelmodule_parameter(paramname)''')
-		c.execute('''create index if not exists kernelmodule_parameter_description_index on kernelmodule_parameter_description(description)''')
-		c.execute('''create index if not exists kernelmodule_version_index on kernelmodule_version(version)''')
+		try:
+			cursor.execute('''create index kernelmodule_alias_index on kernelmodule_alias(alias)''')
+			cursor.execute('''create index kernelmodule_author_index on kernelmodule_author(author)''')
+			cursor.execute('''create index kernelmodule_description_index on kernelmodule_description(description)''')
+			cursor.execute('''create index kernelmodule_firmware_index on kernelmodule_firmware(firmware)''')
+			cursor.execute('''create index kernelmodule_license_index on kernelmodule_license(license)''')
+			cursor.execute('''create index kernelmodule_parameter_index on kernelmodule_parameter(paramname)''')
+			cursor.execute('''create index kernelmodule_parameter_description_index on kernelmodule_parameter_description(description)''')
+			cursor.execute('''create index kernelmodule_version_index on kernelmodule_version(version)''')
 
-		c.execute('''create index if not exists kernelmodule_alias_checksum_index on kernelmodule_alias(checksum)''')
-		c.execute('''create index if not exists kernelmodule_author_checksum_index on kernelmodule_author(checksum)''')
-		c.execute('''create index if not exists kernelmodule_description_checksum_index on kernelmodule_description(checksum)''')
-		c.execute('''create index if not exists kernelmodule_firmware_checksum_index on kernelmodule_firmware(checksum)''')
-		c.execute('''create index if not exists kernelmodule_license_checksum_index on kernelmodule_license(checksum)''')
-		c.execute('''create index if not exists kernelmodule_parameter_checksum_index on kernelmodule_parameter(checksum)''')
-		c.execute('''create index if not exists kernelmodule_parameter_description_checksum_index on kernelmodule_parameter_description(checksum)''')
-		c.execute('''create index if not exists kernelmodule_version_checksum_index on kernelmodule_version(checksum)''')
+			cursor.execute('''create index kernelmodule_alias_checksum_index on kernelmodule_alias(checksum)''')
+			cursor.execute('''create index kernelmodule_author_checksum_index on kernelmodule_author(checksum)''')
+			cursor.execute('''create index kernelmodule_description_checksum_index on kernelmodule_description(checksum)''')
+			cursor.execute('''create index kernelmodule_firmware_checksum_index on kernelmodule_firmware(checksum)''')
+			cursor.execute('''create index kernelmodule_license_checksum_index on kernelmodule_license(checksum)''')
+			cursor.execute('''create index kernelmodule_parameter_checksum_index on kernelmodule_parameter(checksum)''')
+			cursor.execute('''create index kernelmodule_parameter_description_checksum_index on kernelmodule_parameter_description(checksum)''')
+			cursor.execute('''create index kernelmodule_version_checksum_index on kernelmodule_version(checksum)''')
+		except:
+			pass
 
-		##
-		c.execute('''create table if not exists blacklist(checksum text, filename text, origin text)''')
-		c.execute('''create index if not exists blacklist_checksum_index on blacklist(checksum)''')
+		conn.commit()
+
+		cursor.execute('''create table if not exists blacklist(checksum text, filename text, origin text)''')
+		try:
+			cursor.execute('''create index blacklist_checksum_index on blacklist(checksum)''')
+		except:
+			pass
+
+		conn.commit()
 
 		## keep information specifically about rpm files
-		c.execute('''create table if not exists rpm(rpmname text, checksum text, downloadurl text)''')
-		c.execute('''create index if not exists rpm_checksum_index on rpm(checksum)''')
-		c.execute('''create index if not exists rpm_rpmname_index on rpm(rpmname)''')
+		cursor.execute('''create table if not exists rpm(rpmname text, checksum text, downloadurl text)''')
+		try:
+			cursor.execute('''create index rpm_checksum_index on rpm(checksum)''')
+			cursor.execute('''create index rpm_rpmname_index on rpm(rpmname)''')
+		except:
+			pass
+
+		conn.commit()
 
 		## keep information about aliases of archives (different origins, etc.)
-		c.execute('''create table if not exists archivealias(checksum text, archivename text, origin text, downloadurl text, website text)''')
-		c.execute('''create index if not exists archivealias_checksum_index on archivealias(checksum)''')
+		cursor.execute('''create table if not exists archivealias(checksum text, archivename text, origin text, downloadurl text, website text)''')
+		try:
+			cursor.execute('''create index archivealias_checksum_index on archivealias(checksum)''')
+		except:
+			pass
+
+		conn.commit()
 
 		## keep information about other files, such as media files, configuration files,
 		## and so on, for "circumstantial evidence"
-		c.execute('''create table if not exists misc(checksum text, name text)''')
-		c.execute('''create index if not exists misc_checksum_index on misc(checksum)''')
-		c.execute('''create index if not exists misc_name_index on misc(name)''')
+		cursor.execute('''create table if not exists misc(checksum text, name text)''')
+		try:
+			cursor.execute('''create index misc_checksum_index on misc(checksum)''')
+			cursor.execute('''create index misc_name_index on misc(name)''')
+		except:
+			pass
+
+		conn.commit()
 		if extrahashes != []:
-			c.execute('''create table if not exists hashconversion (sha256 text)''')
-			c.execute('''create index if not exists hashconversion_sha256_index on hashconversion(sha256);''')
+			## this is ugly
+			tablequery = 'create table if not exists hashconversion (sha256 text'
+			for h in extrahashes:
+				tablequery += ', %s text' % h
+			tablequery += ')'
+			cursor.execute(tablequery)
+			try:
+				cursor.execute('''create index hashconversion_sha256_index on hashconversion(sha256);''')
+			except:
+				pass
+			conn.commit()
 			for h in extrahashes:
 				## TODO: check whether or not these columns already exist
-				tablequery = "alter table hashconversion add column %s text;" % h
-				indexquery = "create index if not exists hashconversion_%s_index on hashconversion(%s)" % (h, h)
-				c.execute(tablequery)
-				c.execute(indexquery)
+				indexquery = "create index hashconversion_%s_index on hashconversion(%s)" % (h, h)
+				try:
+					cursor.execute(indexquery)
+				except:
+					pass
+				conn.commit()
 		conn.commit()
 
-		if scanlicense or scancopyright:
-			## Store the extracted licenses per checksum.
-			licensec.execute('''create table if not exists licenses (checksum text, license text, scanner text, version text)''')
-			licensec.execute('''create index if not exists license_index on licenses(checksum);''')
+		## Store the extracted licenses per checksum.
+		cursor.execute('''create table if not exists licenses (checksum text, license text, scanner text, version text)''')
 
-			## Store the copyrights extracted by FOSSology, per checksum
-			## type can be:
-			## * email
-			## * statement
-			## * url
-			licensec.execute('''create table if not exists extracted_copyright (checksum text, copyright text, type text, byteoffset int)''')
-			licensec.execute('''create index if not exists copyright_index on extracted_copyright(checksum);''')
-			licensec.execute('''create index if not exists copyright_type_index on extracted_copyright(copyright, type);''')
-			licenseconn.commit()
-			licensec.close()
-			licenseconn.close()
+		## Store the copyrights extracted by FOSSology, per checksum
+		## type can be:
+		## * email
+		## * statement
+		## * url
+		cursor.execute('''create table if not exists extracted_copyright (checksum text, copyright text, type text, byteoffset int)''')
+		try:
+			cursor.execute('''create index license_index on licenses(checksum)''')
+			cursor.execute('''create index copyright_index on extracted_copyright(checksum)''')
+			cursor.execute('''create index copyright_type_index on extracted_copyright(copyright, type)''')
+		except:
+			pass
+		conn.commit()
 
-		if scansecurity:
-			securityc.execute('''create table if not exists security_cert(checksum text, securitybug text, linenumber int, function text, whitelist tinyint(1))''')
-			securityc.execute('''create index if not exists security_cert_checksum_index on security_cert(checksum);''')
-			securityc.execute('''create table if not exists security_cve(checksum text, cve text)''')
-			securityc.execute('''create index if not exists security_cve_checksum_index on security_cve(checksum);''')
-			securityc.execute('''create table if not exists security_password(hash text, password text)''')
-			securityc.execute('''create index if not exists security_password_hash_index on security_cve(checksum);''')
+		cursor.execute('''create table if not exists security_cert(checksum text, securitybug text, linenumber int, function text, whitelist boolean)''')
+		cursor.execute('''create table if not exists security_cve(checksum text, cve text)''')
+		cursor.execute('''create table if not exists security_password(hash text, password text)''')
+		try:
+			cursor.execute('''create index security_cert_checksum_index on security_cert(checksum);''')
+			cursor.execute('''create index security_cve_checksum_index on security_cve(checksum);''')
+			cursor.execute('''create index security_password_hash_index on security_cve(checksum);''')
+		except:
+			pass
 
-			securityconn.commit()
-			securityc.close()
-			securityconn.close()
+		conn.commit()
 	except Exception, e:
 		print >>sys.stderr, e
-
-	c.close()
-	conn.close()
+		sys.stderr.flush()
 
 	pkgmeta = []
 
@@ -3043,6 +3067,7 @@ def main(argv):
 			checksums[archivefilename] = archivechecksums
 	else:
 		print >>sys.stderr, "SHA256SUM not found"
+		sys.stderr.flush()
 		sys.exit(1)
 
 	## keep a mapping of BAT archive checksums. This a file specifically for
@@ -3081,6 +3106,7 @@ def main(argv):
 	## These checks differ for BAT archives and non-archives.
 	## TODO: do all kinds of checks here
 	seenlines = set()
+	linenumber = 0
 	for unpackfile in filelist:
 		if unpackfile in seenlines:
 			continue
@@ -3097,19 +3123,75 @@ def main(argv):
 				else:
 					batarchive = False
 			if not batarchive:
-				pkgmeta.append((options.filedir, package, version, filename, origin, downloadurls.get(filename,None), batarchive, masterdatabase, checksums.get(filename, None), archivechecksums))
+				pkgmeta.append((package, version, filename, origin, downloadurls.get(filename,None), batarchive, checksums.get(filename, None), linenumber))
 			else:
-				pkgmeta.append((options.filedir, package, version, filename, origin, downloadurls, batarchive, masterdatabase, checksums.get(filename, None), archivechecksums))
+				pkgmeta.append((package, version, filename, origin, downloadurls, batarchive, checksums.get(filename, None), linenumber))
 		except Exception, e:
 			# oops, something went wrong
 
 			print >>sys.stderr, e
+			sys.stderr.flush()
+		linenumber += 1
 	processors = multiprocessing.cpu_count()
-	pool = multiprocessing.Pool(processes=processors)
 
 	print "Checking %d packages to see if they have already been scanned" % len(pkgmeta)
 	sys.stdout.flush()
-	res = filter(lambda x: x != None, pool.map(checkalreadyscanned, pkgmeta, 1))
+
+	scanmanager = multiprocessing.Manager()
+	scanqueue = multiprocessing.JoinableQueue(maxsize=0)
+	reportqueue = scanmanager.Queue(maxsize=0)
+
+	map(lambda x: scanqueue.put(x), pkgmeta)
+
+	batcons = []
+	batcursors = []
+
+	for i in range(0,processors):
+		try:
+			c = psycopg2.connect(database=postgresql_db, user=postgresql_user, password=postgresql_password, host=postgresql_host, port=postgresql_port)
+			cursor = c.cursor()
+			batcons.append(c)
+			batcursors.append(cursor)
+		except Exception, e:
+			usedatabase = False
+			break
+
+	processpool = []
+	## TODO: make configurable
+	timeout = 2592000
+
+	for i in range(0,processors):
+		cursor = batcursors[i]
+		conn = batcons[i]
+		p = multiprocessing.Process(target=checkalreadyscanned, args=(conn, cursor, scanqueue, reportqueue, options.filedir, archivechecksums, timeout))
+		processpool.append(p)
+		p.start()
+
+	scanqueue.join()
+
+	res = []
+
+	while True:
+		try:
+			val = reportqueue.get_nowait()
+			res.append(val)
+			reportqueue.task_done()
+		except Queue.Empty, e:
+			## Queue is empty
+			break
+
+	## block here until the reportqueue is empty
+	reportqueue.join()
+
+	for p in processpool:
+		p.terminate()
+
+	scanmanager.shutdown()
+
+	res = filter(lambda x: x != None, res)
+
+	## make sure that the results are in the same order as in 'LIST'
+	res.sort()
 
 	batarchives = []
 	resordered = []
@@ -3117,16 +3199,15 @@ def main(argv):
 	processed_hashes = set()
 	## first loop through everything to filter out all the files that don't
 	## need processing, plus moving any batarchives to the end of the queue
-	conn = sqlite3.connect(masterdatabase, check_same_thread = False)
-	cursor = conn.cursor()
 	for i in res:
-		(package, version, filename, origin, filehash, downloadurl, batarchive) = i
+		(linenumber, package, version, filename, origin, filehash, downloadurl, batarchive) = i
 		if filehash in blacklistsha256sums:
 			continue
 		## no need to process some files twice, even if they
 		## are under a different name.
-		cursor.execute("select * from archivealias where checksum=?", (filehash,))
+		cursor.execute("select * from archivealias where checksum=%s", (filehash,))
 		aliasres = cursor.fetchall()
+		conn.commit()
 		if len(aliasres) != 0:
 			archivefound = False
 			for a in aliasres:
@@ -3135,16 +3216,14 @@ def main(argv):
 					archivefound = True
 					break
 			if not archivefound:
-				cursor.execute("insert into archivealias (checksum, archivename, origin, downloadurl, website) values (?,?,?,?,?)", (filehash, filename, origin, downloadurl, websites.get(filename, None)))
+				cursor.execute("insert into archivealias (checksum, archivename, origin, downloadurl, website) values (%s,%s,%s,%s,%s)", (filehash, filename, origin, downloadurl, websites.get(filename, None)))
 			continue
 		if batarchive:
-			batarchives.append(i)
+			batarchives.append(i[1:])
 		else:
-			resordered.append(i)
+			resordered.append(i[1:])
 		processed_hashes.add(filehash)
 	conn.commit()
-	cursor.close()
-	conn.close()
 
 	## order the results so full files are processed first, and then the
 	## BAT archives, as they assume full files to be processed first.
@@ -3159,15 +3238,23 @@ def main(argv):
 	oldpackage = ""
 	oldres = []
 
+	## create a pool with processes just once for efficiency and
+	## then use it everywhere
+	pool = multiprocessing.Pool(processes=processors)
+
 	for i in res:
 		try:
+			## grab the next entry from LIST
 			(package, version, filename, origin, filehash, downloadurl, batarchive) = i
 			if package != oldpackage:
 				oldres = set()
+
+			## this is a bit ugly: depending on whether or not it is an archive
+			## some special things have to be done. Urgh.
 			if not batarchive:
-				unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums[filename], downloadurl, websites.get(filename, None), masterdatabase, cleanup, license, copyrights, security, pool, extractconfig, licensedb, authlicensedb, authdb, authcopy, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
+				unpackres = unpack_getstrings(cursor, conn, options.filedir, package, version, filename, origin, checksums[filename], downloadurl, websites.get(filename, None), cleanup, scanlicense, scancopyright, scansecurity, pool, extractconfig, authdb, authcopy, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles, batcursors, batcons, processors)
 			else:
-				unpackres = unpack_getstrings(options.filedir, package, version, filename, origin, checksums, downloadurls, websites, masterdatabase, cleanup, license, copyrights, security, pool, extractconfig, licensedb, authlicensedb, authdb, authcopy, securitydb, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles)
+				unpackres = unpack_getstrings(cursor, conn, options.filedir, package, version, filename, origin, checksums, downloadurls, websites, cleanup, scanlicense, scancopyright, scansecurity, pool, extractconfig, authdb, authcopy, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles, batcursors, batcons, processors)
 			if unpackres != None:
 				oldres = set(map(lambda x: x[2]['sha256'], unpackres))
 				## by updating oldres instead of overwriting itsome more files could be filtered
@@ -3175,9 +3262,19 @@ def main(argv):
 				#oldres.update(map(lambda x: x[2]['sha256'], unpackres))
 				oldpackage = package
 		except Exception, e:
-				# oops, something went wrong
-				print >>sys.stderr, "unpacking error", e
+			# oops, something went wrong
+			print >>sys.stderr, "unpacking error", e
+			sys.stderr.flush()
 	pool.close()
+
+	for i in batcursors:
+		i.close()
+
+	for i in batcons:
+		i.close()
+
+	cursor.close()
+	conn.close()
 
 if __name__ == "__main__":
 	main(sys.argv)
