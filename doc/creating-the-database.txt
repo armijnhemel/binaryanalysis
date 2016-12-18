@@ -116,7 +116,9 @@ The script tries to automatically split the archive name into a package name
 and package version. This is not always easy, as there are many naming
 conventions in use by several distributions and some distributions use different
 names for packages. That is why it is necessary to manually check the output of
-this script.
+this script, or to write scripts specifically for source code from various
+origins. As an example of how this can be done F-Droid there is an example
+script called 'generatelist-fdroid.py' in the 'mantenance' directory.
 
   Generating MANIFESTS/* files
 
@@ -191,10 +193,10 @@ There are a few settings related to unpacking archives:
   cleanup = yes
   unpackdir = /ramdisk
 
-The 'cleanup' option (default: no, but this will be changed) is used to
-indicate whether or not the unpacked source code archive should be removed
-after processing. Needless to say it is highly recommended to set this to 'yes'
-to avoid that the disk fills up.
+The 'cleanup' option (default: yes) is used to indicate whether or not the
+unpacked source code archive should be removed after processing. Needless to
+say it is highly recommended to keep this set to 'yes' to avoid that the disk
+fills up. Only set it to 'no' for debugging purposes.
 
 The 'unpackdir' option can be used to specify a different location for
 unpacking source code (default: /tmp). Good reasons for changing this:
@@ -211,13 +213,15 @@ LibreOffice, etc.) the speed up will be significant.
 The other settings are related to which data to extract and especially which
 data to ignore.
 
-  wipe = no
   extrahashes = md5:sha1:crc32:tlsh
   nomoschunks = 10
   urlcutoff = 1000
   maxstringcutoff = 1000
   minstringcutoff = 4
   cutoff = 209715200
+
+The settings 'minstringcutoff' and 'maxstringcutoff' determine the minimum and
+maximum length of the string literals that are stored. 
 
 ...
 
