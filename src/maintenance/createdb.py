@@ -730,7 +730,7 @@ def unpack(directory, filename, unpackdir):
 
 ## get strings plus the license. This method should be renamed to better
 ## reflect its true functionality...
-def unpack_getstrings(cursor, conn, filedir, package, version, filename, origin, checksums, downloadurl, website, cleanup, license, copyrights, security, pool, extractconfig, authdb, authcopy, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, newlist, allfiles, batcursors, batcons, processors):
+def unpack_getstrings(cursor, conn, authcursor, authconn, filedir, package, version, filename, origin, checksums, downloadurl, website, cleanup, license, copyrights, security, pool, extractconfig, authcopy, oldpackage, oldsha256, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, newlist, allfiles, batcursors, batcons, processors):
 	process = True
 	unpacked = False
 
@@ -1031,7 +1031,7 @@ def unpack_getstrings(cursor, conn, filedir, package, version, filename, origin,
 				return None
 
 	## process the files in the unpacked directory
-	extractionresults = traversefiletree(temporarydir, conn, cursor, package, version, license, copyrights, security, pool, extractconfig, authdb, authcopy, oldpackage, oldsha256, batarchive, filetohash, packageconfig.get(package, {}), unpackdir, extrahashes, update, newlist, allfiles)
+	extractionresults = traversefiletree(temporarydir, conn, cursor, authconn, authcursor, package, version, license, copyrights, security, pool, extractconfig, authcopy, oldpackage, oldsha256, batarchive, filetohash, packageconfig.get(package, {}), unpackdir, extrahashes, update, newlist, allfiles)
 
 	if extractionresults != None:
 		if extractionresults != []:
@@ -1162,7 +1162,7 @@ def computehash((filedir, filename, extension, language, extrahashes)):
 		
 	return (filedir, filename, filehashes, extension, language)
 
-def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights, security, pool, extractconfig, authdb, authcopy, oldpackage, oldsha256, batarchive, filetohash, pkgconf, unpackdir, extrahashes, update, newlist, allfiles):
+def traversefiletree(srcdir, conn, cursor, authconn, authcursor, package, version, license, copyrights, security, pool, extractconfig, authcopy, oldpackage, oldsha256, batarchive, filetohash, pkgconf, unpackdir, extrahashes, update, newlist, allfiles):
 
 	srcdirlen = len(srcdir)+1
 	scanfiles = []
@@ -1268,6 +1268,7 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	if not 'TMPDIR' in unpackenv:
 		if unpackdir != None:
 			unpackenv['TMPDIR'] = unpackdir
+	authdb = None
 
 	filestoscan_extract = map(lambda x: x + (unpackenv, security, authdb, pkgconf), filestoscan)
 
@@ -1331,16 +1332,12 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 		ignorefiles = set()
 
 		## if authdb is not empty see if the checksum can be found in this database
-		if authdb != None:
-			authlicenseconn = sqlite3.connect(authdb, check_same_thread = False)
-			authlicensecursor = authlicenseconn.cursor()
-			authlicensecursor.execute('PRAGMA synchronous=off')
-			## TODO: check for presence of licenses
-
+		if authcursor != None:
 			## then check for every file in filestoscan to see if they are already in authdb
 			for f in filestoscan:
-				authlicensecursor.execute("select distinct * from licenses where checksum=%s", (f[5],))
-				authlicenses = authlicensecursor.fetchall()
+				authcursor.execute("select distinct * from licenses where checksum=%s", (f[5],))
+				authlicenses = authcursor.fetchall()
+				authconn.commit()
 				if len(authlicenses) != 0:
 					try:
 						for a in authlicenses:
@@ -1349,8 +1346,6 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 						ignorefiles.add(f[5])
 					except:
 						pass
-			authlicensecursor.close()
-			authlicenseconn.close()
 
 		if len(ignorefiles) != 0:
 			filtered_files = filter(lambda x: x[5] not in ignorefiles, filestoscan)
@@ -1415,17 +1410,13 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 	if copyrights:
 		ignorefiles = set()
 		## if authdb is not empty see if the checksum can be found in this database
-		if authdb != None:
-			authlicenseconn = sqlite3.connect(authdb, check_same_thread = False)
-			authlicensecursor = authlicenseconn.cursor()
-			authlicensecursor.execute('PRAGMA synchronous=off')
-			## TODO: check for presence of extracted_copyright
-
+		if authcursor != None:
 			## then check for every file in filestoscan to see if they are already in authdb
 			for f in filestoscan:
 				try:
-					authlicensecursor.execute("select distinct * from extracted_copyright where checksum=%s", (f[5],))
-					authlicenses = authlicensecursor.fetchall()
+					authcursor.execute("select distinct * from extracted_copyright where checksum=%s", (f[5],))
+					authlicenses = authcursor.fetchall()
+					authconn.commit()
 					if len(authlicenses) != 0:
 						for a in authlicenses:
 							cursor.execute("insert into extracted_copyright values (%s,%s,%s,%s)", a)
@@ -1433,8 +1424,6 @@ def traversefiletree(srcdir, conn, cursor, package, version, license, copyrights
 						ignorefiles.add(f[5])
 				except:
 					pass
-			authlicensecursor.close()
-			authlicenseconn.close()
 
 		if len(ignorefiles) != 0:
 			filtered_files = filter(lambda x: x[5] not in ignorefiles, filestoscan_fossology)
@@ -2699,10 +2688,30 @@ def main(argv):
 			except:
 				allfiles = False
 			try:
-				#authdb = config.get(section, 'authdatabase')
-				authdb = None
+				auth_postgresql_user = config.get(section, 'auth_postgresql_user')
+				auth_postgresql_password = config.get(section, 'auth_postgresql_password')
+				auth_postgresql_db = config.get(section, 'auth_postgresql_db')
+
+				## check to see if a host (IP-address) was supplied either
+				## as host or hostaddr. hostaddr is not supported on older
+				## versions of psycopg2, for example CentOS 6.6, so it is not
+				## used at the moment.
+				try:
+					auth_postgresql_host = config.get(section, 'auth_postgresql_host')
+				except:
+					auth_postgresql_host = None
+				try:
+					auth_postgresql_hostaddr = config.get(section, 'auth_postgresql_hostaddr')
+				except:
+					auth_postgresql_hostaddr = None
+
+				## check to see if a port was specified. If not, default to 'None'
+				try:
+					auth_postgresql_port = config.get(section, 'auth_postgresql_port')
+				except Exception, e:
+					auth_postgresql_port = None
 			except:
-				authdb = None
+				pass
 			try:
 				authcopy = config.get(section, 'authcopy').split(':')
 			except:
@@ -2815,9 +2824,26 @@ def main(argv):
 	else:
 		rewrites = {}
 
-	conn = psycopg2.connect(database=postgresql_db, user=postgresql_user, password=postgresql_password, host=postgresql_host, port=postgresql_port)
+	try:
+		conn = psycopg2.connect(database=postgresql_db, user=postgresql_user, password=postgresql_password, host=postgresql_host, port=postgresql_port)
 
-	cursor = conn.cursor()
+		cursor = conn.cursor()
+	except:
+		print >>sys.stderr, "Database not running or misconfigured"
+		sys.exit(1)
+
+	try:
+		if (auth_postgresql_db == postgresql_db) and (auth_postgresql_user == postgresql_user) and (auth_postgresql_password == postgresql_password) and (auth_postgresql_host == postgresql_host) and (auth_postgresql_port == postgresql_port):
+			authconn = None
+			authcursor = None
+		else:
+			authconn = psycopg2.connect(database=auth_postgresql_db, user=auth_postgresql_user, password=auth_postgresql_password, host=auth_postgresql_host, port=auth_postgresql_port)
+
+			authcursor = authconn.cursor()
+	except:
+		authconn = None
+		authcursor = None
+		print >>sys.stderr, "Auth database not running or misconfigured, skipping auth database"
 
 	if scanlicense and options.updatelicense:
 		try:
@@ -3193,6 +3219,8 @@ def main(argv):
 	## make sure that the results are in the same order as in 'LIST'
 	res.sort()
 
+	print res
+
 	batarchives = []
 	resordered = []
 
@@ -3252,9 +3280,9 @@ def main(argv):
 			## this is a bit ugly: depending on whether or not it is an archive
 			## some special things have to be done. Urgh.
 			if not batarchive:
-				unpackres = unpack_getstrings(cursor, conn, options.filedir, package, version, filename, origin, checksums[filename], downloadurl, websites.get(filename, None), cleanup, scanlicense, scancopyright, scansecurity, pool, extractconfig, authdb, authcopy, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles, batcursors, batcons, processors)
+				unpackres = unpack_getstrings(cursor, conn, authcursor, authconn, options.filedir, package, version, filename, origin, checksums[filename], downloadurl, websites.get(filename, None), cleanup, scanlicense, scancopyright, scansecurity, pool, extractconfig, authcopy, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles, batcursors, batcons, processors)
 			else:
-				unpackres = unpack_getstrings(cursor, conn, options.filedir, package, version, filename, origin, checksums, downloadurls, websites, cleanup, scanlicense, scancopyright, scansecurity, pool, extractconfig, authdb, authcopy, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles, batcursors, batcons, processors)
+				unpackres = unpack_getstrings(cursor, conn, authcursor, authconn, options.filedir, package, version, filename, origin, checksums, downloadurls, websites, cleanup, scanlicense, scancopyright, scansecurity, pool, extractconfig, authcopy, oldpackage, oldres, rewrites, batarchive, packageconfig, unpackdir, extrahashes, update, options.newlist, allfiles, batcursors, batcons, processors)
 			if unpackres != None:
 				oldres = set(map(lambda x: x[2]['sha256'], unpackres))
 				## by updating oldres instead of overwriting itsome more files could be filtered
