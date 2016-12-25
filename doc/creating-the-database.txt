@@ -267,7 +267,9 @@ for example:
 
 $ python createdb.py -c createdb.config -f /data/sources/zlib
 
-
+After the script has successfully run the data should be in the database. This
+can easily be checked by querying the database, for example the table
+"processed", as that table will be filled last.
 
 
 
