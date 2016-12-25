@@ -3301,6 +3301,10 @@ def main(argv):
 	for i in batcons:
 		i.close()
 
+	if authcursor != None:
+		authcursor.close()
+		authconn.close()
+
 	cursor.close()
 	conn.close()
 
