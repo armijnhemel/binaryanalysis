@@ -223,6 +223,30 @@ data to ignore.
 The settings 'minstringcutoff' and 'maxstringcutoff' determine the minimum and
 maximum length of the string literals that are stored. 
 
+In case there is another database from which results should be copied (example:
+to prevent scanning time) then it can be set as follows:
+
+  auth_postgresql_user     = bat
+  auth_postgresql_password = bat
+  auth_postgresql_db       = bat.old
+
+Optionally there are also settings in case the database server runs on a
+different port or machine:
+
+  auth_postgresql_port     = 5432
+  auth_postgresql_host     = 127.0.0.1
+
+In case the two configured databases are the same, then the auth_* settings
+will be ignored.
+
+Currently the only results that will be copied are license and copyright
+information. It should be noted that this setting should be used with very
+great care and only be used if you know exactly what you are doing. It should
+not be used if:
+
+* the license/copyright scanners have been changed
+* the data in the authoritive database is incorrect
+
 ...
 
 By default only files with specific extensions are scanned. The extensions (with
