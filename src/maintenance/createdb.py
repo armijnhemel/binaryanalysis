@@ -3219,8 +3219,6 @@ def main(argv):
 	## make sure that the results are in the same order as in 'LIST'
 	res.sort()
 
-	print res
-
 	batarchives = []
 	resordered = []
 
