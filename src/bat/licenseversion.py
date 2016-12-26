@@ -678,6 +678,9 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 		for p in processpool:
 			p.terminate()
 
+	## finally shut down the scan manager
+	scanmanager.shutdown()
+
 	for filehash in res:
 		if filehash != None:
 			if filehash in hashtoname:
@@ -1342,6 +1345,9 @@ def determinelicense_version_copyright(unpackreports, scantempdir, topleveldir, 
 				leafreports = cPickle.dump(leafreports, leaf_file)
 				leaf_file.close()
 				unpackreport['tags'].append('ranking')
+
+	## finally shut down the scan manager
+	scanmanager.shutdown()
 
 ## grab variable names.
 def grab_sha256_varname(scanqueue, reportqueue, cursor, conn, query):
