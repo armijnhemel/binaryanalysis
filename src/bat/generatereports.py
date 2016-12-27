@@ -533,8 +533,19 @@ def generateunmatched((picklefile, pickledir, filehash, reportdir, compressed)):
 	htmlfilename = "%s/%s-unmatched.html" % (reportdir, filehash)
 	unmatchedhtmlfile = codecs.open(htmlfilename, encoding='utf-8', mode='wb')
 	unmatchedhtmlfile.write(u"<html><body><h1>Unmatched strings (%d strings)</h1><p>" % (len(unmatches),))
-	unmatchedsnippets = map(lambda x: u"%s<br>\n" % cgi.escape(x), unmatches)
-	unmatchedhtmlfile.write(u"".join(unmatchedsnippets))
+	for u in unmatches:
+		decoded = False
+		for i in ['utf-8','ascii','latin-1','euc_jp', 'euc_jis_2004', 'jisx0213', 'iso2022_jp', 'iso2022_jp_1', 'iso2022_jp_2', 'iso2022_jp_2004', 'iso2022_jp_3', 'iso2022_jp_ext', 'iso2022_kr','shift_jis','shift_jis_2004','shift_jisx0213']:
+			try:
+				decodeline = u.decode(i)
+				decoded = True
+				break
+			except Exception, e:
+				pass
+			if decoded:
+				unmatchedhtmlfile.write("u%s<br>\n" % cgi.escape(decodedline))
+			else:
+				pass
 	unmatchedhtmlfile.write(u"</p></body></html>")
 	unmatchedhtmlfile.close()
 	if compressed:
