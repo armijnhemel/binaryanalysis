@@ -13,6 +13,9 @@ how the scripts will be used after the rewrite.
 5. configure database creation script
 6. run database creation script
 
+Appendix A: recreating an existing database
+Appendix B: database design
+
 
 1. Download sources
 -------------------
@@ -296,6 +299,26 @@ can easily be checked by querying the database, for example the table
 "processed", as that table will be filled last.
 
 
+RECREATING AN EXISTING DATABASE
+
+To recreate an existing database the metadata from the "processed" data should
+be dumped and massaged into the metadata files as described earlier. For
+recreating a LIST file there is a script called 'dumplist.py' in the
+'maintenance' directory. It can be invoked as follows:
+
+$ python dumplist.py -l /path/to/list/file -c /path/to/configuration -o origin
+
+for example:
+
+$ python dumplist.py -l /tmp/OLDLIST -c ~/bat/maintenance/createdb.config -o kernel
+
+which will write all entries from the origin 'kernel' to the file
+'/tmp/OLDLIST'. The configuration file that is used is the same that is used to
+create the database.
+
+The '-o' flag is optional: if it is set then only entries from that particular
+origin will be written to the file. If not, then all entries from the
+'processed' table will be written.
 
 DATABASE DESIGN
 
