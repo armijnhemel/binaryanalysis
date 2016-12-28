@@ -12,6 +12,7 @@ how the scripts will be used after the rewrite.
 4. start database server
 5. configure database creation script
 6. run database creation script
+7. find 'third party' code
 
 Appendix A: recreating an existing database
 Appendix B: database design
@@ -297,6 +298,24 @@ $ python createdb.py -c createdb.config -f /data/sources/zlib
 After the script has successfully run the data should be in the database. This
 can easily be checked by querying the database, for example the table
 "processed", as that table will be filled last.
+
+7. find 'third party' code
+--------------------------
+
+Sometimes it is very clear to see from the path name of a file that code has
+been copied from a different package, because for example it has the word
+'thirdparty' in one of the path components.
+
+To discover whether or not code is 'third party code' (copied from another
+package) there is a script in the 'maintenance' directory that will connect to
+the database and records any instances of third party code. This script, called
+'findthirdparty.py' can be invoked as follows:
+
+$ python findthirdparty.py -c /path/to/configuration
+
+for example:
+
+$ python findthirdparty.py -c createdb.config
 
 
 RECREATING AN EXISTING DATABASE
