@@ -17,7 +17,7 @@ for the packages. By comparing the two and reusing the corrected results a lot
 of effort can be saved.
 '''
 
-import os, os.path, sys, sqlite3
+import os, os.path, sys
 from optparse import OptionParser
 
 def main(argv):
