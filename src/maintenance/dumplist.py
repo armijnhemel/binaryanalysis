@@ -77,7 +77,6 @@ def main(argv):
 	except:
 		print >>sys.stderr, "Can't open database"
 		sys.exit(1)
-	cursor = conn.cursor()
 
 	## TODO: add some sanity checks for 'origin' first
 	if options.origin != None:
