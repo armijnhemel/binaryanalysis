@@ -13,6 +13,7 @@ how the scripts will be used after the rewrite.
 5. configure database creation script
 6. run database creation script
 7. find 'third party' code
+8. find 'clones'
 
 Appendix A: recreating an existing database
 Appendix B: database design
@@ -316,6 +317,24 @@ $ python findthirdparty.py -c /path/to/configuration
 for example:
 
 $ python findthirdparty.py -c createdb.config
+
+8. find 'clones'
+----------------
+
+Optionally it might be useful to detect 'clones' in the database, so the
+packages can for example be marked as third party, or as clones. To detect
+these clones a script 'findclones.py' can be found in the 'maintenance'
+directory.
+
+$ python findclones.py -c /path/to/configuration
+
+for example:
+
+$ python findclones.py -c createdb.config
+
+The output of this script will be a list of identical packages (where the
+contents are exactly the same in the database), or partial, where one package
+contains the other.
 
 
 RECREATING AN EXISTING DATABASE
