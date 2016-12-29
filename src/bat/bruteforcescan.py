@@ -937,10 +937,14 @@ def postrunscan(scanqueue, postrunscans, topleveldir, scantempdir, cursor, conn,
 	## grab tasks from the queue continuously until there are no more tasks
 	while True:
 		(filetoscan, unpackreports) = scanqueue.get(timeout=timeout)
+		ignore = False
 		for e in extensionsignore:
 			if filetoscan.endswith(e):
 				ignore = True
-				scanqueue.task_done()
+				break
+		if ignore:
+			scanqueue.task_done()
+			continue
 		for postrunscan in postrunscans:
 			module = postrunscan['module']
 			method = postrunscan['method']
