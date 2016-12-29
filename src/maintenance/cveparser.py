@@ -22,12 +22,13 @@ Datafiles (version 2.0 of the format):
 https://nvd.nist.gov/download.aspx
 '''
 
-import sys, os, re, sqlite3, multiprocessing
+import sys, os, re
 from optparse import OptionParser
 import ConfigParser
 import xml.dom.minidom
 import httplib
 import batextensions
+import psycopg2
 
 batextensions = batextensions.extensions
 
@@ -147,44 +148,68 @@ def main(argv):
         config.readfp(configfile)
         configfile.close()
 
+	if not 'extractconfig' in config.sections():
+		print >>sys.stderr, "malformed configuration file: 'extractconfig' section missing"
+		sys.exit(1)
+
+	if not 'cveconfig' in config.sections():
+		print >>sys.stderr, "malformed configuration file: 'cveconfig' section missing"
+		sys.exit(1)
+
 	for section in config.sections():
-		if section == 'cveconfig':
+		if section == 'extractconfig':
 			try:
-				database = config.get(section, 'database')
+				postgresql_user = config.get(section, 'postgresql_user')
+				postgresql_password = config.get(section, 'postgresql_password')
+				postgresql_db = config.get(section, 'postgresql_db')
+
+				## check to see if a host (IP-address) was supplied either
+				## as host or hostaddr. hostaddr is not supported on older
+				## versions of psycopg2, for example CentOS 6.6, so it is not
+				## used at the moment.
+				try:
+					postgresql_host = config.get(section, 'postgresql_host')
+				except:
+					postgresql_host = None
+				try:
+					postgresql_hostaddr = config.get(section, 'postgresql_hostaddr')
+				except:
+					postgresql_hostaddr = None
+				## check to see if a port was specified. If not, default to 'None'
+				try:
+					postgresql_port = config.get(section, 'postgresql_port')
+				except Exception, e:
+					postgresql_port = None
 			except:
-				print >>sys.stderr, "database not specified in configuration file"
+				print >>sys.stderr, "Database connection not defined in configuration file. Exiting..."
+				sys.stderr.flush()
 				sys.exit(1)
-			try:
-				securitydatabase = config.get(section, 'securitydatabase')
-			except:
-				print >>sys.stderr, "security database not specified in configuration file"
-				sys.exit(1)
+		elif section == 'cveconfig':
 			try:
 				patchdir = config.get(section, 'patchdir')
 			except:
 				print >>sys.stderr, "patchdir not specified in configuration file"
 				sys.exit(1)
 
+	try:
+		conn = psycopg2.connect(database=postgresql_db, user=postgresql_user, password=postgresql_password, host=postgresql_host, port=postgresql_port)
+
+		cursor = conn.cursor()
+	except:
+		print >>sys.stderr, "Can't open database"
+		sys.exit(1)
+
 	## TODO: more sanity checks
 	if not os.path.exists(patchdir):
 		print >>sys.stderr, "patchdir %s does not exist" % patchdir
 		sys.exit(1)
 
-	if not os.path.exists(database):
-		print >>sys.stderr, "database %s does not exist" % database
-		sys.exit(1)
+	cursor.execute('select distinct(origin) from processed')
+	origins = cursor.fetchall()
+	conn.commit()
+	origins = map(lambda x: x[0], origins)
 
-	if not os.path.exists(securitydatabase):
-		print >>sys.stderr, "security database %s does not exist" % securitydatabase
-		sys.exit(1)
-
-	## TODO: replace with PostgreSQL
-	conn = sqlite3.connect(database)
-	cursor = conn.cursor()
-	origins = map(lambda x: x[0], cursor.execute('select distinct(origin) from processed').fetchall())
-
-	securityconn = sqlite3.connect(securitydatabase)
-	securitycursor = securityconn.cursor()
+	securitycursor = conn.cursor()
 	## read the CVE file into a string
 	cvestring = open(options.cvefile, 'rb').read()
 
@@ -259,6 +284,8 @@ def main(argv):
 					if vs.nodeName == 'vuln:source':
 						source = vs.childNodes[0].data
 					elif vs.nodeName == 'vuln:reference':
+						if len(vs.childNodes) == 0:
+							continue
 						reference = vs.childNodes[0].data
 						outfilename = None
 						if reference.startswith('http://git.kernel.org/') or reference.startswith('https://git.kernel.org/'):
@@ -357,9 +384,13 @@ def main(argv):
 				## first check whether or not the product is known
 				## in the database by grabbing all the versions for
 				## the product (per vendor/origin)
-				allversions = map(lambda x: x[0], cursor.execute("select version from processed where package=? and origin=?", (product, vendor)))
+				cursor.execute("select version from processed where package=%s and origin=%s", (product, vendor))
+				allversions = cursor.fetchall()
+				conn.commit()
 				if len(allversions) == 0:
 					continue
+
+				allversions = map(lambda x: x[0], allversions)
 
 				## Filter and store the versions that are not vulnerable
 				vps = map(lambda x: x[0], filter(lambda x: x[1] == None, vendorproduct[v][product]))
@@ -387,7 +418,9 @@ def main(argv):
 						continue
 
 					## grab all the packages in the database with this version
-					res = cursor.execute("select package from processed where package=? and version=?", (product, version.version)).fetchone()
+					cursor.execute("select package from processed where package=%s and version=%s", (product, version.version))
+					res = cursor.fetchone()
+					conn.commit()
 					if res == None:
 						continue
 					if version.version in checkedversions:
@@ -400,7 +433,9 @@ def main(argv):
 							## First grab all the combinations of pathnames and checksums
 							## in the datbase that correspond to the package, version and
 							## filename (basename of vulnpath)
-							vulnamechecksums = set(cursor.execute("select pathname, checksum from processed_file where package=? and version=? and filename=?", (product, version.version, os.path.basename(vulnpath))).fetchall())
+							cursor.execute("select pathname, checksum from processed_file where package=%s and version=%s and filename=%s", (product, version.version, os.path.basename(vulnpath)))
+							vulnamechecksums = set(cursor.fetchall())
+							conn.commit()
 							for vulnamechecksum in vulnamechecksums:
 								match = False
 								## check if the names in the pathname in the database
@@ -422,7 +457,9 @@ def main(argv):
 									## from the database with this database to see
 									## which other packages and/or versions are
 									## affected as well.
-									vulnpackageversions = cursor.execute("select package, version from processed_file where checksum=?", (vulnamechecksum[1],)).fetchall()
+									cursor.execute("select package, version from processed_file where checksum=%s", (vulnamechecksum[1],))
+									vulnpackageversions = cursor.fetchall()
+									conn.commit()
 
 									## grab all the vulnerable versions for this
 									## particular product
@@ -448,11 +485,10 @@ def main(argv):
 				if checkedversions != set():
 					## now record the checksum in the database
 					for vnl in vulnerablechecksums:
-						securitycursor.execute("insert into security_cve (checksum, cve) values (?,?)", (vnl, cveid))
-					securityconn.commit()
+						securitycursor.execute("insert into security_cve (checksum, cve) values (%s,%s)", (vnl, cveid))
+					conn.commit()
 
 	securitycursor.close()
-	securityconn.close()
 	cursor.close()
 	conn.close()
 
