@@ -14,6 +14,7 @@ how the scripts will be used after the rewrite.
 6. run database creation script
 7. find 'third party' code
 8. find 'clones'
+9. extra sanity checks
 
 Appendix A: recreating an existing database
 Appendix B: database design
@@ -336,8 +337,18 @@ The output of this script will be a list of identical packages (where the
 contents are exactly the same in the database), or partial, where one package
 contains the other.
 
+9. extra sanity checks
+----------------------
 
-RECREATING AN EXISTING DATABASE
+For several reasons the database could be out of sync, for example if the
+database creation script exited, having written some data to the database. In
+this case it might be useful to run a sanity check. In the directory
+'maintenance' there is a script called 'verifydb.py' that can be used to flag
+issues in some tables of the database.
+
+
+
+APPENDIX A: RECREATING AN EXISTING DATABASE
 
 To recreate an existing database the metadata from the "processed" data should
 be dumped and massaged into the metadata files as described earlier. For
@@ -358,7 +369,7 @@ The '-o' flag is optional: if it is set then only entries from that particular
 origin will be written to the file. If not, then all entries from the
 'processed' table will be written.
 
-DATABASE DESIGN
+APPENDIX B: DATABASE DESIGN
 
 The BAT manual already contains a description of the database tables. This text
 is to provide some additional background about certain choices and how to
