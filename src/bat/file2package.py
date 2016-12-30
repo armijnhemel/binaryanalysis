@@ -10,7 +10,7 @@ package a file belongs to based on the name of a package. This information is
 mined from distributions like Fedora and Debian.
 '''
 
-import os, os.path, sqlite3, sys, subprocess, copy, Queue, cPickle
+import os, os.path, sys, subprocess, copy, Queue, cPickle
 import multiprocessing
 from multiprocessing import Process, Lock
 from multiprocessing.sharedctypes import Value, Array
