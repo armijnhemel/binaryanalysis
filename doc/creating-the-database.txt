@@ -15,6 +15,7 @@ how the scripts will be used after the rewrite.
 7. find 'third party' code
 8. find 'clones'
 9. extra sanity checks
+10. adding Linux distribution specific information
 
 Appendix A: recreating an existing database
 Appendix B: database design
@@ -345,6 +346,40 @@ database creation script exited, having written some data to the database. In
 this case it might be useful to run a sanity check. In the directory
 'maintenance' there is a script called 'verifydb.py' that can be used to flag
 issues in some tables of the database.
+
+10. adding Linux distribution specific information
+--------------------------------------------------
+
+BAT has a scan to search the name of a file in a Linux distribution. In the
+directory 'maintenance' there are two scripts to populate the database with
+information from Debian and Fedora.
+
+The script for Debian is called 'createfiledatabasedebian.py' and uses
+information that can be downloaded from any Debian FTP site in the 'dists'
+directory, namely the files 'Contents-*.gz', for example: dists/Debian8.6/main/
+
+The script for Debian takes these files and puts the information in the
+database:
+
+$ python createfiledatabasedebian.py -c /path/to/configuration -f /path/to/debian/file
+
+for example:
+
+$ python createfiledatabasedebian.py -c createdb.config -f /home/bat/debian/Contents-i386.gz
+
+The files used in Fedora are a bit different. Information is distributed in
+bzip2 compressed sqlite databases, which can be found in the 'repodata'
+directory on Fedora distribution sites. For example, for Fedora 24 on x86_64
+this data would be in linux/releases/24/Everything/x86_64/os/repodata/
+
+There are no consistent names, but you should grab the files that end with
+'filelists.sqlite.bz2' and 'primary.sqlite.bz2'. These files should be stored
+and then uncompressed so they can be processed.
+
+The script for Fedora takes these files and puts the information in the
+database:
+
+$ python createfiledatabasefedora.py -c /path/to/configuration -s version -f /path/to/filelists.sqlite -p /path/to/primary.sqlite
 
 
 
