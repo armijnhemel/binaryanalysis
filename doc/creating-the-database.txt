@@ -228,7 +228,23 @@ data to ignore.
   cutoff = 209715200
 
 The settings 'minstringcutoff' and 'maxstringcutoff' determine the minimum and
-maximum length of the string literals that are stored. 
+maximum length of the string literals that are stored. It is very highly
+recommended to not change 'minstringcutoff', as it will put a lot of data in
+the database that will be completely useless. It is also recommended to not
+increase 'maxstringcutoff', although decreasing does not matter that much.
+
+The setting 'extrahashes' can be used to set which hashes are computed next
+to SHA256. It is very highly recommended to keep the the default settings, as
+this has been hardcoded in the BAT program itself as well.
+
+In the database creation script URLs are extracted using regular expressions
+that are also used in FOSSology. These regular expressions are not the most
+robust ones and might every now and then match too much data. To prevent bogus
+data to end up in the database the setting 'urlcutoff' can be used. By default
+it is set to a very conservative value and it likely can be lowered. It is
+advised to not increase it.
+
+....
 
 In case there is another database from which results should be copied (example:
 to prevent scanning time) then it can be set as follows:
