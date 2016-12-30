@@ -16,6 +16,7 @@ how the scripts will be used after the rewrite.
 8. find 'clones'
 9. extra sanity checks
 10. adding Linux distribution specific information
+11. run CVE processor
 
 Appendix A: recreating an existing database
 Appendix B: database design
@@ -217,6 +218,19 @@ there is a lot of RAM available it might make sense to create a ramdisk to
 speed up unpacking. For large archives (Linux kernel, Qt, Chromium,
 LibreOffice, etc.) the speed up will be significant.
 
+There are a few settings related to enabling or disabling license scanning,
+copyright scanning and (basic) security scanning:
+
+  scanlicense = yes
+  scancopyright = yes
+  scansecurity = yes
+
+License scanning is done with FOSSology and Ninka. Copyright scanning is done
+using regular expressions lifted from FOSSology. Security scanning is
+implemented as a very basic feature using regular expressions that mark certain
+smells from the CERT Secure Coding Standard. For CVE scanning another script
+should be used (see later).
+
 The other settings are related to which data to extract and especially which
 data to ignore.
 
@@ -397,6 +411,23 @@ database:
 
 $ python createfiledatabasefedora.py -c /path/to/configuration -s version -f /path/to/filelists.sqlite -p /path/to/primary.sqlite
 
+11. run CVE processor
+---------------------
+
+To match file checksums with CVE numbers there is a script available called
+'cveparser.py' that parses CVE files and tries to match file paths mentioned in
+the free text field, as well as file paths from patches, to file paths in the
+database. In the script some assumptions are made about how origins of files
+are named and a translation table is used in the script.
+
+$ python cveparser.py -c /path/to/configuration -f /path/to/cvefile
+
+for example:
+
+$ python cveparser.py -c createdb.config -f /home/bat/cve/nvdcve-2.0-2014.xml
+
+The results are automatically written to the database and can be found in the
+table 'security_cve'.
 
 
 APPENDIX A: RECREATING AN EXISTING DATABASE
@@ -463,4 +494,5 @@ components)
 3. store the identifier, with package name and file name from 2.
 
 The score cache builds on the caches and can be computed by running the script
-'scorecache.py'.
+'scorecache.py' (still needs to be converted to use PostgreSQL instead of
+sqlite).
