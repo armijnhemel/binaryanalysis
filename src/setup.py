@@ -12,7 +12,7 @@ setup(name='bat',
       url='http://www.binaryanalysis.org/',
       packages=['bat'],
       license="Apache 2.0",
-      scripts=['maintenance/batconfigcheck.py', 'maintenance/busybox-appletname-extractor.py', 'maintenance/clonedbinit.py', 'bat-scan', 'busybox-compare-configs.py'],
+      scripts=['maintenance/busybox-appletname-extractor.py', 'maintenance/clonedbinit.py', 'bat-scan', 'busybox-compare-configs.py'],
       data_files=[ ('/etc/bat',  ['bat-scan.config']),
                  ],
      long_description="""The Binary Analysis Tool is a modular framework that assists with auditing
