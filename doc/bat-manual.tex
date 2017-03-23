@@ -3,8 +3,8 @@
 
 \pagestyle{empty}
 
-\author{Armijn Hemel -- Tjaldur Software Governance Solutions}
-\title{Binary Analysis Tool User and Developer Manual - describing version 27}
+\author{Armijn Hemel -- Binary Analysis Tool project}
+\title{Binary Analysis Tool User and Developer Manual - describing version 36}
 
 \begin{document}
 
@@ -47,10 +47,10 @@ Analysis Tool can take advantage of this and will run significantly faster.
 
 \subsection{Software requirements}
 
-To run BAT a recent Linux distribution is needed. Development is (currently)
-done on Fedora 22 and Ubuntu 14.04, so those platforms are likely to
-work best. Ubuntu versions older than 14.04, will not work due to a broken
-version of the PyDot package. Debian versions older than 7 are unsupported.
+To run BAT a recent Linux distribution is needed, such as a recent Fedora or
+Ubuntu. Ubuntu versions older than 14.04, will not work due to a broken
+version of the PyDot package (unless a newer version is installed using
+\texttt{pip}). Debian versions older than 7 are unsupported.
 
 Versions older than Fedora 20 might not work scanning because of a bug in the
 version of matplotlib shipped on those distributions will throw errors in some
@@ -72,20 +72,22 @@ untrusted binary code there might be security risk.
 
 \subsubsection{Installation on Fedora}
 
-To install on Fedora three packages are needed:
-\texttt{bat-extratools}, \texttt{bat-extratools-java} %, \texttt{ubi\_reader}
-and \texttt{bat}. These can be downloaded from the BAT website in both prebuilt
-versions and as source RPM files. When installing the three files there should
-be a list of dependencies that should be installed to let BAT work successfully.
-Some of the dependencies are not in Fedora by default but need to be installed
-through external repositories, such as RPMfusion.
+To install on Fedora two packages are needed: \texttt{bat-extratools}, %, \texttt{ubi\_reader}
+and \texttt{bat}. These packages easily be created as both binary versions and
+as source RPM files from the source code in Git (as described later). When
+installing the two files there should be a list of dependencies that should be
+installed to let BAT work successfully. Some of the dependencies are not in
+Fedora by default but need to be installed through external repositories, such
+as RPMfusion.
 
 \subsubsection{Installation on Debian and Ubuntu}
 
-To install on Debian and Ubuntu three packages are needed:
-\texttt{bat-extratools}, \texttt{bat-extratools-java} %, \texttt{ubi\_reader}
-and \texttt{bat}. These can be downloaded from the BAT website as binary DEB
-files When installing the three files there should be a list of dependencies
+To install on Debian and Ubuntu two packages are needed:
+\texttt{bat-extratools}, %, \texttt{ubi\_reader}
+and \texttt{bat}. These can easily be generated as DEB packages using the
+commands described later in this manual.
+
+When installing the two files there should be a list of dependencies
 that should be installed to let BAT work successfully. Some of these packages
 are not in Debian by default but need to be installed by enabling extra
 repositories such as Debian \texttt{non-free}.
@@ -99,8 +101,7 @@ linking).
 
 It might be necessary to enable the EPEL repository (
 \url{https://fedoraproject.org/wiki/EPEL} ) as well as RepoForge. A few
-packages might have to be installed manually. To rebuild
-\texttt{bat-extratools-java} a newer version of Java might be required.
+packages might have to be installed manually.
 
 \section{Analysing binaries with the Binary Analysis Tool}
 
@@ -401,13 +402,10 @@ OpenWrt project, DD-WRT, or upstream SquashFS project.
 currently not used by default.
 \item \texttt{bat-visualisation} containing a few custom tools to help generate
 pictures. These might be removed in the future.
-\item one Java project called \texttt{ddex} extract identifiers from binary
-files from the Dalvik VM (Android).
 \end{itemize}
 
-The collection is split in three packages: \texttt{bat-extratools-java} contains
-the two Java packages, the \texttt{ubi\_reader} package contains UBI/UBIFS
-specific tools, the \texttt{bat-extratools} package contains the rest.
+The collection is split in two packages: the \texttt{ubi\_reader} package contains UBI/UBIFS
+specific tools and the \texttt{bat-extratools} package contains the rest.
 
 \appendix
 
@@ -524,7 +522,7 @@ description = Unpack JFFS2 file systems
 enabled     = yes
 \end{verbatim}
 
-In BAT 27 the following file systems, compressed files and media files can be
+In BAT 36 the following file systems, compressed files and media files can be
 unpacked or extracted:
 
 \begin{itemize}
@@ -533,10 +531,10 @@ JFFS2 (no LZO compression), Minix (specific variant of v1 often found on older
 embedded Linux systems), SquashFS (several variants), romfs, YAFFS2 (specific
 variants), ubifs (not on all systems), PLF (Parrot specific file format)
 \item compressed files and executable formats: 7z, ar, ARJ, BASE64, BZIP2,
-compressed Flash, CAB, compress, CPIO, EXE (specific compression methods only),
-GZIP, InstallShield (old versions), LRZIP, LZIP, LZMA, LZOP, MSI, pack200, RAR,
+compressed Flash, CAB, compress, CPIO, ELF, EXE (specific compression methods only),
+GZIP, InstallShield (old versions), Java class file, LRZIP, LZIP, LZMA, LZOP, MSI, pack200, RAR,
 RPM, RZIP, serialized Java, TAR, UPX, XZ, ZIP (including APK, EAR, JAR and
-WAR), WIM, Intel HEX (whole files only, no comments allowed), XAR
+WAR), WIM, Intel HEX (whole files only, comments allowed), XAR
 \item media files: BMP, GIF, JPEG, PNG, ICO, PDF, CHM, OTF, TTF, WOFF
 \end{itemize}
 
@@ -721,6 +719,13 @@ processors to use with the \texttt{processors} option:
 processors = 2
 \end{verbatim}
 
+\subsubsection{\texttt{writeoutputfile}}
+
+Sometimes it is useful to let BAT just unpack, but not write an output file,
+saving time packing data and writing it to disk. To prevent an output archive
+being created set \texttt{writeoutputfile} to \texttt{no}. By default it will
+be set to \texttt{yes}.
+
 \subsubsection{\texttt{outputlite}}
 
 Another setting in this section is \texttt{outputlite}:
@@ -831,7 +836,7 @@ usedatabase = no
 If \texttt{reporthash} is set, then hashes in the ranking scan that come from
 the BAT database will be converted from SHA256 (default) to the hash if
 supported (currently MD5, SHA1 and CRC32 are supported) in the default BAT
-database as shipped by Tjaldur Software Governance Solutions:
+database as created by the database scripts.
 
 \begin{verbatim}
 reporthash = sha256
@@ -918,11 +923,28 @@ cleanup = yes
 
 \subsubsection{\texttt{compress}}
 
-TODO
+BAT outputs several result files. To save disk space these can be compressed
+using gzip, at the expense of processing time. If not specified in the
+configuration file \texttt{compress} will default to \texttt{no}.
+
+\subsubsection{\texttt{packpickles}}
+
+BAT internally uses Python pickles to (temporarily) store information on
+disk. Since recent versions of BAT the preferred reporting and data exchange
+format is JSON and pickles are no longer needed and don't need to be packed in
+the output archive. If not specified in the configuration file
+\texttt{packpickles} will default to \texttt{no}.
 
 \subsubsection{\texttt{markersearchminimum}}
 
-TODO
+When a file is scanned for markers it is done in a single process. If many
+files have to be scanned for markers at once this makes sense. However, if
+there are multiple processors available and the top level file is big, then
+it is a bit of a waste of time to not be able to use the extra processor
+power. With \texttt{markersearchminimum} it is possible to set a minimum
+size for a file to search for markers in the top level file in parallel. By
+default top level files larger than 20 million bytes are processed in
+allel.
 
 \subsubsection{\texttt{tasktimeout}}
 
@@ -938,6 +960,12 @@ tasktimeout = 2592000
 
 It should be noted that the value should not be set to 0, because otherwise
 the queues will timeout immediately and BAT will barf.
+
+\subsubsection{\texttt{tlshmaxsize}}
+
+Beyond a certain size it no longer makes sense to compute TLSH checksums for
+files. Using \texttt{tlshmaxsize} this limit can be set. By default it is set
+to 52428800 bytes (50 MiB).
 
 \subsubsection{Global environment variables}
 
@@ -1060,7 +1088,7 @@ cleanup     = yes
 The \texttt{cleanup} setting should be set to \texttt{yes} unless the results
 do not change in between subsequent runs of BAT.
 
-Currently (BAT 27) if \texttt{cleanup} is set the files are written directly to
+Currently (BAT 36) if \texttt{cleanup} is set the files are written directly to
 output directories. The values of these directories are hardcoded (and match
 values that the GUI expects) but these will be replaced by the value of
 \texttt{storetarget} in a later release.
@@ -1468,21 +1496,15 @@ might first need to generate packages for your distribution if none exist. For
 BAT there is currently support to build packages for RPM-based systems and for
 DEB-based systems.
 
-\subsection{Building packages for RPM based systems from releases}
-
-Building RPMs from released versions of BAT is trivial: download the SRPM
-files for \texttt{bat}, \texttt{bat-extratools} and
-\texttt{bat-extratools-java} from the BAT website and rebuild them with
-\texttt{rpmbuild --rebuild}.
-
-\subsection{Building packages for RPM based systems from Subversion}
+\subsection{Building packages for RPM based systems from Git}
 
 \subsubsection{Building \texttt{bat}}
 
 Building the \texttt{bat} package is fairly straightforward.
 
 \begin{enumerate}
-\item Make a fresh export of BAT from Subversion
+\item Git clone the BAT repository from GitHub
+\item \texttt{cd} to the directory \texttt{src}
 \item run the command: \texttt{python setup.py bdist\_rpm}
 \end{enumerate}
 
@@ -1494,18 +1516,15 @@ rebuild the SRPM using:
 rpmbuild --rebuild
 \end{verbatim}
 
-\subsubsection{Building \texttt{bat-extratools} and
-\texttt{bat-extratools-java}}
+\subsubsection{Building \texttt{bat-extratools}}
 
-Building packages for \texttt{bat-extratools} and \texttt{bat-extratools-java}
-is unfortunately a bit more elaborate.
+Building packages for \texttt{bat-extratools} is unfortunately a bit more elaborate.
 
 \begin{enumerate}
-\item make a fresh export of the Subversion repository
-\item change the names of \texttt{bat-extratools} and the
-\texttt{bat-extratools-java} directories to contain the version name of the
-release (for example \texttt{bat-extratools-14.0}). Make a \texttt{tar.gz}
-archive of the directory:
+\item Git clone the \texttt{bat-extratools} repository from GitHub
+\item change the name of \texttt{bat-extratools} directory to contain the version name of the
+release (for example \texttt{bat-extratools-14.0}).
+\item Make a \texttt{tar.gz} archive of the directory:
 
 \begin{verbatim}
 tar zcf bat-extratools-14.0.tar.gz bat-extratools-14.0
@@ -1543,20 +1562,17 @@ The build process might complain about not being able to find the original
 sources. In our experience it is safe to ignore this. The command will build a
 \texttt{.deb} package which can be installed with \texttt{dpkg -i}.
 
-\subsubsection{Building \texttt{bat-extratools} and
-\texttt{bat-extratools-java}}
+\subsubsection{Building \texttt{bat-extratools}}
 
-To build a .deb package do an export of the Subversion repository first. Change
-to the correct directories (\texttt{bat-extratools} and 
-\texttt{bat-extratools-java} and type: \texttt{debuild -uc -us} to
-build the packages.
+To build a .deb package clone the Git repository first. Change
+to the correct directory (\texttt{bat-extratools} and type:
+\texttt{debuild -uc -us} to build the package.
 
 There are some dependencies that need to be installed beforehand, such as
-\texttt{javahelper}, \texttt{ant} and \texttt{default-jdk} for bulding
-\texttt{bat-extratools-java} and \texttt{zlib1g-dev}, \texttt{liblzo2-dev}
-and \texttt{liblzma-dev} for building \texttt{bat-extratools}. These
-dependencies are documented in the file \texttt{debian/control} and
-\texttt{debuild} will warn if these packages are missing.
+\texttt{zlib1g-dev}, \texttt{liblzo2-dev} and \texttt{liblzma-dev} for building
+\texttt{bat-extratools}. These dependencies are documented in the file
+\texttt{debian/control} and \texttt{debuild} will warn if these packages are
+missing.
 
 \section{Binary Analysis Tool knowledgebase}
 
@@ -1577,9 +1593,8 @@ many packages as possible, from a cross cut of all of open source software, to
 prevent bias towards certain packages: if you only would have BusyBox in your
 database, everything would look like BusyBox.
 
-If you don't want to spend much time on downloading and processing
-packages, please contact Tjaldur Software Governance Solutions for
-purchasing a copy of a fully prepared database at \url{info@tjaldur.nl}.
+A more detailed description about how to create the database can be found
+in the BAT GitHub repository in the \textit{doc}
 
 \subsection{Generating the package list}
 
@@ -1676,112 +1691,6 @@ For the Linux kernel additional information is extracted about kernel functions
 and variables, module information (author, license, parameters, and so on),
 and kernel symbol information.
 
-\texttt{createdb.py} can be invoked as follows:
-
-\begin{verbatim}
-python createdb.py -f
-    /path/to/directory/with/files -c /path/to/configurationfile
-\end{verbatim}
-
-The configuration file is a simple configuration file in Windows INI format. An
-example of a configuration file is as follows:
-
-\begin{verbatim}
-[extractconfig]
-configtype = global
-database = /home/bat/db/master.sqlite3
-scanlicense = yes
-licensedb = /home/bat/db/licenses.sqlite3
-nomoschunks = 10
-scancopyright = yes
-scansecurity = yes
-securitydb = /home/bat/db/security.sqlite3
-cleanup = yes
-wipe = no
-unpackdir = /ramdisk
-\end{verbatim}
-
-The global section is called \texttt{extractconfig}. The field
-\texttt{configtype} has to be set to \texttt{global}. The field
-\texttt{database} is used to set the path to the main database. This parameter
-is mandatory: if it is not set the script will exit. The parameters
-\texttt{scanlicense} and \texttt{scancopyright} can be used to enable or
-disable license and copyright scanning (default: disabled). \texttt{licensedb}
-is used to set the path to the copyright and licensing database. The setting
-\texttt{nomoschunks} can be set to tell Nomos (the license scanner in
-FOSSology) how many files should be scanned at once. The default value set in
-the database creation script is 10. Nomos can scan multiple files at once, but
-it has concurrency problems (see
-\url{https://github.com/fossology/fossology/issues/396} for an explanation).
-
-The setting \texttt{scansecurity} enables extraction of security information
-from source code. The parameter \texttt{securitydb} points to the database file
-that security information should be written to. At the moment only C files are
-searched for security bugs.
-
-If \texttt{cleanup} is set to \texttt{yes} (default) the temporary directory
-with unpacked sources will be removed. If \texttt{wipe} (default: \texttt{no})
-is set to \texttt{yes} all tables and indexes will first be dropped. The
-parameter \texttt{unpackdir} can be used to set a location where archives are
-unpacked, for example a ramdisk or SSD.
-
-In case data for string identifiers, function names and variable names has not
-been changed it can be copied from another database:
-
-\begin{verbatim}
-authdatabase = /home/bat/olddb/oldmaster.sqlite3
-\end{verbatim}
-
-One use is for example when support for a new file type has been added (for
-example: extraction of identifiers for Ruby was added in BAT 21) and packages
-need to be rescanned, but it is not necessary to extract data for all files.
-For now this option is explicitely disabled for the Linux kernel, as some data
-for the Linux kernel is extracted in a different way. In the future this will
-likely change.
-
-Similarly data can be copied from an authoritive licensing and copyright
-database:
-
-\begin{verbatim}
-authlicensedb = /home/bat/db/checked_licenses.sqlite3
-\end{verbatim}
-
-This setting is useful if licensing and copyright data has been scanned
-previously and checked, or comes from a different source than Ninka and
-FOSSology. Currently both licensing and copyright data is copied if this option
-is enabled, but this will change in the future to allow for just licensing or
-copyright data to be copied.
-
-Apart from the global section there are also package specific sections to add
-files or to ignore files. Adding extra files can be done as follows:
-
-\begin{verbatim}
-[bash]
-configtype = package
-extensions = .def:C
-\end{verbatim}
-
-The section name (in the example \texttt{bash}) is the name of the package and
-is used by \texttt{createdb.py} to match with a package name. The field
-\texttt{configtype} should be set to \texttt{package}. The only field is
-\texttt{extensions} which defines pairs of extensions and languages for files
-with package specific extensions that are interesting to scan. For example
-\texttt{bash} has quite a few strings that end up in binaries defined in its
-source tree that end on \texttt{.def}. These files are only interesting in the
-context of \texttt{bash}. An extension/language pair has a semicolon as a
-separator. Multiple pairs are separated by whitespace.
-
-Another option is to specifically ignore files, for example:
-
-\begin{verbatim}
-[freecad]
-configtype = package
-blacklist = Arch_rc.py
-\end{verbatim}
-
-Multiple files can be set in the \texttt{blacklist} parameter separated by
-semicolons.
-
 \subsection{License extraction and copyright information extraction}
 
 The configuration for \texttt{createdb.py} has a few options. The most important
@@ -1800,23 +1709,6 @@ If you want to enable license extraction, you will have to install Ninka first
 and change one hardcoded path that points to the main Ninka script in
 \texttt{createdb.py}. You will also have to install FOSSology
 (for which packages are available for most distributions).
-
-\subsection{Converting the SQLite database to PostgreSQL}
-
-The database creation script currently outputs the database in SQLite format.
-To convert the database from SQLite to PostgreSQL there is helper script called
-\texttt{bat-sqlitetopostgresql.py} that can help convert the database from
-SQLite to PostgreSQL.
-
-A set of statements to create the database in PostgreSQL can be found in the
-files \texttt{maintenance/postgresql-table.sql} and
-\texttt{maintenance/postgresql-index.sql} that can be directly passed to
-PostgreSQL's \texttt{psql} program.
-
-At the moment some of the settings in the conversion script, table and index
-definitions are hardcoded and specific to Tjaldur Software Governance
-Solutions. This will be changed in the future. Please note that a few settings
-are hardcoded in the table and index definitions.
 
 \subsection{Setting up PostgreSQL}
 
@@ -2044,9 +1936,8 @@ table has the following mandatory field:
 
 Any other hashes (limited to values that Python's hashlib supports, as well as
 CRC32 and TLSH) listed in \texttt{extrahashes} in the database creation script
-configuration file will be added as columns to this database. Tjaldur Software
-Governance Solutions by default sets MD5, SHA1, CRC32 and TLSH, which the
-convertor from SQLite to PostgreSQL expects to find as well, in that order.
+configuration file will be added as columns to this database. The database
+creation scripts defaults to MD5, SHA1, CRC32 and TLSH.
 
 \subsubsection{\texttt{kernel\_configuration} table}
 
@@ -3047,7 +2938,7 @@ Finally there are some scans that unpack text files (\texttt{base64}) or media
 files. The \texttt{lzma} unpack scan also has the lowest priority because of
 possibly many false positives.
 
-The order of the unpack scans as defined in BAT 27 is:
+The order of the unpack scans as defined in BAT 36 is:
 
 \begin{enumerate}
 \item \texttt{byteswap}
