@@ -12,7 +12,7 @@ including the ranking algorithm.
 The documentation of the format can be found in the 'doc' directory (subject to change)
 '''
 
-import os, sys, re, json, cPickle, multiprocessing, copy, gzip, codecs, Queue
+import os, sys, re, json, cPickle, multiprocessing, copy, gzip, codecs, Queue, shutil
 from multiprocessing import Process, Lock
 from multiprocessing.sharedctypes import Value, Array
 
@@ -320,12 +320,18 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv, batc
 
 	decodingneeded = ['utf-8','ascii','latin-1','euc_jp', 'euc_jis_2004', 'jisx0213', 'iso2022_jp', 'iso2022_jp_1', 'iso2022_jp_2', 'iso2022_jp_2004', 'iso2022_jp_3', 'iso2022_jp_ext', 'iso2022_kr','shift_jis','shift_jis_2004','shift_jisx0213']
 
+	jsondir = scanenv.get('BAT_JSONDIR', None)
+	if jsondir != None:
+		if not os.path.isdir(jsondir):
+			jsondir = None
+
 	unpackreportslen = len(unpackreports)
 	unpackreportsprocessed = 0
 
 	if unpackreportslen != 0:
 		## open the JSON file
-		jsonfile = open(os.path.join(topleveldir, "scandata.json"), 'w')
+		jsonfilename = os.path.join(topleveldir, "scandata.json")
+		jsonfile = open(jsonfilename, 'w')
 		jsonfile.write('[\n')
 
 		unpackreportskeys = unpackreports.keys()
@@ -394,6 +400,9 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv, batc
 				jsonfile.write(',\n')
 		jsonfile.write(']\n')
 		jsonfile.close()
+		if jsondir != None:
+			print jsonfilename, os.path.join(jsondir, 'scandata-%s.json' % filehash)
+			shutil.copy(jsonfilename, os.path.join(jsondir, 'scandata-%s.json' % filehash))
 
 	jsontaskamount = 0
 
