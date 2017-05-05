@@ -401,7 +401,6 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv, batc
 		jsonfile.write(']\n')
 		jsonfile.close()
 		if jsondir != None:
-			print jsonfilename, os.path.join(jsondir, 'scandata-%s.json' % filehash)
 			shutil.copy(jsonfilename, os.path.join(jsondir, 'scandata-%s.json' % filehash))
 
 	jsontaskamount = 0
