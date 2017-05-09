@@ -336,6 +336,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv, batc
 
 		unpackreportskeys = unpackreports.keys()
 		unpackreportskeys.sort()
+		toplevelhash = None
 		for unpackreport in unpackreportskeys:
 			jsonreport = {}
 			filehash = None
@@ -367,6 +368,8 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv, batc
 							jsonreport[p] = "name-for-%s-cannot-be-displayed" % filehash
 			if "tags" in unpackreports[unpackreport]:
 				jsonreport['tags'] = list(set(copy.deepcopy(unpackreports[unpackreport]['tags'])))
+				if 'toplevel' in jsonreport['tags']:
+					toplevelhash = filehash
 			if "magic" in unpackreports[unpackreport]:
 				jsonreport['magic'] = copy.deepcopy(unpackreports[unpackreport]['magic'])
 			if "size" in unpackreports[unpackreport]:
@@ -401,7 +404,7 @@ def printjson(unpackreports, scantempdir, topleveldir, processors, scanenv, batc
 		jsonfile.write(']\n')
 		jsonfile.close()
 		if jsondir != None:
-			shutil.copy(jsonfilename, os.path.join(jsondir, 'scandata-%s.json' % filehash))
+			shutil.copy(jsonfilename, os.path.join(jsondir, 'scandata-%s.json' % toplevelhash))
 
 	jsontaskamount = 0
 
