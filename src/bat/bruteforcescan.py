@@ -788,7 +788,19 @@ def scan(scanqueue, reportqueue, scans, leafscans, prerunscans, prerunignore, pr
 					if 'tlsh' in filehashresults:
 						if filehashresults['tlsh'] != None:
 							tlshminimum = sys.maxint
-							cursor.execute("select tlsh, pathname, parentname, parentchecksum from batresult where filename=%s", (filename,))
+							decoded = False
+							for i in ['utf-8','ascii','latin-1','euc_jp', 'euc_jis_2004', 'jisx0213', 'iso2022_jp', 'iso2022_jp_1', 'iso2022_jp_2', 'iso2022_jp_2004', 'iso2022_jp_3', 'iso2022_jp_ext', 'iso2022_kr','shift_jis','shift_jis_2004','shift_jisx0213']:
+								try:
+									decodefilename = u.decode(i)
+									decoded = True
+									break
+								except Exception, e:
+									pass
+
+							if decoded:
+								cursor.execute("select tlsh, pathname, parentname, parentchecksum from batresult where filename=%s", (decodefilename,))
+							else:
+								cursor.execute("select tlsh, pathname, parentname, parentchecksum from batresult where filename=%s", (filename,))
 							res = cursor.fetchall()
 							for r in res:
 								(tlshchecksum, tlshpathname, parentname, parentchecksum) = r
