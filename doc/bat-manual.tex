@@ -2768,6 +2768,13 @@ The location is set in the global configuration using the parameter
 \texttt{temporary\_unpackdirectory}. By setting this to for example SSD or
 ramdisk it can help avoid disk I/O on a slower disk and speed up scanning.
 
+\subsection{\texttt{generatejson}}
+
+The \texttt{generatejson} scan has an optional parameter \texttt{BAT\_JSONDIR}
+which can be set to the location of a directory where the top level JSON file
+will be written to (as \texttt{scandata-\$SHA256.json}). This is useful when
+scanning files in batch mode.
+
 \subsection{\texttt{jffs2}}
 
 The scan can use a different directory for unpacking temporary files.
