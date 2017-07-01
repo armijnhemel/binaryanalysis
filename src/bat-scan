@@ -17,7 +17,7 @@ import bat.bruteforcescan
 import datetime
 
 def main(argv):
-	batversion = 36
+	batversion = 37
 	config = ConfigParser.ConfigParser()
         parser = OptionParser()
 	parser.add_option("-b", "--binary", action="store", dest="fw", help="path to binary file", metavar="FILE")

@@ -2449,7 +2449,10 @@ def unpackLzop(filename, offset, tempdir=None):
 	p = subprocess.Popen(['lzop', "-d", "-P", "-p%s" % (tmpdir,), tmpfile[1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 	(stanout, stanerr) = p.communicate()
 	if p.returncode != 0 and p.returncode != 2:
-		os.unlink(tmpfile[1])
+		rmfiles = os.listdir(tmpdir)
+		for r in rmfiles:
+			rmfile = os.path.join(tmpdir, r)
+			os.unlink(rmfile)
 		if tempdir == None:
 			os.rmdir(tmpdir)
 		return (None, None)
@@ -5488,8 +5491,11 @@ def searchUnpackLZMA(filename, tempdir=None, blacklist=[], offsets={}, scanenv={
 			lzmafile.close()
 			continue
 
+		lzma_extra_strict = False
+
 		if not lzma_try_all:
-			if not lzmadata[14] == '\x00':
+			## quite a few LZMA streams have '\x00' at byte 14, but not all
+			if not lzmadata[14] == '\x00' and lzma_extra_strict:
 				lzmafile.close()
 				continue
 
