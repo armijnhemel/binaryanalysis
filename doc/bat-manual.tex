@@ -4,7 +4,7 @@
 \pagestyle{empty}
 
 \author{Armijn Hemel -- Binary Analysis Tool project}
-\title{Binary Analysis Tool User and Developer Manual - describing version 36}
+\title{Binary Analysis Tool User and Developer Manual - describing version 37}
 
 \begin{document}
 
@@ -73,7 +73,7 @@ untrusted binary code there might be security risk.
 \subsubsection{Installation on Fedora}
 
 To install on Fedora two packages are needed: \texttt{bat-extratools}, %, \texttt{ubi\_reader}
-and \texttt{bat}. These packages easily be created as both binary versions and
+and \texttt{bat}. These packages can easily be created as both binary versions and
 as source RPM files from the source code in Git (as described later). When
 installing the two files there should be a list of dependencies that should be
 installed to let BAT work successfully. Some of the dependencies are not in
@@ -84,8 +84,8 @@ as RPMfusion.
 
 To install on Debian and Ubuntu two packages are needed:
 \texttt{bat-extratools}, %, \texttt{ubi\_reader}
-and \texttt{bat}. These can easily be generated as DEB packages using the
-commands described later in this manual.
+and \texttt{bat}. These packages can easily be generated as DEB packages from
+the source code in Git using the commands described later in this manual.
 
 When installing the two files there should be a list of dependencies
 that should be installed to let BAT work successfully. Some of these packages
@@ -522,7 +522,7 @@ description = Unpack JFFS2 file systems
 enabled     = yes
 \end{verbatim}
 
-In BAT 36 the following file systems, compressed files and media files can be
+In BAT 37 the following file systems, compressed files and media files can be
 unpacked or extracted:
 
 \begin{itemize}
@@ -1088,7 +1088,7 @@ cleanup     = yes
 The \texttt{cleanup} setting should be set to \texttt{yes} unless the results
 do not change in between subsequent runs of BAT.
 
-Currently (BAT 36) if \texttt{cleanup} is set the files are written directly to
+Currently (BAT 37) if \texttt{cleanup} is set the files are written directly to
 output directories. The values of these directories are hardcoded (and match
 values that the GUI expects) but these will be replaced by the value of
 \texttt{storetarget} in a later release.
@@ -2502,8 +2502,7 @@ as a simple lookup table in Python pickle format.
 Names of applets per version breakdown:
 
 \begin{itemize}
-\item 1.15.x and later: \texttt{include/applets.h} or
-\texttt{include/applets.src.h} IF syntax
+\item 1.15.x and later: \texttt{include/applets.h}
 \item 1.1.1-1.14.x: \texttt{include/applets.h} USE syntax
 \item 1.00-1.1.0: \texttt{include/applets.h} (different syntax)
 \item 0.60.5 and earlier: \texttt{applets.h}, like 1.00-1.1.0 but with a
@@ -2529,8 +2528,17 @@ by \texttt{busybox.py} upon startup. To generate these pickle files the
 \texttt{appletname-extractor.py} should be used. In the standard distribution
 for BAT the configurations for most versions of BusyBox are shipped.
 
-The applet names are extracted from a file called \texttt{applets.h} or
+The applet names are extracted from a file called \texttt{applets.h}. It might
+be that this file first has to be generated if the only file present is
 \texttt{applets.src.h}.
+
+In that case:
+
+\begin{enumerate}
+\item unpack the BusyBox archive
+\item \texttt{cd} to the root of the unpacked archive
+\item run \texttt{./scripts/gen\_build\_files.sh . .} to regenerate \texttt{applets.h}
+\end{enumerate}
 
 \begin{verbatim}
 python appletname-extractor.py -a /path/to/applets.h -n $VERSION
@@ -2945,7 +2953,7 @@ Finally there are some scans that unpack text files (\texttt{base64}) or media
 files. The \texttt{lzma} unpack scan also has the lowest priority because of
 possibly many false positives.
 
-The order of the unpack scans as defined in BAT 36 is:
+The order of the unpack scans as defined in BAT 37 is:
 
 \begin{enumerate}
 \item \texttt{byteswap}
