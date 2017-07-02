@@ -2,7 +2,7 @@ bat (36.0) unstable; urgency=high
 
   * prevent several crashes in processing Android files
 
- -- Armijn Hemel <armijn@binaryanalysis.org>  Tue, 31 Dec 2016 16:18:00 +0100
+ -- Armijn Hemel <armijn@binaryanalysis.org>  Sat, 31 Dec 2016 16:18:00 +0100
 
 bat (35.0) unstable; urgency=high
 
