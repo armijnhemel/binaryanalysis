@@ -12,6 +12,10 @@
 ## file to see if these match.
 ##
 
+## For newer BusyBox versions you first need to generate applets.h
+## First unpack the archive, go to the root of the unpacked archive and run:
+## ./scripts/gen_build_files.sh . .
+
 import sys, os, re, pickle
 from optparse import OptionParser
 
@@ -68,7 +72,7 @@ def extract_configuration(lines, version):
 
 def main(argv):
 	parser = OptionParser()
-        parser.add_option("-a", "--applets", action="store", dest="applets", help="path to applets.h or applets.src.h", metavar="FILE")
+        parser.add_option("-a", "--applets", action="store", dest="applets", help="path to applets.h", metavar="FILE")
         parser.add_option("-n", "--busyboxversion", action="store", dest="busyboxversion", help="BusyBox version", metavar="VERSION")
         (options, args) = parser.parse_args()
         if options.applets == None:
