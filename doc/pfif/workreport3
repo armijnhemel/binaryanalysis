@@ -1,0 +1,11 @@
+Work Report milestone 5 ("Semi-interactive UI")
+
+The milestone "Semi-interactive UI" was performed between March 8 2012 and May 18 2012. In this period the following was done:
+
+* split bruteforce method into a frontend and a backend, to allow for different frontends
+* add methods to create pictures of results from ranking method and other methods
+* write results of bruteforce method, including program state and generated files, to an archive
+* write a graphical user interface that allows viewing generated archives
+* added possiblilty to interactively launch scans from interface and save results to a file
+* rework code for configuration, to make it easier to enable/disable scans from the graphical user interface
+* code for tagging files was expanded, plus display filters for tags were added to the graphical user interface

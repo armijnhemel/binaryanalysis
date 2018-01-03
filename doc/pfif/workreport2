@@ -1,0 +1,9 @@
+Work Report milestone 2 ("Processing Java class files for better extracting of strings for the ranking module")
+
+
+The milestone "Processing Java class files for better extracting of strings for the ranking module" was performed between October 19 and November 23. In this period the following was done:
+
+* the data model from the ranking database was changed to take programming languages into account by adding a new field "language"
+* a public domain third party tool to process files for Android's Dalvik ("dedexer") was added to the bat-extratools collection
+* wrapper code was written to process output from jcf-dump (for regular Java class files) and dedexer (for Dalvik files)
+* a database consisting of code from the Apache project was generated and made available for download to PFIF

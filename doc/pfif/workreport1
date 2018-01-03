@@ -1,0 +1,19 @@
+Work Report milestone 1 ("Official release of BAT")
+
+The milestone "Official release of BAT" was performed between October 16 2011 and January 30 2012. In this period the following was done:
+
+* revision 5 of BAT was tagged (October 18)
+* configurations for building binary packages of bat-extratools for Fedora 14/15 and Ubuntu 10.10 and Debian 6 were added (October 16-18)
+* binary packages of bat-extratools for Fedora 14/15, Ubuntu 10.10 and Debian 6 were made and released (October 18-20)
+* configurations for building binary packages of BAT for Fedora 14/15, Ubuntu 10.10 and Debian 6 were added or updated (October 17-18)
+* binary packages of BAT for Fedora 14/15, Ubuntu 10.10 and Debian 6 were made and released (October 18-20)
+* a much improved user manual was written and released on the binaryanalysis.org website (November 22)
+
+To fix some packaging mistakes the following was done:
+
+* revision 6 of BAT was tagged (January 30 2012)
+* configurations for building binary packages of bat-extratools-java for Fedora 14/15 and Ubuntu 10.10 and Debian 6 were added (January 13 - 14 2012)
+* binary packages of BAT, bat-extratools and bat-extratools-java for Fedora 14/15, Ubuntu 10.10 and Debian 6 were made and released (January 30 2012)
+* a updated user manual was released on the binaryanalysis.org website (January 30 2012)
+
+Additionally many bugs were fixed (massive speed ups, code clean ups) and new functionality was added (November 25 2011 - January 30 2012).

@@ -1,0 +1,23 @@
+Work Report milestone 3 ("standardized test set/training materials based on OpenWrt")
+
+The milestone "standardized test set/training materials based on OpenWrt" was
+completed on November 28 2012, when all materials were updated to reflect the
+status of the upcoming BAT 10.0 release (before the end of 2012).
+
+Work was done between November 27 2011 and November 28 2012. A DVD with the
+software used in the tests was sent by mail in February 2012. The training
+materials were released on November 30 2012:
+
+http://www.binaryanalysis.org/en/content/show/documentation
+
+Work Report milestone 6 ("Release incorporating milestones 2 - 5")
+
+The milestone "release incorporating milestones 2 - 5" was completed on May
+22 2012, when a release containing both milestones 4 and 5 was made. Since then
+a new release with several bug fixes was made on October 4 and there will be
+another release with new features before the end of 2012.
+
+The training materials and configuration to rebuild the test materials used in
+this training were released separately on November 30 2012:
+
+http://www.binaryanalysis.org/en/content/show/documentation

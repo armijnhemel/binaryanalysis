@@ -1,0 +1,11 @@
+Work Report milestone 4 ("adding support for Minix file system")
+
+The milestone "adding support for Minix file system" was completed on May 21
+2012. The work on this milestone was done between May 1 2012 and May 21 2012.
+In this period the following work was done:
+
+* made program to extract Minix v1 file systems as used on many Linux based IP
+cameras
+* tested with many IP camera firmwares containing a Minix file system and
+manually verified contents were correct.
+* added code to use the program inside the Binary Analysis Tool
