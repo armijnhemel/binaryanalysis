@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
-## Binary Analysis Tool
-## Copyright 2009-2016 Armijn Hemel for Tjaldur Software Governance Solutions
-## Licensed under Apache 2.0, see LICENSE file for details
+# Binary Analysis Tool
+# Copyright 2009-2016 Armijn Hemel for Tjaldur Software Governance Solutions
+# Licensed under Apache 2.0, see LICENSE file for details
 
 '''
 CLI front end for running the scans in bat/bruteforcescan.py
@@ -10,166 +10,170 @@ CLI front end for running the scans in bat/bruteforcescan.py
 See documentation in that file to see how it works.
 '''
 
-import sys, os, os.path, tempfile, shutil
+import sys
+import os
+import os.path
+import tempfile
+import shutil
 from optparse import OptionParser
 import ConfigParser
-import bat.bruteforcescan
 import datetime
+import bat.bruteforcescan
 
 def main(argv):
-	batversion = 37
-	config = ConfigParser.ConfigParser()
-        parser = OptionParser()
-	parser.add_option("-b", "--binary", action="store", dest="fw", help="path to binary file", metavar="FILE")
-	parser.add_option("-c", "--config", action="store", dest="cfg", help="path to configuration file", metavar="FILE")
-	parser.add_option("-o", "--outputfile", action="store", dest="outputfile", help="path to output file", metavar="FILE")
-	parser.add_option("-d", "--directory", action="store", dest="fwdir", help="path to directory with files to be scanned", metavar="DIR")
-	parser.add_option("-u", "--outputdir", action="store", dest="outdir", help="path to directory to write results to", metavar="DIR")
-	parser.add_option("-v", "--version", action="store_true", dest="version", help="print version of BAT", metavar="VERSION")
+    batversion = 37
+    config = ConfigParser.ConfigParser()
+    parser = OptionParser()
+    parser.add_option("-b", "--binary", action="store", dest="fw", help="path to binary file", metavar="FILE")
+    parser.add_option("-c", "--config", action="store", dest="cfg", help="path to configuration file", metavar="FILE")
+    parser.add_option("-o", "--outputfile", action="store", dest="outputfile", help="path to output file", metavar="FILE")
+    parser.add_option("-d", "--directory", action="store", dest="fwdir", help="path to directory with files to be scanned", metavar="DIR")
+    parser.add_option("-u", "--outputdir", action="store", dest="outdir", help="path to directory to write results to", metavar="DIR")
+    parser.add_option("-v", "--version", action="store_true", dest="version", help="print version of BAT", metavar="VERSION")
 
-	(options, args) = parser.parse_args()
-	if options.version:
-		print "Binary Analysis Tool %d" % batversion
-		sys.exit(0)
-	if options.cfg != None:
-		try:
-        		configfile = open(options.cfg, 'r')
-		except:
-			parser.error("Need configuration file")
-	else:
-		parser.error("Need configuration file")
+    (options, args) = parser.parse_args()
+    if options.version:
+        print "Binary Analysis Tool %d" % batversion
+        sys.exit(0)
+    if options.cfg != None:
+        try:
+            configfile = open(options.cfg, 'r')
+        except:
+            parser.error("Need configuration file")
+    else:
+        parser.error("Need configuration file")
 
-	## first parse the configuration file
-	try:
-		config.readfp(configfile)
-		scans = bat.bruteforcescan.readconfig(config, os.path.realpath(options.cfg))
-		configfile.close()
-	except:
-		print >>sys.stderr, "Malformed configuration file. Exiting"
-		configfile.close()
-		sys.exit(1)
+    # first parse the configuration file
+    try:
+        config.readfp(configfile)
+        scans = bat.bruteforcescan.readconfig(config, os.path.realpath(options.cfg))
+        configfile.close()
+    except:
+        print >>sys.stderr, "Malformed configuration file. Exiting"
+        configfile.close()
+        sys.exit(1)
 
-	if 'errors' in scans:
-		if scans['errors'] != []:
-			for e in scans['errors']:
-				print >>sys.stderr, "ERROR IN SECTION '%s': %s" % (e['section'], e['errortype'])
-			sys.exit(1)
+    if 'errors' in scans:
+        if scans['errors'] != []:
+            for e in scans['errors']:
+                print >>sys.stderr, "ERROR IN SECTION '%s': %s" % (e['section'], e['errortype'])
+            sys.exit(1)
 
-	## check if there are any conflicts in the configuration file
-	## conflicts are determined per phase
-	for s in scans:
-		if s == 'batconfig':
-			continue
-		scannames = set(map(lambda x: x['name'], scans[s]))
-		if len(scannames) == 0:
-			continue
-		conflicts = set(reduce(lambda x, y: x + y, map(lambda x: x.get('conflicts', []), scans[s])))
-		if scannames.intersection(conflicts) != set():
-			errorstring = reduce(lambda x, y: x + " " + y, scannames.intersection(conflicts))
-			print >>sys.stderr, "conflict in configuration file: %s" % errorstring
-			sys.exit(1)
+    # check if there are any conflicts in the configuration file
+    # conflicts are determined per phase
+    for s in scans:
+        if s == 'batconfig':
+            continue
+        scannames = set(map(lambda x: x['name'], scans[s]))
+        if len(scannames) == 0:
+            continue
+        conflicts = set(reduce(lambda x, y: x + y, map(lambda x: x.get('conflicts', []), scans[s])))
+        if scannames.intersection(conflicts) != set():
+            errorstring = reduce(lambda x, y: x + " " + y, scannames.intersection(conflicts))
+            print >>sys.stderr, "conflict in configuration file: %s" % errorstring
+            sys.exit(1)
 
-	if options.fw == None and options.fwdir == None:
-		parser.error("Path to binary file or directory needed")
+    if options.fw == None and options.fwdir == None:
+        parser.error("Path to binary file or directory needed")
 
-	if options.fw != None and options.fwdir != None:
-		parser.error("Don't supply binary file and directory at the same time")
+    if options.fw != None and options.fwdir != None:
+        parser.error("Don't supply binary file and directory at the same time")
 
-	writeoutputfile = False
+    writeoutputfile = False
 
-	if options.fw != None:
-		if os.path.isdir(options.fw):
-			parser.error("File to scan is a directory. Did you mean -d ?")
+    if options.fw != None:
+        if os.path.isdir(options.fw):
+            parser.error("File to scan is a directory. Did you mean -d ?")
 
-		if not os.path.exists(options.fw):
-			parser.error("No file to scan found")
+        if not os.path.exists(options.fw):
+            parser.error("No file to scan found")
 
-		if not os.path.isfile(options.fw):
-			parser.error("%s is not a file" % options.fw)
+        if not os.path.isfile(options.fw):
+            parser.error("%s is not a file" % options.fw)
 
-		if scans['batconfig']['writeoutputfile']:
-			writeoutputfile = True
-			if options.outputfile == None:
-				parser.error("Path to output file needed")
-			try:
-				os.stat(options.outputfile)
-				print >>sys.stderr, "output file already exists"
-				sys.exit(1)
-			except Exception, e:
-				pass
+        if scans['batconfig']['writeoutputfile']:
+            writeoutputfile = True
+            if options.outputfile == None:
+                parser.error("Path to output file needed")
+            try:
+                os.stat(options.outputfile)
+                print >>sys.stderr, "output file already exists"
+                sys.exit(1)
+            except Exception, e:
+                pass
 
-	if options.fwdir != None:
-		if not os.path.exists(options.fwdir):
-			parser.error("firmware directory does not exist")
-		if not os.path.isdir(options.fwdir):
-			parser.error("directory path is not a directory")
+    if options.fwdir != None:
+        if not os.path.exists(options.fwdir):
+            parser.error("firmware directory does not exist")
+        if not os.path.isdir(options.fwdir):
+            parser.error("directory path is not a directory")
 
-		if scans['batconfig']['writeoutputfile']:
-			writeoutputfile = True
-			if options.outputfile != None:
-				parser.error("-o/--outputfile cannot be used for directory scanning")
+        if scans['batconfig']['writeoutputfile']:
+            writeoutputfile = True
+            if options.outputfile != None:
+                parser.error("-o/--outputfile cannot be used for directory scanning")
 
-			if options.outdir == None:
-				parser.error("output directory not supplied")
-			else:
-				if not os.path.exists(options.outdir):
-					parser.error("output directory does not exist")
-				if not os.path.isdir(options.outdir):
-					parser.error("output path is not a directory")
-			if os.path.normpath(options.fwdir) == os.path.normpath(options.outdir):
-				parser.error("firmware directory and output directory cannot be the same")
+            if options.outdir == None:
+                parser.error("output directory not supplied")
+            else:
+                if not os.path.exists(options.outdir):
+                    parser.error("output directory does not exist")
+                if not os.path.isdir(options.outdir):
+                    parser.error("output path is not a directory")
+            if os.path.normpath(options.fwdir) == os.path.normpath(options.outdir):
+                parser.error("firmware directory and output directory cannot be the same")
 
-	scanfiles = []
-	if options.fw != None:
-		scanfiles.append((options.fw, options.outputfile))
+    scanfiles = []
+    if options.fw != None:
+        scanfiles.append((options.fw, options.outputfile))
 
-	if options.fwdir != None:
-		dirlen = len(os.path.normpath(options.fwdir)) + 1
-		scanls = set()
-		osgen = os.walk(options.fwdir)
-		try:
-			while True:
-				i = osgen.next()
-				for s in i[2]:
-					scanpath = os.path.join(i[0], s)
-					if not os.path.exists(scanpath):
-						continue
-					if os.stat(scanpath).st_size == 0:
-						continue
-					if os.path.islink(scanpath):
-						continue
-					if not os.path.isfile(scanpath):
-						continue
-					if writeoutputfile:
-						newoutdir = os.path.join(options.outdir, i[0][dirlen:])
-						if not os.path.exists(newoutdir):
-							os.makedirs(newoutdir)
-						else:
-							if not os.path.isdir(newoutdir):
-								print >>sys.stderr, "output directory %s cannot be made, skipping %s" % (newoutdir, s)
-								continue
-						## template: "%s.tar.gz"
-						outpath = os.path.join(newoutdir, "%s.tar.gz" % s)
-						if not os.path.exists(outpath):
-							scanfiles.append((scanpath, outpath))
-						else:
-							print >>sys.stderr, "output file for %s exists, skipping scan" % os.path.join(i[0][dirlen:], s)
-					else:
-						scanfiles.append((scanpath, None))
-		except StopIteration:
-			pass
+    if options.fwdir != None:
+        dirlen = len(os.path.normpath(options.fwdir)) + 1
+        scanls = set()
+        osgen = os.walk(options.fwdir)
+        try:
+            while True:
+                i = osgen.next()
+                for s in i[2]:
+                    scanpath = os.path.join(i[0], s)
+                    if not os.path.exists(scanpath):
+                        continue
+                    if os.stat(scanpath).st_size == 0:
+                        continue
+                    if os.path.islink(scanpath):
+                        continue
+                    if not os.path.isfile(scanpath):
+                        continue
+                    if writeoutputfile:
+                        newoutdir = os.path.join(options.outdir, i[0][dirlen:])
+                        if not os.path.exists(newoutdir):
+                            os.makedirs(newoutdir)
+                        else:
+                            if not os.path.isdir(newoutdir):
+                                print >>sys.stderr, "output directory %s cannot be made, skipping %s" % (newoutdir, s)
+                                continue
+                        # template: "%s.tar.gz"
+                        outpath = os.path.join(newoutdir, "%s.tar.gz" % s)
+                        if not os.path.exists(outpath):
+                            scanfiles.append((scanpath, outpath))
+                        else:
+                            print >>sys.stderr, "output file for %s exists, skipping scan" % os.path.join(i[0][dirlen:], s)
+                    else:
+                        scanfiles.append((scanpath, None))
+        except StopIteration:
+            pass
 
-	scantasks = []
-	for so in scanfiles:
-		(scanfile, outputfile) = so
+    scantasks = []
+    for so in scanfiles:
+        (scanfile, outputfile) = so
 
-		writeconfig = {}
-		writeconfig['config'] = os.path.realpath(options.cfg)
-		writeconfig['outputfile'] = outputfile
-		scantasks.append((scanfile, writeconfig))
+        writeconfig = {}
+        writeconfig['config'] = os.path.realpath(options.cfg)
+        writeconfig['outputfile'] = outputfile
+        scantasks.append((scanfile, writeconfig))
 
-	if scantasks != []:
-		bat.bruteforcescan.runscan(scans, scantasks, batversion)
+    if scantasks != []:
+        bat.bruteforcescan.runscan(scans, scantasks, batversion)
 
 if __name__ == "__main__":
-        main(sys.argv)
+    main(sys.argv)
