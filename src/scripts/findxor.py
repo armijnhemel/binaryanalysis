@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
-## Binary Analysis Tool
-## Copyright 2015 Armijn Hemel for Tjaldur Software Governance Solutions
-## Licensed under Apache 2.0, see LICENSE file for details
+# Binary Analysis Tool
+# Copyright 2015 Armijn Hemel for Tjaldur Software Governance Solutions
+# Licensed under Apache 2.0, see LICENSE file for details
 
 '''
 Find XOR key using some very superdumb methods.
@@ -16,38 +16,41 @@ In this script it is assumed (for now) that the keylength is 16 and that there i
 one single key used. Manual inspection is definitely needed.
 '''
 
-import sys, os, collections
+import collections
+import os
+import sys
+
 from optparse import OptionParser
 
 def findpadding(firmware):
-	counter = collections.Counter()
-	fwfile = open(firmware)
-	firmwarebytes = fwfile.read()
-	fwfile.close()
-	fwlen = len(firmwarebytes)
-	blocks = fwlen/16
-	byteblocks = []
-	for i in xrange(0, blocks):
-		byteblocks.append(firmwarebytes[i*16:i*16+16])
-	counter.update(byteblocks)
-	rank = 1
-	reportamount = 10
-	print "MOST COMMON, TOP %d" % reportamount
-	for i in counter.most_common(reportamount):
-		print rank, i[1], map(lambda x: hex(ord(x)), i[0])
-		rank += 1
+    counter = collections.Counter()
+    fwfile = open(firmware)
+    firmwarebytes = fwfile.read()
+    fwfile.close()
+    fwlen = len(firmwarebytes)
+    blocks = fwlen/16
+    byteblocks = []
+    for i in xrange(0, blocks):
+        byteblocks.append(firmwarebytes[i*16:i*16+16])
+    counter.update(byteblocks)
+    rank = 1
+    reportamount = 10
+    print "MOST COMMON, TOP %d" % reportamount
+    for i in counter.most_common(reportamount):
+        print rank, i[1], map(lambda x: hex(ord(x)), i[0])
+        rank += 1
 
 def main(argv):
-	parser = OptionParser()
-	parser.add_option("-f", "--firmware", action="store", dest="firmware", help="path to firmware", metavar="FILE")
-	(options, args) = parser.parse_args()
-	if options.firmware == None:
-		parser.exit("Path to firmware not supplied, exiting")
-	if os.path.isdir(options.firmware):
-		print >>sys.stderr, "%s is not a file" % options.firmware
-		sys.exit(1)
+    parser = OptionParser()
+    parser.add_option("-f", "--firmware", action="store", dest="firmware", help="path to firmware", metavar="FILE")
+    (options, args) = parser.parse_args()
+    if options.firmware == None:
+        parser.exit("Path to firmware not supplied, exiting")
+    if os.path.isdir(options.firmware):
+        print >>sys.stderr, "%s is not a file" % options.firmware
+        sys.exit(1)
 
-	findpadding(options.firmware)
+    findpadding(options.firmware)
 
 if __name__ == "__main__":
-	main(sys.argv)
+    main(sys.argv)

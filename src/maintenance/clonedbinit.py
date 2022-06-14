@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
-## Binary Analysis Tool
-## Copyright 2013 Armijn Hemel for Tjaldur Software Governance Solutions
-## Licensed under Apache 2.0, see LICENSE file for details
+# Binary Analysis Tool
+# Copyright 2013 Armijn Hemel for Tjaldur Software Governance Solutions
+# Licensed under Apache 2.0, see LICENSE file for details
 
 '''
 This script can be used to initialize the clone database. The clone database is
@@ -24,44 +24,46 @@ same when looking at SHA256 checksums of the files, but it might still look
 the same when looking at strings or function names.
 '''
 
-import os, sys, sqlite3
+import os
+import sys
+import sqlite3
 from optparse import OptionParser
 
 def main(argv):
-        parser = OptionParser()
-	parser.add_option("-d", "--database", dest="db", help="path to clone database", metavar="FILE")
-	(options, args) = parser.parse_args()
-	if options.db == None:
-                parser.error("Path to clone database file needed")
-        try:
-                conn = sqlite3.connect(options.db)
-        except:
-                print "Can't open clone database file"
-                sys.exit(1)
+    parser = OptionParser()
+    parser.add_option("-d", "--database", dest="db", help="path to clone database", metavar="FILE")
+    (options, args) = parser.parse_args()
+    if options.db == None:
+        parser.error("Path to clone database file needed")
+    try:
+        conn = sqlite3.connect(options.db)
+    except:
+        print "Can't open clone database file"
+        sys.exit(1)
 
-	c = conn.cursor()
+    c = conn.cursor()
 
-	## create table for renamed packages
-	c.execute('''create table if not exists renames (originalname text, newname text)''')
-	c.execute('''create index if not exists renames_index_originalname on renames (originalname)''')
-	c.execute('''create index if not exists renames_index_newname on renames (newname)''')
+    # create table for renamed packages
+    c.execute('''create table if not exists renames (originalname text, newname text)''')
+    c.execute('''create index if not exists renames_index_originalname on renames (originalname)''')
+    c.execute('''create index if not exists renames_index_newname on renames (newname)''')
 
-	## insert some values as examples
-	c.execute('''insert into renames values ('ethereal', 'wireshark')''')
-	c.execute('''insert into renames values ('koffice', 'calligra')''')
-	c.execute('''insert into renames values ('ucd-snmp', 'net-snmp')''')
-	c.execute('''insert into renames values ('iproute', 'iproute2')''')
-	c.execute('''insert into renames values ('gaim', 'pidgin')''')
-	c.execute('''insert into renames values ('kdebase-runtime', 'kde-runtime')''')
-	c.execute('''insert into renames values ('kdebase-workspace', 'kde-workspace')''')
-	c.execute('''insert into renames values ('eglibc', 'glibc')''')
-	c.execute('''insert into renames values ('org.apache.servicemix.bundles.ant', 'apache-ant')''')
-	c.execute('''insert into renames values ('wengophone', 'qutecom')''')
-	c.execute('''insert into renames values ('gaim-plugin_pack', 'purple-plugin_pack')''')
-	
-	conn.commit()
-	c.close()
-	conn.close()
+    # insert some values as examples
+    c.execute('''insert into renames values ('ethereal', 'wireshark')''')
+    c.execute('''insert into renames values ('koffice', 'calligra')''')
+    c.execute('''insert into renames values ('ucd-snmp', 'net-snmp')''')
+    c.execute('''insert into renames values ('iproute', 'iproute2')''')
+    c.execute('''insert into renames values ('gaim', 'pidgin')''')
+    c.execute('''insert into renames values ('kdebase-runtime', 'kde-runtime')''')
+    c.execute('''insert into renames values ('kdebase-workspace', 'kde-workspace')''')
+    c.execute('''insert into renames values ('eglibc', 'glibc')''')
+    c.execute('''insert into renames values ('org.apache.servicemix.bundles.ant', 'apache-ant')''')
+    c.execute('''insert into renames values ('wengophone', 'qutecom')''')
+    c.execute('''insert into renames values ('gaim-plugin_pack', 'purple-plugin_pack')''')
+    
+    conn.commit()
+    c.close()
+    conn.close()
 
 if __name__ == "__main__":
-        main(sys.argv)
+    main(sys.argv)

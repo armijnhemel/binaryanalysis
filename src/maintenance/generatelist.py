@@ -1,11 +1,12 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # Binary Analysis Tool
 # Copyright 2011-2015 Armijn Hemel for Tjaldur Software Governance Solutions
 # Licensed under Apache 2.0, see LICENSE file for details
 
 '''
-Helper script to generate the LIST files for the string extraction scripts. While this script is not foolproof, it will save lots of typing :-)
+Helper script to generate the LIST files for the string extraction scripts.
+While this script is not foolproof, it will save lots of typing :-)
 '''
 
 import sys

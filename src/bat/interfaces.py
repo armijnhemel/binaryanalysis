@@ -1,12 +1,12 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
-## Binary Analysis Tool
+# Binary Analysis Tool
 
 '''This file contains information about several APIs and standards
 such as POSIX'''
 
-## data extracted from various POSIX standards
-## http://pubs.opengroup.org/onlinepubs/9699919799/idx/functions.html
+# data extracted from various POSIX standards
+# http://pubs.opengroup.org/onlinepubs/9699919799/idx/functions.html
 posixfunctions = ["FD_CLR",
          "FD_ISSET",
          "FD_SET",
@@ -1184,13 +1184,13 @@ posixfunctions = ["FD_CLR",
          "y0",
          "y1",
          "yn",
-         "usleep", ## removed in POSIX.1-2008
-         "ftime", ## removed in POSIX.1-2008
-         "bzero", ## removed in POSIX.1-2008
-         "mktemp", ## removed in POSIX.1-2008
-         "getpass", ## removed in POSIX.1-2001
-         "brk", ## removed in POSIX.1-2001
-         "sbrk", ## removed in POSIX.1-2001
+         "usleep", # removed in POSIX.1-2008
+         "ftime", # removed in POSIX.1-2008
+         "bzero", # removed in POSIX.1-2008
+         "mktemp", # removed in POSIX.1-2008
+         "getpass", # removed in POSIX.1-2001
+         "brk", # removed in POSIX.1-2001
+         "sbrk", # removed in POSIX.1-2001
          "gethostbyname",
          "gethostbyaddr",
          "madvise",
@@ -1331,7 +1331,7 @@ linuxfunctions = ["sysinfo",
 
 susfunctions = ["getpagesize", "inet_network", "cuserid"]
 
-## found in glibc and uClibc
+# found in glibc and uClibc
 libcfunctions = ["getpt",
                  "__libc_pread64",
                  "__libc_pread",
@@ -1373,7 +1373,7 @@ libcfunctions = ["getpt",
                  "__glibc_strerror_r",
                 ]
 
-## inserted by GCC
+# inserted by GCC
 gccfunctions = ["__deregister_frame_info",
                 "__register_frame_info",
                ]
@@ -1388,11 +1388,11 @@ lsbfunctions = ["__cxa_finalize",
                 "__xpg_basename",
                 "__getpagesize",
                 "__sysv_signal",
-                "alphasort64", ## deprecated
-                "fstatfs64", ## deprecated
-                "statfs64", ## deprecated
-                "globfree64", ## deprecated
-                "glob64", ## deprecated
+                "alphasort64", # deprecated
+                "fstatfs64", # deprecated
+                "statfs64", # deprecated
+                "globfree64", # deprecated
+                "glob64", # deprecated
                ]
 
 largefilefunctions = ["creat64",
@@ -1508,7 +1508,7 @@ xdrfunctions = ["xdr_array",
                 "registerrpc",
                ]
 
-## basically stuff where I don't know where it should go for now
+# basically stuff where I don't know where it should go for now
 miscfunctions = ["inet_aton",
                  "vsyslog",
                  "setbuffer",

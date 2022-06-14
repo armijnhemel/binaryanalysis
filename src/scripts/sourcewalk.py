@@ -1,13 +1,17 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
-## Binary Analysis Tool
-## Copyright 2013-2015 Armijn Hemel for Tjaldur Software Governance Solutions
-## Licensed under Apache 2.0, see LICENSE file for details
+# Binary Analysis Tool
+# Copyright 2013-2015 Armijn Hemel for Tjaldur Software Governance Solutions
+# Licensed under Apache 2.0, see LICENSE file for details
 
 '''
-This program can quickly determine whether or not a file is in known upstream sources. It uses a pregenerated database containing names and checksums of files (for example the Linux kernel) and reports whether or not it can be found in the database.
+This program can quickly determine whether or not a file is in known upstream
+sources. It uses a pregenerated database containing names and checksums of
+files (for example the Linux kernel) and reports whether or not it can be found
+in the database.
 
-The purpose of this script is to find files that differ from upstream files and reduce the search space.
+The purpose of this script is to find files that differ from upstream files and
+reduce the search space.
 
 This script will *NOT* catch:
 
@@ -17,11 +21,15 @@ This script will *NOT* catch:
 * configuration files
 '''
 
-import os, os.path, sys, sqlite3, hashlib
+import os
+import os.path
+import sys
+import sqlite3
+import hashlib
 from optparse import OptionParser
 
-## list of extensions, plus what language they should be mapped to
-## This is not necessarily correct, but for now it is good enough.
+# list of extensions, plus what language they should be mapped to
+# This is not necessarily correct, but for now it is good enough.
 extensions = {'.c'      : 'C',
               '.cc'     : 'C',
               '.cpp'    : 'C',
@@ -71,10 +79,10 @@ def sourceWalk(scandir, dbpath):
 						filehash = h.hexdigest()
 						cursor.execute('''select checksum from processed_file where checksum=? limit 1''', (filehash,))
 						res = cursor.fetchall()
-						## there is at least one hit, so ignore
+						# there is at least one hit, so ignore
 						if len(res) != 0:
 							continue
-						## no hits, so this is an interesting file
+						# no hits, so this is an interesting file
 						else:
 							print "%s" % os.path.join(scandir, i[0][lenscandir:],p)
 							notfound = notfound + 1
@@ -94,7 +102,7 @@ def main(argv):
 	if options.db == None:
 		parser.error("Specify path to database")
 
-        sourceWalk(options.filedir, options.db)
+	sourceWalk(options.filedir, options.db)
 
 if __name__ == "__main__":
-        main(sys.argv)
+	main(sys.argv)

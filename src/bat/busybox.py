@@ -1,25 +1,25 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
-## Binary Analysis Tool
-## Copyright 2009-2016 Armijn Hemel for Tjaldur Software Governance Solutions
-## Licensed under Apache 2.0, see LICENSE file for details
+# Binary Analysis Tool
+# Copyright 2009-2016 Armijn Hemel for Tjaldur Software Governance Solutions
+# Licensed under Apache 2.0, see LICENSE file for details
 
 import sys, os, string, re, subprocess
 import pickle
 from optparse import OptionParser
 import extractor, elfcheck
 
-## Some versions of busybox use different configuration directives
-## We need to translate them from the name we got to the name that is actually
-## used by BusyBox.
+# Some versions of busybox use different configuration directives
+# We need to translate them from the name we got to the name that is actually
+# used by BusyBox.
 translation_table_1_15 = { 'dhcprelay': 'APP_DHCPRELAY'
                          , 'dumpleases': 'APP_DUMPLEASES'
                          , 'udhcpc': 'APP_UDHCPC'
                          , 'udhcpd': 'APP_UDHCPD'
                          }
 
-## from 1.3 - 1.15 some programs had a different configuration directive
-## TODO: verify that this actually *works* 
+# from 1.3 - 1.15 some programs had a different configuration directive
+# TODO: verify that this actually *works* 
 translation_table = {'1.3': translation_table_1_15
                     ,'1.4': translation_table_1_15
                     ,'1.5': translation_table_1_15
@@ -34,13 +34,13 @@ translation_table = {'1.3': translation_table_1_15
                     ,'1.14': translation_table_1_15
                     ,'1.15': translation_table_1_15}
 
-## helper method to extract the major version of a BusyBox program:
-## 1.15.2 becomes 1.15
+# helper method to extract the major version of a BusyBox program:
+# 1.15.2 becomes 1.15
 def extract_major_version(version):
 	return version.rsplit('.', version.count('.')-1)[0]
 
-## This method takes a configuration and a version and pretty prints
-## it accordingly.
+# This method takes a configuration and a version and pretty prints
+# it accordingly.
 def prettyprint_configuration(configuration, version):
 	if version <= "0.61":
 		for config in configuration:
@@ -54,33 +54,33 @@ def prettyprint_configuration(configuration, version):
 			except Exception, e:
 				print "CONFIG_%s=y" % config.upper()
 
-## Extracting configuration needs a two way pass.
-## The first pass tries to extract configuration the easy way.
-## If it succeeds the configuration can be pretty printed.
-## If it fails the configuration has to be found the hard way.
+# Extracting configuration needs a two way pass.
+# The first pass tries to extract configuration the easy way.
+# If it succeeds the configuration can be pretty printed.
+# If it fails the configuration has to be found the hard way.
 def extract_configuration(lines, busybox, bbconfig):
 	tmpconfig = extract_configuration_pass1(lines, busybox)
 
 	if tmpconfig != []:
-		## The configuration we have is not empty, so we're lucky.
-		## Search through lines, using the configuration we got earlier
-		## and try to extract the appletnames. This is not fool proof, but
-		## should be good enough.
+		# The configuration we have is not empty, so we're lucky.
+		# Search through lines, using the configuration we got earlier
+		# and try to extract the appletnames. This is not fool proof, but
+		# should be good enough.
 
-		## first make sure that everything we have is in alphabetical order
+		# first make sure that everything we have is in alphabetical order
 		tmpconfig.sort()
 
-		## offset for first appletname we have found earlier, surrounded by NULL characters
+		# offset for first appletname we have found earlier, surrounded by NULL characters
 		offset = lines.find("\x00" + tmpconfig[0] + "\x00")
 
-		## offset for first occurance of last appletname after offset of first appletname
-		## surrounded  by NULL characters
+		# offset for first occurance of last appletname after offset of first appletname
+		# surrounded  by NULL characters
 		offset2 = lines.find("\x00" + tmpconfig[-1] + "\x00", offset)
 
-		## split everything, we should have a reasonable config
+		# split everything, we should have a reasonable config
 		tmp2config = lines[offset+1:offset2 + 1 + len(tmpconfig[-1])].split('\x00')
 		tmp2config = filter(lambda x: x != '', tmp2config)
-		## TODO: sanity check
+		# TODO: sanity check
 		for i in tmpconfig:
 			if i == 'busybox':
 				continue
@@ -89,32 +89,32 @@ def extract_configuration(lines, busybox, bbconfig):
 			if i == 'swap_on_off':
 				continue
 			if not i in tmp2config:
-				## something went wrong, possibly offset that was wrong.
+				# something went wrong, possibly offset that was wrong.
 				pass
 		return tmp2config
 	else:
-		## no configuration was extracted, so guess one by inspecting the binary
+		# no configuration was extracted, so guess one by inspecting the binary
 		results = []
 		results2 = []
 
-		## use the configuration for this version of BusyBox as a starting point
+		# use the configuration for this version of BusyBox as a starting point
 		keys = bbconfig.keys()
 
-		## the list of applets in BusyBox is sorted alphabetically
+		# the list of applets in BusyBox is sorted alphabetically
 		keys.sort()
 		for i in keys:
 			if i == '[' or i == '[[':
 				continue
 			offset = lines.find(i)
 			if offset == -1:
-				## nothing found, continue searching for the next applet in the list
+				# nothing found, continue searching for the next applet in the list
 				continue
 			else:
-				## search through the original binary until finding an exact match
-				## that is surrounded by NULL characters, which is how the applet
-				## list in BusyBox works.
-				## The risk is that the first hit is not actually in that list, but
-				## is somewhere else in the binary.
+				# search through the original binary until finding an exact match
+				# that is surrounded by NULL characters, which is how the applet
+				# list in BusyBox works.
+				# The risk is that the first hit is not actually in that list, but
+				# is somewhere else in the binary.
 				res = extractor.check_null(lines, offset, i)
 				while res == False:
 					offset = lines.find(i, offset+1)
@@ -125,26 +125,26 @@ def extract_configuration(lines, busybox, bbconfig):
 				if offset != -1:
 					results2.append((i, offset))
 
-		## It is expected that for all applets found the offsets are in ascending
-		## order. Of course, there might be unknown applets that have been
-		## added, or the offsets that found might actually be wrong.
+		# It is expected that for all applets found the offsets are in ascending
+		# order. Of course, there might be unknown applets that have been
+		# added, or the offsets that found might actually be wrong.
 		low = 0
 		high = len(results2) - 1
 
-		## calculate a reasonable maximum length that low and high will be apart
-		## motivation: each applet in the list is separated by a few characters
-		## we just take 8 to err on the safe side.
+		# calculate a reasonable maximum length that low and high will be apart
+		# motivation: each applet in the list is separated by a few characters
+		# we just take 8 to err on the safe side.
 		maxlen = reduce(lambda x,y: x + len(y[0]), results2, 0) + len(results2) * 8
 
 		# use the distances map to find closely group together programs
 		distances = map(lambda x,y: y[1] - x[1], results2[:-1], results2[1:])
 
-		## loop through the elements and see if there are closely grouped elements
+		# loop through the elements and see if there are closely grouped elements
 		offsetcounter = 0
 		while offsetcounter < len(distances):
 			if distances[offsetcounter] < maxlen and distances[offsetcounter] > 0:
-				## we have found two things which are closely together
-				## check if it is also close to high
+				# we have found two things which are closely together
+				# check if it is also close to high
 				res = results2[high][1] - results2[offsetcounter][1]
 				if res < maxlen and res > 0:
 					# we have our offset, set low to it, and break out of the loop
@@ -165,11 +165,11 @@ def extract_configuration(lines, busybox, bbconfig):
 			else:
 				offsetcounter = offsetcounter + 1
 
-		## assuming a good value for low and high extract the appletnames
+		# assuming a good value for low and high extract the appletnames
 		tmp2config = lines[results2[low][1]:results2[high][1] + len(results2[high][0])].split('\x00')
 		return tmp2config
 
-## Try to get an configuration in this pass, which will be very accurate
+# Try to get an configuration in this pass, which will be very accurate
 def extract_configuration_pass1(lines, busybox):
 	config = []
 	offset = lines.find("_main")
@@ -190,7 +190,7 @@ def extract_configuration_pass1(lines, busybox):
 			config = map(lambda x: x['name'][:-5], filter(lambda x: x['section'] != 0 and x['type'] == 'func' and '_main' in x['name'], elfres))
 	return config
 
-## default pretty printer for undefined applets
+# default pretty printer for undefined applets
 def prettyprint_undefined_apps(undefined_apps):
 	try:
 		undefined_apps.remove('busybox')
@@ -203,11 +203,11 @@ def prettyprint_undefined_apps(undefined_apps):
 		for undef_app in undefined_apps:
 			print "* ", undef_app
 
-## Helper method that extracts the BusyBox version using a regular
-## expression. If it can't be found, it will return 'None' instead.
-## This won't always work: if just one applet is compiled in it is
-## likely that the "BusyBox v" string is not even included at all,
-## which also means no version number can be extracted.
+# Helper method that extracts the BusyBox version using a regular
+# expression. If it can't be found, it will return 'None' instead.
+# This won't always work: if just one applet is compiled in it is
+# likely that the "BusyBox v" string is not even included at all,
+# which also means no version number can be extracted.
 def extract_version(filename):
 	offset = 0
 	bboffset = 0
@@ -218,7 +218,7 @@ def extract_version(filename):
 	databuffer = datafile.read(100000)
 	bboffsets = []
 	while databuffer != '':
-		## quick check to see if this is BusyBox. If not, return immediately
+		# quick check to see if this is BusyBox. If not, return immediately
 		markeroffset = databuffer.find("BusyBox v")
 		while markeroffset != -1:
 			bboffset = offset + markeroffset
@@ -228,7 +228,7 @@ def extract_version(filename):
 			if res != None:
 				datafile.close()
 				return res.groups(0)[0]
-		## move the offset 99950, allowing some overlap
+		# move the offset 99950, allowing some overlap
 		datafile.seek(offset + 99950)
 		databuffer = datafile.read(100000)
 		if len(databuffer) >= 50:
@@ -261,7 +261,7 @@ def main(argv):
 	(options, args) = parser.parse_args()
 	if options.missing == None and options.found == None:
 		options.found = True
-	## suck in the BusyBox binary
+	# suck in the BusyBox binary
 	if options.bb == None:
 		parser.error("Path to BusyBox binary needed")
 	try:
@@ -270,15 +270,15 @@ def main(argv):
 		print >>sys.stderr, "No valid BusyBox file"
 		sys.exit(1)
 
-	## determine the BusyBox binary
+	# determine the BusyBox binary
 	version = extract_version(options.bb)
 
-	## ... and read in names from all applets extracted from the BusyBox source
+	# ... and read in names from all applets extracted from the BusyBox source
 	if version == None:
 		print >>sys.stderr, "File does not appear to contain BusyBox"
 		sys.exit(1)
 
-	## read the location of the BAT configuration, default to /etc/bat
+	# read the location of the BAT configuration, default to /etc/bat
 	if options.bbconfigs != None:
 		try:
 			os.stat(options.bbconfigs)
@@ -296,10 +296,10 @@ def main(argv):
 
 	busybox_lines = busybox_binary.read()
 	busybox_binary.close()
-	## determine the configuration (can be empty)
+	# determine the configuration (can be empty)
 	bb_configuration = extract_configuration(busybox_lines, options.bb, bbconfig)
 
-	## weed out the unknown applets and store them separately
+	# weed out the unknown applets and store them separately
 	ppconfig = []
 	undefined_apps = []
 	for config in bb_configuration:
@@ -310,10 +310,10 @@ def main(argv):
 	ppconfig = list(set(ppconfig))
 	ppconfig.sort()
 
-	## pretty print the configuration and the unknown applets
+	# pretty print the configuration and the unknown applets
 	if options.found:
 		prettyprint_configuration(ppconfig, version)
-	## pretty print some newlines
+	# pretty print some newlines
 	if options.found and options.missing:
 		print "\n"
 	if options.missing:
