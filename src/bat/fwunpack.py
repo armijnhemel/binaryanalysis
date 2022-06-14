@@ -8060,11 +8060,11 @@ def searchUnpackOgg(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
 # ICC color profiles
 # http://www.color.org/specification/ICC1v43_2010-12.pdf
 # http://www.color.org/icc_specs2.xalter
-def searchUnpackICS(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
+def searchUnpackICC(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}, debug=False):
     hints = {}
-    if not 'ics' in offsets:
+    if not 'icc' in offsets:
         return ([], blacklist, [], hints)
-    if offsets['ics'] == []:
+    if offsets['icc'] == []:
         return ([], blacklist, [], hints)
 
     filesize = os.stat(filename).st_size
@@ -8075,14 +8075,14 @@ def searchUnpackICS(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
     counter = 1
     diroffsets = []
 
-    icsfile = open(filename, 'rb')
-    for offset in offsets['ics']:
+    iccfile = open(filename, 'rb')
+    for offset in offsets['icc']:
         blacklistoffset = extractor.inblacklist(offset-36, blacklist)
         if blacklistoffset != None:
             continue
-        icsfile.seek(offset-36)
+        iccfile.seek(offset-36)
         # first the profile header
-        databytes = icsfile.read(128)
+        databytes = iccfile.read(128)
         if len(databytes) != 128:
             break
         # first check the size
@@ -8099,41 +8099,41 @@ def searchUnpackICS(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
             continue
 
         # now read the tag table
-        icsfile.seek(offset-36+128)
+        iccfile.seek(offset-36+128)
 
         # first find the amount of tags
-        databytes = icsfile.read(4)
+        databytes = iccfile.read(4)
         if len(databytes) != 4:
             break
         tagcount = struct.unpack('>I', databytes)[0]
 
-        brokenics = False
+        brokenicc = False
         maxoffset = 0
         # then for each tag read the signature, offset and size
         for n in xrange(0,tagcount):
             # then the tag signature
             # TODO: add some extra sanity checks
-            databytes = icsfile.read(4)
+            databytes = iccfile.read(4)
             if len(databytes) != 4:
-                brokenics = True
+                brokenicc = True
                 break
             # then the offset
-            databytes = icsfile.read(4)
+            databytes = iccfile.read(4)
             if len(databytes) != 4:
-                brokenics = True
+                brokenicc = True
                 break
             tagoffset = struct.unpack('>I', databytes)[0]
             if tagoffset + offset - 36 > filesize:
-                brokenics = True
+                brokenicc = True
                 break
             # and finally the size
-            databytes = icsfile.read(4)
+            databytes = iccfile.read(4)
             if len(databytes) != 4:
-                brokenics = True
+                brokenicc = True
                 break
             tagsize = struct.unpack('>I', databytes)[0]
             if tagoffset + tagsize + offset - 36 > filesize:
-                brokenics = True
+                brokenicc = True
                 break
             if tagoffset + tagsize + offset - 36 > maxoffset:
                 maxoffset = tagoffset + tagsize + offset - 36
@@ -8142,30 +8142,30 @@ def searchUnpackICS(filename, tempdir=None, blacklist=[], offsets={}, scanenv={}
         if (maxoffset - (offset - 36)) % 4 != 0:
             maxoffset += (4 - (maxoffset - (offset - 36)) % 4)
         if maxoffset - (offset - 36) != profilesize:
-            brokenics = True
-        if brokenics:
+            brokenicc = True
+        if brokenicc:
             continue
 
         if profilesize == filesize:
-            icsfile.close()
+            iccfile.close()
             blacklist.append((0, filesize))
-            return (diroffsets, blacklist, ['ics', 'resource', 'binary'], hints)
+            return (diroffsets, blacklist, ['icc', 'resource', 'binary'], hints)
 
         # set up a directory and temporary file to write data to
-        tmpdir = dirsetup(tempdir, filename, "ics", counter)
-        tmpfilename = os.path.join(tmpdir, 'unpack-%d.ics' % counter)
+        tmpdir = dirsetup(tempdir, filename, "icc", counter)
+        tmpfilename = os.path.join(tmpdir, 'unpack-%d.icc' % counter)
         tmpfile = open(tmpfilename, 'wb')
-        icsfile.seek(offset-36)
-        tmpfile.write(icsfile.read(profilesize))
+        iccfile.seek(offset-36)
+        tmpfile.write(iccfile.read(profilesize))
 
         hints[tmpfilename] = {}
-        hints[tmpfilename]['tags'] = ['ics', 'resource', 'binary']
+        hints[tmpfilename]['tags'] = ['icc', 'resource', 'binary']
         hints[tmpfilename]['scanned'] = True
         blacklist.append((offset - 36, offset - 36 + profilesize))
         diroffsets.append((tmpdir, offset - 36, profilesize))
         counter += 1
 
-    icsfile.close()
+    iccfile.close()
 
     return (diroffsets, blacklist, newtags, hints)
 

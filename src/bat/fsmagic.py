@@ -116,7 +116,7 @@ fsmagic = {
             'woff': 'wOFF',
             'woff2': 'wOF2',
             'xar': '\x78\x61\x72\x21',
-            'ics': 'acsp',
+            'icc': 'acsp',
             'elf': '\x7f\x45\x4c\x46',
             'bflt': '\x62\x46\x4c\x54',
           }
@@ -132,7 +132,7 @@ correction = {
                'fat12': 54,
                'fat16': 54,
                'lha': 2,
-               'ics': 36,
+               'icc': 36,
              }
 
 # collection of markers that should be scanned together
