@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # Binary Analysis Tool
 # Copyright 2015-2016 Armijn Hemel for Tjaldur Software Governance Solutions

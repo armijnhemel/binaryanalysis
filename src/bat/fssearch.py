@@ -1,165 +1,166 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
-## Binary Analysis Tool
-## Copyright 2009-2013 Armijn Hemel for Tjaldur Software Governance Solutions
-## Licensed under Apache 2.0, see LICENSE file for details
+# Binary Analysis Tool
+# Copyright 2009-2013 Armijn Hemel for Tjaldur Software Governance Solutions
+# Licensed under Apache 2.0, see LICENSE file for details
 
-import sys, os
+import sys
+import os
 import tempfile
 import fsmagic
 
 # Find a squashfs file system, starting at a certain offset.
 # Returns the offset of the file system nearest file system.
 def findSquashfs(data, offset=0):
-	marker = -1
-	squashtype = None
-	for t in fsmagic.squashtypes:
-		sqshmarker = findMarker(fsmagic.fsmagic[t], data, offset)
-		if sqshmarker == -1:
-			continue
-		if marker == -1:
-			marker = sqshmarker
-		else:
-			marker = min(marker, sqshmarker)
-	return marker
+    marker = -1
+    squashtype = None
+    for t in fsmagic.squashtypes:
+        sqshmarker = findMarker(fsmagic.fsmagic[t], data, offset)
+        if sqshmarker == -1:
+            continue
+        if marker == -1:
+            marker = sqshmarker
+        else:
+            marker = min(marker, sqshmarker)
+    return marker
 
-## Find a marker. To more efficiently deal with big files we don't read in
-## the entire file at once, but use read() and seek()
+# Find a marker. To more efficiently deal with big files we don't read in
+# the entire file at once, but use read() and seek()
 def findMarker(marker, datafile, offset=0):
-	databuffer = []
-	datafile.seek(offset)
-	databuffer = datafile.read(100000)
-	while databuffer != '':
-		res = databuffer.find(marker)
-		if res != -1:
-			datafile.seek(0)
-			return offset + res
-		else:
-			## move the offset 50
-			datafile.seek(offset + 99950)
-			## read 100000 bytes from oldoffset + 50, so there is 50 bytes
-			## overlap with the previous read
-			databuffer = datafile.read(100000)
-			if len(databuffer) >= 50:
-				offset = offset + 99950
-			else:
-				offset = offset + len(databuffer)
-	datafile.seek(0)
-	return -1
+    databuffer = []
+    datafile.seek(offset)
+    databuffer = datafile.read(100000)
+    while databuffer != '':
+        res = databuffer.find(marker)
+        if res != -1:
+            datafile.seek(0)
+            return offset + res
+        else:
+            # move the offset 50
+            datafile.seek(offset + 99950)
+            # read 100000 bytes from oldoffset + 50, so there is 50 bytes
+            # overlap with the previous read
+            databuffer = datafile.read(100000)
+            if len(databuffer) >= 50:
+                offset = offset + 99950
+            else:
+                offset = offset + len(databuffer)
+    datafile.seek(0)
+    return -1
 
 def findType(type, data, offset=0):
-	res = findMarker(fsmagic.fsmagic[type], data, offset)
-	return res
+    res = findMarker(fsmagic.fsmagic[type], data, offset)
+    return res
 
 def findCpio(data, offset=0):
-	cpiomarker = -1
-	for marker in fsmagic.cpio:
-		res = findMarker(fsmagic.fsmagic[marker], data, offset)
-		if res != -1 and cpiomarker == -1:
-			cpiomarker = res
-		elif res != -1:
-			cpiomarker = min(cpiomarker, res)
-	return cpiomarker
+    cpiomarker = -1
+    for marker in fsmagic.cpio:
+        res = findMarker(fsmagic.fsmagic[marker], data, offset)
+        if res != -1 and cpiomarker == -1:
+            cpiomarker = res
+        elif res != -1:
+            cpiomarker = min(cpiomarker, res)
+    return cpiomarker
 
 def findXZTrailer(data, offset=0):
-	return findType('xztrailer', data, offset)
+    return findType('xztrailer', data, offset)
 
 def findCpioTrailer(data, offset=0):
-	return findType('cpiotrailer', data, offset)
+    return findType('cpiotrailer', data, offset)
 
 def findExt2fs(data, offset=0):
-	return findType('ext2', data, offset)
+    return findType('ext2', data, offset)
 
 def findISO9660(data, offset=0):
-	return findType('iso9660', data, offset)
+    return findType('iso9660', data, offset)
 
 def findIco(data, offset=0):
-	return findType('ico', data, offset)
+    return findType('ico', data, offset)
 
 def findRPM(data, offset=0):
-	return findType('rpm', data, offset)
+    return findType('rpm', data, offset)
 
 def findGzip(data, offset=0):
-	return findType('gzip', data, offset)
+    return findType('gzip', data, offset)
 
 def findZip(data, offset=0):
-	return findType('zip', data, offset)
+    return findType('zip', data, offset)
 
 def findCramfs(data, offset=0):
-	return findType('cramfs', data, offset)
+    return findType('cramfs', data, offset)
 
 def findUbi(data, offset=0):
-	return findType('ubi', data, offset)
+    return findType('ubi', data, offset)
 
 def findRar(data, offset=0):
-	return findType('rar', data, offset)
+    return findType('rar', data, offset)
 
-## not reliable according to comments in /usr/share/magic
+# not reliable according to comments in /usr/share/magic
 def findLZMA(data, offset=0):
-	return findType('lzma_alone', data, offset)
+    return findType('lzma_alone', data, offset)
 
 def findXZ(data, offset=0):
-	return findType('xz', data, offset)
+    return findType('xz', data, offset)
 
 def findLzip(data, offset=0):
-	return findType('lzip', data, offset)
+    return findType('lzip', data, offset)
 
 def findLzo(data, offset=0):
-	return findType('lzo', data, offset)
+    return findType('lzo', data, offset)
 
 def findBzip2(data, offset=0):
-	return findType('bz2', data, offset)
+    return findType('bz2', data, offset)
 
 def findARJ(data, offset=0):
-	return findType('arj', data, offset)
+    return findType('arj', data, offset)
 
 def findCab(data, offset=0):
-	return findType('cab', data, offset)
+    return findType('cab', data, offset)
 
 def findPNG(data, offset=0):
-	return findType('png', data, offset)
+    return findType('png', data, offset)
 
-## http://www.w3.org/TR/PNG-Chunks.html
+# http://www.w3.org/TR/PNG-Chunks.html
 def findPNGTrailer(data, offset=0):
-	return findType('pngtrailer', data, offset)
+    return findType('pngtrailer', data, offset)
 
 def findJFIF(data, offset=0):
-	jfifmarker = findType('jfif', data, offset)
-	if jfifmarker < 6:
-		return -1
-	else:
-		return jfifmarker - 6
+    jfifmarker = findType('jfif', data, offset)
+    if jfifmarker < 6:
+        return -1
+    else:
+        return jfifmarker - 6
 
 def findGIF(data, offset=0):
-	gifmarker = -1
-	for marker in fsmagic.gif:
-		res = findMarker(fsmagic.fsmagic[marker], data, offset)
-		if res != -1 and gifmarker == -1:
-			gifmarker = res
-		elif res != -1:
-			gifmarker = min(gifmarker, res)
-	return gifmarker
+    gifmarker = -1
+    for marker in fsmagic.gif:
+        res = findMarker(fsmagic.fsmagic[marker], data, offset)
+        if res != -1 and gifmarker == -1:
+            gifmarker = res
+        elif res != -1:
+            gifmarker = min(gifmarker, res)
+    return gifmarker
 
 def markerSearch(data):
-	offsets = []
-	marker_keys = fsmagic.marker.keys()
-	for key in marker_keys:
-		res = data.find(fsmagic.marker[key])
-		while res != -1:
-			offsets.append((res, key))
-			res = data.find(fsmagic.marker[key], res+1)
-	offsets.sort()
-	for i in offsets:
-		print hex(i[0]), i[1], i[0]%8
+    offsets = []
+    marker_keys = fsmagic.marker.keys()
+    for key in marker_keys:
+        res = data.find(fsmagic.marker[key])
+        while res != -1:
+            offsets.append((res, key))
+            res = data.find(fsmagic.marker[key], res+1)
+    offsets.sort()
+    for i in offsets:
+        print hex(i[0]), i[1], i[0]%8
 
 def bruteForceSearch(data):
-	offsets = []
-	fsmagic_keys = fsmagic.fsmagic.keys()
-	for key in fsmagic_keys:
-		res = data.find(fsmagic.fsmagic[key])
-		while res != -1:
-			offsets.append((res, key))
-			res = data.find(fsmagic.fsmagic[key], res+1)
-	offsets.sort()
-	for i in offsets:
-		print hex(i[0]), i[1], i[0]%8
+    offsets = []
+    fsmagic_keys = fsmagic.fsmagic.keys()
+    for key in fsmagic_keys:
+        res = data.find(fsmagic.fsmagic[key])
+        while res != -1:
+            offsets.append((res, key))
+            res = data.find(fsmagic.fsmagic[key], res+1)
+    offsets.sort()
+    for i in offsets:
+        print hex(i[0]), i[1], i[0]%8
